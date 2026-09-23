@@ -14,7 +14,7 @@ yang **konsisten, bisa dipakai ulang, dan tidak ditulis dua kali**.
 | Kerangka | React 19 + TypeScript (strict) | |
 | Build | Vite | |
 | Komponen UI | **shadcn/ui** | Radix UI + Tailwind; disalin ke repo, bukan dependensi |
-| Gaya | Tailwind CSS | **satu-satunya** sistem styling |
+| Gaya | Tailwind CSS **v4** | **Satu-satunya** sistem styling (via `@theme` di CSS, tanpa `tailwind.config.js`) |
 | State server | TanStack Query | |
 | State klien | **Zustand** | + middleware `persist` untuk draf dan preferensi |
 | Form | react-hook-form + **zod** | zod, bukan yup — tipe TypeScript-nya lebih baik |

@@ -88,7 +88,7 @@ Tidak ada pustaka kompresi PDF atau Office: dokumen disimpan apa adanya (A-20, d
 | Paket | Untuk apa |
 |---|---|
 | **shadcn/ui** | Pustaka komponen — **disalin ke repo**, bukan dependensi |
-| `tailwindcss`, `postcss`, `autoprefixer` | Gaya |
+| `tailwindcss` (v4), `@tailwindcss/vite` | Gaya Utama (Tanpa PostCSS/config.js) |
 | `@radix-ui/*` | Dasar shadcn (ikut otomatis) |
 | `class-variance-authority` | Varian komponen |
 | `clsx`, `tailwind-merge` | Penggabungan kelas |

@@ -79,10 +79,9 @@ docs/           seluruh rencana dan standar
 
 ## Aturan frontend
 
-- **Mobile-first.** Gaya dasar untuk ponsel, tambahkan dengan `md:` dan `lg:`. Tidak pernah
-  `max-*`.
-- **Wajib pakai shadcn/ui.** Tidak ada → susun dari yang ada → benar-benar tidak ada → buat
-  sendiri dengan token yang sama, taruh di `components/`.
+- **Mobile-first.** Gaya dasar untuk ponsel, tambahkan dengan `md:` dan `lg:`. Tidak pernah `max-*`.
+- **Tailwind CSS v4:** Dilarang menggunakan `tailwind.config.js`. Gunakan murni CSS via `@theme` dan plugin `@tailwindcss/vite`.
+- **Wajib pakai shadcn/ui.** Tidak ada → susun dari yang ada → benar-benar tidak ada → buat sendiri dengan token yang sama, taruh di `components/`.
 - Naikkan komponen ke pustaka bersama **setelah** dipakai dua kali, bukan sebelumnya.
 - **TanStack Query untuk data server, Zustand untuk state klien.** Data API tidak pernah
   disimpan di Zustand.

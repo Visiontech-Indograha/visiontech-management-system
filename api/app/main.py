@@ -106,6 +106,8 @@ def create_app() -> FastAPI:
     from app.api.employees import router as employees_router
     from app.api.documents import router as documents_router
     from app.api.expiry import router as expiry_router
+    from app.api.plans import router as plans_router
+    from app.api.plan_transitions import router as transitions_router
     
     app.include_router(auth_router)
     app.include_router(audit_router)
@@ -113,6 +115,8 @@ def create_app() -> FastAPI:
     app.include_router(employees_router)
     app.include_router(documents_router)
     app.include_router(expiry_router)
+    app.include_router(plans_router)
+    app.include_router(transitions_router)
         
     return app
 

@@ -1,0 +1,219 @@
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import text
+from uuid import UUID
+from typing import List, Optional
+
+from app.api.deps import CurrentUser, get_current_user, get_db_with_user, require_permission
+from app.core.permissions import Permission
+from app.schemas.plan import (
+    WorkPlanCreate, WorkPlanUpdate, WorkPlanResponse,
+    PlanDayCreate, PlanDayResponse, PlanTaskCreate, PlanTaskResponse
+)
+
+router = APIRouter(prefix="/plans", tags=["Work Plans"])
+
+@router.get("", response_model=List[WorkPlanResponse])
+async def get_plans(
+    status_filter: Optional[str] = None,
+    current_user: CurrentUser = Depends(require_permission(Permission.VIEW_USERS)),
+    db: AsyncSession = Depends(get_db_with_user)
+):
+    where = "organization_id = :org"
+    params = {"org": current_user.organization_id}
+    
+    if status_filter:
+        where += " AND status = :status"
+        params["status"] = status_filter
+        
+    query = text(f"""
+        SELECT id, unit_id, site_id, number, title, location_text, description,
+               lower(period) as period_start, upper(period) - integer '1' as period_end,
+               status, pm_employee_id, leader_employee_id, revision, row_version,
+               cancellation_reason
+        FROM vms.work_plan
+        WHERE {where}
+        ORDER BY created_at DESC
+    """)
+    rows = (await db.execute(query, params)).fetchall()
+    
+    return [WorkPlanResponse(**row._mapping) for row in rows]
+
+@router.post("", response_model=WorkPlanResponse, status_code=status.HTTP_201_CREATED)
+async def create_plan(
+    data: WorkPlanCreate,
+    current_user: CurrentUser = Depends(require_permission(Permission.CREATE_PLAN)),
+    db: AsyncSession = Depends(get_db_with_user)
+):
+    query = text("""
+        INSERT INTO vms.work_plan (
+            organization_id, unit_id, site_id, title, location_text, description,
+            period, pm_employee_id, leader_employee_id, status
+        ) VALUES (
+            :org, :unit, :site, :title, :loc, :desc, 
+            daterange(:start, :end, '[]'), :pm, :leader, 'DRAFT'
+        ) RETURNING id, number, status, revision, row_version, cancellation_reason
+    """)
+    try:
+        res = await db.execute(query, {
+            "org": current_user.organization_id,
+            "unit": data.unit_id, "site": data.site_id,
+            "title": data.title, "loc": data.location_text, "desc": data.description,
+            "start": data.period_start, "end": data.period_end,
+            "pm": data.pm_employee_id, "leader": data.leader_employee_id
+        })
+        row = res.fetchone()
+        
+        # Tambahkan Leader ke tabel work_plan_member secara otomatis
+        if data.leader_employee_id:
+            add_member = text("""
+                INSERT INTO vms.work_plan_member (
+                    work_plan_id, employee_id, role_in_plan, valid_period
+                ) VALUES (
+                    :plan, :emp, 'LEADER', daterange(:start, :end, '[]')
+                )
+            """)
+            await db.execute(add_member, {
+                "plan": row.id, "emp": data.leader_employee_id,
+                "start": data.period_start, "end": data.period_end
+            })
+            
+        return WorkPlanResponse(
+            **data.model_dump(),
+            id=row.id, number=row.number, status=row.status,
+            revision=row.revision, row_version=row.row_version,
+            cancellation_reason=row.cancellation_reason
+        )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail={"code": "DB_ERROR", "message": str(e)})
+
+@router.put("/{plan_id}", response_model=WorkPlanResponse)
+async def update_plan(
+    plan_id: UUID,
+    data: WorkPlanUpdate,
+    current_user: CurrentUser = Depends(require_permission(Permission.CREATE_PLAN)),
+    db: AsyncSession = Depends(get_db_with_user)
+):
+    # Optimistic locking
+    check = text("SELECT status, row_version, pm_employee_id, leader_employee_id, lower(period) as period_start, upper(period) - integer '1' as period_end, unit_id FROM vms.work_plan WHERE id = :id AND organization_id = :org")
+    row = (await db.execute(check, {"id": plan_id, "org": current_user.organization_id})).fetchone()
+    
+    if not row:
+        raise HTTPException(status_code=404, detail="Plan not found")
+        
+    if row.status != 'DRAFT':
+        raise HTTPException(status_code=400, detail={"code": "NOT_DRAFT", "message": "Hanya SK berstatus DRAFT yang dapat diubah."})
+        
+    if row.row_version != data.row_version:
+        raise HTTPException(status_code=409, detail={"code": "CONFLICT", "message": "Dokumen ini telah diubah oleh orang lain. Silakan muat ulang halaman."})
+        
+    # Update
+    updates = []
+    params = {"id": plan_id, "org": current_user.organization_id, "version": data.row_version}
+    
+    if data.title is not None:
+        updates.append("title = :title")
+        params["title"] = data.title
+    if data.site_id is not None:
+        updates.append("site_id = :site")
+        params["site"] = data.site_id
+    if data.location_text is not None:
+        updates.append("location_text = :loc")
+        params["loc"] = data.location_text
+    if data.description is not None:
+        updates.append("description = :desc")
+        params["desc"] = data.description
+    
+    if data.period_start and data.period_end:
+        updates.append("period = daterange(:start, :end, '[]')")
+        params["start"] = data.period_start
+        params["end"] = data.period_end
+        
+    if data.leader_employee_id is not None:
+        updates.append("leader_employee_id = :leader")
+        params["leader"] = data.leader_employee_id
+        
+        if data.leader_employee_id != row.leader_employee_id:
+            # Hapus leader lama jika ada
+            await db.execute(text("DELETE FROM vms.work_plan_member WHERE work_plan_id = :plan AND role_in_plan = 'LEADER'"), {"plan": plan_id})
+            # Tambahkan leader baru
+            add_member = text("""
+                INSERT INTO vms.work_plan_member (
+                    work_plan_id, employee_id, role_in_plan, valid_period
+                ) VALUES (
+                    :plan, :emp, 'LEADER', daterange(:start, :end, '[]')
+                )
+            """)
+            start = data.period_start or row.period_start
+            end = data.period_end or row.period_end
+            await db.execute(add_member, {
+                "plan": plan_id, "emp": data.leader_employee_id,
+                "start": start, "end": end
+            })
+            
+    updates.append("row_version = row_version + 1")
+    
+    if not updates:
+        raise HTTPException(status_code=400, detail="Tidak ada perubahan.")
+        
+    query = text(f"""
+        UPDATE vms.work_plan SET {", ".join(updates)} 
+        WHERE id = :id AND organization_id = :org AND row_version = :version
+        RETURNING id, unit_id, site_id, number, title, location_text, description,
+                  lower(period) as period_start, upper(period) - integer '1' as period_end,
+                  status, pm_employee_id, leader_employee_id, revision, row_version,
+                  cancellation_reason
+    """)
+    res = await db.execute(query, params)
+    updated = res.fetchone()
+    
+    if not updated:
+        raise HTTPException(status_code=409, detail={"code": "CONFLICT", "message": "Gagal update, kemungkinan data diubah secara bersamaan."})
+        
+    return WorkPlanResponse(**updated._mapping)
+
+@router.post("/{plan_id}/days", response_model=PlanDayResponse)
+async def add_day(
+    plan_id: UUID,
+    data: PlanDayCreate,
+    current_user: CurrentUser = Depends(require_permission(Permission.CREATE_PLAN)),
+    db: AsyncSession = Depends(get_db_with_user)
+):
+    # Verifikasi status DRAFT
+    check = text("SELECT status FROM vms.work_plan WHERE id = :id AND organization_id = :org")
+    status_val = (await db.execute(check, {"id": plan_id, "org": current_user.organization_id})).scalar()
+    if not status_val or status_val != 'DRAFT':
+        raise HTTPException(status_code=400, detail="Tidak dapat menambah hari. Status SK bukan DRAFT.")
+        
+    insert_day = text("""
+        INSERT INTO vms.work_plan_day (work_plan_id, work_date, title, sort_order)
+        VALUES (:plan, :date, :title, :sort)
+        RETURNING id
+    """)
+    try:
+        res = await db.execute(insert_day, {
+            "plan": plan_id, "date": data.work_date,
+            "title": data.title, "sort": data.sort_order
+        })
+        day_id = res.scalar()
+        return PlanDayResponse(id=day_id, work_plan_id=plan_id, **data.model_dump())
+    except Exception as e:
+        raise HTTPException(status_code=400, detail={"code": "DB_ERROR", "message": "Gagal menambahkan hari (mungkin tanggal bentrok)."})
+
+@router.post("/days/{day_id}/tasks", response_model=PlanTaskResponse)
+async def add_task(
+    day_id: UUID,
+    data: PlanTaskCreate,
+    current_user: CurrentUser = Depends(require_permission(Permission.CREATE_PLAN)),
+    db: AsyncSession = Depends(get_db_with_user)
+):
+    insert_task = text("""
+        INSERT INTO vms.work_plan_task (work_plan_day_id, title, sort_order)
+        VALUES (:day, :title, :sort)
+        RETURNING id
+    """)
+    res = await db.execute(insert_task, {
+        "day": day_id, "title": data.title, "sort": data.sort_order
+    })
+    task_id = res.scalar()
+    return PlanTaskResponse(id=task_id, work_plan_day_id=day_id, is_done=False, **data.model_dump())

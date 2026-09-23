@@ -65,7 +65,7 @@ async def resolve_incident(
     })
     row = res.fetchone()
     if not row:
-        raise HTTPException(status_code=404, detail="Incident not found")
+        raise HTTPException(status_code=404, detail="Insiden tidak ditemukan.")
         
     return IncidentResponse(**row._mapping)
 

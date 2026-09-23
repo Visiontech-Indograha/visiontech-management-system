@@ -1,6 +1,7 @@
 """
-app/controllers/base.py
-Batas transaksi untuk controller (dok 12 §2): satu kasus pakai = satu transaksi.
+app/db/transaction.py
+Batas transaksi (dok 12 §2): satu permintaan / satu kasus pakai = satu transaksi.
+Dipakai dependency sesi (app/api/deps.py::get_db) dan controller.
 """
 from __future__ import annotations
 

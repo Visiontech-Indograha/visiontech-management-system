@@ -7,7 +7,7 @@ import ipaddress
 from fastapi import APIRouter, Depends, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import CurrentUser, get_current_user, get_db
+from app.api.deps import DB_SCOPE, CurrentUser, get_current_user, get_db
 from app.controllers.auth_controller import AuthController
 from app.schemas.auth import (
     ChangePasswordRequest,
@@ -24,7 +24,7 @@ REFRESH_COOKIE = "refresh_token"
 REFRESH_COOKIE_MAX_AGE = 7 * 24 * 60 * 60
 
 
-def get_auth_controller(db: AsyncSession = Depends(get_db)) -> AuthController:
+def get_auth_controller(db: AsyncSession = Depends(get_db, scope=DB_SCOPE)) -> AuthController:
     return AuthController(db)
 
 

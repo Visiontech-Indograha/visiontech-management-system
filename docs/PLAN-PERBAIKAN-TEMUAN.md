@@ -246,7 +246,7 @@ Format tiap task: **Masalah → Uji dulu → Perubahan → DoD**. Centang hanya 
 - [x] **T-10 · CI sungguhan** (F-13, P-5, P-7, P-8) — selesai 2026-09-24 (gerbang lokal + `ci.yml`, digladi di DB kosong)
   - `ci.yml`: service PostGIS+pgvector, pasang `db/01–05`, `alembic upgrade head`, `ruff`, `mypy`
     (modul yang sudah bersih), `pytest`; `gitleaks`; notifikasi Discord tetap.
-- [ ] **T-11 · Aturan AI: definisi selesai** (F-17, P-6)
+- [x] **T-11 · Aturan AI: definisi selesai** (F-17, P-6)
   - `.agy/rules/ai-testing.md` + `CLAUDE.md`: syarat bukti uji, uji tulis-lalu-baca per endpoint,
     larangan menandai selesai tanpa menjalankan kode, perubahan skema hanya lewat Alembic.
 

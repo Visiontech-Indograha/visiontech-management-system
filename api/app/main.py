@@ -60,6 +60,9 @@ def create_app() -> FastAPI:
         # TODO: Add db connection check here
         return {"status": "ready"}
         
+    from app.api.auth import router as auth_router
+    app.include_router(auth_router)
+        
     return app
 
 app = create_app()

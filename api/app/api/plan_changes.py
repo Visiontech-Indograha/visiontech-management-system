@@ -96,28 +96,22 @@ async def approve_change(
             WHERE id = :plan
         """)
         await db.execute(apply_ext, {"new_period": change.new_period, "plan": plan_id})
-        
-        # Perpanjang juga valid_period member yang masih aktif
-        ext_mem = text("""
-            UPDATE vms.work_plan_member
-            SET valid_period = daterange(lower(valid_period), upper(:new_period::daterange), '[)')
-            WHERE work_plan_id = :plan AND valid_to IS NULL
-        """)
-        await db.execute(ext_mem, {"new_period": change.new_period, "plan": plan_id})
+        # Baris anggota TIDAK diubah: anggota aktif = valid_period terbuka (is_plan_member), dan bentrok
+        # jadwal dihitung dari work_plan.period. Memberi batas atas justru membuat anggota tidak aktif.
         
     elif change.change_type == 'PERSONNEL':
         # Penutupan baris anggota lama
         close_old = text("""
             UPDATE vms.work_plan_member
             SET valid_period = daterange(lower(valid_period), CURRENT_DATE, '[)')
-            WHERE work_plan_id = :plan AND role_in_plan = 'LEADER' AND valid_to IS NULL
+            WHERE work_plan_id = :plan AND role_in_plan = 'LEADER' AND upper(valid_period) IS NULL
         """)
         await db.execute(close_old, {"plan": plan_id})
         
         # Pembukaan baris anggota baru
         open_new = text("""
             INSERT INTO vms.work_plan_member (work_plan_id, employee_id, role_in_plan, valid_period)
-            SELECT id, :new_leader, 'LEADER', daterange(CURRENT_DATE, upper(period), '[)')
+            SELECT id, :new_leader, 'LEADER', daterange(CURRENT_DATE, NULL, '[)')  -- terbuka = aktif
             FROM vms.work_plan WHERE id = :plan
         """)
         await db.execute(open_new, {"new_leader": change.proposed_leader_id, "plan": plan_id})

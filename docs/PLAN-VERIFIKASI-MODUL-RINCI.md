@@ -35,7 +35,7 @@ Centang hanya setelah commit di-push.
 
 ## W2 · Siklus SK hidup (E1–E3)
 
-- [ ] **V-03 · Keanggotaan memakai `valid_period`**
+- [x] **V-03 · Keanggotaan memakai `valid_period`**
   - Uji dulu: alur SK sampai publish (V-02) + uji unit kueri anggota aktif.
   - Perubahan: `plan_transitions.py:39`, `plan_changes.py:101,110` — `valid_to IS NULL` →
     `upper(valid_period) IS NULL` (sama dengan `is_plan_member`); penutupan baris →

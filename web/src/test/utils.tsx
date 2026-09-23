@@ -48,13 +48,19 @@ export function apiError(status: number, code: string, message: string, details:
   return { status, data: { error: { code, message, details } } };
 }
 
+import { useSession } from "@/app/session";
+
 export function renderRoute(path: string, opts: { role?: string | null; me?: Me | null } = {}) {
   const me = opts.me !== undefined ? opts.me : opts.role ? mockMe(opts.role) : null;
+  
+  // Set Zustand state directly for testing
+  useSession.setState({ me, ready: true });
+  
   const router = createMemoryRouter(routes, { initialEntries: [path] });
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const utils = render(
     <QueryClientProvider client={client}>
-      <SessionProvider initial={me}>
+      <SessionProvider>
         <RouterProvider router={router} />
       </SessionProvider>
     </QueryClientProvider>,

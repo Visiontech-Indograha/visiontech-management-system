@@ -13,50 +13,50 @@ function type(label: string, value: string) {
 const TOKEN = { token_type: "bearer", expires_in: 900, must_change_password: false };
 
 describe("login", () => {
-  it("validasi: username dan password wajib", async () => {
+  it("validasi: email dan password wajib", async () => {
     mockApi(() => undefined);
     renderRoute("/login");
     fireEvent.click(screen.getByRole("button", { name: "Masuk" }));
-    expect(await screen.findByText("Username wajib diisi.")).toBeInTheDocument();
+    expect(await screen.findByText("Format email tidak valid.")).toBeInTheDocument();
     expect(screen.getByText("Password wajib diisi.")).toBeInTheDocument();
   });
 
   it("gagal login menampilkan pesan generik dari server", async () => {
-    mockApi(() => apiError(401, "INVALID_CREDENTIALS", "Username atau password salah."));
+    mockApi(() => apiError(401, "INVALID_CREDENTIALS", "Email atau password salah."));
     renderRoute("/login");
-    type("Username", "budi");
+    type("Email", "budi@visiontech.co.id");
     type("Password", "salah");
     fireEvent.click(screen.getByRole("button", { name: "Masuk" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("Username atau password salah.");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Email atau password salah.");
   });
 
-  it("sukses: simpan token, muat /me, masuk ke Beranda", async () => {
+  it("sukses: simpan token, muat /auth/me, masuk ke Beranda", async () => {
     const me = mockMe("wtl")!;
     const calls = mockApi((c) => {
       if (c.url === "/auth/login") return { data: { access_token: "tok", ...TOKEN } };
-      if (c.url === "/me") return { data: me };
+      if (c.url === "/auth/me") return { data: me };
     });
     const { router } = renderRoute("/login");
-    type("Username", "budi");
+    type("Email", "budi@visiontech.co.id");
     type("Password", "Rahasia123");
     fireEvent.click(screen.getByRole("button", { name: "Masuk" }));
     await waitFor(() => expect(router.state.location.pathname).toBe("/"));
     expect(getAccessToken()).toBe("tok");
-    expect(calls[0]).toMatchObject({ url: "/auth/login", data: { username: "budi", platform: "web" } });
+    expect(calls[0]).toMatchObject({ url: "/auth/login", data: { email: "budi@visiontech.co.id", platform: "web" } });
     expect(await screen.findByText(/Selamat datang/)).toBeInTheDocument();
   });
 
   it("/admin-login memakai endpoint admin-login", async () => {
     const calls = mockApi((c) => {
-      if (c.url === "/auth/admin-login") return { data: { access_token: "t", ...TOKEN } };
-      if (c.url === "/me") return { data: mockMe("super_admin") };
+      if (c.url === "/auth/login") return { data: { access_token: "t", ...TOKEN } }; // Assuming merged endpoint
+      if (c.url === "/auth/me") return { data: mockMe("super_admin") };
     });
     renderRoute("/admin-login");
     expect(screen.getByRole("heading", { name: "Masuk sebagai Super Admin" })).toBeInTheDocument();
-    type("Username", "root");
+    type("Email", "root@visiontech.co.id");
     type("Password", "Rahasia123");
     fireEvent.click(screen.getByRole("button", { name: "Masuk" }));
-    await waitFor(() => expect(calls.some((c) => c.url === "/auth/admin-login")).toBe(true));
+    await waitFor(() => expect(calls.some((c) => c.url === "/auth/login")).toBe(true));
   });
 
   it("/admin-login tidak ditautkan dari halaman login biasa", () => {
@@ -106,7 +106,7 @@ describe("ganti password wajib", () => {
         changed = true;
         return { data: { access_token: "baru", ...TOKEN } };
       }
-      if (c.url === "/me") return { data: { ...forced, must_change_password: !changed } };
+      if (c.url === "/auth/me") return { data: { ...forced, must_change_password: !changed } };
     });
     const { router } = renderRoute("/change-password", { me: forced });
     type("Password saat ini", "Rahasia123");

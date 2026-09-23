@@ -9,7 +9,7 @@ import { TextField } from "@/components/ui/Field";
 import { ApiError } from "@/lib/api";
 
 const schema = z.object({
-  username: z.string().trim().min(1, "Username wajib diisi."),
+  email: z.string().trim().email("Format email tidak valid.").min(1, "Email wajib diisi."),
   password: z.string().min(1, "Password wajib diisi."),
 });
 type Values = z.infer<typeof schema>;
@@ -27,10 +27,10 @@ export function LoginPage({ admin = false }: { admin?: boolean }) {
 
   if (me) return <Navigate to="/" replace />;
 
-  const onSubmit = handleSubmit(async ({ username, password }) => {
+  const onSubmit = handleSubmit(async ({ email, password }) => {
     setFormError(null);
     try {
-      await login(username, password, admin);
+      await login(email, password, admin);
       navigate("/", { replace: true });
     } catch (e) {
       setFormError(e instanceof ApiError ? e.message : "Tidak dapat masuk. Coba lagi.");
@@ -48,11 +48,11 @@ export function LoginPage({ admin = false }: { admin?: boolean }) {
           </p>
         )}
         <TextField
-          label="Username"
-          autoComplete="username"
+          label="Email"
+          autoComplete="email"
           autoCapitalize="none"
-          error={errors.username?.message}
-          {...register("username")}
+          error={errors.email?.message}
+          {...register("email")}
         />
         <TextField
           label="Password"

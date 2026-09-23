@@ -4,6 +4,7 @@ from typing import List, Optional
 class LoginRequest(BaseModel):
     email: str
     password: str
+    platform: Optional[str] = "web"
 
 class TokenResponse(BaseModel):
     access_token: str

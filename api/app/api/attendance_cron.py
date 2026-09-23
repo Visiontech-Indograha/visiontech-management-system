@@ -1,49 +1,50 @@
+"""
+Tugas terjadwal pemantauan absensi (P4-9, dok 17 §5.3). Dipanggil penjadwal dengan token ADMIN.
+"""
 from fastapi import APIRouter, Depends
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import text
-from datetime import datetime
-from app.api.deps import get_db_with_user
-from app.core.discord import send_discord_alert
-from app.core.config import settings
+
+from app.api.deps import CurrentUser, get_db_with_user, require_permission
+from app.core.permissions import Permission
+from app.repositories.attendance_monitor_repo import AttendanceMonitorRepo
+from app.services.attendance_monitor_service import AttendanceMonitorService
 
 router = APIRouter(prefix="/cron/attendance", tags=["Attendance Cron"])
 
-@router.post("/alert-missing")
-async def alert_missing_checkin(db: AsyncSession = Depends(get_db_with_user)):
-    """P4-9: Peringatan bisnis -> Discord: tidak ada absensi masuk sampai 09.00 WIB"""
-    if datetime.now().hour != 9:
-        return {"status": "skipped", "message": "Bukan jam 09:00"}
-        
-    query = text("""
-        SELECT e.full_name, e.employee_no 
-        FROM vms.employee e
-        WHERE e.is_active = true 
-          AND e.id NOT IN (
-              SELECT employee_id FROM vms.attendance 
-              WHERE work_date = CURRENT_DATE
-          )
-    """)
-    rows = (await db.execute(query)).fetchall()
-    
-    if rows:
-        names = ", ".join([f"{r.full_name} ({r.employee_no})" for r in rows])
-        await send_discord_alert(
-            webhook_url=settings.DISCORD_WEBHOOK_URL,
-            message=f"Terdapat {len(rows)} karyawan aktif yang belum check-in hari ini:\n\n{names}",
-            level="warning"
-        )
-    return {"missing_count": len(rows)}
 
-@router.post("/alert-needs-review")
-async def alert_needs_review_spike(db: AsyncSession = Depends(get_db_with_user)):
-    """P4-9: Peringatan bisnis -> Discord: lonjakan NEEDS_REVIEW"""
-    query = text("SELECT count(*) FROM vms.attendance WHERE status = 'NEEDS_REVIEW'")
-    count = (await db.execute(query)).scalar()
-    
-    if count > 10:  # Threshold lonjakan
-        await send_discord_alert(
-            webhook_url=settings.DISCORD_WEBHOOK_URL,
-            message=f"Terdapat {count} absensi yang menunggu review dari Finance/HRD. Mohon segera diproses.",
-            level="error"
-        )
-    return {"needs_review_count": count}
+class MissingCheckInResponse(BaseModel):
+    alerted: bool
+    check_ins_today: int
+
+
+class NeedsReviewResponse(BaseModel):
+    alerted: bool
+    needs_review_today: int
+    daily_average: float
+
+
+@router.post("/alert-missing", response_model=MissingCheckInResponse)
+async def alert_missing_checkin(
+    current_user: CurrentUser = Depends(require_permission(Permission.RUN_SYSTEM_JOBS)),
+    db: AsyncSession = Depends(get_db_with_user),
+) -> MissingCheckInResponse:
+    result = await AttendanceMonitorService(AttendanceMonitorRepo(db)).check_missing_check_ins(
+        current_user.organization_id
+    )
+    return MissingCheckInResponse(alerted=result.alerted, check_ins_today=result.check_ins_today)
+
+
+@router.post("/alert-needs-review", response_model=NeedsReviewResponse)
+async def alert_needs_review_spike(
+    current_user: CurrentUser = Depends(require_permission(Permission.RUN_SYSTEM_JOBS)),
+    db: AsyncSession = Depends(get_db_with_user),
+) -> NeedsReviewResponse:
+    result = await AttendanceMonitorService(AttendanceMonitorRepo(db)).check_needs_review_spike(
+        current_user.organization_id
+    )
+    return NeedsReviewResponse(
+        alerted=result.alerted,
+        needs_review_today=result.needs_review_today,
+        daily_average=result.daily_average,
+    )

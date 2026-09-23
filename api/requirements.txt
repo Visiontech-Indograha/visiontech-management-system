@@ -16,3 +16,4 @@ minio==7.2.5
 Pillow>=10.2.0
 filetype==1.2.0
 python-multipart==0.0.9
+tzdata==2026.4

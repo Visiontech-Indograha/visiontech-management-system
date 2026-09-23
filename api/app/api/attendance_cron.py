@@ -3,7 +3,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 from datetime import datetime
 from app.api.deps import get_db_with_user
-from app.core.discord import send_security_alert
+from app.core.discord import send_discord_alert
+from app.core.config import settings
 
 router = APIRouter(prefix="/cron/attendance", tags=["Attendance Cron"])
 
@@ -26,10 +27,10 @@ async def alert_missing_checkin(db: AsyncSession = Depends(get_db_with_user)):
     
     if rows:
         names = ", ".join([f"{r.full_name} ({r.employee_no})" for r in rows])
-        await send_security_alert(
-            title="⚠️ Absensi Kosong Pukul 09.00",
-            description=f"Terdapat {len(rows)} karyawan aktif yang belum check-in hari ini:\n\n{names}",
-            color=16753920 # Orange
+        await send_discord_alert(
+            webhook_url=settings.DISCORD_WEBHOOK_URL,
+            message=f"Terdapat {len(rows)} karyawan aktif yang belum check-in hari ini:\n\n{names}",
+            level="warning"
         )
     return {"missing_count": len(rows)}
 
@@ -40,9 +41,9 @@ async def alert_needs_review_spike(db: AsyncSession = Depends(get_db_with_user))
     count = (await db.execute(query)).scalar()
     
     if count > 10:  # Threshold lonjakan
-        await send_security_alert(
-            title="🚨 Lonjakan Absensi NEEDS_REVIEW",
-            description=f"Terdapat **{count}** absensi yang menunggu review dari Finance/HRD. Mohon segera diproses.",
-            color=16711680 # Red
+        await send_discord_alert(
+            webhook_url=settings.DISCORD_WEBHOOK_URL,
+            message=f"Terdapat {count} absensi yang menunggu review dari Finance/HRD. Mohon segera diproses.",
+            level="error"
         )
     return {"needs_review_count": count}

@@ -24,3 +24,13 @@ Tujuan utama: Menyelesaikan Setup Fase 0 dan beralih ke Fase 1 sesuai dengan `do
 - Jangan membuat mock atau bypass terhadap RLS.
 - Database yang digunakan adalah `100.117.92.14:5433` (Docker Postgis 16).
 - Pengguna (Ageng) sedang istirahat sampai jam 13:00. Bekerja secara mandiri dan laporkan di akhir goal.
+
+## Fase 1 - Identitas, Sesi, Peran, Audit (RENCANA BERIKUTNYA)
+- [x] P1-1: Setup argon2id & JWT EdDSA untuk sesi auth.
+- [ ] P1-2: Endpoint auth (/login, /refresh, /logout, /auth/me).
+- [x] P1-3: Peta izin (core/permissions.py) & middleware RBAC.
+- [x] P1-4: Fungsi otorisasi spesifik is_plan_leader & is_plan_member.
+- [ ] P1-5: CLI scripts: create-admin, seed.
+- [ ] P1-6: Audit log middleware (pp.actor_label).
+- [ ] P1-7: Web UI: Halaman Login, ganti kata sandi, manajemen sesi.
+- [ ] P1-8: Peringatan Keamanan ke Discord.

@@ -51,6 +51,10 @@ async def publish_plan(
     snapshot_json = json.dumps(dict(snapshot_raw._mapping), default=str)
     snapshot_sha = hashlib.sha256(snapshot_json.encode('utf-8')).digest()
     
+    # Dapatkan employee_id dari user_id
+    emp_q = text("SELECT employee_id FROM vms.app_user WHERE id = :uid")
+    my_emp = (await db.execute(emp_q, {"uid": current_user.user_id})).scalar()
+    
     # 1. Update status
     upd = text("""
         UPDATE vms.work_plan 
@@ -69,13 +73,13 @@ async def publish_plan(
             snapshot, snapshot_sha256, issued_by
         ) VALUES (
             :plan_id, 'SK', :rev, :num, 'AWAITING_ACCEPTANCE',
-            :snap::jsonb, :hash, :uid
+            :snap::jsonb, :hash, :emp
         )
     """)
     await db.execute(doc_ins, {
         "plan_id": plan_id, "rev": plan_out.revision,
         "num": plan_out.number, "snap": snapshot_json,
-        "hash": snapshot_sha, "uid": current_user.user_id
+        "hash": snapshot_sha, "emp": my_emp
     })
     
     return WorkPlanResponse(**plan_out._mapping)

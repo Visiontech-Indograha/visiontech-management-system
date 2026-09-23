@@ -27,7 +27,7 @@ async def get_employee_documents(
     user_emp = text("SELECT employee_id FROM vms.app_user WHERE id = :uid")
     my_emp_id = (await db.execute(user_emp, {"uid": current_user.user_id})).scalar()
     
-    if current_user.role == "field" and my_emp_id != emp_id:
+    if Permission.MANAGE_EMPLOYEE_DOCUMENTS.value not in current_user.permissions and my_emp_id != emp_id:
         # DoD: "pengguna lain tidak bisa melihat dokumen pribadi orang lain (404, bukan 403)"
         raise HTTPException(status_code=404, detail="Dokumen tidak ditemukan.")
         
@@ -58,7 +58,7 @@ async def upload_document(
     user_emp = text("SELECT employee_id FROM vms.app_user WHERE id = :uid")
     my_emp_id = (await db.execute(user_emp, {"uid": current_user.user_id})).scalar()
     
-    if current_user.role == "field" and my_emp_id != emp_id:
+    if Permission.MANAGE_EMPLOYEE_DOCUMENTS.value not in current_user.permissions and my_emp_id != emp_id:
         raise HTTPException(status_code=404, detail="Dokumen tidak ditemukan.")
         
     # Masking dan hashing

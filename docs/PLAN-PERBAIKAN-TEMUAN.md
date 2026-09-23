@@ -243,7 +243,7 @@ Format tiap task: **Masalah → Uji dulu → Perubahan → DoD**. Centang hanya 
 - [x] **T-09 · Uji asap seluruh rute** (F-14, P-4)
   - Uji menginventaris `app.routes`: setiap rute non-publik tanpa token → 401; dengan ADMIN → bukan 500.
     Rute publik harus terdaftar eksplisit.
-- [ ] **T-10 · CI sungguhan** (F-13, P-5, P-7, P-8) — **bagian 1 selesai 2026-09-23** (garis dasar ruff, `mypy.ini`, `VMS_REQUIRE_DB`, web lint hijau); **sisa:** tulis `ci.yml`
+- [x] **T-10 · CI sungguhan** (F-13, P-5, P-7, P-8) — selesai 2026-09-24 (gerbang lokal + `ci.yml`, digladi di DB kosong)
   - `ci.yml`: service PostGIS+pgvector, pasang `db/01–05`, `alembic upgrade head`, `ruff`, `mypy`
     (modul yang sudah bersih), `pytest`; `gitleaks`; notifikasi Discord tetap.
 - [ ] **T-11 · Aturan AI: definisi selesai** (F-17, P-6)

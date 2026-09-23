@@ -22,6 +22,8 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 REFRESH_COOKIE = "refresh_token"
 REFRESH_COOKIE_MAX_AGE = 7 * 24 * 60 * 60
+# Dok 02 A-11: cookie hanya dikirim ke rute auth, tidak pernah lintas situs.
+REFRESH_COOKIE_PATH = "/api/v1/auth"
 
 
 def get_auth_controller(db: AsyncSession = Depends(get_db, scope=DB_SCOPE)) -> AuthController:
@@ -40,7 +42,7 @@ def client_info(request: Request) -> ClientInfo:
 def _issue(response: Response, tokens: IssuedTokens) -> TokenResponse:
     response.set_cookie(
         key=REFRESH_COOKIE, value=tokens.refresh_token, httponly=True,
-        secure=True, samesite="lax", max_age=REFRESH_COOKIE_MAX_AGE,
+        secure=True, samesite="strict", max_age=REFRESH_COOKIE_MAX_AGE, path=REFRESH_COOKIE_PATH,
     )
     return TokenResponse(access_token=tokens.access_token)
 
@@ -69,7 +71,7 @@ async def logout(
     controller: AuthController = Depends(get_auth_controller),
 ) -> MessageResponse:
     await controller.logout(request.cookies.get(REFRESH_COOKIE))
-    response.delete_cookie(REFRESH_COOKIE)
+    response.delete_cookie(REFRESH_COOKIE, path=REFRESH_COOKIE_PATH, secure=True, httponly=True, samesite="strict")
     return MessageResponse(message="Berhasil keluar.")
 
 

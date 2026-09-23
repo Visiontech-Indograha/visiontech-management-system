@@ -215,6 +215,10 @@ Format tiap task: **Masalah → Uji dulu → Perubahan → DoD**. Centang hanya 
   - Uji: `/api/v1/auth/login` 200; `/auth/login` 404; `/health` & `/ready` tetap di akar (Caddy).
 - [x] **T-08 · `attendance_cron` memakai setelan yang ada** (F-10)
   - Uji: impor modul & panggil fungsi peringatan tanpa webhook → tidak crash.
+- [x] **T-17 · Cookie refresh sesuai dok 02 A-11** (F-22, ditemukan saat T-13)
+  - Masalah: cookie refresh web `SameSite=Lax`, path `/`; dok 02 A-11 mengunci `SameSite=Strict`
+    dan path `/api/v1/auth`. Logout menghapus cookie tanpa path yang sama.
+  - Uji: `tests/test_refresh_cookie.py` — atribut cookie saat login & refresh; logout menghapus di path yang sama.
 - [x] **T-15 · Wajah tidak cocok benar-benar masuk NEEDS_REVIEW** (F-19, ditemukan saat T-08)
   - Masalah: trigger BEFORE dijalankan menurut urutan nama; `attendance_face_flag` jalan sebelum
     `attendance_geofence` yang lalu menyetel ulang status → `NO_MATCH`/`LOW_QUALITY` selalu tersimpan

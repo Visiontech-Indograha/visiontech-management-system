@@ -223,7 +223,7 @@ Format tiap task: **Masalah → Uji dulu → Perubahan → DoD**. Centang hanya 
     SKIPPED/tanpa wajah → AUTO_VALID; urutan trigger dijaga.
   - Perubahan: migrasi `0003` mengganti nama trigger menjadi `attendance_post_geofence_face_flag`;
     `db/05_face.sql` disamakan.
-- [ ] **T-16 · Python lokal = Python produksi (3.12)** (F-21, ditemukan saat T-09)
+- [x] **T-16 · Python lokal = Python produksi (3.12)** (F-21, ditemukan saat T-09)
   - Masalah: venv lokal memakai Python 3.14 (anotasi malas, PEP 649), Dockerfile & tumpukan terkunci
     3.12. `employees.py` memakai `date` tanpa impor — lolos di 3.14, **gagal saat impor di 3.12** →
     API tidak bisa start di container. Bug semacam ini tak terlihat selama uji jalan di 3.14.

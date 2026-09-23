@@ -1,21 +1,26 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import text
 from uuid import UUID
-from typing import List, Optional
 
-from app.api.deps import CurrentUser, get_current_user, get_db_with_user, require_permission
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.api.deps import CurrentUser, get_db_with_user, require_permission
 from app.core.permissions import Permission
 from app.schemas.plan import (
-    WorkPlanCreate, WorkPlanUpdate, WorkPlanResponse,
-    PlanDayCreate, PlanDayResponse, PlanTaskCreate, PlanTaskResponse
+    PlanDayCreate,
+    PlanDayResponse,
+    PlanTaskCreate,
+    PlanTaskResponse,
+    WorkPlanCreate,
+    WorkPlanResponse,
+    WorkPlanUpdate,
 )
 
 router = APIRouter(prefix="/plans", tags=["Work Plans"])
 
-@router.get("", response_model=List[WorkPlanResponse])
+@router.get("", response_model=list[WorkPlanResponse])
 async def get_plans(
-    status_filter: Optional[str] = None,
+    status_filter: str | None = None,
     current_user: CurrentUser = Depends(require_permission(Permission.VIEW_USERS)),
     db: AsyncSession = Depends(get_db_with_user)
 ):
@@ -197,7 +202,7 @@ async def add_day(
         })
         day_id = res.scalar()
         return PlanDayResponse(id=day_id, work_plan_id=plan_id, **data.model_dump())
-    except Exception as e:
+    except Exception:
         raise HTTPException(status_code=400, detail={"code": "DB_ERROR", "message": "Gagal menambahkan hari (mungkin tanggal bentrok)."})
 
 @router.post("/days/{day_id}/tasks", response_model=PlanTaskResponse)

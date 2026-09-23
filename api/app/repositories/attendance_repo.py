@@ -4,9 +4,9 @@ Query untuk attendance dan site.
 """
 from __future__ import annotations
 
-from uuid import UUID
 from datetime import date
 from typing import Any
+from uuid import UUID
 
 from .base_repo import BaseRepo
 

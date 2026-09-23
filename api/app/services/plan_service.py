@@ -12,13 +12,13 @@ Setiap method:
 from __future__ import annotations
 
 from uuid import UUID
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.errors import NotFoundError, InvalidStateError, ConflictError, ForbiddenError
+from app.core.errors import ConflictError, ForbiddenError, InvalidStateError, NotFoundError
 from app.repositories.plan_repo import PlanRepo
 from app.repositories.user_repo import UserRepo
 from app.services.document_service import DocumentService
-
 
 # Status yang valid sebelum transisi bisa terjadi
 _VALID_BEFORE: dict[str, str] = {
@@ -134,7 +134,7 @@ class PlanService:
         plan = await self._get_or_404(plan_id, org_id)
         if plan.status != "IN_PROGRESS":
             raise InvalidStateError(
-                f"SK harus berstatus IN_PROGRESS untuk mengajukan penyelesaian."
+                "SK harus berstatus IN_PROGRESS untuk mengajukan penyelesaian."
             )
         updated = await self.repo.update_status(
             plan_id, "COMPLETION_REVIEW", row_version

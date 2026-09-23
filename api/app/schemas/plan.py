@@ -1,39 +1,40 @@
-from pydantic import BaseModel
-from typing import Optional, List
 from datetime import date
 from uuid import UUID
+
+from pydantic import BaseModel
+
 
 class WorkPlanBase(BaseModel):
     title: str
     unit_id: UUID
-    site_id: Optional[UUID] = None
+    site_id: UUID | None = None
     location_text: str
-    description: Optional[str] = None
+    description: str | None = None
     period_start: date
     period_end: date
     pm_employee_id: UUID
-    leader_employee_id: Optional[UUID] = None
+    leader_employee_id: UUID | None = None
 
 class WorkPlanCreate(WorkPlanBase):
     pass
 
 class WorkPlanUpdate(BaseModel):
-    title: Optional[str] = None
-    site_id: Optional[UUID] = None
-    location_text: Optional[str] = None
-    description: Optional[str] = None
-    period_start: Optional[date] = None
-    period_end: Optional[date] = None
-    leader_employee_id: Optional[UUID] = None
+    title: str | None = None
+    site_id: UUID | None = None
+    location_text: str | None = None
+    description: str | None = None
+    period_start: date | None = None
+    period_end: date | None = None
+    leader_employee_id: UUID | None = None
     row_version: int
 
 class WorkPlanResponse(WorkPlanBase):
     id: UUID
-    number: Optional[str] = None
+    number: str | None = None
     status: str
     revision: int
     row_version: int
-    cancellation_reason: Optional[str] = None
+    cancellation_reason: str | None = None
 
 class PlanMemberListResponse(BaseModel):
     id: UUID

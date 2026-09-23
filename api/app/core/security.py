@@ -1,10 +1,12 @@
 import os
-import nacl.signing
+from datetime import UTC, datetime, timedelta
+
+import jwt
 import nacl.encoding
 import nacl.exceptions
+import nacl.signing
 from argon2 import PasswordHasher
-from datetime import datetime, timedelta, timezone
-import jwt
+
 from app.core.config import settings
 
 ph = PasswordHasher()
@@ -37,7 +39,7 @@ def verify_password(password: str, hashed: str) -> bool:
 
 def create_jwt_token(data: dict, expires_delta: timedelta) -> str:
     to_encode = data.copy()
-    expire = datetime.now(timezone.utc) + expires_delta
+    expire = datetime.now(UTC) + expires_delta
     to_encode.update({"exp": expire})
     
     # We will use cryptography for PyJWT EdDSA if installed. 

@@ -1,7 +1,9 @@
+import uuid
+
+from fastapi import HTTPException, status
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi import HTTPException, status
-import uuid
+
 
 async def check_is_plan_leader(db: AsyncSession, plan_id: uuid.UUID, user_id: uuid.UUID) -> bool:
     query = text("SELECT vms.is_plan_leader(:plan_id, :user_id)")

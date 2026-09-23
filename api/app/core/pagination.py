@@ -11,6 +11,7 @@ from __future__ import annotations
 import base64
 import json
 from typing import Any, Generic, TypeVar
+
 from pydantic import BaseModel
 
 T = TypeVar("T")

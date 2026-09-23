@@ -4,7 +4,7 @@ import { Toaster } from "react-hot-toast";
 import { createRoot } from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { routes } from "@/app/routes";
-import { SessionProvider } from "@/app/session";
+import { SessionProvider } from "@/app/SessionProvider";
 import { queryClient } from "@/lib/queryClient";
 import "@/styles/index.css";
 

@@ -1,12 +1,18 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import text
-from typing import List, Optional
 from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, get_current_user, get_db_with_user, require_permission
 from app.core.permissions import Permission
-from app.schemas.hse import IncidentCreate, IncidentResolve, IncidentResponse, DailyReportCreate, DailyReportResponse
+from app.schemas.hse import (
+    DailyReportCreate,
+    DailyReportResponse,
+    IncidentCreate,
+    IncidentResolve,
+    IncidentResponse,
+)
 
 router = APIRouter(prefix="/hse", tags=["HSE & Reports"])
 

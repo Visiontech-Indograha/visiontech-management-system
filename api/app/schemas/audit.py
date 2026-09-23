@@ -1,7 +1,9 @@
-from pydantic import BaseModel
-from typing import Optional, List, Dict, Any
 from datetime import datetime
+from typing import Any
 from uuid import UUID
+
+from pydantic import BaseModel
+
 
 class AuditEventResponse(BaseModel):
     id: UUID
@@ -9,12 +11,12 @@ class AuditEventResponse(BaseModel):
     actor_label: str
     action: str
     entity_type: str
-    entity_id: Optional[UUID] = None
-    detail: Optional[str] = None
-    changes: Optional[Dict[str, Any]] = None
+    entity_id: UUID | None = None
+    detail: str | None = None
+    changes: dict[str, Any] | None = None
 
 class AuditEventListResponse(BaseModel):
-    items: List[AuditEventResponse]
+    items: list[AuditEventResponse]
     total: int
     page: int
     size: int

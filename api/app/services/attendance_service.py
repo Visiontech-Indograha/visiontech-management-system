@@ -5,14 +5,14 @@ Server tidak mempercayai perangkat — waktu dan jarak dihitung ulang di sini.
 """
 from __future__ import annotations
 
-from uuid import UUID
-from datetime import date, time as dtime
+from datetime import time as dtime
 from typing import Any
+from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.errors import AppError, InvalidStateError, NotFoundError
-from app.core.time import utcnow, jakarta_now
+from app.core.errors import AppError, NotFoundError
+from app.core.time import jakarta_now
 from app.repositories.attendance_repo import AttendanceRepo
 
 # Jam kerja standar dalam WIB (bisa dijadikan config per organisasi nantinya)

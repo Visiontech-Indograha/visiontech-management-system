@@ -1,5 +1,4 @@
 import { create } from "zustand";
-import { useEffect, type ReactNode } from "react";
 import { api, setAccessToken, setSessionExpiredHandler } from "@/lib/api";
 import type { Me, TokenOut } from "@/lib/types";
 import { mockMe } from "./mockSession";
@@ -76,10 +75,3 @@ export const useSession = create<SessionState>((set, get) => {
   };
 });
 
-export function SessionProvider({ children }: { children: ReactNode }) {
-  useEffect(() => {
-    useSession.getState().initSession();
-  }, []);
-  
-  return <>{children}</>;
-}

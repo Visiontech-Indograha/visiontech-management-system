@@ -7,15 +7,15 @@ from __future__ import annotations
 
 import base64
 import io
-import qrcode
 from pathlib import Path
 from uuid import UUID
 
+import qrcode
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.repositories.plan_repo import PlanRepo
 from app.core.errors import NotFoundError
+from app.repositories.plan_repo import PlanRepo
 
 TEMPLATE_DIR = Path(__file__).parent.parent / "templates"
 
@@ -105,7 +105,7 @@ class PdfService:
     def _html_to_pdf(html: str) -> bytes:
         """Render HTML ke PDF bytes via WeasyPrint."""
         try:
-            from weasyprint import HTML, CSS
+            from weasyprint import CSS, HTML
             buf = io.BytesIO()
             HTML(string=html).write_pdf(buf)
             return buf.getvalue()

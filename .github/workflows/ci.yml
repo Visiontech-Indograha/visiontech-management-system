@@ -1,55 +1,128 @@
+# CI — gerbang kualitas setiap push & PR (dok 17, docs/PLAN-PERBAIKAN-TEMUAN.md T-10).
+# Semua langkah di sini sudah digladi lokal (database kosong dari db/*.sql → 199 uji hijau).
 name: CI
 
 on:
   push:
-    branches: [ prod, development, "feature/*" ]
+    branches: [prod, development, "feature/**"]
   pull_request:
-    branches: [ prod, development ]
+    branches: [prod, development]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
-  test-api:
+  api:
+    name: API · ruff · mypy · pytest (PostgreSQL nyata)
     runs-on: ubuntu-latest
+    services:
+      db:
+        # Sama dengan docker-compose.yml / server dev (PostgreSQL 16 + PostGIS); pgvector dipasang di bawah.
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: visiontech_db
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres -d visiontech_db"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      # Kredensial khusus container CI sekali pakai — bukan rahasia.
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/visiontech_db
+      VMS_REQUIRE_DB: "1"   # uji DB gagal (bukan dilewati) bila DB tak terjangkau
+      PYTHONPATH: .
+    defaults:
+      run:
+        working-directory: api
     steps:
-      - uses: actions/checkout@v4
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - name: Run Ruff, Mypy, Pytest
-        run: |
-          echo "Running API checks..."
-          # Implement ruff, mypy, pytest
+      - uses: actions/checkout@v7
 
-  test-web:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-python@v7
         with:
-          node-version: '20'
-      - name: Run Web Checks
-        run: |
-          echo "Running web checks..."
-          # Implement eslint, tsc, vitest, build bundle check
+          python-version: "3.12"   # sama dengan Dockerfile (T-16)
+          cache: pip
+          cache-dependency-path: api/requirements-dev.txt
 
-  test-mobile:
+      - name: Pasang pgvector di container DB
+        run: |
+          docker exec ${{ job.services.db.id }} bash -c \
+            "apt-get update -qq && apt-get install -y -qq postgresql-16-pgvector >/dev/null"
+
+      - name: Pasang skema dari db/*.sql (urutan 01 → 05)
+        working-directory: db
+        env:
+          PGPASSWORD: postgres
+        run: |
+          for f in 01_schema 02_functions 03_policies 04_signature_auth 05_face; do
+            psql -h localhost -U postgres -d visiontech_db -v ON_ERROR_STOP=1 -q -f "$f.sql"
+          done
+
+      - name: Pasang dependensi
+        run: pip install -r requirements-dev.txt
+
+      - name: Tandai migrasi (db/*.sql sudah memuat hasil migrasi 0002–0003)
+        run: python -m alembic stamp head
+
+      - name: Galat fatal — sintaks & nama tak terdefinisi (semua berkas, tanpa garis dasar)
+        run: ruff check --isolated --select E9,F63,F7,F82 app tests
+
+      - name: Lint (garis dasar di ruff.toml — hanya temuan BARU yang menggagalkan)
+        run: ruff check app tests
+
+      - name: Tipe — mypy --strict (modul di mypy.ini)
+        run: python -m mypy
+
+      - name: Uji — pytest
+        run: python -m pytest -q -p no:warnings
+
+  web:
+    name: Web · lint · typecheck · test · build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  secrets:
+    name: Pemindaian rahasia (gitleaks)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Run Mobile Checks
-        run: |
-          echo "Running mobile checks..."
-          # Implement flutter analyze, flutter test
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # mobile/ adalah submodule dengan repo & workflow sendiri (mobile/.github/workflows/flutter-ci.yml).
 
   notify-failure:
-    needs: [test-api, test-web, test-mobile]
+    name: Kabari #vms-ci bila gagal
+    needs: [api, web, secrets]
     if: failure()
     runs-on: ubuntu-latest
     steps:
-      - name: Send Failure Notification to Discord
+      - name: Kirim ke Discord (tanpa data pribadi — dok 17 §2)
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_CI }}
+          RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          curl -H "Content-Type: application/json" \
-               -X POST \
-               -d "{\"content\": \"❌ CI gagal pada commit ${{ github.sha }} \nLihat: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" \
-               ${{ secrets.DISCORD_WEBHOOK_CI }}
+          if [ -z "$WEBHOOK" ]; then echo "DISCORD_WEBHOOK_CI belum diset; notifikasi dilewati."; exit 0; fi
+          payload=$(printf '{"content":"❌ CI gagal di %s (%s)\\nLihat: %s"}' "${GITHUB_REF_NAME}" "${GITHUB_SHA::8}" "$RUN_URL")
+          curl -fsS -H "Content-Type: application/json" -X POST -d "$payload" "$WEBHOOK"

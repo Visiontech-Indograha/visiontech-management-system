@@ -13,6 +13,10 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Face Recognition Microservice", lifespan=lifespan)
 
+@app.get("/health")
+async def health_check():
+    return {"status": "ok", "service": "face-service"}
+
 @app.post("/register")
 async def register_face(karyawan_id: str = Form(...), file: UploadFile = File(...)):
     """ Endpoint untuk menyimpan wajah baru ke database. """

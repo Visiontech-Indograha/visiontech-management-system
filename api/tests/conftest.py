@@ -4,6 +4,7 @@ bukan SQLite — separuh aturan hidup di fungsi, trigger, dan RLS.
 """
 from __future__ import annotations
 
+import os
 import socket
 import uuid
 from collections.abc import Callable, Iterator
@@ -30,7 +31,12 @@ def _db_reachable() -> bool:
         return False
 
 
-requires_db = pytest.mark.skipif(not _db_reachable(), reason="PostgreSQL uji tidak dapat dijangkau")
+_DB_OK = _db_reachable()
+if not _DB_OK and os.getenv("VMS_REQUIRE_DB"):
+    # Di CI uji DB tidak boleh diam-diam dilewati — itu sama dengan tidak diuji sama sekali.
+    raise RuntimeError(f"VMS_REQUIRE_DB diset tetapi PostgreSQL {_DB.hostname}:{_DB.port} tidak dapat dijangkau")
+
+requires_db = pytest.mark.skipif(not _DB_OK, reason="PostgreSQL uji tidak dapat dijangkau")
 
 
 @pytest.fixture(scope="session", autouse=True)

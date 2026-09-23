@@ -1,7 +1,7 @@
-import re
-import json
-import httpx
 import logging
+import re
+
+import httpx
 
 logger = logging.getLogger(__name__)
 

@@ -1,11 +1,10 @@
 from pydantic import BaseModel
-from typing import List, Optional
 
 
 class LoginRequest(BaseModel):
     email: str
     password: str
-    platform: Optional[str] = "web"
+    platform: str | None = "web"
 
 
 class TokenResponse(BaseModel):
@@ -17,7 +16,7 @@ class UserMeResponse(BaseModel):
     user_id: str
     email: str
     role: str
-    permissions: List[str]
+    permissions: list[str]
 
 
 class ChangePasswordRequest(BaseModel):

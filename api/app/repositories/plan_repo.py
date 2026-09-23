@@ -4,8 +4,8 @@ Query untuk work_plan, work_plan_day, work_plan_task, work_plan_member, plan_doc
 """
 from __future__ import annotations
 
-from uuid import UUID
 from typing import Any
+from uuid import UUID
 
 from .base_repo import BaseRepo
 

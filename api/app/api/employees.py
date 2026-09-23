@@ -1,15 +1,20 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import text
 from datetime import date
-from typing import Optional
 from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, get_current_user, get_db_with_user, require_permission
 from app.core.permissions import Permission
 from app.schemas.employee import (
-    EmployeeCreate, EmployeeUpdate, EmployeeResponse, EmployeeListResponse,
-    EmployeeAssignmentCreate, EmployeeAssignmentResponse, EmployeeOffboard
+    EmployeeAssignmentCreate,
+    EmployeeAssignmentResponse,
+    EmployeeCreate,
+    EmployeeListResponse,
+    EmployeeOffboard,
+    EmployeeResponse,
+    EmployeeUpdate,
 )
 
 router = APIRouter(prefix="/employees", tags=["Employees"])
@@ -18,8 +23,8 @@ router = APIRouter(prefix="/employees", tags=["Employees"])
 async def get_employees(
     page: int = Query(1, ge=1),
     size: int = Query(20, ge=1, le=100),
-    is_active: Optional[bool] = None,
-    q: Optional[str] = None,
+    is_active: bool | None = None,
+    q: str | None = None,
     current_user: CurrentUser = Depends(require_permission(Permission.VIEW_USERS)),
     db: AsyncSession = Depends(get_db_with_user)
 ):
@@ -220,7 +225,7 @@ async def check_conflicts(
     emp_id: UUID,
     start_date: date,
     end_date: date,
-    exclude_plan: Optional[UUID] = None,
+    exclude_plan: UUID | None = None,
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_with_user)
 ):

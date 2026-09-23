@@ -1,12 +1,12 @@
-from fastapi import APIRouter, Depends
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import text
-from typing import List, Optional
-from uuid import UUID
-from pydantic import BaseModel
 from datetime import date
+from uuid import UUID
 
-from app.api.deps import CurrentUser, get_current_user, get_db_with_user, require_permission
+from fastapi import APIRouter, Depends
+from pydantic import BaseModel
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.api.deps import CurrentUser, get_db_with_user, require_permission
 from app.core.permissions import Permission
 
 router = APIRouter(prefix="/documents", tags=["Document Expiry"])
@@ -21,11 +21,11 @@ class ExpiringDocumentResponse(BaseModel):
     urgency: str
 
 class ExpiringDocumentList(BaseModel):
-    items: List[ExpiringDocumentResponse]
+    items: list[ExpiringDocumentResponse]
 
 @router.get("/expiring", response_model=ExpiringDocumentList)
 async def get_expiring_documents(
-    urgency: Optional[str] = None,
+    urgency: str | None = None,
     current_user: CurrentUser = Depends(require_permission(Permission.VERIFY_DOCUMENTS)),
     db: AsyncSession = Depends(get_db_with_user)
 ):

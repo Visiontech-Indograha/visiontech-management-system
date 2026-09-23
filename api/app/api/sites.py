@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import text
-from typing import List, Optional
 from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, get_current_user, get_db_with_user, require_permission
 from app.core.permissions import Permission
@@ -10,7 +10,7 @@ from app.schemas.attendance import SiteCreate, SiteResponse
 
 router = APIRouter(prefix="/sites", tags=["Sites"])
 
-@router.get("", response_model=List[SiteResponse])
+@router.get("", response_model=list[SiteResponse])
 async def get_sites(
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_with_user)

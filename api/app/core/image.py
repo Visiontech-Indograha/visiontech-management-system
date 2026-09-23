@@ -1,7 +1,7 @@
 import io
 import logging
+
 from PIL import Image, ImageOps
-from typing import Dict, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -11,7 +11,7 @@ SIZES = {
     "view": 1024
 }
 
-def compress_image(image_bytes: bytes) -> Optional[Dict[str, bytes]]:
+def compress_image(image_bytes: bytes) -> dict[str, bytes] | None:
     """
     Mengkompresi gambar ke WebP dalam 3 ukuran: thumb, view, dan full.
     Menghapus metadata EXIF secara otomatis.

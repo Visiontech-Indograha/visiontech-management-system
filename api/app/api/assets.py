@@ -1,14 +1,19 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import text
-from typing import List, Optional
 from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, get_current_user, get_db_with_user, require_permission
 from app.core.permissions import Permission
 from app.schemas.asset import (
-    AssetCreate, AssetResponse, AssetAllocationCreate, AssetAllocationResponse,
-    AssetReturnCreate, AssetReturnVerify, AssetReturnResponse
+    AssetAllocationCreate,
+    AssetAllocationResponse,
+    AssetCreate,
+    AssetResponse,
+    AssetReturnCreate,
+    AssetReturnResponse,
+    AssetReturnVerify,
 )
 
 router = APIRouter(prefix="/assets", tags=["Assets"])
@@ -34,7 +39,7 @@ async def create_asset(
     except Exception as e:
         raise HTTPException(status_code=400, detail={"code": "DB_ERROR", "message": str(e)})
 
-@router.get("", response_model=List[AssetResponse])
+@router.get("", response_model=list[AssetResponse])
 async def get_assets(
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_with_user)

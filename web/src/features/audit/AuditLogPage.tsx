@@ -24,7 +24,7 @@ interface AuditEvent {
   entity_type: string;
   entity_id: string | null;
   detail: string | null;
-  changes: any | null;
+  changes: Record<string, unknown> | null;
 }
 
 interface AuditEventListResponse {

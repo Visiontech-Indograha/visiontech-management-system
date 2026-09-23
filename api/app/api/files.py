@@ -1,17 +1,15 @@
 import asyncio
-import filetype
 import hashlib
-from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status, BackgroundTasks
-from fastapi.responses import JSONResponse
-from sqlalchemy.ext.asyncio import AsyncSession
+import uuid
+
+import filetype
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, get_current_user, get_db_with_user
-from app.core.storage import upload_file, get_presigned_url
 from app.core.image import compress_image
-import uuid
-import os
+from app.core.storage import get_presigned_url, upload_file
 
 router = APIRouter(prefix="/files", tags=["Files"])
 

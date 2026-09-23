@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: ./api
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://vms_app:D3rJN0apzlCeOUcSyo4GEMzaJLTGYPs@db:5432/visiontech_db
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ./web
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - api
+
+  db:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_USER: vms_app
+      POSTGRES_PASSWORD: D3rJN0apzlCeOUcSyo4GEMzaJLTGYPs
+      POSTGRES_DB: visiontech_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vms_app -d visiontech_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:

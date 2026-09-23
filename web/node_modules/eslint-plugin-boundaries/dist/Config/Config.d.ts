@@ -1,0 +1,44 @@
+import type { Linter } from "eslint";
+import type { Config } from "../Shared";
+import { PLUGIN_NAME } from "../Shared";
+export * from "../Public";
+/**
+ * The full ESLint config object returned by createConfig, including the plugins field with the boundaries plugin registered.
+ * Configuration object returned by createConfig.
+ * We use a public alias to keep the exported type nameable and portable.
+ * This helps prevent TS2742 errors caused by inferred types leaking internal ESLint type paths.
+ */
+export type ConfigObject = Linter.Config;
+/**
+ * Returns an ESLint config object with the boundaries plugin registered, providing default JS and TS file patterns
+ * and enforcing valid types for settings and rules. Supports renaming the plugin. Rules can be prefixed with either
+ * the original plugin name or the provided plugin name.
+ *
+ * @param config - ESLint config object without the plugins field.
+ * @param name - The name of the plugin to register. Defaults to "boundaries".
+ * @returns {ConfigObject} The ESLint config object with the boundaries plugin registered and the provided config merged in.
+ * @throws {Error} If settings or rules are not from eslint-plugin-boundaries.
+ *
+ * @example
+ * ```ts
+ * import { createConfig, recommended } from "eslint-plugin-boundaries/config";
+ *
+ * const config = createConfig({
+ *   settings: {
+ *     ...recommended.settings,
+ *     "boundaries/elements": [],
+ *     "boundaries/ignore": ["ignored/*.js"],
+ *   },
+ *   rules: {
+ *     ...recommended.rules,
+ *     "boundaries/dependencies": ["error", { default: "disallow" }],
+ *   }
+ * });
+ *
+ * export default [config];
+ * ```
+ */
+export declare function createConfig<PluginName extends string = typeof PLUGIN_NAME>(config: Omit<Config<PluginName> | Config, "plugins">, name?: PluginName): ConfigObject;
+export declare const recommended: Config<"boundaries">;
+export declare const strict: Config<"boundaries">;
+export declare const strictLegacy: Config<"boundaries">;

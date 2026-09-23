@@ -43,7 +43,7 @@ Centang hanya setelah commit di-push.
   - DoD: `check_sql` bersih untuk tiga baris itu; publish tidak lagi 500.
   - Acuan: `db/01` `work_plan_member`, `db/02` `is_plan_member`.
 
-- [ ] **V-04 · Nilai enum sesuai skema**
+- [x] **V-04 · Nilai enum sesuai skema**
   - Perubahan: `document_kind` `'SK'` → `'INITIAL_ORDER'` (revisi → `'REVISION'`, `domain.js:321`);
     `document_status` `'ACCEPTED'` → `'EFFECTIVE'` (dokumen lama → `'SUPERSEDED'`);
     `change_status` `'APPLIED'` → `'EFFECTIVE'`; `daterange` pada `plan_changes.py:45` diberi cast

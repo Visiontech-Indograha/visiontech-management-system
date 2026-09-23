@@ -11,7 +11,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 SQL_START = re.compile(r"^\s*(SELECT|INSERT|UPDATE|DELETE|WITH)\b", re.IGNORECASE)
-PARAM = re.compile(r"(?<!:):([a-zA-Z_][a-zA-Z0-9_]*)")
+# Pola yang sama dengan SQLAlchemy TextClause: `:nama::tipe` BUKAN parameter (terkirim mentah ke DB).
+PARAM = re.compile(r"(?<![:\w\x5c]):(\w+)(?!:)")
 
 
 @dataclass(frozen=True)

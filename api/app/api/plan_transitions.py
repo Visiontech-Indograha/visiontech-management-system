@@ -8,6 +8,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, get_current_user, get_db_with_user, require_permission
+from app.core.enums import DocumentKind, DocumentStatus, PlanStatus
 from app.core.permissions import Permission
 from app.schemas.plan import WorkPlanResponse
 
@@ -30,7 +31,7 @@ async def publish_plan(
     
     if not row:
         raise HTTPException(status_code=404, detail="SK tidak ditemukan")
-    if row.status not in ('DRAFT', 'APPEALED'):
+    if row.status not in (PlanStatus.DRAFT, PlanStatus.APPEALED):
         raise HTTPException(status_code=400, detail={"code": "INVALID_STATE", "message": "Hanya DRAFT atau APPEALED yang bisa di-publish."})
     if row.row_version != data.row_version:
         raise HTTPException(status_code=409, detail={"code": "CONFLICT", "message": "Dokumen ini telah diubah oleh orang lain."})
@@ -60,12 +61,12 @@ async def publish_plan(
     # 1. Update status
     upd = text("""
         UPDATE vms.work_plan 
-        SET status = 'PUBLISHED', row_version = row_version + 1,
+        SET status = :published, row_version = row_version + 1,
             number = COALESCE(number, 'SK-' || TO_CHAR(CURRENT_DATE, 'YYYYMM') || '-' || SUBSTR(id::text, 1, 4))
         WHERE id = :id
         RETURNING *
     """)
-    res = await db.execute(upd, {"id": plan_id})
+    res = await db.execute(upd, {"id": plan_id, "published": PlanStatus.PUBLISHED})
     plan_out = res.fetchone()
     
     # 2. Buat Dokumen (SK)
@@ -74,12 +75,15 @@ async def publish_plan(
             work_plan_id, kind, version, number, status, 
             snapshot, snapshot_sha256, issued_by
         ) VALUES (
-            :plan_id, 'SK', :rev, :num, 'AWAITING_ACCEPTANCE',
-            :snap::jsonb, :hash, :emp
+            :plan_id, :kind, :rev, :num, :awaiting,
+            CAST(:snap AS jsonb), :hash, :emp
         )
     """)
     await db.execute(doc_ins, {
         "plan_id": plan_id, "rev": plan_out.revision,
+        # Revisi pertama = SK awal; revisi berikutnya (setelah banding) = dokumen revisi (domain.js PUBLISH)
+        "kind": DocumentKind.INITIAL_ORDER if plan_out.revision == 1 else DocumentKind.REVISION,
+        "awaiting": DocumentStatus.AWAITING_ACCEPTANCE,
         "num": plan_out.number, "snap": snapshot_json,
         "hash": snapshot_sha, "emp": my_emp
     })
@@ -96,7 +100,7 @@ async def accept_plan(
     check = text("SELECT status, row_version, leader_employee_id FROM vms.work_plan WHERE id = :id FOR UPDATE")
     row = (await db.execute(check, {"id": plan_id})).fetchone()
     
-    if not row or row.status != 'PUBLISHED':
+    if not row or row.status != PlanStatus.PUBLISHED:
         raise HTTPException(status_code=400, detail="Hanya status PUBLISHED yang bisa di-accept.")
         
     # Pastikan yang accept adalah Leader
@@ -106,15 +110,16 @@ async def accept_plan(
     if my_emp != row.leader_employee_id:
         raise HTTPException(status_code=403, detail="Hanya Leader yang dapat menerima SK.")
         
-    upd = text("UPDATE vms.work_plan SET status = 'ACCEPTED', row_version = row_version + 1 WHERE id = :id RETURNING *")
-    res = await db.execute(upd, {"id": plan_id})
+    upd = text("UPDATE vms.work_plan SET status = :accepted, row_version = row_version + 1 WHERE id = :id RETURNING *")
+    res = await db.execute(upd, {"id": plan_id, "accepted": PlanStatus.ACCEPTED})
     
     doc_upd = text("""
         UPDATE vms.plan_document 
-        SET status = 'ACCEPTED', accepted_by = :emp, accepted_at = now()
-        WHERE work_plan_id = :id AND status = 'AWAITING_ACCEPTANCE'
+        SET status = :effective, accepted_by = :emp, accepted_at = now()
+        WHERE work_plan_id = :id AND status = :awaiting
     """)
-    await db.execute(doc_upd, {"emp": my_emp, "id": plan_id})
+    await db.execute(doc_upd, {"emp": my_emp, "id": plan_id, "effective": DocumentStatus.EFFECTIVE,
+                               "awaiting": DocumentStatus.AWAITING_ACCEPTANCE})
     
     return WorkPlanResponse(**res.fetchone()._mapping)
 
@@ -128,10 +133,10 @@ async def start_plan(
     check = text("SELECT status FROM vms.work_plan WHERE id = :id FOR UPDATE")
     row = (await db.execute(check, {"id": plan_id})).fetchone()
     
-    if not row or row.status != 'ACCEPTED':
+    if not row or row.status != PlanStatus.ACCEPTED:
         raise HTTPException(status_code=400, detail="Hanya status ACCEPTED yang bisa di-start.")
         
-    upd = text("UPDATE vms.work_plan SET status = 'IN_PROGRESS', row_version = row_version + 1 WHERE id = :id RETURNING *")
-    res = await db.execute(upd, {"id": plan_id})
+    upd = text("UPDATE vms.work_plan SET status = :in_progress, row_version = row_version + 1 WHERE id = :id RETURNING *")
+    res = await db.execute(upd, {"id": plan_id, "in_progress": PlanStatus.IN_PROGRESS})
     
     return WorkPlanResponse(**res.fetchone()._mapping)

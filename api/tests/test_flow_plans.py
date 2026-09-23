@@ -104,7 +104,7 @@ def test_plan_lifecycle_to_extension(client, world):
                          json={"new_period_end": (jakarta_now().date() + timedelta(days=5)).isoformat(),
                                "reason": "Hujan deras dua hari"})
     assert change.status_code in (200, 201), change.text
-    approved = client.post(f"/plans/{plan_id}/changes/{change.json()['id']}/approve", headers=pm)
+    approved = client.post(f"/plans/{plan_id}/changes/{change.json()['change_id']}/approve", headers=pm)
     assert approved.status_code == 200, approved.text
     assert sync_query("SELECT count(*) FROM vms.plan_change WHERE work_plan_id = %s AND status <> 'PENDING_PM'",
                       (plan_id,)) == [(1,)]

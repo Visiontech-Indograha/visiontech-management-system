@@ -254,7 +254,7 @@ Format tiap task: **Masalah → Uji dulu → Perubahan → DoD**. Centang hanya 
 
 - [ ] **T-12 · RLS efektif** (F-11) — buat peran DB aplikasi non-superuser tanpa `BYPASSRLS`;
   butuh akses admin server. Rencana dan skrip disiapkan, eksekusi menunggu persetujuan.
-- [ ] **T-13 · JWT EdDSA** (F-12, K-20) — kunci Ed25519 dari env/berkas, `kid`, uji verifikasi.
+- [x] **T-13 · JWT EdDSA** (F-12, K-20) — kunci Ed25519 dari env/berkas, `kid`, uji verifikasi.
 
 ### Dikerjakan bersama plan lain
 - F-09 → diverifikasi terhadap skema saat A-3 (SK) dan A-4 (absensi), dengan pola A-2.

@@ -1,58 +1,71 @@
-import os
+"""
+Kata sandi (argon2id, K-20) dan access token JWT EdDSA (dok 02 A-11, dok 05 §4, dok 08 §3/§7).
+
+Kunci penandatangan JWT (tujuan `JWT_ACCESS`, terpisah dari kunci tanda tangan dokumen) dibaca
+dari `JWT_PRIVATE_KEY_HEX` — 32 byte seed Ed25519 dalam hex. Di produksi nilainya disuntikkan
+dari KMS/secret manager (K-05), tidak pernah disimpan di Git atau basis data.
+Verifikasi hanya menerima EdDSA dengan `kid` yang dikenal: token HS256, `alg: none`, dan
+kebingungan algoritma ditolak.
+"""
+import logging
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 import jwt
-import nacl.encoding
-import nacl.exceptions
-import nacl.signing
 from argon2 import PasswordHasher
+from argon2.exceptions import InvalidHashError, VerificationError
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from app.core.config import settings
 
+logger = logging.getLogger(__name__)
 ph = PasswordHasher()
 
-# Generate or load Ed25519 keys
-# In a real app, these should be loaded from env or secrets manager
-_private_key_hex = os.getenv("ED25519_PRIVATE_KEY")
-if not _private_key_hex:
-    _signing_key = nacl.signing.SigningKey.generate()
-    _private_key_hex = _signing_key.encode(encoder=nacl.encoding.HexEncoder).decode('utf-8')
-else:
-    _signing_key = nacl.signing.SigningKey(_private_key_hex, encoder=nacl.encoding.HexEncoder)
+ACCESS_AUDIENCE = "vms-api"
+ACCESS_ISSUER = "vms"
+_ALGORITHM = "EdDSA"
 
-_verify_key = _signing_key.verify_key
-_public_key_hex = _verify_key.encode(encoder=nacl.encoding.HexEncoder).decode('utf-8')
 
-# Using PyJWT which supports EdDSA if cryptography is installed, but since we use PyNaCl:
-# PyJWT with 'EdDSA' requires cryptography package.
-# Let's ensure cryptography is installed or use PyJWT native EdDSA.
-# Wait, PyJWT requires `cryptography` for EdDSA!
+def _load_private_key() -> Ed25519PrivateKey:
+    if settings.JWT_PRIVATE_KEY_HEX:
+        return Ed25519PrivateKey.from_private_bytes(bytes.fromhex(settings.JWT_PRIVATE_KEY_HEX))
+    # Hanya layak untuk uji/dev satu proses: token tidak berlaku lagi setelah restart dan
+    # tidak dikenali worker lain. Produksi WAJIB mengisi JWT_PRIVATE_KEY_HEX.
+    logger.warning("JWT_PRIVATE_KEY_HEX kosong — memakai kunci sementara (hanya untuk dev/uji).")
+    return Ed25519PrivateKey.generate()
+
+
+_private_key = _load_private_key()
+_public_key = _private_key.public_key()
+
 
 def hash_password(password: str) -> str:
     return ph.hash(password)
 
+
 def verify_password(password: str, hashed: str) -> bool:
     try:
         return ph.verify(hashed, password)
-    except Exception:
+    except (VerificationError, InvalidHashError):
         return False
 
-def create_jwt_token(data: dict, expires_delta: timedelta) -> str:
-    to_encode = data.copy()
-    expire = datetime.now(UTC) + expires_delta
-    to_encode.update({"exp": expire})
-    
-    # We will use cryptography for PyJWT EdDSA if installed. 
-    # For now, if we don't have it, we fallback to HS256 for testing,
-    # but the requirement says EdDSA. We should install cryptography!
-    # Let's assume we have it or will add it.
-    
-    # encoded = jwt.encode(to_encode, _private_key_pem, algorithm="EdDSA")
-    # return encoded
-    
-    # Mock return for now
-    encoded = jwt.encode(to_encode, settings.JWT_SECRET_KEY, algorithm="HS256")
-    return encoded
 
-def verify_jwt_token(token: str) -> dict:
-    return jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=["HS256"])
+def create_jwt_token(data: dict[str, Any], expires_delta: timedelta) -> str:
+    now = datetime.now(UTC)
+    claims = {**data, "iat": now, "exp": now + expires_delta, "aud": ACCESS_AUDIENCE, "iss": ACCESS_ISSUER}
+    return jwt.encode(claims, _private_key, algorithm=_ALGORITHM, headers={"kid": settings.JWT_KID})
+
+
+def verify_jwt_token(token: str) -> dict[str, Any]:
+    """Klaim token bila sah; selain itu `jwt.PyJWTError` (termasuk kid asing & algoritma lain)."""
+    if jwt.get_unverified_header(token).get("kid") != settings.JWT_KID:
+        raise jwt.InvalidTokenError("kid tidak dikenal")
+    claims: dict[str, Any] = jwt.decode(
+        token,
+        _public_key,
+        algorithms=[_ALGORITHM],
+        audience=ACCESS_AUDIENCE,
+        issuer=ACCESS_ISSUER,
+        options={"require": ["exp", "iat", "sub", "jti"]},
+    )
+    return claims

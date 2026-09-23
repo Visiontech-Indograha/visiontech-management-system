@@ -5,7 +5,9 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "Visiontech VMS"
     # Nilai asli hanya di api/.env (tidak masuk Git). Bawaan ini sengaja tidak bisa login.
     DATABASE_URL: str = "postgresql+asyncpg://vms_app:CHANGE_ME@localhost:5433/visiontech_db"
-    JWT_SECRET_KEY: str = "supersecretkey_change_me_in_production"
+    # Access token EdDSA (dok 08 §7): seed Ed25519 32 byte (hex). Nilai asli hanya di api/.env / KMS.
+    JWT_PRIVATE_KEY_HEX: str = ""
+    JWT_KID: str = "jwt-dev-1"
     
     # Discord #vms-alerts (dok 17). Kosong = peringatan hanya dicatat di log.
     DISCORD_WEBHOOK_ALERTS: str = ""

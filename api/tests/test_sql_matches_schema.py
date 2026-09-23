@@ -1,0 +1,74 @@
+"""
+V-01 · Setiap literal SQL di aplikasi cocok dengan skema sungguhan (tabel, kolom, enum, fungsi,
+tipe). Kueri di-PREPARE tanpa dieksekusi. Mencegah terulangnya publish SK → 500 karena kolom
+`valid_to` yang tidak ada (PLAN-VERIFIKASI-MODUL E1/E2).
+
+`KNOWN_BROKEN` hanya boleh MENYUSUT: uji gagal bila ada kueri rusak baru, dan juga bila kueri di
+daftar ini ternyata sudah benar (hapus barisnya).
+"""
+from __future__ import annotations
+
+import psycopg2
+import pytest
+
+from tests.conftest import _sync_conn, requires_db
+from tests.sql_inventory import collect
+
+pytestmark = requires_db
+
+# kunci → task yang memperbaikinya (PLAN-VERIFIKASI-MODUL-RINCI.md)
+KNOWN_BROKEN: dict[str, str] = {
+    # Jalur SK — kolom valid_to (skema: valid_period daterange)
+    "app/api/plan_transitions.py#49b7507ca3": "V-03",
+    "app/api/plan_changes.py#0d3f27e550": "V-03",
+    "app/api/plan_changes.py#5cf2e0770e": "V-03",
+    # Jalur SK — nilai enum & tipe
+    "app/api/plan_transitions.py#36bd87c887": "V-04",  # document_kind 'SK'
+    "app/api/plan_transitions.py#56fe77e81a": "V-04",  # document_status 'ACCEPTED'
+    "app/api/plan_changes.py#51f0126afa": "V-04",      # change_status 'APPLIED'
+    "app/api/plan_changes.py#d29e528d32": "V-04",      # daterange tanpa cast
+    # Kode mati dari sesi lain (tidak diimpor) — dihapus di V-14
+    "app/repositories/plan_repo.py#485dbe0fc8": "V-14",
+    "app/repositories/plan_repo.py#488a7fca2b": "V-14",
+    "app/repositories/plan_repo.py#c0d2cf2ac1": "V-14",
+    "app/repositories/plan_repo.py#cd963790c2": "V-14",
+    "app/services/pdf_service.py#fcf2d53873": "V-14",
+}
+
+
+def _prepare_errors() -> dict[str, str]:
+    literals, _ = collect()
+    errors: dict[str, str] = {}
+    conn = _sync_conn()
+    conn.autocommit = True
+    try:
+        cur = conn.cursor()
+        for lit in literals:
+            try:
+                cur.execute(f"PREPARE _cek AS {lit.as_prepared()}")
+                cur.execute("DEALLOCATE _cek")
+            except psycopg2.Error as e:
+                errors[lit.key] = f"{lit.path}:{lit.line}: {str(e).splitlines()[0]}"
+    finally:
+        conn.close()
+    return errors
+
+
+@pytest.fixture(scope="module")
+def errors() -> dict[str, str]:
+    return _prepare_errors()
+
+
+def test_inventory_is_not_empty():
+    literals, _ = collect()
+    assert len(literals) > 100
+
+
+def test_no_new_query_mismatches_schema(errors):
+    new = {k: v for k, v in errors.items() if k not in KNOWN_BROKEN}
+    assert not new, "Kueri tidak cocok skema:\n" + "\n".join(f"  {k}  {v}" for k, v in sorted(new.items()))
+
+
+def test_known_broken_list_only_shrinks(errors):
+    fixed = sorted(k for k in KNOWN_BROKEN if k not in errors)
+    assert not fixed, f"Sudah benar — hapus dari KNOWN_BROKEN: {fixed}"

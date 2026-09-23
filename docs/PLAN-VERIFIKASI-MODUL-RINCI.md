@@ -13,7 +13,7 @@ Centang hanya setelah commit di-push.
 
 ## W1 · Alat bukti permanen
 
-- [ ] **V-01 · Pemeriksa SQL-vs-skema menjadi uji resmi**
+- [x] **V-01 · Pemeriksa SQL-vs-skema menjadi uji resmi**
   - Tujuan: kueri yang tak cocok skema (E1/E2) langsung membuat CI merah.
   - Uji dulu: `tests/test_sql_matches_schema.py` — setiap literal SQL di `app/` di-`PREPARE`
     terhadap DB uji; potongan f-string dilewati **dan dihitung**; uji gagal bila inventaris kosong

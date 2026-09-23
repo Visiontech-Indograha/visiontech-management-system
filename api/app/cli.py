@@ -1,61 +1,68 @@
-import asyncio
 import argparse
-from app.db.session import make_engine
+import asyncio
+import getpass
+import sys
+
 from sqlalchemy import text
-from app.core.config import settings
+
+from app.core.permissions import RoleCode
 from app.core.security import hash_password
+from app.db.session import make_engine
 
-async def create_admin(email: str, password: str):
+ADMIN_PASSWORD_MIN_LENGTH = 12
+
+
+class CliError(Exception):
+    """Galat perintah CLI yang ditampilkan ke operator tanpa jejak tumpukan."""
+
+
+async def create_admin(email: str, password: str, organization_id: str | None = None) -> str:
+    """
+    Buat pengguna ber-peran ADMIN. Organisasi: `organization_id` bila diberikan; bila tidak,
+    satu-satunya organisasi yang ada (dibuat bila belum ada). Lebih dari satu → wajib dipilih.
+    Mengembalikan id pengguna baru.
+    """
+    if len(password) < ADMIN_PASSWORD_MIN_LENGTH:
+        raise CliError(f"Kata sandi admin minimal {ADMIN_PASSWORD_MIN_LENGTH} karakter.")
+
     engine = make_engine()
-    async with engine.begin() as conn:
-        hashed = hash_password(password)
-        
-        # 1. Ensure at least one organization exists (Default Org)
-        org_query = text("SELECT id FROM vms.organization LIMIT 1")
-        result = await conn.execute(org_query)
-        org_row = result.fetchone()
-        
-        if not org_row:
-            print("No organization found. Creating 'Default Organization'...")
-            insert_org = text("""
-                INSERT INTO vms.organization (name) VALUES ('Default Organization') RETURNING id
-            """)
-            result = await conn.execute(insert_org)
-            org_id = result.scalar()
-        else:
-            org_id = org_row[0]
-            
-        # 2. Checking if user exists
-        query = text("SELECT id FROM vms.app_user WHERE login = :login")
-        result = await conn.execute(query, {"login": email})
-        user_row = result.fetchone()
-        if user_row:
-            print(f"User {email} already exists!")
-            return
+    try:
+        async with engine.begin() as conn:
+            if organization_id:
+                if not (await conn.execute(
+                    text("SELECT 1 FROM vms.organization WHERE id = :id"), {"id": organization_id}
+                )).scalar():
+                    raise CliError(f"Organisasi {organization_id} tidak ditemukan.")
+                org_id = organization_id
+            else:
+                orgs = (await conn.execute(text("SELECT id FROM vms.organization"))).scalars().all()
+                if len(orgs) > 1:
+                    raise CliError("Ada lebih dari satu organisasi; pilih dengan --organization-id.")
+                org_id = orgs[0] if orgs else (await conn.execute(text(
+                    "INSERT INTO vms.organization (name) VALUES ('Default Organization') RETURNING id"
+                ))).scalar_one()
 
-        # 3. Insert user
-        insert_query = text("""
-            INSERT INTO vms.app_user (organization_id, login, password_hash, is_active)
-            VALUES (:org_id, :login, :password_hash, true)
-            RETURNING id
-        """)
-        result = await conn.execute(insert_query, {
-            "org_id": org_id,
-            "login": email,
-            "password_hash": hashed
-        })
-        user_id = result.scalar()
-        
-        # 4. Insert role
-        insert_role_query = text("""
-            INSERT INTO vms.user_role (user_id, role)
-            VALUES (:user_id, 'admin')
-        """)
-        await conn.execute(insert_role_query, {"user_id": user_id})
-        
-    print(f"Admin user {email} created successfully in organization {org_id}!")
-        
-    await engine.dispose()
+            if (await conn.execute(
+                text("SELECT 1 FROM vms.app_user WHERE login = :login"), {"login": email}
+            )).scalar():
+                raise CliError(f"Pengguna {email} sudah ada.")
+
+            user_id = (await conn.execute(
+                text("""
+                    INSERT INTO vms.app_user (organization_id, login, password_hash, is_active)
+                    VALUES (:org_id, :login, :password_hash, true)
+                    RETURNING id
+                """),
+                {"org_id": org_id, "login": email, "password_hash": hash_password(password)},
+            )).scalar_one()
+            await conn.execute(
+                text("INSERT INTO vms.user_role (user_id, role) VALUES (:user_id, :role)"),
+                {"user_id": user_id, "role": RoleCode.ADMIN.value},
+            )
+    finally:
+        await engine.dispose()
+    return str(user_id)
+
 
 async def seed():
     engine = make_engine()
@@ -97,17 +104,25 @@ def main():
     parser = argparse.ArgumentParser(description="VMS CLI")
     subparsers = parser.add_subparsers(dest="command")
     
-    admin_parser = subparsers.add_parser("create-admin", help="Create an admin user")
-    admin_parser.add_argument("email", help="Admin email")
-    admin_parser.add_argument("password", help="Admin password")
-    
+    admin_parser = subparsers.add_parser("create-admin", help="Buat pengguna ADMIN")
+    admin_parser.add_argument("email", help="Login admin (email)")
+    admin_parser.add_argument("--organization-id", help="Wajib bila ada lebih dari satu organisasi")
+
     subparsers.add_parser("seed", help="Seed database with initial data")
     subparsers.add_parser("cleanup-orphans", help="Cleanup orphan sessions and tokens")
-    
+
     args = parser.parse_args()
-    
+
     if args.command == "create-admin":
-        asyncio.run(create_admin(args.email, args.password))
+        # Kata sandi tidak diterima sebagai argumen: argumen tersimpan di riwayat shell & daftar proses.
+        password = getpass.getpass("Kata sandi admin: ")
+        if password != getpass.getpass("Ulangi kata sandi: "):
+            sys.exit("Kata sandi tidak sama.")
+        try:
+            user_id = asyncio.run(create_admin(args.email, password, args.organization_id))
+        except CliError as exc:
+            sys.exit(str(exc))
+        print(f"Admin {args.email} dibuat (id {user_id}).")
     elif args.command == "seed":
         asyncio.run(seed())
     elif args.command == "cleanup-orphans":

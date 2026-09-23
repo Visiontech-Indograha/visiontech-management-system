@@ -204,7 +204,7 @@ Format tiap task: **Masalah → Uji dulu → Perubahan → DoD**. Centang hanya 
   - Uji: cabut peran di DB → permintaan berikutnya dengan token lama ditolak 403; akun nonaktif → 401.
   - Perubahan: `get_current_user` memuat peran & `is_active` dari DB; token hanya identitas (`sub`, `org`, `jti`).
 
-- [ ] **T-05 · `create-admin` memakai `ADMIN`** (F-05)
+- [x] **T-05 · `create-admin` memakai `ADMIN`** (F-05)
   - Uji: jalankan fungsi `create_admin` ke organisasi uji → pengguna + peran `ADMIN` tersimpan; login berhasil.
 
 ### G3 · Kontrak HTTP

@@ -95,10 +95,17 @@ docs/           seluruh rencana dan standar
 
 - Uji aturan bisnis ditulis **sebelum** kodenya.
 - PostgreSQL sungguhan untuk uji, **bukan SQLite** — separuh aturan hidup di trigger dan RLS.
-- Matriks RBAC endpoint × 7 peran. Endpoint baru tanpa baris di matriks → CI gagal.
+- Matriks RBAC endpoint × 8 peran (`RoleCode`). Setiap rute otomatis masuk uji asap
+  `api/tests/test_route_smoke.py`; rute publik baru wajib didaftarkan eksplisit.
 - Daftar regresi wajib di `docs/07-RENCANA-PENGUJIAN.md` §3 harus tetap hijau.
+- **"Selesai" = uji dijalankan & hijau, hasilnya dilaporkan.** Berkas yang ada atau entri
+  CHANGELOG bukan bukti. Syarat lengkap (a–l): `.agy/rules/ai-testing.md` butir 4.
+- Uji API memakai `api/.venv` (Python 3.12, sama dengan Docker) terhadap PostgreSQL nyata;
+  endpoint tulis wajib diuji *tulis → baca ulang*. Perubahan skema hanya lewat Alembic +
+  `db/*.sql` disamakan di commit yang sama.
 - Perintah: `ruff check`, `mypy`, `pytest` · `npm run lint`, `npm run typecheck`,
-  `npm test` · `flutter analyze`, `flutter test`.
+  `npm test` · `flutter analyze`, `flutter test`. CI (`.github/workflows/ci.yml`) menjalankan
+  semuanya kecuali Flutter (repo `mobile/` punya workflow sendiri).
 
 ## Alur kerja per iterasi
 

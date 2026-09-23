@@ -112,6 +112,7 @@ def create_app() -> FastAPI:
     from app.api.sites import router as sites_router
     from app.api.attendance import router as attendance_router
     from app.api.attendance_cron import router as attendance_cron_router
+    from app.api.hse import router as hse_router
     
     app.include_router(auth_router)
     app.include_router(audit_router)
@@ -125,6 +126,7 @@ def create_app() -> FastAPI:
     app.include_router(sites_router)
     app.include_router(attendance_router)
     app.include_router(attendance_cron_router)
+    app.include_router(hse_router)
         
     return app
 

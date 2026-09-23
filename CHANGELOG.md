@@ -26,6 +26,15 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 - `api/app/services/pdf_service.py` — `PdfService`: render PDF SK + QR code base64 via WeasyPrint + Jinja2, render BAST.
 - `api/app/main.py` — Daftarkan `AppError` exception handler ke FastAPI app factory.
 
+#### A-2 · Refactor Auth ke lapisan router → controller → service → repository — 2026-09-23
+- `api/app/api/auth.py` kini tipis: hanya jalur, skema, dependency, dan cookie refresh. Tidak ada SQL.
+- `api/app/controllers/auth_controller.py` + `controllers/base.py::unit_of_work` — controller menjadi batas transaksi (dok 12 §2): commit bila sukses, rollback bila gagal; `AppError(persist=True)` tetap di-commit.
+- `api/app/services/auth_service.py` **ditulis ulang** — versi sebelumnya (entri di atas) tidak cocok dengan skema (kolom `email`/`deleted_at` tidak ada, signature `issue_session`/`rotate_session`/`revoke_sessions` salah, verifikasi bcrypt padahal hash argon2) dan belum pernah dipakai router. Logika dipindah dari router lama; kode galat dan bentuk respons tetap sama.
+- `api/app/repositories/user_repo.py` ditulis ulang + `repositories/session_repo.py` baru — membungkus `issue_session`, `rotate_session`, `revoke_sessions`, `login_is_locked`, `login_attempt` sesuai `db/04`.
+- `AppError` mendapat parameter `persist`.
+- `api/ruff.toml` — konfigurasi ruff proyek (Depends FastAPI sebagai nilai default diizinkan).
+- Uji integrasi PostgreSQL nyata `api/tests/test_auth_flow.py` (12 kasus): login, gagal login tercatat, penguncian 5×, akun nonaktif, rotasi refresh, deteksi pemakaian ulang mencabut seluruh rantai, logout, `/auth/me`, ganti kata sandi.
+
 #### Sistem Desain UI (`design`) — 2026-09-23
 - Dokumen sistem desain lengkap `docs/18-SISTEM-DESAIN-UI.md` — warna, tipografi, spasi, radius, elevasi, komponen, ikon, animasi, dan daftar larangan.
 - Token desain tunggal `docs/design/tokens.json` — sumber kebenaran untuk semua nilai visual (brand, neutral, status, font, spasi, radius, gerak).
@@ -99,6 +108,12 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 - **`plan_transitions.py`**: `issued_by` di tabel `plan_document` sekarang diisi `employee_id` (bukan `user_id`) sesuai FK constraint skema database.
 - **`auth.py`**: User yang tidak aktif (`is_active = false`) tidak dapat memperbarui token meskipun refresh token masih valid.
 - **`deps.py`**: Tambah try/except + Discord alert di sekitar `SET LOCAL` RLS injection; gagal tidak lagi memberikan akses tanpa konteks.
+- **Auth tidak pernah menyimpan apa pun** (2026-09-23, A-2): sesi DB dari `get_db` ditutup tanpa commit, sehingga sesi login, catatan percobaan login, pencabutan saat logout, dan pencabutan rantai saat refresh token dipakai ulang semuanya di-rollback — refresh selalu gagal dan penguncian login tidak pernah aktif. Kini di-commit oleh `AuthController`.
+- **Ganti kata sandi** (A-2): sebelumnya menerbitkan JWT sebagai "refresh token" yang tidak dikenal `rotate_session` (refresh berikutnya gagal) dan tidak mencabut sesi lama. Kini semua sesi lama dicabut dan sesi baru diterbitkan lewat `issue_session`.
+- **Refresh oleh akun nonaktif** (A-2): selain ditolak 403, seluruh sesi akun itu kini dicabut (DoD fase 1).
+- **`core/alerts.py`** (A-2): mengimpor `send_to_discord` yang tidak ada → jalur akun terkunci dan pemakaian ulang token berakhir 500. Kini memakai `send_discord_alert` + setelan baru `DISCORD_WEBHOOK_ALERTS` (#vms-alerts, dok 17; ditambahkan ke `.env.example`).
+- **IP klien tidak sah** (A-2): nilai `request.client.host` yang bukan alamat IP (mis. di belakang proxy tertentu) membuat INSERT `inet` gagal 500; kini disimpan NULL.
+- Pesan `NO_TOKEN` dan `/auth/logout` kini Bahasa Indonesia.
 - **`db/session.py`** (2026-09-23): Koneksi aplikasi kini menyetel `search_path = vms, public` lewat `make_engine()` (dipakai juga `cli.py` dan fixture uji). Tanpa ini fungsi skema yang menyebut tabel tanpa awalan (`login_is_locked`, `issue_session`, `rotate_session`, trigger) gagal "relation does not exist" → login selalu 500. Stub `get_db_session_for_user` yang kosong dihapus. Uji: `api/tests/test_db_session.py`. Keputusan dicatat di dok 10 Bagian C.
 - **`vms.new_id()`** (2026-09-23, migrasi `0002_fix_new_id`): Fungsi kunci utama di DB dev rusak (`integer & bit` tanpa operator) sehingga **setiap INSERT ke tabel ber-id default gagal** — seluruh tabel `vms` masih kosong. Diganti UUIDv7 murni SQL yang benar (versi 7, varian RFC 4122, 48 bit milidetik). `db/01_schema.sql` disamakan. Keputusan dicatat di dok 10 Bagian C. Uji: `api/tests/test_new_id.py`; fixture PostgreSQL nyata di `api/tests/conftest.py`.
 - **`core/errors.py`** (2026-09-23): Respons `AppError` kini memakai bentuk baku dokumen 05 §2 — `{"error": {"code", "message", "details"}}` — sama dengan handler lain dan yang dibaca `web/src/lib/api.ts`. Sebelumnya `{code, message}` di tingkat atas sehingga web tidak bisa membaca pesan galat. `AppError` mendapat parameter `details`; `status` menjadi keyword-only. Uji: `api/tests/test_errors.py`.

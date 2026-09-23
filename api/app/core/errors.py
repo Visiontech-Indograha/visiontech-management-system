@@ -15,7 +15,13 @@ from fastapi.responses import JSONResponse
 
 
 class AppError(Exception):
-    """Error bisnis yang bisa disampaikan ke klien."""
+    """
+    Error bisnis yang bisa disampaikan ke klien.
+
+    `persist=True`: permintaan ditolak, tetapi perubahan data yang sudah dibuat dalam
+    transaksinya tetap disimpan — mis. catatan percobaan login gagal (dasar penguncian)
+    atau pencabutan rantai sesi saat refresh token dipakai ulang.
+    """
 
     def __init__(
         self,
@@ -24,11 +30,13 @@ class AppError(Exception):
         *,
         status: int = 400,
         details: dict[str, Any] | None = None,
+        persist: bool = False,
     ) -> None:
         self.code = code
         self.message = message
         self.status = status
         self.details = details or {}
+        self.persist = persist
         super().__init__(message)
 
 

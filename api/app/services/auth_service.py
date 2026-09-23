@@ -1,116 +1,155 @@
 """
 app/services/auth_service.py
-Aturan bisnis autentikasi — login, refresh, logout.
-Router hanya memanggil ini. Tidak ada SQL di router.
+Aturan bisnis autentikasi: login, rotasi refresh token, logout, ganti kata sandi.
+Tidak menulis SQL (lewat repository) dan tidak tahu HTTP (cookie diurus router).
 """
 from __future__ import annotations
 
-import hashlib
-from uuid import UUID
+from dataclasses import dataclass
+from datetime import timedelta
+from typing import Any
 
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.core.errors import AppError, ForbiddenError, NotFoundError
-from app.core.permissions import get_role_permissions
-from app.core.security import verify_jwt_token, create_jwt_token
+from app.core.alerts import send_security_alert
+from app.core.errors import AppError, NotFoundError
+from app.core.security import create_jwt_token, hash_password, verify_password
+from app.repositories.session_repo import SessionRepo
 from app.repositories.user_repo import UserRepo
+
+ACCESS_TOKEN_TTL = timedelta(minutes=15)
+DEFAULT_ROLE = "field"
+
+
+@dataclass(frozen=True)
+class ClientInfo:
+    ip: str | None
+    user_agent: str
+    device_label: str = "Web Login"
+    fingerprint: str | None = "fingerprint"
+
+
+@dataclass(frozen=True)
+class IssuedTokens:
+    access_token: str
+    refresh_token: str
+
+
+@dataclass(frozen=True)
+class Profile:
+    user_id: str
+    email: str
+    role: str
+    permissions: list[str]
+
+
+def _inactive() -> AppError:
+    return AppError("INACTIVE", "Akun dinonaktifkan", status=403)
+
+
+def _revoked() -> AppError:
+    return AppError("SESSION_REVOKED", "Sesi tidak valid atau telah dicabut", status=401, persist=True)
 
 
 class AuthService:
-    def __init__(self, db: AsyncSession) -> None:
-        self.repo = UserRepo(db)
+    def __init__(self, users: UserRepo, sessions: SessionRepo) -> None:
+        self.users = users
+        self.sessions = sessions
 
-    async def login(
-        self,
-        email: str,
-        password: str,
-        ip: str,
-        user_agent: str,
-    ) -> dict:
-        """
-        Login karyawan:
-        1. Cek lockout — kalau terkunci, lempar error (tidak bocorkan alasan).
-        2. Verifikasi email + password via DB.
-        3. Cek is_active — akun nonaktif tidak bisa login.
-        4. Buat sesi via vms.issue_session.
-        5. Kembalikan access_token + refresh_token.
-        """
-        if await self.repo.login_is_locked(email):
-            raise AppError(
-                "ACCOUNT_LOCKED",
-                "Akun terkunci sementara karena terlalu banyak percobaan gagal. "
-                "Coba lagi dalam beberapa menit.",
-                status=429,
+    async def login(self, login: str, password: str, client: ClientInfo) -> IssuedTokens:
+        if await self.sessions.login_is_locked(login):
+            await send_security_alert(
+                "Lonjakan Kegagalan Login", f"Sebuah akun terkunci sementara dari IP {client.ip}."
             )
+            raise AppError("LOCKED", "Terlalu banyak kegagalan login. Coba lagi nanti.", status=403)
 
-        user = await self.repo.get_user_by_email(email)
-        if not user:
-            raise AppError("INVALID_CREDENTIALS", "Email atau kata sandi salah.", status=401)
-
-        # Verifikasi password melalui DB function pgcrypto
-        valid = await self.repo.scalar(
-            "SELECT crypt(:pwd, password_hash) = password_hash FROM vms.app_user WHERE id = :id",
-            {"pwd": password, "id": user.id},
-        ) if hasattr(self.repo, 'scalar') else False
-
-        # Fallback: python-bcrypt bila DB function tidak tersedia
-        if not valid:
-            try:
-                import bcrypt
-                valid = bcrypt.checkpw(password.encode(), user.password_hash.encode())
-            except Exception:
-                valid = False
-
-        if not valid:
-            raise AppError("INVALID_CREDENTIALS", "Email atau kata sandi salah.", status=401)
+        user = await self.users.find_by_login(login)
+        if not user or not user.password_hash or not verify_password(password, user.password_hash):
+            await self.sessions.record_login_attempt(login, client.ip, False, "Invalid credentials")
+            raise AppError("INVALID_CREDENTIALS", "Email atau kata sandi salah", status=400, persist=True)
 
         if not user.is_active:
-            raise ForbiddenError("Akun Anda telah dinonaktifkan. Hubungi HR untuk informasi lebih lanjut.")
+            raise _inactive()
 
-        session = await self.repo.issue_session(user.id, ip, user_agent, user.organization_id)
-        if not session:
-            raise AppError("SESSION_ERROR", "Gagal membuat sesi. Coba beberapa saat lagi.", status=500)
+        await self.sessions.record_login_attempt(login, client.ip, True)
+        return await self._start_session(user, client)
 
-        return {
-            "access_token": session.access_token,
-            "refresh_token": session.refresh_token,
-            "token_type": "bearer",
-        }
+    async def refresh(self, raw_refresh_token: str | None, client: ClientInfo) -> IssuedTokens:
+        if not raw_refresh_token:
+            raise AppError("NO_TOKEN", "Sesi tidak ditemukan. Silakan masuk kembali.", status=401)
 
-    async def refresh(self, raw_refresh_token: str) -> dict:
-        """
-        Rotasi refresh token via vms.rotate_session.
-        Token lama langsung dicabut setelah rotasi.
-        """
-        token_hash = hashlib.sha256(raw_refresh_token.encode()).hexdigest()
-        new_tokens = await self.repo.rotate_session(token_hash)
-        if not new_tokens:
-            raise AppError(
-                "INVALID_REFRESH_TOKEN",
-                "Token tidak valid atau sudah kedaluwarsa. Silakan login ulang.",
-                status=401,
+        rotated = await self.sessions.rotate(raw_refresh_token, client.ip, client.user_agent)
+        if rotated.reused:
+            await send_security_alert(
+                "Pencurian Sesi (Reuse Detected)",
+                f"Refresh token usang dipakai oleh IP {client.ip}. Seluruh sesi perangkat dicabut.",
             )
-        return {
-            "access_token": new_tokens.access_token,
-            "refresh_token": new_tokens.refresh_token,
-            "token_type": "bearer",
-        }
+            raise _revoked()
+        if not rotated.session_id:
+            raise AppError("INVALID_TOKEN", "Token tidak valid", status=401)
 
-    async def logout(self, session_id: UUID) -> None:
-        """Cabut sesi aktif. Idempotent — tidak error bila session sudah tidak ada."""
-        await self.repo.revoke_session(session_id)
+        user = await self.users.find_by_id(rotated.user_id)
+        if not user or not user.is_active:
+            # Akun dinonaktifkan: seluruh sesinya berakhir pada permintaan ini juga (DoD fase 1).
+            await self.sessions.revoke_all_for_user(rotated.user_id, "Akun dinonaktifkan")
+            raise AppError("INACTIVE", "Akun dinonaktifkan", status=403, persist=True)
 
-    async def get_me(self, user_id: UUID) -> dict:
-        user = await self.repo.get_user_by_id(user_id)
+        return IssuedTokens(
+            access_token=self._access_token(user, rotated.session_id),
+            refresh_token=rotated.refresh_token,
+        )
+
+    async def logout(self, raw_refresh_token: str | None) -> None:
+        if raw_refresh_token:
+            await self.sessions.revoke_by_refresh_token(raw_refresh_token, "User logged out")
+
+    async def me(self, user_id: str, permissions: list[str]) -> Profile:
+        user = await self.users.find_by_id(user_id)
         if not user:
             raise NotFoundError("Pengguna")
-        permissions = get_role_permissions(user.role)
-        return {
-            "user_id": str(user.id),
-            "email": user.email,
-            "full_name": user.full_name,
-            "role": user.role,
-            "organization_id": str(user.organization_id),
-            "permissions": permissions,
-            "must_change_password": getattr(user, "must_change_password", False),
-        }
+        return Profile(
+            user_id=user_id,
+            email=user.login,
+            role=user.role or DEFAULT_ROLE,
+            permissions=permissions,
+        )
+
+    async def change_password(
+        self, user_id: str, current_password: str, new_password: str, client: ClientInfo
+    ) -> IssuedTokens:
+        user = await self.users.find_by_id(user_id)
+        if not user:
+            raise NotFoundError("Pengguna")
+        if not user.password_hash or not verify_password(current_password, user.password_hash):
+            raise AppError(
+                "VALIDATION_ERROR",
+                "Data yang dikirim tidak valid.",
+                status=422,
+                details={"fields": {"current_password": "Password saat ini salah."}},
+            )
+
+        await self.users.update_password_hash(user_id, hash_password(new_password))
+        # Kata sandi berganti → semua perangkat lain keluar; perangkat ini mendapat sesi baru.
+        await self.sessions.revoke_all_for_user(user_id, "Kata sandi diganti")
+        return await self._start_session(user, client)
+
+    async def _start_session(self, user: Any, client: ClientInfo) -> IssuedTokens:
+        session = await self.sessions.issue(
+            user.organization_id, user.id, client.device_label, client.fingerprint,
+            client.ip, client.user_agent,
+        )
+        return IssuedTokens(
+            access_token=self._access_token(user, session.session_id),
+            refresh_token=session.refresh_token,
+        )
+
+    @staticmethod
+    def _access_token(user: Any, session_id: Any) -> str:
+        return create_jwt_token(
+            {
+                "sub": str(user.id),
+                "org": str(user.organization_id),
+                "email": user.login,
+                "role": user.role or DEFAULT_ROLE,
+                "jti": str(session_id),
+            },
+            ACCESS_TOKEN_TTL,
+        )

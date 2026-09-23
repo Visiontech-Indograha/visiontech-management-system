@@ -103,14 +103,20 @@ docs/           seluruh rencana dan standar
 
 ## Alur kerja per iterasi
 
-1. Ambil task berikutnya dari `docs/06-RENCANA-FASE.md`.
-2. Baca standar yang relevan.
-3. Tulis uji lebih dulu.
-4. Kerjakan.
-5. Lint + tipe + uji hijau.
-6. Regresi wajib masih hijau.
-7. Ambiguitas yang diputuskan sendiri → catat di `docs/10-...md` Bagian C.
-8. Tandai selesai hanya bila DoD fase terpenuhi.
+**ATURAN WAJIB GIT FLOW (Untuk AI & Developer):**
+- **DILARANG** melakukan commit atau push langsung ke branch `prod` atau `main`.
+- **SELALU** kerjakan tugas di branch `development` atau branch fitur (misal: `feature/nama-fitur`).
+- Penggabungan ke `prod` hanya boleh dilakukan melalui proses *Pull Request* yang ditinjau.
+
+1. Pastikan Anda berada di branch `development` atau branch fitur, bukan `prod`.
+2. Ambil task berikutnya dari `docs/06-RENCANA-FASE.md`.
+3. Baca standar yang relevan.
+4. Tulis uji lebih dulu.
+5. Kerjakan.
+6. Lint + tipe + uji hijau.
+7. Regresi wajib masih hijau.
+8. Ambiguitas yang diputuskan sendiri → catat di `docs/10-...md` Bagian C.
+9. Tandai selesai hanya bila DoD fase terpenuhi.
 
 Satu task per iterasi.
 

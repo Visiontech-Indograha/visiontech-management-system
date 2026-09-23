@@ -22,16 +22,23 @@ class Permission(str, Enum):
     
     # Audit permissions
     VIEW_AUDIT = "view:audit"
+    
+    # Document permissions
+    UPLOAD_DOCUMENTS = "upload:documents"
+    VIEW_DOCUMENTS = "view:documents"
 
 # Mapping Role -> Permissions
 ROLE_PERMISSIONS = {
     "admin": [p.value for p in Permission],
     "hr": [
         Permission.VIEW_USERS,
+        Permission.MANAGE_USERS,
         Permission.VERIFY_DOCUMENTS,
+        Permission.VIEW_DOCUMENTS,
     ],
     "pm": [
         Permission.VIEW_USERS,
+        Permission.VIEW_DOCUMENTS,
         Permission.CREATE_PLAN,
         Permission.PUBLISH_PLAN,
         Permission.VIEW_TIMELINE,
@@ -48,6 +55,8 @@ ROLE_PERMISSIONS = {
     ],
     "field": [
         Permission.VIEW_USERS,
+        Permission.UPLOAD_DOCUMENTS,
+        Permission.VIEW_DOCUMENTS,
     ]
 }
 

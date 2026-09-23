@@ -103,9 +103,16 @@ def create_app() -> FastAPI:
     from app.api.auth import router as auth_router
     from app.api.audit import router as audit_router
     from app.api.files import router as files_router
+    from app.api.employees import router as employees_router
+    from app.api.documents import router as documents_router
+    from app.api.expiry import router as expiry_router
+    
     app.include_router(auth_router)
     app.include_router(audit_router)
     app.include_router(files_router)
+    app.include_router(employees_router)
+    app.include_router(documents_router)
+    app.include_router(expiry_router)
         
     return app
 

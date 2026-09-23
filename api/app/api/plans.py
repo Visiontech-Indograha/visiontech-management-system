@@ -75,7 +75,7 @@ async def create_plan(
                 INSERT INTO vms.work_plan_member (
                     work_plan_id, employee_id, role_in_plan, valid_period
                 ) VALUES (
-                    :plan, :emp, 'LEADER', daterange(:start, :end, '[]')
+                    :plan, :emp, 'LEADER', daterange(CAST(:start AS date), NULL, '[)')  -- terbuka = aktif (is_plan_member)
                 )
             """)
             await db.execute(add_member, {
@@ -146,7 +146,7 @@ async def update_plan(
                 INSERT INTO vms.work_plan_member (
                     work_plan_id, employee_id, role_in_plan, valid_period
                 ) VALUES (
-                    :plan, :emp, 'LEADER', daterange(:start, :end, '[]')
+                    :plan, :emp, 'LEADER', daterange(CAST(:start AS date), NULL, '[)')  -- terbuka = aktif (is_plan_member)
                 )
             """)
             start = data.period_start or row.period_start

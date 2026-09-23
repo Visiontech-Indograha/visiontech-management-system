@@ -23,7 +23,8 @@ def _row_version(plan_id: str) -> int:
     return sync_query("SELECT row_version FROM vms.work_plan WHERE id = %s", (plan_id,))[0][0]
 
 
-def create_draft_plan(client, world: World, start_offset_days: int = 0, length_days: int = 2) -> tuple[str, list[str]]:
+def create_draft_plan(client, world: World, start_offset_days: int = 0, length_days: int = 2,
+                      leader: str = "leader") -> tuple[str, list[str]]:
     """SK draft lengkap: periode, satu hari kerja per tanggal, masing-masing satu tugas. → (plan_id, day_ids)."""
     start = jakarta_now().date() + timedelta(days=start_offset_days)
     end = start + timedelta(days=length_days - 1)
@@ -31,7 +32,7 @@ def create_draft_plan(client, world: World, start_offset_days: int = 0, length_d
     plan = client.post("/plans", headers=pm, json={
         "title": "Instalasi CCTV gudang", "unit_id": world.unit_id, "site_id": world.site_id,
         "location_text": "Gudang uji", "period_start": start.isoformat(), "period_end": end.isoformat(),
-        "pm_employee_id": world.employees["pm"], "leader_employee_id": world.employees["leader"]})
+        "pm_employee_id": world.employees["pm"], "leader_employee_id": world.employees[leader]})
     assert plan.status_code == 201, plan.text
     plan_id = plan.json()["id"]
     day_ids = []

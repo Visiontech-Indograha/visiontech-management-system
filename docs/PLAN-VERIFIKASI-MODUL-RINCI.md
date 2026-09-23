@@ -52,7 +52,7 @@ Centang hanya setelah commit di-push.
     alur SK sampai ACCEPTED hijau.
   - Acuan: `db/01` baris 36–39, `domain.js:319–327`.
 
-- [ ] **V-05 · Anggota tim SK draft**
+- [x] **V-05 · Anggota tim SK draft**
   - Tujuan: SK dapat diberi ketua & anggota sebelum terbit (E3).
   - Endpoint: `PUT /plans/{id}/members` (PM unit, hanya DRAFT, `row_version`) — daftar lengkap
     `{leader_employee_id, member_employee_ids[]}`; menulis `work_plan_member` dengan

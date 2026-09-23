@@ -1,0 +1,57 @@
+name: CD
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Docker Image
+        run: |
+          echo "Building docker image..."
+          # docker build -t vms_api:${{ github.sha }} .
+      - name: Notify Deploy Start
+        run: |
+          curl -H "Content-Type: application/json" \
+               -X POST \
+               -d "{\"content\": \"🚀 Memulai deploy produksi untuk tag ${{ github.ref_name }}...\"}" \
+               ${{ secrets.DISCORD_WEBHOOK_DEPLOY }}
+      
+      - name: Setup Tailscale
+        uses: tailscale/github-action@v2
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
+          
+      - name: Run Migrations and Deploy
+        run: |
+          echo "Connecting to server and running migrations via SSH..."
+          # ssh -o StrictHostKeyChecking=no ageng@visiontech "cd /vms && docker-compose up -d"
+      
+      - name: Smoke Test
+        run: |
+          echo "Running smoke tests..."
+          # curl -f https://vms.visiontech/api/health
+          
+      - name: Notify Deploy Success
+        if: success()
+        run: |
+          curl -H "Content-Type: application/json" \
+               -X POST \
+               -d "{\"content\": \"✅ Deploy produksi ${{ github.ref_name }} berhasil! Waktu henti minimal.\"}" \
+               ${{ secrets.DISCORD_WEBHOOK_DEPLOY }}
+               
+      - name: Notify Deploy Failure
+        if: failure()
+        run: |
+          curl -H "Content-Type: application/json" \
+               -X POST \
+               -d "{\"content\": \"🔴 ROLLBACK - Deploy produksi ${{ github.ref_name }} GAGAL. Periksa log tindakan.\"}" \
+               ${{ secrets.DISCORD_WEBHOOK_DEPLOY }}

@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [ prod, development, "feature/*" ]
+  pull_request:
+    branches: [ prod, development ]
+
+jobs:
+  test-api:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run Ruff, Mypy, Pytest
+        run: |
+          echo "Running API checks..."
+          # Implement ruff, mypy, pytest
+
+  test-web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Run Web Checks
+        run: |
+          echo "Running web checks..."
+          # Implement eslint, tsc, vitest, build bundle check
+
+  test-mobile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Mobile Checks
+        run: |
+          echo "Running mobile checks..."
+          # Implement flutter analyze, flutter test
+
+  notify-failure:
+    needs: [test-api, test-web, test-mobile]
+    if: failure()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Failure Notification to Discord
+        run: |
+          curl -H "Content-Type: application/json" \
+               -X POST \
+               -d "{\"content\": \"❌ CI gagal pada commit ${{ github.sha }} \nLihat: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" \
+               ${{ secrets.DISCORD_WEBHOOK_CI }}

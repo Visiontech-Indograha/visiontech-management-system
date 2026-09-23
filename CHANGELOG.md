@@ -99,6 +99,7 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 - **`plan_transitions.py`**: `issued_by` di tabel `plan_document` sekarang diisi `employee_id` (bukan `user_id`) sesuai FK constraint skema database.
 - **`auth.py`**: User yang tidak aktif (`is_active = false`) tidak dapat memperbarui token meskipun refresh token masih valid.
 - **`deps.py`**: Tambah try/except + Discord alert di sekitar `SET LOCAL` RLS injection; gagal tidak lagi memberikan akses tanpa konteks.
+- **`vms.new_id()`** (2026-09-23, migrasi `0002_fix_new_id`): Fungsi kunci utama di DB dev rusak (`integer & bit` tanpa operator) sehingga **setiap INSERT ke tabel ber-id default gagal** — seluruh tabel `vms` masih kosong. Diganti UUIDv7 murni SQL yang benar (versi 7, varian RFC 4122, 48 bit milidetik). `db/01_schema.sql` disamakan. Keputusan dicatat di dok 10 Bagian C. Uji: `api/tests/test_new_id.py`; fixture PostgreSQL nyata di `api/tests/conftest.py`.
 - **`core/errors.py`** (2026-09-23): Respons `AppError` kini memakai bentuk baku dokumen 05 §2 — `{"error": {"code", "message", "details"}}` — sama dengan handler lain dan yang dibaca `web/src/lib/api.ts`. Sebelumnya `{code, message}` di tingkat atas sehingga web tidak bisa membaca pesan galat. `AppError` mendapat parameter `details`; `status` menjadi keyword-only. Uji: `api/tests/test_errors.py`.
 
 ### 🏗️ Infrastruktur & Aturan AI

@@ -108,6 +108,10 @@ def create_app() -> FastAPI:
     from app.api.expiry import router as expiry_router
     from app.api.plans import router as plans_router
     from app.api.plan_transitions import router as transitions_router
+    from app.api.plan_changes import router as changes_router
+    from app.api.sites import router as sites_router
+    from app.api.attendance import router as attendance_router
+    from app.api.attendance_cron import router as attendance_cron_router
     
     app.include_router(auth_router)
     app.include_router(audit_router)
@@ -117,6 +121,10 @@ def create_app() -> FastAPI:
     app.include_router(expiry_router)
     app.include_router(plans_router)
     app.include_router(transitions_router)
+    app.include_router(changes_router)
+    app.include_router(sites_router)
+    app.include_router(attendance_router)
+    app.include_router(attendance_cron_router)
         
     return app
 

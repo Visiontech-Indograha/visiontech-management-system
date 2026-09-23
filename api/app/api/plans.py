@@ -99,7 +99,7 @@ async def update_plan(
     row = (await db.execute(check, {"id": plan_id, "org": current_user.organization_id})).fetchone()
     
     if not row:
-        raise HTTPException(status_code=404, detail="Plan not found")
+        raise HTTPException(status_code=404, detail="SK tidak ditemukan.")
         
     if row.status != 'DRAFT':
         raise HTTPException(status_code=400, detail={"code": "NOT_DRAFT", "message": "Hanya SK berstatus DRAFT yang dapat diubah."})

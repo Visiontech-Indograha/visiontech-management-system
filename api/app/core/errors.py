@@ -8,10 +8,16 @@ dengan message Bahasa Indonesia untuk pengguna.
 """
 from __future__ import annotations
 
+import logging
+from http import HTTPStatus
 from typing import Any
 
-from fastapi import Request
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
+logger = logging.getLogger(__name__)
 
 
 class AppError(Exception):
@@ -74,8 +80,73 @@ class StorageError(AppError):
 
 
 # ── FastAPI exception handler ──────────────────────────────────────────────────
-async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
+def _error_response(status: int, code: str, message: str, details: dict[str, Any] | None = None) -> JSONResponse:
     return JSONResponse(
-        status_code=exc.status,
-        content={"error": {"code": exc.code, "message": exc.message, "details": exc.details}},
+        status_code=status,
+        content={"error": {"code": code, "message": message, "details": details or {}}},
     )
+
+
+async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
+    return _error_response(exc.status, exc.code, exc.message, exc.details)
+
+
+# Kode & pesan bawaan per status HTTP (dok 05 §2). Pesan untuk orang lapangan, bukan programmer.
+_STATUS_DEFAULTS: dict[int, tuple[str, str]] = {
+    400: ("BAD_REQUEST", "Permintaan tidak dapat diproses."),
+    401: ("UNAUTHENTICATED", "Sesi berakhir. Silakan masuk kembali."),
+    403: ("FORBIDDEN", "Anda tidak memiliki akses untuk tindakan ini."),
+    404: ("NOT_FOUND", "Data atau halaman tidak ditemukan."),
+    405: ("METHOD_NOT_ALLOWED", "Metode tidak didukung untuk alamat ini."),
+    409: ("CONFLICT", "Data ini baru saja diubah. Muat ulang lalu coba lagi."),
+    413: ("PAYLOAD_TOO_LARGE", "Ukuran data terlalu besar."),
+    422: ("VALIDATION_ERROR", "Data yang dikirim tidak valid."),
+    429: ("TOO_MANY_REQUESTS", "Terlalu banyak permintaan. Coba lagi beberapa saat lagi."),
+}
+_INTERNAL = ("INTERNAL_ERROR", "Terjadi kesalahan internal pada server.")
+_DB_ERROR_MESSAGE = "Data tidak dapat disimpan karena bertentangan dengan data lain. Periksa isian lalu coba lagi."
+
+
+def _defaults_for(status: int) -> tuple[str, str]:
+    if status >= 500:
+        return _INTERNAL
+    return _STATUS_DEFAULTS.get(status, ("BAD_REQUEST", _STATUS_DEFAULTS[400][1]))
+
+
+async def http_error_handler(request: Request, exc: StarletteHTTPException) -> JSONResponse:
+    code, message = _defaults_for(exc.status_code)
+    details: dict[str, Any] = {}
+    detail = exc.detail
+
+    if exc.status_code >= 500:
+        # Isi galat internal tidak pernah dikirim ke klien; detailnya hanya di log.
+        logger.error("HTTP %s: %s", exc.status_code, detail)
+    elif isinstance(detail, dict):
+        code = str(detail.get("code") or code)
+        details = dict(detail.get("details") or {})
+        if code == "DB_ERROR":
+            logger.error("DB_ERROR: %s", detail.get("message"))
+            message = _DB_ERROR_MESSAGE
+        else:
+            message = str(detail.get("message") or message)
+    elif isinstance(detail, str) and detail and detail != HTTPStatus(exc.status_code).phrase:
+        message = detail  # pesan yang ditulis aplikasi (Bahasa Indonesia)
+
+    return _error_response(exc.status_code, code, message, details)
+
+
+async def validation_error_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+    fields = {".".join(str(part) for part in err["loc"][1:]): err["msg"] for err in exc.errors()}
+    return _error_response(422, "VALIDATION_ERROR", _STATUS_DEFAULTS[422][1], {"fields": fields})
+
+
+async def unhandled_error_handler(request: Request, exc: Exception) -> JSONResponse:
+    logger.error("Unhandled error: %s", exc, exc_info=exc)
+    return _error_response(500, *_INTERNAL)
+
+
+def register_error_handlers(app: FastAPI) -> None:
+    app.add_exception_handler(AppError, app_error_handler)  # type: ignore[arg-type]
+    app.add_exception_handler(StarletteHTTPException, http_error_handler)  # type: ignore[arg-type]
+    app.add_exception_handler(RequestValidationError, validation_error_handler)  # type: ignore[arg-type]
+    app.add_exception_handler(Exception, unhandled_error_handler)

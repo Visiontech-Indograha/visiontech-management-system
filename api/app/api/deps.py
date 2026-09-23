@@ -19,7 +19,7 @@ from app.db.transaction import unit_of_work
 from app.repositories.user_repo import UserRepo
 
 logger = logging.getLogger(__name__)
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)  # token hilang → 401 UNAUTHENTICATED kita sendiri
 
 # "function": commit/rollback terjadi SEBELUM respons dikirim, jadi commit yang gagal
 # sampai ke klien sebagai 500 — bukan 200 untuk data yang ternyata tidak tersimpan.
@@ -47,7 +47,7 @@ def _unauthenticated() -> AppError:
 
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
     db: AsyncSession = Depends(get_db, scope=DB_SCOPE),
 ) -> CurrentUser:
     """
@@ -55,6 +55,8 @@ async def get_current_user(
     basis data pada setiap permintaan (dok 05 §4): mencabut peran atau menonaktifkan akun
     berlaku pada permintaan berikutnya.
     """
+    if credentials is None:
+        raise _unauthenticated()
     try:
         payload = verify_jwt_token(credentials.credentials)
     except jwt.PyJWTError:

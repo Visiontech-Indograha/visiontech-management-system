@@ -209,7 +209,7 @@ Format tiap task: **Masalah → Uji dulu → Perubahan → DoD**. Centang hanya 
 
 ### G3 · Kontrak HTTP
 
-- [ ] **T-06 · Galat baku & Bahasa Indonesia** (F-06)
+- [x] **T-06 · Galat baku & Bahasa Indonesia** (F-06)
   - Uji: 401/403/404/405/500 menghasilkan kode yang benar (`UNAUTHENTICATED`/`FORBIDDEN`/`NOT_FOUND`/`METHOD_NOT_ALLOWED`/`INTERNAL_ERROR`) dan pesan Indonesia; tidak ada jejak tumpukan.
 - [ ] **T-07 · Awalan `/api/v1`** (F-07)
   - Uji: `/api/v1/auth/login` 200; `/auth/login` 404; `/health` & `/ready` tetap di akar (Caddy).

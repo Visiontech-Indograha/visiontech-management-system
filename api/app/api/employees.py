@@ -213,3 +213,24 @@ async def offboard_employee(
     await db.execute(off_user, {"emp_id": emp_id})
     
     return {"message": "Karyawan berhasil dioffboard."}
+
+@router.get("/{emp_id}/conflicts")
+async def check_conflicts(
+    emp_id: UUID,
+    start_date: date,
+    end_date: date,
+    exclude_plan: Optional[UUID] = None,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_with_user)
+):
+    """Mengecek bentrok jadwal (P3-6). Mengembalikan daftar SK yang bentrok."""
+    query = text("""
+        SELECT work_plan_id, number, title 
+        FROM vms.personnel_conflict(:emp, daterange(:start, :end, '[]'), :exclude)
+    """)
+    rows = (await db.execute(query, {
+        "emp": emp_id, "start": start_date, "end": end_date, "exclude": exclude_plan
+    })).fetchall()
+    
+    conflicts = [{"id": r.work_plan_id, "number": r.number, "title": r.title} for r in rows]
+    return {"conflicts": conflicts, "has_conflict": len(conflicts) > 0}

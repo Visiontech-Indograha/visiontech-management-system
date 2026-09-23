@@ -200,7 +200,7 @@ Format tiap task: **Masalah → Uji dulu → Perubahan → DoD**. Centang hanya 
   - Perubahan: `core/permissions.py` berkunci `RoleCode`; `require_permission` tanpa perbandingan string `"admin"`.
   - DoD: probe ADMIN → `/audit-events`, `/employees`, `/plans` 200.
 
-- [ ] **T-04 · Peran dibaca dari DB tiap permintaan** (F-04, dok 05 §4)
+- [x] **T-04 · Peran dibaca dari DB tiap permintaan** (F-04, dok 05 §4)
   - Uji: cabut peran di DB → permintaan berikutnya dengan token lama ditolak 403; akun nonaktif → 401.
   - Perubahan: `get_current_user` memuat peran & `is_active` dari DB; token hanya identitas (`sub`, `org`, `jti`).
 

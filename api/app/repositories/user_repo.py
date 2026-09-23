@@ -25,6 +25,21 @@ class UserRepo(BaseRepo):
     async def find_by_id(self, user_id: UUID | str) -> Any:
         return await self.fetchone(f"{_USER_WITH_ROLE} WHERE u.id = :id", {"id": user_id})
 
+    async def find_identity(self, user_id: UUID | str) -> Any:
+        """Status akun + SEMUA peran global — dibaca pada setiap permintaan (dok 05 §4)."""
+        return await self.fetchone(
+            """
+            SELECT u.login, u.is_active, u.organization_id,
+                   COALESCE(array_agg(r.role::text ORDER BY r.role) FILTER (WHERE r.role IS NOT NULL),
+                            '{}') AS roles
+            FROM vms.app_user u
+            LEFT JOIN vms.user_role r ON r.user_id = u.id
+            WHERE u.id = :id
+            GROUP BY u.id
+            """,
+            {"id": user_id},
+        )
+
     async def update_password_hash(self, user_id: UUID | str, password_hash: str) -> None:
         await self.execute(
             "UPDATE vms.app_user SET password_hash = :hash WHERE id = :id",

@@ -143,13 +143,8 @@ class AuthService:
 
     @staticmethod
     def _access_token(user: Any, session_id: Any) -> str:
+        # Hanya identitas (dok 05 §4); peran & status akun dibaca dari DB tiap permintaan.
         return create_jwt_token(
-            {
-                "sub": str(user.id),
-                "org": str(user.organization_id),
-                "email": user.login,
-                "role": user.role or DEFAULT_ROLE,
-                "jti": str(session_id),
-            },
+            {"sub": str(user.id), "org": str(user.organization_id), "jti": str(session_id)},
             ACCESS_TOKEN_TTL,
         )

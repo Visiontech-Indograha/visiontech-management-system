@@ -102,6 +102,8 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 - Discord security alerts via `app/core/alerts.py` (RLS injection failure, session reuse).
 - RBAC permissions mapping per peran di `app/core/permissions.py`.
 
+- `docs/PLAN-PERBAIKAN-TEMUAN.md` (2026-09-23) — plan perbaikan 7 segmen (definisi, pohon isu, prioritas, rencana kerja, 5×mengapa, sintesis, pencegahan) + antrean turunan T-01…T-13. Dikerjakan sebelum A-3.
+
 ### 🔧 Diperbaiki
 
 - **`attendance_cron.py`**: Import `send_security_alert` yang tidak ada diganti dengan `send_discord_alert` yang benar — mencegah `ImportError` saat aplikasi dimulai.

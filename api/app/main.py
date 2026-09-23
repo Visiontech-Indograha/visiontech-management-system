@@ -47,7 +47,7 @@ def create_app() -> FastAPI:
     from starlette.exceptions import HTTPException as StarletteHTTPException
     from app.core.errors import AppError, app_error_handler
 
-    # AppError → JSON { code, message } dalam Bahasa Indonesia
+    # AppError → { "error": { code, message, details } } (dok 05 §2)
     app.add_exception_handler(AppError, app_error_handler)  # type: ignore[arg-type]
 
     @app.exception_handler(StarletteHTTPException)

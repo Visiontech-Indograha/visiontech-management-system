@@ -5,6 +5,9 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql+asyncpg://vms_app:CHANGE_ME@100.117.92.14:5433/visiontech_db"
     JWT_SECRET_KEY: str = "supersecretkey_change_me_in_production"
     
+    # Discord #vms-alerts (dok 17). Kosong = peringatan hanya dicatat di log.
+    DISCORD_WEBHOOK_ALERTS: str = ""
+
     MINIO_ENDPOINT: str = "127.0.0.1:9000"
     MINIO_ACCESS_KEY: str = "minioadmin"
     MINIO_SECRET_KEY: str = "minioadmin"

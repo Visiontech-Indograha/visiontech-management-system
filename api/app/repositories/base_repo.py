@@ -5,9 +5,11 @@ Repository adalah satu-satunya tempat query SQL ditulis — lihat docs/12-STANDA
 """
 from __future__ import annotations
 
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import text
+from collections.abc import Sequence
 from typing import Any
+
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 class BaseRepo:
@@ -21,7 +23,7 @@ class BaseRepo:
         result = await self.db.execute(text(query), params or {})
         return result.fetchone()
 
-    async def fetchall(self, query: str, params: dict[str, Any] | None = None) -> list[Any]:
+    async def fetchall(self, query: str, params: dict[str, Any] | None = None) -> Sequence[Any]:
         result = await self.db.execute(text(query), params or {})
         return result.fetchall()
 

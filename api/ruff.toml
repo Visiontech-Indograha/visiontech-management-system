@@ -1,0 +1,17 @@
+# Konfigurasi ruff untuk api/ (dok 12 §7: ruff untuk format + lint).
+target-version = "py312"
+line-length = 110
+
+[lint.flake8-bugbear]
+# Dependency FastAPI ditulis sebagai nilai default parameter (pola resmi FastAPI, dok 12 §2).
+extend-immutable-calls = [
+    "fastapi.Depends",
+    "fastapi.Query",
+    "fastapi.Path",
+    "fastapi.Body",
+    "fastapi.Header",
+    "fastapi.Cookie",
+    "fastapi.File",
+    "fastapi.Form",
+    "fastapi.Security",
+]

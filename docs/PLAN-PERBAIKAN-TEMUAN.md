@@ -223,6 +223,13 @@ Format tiap task: **Masalah → Uji dulu → Perubahan → DoD**. Centang hanya 
     SKIPPED/tanpa wajah → AUTO_VALID; urutan trigger dijaga.
   - Perubahan: migrasi `0003` mengganti nama trigger menjadi `attendance_post_geofence_face_flag`;
     `db/05_face.sql` disamakan.
+- [ ] **T-16 · Python lokal = Python produksi (3.12)** (F-21, ditemukan saat T-09)
+  - Masalah: venv lokal memakai Python 3.14 (anotasi malas, PEP 649), Dockerfile & tumpukan terkunci
+    3.12. `employees.py` memakai `date` tanpa impor — lolos di 3.14, **gagal saat impor di 3.12** →
+    API tidak bisa start di container. Bug semacam ini tak terlihat selama uji jalan di 3.14.
+  - Perubahan: venv `api/.venv` dibuat ulang dengan CPython 3.12 (tersedia lewat uv); CI (T-10)
+    memakai 3.12; `ruff --select F821` (nama tak terdefinisi) masuk gerbang CI.
+  - Uji: seluruh suite hijau di 3.12; `python -c "import app.main"` di 3.12.
 - [ ] **T-14 · MinIO tidak disentuh saat impor** (F-18, ditemukan saat T-02)
   - Masalah: `core/storage.py` memanggil `ensure_bucket()` di tingkat modul → setiap impor aplikasi
     (termasuk uji dan `alembic`) mencoba menyambung ke MinIO dan mengulang ±10 detik bila mati.
@@ -233,7 +240,7 @@ Format tiap task: **Masalah → Uji dulu → Perubahan → DoD**. Centang hanya 
 
 ### G4 · Jaring pengaman
 
-- [ ] **T-09 · Uji asap seluruh rute** (F-14, P-4)
+- [x] **T-09 · Uji asap seluruh rute** (F-14, P-4)
   - Uji menginventaris `app.routes`: setiap rute non-publik tanpa token → 401; dengan ADMIN → bukan 500.
     Rute publik harus terdaftar eksplisit.
 - [ ] **T-10 · CI sungguhan** (F-13, P-5, P-7, P-8)

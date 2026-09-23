@@ -40,6 +40,10 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
         response.headers["X-Request-ID"] = req_id
         return response
 
+# Basis semua rute aplikasi (dok 05). /health dan /ready tetap di akar untuk Caddy & pemantauan.
+API_PREFIX = "/api/v1"
+
+
 def create_app() -> FastAPI:
     app = FastAPI(title=settings.PROJECT_NAME)
     
@@ -72,20 +76,20 @@ def create_app() -> FastAPI:
     from app.api.plans import router as plans_router
     from app.api.sites import router as sites_router
     
-    app.include_router(auth_router)
-    app.include_router(audit_router)
-    app.include_router(files_router)
-    app.include_router(employees_router)
-    app.include_router(documents_router)
-    app.include_router(expiry_router)
-    app.include_router(plans_router)
-    app.include_router(transitions_router)
-    app.include_router(changes_router)
-    app.include_router(sites_router)
-    app.include_router(attendance_router)
-    app.include_router(attendance_cron_router)
-    app.include_router(hse_router)
-    app.include_router(assets_router)
+    app.include_router(auth_router, prefix=API_PREFIX)
+    app.include_router(audit_router, prefix=API_PREFIX)
+    app.include_router(files_router, prefix=API_PREFIX)
+    app.include_router(employees_router, prefix=API_PREFIX)
+    app.include_router(documents_router, prefix=API_PREFIX)
+    app.include_router(expiry_router, prefix=API_PREFIX)
+    app.include_router(plans_router, prefix=API_PREFIX)
+    app.include_router(transitions_router, prefix=API_PREFIX)
+    app.include_router(changes_router, prefix=API_PREFIX)
+    app.include_router(sites_router, prefix=API_PREFIX)
+    app.include_router(attendance_router, prefix=API_PREFIX)
+    app.include_router(attendance_cron_router, prefix=API_PREFIX)
+    app.include_router(hse_router, prefix=API_PREFIX)
+    app.include_router(assets_router, prefix=API_PREFIX)
         
     return app
 

@@ -144,7 +144,7 @@ def test_no_english_error_messages_in_source():
 def test_real_app_unknown_path_and_missing_token():
     with TestClient(real_app) as client:
         unknown = client.get("/rute-yang-tidak-ada")
-        no_token = client.get("/audit-events")
+        no_token = client.get("/api/v1/audit-events")
 
     assert unknown.status_code == 404 and _error(unknown)["code"] == "NOT_FOUND"
     assert no_token.status_code == 401 and _error(no_token)["code"] == "UNAUTHENTICATED"

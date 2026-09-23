@@ -17,7 +17,7 @@ from sqlalchemy.pool import NullPool
 from app.core.config import settings
 from app.core.security import hash_password
 from app.db.session import SEARCH_PATH, AsyncSessionLocal, make_engine
-from app.main import app
+from app.main import API_PREFIX, app
 
 _DB = urlparse(settings.DATABASE_URL.replace("+asyncpg", ""))
 
@@ -112,6 +112,6 @@ def login_headers(client: TestClient, user: SeededUser) -> dict[str, str]:
 
 @pytest.fixture
 def client() -> Iterator[TestClient]:
-    # https agar cookie refresh (Secure) disimpan dan dikirim ulang oleh klien uji.
-    with TestClient(app, base_url="https://testserver") as c:
+    # https agar cookie refresh (Secure) disimpan dan dikirim ulang; jalur relatif terhadap /api/v1.
+    with TestClient(app, base_url=f"https://testserver{API_PREFIX}") as c:
         yield c

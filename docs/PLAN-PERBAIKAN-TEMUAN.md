@@ -230,7 +230,7 @@ Format tiap task: **Masalah → Uji dulu → Perubahan → DoD**. Centang hanya 
   - Perubahan: venv `api/.venv` dibuat ulang dengan CPython 3.12 (tersedia lewat uv); CI (T-10)
     memakai 3.12; `ruff --select F821` (nama tak terdefinisi) masuk gerbang CI.
   - Uji: seluruh suite hijau di 3.12; `python -c "import app.main"` di 3.12.
-- [ ] **T-14 · MinIO tidak disentuh saat impor** (F-18, ditemukan saat T-02)
+- [x] **T-14 · MinIO tidak disentuh saat impor** (F-18, ditemukan saat T-02)
   - Masalah: `core/storage.py` memanggil `ensure_bucket()` di tingkat modul → setiap impor aplikasi
     (termasuk uji dan `alembic`) mencoba menyambung ke MinIO dan mengulang ±10 detik bila mati.
     Melanggar prinsip 3 (komponen pendukung mati → pekerjaan tetap bisa dilakukan).

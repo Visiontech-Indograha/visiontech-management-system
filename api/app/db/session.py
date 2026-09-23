@@ -1,17 +1,27 @@
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
+from typing import Any
+
+from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
+
 from app.core.config import settings
 
-engine = create_async_engine(settings.DATABASE_URL, echo=False)
+# Fungsi & trigger di db/*.sql menyebut tabel tanpa awalan skema (ditulis dengan
+# `SET search_path = vms, public`), jadi setiap koneksi aplikasi wajib memakai path yang sama.
+SEARCH_PATH = "vms, public"
+
+
+def make_engine(**kwargs: Any) -> AsyncEngine:
+    return create_async_engine(
+        settings.DATABASE_URL,
+        echo=False,
+        connect_args={"server_settings": {"search_path": SEARCH_PATH}},
+        **kwargs,
+    )
+
+
+engine = make_engine()
 AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False)
 
-from fastapi import Depends
 
 async def get_db_session():
     async with AsyncSessionLocal() as session:
         yield session
-
-async def get_db_session_for_user(
-    # avoid circular import by local import or type hints
-):
-    pass # Will implement properly in dependencies
-

@@ -74,6 +74,7 @@ ditemukan enam bulan kemudian.
 | Tanggal | Task | Ambiguitas | Keputusan yang diambil | Menyimpang dari Bagian A? |
 |---|---|---|---|---|
 | 2026-09-23 | P0-2 | P0-2 meminta `new_id()` → `uuidv7()`, tetapi DB dev memakai PostgreSQL 16 (Docker PostGIS 16, bukan PG18) yang belum punya `uuidv7()`. Versi plpgsql yang terpasang rusak sehingga semua INSERT gagal | UUIDv7 dibuat murni SQL di `new_id()` (migrasi `0002_fix_new_id`, disamakan di `db/01_schema.sql`); diganti `uuidv7()` saat pindah ke PG18 | Tidak — tetap UUIDv7. Catatan: server memakai PG16, bukan PG18 seperti tumpukan terkunci; **perlu konfirmasi** apakah produksi tetap PG16 |
+| 2026-09-23 | P0-4 | Fungsi & trigger di `db/*.sql` menyebut tabel tanpa awalan skema (mengandalkan `SET search_path = vms, public` saat skema dipasang); dokumen tidak mengatur `search_path` koneksi aplikasi, sehingga `login_is_locked()` dkk. gagal "relation does not exist" | Setiap koneksi aplikasi (`app/db/session.py::make_engine`, dipakai juga `cli.py` dan uji) menyetel `search_path = vms, public` | Tidak |
 
 Kolom terakhir yang paling penting. Baris yang menyimpang dari keputusan terkunci
 dikumpulkan dan dilaporkan ke pemilik produk pada demo akhir fase.

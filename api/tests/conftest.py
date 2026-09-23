@@ -12,12 +12,11 @@ from urllib.parse import urlparse
 import psycopg2
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.pool import NullPool
 
 from app.core.config import settings
 from app.core.security import hash_password
-from app.db.session import AsyncSessionLocal
+from app.db.session import SEARCH_PATH, AsyncSessionLocal, make_engine
 from app.main import app
 
 _DB = urlparse(settings.DATABASE_URL.replace("+asyncpg", ""))
@@ -37,13 +36,14 @@ requires_db = pytest.mark.skipif(not _db_reachable(), reason="PostgreSQL uji tid
 @pytest.fixture(scope="session", autouse=True)
 def _null_pool() -> None:
     # Setiap TestClient menjalankan event loop sendiri; koneksi asyncpg tidak boleh dipakai lintas loop.
-    AsyncSessionLocal.configure(bind=create_async_engine(settings.DATABASE_URL, poolclass=NullPool))
+    AsyncSessionLocal.configure(bind=make_engine(poolclass=NullPool))
 
 
 def _sync_conn():
     return psycopg2.connect(
         host=_DB.hostname, port=_DB.port, dbname=_DB.path.lstrip("/"),
         user=_DB.username, password=_DB.password,
+        options=f"-c search_path={SEARCH_PATH.replace(' ', '')}",
     )
 
 

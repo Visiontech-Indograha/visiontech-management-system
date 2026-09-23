@@ -1,12 +1,12 @@
 import asyncio
 import argparse
-from sqlalchemy.ext.asyncio import create_async_engine
+from app.db.session import make_engine
 from sqlalchemy import text
 from app.core.config import settings
 from app.core.security import hash_password
 
 async def create_admin(email: str, password: str):
-    engine = create_async_engine(settings.DATABASE_URL)
+    engine = make_engine()
     async with engine.begin() as conn:
         hashed = hash_password(password)
         
@@ -58,7 +58,7 @@ async def create_admin(email: str, password: str):
     await engine.dispose()
 
 async def seed():
-    engine = create_async_engine(settings.DATABASE_URL)
+    engine = make_engine()
     async with engine.begin() as conn:
         # Check org
         org_id = (await conn.execute(text("SELECT id FROM vms.organization LIMIT 1"))).scalar()
@@ -82,7 +82,7 @@ async def seed():
     await engine.dispose()
 
 async def cleanup_orphans():
-    engine = create_async_engine(settings.DATABASE_URL)
+    engine = make_engine()
     async with engine.begin() as conn:
         # Hapus session kedaluwarsa atau ter-revoke yang lebih dari 30 hari
         res = await conn.execute(text("""

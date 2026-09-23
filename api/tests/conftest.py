@@ -121,3 +121,93 @@ def client() -> Iterator[TestClient]:
     # https agar cookie refresh (Secure) disimpan dan dikirim ulang; jalur relatif terhadap /api/v1.
     with TestClient(app, base_url=f"https://testserver{API_PREFIX}") as c:
         yield c
+
+
+# ── Dunia uji untuk alur per modul (V-02) ─────────────────────────────────────────────────────
+WORLD_PASSWORD = "KataSandiDunia-123"
+
+
+class World:
+    """Satu organisasi lengkap: unit, lokasi, karyawan, dan pengguna per peran yang saling tertaut."""
+
+    def __init__(self, org_id: str, unit_id: str, site_id: str, employees: dict[str, str], logins: dict[str, str]):
+        self.org_id = org_id
+        self.unit_id = unit_id
+        self.site_id = site_id
+        self.employees = employees  # nama peran → employee_id
+        self.logins = logins        # nama peran → login
+        self._headers: dict[str, dict[str, str]] = {}
+
+    def headers(self, client: TestClient, who: str) -> dict[str, str]:
+        if who not in self._headers:
+            response = client.post("/auth/login", json={"email": self.logins[who], "password": WORLD_PASSWORD})
+            assert response.status_code == 200, response.text
+            self._headers[who] = {"Authorization": f"Bearer {response.json()['access_token']}"}
+        return self._headers[who]
+
+
+# peran di dunia uji → (peran global, apakah per unit)
+_WORLD_PEOPLE = {
+    "admin": ("ADMIN", False),
+    "hr": ("HR", False),
+    "pm": ("PM", True),
+    "finance": ("FINANCE", False),
+    "asset": ("ASSET", False),
+    "ops": ("OPS", False),
+    "leader": (None, False),   # ketua & anggota berasal dari SK, bukan peran global
+    "member": (None, False),
+}
+
+
+@pytest.fixture
+def world() -> Iterator[World]:
+    from tests.cleanup import purge_organization
+
+    tag = uuid.uuid4().hex[:8]
+    org_id = str(sync_query("INSERT INTO vms.organization (name) VALUES (%s) RETURNING id", (f"Dunia uji {tag}",))[0][0])
+    try:
+        unit_id = str(sync_query(
+            "INSERT INTO vms.business_unit (organization_id, code, name) VALUES (%s, 'CCTV_ACS', 'CCTV & ACS') RETURNING id",
+            (org_id,))[0][0])
+        site_id = str(sync_query(
+            "INSERT INTO vms.site (organization_id, name, location, radius_m) "
+            "VALUES (%s, 'Gudang uji', ST_GeogFromText('POINT(106.8 -6.2)'), 100) RETURNING id", (org_id,))[0][0])
+        employees: dict[str, str] = {}
+        logins: dict[str, str] = {}
+        hashed = hash_password(WORLD_PASSWORD)
+        for i, (who, (role, per_unit)) in enumerate(_WORLD_PEOPLE.items()):
+            employees[who] = str(sync_query(
+                "INSERT INTO vms.employee (organization_id, employee_no, full_name, position, unit_id, join_date) "
+                "VALUES (%s, %s, %s, 'Teknisi', %s, '2026-01-05') RETURNING id",
+                (org_id, f"UJI-{i:02d}", f"Karyawan uji {who}", unit_id))[0][0])
+            logins[who] = f"{who}-{tag}@contoh.test"
+            user_id = sync_query(
+                "INSERT INTO vms.app_user (organization_id, login, password_hash, employee_id) VALUES (%s, %s, %s, %s) RETURNING id",
+                (org_id, logins[who], hashed, employees[who]))[0][0]
+            if role:
+                sync_query("INSERT INTO vms.user_role (user_id, role, unit_id) VALUES (%s, %s, %s)",
+                           (user_id, role, unit_id if per_unit else None))
+        yield World(org_id, unit_id, site_id, employees, logins)
+    finally:
+        conn = _sync_conn()
+        try:
+            purge_organization(conn, org_id)
+        finally:
+            conn.close()
+        sync_query("DELETE FROM vms.login_attempt WHERE login LIKE %s", (f"%-{tag}@contoh.test",))
+
+
+@pytest.fixture
+def fake_storage(monkeypatch) -> dict[str, bytes]:
+    """Penyimpanan berkas di memori — uji alur memeriksa DB; MinIO diuji di test_storage.py."""
+    stored: dict[str, bytes] = {}
+
+    def upload(object_name: str, data: bytes, content_type: str) -> bool:
+        stored[object_name] = data
+        return True
+
+    import app.api.files as files_api
+
+    monkeypatch.setattr(files_api, "upload_file", upload)
+    monkeypatch.setattr(files_api, "get_presigned_url", lambda name, expires=None: f"https://minio.uji/{name}")
+    return stored

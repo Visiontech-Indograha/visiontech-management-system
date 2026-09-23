@@ -184,7 +184,7 @@ Format tiap task: **Masalah → Uji dulu → Perubahan → DoD**. Centang hanya 
   - Perubahan: `api/app/api/deps.py::get_db_with_user` → satu `SELECT set_config(...), set_config(...), set_config(...)`.
   - DoD: `GET /sites` dengan token sah → bukan 500.
 
-- [ ] **T-02 · Batas transaksi bawaan** (F-01)
+- [x] **T-02 · Batas transaksi bawaan** (F-01)
   - Uji: endpoint tulis sungguhan (`POST /sites`) lalu baca ulang lewat koneksi terpisah → baris ada;
     endpoint yang melempar galat → tidak ada baris tersisa.
   - Perubahan: dependency sesi (`get_db`/`get_db_with_user`) commit setelah handler sukses,
@@ -215,6 +215,13 @@ Format tiap task: **Masalah → Uji dulu → Perubahan → DoD**. Centang hanya 
   - Uji: `/api/v1/auth/login` 200; `/auth/login` 404; `/health` & `/ready` tetap di akar (Caddy).
 - [ ] **T-08 · `attendance_cron` memakai setelan yang ada** (F-10)
   - Uji: impor modul & panggil fungsi peringatan tanpa webhook → tidak crash.
+- [ ] **T-14 · MinIO tidak disentuh saat impor** (F-18, ditemukan saat T-02)
+  - Masalah: `core/storage.py` memanggil `ensure_bucket()` di tingkat modul → setiap impor aplikasi
+    (termasuk uji dan `alembic`) mencoba menyambung ke MinIO dan mengulang ±10 detik bila mati.
+    Melanggar prinsip 3 (komponen pendukung mati → pekerjaan tetap bisa dilakukan).
+  - Uji: impor `app.main` dengan MinIO tak terjangkau selesai < 1 detik tanpa percobaan koneksi;
+    `/ready` melaporkan status MinIO.
+  - Perubahan: klien & bucket dibuat malas (saat pertama dipakai) atau di `lifespan`, dengan batas waktu.
 
 ### G4 · Jaring pengaman
 

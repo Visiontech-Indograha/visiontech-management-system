@@ -59,16 +59,27 @@ def require_permission(required_permission: Permission):
         return current_user
     return permission_checker
 
+from collections.abc import AsyncIterator
+from typing import Literal
+
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.context import set_request_context
 from app.db.session import AsyncSessionLocal
+from app.db.transaction import unit_of_work
 
-async def get_db() -> AsyncSession:
+# "function": commit/rollback terjadi SEBELUM respons dikirim, jadi commit yang gagal
+# sampai ke klien sebagai 500 — bukan 200 untuk data yang ternyata tidak tersimpan.
+DB_SCOPE: Literal["function", "request"] = "function"
+
+
+async def get_db() -> AsyncIterator[AsyncSession]:
+    """Satu permintaan = satu transaksi: commit bila handler sukses, rollback bila galat (T-02)."""
     async with AsyncSessionLocal() as session:
-        yield session
+        async with unit_of_work(session):
+            yield session
 
 async def get_db_with_user(
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope=DB_SCOPE),
     current_user: CurrentUser = Depends(get_current_user)
 ) -> AsyncSession:
     # Konteks RLS & audit untuk transaksi permintaan ini (app/db/context.py).

@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.controllers.base import unit_of_work
+from app.db.transaction import unit_of_work
 from app.repositories.session_repo import SessionRepo
 from app.repositories.user_repo import UserRepo
 from app.schemas.auth import UserMeResponse

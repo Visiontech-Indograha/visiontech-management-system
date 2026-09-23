@@ -1,0 +1,127 @@
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import text
+from typing import List, Optional
+from uuid import UUID
+
+from app.api.deps import CurrentUser, get_current_user, get_db_with_user, require_permission
+from app.core.permissions import Permission
+from app.schemas.hse import IncidentCreate, IncidentResolve, IncidentResponse, DailyReportCreate, DailyReportResponse
+
+router = APIRouter(prefix="/hse", tags=["HSE & Reports"])
+
+@router.post("/incidents", response_model=IncidentResponse, status_code=status.HTTP_201_CREATED)
+async def report_incident(
+    data: IncidentCreate,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_with_user)
+):
+    emp_q = text("SELECT employee_id FROM vms.app_user WHERE id = :uid")
+    my_emp = (await db.execute(emp_q, {"uid": current_user.user_id})).scalar()
+    
+    # Insert incident
+    ins = text("""
+        INSERT INTO vms.incident_report (
+            organization_id, work_plan_id, reported_by, occurred_on,
+            category, severity, description
+        ) VALUES (
+            :org, :plan, :emp, :occ, :cat, :sev, :desc
+        ) RETURNING *
+    """)
+    res = await db.execute(ins, {
+        "org": current_user.organization_id, "plan": data.work_plan_id,
+        "emp": my_emp, "occ": data.occurred_on, "cat": data.category,
+        "sev": data.severity, "desc": data.description
+    })
+    incident = res.fetchone()
+    
+    # Insert evidence
+    if data.evidence_file_ids:
+        ins_ev = text("INSERT INTO vms.incident_evidence (incident_id, file_id) VALUES (:inc, :fid)")
+        for fid in data.evidence_file_ids:
+            await db.execute(ins_ev, {"inc": incident.id, "fid": fid})
+            
+    return IncidentResponse(**incident._mapping)
+
+@router.post("/incidents/{inc_id}/resolve", response_model=IncidentResponse)
+async def resolve_incident(
+    inc_id: UUID,
+    data: IncidentResolve,
+    current_user: CurrentUser = Depends(require_permission(Permission.PUBLISH_PLAN)),
+    db: AsyncSession = Depends(get_db_with_user)
+):
+    emp_q = text("SELECT employee_id FROM vms.app_user WHERE id = :uid")
+    my_emp = (await db.execute(emp_q, {"uid": current_user.user_id})).scalar()
+    
+    upd = text("""
+        UPDATE vms.incident_report
+        SET status = 'RESOLVED', resolved_by = :emp, resolved_at = now(), resolution_note = :note
+        WHERE id = :id AND organization_id = :org
+        RETURNING *
+    """)
+    res = await db.execute(upd, {
+        "emp": my_emp, "note": data.resolution_note,
+        "id": inc_id, "org": current_user.organization_id
+    })
+    row = res.fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Incident not found")
+        
+    return IncidentResponse(**row._mapping)
+
+@router.post("/daily-reports/{day_id}", response_model=DailyReportResponse)
+async def upsert_daily_report(
+    day_id: UUID,
+    data: DailyReportCreate,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_with_user)
+):
+    emp_q = text("SELECT employee_id FROM vms.app_user WHERE id = :uid")
+    my_emp = (await db.execute(emp_q, {"uid": current_user.user_id})).scalar()
+    
+    # Upsert
+    ups = text("""
+        INSERT INTO vms.daily_report (work_plan_day_id, body, obstacle)
+        VALUES (:day, :body, :obs)
+        ON CONFLICT (work_plan_day_id) DO UPDATE 
+        SET body = EXCLUDED.body, obstacle = EXCLUDED.obstacle, updated_at = now()
+        RETURNING *
+    """)
+    res = await db.execute(ups, {
+        "day": day_id, "body": data.body, "obs": data.obstacle
+    })
+    report = res.fetchone()
+    
+    if data.evidence_file_ids:
+        await db.execute(text("DELETE FROM vms.report_evidence WHERE daily_report_id = :rid"), {"rid": report.id})
+        ins_ev = text("INSERT INTO vms.report_evidence (daily_report_id, file_id) VALUES (:rid, :fid)")
+        for fid in data.evidence_file_ids:
+            await db.execute(ins_ev, {"rid": report.id, "fid": fid})
+            
+    return DailyReportResponse(**report._mapping)
+
+@router.post("/daily-reports/{day_id}/submit", response_model=DailyReportResponse)
+async def submit_daily_report(
+    day_id: UUID,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_with_user)
+):
+    emp_q = text("SELECT employee_id FROM vms.app_user WHERE id = :uid")
+    my_emp = (await db.execute(emp_q, {"uid": current_user.user_id})).scalar()
+    
+    sub = text("""
+        UPDATE vms.daily_report
+        SET status = 'SUBMITTED', submitted_by = :emp, submitted_at = now()
+        WHERE work_plan_day_id = :day AND status = 'DRAFT'
+        RETURNING *
+    """)
+    try:
+        res = await db.execute(sub, {"emp": my_emp, "day": day_id})
+        report = res.fetchone()
+        if not report:
+            raise HTTPException(status_code=400, detail="Report tidak ditemukan atau bukan DRAFT.")
+        return DailyReportResponse(**report._mapping)
+    except Exception as e:
+        if "check" in str(e).lower():
+            raise HTTPException(status_code=400, detail="Laporan terlalu singkat (minimal 10 karakter).")
+        raise HTTPException(status_code=400, detail={"code": "DB_ERROR", "message": str(e)})

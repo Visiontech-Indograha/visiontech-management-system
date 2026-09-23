@@ -43,22 +43,26 @@ async def check_in(
     work_dt = now_ts.date()
     is_late = now_ts.hour >= 9 
     
-    # Tentukan status
+    # Tentukan status berdasarkan fallback (K-030 face mismatch UX)
     status_val = 'AUTO_VALID'
     if dist > radius:
         status_val = 'NEEDS_REVIEW'  # Di luar radius
     if data.location_origin != 'GPS':
         status_val = 'NEEDS_REVIEW'  # Simulasi/Fake GPS
+    
+    # Apabila pemindaian wajah tidak cocok, beri kesempatan finance/HR me-review, BUKAN menolak absennya.
+    if data.face_result in ('NO_MATCH', 'LOW_QUALITY'):
+        status_val = 'NEEDS_REVIEW'
         
     ins = text("""
         INSERT INTO vms.attendance (
             organization_id, employee_id, work_date, site_id, site_label,
             check_in_at, location, location_origin, distance_m, radius_m,
-            is_late, selfie_file_id, status
+            is_late, selfie_file_id, status, face_result, face_similarity
         ) VALUES (
             :org, :emp, :wdate, :site, :slabel, now(),
             ST_SetSRID(ST_MakePoint(:lng, :lat), 4326), :orig, :dist, :rad,
-            :late, :file, :status
+            :late, :file, :status, :f_res, :f_sim
         ) RETURNING id, check_in_at, check_out_at, is_early_leave, explanation, reviewed_at
     """)
     try:
@@ -67,7 +71,8 @@ async def check_in(
             "site": data.site_id, "slabel": site.name, 
             "lng": data.location.lng, "lat": data.location.lat,
             "orig": data.location_origin, "dist": dist, "rad": radius,
-            "late": is_late, "file": data.selfie_file_id, "status": status_val
+            "late": is_late, "file": data.selfie_file_id, "status": status_val,
+            "f_res": data.face_result, "f_sim": data.face_similarity
         })
         row = res.fetchone()
         

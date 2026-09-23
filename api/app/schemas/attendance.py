@@ -21,6 +21,8 @@ class CheckInRequest(BaseModel):
     location: GeoPoint
     location_origin: str = "GPS"  # GPS, SIMULASI
     selfie_file_id: Optional[UUID] = None
+    face_result: Optional[str] = None  # MATCH, NO_MATCH, LOW_QUALITY, SKIPPED
+    face_similarity: Optional[float] = None
 
 class CheckOutRequest(BaseModel):
     location: GeoPoint

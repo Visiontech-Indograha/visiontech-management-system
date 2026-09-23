@@ -116,6 +116,9 @@ docs/           seluruh rencana dan standar
 7. Regresi wajib masih hijau.
 8. Ambiguitas yang diputuskan sendiri → catat di `docs/10-...md` Bagian C.
 9. Tandai selesai hanya bila DoD fase terpenuhi.
+10. Perbarui `CHANGELOG.md`, lalu **commit** (satu task = satu commit).
+11. Periksa rahasia pada commit yang belum di-push, lalu **push** ke `origin` di branch yang
+    sama. Ada rahasia → jangan push, laporkan. Rincian: `.agy/rules/git-flow.md` butir 6–10.
 
 Satu task per iterasi.
 

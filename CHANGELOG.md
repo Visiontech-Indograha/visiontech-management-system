@@ -108,6 +108,7 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 - `.agy/rules/tailwind-v4.md` — aturan penggunaan Tailwind CSS v4 (tidak boleh konfigurasi v3).
 - `.agy/rules/design-system.md` — aturan sistem desain mengikat untuk web dan mobile.
 - `.agy/rules/changelog.md` — aturan ini (wajib menulis CHANGELOG sebelum commit).
+- `.agy/rules/git-flow.md` butir 6–10 + `CLAUDE.md` langkah 10–11 (2026-09-23): wajib commit per tugas selesai dan wajib push ke `origin`, dengan pemeriksaan rahasia sebelum push; ada rahasia → tidak di-push dan dilaporkan. Dilarang force-push ke branch bersama.
 
 ---
 

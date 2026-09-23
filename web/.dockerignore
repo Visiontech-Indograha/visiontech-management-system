@@ -1,0 +1,21 @@
+# Secrets — JANGAN PERNAH ikut ke dalam image Docker
+.env
+.env.*
+!.env.example
+
+# Node
+node_modules/
+dist/
+dist-ssr/
+
+# VCS / editor
+.git/
+.gitignore
+.vscode/
+.idea/
+
+# Test artifacts
+coverage/
+
+# Not needed inside the image
+Dockerfile

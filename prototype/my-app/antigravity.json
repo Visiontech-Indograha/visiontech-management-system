@@ -1,0 +1,14 @@
+{
+  "name": "my-app",
+  "version": "1.0.0",
+  "orchestrator": "antigravity-cli",
+  "infrastructure": {
+    "provider": "local",
+    "database": "postgresql",
+    "cache": "redis"
+  },
+  "roles": {
+    "antigravity": "Infrastructure, Security, and Deployment",
+    "claude_code": "Business Logic, UI, and Algorithms"
+  }
+}

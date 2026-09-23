@@ -1,0 +1,32 @@
+/* Design tokens VMS (docs/06-UI-UX §1, §7). Komponen memakai token ini, bukan heksadesimal. */
+:root {
+  --color-paper: #f5f7f8;
+  --color-surface: #ffffff;
+  --color-ink: #15222e;
+  --color-mist: #5b6975;
+  --color-line: #e0e5e9;
+  --color-hover: #f0f3f5;
+
+  --color-lens: #0a7c78;
+  --color-lens-hover: #075f5c;
+  --color-lens-soft: #e4f2f1;
+
+  --color-success: #1b7f4b;
+  --color-warning: #8f4f00;
+  --color-warning-soft: #fff3dc;
+  --color-danger: #c0392b;
+  --color-danger-soft: #fdecea;
+  --color-info: #245ea6;
+  --color-info-soft: #e8f0fa;
+
+  --radius-tag: 4px;
+  --radius-control: 8px;
+  --radius-panel: 14px;
+
+  --shadow-overlay: 0 8px 24px rgba(21, 34, 46, 0.12);
+
+  --font-sans: "Plus Jakarta Sans", system-ui, sans-serif;
+
+  --motion-fast: 120ms;
+  --motion-base: 180ms;
+}

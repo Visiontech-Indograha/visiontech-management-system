@@ -1,0 +1,140 @@
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { useSession } from "@/app/session";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { EMPLOYMENT_LABEL, ROLE_LABEL } from "@/lib/types";
+import { useDebouncedValue } from "@/lib/useDebouncedValue";
+import { useEmployees } from "./api";
+import { CompletenessBadge } from "./badges";
+
+const inputCls = "h-10 rounded-control border border-line bg-surface px-3 text-sm";
+
+export function DirectoryPage() {
+  const { can } = useSession();
+  const showDocs = can("employee_document:manage"); // kolom kelengkapan hanya SA dan HES
+  const [q, setQ] = useState("");
+  const [role, setRole] = useState("");
+  const [employment, setEmployment] = useState("");
+  const [status, setStatus] = useState("active");
+  const [page, setPage] = useState(1);
+  const search = useDebouncedValue(q, 300);
+  const list = useEmployees({ q: search, role, employment_type: employment, status, page });
+  const data = list.data;
+  const lastPage = data ? Math.max(1, Math.ceil(data.total / data.page_size)) : 1;
+  const reset = <T,>(set: (v: T) => void) => (v: T) => {
+    set(v);
+    setPage(1);
+  };
+  const cols = showDocs ? 5 : 4;
+
+  return (
+    <>
+      <PageHeader title="Direktori" />
+      <div className="mb-4 flex flex-wrap gap-3">
+        <input
+          aria-label="Cari nama atau username"
+          placeholder="Cari nama..."
+          className={`${inputCls} w-64`}
+          value={q}
+          onChange={(e) => reset(setQ)(e.target.value)}
+        />
+        <select aria-label="Filter role" className={inputCls} value={role} onChange={(e) => reset(setRole)(e.target.value)}>
+          <option value="">Semua role</option>
+          {["admin", "team_leader", "finance", "hes", "user"].map((v) => (
+            <option key={v} value={v}>
+              {ROLE_LABEL[v]}
+            </option>
+          ))}
+        </select>
+        <select
+          aria-label="Filter status kerja"
+          className={inputCls}
+          value={employment}
+          onChange={(e) => reset(setEmployment)(e.target.value)}
+        >
+          <option value="">Semua status kerja</option>
+          <option value="PERMANENT">Tetap</option>
+          <option value="CONTRACT">Kontrak</option>
+        </select>
+        <select aria-label="Filter akun" className={inputCls} value={status} onChange={(e) => reset(setStatus)(e.target.value)}>
+          <option value="active">Aktif</option>
+          <option value="inactive">Nonaktif</option>
+          <option value="all">Semua</option>
+        </select>
+      </div>
+
+      <div className="overflow-x-auto rounded-panel border border-line bg-surface">
+        <table className="w-full text-left text-sm">
+          <thead className="sticky top-0 border-b border-line bg-surface text-mist">
+            <tr>
+              <th className="px-4 py-3 font-medium">Nama</th>
+              <th className="px-4 py-3 font-medium">Role</th>
+              <th className="px-4 py-3 font-medium">Status kerja</th>
+              <th className="px-4 py-3 font-medium">Akun</th>
+              {showDocs && <th className="px-4 py-3 font-medium">Berkas</th>}
+            </tr>
+          </thead>
+          <tbody>
+            {list.isPending && (
+              <tr aria-hidden>
+                <td colSpan={cols} className="h-11 px-4">
+                  <div className="h-3 w-1/2 animate-pulse rounded-tag bg-hover" />
+                </td>
+              </tr>
+            )}
+            {list.isError && (
+              <tr>
+                <td colSpan={cols} className="px-4 py-6 text-center text-danger">
+                  Direktori tidak dapat dimuat.
+                </td>
+              </tr>
+            )}
+            {data?.items.length === 0 && (
+              <tr>
+                <td colSpan={cols} className="px-4 py-6 text-center text-mist">
+                  Tidak ada karyawan yang cocok.
+                </td>
+              </tr>
+            )}
+            {data?.items.map((e) => (
+              <tr key={e.id} className="h-11 border-b border-line last:border-0 hover:bg-hover">
+                <td className="px-4 py-2">
+                  <Link to={`/directory/${e.id}`} className="font-medium text-lens hover:underline">
+                    {e.full_name}
+                  </Link>
+                  <div className="text-xs text-mist">{e.username}</div>
+                </td>
+                <td className="px-4 py-2">{ROLE_LABEL[e.user_type ?? e.role]}</td>
+                <td className="px-4 py-2">{e.employment_type ? EMPLOYMENT_LABEL[e.employment_type] : "-"}</td>
+                <td className="px-4 py-2">{e.is_active ? <Badge tone="success">Aktif</Badge> : <Badge>Nonaktif</Badge>}</td>
+                {showDocs && (
+                  <td className="px-4 py-2">
+                    <CompletenessBadge status={e.documents_status} missing={e.documents_missing?.length} />
+                  </td>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {data && data.total > data.page_size && (
+        <nav aria-label="Halaman" className="mt-4 flex items-center justify-between text-sm">
+          <span className="text-mist">
+            {data.total} karyawan · halaman {data.page} dari {lastPage}
+          </span>
+          <span className="flex gap-2">
+            <Button variant="secondary" disabled={page <= 1} onClick={() => setPage(page - 1)}>
+              Sebelumnya
+            </Button>
+            <Button variant="secondary" disabled={page >= lastPage} onClick={() => setPage(page + 1)}>
+              Berikutnya
+            </Button>
+          </span>
+        </nav>
+      )}
+    </>
+  );
+}

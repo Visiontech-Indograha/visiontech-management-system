@@ -6,11 +6,14 @@ from typing import List
 
 from app.core.config import settings
 from app.core.permissions import Permission, get_role_permissions
+from app.core.security import verify_jwt_token
 
 security = HTTPBearer()
 
 class CurrentUser(BaseModel):
     user_id: str
+    organization_id: str
+    email: str
     role: str
     session_id: str
     permissions: List[str]
@@ -18,13 +21,14 @@ class CurrentUser(BaseModel):
 def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> CurrentUser:
     token = credentials.credentials
     try:
-        # TODO: Decode using EdDSA and verify with DB if session revoked
-        payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=["HS256"]) # Change to EdDSA
+        payload = verify_jwt_token(token)
         user_id = payload.get("sub")
+        org_id = payload.get("org")
+        email = payload.get("email", "unknown")
         role = payload.get("role", "field")
         session_id = payload.get("jti")
         
-        if user_id is None or session_id is None:
+        if user_id is None or org_id is None or session_id is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Could not validate credentials",
@@ -33,16 +37,13 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
         permissions = get_role_permissions(role)
         return CurrentUser(
             user_id=user_id,
+            organization_id=org_id,
+            email=email,
             role=role,
             session_id=session_id,
             permissions=permissions
         )
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token expired",
-        )
-    except jwt.InvalidTokenError:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token",
@@ -71,6 +72,15 @@ async def get_db_with_user(
     current_user: CurrentUser = Depends(get_current_user)
 ) -> AsyncSession:
     # Pass user context to Postgres for RLS and auditing
-    await db.execute(text("SET LOCAL vms.user_id = :uid"), {"uid": current_user.user_id})
+    query = text("""
+        SET LOCAL app.user_id = :uid;
+        SET LOCAL app.organization_id = :org_id;
+        SET LOCAL app.actor_label = :actor;
+    """)
+    await db.execute(query, {
+        "uid": current_user.user_id,
+        "org_id": current_user.organization_id,
+        "actor": current_user.email
+    })
     return db
 

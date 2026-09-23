@@ -43,12 +43,52 @@ def create_app() -> FastAPI:
     
     app.add_middleware(RequestIDMiddleware)
     
+    from fastapi.exceptions import RequestValidationError
+    from starlette.exceptions import HTTPException as StarletteHTTPException
+    
+    @app.exception_handler(StarletteHTTPException)
+    async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+        if isinstance(exc.detail, dict) and "code" in exc.detail:
+            error_payload = exc.detail
+        else:
+            code = "NOT_FOUND" if exc.status_code == 404 else "INVALID_CREDENTIALS" if exc.status_code == 401 else "FORBIDDEN" if exc.status_code == 403 else "BAD_REQUEST"
+            error_payload = {
+                "code": code,
+                "message": str(exc.detail),
+                "details": {}
+            }
+        return JSONResponse(status_code=exc.status_code, content={"error": error_payload})
+
+    @app.exception_handler(RequestValidationError)
+    async def validation_exception_handler(request: Request, exc: RequestValidationError):
+        fields = {}
+        for err in exc.errors():
+            loc = ".".join(str(l) for l in err["loc"][1:])
+            fields[loc] = err["msg"]
+            
+        return JSONResponse(
+            status_code=422,
+            content={
+                "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Data yang dikirim tidak valid.",
+                    "details": {"fields": fields}
+                }
+            }
+        )
+        
     @app.exception_handler(Exception)
     async def global_exception_handler(request: Request, exc: Exception):
         logger.error(f"Unhandled error: {exc}", exc_info=True)
         return JSONResponse(
             status_code=500,
-            content={"detail": "Internal server error", "error_code": "INTERNAL_ERROR"}
+            content={
+                "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Terjadi kesalahan internal pada server.",
+                    "details": {}
+                }
+            }
         )
 
     @app.get("/health")
@@ -61,7 +101,9 @@ def create_app() -> FastAPI:
         return {"status": "ready"}
         
     from app.api.auth import router as auth_router
+    from app.api.audit import router as audit_router
     app.include_router(auth_router)
+    app.include_router(audit_router)
         
     return app
 

@@ -10,23 +10,50 @@ async def create_admin(email: str, password: str):
     async with engine.begin() as conn:
         hashed = hash_password(password)
         
-        # Checking if admin exists
-        query = text("SELECT id FROM vms.users WHERE email = :email")
-        result = await conn.execute(query, {"email": email})
-        if result.fetchone():
+        # 1. Ensure at least one organization exists (Default Org)
+        org_query = text("SELECT id FROM vms.organization LIMIT 1")
+        result = await conn.execute(org_query)
+        org_row = result.fetchone()
+        
+        if not org_row:
+            print("No organization found. Creating 'Default Organization'...")
+            insert_org = text("""
+                INSERT INTO vms.organization (name) VALUES ('Default Organization') RETURNING id
+            """)
+            result = await conn.execute(insert_org)
+            org_id = result.scalar()
+        else:
+            org_id = org_row[0]
+            
+        # 2. Checking if user exists
+        query = text("SELECT id FROM vms.app_user WHERE login = :login")
+        result = await conn.execute(query, {"login": email})
+        user_row = result.fetchone()
+        if user_row:
             print(f"User {email} already exists!")
             return
 
-        # Insert user
+        # 3. Insert user
         insert_query = text("""
-            INSERT INTO vms.users (email, password_hash, role, status)
-            VALUES (:email, :password_hash, 'admin', 'ACTIVE')
+            INSERT INTO vms.app_user (organization_id, login, password_hash, is_active)
+            VALUES (:org_id, :login, :password_hash, true)
+            RETURNING id
         """)
-        await conn.execute(insert_query, {
-            "email": email,
+        result = await conn.execute(insert_query, {
+            "org_id": org_id,
+            "login": email,
             "password_hash": hashed
         })
-        print(f"Admin user {email} created successfully!")
+        user_id = result.scalar()
+        
+        # 4. Insert role
+        insert_role_query = text("""
+            INSERT INTO vms.user_role (user_id, role)
+            VALUES (:user_id, 'admin')
+        """)
+        await conn.execute(insert_role_query, {"user_id": user_id})
+        
+        print(f"Admin user {email} created successfully in organization {org_id}!")
         
     await engine.dispose()
 

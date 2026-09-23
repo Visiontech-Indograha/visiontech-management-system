@@ -24,18 +24,20 @@ def set_refresh_cookie(response: Response, token: str):
 @router.post("/login", response_model=TokenResponse)
 async def login(request: LoginRequest, response: Response, db: AsyncSession = Depends(get_db)):
     # Fetch user
-    query = text("SELECT id, email, password_hash, role, status, login_attempts, is_locked FROM vms.users WHERE email = :email")
+    query = text("""
+        SELECT u.id, u.login, u.password_hash, u.is_active, u.organization_id, r.role
+        FROM vms.app_user u
+        LEFT JOIN vms.user_role r ON u.id = r.user_id
+        WHERE u.login = :email
+    """)
     result = await db.execute(query, {"email": request.email})
     user = result.fetchone()
     
     if not user:
         raise HTTPException(status_code=400, detail="Email atau kata sandi salah")
         
-    if user.status != "ACTIVE":
+    if not user.is_active:
         raise HTTPException(status_code=403, detail="Akun dinonaktifkan")
-        
-    if user.is_locked:
-        raise HTTPException(status_code=403, detail="Akun terkunci karena terlalu banyak percobaan gagal")
         
     # Verify password
     if not verify_password(request.password, user.password_hash):
@@ -46,7 +48,9 @@ async def login(request: LoginRequest, response: Response, db: AsyncSession = De
     
     token_data = {
         "sub": str(user.id),
-        "role": user.role,
+        "org": str(user.organization_id),
+        "email": user.login,
+        "role": user.role or "field",
         "jti": session_id
     }
     
@@ -68,13 +72,15 @@ async def refresh_token(request: Request, response: Response, db: AsyncSession =
     try:
         payload = verify_jwt_token(refresh_token)
         user_id = payload.get("sub")
+        org_id = payload.get("org")
+        email = payload.get("email")
         role = payload.get("role")
         session_id = payload.get("jti")
         
-        # In a real app, verify that session_id is still valid in DB
-        
         token_data = {
             "sub": user_id,
+            "org": org_id,
+            "email": email,
             "role": role,
             "jti": session_id
         }
@@ -94,7 +100,12 @@ async def logout(response: Response):
 @router.get("/me", response_model=UserMeResponse)
 async def get_me(current_user: CurrentUser = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     # Retrieve latest user info
-    query = text("SELECT email, role FROM vms.users WHERE id = :id")
+    query = text("""
+        SELECT u.login, r.role 
+        FROM vms.app_user u
+        LEFT JOIN vms.user_role r ON u.id = r.user_id
+        WHERE u.id = :id
+    """)
     result = await db.execute(query, {"id": current_user.user_id})
     user = result.fetchone()
     
@@ -103,7 +114,48 @@ async def get_me(current_user: CurrentUser = Depends(get_current_user), db: Asyn
         
     return UserMeResponse(
         user_id=current_user.user_id,
-        email=user.email,
-        role=user.role,
+        email=user.login,
+        role=user.role or "field",
         permissions=current_user.permissions
     )
+
+from pydantic import BaseModel
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+@router.post("/change-password", response_model=TokenResponse)
+async def change_password(request: ChangePasswordRequest, response: Response, current_user: CurrentUser = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    query = text("SELECT password_hash FROM vms.app_user WHERE id = :id")
+    result = await db.execute(query, {"id": current_user.user_id})
+    user = result.fetchone()
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    if not verify_password(request.current_password, user.password_hash):
+        raise HTTPException(status_code=422, detail={"code": "VALIDATION_ERROR", "message": "Data yang dikirim tidak valid.", "details": {"fields": {"current_password": "Password saat ini salah."}}})
+        
+    from app.core.security import hash_password
+    hashed_new = hash_password(request.new_password)
+    
+    update_query = text("UPDATE vms.app_user SET password_hash = :hash WHERE id = :id")
+    await db.execute(update_query, {"hash": hashed_new, "id": current_user.user_id})
+    
+    # Generate new tokens
+    session_id = str(uuid.uuid4())
+    token_data = {
+        "sub": current_user.user_id,
+        "org": current_user.organization_id,
+        "email": current_user.email,
+        "role": current_user.role,
+        "jti": session_id
+    }
+    
+    access_token = create_jwt_token(token_data, timedelta(minutes=15))
+    refresh_token = create_jwt_token(token_data, timedelta(days=7))
+    
+    set_refresh_cookie(response, refresh_token)
+    
+    return TokenResponse(access_token=access_token)

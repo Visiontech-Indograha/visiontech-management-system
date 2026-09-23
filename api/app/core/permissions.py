@@ -19,6 +19,9 @@ class Permission(str, Enum):
     # OPS permissions
     MANAGE_ASSETS = "manage:assets"
     VIEW_TIMELINE = "view:timeline"
+    
+    # Audit permissions
+    VIEW_AUDIT = "view:audit"
 
 # Mapping Role -> Permissions
 ROLE_PERMISSIONS = {

@@ -4,10 +4,10 @@ meneruskan `/api/*` dan `/health` ke API. Hanya pemeriksaan kesehatan & dokument
 """
 from __future__ import annotations
 
-from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
 
 from app.main import API_PREFIX, app
+from tests.route_inventory import all_routes
 
 ROOT_ROUTES = {"/health", "/ready"}
 
@@ -17,12 +17,11 @@ def test_api_prefix_matches_contract():
 
 
 def test_every_application_route_lives_under_api_v1():
-    offenders = [
-        route.path
-        for route in app.routes
-        if isinstance(route, APIRoute) and route.path not in ROOT_ROUTES and not route.path.startswith(API_PREFIX)
-    ]
+    routes = all_routes()
+    offenders = [path for _, path in routes if path not in ROOT_ROUTES and not path.startswith(API_PREFIX)]
 
+    # Inventaris kosong berarti penjaga ini tidak memeriksa apa pun — gagal, jangan lolos diam-diam.
+    assert len(routes) > 20
     assert offenders == []
 
 

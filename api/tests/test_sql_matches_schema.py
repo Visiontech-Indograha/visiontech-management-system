@@ -18,10 +18,6 @@ pytestmark = requires_db
 
 # kunci → task yang memperbaikinya (PLAN-VERIFIKASI-MODUL-RINCI.md)
 KNOWN_BROKEN: dict[str, str] = {
-    # Jalur SK — kolom valid_to (skema: valid_period daterange)
-    "app/api/plan_transitions.py#49b7507ca3": "V-03",
-    "app/api/plan_changes.py#0d3f27e550": "V-03",
-    "app/api/plan_changes.py#5cf2e0770e": "V-03",
     # Jalur SK — nilai enum & tipe
     "app/api/plan_transitions.py#36bd87c887": "V-04",  # document_kind 'SK'
     "app/api/plan_transitions.py#56fe77e81a": "V-04",  # document_status 'ACCEPTED'

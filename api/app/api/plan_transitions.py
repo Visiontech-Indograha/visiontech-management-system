@@ -36,7 +36,8 @@ async def publish_plan(
         raise HTTPException(status_code=409, detail={"code": "CONFLICT", "message": "Dokumen ini telah diubah oleh orang lain."})
         
     # Validasi kelengkapan (Minimal 1 member (Leader), 1 day, 1 task)
-    mem_check = text("SELECT count(*) FROM vms.work_plan_member WHERE work_plan_id = :id AND valid_to IS NULL")
+    # Anggota aktif = valid_period terbuka (sama dengan vms.is_plan_member)
+    mem_check = text("SELECT count(*) FROM vms.work_plan_member WHERE work_plan_id = :id AND upper(valid_period) IS NULL")
     if (await db.execute(mem_check, {"id": plan_id})).scalar() < 1:
         raise HTTPException(status_code=400, detail="SK belum memiliki anggota aktif.")
         

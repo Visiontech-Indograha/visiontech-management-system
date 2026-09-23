@@ -60,7 +60,7 @@ def require_permission(required_permission: Permission):
     return permission_checker
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import text
+from app.db.context import set_request_context
 from app.db.session import AsyncSessionLocal
 
 async def get_db() -> AsyncSession:
@@ -71,18 +71,14 @@ async def get_db_with_user(
     db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user)
 ) -> AsyncSession:
-    # Pass user context to Postgres for RLS and auditing
-    query = text("""
-        SET LOCAL app.user_id = :uid;
-        SET LOCAL app.organization_id = :org_id;
-        SET LOCAL app.actor_label = :actor;
-    """)
+    # Konteks RLS & audit untuk transaksi permintaan ini (app/db/context.py).
     try:
-        await db.execute(query, {
-            "uid": current_user.user_id,
-            "org_id": current_user.organization_id,
-            "actor": current_user.email
-        })
+        await set_request_context(
+            db,
+            user_id=current_user.user_id,
+            organization_id=current_user.organization_id,
+            actor_label=current_user.email,
+        )
     except Exception as e:
         from app.core.alerts import send_security_alert
         await send_security_alert("Konteks RLS Gagal Disetel", f"Gagal menetapkan context RLS untuk user {current_user.email}. DB Error: {str(e)}")

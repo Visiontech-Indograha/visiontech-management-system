@@ -177,7 +177,7 @@ Format tiap task: **Masalah → Uji dulu → Perubahan → DoD**. Centang hanya 
 
 ### G1 · Fondasi DB
 
-- [ ] **T-01 · Konteks RLS dengan `set_config`** (F-02)
+- [x] **T-01 · Konteks RLS dengan `set_config`** (F-02)
   - Uji: `tests/test_db_context.py` — dependency menyetel `app.user_id`, `app.organization_id`,
     `app.actor_label`; `current_user_id()`/`current_org_id()` di DB mengembalikan nilai itu; nilai
     hilang setelah transaksi (tidak bocor ke permintaan lain).

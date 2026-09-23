@@ -21,10 +21,22 @@ CREATE EXTENSION IF NOT EXISTS citext;       -- email & login tanpa peduli huruf
 CREATE SCHEMA IF NOT EXISTS vms;
 SET search_path = vms, public;
 
--- Kunci utama memakai UUID acak. Pada PostgreSQL 18+ ganti isi fungsi ini dengan
--- uuidv7() bawaan agar nilainya urut waktu dan indeks tetap padat.
+-- Kunci utama memakai UUIDv7 (urut waktu, indeks tetap padat). PostgreSQL 16 belum punya
+-- uuidv7(): 48 bit milidetik Unix + bit acak gen_random_uuid(), nibble versi 4 → 7.
+-- Pada PostgreSQL 18+ isi fungsi ini boleh diganti `SELECT uuidv7()`.
+-- Sama dengan migrasi api/alembic/versions/0002_fix_new_id_uuidv7.py.
 CREATE OR REPLACE FUNCTION new_id() RETURNS uuid
-LANGUAGE sql VOLATILE AS $$ SELECT gen_random_uuid() $$;
+LANGUAGE sql VOLATILE AS $$
+  SELECT encode(
+    set_bit(
+      set_bit(
+        overlay(uuid_send(gen_random_uuid())
+                PLACING substring(int8send(floor(extract(epoch FROM clock_timestamp()) * 1000)::bigint) FROM 3)
+                FROM 1 FOR 6),
+        52, 1),
+      53, 1),
+    'hex')::uuid
+$$;
 
 -- -----------------------------------------------------------------------------
 -- Tipe enum: status yang dipakai aplikasi. Enum dipilih (bukan lookup table)

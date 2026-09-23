@@ -7,7 +7,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql+asyncpg://vms_app:CHANGE_ME@db:5432/visiontech_db
+      - DATABASE_URL=postgresql+asyncpg://vms_app:${POSTGRES_PASSWORD:?isi POSTGRES_PASSWORD di .env}@db:5432/visiontech_db
     depends_on:
       db:
         condition: service_healthy
@@ -25,7 +25,7 @@ services:
     image: postgis/postgis:16-3.4
     environment:
       POSTGRES_USER: vms_app
-      POSTGRES_PASSWORD: CHANGE_ME
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?isi POSTGRES_PASSWORD di .env}
       POSTGRES_DB: visiontech_db
     ports:
       - "5433:5432"

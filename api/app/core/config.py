@@ -2,7 +2,8 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "Visiontech VMS"
-    DATABASE_URL: str = "postgresql+asyncpg://vms_app:CHANGE_ME@100.117.92.14:5433/visiontech_db"
+    # Nilai asli hanya di api/.env (tidak masuk Git). Bawaan ini sengaja tidak bisa login.
+    DATABASE_URL: str = "postgresql+asyncpg://vms_app:CHANGE_ME@localhost:5433/visiontech_db"
     JWT_SECRET_KEY: str = "supersecretkey_change_me_in_production"
     
     # Discord #vms-alerts (dok 17). Kosong = peringatan hanya dicatat di log.

@@ -23,7 +23,7 @@ Centang hanya setelah commit di-push.
   - DoD: uji merah menampilkan tepat bug E2; setelah W2 & V-14 → hijau tanpa pengecualian.
   - Bergantung pada: —
 
-- [ ] **V-02 · Uji alur per modul (dari probe)**
+- [x] **V-02 · Uji alur per modul (dari probe)**
   - Tujuan: bukti permanen bahwa alur bahagia setiap modul menyimpan data.
   - Uji: `tests/flows/test_employee_flow.py`, `…_document_flow.py`, `…_attendance_flow.py`,
     `…_asset_flow.py`, `…_incident_flow.py`, `…_plan_flow.py` (SK: ditandai `xfail(strict=True)`

@@ -11,6 +11,21 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ### ✨ Ditambahkan
 
+#### Arsitektur Backend (Blok A — Refactor) — 2026-09-23
+- `api/app/core/errors.py` — `AppError`, `NotFoundError`, `ConflictError`, `InvalidStateError`, `ForbiddenError` + handler terpusat (semua error → JSON `{ code, message }` Bahasa Indonesia, tidak ada stack trace yang bocor).
+- `api/app/core/time.py` — `utcnow()` dan `jakarta_now()` sebagai sumber tunggal waktu server. `datetime.now()` tidak boleh dipakai di tempat lain.
+- `api/app/core/pagination.py` — Cursor pagination standar: encode/decode cursor, parse sort parameter, `PageResult[T]` generic.
+- `api/app/repositories/base_repo.py` — `BaseRepo` dengan helper `execute`, `fetchone`, `fetchall`, `scalar`.
+- `api/app/repositories/user_repo.py` — Semua query auth: `get_user_by_email`, `issue_session`, `rotate_session`, `revoke_session`, `login_is_locked`.
+- `api/app/repositories/plan_repo.py` — Semua query SK: CRUD, `update_status` dengan optimistic lock, `create_document_snapshot`, `get_snapshot` (dengan JOIN members + days).
+- `api/app/repositories/attendance_repo.py` — Semua query absensi: `get_site`, `distance_to_site` (PostGIS), `create_checkin`, `update_checkout`, `list_attendance`.
+- `api/app/services/auth_service.py` — `AuthService`: login (cek lockout + bcrypt), refresh (rotasi token), logout, get_me.
+- `api/app/services/plan_service.py` — `PlanService`: semua transisi status SK (publish, accept, start, request_completion, approve_completion, cancel) dengan validasi status dan optimistic lock.
+- `api/app/services/document_service.py` — `DocumentService`: kanonisasi JSON deterministik, SHA-256, `next_serial_number` via DB function, `register_document_snapshot`.
+- `api/app/services/attendance_service.py` — `AttendanceService`: check-in (geofence server-side, GPS palsu, face mismatch → NEEDS_REVIEW, duplikat dicegah), check-out (deteksi pulang cepat).
+- `api/app/services/pdf_service.py` — `PdfService`: render PDF SK + QR code base64 via WeasyPrint + Jinja2, render BAST.
+- `api/app/main.py` — Daftarkan `AppError` exception handler ke FastAPI app factory.
+
 #### Sistem Desain UI (`design`) — 2026-09-23
 - Dokumen sistem desain lengkap `docs/18-SISTEM-DESAIN-UI.md` — warna, tipografi, spasi, radius, elevasi, komponen, ikon, animasi, dan daftar larangan.
 - Token desain tunggal `docs/design/tokens.json` — sumber kebenaran untuk semua nilai visual (brand, neutral, status, font, spasi, radius, gerak).

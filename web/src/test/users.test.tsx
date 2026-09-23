@@ -123,26 +123,24 @@ describe("halaman Pengguna", () => {
 describe("halaman Audit log", () => {
   it("menampilkan catatan dalam WIB dan detail sebelum/sesudah", async () => {
     mockApi((c) => {
-      if (c.url === "/audit-logs")
+      if (c.url === "/audit-events")
         return {
           data: {
             items: [
               {
                 id: "a1",
-                actor_id: "abcdef12-0000-0000-0000-000000000000",
+                actor_label: "admin@visiontech.co.id",
                 action: "user.deactivate",
                 entity_type: "user",
                 entity_id: "11111111-0000-0000-0000-000000000000",
-                before: { is_active: true },
-                after: { is_active: false },
-                ip: "10.0.0.1",
-                user_agent: null,
-                created_at: "2026-09-21T00:42:00Z",
+                detail: "Deactivated user",
+                changes: { "is_active": false },
+                occurred_at: "2026-09-21T00:42:00Z",
               },
             ],
             total: 1,
             page: 1,
-            page_size: 25,
+            size: 25,
           },
         };
     });

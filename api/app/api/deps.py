@@ -51,7 +51,7 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
 
 def require_permission(required_permission: Permission):
     def permission_checker(current_user: CurrentUser = Depends(get_current_user)):
-        if required_permission.value not in current_user.permissions and "admin" != current_user.role:
+        if required_permission.value not in current_user.permissions:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Not enough permissions",

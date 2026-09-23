@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import socket
 import uuid
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from urllib.parse import urlparse
 
 import psycopg2
@@ -66,25 +66,48 @@ class SeededUser:
 
 
 @pytest.fixture
-def seeded_user() -> Iterator[SeededUser]:
-    """Organisasi + pengguna ADMIN sekali pakai; dihapus bersih setelah uji."""
-    login = f"uji-{uuid.uuid4().hex[:12]}@contoh.test"
-    password = "KataSandiUji-123"
-    with _sync_conn() as conn, conn.cursor() as cur:
-        cur.execute("INSERT INTO vms.organization (name) VALUES ('Organisasi uji') RETURNING id")
-        org_id = cur.fetchone()[0]
-        cur.execute(
-            "INSERT INTO vms.app_user (organization_id, login, password_hash) VALUES (%s, %s, %s) RETURNING id",
-            (org_id, login, hash_password(password)),
-        )
-        user_id = cur.fetchone()[0]
-        cur.execute("INSERT INTO vms.user_role (user_id, role) VALUES (%s, 'ADMIN')", (user_id,))
+def make_user() -> Iterator[Callable[..., SeededUser]]:
+    """
+    Pabrik pengguna sekali pakai: `make_user("HR")`, `make_user(None)` (tanpa peran global).
+    Setiap pengguna mendapat organisasi sendiri; semuanya dihapus bersih setelah uji.
+    """
+    created: list[tuple[str, str]] = []
+
+    def _make(role: str | None = "ADMIN") -> SeededUser:
+        login = f"uji-{uuid.uuid4().hex[:12]}@contoh.test"
+        password = "KataSandiUji-123"
+        with _sync_conn() as conn, conn.cursor() as cur:
+            cur.execute("INSERT INTO vms.organization (name) VALUES ('Organisasi uji') RETURNING id")
+            org_id = cur.fetchone()[0]
+            cur.execute(
+                "INSERT INTO vms.app_user (organization_id, login, password_hash) VALUES (%s, %s, %s) RETURNING id",
+                (org_id, login, hash_password(password)),
+            )
+            user_id = cur.fetchone()[0]
+            if role:
+                cur.execute("INSERT INTO vms.user_role (user_id, role) VALUES (%s, %s)", (user_id, role))
+        created.append((str(org_id), login))
+        return SeededUser(str(org_id), str(user_id), login, password)
+
     try:
-        yield SeededUser(str(org_id), str(user_id), login, password)
+        yield _make
     finally:
         with _sync_conn() as conn, conn.cursor() as cur:
-            cur.execute("DELETE FROM vms.login_attempt WHERE login = %s", (login,))
-            cur.execute("DELETE FROM vms.organization WHERE id = %s", (org_id,))
+            for org_id, login in created:
+                cur.execute("DELETE FROM vms.login_attempt WHERE login = %s", (login,))
+                cur.execute("DELETE FROM vms.organization WHERE id = %s", (org_id,))
+
+
+@pytest.fixture
+def seeded_user(make_user: Callable[..., SeededUser]) -> SeededUser:
+    """Pengguna ADMIN sekali pakai."""
+    return make_user("ADMIN")
+
+
+def login_headers(client: TestClient, user: SeededUser) -> dict[str, str]:
+    response = client.post("/auth/login", json={"email": user.login, "password": user.password})
+    assert response.status_code == 200, response.text
+    return {"Authorization": f"Bearer {response.json()['access_token']}"}
 
 
 @pytest.fixture

@@ -194,7 +194,7 @@ Format tiap task: **Masalah → Uji dulu → Perubahan → DoD**. Centang hanya 
 
 ### G2 · Identitas & izin
 
-- [ ] **T-03 · Satu sumber peran + peta izin 8 peran** (F-03, F-04)
+- [x] **T-03 · Satu sumber peran + peta izin 8 peran** (F-03, F-04)
   - Uji: `RoleCode` Python == `enum_range(NULL::vms.role_code)`; parametrik 8 peran × izin sesuai dok 03 §1;
     ADMIN mendapat semua izin; peran tak dikenal → tanpa izin.
   - Perubahan: `core/permissions.py` berkunci `RoleCode`; `require_permission` tanpa perbandingan string `"admin"`.

@@ -57,3 +57,20 @@ def require_permission(required_permission: Permission):
             )
         return current_user
     return permission_checker
+
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import text
+from app.db.session import AsyncSessionLocal
+
+async def get_db() -> AsyncSession:
+    async with AsyncSessionLocal() as session:
+        yield session
+
+async def get_db_with_user(
+    db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(get_current_user)
+) -> AsyncSession:
+    # Pass user context to Postgres for RLS and auditing
+    await db.execute(text("SET LOCAL vms.user_id = :uid"), {"uid": current_user.user_id})
+    return db
+

@@ -13,6 +13,6 @@ PyNaCl==1.5.0
 PyJWT==2.8.0
 cryptography==42.0.5
 minio==7.2.5
-Pillow==10.2.0
+Pillow>=10.2.0
 filetype==1.2.0
 python-multipart==0.0.9

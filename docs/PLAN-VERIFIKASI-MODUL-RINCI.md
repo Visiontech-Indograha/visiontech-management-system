@@ -61,7 +61,7 @@ Centang hanya setelah commit di-push.
     bentrok jadwal → 409 berbahasa Indonesia; bukan DRAFT → 409; `row_version` usang → 409.
   - Acuan: `domain.js` `checkMembers`, `checkSchedule`; `db/02` `tg_member_no_conflict`.
 
-- [ ] **V-06 · Aturan publish & start lengkap**
+- [x] **V-06 · Aturan publish & start lengkap**
   - Uji dulu: publish ditolak bila ada tanggal periode tanpa hari, hari tanpa judul/tugas
     (`domain.js:319`); start ditolak sebelum `period_start` menurut jam server (`domain.js:330`);
     accept hanya oleh **ketua menurut SK** (`is_plan_leader`) — pengguna lain 403.
@@ -77,6 +77,10 @@ Centang hanya setelah commit di-push.
   - Uji dulu (parametrik peran × kebutuhan): PM unit lain, OPS, ketua lama setelah diganti,
     anggota, pengguna tanpa peran. Termasuk regresi **R3** (ketua diganti kehilangan hak ketua,
     tetap anggota bila masih terdaftar).
+  - **Temuan V-06 (wajib diputuskan di sini):** di prototipe (`domain.js` baris 174) OPS memegang
+    kewenangan PM lintas unit (CREATE_PLAN, PUBLISH, APPROVE_CHANGE, CANCEL_PLAN, …), sedangkan peta
+    izin T-03 mengikuti dok 03 §1 ("OPS = baca"). Urutan kewenangan menempatkan prototipe di atas
+    dok 03 → peta izin OPS disesuaikan dengan prototipe dan dicatat di dok 10 Bagian C.
 
 - [ ] **V-08 · Penjaga organisasi untuk rujukan di badan permintaan**
   - Perubahan: `same_org(table, id)` untuk `work_plan_id`, `site_id`, `asset_id`,

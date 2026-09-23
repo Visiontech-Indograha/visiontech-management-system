@@ -1,23 +1,17 @@
 """
 V-02 · Alur modul yang bergantung pada SK: aset (M6), siklus SK (M3), insiden (M7), laporan harian (M5).
 
-Alur SK & turunannya ditandai `xfail(strict=True)` sampai W2 (V-03…V-06) selesai: begitu alurnya
-lulus, xfail ketat membuat uji MERAH sehingga penandanya wajib dicabut — tidak bisa terlupa.
-Uji-uji ini sekaligus spesifikasi yang dapat dijalankan untuk W2 (termasuk `PUT /plans/{id}/members`).
+Alur SK sempat ditandai `xfail(strict=True)` sampai W2 (V-03…V-06) selesai; penandanya dicabut
+begitu xfail ketat mendeteksi alurnya lulus (2026-09-24).
 """
 from __future__ import annotations
 
 from datetime import timedelta
 
-import pytest
-
 from app.core.time import jakarta_now
 from tests.conftest import World, requires_db, sync_query
 
 pytestmark = requires_db
-
-W2 = pytest.mark.xfail(strict=True, reason="Siklus SK belum hidup — V-03…V-06 (PLAN-VERIFIKASI-MODUL-RINCI)")
-
 
 def _row_version(plan_id: str) -> int:
     return sync_query("SELECT row_version FROM vms.work_plan WHERE id = %s", (plan_id,))[0][0]
@@ -65,7 +59,9 @@ def run_plan_to_in_progress(client, world: World) -> tuple[str, list[str]]:
     assert accepted.status_code == 200, accepted.text
     assert sync_query("SELECT status::text FROM vms.plan_document WHERE work_plan_id = %s", (plan_id,)) == [("EFFECTIVE",)]
 
-    started = client.post(f"/plans/{plan_id}/start", headers=pm, json={"row_version": _row_version(plan_id), "reason": ""})
+    # START oleh ketua menurut SK (domain.js: LEADER), bukan PM.
+    started = client.post(f"/plans/{plan_id}/start", headers=world.headers(client, "leader"),
+                          json={"row_version": _row_version(plan_id), "reason": ""})
     assert started.status_code == 200, started.text
     assert sync_query("SELECT status::text FROM vms.work_plan WHERE id = %s", (plan_id,)) == [("IN_PROGRESS",)]
     return plan_id, day_ids
@@ -96,12 +92,12 @@ def test_asset_cycle_reserve_return_verify(client, world):
         == [(1,)]
 
 
-@W2
 def test_plan_lifecycle_to_extension(client, world):
     plan_id, _ = run_plan_to_in_progress(client, world)
     pm = world.headers(client, "pm")
 
-    change = client.post(f"/plans/{plan_id}/changes/extension", headers=pm,
+    # Perpanjangan diajukan ketua (REQUEST_CHANGE), disetujui PM (APPROVE_CHANGE).
+    change = client.post(f"/plans/{plan_id}/changes/extension", headers=world.headers(client, "leader"),
                          json={"new_period_end": (jakarta_now().date() + timedelta(days=5)).isoformat(),
                                "reason": "Hujan deras dua hari"})
     assert change.status_code in (200, 201), change.text
@@ -111,7 +107,6 @@ def test_plan_lifecycle_to_extension(client, world):
                       (plan_id,)) == [(1,)]
 
 
-@W2
 def test_incident_and_daily_report_on_running_plan(client, world):
     plan_id, day_ids = run_plan_to_in_progress(client, world)
     leader = world.headers(client, "leader")

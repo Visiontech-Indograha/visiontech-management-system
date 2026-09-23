@@ -6,8 +6,9 @@ from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import CurrentUser, get_db_with_user, require_permission
+from app.api.deps import CurrentUser, get_current_user, get_db_with_user, require_permission
 from app.core.enums import ChangeStatus, ChangeType, PlanStatus
+from app.core.errors import ForbiddenError
 from app.core.permissions import Permission
 
 router = APIRouter(prefix="/plans/{plan_id}/changes", tags=["Plan Changes / Addendums"])
@@ -24,10 +25,14 @@ class PersonnelRequest(BaseModel):
 async def request_extension(
     plan_id: UUID,
     data: ExtensionRequest,
-    current_user: CurrentUser = Depends(require_permission(Permission.CREATE_PLAN)),
+    current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_with_user)
 ):
-    """Mengajukan Adendum Perpanjangan Waktu (P3-4)"""
+    """Mengajukan Adendum Perpanjangan Waktu (P3-4). Diajukan ketua menurut SK (domain.js REQUEST_CHANGE)."""
+    is_leader = (await db.execute(text("SELECT vms.is_plan_leader(:plan, :user)"),
+                                  {"plan": plan_id, "user": current_user.user_id})).scalar()
+    if not is_leader:
+        raise ForbiddenError("Hanya ketua tim menurut SK yang berlaku yang dapat mengajukan perpanjangan.")
     # 1. Pastikan SK dalam status yang bisa diperpanjang (IN_PROGRESS)
     check = text("SELECT status, upper(period) - integer '1' as current_end, revision FROM vms.work_plan WHERE id = :id FOR UPDATE")
     row = (await db.execute(check, {"id": plan_id})).fetchone()

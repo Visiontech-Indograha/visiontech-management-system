@@ -108,7 +108,7 @@ async def refresh_token(req: Request, response: Response, db: AsyncSession = Dep
         
     # Get user profile for new JWT
     query = text("""
-        SELECT u.id, u.login, u.organization_id, r.role 
+        SELECT u.id, u.login, u.is_active, u.organization_id, r.role 
         FROM vms.app_user u
         LEFT JOIN vms.user_role r ON u.id = r.user_id
         WHERE u.id = :uid
@@ -116,6 +116,9 @@ async def refresh_token(req: Request, response: Response, db: AsyncSession = Dep
     user_res = await db.execute(query, {"uid": rot_data.user_id})
     user = user_res.fetchone()
     
+    if not user or not user.is_active:
+        raise HTTPException(status_code=403, detail={"code": "INACTIVE", "message": "Akun dinonaktifkan"})
+        
     token_data = {
         "sub": str(user.id),
         "org": str(user.organization_id),

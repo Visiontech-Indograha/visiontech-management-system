@@ -77,10 +77,16 @@ async def get_db_with_user(
         SET LOCAL app.organization_id = :org_id;
         SET LOCAL app.actor_label = :actor;
     """)
-    await db.execute(query, {
-        "uid": current_user.user_id,
-        "org_id": current_user.organization_id,
-        "actor": current_user.email
-    })
+    try:
+        await db.execute(query, {
+            "uid": current_user.user_id,
+            "org_id": current_user.organization_id,
+            "actor": current_user.email
+        })
+    except Exception as e:
+        from app.core.alerts import send_security_alert
+        await send_security_alert("Konteks RLS Gagal Disetel", f"Gagal menetapkan context RLS untuk user {current_user.email}. DB Error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+        
     return db
 

@@ -99,6 +99,7 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 - **`plan_transitions.py`**: `issued_by` di tabel `plan_document` sekarang diisi `employee_id` (bukan `user_id`) sesuai FK constraint skema database.
 - **`auth.py`**: User yang tidak aktif (`is_active = false`) tidak dapat memperbarui token meskipun refresh token masih valid.
 - **`deps.py`**: Tambah try/except + Discord alert di sekitar `SET LOCAL` RLS injection; gagal tidak lagi memberikan akses tanpa konteks.
+- **`core/errors.py`** (2026-09-23): Respons `AppError` kini memakai bentuk baku dokumen 05 §2 — `{"error": {"code", "message", "details"}}` — sama dengan handler lain dan yang dibaca `web/src/lib/api.ts`. Sebelumnya `{code, message}` di tingkat atas sehingga web tidak bisa membaca pesan galat. `AppError` mendapat parameter `details`; `status` menjadi keyword-only. Uji: `api/tests/test_errors.py`.
 
 ### 🏗️ Infrastruktur & Aturan AI
 

@@ -2,9 +2,13 @@
 app/core/errors.py
 Penanganan error terpusat VMS.
 Semua error bisnis dilempar sebagai AppError. Handler di main.py mengubahnya
-menjadi respons JSON { "code": "...", "message": "..." } dalam Bahasa Indonesia.
+menjadi bentuk baku dokumen 05 §2:
+{ "error": { "code": "...", "message": "...", "details": {...} } }
+dengan message Bahasa Indonesia untuk pengguna.
 """
 from __future__ import annotations
+
+from typing import Any
 
 from fastapi import Request
 from fastapi.responses import JSONResponse
@@ -13,10 +17,18 @@ from fastapi.responses import JSONResponse
 class AppError(Exception):
     """Error bisnis yang bisa disampaikan ke klien."""
 
-    def __init__(self, code: str, message: str, status: int = 400) -> None:
+    def __init__(
+        self,
+        code: str,
+        message: str,
+        *,
+        status: int = 400,
+        details: dict[str, Any] | None = None,
+    ) -> None:
         self.code = code
         self.message = message
         self.status = status
+        self.details = details or {}
         super().__init__(message)
 
 
@@ -57,5 +69,5 @@ class StorageError(AppError):
 async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
     return JSONResponse(
         status_code=exc.status,
-        content={"code": exc.code, "message": exc.message},
+        content={"error": {"code": exc.code, "message": exc.message, "details": exc.details}},
     )

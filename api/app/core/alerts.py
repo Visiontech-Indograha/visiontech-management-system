@@ -18,3 +18,12 @@ async def send_security_alert(title: str, description: str, details: dict[str, o
 
     logger.warning(f"SECURITY ALERT: {title} - {description} - {details}")
     await send_discord_alert(settings.DISCORD_WEBHOOK_ALERTS, message, level="warning")
+
+
+async def send_business_alert(title: str, description: str) -> None:
+    """
+    Peringatan keanehan bisnis ke Discord #vms-alerts (dok 17 §5.3).
+    Pemanggil wajib hanya mengirim angka & waktu — tanpa nama, nomor karyawan, atau koordinat.
+    """
+    logger.warning(f"BUSINESS ALERT: {title} - {description}")
+    await send_discord_alert(settings.DISCORD_WEBHOOK_ALERTS, f"**{title}**\n{description}", level="warning")

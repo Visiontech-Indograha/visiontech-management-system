@@ -50,6 +50,9 @@ class Permission(str, Enum):
     VIEW_TIMELINE = "view:timeline"
     VIEW_AUDIT = "view:audit"
 
+    # Tugas terjadwal (cron) yang memicu peringatan — hanya ADMIN
+    RUN_SYSTEM_JOBS = "run:system_jobs"
+
 
 P = Permission
 

@@ -213,7 +213,7 @@ Format tiap task: **Masalah → Uji dulu → Perubahan → DoD**. Centang hanya 
   - Uji: 401/403/404/405/500 menghasilkan kode yang benar (`UNAUTHENTICATED`/`FORBIDDEN`/`NOT_FOUND`/`METHOD_NOT_ALLOWED`/`INTERNAL_ERROR`) dan pesan Indonesia; tidak ada jejak tumpukan.
 - [x] **T-07 · Awalan `/api/v1`** (F-07)
   - Uji: `/api/v1/auth/login` 200; `/auth/login` 404; `/health` & `/ready` tetap di akar (Caddy).
-- [ ] **T-08 · `attendance_cron` memakai setelan yang ada** (F-10)
+- [x] **T-08 · `attendance_cron` memakai setelan yang ada** (F-10)
   - Uji: impor modul & panggil fungsi peringatan tanpa webhook → tidak crash.
 - [x] **T-15 · Wajah tidak cocok benar-benar masuk NEEDS_REVIEW** (F-19, ditemukan saat T-08)
   - Masalah: trigger BEFORE dijalankan menurut urutan nama; `attendance_face_flag` jalan sebelum

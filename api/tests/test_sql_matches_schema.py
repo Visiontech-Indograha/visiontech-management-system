@@ -18,16 +18,12 @@ pytestmark = requires_db
 
 # kunci → task yang memperbaikinya (PLAN-VERIFIKASI-MODUL-RINCI.md)
 KNOWN_BROKEN: dict[str, str] = {
-    # Jalur SK — nilai enum & tipe
-    "app/api/plan_transitions.py#36bd87c887": "V-04",  # document_kind 'SK'
-    "app/api/plan_transitions.py#56fe77e81a": "V-04",  # document_status 'ACCEPTED'
-    "app/api/plan_changes.py#51f0126afa": "V-04",      # change_status 'APPLIED'
-    "app/api/plan_changes.py#d29e528d32": "V-04",      # daterange tanpa cast
     # Kode mati dari sesi lain (tidak diimpor) — dihapus di V-14
     "app/repositories/plan_repo.py#485dbe0fc8": "V-14",
     "app/repositories/plan_repo.py#488a7fca2b": "V-14",
     "app/repositories/plan_repo.py#c0d2cf2ac1": "V-14",
     "app/repositories/plan_repo.py#cd963790c2": "V-14",
+    "app/repositories/plan_repo.py#1fbc0beccc": "V-14",  # `:param::tipe` (lihat sql_inventory.PARAM)
     "app/services/pdf_service.py#fcf2d53873": "V-14",
 }
 

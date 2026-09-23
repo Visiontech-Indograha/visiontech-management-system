@@ -7,6 +7,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, get_db_with_user, require_permission
+from app.core.enums import ChangeStatus, ChangeType, PlanStatus
 from app.core.permissions import Permission
 
 router = APIRouter(prefix="/plans/{plan_id}/changes", tags=["Plan Changes / Addendums"])
@@ -31,7 +32,7 @@ async def request_extension(
     check = text("SELECT status, upper(period) - integer '1' as current_end, revision FROM vms.work_plan WHERE id = :id FOR UPDATE")
     row = (await db.execute(check, {"id": plan_id})).fetchone()
     
-    if not row or row.status not in ('IN_PROGRESS', 'ACCEPTED'):
+    if not row or row.status not in (PlanStatus.IN_PROGRESS, PlanStatus.ACCEPTED):
         raise HTTPException(status_code=400, detail="Hanya SK yang aktif (IN_PROGRESS / ACCEPTED) yang dapat diperpanjang.")
         
     if data.new_period_end <= row.current_end:
@@ -47,16 +48,17 @@ async def request_extension(
             work_plan_id, change_type, status, reason, 
             old_period, new_period, base_revision, proposed_revision, requested_by
         ) VALUES (
-            :plan, 'EXTENSION', 'PENDING_PM', :reason, 
-            daterange(null, :old_end + integer '1', '[)'), 
-            daterange(null, :new_end + integer '1', '[)'), 
+            :plan, :extend, :pending, :reason,
+            daterange(NULL, CAST(:old_end AS date) + 1, '[)'),
+            daterange(NULL, CAST(:new_end AS date) + 1, '[)'),
             :rev, :rev + 1, :emp
         ) RETURNING id
     """)
     res = await db.execute(ins, {
         "plan": plan_id, "reason": data.reason,
         "old_end": row.current_end, "new_end": data.new_period_end,
-        "rev": row.revision, "emp": my_emp
+        "rev": row.revision, "emp": my_emp,
+        "extend": ChangeType.EXTEND, "pending": ChangeStatus.PENDING_PM,
     })
     
     return {"change_id": res.scalar(), "message": "Usulan perpanjangan diajukan."}
@@ -72,7 +74,7 @@ async def approve_change(
     check = text("SELECT * FROM vms.plan_change WHERE id = :id AND work_plan_id = :plan FOR UPDATE")
     change = (await db.execute(check, {"id": change_id, "plan": plan_id})).fetchone()
     
-    if not change or change.status not in ('PENDING_PM', 'PENDING_LEADER'):
+    if not change or change.status not in (ChangeStatus.PENDING_PM, ChangeStatus.AWAITING_LEADER_ACCEPTANCE):
         raise HTTPException(status_code=400, detail="Usulan tidak ditemukan atau tidak dalam status pending.")
         
     emp_q = text("SELECT employee_id FROM vms.app_user WHERE id = :uid")
@@ -81,17 +83,17 @@ async def approve_change(
     # Update change status
     upd_change = text("""
         UPDATE vms.plan_change 
-        SET status = 'APPLIED', decided_by = :emp, updated_at = now() 
+        SET status = :effective, decided_by = :emp
         WHERE id = :id
     """)
-    await db.execute(upd_change, {"emp": my_emp, "id": change_id})
+    await db.execute(upd_change, {"emp": my_emp, "id": change_id, "effective": ChangeStatus.EFFECTIVE})
     
     # Apply logic based on type
-    if change.change_type == 'EXTENSION':
+    if change.change_type == ChangeType.EXTEND:
         # Update upper bound of period
         apply_ext = text("""
             UPDATE vms.work_plan 
-            SET period = daterange(lower(period), upper(:new_period::daterange), '[)'),
+            SET period = daterange(lower(period), upper(CAST(:new_period AS daterange)), '[)'),
                 revision = revision + 1, row_version = row_version + 1
             WHERE id = :plan
         """)
@@ -99,7 +101,7 @@ async def approve_change(
         # Baris anggota TIDAK diubah: anggota aktif = valid_period terbuka (is_plan_member), dan bentrok
         # jadwal dihitung dari work_plan.period. Memberi batas atas justru membuat anggota tidak aktif.
         
-    elif change.change_type == 'PERSONNEL':
+    elif change.change_type == ChangeType.PERSONNEL:
         # Penutupan baris anggota lama
         close_old = text("""
             UPDATE vms.work_plan_member

@@ -237,7 +237,9 @@ BEGIN
   END IF;
   RETURN NEW;
 END $$;
-CREATE TRIGGER attendance_face_flag BEFORE INSERT ON attendance
+-- Trigger BEFORE dijalankan menurut urutan nama: nama ini harus diurutkan SETELAH
+-- `attendance_geofence`, karena geofence menyetel ulang status dari jarak (migrasi 0003).
+CREATE TRIGGER attendance_post_geofence_face_flag BEFORE INSERT ON attendance
   FOR EACH ROW EXECUTE FUNCTION tg_attendance_face_flag();
 
 -- -----------------------------------------------------------------------------

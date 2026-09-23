@@ -215,6 +215,14 @@ Format tiap task: **Masalah → Uji dulu → Perubahan → DoD**. Centang hanya 
   - Uji: `/api/v1/auth/login` 200; `/auth/login` 404; `/health` & `/ready` tetap di akar (Caddy).
 - [ ] **T-08 · `attendance_cron` memakai setelan yang ada** (F-10)
   - Uji: impor modul & panggil fungsi peringatan tanpa webhook → tidak crash.
+- [x] **T-15 · Wajah tidak cocok benar-benar masuk NEEDS_REVIEW** (F-19, ditemukan saat T-08)
+  - Masalah: trigger BEFORE dijalankan menurut urutan nama; `attendance_face_flag` jalan sebelum
+    `attendance_geofence` yang lalu menyetel ulang status → `NO_MATCH`/`LOW_QUALITY` selalu tersimpan
+    `AUTO_VALID`. Melanggar aturan inti "wajah tidak cocok → diperiksa manusia" (K-10, R-02).
+  - Uji: `tests/test_attendance_triggers.py` — NO_MATCH/LOW_QUALITY → NEEDS_REVIEW; MATCH/NOT_ENROLLED/
+    SKIPPED/tanpa wajah → AUTO_VALID; urutan trigger dijaga.
+  - Perubahan: migrasi `0003` mengganti nama trigger menjadi `attendance_post_geofence_face_flag`;
+    `db/05_face.sql` disamakan.
 - [ ] **T-14 · MinIO tidak disentuh saat impor** (F-18, ditemukan saat T-02)
   - Masalah: `core/storage.py` memanggil `ensure_bucket()` di tingkat modul → setiap impor aplikasi
     (termasuk uji dan `alembic`) mencoba menyambung ke MinIO dan mengulang ±10 detik bila mati.

@@ -258,6 +258,35 @@ Format tiap task: **Masalah → Uji dulu → Perubahan → DoD**. Centang hanya 
 
 - [ ] **T-12 · RLS efektif** (F-11) — buat peran DB aplikasi non-superuser tanpa `BYPASSRLS`;
   butuh akses admin server. Rencana dan skrip disiapkan, eksekusi menunggu persetujuan.
+  **Rencana rinci (analisis statis 2026-09-24, belum dieksekusi):**
+
+  *Kondisi sekarang:* `vms_app` = superuser + `BYPASSRLS` dan pemilik tabel → seluruh kebijakan
+  RLS di `db/03`–`05` tidak pernah berlaku. `db/03` sendiri menulis "jangan pernah memakai peran
+  superuser untuk koneksi aplikasi". Aplikasi adalah satu-satunya pagar.
+
+  *Benturan yang akan muncul begitu RLS berlaku* (harus diselesaikan **sebelum** berpindah role):
+
+  | # | Benturan | Bukti | Usulan |
+  |---|---|---|---|
+  | R1 | **Login & refresh rusak total.** `user_session` berkebijakan `user_id = current_user_id()`, tetapi login/refresh berjalan sebelum ada konteks pengguna → `issue_session` ditolak, `rotate_session` tidak menemukan baris | `db/04` baris 393; `AuthService` | Jadikan `issue_session`, `rotate_session`, `revoke_sessions`, `login_is_locked` `SECURITY DEFINER` milik `vms_migrator`, dengan `SET search_path = vms, public` |
+  | R2 | Pemilik tabel melewati RLS | tabel dimiliki `vms_app` | Pemilik semua objek = `vms_migrator`; aplikasi = `vms_app` (NOSUPERUSER, NOBYPASSRLS). Atau `FORCE ROW LEVEL SECURITY` |
+  | R3 | `DELETE` dicabut dari `vms_app`, tetapi aplikasi menghapus `report_evidence` dan `work_plan_member` | `db/03` `REVOKE DELETE`; `api/app/api/hse.py:102`, `plans.py:143` | Ganti penghapusan dengan penutupan baris (mis. `valid_to`), atau beri `DELETE` khusus dua tabel itu — **keputusan** |
+  | R4 | Kebijakan INSERT dokumen pribadi hanya untuk pemilik, padahal HR boleh mengunggah untuk orang lain (izin `manage:employee_documents`, T-03) | `db/03` `employee_document_insert` | Tambah `OR has_role('HR') OR has_role('ADMIN')` di `WITH CHECK` — **keputusan** |
+  | R5 | `GRANT … ON ALL TABLES` hanya mencakup tabel yang ada saat skrip dijalankan; tabel dari migrasi berikutnya tanpa hak | `db/03` baris 26–28 | `ALTER DEFAULT PRIVILEGES FOR ROLE vms_migrator …` |
+  | R6 | Uji memakai satu URL untuk aplikasi *dan* fixture; fixture perlu menulis lintas organisasi & menghapus | `tests/conftest.py` | `TEST_ADMIN_DATABASE_URL` (peran migrator) untuk fixture; aplikasi tetap `vms_app` |
+  | R7 | `create-admin`/`seed` membuat organisasi pertama tanpa konteks | `app/cli.py` | CLI memakai URL migrator |
+
+  *Urutan eksekusi* (setiap langkah = migrasi Alembic + uji, seperti T-15):
+  1. Migrasi: R1 (SECURITY DEFINER) + R4 + R5 — tidak berdampak selama `vms_app` masih superuser.
+  2. Uji otomatis baru: jalankan suite dengan role non-superuser di DB gladi (Docker lokal / CI).
+  3. Perbaiki R3, R6, R7 di kode; CI memakai dua URL (migrator & aplikasi).
+  4. **Di server (butuh persetujuan & akses admin):** buat `vms_migrator` sebagai pemilik,
+     `ALTER … OWNER TO vms_migrator`, `ALTER ROLE vms_app NOSUPERUSER NOBYPASSRLS`, sandi baru
+     untuk kedua role (disimpan di `api/.env` / secret manager).
+  5. Uji penuh + uji asap terhadap server; siapkan rollback (`ALTER ROLE vms_app SUPERUSER`).
+
+  *Keputusan yang dibutuhkan dari pemilik produk:* R3 (hapus vs tutup baris), R4 (HR mengunggah
+  untuk orang lain), izin mengubah role di server dev, dan menyalakan Docker lokal untuk gladi.
 - [x] **T-13 · JWT EdDSA** (F-12, K-20) — kunci Ed25519 dari env/berkas, `kid`, uji verifikasi.
 
 ### Dikerjakan bersama plan lain

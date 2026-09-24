@@ -17,6 +17,11 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 - `web/`: Refactor `LoginPage` dan fitur lainnya untuk memakai komponen UI standar yang baru.
 - `web/`: Refactor `Badge` agar memakai warna semantik (misal `bg-success-bg`).
 
+### 🔄 Diubah
+
+#### Migrasi Toast (Web) — 2026-09-24
+- `web/`: Mengganti pustaka notifikasi dari `react-hot-toast` menjadi `sonner` (standar UI baru) dan membersihkan dependensi lama.
+
 #### Arsitektur Backend (Blok A — Refactor) — 2026-09-23
 - `api/app/core/errors.py` — `AppError`, `NotFoundError`, `ConflictError`, `InvalidStateError`, `ForbiddenError` + handler terpusat (semua error → JSON `{ code, message }` Bahasa Indonesia, tidak ada stack trace yang bocor).
 - `api/app/core/time.py` — `utcnow()` dan `jakarta_now()` sebagai sumber tunggal waktu server. `datetime.now()` tidak boleh dipakai di tempat lain.

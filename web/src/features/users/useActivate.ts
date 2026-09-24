@@ -1,4 +1,4 @@
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 import { ApiError } from "@/lib/api";
 import type { UserOut } from "@/lib/types";
 import { useActivateUser } from "./api";

@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(./web/openapi.json)",
+      "Read(./web/openapi.current.json)",
+      "Read(./**/package-lock.json)",
+      "Read(./web/src/lib/api-types.ts)",
+      "Read(./**/node_modules/**)",
+      "Read(./api/.venv/**)",
+      "Read(./api/.env)",
+      "Read(./.env)",
+      "Read(./migrate_baca.py)",
+      "Read(./test_db.py)"
+    ]
+  }
+}

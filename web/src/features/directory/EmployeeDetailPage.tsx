@@ -3,8 +3,8 @@ import toast from "react-hot-toast";
 import { Link, useParams } from "react-router-dom";
 import { useSession } from "@/app/session";
 import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
-import { Dialog } from "@/components/ui/Dialog";
+import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/VmsDialog";
 import { SelectField, TextField } from "@/components/ui/Field";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ApiError } from "@/lib/api";
@@ -44,7 +44,7 @@ export function EmployeeDetailPage() {
     <>
       <PageHeader
         title={e?.full_name ?? "Karyawan"}
-        action={canEdit && e && <Button variant="secondary" onClick={() => setEditing(true)}>Ubah profil</Button>}
+        action={canEdit && e && <Button variant="outline" onClick={() => setEditing(true)}>Ubah profil</Button>}
       />
       {e && (
         <div className="mb-8 max-w-xl rounded-panel border border-line bg-surface px-5 py-2">
@@ -115,7 +115,7 @@ function ProfileDialog({ employee, onClose }: { employee: Employee; onClose: () 
       onClose={onClose}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="outline" onClick={onClose}>
             Batal
           </Button>
           <Button type="submit" form="profile-form" disabled={update.isPending}>

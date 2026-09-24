@@ -1,6 +1,6 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Fragment, useState } from "react";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { api } from "@/lib/api";
 import { formatDateTime } from "@/lib/format";
@@ -135,10 +135,10 @@ export function AuditLogPage() {
             {data.total} catatan · halaman {data.page} dari {lastPage}
           </span>
           <span className="flex gap-2">
-            <Button variant="secondary" disabled={page <= 1} onClick={() => setPage(page - 1)}>
+            <Button variant="outline" disabled={page <= 1} onClick={() => setPage(page - 1)}>
               Sebelumnya
             </Button>
-            <Button variant="secondary" disabled={page >= lastPage} onClick={() => setPage(page + 1)}>
+            <Button variant="outline" disabled={page >= lastPage} onClick={() => setPage(page + 1)}>
               Berikutnya
             </Button>
           </span>

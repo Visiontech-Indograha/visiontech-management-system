@@ -1,62 +1,314 @@
-@import "@fontsource/plus-jakarta-sans/400.css";
-@import "@fontsource/plus-jakarta-sans/500.css";
-@import "@fontsource/plus-jakarta-sans/600.css";
-@import "@fontsource/plus-jakarta-sans/700.css";
+/*
+ * VMS — tema web untuk shadcn/ui + Tailwind CSS v4.
+ * Sumber nilai: docs/design/tokens.json · Aturan: docs/18-SISTEM-DESAIN-UI.md
+ *
+ *
+ * Penegakan otomatis di berkas ini:
+ *   - Palet bawaan Tailwind DIHAPUS (--color-*: initial) → bg-purple-500, text-indigo-*,
+ *     from-violet-* dan sejenisnya tidak lagi menghasilkan CSS.
+ *   - Bayangan besar, radius 2xl/3xl, blur (glassmorphism), ukuran teks 4xl+ dan font
+ *     bawaan juga dihapus.
+ *   - Varian `dark:` diikat ke kelas .dark yang tidak pernah dipasang → mode gelap mati
+ *     (di luar cakupan MVP, K-23), dan komponen shadcn tidak ikut berubah saat OS gelap.
+ */
+
 @import "tailwindcss";
-@import "./tokens.css";
+@import "tw-animate-css";
+@import "@fontsource-variable/plus-jakarta-sans";
 
-/* Petakan token ke utilitas Tailwind (bg-paper, text-ink, border-line, bg-lens, rounded-control, ...). */
+@custom-variant dark (&:is(.dark *));
+
+/* ------------------------------------------------------------------ */
+/* 1. Variabel semantik (kontrak shadcn/ui) + token tambahan VMS       */
+/* ------------------------------------------------------------------ */
+:root {
+  --radius: 0.5rem; /* 8 px — tombol, input */
+
+  --background: #f3f6f3;
+  --foreground: #243b33;
+  --heading: #16241f;
+  --card: #ffffff;
+  --card-foreground: #243b33;
+  --popover: #ffffff;
+  --popover-foreground: #243b33;
+  --primary: #164d40;
+  --primary-hover: #1f634d;
+  --primary-pressed: #113d33;
+  --primary-foreground: #ffffff;
+  --secondary: #e9eee9;
+  --secondary-foreground: #243b33;
+  --muted: #e9eee9;
+  --muted-foreground: #5f6b64;
+  --accent: #eef5f2;
+  --accent-foreground: #164d40;
+  --destructive: #b93c2d;
+  --destructive-foreground: #ffffff;
+  --border: #dde4de;
+  --border-hover: #c6cfc8;
+  --input: #8a968e;
+  --ring: #2d7a60;
+  --table-header: #f8faf8;
+  --scrim: rgb(22 36 31 / 0.48);
+
+  --success: #1e6b43;
+  --success-bg: #e8f3ec;
+  --success-border: #b9dcc6;
+  --success-solid: #23804f;
+  --warning: #8a5a12;
+  --warning-bg: #fcf1dd;
+  --warning-border: #efd29f;
+  --warning-solid: #c7892a;
+  --danger: #a33a2c;
+  --danger-bg: #fbecea;
+  --danger-border: #f0c2ba;
+  --danger-solid: #b93c2d;
+  --info: #2f5f8a;
+  --info-bg: #e8f0f8;
+  --info-border: #bcd2e8;
+  --info-solid: #3569a0;
+
+  --chart-1: #164d40;
+  --chart-2: #3569a0;
+  --chart-3: #c7892a;
+  --chart-4: #5f6b64;
+  --chart-5: #4f977d;
+
+  --sidebar: #ffffff;
+  --sidebar-foreground: #243b33;
+  --sidebar-primary: #164d40;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #eef5f2;
+  --sidebar-accent-foreground: #164d40;
+  --sidebar-border: #dde4de;
+  --sidebar-ring: #2d7a60;
+}
+
+/* ------------------------------------------------------------------ */
+/* 2. Tema Tailwind — hanya token VMS yang tersedia sebagai utilitas   */
+/* ------------------------------------------------------------------ */
 @theme inline {
-  --color-paper: var(--color-paper);
-  --color-surface: var(--color-surface);
-  --color-ink: var(--color-ink);
-  --color-mist: var(--color-mist);
-  --color-line: var(--color-line);
-  --color-hover: var(--color-hover);
-  --color-lens: var(--color-lens);
-  --color-lens-hover: var(--color-lens-hover);
-  --color-lens-soft: var(--color-lens-soft);
-  --color-success: var(--color-success);
-  --color-warning: var(--color-warning);
-  --color-warning-soft: var(--color-warning-soft);
-  --color-danger: var(--color-danger);
-  --color-danger-soft: var(--color-danger-soft);
-  --color-info: var(--color-info);
-  --color-info-soft: var(--color-info-soft);
-  --radius-tag: var(--radius-tag);
-  --radius-control: var(--radius-control);
-  --radius-panel: var(--radius-panel);
-  --shadow-overlay: var(--shadow-overlay);
-  --font-sans: var(--font-sans);
+  /* Hapus bawaan: tidak ada palet, bayangan, blur, font, atau radius di luar sistem. */
+  --color-*: initial;
+  --shadow-*: initial;
+  --inset-shadow-*: initial;
+  --drop-shadow-*: initial;
+  --blur-*: initial;
+  --font-*: initial;
+  --radius-*: initial;
+
+  /* Warna dasar */
+  --color-white: #ffffff;
+  --color-black: #16241f; /* dipakai overlay shadcn (bg-black/50) → scrim bernada hijau gelap */
+
+  /* Kontrak shadcn/ui */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-heading: var(--heading);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-pressed: var(--primary-pressed);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-border-hover: var(--border-hover);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-table-header: var(--table-header);
+  --color-scrim: var(--scrim);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Status: text-success, bg-success-bg, border-success-border, bg-success-solid, ... */
+  --color-success: var(--success);
+  --color-success-bg: var(--success-bg);
+  --color-success-border: var(--success-border);
+  --color-success-solid: var(--success-solid);
+  --color-warning: var(--warning);
+  --color-warning-bg: var(--warning-bg);
+  --color-warning-border: var(--warning-border);
+  --color-warning-solid: var(--warning-solid);
+  --color-danger: var(--danger);
+  --color-danger-bg: var(--danger-bg);
+  --color-danger-border: var(--danger-border);
+  --color-danger-solid: var(--danger-solid);
+  --color-info: var(--info);
+  --color-info-bg: var(--info-bg);
+  --color-info-border: var(--info-border);
+  --color-info-solid: var(--info-solid);
+
+  /* Skala mentah — hanya untuk kasus yang tidak tercakup token semantik di atas. */
+  --color-brand-50: #eef5f2;
+  --color-brand-100: #d5e8e0;
+  --color-brand-200: #aed3c3;
+  --color-brand-300: #7fb7a0;
+  --color-brand-400: #4f977d;
+  --color-brand-500: #2d7a60;
+  --color-brand-600: #1f634d;
+  --color-brand-700: #164d40;
+  --color-brand-800: #113d33;
+  --color-brand-900: #0c2d26;
+  --color-neutral-0: #ffffff;
+  --color-neutral-25: #f8faf8;
+  --color-neutral-50: #f3f6f3;
+  --color-neutral-100: #e9eee9;
+  --color-neutral-200: #dde4de;
+  --color-neutral-300: #c6cfc8;
+  --color-neutral-400: #8a968e;
+  --color-neutral-500: #5f6b64;
+  --color-neutral-600: #4a5650;
+  --color-neutral-700: #36423c;
+  --color-neutral-800: #243b33;
+  --color-neutral-900: #16241f;
+
+  /* Huruf */
+  --font-sans: "Plus Jakarta Sans Variable", system-ui, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Mono", "Roboto Mono", monospace;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* Skala huruf standar Tailwind dipetakan ke skala VMS (dipakai komponen shadcn). */
+  --text-xs: 0.75rem;         --text-xs--line-height: 1rem;
+  --text-sm: 0.875rem;        --text-sm--line-height: 1.25rem;
+  --text-base: 1rem;          --text-base--line-height: 1.5rem;
+  --text-lg: 1.125rem;        --text-lg--line-height: 1.625rem;
+  --text-xl: 1.25rem;         --text-xl--line-height: 1.75rem;
+  --text-2xl: 1.5rem;         --text-2xl--line-height: 2rem;
+  --text-3xl: 1.875rem;       --text-3xl--line-height: 2.25rem;
+  --text-4xl: initial;
+  --text-5xl: initial;
+  --text-6xl: initial;
+  --text-7xl: initial;
+  --text-8xl: initial;
+  --text-9xl: initial;
+
+  /* Nama semantik — dipakai di kode fitur (text-title, text-body-sm, ...). */
+  --text-display: 1.875rem;   --text-display--line-height: 2.25rem;  --text-display--letter-spacing: -0.02em;   --text-display--font-weight: 700;
+  --text-title-lg: 1.5rem;    --text-title-lg--line-height: 2rem;    --text-title-lg--letter-spacing: -0.015em; --text-title-lg--font-weight: 600;
+  --text-title: 1.25rem;      --text-title--line-height: 1.75rem;    --text-title--letter-spacing: -0.01em;     --text-title--font-weight: 600;
+  --text-heading: 1.125rem;   --text-heading--line-height: 1.625rem; --text-heading--letter-spacing: -0.005em;  --text-heading--font-weight: 600;
+  --text-subheading: 1rem;    --text-subheading--line-height: 1.5rem; --text-subheading--font-weight: 600;
+  --text-body: 1rem;          --text-body--line-height: 1.5rem;
+  --text-body-sm: 0.875rem;   --text-body-sm--line-height: 1.25rem;
+  --text-caption: 0.75rem;    --text-caption--line-height: 1rem;     --text-caption--letter-spacing: 0.01em;    --text-caption--font-weight: 500;
+  --text-overline: 0.75rem;   --text-overline--line-height: 1rem;    --text-overline--letter-spacing: 0.06em;   --text-overline--font-weight: 600;
+
+  /* Radius: 4 · 6 · 8 · 12. Tidak ada 2xl/3xl. */
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  /* Bayangan: shadow-xs/sm sengaja kosong (kartu & kontrol datar). md = melayang, lg = dialog. */
+  --shadow-xs: 0 0 #0000;
+  --shadow-sm: 0 0 #0000;
+  --shadow-elevation-1: 0 1px 2px rgb(22 36 31 / 0.06);
+  --shadow-md: 0 8px 24px rgb(22 36 31 / 0.12);
+  --shadow-lg: 0 16px 48px rgb(22 36 31 / 0.16);
+
+  /* Lebar konten */
+  --container-narrow: 25rem;   /* 400 */
+  --container-dialog: 30rem;   /* 480 */
+  --container-form: 45rem;     /* 720 */
+  --container-detail: 64rem;   /* 1024 */
+  --container-list: 80rem;     /* 1280 */
+
+  /* Gerak */
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --default-transition-duration: 180ms;
+  --default-transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+  --animate-spin: spin 1s linear infinite;
+  --animate-pulse: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-bounce: initial;
+  --animate-ping: initial;
 }
 
-html {
-  font-size: 14px;
+/* ------------------------------------------------------------------ */
+/* 3. Dasar                                                            */
+/* ------------------------------------------------------------------ */
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    /* Dasar 16 px (dok 11 §2). Jangan diturunkan ke 14 px. */
+    font-size: 100%;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans text-body antialiased;
+    font-feature-settings: "cv11" 1;
+  }
+
+  h1, h2, h3, h4 {
+    @apply text-heading;
+  }
+
+  table, time, [data-numeric] {
+    font-variant-numeric: tabular-nums;
+  }
+
+  code, kbd, samp, [data-mono] {
+    @apply font-mono;
+  }
+
+  input, select, textarea {
+    font-size: 1rem; /* cegah zoom otomatis di ponsel */
+  }
+
+  ::selection {
+    background: var(--color-brand-100);
+    color: var(--color-neutral-900);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
 }
 
-body {
-  margin: 0;
-  background: var(--color-paper);
-  color: var(--color-ink);
-  font-family: var(--font-sans);
-  line-height: 1.5;
-  -webkit-font-smoothing: antialiased;
-}
-
-table {
-  font-variant-numeric: tabular-nums;
-}
-
-:focus-visible {
-  outline: 2px solid var(--color-lens);
-  outline-offset: 2px;
+/* Label overline — satu-satunya tempat huruf kapital. */
+@utility overline {
+  font-size: var(--text-overline);
+  line-height: var(--text-overline--line-height);
+  letter-spacing: var(--text-overline--letter-spacing);
+  font-weight: var(--text-overline--font-weight);
+  text-transform: uppercase;
+  color: var(--muted-foreground);
 }
 
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
-    transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

@@ -5,7 +5,7 @@ import toast from "react-hot-toast";
 import { Navigate, useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { useSession } from "@/app/session";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/button";
 import { TextField } from "@/components/ui/Field";
 import { api, ApiError } from "@/lib/api";
 import type { TokenOut } from "@/lib/types";

@@ -5,8 +5,9 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, get_current_user, get_db_with_user, require_permission
-from app.api.guards import ensure_same_org
-from app.core.permissions import Permission
+from app.api.guards import PlanAccess, PlanNeed, allocation_plan_access, ensure_same_org
+from app.core.errors import ForbiddenError
+from app.core.permissions import Permission, RoleCode
 from app.schemas.asset import (
     AssetAllocationCreate,
     AssetAllocationResponse,
@@ -18,6 +19,7 @@ from app.schemas.asset import (
 )
 
 router = APIRouter(prefix="/assets", tags=["Assets"])
+_ALLOCATION_LEADER_ACCESS = Depends(allocation_plan_access(PlanNeed.LEADER))
 
 @router.post("", response_model=AssetResponse, status_code=status.HTTP_201_CREATED)
 async def create_asset(
@@ -97,10 +99,13 @@ async def allocate_asset(
 async def request_asset_return(
     alloc_id: UUID,
     data: AssetReturnCreate,
-    current_user: CurrentUser = Depends(get_current_user),
+    access: PlanAccess = _ALLOCATION_LEADER_ACCESS,
     db: AsyncSession = Depends(get_db_with_user)
 ):
-    """P6-3: Formulir BAST pengembalian aset dari PM/Pekerja."""
+    """P6-3: Formulir BAST pengembalian aset — diajukan ketua tim menurut SK peminjam (V-09)."""
+    current_user = access.user
+    if RoleCode.ASSET in current_user.roles:  # domain.js RETURN_ASSET
+        raise ForbiddenError("Pengajuan pengembalian tidak dapat dilakukan oleh petugas aset. Gunakan ketua tim.")
     emp_q = text("SELECT employee_id FROM vms.app_user WHERE id = :uid")
     my_emp = (await db.execute(emp_q, {"uid": current_user.user_id})).scalar()
     

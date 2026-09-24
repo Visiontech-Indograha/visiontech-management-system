@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import CurrentUser, get_current_user, get_db_with_user, require_permission
+from app.api.deps import CurrentUser, get_db_with_user, require_permission
 from app.api.guards import ensure_same_org
 from app.core.permissions import Permission
 from app.schemas.employee import (
@@ -229,10 +229,11 @@ async def check_conflicts(
     start_date: date,
     end_date: date,
     exclude_plan: UUID | None = None,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(require_permission(Permission.CREATE_PLAN)),
     db: AsyncSession = Depends(get_db_with_user)
 ):
-    """Mengecek bentrok jadwal (P3-6). Mengembalikan daftar SK yang bentrok."""
+    """Mengecek bentrok jadwal (P3-6) — untuk penyusun SK (V-09). Karyawan/SK asing → 404."""
+    await ensure_same_org(db, current_user.organization_id, employees=[emp_id], work_plans=[exclude_plan])
     query = text("""
         SELECT work_plan_id, number, title 
         FROM vms.personnel_conflict(:emp, daterange(:start, :end, '[]'), :exclude)

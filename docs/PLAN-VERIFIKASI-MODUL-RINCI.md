@@ -88,7 +88,7 @@ Centang hanya setelah commit di-push.
   - Uji dulu: untuk setiap endpoint tulis, id milik organisasi lain → 404 dan **tidak ada baris
     tersimpan** (tulis → baca ulang).
 
-- [ ] **V-09 · Setiap rute punya izin atau penjaga**
+- [x] **V-09 · Setiap rute punya izin atau penjaga**
   - Uji dulu: perluasan `test_route_smoke.py` — rute non-publik tanpa `require_permission` dan
     tanpa `plan_access` → gagal (inventaris dependency dari FastAPI).
   - Perubahan: pasang pada insiden (`LEADER_OR_MEMBER`, `domain.js:582`), laporan harian
@@ -118,6 +118,11 @@ Centang hanya setelah commit di-push.
 - [ ] **V-15 · Trigger audit menemukan organisasi** (migrasi 0005; 0004 dipakai V-07): untuk baris tanpa
   `organization_id`, ambil dari `work_plan`/`asset` terkait sebelum `current_org_id()`. Uji:
   hapus `asset_allocation` tanpa konteks → berhasil & tercatat di audit dengan organisasi benar.
+- [ ] **V-17 · Kebijakan akses berkas** (temuan V-09): `GET /files/{file_id}/url` hanya memeriksa
+  organisasi — siapa pun di organisasi dapat mengambil URL KTP/SIM karyawan lain (dok 08: dokumen
+  pribadi hanya pemilik & HR; CLAUDE.md "berkas tak berwenang → 404"). Aturan: pengunggah; HR untuk
+  dokumen karyawan; bukti insiden/laporan → penjaga SK (VIEW); swafoto absensi → pemilik & FINANCE/HR.
+  Uji: matriks peran × jenis berkas → 200/404. Dikerjakan tepat setelah V-09 (sebelum W4).
 - [ ] **V-16 · Jalur sesuai kontrak**: `/plans` → `/work-plans` (dok 05); `/hse/daily-reports` →
   `/work-plans/{id}/days/{day_id}`. Web belum memakai rute ini (tidak ada dampak).
 
@@ -146,6 +151,6 @@ Setiap task W6 dirinci (uji & DoD per aturan) tepat sebelum dikerjakan, di bagia
 
 ## Urutan & titik aman
 
-`V-01 → V-02 → V-03 → V-04 → V-05 → V-06` (SK hidup) `→ V-07 → V-08 → V-09` (aman)
+`V-01 → V-02 → V-03 → V-04 → V-05 → V-06` (SK hidup) `→ V-07 → V-08 → V-09 → V-17` (aman)
 `→ V-10 … V-13` (patuh) `→ V-14 … V-16` (bersih) `→ W6`.
 Setiap task adalah titik aman: di-commit, di-push, suite hijau.

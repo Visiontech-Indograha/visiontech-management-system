@@ -58,17 +58,24 @@ async def get_expiring_documents(
     return ExpiringDocumentList(items=items)
 
 @router.post("/cron/expire-documents")
-async def cron_expire_documents(db: AsyncSession = Depends(get_db_with_user)):
+async def cron_expire_documents(
+    current_user: CurrentUser = Depends(require_permission(Permission.RUN_SYSTEM_JOBS)),
+    db: AsyncSession = Depends(get_db_with_user),
+):
     """
-    Dipanggil secara berkala oleh scheduler untuk memperbarui status 'CURRENT' menjadi 'EXPIRED'.
-    Dalam praktiknya, endpoint ini harus diproteksi dengan secret key internal.
+    Dipanggil berkala oleh penjadwal: dokumen 'CURRENT' yang lewat masa berlaku → 'EXPIRED'.
+    Hanya ADMIN (`run:system_jobs`, sama dengan cron absensi) dan hanya untuk organisasinya (V-09);
+    "hari ini" menurut zona waktu organisasi, bukan jam server DB.
     """
     query = text("""
-        UPDATE vms.employee_document 
+        UPDATE vms.employee_document d
         SET lifecycle = 'EXPIRED'
-        WHERE lifecycle = 'CURRENT' AND expiry_date < CURRENT_DATE
-        RETURNING id
+        FROM vms.employee e
+        JOIN vms.organization o ON o.id = e.organization_id
+        WHERE d.employee_id = e.id AND e.organization_id = CAST(:org AS uuid)
+          AND d.lifecycle = 'CURRENT' AND d.expiry_date < (now() AT TIME ZONE o.timezone)::date
+        RETURNING d.id
     """)
-    res = await db.execute(query)
+    res = await db.execute(query, {"org": current_user.organization_id})
     updated = res.fetchall()
     return {"expired_count": len(updated)}

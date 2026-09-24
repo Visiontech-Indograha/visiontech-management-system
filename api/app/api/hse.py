@@ -4,9 +4,17 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import CurrentUser, get_current_user, get_db_with_user, require_permission
-from app.api.guards import ensure_same_org
-from app.core.permissions import Permission
+from app.api.deps import CurrentUser, get_current_user, get_db_with_user
+from app.api.guards import (
+    PlanAccess,
+    PlanNeed,
+    check_plan_access,
+    day_plan_access,
+    ensure_same_org,
+    incident_plan_access,
+)
+from app.core.errors import ForbiddenError
+from app.core.permissions import RoleCode
 from app.schemas.hse import (
     DailyReportCreate,
     DailyReportResponse,
@@ -16,6 +24,8 @@ from app.schemas.hse import (
 )
 
 router = APIRouter(prefix="/hse", tags=["HSE & Reports"])
+_INCIDENT_VIEW_ACCESS = Depends(incident_plan_access(PlanNeed.VIEW))
+_DAY_LEADER_ACCESS = Depends(day_plan_access(PlanNeed.LEADER))  # domain.js SAVE/SUBMIT_REPORT
 
 @router.post("/incidents", response_model=IncidentResponse, status_code=status.HTTP_201_CREATED)
 async def report_incident(
@@ -23,8 +33,9 @@ async def report_incident(
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_with_user)
 ):
-    await ensure_same_org(db, current_user.organization_id,
-                          work_plans=[data.work_plan_id], files=data.evidence_file_ids)
+    # domain.js REPORT_INCIDENT: hanya ketua atau anggota pekerjaan ini (V-09). SK asing/tak terlihat → 404.
+    await check_plan_access(db, data.work_plan_id, current_user, PlanNeed.LEADER_OR_MEMBER)
+    await ensure_same_org(db, current_user.organization_id, files=data.evidence_file_ids)
     emp_q = text("SELECT employee_id FROM vms.app_user WHERE id = :uid")
     my_emp = (await db.execute(emp_q, {"uid": current_user.user_id})).scalar()
 
@@ -56,9 +67,13 @@ async def report_incident(
 async def resolve_incident(
     inc_id: UUID,
     data: IncidentResolve,
-    current_user: CurrentUser = Depends(require_permission(Permission.PUBLISH_PLAN)),
+    access: PlanAccess = _INCIDENT_VIEW_ACCESS,
     db: AsyncSession = Depends(get_db_with_user)
 ):
+    # domain.js RESOLVE_INCIDENT: PM (unit SK), OPS, ASSET. R2: PM unit lain tidak melihat SK ini → 404.
+    current_user = access.user
+    if not (access.manages or RoleCode.ASSET in current_user.roles):
+        raise ForbiddenError("Hanya PM unit pekerjaan ini atau petugas aset yang dapat menyelesaikan insiden.")
     emp_q = text("SELECT employee_id FROM vms.app_user WHERE id = :uid")
     my_emp = (await db.execute(emp_q, {"uid": current_user.user_id})).scalar()
     
@@ -82,9 +97,10 @@ async def resolve_incident(
 async def upsert_daily_report(
     day_id: UUID,
     data: DailyReportCreate,
-    current_user: CurrentUser = Depends(get_current_user),
+    access: PlanAccess = _DAY_LEADER_ACCESS,
     db: AsyncSession = Depends(get_db_with_user)
 ):
+    current_user = access.user
     await ensure_same_org(db, current_user.organization_id, files=data.evidence_file_ids)
     emp_q = text("SELECT employee_id FROM vms.app_user WHERE id = :uid")
     my_emp = (await db.execute(emp_q, {"uid": current_user.user_id})).scalar()
@@ -113,9 +129,10 @@ async def upsert_daily_report(
 @router.post("/daily-reports/{day_id}/submit", response_model=DailyReportResponse)
 async def submit_daily_report(
     day_id: UUID,
-    current_user: CurrentUser = Depends(get_current_user),
+    access: PlanAccess = _DAY_LEADER_ACCESS,
     db: AsyncSession = Depends(get_db_with_user)
 ):
+    current_user = access.user
     emp_q = text("SELECT employee_id FROM vms.app_user WHERE id = :uid")
     my_emp = (await db.execute(emp_q, {"uid": current_user.user_id})).scalar()
     

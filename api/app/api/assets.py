@@ -5,6 +5,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, get_current_user, get_db_with_user, require_permission
+from app.api.guards import ensure_same_org
 from app.core.permissions import Permission
 from app.schemas.asset import (
     AssetAllocationCreate,
@@ -54,9 +55,11 @@ async def allocate_asset(
     current_user: CurrentUser = Depends(require_permission(Permission.MANAGE_ASSETS)),
     db: AsyncSession = Depends(get_db_with_user)
 ):
+    await ensure_same_org(db, current_user.organization_id, assets=[data.asset_id],
+                          work_plans=[data.work_plan_id], employees=[data.driver_employee_id])
     emp_q = text("SELECT employee_id FROM vms.app_user WHERE id = :uid")
     my_emp = (await db.execute(emp_q, {"uid": current_user.user_id})).scalar()
-    
+
     # Check asset status
     check_asset = text("SELECT status, kind FROM vms.asset WHERE id = :id FOR UPDATE")
     asset = (await db.execute(check_asset, {"id": data.asset_id})).fetchone()

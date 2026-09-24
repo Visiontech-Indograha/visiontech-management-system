@@ -5,7 +5,7 @@ ketua & anggota dibaca dari SK yang berlaku setiap permintaan (`is_plan_leader`/
 SK organisasi lain atau yang tidak terlihat oleh pengguna → 404 (keberadaannya tidak dibocorkan);
 terlihat tetapi tidak berwenang → 403.
 """
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Iterable
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any
@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, get_current_user, get_db_with_user
 from app.core.errors import ForbiddenError, NotFoundError
+from app.repositories.org_ref_repo import OrgRefRepo
 from app.repositories.plan_access_repo import PlanAccessRepo
 
 
@@ -73,6 +74,38 @@ async def check_unit_manager(db: AsyncSession, unit_id: UUID | str, user: Curren
         raise NotFoundError("Unit bisnis")
     if not row.manages:
         raise ForbiddenError("Hanya PM unit ini yang dapat membuat SK untuk unit tersebut.")
+
+
+_REF_LABELS = (
+    ("work_plans", "SK"), ("sites", "Lokasi"), ("assets", "Aset"),
+    ("files", "Berkas"), ("employees", "Karyawan"), ("units", "Unit bisnis"),
+)
+
+
+async def ensure_same_org(
+    db: AsyncSession,
+    org_id: str,
+    *,
+    work_plans: Iterable[UUID | str | None] = (),
+    sites: Iterable[UUID | str | None] = (),
+    assets: Iterable[UUID | str | None] = (),
+    files: Iterable[UUID | str | None] = (),
+    employees: Iterable[UUID | str | None] = (),
+    units: Iterable[UUID | str | None] = (),
+) -> None:
+    """V-08: setiap id di badan permintaan milik organisasi pengguna; bila tidak → 404 (bukan 403,
+    agar keberadaan data organisasi lain tidak bocor). Dipanggil SEBELUM menulis apa pun."""
+    refs = {
+        kind: sorted({str(i) for i in ids if i is not None})
+        for kind, ids in (("work_plans", work_plans), ("sites", sites), ("assets", assets),
+                          ("files", files), ("employees", employees), ("units", units))
+    }
+    if not any(refs.values()):
+        return
+    owned = await OrgRefRepo(db).owned_counts(org_id, **refs)
+    for kind, label in _REF_LABELS:
+        if getattr(owned, kind) != len(refs[kind]):
+            raise NotFoundError(label)
 
 
 def plan_access(need: PlanNeed) -> Callable[..., Awaitable[PlanAccess]]:

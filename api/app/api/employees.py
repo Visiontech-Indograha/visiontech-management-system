@@ -6,6 +6,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, get_current_user, get_db_with_user, require_permission
+from app.api.guards import ensure_same_org
 from app.core.permissions import Permission
 from app.schemas.employee import (
     EmployeeAssignmentCreate,
@@ -75,6 +76,7 @@ async def create_employee(
     current_user: CurrentUser = Depends(require_permission(Permission.MANAGE_USERS)),
     db: AsyncSession = Depends(get_db_with_user)
 ):
+    await ensure_same_org(db, current_user.organization_id, units=[data.unit_id])
     query = text("""
         INSERT INTO vms.employee (
             organization_id, employee_no, full_name, position, unit_id, 
@@ -164,7 +166,8 @@ async def add_assignment(
     check = text("SELECT id FROM vms.employee WHERE id = :id AND organization_id = :org")
     if not (await db.execute(check, {"id": emp_id, "org": current_user.organization_id})).scalar():
         raise HTTPException(status_code=404, detail="Karyawan tidak ditemukan.")
-        
+    await ensure_same_org(db, current_user.organization_id, units=[data.unit_id])
+
     # 2. Tutup assignment sebelumnya
     close_prev = text("""
         UPDATE vms.employee_assignment 

@@ -82,7 +82,7 @@ Centang hanya setelah commit di-push.
     izin T-03 mengikuti dok 03 §1 ("OPS = baca"). Urutan kewenangan menempatkan prototipe di atas
     dok 03 → peta izin OPS disesuaikan dengan prototipe dan dicatat di dok 10 Bagian C.
 
-- [ ] **V-08 · Penjaga organisasi untuk rujukan di badan permintaan**
+- [x] **V-08 · Penjaga organisasi untuk rujukan di badan permintaan**
   - Perubahan: `same_org(table, id)` untuk `work_plan_id`, `site_id`, `asset_id`,
     `evidence_file_ids`, `file_id`, `pm_employee_id`, `leader_employee_id`, `driver_employee_id`.
   - Uji dulu: untuk setiap endpoint tulis, id milik organisasi lain → 404 dan **tidak ada baris

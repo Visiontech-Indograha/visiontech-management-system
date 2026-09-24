@@ -5,7 +5,14 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, get_current_user, get_db_with_user, require_permission
-from app.api.guards import PlanAccess, PlanNeed, check_unit_manager, day_plan_access, plan_access
+from app.api.guards import (
+    PlanAccess,
+    PlanNeed,
+    check_unit_manager,
+    day_plan_access,
+    ensure_same_org,
+    plan_access,
+)
 from app.core.permissions import Permission
 from app.repositories.plan_access_repo import PlanAccessRepo
 from app.schemas.plan import (
@@ -44,6 +51,8 @@ async def create_plan(
     db: AsyncSession = Depends(get_db_with_user)
 ):
     await check_unit_manager(db, data.unit_id, current_user)
+    await ensure_same_org(db, current_user.organization_id, sites=[data.site_id],
+                          employees=[data.pm_employee_id, data.leader_employee_id])
     query = text("""
         INSERT INTO vms.work_plan (
             organization_id, unit_id, site_id, title, location_text, description,
@@ -94,6 +103,7 @@ async def update_plan(
     db: AsyncSession = Depends(get_db_with_user)
 ):
     current_user = access.user
+    await ensure_same_org(db, current_user.organization_id, sites=[data.site_id], employees=[data.leader_employee_id])
     # Optimistic locking
     check = text("SELECT status, row_version, pm_employee_id, leader_employee_id, lower(period) as period_start, upper(period) - integer '1' as period_end, unit_id FROM vms.work_plan WHERE id = :id AND organization_id = :org")
     row = (await db.execute(check, {"id": plan_id, "org": current_user.organization_id})).fetchone()

@@ -113,6 +113,9 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 - `docs/PLAN-PERBAIKAN-TEMUAN.md` (2026-09-23) — plan perbaikan 7 segmen (definisi, pohon isu, prioritas, rencana kerja, 5×mengapa, sintesis, pencegahan) + antrean turunan T-01…T-13. Dikerjakan sebelum A-3.
 
+#### Daftar absensi — `GET /attendance` (Backend) — 2026-09-24
+- Endpoint baru sesuai dok 05 §3.5 (sebelumnya tidak ada, sehingga halaman tinjauan Finance di web tidak bisa dibangun): filter `employee_id`, `from`, `to`, `status`, halaman `page`/`size` → `{items, total, page, size}`, terbaru dulu. Cakupan mengikuti prototipe: FINANCE, HR, OPS, ADMIN melihat seluruh organisasi; lainnya hanya milik sendiri. Filter `plan_id` belum didukung (dok 10 Bagian C). Uji: `api/tests/test_attendance_list.py`.
+
 ### 🔄 Diubah
 
 #### Direktori karyawan & dokumen diselaraskan ke API (Web) — 2026-09-24

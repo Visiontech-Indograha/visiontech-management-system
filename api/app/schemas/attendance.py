@@ -50,3 +50,9 @@ class AttendanceResponse(BaseModel):
     status: str
     explanation: str | None
     reviewed_at: datetime | None
+
+class AttendanceListResponse(BaseModel):
+    items: list[AttendanceResponse]
+    total: int
+    page: int
+    size: int

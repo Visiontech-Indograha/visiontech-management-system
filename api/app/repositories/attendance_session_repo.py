@@ -87,6 +87,39 @@ class AttendanceSessionRepo(BaseRepo):
             {"id": attendance_id, "org": org_id},
         )
 
+    async def list_page(self, org_id: str, *, employee_id: Any, date_from: Any, date_to: Any,
+                        status: str | None, limit: int, offset: int) -> tuple[list[Any], int]:
+        """Absensi organisasi dengan filter opsional (NULL = semua), terbaru dulu. → (baris, total)."""
+        params = {"org": org_id, "emp": employee_id, "date_from": date_from, "date_to": date_to,
+                  "status": status, "limit": limit, "offset": offset}
+        rows = await self.fetchall(
+            """
+            SELECT id, employee_id, work_date, site_id, site_label, check_in_at, check_out_at,
+                   distance_m, is_late, is_early_leave, status, explanation, reviewed_at
+            FROM vms.attendance
+            WHERE organization_id = CAST(:org AS uuid)
+              AND (CAST(:emp AS uuid) IS NULL OR employee_id = CAST(:emp AS uuid))
+              AND (CAST(:date_from AS date) IS NULL OR work_date >= CAST(:date_from AS date))
+              AND (CAST(:date_to AS date) IS NULL OR work_date <= CAST(:date_to AS date))
+              AND (CAST(:status AS text) IS NULL OR CAST(status AS text) = CAST(:status AS text))
+            ORDER BY work_date DESC, check_in_at DESC
+            LIMIT :limit OFFSET :offset
+            """,
+            params,
+        )
+        total = await self.scalar(
+            """
+            SELECT count(*) FROM vms.attendance
+            WHERE organization_id = CAST(:org AS uuid)
+              AND (CAST(:emp AS uuid) IS NULL OR employee_id = CAST(:emp AS uuid))
+              AND (CAST(:date_from AS date) IS NULL OR work_date >= CAST(:date_from AS date))
+              AND (CAST(:date_to AS date) IS NULL OR work_date <= CAST(:date_to AS date))
+              AND (CAST(:status AS text) IS NULL OR CAST(status AS text) = CAST(:status AS text))
+            """,
+            params,
+        )
+        return list(rows), int(total or 0)
+
     async def set_explanation(self, attendance_id: UUID | str, explanation: str) -> None:
         await self.execute("UPDATE vms.attendance SET explanation = :exp WHERE id = :id",
                            {"exp": explanation, "id": attendance_id})

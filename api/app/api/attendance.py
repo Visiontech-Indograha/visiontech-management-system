@@ -8,7 +8,7 @@ from datetime import date
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from fastapi.responses import PlainTextResponse
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,6 +19,7 @@ from app.core.permissions import Permission
 from app.repositories.attendance_session_repo import AttendanceSessionRepo
 from app.repositories.org_clock_repo import OrgClockRepo
 from app.schemas.attendance import (
+    AttendanceListResponse,
     AttendanceResponse,
     CheckInRequest,
     CheckOutRequest,
@@ -36,6 +37,25 @@ def _service(db: AsyncSession) -> AttendanceSessionService:
 
 def _response(row: Any) -> AttendanceResponse:
     return AttendanceResponse(**row._mapping)
+
+
+@router.get("", response_model=AttendanceListResponse)
+async def list_attendance(
+    employee_id: UUID | None = None,
+    date_from: date | None = Query(None, alias="from"),
+    date_to: date | None = Query(None, alias="to"),
+    status: str | None = None,
+    page: int = Query(1, ge=1),
+    size: int = Query(50, ge=1, le=200),
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_with_user)
+) -> AttendanceListResponse:
+    """Dok 05 §3.5. FINANCE/HR/OPS/ADMIN: seluruh organisasi; lainnya: hanya milik sendiri.
+    Filter `plan_id` di dok 05 belum didukung — absensi belum tertaut ke SK (dok 10 Bagian C)."""
+    rows, total = await _service(db).list_attendance(
+        current_user.organization_id, current_user.user_id, current_user.roles,
+        employee_id=employee_id, date_from=date_from, date_to=date_to, status=status, page=page, size=size)
+    return AttendanceListResponse(items=[_response(r) for r in rows], total=total, page=page, size=size)
 
 
 @router.post("/check-in", response_model=AttendanceResponse)

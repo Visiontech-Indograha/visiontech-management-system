@@ -8,7 +8,7 @@ export function MyDocumentsPage() {
   return (
     <>
       <PageHeader title="Berkas saya" />
-      {me && <DocumentsPanel userId={me.id} canManage={false} />}
+      {me && <DocumentsPanel userId={me.user_id} canManage={false} />}
     </>
   );
 }

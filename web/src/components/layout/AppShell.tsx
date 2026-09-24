@@ -5,16 +5,7 @@ import { NavLink, Outlet } from "react-router-dom";
 import { visibleNav } from "@/app/navigation";
 import { useSession } from "@/app/session";
 import { IncompleteDocumentsBanner } from "@/features/directory/MyDocuments";
-
-const ROLE_LABEL: Record<string, string> = {
-  super_admin: "Super Admin",
-  admin: "Admin",
-  team_leader: "Team Leader",
-  finance: "Finance",
-  hes: "HES",
-  WTL: "WTL",
-  DRIVER: "Driver",
-};
+import { ROLE_LABEL } from "@/lib/types";
 
 /** Rail kiri 232 px (ciut 64 px); di < 768 px menjadi laci. */
 export function AppShell() {
@@ -22,7 +13,7 @@ export function AppShell() {
   const [collapsed, setCollapsed] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const items = visibleNav(me?.permissions ?? []);
-  const roleLabel = me ? ROLE_LABEL[me.user_type ?? me.role] : "";
+  const roleLabel = me ? (ROLE_LABEL[me.role] ?? me.role) : "";
 
   const nav = (
     <nav aria-label="Menu utama" className="flex-1 overflow-y-auto px-2 py-3">
@@ -59,7 +50,7 @@ export function AppShell() {
   const profile = me && (
     <div className="border-t border-line p-3">
       <div className={clsx("mb-2 min-w-0", collapsed && "md:sr-only")}>
-        <p className="truncate text-sm font-semibold">{me.full_name}</p>
+        <p className="truncate text-sm font-semibold">{me.email}</p>
         <p className="text-xs text-mist">{roleLabel}</p>
       </div>
       <button

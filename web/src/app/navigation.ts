@@ -12,7 +12,6 @@ import {
   House,
   ListChecks,
   MapPin,
-  Package,
   PackageCheck,
   ScrollText,
   Truck,
@@ -118,22 +117,6 @@ export const NAV_ITEMS: NavItem[] = [
     hides: ["employee:read"],
   },
   // Master data
-  { path: "/master/products", label: "Produk", icon: Package, requires: ["master:item_project"], group: "Master data" },
-  { path: "/master/vehicles", label: "Kendaraan", icon: Car, requires: ["master:item_project"], group: "Master data" },
-  {
-    path: "/master/items-project",
-    label: "Item barang",
-    icon: Package,
-    requires: ["master:item_project"],
-    group: "Master data",
-  },
-  {
-    path: "/master/items-tool",
-    label: "Item tool/APD",
-    icon: Wrench,
-    requires: ["master:item_tool_ppe"],
-    group: "Master data",
-  },
   {
     path: "/master/document-types",
     label: "Jenis berkas",

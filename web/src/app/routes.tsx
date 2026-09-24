@@ -4,11 +4,11 @@ import { AppShell } from "@/components/layout/AppShell";
 import { RequireAccess, RequireAuth } from "@/components/layout/guards";
 import { AuditLogPage } from "@/features/audit/AuditLogPage";
 import {
-  ProductsPage,
-  ProjectItemsPage,
+  
+  
   SitesPage,
-  ToolItemsPage,
-  VehiclesPage,
+  
+  
 } from "@/features/master/pages";
 import { AttendancePage } from "@/features/attendance/AttendancePage";
 import { DirectoryPage } from "@/features/directory/DirectoryPage";
@@ -32,11 +32,7 @@ const PAGES: Record<string, ReactNode> = {
   "/documents/incomplete": <IncompletePage />,
   "/master/document-types": <DocumentTypesPage />,
   "/my-documents": <MyDocumentsPage />,
-  "/master/products": <ProductsPage />,
-  "/master/vehicles": <VehiclesPage />,
   "/master/sites": <SitesPage />,
-  "/master/items-project": <ProjectItemsPage />,
-  "/master/items-tool": <ToolItemsPage />,
 };
 
 /** Route dibangun dari NAV_ITEMS agar menu dan guard selalu sejalan. */
@@ -72,3 +68,4 @@ export const routes: RouteObject[] = [
     ],
   },
 ];
+

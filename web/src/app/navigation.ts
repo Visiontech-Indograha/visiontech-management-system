@@ -1,4 +1,4 @@
-import {
+﻿import {
   Backpack,
   BookUser,
   CalendarCheck,
@@ -6,9 +6,7 @@ import {
   ClipboardCheck,
   ClipboardList,
   FileBarChart,
-  FileText,
-  FileWarning,
-  FolderOpen,
+      FolderOpen,
   House,
   ListChecks,
   MapPin,
@@ -32,7 +30,7 @@ export interface NavItem {
   anyOf?: Permission[];
   /** Disembunyikan bila user memiliki salah satu permission ini (membedakan role dengan izin bertumpuk). */
   hides?: Permission[];
-  /** Super Admin adalah cadangan; menu operasional role lain tidak ditampilkan untuknya (docs/06-UI-UX §5). */
+  /** Super Admin adalah cadangan; menu operasional role lain tidak ditampilkan untuknya (docs/06-UI-UX Â§5). */
   hideForSuperAdmin?: boolean;
   group?: string;
 }
@@ -42,13 +40,6 @@ export const NAV_ITEMS: NavItem[] = [
   { path: "/", label: "Beranda", icon: House },
   { path: "/users", label: "Pengguna", icon: Users, requires: ["user:manage"] },
   { path: "/directory", label: "Direktori", icon: BookUser, requires: ["employee:read"] },
-  {
-    path: "/documents/incomplete",
-    label: "Perlu dilengkapi",
-    icon: FileWarning,
-    requires: ["employee_document:manage"],
-    hideForSuperAdmin: true,
-  },
   { path: "/teams", label: "Team", icon: UsersRound, requires: ["work_plan:manage"] },
   { path: "/work-plans", label: "Work plan", icon: ClipboardList, requires: ["work_plan:manage"] },
   {
@@ -118,13 +109,6 @@ export const NAV_ITEMS: NavItem[] = [
   },
   // Master data
   {
-    path: "/master/document-types",
-    label: "Jenis berkas",
-    icon: FileText,
-    requires: ["document_type:manage"],
-    group: "Master data",
-  },
-  {
     path: "/master/sites",
     label: "Site",
     icon: MapPin,
@@ -147,3 +131,4 @@ export function isAllowed(item: NavItem, permissions: readonly string[]): boolea
 export function visibleNav(permissions: readonly string[]): NavItem[] {
   return NAV_ITEMS.filter((item) => isAllowed(item, permissions));
 }
+

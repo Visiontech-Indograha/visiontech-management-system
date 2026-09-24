@@ -1,6 +1,7 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,7 +16,7 @@ from app.api.guards import (
     require_plan_status,
 )
 from app.core.enums import PlanStatus
-from app.core.errors import ForbiddenError, ValidationError
+from app.core.errors import AppError, ForbiddenError, ValidationError
 from app.core.permissions import RoleCode
 from app.repositories.org_clock_repo import OrgClockRepo
 from app.schemas.hse import (
@@ -29,6 +30,7 @@ from app.schemas.hse import (
 router = APIRouter(prefix="/hse", tags=["HSE & Reports"])
 _INCIDENT_VIEW_ACCESS = Depends(incident_plan_access(PlanNeed.VIEW))
 _DAY_LEADER_ACCESS = Depends(plan_day_access(PlanNeed.LEADER))  # domain.js SAVE/SUBMIT_REPORT
+_DAY_PM_UNIT_ACCESS = Depends(plan_day_access(PlanNeed.PM_UNIT))  # domain.js REVIEW_REPORT
 # Laporan harian di bawah SK-nya (dok 05 §3.6, V-16); sebelumnya /hse/daily-reports/{day_id}.
 days_router = APIRouter(prefix="/work-plans/{plan_id}/days", tags=["Daily Reports"])
 
@@ -122,19 +124,22 @@ async def upsert_daily_report(
     emp_q = text("SELECT employee_id FROM vms.app_user WHERE id = :uid")
     my_emp = (await db.execute(emp_q, {"uid": current_user.user_id})).scalar()
     
-    # Upsert
+    # Upsert — hanya selagi DRAFT / CHANGES_REQUESTED (domain.js SAVE_REPORT, V-24)
     ups = text("""
         INSERT INTO vms.daily_report (work_plan_day_id, body, obstacle)
         VALUES (:day, :body, :obs)
-        ON CONFLICT (work_plan_day_id) DO UPDATE 
+        ON CONFLICT (work_plan_day_id) DO UPDATE
         SET body = EXCLUDED.body, obstacle = EXCLUDED.obstacle, updated_at = now()
+        WHERE vms.daily_report.status IN ('DRAFT', 'CHANGES_REQUESTED')
         RETURNING *
     """)
     res = await db.execute(ups, {
         "day": day_id, "body": data.body, "obs": data.obstacle
     })
     report = res.fetchone()
-    
+    if report is None:
+        raise AppError("INVALID_STATE", "Laporan yang sudah diserahkan tidak dapat diubah.", status=409)
+
     if data.evidence_file_ids:
         await db.execute(text("DELETE FROM vms.report_evidence WHERE daily_report_id = :rid"), {"rid": report.id})
         ins_ev = text("INSERT INTO vms.report_evidence (daily_report_id, file_id) VALUES (:rid, :fid)")
@@ -155,19 +160,55 @@ async def submit_daily_report(
     emp_q = text("SELECT employee_id FROM vms.app_user WHERE id = :uid")
     my_emp = (await db.execute(emp_q, {"uid": current_user.user_id})).scalar()
     
+    # Ajukan dari DRAFT atau setelah dikembalikan PM (domain.js SUBMIT_REPORT, V-24)
     sub = text("""
         UPDATE vms.daily_report
         SET status = 'SUBMITTED', submitted_by = :emp, submitted_at = now()
-        WHERE work_plan_day_id = :day AND status = 'DRAFT'
+        WHERE work_plan_day_id = :day AND status IN ('DRAFT', 'CHANGES_REQUESTED')
         RETURNING *
     """)
     try:
         res = await db.execute(sub, {"emp": my_emp, "day": day_id})
-        report = res.fetchone()
-        if not report:
-            raise HTTPException(status_code=400, detail="Report tidak ditemukan atau bukan DRAFT.")
-        return DailyReportResponse(**report._mapping)
     except Exception as e:
         if "check" in str(e).lower():
             raise HTTPException(status_code=400, detail="Laporan terlalu singkat (minimal 10 karakter).")
         raise HTTPException(status_code=400, detail={"code": "DB_ERROR", "message": str(e)})
+    report = res.fetchone()
+    if not report:
+        raise AppError("INVALID_STATE", "Laporan sudah diserahkan atau belum dibuat.", status=409)
+    return DailyReportResponse(**report._mapping)
+
+
+class ReportReviewRequest(BaseModel):
+    decision: str
+    note: str | None = None
+
+
+@days_router.post("/{day_id}/review", response_model=DailyReportResponse)
+async def review_daily_report(
+    day_id: UUID,
+    data: ReportReviewRequest,
+    access: PlanAccess = _DAY_PM_UNIT_ACCESS,
+    db: AsyncSession = Depends(get_db_with_user)
+):
+    """domain.js REVIEW_REPORT (V-24): PM unit/OPS menyetujui atau mengembalikan laporan yang diserahkan."""
+    require_plan_status(access, PlanStatus.IN_PROGRESS, PlanStatus.COMPLETION_REVIEW)
+    if data.decision not in ("APPROVE", "RETURN"):
+        raise ValidationError("Keputusan tidak valid.")
+    note = (data.note or "").strip()
+    if data.decision == "RETURN" and not note:
+        raise ValidationError("Catatan revisi wajib diisi.")
+    upd = text("""
+        UPDATE vms.daily_report
+        SET status = CAST(:status AS vms.report_status), review_note = :note, reviewed_at = now(),
+            reviewed_by = (SELECT employee_id FROM vms.app_user WHERE id = :uid)
+        WHERE work_plan_day_id = :day AND status = 'SUBMITTED'
+        RETURNING *
+    """)
+    report = (await db.execute(upd, {
+        "status": "APPROVED" if data.decision == "APPROVE" else "CHANGES_REQUESTED",
+        "note": note or None, "uid": access.user.user_id, "day": day_id,
+    })).fetchone()
+    if report is None:
+        raise AppError("INVALID_STATE", "Laporan belum menunggu pemeriksaan.", status=409)
+    return DailyReportResponse(**report._mapping)

@@ -115,6 +115,9 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 - `docs/PLAN-PERBAIKAN-TEMUAN.md` (2026-09-23) — plan perbaikan 7 segmen (definisi, pohon isu, prioritas, rencana kerja, 5×mengapa, sintesis, pencegahan) + antrean turunan T-01…T-13. Dikerjakan sebelum A-3.
 
+#### V-24 · Tinjauan laporan harian (Backend) — 2026-09-24
+- `POST /work-plans/{id}/days/{day_id}/review` `{decision: APPROVE|RETURN, note}` — PM unit/OPS, SK `IN_PROGRESS`/`COMPLETION_REVIEW`, hanya laporan `SUBMITTED`; RETURN wajib catatan → `CHANGES_REQUESTED`; peninjau, waktu, dan catatan tersimpan (`domain.js` REVIEW_REPORT). Laporan yang sudah diserahkan/disetujui tidak bisa disunting lagi (sebelumnya bisa ditimpa kapan saja); laporan yang dikembalikan bisa diperbaiki dan diajukan ulang. Pesan "tidak ditemukan" saat mengajukan tidak lagi tertelan jadi `DB_ERROR`. Uji: `api/tests/test_report_review.py`.
+
 #### V-22 · Adendum perpanjangan & personel (Backend) — 2026-09-24
 - Alur prototipe menggantikan kode lama yang **langsung menerapkan** perubahan saat PM menyetujui (tanpa penerimaan ketua, tanpa dokumen adendum; adendum personel tidak bisa diajukan lewat API). Jalur dok 05 §3.4: `POST /work-plans/{id}/changes` (`type` EXTEND/PERSONNEL), `POST /changes/{id}/approve|accept|reject|withdraw`. Servis `services/plan_change_service.py` (nama = transaksi `domain.js`), repository `repositories/plan_change_repo.py`.
 - **Perpanjangan:** ketua mengajukan → PM menyetujui (bentrok jadwal periode baru diperiksa; dokumen `ADDENDUM` terbit menunggu) → ketua menerima → periode diperpanjang, revisi naik, **hari baru dibuat** dengan tugas bawaan (`domain.js` makeDay). Rencana lama tetap berlaku sampai diterima.

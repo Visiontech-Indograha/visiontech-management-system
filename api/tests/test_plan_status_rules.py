@@ -23,12 +23,12 @@ def _error(response) -> dict:
 
 # ── Laporan & insiden hanya untuk SK yang sedang berjalan ─────────────────────────────────────
 def test_daily_report_needs_a_running_plan(client, world):
-    _, day_ids = run_plan_to_accepted(client, world)          # diterima, belum dimulai
+    plan_id, day_ids = run_plan_to_accepted(client, world)          # diterima, belum dimulai
     leader = world.headers(client, "leader")
 
-    saved = client.post(f"/hse/daily-reports/{day_ids[0]}", headers=leader,
+    saved = client.put(f"/work-plans/{plan_id}/days/{day_ids[0]}", headers=leader,
                         json={"body": "Kamera 1-4 terpasang dan diuji", "obstacle": "Tidak ada"})
-    submitted = client.post(f"/hse/daily-reports/{day_ids[0]}/submit", headers=leader)
+    submitted = client.post(f"/work-plans/{plan_id}/days/{day_ids[0]}/submit", headers=leader)
 
     for response in (saved, submitted):
         assert response.status_code == 409, response.text

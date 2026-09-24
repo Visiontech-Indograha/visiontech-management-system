@@ -16,14 +16,14 @@ def _rv(plan_id: str) -> int:
 
 
 def _team(client, world, plan_id, members=("member",)):
-    r = client.put(f"/plans/{plan_id}/members", headers=world.headers(client, "pm"), json={
+    r = client.put(f"/work-plans/{plan_id}/members", headers=world.headers(client, "pm"), json={
         "leader_employee_id": world.employees["leader"],
         "member_employee_ids": [world.employees[m] for m in members], "row_version": _rv(plan_id)})
     assert r.status_code == 200, r.text
 
 
 def _do(client, world, plan_id, action, who):
-    return client.post(f"/plans/{plan_id}/{action}", headers=world.headers(client, who),
+    return client.post(f"/work-plans/{plan_id}/{action}", headers=world.headers(client, who),
                        json={"row_version": _rv(plan_id), "reason": ""})
 
 
@@ -126,7 +126,7 @@ def test_stale_row_version_is_rejected(client, world):
     plan_id, _ = create_draft_plan(client, world)
     _team(client, world, plan_id)
 
-    response = client.post(f"/plans/{plan_id}/publish", headers=world.headers(client, "pm"),
+    response = client.post(f"/work-plans/{plan_id}/publish", headers=world.headers(client, "pm"),
                            json={"row_version": _rv(plan_id) - 1, "reason": ""})
 
     assert response.status_code == 409

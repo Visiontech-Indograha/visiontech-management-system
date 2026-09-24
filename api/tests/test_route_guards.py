@@ -29,7 +29,7 @@ SELF_SERVICE = {
     ("GET", "/auth/me"): "profil sendiri",
     ("POST", "/auth/change-password"): "kata sandi sendiri",
     ("POST", "/files/upload"): "setiap karyawan mengunggah bukti/dokumen sendiri",
-    ("GET", "/plans"): "hanya SK yang terlihat (V-07)",
+    ("GET", "/work-plans"): "hanya SK yang terlihat (V-07)",
     ("GET", "/sites"): "daftar lokasi organisasi untuk check-in",
     ("GET", "/assets"): "daftar aset organisasi (CHECK_ASSET oleh tim)",
     ("POST", "/attendance/check-in"): "absensi sendiri",
@@ -41,7 +41,7 @@ GUARDED_IN_HANDLER = {
     ("POST", "/hse/incidents"): "check_plan_access(LEADER_OR_MEMBER) untuk work_plan_id di badan",
     ("GET", "/files/{file_id}/url"): "check_file_access (V-17): pemilik/HR/peninjau/penglihat SK, selain itu 404",
 }
-_GUARDS = ("permission_checker", "plan_access.", "day_plan_access.", "allocation_plan_access.",
+_GUARDS = ("permission_checker", "plan_access.", "plan_day_access.", "allocation_plan_access.",
            "incident_plan_access.")
 
 
@@ -141,12 +141,12 @@ def test_incident_is_resolved_by_unit_managers_or_asset_officers(client, world, 
 ])
 def test_only_the_leader_writes_and_submits_daily_reports(client, world, who, expected):
     _other_unit_pm(world)
-    _, day_ids = run_plan_to_in_progress(client, world)
+    plan_id, day_ids = run_plan_to_in_progress(client, world)
     headers = world.headers(client, who)
 
-    saved = client.post(f"/hse/daily-reports/{day_ids[0]}", headers=headers,
+    saved = client.put(f"/work-plans/{plan_id}/days/{day_ids[0]}", headers=headers,
                         json={"body": "Kamera 1-4 terpasang dan diuji", "obstacle": "Tidak ada"})
-    submitted = client.post(f"/hse/daily-reports/{day_ids[0]}/submit", headers=headers)
+    submitted = client.post(f"/work-plans/{plan_id}/days/{day_ids[0]}/submit", headers=headers)
 
     assert saved.status_code == expected, saved.text
     assert submitted.status_code == expected, submitted.text

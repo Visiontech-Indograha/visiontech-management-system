@@ -67,10 +67,10 @@ def test_incident_with_evidence_of_another_organisation_is_rejected(client, worl
 
 
 def test_daily_report_with_evidence_of_another_organisation_is_rejected(client, world, other_world, fake_storage):
-    _, day_ids = run_plan_to_in_progress(client, world)
+    plan_id, day_ids = run_plan_to_in_progress(client, world)
     foreign_file = _file(client, other_world)
 
-    response = client.post(f"/hse/daily-reports/{day_ids[0]}", headers=world.headers(client, "leader"), json={
+    response = client.put(f"/work-plans/{plan_id}/days/{day_ids[0]}", headers=world.headers(client, "leader"), json={
         "body": "Kamera 1-4 terpasang dan diuji", "obstacle": "Tidak ada", "evidence_file_ids": [foreign_file]})
 
     _not_found(response)
@@ -164,7 +164,7 @@ def test_plan_with_a_reference_of_another_organisation_is_rejected(client, world
             "pm_employee_id": world.employees["pm"], "leader_employee_id": world.employees["leader"]}
     body[foreign] = other_world.site_id if foreign == "site_id" else other_world.employees["leader"]
 
-    response = client.post("/plans", headers=world.headers(client, "pm"), json=body)
+    response = client.post("/work-plans", headers=world.headers(client, "pm"), json=body)
 
     _not_found(response)
     assert _count("SELECT count(*) FROM vms.work_plan WHERE organization_id = %s AND title = 'SK rujukan asing'",
@@ -177,7 +177,7 @@ def test_plan_update_with_a_reference_of_another_organisation_is_rejected(client
     before = sync_query("SELECT site_id, leader_employee_id, row_version FROM vms.work_plan WHERE id = %s", (plan_id,))
     value = other_world.site_id if foreign == "site_id" else other_world.employees["leader"]
 
-    response = client.put(f"/plans/{plan_id}", headers=world.headers(client, "pm"),
+    response = client.patch(f"/work-plans/{plan_id}", headers=world.headers(client, "pm"),
                           json={foreign: value, "row_version": before[0][2]})
 
     _not_found(response)

@@ -13,7 +13,7 @@ from app.api.guards import PlanAccess, PlanNeed, plan_access
 from app.repositories.plan_member_repo import PlanMemberRepo
 from app.services.plan_member_service import PlanMemberService
 
-router = APIRouter(prefix="/plans/{plan_id}", tags=["Plan Members"])
+router = APIRouter(prefix="/work-plans/{plan_id}", tags=["Plan Members"])
 _PM_UNIT_ACCESS = Depends(plan_access(PlanNeed.PM_UNIT))
 
 

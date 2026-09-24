@@ -2,34 +2,28 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/VmsDialog";
-import { SelectField, TextField } from "@/components/ui/Field";
+import { TextField } from "@/components/ui/Field";
 import { ApiError } from "@/lib/api";
 import { formatDate } from "@/lib/format";
 import {
   useCreateDocument,
-  useDeleteDocument,
-  useDocumentTypes,
   useEmployeeDocuments,
-  useUpdateDocument,
-  type EmployeeDocument,
+  useUploadFile,
 } from "./api";
-import { ExpiryBadge } from "./badges";
 import { FilePreview } from "@/components/molecules/FilePreview";
 
 type Errors = Record<string, string>;
 
-/** Daftar berkas + tambah/ubah/hapus (SA, HES) atau hanya lihat (pemilik). */
+/** Daftar berkas + tambah (SA, HES) atau hanya lihat (pemilik). */
 export function DocumentsPanel({ userId, canManage }: { userId: string; canManage: boolean }) {
   const docs = useEmployeeDocuments(userId);
-  const [editing, setEditing] = useState<EmployeeDocument | "new" | null>(null);
-  const [deleting, setDeleting] = useState<EmployeeDocument | null>(null);
-  const remove = useDeleteDocument(userId);
+  const [editing, setEditing] = useState(false);
 
   return (
     <section aria-label="Berkas">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-base font-semibold">Berkas</h2>
-        {canManage && <Button onClick={() => setEditing("new")}>Tambah berkas</Button>}
+        {canManage && <Button onClick={() => setEditing(true)}>Tambah berkas</Button>}
       </div>
 
       <div className="overflow-x-auto rounded-panel border border-line bg-surface">
@@ -51,122 +45,71 @@ export function DocumentsPanel({ userId, canManage }: { userId: string; canManag
                 </td>
               </tr>
             )}
-            {docs.data?.length === 0 && (
+            {docs.data?.items.length === 0 && (
               <tr>
                 <td colSpan={5} className="px-4 py-6 text-center text-mist">
                   Belum ada berkas.
                 </td>
               </tr>
             )}
-            {docs.data?.map((d) => (
+            {docs.data?.items.map((d) => (
               <tr key={d.id} className="h-11 border-b border-line last:border-0">
-                <td className="px-4 py-2 font-medium">{d.type_name ?? d.custom_label}</td>
-                <td className="px-4 py-2">{d.document_number ?? "-"}</td>
+                <td className="px-4 py-2 font-medium">{d.doc_type}</td>
+                <td className="px-4 py-2">{d.number_masked ?? "-"}</td>
                 <td className="px-4 py-2">
-                  {d.expires_at ? (
+                  {d.expiry_date ? (
                     <span className="flex items-center gap-2">
-                      {formatDate(d.expires_at)}
-                      <ExpiryBadge level={d.expiry_level} days={d.days_left} />
+                      {formatDate(d.expiry_date)}
                     </span>
                   ) : (
                     "-"
                   )}
                 </td>
                 <td className="px-4 py-2">
-                  {d.file_id ? (<FilePreview fileId={d.file_id} fileName={d.type_name ?? d.custom_label ?? "Berkas"} />) : (
+                  {d.file_id ? (<FilePreview fileId={d.file_id} fileName={d.doc_type ?? "Berkas"} />) : (
                     <span className="text-mist">Belum ada file</span>
                   )}
                 </td>
-                {canManage && (
-                  <td className="whitespace-nowrap px-4 py-2 text-right">
-                    <Button variant="ghost" className="h-8 px-2" onClick={() => setEditing(d)}>
-                      Ubah
-                    </Button>
-                    <Button variant="ghost" className="h-8 px-2 text-danger" onClick={() => setDeleting(d)}>
-                      Hapus
-                    </Button>
-                  </td>
-                )}
               </tr>
             ))}
           </tbody>
         </table>
       </div>
 
-      {editing && (
-        <DocumentDialog key={editing === "new" ? "new" : editing.id} userId={userId} doc={editing === "new" ? null : editing} onClose={() => setEditing(null)} />
-      )}
-      <Dialog
-        open={deleting !== null}
-        title={deleting ? `Hapus ${deleting.type_name ?? deleting.custom_label}?` : ""}
-        onClose={() => setDeleting(null)}
-        footer={
-          <>
-            <Button variant="outline" onClick={() => setDeleting(null)}>
-              Batal
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={async () => {
-                if (!deleting) return;
-                try {
-                  await remove.mutateAsync(deleting.id);
-                  toast.success("Berkas dihapus.");
-                } catch (e) {
-                  toast.error(e instanceof ApiError ? e.message : "Terjadi kesalahan.");
-                }
-                setDeleting(null);
-              }}
-            >
-              Hapus
-            </Button>
-          </>
-        }
-      >
-        Baris berkas dihapus dari daftar dan perubahan dicatat pada audit log.
-      </Dialog>
+      {editing && <DocumentDialog userId={userId} onClose={() => setEditing(false)} />}
     </section>
   );
 }
 
-function DocumentDialog({ userId, doc, onClose }: { userId: string; doc: EmployeeDocument | null; onClose: () => void }) {
-  const types = useDocumentTypes();
+function DocumentDialog({ userId, onClose }: { userId: string; onClose: () => void }) {
+  const upload = useUploadFile();
   const create = useCreateDocument(userId);
-  const update = useUpdateDocument(userId);
-  const [mode, setMode] = useState<"type" | "label">(doc?.document_type_id || !doc ? "type" : "label");
   const [errors, setErrors] = useState<Errors>({});
   const [formError, setFormError] = useState<string | null>(null);
-  const editing = doc !== null;
-  const pending = create.isPending || update.isPending;
+  const pending = upload.isPending || create.isPending;
 
   const submit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
-    const form = new FormData();
-    const clear: string[] = [];
-    const put = (name: string, remove = false) => {
-      const v = String(f.get(name) ?? "").trim();
-      if (v) form.set(name, v);
-      else if (editing && remove && doc[name as keyof EmployeeDocument] != null) clear.push(name);
-    };
-    if (!editing) {
-      if (mode === "type") put("document_type_id");
-      else put("custom_label");
-    } else if (!doc.document_type_id) put("custom_label");
-    put("document_number", true);
-    put("issued_at", true);
-    put("expires_at", true);
-    put("notes", true);
-    clear.forEach((c) => form.append("clear", c));
-    const file = (f.get("file") as File | null) ?? null;
-    if (file && file.size > 0) form.set("file", file);
+    const doc_type = String(f.get("doc_type") ?? "").trim();
+    const number = String(f.get("number") ?? "").trim();
+    const expiry_date = String(f.get("expiry_date") ?? "").trim() || null;
+    const fileInput = e.currentTarget.elements.namedItem("file") as HTMLInputElement;
+    const file = fileInput.files?.[0];
 
     setErrors({});
     setFormError(null);
+
+    if (!doc_type) return setErrors({ doc_type: "Wajib diisi." });
+    if (!number) return setErrors({ number: "Wajib diisi." });
+    if (!file || file.size === 0) return setErrors({ file: "File wajib dilampirkan." });
+
     try {
-      if (editing) await update.mutateAsync({ id: doc.id, form });
-      else await create.mutateAsync(form);
-      toast.success(editing ? "Perubahan disimpan." : "Berkas ditambahkan.");
+      const fileForm = new FormData();
+      fileForm.set("file", file);
+      const { id: file_id } = await upload.mutateAsync(fileForm);
+      await create.mutateAsync({ doc_type, number, expiry_date, file_id });
+      toast.success("Berkas ditambahkan.");
       onClose();
     } catch (err) {
       if (err instanceof ApiError && err.details.fields) setErrors(err.details.fields as Errors);
@@ -174,16 +117,14 @@ function DocumentDialog({ userId, doc, onClose }: { userId: string; doc: Employe
     }
   };
 
-  const canAttach = !editing || !doc.file_id;
-
   return (
     <Dialog
       open
-      title={editing ? "Ubah berkas" : "Tambah berkas"}
+      title="Tambah berkas"
       onClose={onClose}
       footer={
         <>
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" onClick={onClose} disabled={pending}>
             Batal
           </Button>
           <Button type="submit" form="document-form" disabled={pending}>
@@ -198,53 +139,10 @@ function DocumentDialog({ userId, doc, onClose }: { userId: string; doc: Employe
             {formError}
           </p>
         )}
-        {!editing && (
-          <div role="group" aria-label="Sumber jenis" className="mb-4 flex rounded-control border border-line p-0.5 text-sm">
-            {(["type", "label"] as const).map((m) => (
-              <button
-                key={m}
-                type="button"
-                aria-pressed={mode === m}
-                onClick={() => setMode(m)}
-                className={`h-9 flex-1 rounded-control font-medium ${mode === m ? "bg-lens-soft text-lens" : "text-mist"}`}
-              >
-                {m === "type" ? "Jenis berkas" : "Label bebas"}
-              </button>
-            ))}
-          </div>
-        )}
-        {!editing && mode === "type" && (
-          <SelectField name="document_type_id" label="Jenis berkas" error={errors.document_type_id} defaultValue="">
-            <option value="" disabled>
-              Pilih jenis...
-            </option>
-            {types.data?.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-                {t.has_expiry ? " (ada kedaluwarsa)" : ""}
-              </option>
-            ))}
-          </SelectField>
-        )}
-        {((!editing && mode === "label") || (editing && !doc.document_type_id)) && (
-          <TextField name="custom_label" label="Label" defaultValue={doc?.custom_label ?? ""} error={errors.custom_label} />
-        )}
-        <TextField name="document_number" label="Nomor" defaultValue={doc?.document_number ?? ""} error={errors.document_number} />
-        <TextField name="issued_at" label="Tanggal terbit" type="date" defaultValue={doc?.issued_at ?? ""} error={errors.issued_at} />
-        <TextField
-          name="expires_at"
-          label="Tanggal kedaluwarsa"
-          type="date"
-          defaultValue={doc?.expires_at ?? ""}
-          error={errors.expires_at}
-          hint="Wajib untuk jenis berkas yang memiliki kedaluwarsa."
-        />
-        <TextField name="notes" label="Catatan" defaultValue={doc?.notes ?? ""} error={errors.notes} />
-        {canAttach ? (
-          <TextField name="file" label="File (jpg, png, pdf; maks. 10 MB)" type="file" accept=".jpg,.jpeg,.png,.pdf" error={errors.file} />
-        ) : (
-          <p className="text-sm text-mist">Untuk mengganti file, tambahkan baris berkas baru agar riwayat tetap ada.</p>
-        )}
+        <TextField name="doc_type" label="Jenis dokumen" error={errors.doc_type} hint="Contoh: KTP, SIM A, SIO Excavator" />
+        <TextField name="number" label="Nomor dokumen" error={errors.number} />
+        <TextField name="expiry_date" label="Tanggal kedaluwarsa" type="date" error={errors.expiry_date} hint="Bila ada." />
+        <TextField name="file" label="File (jpg, png, pdf; maks. 10 MB)" type="file" accept=".jpg,.jpeg,.png,.pdf" error={errors.file} />
       </form>
     </Dialog>
   );

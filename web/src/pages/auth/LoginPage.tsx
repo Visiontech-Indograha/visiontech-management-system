@@ -4,8 +4,9 @@ import { useForm } from "react-hook-form";
 import { Navigate, useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { useSession } from "@/app/session";
-import { Button } from "@/components/ui/Button";
-import { TextField } from "@/components/ui/Field";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { ApiError } from "@/lib/api";
 
 const schema = z.object({
@@ -38,33 +39,40 @@ export function LoginPage({ admin = false }: { admin?: boolean }) {
   });
 
   return (
-    <main className="mx-auto mt-16 w-full max-w-sm px-4">
+    <main className="mx-auto mt-16 w-full max-w-[400px] px-4">
       <h1 className="mb-1 text-2xl font-semibold">{admin ? "Masuk sebagai Super Admin" : "Masuk ke VMS"}</h1>
-      <p className="mb-6 text-mist">Visiontech Management System</p>
-      <form onSubmit={onSubmit} noValidate>
+      <p className="mb-6 text-muted-foreground">Visiontech Management System</p>
+      <form onSubmit={onSubmit} noValidate className="space-y-4">
         {formError && (
-          <p role="alert" className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
+          <p role="alert" className="rounded-xl bg-destructive/10 px-3 py-2 text-sm text-destructive">
             {formError}
           </p>
         )}
-        <TextField
-          label="Email"
-          autoComplete="email"
-          autoCapitalize="none"
-          error={errors.email?.message}
-          {...register("email")}
-        />
-        <TextField
-          label="Password"
-          type="password"
-          autoComplete="current-password"
-          error={errors.password?.message}
-          {...register("password")}
-        />
-        <Button type="submit" className="w-full" disabled={isSubmitting}>
+        <div className="space-y-1.5">
+          <Label htmlFor="email">Email</Label>
+          <Input
+            id="email"
+            autoComplete="email"
+            autoCapitalize="none"
+            {...register("email")}
+          />
+          {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="password">Password</Label>
+          <Input
+            id="password"
+            type="password"
+            autoComplete="current-password"
+            {...register("password")}
+          />
+          {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
+        </div>
+        <Button type="submit" className="w-full h-11" disabled={isSubmitting}>
           {isSubmitting ? "Memproses..." : "Masuk"}
         </Button>
       </form>
     </main>
   );
 }
+

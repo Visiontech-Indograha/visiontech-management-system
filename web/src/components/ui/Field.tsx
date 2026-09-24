@@ -1,8 +1,7 @@
-import clsx from "clsx";
 import { forwardRef, useId, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from "react";
-
-const CONTROL =
-  "h-10 w-full rounded-control border border-line bg-surface px-3 text-sm text-ink placeholder:text-mist";
+import { Label } from "./label";
+import { Input } from "./input";
+import { cn } from "@/lib/utils";
 
 interface FieldShellProps {
   label: string;
@@ -11,22 +10,20 @@ interface FieldShellProps {
   children: (id: string, describedBy: string | undefined) => ReactNode;
 }
 
-/** Label di atas, bantuan di bawah, galat inline (docs/06-UI-UX §3). */
+/** Label di atas, bantuan di bawah, galat inline (docs/06-UI-UX A 3). */
 function FieldShell({ label, error, hint, children }: FieldShellProps) {
   const id = useId();
   const msgId = `${id}-msg`;
   return (
-    <div className="mb-4">
-      <label htmlFor={id} className="mb-1 block text-sm font-medium">
-        {label}
-      </label>
+    <div className="mb-4 space-y-1.5">
+      <Label htmlFor={id}>{label}</Label>
       {children(id, error || hint ? msgId : undefined)}
       {error ? (
-        <p id={msgId} role="alert" className="mt-1 text-sm text-danger">
+        <p id={msgId} role="alert" className="text-sm text-destructive">
           {error}
         </p>
       ) : hint ? (
-        <p id={msgId} className="mt-1 text-sm text-mist">
+        <p id={msgId} className="text-sm text-muted-foreground">
           {hint}
         </p>
       ) : null}
@@ -41,12 +38,12 @@ export const TextField = forwardRef<
   return (
     <FieldShell label={label} error={error} hint={hint}>
       {(id, describedBy) => (
-        <input
+        <Input
           id={id}
           ref={ref}
           aria-invalid={!!error}
           aria-describedby={describedBy}
-          className={clsx(CONTROL, error && "border-danger", className)}
+          className={cn(error && "border-destructive focus-visible:ring-destructive", className)}
           {...props}
         />
       )}
@@ -66,7 +63,11 @@ export const SelectField = forwardRef<
           ref={ref}
           aria-invalid={!!error}
           aria-describedby={describedBy}
-          className={clsx(CONTROL, error && "border-danger", className)}
+          className={cn(
+            "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
+            error && "border-destructive focus-visible:ring-destructive",
+            className
+          )}
           {...props}
         >
           {children}
@@ -75,3 +76,4 @@ export const SelectField = forwardRef<
     </FieldShell>
   );
 });
+

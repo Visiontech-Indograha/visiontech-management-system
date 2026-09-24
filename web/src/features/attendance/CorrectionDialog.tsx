@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import toast from "react-hot-toast";
-import { Button } from "@/components/ui/Button";
-import { Dialog } from "@/components/ui/Dialog";
+import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/VmsDialog";
 import { SelectField, TextField } from "@/components/ui/Field";
 import { api, ApiError } from "@/lib/api";
 import type { components } from "@/lib/api-types";
@@ -52,7 +52,7 @@ export function CorrectionDialog({ onClose }: { onClose: () => void }) {
       onClose={onClose}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="outline" onClick={onClose}>
             Batal
           </Button>
           <Button type="submit" form="correction-form" disabled={correct.isPending}>

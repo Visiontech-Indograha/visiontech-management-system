@@ -3,7 +3,7 @@ import { useState } from "react";
 import toast from "react-hot-toast";
 import { useSession } from "@/app/session";
 import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ApiError } from "@/lib/api";
 import { formatDate, formatDateTime } from "@/lib/format";
@@ -107,10 +107,10 @@ export function AttendancePage({ mode }: { mode: "all" | "team" }) {
         title={mode === "team" ? "Absensi team" : "Absensi"}
         action={
           <div className="flex gap-2">
-            {canCorrect && <Button variant="secondary" onClick={() => setCorrecting(true)}>Koreksi absen</Button>}
+            {canCorrect && <Button variant="outline" onClick={() => setCorrecting(true)}>Koreksi absen</Button>}
             {canExport && (
               <>
-                <Button variant="secondary" onClick={() => void doExport("csv")}>Ekspor CSV</Button>
+                <Button variant="outline" onClick={() => void doExport("csv")}>Ekspor CSV</Button>
                 <Button onClick={() => void doExport("xlsx")}>Ekspor XLSX</Button>
               </>
             )}
@@ -192,10 +192,10 @@ export function AttendancePage({ mode }: { mode: "all" | "team" }) {
             {data.total} absen · halaman {data.page} dari {lastPage}
           </span>
           <span className="flex gap-2">
-            <Button variant="secondary" disabled={page <= 1} onClick={() => setPage(page - 1)}>
+            <Button variant="outline" disabled={page <= 1} onClick={() => setPage(page - 1)}>
               Sebelumnya
             </Button>
-            <Button variant="secondary" disabled={page >= lastPage} onClick={() => setPage(page + 1)}>
+            <Button variant="outline" disabled={page >= lastPage} onClick={() => setPage(page + 1)}>
               Berikutnya
             </Button>
           </span>

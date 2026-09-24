@@ -1,7 +1,7 @@
 import { useState } from "react";
 import toast from "react-hot-toast";
-import { Button } from "@/components/ui/Button";
-import { Dialog } from "@/components/ui/Dialog";
+import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/VmsDialog";
 import { SelectField, TextField } from "@/components/ui/Field";
 import { ApiError } from "@/lib/api";
 import { formatDate } from "@/lib/format";
@@ -105,11 +105,11 @@ export function DocumentsPanel({ userId, canManage }: { userId: string; canManag
         onClose={() => setDeleting(null)}
         footer={
           <>
-            <Button variant="secondary" onClick={() => setDeleting(null)}>
+            <Button variant="outline" onClick={() => setDeleting(null)}>
               Batal
             </Button>
             <Button
-              variant="danger"
+              variant="destructive"
               onClick={async () => {
                 if (!deleting) return;
                 try {
@@ -186,7 +186,7 @@ function DocumentDialog({ userId, doc, onClose }: { userId: string; doc: Employe
       onClose={onClose}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="outline" onClick={onClose}>
             Batal
           </Button>
           <Button type="submit" form="document-form" disabled={pending}>

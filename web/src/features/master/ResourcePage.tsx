@@ -2,8 +2,8 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tansta
 import { useState, type ReactNode } from "react";
 import toast from "react-hot-toast";
 import { useSession } from "@/app/session";
-import { Button } from "@/components/ui/Button";
-import { Dialog } from "@/components/ui/Dialog";
+import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/VmsDialog";
 import { SelectField, TextField } from "@/components/ui/Field";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { api, ApiError } from "@/lib/api";
@@ -219,10 +219,10 @@ export function ResourcePage<Row extends { id: string }>(props: Props<Row>) {
             {data.total} data · halaman {data.page} dari {lastPage}
           </span>
           <span className="flex gap-2">
-            <Button variant="secondary" disabled={page <= 1} onClick={() => setPage(page - 1)}>
+            <Button variant="outline" disabled={page <= 1} onClick={() => setPage(page - 1)}>
               Sebelumnya
             </Button>
-            <Button variant="secondary" disabled={page >= lastPage} onClick={() => setPage(page + 1)}>
+            <Button variant="outline" disabled={page >= lastPage} onClick={() => setPage(page + 1)}>
               Berikutnya
             </Button>
           </span>
@@ -235,7 +235,7 @@ export function ResourcePage<Row extends { id: string }>(props: Props<Row>) {
         onClose={close}
         footer={
           <>
-            <Button variant="secondary" onClick={close}>
+            <Button variant="outline" onClick={close}>
               Batal
             </Button>
             <Button type="submit" form="resource-form" disabled={save.isPending}>
@@ -300,11 +300,11 @@ export function ResourcePage<Row extends { id: string }>(props: Props<Row>) {
         onClose={() => setDeleting(null)}
         footer={
           <>
-            <Button variant="secondary" onClick={() => setDeleting(null)}>
+            <Button variant="outline" onClick={() => setDeleting(null)}>
               Batal
             </Button>
             <Button
-              variant="danger"
+              variant="destructive"
               disabled={remove.isPending}
               onClick={async () => {
                 if (!deleting) return;

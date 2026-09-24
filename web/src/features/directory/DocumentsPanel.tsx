@@ -14,6 +14,7 @@ import {
   type EmployeeDocument,
 } from "./api";
 import { ExpiryBadge } from "./badges";
+import { FilePreview } from "@/components/molecules/FilePreview";
 
 type Errors = Record<string, string>;
 
@@ -72,11 +73,7 @@ export function DocumentsPanel({ userId, canManage }: { userId: string; canManag
                   )}
                 </td>
                 <td className="px-4 py-2">
-                  {d.file_url ? (
-                    <a href={`${import.meta.env.VITE_API_BASE_URL ?? ""}${d.file_url}`} className="text-lens hover:underline" target="_blank" rel="noreferrer">
-                      Buka
-                    </a>
-                  ) : (
+                  {d.file_id ? (<FilePreview fileId={d.file_id} fileName={d.type_name ?? d.custom_label ?? "Berkas"} />) : (
                     <span className="text-mist">Belum ada file</span>
                   )}
                 </td>

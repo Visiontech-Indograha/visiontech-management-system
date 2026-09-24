@@ -205,6 +205,7 @@ CREATE TABLE work_plan (
   revision        integer NOT NULL DEFAULT 1,
   row_version     integer NOT NULL DEFAULT 1,  -- penguncian optimistis antar-tab
   cancellation_reason text,
+  appeal_reason   text,                        -- alasan banding ketua (domain.js APPEAL, V-20)
   deleted_at      timestamptz,                 -- arsip draft (soft delete)
   created_by      uuid REFERENCES app_user(id),
   created_at      timestamptz NOT NULL DEFAULT now(),

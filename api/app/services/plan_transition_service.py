@@ -81,6 +81,21 @@ class PlanTransitionService:
         await self.repo.accept_document(plan_id, leader or "")
         return await self.repo.get_plan(plan_id)
 
+    async def appeal(self, plan_id: UUID, org_id: str, user_id: str, row_version: int, reason: str) -> Any:
+        """domain.js APPEAL — ketua menurut SK, hanya dari PUBLISHED, alasan wajib."""
+        await self._load(plan_id, org_id, row_version, PlanStatus.PUBLISHED)
+        await self._leader_only(plan_id, user_id)
+        if not reason.strip():
+            raise AppError("VALIDATION_ERROR", "Alasan banding wajib diisi.", status=422)
+        await self.repo.appeal(plan_id, reason.strip())
+        return await self.repo.get_plan(plan_id)
+
+    async def revise(self, plan_id: UUID, org_id: str, row_version: int) -> Any:
+        """domain.js REVISE — PM unit/OPS (dijaga router), hanya dari APPEALED."""
+        await self._load(plan_id, org_id, row_version, PlanStatus.APPEALED)
+        await self.repo.revise(plan_id)
+        return await self.repo.get_plan(plan_id)
+
     async def start(self, plan_id: UUID, org_id: str, user_id: str, row_version: int) -> Any:
         plan = await self._load(plan_id, org_id, row_version, PlanStatus.ACCEPTED)
         await self._leader_only(plan_id, user_id)

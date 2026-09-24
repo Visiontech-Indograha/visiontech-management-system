@@ -1,5 +1,5 @@
 """
-Peran global dan peta izin (dok 03 §1, dok 08).
+Peran global dan peta izin (dok 03 §1, dok 08; OPS mengikuti prototipe — dok 10 Bagian C).
 
 `RoleCode` adalah satu-satunya daftar peran di Python dan harus identik dengan enum
 `vms.role_code` (dijaga `tests/test_permissions.py`). LEADER/MEMBER tidak memberi izin global:
@@ -65,7 +65,9 @@ _ROLE_EXTRA: dict[RoleCode, frozenset[Permission]] = {
     RoleCode.HR: frozenset({P.MANAGE_USERS, P.VERIFY_DOCUMENTS, P.MANAGE_EMPLOYEE_DOCUMENTS}),
     RoleCode.FINANCE: frozenset({P.REVIEW_ATTENDANCE, P.REVIEW_OVERTIME}),
     RoleCode.ASSET: frozenset({P.MANAGE_ASSETS}),
-    RoleCode.OPS: frozenset({P.VIEW_TIMELINE, P.VIEW_AUDIT}),
+    # OPS memegang kewenangan PM lintas unit (domain.js permissions.OPS; dok 10 Bagian C, V-07).
+    # PROMOTE/OFFBOARD prototipe belum dipetakan: MANAGE_USERS juga mencakup ubah data karyawan (HR saja).
+    RoleCode.OPS: frozenset({P.CREATE_PLAN, P.PUBLISH_PLAN, P.REVIEW_OVERTIME, P.VIEW_TIMELINE, P.VIEW_AUDIT}),
     RoleCode.LEADER: frozenset(),
     RoleCode.MEMBER: frozenset(),
 }

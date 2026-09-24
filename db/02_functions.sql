@@ -45,7 +45,7 @@ LANGUAGE sql STABLE AS $$
   SELECT EXISTS (
     SELECT 1 FROM work_plan_member m
     JOIN app_user u ON u.employee_id = m.employee_id
-    WHERE m.work_plan_id = p_plan AND u.id = p_user AND upper(m.valid_period) IS NULL
+    WHERE m.work_plan_id = p_plan AND u.id = p_user AND upper_inf(m.valid_period)
   )
 $$;
 
@@ -229,7 +229,7 @@ RETURNS TABLE (work_plan_id uuid, number text, title text)
 LANGUAGE sql STABLE AS $$
   SELECT wp.id, wp.number, wp.title
   FROM work_plan wp
-  JOIN work_plan_member m ON m.work_plan_id = wp.id AND upper(m.valid_period) IS NULL
+  JOIN work_plan_member m ON m.work_plan_id = wp.id AND upper_inf(m.valid_period)
   WHERE m.employee_id = p_employee
     AND wp.deleted_at IS NULL
     AND wp.status IN ('PUBLISHED','ACCEPTED','IN_PROGRESS','COMPLETION_REVIEW')

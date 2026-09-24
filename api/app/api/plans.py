@@ -4,8 +4,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import CurrentUser, get_db_with_user, require_permission
+from app.api.deps import CurrentUser, get_current_user, get_db_with_user, require_permission
+from app.api.guards import PlanAccess, PlanNeed, check_unit_manager, day_plan_access, plan_access
 from app.core.permissions import Permission
+from app.repositories.plan_access_repo import PlanAccessRepo
 from app.schemas.plan import (
     PlanDayCreate,
     PlanDayResponse,
@@ -17,32 +19,23 @@ from app.schemas.plan import (
 )
 
 router = APIRouter(prefix="/plans", tags=["Work Plans"])
+_VIEW_ACCESS = Depends(plan_access(PlanNeed.VIEW))
+_PM_UNIT_ACCESS = Depends(plan_access(PlanNeed.PM_UNIT))
+_DAY_PM_UNIT_ACCESS = Depends(day_plan_access(PlanNeed.PM_UNIT))
 
 @router.get("", response_model=list[WorkPlanResponse])
 async def get_plans(
     status_filter: str | None = None,
-    current_user: CurrentUser = Depends(require_permission(Permission.VIEW_USERS)),
+    current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_with_user)
 ):
-    where = "organization_id = :org"
-    params = {"org": current_user.organization_id}
-    
-    if status_filter:
-        where += " AND status = :status"
-        params["status"] = status_filter
-        
-    query = text(f"""
-        SELECT id, unit_id, site_id, number, title, location_text, description,
-               lower(period) as period_start, upper(period) - integer '1' as period_end,
-               status, pm_employee_id, leader_employee_id, revision, row_version,
-               cancellation_reason
-        FROM vms.work_plan
-        WHERE {where}
-        ORDER BY created_at DESC
-    """)
-    rows = (await db.execute(query, params)).fetchall()
-    
+    """Hanya SK yang terlihat oleh pengguna (V-07, `domain.js` visiblePlans)."""
+    rows = await PlanAccessRepo(db).visible_plans(current_user.organization_id, current_user.user_id, status_filter)
     return [WorkPlanResponse(**row._mapping) for row in rows]
+
+@router.get("/{plan_id}", response_model=WorkPlanResponse)
+async def get_plan(access: PlanAccess = _VIEW_ACCESS):
+    return WorkPlanResponse(**access.plan._mapping)
 
 @router.post("", response_model=WorkPlanResponse, status_code=status.HTTP_201_CREATED)
 async def create_plan(
@@ -50,6 +43,7 @@ async def create_plan(
     current_user: CurrentUser = Depends(require_permission(Permission.CREATE_PLAN)),
     db: AsyncSession = Depends(get_db_with_user)
 ):
+    await check_unit_manager(db, data.unit_id, current_user)
     query = text("""
         INSERT INTO vms.work_plan (
             organization_id, unit_id, site_id, title, location_text, description,
@@ -96,9 +90,10 @@ async def create_plan(
 async def update_plan(
     plan_id: UUID,
     data: WorkPlanUpdate,
-    current_user: CurrentUser = Depends(require_permission(Permission.CREATE_PLAN)),
+    access: PlanAccess = _PM_UNIT_ACCESS,
     db: AsyncSession = Depends(get_db_with_user)
 ):
+    current_user = access.user
     # Optimistic locking
     check = text("SELECT status, row_version, pm_employee_id, leader_employee_id, lower(period) as period_start, upper(period) - integer '1' as period_end, unit_id FROM vms.work_plan WHERE id = :id AND organization_id = :org")
     row = (await db.execute(check, {"id": plan_id, "org": current_user.organization_id})).fetchone()
@@ -181,9 +176,10 @@ async def update_plan(
 async def add_day(
     plan_id: UUID,
     data: PlanDayCreate,
-    current_user: CurrentUser = Depends(require_permission(Permission.CREATE_PLAN)),
+    access: PlanAccess = _PM_UNIT_ACCESS,
     db: AsyncSession = Depends(get_db_with_user)
 ):
+    current_user = access.user
     # Verifikasi status DRAFT
     check = text("SELECT status FROM vms.work_plan WHERE id = :id AND organization_id = :org")
     status_val = (await db.execute(check, {"id": plan_id, "org": current_user.organization_id})).scalar()
@@ -209,7 +205,7 @@ async def add_day(
 async def add_task(
     day_id: UUID,
     data: PlanTaskCreate,
-    current_user: CurrentUser = Depends(require_permission(Permission.CREATE_PLAN)),
+    access: PlanAccess = _DAY_PM_UNIT_ACCESS,
     db: AsyncSession = Depends(get_db_with_user)
 ):
     insert_task = text("""

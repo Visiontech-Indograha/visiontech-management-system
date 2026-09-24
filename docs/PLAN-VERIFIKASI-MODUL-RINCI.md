@@ -70,7 +70,7 @@ Centang hanya setelah commit di-push.
 
 ## W3 · Aman (E4, E5)
 
-- [ ] **V-07 · Penjaga keterlibatan pekerjaan (dependency bersama)**
+- [x] **V-07 · Penjaga keterlibatan pekerjaan (dependency bersama)**
   - Perubahan: `app/api/guards.py::plan_access(need)` — `need ∈ {PM_UNIT, LEADER, MEMBER,
     LEADER_OR_MEMBER, VIEW}`; memakai `is_plan_leader`/`is_plan_member`/`has_role('PM', unit)`;
     SK organisasi lain atau tak terlihat → **404**; terlihat tapi tak berwenang → 403.
@@ -115,7 +115,7 @@ Centang hanya setelah commit di-push.
   `repositories/attendance_repo.py`, `services/plan_service.py`, `services/attendance_service.py`,
   `services/document_service.py`, `services/pdf_service.py` (tak diimpor; E9). Uji penjaga:
   setiap modul di `services/` & `repositories/` diimpor kode aplikasi. Pengecualian V-01 dikosongkan.
-- [ ] **V-15 · Trigger audit menemukan organisasi** (migrasi 0004): untuk baris tanpa
+- [ ] **V-15 · Trigger audit menemukan organisasi** (migrasi 0005; 0004 dipakai V-07): untuk baris tanpa
   `organization_id`, ambil dari `work_plan`/`asset` terkait sebelum `current_org_id()`. Uji:
   hapus `asset_allocation` tanpa konteks → berhasil & tercatat di audit dengan organisasi benar.
 - [ ] **V-16 · Jalur sesuai kontrak**: `/plans` → `/work-plans` (dok 05); `/hse/daily-reports` →

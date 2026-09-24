@@ -91,7 +91,8 @@ def test_member_cannot_publish(client, world):
     plan_id, _ = create_draft_plan(client, world)
     _team(client, world, plan_id)
 
-    assert _do(client, world, plan_id, "publish", "member").status_code == 403
+    # SK draf tidak terlihat oleh anggota (V-07, domain.js visiblePlans) → 404, bukan 403.
+    assert _do(client, world, plan_id, "publish", "member").status_code == 404
 
 
 def test_only_the_leader_named_in_the_sk_accepts_and_starts(client, world):

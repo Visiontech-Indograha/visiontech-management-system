@@ -114,4 +114,5 @@ def test_only_plan_managers_may_set_the_team(client, world):
 
     response = _put(client, world, plan_id, world.employees["leader"], [], who="member")
 
-    assert response.status_code == 403
+    # SK draf tidak terlihat oleh anggota (V-07, domain.js visiblePlans) → 404, bukan 403.
+    assert response.status_code == 404

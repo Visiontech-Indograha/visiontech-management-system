@@ -104,11 +104,11 @@ def test_plan_lifecycle_to_extension(client, world):
     pm = world.headers(client, "pm")
 
     # Perpanjangan diajukan ketua (REQUEST_CHANGE), disetujui PM (APPROVE_CHANGE).
-    change = client.post(f"/work-plans/{plan_id}/changes/extension", headers=world.headers(client, "leader"),
-                         json={"new_period_end": (jakarta_now().date() + timedelta(days=5)).isoformat(),
+    change = client.post(f"/work-plans/{plan_id}/changes", headers=world.headers(client, "leader"),
+                         json={"type": "EXTEND", "new_period_end": (jakarta_now().date() + timedelta(days=5)).isoformat(),
                                "reason": "Hujan deras dua hari"})
-    assert change.status_code in (200, 201), change.text
-    approved = client.post(f"/work-plans/{plan_id}/changes/{change.json()['change_id']}/approve", headers=pm)
+    assert change.status_code == 201, change.text
+    approved = client.post(f"/changes/{change.json()['id']}/approve", headers=pm, json={})
     assert approved.status_code == 200, approved.text
     assert sync_query("SELECT count(*) FROM vms.plan_change WHERE work_plan_id = %s AND status <> 'PENDING_PM'",
                       (plan_id,)) == [(1,)]

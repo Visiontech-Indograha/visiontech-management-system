@@ -13,8 +13,9 @@ from app.api.guards import (
     ensure_same_org,
     incident_plan_access,
 )
-from app.core.errors import ForbiddenError
+from app.core.errors import ForbiddenError, ValidationError
 from app.core.permissions import RoleCode
+from app.repositories.org_clock_repo import OrgClockRepo
 from app.schemas.hse import (
     DailyReportCreate,
     DailyReportResponse,
@@ -26,6 +27,13 @@ from app.schemas.hse import (
 router = APIRouter(prefix="/hse", tags=["HSE & Reports"])
 _INCIDENT_VIEW_ACCESS = Depends(incident_plan_access(PlanNeed.VIEW))
 _DAY_LEADER_ACCESS = Depends(day_plan_access(PlanNeed.LEADER))  # domain.js SAVE/SUBMIT_REPORT
+
+
+async def _ensure_day_reached(db: AsyncSession, day_id: UUID) -> None:
+    """R6 · domain.js SAVE_REPORT/SUBMIT_REPORT: laporan hanya pada atau setelah tanggal pelaksanaan
+    (tanggal server menurut zona waktu organisasi, V-10)."""
+    if not await OrgClockRepo(db).day_reached(day_id):
+        raise ValidationError("Laporan hanya dapat diisi pada atau setelah tanggal pelaksanaan.")
 
 @router.post("/incidents", response_model=IncidentResponse, status_code=status.HTTP_201_CREATED)
 async def report_incident(
@@ -39,7 +47,8 @@ async def report_incident(
     emp_q = text("SELECT employee_id FROM vms.app_user WHERE id = :uid")
     my_emp = (await db.execute(emp_q, {"uid": current_user.user_id})).scalar()
 
-    # Insert incident
+    # Tanggal insiden = hari ini menurut server & zona waktu organisasi (V-10, domain.js REPORT_INCIDENT
+    # memakai tanggal sistem) — tanggal kiriman klien tidak dipakai.
     ins = text("""
         INSERT INTO vms.incident_report (
             organization_id, work_plan_id, reported_by, occurred_on,
@@ -48,9 +57,10 @@ async def report_incident(
             :org, :plan, :emp, :occ, :cat, :sev, :desc
         ) RETURNING *
     """)
+    today = (await OrgClockRepo(db).local_now(current_user.organization_id)).today
     res = await db.execute(ins, {
         "org": current_user.organization_id, "plan": data.work_plan_id,
-        "emp": my_emp, "occ": data.occurred_on, "cat": data.category,
+        "emp": my_emp, "occ": today, "cat": data.category,
         "sev": data.severity, "desc": data.description
     })
     incident = res.fetchone()
@@ -101,6 +111,7 @@ async def upsert_daily_report(
     db: AsyncSession = Depends(get_db_with_user)
 ):
     current_user = access.user
+    await _ensure_day_reached(db, day_id)
     await ensure_same_org(db, current_user.organization_id, files=data.evidence_file_ids)
     emp_q = text("SELECT employee_id FROM vms.app_user WHERE id = :uid")
     my_emp = (await db.execute(emp_q, {"uid": current_user.user_id})).scalar()
@@ -133,6 +144,7 @@ async def submit_daily_report(
     db: AsyncSession = Depends(get_db_with_user)
 ):
     current_user = access.user
+    await _ensure_day_reached(db, day_id)
     emp_q = text("SELECT employee_id FROM vms.app_user WHERE id = :uid")
     my_emp = (await db.execute(emp_q, {"uid": current_user.user_id})).scalar()
     

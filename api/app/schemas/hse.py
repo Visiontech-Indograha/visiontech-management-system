@@ -6,7 +6,7 @@ from pydantic import BaseModel
 
 class IncidentCreate(BaseModel):
     work_plan_id: UUID
-    occurred_on: date
+    # occurred_on tidak diterima dari klien: tanggal insiden = hari ini menurut server (V-10).
     category: str
     severity: str
     description: str

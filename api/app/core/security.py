@@ -8,7 +8,7 @@ Verifikasi hanya menerima EdDSA dengan `kid` yang dikenal: token HS256, `alg: no
 kebingungan algoritma ditolak.
 """
 import logging
-from datetime import UTC, datetime, timedelta
+from datetime import timedelta
 from typing import Any
 
 import jwt
@@ -17,6 +17,7 @@ from argon2.exceptions import InvalidHashError, VerificationError
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from app.core.config import settings
+from app.core.time import utcnow
 
 logger = logging.getLogger(__name__)
 ph = PasswordHasher()
@@ -51,7 +52,7 @@ def verify_password(password: str, hashed: str) -> bool:
 
 
 def create_jwt_token(data: dict[str, Any], expires_delta: timedelta) -> str:
-    now = datetime.now(UTC)
+    now = utcnow()
     claims = {**data, "iat": now, "exp": now + expires_delta, "aud": ACCESS_AUDIENCE, "iss": ACCESS_ISSUER}
     return jwt.encode(claims, _private_key, algorithm=_ALGORITHM, headers={"kid": settings.JWT_KID})
 

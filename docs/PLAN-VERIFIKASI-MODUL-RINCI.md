@@ -97,7 +97,7 @@ Centang hanya setelah commit di-push.
 
 ## W4 · Patuh aturan (E6, regresi wajib)
 
-- [ ] **V-10 · Tanggal dari server**: laporan hanya pada/setelah tanggal pelaksanaan
+- [x] **V-10 · Tanggal dari server**: laporan hanya pada/setelah tanggal pelaksanaan
   (`domain.js:360,372`, regresi **R6**); insiden bertanggal hari ini menurut server;
   semua lewat `core/time.py`. Uji: tanggal belum tiba → 422 berbahasa Indonesia.
 - [ ] **V-11 · Status SK sebagai syarat**: laporan & insiden hanya untuk `IN_PROGRESS`;

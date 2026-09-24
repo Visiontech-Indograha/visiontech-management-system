@@ -40,8 +40,8 @@ def create_draft_plan(client, world: World, start_offset_days: int = 0, length_d
     return plan_id, day_ids
 
 
-def run_plan_to_in_progress(client, world: World) -> tuple[str, list[str]]:
-    plan_id, day_ids = run_plan_to_accepted(client, world)
+def run_plan_to_in_progress(client, world: World, length_days: int = 2) -> tuple[str, list[str]]:
+    plan_id, day_ids = run_plan_to_accepted(client, world, length_days)
 
     # START oleh ketua menurut SK (domain.js: LEADER), bukan PM.
     started = client.post(f"/work-plans/{plan_id}/start", headers=world.headers(client, "leader"),
@@ -51,9 +51,9 @@ def run_plan_to_in_progress(client, world: World) -> tuple[str, list[str]]:
     return plan_id, day_ids
 
 
-def run_plan_to_accepted(client, world: World) -> tuple[str, list[str]]:
+def run_plan_to_accepted(client, world: World, length_days: int = 2) -> tuple[str, list[str]]:
     """SK terbit & diterima ketua, belum dimulai (status ACCEPTED)."""
-    plan_id, day_ids = create_draft_plan(client, world)
+    plan_id, day_ids = create_draft_plan(client, world, length_days=length_days)
     pm = world.headers(client, "pm")
 
     members = client.put(f"/work-plans/{plan_id}/members", headers=pm, json={

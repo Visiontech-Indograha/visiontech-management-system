@@ -78,6 +78,7 @@ def create_app() -> FastAPI:
     from app.api.plan_transitions import router as transitions_router
     from app.api.plans import router as plans_router
     from app.api.sites import router as sites_router
+    from app.api.weekly_reports import router as weekly_reports_router
     
     app.include_router(auth_router, prefix=API_PREFIX)
     app.include_router(audit_router, prefix=API_PREFIX)
@@ -91,6 +92,7 @@ def create_app() -> FastAPI:
     app.include_router(plan_changes_router, prefix=API_PREFIX)
     app.include_router(changes_router, prefix=API_PREFIX)
     app.include_router(sites_router, prefix=API_PREFIX)
+    app.include_router(weekly_reports_router, prefix=API_PREFIX)
     app.include_router(attendance_router, prefix=API_PREFIX)
     app.include_router(attendance_cron_router, prefix=API_PREFIX)
     app.include_router(hse_router, prefix=API_PREFIX)

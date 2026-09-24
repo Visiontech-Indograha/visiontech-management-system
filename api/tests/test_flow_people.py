@@ -72,7 +72,7 @@ def test_personal_document_upload_and_hr_verification(client, world, fake_storag
     assert sync_query("SELECT status::text FROM vms.employee_document WHERE id = %s", (doc_id,)) == [("VERIFIED",)]
 
 
-def test_site_and_attendance_day(client, world):
+def test_site_and_attendance_day(client, world, fake_storage):
     admin = world.headers(client, "admin")
     member = world.headers(client, "member")
 
@@ -81,13 +81,16 @@ def test_site_and_attendance_day(client, world):
     assert site.status_code == 201, site.text
     assert sync_query("SELECT radius_m FROM vms.site WHERE id = %s", (site.json()["id"],)) == [(150,)]
 
+    # Di luar radius (±11 km) dengan swafoto → menunggu pemeriksaan Finance (domain.js CHECK_IN).
+    selfie = client.post("/files/upload", headers=member, files={"file": ("swafoto.png", _png(), "image/png")})
     check_in = client.post("/attendance/check-in", headers=member, json={
-        "site_id": world.site_id, "location": {"lat": -6.2, "lng": 106.8}, "location_origin": "GPS"})
+        "site_id": world.site_id, "location": {"lat": -6.3, "lng": 106.8}, "location_origin": "GPS",
+        "selfie_file_id": selfie.json()["file_id"]})
     assert check_in.status_code == 200, check_in.text
     att_id = check_in.json()["id"]
     # Jarak & status dihitung server (aturan inti #3), bukan dikirim perangkat.
-    assert sync_query("SELECT status::text, distance_m <= radius_m FROM vms.attendance WHERE id = %s", (att_id,)) \
-        == [("AUTO_VALID", True)]
+    assert sync_query("SELECT status::text, distance_m > radius_m FROM vms.attendance WHERE id = %s", (att_id,)) \
+        == [("NEEDS_REVIEW", True)]
 
     check_out = client.post("/attendance/check-out", headers=member,
                             json={"location": {"lat": -6.2, "lng": 106.8}, "location_origin": "GPS"})
@@ -99,10 +102,10 @@ def test_site_and_attendance_day(client, world):
     assert sync_query("SELECT explanation FROM vms.attendance WHERE id = %s", (att_id,)) == [("Macet di tol",)]
 
     reviewed = client.post(f"/attendance/{att_id}/review", headers=world.headers(client, "finance"),
-                           json={"is_approved": True})
+                           json={"is_approved": True, "note": "Macet dibenarkan PM"})
     assert reviewed.status_code == 200, reviewed.text
-    assert sync_query("SELECT status::text, reviewed_at IS NOT NULL FROM vms.attendance WHERE id = %s", (att_id,)) \
-        == [("APPROVED", True)]
+    assert sync_query("SELECT status::text, reviewed_at IS NOT NULL, review_note FROM vms.attendance WHERE id = %s",
+                      (att_id,)) == [("APPROVED", True, "Macet dibenarkan PM")]
 
     export = client.get("/attendance/export", headers=world.headers(client, "finance"),
                         params={"start_date": "2026-01-01", "end_date": "2026-12-31"})

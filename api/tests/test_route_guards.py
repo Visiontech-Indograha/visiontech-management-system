@@ -11,10 +11,12 @@ V-09 · Setiap rute punya izin atau penjaga.
 """
 from __future__ import annotations
 
+import io
 from datetime import timedelta
 
 import pytest
 from fastapi.routing import APIRoute
+from PIL import Image
 
 from app.core.time import jakarta_now
 from app.main import app
@@ -182,10 +184,15 @@ def test_only_the_leader_requests_an_asset_return(client, world, who, expected):
 
 # ── Penjelasan absensi ────────────────────────────────────────────────────────────────────────
 @requires_db
-def test_only_the_owner_explains_an_attendance(client, world, other_world):
+def test_only_the_owner_explains_an_attendance(client, world, other_world, fake_storage):
     member = world.headers(client, "member")
+    # Di luar radius + swafoto → NEEDS_REVIEW; hanya absensi yang menunggu pemeriksaan dapat dijelaskan (V-12).
+    buf = io.BytesIO()
+    Image.new("RGB", (32, 32), (5, 6, 7)).save(buf, "PNG")
+    selfie = client.post("/files/upload", headers=member, files={"file": ("s.png", buf.getvalue(), "image/png")})
     check_in = client.post("/attendance/check-in", headers=member, json={
-        "site_id": world.site_id, "location": {"lat": -6.2, "lng": 106.8}, "location_origin": "SIMULASI"})
+        "site_id": world.site_id, "location": {"lat": -6.3, "lng": 106.8},
+        "selfie_file_id": selfie.json()["file_id"]})
     assert check_in.status_code == 200, check_in.text
     att_id = check_in.json()["id"]
 

@@ -103,7 +103,7 @@ Centang hanya setelah commit di-push.
 - [x] **V-11 · Status SK sebagai syarat**: laporan & insiden hanya untuk `IN_PROGRESS`;
   alokasi aset hanya bila SK bukan `COMPLETED/CANCELLED` (`domain.js:489`); pengemudi kendaraan
   harus anggota tim. Uji per aturan.
-- [ ] **V-12 · Absensi**: sesi terbuka dicegah, satu absensi aktif per hari kecuali ditolak
+- [x] **V-12 · Absensi**: sesi terbuka dicegah, satu absensi aktif per hari kecuali ditolak
   (`domain.js:533`); kode `is_late` mati di router dihapus (trigger yang menentukan, K-11);
   regresi **R10** (jam perangkat tidak dipakai) diuji.
 - [ ] **V-13 · Regresi wajib tersisa**: **R4** (kolom `plan_document` terkunci — UPDATE ditolak),

@@ -99,3 +99,5 @@ ehthumbs_vista.db
 
 # Local AI Scratch Tests (lihat .agy/rules/ai-testing.md)
 .local_tests/
+
+!web/src/lib/

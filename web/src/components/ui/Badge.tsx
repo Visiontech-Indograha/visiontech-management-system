@@ -3,11 +3,11 @@ import clsx from "clsx";
 type Tone = "success" | "warning" | "danger" | "info" | "neutral";
 
 const TONE: Record<Tone, { box: string; dot: string }> = {
-  success: { box: "bg-lens-soft text-success", dot: "bg-success" },
-  warning: { box: "bg-warning-soft text-warning", dot: "bg-warning" },
-  danger: { box: "bg-danger-soft text-danger", dot: "bg-danger" },
-  info: { box: "bg-info-soft text-info", dot: "bg-info" },
-  neutral: { box: "bg-hover text-mist", dot: "bg-mist" },
+  success: { box: "bg-success-bg text-success", dot: "bg-success" },
+  warning: { box: "bg-warning-bg text-warning", dot: "bg-warning" },
+  danger: { box: "bg-danger-bg text-danger", dot: "bg-danger" },
+  info: { box: "bg-info-bg text-info", dot: "bg-info" },
+  neutral: { box: "bg-muted text-muted-foreground", dot: "bg-muted-foreground" },
 };
 
 /** Titik warna + label: status terbaca tanpa warna (docs/06-UI-UX §1 prinsip 3). */

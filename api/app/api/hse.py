@@ -5,6 +5,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, get_current_user, get_db_with_user, require_permission
+from app.api.guards import ensure_same_org
 from app.core.permissions import Permission
 from app.schemas.hse import (
     DailyReportCreate,
@@ -22,9 +23,11 @@ async def report_incident(
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_with_user)
 ):
+    await ensure_same_org(db, current_user.organization_id,
+                          work_plans=[data.work_plan_id], files=data.evidence_file_ids)
     emp_q = text("SELECT employee_id FROM vms.app_user WHERE id = :uid")
     my_emp = (await db.execute(emp_q, {"uid": current_user.user_id})).scalar()
-    
+
     # Insert incident
     ins = text("""
         INSERT INTO vms.incident_report (
@@ -82,6 +85,7 @@ async def upsert_daily_report(
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_with_user)
 ):
+    await ensure_same_org(db, current_user.organization_id, files=data.evidence_file_ids)
     emp_q = text("SELECT employee_id FROM vms.app_user WHERE id = :uid")
     my_emp = (await db.execute(emp_q, {"uid": current_user.user_id})).scalar()
     

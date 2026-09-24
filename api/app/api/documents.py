@@ -6,6 +6,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, get_db_with_user, require_permission
+from app.api.guards import ensure_same_org
 from app.core.permissions import Permission
 from app.schemas.document import (
     DocumentListResponse,
@@ -65,7 +66,9 @@ async def upload_document(
     
     if Permission.MANAGE_EMPLOYEE_DOCUMENTS.value not in current_user.permissions and my_emp_id != emp_id:
         raise HTTPException(status_code=404, detail="Dokumen tidak ditemukan.")
-        
+    # HR memegang izin dokumen siapa pun — tetapi hanya di organisasinya sendiri (V-08).
+    await ensure_same_org(db, current_user.organization_id, employees=[emp_id], files=[data.file_id])
+
     # Masking dan hashing
     number_masked = mask_number(data.number)
     number_sha256 = hashlib.sha256(data.number.encode('utf-8')).digest()

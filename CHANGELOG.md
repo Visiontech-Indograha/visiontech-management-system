@@ -215,6 +215,8 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ### 🏗️ Infrastruktur & Aturan AI
 
+- **Kerja paralel multi-agen hemat token** (2026-09-24): `GEMINI.md` (aturan tetap Gemini: peran web/API, dilarang merge/push ke `development`, dilarang `git stash`, CHANGELOG lewat editor, format laporan 3 baris), `.geminiignore` (berkas besar/rahasia tidak dipindai), `docs/PETA-KODE.md` (peta satu halaman: penjaga, servis, repository, pembantu uji, perintah), `.claude/settings.json` (larangan membaca berkas raksasa & rahasia), dan `scripts/verify-branch.sh <branch> web|api` (verifikasi dari salinan bersih `git archive`, termasuk deteksi CHANGELOG rusak → satu baris LULUS/GAGAL).
+
 - `.agy/rules/git-flow.md` — aturan Git Flow ketat untuk AI dan developer.
 - `.agy/rules/ai-testing.md` — aturan isolasi test lokal di `.local_tests/` agar tidak ikut ke GitHub.
 - `.agy/rules/tailwind-v4.md` — aturan penggunaan Tailwind CSS v4 (tidak boleh konfigurasi v3).

@@ -1,0 +1,25 @@
+# Jangan dipindai agen — besar, hasil build, atau rahasia (hemat token)
+node_modules/
+**/node_modules/
+.venv/
+**/.venv/
+__pycache__/
+**/__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+dist/
+build/
+.local_tests/
+web/openapi.json
+web/openapi.current.json
+**/package-lock.json
+web/src/lib/api-types.ts
+prototype/assets/
+mobile/build/
+mobile/.dart_tool/
+*.log
+.env
+api/.env
+migrate_baca.py
+test_db.py

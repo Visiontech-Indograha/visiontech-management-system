@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import CurrentUser, get_current_user, get_db_with_user, require_permission
 from app.api.guards import ensure_same_org
 from app.core.permissions import Permission
+from app.repositories.org_clock_repo import OrgClockRepo
 from app.schemas.attendance import (
     AttendanceResponse,
     CheckInRequest,
@@ -46,10 +47,11 @@ async def check_in(
         "lng": data.location.lng, "lat": data.location.lat, "site_loc": site.location
     })).scalar()
     
-    # 09.00 dianggap terlambat. Di production harus ambil shift dari employee/unit
-    now_ts = datetime.now()
-    work_dt = now_ts.date()
-    is_late = now_ts.hour >= 9 
+    # Tanggal & jam menurut zona waktu organisasi dari jam server (V-10) — bukan jam mesin (Docker = UTC).
+    # 09.00 dianggap terlambat. Di production harus ambil shift dari employee/unit (V-12).
+    clock = await OrgClockRepo(db).local_now(current_user.organization_id)
+    work_dt = clock.today
+    is_late = clock.local_now.hour >= 9
     
     # Tentukan status berdasarkan fallback (K-030 face mismatch UX)
     status_val = 'AUTO_VALID'
@@ -104,9 +106,9 @@ async def check_out(
     emp_q = text("SELECT employee_id FROM vms.app_user WHERE id = :uid")
     emp_id = (await db.execute(emp_q, {"uid": current_user.user_id})).scalar()
     
-    # Cari absensi hari ini yang masih belum check out
-    now_ts = datetime.now()
-    work_dt = now_ts.date()
+    # Cari absensi hari ini (zona waktu organisasi, V-10) yang masih belum check out
+    clock = await OrgClockRepo(db).local_now(current_user.organization_id)
+    work_dt = clock.today
     
     find_q = text("""
         SELECT id, site_id, radius_m, status 
@@ -118,7 +120,7 @@ async def check_out(
     if not att:
         raise HTTPException(status_code=400, detail="Tidak ada absensi aktif untuk di-check-out.")
         
-    is_early = now_ts.hour < 17  # Asumsi 17.00
+    is_early = clock.local_now.hour < 17  # Asumsi 17.00 (zona waktu organisasi)
     new_status = att.status
     if data.location_origin != 'GPS' or is_early:
         new_status = 'NEEDS_REVIEW'

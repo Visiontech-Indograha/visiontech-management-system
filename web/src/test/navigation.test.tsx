@@ -11,7 +11,7 @@ const labels = (role: string) => visibleNav(MOCK_PERMISSIONS[role]).map((i) => i
 const EXPECTED: Record<string, string[]> = {
   super_admin: [
     "Beranda", "Pengguna", "Direktori", "Absensi",
-    "Jenis berkas", "Site", "Audit log",
+    "Site", "Audit log",
   ],
   admin: ["Beranda", "Direktori", "Serah terima barang", "Status kendaraan"],
   team_leader: [
@@ -19,7 +19,7 @@ const EXPECTED: Record<string, string[]> = {
     "Absensi team", "Site",
   ],
   finance: ["Beranda", "Direktori", "Absensi"],
-  hes: ["Beranda", "Direktori", "Perlu dilengkapi", "Serah terima tool/APD", "Jenis berkas"],
+  hes: ["Beranda", "Direktori", "Serah terima tool/APD"],
   wtl: ["Beranda", "Plan saya", "Progress", "Barang saya", "Berkas saya"],
   driver: ["Beranda", "Logbook kendaraan", "Plan team", "Barang saya", "Berkas saya"],
 };

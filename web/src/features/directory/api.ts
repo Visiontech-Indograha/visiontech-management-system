@@ -4,16 +4,25 @@ import type { components } from "@/lib/api-types";
 
 type S = components["schemas"];
 export type Employee = S["EmployeeOut"];
-export type EmployeeDocument = S["EmployeeDocumentOut"];
-export type DocumentType = S["DocumentTypeOut"];
-export type Incomplete = S["IncompleteOut"];
-export type Completeness = S["CompletenessOut"];
+export interface EmployeeDocument {
+  id: string;
+  employee_id: string;
+  doc_type: string;
+  number_masked: string;
+  expiry_date: string | null;
+  status: string;
+  lifecycle: string;
+  file_id: string;
+  uploaded_by: string;
+  verified_by: string | null;
+  verified_at: string | null;
+  review_note: string | null;
+  created_at: string;
+}
 type EmployeePage = S["Page_EmployeeOut_"];
 
 export interface EmployeeFilters {
   q?: string;
-  role?: string;
-  employment_type?: string;
   status: string;
   page: number;
 }
@@ -22,13 +31,12 @@ export function useEmployees(f: EmployeeFilters) {
   return useQuery({
     queryKey: ["employees", f],
     queryFn: async () => {
+      const is_active = f.status === "active" ? true : f.status === "inactive" ? false : undefined;
       const params = {
         page: f.page,
-        page_size: 25,
-        status: f.status,
+        size: 25,
+        ...(is_active !== undefined ? { is_active } : {}),
         ...(f.q ? { q: f.q } : {}),
-        ...(f.role ? { role: f.role } : {}),
-        ...(f.employment_type ? { employment_type: f.employment_type } : {}),
       };
       return (await api.get<EmployeePage>("/employees", { params })).data;
     },
@@ -43,7 +51,7 @@ export function useEmployeeDocuments(id: string, enabled = true) {
   return useQuery({
     queryKey: ["employee-documents", id],
     enabled,
-    queryFn: async () => (await api.get<EmployeeDocument[]>(`/employees/${id}/documents`)).data,
+    queryFn: async () => (await api.get<{ items: EmployeeDocument[]; total: number }>(`/employees/${id}/documents`)).data,
   });
 }
 
@@ -55,7 +63,7 @@ function useInvalidating<V, D>(fn: (v: V) => Promise<D>, keys: string[][]) {
   });
 }
 
-const DOC_KEYS = [["employee-documents"], ["employee"], ["employees"], ["incomplete"], ["me-docs"]];
+const DOC_KEYS = [["employee-documents"], ["employee"], ["employees"], ["me-docs"]];
 
 export const useUpdateProfile = (id: string) =>
   useInvalidating(
@@ -65,45 +73,13 @@ export const useUpdateProfile = (id: string) =>
 
 export const useCreateDocument = (userId: string) =>
   useInvalidating(
-    async (form: FormData) => (await api.post<EmployeeDocument>(`/employees/${userId}/documents`, form)).data,
+    async (body: { doc_type: string; number: string; expiry_date?: string | null; file_id: string }) =>
+      (await api.post<EmployeeDocument>(`/employees/${userId}/documents`, body)).data,
     DOC_KEYS,
   );
 
-export const useUpdateDocument = (userId: string) =>
-  useInvalidating(
-    async ({ id, form }: { id: string; form: FormData }) =>
-      (await api.patch<EmployeeDocument>(`/employees/${userId}/documents/${id}`, form)).data,
-    DOC_KEYS,
-  );
-
-export const useDeleteDocument = (userId: string) =>
-  useInvalidating(async (id: string) => api.delete(`/employees/${userId}/documents/${id}`), DOC_KEYS);
-
-export function useDocumentTypes(enabled = true) {
-  return useQuery({
-    queryKey: ["document-types"],
-    enabled,
-    queryFn: async () => (await api.get<DocumentType[]>("/document-types")).data,
+export const useUploadFile = () => {
+  return useMutation({
+    mutationFn: async (form: FormData) => (await api.post<{ id: string; url: string; mime_type: string }>("/files/upload", form)).data,
   });
-}
-
-export const useIncomplete = () =>
-  useQuery({ queryKey: ["incomplete"], queryFn: async () => (await api.get<Incomplete[]>("/documents/incomplete")).data });
-
-export function useMyCompleteness(userId: string | undefined) {
-  return useQuery({
-    queryKey: ["me-docs", userId],
-    enabled: !!userId,
-    queryFn: async () => (await api.get<Completeness>(`/employees/${userId}/documents/completeness`)).data,
-  });
-}
-
-export const useSaveType = () =>
-  useInvalidating(
-    async ({ id, body }: { id?: string; body: Record<string, unknown> }) =>
-      id ? (await api.patch<DocumentType>(`/document-types/${id}`, body)).data : (await api.post<DocumentType>("/document-types", body)).data,
-    [["document-types"], ["incomplete"], ["employees"]],
-  );
-
-export const useDeleteType = () =>
-  useInvalidating(async (id: string) => api.delete(`/document-types/${id}`), [["document-types"], ["incomplete"], ["employees"]]);
+};

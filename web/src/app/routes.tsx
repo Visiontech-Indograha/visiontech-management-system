@@ -12,9 +12,7 @@ import {
 } from "@/features/master/pages";
 import { AttendancePage } from "@/features/attendance/AttendancePage";
 import { DirectoryPage } from "@/features/directory/DirectoryPage";
-import { DocumentTypesPage } from "@/features/directory/DocumentTypesPage";
 import { EmployeeDetailPage } from "@/features/directory/EmployeeDetailPage";
-import { IncompletePage } from "@/features/directory/IncompletePage";
 import { MyDocumentsPage } from "@/features/directory/MyDocuments";
 import { UsersPage } from "@/features/users/UsersPage";
 import { ChangePasswordPage } from "@/pages/auth/ChangePasswordPage";
@@ -29,8 +27,6 @@ const PAGES: Record<string, ReactNode> = {
   "/directory": <DirectoryPage />,
   "/attendance": <AttendancePage mode="all" />,
   "/attendance/team": <AttendancePage mode="team" />,
-  "/documents/incomplete": <IncompletePage />,
-  "/master/document-types": <DocumentTypesPage />,
   "/my-documents": <MyDocumentsPage />,
   "/master/sites": <SitesPage />,
 };

@@ -115,6 +115,10 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ### 🔄 Diubah
 
+#### Direktori karyawan & dokumen diselaraskan ke API (Web) — 2026-09-24
+- `web/src/features/directory/`: daftar karyawan memakai `GET /employees?page&size&is_active&q` → `{items,total}`; dokumen karyawan `GET/POST /employees/{id}/documents` (unggah lewat `POST /files/upload`, lalu JSON `{doc_type, number, expiry_date, file_id}`), pratinjau lewat `FilePreview` (V-17).
+- Dihapus dari UI karena endpoint-nya tidak ada di kontrak dok 05: jenis dokumen (`DocumentTypesPage`), kelengkapan berkas (`IncompletePage`), ubah/hapus dokumen. `web/openapi.json` diganti skema API sekarang (sebelumnya skema `../backend` lama).
+
 #### Skema API untuk web (Web) — 2026-09-24
 - `web/package.json`: skrip `gen:api:export` kini menulis `web/openapi.json` dari `api/` yang sekarang (sebelumnya menunjuk `../backend` lama), UTF-8 tanpa BOM. Catatan: memakai `api\.venv\Scripts\python` — hanya berjalan di Windows; perlu varian lintas-platform sebelum dipakai di CI.
 

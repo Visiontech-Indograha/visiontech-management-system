@@ -94,8 +94,15 @@ DECLARE
 BEGIN
   -- COALESCE tidak dapat dipakai pada tipe record, jadi barisnya dipilih eksplisit.
   v_row := CASE WHEN TG_OP = 'DELETE' THEN to_jsonb(OLD) ELSE to_jsonb(NEW) END;
-  v_org := COALESCE(v_row ->> 'organization_id', current_org_id()::text)::uuid;
   v_plan := NULLIF(v_row ->> 'work_plan_id', '')::uuid;
+  -- Organisasi dari data baris itu sendiri; konteks sesi hanya cadangan terakhir (V-15).
+  v_org := COALESCE(
+    NULLIF(v_row ->> 'organization_id', '')::uuid,
+    (SELECT wp.organization_id FROM work_plan wp WHERE wp.id = v_plan),
+    (SELECT e.organization_id FROM employee e WHERE e.id = NULLIF(v_row ->> 'employee_id', '')::uuid),
+    (SELECT a.organization_id FROM asset a WHERE a.id = NULLIF(v_row ->> 'asset_id', '')::uuid),
+    current_org_id()
+  );
 
   IF TG_OP = 'UPDATE' THEN
     SELECT jsonb_object_agg(key, jsonb_build_object('dari', old_value, 'menjadi', new_value))

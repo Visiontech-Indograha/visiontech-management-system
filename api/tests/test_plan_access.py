@@ -30,7 +30,7 @@ def _add_other_unit_pm(world: World) -> str:
 
 def _extension(client, world, plan_id, who):
     end = jakarta_now().date() + timedelta(days=5)
-    return client.post(f"/plans/{plan_id}/changes/extension", headers=world.headers(client, who),
+    return client.post(f"/work-plans/{plan_id}/changes/extension", headers=world.headers(client, who),
                        json={"new_period_end": end.isoformat(), "reason": "Material terlambat"})
 
 
@@ -63,8 +63,8 @@ def test_draft_plan_is_managed_only_by_its_unit(client, world, who, expected):
     plan_id, _ = create_draft_plan(client, world)
     headers = world.headers(client, who)
 
-    assert client.get(f"/plans/{plan_id}", headers=headers).status_code == expected
-    response = client.put(f"/plans/{plan_id}/members", headers=headers, json={
+    assert client.get(f"/work-plans/{plan_id}", headers=headers).status_code == expected
+    response = client.put(f"/work-plans/{plan_id}/members", headers=headers, json={
         "leader_employee_id": world.employees["leader"],
         "member_employee_ids": [world.employees["member"]], "row_version": _rv(plan_id)})
     assert response.status_code == expected, response.text
@@ -89,8 +89,8 @@ def test_running_plan_actions_follow_standing(client, world, who, view, publish,
     plan_id, _ = run_plan_to_in_progress(client, world)
     headers = world.headers(client, who)
 
-    assert client.get(f"/plans/{plan_id}", headers=headers).status_code == view
-    published = client.post(f"/plans/{plan_id}/publish", headers=headers, json={"row_version": _rv(plan_id)})
+    assert client.get(f"/work-plans/{plan_id}", headers=headers).status_code == view
+    published = client.post(f"/work-plans/{plan_id}/publish", headers=headers, json={"row_version": _rv(plan_id)})
     assert published.status_code == publish, published.text
     requested = _extension(client, world, plan_id, who)
     assert requested.status_code == extension, requested.text
@@ -103,11 +103,11 @@ def test_plan_of_another_organisation_is_404(client, world, other_world):
 
     for who in ("admin", "ops", "pm"):
         headers = world.headers(client, who)
-        assert client.get(f"/plans/{foreign_id}", headers=headers).status_code == 404
-        response = client.put(f"/plans/{foreign_id}/members", headers=headers, json={
+        assert client.get(f"/work-plans/{foreign_id}", headers=headers).status_code == 404
+        response = client.put(f"/work-plans/{foreign_id}/members", headers=headers, json={
             "leader_employee_id": None, "member_employee_ids": [], "row_version": _rv(foreign_id)})
         assert response.status_code == 404, response.text
-        assert foreign_id not in {p["id"] for p in client.get("/plans", headers=headers).json()}
+        assert foreign_id not in {p["id"] for p in client.get("/work-plans", headers=headers).json()}
     assert sync_query("SELECT count(*) FROM vms.work_plan_member WHERE work_plan_id = %s", (foreign_id,)) == [(1,)]
 
 
@@ -115,7 +115,7 @@ def test_plan_list_shows_only_visible_plans(client, world):
     other_unit = _add_other_unit_pm(world)
     own_id, _ = create_draft_plan(client, world)
     start = jakarta_now().date()
-    other = client.post("/plans", headers=world.headers(client, "pm_other"), json={
+    other = client.post("/work-plans", headers=world.headers(client, "pm_other"), json={
         "title": "Pasang videowall", "unit_id": other_unit, "location_text": "Lobi",
         "period_start": start.isoformat(), "period_end": start.isoformat(),
         "pm_employee_id": world.employees["pm_other"]})
@@ -123,7 +123,7 @@ def test_plan_list_shows_only_visible_plans(client, world):
     other_id = other.json()["id"]
 
     def listed(who: str) -> set[str]:
-        response = client.get("/plans", headers=world.headers(client, who))
+        response = client.get("/work-plans", headers=world.headers(client, who))
         assert response.status_code == 200, response.text
         return {p["id"] for p in response.json()} & {own_id, other_id}
 
@@ -137,7 +137,7 @@ def test_plan_list_shows_only_visible_plans(client, world):
 def test_plan_is_created_only_by_a_manager_of_its_unit(client, world, who, expected):
     other_unit = _add_other_unit_pm(world)
     start = jakarta_now().date()
-    response = client.post("/plans", headers=world.headers(client, who), json={
+    response = client.post("/work-plans", headers=world.headers(client, who), json={
         "title": "Pasang videowall", "unit_id": other_unit, "location_text": "Lobi",
         "period_start": start.isoformat(), "period_end": start.isoformat(),
         "pm_employee_id": world.employees["pm_other"]})
@@ -149,7 +149,7 @@ def test_plan_is_created_only_by_a_manager_of_its_unit(client, world, who, expec
 
 def test_plan_cannot_be_created_for_a_unit_of_another_organisation(client, world, other_world):
     start = jakarta_now().date()
-    response = client.post("/plans", headers=world.headers(client, "ops"), json={
+    response = client.post("/work-plans", headers=world.headers(client, "ops"), json={
         "title": "Pasang videowall", "unit_id": other_world.unit_id, "location_text": "Lobi",
         "period_start": start.isoformat(), "period_end": start.isoformat(),
         "pm_employee_id": world.employees["pm"]})
@@ -174,12 +174,24 @@ def test_replaced_leader_loses_leader_rights_and_keeps_member_rights_only_if_lis
         "proposed_revision, requested_by) SELECT id, 'PERSONNEL', 'Ketua dipindahtugaskan', %s, revision, "
         "revision + 1, pm_employee_id FROM vms.work_plan, _ctx WHERE id = %s RETURNING id",
         (world.org_id, new_leader, plan_id))[0][0]
-    approved = client.post(f"/plans/{plan_id}/changes/{change_id}/approve", headers=world.headers(client, "pm"))
+    approved = client.post(f"/work-plans/{plan_id}/changes/{change_id}/approve", headers=world.headers(client, "pm"))
     assert approved.status_code == 200, approved.text
 
     # Ketua baru memegang hak ketua hari itu juga; ketua lama ditolak.
     assert _extension(client, world, plan_id, "leader2").status_code == 200
     assert _extension(client, world, plan_id, "leader").status_code == (403 if old_leader_stays_member else 404)
     # Hak anggota (melihat SK) tetap ada hanya bila masih terdaftar.
-    assert client.get(f"/plans/{plan_id}", headers=world.headers(client, "leader")).status_code \
+    assert client.get(f"/work-plans/{plan_id}", headers=world.headers(client, "leader")).status_code \
         == (200 if old_leader_stays_member else 404)
+
+
+def test_day_of_another_plan_is_404_under_this_plan_path(client, world):
+    """V-16 · `/work-plans/{id}/days/{day_id}`: hari harus milik SK di jalur, walau keduanya boleh dikelola."""
+    plan_a, _ = create_draft_plan(client, world)
+    _, days_b = create_draft_plan(client, world, start_offset_days=30, leader="ops")
+
+    response = client.post(f"/work-plans/{plan_a}/days/{days_b[0]}/tasks", headers=world.headers(client, "pm"),
+                           json={"title": "Tugas nyasar"})
+
+    assert response.status_code == 404, response.text
+    assert sync_query("SELECT count(*) FROM vms.work_plan_task WHERE title = 'Tugas nyasar'") == [(0,)]

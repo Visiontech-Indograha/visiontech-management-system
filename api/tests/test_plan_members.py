@@ -1,5 +1,5 @@
 """
-V-05 · Susunan tim SK draft (PUT /plans/{id}/members).
+V-05 · Susunan tim SK draft (PUT /work-plans/{id}/members).
 Ketua & anggota berasal dari SK (aturan inti #1): baris anggota ditulis dengan rentang terbuka sehingga
 `vms.is_plan_leader`/`vms.is_plan_member` langsung mengenalinya. Acuan: domain.js checkMembers/checkSchedule.
 """
@@ -22,7 +22,7 @@ def _user_id(world: World, who: str) -> str:
 
 
 def _put(client, world, plan_id, leader, members, who="pm", row_version=None):
-    return client.put(f"/plans/{plan_id}/members", headers=world.headers(client, who), json={
+    return client.put(f"/work-plans/{plan_id}/members", headers=world.headers(client, who), json={
         "leader_employee_id": leader, "member_employee_ids": members,
         "row_version": _rv(plan_id) if row_version is None else row_version})
 

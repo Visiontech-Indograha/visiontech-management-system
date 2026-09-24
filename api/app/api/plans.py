@@ -9,9 +9,9 @@ from app.api.guards import (
     PlanAccess,
     PlanNeed,
     check_unit_manager,
-    day_plan_access,
     ensure_same_org,
     plan_access,
+    plan_day_access,
 )
 from app.core.permissions import Permission
 from app.repositories.plan_access_repo import PlanAccessRepo
@@ -25,10 +25,10 @@ from app.schemas.plan import (
     WorkPlanUpdate,
 )
 
-router = APIRouter(prefix="/plans", tags=["Work Plans"])
+router = APIRouter(prefix="/work-plans", tags=["Work Plans"])  # jalur dok 05 §3.3 (V-16)
 _VIEW_ACCESS = Depends(plan_access(PlanNeed.VIEW))
 _PM_UNIT_ACCESS = Depends(plan_access(PlanNeed.PM_UNIT))
-_DAY_PM_UNIT_ACCESS = Depends(day_plan_access(PlanNeed.PM_UNIT))
+_DAY_PM_UNIT_ACCESS = Depends(plan_day_access(PlanNeed.PM_UNIT))
 
 @router.get("", response_model=list[WorkPlanResponse])
 async def get_plans(
@@ -95,7 +95,7 @@ async def create_plan(
     except Exception as e:
         raise HTTPException(status_code=400, detail={"code": "DB_ERROR", "message": str(e)})
 
-@router.put("/{plan_id}", response_model=WorkPlanResponse)
+@router.patch("/{plan_id}", response_model=WorkPlanResponse)  # EDIT_DRAFT (dok 05)
 async def update_plan(
     plan_id: UUID,
     data: WorkPlanUpdate,
@@ -211,8 +211,9 @@ async def add_day(
     except Exception:
         raise HTTPException(status_code=400, detail={"code": "DB_ERROR", "message": "Gagal menambahkan hari (mungkin tanggal bentrok)."})
 
-@router.post("/days/{day_id}/tasks", response_model=PlanTaskResponse)
+@router.post("/{plan_id}/days/{day_id}/tasks", response_model=PlanTaskResponse)
 async def add_task(
+    plan_id: UUID,
     day_id: UUID,
     data: PlanTaskCreate,
     access: PlanAccess = _DAY_PM_UNIT_ACCESS,

@@ -23,7 +23,7 @@ def create_draft_plan(client, world: World, start_offset_days: int = 0, length_d
     start = jakarta_now().date() + timedelta(days=start_offset_days)
     end = start + timedelta(days=length_days - 1)
     pm = world.headers(client, "pm")
-    plan = client.post("/plans", headers=pm, json={
+    plan = client.post("/work-plans", headers=pm, json={
         "title": "Instalasi CCTV gudang", "unit_id": world.unit_id, "site_id": world.site_id,
         "location_text": "Gudang uji", "period_start": start.isoformat(), "period_end": end.isoformat(),
         "pm_employee_id": world.employees["pm"], "leader_employee_id": world.employees[leader]})
@@ -31,11 +31,11 @@ def create_draft_plan(client, world: World, start_offset_days: int = 0, length_d
     plan_id = plan.json()["id"]
     day_ids = []
     for i in range(length_days):
-        day = client.post(f"/plans/{plan_id}/days", headers=pm,
+        day = client.post(f"/work-plans/{plan_id}/days", headers=pm,
                           json={"work_date": (start + timedelta(days=i)).isoformat(), "title": f"Hari {i + 1}"})
         assert day.status_code == 200, day.text
         day_ids.append(day.json()["id"])
-        task = client.post(f"/plans/days/{day_ids[-1]}/tasks", headers=pm, json={"title": "Pasang kamera"})
+        task = client.post(f"/work-plans/{plan_id}/days/{day_ids[-1]}/tasks", headers=pm, json={"title": "Pasang kamera"})
         assert task.status_code == 200, task.text
     return plan_id, day_ids
 
@@ -44,7 +44,7 @@ def run_plan_to_in_progress(client, world: World) -> tuple[str, list[str]]:
     plan_id, day_ids = run_plan_to_accepted(client, world)
 
     # START oleh ketua menurut SK (domain.js: LEADER), bukan PM.
-    started = client.post(f"/plans/{plan_id}/start", headers=world.headers(client, "leader"),
+    started = client.post(f"/work-plans/{plan_id}/start", headers=world.headers(client, "leader"),
                           json={"row_version": _row_version(plan_id), "reason": ""})
     assert started.status_code == 200, started.text
     assert sync_query("SELECT status::text FROM vms.work_plan WHERE id = %s", (plan_id,)) == [("IN_PROGRESS",)]
@@ -56,17 +56,17 @@ def run_plan_to_accepted(client, world: World) -> tuple[str, list[str]]:
     plan_id, day_ids = create_draft_plan(client, world)
     pm = world.headers(client, "pm")
 
-    members = client.put(f"/plans/{plan_id}/members", headers=pm, json={
+    members = client.put(f"/work-plans/{plan_id}/members", headers=pm, json={
         "leader_employee_id": world.employees["leader"],
         "member_employee_ids": [world.employees["member"]], "row_version": _row_version(plan_id)})
     assert members.status_code == 200, members.text
 
-    published = client.post(f"/plans/{plan_id}/publish", headers=pm, json={"row_version": _row_version(plan_id), "reason": ""})
+    published = client.post(f"/work-plans/{plan_id}/publish", headers=pm, json={"row_version": _row_version(plan_id), "reason": ""})
     assert published.status_code == 200, published.text
     assert sync_query("SELECT kind::text, status::text FROM vms.plan_document WHERE work_plan_id = %s", (plan_id,)) \
         == [("INITIAL_ORDER", "AWAITING_ACCEPTANCE")]
 
-    accepted = client.post(f"/plans/{plan_id}/accept", headers=world.headers(client, "leader"),
+    accepted = client.post(f"/work-plans/{plan_id}/accept", headers=world.headers(client, "leader"),
                            json={"row_version": _row_version(plan_id), "reason": ""})
     assert accepted.status_code == 200, accepted.text
     assert sync_query("SELECT status::text FROM vms.plan_document WHERE work_plan_id = %s", (plan_id,)) == [("EFFECTIVE",)]
@@ -104,11 +104,11 @@ def test_plan_lifecycle_to_extension(client, world):
     pm = world.headers(client, "pm")
 
     # Perpanjangan diajukan ketua (REQUEST_CHANGE), disetujui PM (APPROVE_CHANGE).
-    change = client.post(f"/plans/{plan_id}/changes/extension", headers=world.headers(client, "leader"),
+    change = client.post(f"/work-plans/{plan_id}/changes/extension", headers=world.headers(client, "leader"),
                          json={"new_period_end": (jakarta_now().date() + timedelta(days=5)).isoformat(),
                                "reason": "Hujan deras dua hari"})
     assert change.status_code in (200, 201), change.text
-    approved = client.post(f"/plans/{plan_id}/changes/{change.json()['change_id']}/approve", headers=pm)
+    approved = client.post(f"/work-plans/{plan_id}/changes/{change.json()['change_id']}/approve", headers=pm)
     assert approved.status_code == 200, approved.text
     assert sync_query("SELECT count(*) FROM vms.plan_change WHERE work_plan_id = %s AND status <> 'PENDING_PM'",
                       (plan_id,)) == [(1,)]
@@ -126,10 +126,10 @@ def test_incident_and_daily_report_on_running_plan(client, world):
                            json={"resolution_note": "Dipasang karpet anti selip"})
     assert resolved.status_code == 200, resolved.text
 
-    report = client.post(f"/hse/daily-reports/{day_ids[0]}", headers=leader,
+    report = client.put(f"/work-plans/{plan_id}/days/{day_ids[0]}", headers=leader,
                          json={"body": "Kamera 1-4 terpasang dan diuji", "obstacle": "Tidak ada", "evidence_file_ids": []})
     assert report.status_code == 200, report.text
-    submitted = client.post(f"/hse/daily-reports/{day_ids[0]}/submit", headers=leader)
+    submitted = client.post(f"/work-plans/{plan_id}/days/{day_ids[0]}/submit", headers=leader)
     assert submitted.status_code == 200, submitted.text
     assert sync_query("SELECT status::text FROM vms.daily_report WHERE work_plan_day_id = %s", (day_ids[0],)) \
         == [("SUBMITTED",)]

@@ -17,7 +17,7 @@ from app.repositories.plan_transition_repo import PlanTransitionRepo
 from app.schemas.plan import WorkPlanResponse
 from app.services.plan_transition_service import PlanTransitionService
 
-router = APIRouter(prefix="/plans/{plan_id}", tags=["Work Plan Transitions"])
+router = APIRouter(prefix="/work-plans/{plan_id}", tags=["Work Plan Transitions"])
 _LEADER_ACCESS = Depends(plan_access(PlanNeed.LEADER))
 _PM_UNIT_ACCESS = Depends(plan_access(PlanNeed.PM_UNIT))
 

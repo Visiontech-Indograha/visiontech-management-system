@@ -123,7 +123,7 @@ Centang hanya setelah commit di-push.
   pribadi hanya pemilik & HR; CLAUDE.md "berkas tak berwenang → 404"). Aturan: pengunggah; HR untuk
   dokumen karyawan; bukti insiden/laporan → penjaga SK (VIEW); swafoto absensi → pemilik & FINANCE/HR.
   Uji: matriks peran × jenis berkas → 200/404. Dikerjakan tepat setelah V-09 (sebelum W4).
-- [ ] **V-16 · Jalur sesuai kontrak**: `/plans` → `/work-plans` (dok 05); `/hse/daily-reports` →
+- [x] **V-16 · Jalur sesuai kontrak**: `/plans` → `/work-plans` (dok 05); `/hse/daily-reports` →
   `/work-plans/{id}/days/{day_id}`. Web belum memakai rute ini (tidak ada dampak).
 
 ## W6 · Lengkap — transaksi prototipe yang belum ada

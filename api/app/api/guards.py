@@ -185,15 +185,19 @@ def incident_plan_access(need: PlanNeed) -> Callable[..., Awaitable[PlanAccess]]
     return guard
 
 
-def day_plan_access(need: PlanNeed) -> Callable[..., Awaitable[PlanAccess]]:
-    """Dependency untuk rute ber-`{day_id}` (sampai V-16 memindahkannya ke `/work-plans/{id}/days/{day_id}`)."""
+def plan_day_access(need: PlanNeed) -> Callable[..., Awaitable[PlanAccess]]:
+    """Dependency untuk rute `/work-plans/{plan_id}/days/{day_id}` (V-16, dok 05 §3.6): kewenangan
+    atas SK, dan hari harus milik SK itu — hari SK lain → 404."""
     async def guard(
+        plan_id: UUID,
         day_id: UUID,
         current_user: CurrentUser = Depends(get_current_user),
         db: AsyncSession = Depends(get_db_with_user),
     ) -> PlanAccess:
-        plan_id = await PlanAccessRepo(db).plan_of_day(day_id)
-        if plan_id is None:
+        access = await check_plan_access(db, plan_id, current_user, need)
+        if str(await PlanAccessRepo(db).plan_of_day(day_id)) != str(plan_id):
             raise NotFoundError("Hari kerja")
-        return await check_plan_access(db, plan_id, current_user, need)
+        return access
     return guard
+
+

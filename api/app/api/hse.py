@@ -9,9 +9,9 @@ from app.api.guards import (
     PlanAccess,
     PlanNeed,
     check_plan_access,
-    day_plan_access,
     ensure_same_org,
     incident_plan_access,
+    plan_day_access,
     require_plan_status,
 )
 from app.core.enums import PlanStatus
@@ -28,7 +28,9 @@ from app.schemas.hse import (
 
 router = APIRouter(prefix="/hse", tags=["HSE & Reports"])
 _INCIDENT_VIEW_ACCESS = Depends(incident_plan_access(PlanNeed.VIEW))
-_DAY_LEADER_ACCESS = Depends(day_plan_access(PlanNeed.LEADER))  # domain.js SAVE/SUBMIT_REPORT
+_DAY_LEADER_ACCESS = Depends(plan_day_access(PlanNeed.LEADER))  # domain.js SAVE/SUBMIT_REPORT
+# Laporan harian di bawah SK-nya (dok 05 §3.6, V-16); sebelumnya /hse/daily-reports/{day_id}.
+days_router = APIRouter(prefix="/work-plans/{plan_id}/days", tags=["Daily Reports"])
 
 
 async def _ensure_day_reached(db: AsyncSession, day_id: UUID) -> None:
@@ -106,7 +108,7 @@ async def resolve_incident(
         
     return IncidentResponse(**row._mapping)
 
-@router.post("/daily-reports/{day_id}", response_model=DailyReportResponse)
+@days_router.put("/{day_id}", response_model=DailyReportResponse)
 async def upsert_daily_report(
     day_id: UUID,
     data: DailyReportCreate,
@@ -141,7 +143,7 @@ async def upsert_daily_report(
             
     return DailyReportResponse(**report._mapping)
 
-@router.post("/daily-reports/{day_id}/submit", response_model=DailyReportResponse)
+@days_router.post("/{day_id}/submit", response_model=DailyReportResponse)
 async def submit_daily_report(
     day_id: UUID,
     access: PlanAccess = _DAY_LEADER_ACCESS,

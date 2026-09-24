@@ -10,7 +10,7 @@ from app.api.deps import get_db_with_user
 from app.api.guards import PlanAccess, PlanNeed, plan_access
 from app.core.enums import ChangeStatus, ChangeType, PlanStatus
 
-router = APIRouter(prefix="/plans/{plan_id}/changes", tags=["Plan Changes / Addendums"])
+router = APIRouter(prefix="/work-plans/{plan_id}/changes", tags=["Plan Changes / Addendums"])
 _LEADER_ACCESS = Depends(plan_access(PlanNeed.LEADER))
 _PM_UNIT_ACCESS = Depends(plan_access(PlanNeed.PM_UNIT))
 

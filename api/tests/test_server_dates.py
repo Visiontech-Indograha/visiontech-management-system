@@ -29,19 +29,19 @@ def test_clock_is_read_only_in_core_time():
 @requires_db
 def test_daily_report_for_a_day_not_yet_reached_is_rejected(client, world):
     """R6 · domain.js SAVE_REPORT/SUBMIT_REPORT: hanya pada atau setelah tanggal pelaksanaan."""
-    _, day_ids = run_plan_to_in_progress(client, world)   # hari ke-1 = hari ini, hari ke-2 = besok
+    plan_id, day_ids = run_plan_to_in_progress(client, world)   # hari ke-1 = hari ini, hari ke-2 = besok
     leader = world.headers(client, "leader")
 
-    saved = client.post(f"/hse/daily-reports/{day_ids[1]}", headers=leader,
+    saved = client.put(f"/work-plans/{plan_id}/days/{day_ids[1]}", headers=leader,
                         json={"body": "Kamera 5-8 terpasang dan diuji", "obstacle": "Tidak ada"})
-    submitted = client.post(f"/hse/daily-reports/{day_ids[1]}/submit", headers=leader)
+    submitted = client.post(f"/work-plans/{plan_id}/days/{day_ids[1]}/submit", headers=leader)
 
     for response in (saved, submitted):
         assert response.status_code == 422, response.text
         assert response.json()["error"]["message"] == "Laporan hanya dapat diisi pada atau setelah tanggal pelaksanaan."
     assert sync_query("SELECT count(*) FROM vms.daily_report WHERE work_plan_day_id = %s", (day_ids[1],)) == [(0,)]
 
-    today = client.post(f"/hse/daily-reports/{day_ids[0]}", headers=leader,
+    today = client.put(f"/work-plans/{plan_id}/days/{day_ids[0]}", headers=leader,
                         json={"body": "Kamera 1-4 terpasang dan diuji", "obstacle": "Tidak ada"})
     assert today.status_code == 200, today.text
 

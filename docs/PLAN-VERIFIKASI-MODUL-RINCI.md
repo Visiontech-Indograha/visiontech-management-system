@@ -118,7 +118,7 @@ Centang hanya setelah commit di-push.
 - [ ] **V-15 · Trigger audit menemukan organisasi** (migrasi 0005; 0004 dipakai V-07): untuk baris tanpa
   `organization_id`, ambil dari `work_plan`/`asset` terkait sebelum `current_org_id()`. Uji:
   hapus `asset_allocation` tanpa konteks → berhasil & tercatat di audit dengan organisasi benar.
-- [ ] **V-17 · Kebijakan akses berkas** (temuan V-09): `GET /files/{file_id}/url` hanya memeriksa
+- [x] **V-17 · Kebijakan akses berkas** (temuan V-09): `GET /files/{file_id}/url` hanya memeriksa
   organisasi — siapa pun di organisasi dapat mengambil URL KTP/SIM karyawan lain (dok 08: dokumen
   pribadi hanya pemilik & HR; CLAUDE.md "berkas tak berwenang → 404"). Aturan: pengunggah; HR untuk
   dokumen karyawan; bukti insiden/laporan → penjaga SK (VIEW); swafoto absensi → pemilik & FINANCE/HR.

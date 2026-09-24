@@ -24,6 +24,9 @@ _OWNED_IDS = {
                            "WHERE s.organization_id = %(org)s",
     "daily_report_id": "SELECT r.id FROM vms.daily_report r JOIN vms.work_plan_day d ON d.id = r.work_plan_day_id "
                        "JOIN vms.work_plan w ON w.id = d.work_plan_id WHERE w.organization_id = %(org)s",
+    "incident_id": "SELECT id FROM vms.incident_report WHERE organization_id = %(org)s",
+    # cadangan untuk tabel tautan berkas (bukti insiden/laporan, dst.) yang menahan file_object
+    "file_id": "SELECT id FROM vms.file_object WHERE organization_id = %(org)s",
 }
 _BLOCKER = re.compile(r'on table "(\w+)"\s*DETAIL')
 

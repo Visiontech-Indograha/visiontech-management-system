@@ -27,7 +27,6 @@ SELF_SERVICE = {
     ("GET", "/auth/me"): "profil sendiri",
     ("POST", "/auth/change-password"): "kata sandi sendiri",
     ("POST", "/files/upload"): "setiap karyawan mengunggah bukti/dokumen sendiri",
-    ("GET", "/files/{file_id}/url"): "dibatasi organisasi — kebijakan per berkas menyusul di V-17",
     ("GET", "/plans"): "hanya SK yang terlihat (V-07)",
     ("GET", "/sites"): "daftar lokasi organisasi untuk check-in",
     ("GET", "/assets"): "daftar aset organisasi (CHECK_ASSET oleh tim)",
@@ -35,9 +34,10 @@ SELF_SERVICE = {
     ("POST", "/attendance/check-out"): "absensi sendiri",
     ("POST", "/attendance/{att_id}/explain"): "hanya absensi milik sendiri — diuji di bawah",
 }
-# Kewenangan bergantung pada SK yang disebut di badan permintaan → dijaga di handler.
+# Kewenangan bergantung pada isi permintaan (SK di badan) atau tautan berkas → dijaga di handler.
 GUARDED_IN_HANDLER = {
     ("POST", "/hse/incidents"): "check_plan_access(LEADER_OR_MEMBER) untuk work_plan_id di badan",
+    ("GET", "/files/{file_id}/url"): "check_file_access (V-17): pemilik/HR/peninjau/penglihat SK, selain itu 404",
 }
 _GUARDS = ("permission_checker", "plan_access.", "day_plan_access.", "allocation_plan_access.",
            "incident_plan_access.")

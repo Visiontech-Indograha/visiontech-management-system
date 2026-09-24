@@ -16,6 +16,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, get_current_user, get_db_with_user
 from app.core.errors import ForbiddenError, NotFoundError
+from app.core.permissions import Permission
+from app.repositories.file_access_repo import FileAccessRepo
 from app.repositories.org_ref_repo import OrgRefRepo
 from app.repositories.plan_access_repo import PlanAccessRepo
 
@@ -74,6 +76,33 @@ async def check_unit_manager(db: AsyncSession, unit_id: UUID | str, user: Curren
         raise NotFoundError("Unit bisnis")
     if not row.manages:
         raise ForbiddenError("Hanya PM unit ini yang dapat membuat SK untuk unit tersebut.")
+
+
+async def check_file_access(db: AsyncSession, file_id: UUID, user: CurrentUser) -> Any:
+    """V-17 — siapa boleh membuka berkas (dok 08, dok 13 §7). Tidak boleh → 404, bukan 403.
+    - pengunggahnya sendiri;
+    - dokumen pribadi: karyawan pemilik & pemegang `manage:employee_documents` (HR);
+    - swafoto absensi: karyawan pemilik & peninjau absensi (`review:attendance`);
+    - bukti laporan/insiden/laporan akhir: siapa pun yang melihat SK-nya (V-07);
+    - selain itu (belum dilampirkan, QR, wajah): hanya pengunggah."""
+    row = await FileAccessRepo(db).links(file_id, user.organization_id, user.user_id)
+    if row is None:
+        raise NotFoundError("Berkas")
+    if row.is_uploader:
+        return row
+    if row.personal_document:
+        if row.own_document or Permission.MANAGE_EMPLOYEE_DOCUMENTS.value in user.permissions:
+            return row
+        raise NotFoundError("Berkas")
+    if row.selfie:
+        if row.own_selfie or Permission.REVIEW_ATTENDANCE.value in user.permissions:
+            return row
+        raise NotFoundError("Berkas")
+    plans = PlanAccessRepo(db)
+    for plan_id in row.plan_ids:
+        if await plans.standing(plan_id, user.organization_id, user.user_id) is not None:
+            return row
+    raise NotFoundError("Berkas")
 
 
 _REF_LABELS = (

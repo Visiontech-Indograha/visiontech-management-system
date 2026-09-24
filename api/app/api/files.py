@@ -8,6 +8,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, get_current_user, get_db_with_user
+from app.api.guards import check_file_access
 from app.core.image import compress_image
 from app.core.storage import get_presigned_url, upload_file
 
@@ -104,22 +105,17 @@ async def upload_document(
 
 @router.get("/{file_id}/url")
 async def get_file_url(
-    file_id: str,
+    file_id: uuid.UUID,
     variant: str = "full",
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_with_user)
 ):
     """
     Mendapatkan URL Presigned MinIO untuk mengakses file (valid 5 menit).
-    Varian: full, view, thumb.
+    Varian: full, view, thumb. URL dibuat hanya setelah otorisasi per berkas (V-17, dok 13 §7).
     """
-    query = text("SELECT storage_key, mime_type FROM vms.file_object WHERE id = :id AND organization_id = :org")
-    result = await db.execute(query, {"id": file_id, "org": current_user.organization_id})
-    file_obj = result.fetchone()
-    
-    if not file_obj:
-        raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Berkas tidak ditemukan."})
-        
+    file_obj = await check_file_access(db, file_id, current_user)
+
     is_image = file_obj.mime_type.startswith("image/")
     
     if is_image and variant in ["thumb", "view", "full"]:
@@ -137,4 +133,6 @@ async def get_file_url(
     if not url:
         raise HTTPException(status_code=500, detail={"code": "STORAGE_ERROR", "message": "Gagal membuat URL."})
         
-    return {"url": url}
+    # mime_type dari basis data (hasil pemeriksaan magic bytes saat unggah) — klien tidak perlu
+    # menebak jenis berkas dari ekstensi URL.
+    return {"url": url, "mime_type": file_obj.mime_type}

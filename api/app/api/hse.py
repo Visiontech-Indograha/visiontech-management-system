@@ -16,7 +16,7 @@ from app.api.guards import (
     require_plan_status,
 )
 from app.core.enums import PlanStatus
-from app.core.errors import AppError, ForbiddenError, ValidationError
+from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationError
 from app.core.permissions import RoleCode
 from app.repositories.org_clock_repo import OrgClockRepo
 from app.schemas.hse import (
@@ -212,3 +212,31 @@ async def review_daily_report(
     if report is None:
         raise AppError("INVALID_STATE", "Laporan belum menunggu pemeriksaan.", status=409)
     return DailyReportResponse(**report._mapping)
+
+
+@days_router.post("/{day_id}/tasks/{task_id}/toggle")
+async def toggle_task(
+    day_id: UUID,
+    task_id: UUID,
+    access: PlanAccess = _DAY_LEADER_ACCESS,
+    db: AsyncSession = Depends(get_db_with_user)
+) -> dict:
+    """domain.js TOGGLE_TASK (V-23): ketua mencentang tugas selama laporan hari itu belum diserahkan."""
+    require_plan_status(access, PlanStatus.IN_PROGRESS)
+    await _ensure_day_reached(db, day_id)
+    report_status = (await db.execute(text(
+        "SELECT status FROM vms.daily_report WHERE work_plan_day_id = :day"), {"day": day_id})).scalar()
+    if report_status in ("SUBMITTED", "APPROVED"):
+        raise AppError("INVALID_STATE", "Checklist tidak dapat diubah setelah laporan diserahkan.", status=409)
+    row = (await db.execute(text("""
+        UPDATE vms.work_plan_task
+           SET is_done = NOT is_done,
+               done_at = CASE WHEN is_done THEN NULL ELSE now() END,
+               done_by = CASE WHEN is_done THEN NULL
+                              ELSE (SELECT employee_id FROM vms.app_user WHERE id = :uid) END
+         WHERE id = :task AND work_plan_day_id = :day
+        RETURNING id, is_done
+    """), {"task": task_id, "day": day_id, "uid": access.user.user_id})).fetchone()
+    if row is None:
+        raise NotFoundError("Tugas")
+    return {"id": str(row.id), "is_done": row.is_done}

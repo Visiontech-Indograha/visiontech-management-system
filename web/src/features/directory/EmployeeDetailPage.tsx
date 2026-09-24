@@ -11,7 +11,6 @@ import { ApiError } from "@/lib/api";
 import { formatDate } from "@/lib/format";
 import { EMPLOYMENT_LABEL, ROLE_LABEL } from "@/lib/types";
 import { useEmployee, useUpdateProfile, type Employee } from "./api";
-import { CompletenessBadge } from "./badges";
 import { DocumentsPanel } from "./DocumentsPanel";
 
 const Row = ({ label, children }: { label: string; children: React.ReactNode }) => (
@@ -58,12 +57,7 @@ export function EmployeeDetailPage() {
             <Row label="Tanggal bergabung">{e.join_date ? formatDate(e.join_date) : null}</Row>
             {e.employment_type === "CONTRACT" && (
               <Row label="Kontrak">
-                {e.contract_start ? formatDate(e.contract_start) : "-"} – {e.contract_end ? formatDate(e.contract_end) : "-"}
-              </Row>
-            )}
-            {e.documents_status && (
-              <Row label="Kelengkapan berkas">
-                <CompletenessBadge status={e.documents_status} missing={e.documents_missing?.length} />
+                {e.contract_start ? formatDate(e.contract_start) : "-"} â€“ {e.contract_end ? formatDate(e.contract_end) : "-"}
               </Row>
             )}
           </dl>

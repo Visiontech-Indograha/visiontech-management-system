@@ -35,11 +35,14 @@ _DAY_PM_UNIT_ACCESS = Depends(plan_day_access(PlanNeed.PM_UNIT))
 @router.get("", response_model=list[WorkPlanResponse])
 async def get_plans(
     status_filter: str | None = None,
+    archived: bool = False,
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_with_user)
 ):
-    """Hanya SK yang terlihat oleh pengguna (V-07, `domain.js` visiblePlans)."""
-    rows = await PlanAccessRepo(db).visible_plans(current_user.organization_id, current_user.user_id, status_filter)
+    """Hanya SK yang terlihat oleh pengguna (V-07, `domain.js` visiblePlans). `archived=true`: draf
+    terarsip — hanya untuk pengelola (V-21)."""
+    rows = await PlanAccessRepo(db).visible_plans(current_user.organization_id, current_user.user_id,
+                                                  status_filter, archived)
     return [WorkPlanResponse(**row._mapping) for row in rows]
 
 @router.get("/{plan_id}", response_model=WorkPlanResponse)

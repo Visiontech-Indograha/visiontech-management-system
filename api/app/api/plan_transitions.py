@@ -20,6 +20,7 @@ from app.services.plan_transition_service import PlanTransitionService
 router = APIRouter(prefix="/work-plans/{plan_id}", tags=["Work Plan Transitions"])
 _LEADER_ACCESS = Depends(plan_access(PlanNeed.LEADER))
 _PM_UNIT_ACCESS = Depends(plan_access(PlanNeed.PM_UNIT))
+_PM_UNIT_ANY_ACCESS = Depends(plan_access(PlanNeed.PM_UNIT, archived=None))  # aktif maupun terarsip
 
 
 class TransitionRequest(BaseModel):
@@ -80,6 +81,41 @@ async def revise_plan(
     """domain.js REVISE (V-20): PM membuka revisi draf dari SK yang dibanding."""
     plan = await _service(db).revise(plan_id, access.user.organization_id, data.row_version)
     return _response(plan)
+
+
+@router.post("/cancel", response_model=WorkPlanResponse)
+async def cancel_plan(
+    plan_id: UUID,
+    data: TransitionRequest,
+    access: PlanAccess = _PM_UNIT_ACCESS,
+    db: AsyncSession = Depends(get_db_with_user),
+) -> WorkPlanResponse:
+    """domain.js CANCEL_PLAN (V-21)."""
+    return _response(await _service(db).cancel_plan(plan_id, access.user.organization_id,
+                                                     data.row_version, data.reason))
+
+
+@router.post("/archive", response_model=WorkPlanResponse)
+async def archive_plan(
+    plan_id: UUID,
+    data: TransitionRequest,
+    access: PlanAccess = _PM_UNIT_ACCESS,
+    db: AsyncSession = Depends(get_db_with_user),
+) -> WorkPlanResponse:
+    """domain.js DELETE_PLAN (V-21): arsip draf — soft delete, riwayat tetap ada."""
+    return _response(await _service(db).delete_plan(plan_id, access.user.organization_id, access.user.user_id,
+                                                    data.row_version, data.reason))
+
+
+@router.post("/restore", response_model=WorkPlanResponse)
+async def restore_plan(
+    plan_id: UUID,
+    data: TransitionRequest,
+    access: PlanAccess = _PM_UNIT_ANY_ACCESS,
+    db: AsyncSession = Depends(get_db_with_user),
+) -> WorkPlanResponse:
+    """domain.js RESTORE_PLAN (V-21): pulihkan draf terarsip."""
+    return _response(await _service(db).restore_plan(plan_id, access.user.organization_id, data.row_version))
 
 
 @router.post("/start", response_model=WorkPlanResponse)

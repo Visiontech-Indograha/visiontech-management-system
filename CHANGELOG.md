@@ -113,6 +113,10 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 - `docs/PLAN-PERBAIKAN-TEMUAN.md` (2026-09-23) — plan perbaikan 7 segmen (definisi, pohon isu, prioritas, rencana kerja, 5×mengapa, sintesis, pencegahan) + antrean turunan T-01…T-13. Dikerjakan sebelum A-3.
 
+#### V-21 · Batal, arsip, dan pulihkan SK (Backend) — 2026-09-24
+- `POST /work-plans/{id}/cancel` (PM unit/OPS; dari PUBLISHED/ACCEPTED/APPEALED/IN_PROGRESS/COMPLETION_REVIEW; alasan wajib) → `CANCELLED` dengan `cancellation_reason`; usulan perubahan terbuka & semua dokumen ditarik (`WITHDRAWN`); aset yang masih dipesan dilepas, yang sedang dipakai tetap wajib dikembalikan (`domain.js` CANCEL_PLAN). Draf tidak bisa dibatalkan — diarsipkan.
+- `POST /work-plans/{id}/archive` (`domain.js` DELETE_PLAN; hanya DRAFT yang **belum pernah punya SK**, tanpa aset teralokasi, alasan wajib) → soft delete dengan `deleted_by`/`deletion_reason` (kolom baru, migrasi `0008_work_plan_archive_fields`, `db/01` disamakan). `POST /work-plans/{id}/restore` (`domain.js` RESTORE_PLAN) memulihkan draf terarsip setelah tim diperiksa ulang. Draf terarsip hanya terlihat pengelola lewat `GET /work-plans?archived=true`. Keputusan status `WITHDRAWN` & jalur arsip: dok 10 Bagian C. Uji: `api/tests/test_plan_cancel_archive.py`.
+
 #### V-20 · Banding & revisi SK (Backend) — 2026-09-24
 - `POST /work-plans/{id}/appeal` (ketua menurut SK; hanya dari `PUBLISHED`; alasan wajib) → `APPEALED`, alasan tersimpan di kolom baru `work_plan.appeal_reason` (migrasi `0007_work_plan_appeal_reason`, `db/01` disamakan); dokumen lama tetap tercatat. `POST /work-plans/{id}/revise` (PM unit/OPS; hanya dari `APPEALED`) → kembali `DRAFT`, `revision + 1`, semua dokumen lama `SUPERSEDED`. Terbit ulang menghasilkan dokumen versi baru berjenis `REVISION` dengan nomor SK yang sama; penerimaan ketua membuatnya `EFFECTIVE` (`domain.js` APPEAL/REVISE). Respons SK kini memuat `appeal_reason`. Uji: `api/tests/test_plan_appeal_revise.py`.
 

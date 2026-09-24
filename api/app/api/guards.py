@@ -68,9 +68,9 @@ def satisfies(need: PlanNeed, *, manages: bool, is_leader: bool, is_member: bool
 
 
 async def check_plan_access(
-    db: AsyncSession, plan_id: UUID | str, user: CurrentUser, need: PlanNeed
+    db: AsyncSession, plan_id: UUID | str, user: CurrentUser, need: PlanNeed, archived: bool | None = False
 ) -> PlanAccess:
-    row = await PlanAccessRepo(db).standing(plan_id, user.organization_id, user.user_id)
+    row = await PlanAccessRepo(db).standing(plan_id, user.organization_id, user.user_id, archived)
     if row is None:
         raise NotFoundError("SK")
     if not satisfies(need, manages=row.manages, is_leader=row.is_leader, is_member=row.is_member):
@@ -146,14 +146,15 @@ async def ensure_same_org(
             raise NotFoundError(label)
 
 
-def plan_access(need: PlanNeed) -> Callable[..., Awaitable[PlanAccess]]:
-    """Dependency untuk rute ber-`{plan_id}`."""
+def plan_access(need: PlanNeed, archived: bool | None = False) -> Callable[..., Awaitable[PlanAccess]]:
+    """Dependency untuk rute ber-`{plan_id}`. `archived=None`: SK aktif maupun draf terarsip
+    (pemulihan) — terarsip tetap hanya terlihat oleh pengelola."""
     async def guard(
         plan_id: UUID,
         current_user: CurrentUser = Depends(get_current_user),
         db: AsyncSession = Depends(get_db_with_user),
     ) -> PlanAccess:
-        return await check_plan_access(db, plan_id, current_user, need)
+        return await check_plan_access(db, plan_id, current_user, need, archived)
     return guard
 
 

@@ -207,6 +207,8 @@ CREATE TABLE work_plan (
   cancellation_reason text,
   appeal_reason   text,                        -- alasan banding ketua (domain.js APPEAL, V-20)
   deleted_at      timestamptz,                 -- arsip draft (soft delete)
+  deleted_by      uuid REFERENCES app_user(id), -- pengarsip (domain.js DELETE_PLAN, V-21)
+  deletion_reason text,                        -- alasan pengarsipan (V-21)
   created_by      uuid REFERENCES app_user(id),
   created_at      timestamptz NOT NULL DEFAULT now(),
   updated_at      timestamptz NOT NULL DEFAULT now(),

@@ -15,6 +15,10 @@ from app.core.time import jakarta_now
 from app.repositories.plan_member_repo import PlanMemberRepo
 from app.repositories.plan_transition_repo import PlanTransitionRepo
 
+# domain.js CANCEL_PLAN requireStatus
+CANCELLABLE = {PlanStatus.PUBLISHED, PlanStatus.ACCEPTED, PlanStatus.APPEALED, PlanStatus.IN_PROGRESS,
+               PlanStatus.COMPLETION_REVIEW}
+
 
 def _invalid(message: str) -> AppError:
     return AppError("VALIDATION_ERROR", message, status=422)
@@ -94,6 +98,47 @@ class PlanTransitionService:
         """domain.js REVISE — PM unit/OPS (dijaga router), hanya dari APPEALED."""
         await self._load(plan_id, org_id, row_version, PlanStatus.APPEALED)
         await self.repo.revise(plan_id)
+        return await self.repo.get_plan(plan_id)
+
+    async def cancel_plan(self, plan_id: UUID, org_id: str, row_version: int, reason: str) -> Any:
+        """domain.js CANCEL_PLAN — PM unit/OPS (dijaga router); draf diarsipkan, bukan dibatalkan."""
+        plan = await self.repo.lock_plan(plan_id, org_id)
+        if plan is None:
+            raise NotFoundError("SK")
+        if plan.status not in CANCELLABLE:
+            raise AppError("INVALID_STATE", "Tahap work plan belum sesuai untuk tindakan ini.", status=409)
+        if plan.row_version != row_version:
+            raise ConflictError()
+        if not reason.strip():
+            raise _invalid("Alasan pembatalan wajib diisi.")
+        await self.repo.cancel(plan_id, reason.strip())
+        return await self.repo.get_plan(plan_id)
+
+    async def delete_plan(self, plan_id: UUID, org_id: str, user_id: str, row_version: int, reason: str) -> Any:
+        """domain.js DELETE_PLAN — arsip (soft delete) draf yang belum pernah punya SK."""
+        await self._load(plan_id, org_id, row_version, PlanStatus.DRAFT)
+        if not reason.strip():
+            raise _invalid("Alasan pengarsipan wajib diisi.")
+        if await self.repo.has_active_allocation(plan_id):
+            raise AppError("INVALID_STATE", "Lepaskan reservasi aset sebelum mengarsipkan draft.", status=409)
+        if await self.repo.ever_published(plan_id):
+            raise AppError("INVALID_STATE",
+                           "Pekerjaan yang pernah memiliki SK tidak dapat diarsipkan. Gunakan opsi pembatalan.",
+                           status=409)
+        await self.repo.archive(plan_id, user_id, reason.strip())
+        return await self.repo.get_plan(plan_id)
+
+    async def restore_plan(self, plan_id: UUID, org_id: str, row_version: int) -> Any:
+        """domain.js RESTORE_PLAN — hanya draf terarsip; tim diperiksa ulang (checkMembers)."""
+        plan = await self.repo.lock_plan(plan_id, org_id, include_archived=True)
+        if plan is None:
+            raise NotFoundError("SK")
+        if not plan.archived:
+            raise AppError("INVALID_STATE", "Draft tidak berada di arsip.", status=409)
+        if plan.row_version != row_version:
+            raise ConflictError()
+        await self._check_members(plan)
+        await self.repo.restore(plan_id)
         return await self.repo.get_plan(plan_id)
 
     async def start(self, plan_id: UUID, org_id: str, user_id: str, row_version: int) -> Any:

@@ -27,8 +27,11 @@ _STANDING = """
                wp.cancellation_reason, wp.appeal_reason, wp.created_at,
                s.oversees OR s.pm_of_unit AS manages,
                s.is_leader, s.is_member,
-               s.oversees OR s.pm_of_unit
-                   OR (wp.status <> 'DRAFT' AND (s.asset_officer OR s.is_leader OR s.is_member)) AS visible
+               -- Draf terarsip hanya terlihat oleh pengelola (domain.js visiblePlans includeArchived, V-21).
+               CASE WHEN wp.deleted_at IS NOT NULL THEN s.oversees OR s.pm_of_unit
+                    ELSE s.oversees OR s.pm_of_unit
+                         OR (wp.status <> 'DRAFT' AND (s.asset_officer OR s.is_leader OR s.is_member))
+               END AS visible
         FROM vms.work_plan wp
         CROSS JOIN LATERAL (
             SELECT
@@ -42,7 +45,8 @@ _STANDING = """
                 vms.is_plan_leader(wp.id, CAST(:user AS uuid)) AS is_leader,
                 vms.is_plan_member(wp.id, CAST(:user AS uuid)) AS is_member
         ) AS s
-        WHERE wp.organization_id = CAST(:org AS uuid) AND wp.deleted_at IS NULL
+        WHERE wp.organization_id = CAST(:org AS uuid)
+          AND (CAST(:archived AS boolean) IS NULL OR (wp.deleted_at IS NOT NULL) = CAST(:archived AS boolean))
           AND (CAST(:plan AS uuid) IS NULL OR wp.id = CAST(:plan AS uuid))
           AND (CAST(:status AS text) IS NULL OR CAST(wp.status AS text) = CAST(:status AS text))
     ) AS standing
@@ -53,12 +57,17 @@ _STANDING = """
 
 class PlanAccessRepo(BaseRepo):
 
-    async def standing(self, plan_id: UUID | str, org_id: UUID | str, user_id: UUID | str) -> Any:
-        """Baris SK + kedudukan pengguna; None bila SK tidak ada, milik organisasi lain, atau tak terlihat."""
-        return await self.fetchone(_STANDING, {"plan": str(plan_id), "org": org_id, "user": user_id, "status": None})
+    async def standing(self, plan_id: UUID | str, org_id: UUID | str, user_id: UUID | str,
+                       archived: bool | None = False) -> Any:
+        """Baris SK + kedudukan pengguna; None bila SK tidak ada, milik organisasi lain, atau tak terlihat.
+        `archived`: False = aktif saja, True = terarsip saja, None = keduanya (pemulihan)."""
+        return await self.fetchone(_STANDING, {"plan": str(plan_id), "org": org_id, "user": user_id,
+                                               "status": None, "archived": archived})
 
-    async def visible_plans(self, org_id: UUID | str, user_id: UUID | str, status: str | None) -> Sequence[Any]:
-        return await self.fetchall(_STANDING, {"plan": None, "org": org_id, "user": user_id, "status": status})
+    async def visible_plans(self, org_id: UUID | str, user_id: UUID | str, status: str | None,
+                            archived: bool = False) -> Sequence[Any]:
+        return await self.fetchall(_STANDING, {"plan": None, "org": org_id, "user": user_id,
+                                               "status": status, "archived": archived})
 
     async def plan_of_day(self, day_id: UUID | str) -> Any:
         return await self.scalar("SELECT work_plan_id FROM vms.work_plan_day WHERE id = :day", {"day": day_id})

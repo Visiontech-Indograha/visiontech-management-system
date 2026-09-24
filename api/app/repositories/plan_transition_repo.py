@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
-from app.core.enums import DocumentKind, DocumentStatus, PlanStatus
+from app.core.enums import ChangeStatus, DocumentKind, DocumentStatus, PlanStatus
 
 from .base_repo import BaseRepo
 
@@ -17,17 +17,83 @@ from .base_repo import BaseRepo
 
 class PlanTransitionRepo(BaseRepo):
 
-    async def lock_plan(self, plan_id: UUID | str, org_id: UUID | str) -> Any:
+    async def lock_plan(self, plan_id: UUID | str, org_id: UUID | str, include_archived: bool = False) -> Any:
         return await self.fetchone(
             """
             SELECT id, unit_id, site_id, number, title, location_text, description,
                    lower(period) AS period_start, upper(period) - 1 AS period_end,
-                   status, pm_employee_id, leader_employee_id, revision, row_version, cancellation_reason
+                   status, pm_employee_id, leader_employee_id, revision, row_version, cancellation_reason,
+                   deleted_at IS NOT NULL AS archived
             FROM vms.work_plan
-            WHERE id = :id AND organization_id = :org AND deleted_at IS NULL
+            WHERE id = :id AND organization_id = :org AND (CAST(:any AS boolean) OR deleted_at IS NULL)
             FOR UPDATE
             """,
-            {"id": plan_id, "org": org_id},
+            {"id": plan_id, "org": org_id, "any": include_archived},
+        )
+
+    async def cancel(self, plan_id: UUID | str, reason: str) -> None:
+        """domain.js CANCEL_PLAN: SK batal; usulan terbuka & dokumen ditarik; aset yang masih dipesan dilepas.
+        Skema tidak punya status CANCELLED untuk dokumen/usulan → WITHDRAWN (dok 10 Bagian C)."""
+        await self.execute(
+            """
+            UPDATE vms.work_plan
+               SET status = CAST(:cancelled AS vms.plan_status), cancellation_reason = :reason,
+                   row_version = row_version + 1
+             WHERE id = :plan
+            """,
+            {"plan": plan_id, "reason": reason, "cancelled": PlanStatus.CANCELLED},
+        )
+        await self.execute(
+            """
+            UPDATE vms.plan_change SET status = CAST(:withdrawn AS vms.change_status)
+             WHERE work_plan_id = :plan AND status IN ('PENDING_PM', 'AWAITING_LEADER_ACCEPTANCE')
+            """,
+            {"plan": plan_id, "withdrawn": ChangeStatus.WITHDRAWN},
+        )
+        await self.execute(
+            "UPDATE vms.plan_document SET status = CAST(:withdrawn AS vms.document_status) WHERE work_plan_id = :plan",
+            {"plan": plan_id, "withdrawn": DocumentStatus.WITHDRAWN},
+        )
+        # Aset yang baru dipesan dilepas; yang sedang dipakai tetap wajib dikembalikan (prototipe).
+        await self.execute(
+            """
+            WITH freed AS (
+                UPDATE vms.asset_allocation a SET released_at = now()
+                  FROM vms.asset s
+                 WHERE a.asset_id = s.id AND a.work_plan_id = :plan AND a.released_at IS NULL
+                   AND s.status = 'RESERVED'
+                RETURNING a.asset_id
+            )
+            UPDATE vms.asset SET status = 'AVAILABLE' WHERE id IN (SELECT asset_id FROM freed)
+            """,
+            {"plan": plan_id},
+        )
+
+    async def ever_published(self, plan_id: UUID | str) -> bool:
+        return bool(await self.scalar(
+            "SELECT EXISTS (SELECT 1 FROM vms.plan_document WHERE work_plan_id = :plan)", {"plan": plan_id}))
+
+    async def has_active_allocation(self, plan_id: UUID | str) -> bool:
+        return bool(await self.scalar(
+            "SELECT EXISTS (SELECT 1 FROM vms.asset_allocation WHERE work_plan_id = :plan AND released_at IS NULL)",
+            {"plan": plan_id}))
+
+    async def archive(self, plan_id: UUID | str, user_id: UUID | str, reason: str) -> None:
+        """domain.js DELETE_PLAN: soft delete — riwayat tetap ada."""
+        await self.execute(
+            """
+            UPDATE vms.work_plan
+               SET deleted_at = now(), deleted_by = :user, deletion_reason = :reason, row_version = row_version + 1
+             WHERE id = :plan
+            """,
+            {"plan": plan_id, "user": user_id, "reason": reason},
+        )
+
+    async def restore(self, plan_id: UUID | str) -> None:
+        """domain.js RESTORE_PLAN — alasan pengarsipan tetap disimpan sebagai riwayat."""
+        await self.execute(
+            "UPDATE vms.work_plan SET deleted_at = NULL, deleted_by = NULL, row_version = row_version + 1 WHERE id = :plan",
+            {"plan": plan_id},
         )
 
     async def get_plan(self, plan_id: UUID | str) -> Any:

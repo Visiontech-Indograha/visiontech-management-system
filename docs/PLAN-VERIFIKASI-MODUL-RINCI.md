@@ -134,7 +134,7 @@ uji aturan dari baris `domain.js` → servis → penjaga W3 → uji alur.
 | Task | Transaksi | Fase | Acuan `domain.js` |
 |---|---|---|---|
 | V-20 ✅ | APPEAL, REVISE | 3 | 328–329 |
-| V-21 | CANCEL_PLAN, RESTORE_PLAN, DELETE_PLAN | 3 | case masing-masing |
+| V-21 ✅ | CANCEL_PLAN, RESTORE_PLAN, DELETE_PLAN | 3 | case masing-masing |
 | V-22 | REQUEST_PERSONNEL_CHANGE, ACCEPT_CHANGE, REJECT_CHANGE, WITHDRAW_CHANGE | 3 | 413 dst. |
 | V-23 | SAVE_DAY, TOGGLE_TASK | 5 | case masing-masing |
 | V-24 | REVIEW_REPORT | 5 | case REVIEW_REPORT |

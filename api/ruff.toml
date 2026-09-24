@@ -33,4 +33,3 @@ extend-immutable-calls = [
 "app/core/discord.py" = ["BLE001"]
 "app/core/image.py" = ["BLE001"]
 "app/core/pagination.py" = ["UP046"]
-"app/services/pdf_service.py" = ["F401"]

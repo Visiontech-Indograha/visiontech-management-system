@@ -111,7 +111,7 @@ Centang hanya setelah commit di-push.
 
 ## W5 · Bersih (E7–E9)
 
-- [ ] **V-14 · Hapus kode mati tak cocok skema**: `repositories/plan_repo.py`,
+- [x] **V-14 · Hapus kode mati tak cocok skema**: `repositories/plan_repo.py`,
   `repositories/attendance_repo.py`, `services/plan_service.py`, `services/attendance_service.py`,
   `services/document_service.py`, `services/pdf_service.py` (tak diimpor; E9). Uji penjaga:
   setiap modul di `services/` & `repositories/` diimpor kode aplikasi. Pengecualian V-01 dikosongkan.

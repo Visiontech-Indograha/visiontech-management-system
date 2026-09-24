@@ -10,15 +10,15 @@ const labels = (role: string) => visibleNav(MOCK_PERMISSIONS[role]).map((i) => i
 // Inventaris menu web: docs/06-UI-UX §5
 const EXPECTED: Record<string, string[]> = {
   super_admin: [
-    "Beranda", "Pengguna", "Direktori", "Absensi",
+    "Beranda", "Pengguna", "Direktori",
     "Site", "Audit log",
   ],
   admin: ["Beranda", "Direktori", "Serah terima barang", "Status kendaraan"],
   team_leader: [
     "Beranda", "Direktori", "Team", "Work plan", "Progress", "Persetujuan kendaraan", "Laporan",
-    "Absensi team", "Site",
+    "Site",
   ],
-  finance: ["Beranda", "Direktori", "Absensi"],
+  finance: ["Beranda", "Direktori"],
   hes: ["Beranda", "Direktori", "Serah terima tool/APD"],
   wtl: ["Beranda", "Plan saya", "Progress", "Barang saya", "Berkas saya"],
   driver: ["Beranda", "Logbook kendaraan", "Plan team", "Barang saya", "Berkas saya"],

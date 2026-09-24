@@ -1,7 +1,6 @@
 ﻿import {
   Backpack,
   BookUser,
-  CalendarCheck,
   Car,
   ClipboardCheck,
   ClipboardList,
@@ -55,8 +54,6 @@ export const NAV_ITEMS: NavItem[] = [
     requires: ["vehicle_loan:approve"],
   },
   { path: "/reports", label: "Laporan", icon: FileBarChart, requires: ["report:pdf"], hideForSuperAdmin: true },
-  { path: "/attendance", label: "Absensi", icon: CalendarCheck, requires: ["attendance:read_all"] },
-  { path: "/attendance/team", label: "Absensi team", icon: CalendarCheck, requires: ["attendance:read_team"] },
   {
     path: "/issuances/goods",
     label: "Serah terima barang",

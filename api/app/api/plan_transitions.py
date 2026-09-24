@@ -11,7 +11,7 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_db_with_user
-from app.api.guards import PlanAccess, PlanNeed, plan_access
+from app.api.guards import PlanAccess, PlanNeed, ensure_same_org, plan_access
 from app.repositories.plan_member_repo import PlanMemberRepo
 from app.repositories.plan_transition_repo import PlanTransitionRepo
 from app.schemas.plan import WorkPlanResponse
@@ -127,3 +127,48 @@ async def start_plan(
 ) -> WorkPlanResponse:
     plan = await _service(db).start(plan_id, access.user.organization_id, access.user.user_id, data.row_version)
     return _response(plan)
+
+
+class CompletionRequest(BaseModel):
+    row_version: int
+    body: str
+    obstacle: str
+    evidence_file_ids: list[UUID] = []
+
+
+@router.post("/request-completion", response_model=WorkPlanResponse)
+async def request_completion(
+    plan_id: UUID,
+    data: CompletionRequest,
+    access: PlanAccess = _LEADER_ACCESS,
+    db: AsyncSession = Depends(get_db_with_user),
+) -> WorkPlanResponse:
+    """domain.js REQUEST_COMPLETE (V-26): ketua menyerahkan laporan akhir → COMPLETION_REVIEW."""
+    await ensure_same_org(db, access.user.organization_id, files=data.evidence_file_ids)
+    return _response(await _service(db).request_complete(
+        plan_id, access.user.organization_id, access.user.user_id, data.row_version,
+        data.body, data.obstacle, data.evidence_file_ids))
+
+
+@router.post("/approve-completion", response_model=WorkPlanResponse)
+async def approve_completion(
+    plan_id: UUID,
+    data: TransitionRequest,
+    access: PlanAccess = _PM_UNIT_ACCESS,
+    db: AsyncSession = Depends(get_db_with_user),
+) -> WorkPlanResponse:
+    """domain.js APPROVE_COMPLETE (V-26): PM unit/OPS menutup SK → COMPLETED."""
+    return _response(await _service(db).approve_complete(
+        plan_id, access.user.organization_id, access.user.user_id, data.row_version, data.reason))
+
+
+@router.post("/return-completion", response_model=WorkPlanResponse)
+async def return_completion(
+    plan_id: UUID,
+    data: TransitionRequest,
+    access: PlanAccess = _PM_UNIT_ACCESS,
+    db: AsyncSession = Depends(get_db_with_user),
+) -> WorkPlanResponse:
+    """domain.js RETURN_COMPLETE (V-26): PM unit/OPS mengembalikan ke ketua → IN_PROGRESS."""
+    return _response(await _service(db).return_complete(
+        plan_id, access.user.organization_id, access.user.user_id, data.row_version, data.reason))

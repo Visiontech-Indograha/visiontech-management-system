@@ -43,23 +43,23 @@ def _out(row: Any) -> WeeklyReportResponse:
 
 
 @router.get("", response_model=list[WeeklyReportResponse])
-async def list_weeks(access: PlanAccess = _VIEW_ACCESS, db: AsyncSession = Depends(get_db_with_user)):
+async def list_weeks(access: PlanAccess = _VIEW_ACCESS, db: AsyncSession = Depends(get_db_with_user)) -> list[WeeklyReportResponse]:
     return [_out(row) for row in await WeeklyReportService(db).list_weeks(access)]
 
 
 @router.put("/{week}", response_model=WeeklyReportResponse)
 async def save_weekly(week: int, data: WeeklyReportRequest, access: PlanAccess = _LEADER_ACCESS,
-                      db: AsyncSession = Depends(get_db_with_user)):
+                      db: AsyncSession = Depends(get_db_with_user)) -> WeeklyReportResponse:
     return _out(await WeeklyReportService(db).save_weekly(access, week, data.body, data.obstacle))
 
 
 @router.post("/{week}/submit", response_model=WeeklyReportResponse)
 async def submit_weekly(week: int, access: PlanAccess = _LEADER_ACCESS,
-                        db: AsyncSession = Depends(get_db_with_user)):
+                        db: AsyncSession = Depends(get_db_with_user)) -> WeeklyReportResponse:
     return _out(await WeeklyReportService(db).submit_weekly(access, week))
 
 
 @router.post("/{week}/review", response_model=WeeklyReportResponse)
 async def review_weekly(week: int, data: WeeklyReviewRequest, access: PlanAccess = _PM_UNIT_ACCESS,
-                        db: AsyncSession = Depends(get_db_with_user)):
+                        db: AsyncSession = Depends(get_db_with_user)) -> WeeklyReportResponse:
     return _out(await WeeklyReportService(db).review_weekly(access, week, data.decision, data.note))

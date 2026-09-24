@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { toast } from "sonner";
 import { Link, useParams } from "react-router-dom";
 import { useSession } from "@/app/session";
@@ -22,11 +22,12 @@ const Row = ({ label, children }: { label: string; children: React.ReactNode }) 
 
 export function EmployeeDetailPage() {
   const { id = "" } = useParams();
-  const { me, can } = useSession();
+  const { me } = useSession();
   const employee = useEmployee(id);
   const [editing, setEditing] = useState(false);
-  const canEdit = !!me?.manage_permissions.includes("employee:profile_update");
-  const seesDocs = can("employee_document:manage") || me?.id === id;
+  const canEdit = !!me?.permissions.includes("manage:users");
+  const canManageDocs = !!me?.permissions.includes("manage:employee_documents");
+  const seesDocs = canManageDocs || (me?.user_id === id && !!me.permissions.includes("view:documents"));
   const e = employee.data;
 
   if (employee.isError)
@@ -57,7 +58,7 @@ export function EmployeeDetailPage() {
             <Row label="Tanggal bergabung">{e.join_date ? formatDate(e.join_date) : null}</Row>
             {e.employment_type === "CONTRACT" && (
               <Row label="Kontrak">
-                {e.contract_start ? formatDate(e.contract_start) : "-"} â€“ {e.contract_end ? formatDate(e.contract_end) : "-"}
+                {e.contract_start ? formatDate(e.contract_start) : "-"} Ã¢â‚¬â€œ {e.contract_end ? formatDate(e.contract_end) : "-"}
               </Row>
             )}
           </dl>
@@ -68,7 +69,7 @@ export function EmployeeDetailPage() {
           Berkas wajib yang kurang: {e.documents_missing.map((m) => m.name).join(", ")}.
         </p>
       )}
-      {seesDocs && <DocumentsPanel userId={id} canManage={can("employee_document:manage")} />}
+      {seesDocs && <DocumentsPanel userId={id} canManage={canManageDocs} />}
       {e && editing && <ProfileDialog employee={e} onClose={() => setEditing(false)} />}
     </>
   );

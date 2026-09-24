@@ -9,8 +9,8 @@ const user = (over: Partial<UserOut> = {}): UserOut => ({
   full_name: "Budi Santoso",
   role: "user",
   user_type: "WTL",
-  is_active: true,
   must_change_password: false,
+  is_active: true,
   last_login_at: null,
   deactivated_at: null,
   deactivation_reason: null,
@@ -22,9 +22,9 @@ const user = (over: Partial<UserOut> = {}): UserOut => ({
 const page = (items: UserOut[]) => ({ items, total: items.length, page: 1, page_size: 25 });
 
 describe("halaman Pengguna", () => {
-  it("hanya Super Admin yang dapat membukanya", () => {
+  it("PM tanpa manage:users ditolak", () => {
     mockApi(() => undefined);
-    const { router } = renderRoute("/users", { role: "admin" });
+    const { router } = renderRoute("/users", { role: "PM" });
     expect(router.state.location.pathname).toBe("/forbidden");
   });
 
@@ -35,7 +35,7 @@ describe("halaman Pengguna", () => {
           data: page([user(), user({ id: "2", username: "citra", full_name: "Citra Dewi", is_active: false })]),
         };
     });
-    renderRoute("/users", { role: "super_admin" });
+    renderRoute("/users", { role: "ADMIN" });
     expect(await screen.findByText("Budi Santoso")).toBeInTheDocument();
     expect(screen.getByText("Aktif", { selector: "span" })).toBeInTheDocument();
     expect(screen.getByText("Nonaktif", { selector: "span" })).toBeInTheDocument();
@@ -44,13 +44,13 @@ describe("halaman Pengguna", () => {
 
   it("keadaan kosong", async () => {
     mockApi((c) => (c.url === "/users" ? { data: page([]) } : undefined));
-    renderRoute("/users", { role: "super_admin" });
+    renderRoute("/users", { role: "ADMIN" });
     expect(await screen.findByText("Tidak ada pengguna yang cocok.")).toBeInTheDocument();
   });
 
   it("galat memuat daftar", async () => {
     mockApi(() => apiError(500, "INTERNAL_ERROR", "x"));
-    renderRoute("/users", { role: "super_admin" });
+    renderRoute("/users", { role: "ADMIN" });
     expect(await screen.findByText(/tidak dapat dimuat/)).toBeInTheDocument();
   });
 
@@ -60,7 +60,7 @@ describe("halaman Pengguna", () => {
       if (c.url === "/users" && c.method === "post")
         return { status: 201, data: { ...user({ username: "baru.user" }), temporary_password: "Ab3dEf7hJk9m" } };
     });
-    renderRoute("/users", { role: "super_admin" });
+    renderRoute("/users", { role: "ADMIN" });
     fireEvent.click(await screen.findByRole("button", { name: "Tambah user" }));
     const dialog = screen.getByRole("dialog", { name: "Tambah user" });
     fireEvent.change(within(dialog).getByLabelText("Username"), { target: { value: "baru.user" } });
@@ -85,7 +85,7 @@ describe("halaman Pengguna", () => {
       if (c.method === "get") return { data: page([]) };
       return apiError(422, "VALIDATION_ERROR", "x", { fields: { username: "Username sudah dipakai." } });
     });
-    renderRoute("/users", { role: "super_admin" });
+    renderRoute("/users", { role: "ADMIN" });
     fireEvent.click(await screen.findByRole("button", { name: "Tambah user" }));
     fireEvent.click(screen.getByRole("button", { name: "Buat user" }));
     expect(await screen.findByText("Username sudah dipakai.")).toBeInTheDocument();
@@ -97,7 +97,7 @@ describe("halaman Pengguna", () => {
       if (c.url?.endsWith("/open-items")) return { data: { vehicle_loans: [{ id: "v" }], issuances: [] } };
       if (c.url?.endsWith("/deactivate")) return { data: user({ is_active: false }) };
     });
-    renderRoute("/users", { role: "super_admin" });
+    renderRoute("/users", { role: "ADMIN" });
     fireEvent.click(await screen.findByRole("button", { name: "Nonaktifkan" }));
     const dialog = await screen.findByRole("dialog", { name: /Nonaktifkan Budi Santoso/ });
     expect(await within(dialog).findByRole("status")).toHaveTextContent("1 kendaraan");
@@ -112,7 +112,7 @@ describe("halaman Pengguna", () => {
       if (c.url === "/users") return { data: page([user()]) };
       if (c.url?.endsWith("/reset-password")) return { data: { temporary_password: "Zx9yWv8uTs7r" } };
     });
-    renderRoute("/users", { role: "super_admin" });
+    renderRoute("/users", { role: "ADMIN" });
     fireEvent.click(await screen.findByRole("button", { name: "Reset password" }));
     const dialog = await screen.findByRole("dialog");
     fireEvent.click(within(dialog).getByRole("button", { name: "Reset password" }));
@@ -144,16 +144,16 @@ describe("halaman Audit log", () => {
           },
         };
     });
-    renderRoute("/audit-logs", { role: "super_admin" });
+    renderRoute("/audit-logs", { role: "ADMIN" });
     expect(await screen.findByText("user.deactivate", { selector: "td" })).toBeInTheDocument();
     expect(screen.getByText("21 Sep 2026 07.42 WIB")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Lihat" }));
     expect(screen.getByText(/"is_active": false/)).toBeInTheDocument();
   });
 
-  it("role selain Super Admin ditolak", () => {
+  it("FINANCE tanpa view:audit ditolak", () => {
     mockApi(() => undefined);
-    const { router } = renderRoute("/audit-logs", { role: "finance" });
+    const { router } = renderRoute("/audit-logs", { role: "FINANCE" });
     expect(router.state.location.pathname).toBe("/forbidden");
   });
 });

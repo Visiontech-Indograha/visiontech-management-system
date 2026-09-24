@@ -7,7 +7,7 @@ export function HomePage() {
   return (
     <>
       <PageHeader title="Beranda" />
-      <p className="text-mist">Selamat datang, {me?.full_name}.</p>
+      <p className="text-mist">Selamat datang, {me?.email}.</p>
     </>
   );
 }

@@ -1,6 +1,7 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,8 +14,10 @@ from app.api.guards import (
     ensure_same_org,
     plan_access,
     plan_day_access,
+    require_plan_status,
 )
-from app.core.errors import trigger_rule_error
+from app.core.enums import PlanStatus
+from app.core.errors import ValidationError, trigger_rule_error
 from app.core.permissions import Permission
 from app.repositories.plan_access_repo import PlanAccessRepo
 from app.schemas.plan import (
@@ -244,3 +247,36 @@ async def add_task(
     })
     task_id = res.scalar()
     return PlanTaskResponse(id=task_id, work_plan_day_id=day_id, is_done=False, **data.model_dump())
+
+
+class DayTaskInput(BaseModel):
+    title: str
+
+
+class DayPlanRequest(BaseModel):
+    title: str
+    tasks: list[DayTaskInput]
+
+
+@router.put("/{plan_id}/days/{day_id}/plan")
+async def save_day(
+    plan_id: UUID,
+    day_id: UUID,
+    data: DayPlanRequest,
+    access: PlanAccess = _DAY_PM_UNIT_ACCESS,
+    db: AsyncSession = Depends(get_db_with_user)
+) -> dict:
+    """domain.js SAVE_DAY (V-23): PM menyusun ulang judul & tugas satu hari selagi SK masih draf."""
+    require_plan_status(access, PlanStatus.DRAFT)
+    if not 1 <= len(data.tasks) <= 30:
+        raise ValidationError("Isi antara 1 sampai 30 tugas per hari.")
+    titles = [t.title.strip() for t in data.tasks]
+    if not data.title.strip() or not all(titles):
+        raise ValidationError("Judul hari dan setiap tugas wajib diisi.")
+    await db.execute(text("UPDATE vms.work_plan_day SET title = :title WHERE id = :day"),
+                     {"title": data.title.strip(), "day": day_id})
+    await db.execute(text("DELETE FROM vms.work_plan_task WHERE work_plan_day_id = :day"), {"day": day_id})
+    for order, title in enumerate(titles):
+        await db.execute(text("INSERT INTO vms.work_plan_task (work_plan_day_id, title, sort_order) "
+                              "VALUES (:day, :title, :sort)"), {"day": day_id, "title": title, "sort": order})
+    return {"id": str(day_id), "title": data.title.strip(), "tasks": titles}

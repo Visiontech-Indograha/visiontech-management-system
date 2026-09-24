@@ -115,6 +115,9 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 - `docs/PLAN-PERBAIKAN-TEMUAN.md` (2026-09-23) — plan perbaikan 7 segmen (definisi, pohon isu, prioritas, rencana kerja, 5×mengapa, sintesis, pencegahan) + antrean turunan T-01…T-13. Dikerjakan sebelum A-3.
 
+#### V-23 · Rincian hari & centang tugas (Backend) — 2026-09-24
+- `PUT /work-plans/{id}/days/{day_id}/plan` `{title, tasks:[{title}]}` — PM unit/OPS menyusun ulang judul & 1–30 tugas satu hari selagi SK `DRAFT` (`domain.js` SAVE_DAY). `POST /work-plans/{id}/days/{day_id}/tasks/{task_id}/toggle` — ketua menurut SK mencentang/membatalkan tugas saat SK `IN_PROGRESS`, tanggal hari sudah tiba, dan laporan hari itu belum diserahkan; `done_at`/`done_by` tercatat (`domain.js` TOGGLE_TASK). Jalur `/plan` & `/toggle` dipilih karena `PUT …/days/{day_id}` sudah dipakai teks laporan (dok 10 Bagian C). Uji: `api/tests/test_day_plan_tasks.py`.
+
 #### V-24 · Tinjauan laporan harian (Backend) — 2026-09-24
 - `POST /work-plans/{id}/days/{day_id}/review` `{decision: APPROVE|RETURN, note}` — PM unit/OPS, SK `IN_PROGRESS`/`COMPLETION_REVIEW`, hanya laporan `SUBMITTED`; RETURN wajib catatan → `CHANGES_REQUESTED`; peninjau, waktu, dan catatan tersimpan (`domain.js` REVIEW_REPORT). Laporan yang sudah diserahkan/disetujui tidak bisa disunting lagi (sebelumnya bisa ditimpa kapan saja); laporan yang dikembalikan bisa diperbaiki dan diajukan ulang. Pesan "tidak ditemukan" saat mengajukan tidak lagi tertelan jadi `DB_ERROR`. Uji: `api/tests/test_report_review.py`.
 

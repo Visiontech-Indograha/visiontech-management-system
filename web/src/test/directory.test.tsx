@@ -121,6 +121,12 @@ describe("detail karyawan dan berkas", () => {
       const r = extra(c);
       if (r) return r as { data?: unknown; status?: number };
     }
+    if (c.url?.startsWith("/files/") && c.url.endsWith("/url?variant=thumb")) {
+      return { data: { url: `https://mock.url${c.url.split("?")[0]}.pdf`, mime_type: "application/pdf" } };
+    }
+    if (c.url?.startsWith("/files/") && c.url.endsWith("/url?variant=full")) {
+      return { data: { url: `https://mock.url${c.url.split("?")[0]}_full.pdf`, mime_type: "application/pdf" } };
+    }
     if (c.url === "/employees/e1" && c.method === "get")
       return { data: employee({ documents_status: "INCOMPLETE", documents_missing: missing }) };
     if (c.url === "/employees/e1/documents" && c.method === "get") return { data: [doc()] };
@@ -139,7 +145,7 @@ describe("detail karyawan dan berkas", () => {
     expect(await screen.findByText("MCU", { selector: "td" })).toBeInTheDocument();
     expect(screen.getByText("≤ 7 hari")).toBeInTheDocument();
     expect(screen.getByText(/Berkas wajib yang kurang: KTP, SIM A/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Buka" }).getAttribute("href")).toMatch(/\/api\/v1\/files\/f1$/);
+    expect(screen.getByRole("button", { name: "Unduh MCU" })).toBeInTheDocument();
   });
 
   it("Finance melihat profil tetapi tidak tab berkas", async () => {

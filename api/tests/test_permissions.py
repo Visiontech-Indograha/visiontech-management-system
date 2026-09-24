@@ -1,6 +1,7 @@
 """
 T-03 · Satu sumber peran + peta izin (dok 03 §1, dok 08).
-Kode peran Python harus identik dengan enum `vms.role_code`; izin per peran mengikuti dok 03.
+Kode peran Python harus identik dengan enum `vms.role_code`; izin per peran mengikuti dok 03,
+kecuali OPS yang mengikuti `prototype/js/domain.js` `permissions.OPS` (V-07, dok 10 Bagian C).
 """
 from __future__ import annotations
 
@@ -18,7 +19,8 @@ EXPECTED_EXTRA: dict[RoleCode, set[Permission]] = {
     RoleCode.HR: {P.MANAGE_USERS, P.VERIFY_DOCUMENTS, P.MANAGE_EMPLOYEE_DOCUMENTS},
     RoleCode.FINANCE: {P.REVIEW_ATTENDANCE, P.REVIEW_OVERTIME},
     RoleCode.ASSET: {P.MANAGE_ASSETS},
-    RoleCode.OPS: {P.VIEW_TIMELINE, P.VIEW_AUDIT},
+    # OPS memegang kewenangan PM lintas unit (domain.js permissions.OPS) di samping pemantauan.
+    RoleCode.OPS: {P.CREATE_PLAN, P.PUBLISH_PLAN, P.REVIEW_OVERTIME, P.VIEW_TIMELINE, P.VIEW_AUDIT},
     # Ketua/anggota berasal dari SK (is_plan_leader/is_plan_member), bukan peran global.
     RoleCode.LEADER: set(),
     RoleCode.MEMBER: set(),

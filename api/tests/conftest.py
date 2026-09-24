@@ -4,6 +4,7 @@ bukan SQLite — separuh aturan hidup di fungsi, trigger, dan RLS.
 """
 from __future__ import annotations
 
+import contextlib
 import os
 import socket
 import uuid
@@ -130,13 +131,36 @@ WORLD_PASSWORD = "KataSandiDunia-123"
 class World:
     """Satu organisasi lengkap: unit, lokasi, karyawan, dan pengguna per peran yang saling tertaut."""
 
-    def __init__(self, org_id: str, unit_id: str, site_id: str, employees: dict[str, str], logins: dict[str, str]):
+    def __init__(self, tag: str, org_id: str, unit_id: str, site_id: str):
+        self.tag = tag
         self.org_id = org_id
         self.unit_id = unit_id
         self.site_id = site_id
-        self.employees = employees  # nama peran → employee_id
-        self.logins = logins        # nama peran → login
+        self.employees: dict[str, str] = {}  # nama peran → employee_id
+        self.logins: dict[str, str] = {}     # nama peran → login
         self._headers: dict[str, dict[str, str]] = {}
+        self._password_hash = hash_password(WORLD_PASSWORD)
+
+    def add_unit(self, code: str) -> str:
+        return str(sync_query(
+            "INSERT INTO vms.business_unit (organization_id, code, name) VALUES (%s, %s, %s) RETURNING id",
+            (self.org_id, code, f"Unit uji {code}"))[0][0])
+
+    def add_person(self, who: str, role: str | None, unit_id: str | None = None, *, per_unit: bool = False) -> str:
+        """Karyawan + akun (+ peran global) di organisasi ini. → employee_id."""
+        unit = unit_id or self.unit_id
+        self.employees[who] = str(sync_query(
+            "INSERT INTO vms.employee (organization_id, employee_no, full_name, position, unit_id, join_date) "
+            "VALUES (%s, %s, %s, 'Teknisi', %s, '2026-01-05') RETURNING id",
+            (self.org_id, f"UJI-{len(self.employees):02d}", f"Karyawan uji {who}", unit))[0][0])
+        self.logins[who] = f"{who}-{self.tag}@contoh.test"
+        user_id = sync_query(
+            "INSERT INTO vms.app_user (organization_id, login, password_hash, employee_id) VALUES (%s, %s, %s, %s) RETURNING id",
+            (self.org_id, self.logins[who], self._password_hash, self.employees[who]))[0][0]
+        if role:
+            sync_query("INSERT INTO vms.user_role (user_id, role, unit_id) VALUES (%s, %s, %s)",
+                       (user_id, role, unit if per_unit else None))
+        return self.employees[who]
 
     def headers(self, client: TestClient, who: str) -> dict[str, str]:
         if who not in self._headers:
@@ -159,8 +183,8 @@ _WORLD_PEOPLE = {
 }
 
 
-@pytest.fixture
-def world() -> Iterator[World]:
+@contextlib.contextmanager
+def _build_world() -> Iterator[World]:
     from tests.cleanup import purge_organization
 
     tag = uuid.uuid4().hex[:8]
@@ -172,22 +196,10 @@ def world() -> Iterator[World]:
         site_id = str(sync_query(
             "INSERT INTO vms.site (organization_id, name, location, radius_m) "
             "VALUES (%s, 'Gudang uji', ST_GeogFromText('POINT(106.8 -6.2)'), 100) RETURNING id", (org_id,))[0][0])
-        employees: dict[str, str] = {}
-        logins: dict[str, str] = {}
-        hashed = hash_password(WORLD_PASSWORD)
-        for i, (who, (role, per_unit)) in enumerate(_WORLD_PEOPLE.items()):
-            employees[who] = str(sync_query(
-                "INSERT INTO vms.employee (organization_id, employee_no, full_name, position, unit_id, join_date) "
-                "VALUES (%s, %s, %s, 'Teknisi', %s, '2026-01-05') RETURNING id",
-                (org_id, f"UJI-{i:02d}", f"Karyawan uji {who}", unit_id))[0][0])
-            logins[who] = f"{who}-{tag}@contoh.test"
-            user_id = sync_query(
-                "INSERT INTO vms.app_user (organization_id, login, password_hash, employee_id) VALUES (%s, %s, %s, %s) RETURNING id",
-                (org_id, logins[who], hashed, employees[who]))[0][0]
-            if role:
-                sync_query("INSERT INTO vms.user_role (user_id, role, unit_id) VALUES (%s, %s, %s)",
-                           (user_id, role, unit_id if per_unit else None))
-        yield World(org_id, unit_id, site_id, employees, logins)
+        built = World(tag, org_id, unit_id, site_id)
+        for who, (role, per_unit) in _WORLD_PEOPLE.items():
+            built.add_person(who, role, per_unit=per_unit)
+        yield built
     finally:
         conn = _sync_conn()
         try:
@@ -195,6 +207,19 @@ def world() -> Iterator[World]:
         finally:
             conn.close()
         sync_query("DELETE FROM vms.login_attempt WHERE login LIKE %s", (f"%-{tag}@contoh.test",))
+
+
+@pytest.fixture
+def world() -> Iterator[World]:
+    with _build_world() as built:
+        yield built
+
+
+@pytest.fixture
+def other_world() -> Iterator[World]:
+    """Organisasi kedua — untuk memastikan data lintas organisasi tidak terlihat (404)."""
+    with _build_world() as built:
+        yield built
 
 
 @pytest.fixture

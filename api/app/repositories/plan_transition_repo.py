@@ -48,7 +48,7 @@ class PlanTransitionRepo(BaseRepo):
             SELECT m.employee_id::text AS employee_id, m.role_in_plan::text AS role_in_plan,
                    e.is_active AND e.deleted_at IS NULL AS employee_active
             FROM vms.work_plan_member m JOIN vms.employee e ON e.id = m.employee_id
-            WHERE m.work_plan_id = :plan AND upper(m.valid_period) IS NULL
+            WHERE m.work_plan_id = :plan AND upper_inf(m.valid_period)
             """,
             {"plan": plan_id},
         ))
@@ -84,7 +84,7 @@ class PlanTransitionRepo(BaseRepo):
                                         'full_name', e.full_name, 'role_in_plan', m.role_in_plan)
                                         ORDER BY m.role_in_plan, e.full_name)
                                 FROM vms.work_plan_member m JOIN vms.employee e ON e.id = m.employee_id
-                                WHERE m.work_plan_id = :plan AND upper(m.valid_period) IS NULL), '[]'),
+                                WHERE m.work_plan_id = :plan AND upper_inf(m.valid_period)), '[]'),
               'days', COALESCE((SELECT jsonb_agg(jsonb_build_object('work_date', d.work_date, 'title', d.title,
                                         'tasks', (SELECT COALESCE(jsonb_agg(t.title ORDER BY t.sort_order, t.title), '[]')
                                                   FROM vms.work_plan_task t WHERE t.work_plan_day_id = d.id))

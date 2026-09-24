@@ -6,12 +6,13 @@ from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import CurrentUser, get_current_user, get_db_with_user, require_permission
+from app.api.deps import get_db_with_user
+from app.api.guards import PlanAccess, PlanNeed, plan_access
 from app.core.enums import ChangeStatus, ChangeType, PlanStatus
-from app.core.errors import ForbiddenError
-from app.core.permissions import Permission
 
 router = APIRouter(prefix="/plans/{plan_id}/changes", tags=["Plan Changes / Addendums"])
+_LEADER_ACCESS = Depends(plan_access(PlanNeed.LEADER))
+_PM_UNIT_ACCESS = Depends(plan_access(PlanNeed.PM_UNIT))
 
 class ExtensionRequest(BaseModel):
     new_period_end: date
@@ -25,14 +26,11 @@ class PersonnelRequest(BaseModel):
 async def request_extension(
     plan_id: UUID,
     data: ExtensionRequest,
-    current_user: CurrentUser = Depends(get_current_user),
+    access: PlanAccess = _LEADER_ACCESS,
     db: AsyncSession = Depends(get_db_with_user)
 ):
     """Mengajukan Adendum Perpanjangan Waktu (P3-4). Diajukan ketua menurut SK (domain.js REQUEST_CHANGE)."""
-    is_leader = (await db.execute(text("SELECT vms.is_plan_leader(:plan, :user)"),
-                                  {"plan": plan_id, "user": current_user.user_id})).scalar()
-    if not is_leader:
-        raise ForbiddenError("Hanya ketua tim menurut SK yang berlaku yang dapat mengajukan perpanjangan.")
+    current_user = access.user
     # 1. Pastikan SK dalam status yang bisa diperpanjang (IN_PROGRESS)
     check = text("SELECT status, upper(period) - integer '1' as current_end, revision FROM vms.work_plan WHERE id = :id FOR UPDATE")
     row = (await db.execute(check, {"id": plan_id})).fetchone()
@@ -72,10 +70,11 @@ async def request_extension(
 async def approve_change(
     plan_id: UUID,
     change_id: UUID,
-    current_user: CurrentUser = Depends(require_permission(Permission.PUBLISH_PLAN)),
+    access: PlanAccess = _PM_UNIT_ACCESS,
     db: AsyncSession = Depends(get_db_with_user)
 ):
     """Menyetujui adendum (P3-4, P3-5) dan menerapkannya."""
+    current_user = access.user
     check = text("SELECT * FROM vms.plan_change WHERE id = :id AND work_plan_id = :plan FOR UPDATE")
     change = (await db.execute(check, {"id": change_id, "plan": plan_id})).fetchone()
     
@@ -109,17 +108,27 @@ async def approve_change(
     elif change.change_type == ChangeType.PERSONNEL:
         # Penutupan baris anggota lama
         close_old = text("""
-            UPDATE vms.work_plan_member
-            SET valid_period = daterange(lower(valid_period), CURRENT_DATE, '[)')
-            WHERE work_plan_id = :plan AND role_in_plan = 'LEADER' AND upper(valid_period) IS NULL
+            WITH effective AS (
+                SELECT GREATEST(lower(wp.period), (now() AT TIME ZONE o.timezone)::date) AS effective_date
+                FROM vms.work_plan wp
+                JOIN vms.organization o ON o.id = wp.organization_id
+                WHERE wp.id = :plan
+            )
+            UPDATE vms.work_plan_member AS m
+            SET valid_period = daterange(lower(m.valid_period), GREATEST(lower(m.valid_period), effective.effective_date), '[)')
+            FROM effective
+            WHERE m.work_plan_id = :plan AND m.role_in_plan = 'LEADER' AND upper_inf(m.valid_period)
         """)
         await db.execute(close_old, {"plan": plan_id})
         
         # Pembukaan baris anggota baru
         open_new = text("""
             INSERT INTO vms.work_plan_member (work_plan_id, employee_id, role_in_plan, valid_period)
-            SELECT id, :new_leader, 'LEADER', daterange(CURRENT_DATE, NULL, '[)')  -- terbuka = aktif
-            FROM vms.work_plan WHERE id = :plan
+            SELECT wp.id, :new_leader, 'LEADER', daterange(
+                GREATEST(lower(wp.period), (now() AT TIME ZONE o.timezone)::date), NULL, '[)')
+            FROM vms.work_plan wp
+            JOIN vms.organization o ON o.id = wp.organization_id
+            WHERE wp.id = :plan
         """)
         await db.execute(open_new, {"new_leader": change.proposed_leader_id, "plan": plan_id})
         

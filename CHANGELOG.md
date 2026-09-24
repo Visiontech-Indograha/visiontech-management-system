@@ -17,11 +17,6 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 - `web/`: Refactor `LoginPage` dan fitur lainnya untuk memakai komponen UI standar yang baru.
 - `web/`: Refactor `Badge` agar memakai warna semantik (misal `bg-success-bg`).
 
-### 🔄 Diubah
-
-#### Migrasi Toast (Web) — 2026-09-24
-- `web/`: Mengganti pustaka notifikasi dari `react-hot-toast` menjadi `sonner` (standar UI baru) dan membersihkan dependensi lama.
-
 #### Arsitektur Backend (Blok A — Refactor) — 2026-09-23
 - `api/app/core/errors.py` — `AppError`, `NotFoundError`, `ConflictError`, `InvalidStateError`, `ForbiddenError` + handler terpusat (semua error → JSON `{ code, message }` Bahasa Indonesia, tidak ada stack trace yang bocor).
 - `api/app/core/time.py` — `utcnow()` dan `jakarta_now()` sebagai sumber tunggal waktu server. `datetime.now()` tidak boleh dipakai di tempat lain.
@@ -114,6 +109,17 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 - RBAC permissions mapping per peran di `app/core/permissions.py`.
 
 - `docs/PLAN-PERBAIKAN-TEMUAN.md` (2026-09-23) — plan perbaikan 7 segmen (definisi, pohon isu, prioritas, rencana kerja, 5×mengapa, sintesis, pencegahan) + antrean turunan T-01…T-13. Dikerjakan sebelum A-3.
+
+### 🔄 Diubah
+
+#### Migrasi Toast (Web) — 2026-09-24
+- `web/`: Mengganti pustaka notifikasi dari `react-hot-toast` menjadi `sonner` (pustaka resmi di dok 14) dan membersihkan dependensi lama.
+
+#### Ukuran kontrol sesuai dok 18 (Web) — 2026-09-24
+- `web/src/components/ui/button.tsx`: tinggi bawaan 44px (`h-11`); varian kecil (`sm`, `xs`, ikon kecil) hanya mengecil di `lg+` dan area sentuhnya tetap 44px lewat pseudo-elemen.
+- `web/src/components/ui/input.tsx`: tinggi 44px dan teks selalu 16px (`md:text-sm` dicabut — dok 18 "input selalu 16 px").
+- `checkbox`/`switch`: area sentuh 44×44px. `LoginPage`: `max-w-[400px]` → `max-w-sm`.
+- Catatan: varian `xs` terlihat 28px di `lg+`, di bawah ukuran terkecil dok 18 (36px) — dirapikan menyusul.
 
 ### 🔧 Diperbaiki
 

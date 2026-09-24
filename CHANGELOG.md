@@ -115,6 +115,9 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ### 🔄 Diubah
 
+#### Skema API untuk web (Web) — 2026-09-24
+- `web/package.json`: skrip `gen:api:export` kini menulis `web/openapi.json` dari `api/` yang sekarang (sebelumnya menunjuk `../backend` lama), UTF-8 tanpa BOM. Catatan: memakai `api\.venv\Scripts\python` — hanya berjalan di Windows; perlu varian lintas-platform sebelum dipakai di CI.
+
 #### Ukuran Tombol Sentuh (Web) — 2026-09-24
 - `web/`: Mengubah ukuran visual tombol varian `xs` dan `icon-xs` menjadi minimum `h-9` (36px) pada layar lebar (`lg+`), dengan padding tersembunyi `after:-inset-y-1` untuk mempertahankan target area sentuh di 44px sesuai ketetapan desain.
 

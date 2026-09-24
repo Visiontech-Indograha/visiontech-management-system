@@ -1,6 +1,6 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 import { useSession } from "@/app/session";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/VmsDialog";

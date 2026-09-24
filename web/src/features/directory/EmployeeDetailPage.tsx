@@ -1,5 +1,5 @@
 import { useState } from "react";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 import { Link, useParams } from "react-router-dom";
 import { useSession } from "@/app/session";
 import { Badge } from "@/components/ui/Badge";

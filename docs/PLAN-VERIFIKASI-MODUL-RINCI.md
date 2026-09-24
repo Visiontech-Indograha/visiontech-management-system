@@ -115,7 +115,7 @@ Centang hanya setelah commit di-push.
   `repositories/attendance_repo.py`, `services/plan_service.py`, `services/attendance_service.py`,
   `services/document_service.py`, `services/pdf_service.py` (tak diimpor; E9). Uji penjaga:
   setiap modul di `services/` & `repositories/` diimpor kode aplikasi. Pengecualian V-01 dikosongkan.
-- [ ] **V-15 · Trigger audit menemukan organisasi** (migrasi 0006; 0004 dipakai V-07, 0005 dipakai V-13): untuk baris tanpa
+- [x] **V-15 · Trigger audit menemukan organisasi** (migrasi 0006; 0004 dipakai V-07, 0005 dipakai V-13): untuk baris tanpa
   `organization_id`, ambil dari `work_plan`/`asset` terkait sebelum `current_org_id()`. Uji:
   hapus `asset_allocation` tanpa konteks → berhasil & tercatat di audit dengan organisasi benar.
 - [x] **V-17 · Kebijakan akses berkas** (temuan V-09): `GET /files/{file_id}/url` hanya memeriksa

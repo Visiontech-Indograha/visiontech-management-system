@@ -1,15 +1,13 @@
-import { Link } from "react-router-dom";
+﻿import { Link } from "react-router-dom";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { useSession } from "@/app/session";
-import { HomeAttendance } from "@/features/attendance/HomeAttendance";
 
 export function HomePage() {
-  const { me, can } = useSession();
+  const { me } = useSession();
   return (
     <>
       <PageHeader title="Beranda" />
       <p className="text-mist">Selamat datang, {me?.full_name}.</p>
-      {can("attendance:submit") && <HomeAttendance />}
     </>
   );
 }

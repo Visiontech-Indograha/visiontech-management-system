@@ -10,7 +10,6 @@ import {
   
   
 } from "@/features/master/pages";
-import { AttendancePage } from "@/features/attendance/AttendancePage";
 import { DirectoryPage } from "@/features/directory/DirectoryPage";
 import { EmployeeDetailPage } from "@/features/directory/EmployeeDetailPage";
 import { MyDocumentsPage } from "@/features/directory/MyDocuments";
@@ -25,8 +24,6 @@ const PAGES: Record<string, ReactNode> = {
   "/users": <UsersPage />,
   "/audit-logs": <AuditLogPage />,
   "/directory": <DirectoryPage />,
-  "/attendance": <AttendancePage mode="all" />,
-  "/attendance/team": <AttendancePage mode="team" />,
   "/my-documents": <MyDocumentsPage />,
   "/master/sites": <SitesPage />,
 };

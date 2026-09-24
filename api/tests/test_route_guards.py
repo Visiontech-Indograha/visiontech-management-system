@@ -41,6 +41,12 @@ SELF_SERVICE = {
 GUARDED_IN_HANDLER = {
     ("POST", "/hse/incidents"): "check_plan_access(LEADER_OR_MEMBER) untuk work_plan_id di badan",
     ("GET", "/files/{file_id}/url"): "check_file_access (V-17): pemilik/HR/peninjau/penglihat SK, selain itu 404",
+    # V-22: kewenangan bergantung jenis usulan; ketua baru adendum personel belum tentu anggota SK.
+    ("POST", "/work-plans/{plan_id}/changes"): "PlanChangeService: EXTEND=ketua, PERSONNEL=PM unit/OPS",
+    ("POST", "/changes/{change_id}/approve"): "PlanChangeService: PM unit/OPS",
+    ("POST", "/changes/{change_id}/accept"): "PlanChangeService: ketua (EXTEND) / ketua baru (PERSONNEL)",
+    ("POST", "/changes/{change_id}/reject"): "PlanChangeService: ketua/PM (EXTEND) / ketua baru (PERSONNEL)",
+    ("POST", "/changes/{change_id}/withdraw"): "PlanChangeService: PM unit/OPS, hanya PERSONNEL",
 }
 _GUARDS = ("permission_checker", "plan_access.", "plan_day_access.", "allocation_plan_access.",
            "incident_plan_access.")

@@ -46,18 +46,33 @@ def purge_organization(conn: psycopg2.extensions.connection, org_id: str, max_ro
             match = _BLOCKER.search(str(exc))
             if not match:
                 raise
-            blocker = match.group(1)
-            cur = conn.cursor()
-            cur.execute("SELECT set_config('app.organization_id', %s, true)", (org_id,))
-            cur.execute("SELECT column_name FROM information_schema.columns "
-                        "WHERE table_schema = 'vms' AND table_name = %s", (blocker,))
-            columns = {c for (c,) in cur.fetchall()}
+            _delete_blocker(conn, org_id, match.group(1), max_rounds)
+    raise RuntimeError(f"Organisasi uji {org_id} tidak dapat dihapus setelah {max_rounds} putaran")
+
+
+def _delete_blocker(conn: psycopg2.extensions.connection, org_id: str, blocker: str, depth: int) -> None:
+    """Hapus baris penahan milik organisasi. Bila penahan itu sendiri ditahan tabel lain (mis.
+    plan_change.document_id → plan_document → employee), urai lebih dulu penahannya — berjenjang."""
+    for _ in range(depth):
+        cur = conn.cursor()
+        cur.execute("SELECT set_config('app.organization_id', %s, true)", (org_id,))
+        cur.execute("SELECT column_name FROM information_schema.columns "
+                    "WHERE table_schema = 'vms' AND table_name = %s", (blocker,))
+        columns = {c for (c,) in cur.fetchall()}
+        try:
             if "organization_id" in columns:
                 cur.execute(f"DELETE FROM vms.{blocker} WHERE organization_id = %s", (org_id,))
             else:
                 ref = next((c for c in _OWNED_IDS if c in columns), None)
                 if ref is None:
-                    raise RuntimeError(f"Tidak tahu cara menghapus penahan {blocker} (kolom: {sorted(columns)})") from exc
+                    raise RuntimeError(f"Tidak tahu cara menghapus penahan {blocker} (kolom: {sorted(columns)})")
                 cur.execute(f"DELETE FROM vms.{blocker} WHERE {ref} IN ({_OWNED_IDS[ref]})", {"org": org_id})
             conn.commit()
-    raise RuntimeError(f"Organisasi uji {org_id} tidak dapat dihapus setelah {max_rounds} putaran")
+            return
+        except psycopg2.errors.ForeignKeyViolation as exc:
+            conn.rollback()
+            match = _BLOCKER.search(str(exc))
+            if not match:
+                raise
+            _delete_blocker(conn, org_id, match.group(1), depth - 1)
+    raise RuntimeError(f"Penahan {blocker} tidak dapat dihapus")

@@ -30,8 +30,8 @@ def _add_other_unit_pm(world: World) -> str:
 
 def _extension(client, world, plan_id, who):
     end = jakarta_now().date() + timedelta(days=5)
-    return client.post(f"/work-plans/{plan_id}/changes/extension", headers=world.headers(client, who),
-                       json={"new_period_end": end.isoformat(), "reason": "Material terlambat"})
+    return client.post(f"/work-plans/{plan_id}/changes", headers=world.headers(client, who),
+                       json={"type": "EXTEND", "new_period_end": end.isoformat(), "reason": "Material terlambat"})
 
 
 # ── Aturan murni ───────────────────────────────────────────────────────────────────────────────
@@ -77,7 +77,7 @@ def test_draft_plan_is_managed_only_by_its_unit(client, world, who, expected):
     ("pm", 200, 409, 403),        # boleh mengelola (status sudah bukan DRAFT → 409), bukan ketua
     ("ops", 200, 409, 403),
     ("admin", 200, 409, 403),
-    ("leader", 200, 403, 200),    # hanya ketua menurut SK yang mengajukan perpanjangan
+    ("leader", 200, 403, 201),    # hanya ketua menurut SK yang mengajukan perpanjangan
     ("member", 200, 403, 403),
     ("asset", 200, 403, 403),
     ("pm_other", 404, 404, 404),
@@ -95,7 +95,7 @@ def test_running_plan_actions_follow_standing(client, world, who, view, publish,
     requested = _extension(client, world, plan_id, who)
     assert requested.status_code == extension, requested.text
     stored = sync_query("SELECT count(*) FROM vms.plan_change WHERE work_plan_id = %s", (plan_id,))[0][0]
-    assert stored == (1 if extension == 200 else 0)
+    assert stored == (1 if extension == 201 else 0)
 
 
 def test_plan_of_another_organisation_is_404(client, world, other_world):
@@ -164,21 +164,18 @@ def test_replaced_leader_loses_leader_rights_and_keeps_member_rights_only_if_lis
     """Dok 07 R3. Adendum berlaku di hari pertama SK — baris ketua lama ditutup pada hari yang sama."""
     plan_id, _ = run_plan_to_in_progress(client, world)
     new_leader = world.add_person("leader2", None)
-    old_leader = world.employees["leader"]
-    if old_leader_stays_member:
-        sync_query("INSERT INTO vms.work_plan_member (work_plan_id, employee_id, role_in_plan, valid_period) "
-                   "VALUES (%s, %s, 'MEMBER', daterange(CURRENT_DATE, NULL, '[)'))", (plan_id, old_leader))
-    change_id = sync_query(
-        "WITH _ctx AS (SELECT set_config('app.organization_id', %s, true)) "
-        "INSERT INTO vms.plan_change (work_plan_id, change_type, reason, proposed_leader_id, base_revision, "
-        "proposed_revision, requested_by) SELECT id, 'PERSONNEL', 'Ketua dipindahtugaskan', %s, revision, "
-        "revision + 1, pm_employee_id FROM vms.work_plan, _ctx WHERE id = %s RETURNING id",
-        (world.org_id, new_leader, plan_id))[0][0]
-    approved = client.post(f"/work-plans/{plan_id}/changes/{change_id}/approve", headers=world.headers(client, "pm"))
-    assert approved.status_code == 200, approved.text
+    members = [world.employees["member"]] + ([world.employees["leader"]] if old_leader_stays_member else [])
+    # Alur sungguhan (V-22): PM mengajukan adendum personel → ketua baru menerimanya.
+    requested = client.post(f"/work-plans/{plan_id}/changes", headers=world.headers(client, "pm"), json={
+        "type": "PERSONNEL", "leader_employee_id": new_leader, "member_employee_ids": members,
+        "reason": "Ketua dipindahtugaskan"})
+    assert requested.status_code == 201, requested.text
+    accepted = client.post(f"/changes/{requested.json()['id']}/accept", headers=world.headers(client, "leader2"),
+                           json={})
+    assert accepted.status_code == 200, accepted.text
 
     # Ketua baru memegang hak ketua hari itu juga; ketua lama ditolak.
-    assert _extension(client, world, plan_id, "leader2").status_code == 200
+    assert _extension(client, world, plan_id, "leader2").status_code == 201
     assert _extension(client, world, plan_id, "leader").status_code == (403 if old_leader_stays_member else 404)
     # Hak anggota (melihat SK) tetap ada hanya bila masih terdaftar.
     assert client.get(f"/work-plans/{plan_id}", headers=world.headers(client, "leader")).status_code \

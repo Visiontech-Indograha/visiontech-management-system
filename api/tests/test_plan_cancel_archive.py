@@ -38,9 +38,9 @@ def _team(client, world: World, plan_id: str) -> None:
 def test_cancel_withdraws_documents_and_open_changes(client, world):
     plan_id, _ = run_plan_to_in_progress(client, world)
     end = jakarta_now().date() + timedelta(days=5)
-    change = client.post(f"/work-plans/{plan_id}/changes/extension", headers=world.headers(client, "leader"),
-                         json={"new_period_end": end.isoformat(), "reason": "Material terlambat"})
-    assert change.status_code == 200, change.text
+    change = client.post(f"/work-plans/{plan_id}/changes", headers=world.headers(client, "leader"),
+                         json={"type": "EXTEND", "new_period_end": end.isoformat(), "reason": "Material terlambat"})
+    assert change.status_code == 201, change.text
 
     response = _do(client, world, plan_id, "cancel")
 

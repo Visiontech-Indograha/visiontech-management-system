@@ -52,6 +52,22 @@ class PlanMemberRepo(BaseRepo):
             {"ids": [str(e) for e in employee_ids], "plan": plan_id},
         )
 
+    async def schedule_conflicts_until(self, employee_ids: Iterable[UUID | str], plan_id: UUID | str,
+                                       new_end: date) -> Sequence[Any]:
+        """Seperti schedule_conflicts, tetapi untuk periode yang diperpanjang sampai `new_end`
+        (domain.js checkSchedule(plan, newEnd) saat menyetujui perpanjangan)."""
+        return await self.fetchall(
+            """
+            SELECT e.employee_id::text AS employee_id, c.work_plan_id::text AS work_plan_id, c.number, c.title
+            FROM unnest(CAST(:ids AS uuid[])) AS e(employee_id)
+            CROSS JOIN LATERAL vms.personnel_conflict(
+                e.employee_id,
+                (SELECT daterange(lower(period), CAST(:new_end AS date) + 1, '[)') FROM vms.work_plan WHERE id = :plan),
+                :plan) AS c
+            """,
+            {"ids": [str(e) for e in employee_ids], "plan": plan_id, "new_end": new_end},
+        )
+
     async def replace_team(
         self, plan_id: UUID | str, start: date, leader_id: UUID | str | None, member_ids: Sequence[UUID | str]
     ) -> None:

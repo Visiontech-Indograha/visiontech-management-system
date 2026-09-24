@@ -2,6 +2,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, get_current_user, get_db_with_user, require_permission
@@ -13,6 +14,7 @@ from app.api.guards import (
     plan_access,
     plan_day_access,
 )
+from app.core.errors import trigger_rule_error
 from app.core.permissions import Permission
 from app.repositories.plan_access_repo import PlanAccessRepo
 from app.schemas.plan import (
@@ -92,6 +94,12 @@ async def create_plan(
             revision=row.revision, row_version=row.row_version,
             cancellation_reason=row.cancellation_reason
         )
+    except IntegrityError as e:
+        # Aturan dari trigger (mis. bentrok jadwal ketua) sampai ke pengguna; sisanya tetap DB_ERROR.
+        rule = trigger_rule_error(e)
+        if rule:
+            raise rule from None
+        raise HTTPException(status_code=400, detail={"code": "DB_ERROR", "message": str(e)})
     except Exception as e:
         raise HTTPException(status_code=400, detail={"code": "DB_ERROR", "message": str(e)})
 
@@ -156,10 +164,14 @@ async def update_plan(
             """)
             start = data.period_start or row.period_start
             end = data.period_end or row.period_end
-            await db.execute(add_member, {
-                "plan": plan_id, "emp": data.leader_employee_id,
-                "start": start, "end": end
-            })
+            try:
+                await db.execute(add_member, {
+                    "plan": plan_id, "emp": data.leader_employee_id,
+                    "start": start, "end": end
+                })
+            except IntegrityError as exc:
+                # Bentrok jadwal ketua (trigger) → 409 berpesan jelas; sebelumnya 500.
+                raise trigger_rule_error(exc) or exc from None
             
     updates.append("row_version = row_version + 1")
     

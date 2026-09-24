@@ -15,7 +15,7 @@ from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, get_current_user, get_db_with_user
-from app.core.errors import ForbiddenError, NotFoundError
+from app.core.errors import AppError, ForbiddenError, NotFoundError
 from app.core.permissions import Permission
 from app.repositories.file_access_repo import FileAccessRepo
 from app.repositories.org_ref_repo import OrgRefRepo
@@ -45,6 +45,15 @@ class PlanAccess:
     manages: bool
     is_leader: bool
     is_member: bool
+
+
+STAGE_MISMATCH = "Tahap work plan belum sesuai untuk tindakan ini."  # domain.js requireStatus
+
+
+def require_plan_status(access: PlanAccess, *allowed: str) -> None:
+    """`domain.js` requireStatus — tindakan hanya pada tahap SK tertentu (V-11). → 409 INVALID_STATE."""
+    if access.plan.status not in allowed:
+        raise AppError("INVALID_STATE", STAGE_MISMATCH, status=409)
 
 
 def satisfies(need: PlanNeed, *, manages: bool, is_leader: bool, is_member: bool) -> bool:

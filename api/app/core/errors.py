@@ -79,6 +79,17 @@ class StorageError(AppError):
         super().__init__("STORAGE_ERROR", detail, status=500)
 
 
+def trigger_rule_message(exc: BaseException) -> str | None:
+    """Pesan aturan bisnis dari trigger kita (`RAISE EXCEPTION '…' USING ERRCODE = '23514'`, db/02),
+    atau None. CHECK constraint biasa juga 23514 tetapi membawa `constraint_name` dan pesan bahasa
+    Inggris — itu tetap disembunyikan sebagai DB_ERROR."""
+    cause = getattr(getattr(exc, "orig", None), "__cause__", None)
+    if getattr(cause, "sqlstate", None) == "23514" and not getattr(cause, "constraint_name", None):
+        message = getattr(cause, "message", None)
+        return str(message) if message else None
+    return None
+
+
 # ── FastAPI exception handler ──────────────────────────────────────────────────
 def _error_response(status: int, code: str, message: str, details: dict[str, Any] | None = None) -> JSONResponse:
     return JSONResponse(

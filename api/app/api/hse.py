@@ -12,7 +12,9 @@ from app.api.guards import (
     day_plan_access,
     ensure_same_org,
     incident_plan_access,
+    require_plan_status,
 )
+from app.core.enums import PlanStatus
 from app.core.errors import ForbiddenError, ValidationError
 from app.core.permissions import RoleCode
 from app.repositories.org_clock_repo import OrgClockRepo
@@ -42,7 +44,8 @@ async def report_incident(
     db: AsyncSession = Depends(get_db_with_user)
 ):
     # domain.js REPORT_INCIDENT: hanya ketua atau anggota pekerjaan ini (V-09). SK asing/tak terlihat → 404.
-    await check_plan_access(db, data.work_plan_id, current_user, PlanNeed.LEADER_OR_MEMBER)
+    standing = await check_plan_access(db, data.work_plan_id, current_user, PlanNeed.LEADER_OR_MEMBER)
+    require_plan_status(standing, PlanStatus.IN_PROGRESS)  # domain.js REPORT_INCIDENT (V-11)
     await ensure_same_org(db, current_user.organization_id, files=data.evidence_file_ids)
     emp_q = text("SELECT employee_id FROM vms.app_user WHERE id = :uid")
     my_emp = (await db.execute(emp_q, {"uid": current_user.user_id})).scalar()
@@ -111,6 +114,7 @@ async def upsert_daily_report(
     db: AsyncSession = Depends(get_db_with_user)
 ):
     current_user = access.user
+    require_plan_status(access, PlanStatus.IN_PROGRESS)  # domain.js SAVE/SUBMIT_REPORT (V-11)
     await _ensure_day_reached(db, day_id)
     await ensure_same_org(db, current_user.organization_id, files=data.evidence_file_ids)
     emp_q = text("SELECT employee_id FROM vms.app_user WHERE id = :uid")
@@ -144,6 +148,7 @@ async def submit_daily_report(
     db: AsyncSession = Depends(get_db_with_user)
 ):
     current_user = access.user
+    require_plan_status(access, PlanStatus.IN_PROGRESS)  # domain.js SAVE/SUBMIT_REPORT (V-11)
     await _ensure_day_reached(db, day_id)
     emp_q = text("SELECT employee_id FROM vms.app_user WHERE id = :uid")
     my_emp = (await db.execute(emp_q, {"uid": current_user.user_id})).scalar()

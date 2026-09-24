@@ -2,11 +2,13 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, get_current_user, get_db_with_user, require_permission
 from app.api.guards import PlanAccess, PlanNeed, allocation_plan_access, ensure_same_org
-from app.core.errors import ForbiddenError
+from app.core.enums import PlanStatus
+from app.core.errors import AppError, ForbiddenError, ValidationError, trigger_rule_message
 from app.core.permissions import Permission, RoleCode
 from app.schemas.asset import (
     AssetAllocationCreate,
@@ -68,10 +70,25 @@ async def allocate_asset(
     
     if not asset or asset.status != 'AVAILABLE':
         raise HTTPException(status_code=400, detail="Aset tidak tersedia atau sudah dialokasikan.")
-        
-    if asset.kind == 'VEHICLE' and not data.driver_employee_id:
-        raise HTTPException(status_code=400, detail="Pengemudi wajib diisi untuk aset kendaraan.")
-        
+
+    # domain.js RESERVE_ASSET (V-11): SK masih aktif; kendaraan wajib berpengemudi dari tim penugasan.
+    plan_q = text("""
+        SELECT wp.status,
+               wp.leader_employee_id = CAST(:driver AS uuid) OR EXISTS (
+                   SELECT 1 FROM vms.work_plan_member m
+                   WHERE m.work_plan_id = wp.id AND m.employee_id = CAST(:driver AS uuid)
+                     AND upper_inf(m.valid_period)) AS driver_on_team
+        FROM vms.work_plan wp WHERE wp.id = :plan
+    """)
+    plan = (await db.execute(plan_q, {"plan": data.work_plan_id, "driver": data.driver_employee_id})).fetchone()
+    if plan.status in (PlanStatus.COMPLETED, PlanStatus.CANCELLED):
+        raise AppError("INVALID_STATE", "Pilih work plan yang masih aktif.", status=409)
+    if asset.kind == 'VEHICLE':
+        if not data.driver_employee_id:
+            raise ValidationError("Pilih pengemudi untuk aset kendaraan.")
+        if not plan.driver_on_team:
+            raise ValidationError("Pengemudi harus bagian dari tim penugasan.")
+
     ins = text("""
         INSERT INTO vms.asset_allocation (
             asset_id, work_plan_id, driver_employee_id, allocated_by
@@ -90,6 +107,14 @@ async def allocate_asset(
         await db.execute(text("UPDATE vms.asset SET status = 'IN_USE' WHERE id = :id"), {"id": data.asset_id})
         
         return AssetAllocationResponse(**allocation._mapping)
+    except IntegrityError as e:
+        # Aturan SIM hidup di trigger asset_allocation_driver — teruskan pesannya (V-11).
+        rule = trigger_rule_message(e)
+        if rule:
+            raise ValidationError(rule) from None
+        if "asset_allocation_no_overlap" in str(e):
+            raise HTTPException(status_code=409, detail="Aset sudah dialokasikan ke pekerjaan lain pada waktu yang sama (overlap).")
+        raise HTTPException(status_code=400, detail={"code": "DB_ERROR", "message": str(e)})
     except Exception as e:
         if "asset_allocation_no_overlap" in str(e):
             raise HTTPException(status_code=409, detail="Aset sudah dialokasikan ke pekerjaan lain pada waktu yang sama (overlap).")

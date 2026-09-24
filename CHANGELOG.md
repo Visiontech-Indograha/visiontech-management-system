@@ -11,6 +11,9 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ### ✨ Ditambahkan
 
+#### Fitur File URL (V-17) — 2026-09-24
+- `web/`: Menambahkan komponen `FilePreview` untuk menampilkan pratinjau thumbnail gambar yang dapat diklik atau tautan unduh dokumen, terintegrasi dengan endpoint presigned URL MinIO (`/api/v1/files/{id}/url`), lengkap dengan penanganan URL kadaluwarsa.
+
 #### Web Foundation (shadcn/ui) — 2026-09-24
 - `web/`: Fondasi UI dengan `shadcn/ui`, `Tailwind CSS v4`, dan integrasi variabel tema VMS (`theme.css`).
 - `web/`: Komponen dasar (button, input, label, dialog, alert, avatar, dll) dari shadcn.
@@ -111,6 +114,9 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 - `docs/PLAN-PERBAIKAN-TEMUAN.md` (2026-09-23) — plan perbaikan 7 segmen (definisi, pohon isu, prioritas, rencana kerja, 5×mengapa, sintesis, pencegahan) + antrean turunan T-01…T-13. Dikerjakan sebelum A-3.
 
 ### 🔄 Diubah
+
+#### Ukuran Tombol Sentuh (Web) — 2026-09-24
+- `web/`: Mengubah ukuran visual tombol varian `xs` dan `icon-xs` menjadi minimum `h-9` (36px) pada layar desktop (md+), dengan padding tersembunyi `after:-inset-y-1` untuk mempertahankan target area sentuh di 44px sesuai ketetapan desain.
 
 #### Migrasi Toast (Web) — 2026-09-24
 - `web/`: Mengganti pustaka notifikasi dari `react-hot-toast` menjadi `sonner` (pustaka resmi di dok 14) dan membersihkan dependensi lama.

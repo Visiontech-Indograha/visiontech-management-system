@@ -21,11 +21,11 @@ const buttonVariants = cva(
       },
       size: {
         default: "h-11 px-4 py-2 has-[>svg]:px-3",
-        xs: "h-11 lg:h-7 gap-1 rounded-md px-2 text-xs has-[>svg]:px-1.5 [&_svg:not([class*='size-'])]:size-3 relative lg:after:absolute lg:after:content-[''] lg:after:-inset-y-2 lg:after:inset-x-0",
+        xs: "h-11 lg:h-9 gap-1 rounded-md px-2 text-xs has-[>svg]:px-1.5 [&_svg:not([class*='size-'])]:size-3 relative lg:after:absolute lg:after:content-[''] lg:after:-inset-y-1 lg:after:inset-x-0",
         sm: "h-11 lg:h-9 gap-1.5 rounded-md px-3 has-[>svg]:px-2.5 relative lg:after:absolute lg:after:content-[''] lg:after:-inset-y-1 lg:after:inset-x-0",
         lg: "h-12 rounded-md px-6 has-[>svg]:px-4",
         icon: "size-11",
-        "icon-xs": "size-11 lg:size-7 rounded-md [&_svg:not([class*='size-'])]:size-3 relative lg:after:absolute lg:after:content-[''] lg:after:-inset-y-2 lg:after:-inset-x-2",
+        "icon-xs": "size-11 lg:size-9 rounded-md [&_svg:not([class*='size-'])]:size-3 relative lg:after:absolute lg:after:content-[''] lg:after:-inset-y-1 lg:after:-inset-x-1",
         "icon-sm": "size-11 lg:size-9 relative lg:after:absolute lg:after:content-[''] lg:after:-inset-y-1 lg:after:-inset-x-1",
         "icon-lg": "size-12",
       },

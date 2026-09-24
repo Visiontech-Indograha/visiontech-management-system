@@ -61,11 +61,7 @@ export function ChangePasswordPage() {
   return (
     <main className="mx-auto mt-16 w-full max-w-sm px-4">
       <h1 className="mb-1 text-2xl font-semibold">Ganti password</h1>
-      <p className="mb-6 text-mist">
-        {me.must_change_password
-          ? "Anda harus mengganti password sementara sebelum memakai VMS."
-          : "Masukkan password saat ini dan password baru."}
-      </p>
+      <p className="mb-6 text-mist">Masukkan password saat ini dan password baru.</p>
       <form onSubmit={onSubmit} noValidate>
         {formError && (
           <p role="alert" className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">

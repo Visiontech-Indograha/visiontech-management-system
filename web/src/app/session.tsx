@@ -8,7 +8,6 @@ interface SessionState {
   me: Me | null;
   /** false selama sesi dipulihkan dari cookie refresh saat aplikasi dibuka. */
   ready: boolean;
-  can: (...perms: string[]) => boolean;
   login: (email: string, password: string, admin?: boolean) => Promise<Me>;
   logout: () => Promise<void>;
   /** Terapkan token baru (mis. setelah ganti password) lalu muat ulang /auth/me. */
@@ -31,10 +30,6 @@ export const useSession = create<SessionState>((set, get) => {
   return {
     me: preset,
     ready: skipRestore,
-    can: (...perms) => {
-      const { me } = get();
-      return !!me && perms.every((p) => me.permissions.includes(p));
-    },
     login: async (email, password, admin = false) => {
       // For now we use the same endpoint, in future we can split if needed
       const endpoint = admin ? "/auth/login" : "/auth/login";

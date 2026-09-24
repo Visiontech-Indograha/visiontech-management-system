@@ -90,6 +90,26 @@ def trigger_rule_message(exc: BaseException) -> str | None:
     return None
 
 
+# Kode 23xxx yang dipakai `RAISE EXCEPTION` di trigger kita (db/02) → galat untuk pengguna.
+_TRIGGER_CODES: dict[str, tuple[str, int]] = {
+    "23514": ("VALIDATION_ERROR", 422),     # aturan data (SIM, radius, dokumen terkunci, …)
+    "23505": ("PERSONNEL_CONFLICT", 409),   # bentrok jadwal personel (tg_member_no_conflict)
+    "23503": ("NOT_FOUND", 404),            # rujukan tanda tangan tidak dikenal
+}
+
+
+def trigger_rule_error(exc: BaseException) -> AppError | None:
+    """AppError berisi pesan Indonesia dari trigger kita, atau None bila galatnya bukan dari trigger
+    (pelanggaran constraint sungguhan membawa `constraint_name` — tetap disembunyikan)."""
+    cause = getattr(getattr(exc, "orig", None), "__cause__", None)
+    sqlstate = getattr(cause, "sqlstate", None)
+    message = getattr(cause, "message", None)
+    if sqlstate in _TRIGGER_CODES and message and not getattr(cause, "constraint_name", None):
+        code, status = _TRIGGER_CODES[sqlstate]
+        return AppError(code, str(message), status=status)
+    return None
+
+
 # ── FastAPI exception handler ──────────────────────────────────────────────────
 def _error_response(status: int, code: str, message: str, details: dict[str, Any] | None = None) -> JSONResponse:
     return JSONResponse(

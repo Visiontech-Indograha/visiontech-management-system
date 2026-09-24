@@ -63,6 +63,15 @@ class PlanAccessRepo(BaseRepo):
     async def plan_of_day(self, day_id: UUID | str) -> Any:
         return await self.scalar("SELECT work_plan_id FROM vms.work_plan_day WHERE id = :day", {"day": day_id})
 
+    async def plan_of_allocation(self, allocation_id: UUID | str) -> Any:
+        return await self.scalar(
+            "SELECT work_plan_id FROM vms.asset_allocation WHERE id = :alloc", {"alloc": allocation_id})
+
+    async def plan_of_incident(self, incident_id: UUID | str, org_id: UUID | str) -> Any:
+        return await self.scalar(
+            "SELECT work_plan_id FROM vms.incident_report WHERE id = :inc AND organization_id = CAST(:org AS uuid)",
+            {"inc": incident_id, "org": org_id})
+
     async def unit_standing(self, unit_id: UUID | str, org_id: UUID | str, user_id: UUID | str) -> Any:
         """(ada di organisasi ini?, boleh dikelola pengguna?) — untuk membuat SK di sebuah unit."""
         return await self.fetchone(

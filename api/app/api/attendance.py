@@ -146,9 +146,13 @@ async def explain_attendance(
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_with_user)
 ):
-    """P4-4: Karyawan memberi penjelasan untuk absensi bermasalah."""
-    upd = text("UPDATE vms.attendance SET explanation = :exp WHERE id = :id RETURNING id")
-    res = await db.execute(upd, {"exp": data.explanation, "id": att_id})
+    """P4-4: Karyawan memberi penjelasan untuk absensi bermasalah — hanya absensinya sendiri (V-09)."""
+    upd = text("""
+        UPDATE vms.attendance SET explanation = :exp
+        WHERE id = :id AND employee_id = (SELECT employee_id FROM vms.app_user WHERE id = :uid)
+        RETURNING id
+    """)
+    res = await db.execute(upd, {"exp": data.explanation, "id": att_id, "uid": current_user.user_id})
     if not res.scalar():
         raise HTTPException(status_code=404, detail="Absensi tidak ditemukan.")
     return {"message": "Penjelasan ditambahkan."}

@@ -68,7 +68,8 @@ def run_plan_to_in_progress(client, world: World) -> tuple[str, list[str]]:
 
 
 def test_asset_cycle_reserve_return_verify(client, world):
-    plan_id, _ = create_draft_plan(client, world, start_offset_days=7)
+    # Pengembalian diajukan ketua menurut SK peminjam (V-09); SK draf belum terlihat oleh ketua.
+    plan_id, _ = run_plan_to_in_progress(client, world)
     asset_officer = world.headers(client, "asset")
 
     asset = client.post("/assets", headers=asset_officer,

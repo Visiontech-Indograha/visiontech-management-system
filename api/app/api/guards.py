@@ -119,6 +119,34 @@ def plan_access(need: PlanNeed) -> Callable[..., Awaitable[PlanAccess]]:
     return guard
 
 
+def allocation_plan_access(need: PlanNeed) -> Callable[..., Awaitable[PlanAccess]]:
+    """Dependency untuk rute ber-`{alloc_id}` — kewenangan mengikuti SK peminjam aset."""
+    async def guard(
+        alloc_id: UUID,
+        current_user: CurrentUser = Depends(get_current_user),
+        db: AsyncSession = Depends(get_db_with_user),
+    ) -> PlanAccess:
+        plan_id = await PlanAccessRepo(db).plan_of_allocation(alloc_id)
+        if plan_id is None:
+            raise NotFoundError("Alokasi aset")
+        return await check_plan_access(db, plan_id, current_user, need)
+    return guard
+
+
+def incident_plan_access(need: PlanNeed) -> Callable[..., Awaitable[PlanAccess]]:
+    """Dependency untuk rute ber-`{inc_id}` — kewenangan mengikuti SK tempat insiden terjadi."""
+    async def guard(
+        inc_id: UUID,
+        current_user: CurrentUser = Depends(get_current_user),
+        db: AsyncSession = Depends(get_db_with_user),
+    ) -> PlanAccess:
+        plan_id = await PlanAccessRepo(db).plan_of_incident(inc_id, current_user.organization_id)
+        if plan_id is None:
+            raise NotFoundError("Insiden")
+        return await check_plan_access(db, plan_id, current_user, need)
+    return guard
+
+
 def day_plan_access(need: PlanNeed) -> Callable[..., Awaitable[PlanAccess]]:
     """Dependency untuk rute ber-`{day_id}` (sampai V-16 memindahkannya ke `/work-plans/{id}/days/{day_id}`)."""
     async def guard(

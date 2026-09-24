@@ -100,7 +100,7 @@ Centang hanya setelah commit di-push.
 - [x] **V-10 · Tanggal dari server**: laporan hanya pada/setelah tanggal pelaksanaan
   (`domain.js:360,372`, regresi **R6**); insiden bertanggal hari ini menurut server;
   semua lewat `core/time.py`. Uji: tanggal belum tiba → 422 berbahasa Indonesia.
-- [ ] **V-11 · Status SK sebagai syarat**: laporan & insiden hanya untuk `IN_PROGRESS`;
+- [x] **V-11 · Status SK sebagai syarat**: laporan & insiden hanya untuk `IN_PROGRESS`;
   alokasi aset hanya bila SK bukan `COMPLETED/CANCELLED` (`domain.js:489`); pengemudi kendaraan
   harus anggota tim. Uji per aturan.
 - [ ] **V-12 · Absensi**: sesi terbuka dicegah, satu absensi aktif per hari kecuali ditolak

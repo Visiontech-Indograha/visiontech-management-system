@@ -41,6 +41,18 @@ def create_draft_plan(client, world: World, start_offset_days: int = 0, length_d
 
 
 def run_plan_to_in_progress(client, world: World) -> tuple[str, list[str]]:
+    plan_id, day_ids = run_plan_to_accepted(client, world)
+
+    # START oleh ketua menurut SK (domain.js: LEADER), bukan PM.
+    started = client.post(f"/plans/{plan_id}/start", headers=world.headers(client, "leader"),
+                          json={"row_version": _row_version(plan_id), "reason": ""})
+    assert started.status_code == 200, started.text
+    assert sync_query("SELECT status::text FROM vms.work_plan WHERE id = %s", (plan_id,)) == [("IN_PROGRESS",)]
+    return plan_id, day_ids
+
+
+def run_plan_to_accepted(client, world: World) -> tuple[str, list[str]]:
+    """SK terbit & diterima ketua, belum dimulai (status ACCEPTED)."""
     plan_id, day_ids = create_draft_plan(client, world)
     pm = world.headers(client, "pm")
 
@@ -58,12 +70,6 @@ def run_plan_to_in_progress(client, world: World) -> tuple[str, list[str]]:
                            json={"row_version": _row_version(plan_id), "reason": ""})
     assert accepted.status_code == 200, accepted.text
     assert sync_query("SELECT status::text FROM vms.plan_document WHERE work_plan_id = %s", (plan_id,)) == [("EFFECTIVE",)]
-
-    # START oleh ketua menurut SK (domain.js: LEADER), bukan PM.
-    started = client.post(f"/plans/{plan_id}/start", headers=world.headers(client, "leader"),
-                          json={"row_version": _row_version(plan_id), "reason": ""})
-    assert started.status_code == 200, started.text
-    assert sync_query("SELECT status::text FROM vms.work_plan WHERE id = %s", (plan_id,)) == [("IN_PROGRESS",)]
     return plan_id, day_ids
 
 

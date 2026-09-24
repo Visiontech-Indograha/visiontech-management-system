@@ -15,7 +15,7 @@ const schema = z.object({
 });
 type Values = z.infer<typeof schema>;
 
-/** `/login` untuk semua role kecuali Super Admin; `/admin-login` khusus Super Admin (D-01). */
+/** Kedua halaman login memakai endpoint auth yang sama. */
 export function LoginPage({ admin = false }: { admin?: boolean }) {
   const { me, login } = useSession();
   const navigate = useNavigate();
@@ -40,7 +40,7 @@ export function LoginPage({ admin = false }: { admin?: boolean }) {
 
   return (
     <main className="mx-auto mt-16 w-full max-w-sm px-4">
-      <h1 className="mb-1 text-2xl font-semibold">{admin ? "Masuk sebagai Super Admin" : "Masuk ke VMS"}</h1>
+      <h1 className="mb-1 text-2xl font-semibold">{admin ? "Masuk sebagai Admin" : "Masuk ke VMS"}</h1>
       <p className="mb-6 text-muted-foreground">Visiontech Management System</p>
       <form onSubmit={onSubmit} noValidate className="space-y-4">
         {formError && (

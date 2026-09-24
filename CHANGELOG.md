@@ -10,6 +10,7 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 ## [Unreleased] — `development`
 
 - `web/`: Hapus antarmuka absensi untuk endpoint yang belum tersedia; halaman daftar dan tinjauan menunggu `GET /attendance`.
+- `web/`: Selaraskan sesi `/auth/me`, peran, izin, menu, dan guard ke kontrak API; tahan halaman Site sampai endpoint tersedia.
 
 ### ✨ Ditambahkan
 

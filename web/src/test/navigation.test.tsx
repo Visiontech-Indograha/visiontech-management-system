@@ -5,75 +5,51 @@ import { visibleNav } from "@/app/navigation";
 import { PERMISSIONS } from "@/lib/permissions";
 import { renderRoute } from "./utils";
 
-const labels = (role: string) => visibleNav(MOCK_PERMISSIONS[role]).map((i) => i.label);
+const labels = (permissions: readonly string[]) => visibleNav(permissions).map((item) => item.label);
 
-// Inventaris menu web: docs/06-UI-UX §5
-const EXPECTED: Record<string, string[]> = {
-  super_admin: [
-    "Beranda", "Pengguna", "Direktori",
-    "Site", "Audit log",
-  ],
-  admin: ["Beranda", "Direktori", "Serah terima barang", "Status kendaraan"],
-  team_leader: [
-    "Beranda", "Direktori", "Team", "Work plan", "Progress", "Persetujuan kendaraan", "Laporan",
-    "Site",
-  ],
-  finance: ["Beranda", "Direktori"],
-  hes: ["Beranda", "Direktori", "Serah terima tool/APD"],
-  wtl: ["Beranda", "Plan saya", "Progress", "Barang saya", "Berkas saya"],
-  driver: ["Beranda", "Logbook kendaraan", "Plan team", "Barang saya", "Berkas saya"],
-};
-
-describe("menu per role", () => {
-  for (const [role, expected] of Object.entries(EXPECTED)) {
-    it(`${role} melihat menu sesuai docs`, () => {
-      expect([...labels(role)].sort()).toEqual([...expected].sort());
-    });
-  }
-
-  it("Finance, Admin, dan HES tidak melihat menu work plan (BR-17)", () => {
-    for (const role of ["finance", "admin", "hes"]) {
-      const l = labels(role);
-      expect(l).not.toContain("Work plan");
-      expect(l).not.toContain("Plan saya");
-      expect(l).not.toContain("Plan team");
-    }
+describe("menu berdasarkan izin API", () => {
+  it("menampilkan menu hanya ketika izin API yang sesuai tersedia", () => {
+    expect(labels([])).toEqual(["Beranda"]);
+    expect(labels(["view:users"])).toEqual(["Beranda", "Direktori"]);
+    expect(labels(["manage:users"])).toEqual(["Beranda", "Pengguna"]);
+    expect(labels(["view:documents"])).toEqual(["Beranda", "Berkas saya"]);
+    expect(labels(["view:audit"])).toEqual(["Beranda", "Audit log"]);
   });
 
-  it("semua permission mock dikenal (tidak ada salah ketik)", () => {
-    const known = new Set<string>(PERMISSIONS);
-    for (const perms of Object.values(MOCK_PERMISSIONS)) {
-      for (const p of perms) expect(known.has(p)).toBe(true);
+  it("izin mock sama dengan peta peran API", () => {
+    expect(Object.keys(MOCK_PERMISSIONS).sort()).toEqual(
+      ["ADMIN", "ASSET", "FINANCE", "HR", "OPS", "PM", "field"].sort(),
+    );
+    expect(MOCK_PERMISSIONS.ADMIN).toEqual([...PERMISSIONS]);
+    for (const permissions of Object.values(MOCK_PERMISSIONS)) {
+      for (const permission of permissions) expect(PERMISSIONS).toContain(permission);
     }
+    expect(labels(MOCK_PERMISSIONS.FINANCE)).not.toContain("Pengguna");
+    expect(labels(MOCK_PERMISSIONS.HR)).toContain("Pengguna");
+    expect(labels(MOCK_PERMISSIONS.field)).toEqual(["Beranda", "Direktori", "Berkas saya"]);
+  });
+
+  it("shell memakai permissions[] dari /auth/me untuk menyaring menu", () => {
+    renderRoute("/", {
+      me: { user_id: "u1", email: "finance@example.com", role: "FINANCE", permissions: ["view:users"] },
+    });
+    const nav = screen.getByRole("navigation", { name: "Menu utama" });
+    expect(nav).toHaveTextContent("Direktori");
+    expect(nav).not.toHaveTextContent("Pengguna");
+    expect(nav).not.toHaveTextContent("Audit log");
   });
 });
 
-function renderAt(path: string, role: string | null) {
-  return renderRoute(path, { role }).router;
-}
-
 describe("route guard", () => {
-  it("tanpa sesi diarahkan ke /login", () => {
-    const router = renderAt("/work-plans", null);
+  it("tanpa sesi diarahkan ke login", () => {
+    const { router } = renderRoute("/directory");
     expect(router.state.location.pathname).toBe("/login");
   });
 
-  it("Finance membuka /work-plans → /forbidden", () => {
-    const router = renderAt("/work-plans", "finance");
+  it("izin view:users tidak cukup untuk membuka halaman Pengguna", () => {
+    const { router } = renderRoute("/users", {
+      me: { user_id: "u1", email: "pm@example.com", role: "PM", permissions: ["view:users"] },
+    });
     expect(router.state.location.pathname).toBe("/forbidden");
-    expect(screen.getByText("Akses ditolak")).toBeInTheDocument();
-  });
-
-  it("TL dapat membuka /work-plans", () => {
-    const router = renderAt("/work-plans", "team_leader");
-    expect(router.state.location.pathname).toBe("/work-plans");
-    expect(screen.getByRole("heading", { name: "Work plan" })).toBeInTheDocument();
-  });
-
-  it("shell menampilkan menu sesuai role", () => {
-    renderAt("/", "wtl");
-    const nav = screen.getByRole("navigation", { name: "Menu utama" });
-    expect(nav).toHaveTextContent("Plan saya");
-    expect(nav).not.toHaveTextContent("Direktori");
   });
 });

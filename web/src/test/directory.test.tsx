@@ -28,13 +28,13 @@ const doc = (overrides: Record<string, unknown> = {}) => ({
 describe("halaman direktori utama", () => {
   it("menampilkan daftar", async () => {
     mockApi((c) => (c.url === "/employees" ? { data: page([employee()]) } : undefined));
-    renderRoute("/directory", { role: "hes" });
+    renderRoute("/directory", { role: "HR" });
     expect(await screen.findByText("Test User")).toBeInTheDocument();
   });
 
   it("filter dan status default 'Aktif' dikirim ke server", async () => {
     const calls = mockApi((c) => (c.url === "/employees" ? { data: page([]) } : undefined));
-    renderRoute("/directory", { role: "hes" });
+    renderRoute("/directory", { role: "HR" });
     await screen.findByText("Tidak ada karyawan yang cocok.");
     expect(calls[0]).toBeDefined();
 
@@ -52,7 +52,7 @@ describe("halaman detail karyawan (SA / HES)", () => {
       if (c.url === "/employees/e1") return { data: employee() };
       if (c.url === "/employees/e1/documents") return { data: { items: [doc()], total: 1 } };
     });
-    renderRoute("/directory/e1", { role: "hes" });
+    renderRoute("/directory/e1", { role: "HR" });
     expect(await screen.findByText("KTP")).toBeInTheDocument();
   });
 
@@ -63,7 +63,7 @@ describe("halaman detail karyawan (SA / HES)", () => {
       if (c.url === "/files/upload" && c.method === "post") return { data: { id: "f1", url: "x", mime_type: "image/jpeg" } };
       if (c.url === "/employees/e1/documents" && c.method === "post") return { status: 201, data: doc({ id: "d2" }) };
     });
-    renderRoute("/directory/e1", { role: "hes" });
+    renderRoute("/directory/e1", { role: "HR" });
     fireEvent.click(await screen.findByRole("button", { name: "Tambah berkas" }));
     const dialog = screen.getByRole("dialog", { name: "Tambah berkas" });
 
@@ -91,7 +91,7 @@ describe("halaman detail karyawan (SA / HES)", () => {
         if (c.url === "/employees/e1/documents" && c.method === "get") return { data: { items: [], total: 0 } };
         if (c.method === "patch") return { data: employee() };
     });
-    renderRoute("/directory/e1", { role: "hes" });
+    renderRoute("/directory/e1", { role: "HR" });
     fireEvent.click(await screen.findByRole("button", { name: "Ubah profil" }));
     const dialog = screen.getByRole("dialog", { name: "Ubah profil" });
     fireEvent.change(within(dialog).getByLabelText("Status kerja"), { target: { value: "PERMANENT" } });

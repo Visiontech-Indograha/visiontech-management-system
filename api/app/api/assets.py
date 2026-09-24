@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import CurrentUser, get_current_user, get_db_with_user, require_permission
 from app.api.guards import PlanAccess, PlanNeed, allocation_plan_access, ensure_same_org
 from app.core.enums import PlanStatus
-from app.core.errors import AppError, ForbiddenError, ValidationError, trigger_rule_message
+from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationError, trigger_rule_message
 from app.core.permissions import Permission, RoleCode
 from app.schemas.asset import (
     AssetAllocationCreate,
@@ -133,7 +133,18 @@ async def request_asset_return(
         raise ForbiddenError("Pengajuan pengembalian tidak dapat dilakukan oleh petugas aset. Gunakan ketua tim.")
     emp_q = text("SELECT employee_id FROM vms.app_user WHERE id = :uid")
     my_emp = (await db.execute(emp_q, {"uid": current_user.user_id})).scalar()
-    
+
+    # domain.js RETURN_ASSET (R9): hanya aset yang sedang dipinjam — satu pengajuan terbuka per aset.
+    state_q = text("""
+        SELECT a.released_at IS NULL AS active, s.status AS asset_status, s.id AS asset_id
+        FROM vms.asset_allocation a JOIN vms.asset s ON s.id = a.asset_id
+        WHERE a.id = :alloc
+        FOR UPDATE OF s
+    """)
+    state = (await db.execute(state_q, {"alloc": alloc_id})).fetchone()
+    if not (state.active and state.asset_status in ("IN_USE", "RESERVED")):
+        raise AppError("INVALID_STATE", "Aset belum dipinjam atau sudah menunggu verifikasi.", status=409)
+
     ins = text("""
         INSERT INTO vms.asset_return (
             asset_allocation_id, requested_by, condition_on_return, note
@@ -142,9 +153,10 @@ async def request_asset_return(
         ) RETURNING *
     """)
     res = await db.execute(ins, {
-        "alloc": alloc_id, "emp": my_emp, 
+        "alloc": alloc_id, "emp": my_emp,
         "cond": data.condition_on_return, "note": data.note
     })
+    await db.execute(text("UPDATE vms.asset SET status = 'RETURN_PENDING' WHERE id = :id"), {"id": state.asset_id})
     return AssetReturnResponse(**res.fetchone()._mapping)
 
 @router.post("/returns/{return_id}/verify", response_model=AssetReturnResponse)
@@ -158,20 +170,25 @@ async def verify_asset_return(
     emp_q = text("SELECT employee_id FROM vms.app_user WHERE id = :uid")
     my_emp = (await db.execute(emp_q, {"uid": current_user.user_id})).scalar()
     
-    # Dapatkan asset_id dari return ini
+    # Dapatkan asset_id dari return ini — hanya milik organisasi sendiri (V-09: jalur ber-id).
     get_a = text("""
-        SELECT r.requested_by, a.asset_id, a.id as alloc_id
+        SELECT r.requested_by, r.verified_at, a.asset_id, a.id as alloc_id, s.status AS asset_status
         FROM vms.asset_return r
         JOIN vms.asset_allocation a ON a.id = r.asset_allocation_id
-        WHERE r.id = :id
+        JOIN vms.asset s ON s.id = a.asset_id
+        WHERE r.id = :id AND s.organization_id = :org
+        FOR UPDATE OF s
     """)
-    ret_info = (await db.execute(get_a, {"id": return_id})).fetchone()
-    
+    ret_info = (await db.execute(get_a, {"id": return_id, "org": current_user.organization_id})).fetchone()
+
     if not ret_info:
-        raise HTTPException(status_code=404, detail="Return tidak ditemukan.")
+        raise NotFoundError("Pengembalian aset")
+    # domain.js VERIFY_RETURN (R9): hanya pengajuan yang masih menunggu; tidak diperiksa pengaju sendiri.
+    if ret_info.verified_at is not None or ret_info.asset_status != "RETURN_PENDING":
+        raise AppError("INVALID_STATE", "Aset belum menunggu verifikasi pengembalian.", status=409)
     if ret_info.requested_by == my_emp:
-        raise HTTPException(status_code=403, detail="Anda tidak boleh memverifikasi pengembalian yang Anda ajukan sendiri.")
-        
+        raise ForbiddenError("Pengembalian tidak dapat diperiksa oleh pengaju yang sama. Gunakan ketua tim untuk serah terima.")
+
     # Update return
     upd = text("""
         UPDATE vms.asset_return
@@ -186,5 +203,8 @@ async def verify_asset_return(
         # Lepas alokasi & kembalikan status aset
         await db.execute(text("UPDATE vms.asset_allocation SET released_at = now() WHERE id = :id"), {"id": ret_info.alloc_id})
         await db.execute(text("UPDATE vms.asset SET status = 'AVAILABLE' WHERE id = :id"), {"id": ret_info.asset_id})
-        
+    else:
+        # Ditolak: aset kembali ke tim peminjam agar dapat diperbaiki & diajukan ulang — bukan buntu (R9).
+        await db.execute(text("UPDATE vms.asset SET status = 'IN_USE' WHERE id = :id"), {"id": ret_info.asset_id})
+
     return AssetReturnResponse(**row._mapping)

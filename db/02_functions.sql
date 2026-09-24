@@ -137,12 +137,20 @@ END $$;
 CREATE OR REPLACE FUNCTION tg_plan_document_immutable() RETURNS trigger
 LANGUAGE plpgsql AS $$
 BEGIN
-  IF NEW.snapshot IS DISTINCT FROM OLD.snapshot
-     OR NEW.number IS DISTINCT FROM OLD.number
-     OR NEW.version IS DISTINCT FROM OLD.version
+  -- Isi dokumen terbit tidak pernah berubah; hanya siklusnya (status) yang bergerak (R4).
+  IF NEW.id IS DISTINCT FROM OLD.id
+     OR NEW.work_plan_id IS DISTINCT FROM OLD.work_plan_id
      OR NEW.kind IS DISTINCT FROM OLD.kind
+     OR NEW.version IS DISTINCT FROM OLD.version
+     OR NEW.number IS DISTINCT FROM OLD.number
+     OR NEW.snapshot IS DISTINCT FROM OLD.snapshot
+     OR NEW.snapshot_sha256 IS DISTINCT FROM OLD.snapshot_sha256
+     OR NEW.reason IS DISTINCT FROM OLD.reason
      OR NEW.issued_by IS DISTINCT FROM OLD.issued_by
-     OR NEW.issued_at IS DISTINCT FROM OLD.issued_at THEN
+     OR NEW.issued_at IS DISTINCT FROM OLD.issued_at
+     -- penerimaan dicatat sekali: dari kosong ke terisi, tidak ditimpa sesudahnya
+     OR (OLD.accepted_by IS NOT NULL AND NEW.accepted_by IS DISTINCT FROM OLD.accepted_by)
+     OR (OLD.accepted_at IS NOT NULL AND NEW.accepted_at IS DISTINCT FROM OLD.accepted_at) THEN
     RAISE EXCEPTION 'Dokumen terbit bersifat tetap. Terbitkan versi baru, jangan mengubah versi lama.'
       USING ERRCODE = '23514';
   END IF;

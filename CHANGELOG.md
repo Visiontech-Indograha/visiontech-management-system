@@ -130,6 +130,11 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 - `checkbox`/`switch`: area sentuh 44×44px. `LoginPage`: `max-w-[400px]` → `max-w-sm`.
 - Catatan: varian `xs` terlihat 28px di `lg+`, di bawah ukuran terkecil dok 18 (36px) — dirapikan menyusul.
 
+### 🗑️ Dihapus
+
+#### Halaman master produk, kendaraan, dan barang (Web) — 2026-09-24
+- `web/`: halaman, rute, menu, dan uji master `/products`, `/vehicles`, `/items` dihapus — sisa web lama yang memanggil endpoint di luar kontrak dok 05 (keputusan pemilik produk: ikuti dok 01 §4.3, dok 10 Bagian C). Aset kendaraan/alat kelak dari `/assets`. Uji master kini hanya untuk lokasi (`SitesPage`).
+
 ### 🔧 Diperbaiki
 
 - **`attendance_cron.py`**: Import `send_security_alert` yang tidak ada diganti dengan `send_discord_alert` yang benar — mencegah `ImportError` saat aplikasi dimulai.

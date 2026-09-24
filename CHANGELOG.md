@@ -113,6 +113,9 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 - `docs/PLAN-PERBAIKAN-TEMUAN.md` (2026-09-23) — plan perbaikan 7 segmen (definisi, pohon isu, prioritas, rencana kerja, 5×mengapa, sintesis, pencegahan) + antrean turunan T-01…T-13. Dikerjakan sebelum A-3.
 
+#### V-20 · Banding & revisi SK (Backend) — 2026-09-24
+- `POST /work-plans/{id}/appeal` (ketua menurut SK; hanya dari `PUBLISHED`; alasan wajib) → `APPEALED`, alasan tersimpan di kolom baru `work_plan.appeal_reason` (migrasi `0007_work_plan_appeal_reason`, `db/01` disamakan); dokumen lama tetap tercatat. `POST /work-plans/{id}/revise` (PM unit/OPS; hanya dari `APPEALED`) → kembali `DRAFT`, `revision + 1`, semua dokumen lama `SUPERSEDED`. Terbit ulang menghasilkan dokumen versi baru berjenis `REVISION` dengan nomor SK yang sama; penerimaan ketua membuatnya `EFFECTIVE` (`domain.js` APPEAL/REVISE). Respons SK kini memuat `appeal_reason`. Uji: `api/tests/test_plan_appeal_revise.py`.
+
 #### Daftar absensi — `GET /attendance` (Backend) — 2026-09-24
 - Endpoint baru sesuai dok 05 §3.5 (sebelumnya tidak ada, sehingga halaman tinjauan Finance di web tidak bisa dibangun): filter `employee_id`, `from`, `to`, `status`, halaman `page`/`size` → `{items, total, page, size}`, terbaru dulu. Cakupan mengikuti prototipe: FINANCE, HR, OPS, ADMIN melihat seluruh organisasi; lainnya hanya milik sendiri. Filter `plan_id` belum didukung (dok 10 Bagian C). Uji: `api/tests/test_attendance_list.py`.
 

@@ -35,10 +35,37 @@ class PlanTransitionRepo(BaseRepo):
             """
             SELECT id, unit_id, site_id, number, title, location_text, description,
                    lower(period) AS period_start, upper(period) - 1 AS period_end,
-                   status, pm_employee_id, leader_employee_id, revision, row_version, cancellation_reason
+                   status, pm_employee_id, leader_employee_id, revision, row_version, cancellation_reason,
+                   appeal_reason
             FROM vms.work_plan WHERE id = :id
             """,
             {"id": plan_id},
+        )
+
+    async def appeal(self, plan_id: UUID | str, reason: str) -> None:
+        """domain.js APPEAL: SK terbit → APPEALED dengan alasan; dokumen tidak diubah."""
+        await self.execute(
+            """
+            UPDATE vms.work_plan
+               SET status = CAST(:appealed AS vms.plan_status), appeal_reason = :reason, row_version = row_version + 1
+             WHERE id = :plan
+            """,
+            {"plan": plan_id, "reason": reason, "appealed": PlanStatus.APPEALED},
+        )
+
+    async def revise(self, plan_id: UUID | str) -> None:
+        """domain.js REVISE: kembali ke DRAFT, revisi berikutnya; semua dokumen lama digantikan."""
+        await self.execute(
+            """
+            UPDATE vms.work_plan
+               SET status = CAST(:draft AS vms.plan_status), revision = revision + 1, row_version = row_version + 1
+             WHERE id = :plan
+            """,
+            {"plan": plan_id, "draft": PlanStatus.DRAFT},
+        )
+        await self.execute(
+            "UPDATE vms.plan_document SET status = CAST(:superseded AS vms.document_status) WHERE work_plan_id = :plan",
+            {"plan": plan_id, "superseded": DocumentStatus.SUPERSEDED},
         )
 
     async def active_team(self, plan_id: UUID | str) -> list[Any]:

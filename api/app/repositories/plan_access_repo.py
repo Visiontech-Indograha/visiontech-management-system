@@ -24,7 +24,7 @@ _STANDING = """
         SELECT wp.id, wp.unit_id, wp.site_id, wp.number, wp.title, wp.location_text, wp.description,
                lower(wp.period) AS period_start, upper(wp.period) - 1 AS period_end,
                wp.status, wp.pm_employee_id, wp.leader_employee_id, wp.revision, wp.row_version,
-               wp.cancellation_reason, wp.created_at,
+               wp.cancellation_reason, wp.appeal_reason, wp.created_at,
                s.oversees OR s.pm_of_unit AS manages,
                s.is_leader, s.is_member,
                s.oversees OR s.pm_of_unit

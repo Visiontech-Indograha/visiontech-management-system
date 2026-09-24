@@ -57,6 +57,31 @@ async def accept_plan(
     return _response(plan)
 
 
+@router.post("/appeal", response_model=WorkPlanResponse)
+async def appeal_plan(
+    plan_id: UUID,
+    data: TransitionRequest,
+    access: PlanAccess = _LEADER_ACCESS,
+    db: AsyncSession = Depends(get_db_with_user),
+) -> WorkPlanResponse:
+    """domain.js APPEAL (V-20): ketua mengajukan banding atas SK terbit."""
+    plan = await _service(db).appeal(plan_id, access.user.organization_id, access.user.user_id,
+                                     data.row_version, data.reason)
+    return _response(plan)
+
+
+@router.post("/revise", response_model=WorkPlanResponse)
+async def revise_plan(
+    plan_id: UUID,
+    data: TransitionRequest,
+    access: PlanAccess = _PM_UNIT_ACCESS,
+    db: AsyncSession = Depends(get_db_with_user),
+) -> WorkPlanResponse:
+    """domain.js REVISE (V-20): PM membuka revisi draf dari SK yang dibanding."""
+    plan = await _service(db).revise(plan_id, access.user.organization_id, data.row_version)
+    return _response(plan)
+
+
 @router.post("/start", response_model=WorkPlanResponse)
 async def start_plan(
     plan_id: UUID,

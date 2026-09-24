@@ -35,6 +35,7 @@ class WorkPlanResponse(WorkPlanBase):
     revision: int
     row_version: int
     cancellation_reason: str | None = None
+    appeal_reason: str | None = None
 
 class PlanMemberListResponse(BaseModel):
     id: UUID

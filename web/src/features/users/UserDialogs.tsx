@@ -1,8 +1,8 @@
 import { Copy } from "lucide-react";
 import { useState } from "react";
 import toast from "react-hot-toast";
-import { Button } from "@/components/ui/Button";
-import { Dialog } from "@/components/ui/Dialog";
+import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/VmsDialog";
 import { SelectField, TextField } from "@/components/ui/Field";
 import { ApiError } from "@/lib/api";
 import { EMPLOYMENT_LABEL, ROLE_LABEL, type UserCreate, type UserOut, type UserUpdate } from "@/lib/types";
@@ -119,7 +119,7 @@ export function CreateUserDialog({
       onClose={onClose}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="outline" onClick={onClose}>
             Batal
           </Button>
           <Button type="submit" form="create-user-form" disabled={create.isPending}>
@@ -224,7 +224,7 @@ export function EditUserDialog({ user, onClose }: { user: UserOut | null; onClos
       onClose={onClose}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="outline" onClick={onClose}>
             Batal
           </Button>
           <Button type="submit" form="edit-user-form" disabled={update.isPending}>
@@ -321,7 +321,7 @@ export function ResetPasswordDialog({
       onClose={onClose}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="outline" onClick={onClose}>
             Batal
           </Button>
           <Button
@@ -379,10 +379,10 @@ export function DeactivateDialog({ user, onClose }: { user: UserOut | null; onCl
       onClose={onClose}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="outline" onClick={onClose}>
             Batal
           </Button>
-          <Button variant="danger" type="submit" form="deactivate-form" disabled={deactivate.isPending}>
+          <Button variant="destructive" type="submit" form="deactivate-form" disabled={deactivate.isPending}>
             Nonaktifkan
           </Button>
         </>

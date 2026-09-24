@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useSession } from "@/app/session";
 import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EMPLOYMENT_LABEL, ROLE_LABEL } from "@/lib/types";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
@@ -126,10 +126,10 @@ export function DirectoryPage() {
             {data.total} karyawan · halaman {data.page} dari {lastPage}
           </span>
           <span className="flex gap-2">
-            <Button variant="secondary" disabled={page <= 1} onClick={() => setPage(page - 1)}>
+            <Button variant="outline" disabled={page <= 1} onClick={() => setPage(page - 1)}>
               Sebelumnya
             </Button>
-            <Button variant="secondary" disabled={page >= lastPage} onClick={() => setPage(page + 1)}>
+            <Button variant="outline" disabled={page >= lastPage} onClick={() => setPage(page + 1)}>
               Berikutnya
             </Button>
           </span>

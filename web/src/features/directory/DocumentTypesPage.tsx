@@ -1,8 +1,8 @@
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
-import { Dialog } from "@/components/ui/Dialog";
+import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/VmsDialog";
 import { TextField } from "@/components/ui/Field";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ApiError } from "@/lib/api";
@@ -75,11 +75,11 @@ export function DocumentTypesPage() {
         onClose={() => setDeleting(null)}
         footer={
           <>
-            <Button variant="secondary" onClick={() => setDeleting(null)}>
+            <Button variant="outline" onClick={() => setDeleting(null)}>
               Batal
             </Button>
             <Button
-              variant="danger"
+              variant="destructive"
               onClick={async () => {
                 if (!deleting) return;
                 try {
@@ -147,7 +147,7 @@ function TypeDialog({ type, onClose }: { type: DocumentType | null; onClose: () 
       onClose={onClose}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="outline" onClick={onClose}>
             Batal
           </Button>
           <Button type="submit" form="type-form" disabled={save.isPending}>
@@ -210,7 +210,7 @@ function TypeDialog({ type, onClose }: { type: DocumentType | null; onClose: () 
               </Button>
             </div>
           ))}
-          <Button variant="secondary" onClick={() => setRules([...rules, { role: null, user_type: null, employment_type: null }])}>
+          <Button variant="outline" onClick={() => setRules([...rules, { role: null, user_type: null, employment_type: null }])}>
             Tambah aturan
           </Button>
         </fieldset>

@@ -94,7 +94,8 @@ Tidak ada pustaka kompresi PDF atau Office: dokumen disimpan apa adanya (A-20, d
 | `clsx`, `tailwind-merge` | Penggabungan kelas |
 | `lucide-react` | Ikon |
 | `sonner` | Notifikasi (pengganti `alert()`) |
-| `tailwindcss-animate` | Animasi shadcn |
+| `tw-animate-css` | Animasi shadcn |
+| `@fontsource-variable/plus-jakarta-sans` | Font variabel |
 
 ### Data & state
 | Paket | Untuk apa |

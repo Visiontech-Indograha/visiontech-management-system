@@ -2,8 +2,9 @@ import type { components } from "./api-types";
 
 type S = components["schemas"];
 
-export type Me = S["MeOut"];
-export type TokenOut = S["TokenOut"];
+/** Respons GET /auth/me sesuai API terbaru: {user_id, email, role, permissions[]}. */
+export type Me = S["UserMeResponse"];
+export type TokenOut = S["TokenResponse"];
 export type UserOut = S["UserOut"];
 export type UserCreated = S["UserCreated"];
 export type UserCreate = S["UserCreate"];
@@ -12,15 +13,15 @@ export type AuditLogOut = S["AuditLogOut"];
 export type UserPage = S["Page_UserOut_"];
 export type AuditPage = S["Page_AuditLogOut_"];
 
+/** Label peran sesuai RoleCode API. */
 export const ROLE_LABEL: Record<string, string> = {
-  super_admin: "Super Admin",
-  admin: "Admin",
-  team_leader: "Team Leader",
-  finance: "Finance",
-  hes: "HES",
-  user: "User",
-  WTL: "WTL",
-  DRIVER: "Driver",
+  ADMIN: "Admin",
+  HR: "HR",
+  PM: "Project Manager",
+  FINANCE: "Finance",
+  ASSET: "Asset",
+  OPS: "Operasional",
+  field: "Karyawan lapangan",
 };
 
 export const EMPLOYMENT_LABEL: Record<string, string> = {

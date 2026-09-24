@@ -9,6 +9,8 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased] — `development`
 
+- `web/`: Hapus antarmuka absensi untuk endpoint yang belum tersedia; halaman daftar dan tinjauan menunggu `GET /attendance`.
+
 ### ✨ Ditambahkan
 
 #### Fitur File URL (V-17) — 2026-09-24

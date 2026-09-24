@@ -39,7 +39,7 @@ export function LoginPage({ admin = false }: { admin?: boolean }) {
   });
 
   return (
-    <main className="mx-auto mt-16 w-full max-w-[400px] px-4">
+    <main className="mx-auto mt-16 w-full max-w-sm px-4">
       <h1 className="mb-1 text-2xl font-semibold">{admin ? "Masuk sebagai Super Admin" : "Masuk ke VMS"}</h1>
       <p className="mb-6 text-muted-foreground">Visiontech Management System</p>
       <form onSubmit={onSubmit} noValidate className="space-y-4">

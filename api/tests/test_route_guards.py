@@ -32,6 +32,7 @@ SELF_SERVICE = {
     ("GET", "/work-plans"): "hanya SK yang terlihat (V-07)",
     ("GET", "/sites"): "daftar lokasi organisasi untuk check-in",
     ("GET", "/assets"): "daftar aset organisasi (CHECK_ASSET oleh tim)",
+    ("GET", "/attendance"): "milik sendiri; FINANCE/HR/OPS/ADMIN seluruh organisasi (diuji)",
     ("POST", "/attendance/check-in"): "absensi sendiri",
     ("POST", "/attendance/check-out"): "absensi sendiri",
     ("POST", "/attendance/{att_id}/explain"): "hanya absensi milik sendiri — diuji di bawah",

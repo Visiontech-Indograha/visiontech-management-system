@@ -16,6 +16,7 @@ from app.repositories.attendance_session_repo import AttendanceSessionRepo
 from app.repositories.org_clock_repo import OrgClockRepo
 
 OPEN_SESSION = "Masih ada sesi absensi terbuka."
+SEE_ALL = {"FINANCE", "HR", "OPS", "ADMIN"}  # prototipe operations.js attendance(): canAll (+ ADMIN)
 ALREADY_TODAY = "Absensi untuk hari ini sudah tercatat (hanya dapat mengajukan ulang jika absensi sebelumnya ditolak)."
 
 
@@ -65,6 +66,20 @@ class AttendanceSessionService:
         if session is None:
             raise AppError("NO_OPEN_SESSION", "Tidak ada sesi absensi terbuka.", status=409)
         return await self.repo.close(session.id)
+
+    async def list_attendance(self, org_id: str, user_id: str, roles: list[str], *, employee_id: UUID | None,
+                              date_from: Any, date_to: Any, status: str | None,
+                              page: int, size: int) -> tuple[list[Any], int]:
+        """Prototipe (operations.js): FINANCE, HR, OPS — dan ADMIN — melihat seluruh organisasi;
+        selain itu hanya absensi sendiri (filter karyawan lain → daftar kosong, tidak dibocorkan)."""
+        scope: Any = employee_id
+        if not set(roles) & SEE_ALL:
+            own = await self.repo.employee_of(user_id)
+            if own is None or (employee_id is not None and str(employee_id) != str(own)):
+                return [], 0
+            scope = own
+        return await self.repo.list_page(org_id, employee_id=scope, date_from=date_from, date_to=date_to,
+                                         status=status, limit=size, offset=(page - 1) * size)
 
     async def explain_attendance(self, org_id: str, user_id: str, attendance_id: UUID, explanation: str) -> None:
         attendance = await self.repo.get(attendance_id, org_id)

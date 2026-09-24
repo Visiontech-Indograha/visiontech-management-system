@@ -1,6 +1,6 @@
 """
 app/services/plan_transition_service.py
-Transisi SK — padanan PUBLISH / ACCEPT / START di prototype/js/domain.js, termasuk checkMembers
+Transisi SK — padanan PUBLISH / ACCEPT / START / REQUEST·APPROVE·RETURN_COMPLETE di prototype/js/domain.js, termasuk checkMembers
 dan checkSchedule. Pesan galat mengikuti prototipe.
 """
 from __future__ import annotations
@@ -14,6 +14,7 @@ from app.core.errors import AppError, ConflictError, ForbiddenError, NotFoundErr
 from app.core.time import jakarta_now
 from app.repositories.plan_member_repo import PlanMemberRepo
 from app.repositories.plan_transition_repo import PlanTransitionRepo
+from app.repositories.weekly_report_repo import WeeklyReportRepo
 
 # domain.js CANCEL_PLAN requireStatus
 CANCELLABLE = {PlanStatus.PUBLISHED, PlanStatus.ACCEPTED, PlanStatus.APPEALED, PlanStatus.IN_PROGRESS,
@@ -22,6 +23,10 @@ CANCELLABLE = {PlanStatus.PUBLISHED, PlanStatus.ACCEPTED, PlanStatus.APPEALED, P
 
 def _invalid(message: str) -> AppError:
     return AppError("VALIDATION_ERROR", message, status=422)
+
+
+def _state(message: str) -> AppError:
+    return AppError("INVALID_STATE", message, status=409)
 
 
 class PlanTransitionService:
@@ -148,5 +153,52 @@ class PlanTransitionService:
         if plan.period_start > today:
             raise _invalid(f"Pekerjaan baru dapat dimulai pada {plan.period_start:%d-%m-%Y}.")
         await self._check_members(plan)
+        await self.repo.set_status(plan_id, PlanStatus.IN_PROGRESS)
+        return await self.repo.get_plan(plan_id)
+
+    # ── Penyelesaian (V-26) ───────────────────────────────────────────────────────────────────
+    async def _weeks_approved(self, plan_id: UUID) -> bool:
+        weeks = await WeeklyReportRepo(self.repo.db).list_weeks(plan_id)
+        return all(week.status == "APPROVED" for week in weeks)
+
+    async def request_complete(self, plan_id: UUID, org_id: str, user_id: str, row_version: int,
+                               body: str, obstacle: str, file_ids: list[UUID]) -> Any:
+        """domain.js REQUEST_COMPLETE — ketua menurut SK (dijaga router)."""
+        await self._load(plan_id, org_id, row_version, PlanStatus.IN_PROGRESS)
+        if await self.repo.has_open_change(plan_id):
+            raise _state("Masih ada usulan perubahan yang belum selesai.")
+        if not await self.repo.all_days_approved(plan_id):
+            raise _state("Seluruh laporan harian wajib disetujui PM terlebih dahulu.")
+        if not await self._weeks_approved(plan_id):
+            raise _state("Laporan mingguan belum selesai.")
+        if not body.strip() or not obstacle.strip():
+            raise _invalid("Laporan penyelesaian dan ringkasan kendala keseluruhan wajib diisi.")
+        await self.repo.submit_final_report(plan_id, user_id, body.strip(), obstacle.strip(), file_ids)
+        await self.repo.set_status(plan_id, PlanStatus.COMPLETION_REVIEW)
+        return await self.repo.get_plan(plan_id)
+
+    async def approve_complete(self, plan_id: UUID, org_id: str, user_id: str, row_version: int,
+                               note: str) -> Any:
+        """domain.js APPROVE_COMPLETE — PM unit/OPS (dijaga router)."""
+        await self._load(plan_id, org_id, row_version, PlanStatus.COMPLETION_REVIEW)
+        if not await self.repo.all_days_approved(plan_id):
+            raise _state("Terdapat laporan harian yang belum disetujui.")
+        if not await self._weeks_approved(plan_id):
+            raise _state("Terdapat laporan mingguan yang belum disetujui.")
+        if await self.repo.final_report_status(plan_id) != "SUBMITTED":
+            raise _state("Laporan akhir belum diserahkan.")
+        if await self.repo.has_active_allocation(plan_id):
+            raise _state("Masih ada aset yang belum dikembalikan atau diverifikasi (Asset).")
+        await self.repo.review_final_report(plan_id, user_id, "APPROVED", note.strip() or None)
+        await self.repo.set_status(plan_id, PlanStatus.COMPLETED)
+        return await self.repo.get_plan(plan_id)
+
+    async def return_complete(self, plan_id: UUID, org_id: str, user_id: str, row_version: int,
+                              reason: str) -> Any:
+        """domain.js RETURN_COMPLETE — PM unit/OPS (dijaga router), alasan wajib."""
+        await self._load(plan_id, org_id, row_version, PlanStatus.COMPLETION_REVIEW)
+        if not reason.strip():
+            raise _invalid("Alasan pengembalian wajib diisi.")
+        await self.repo.review_final_report(plan_id, user_id, "CHANGES_REQUESTED", reason.strip())
         await self.repo.set_status(plan_id, PlanStatus.IN_PROGRESS)
         return await self.repo.get_plan(plan_id)

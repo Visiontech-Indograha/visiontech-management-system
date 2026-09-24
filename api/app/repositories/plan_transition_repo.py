@@ -237,3 +237,57 @@ class PlanTransitionRepo(BaseRepo):
             {"plan": plan_id, "emp": employee_id, "effective": DocumentStatus.EFFECTIVE,
              "awaiting": DocumentStatus.AWAITING_ACCEPTANCE},
         )
+
+    # ── Penyelesaian SK (V-26, domain.js REQUEST/APPROVE/RETURN_COMPLETE) ─────────────────────
+    async def has_open_change(self, plan_id: UUID | str) -> bool:
+        return bool(await self.scalar(
+            """
+            SELECT EXISTS (SELECT 1 FROM vms.plan_change
+                            WHERE work_plan_id = :plan AND status IN ('PENDING_PM', 'AWAITING_LEADER_ACCEPTANCE'))
+            """,
+            {"plan": plan_id}))
+
+    async def all_days_approved(self, plan_id: UUID | str) -> bool:
+        return not await self.scalar(
+            """
+            SELECT EXISTS (SELECT 1 FROM vms.work_plan_day wpd
+                             LEFT JOIN vms.daily_report dr ON dr.work_plan_day_id = wpd.id
+                            WHERE wpd.work_plan_id = :plan AND dr.status IS DISTINCT FROM 'APPROVED')
+            """,
+            {"plan": plan_id})
+
+    async def final_report_status(self, plan_id: UUID | str) -> str | None:
+        status: str | None = await self.scalar(
+            "SELECT CAST(status AS text) FROM vms.final_report WHERE work_plan_id = :plan", {"plan": plan_id})
+        return status
+
+    async def submit_final_report(self, plan_id: UUID | str, user_id: UUID | str, body: str, obstacle: str,
+                                  file_ids: list[UUID]) -> None:
+        await self.execute(
+            """
+            INSERT INTO vms.final_report (work_plan_id, status, body, obstacle, submitted_by, submitted_at)
+            VALUES (:plan, 'SUBMITTED', :body, :obstacle,
+                    (SELECT employee_id FROM vms.app_user WHERE id = :uid), now())
+            ON CONFLICT (work_plan_id) DO UPDATE
+               SET status = 'SUBMITTED', body = EXCLUDED.body, obstacle = EXCLUDED.obstacle,
+                   submitted_by = EXCLUDED.submitted_by, submitted_at = now()
+            """,
+            {"plan": plan_id, "uid": user_id, "body": body, "obstacle": obstacle},
+        )
+        await self.execute("DELETE FROM vms.final_report_evidence WHERE work_plan_id = :plan", {"plan": plan_id})
+        for file_id in file_ids:
+            await self.execute(
+                "INSERT INTO vms.final_report_evidence (work_plan_id, file_id) VALUES (:plan, :file)",
+                {"plan": plan_id, "file": file_id})
+
+    async def review_final_report(self, plan_id: UUID | str, user_id: UUID | str, status: str,
+                                  note: str | None) -> None:
+        await self.execute(
+            """
+            UPDATE vms.final_report
+               SET status = CAST(:status AS vms.report_status), review_note = :note, reviewed_at = now(),
+                   reviewed_by = (SELECT employee_id FROM vms.app_user WHERE id = :uid)
+             WHERE work_plan_id = :plan
+            """,
+            {"plan": plan_id, "uid": user_id, "status": status, "note": note},
+        )

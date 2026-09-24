@@ -1431,26 +1431,8 @@ export interface components {
             /** Refresh Token */
             refresh_token?: string | null;
         };
-        /** MeOut */
-        MeOut: {
-            documents_incomplete: components["schemas"]["DocumentsIncomplete"];
-            /** Full Name */
-            full_name: string;
-            /** Id */
-            id: string;
-            /** Manage Permissions */
-            manage_permissions: string[];
-            /** Must Change Password */
-            must_change_password: boolean;
-            /** Permissions */
-            permissions: string[];
-            /** Role */
-            role: string;
-            /** User Type */
-            user_type: string | null;
-            /** Username */
-            username: string;
-        };
+        /** Legacy operation alias; /auth/me responds with UserMeResponse. */
+        MeOut: components["schemas"]["UserMeResponse"];
         /** MissingDocument */
         MissingDocument: {
             /** Code */
@@ -1709,22 +1691,15 @@ export interface components {
             /** Name */
             name?: string | null;
         };
-        /** TokenOut */
-        TokenOut: {
+        /** TokenResponse */
+        TokenResponse: {
             /** Access Token */
             access_token: string;
-            /** Expires In */
-            expires_in: number;
-            /** Must Change Password */
-            must_change_password: boolean;
-            /** Refresh Token */
-            refresh_token?: string | null;
-            /**
-             * Token Type
-             * @default bearer
-             */
+            /** Token Type */
             token_type: string;
         };
+        /** Legacy operation alias; auth endpoints respond with TokenResponse. */
+        TokenOut: components["schemas"]["TokenResponse"];
         /** UserCreate */
         UserCreate: {
             /** Description */
@@ -1797,6 +1772,17 @@ export interface components {
             user_type: string | null;
             /** Username */
             username: string;
+        };
+        /** UserMeResponse */
+        UserMeResponse: {
+            /** User Id */
+            user_id: string;
+            /** Email */
+            email: string;
+            /** Role */
+            role: string;
+            /** Permissions */
+            permissions: string[];
         };
         /** UserOut */
         UserOut: {

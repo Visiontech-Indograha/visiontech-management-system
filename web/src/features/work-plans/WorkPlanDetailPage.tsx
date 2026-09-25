@@ -16,6 +16,7 @@ import { OvertimeDialog, OvertimePanel } from "./Overtime";
 import { ChangePanel, ExtensionDialog, PersonnelDialog } from "./PlanChanges";
 import { AddDayDialog, EditDraftDialog, ReasonDialog, TeamDialog } from "./PlanForms";
 import { DailyReports } from "./DailyReports";
+import { Documents } from "./Documents";
 import { WeeklyReports } from "./WeeklyReports";
 
 const Row = ({ label, children }: { label: string; children: ReactNode }) => (
@@ -65,6 +66,7 @@ export function WorkPlanDetailPage() {
           </div>
         )}
         {p && <Attachments plan={p} />}
+        {p && p.status !== "DRAFT" && <Documents plan={p} />}
         {p && ["IN_PROGRESS", "COMPLETION_REVIEW", "COMPLETED"].includes(p.status) && (
           <div className="mt-6 space-y-6">
             <DailyReports plan={p} />

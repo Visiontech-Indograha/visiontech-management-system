@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import type { RouteObject } from "react-router-dom";
 import { AppShell } from "@/components/layout/AppShell";
 import { RequireAccess, RequireAuth } from "@/components/layout/guards";
+import { AssetsPage } from "@/features/assets/AssetsPage";
 import { AuditLogPage } from "@/features/audit/AuditLogPage";
 import { DirectoryPage } from "@/features/directory/DirectoryPage";
 import { EmployeeDetailPage } from "@/features/directory/EmployeeDetailPage";
@@ -19,6 +20,7 @@ const PAGES: Record<string, ReactNode> = {
   "/directory": <DirectoryPage />,
   "/sites": <SitesPage />,
   "/work-plans": <WorkPlansPage />,
+  "/assets": <AssetsPage />,
 };
 
 /** Route dibangun dari NAV_ITEMS agar menu dan guard selalu sejalan. */

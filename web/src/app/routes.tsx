@@ -7,12 +7,14 @@ import { AttendancePage } from "@/features/attendance/AttendancePage";
 import { AuditLogPage } from "@/features/audit/AuditLogPage";
 import { DirectoryPage } from "@/features/directory/DirectoryPage";
 import { EmployeeDetailPage } from "@/features/directory/EmployeeDetailPage";
+import { MyDocumentsPage } from "@/features/directory/MyDocuments";
 import { SitesPage } from "@/features/sites/SitesPage";
 import { WorkPlanDetailPage } from "@/features/work-plans/WorkPlanDetailPage";
 import { WorkPlansPage } from "@/features/work-plans/WorkPlansPage";
 import { AttendanceRecapPage } from "@/features/monitoring/AttendanceRecapPage";
 import { OvertimeRecapPage } from "@/features/monitoring/OvertimeRecapPage";
 import { TimelinePage } from "@/features/monitoring/TimelinePage";
+import { VerifyPage } from "@/features/verify/VerifyPage";
 import { ChangePasswordPage } from "@/pages/auth/ChangePasswordPage";
 import { LoginPage } from "@/pages/auth/LoginPage";
 import { ComingSoonPage, ForbiddenPage, HomePage, NotFoundPage } from "@/pages/Placeholders";
@@ -22,6 +24,7 @@ import { NAV_ITEMS } from "./navigation";
 const PAGES: Record<string, ReactNode> = {
   "/audit-logs": <AuditLogPage />,
   "/directory": <DirectoryPage />,
+  "/my-documents": <MyDocumentsPage />,
   "/sites": <SitesPage />,
   "/work-plans": <WorkPlansPage />,
   "/assets": <AssetsPage />,
@@ -35,6 +38,8 @@ const PAGES: Record<string, ReactNode> = {
 export const routes: RouteObject[] = [
   { path: "/login", element: <LoginPage /> },
   { path: "/admin-login", element: <LoginPage admin /> }, // sengaja tidak ditautkan dari menu/halaman lain
+  // PUBLIK: tujuan pemindaian QR tanda tangan; tanpa login dan di luar AppShell. Token boleh memuat "/".
+  { path: "/verify/*", element: <VerifyPage /> },
   {
     element: <RequireAuth />,
     children: [

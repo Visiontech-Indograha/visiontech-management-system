@@ -164,7 +164,7 @@ class PlanTransitionRepo(BaseRepo):
         ))
 
     async def snapshot(self, plan_id: UUID | str) -> Any:
-        """Isi beku dokumen: SK, tim aktif, hari beserta tugasnya (domain.js snapshot)."""
+        """Isi beku dokumen: SK, tim aktif, hari beserta tugasnya, lampiran (domain.js snapshot)."""
         return await self.scalar(
             """
             SELECT jsonb_build_object(
@@ -182,7 +182,11 @@ class PlanTransitionRepo(BaseRepo):
                                         'tasks', (SELECT COALESCE(jsonb_agg(t.title ORDER BY t.sort_order, t.title), '[]')
                                                   FROM vms.work_plan_task t WHERE t.work_plan_day_id = d.id))
                                         ORDER BY d.work_date)
-                                FROM vms.work_plan_day d WHERE d.work_plan_id = :plan), '[]')
+                                FROM vms.work_plan_day d WHERE d.work_plan_id = :plan), '[]'),
+              'attachments', COALESCE((SELECT jsonb_agg(jsonb_build_object('file_id', a.file_id,
+                                        'file_name', f.file_name) ORDER BY a.sort_order)
+                                FROM vms.work_plan_attachment a JOIN vms.file_object f ON f.id = a.file_id
+                                WHERE a.work_plan_id = :plan), '[]')
             )
             """,
             {"plan": plan_id},

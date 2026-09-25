@@ -1,4 +1,5 @@
 from datetime import date
+from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -17,6 +18,7 @@ from app.schemas.employee import (
     EmployeeResponse,
     EmployeeUpdate,
 )
+from app.services.employee_service import EmployeeService
 
 router = APIRouter(prefix="/employees", tags=["Employees"])
 
@@ -30,7 +32,7 @@ async def get_employees(
     db: AsyncSession = Depends(get_db_with_user)
 ):
     offset = (page - 1) * size
-    where_clauses = ["organization_id = :org"]
+    where_clauses = ["organization_id = :org", "deleted_at IS NULL"]  # karyawan terhapus disembunyikan (V-29)
     params = {"org": current_user.organization_id, "limit": size, "offset": offset}
     
     if is_active is not None:
@@ -222,6 +224,26 @@ async def offboard_employee(
     await db.execute(off_user, {"emp_id": emp_id})
     
     return {"message": "Karyawan berhasil dioffboard."}
+
+
+@router.post("/{emp_id}/archive")
+async def archive_employee(
+    emp_id: UUID,
+    current_user: CurrentUser = Depends(require_permission(Permission.MANAGE_USERS)),
+    db: AsyncSession = Depends(get_db_with_user),
+) -> dict[str, Any]:
+    """Hapus karyawan (V-29, keputusan pemilik): hanya yang sudah di-offboard; dibalik lewat /restore."""
+    return await EmployeeService(db).archive_employee(emp_id, current_user.organization_id)
+
+
+@router.post("/{emp_id}/restore")
+async def restore_employee(
+    emp_id: UUID,
+    current_user: CurrentUser = Depends(require_permission(Permission.MANAGE_USERS)),
+    db: AsyncSession = Depends(get_db_with_user),
+) -> dict[str, Any]:
+    """domain.js RESTORE_EMPLOYEE (V-29): HR memulihkan karyawan terhapus sebagai nonaktif."""
+    return await EmployeeService(db).restore_employee(emp_id, current_user.organization_id)
 
 @router.get("/{emp_id}/conflicts")
 async def check_conflicts(

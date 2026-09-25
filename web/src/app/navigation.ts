@@ -1,6 +1,7 @@
 import {
   BookUser,
   CalendarRange,
+  Clock,
   ChartColumn,
   ClipboardList,
   House,
@@ -25,6 +26,7 @@ export const NAV_ITEMS: NavItem[] = [
   { path: "/", label: "Beranda", icon: House },
   { path: "/work-plans", label: "Work plan", icon: ClipboardList },
   { path: "/timeline", label: "Timeline tim", icon: CalendarRange, requires: ["view:timeline"] },
+  { path: "/attendance", label: "Absensi", icon: Clock },
   { path: "/attendance-recap", label: "Rekap absensi", icon: ChartColumn },
   { path: "/assets", label: "Kendaraan & alat", icon: Truck },
   { path: "/directory", label: "Direktori", icon: BookUser, requires: ["view:users"] },

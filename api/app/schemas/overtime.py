@@ -5,41 +5,21 @@ Skema permintaan & respons lembur (V-28) — domain.js REPORT_OVERTIME, REVIEW_O
 from datetime import date, datetime
 from uuid import UUID
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel
 
 
 class OvertimeCreate(BaseModel):
-    """domain.js REPORT_OVERTIME: ketua mengajukan lembur pada SK yang sedang berjalan."""
+    """domain.js REPORT_OVERTIME. Aturan (jam 0–12, alasan wajib) diperiksa di OvertimeService
+    agar urutan & pesannya sama dengan prototipe."""
     work_plan_id: UUID
     hours: float
     reason: str
 
-    @field_validator("hours")
-    @classmethod
-    def hours_valid(cls, v: float) -> float:
-        if not (0 < v <= 12):
-            raise ValueError("Jam lembur tidak valid (harus 0 < jam ≤ 12).")
-        return v
-
-    @field_validator("reason")
-    @classmethod
-    def reason_not_empty(cls, v: str) -> str:
-        if not v.strip():
-            raise ValueError("Alasan lembur wajib diisi.")
-        return v.strip()
-
 
 class OvertimeReview(BaseModel):
-    """domain.js REVIEW_OVERTIME: PM unit/OPS menyetujui atau menolak lembur."""
-    decision: str          # APPROVED | REJECTED
+    """domain.js REVIEW_OVERTIME: decision APPROVED | REJECTED (diperiksa di service)."""
+    decision: str
     note: str | None = None
-
-    @field_validator("decision")
-    @classmethod
-    def decision_valid(cls, v: str) -> str:
-        if v not in ("APPROVED", "REJECTED"):
-            raise ValueError("Keputusan harus APPROVED atau REJECTED.")
-        return v
 
 
 class OvertimeResponse(BaseModel):

@@ -22,8 +22,8 @@ def test_allocation_deleted_without_session_context_is_audited_in_its_organisati
     officer = world.headers(client, "asset")
     asset_id = client.post("/assets", headers=officer, json={
         "kind": "TOOL", "code": "TL-AUDIT", "name": "Tangga", "condition": "BAIK"}).json()["id"]
-    alloc_id = client.post("/assets/allocate", headers=officer,
-                           json={"asset_id": asset_id, "work_plan_id": plan_id}).json()["id"]
+    alloc_id = client.post(f"/assets/{asset_id}/reserve", headers=officer,
+                           json={"work_plan_id": plan_id}).json()["id"]
 
     sync_query("DELETE FROM vms.asset_allocation WHERE id = %s", (alloc_id,))   # tanpa set_config
 

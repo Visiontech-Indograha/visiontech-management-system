@@ -222,6 +222,18 @@ class PlanTransitionRepo(BaseRepo):
             },
         )
 
+    async def activate_reserved_assets(self, plan_id: UUID | str) -> None:
+        """domain.js START: reservasi SK menjadi IN_USE — alat langsung, kendaraan setelah diperiksa pengemudi."""
+        await self.execute(
+            """
+            UPDATE vms.asset a SET status = 'IN_USE', updated_at = now()
+              FROM vms.asset_allocation al
+             WHERE al.asset_id = a.id AND al.work_plan_id = :plan AND al.released_at IS NULL
+               AND a.status = 'RESERVED' AND (a.kind = 'TOOL' OR al.driver_checked_at IS NOT NULL)
+            """,
+            {"plan": plan_id},
+        )
+
     async def set_status(self, plan_id: UUID | str, status: PlanStatus) -> None:
         await self.execute(
             "UPDATE vms.work_plan SET status = CAST(:status AS vms.plan_status), row_version = row_version + 1 WHERE id = :plan",

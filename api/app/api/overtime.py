@@ -1,15 +1,17 @@
 """
 app/api/overtime.py
-Router lembur (V-28) — domain.js REPORT_OVERTIME, REVIEW_OVERTIME + rekap bulanan.
-Rute di bawah /work-plans/{plan_id}/overtime dan /overtime/recap.
+Router lembur (V-28, dok 05 §3.8 & §3.13) — domain.js REPORT_OVERTIME, REVIEW_OVERTIME + rekap bulanan.
+Jalur: POST/GET /overtime, POST /overtime/{id}/review, GET /recaps/overtime.
 Router tipis: hanya marshalling HTTP ↔ service.
 """
+from datetime import date
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, get_current_user, get_db_with_user
+from app.api.guards import ensure_same_org
 from app.schemas.overtime import (
     OvertimeCreate,
     OvertimeRecapRow,
@@ -18,34 +20,30 @@ from app.schemas.overtime import (
 )
 from app.services.overtime_service import OvertimeService
 
-# Lembur per SK: POST /work-plans/{plan_id}/overtime, GET /work-plans/{plan_id}/overtime
-plan_overtime_router = APIRouter(prefix="/work-plans/{plan_id}/overtime", tags=["Overtime"])
-
-# Review per entri: POST /overtime/{ot_id}/review
-# Rekap: GET /overtime/recap
 overtime_router = APIRouter(prefix="/overtime", tags=["Overtime"])
+recaps_router = APIRouter(prefix="/recaps", tags=["Overtime"])
 
 
-@plan_overtime_router.post("", response_model=OvertimeResponse, status_code=status.HTTP_201_CREATED)
+@overtime_router.post("", response_model=OvertimeResponse, status_code=status.HTTP_201_CREATED)
 async def report_overtime(
-    plan_id: UUID,
     data: OvertimeCreate,
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_with_user),
 ) -> OvertimeResponse:
     """domain.js REPORT_OVERTIME (V-28): ketua atau anggota mengajukan lembur pada SK aktif."""
-    row = await OvertimeService(db).report(current_user, plan_id, data.hours, data.reason)
+    await ensure_same_org(db, current_user.organization_id, work_plans=[data.work_plan_id])
+    row = await OvertimeService(db).report(current_user, data.work_plan_id, data.hours, data.reason)
     return OvertimeResponse(**row._mapping)
 
 
-@plan_overtime_router.get("", response_model=list[OvertimeResponse])
+@overtime_router.get("", response_model=list[OvertimeResponse])
 async def list_overtime(
-    plan_id: UUID,
+    work_plan_id: UUID,
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_with_user),
 ) -> list[OvertimeResponse]:
-    """Daftar lembur pada SK tertentu — siapa pun yang dapat melihat SK."""
-    rows = await OvertimeService(db).list_by_plan(current_user, plan_id)
+    """Daftar lembur satu SK — siapa pun yang dapat melihat SK (tidak terlihat → 404)."""
+    rows = await OvertimeService(db).list_by_plan(current_user, work_plan_id)
     return [OvertimeResponse(**r._mapping) for r in rows]
 
 
@@ -61,18 +59,18 @@ async def review_overtime(
     return OvertimeResponse(**row._mapping)
 
 
-@overtime_router.get("/recap", response_model=list[OvertimeRecapRow])
+@recaps_router.get("/overtime", response_model=list[OvertimeRecapRow])
 async def overtime_recap(
     month: str | None = Query(
         default=None,
         description="Filter bulan dalam format YYYY-MM, contoh: 2026-09",
-        pattern=r"^\d{4}-\d{2}$",
+        pattern=r"^\d{4}-(0[1-9]|1[0-2])$",
     ),
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_with_user),
 ) -> list[OvertimeRecapRow]:
-    """Rekap lembur per karyawan per bulan — Finance, OPS, Admin (dok 03 M11)."""
-    # Normalisasi: "2026-09" → "2026-09-01" agar cocok dengan period_month (date trunc)
-    month_date = f"{month}-01" if month else None
+    """Rekap lembur per karyawan per bulan — Finance/OPS/Admin seluruh organisasi, PM unitnya (dok 10 V-28)."""
+    # asyncpg butuh objek date untuk CAST(:month AS date); period_month = date_trunc('month', work_date)
+    month_date = date.fromisoformat(f"{month}-01") if month else None
     rows = await OvertimeService(db).recap(current_user, month_date)
     return [OvertimeRecapRow(**r._mapping) for r in rows]

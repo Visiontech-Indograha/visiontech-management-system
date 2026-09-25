@@ -106,8 +106,8 @@ def test_archive_rules(client, world):
     officer = world.headers(client, "asset")
     asset_id = client.post("/assets", headers=officer, json={
         "kind": "TOOL", "code": "TL-ARSIP", "name": "Tangga", "condition": "BAIK"}).json()["id"]
-    assert client.post("/assets/allocate", headers=officer,
-                       json={"asset_id": asset_id, "work_plan_id": plan_id}).status_code == 200
+    assert client.post(f"/assets/{asset_id}/reserve", headers=officer,
+                       json={"work_plan_id": plan_id}).status_code == 200
     with_asset = _do(client, world, plan_id, "archive")
     assert with_asset.status_code == 409 and with_asset.json()["error"]["message"] == \
         "Lepaskan reservasi aset sebelum mengarsipkan draft."

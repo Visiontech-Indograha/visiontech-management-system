@@ -6,6 +6,7 @@ Router tipis → service → repository; aturan bisnis di sini, SQL di repositor
 from __future__ import annotations
 
 from collections.abc import Sequence
+from datetime import date
 from typing import Any
 from uuid import UUID
 
@@ -16,7 +17,7 @@ from app.api.deps import CurrentUser
 from app.api.guards import PlanNeed, check_plan_access
 from app.core.enums import PlanStatus
 from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationError
-from app.core.permissions import Permission
+from app.core.permissions import Permission, RoleCode
 from app.repositories.org_clock_repo import OrgClockRepo
 from app.repositories.overtime_repo import OvertimeRepo
 from app.repositories.plan_access_repo import PlanAccessRepo
@@ -35,13 +36,18 @@ class OvertimeService:
     # domain.js REPORT_OVERTIME (baris 607–614)
     # ------------------------------------------------------------------
     async def report(self, user: CurrentUser, plan_id: UUID, hours: float, reason: str) -> Any:
-        """Ketua atau anggota mengajukan lembur pada SK IN_PROGRESS."""
-        # domain.js baris 611: hanya ketua atau anggota pekerjaan ini.
-        access = await check_plan_access(self.db, plan_id, user, PlanNeed.LEADER_OR_MEMBER)
-
-        # domain.js baris 608: hanya pekerjaan IN_PROGRESS.
+        """Ketua atau anggota mengajukan lembur pada SK IN_PROGRESS. Urutan & pesan = domain.js."""
+        # SK tidak terlihat / organisasi lain → 404 (V-07/V-08).
+        access = await check_plan_access(self.db, plan_id, user, PlanNeed.VIEW)
         if access.plan.status != PlanStatus.IN_PROGRESS:
             raise _state("Hanya pekerjaan aktif yang bisa diajukan lembur.")
+        if not 0 < hours <= 12:
+            raise ValidationError("Jam lembur tidak valid.")
+        reason = reason.strip()
+        if not reason:
+            raise ValidationError("Alasan lembur wajib diisi.")
+        if not (access.is_leader or access.is_member):
+            raise ForbiddenError("Hanya ketua atau anggota pekerjaan ini yang dapat mengajukan lembur.")
 
         # Tanggal dari server (V-10, domain.js memakai state.demoDate — bukan tanggal klien).
         today = (await OrgClockRepo(self.db).local_now(user.organization_id)).today
@@ -101,7 +107,10 @@ class OvertimeService:
         if reviewer_emp is None or str(reviewer_emp) == str(ot.employee_id):
             raise ForbiddenError("Pengaju lembur tidak dapat menyetujui pengajuannya sendiri.")
 
-        row = await self.repo.review(overtime_id, reviewer_emp, decision, note or None)
+        # domain.js: keputusan diperiksa terakhir.
+        if decision not in ("APPROVED", "REJECTED"):
+            raise ValidationError("Keputusan harus disetujui atau ditolak.")
+        row = await self.repo.review(overtime_id, reviewer_emp, decision, (note or "").strip() or None)
         if row is None:
             raise _state("Lembur tidak tersedia untuk direview.")
         return row
@@ -114,8 +123,11 @@ class OvertimeService:
         await check_plan_access(self.db, plan_id, user, PlanNeed.VIEW)
         return await self.repo.list_by_plan(plan_id, user.organization_id)
 
-    async def recap(self, user: CurrentUser, month: str | None) -> Sequence[Any]:
-        """Rekap per karyawan per bulan — hanya yang punya izin review:overtime (Finance, OPS, Admin)."""
-        if Permission.REVIEW_OVERTIME not in user.permissions:
-            raise ForbiddenError("Hanya Finance, OPS, atau Admin yang dapat melihat rekap lembur.")
-        return await self.repo.recap(user.organization_id, month)
+    async def recap(self, user: CurrentUser, month: date | None) -> Sequence[Any]:
+        """Rekap per karyawan per bulan: Finance/OPS/Admin (review:overtime) seluruh organisasi;
+        PM hanya unit yang dipegangnya (keputusan pemilik 2026-09-25, dok 10 V-28)."""
+        if Permission.REVIEW_OVERTIME in user.permissions:
+            return await self.repo.recap(user.organization_id, month, None)
+        if RoleCode.PM in user.roles:
+            return await self.repo.recap(user.organization_id, month, user.user_id)
+        raise ForbiddenError("Rekap lembur hanya untuk Finance, OPS, Admin, atau PM unit.")

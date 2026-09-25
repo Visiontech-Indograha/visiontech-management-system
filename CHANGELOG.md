@@ -14,6 +14,12 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ### ✨ Ditambahkan
 
+#### Fitur Lembur (V-28) — 2026-09-25
+- `api/`: Endpoint `POST /work-plans/{id}/overtime` (ketua/anggota lapor lembur pada SK aktif).
+- `api/`: Endpoint `POST /overtime/{id}/review` (PM unit/OPS tinjau pengajuan lembur yang PENDING_PM).
+- `api/`: Endpoint `GET /work-plans/{id}/overtime` (daftar lembur SK).
+- `api/`: Endpoint `GET /overtime/recap` (rekap lembur per karyawan per bulan untuk Finance, OPS, Admin).
+
 #### Fitur File URL (V-17) — 2026-09-24
 - `web/`: Menambahkan komponen `FilePreview` untuk menampilkan pratinjau thumbnail gambar yang dapat diklik atau tautan unduh dokumen, terintegrasi dengan endpoint presigned URL MinIO (`/api/v1/files/{id}/url`), lengkap dengan penanganan URL kadaluwarsa.
 
@@ -118,6 +124,15 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 #### V-23 · Rincian hari & centang tugas (Backend) — 2026-09-24
 - `PUT /work-plans/{id}/days/{day_id}/plan` `{title, tasks:[{title}]}` — PM unit/OPS menyusun ulang judul & 1–30 tugas satu hari selagi SK `DRAFT` (`domain.js` SAVE_DAY). `POST /work-plans/{id}/days/{day_id}/tasks/{task_id}/toggle` — ketua menurut SK mencentang/membatalkan tugas saat SK `IN_PROGRESS`, tanggal hari sudah tiba, dan laporan hari itu belum diserahkan; `done_at`/`done_by` tercatat (`domain.js` TOGGLE_TASK). Jalur `/plan` & `/toggle` dipilih karena `PUT …/days/{day_id}` sudah dipakai teks laporan (dok 10 Bagian C). Uji: `api/tests/test_day_plan_tasks.py`.
+
+#### V-28 · Lembur (Backend) — 2026-09-25
+- `POST /overtime` `{work_plan_id, hours, reason}` — ketua atau anggota SK, SK `IN_PROGRESS`, 0 < jam ≤ 12, alasan wajib; tanggal = hari ini menurut organisasi, SK berlaku dicatat (`plan_document_id`); satu pengajuan aktif per karyawan/SK/hari. `GET /overtime?work_plan_id=` — siapa pun yang melihat SK. `POST /overtime/{id}/review` `{decision: APPROVED|REJECTED, note}` — PM unit/OPS SK itu, hanya `PENDING_PM`, pengaju tidak boleh meninjau sendiri (Finance tidak meninjau). `GET /recaps/overtime?month=YYYY-MM` — rekap per karyawan per bulan (jam `APPROVED`, jumlah menunggu): Finance/OPS/Admin seluruh organisasi, PM hanya unit yang dipegangnya (`domain.js` REPORT_OVERTIME, REVIEW_OVERTIME). Dikerjakan Gemini (1e4650ac), dirapikan: jalur mengikuti dok 05, urutan & pesan galat sama dengan prototipe. Uji: `api/tests/test_overtime.py`.
+
+#### V-30 · Lini masa OPS & rekap absensi (Backend) — 2026-09-25
+- `GET /timeline?from=&to=` — izin `view:timeline` (PM, OPS, ADMIN): satu kelompok per SK yang terlihat (aturan `GET /work-plans`), kecuali `CANCELLED`/`COMPLETED`, urut tanggal mulai; tiap hari berstatus `APPROVED`/`SUBMITTED`/`CHANGES_REQUESTED`/`LATE`/`TODAY`/`UPCOMING` menurut tanggal organisasi, plus ringkasan hari disetujui & terlambat (prototipe `operations.js` timeline(), dok 03 M11). `GET /recaps/attendance?month=YYYY-MM` — hitungan hadir/valid otomatis/menunggu/disetujui/ditolak per karyawan; FINANCE/HR/OPS/ADMIN melihat seluruh organisasi, lainnya hanya dirinya (aturan `GET /attendance`). Uji: `api/tests/test_monitoring.py`.
+
+#### V-27 · Reservasi aset (Backend) — 2026-09-25
+- `POST /assets/{id}/reserve` `{work_plan_id, driver_employee_id}` **menggantikan** `POST /assets/allocate` — petugas aset, atau PM unit/OPS SK tersebut (sebelumnya hanya petugas aset). Aset dipesan berstatus `RESERVED`; alat pada SK yang sudah berjalan langsung `IN_USE` (sebelumnya semua alokasi langsung `IN_USE`, sehingga pembatalan SK tidak pernah melepas reservasi). Pesan ganda → 409 "Aset sudah dialokasikan ke pekerjaan lain." `POST /assets/{id}/release` `{work_plan_id}` — hanya reservasi yang belum dipakai milik SK itu → `AVAILABLE`. `POST /assets/{id}/check` `{decision: ACCEPT|APPEAL, reason}` — hanya pengemudi yang ditunjuk; ACCEPT mencatat `driver_checked_at`, APPEAL (alasan wajib) melepas reservasi dan mencatat kondisi "Banding pengemudi: …". START kini mengubah reservasi SK menjadi `IN_USE` (alat langsung, kendaraan bila sudah diperiksa pengemudi) (`domain.js` RESERVE/RELEASE/CHECK_ASSET, START). Lapisan router → `AssetReservationService` → `AssetReservationRepo`. Uji: `api/tests/test_asset_reservation.py`; uji lama dipindah ke jalur baru.
 
 #### V-26 · Penyelesaian SK (Backend) — 2026-09-24
 - `POST /work-plans/{id}/request-completion` `{row_version, body, obstacle, evidence_file_ids}` — ketua menurut SK, SK `IN_PROGRESS`; ditolak bila masih ada usulan perubahan terbuka, laporan harian/mingguan belum semuanya `APPROVED`, atau laporan akhir/kendala kosong → SK `COMPLETION_REVIEW`, `final_report` `SUBMITTED` (+ bukti berkas satu organisasi). `POST …/approve-completion` — PM unit/OPS, cek ulang laporan & aset yang belum dikembalikan → SK `COMPLETED`, laporan akhir `APPROVED`. `POST …/return-completion` `{reason}` — alasan wajib → SK `IN_PROGRESS`, laporan akhir `CHANGES_REQUESTED` (`domain.js` REQUEST/APPROVE/RETURN_COMPLETE). Uji: `api/tests/test_plan_completion.py`.

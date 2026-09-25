@@ -30,7 +30,7 @@ pytestmark = requires_db
 def _report(client, world: World, plan_id: str, who: str,
             hours: float = 2.0, reason: str = "Pengerjaan kabel tambahan") -> object:
     return client.post(
-        f"/work-plans/{plan_id}/overtime",
+        "/overtime",
         headers=world.headers(client, who),
         json={"work_plan_id": plan_id, "hours": hours, "reason": reason},
     )
@@ -46,22 +46,16 @@ def _review(client, world: World, ot_id: str, who: str,
 
 
 def _list(client, world: World, plan_id: str, who: str) -> object:
-    return client.get(f"/work-plans/{plan_id}/overtime", headers=world.headers(client, who))
+    return client.get("/overtime", headers=world.headers(client, who), params={"work_plan_id": plan_id})
 
 
 def _recap(client, world: World, who: str, month: str | None = None) -> object:
     params = f"?month={month}" if month else ""
-    return client.get(f"/overtime/recap{params}", headers=world.headers(client, who))
+    return client.get(f"/recaps/overtime{params}", headers=world.headers(client, who))
 
 
 def _ot_status(ot_id: str) -> str:
     return sync_query("SELECT status::text FROM vms.overtime_log WHERE id = %s", (ot_id,))[0][0]
-
-
-def _make_leader_pm(world: World) -> None:
-    """Sambungkan leader ke SK sebagai ketua (via work_plan_member) dan pm ke unit-nya."""
-    # Di conftest 'leader' dan 'member' sudah dibuat; mereka menjadi ketua/anggota via SK.
-    # run_plan_to_in_progress sudah mengurus ini
 
 
 # ---------------------------------------------------------------------------
@@ -96,7 +90,7 @@ def test_report_requires_in_progress_status(client, world: World):
 
     resp = _report(client, world, plan_id, "leader")
     assert resp.status_code == 409
-    assert "aktif" in resp.json()["error"]["message"]
+    assert resp.json()["error"]["message"] == "Hanya pekerjaan aktif yang bisa diajukan lembur."
 
 
 def test_report_hours_validation(client, world: World):
@@ -106,6 +100,7 @@ def test_report_hours_validation(client, world: World):
     for bad_hours in (0, -1, 12.1, 13, 100):
         resp = _report(client, world, plan_id, "leader", hours=bad_hours)
         assert resp.status_code == 422, f"Diharapkan 422 untuk jam={bad_hours}"
+        assert resp.json()["error"]["message"] == "Jam lembur tidak valid."
 
     # Batas tepat: 12.0 harus diterima
     resp = _report(client, world, plan_id, "member", hours=12.0)
@@ -119,6 +114,7 @@ def test_report_reason_required(client, world: World):
     for bad_reason in ("", "   "):
         resp = _report(client, world, plan_id, "leader", reason=bad_reason)
         assert resp.status_code == 422, f"Diharapkan 422 untuk reason={bad_reason!r}"
+        assert resp.json()["error"]["message"] == "Alasan lembur wajib diisi."
 
 
 def test_only_team_member_can_report(client, world: World):
@@ -127,6 +123,7 @@ def test_only_team_member_can_report(client, world: World):
 
     resp = _report(client, world, plan_id, "pm")
     assert resp.status_code == 403, resp.text
+    assert resp.json()["error"]["message"] == "Hanya ketua atau anggota pekerjaan ini yang dapat mengajukan lembur."
 
 
 def test_other_org_cannot_report(client, world: World, other_world: World):
@@ -192,10 +189,14 @@ def test_reviewer_cannot_be_same_as_submitter(client, world: World):
     # leader mengajukan lembur
     ot_id = _report(client, world, plan_id, "leader").json()["id"]
 
-    # Buat akun PM baru dengan employee yang sama dengan leader — simulasi dengan cara lain:
-    # Cukup uji bahwa 'leader' tidak bisa review (bukan PM/OPS).
+    # Ketua juga PM unit SK ini → ia pengelola, jadi penolakan murni karena ia pengajunya.
+    sync_query("INSERT INTO vms.user_role (user_id, role, unit_id) "
+               "SELECT id, 'PM', %s FROM vms.app_user WHERE employee_id = %s",
+               (world.unit_id, world.employees["leader"]))
     resp = _review(client, world, ot_id, "leader", decision="APPROVED")
     assert resp.status_code == 403
+    assert resp.json()["error"]["message"] == "Pengaju lembur tidak dapat menyetujui pengajuannya sendiri."
+    assert _ot_status(ot_id) == "PENDING_PM"
 
 
 def test_review_only_pending_pm(client, world: World):
@@ -207,7 +208,7 @@ def test_review_only_pending_pm(client, world: World):
     # Coba review lagi
     resp = _review(client, world, ot_id, "pm", decision="REJECTED")
     assert resp.status_code == 409
-    assert "tidak tersedia" in resp.json()["error"]["message"]
+    assert resp.json()["error"]["message"] == "Lembur tidak tersedia untuk direview."
 
 
 def test_review_invalid_decision(client, world: World):
@@ -217,6 +218,7 @@ def test_review_invalid_decision(client, world: World):
 
     resp = _review(client, world, ot_id, "pm", decision="MAYBE")
     assert resp.status_code == 422
+    assert resp.json()["error"]["message"] == "Keputusan harus disetujui atau ditolak."
 
 
 def test_pm_other_unit_cannot_review(client, world: World):
@@ -312,16 +314,27 @@ def test_recap_filter_by_month(client, world: World):
 
 
 def test_recap_permissions(client, world: World):
-    """Finance & OPS boleh; member, leader, pm (tanpa REVIEW_OVERTIME global) tidak."""
-    _plan_id, _ = run_plan_to_in_progress(client, world)
+    """Finance, OPS, Admin: seluruh organisasi. PM: hanya unit yang dipegangnya (keputusan pemilik).
+    Peran lain: 403."""
+    plan_id, _ = run_plan_to_in_progress(client, world)
+    ot_id = _report(client, world, plan_id, "leader", hours=2.0).json()["id"]
+    assert _review(client, world, ot_id, "pm", decision="APPROVED").status_code == 200
+    other_unit = world.add_unit("LAIN")
+    world.add_person("pm_other", "PM", other_unit, per_unit=True)
 
     assert _recap(client, world, "finance").status_code == 200
     assert _recap(client, world, "ops").status_code == 200
     assert _recap(client, world, "admin").status_code == 200
+    own_unit = _recap(client, world, "pm")
+    assert own_unit.status_code == 200
+    assert [(r["employee_id"], r["approved_hours"]) for r in own_unit.json()] == [(world.employees["leader"], 2.0)]
+    other = _recap(client, world, "pm_other")
+    assert other.status_code == 200 and other.json() == []
 
     for who in ("member", "leader", "asset", "hr"):
         resp = _recap(client, world, who)
         assert resp.status_code == 403, f"Diharapkan 403 untuk {who}, dapat {resp.status_code}"
+        assert resp.json()["error"]["message"] == "Rekap lembur hanya untuk Finance, OPS, Admin, atau PM unit."
 
 
 @pytest.mark.parametrize("bad_month", ["2026", "26-09", "2026/09", "abcd-ef"])

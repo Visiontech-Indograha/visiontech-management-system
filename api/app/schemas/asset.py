@@ -15,10 +15,23 @@ class AssetResponse(AssetCreate):
     id: UUID
     status: str
     
-class AssetAllocationCreate(BaseModel):
-    asset_id: UUID
+class AssetReserveRequest(BaseModel):
     work_plan_id: UUID
     driver_employee_id: UUID | None = None
+
+
+class AssetReleaseRequest(BaseModel):
+    work_plan_id: UUID
+
+
+class AssetCheckRequest(BaseModel):
+    decision: str            # ACCEPT | APPEAL
+    reason: str | None = None
+
+
+class AssetStatusResponse(BaseModel):
+    asset_id: UUID
+    status: str
 
 class AssetAllocationResponse(BaseModel):
     id: UUID

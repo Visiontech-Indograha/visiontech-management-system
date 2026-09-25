@@ -11,6 +11,7 @@ import { SitesPage } from "@/features/sites/SitesPage";
 import { WorkPlanDetailPage } from "@/features/work-plans/WorkPlanDetailPage";
 import { WorkPlansPage } from "@/features/work-plans/WorkPlansPage";
 import { AttendanceRecapPage } from "@/features/monitoring/AttendanceRecapPage";
+import { OvertimeRecapPage } from "@/features/monitoring/OvertimeRecapPage";
 import { TimelinePage } from "@/features/monitoring/TimelinePage";
 import { ChangePasswordPage } from "@/pages/auth/ChangePasswordPage";
 import { LoginPage } from "@/pages/auth/LoginPage";
@@ -27,6 +28,7 @@ const PAGES: Record<string, ReactNode> = {
   "/timeline": <TimelinePage />,
   "/attendance": <AttendancePage />,
   "/attendance-recap": <AttendanceRecapPage />,
+  "/overtime-recap": <OvertimeRecapPage />,
 };
 
 /** Route dibangun dari NAV_ITEMS agar menu dan guard selalu sejalan. */

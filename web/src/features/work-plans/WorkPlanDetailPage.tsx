@@ -12,6 +12,7 @@ import { employeeName, useActiveEmployees, useTransition, useWorkPlan, type Tran
 import { Attachments } from "./Attachments";
 import { CompletionDialog } from "./CompletionDialog";
 import { IncidentDialog, IncidentPanel } from "./Incidents";
+import { OvertimeDialog, OvertimePanel } from "./Overtime";
 import { ChangePanel, ExtensionDialog, PersonnelDialog } from "./PlanChanges";
 import { AddDayDialog, EditDraftDialog, ReasonDialog, TeamDialog } from "./PlanForms";
 import { DailyReports } from "./DailyReports";
@@ -28,7 +29,7 @@ const CANCELLABLE = ["PUBLISHED", "APPEALED", "ACCEPTED", "IN_PROGRESS", "COMPLE
 
 type Dialogs =
   | {
-      kind: "edit" | "team" | "day" | "completion" | "extension" | "personnel" | "incident";
+      kind: "edit" | "team" | "day" | "completion" | "extension" | "personnel" | "incident" | "overtime";
     }
   | { kind: "reason"; action: Transition; title: string; label: string }
   | null;
@@ -186,6 +187,12 @@ function PlanActions({ plan }: { plan: WorkPlan }) {
     );
   if (s === "IN_PROGRESS")
     leader.push(
+      <Button key="overtime" variant="outline" onClick={() => setDialog({ kind: "overtime" })}>
+        Ajukan Lembur
+      </Button>,
+    );
+  if (s === "IN_PROGRESS")
+    leader.push(
       <Button key="completion" onClick={() => setDialog({ kind: "completion" })}>
         Buat Laporan Akhir
       </Button>,
@@ -195,6 +202,7 @@ function PlanActions({ plan }: { plan: WorkPlan }) {
     <aside className="space-y-4">
       <ChangePanel plan={plan} />
       <IncidentPanel plan={plan} />
+      <OvertimePanel plan={plan} />
       {manager.length > 0 && (
         <section aria-label="Tindakan PM" className="rounded-panel border border-line bg-surface p-4">
           <h2 className="mb-3 text-base font-semibold">Tindakan PM</h2>
@@ -219,6 +227,7 @@ function PlanActions({ plan }: { plan: WorkPlan }) {
       {dialog?.kind === "extension" && <ExtensionDialog plan={plan} onClose={() => setDialog(null)} />}
       {dialog?.kind === "personnel" && <PersonnelDialog plan={plan} onClose={() => setDialog(null)} />}
       {dialog?.kind === "incident" && <IncidentDialog plan={plan} onClose={() => setDialog(null)} />}
+      {dialog?.kind === "overtime" && <OvertimeDialog plan={plan} onClose={() => setDialog(null)} />}
       {dialog?.kind === "reason" && (
         <ReasonDialog plan={plan} action={dialog.action} title={dialog.title} label={dialog.label} onClose={() => setDialog(null)} />
       )}

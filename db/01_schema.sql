@@ -289,6 +289,14 @@ CREATE TABLE weekly_report (
   UNIQUE (work_plan_id, name)
 );
 
+-- Lampiran draf SK (V-29, domain.js SAVE_ATTACHMENTS) — dibekukan di snapshot dokumen saat terbit.
+CREATE TABLE work_plan_attachment (
+  work_plan_id uuid NOT NULL REFERENCES work_plan(id) ON DELETE CASCADE,
+  file_id      uuid NOT NULL REFERENCES file_object(id),
+  sort_order   integer NOT NULL DEFAULT 0,
+  PRIMARY KEY (work_plan_id, file_id)
+);
+
 CREATE TABLE final_report (
   work_plan_id  uuid PRIMARY KEY REFERENCES work_plan(id) ON DELETE CASCADE,
   status        report_status NOT NULL DEFAULT 'DRAFT',

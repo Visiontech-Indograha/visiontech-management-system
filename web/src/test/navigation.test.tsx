@@ -16,7 +16,8 @@ describe("menu berdasarkan izin API", () => {
     // "Berkas saya" ditahan: /auth/me belum mengirim employee_id untuk /employees/{emp_id}/documents.
     expect(labels(["view:documents"])).toEqual(["Beranda", "Work plan", "Absensi", "Rekap absensi", "Kendaraan & alat"]);
     expect(labels(["view:audit"])).toEqual(["Beranda", "Work plan", "Absensi", "Rekap absensi", "Kendaraan & alat", "Audit log"]);
-    expect(labels(["create:plan"])).toEqual(["Beranda", "Work plan", "Absensi", "Rekap absensi", "Kendaraan & alat", "Lokasi kerja"]);
+    expect(labels(["create:plan"])).toEqual(["Beranda", "Work plan", "Absensi", "Rekap absensi", "Rekap lembur", "Kendaraan & alat", "Lokasi kerja"]);
+    expect(labels(["review:overtime"])).toEqual(["Beranda", "Work plan", "Absensi", "Rekap absensi", "Rekap lembur", "Kendaraan & alat"]);
   });
 
   it("izin mock sama dengan peta peran API", () => {

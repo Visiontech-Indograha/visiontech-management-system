@@ -83,7 +83,7 @@ def test_asset_cycle_reserve_return_verify(client, world):
     assert asset.status_code == 201, asset.text
     asset_id = asset.json()["id"]
 
-    allocated = client.post("/assets/allocate", headers=asset_officer, json={"asset_id": asset_id, "work_plan_id": plan_id})
+    allocated = client.post(f"/assets/{asset_id}/reserve", headers=asset_officer, json={"work_plan_id": plan_id})
     assert allocated.status_code == 200, allocated.text
     alloc_id = allocated.json()["id"]
     assert sync_query("SELECT work_plan_id::text FROM vms.asset_allocation WHERE id = %s", (alloc_id,)) == [(plan_id,)]

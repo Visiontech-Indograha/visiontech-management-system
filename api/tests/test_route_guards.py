@@ -47,6 +47,10 @@ GUARDED_IN_HANDLER = {
     ("POST", "/changes/{change_id}/accept"): "PlanChangeService: ketua (EXTEND) / ketua baru (PERSONNEL)",
     ("POST", "/changes/{change_id}/reject"): "PlanChangeService: ketua/PM (EXTEND) / ketua baru (PERSONNEL)",
     ("POST", "/changes/{change_id}/withdraw"): "PlanChangeService: PM unit/OPS, hanya PERSONNEL",
+    # V-27: SK ada di badan permintaan; pengemudi ditentukan alokasi aset.
+    ("POST", "/assets/{asset_id}/reserve"): "AssetReservationService: manage:assets atau PM unit/OPS SK (diuji)",
+    ("POST", "/assets/{asset_id}/release"): "AssetReservationService: manage:assets atau PM unit/OPS SK (diuji)",
+    ("POST", "/assets/{asset_id}/check"): "AssetReservationService: hanya pengemudi yang ditunjuk (diuji)",
 }
 _GUARDS = ("permission_checker", "plan_access.", "plan_day_access.", "allocation_plan_access.",
            "incident_plan_access.")
@@ -176,8 +180,8 @@ def test_only_the_leader_requests_an_asset_return(client, world, who, expected):
     asset = client.post("/assets", headers=officer,
                         json={"kind": "TOOL", "code": "TL-UJI", "name": "Tangga lipat", "condition": "BAIK"})
     assert asset.status_code == 201, asset.text
-    allocated = client.post("/assets/allocate", headers=officer,
-                            json={"asset_id": asset.json()["id"], "work_plan_id": plan_id})
+    allocated = client.post(f"/assets/{asset.json()['id']}/reserve", headers=officer,
+                            json={"work_plan_id": plan_id})
     assert allocated.status_code == 200, allocated.text
     alloc_id = allocated.json()["id"]
 

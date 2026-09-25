@@ -52,6 +52,11 @@ GUARDED_IN_HANDLER = {
     ("POST", "/assets/{asset_id}/reserve"): "AssetReservationService: manage:assets atau PM unit/OPS SK (diuji)",
     ("POST", "/assets/{asset_id}/release"): "AssetReservationService: manage:assets atau PM unit/OPS SK (diuji)",
     ("POST", "/assets/{asset_id}/check"): "AssetReservationService: hanya pengemudi yang ditunjuk (diuji)",
+    # V-28: SK ada di badan/kueri atau ditentukan baris lembur.
+    ("POST", "/overtime"): "OvertimeService: SK terlihat + ketua/anggota (diuji)",
+    ("GET", "/overtime"): "OvertimeService: check_plan_access(VIEW) untuk work_plan_id (diuji)",
+    ("POST", "/overtime/{ot_id}/review"): "OvertimeService: PM unit/OPS SK, bukan pengaju (diuji)",
+    ("GET", "/recaps/overtime"): "OvertimeService: izin review:overtime (Finance/OPS/Admin) (diuji)",
 }
 _GUARDS = ("permission_checker", "plan_access.", "plan_day_access.", "allocation_plan_access.",
            "incident_plan_access.")

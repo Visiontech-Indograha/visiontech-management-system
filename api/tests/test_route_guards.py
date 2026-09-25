@@ -36,6 +36,7 @@ SELF_SERVICE = {
     ("POST", "/attendance/check-in"): "absensi sendiri",
     ("POST", "/attendance/check-out"): "absensi sendiri",
     ("POST", "/attendance/{att_id}/explain"): "hanya absensi milik sendiri — diuji di bawah",
+    ("GET", "/recaps/attendance"): "rekap sendiri; FINANCE/HR/OPS/ADMIN seluruh organisasi (V-30, diuji)",
 }
 # Kewenangan bergantung pada isi permintaan (SK di badan) atau tautan berkas → dijaga di handler.
 GUARDED_IN_HANDLER = {

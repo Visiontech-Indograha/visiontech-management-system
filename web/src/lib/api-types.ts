@@ -132,8 +132,8 @@ export interface paths {
         };
         /**
          * Get Audit Events
-         * @description Mengambil daftar kejadian audit. Hanya dapat diakses oleh Admin atau peran dengan VIEW_REPORTS.
-         *     Data difilter otomatis berdasarkan organization_id lewat RLS jika diatur.
+         * @description Kejadian audit organisasi pengguna (VIEW_AUDIT). Disaring `organization_id` secara eksplisit —
+         *     tidak hanya mengandalkan RLS, yang terlewati bila aplikasi terhubung sebagai pemilik tabel (T-12).
          */
         get: operations["get_audit_events_api_v1_audit_events_get"];
         put?: never;
@@ -253,6 +253,46 @@ export interface paths {
         put?: never;
         /** Offboard Employee */
         post: operations["offboard_employee_api_v1_employees__emp_id__offboard_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/employees/{emp_id}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Archive Employee
+         * @description Hapus karyawan (V-29, keputusan pemilik): hanya yang sudah di-offboard; dibalik lewat /restore.
+         */
+        post: operations["archive_employee_api_v1_employees__emp_id__archive_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/employees/{emp_id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Restore Employee
+         * @description domain.js RESTORE_EMPLOYEE (V-29): HR memulihkan karyawan terhapus sebagai nonaktif.
+         */
+        post: operations["restore_employee_api_v1_employees__emp_id__restore_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -404,7 +444,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * List Plan Days
+         * @description Siapa pun yang melihat SK (V-07); SK tak terlihat / organisasi lain → 404.
+         */
+        get: operations["list_plan_days_api_v1_work_plans__plan_id__days_get"];
         put?: never;
         /** Add Day */
         post: operations["add_day_api_v1_work_plans__plan_id__days_post"];
@@ -922,6 +966,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/work-plans/{plan_id}/attachments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Attachments */
+        get: operations["list_attachments_api_v1_work_plans__plan_id__attachments_get"];
+        /** Save Attachments */
+        put: operations["save_attachments_api_v1_work_plans__plan_id__attachments_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/attendance": {
         parameters: {
             query?: never;
@@ -1303,6 +1365,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/overtime": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Overtime
+         * @description Daftar lembur satu SK — siapa pun yang dapat melihat SK (tidak terlihat → 404).
+         */
+        get: operations["list_overtime_api_v1_overtime_get"];
+        put?: never;
+        /**
+         * Report Overtime
+         * @description domain.js REPORT_OVERTIME (V-28): ketua atau anggota mengajukan lembur pada SK aktif.
+         */
+        post: operations["report_overtime_api_v1_overtime_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/overtime/{ot_id}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Review Overtime
+         * @description domain.js REVIEW_OVERTIME (V-28): PM unit/OPS menyetujui atau menolak lembur PENDING_PM.
+         */
+        post: operations["review_overtime_api_v1_overtime__ot_id__review_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/recaps/overtime": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Overtime Recap
+         * @description Rekap lembur per karyawan per bulan — Finance/OPS/Admin seluruh organisasi, PM unitnya (dok 10 V-28).
+         */
+        get: operations["overtime_recap_api_v1_recaps_overtime_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1457,6 +1583,24 @@ export interface components {
             asset_id: string;
             /** Status */
             status: string;
+        };
+        /** AttachmentResponse */
+        AttachmentResponse: {
+            /** File Id */
+            file_id: string;
+            /** File Name */
+            file_name: string;
+            /** Mime Type */
+            mime_type: string;
+            /** Byte Size */
+            byte_size: number;
+            /** Sort Order */
+            sort_order: number;
+        };
+        /** AttachmentsRequest */
+        AttachmentsRequest: {
+            /** File Ids */
+            file_ids: string[];
         };
         /** AttendanceListResponse */
         AttendanceListResponse: {
@@ -1711,10 +1855,43 @@ export interface components {
             /** Tasks */
             tasks: components["schemas"]["DayTaskInput"][];
         };
+        /** DayReportOut */
+        DayReportOut: {
+            /** Status */
+            status: string;
+            /** Body */
+            body: string;
+            /** Obstacle */
+            obstacle: string;
+            /** Review Note */
+            review_note: string | null;
+            /** Submitted At */
+            submitted_at: string | null;
+            /** Reviewed At */
+            reviewed_at: string | null;
+            /** Evidence File Ids */
+            evidence_file_ids: string[];
+        };
         /** DayTaskInput */
         DayTaskInput: {
             /** Title */
             title: string;
+        };
+        /** DayTaskOut */
+        DayTaskOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Title */
+            title: string;
+            /** Sort Order */
+            sort_order: number;
+            /** Is Done */
+            is_done: boolean;
+            /** Done At */
+            done_at: string | null;
         };
         /** DecisionRequest */
         DecisionRequest: {
@@ -2072,6 +2249,98 @@ export interface components {
             /** Daily Average */
             daily_average: number;
         };
+        /**
+         * OvertimeCreate
+         * @description domain.js REPORT_OVERTIME. Aturan (jam 0–12, alasan wajib) diperiksa di OvertimeService
+         *     agar urutan & pesannya sama dengan prototipe.
+         */
+        OvertimeCreate: {
+            /**
+             * Work Plan Id
+             * Format: uuid
+             */
+            work_plan_id: string;
+            /** Hours */
+            hours: number;
+            /** Reason */
+            reason: string;
+        };
+        /**
+         * OvertimeRecapRow
+         * @description Satu baris rekap dari v_overtime_recap (per karyawan per bulan).
+         */
+        OvertimeRecapRow: {
+            /**
+             * Employee Id
+             * Format: uuid
+             */
+            employee_id: string;
+            /** Employee Name */
+            employee_name: string;
+            /**
+             * Period Month
+             * Format: date
+             */
+            period_month: string;
+            /** Approved Entries */
+            approved_entries: number;
+            /** Pending Entries */
+            pending_entries: number;
+            /** Approved Hours */
+            approved_hours: number;
+        };
+        /** OvertimeResponse */
+        OvertimeResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Work Plan Id
+             * Format: uuid
+             */
+            work_plan_id: string;
+            /** Plan Document Id */
+            plan_document_id: string | null;
+            /**
+             * Employee Id
+             * Format: uuid
+             */
+            employee_id: string;
+            /**
+             * Work Date
+             * Format: date
+             */
+            work_date: string;
+            /** Hours */
+            hours: number;
+            /** Reason */
+            reason: string;
+            /** Status */
+            status: string;
+            /** Reviewed By */
+            reviewed_by: string | null;
+            /** Reviewed At */
+            reviewed_at: string | null;
+            /** Review Note */
+            review_note: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /**
+         * OvertimeReview
+         * @description domain.js REVIEW_OVERTIME: decision APPROVED | REJECTED (diperiksa di service).
+         */
+        OvertimeReview: {
+            /** Decision */
+            decision: string;
+            /** Note */
+            note?: string | null;
+        };
         /** PlanDayCreate */
         PlanDayCreate: {
             /**
@@ -2086,6 +2355,26 @@ export interface components {
              * @default 0
              */
             sort_order: number;
+        };
+        /** PlanDayOut */
+        PlanDayOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Work Date
+             * Format: date
+             */
+            work_date: string;
+            /** Title */
+            title: string;
+            /** Sort Order */
+            sort_order: number;
+            /** Tasks */
+            tasks: components["schemas"]["DayTaskOut"][];
+            report: components["schemas"]["DayReportOut"] | null;
         };
         /** PlanDayResponse */
         PlanDayResponse: {
@@ -2629,7 +2918,7 @@ export interface operations {
             query?: {
                 page?: number;
                 size?: number;
-                entity_type?: string;
+                entity_type?: string | null;
             };
             header?: never;
             path?: never;
@@ -2882,6 +3171,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    archive_employee_api_v1_employees__emp_id__archive_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                emp_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    restore_employee_api_v1_employees__emp_id__restore_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                emp_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Validation Error */
@@ -3201,6 +3556,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorkPlanResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_plan_days_api_v1_work_plans__plan_id__days_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanDayOut"][];
                 };
             };
             /** @description Validation Error */
@@ -4200,6 +4586,72 @@ export interface operations {
             };
         };
     };
+    list_attachments_api_v1_work_plans__plan_id__attachments_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttachmentResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    save_attachments_api_v1_work_plans__plan_id__attachments_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AttachmentsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttachmentResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_attendance_api_v1_attendance_get: {
         parameters: {
             query?: {
@@ -4870,6 +5322,137 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AssetReturnResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_overtime_api_v1_overtime_get: {
+        parameters: {
+            query: {
+                work_plan_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OvertimeResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    report_overtime_api_v1_overtime_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OvertimeCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OvertimeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    review_overtime_api_v1_overtime__ot_id__review_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ot_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OvertimeReview"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OvertimeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    overtime_recap_api_v1_recaps_overtime_get: {
+        parameters: {
+            query?: {
+                /** @description Filter bulan dalam format YYYY-MM, contoh: 2026-09 */
+                month?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OvertimeRecapRow"][];
                 };
             };
             /** @description Validation Error */

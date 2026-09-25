@@ -143,7 +143,7 @@ uji aturan dari baris `domain.js` → servis → penjaga W3 → uji alur.
 | V-27 ✅ | RESERVE_ASSET, RELEASE_ASSET (ganti `allocate`), CHECK_ASSET | 7 | 489, 273 |
 | V-28 | REPORT_OVERTIME, REVIEW_OVERTIME + rekap | 7 | case masing-masing |
 | V-29 | RESTORE_EMPLOYEE, SAVE_ATTACHMENTS | 2/5 | 177 (izin), case masing-masing |
-| V-30 | Lini masa OPS dikelompokkan per pekerjaan, rekap absensi | 7 | dok 03 M11 |
+| V-30 ✅ | Lini masa OPS dikelompokkan per pekerjaan, rekap absensi | 7 | dok 03 M11 |
 
 Setiap task W6 dirinci (uji & DoD per aturan) tepat sebelum dikerjakan, di bagian bawah dokumen ini.
 

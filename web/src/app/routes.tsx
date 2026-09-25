@@ -6,6 +6,8 @@ import { AuditLogPage } from "@/features/audit/AuditLogPage";
 import { DirectoryPage } from "@/features/directory/DirectoryPage";
 import { EmployeeDetailPage } from "@/features/directory/EmployeeDetailPage";
 import { SitesPage } from "@/features/sites/SitesPage";
+import { WorkPlanDetailPage } from "@/features/work-plans/WorkPlanDetailPage";
+import { WorkPlansPage } from "@/features/work-plans/WorkPlansPage";
 import { ChangePasswordPage } from "@/pages/auth/ChangePasswordPage";
 import { LoginPage } from "@/pages/auth/LoginPage";
 import { ComingSoonPage, ForbiddenPage, HomePage, NotFoundPage } from "@/pages/Placeholders";
@@ -16,6 +18,7 @@ const PAGES: Record<string, ReactNode> = {
   "/audit-logs": <AuditLogPage />,
   "/directory": <DirectoryPage />,
   "/sites": <SitesPage />,
+  "/work-plans": <WorkPlansPage />,
 };
 
 /** Route dibangun dari NAV_ITEMS agar menu dan guard selalu sejalan. */
@@ -44,6 +47,7 @@ export const routes: RouteObject[] = [
               </RequireAccess>
             ),
           },
+          { path: "/work-plans/:id", element: <WorkPlanDetailPage /> },
           { path: "/forbidden", element: <ForbiddenPage /> },
           { path: "*", element: <NotFoundPage /> },
         ],

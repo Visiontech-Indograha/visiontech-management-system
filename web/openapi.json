@@ -198,7 +198,7 @@
      "Audit"
     ],
     "summary": "Get Audit Events",
-    "description": "Mengambil daftar kejadian audit. Hanya dapat diakses oleh Admin atau peran dengan VIEW_REPORTS.\nData difilter otomatis berdasarkan organization_id lewat RLS jika diatur.",
+    "description": "Kejadian audit organisasi pengguna (VIEW_AUDIT). Disaring `organization_id` secara eksplisit —\ntidak hanya mengandalkan RLS, yang terlewati bila aplikasi terhubung sebagai pemilik tabel (T-12).",
     "operationId": "get_audit_events_api_v1_audit_events_get",
     "security": [
      {
@@ -234,7 +234,14 @@
       "in": "query",
       "required": false,
       "schema": {
-       "type": "string",
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
        "title": "Entity Type"
       }
      }
@@ -675,6 +682,108 @@
     }
    }
   },
+  "/api/v1/employees/{emp_id}/archive": {
+   "post": {
+    "tags": [
+     "Employees"
+    ],
+    "summary": "Archive Employee",
+    "description": "Hapus karyawan (V-29, keputusan pemilik): hanya yang sudah di-offboard; dibalik lewat /restore.",
+    "operationId": "archive_employee_api_v1_employees__emp_id__archive_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "emp_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Emp Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Archive Employee Api V1 Employees  Emp Id  Archive Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/employees/{emp_id}/restore": {
+   "post": {
+    "tags": [
+     "Employees"
+    ],
+    "summary": "Restore Employee",
+    "description": "domain.js RESTORE_EMPLOYEE (V-29): HR memulihkan karyawan terhapus sebagai nonaktif.",
+    "operationId": "restore_employee_api_v1_employees__emp_id__restore_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "emp_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Emp Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Restore Employee Api V1 Employees  Emp Id  Restore Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/v1/employees/{emp_id}/conflicts": {
    "get": {
     "tags": [
@@ -1011,14 +1120,14 @@
     ]
    }
   },
-  "/api/v1/plans": {
+  "/api/v1/work-plans": {
    "get": {
     "tags": [
      "Work Plans"
     ],
     "summary": "Get Plans",
-    "description": "Hanya SK yang terlihat oleh pengguna (V-07, `domain.js` visiblePlans).",
-    "operationId": "get_plans_api_v1_plans_get",
+    "description": "Hanya SK yang terlihat oleh pengguna (V-07, `domain.js` visiblePlans). `archived=true`: draf\nterarsip — hanya untuk pengelola (V-21).",
+    "operationId": "get_plans_api_v1_work_plans_get",
     "security": [
      {
       "HTTPBearer": []
@@ -1040,6 +1149,16 @@
        ],
        "title": "Status Filter"
       }
+     },
+     {
+      "name": "archived",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "boolean",
+       "default": false,
+       "title": "Archived"
+      }
      }
     ],
     "responses": {
@@ -1052,7 +1171,7 @@
          "items": {
           "$ref": "#/components/schemas/WorkPlanResponse"
          },
-         "title": "Response Get Plans Api V1 Plans Get"
+         "title": "Response Get Plans Api V1 Work Plans Get"
         }
        }
       }
@@ -1074,7 +1193,7 @@
      "Work Plans"
     ],
     "summary": "Create Plan",
-    "operationId": "create_plan_api_v1_plans_post",
+    "operationId": "create_plan_api_v1_work_plans_post",
     "security": [
      {
       "HTTPBearer": []
@@ -1114,13 +1233,13 @@
     }
    }
   },
-  "/api/v1/plans/{plan_id}": {
+  "/api/v1/work-plans/{plan_id}": {
    "get": {
     "tags": [
      "Work Plans"
     ],
     "summary": "Get Plan",
-    "operationId": "get_plan_api_v1_plans__plan_id__get",
+    "operationId": "get_plan_api_v1_work_plans__plan_id__get",
     "security": [
      {
       "HTTPBearer": []
@@ -1161,12 +1280,12 @@
      }
     }
    },
-   "put": {
+   "patch": {
     "tags": [
      "Work Plans"
     ],
     "summary": "Update Plan",
-    "operationId": "update_plan_api_v1_plans__plan_id__put",
+    "operationId": "update_plan_api_v1_work_plans__plan_id__patch",
     "security": [
      {
       "HTTPBearer": []
@@ -1218,13 +1337,13 @@
     }
    }
   },
-  "/api/v1/plans/{plan_id}/days": {
+  "/api/v1/work-plans/{plan_id}/days": {
    "post": {
     "tags": [
      "Work Plans"
     ],
     "summary": "Add Day",
-    "operationId": "add_day_api_v1_plans__plan_id__days_post",
+    "operationId": "add_day_api_v1_work_plans__plan_id__days_post",
     "security": [
      {
       "HTTPBearer": []
@@ -1274,21 +1393,82 @@
       }
      }
     }
-   }
-  },
-  "/api/v1/plans/days/{day_id}/tasks": {
-   "post": {
+   },
+   "get": {
     "tags": [
-     "Work Plans"
+     "Daily Reports"
     ],
-    "summary": "Add Task",
-    "operationId": "add_task_api_v1_plans_days__day_id__tasks_post",
+    "summary": "List Plan Days",
+    "description": "Siapa pun yang melihat SK (V-07); SK tak terlihat / organisasi lain → 404.",
+    "operationId": "list_plan_days_api_v1_work_plans__plan_id__days_get",
     "security": [
      {
       "HTTPBearer": []
      }
     ],
     "parameters": [
+     {
+      "name": "plan_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Plan Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/PlanDayOut"
+         },
+         "title": "Response List Plan Days Api V1 Work Plans  Plan Id  Days Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/work-plans/{plan_id}/days/{day_id}/tasks": {
+   "post": {
+    "tags": [
+     "Work Plans"
+    ],
+    "summary": "Add Task",
+    "operationId": "add_task_api_v1_work_plans__plan_id__days__day_id__tasks_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "plan_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Plan Id"
+      }
+     },
      {
       "name": "day_id",
       "in": "path",
@@ -1334,13 +1514,84 @@
     }
    }
   },
-  "/api/v1/plans/{plan_id}/members": {
+  "/api/v1/work-plans/{plan_id}/days/{day_id}/plan": {
+   "put": {
+    "tags": [
+     "Work Plans"
+    ],
+    "summary": "Save Day",
+    "description": "domain.js SAVE_DAY (V-23): PM menyusun ulang judul & tugas satu hari selagi SK masih draf.",
+    "operationId": "save_day_api_v1_work_plans__plan_id__days__day_id__plan_put",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "plan_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Plan Id"
+      }
+     },
+     {
+      "name": "day_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Day Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/DayPlanRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Save Day Api V1 Work Plans  Plan Id  Days  Day Id  Plan Put"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/work-plans/{plan_id}/members": {
    "put": {
     "tags": [
      "Plan Members"
     ],
     "summary": "Set Plan Team",
-    "operationId": "set_plan_team_api_v1_plans__plan_id__members_put",
+    "operationId": "set_plan_team_api_v1_work_plans__plan_id__members_put",
     "security": [
      {
       "HTTPBearer": []
@@ -1392,13 +1643,13 @@
     }
    }
   },
-  "/api/v1/plans/{plan_id}/publish": {
+  "/api/v1/work-plans/{plan_id}/publish": {
    "post": {
     "tags": [
      "Work Plan Transitions"
     ],
     "summary": "Publish Plan",
-    "operationId": "publish_plan_api_v1_plans__plan_id__publish_post",
+    "operationId": "publish_plan_api_v1_work_plans__plan_id__publish_post",
     "security": [
      {
       "HTTPBearer": []
@@ -1450,13 +1701,13 @@
     }
    }
   },
-  "/api/v1/plans/{plan_id}/accept": {
+  "/api/v1/work-plans/{plan_id}/accept": {
    "post": {
     "tags": [
      "Work Plan Transitions"
     ],
     "summary": "Accept Plan",
-    "operationId": "accept_plan_api_v1_plans__plan_id__accept_post",
+    "operationId": "accept_plan_api_v1_work_plans__plan_id__accept_post",
     "security": [
      {
       "HTTPBearer": []
@@ -1508,13 +1759,308 @@
     }
    }
   },
-  "/api/v1/plans/{plan_id}/start": {
+  "/api/v1/work-plans/{plan_id}/appeal": {
+   "post": {
+    "tags": [
+     "Work Plan Transitions"
+    ],
+    "summary": "Appeal Plan",
+    "description": "domain.js APPEAL (V-20): ketua mengajukan banding atas SK terbit.",
+    "operationId": "appeal_plan_api_v1_work_plans__plan_id__appeal_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "plan_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Plan Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/TransitionRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/WorkPlanResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/work-plans/{plan_id}/revise": {
+   "post": {
+    "tags": [
+     "Work Plan Transitions"
+    ],
+    "summary": "Revise Plan",
+    "description": "domain.js REVISE (V-20): PM membuka revisi draf dari SK yang dibanding.",
+    "operationId": "revise_plan_api_v1_work_plans__plan_id__revise_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "plan_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Plan Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/TransitionRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/WorkPlanResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/work-plans/{plan_id}/cancel": {
+   "post": {
+    "tags": [
+     "Work Plan Transitions"
+    ],
+    "summary": "Cancel Plan",
+    "description": "domain.js CANCEL_PLAN (V-21).",
+    "operationId": "cancel_plan_api_v1_work_plans__plan_id__cancel_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "plan_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Plan Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/TransitionRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/WorkPlanResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/work-plans/{plan_id}/archive": {
+   "post": {
+    "tags": [
+     "Work Plan Transitions"
+    ],
+    "summary": "Archive Plan",
+    "description": "domain.js DELETE_PLAN (V-21): arsip draf — soft delete, riwayat tetap ada.",
+    "operationId": "archive_plan_api_v1_work_plans__plan_id__archive_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "plan_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Plan Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/TransitionRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/WorkPlanResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/work-plans/{plan_id}/restore": {
+   "post": {
+    "tags": [
+     "Work Plan Transitions"
+    ],
+    "summary": "Restore Plan",
+    "description": "domain.js RESTORE_PLAN (V-21): pulihkan draf terarsip.",
+    "operationId": "restore_plan_api_v1_work_plans__plan_id__restore_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "plan_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Plan Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/TransitionRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/WorkPlanResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/work-plans/{plan_id}/start": {
    "post": {
     "tags": [
      "Work Plan Transitions"
     ],
     "summary": "Start Plan",
-    "operationId": "start_plan_api_v1_plans__plan_id__start_post",
+    "operationId": "start_plan_api_v1_work_plans__plan_id__start_post",
     "security": [
      {
       "HTTPBearer": []
@@ -1566,14 +2112,14 @@
     }
    }
   },
-  "/api/v1/plans/{plan_id}/changes/extension": {
+  "/api/v1/work-plans/{plan_id}/request-completion": {
    "post": {
     "tags": [
-     "Plan Changes / Addendums"
+     "Work Plan Transitions"
     ],
-    "summary": "Request Extension",
-    "description": "Mengajukan Adendum Perpanjangan Waktu (P3-4). Diajukan ketua menurut SK (domain.js REQUEST_CHANGE).",
-    "operationId": "request_extension_api_v1_plans__plan_id__changes_extension_post",
+    "summary": "Request Completion",
+    "description": "domain.js REQUEST_COMPLETE (V-26): ketua menyerahkan laporan akhir → COMPLETION_REVIEW.",
+    "operationId": "request_completion_api_v1_work_plans__plan_id__request_completion_post",
     "security": [
      {
       "HTTPBearer": []
@@ -1596,7 +2142,7 @@
      "content": {
       "application/json": {
        "schema": {
-        "$ref": "#/components/schemas/ExtensionRequest"
+        "$ref": "#/components/schemas/CompletionRequest"
        }
       }
      }
@@ -1607,9 +2153,7 @@
       "content": {
        "application/json": {
         "schema": {
-         "type": "object",
-         "additionalProperties": true,
-         "title": "Response Request Extension Api V1 Plans  Plan Id  Changes Extension Post"
+         "$ref": "#/components/schemas/WorkPlanResponse"
         }
        }
       }
@@ -1627,14 +2171,14 @@
     }
    }
   },
-  "/api/v1/plans/{plan_id}/changes/{change_id}/approve": {
+  "/api/v1/work-plans/{plan_id}/approve-completion": {
    "post": {
     "tags": [
-     "Plan Changes / Addendums"
+     "Work Plan Transitions"
     ],
-    "summary": "Approve Change",
-    "description": "Menyetujui adendum (P3-4, P3-5) dan menerapkannya.",
-    "operationId": "approve_change_api_v1_plans__plan_id__changes__change_id__approve_post",
+    "summary": "Approve Completion",
+    "description": "domain.js APPROVE_COMPLETE (V-26): PM unit/OPS menutup SK → COMPLETED.",
+    "operationId": "approve_completion_api_v1_work_plans__plan_id__approve_completion_post",
     "security": [
      {
       "HTTPBearer": []
@@ -1650,7 +2194,174 @@
        "format": "uuid",
        "title": "Plan Id"
       }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/TransitionRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/WorkPlanResponse"
+        }
+       }
+      }
      },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/work-plans/{plan_id}/return-completion": {
+   "post": {
+    "tags": [
+     "Work Plan Transitions"
+    ],
+    "summary": "Return Completion",
+    "description": "domain.js RETURN_COMPLETE (V-26): PM unit/OPS mengembalikan ke ketua → IN_PROGRESS.",
+    "operationId": "return_completion_api_v1_work_plans__plan_id__return_completion_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "plan_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Plan Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/TransitionRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/WorkPlanResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/work-plans/{plan_id}/changes": {
+   "post": {
+    "tags": [
+     "Plan Changes / Addendums"
+    ],
+    "summary": "Request Change",
+    "description": "REQUEST_CHANGE (ketua, perpanjangan) · REQUEST_PERSONNEL_CHANGE (PM unit/OPS, personel).",
+    "operationId": "request_change_api_v1_work_plans__plan_id__changes_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "plan_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Plan Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ChangeRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ChangeResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/changes/{change_id}/approve": {
+   "post": {
+    "tags": [
+     "Plan Changes / Addendums"
+    ],
+    "summary": "Approve Change",
+    "description": "APPROVE_CHANGE — PM unit/OPS menandatangani perpanjangan.",
+    "operationId": "approve_change_api_v1_changes__change_id__approve_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
      {
       "name": "change_id",
       "in": "path",
@@ -1662,12 +2373,201 @@
       }
      }
     ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/DecisionRequest"
+       }
+      }
+     }
+    },
     "responses": {
      "200": {
       "description": "Successful Response",
       "content": {
        "application/json": {
-        "schema": {}
+        "schema": {
+         "$ref": "#/components/schemas/ChangeResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/changes/{change_id}/accept": {
+   "post": {
+    "tags": [
+     "Plan Changes / Addendums"
+    ],
+    "summary": "Accept Change",
+    "description": "ACCEPT_CHANGE — ketua (perpanjangan) / ketua baru (personel) mengaktifkan adendum.",
+    "operationId": "accept_change_api_v1_changes__change_id__accept_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "change_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Change Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/DecisionRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ChangeResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/changes/{change_id}/reject": {
+   "post": {
+    "tags": [
+     "Plan Changes / Addendums"
+    ],
+    "summary": "Reject Change",
+    "description": "REJECT_CHANGE — alasan wajib.",
+    "operationId": "reject_change_api_v1_changes__change_id__reject_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "change_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Change Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/DecisionRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ChangeResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/changes/{change_id}/withdraw": {
+   "post": {
+    "tags": [
+     "Plan Changes / Addendums"
+    ],
+    "summary": "Withdraw Change",
+    "description": "WITHDRAW_CHANGE — PM menarik adendum personel.",
+    "operationId": "withdraw_change_api_v1_changes__change_id__withdraw_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "change_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Change Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/DecisionRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ChangeResponse"
+        }
        }
       }
      },
@@ -1804,13 +2704,630 @@
     }
    }
   },
+  "/api/v1/work-plans/{plan_id}/weekly": {
+   "get": {
+    "tags": [
+     "Weekly Reports"
+    ],
+    "summary": "List Weeks",
+    "operationId": "list_weeks_api_v1_work_plans__plan_id__weekly_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "plan_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Plan Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/WeeklyReportResponse"
+         },
+         "title": "Response List Weeks Api V1 Work Plans  Plan Id  Weekly Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/work-plans/{plan_id}/weekly/{week}": {
+   "put": {
+    "tags": [
+     "Weekly Reports"
+    ],
+    "summary": "Save Weekly",
+    "operationId": "save_weekly_api_v1_work_plans__plan_id__weekly__week__put",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "week",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Week"
+      }
+     },
+     {
+      "name": "plan_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Plan Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/WeeklyReportRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/WeeklyReportResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/work-plans/{plan_id}/weekly/{week}/submit": {
+   "post": {
+    "tags": [
+     "Weekly Reports"
+    ],
+    "summary": "Submit Weekly",
+    "operationId": "submit_weekly_api_v1_work_plans__plan_id__weekly__week__submit_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "week",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Week"
+      }
+     },
+     {
+      "name": "plan_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Plan Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/WeeklyReportResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/work-plans/{plan_id}/weekly/{week}/review": {
+   "post": {
+    "tags": [
+     "Weekly Reports"
+    ],
+    "summary": "Review Weekly",
+    "operationId": "review_weekly_api_v1_work_plans__plan_id__weekly__week__review_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "week",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Week"
+      }
+     },
+     {
+      "name": "plan_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Plan Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/WeeklyReviewRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/WeeklyReportResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/timeline": {
+   "get": {
+    "tags": [
+     "Monitoring"
+    ],
+    "summary": "Timeline",
+    "description": "Dok 03 M11: dikelompokkan per pekerjaan, hanya SK yang terlihat (V-07).",
+    "operationId": "timeline_api_v1_timeline_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "from",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "From"
+      }
+     },
+     {
+      "name": "to",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "To"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/TimelineGroup"
+         },
+         "title": "Response Timeline Api V1 Timeline Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/recaps/attendance": {
+   "get": {
+    "tags": [
+     "Monitoring"
+    ],
+    "summary": "Attendance Recap",
+    "description": "FINANCE/HR/OPS/ADMIN: seluruh organisasi; lainnya: hanya dirinya (aturan `GET /attendance`).",
+    "operationId": "attendance_recap_api_v1_recaps_attendance_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "month",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "pattern": "^\\d{4}-\\d{2}$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Month"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AttendanceRecap"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/work-plans/{plan_id}/attachments": {
+   "get": {
+    "tags": [
+     "Work Plans"
+    ],
+    "summary": "List Attachments",
+    "operationId": "list_attachments_api_v1_work_plans__plan_id__attachments_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "plan_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Plan Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/AttachmentResponse"
+         },
+         "title": "Response List Attachments Api V1 Work Plans  Plan Id  Attachments Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "put": {
+    "tags": [
+     "Work Plans"
+    ],
+    "summary": "Save Attachments",
+    "operationId": "save_attachments_api_v1_work_plans__plan_id__attachments_put",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "plan_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Plan Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/AttachmentsRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/AttachmentResponse"
+         },
+         "title": "Response Save Attachments Api V1 Work Plans  Plan Id  Attachments Put"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/attendance": {
+   "get": {
+    "tags": [
+     "Attendance"
+    ],
+    "summary": "List Attendance",
+    "description": "Dok 05 §3.5. FINANCE/HR/OPS/ADMIN: seluruh organisasi; lainnya: hanya milik sendiri.\nFilter `plan_id` di dok 05 belum didukung — absensi belum tertaut ke SK (dok 10 Bagian C).",
+    "operationId": "list_attendance_api_v1_attendance_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "employee_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "uuid"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Employee Id"
+      }
+     },
+     {
+      "name": "from",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "From"
+      }
+     },
+     {
+      "name": "to",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "To"
+      }
+     },
+     {
+      "name": "status",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Status"
+      }
+     },
+     {
+      "name": "page",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "minimum": 1,
+       "default": 1,
+       "title": "Page"
+      }
+     },
+     {
+      "name": "size",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 200,
+       "minimum": 1,
+       "default": 50,
+       "title": "Size"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AttendanceListResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/v1/attendance/check-in": {
    "post": {
     "tags": [
      "Attendance"
     ],
     "summary": "Check In",
-    "description": "P4-2: Absensi Check-In dengan validasi lokasi.",
+    "description": "P4-2 · domain.js CHECK_IN. Waktu, tanggal, jarak, dan status dari server (aturan inti #3).",
     "operationId": "check_in_api_v1_attendance_check_in_post",
     "requestBody": {
      "content": {
@@ -1857,6 +3374,7 @@
      "Attendance"
     ],
     "summary": "Check Out",
+    "description": "domain.js CHECK_OUT — menutup sesi terbuka milik sendiri.",
     "operationId": "check_out_api_v1_attendance_check_out_post",
     "requestBody": {
      "content": {
@@ -1903,7 +3421,7 @@
      "Attendance"
     ],
     "summary": "Explain Attendance",
-    "description": "P4-4: Karyawan memberi penjelasan untuk absensi bermasalah — hanya absensinya sendiri (V-09).",
+    "description": "P4-4 · domain.js EXPLAIN_ATTENDANCE — hanya absensi sendiri yang menunggu pemeriksaan.",
     "operationId": "explain_attendance_api_v1_attendance__att_id__explain_post",
     "security": [
      {
@@ -1937,7 +3455,13 @@
       "description": "Successful Response",
       "content": {
        "application/json": {
-        "schema": {}
+        "schema": {
+         "type": "object",
+         "additionalProperties": {
+          "type": "string"
+         },
+         "title": "Response Explain Attendance Api V1 Attendance  Att Id  Explain Post"
+        }
        }
       }
      },
@@ -1960,7 +3484,7 @@
      "Attendance"
     ],
     "summary": "Review Attendance",
-    "description": "P4-4: Review oleh Finance/HR.",
+    "description": "P4-4 · domain.js REVIEW_ATTENDANCE (Finance).",
     "operationId": "review_attendance_api_v1_attendance__att_id__review_post",
     "security": [
      {
@@ -1994,7 +3518,13 @@
       "description": "Successful Response",
       "content": {
        "application/json": {
-        "schema": {}
+        "schema": {
+         "type": "object",
+         "additionalProperties": {
+          "type": "string"
+         },
+         "title": "Response Review Attendance Api V1 Attendance  Att Id  Review Post"
+        }
        }
       }
      },
@@ -2017,7 +3547,7 @@
      "Attendance"
     ],
     "summary": "Export Attendance",
-    "description": "P4-5: Ekspor CSV untuk Finance.",
+    "description": "P4-5: Ekspor CSV untuk Finance. Jam dalam zona waktu organisasi (sebelumnya tercetak UTC).",
     "operationId": "export_attendance_api_v1_attendance_export_get",
     "security": [
      {
@@ -2226,13 +3756,13 @@
     }
    }
   },
-  "/api/v1/hse/daily-reports/{day_id}": {
-   "post": {
+  "/api/v1/work-plans/{plan_id}/days/{day_id}": {
+   "put": {
     "tags": [
-     "HSE & Reports"
+     "Daily Reports"
     ],
     "summary": "Upsert Daily Report",
-    "operationId": "upsert_daily_report_api_v1_hse_daily_reports__day_id__post",
+    "operationId": "upsert_daily_report_api_v1_work_plans__plan_id__days__day_id__put",
     "security": [
      {
       "HTTPBearer": []
@@ -2247,6 +3777,16 @@
        "type": "string",
        "format": "uuid",
        "title": "Day Id"
+      }
+     },
+     {
+      "name": "plan_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Plan Id"
       }
      }
     ],
@@ -2284,13 +3824,13 @@
     }
    }
   },
-  "/api/v1/hse/daily-reports/{day_id}/submit": {
+  "/api/v1/work-plans/{plan_id}/days/{day_id}/submit": {
    "post": {
     "tags": [
-     "HSE & Reports"
+     "Daily Reports"
     ],
     "summary": "Submit Daily Report",
-    "operationId": "submit_daily_report_api_v1_hse_daily_reports__day_id__submit_post",
+    "operationId": "submit_daily_report_api_v1_work_plans__plan_id__days__day_id__submit_post",
     "security": [
      {
       "HTTPBearer": []
@@ -2306,6 +3846,16 @@
        "format": "uuid",
        "title": "Day Id"
       }
+     },
+     {
+      "name": "plan_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Plan Id"
+      }
      }
     ],
     "responses": {
@@ -2315,6 +3865,146 @@
        "application/json": {
         "schema": {
          "$ref": "#/components/schemas/DailyReportResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/work-plans/{plan_id}/days/{day_id}/review": {
+   "post": {
+    "tags": [
+     "Daily Reports"
+    ],
+    "summary": "Review Daily Report",
+    "description": "domain.js REVIEW_REPORT (V-24): PM unit/OPS menyetujui atau mengembalikan laporan yang diserahkan.",
+    "operationId": "review_daily_report_api_v1_work_plans__plan_id__days__day_id__review_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "day_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Day Id"
+      }
+     },
+     {
+      "name": "plan_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Plan Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ReportReviewRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/DailyReportResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/work-plans/{plan_id}/days/{day_id}/tasks/{task_id}/toggle": {
+   "post": {
+    "tags": [
+     "Daily Reports"
+    ],
+    "summary": "Toggle Task",
+    "description": "domain.js TOGGLE_TASK (V-23): ketua mencentang tugas selama laporan hari itu belum diserahkan.",
+    "operationId": "toggle_task_api_v1_work_plans__plan_id__days__day_id__tasks__task_id__toggle_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "day_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Day Id"
+      }
+     },
+     {
+      "name": "task_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Task Id"
+      }
+     },
+     {
+      "name": "plan_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Plan Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Toggle Task Api V1 Work Plans  Plan Id  Days  Day Id  Tasks  Task Id  Toggle Post"
         }
        }
       }
@@ -2406,22 +4096,40 @@
     ]
    }
   },
-  "/api/v1/assets/allocate": {
+  "/api/v1/assets/{asset_id}/reserve": {
    "post": {
     "tags": [
      "Assets"
     ],
-    "summary": "Allocate Asset",
-    "operationId": "allocate_asset_api_v1_assets_allocate_post",
+    "summary": "Reserve Asset",
+    "description": "domain.js RESERVE_ASSET (V-27): petugas aset atau PM unit/OPS SK memesan aset untuk SK aktif.",
+    "operationId": "reserve_asset_api_v1_assets__asset_id__reserve_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "asset_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Asset Id"
+      }
+     }
+    ],
     "requestBody": {
+     "required": true,
      "content": {
       "application/json": {
        "schema": {
-        "$ref": "#/components/schemas/AssetAllocationCreate"
+        "$ref": "#/components/schemas/AssetReserveRequest"
        }
       }
-     },
-     "required": true
+     }
     },
     "responses": {
      "200": {
@@ -2444,12 +4152,125 @@
        }
       }
      }
-    },
+    }
+   }
+  },
+  "/api/v1/assets/{asset_id}/release": {
+   "post": {
+    "tags": [
+     "Assets"
+    ],
+    "summary": "Release Asset",
+    "description": "domain.js RELEASE_ASSET (V-27): reservasi yang belum dipakai dilepas.",
+    "operationId": "release_asset_api_v1_assets__asset_id__release_post",
     "security": [
      {
       "HTTPBearer": []
      }
-    ]
+    ],
+    "parameters": [
+     {
+      "name": "asset_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Asset Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/AssetReleaseRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AssetStatusResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/assets/{asset_id}/check": {
+   "post": {
+    "tags": [
+     "Assets"
+    ],
+    "summary": "Check Asset",
+    "description": "domain.js CHECK_ASSET (V-27): pengemudi yang ditunjuk menyatakan kendaraan layak atau banding.",
+    "operationId": "check_asset_api_v1_assets__asset_id__check_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "asset_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Asset Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/AssetCheckRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AssetStatusResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
    }
   },
   "/api/v1/assets/allocations/{alloc_id}/return": {
@@ -2569,42 +4390,229 @@
      }
     }
    }
+  },
+  "/api/v1/overtime": {
+   "post": {
+    "tags": [
+     "Overtime"
+    ],
+    "summary": "Report Overtime",
+    "description": "domain.js REPORT_OVERTIME (V-28): ketua atau anggota mengajukan lembur pada SK aktif.",
+    "operationId": "report_overtime_api_v1_overtime_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/OvertimeCreate"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/OvertimeResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "get": {
+    "tags": [
+     "Overtime"
+    ],
+    "summary": "List Overtime",
+    "description": "Daftar lembur satu SK — siapa pun yang dapat melihat SK (tidak terlihat → 404).",
+    "operationId": "list_overtime_api_v1_overtime_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "work_plan_id",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Work Plan Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/OvertimeResponse"
+         },
+         "title": "Response List Overtime Api V1 Overtime Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/overtime/{ot_id}/review": {
+   "post": {
+    "tags": [
+     "Overtime"
+    ],
+    "summary": "Review Overtime",
+    "description": "domain.js REVIEW_OVERTIME (V-28): PM unit/OPS menyetujui atau menolak lembur PENDING_PM.",
+    "operationId": "review_overtime_api_v1_overtime__ot_id__review_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "ot_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Ot Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/OvertimeReview"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/OvertimeResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/recaps/overtime": {
+   "get": {
+    "tags": [
+     "Overtime"
+    ],
+    "summary": "Overtime Recap",
+    "description": "Rekap lembur per karyawan per bulan — Finance/OPS/Admin seluruh organisasi, PM unitnya (dok 10 V-28).",
+    "operationId": "overtime_recap_api_v1_recaps_overtime_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "month",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Filter bulan dalam format YYYY-MM, contoh: 2026-09",
+       "title": "Month"
+      },
+      "description": "Filter bulan dalam format YYYY-MM, contoh: 2026-09"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/OvertimeRecapRow"
+         },
+         "title": "Response Overtime Recap Api V1 Recaps Overtime Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
   }
  },
  "components": {
   "schemas": {
-   "AssetAllocationCreate": {
-    "properties": {
-     "asset_id": {
-      "type": "string",
-      "format": "uuid",
-      "title": "Asset Id"
-     },
-     "work_plan_id": {
-      "type": "string",
-      "format": "uuid",
-      "title": "Work Plan Id"
-     },
-     "driver_employee_id": {
-      "anyOf": [
-       {
-        "type": "string",
-        "format": "uuid"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Driver Employee Id"
-     }
-    },
-    "type": "object",
-    "required": [
-     "asset_id",
-     "work_plan_id"
-    ],
-    "title": "AssetAllocationCreate"
-   },
    "AssetAllocationResponse": {
     "properties": {
      "id": {
@@ -2669,6 +4677,30 @@
     ],
     "title": "AssetAllocationResponse"
    },
+   "AssetCheckRequest": {
+    "properties": {
+     "decision": {
+      "type": "string",
+      "title": "Decision"
+     },
+     "reason": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Reason"
+     }
+    },
+    "type": "object",
+    "required": [
+     "decision"
+    ],
+    "title": "AssetCheckRequest"
+   },
    "AssetCreate": {
     "properties": {
      "kind": {
@@ -2707,6 +4739,46 @@
      "name"
     ],
     "title": "AssetCreate"
+   },
+   "AssetReleaseRequest": {
+    "properties": {
+     "work_plan_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Work Plan Id"
+     }
+    },
+    "type": "object",
+    "required": [
+     "work_plan_id"
+    ],
+    "title": "AssetReleaseRequest"
+   },
+   "AssetReserveRequest": {
+    "properties": {
+     "work_plan_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Work Plan Id"
+     },
+     "driver_employee_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Driver Employee Id"
+     }
+    },
+    "type": "object",
+    "required": [
+     "work_plan_id"
+    ],
+    "title": "AssetReserveRequest"
    },
    "AssetResponse": {
     "properties": {
@@ -2887,6 +4959,170 @@
      "is_accepted"
     ],
     "title": "AssetReturnVerify"
+   },
+   "AssetStatusResponse": {
+    "properties": {
+     "asset_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Asset Id"
+     },
+     "status": {
+      "type": "string",
+      "title": "Status"
+     }
+    },
+    "type": "object",
+    "required": [
+     "asset_id",
+     "status"
+    ],
+    "title": "AssetStatusResponse"
+   },
+   "AttachmentResponse": {
+    "properties": {
+     "file_id": {
+      "type": "string",
+      "title": "File Id"
+     },
+     "file_name": {
+      "type": "string",
+      "title": "File Name"
+     },
+     "mime_type": {
+      "type": "string",
+      "title": "Mime Type"
+     },
+     "byte_size": {
+      "type": "integer",
+      "title": "Byte Size"
+     },
+     "sort_order": {
+      "type": "integer",
+      "title": "Sort Order"
+     }
+    },
+    "type": "object",
+    "required": [
+     "file_id",
+     "file_name",
+     "mime_type",
+     "byte_size",
+     "sort_order"
+    ],
+    "title": "AttachmentResponse"
+   },
+   "AttachmentsRequest": {
+    "properties": {
+     "file_ids": {
+      "items": {
+       "type": "string",
+       "format": "uuid"
+      },
+      "type": "array",
+      "title": "File Ids"
+     }
+    },
+    "type": "object",
+    "required": [
+     "file_ids"
+    ],
+    "title": "AttachmentsRequest"
+   },
+   "AttendanceListResponse": {
+    "properties": {
+     "items": {
+      "items": {
+       "$ref": "#/components/schemas/AttendanceResponse"
+      },
+      "type": "array",
+      "title": "Items"
+     },
+     "total": {
+      "type": "integer",
+      "title": "Total"
+     },
+     "page": {
+      "type": "integer",
+      "title": "Page"
+     },
+     "size": {
+      "type": "integer",
+      "title": "Size"
+     }
+    },
+    "type": "object",
+    "required": [
+     "items",
+     "total",
+     "page",
+     "size"
+    ],
+    "title": "AttendanceListResponse"
+   },
+   "AttendanceRecap": {
+    "properties": {
+     "month": {
+      "type": "string",
+      "title": "Month"
+     },
+     "employees": {
+      "items": {
+       "$ref": "#/components/schemas/AttendanceRecapRow"
+      },
+      "type": "array",
+      "title": "Employees"
+     }
+    },
+    "type": "object",
+    "required": [
+     "month",
+     "employees"
+    ],
+    "title": "AttendanceRecap"
+   },
+   "AttendanceRecapRow": {
+    "properties": {
+     "employee_id": {
+      "type": "string",
+      "title": "Employee Id"
+     },
+     "full_name": {
+      "type": "string",
+      "title": "Full Name"
+     },
+     "days_present": {
+      "type": "integer",
+      "title": "Days Present"
+     },
+     "auto_valid": {
+      "type": "integer",
+      "title": "Auto Valid"
+     },
+     "needs_review": {
+      "type": "integer",
+      "title": "Needs Review"
+     },
+     "approved": {
+      "type": "integer",
+      "title": "Approved"
+     },
+     "rejected": {
+      "type": "integer",
+      "title": "Rejected"
+     }
+    },
+    "type": "object",
+    "required": [
+     "employee_id",
+     "full_name",
+     "days_present",
+     "auto_valid",
+     "needs_review",
+     "approved",
+     "rejected"
+    ],
+    "title": "AttendanceRecapRow"
    },
    "AttendanceResponse": {
     "properties": {
@@ -3129,6 +5365,106 @@
     ],
     "title": "ChangePasswordRequest"
    },
+   "ChangeRequest": {
+    "properties": {
+     "type": {
+      "type": "string",
+      "enum": [
+       "EXTEND",
+       "PERSONNEL"
+      ],
+      "title": "Type"
+     },
+     "reason": {
+      "type": "string",
+      "title": "Reason",
+      "default": ""
+     },
+     "new_period_end": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "New Period End"
+     },
+     "leader_employee_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Leader Employee Id"
+     },
+     "member_employee_ids": {
+      "items": {
+       "type": "string",
+       "format": "uuid"
+      },
+      "type": "array",
+      "title": "Member Employee Ids"
+     }
+    },
+    "type": "object",
+    "required": [
+     "type"
+    ],
+    "title": "ChangeRequest"
+   },
+   "ChangeResponse": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Id"
+     },
+     "work_plan_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Work Plan Id"
+     },
+     "change_type": {
+      "type": "string",
+      "title": "Change Type"
+     },
+     "status": {
+      "type": "string",
+      "title": "Status"
+     },
+     "reason": {
+      "type": "string",
+      "title": "Reason"
+     },
+     "decision_reason": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Decision Reason"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "work_plan_id",
+     "change_type",
+     "status",
+     "reason"
+    ],
+    "title": "ChangeResponse"
+   },
    "CheckInRequest": {
     "properties": {
      "site_id": {
@@ -3202,6 +5538,38 @@
      "location"
     ],
     "title": "CheckOutRequest"
+   },
+   "CompletionRequest": {
+    "properties": {
+     "row_version": {
+      "type": "integer",
+      "title": "Row Version"
+     },
+     "body": {
+      "type": "string",
+      "title": "Body"
+     },
+     "obstacle": {
+      "type": "string",
+      "title": "Obstacle"
+     },
+     "evidence_file_ids": {
+      "items": {
+       "type": "string",
+       "format": "uuid"
+      },
+      "type": "array",
+      "title": "Evidence File Ids",
+      "default": []
+     }
+    },
+    "type": "object",
+    "required": [
+     "row_version",
+     "body",
+     "obstacle"
+    ],
+    "title": "CompletionRequest"
    },
    "DailyReportCreate": {
     "properties": {
@@ -3303,6 +5671,169 @@
      "reviewed_at"
     ],
     "title": "DailyReportResponse"
+   },
+   "DayPlanRequest": {
+    "properties": {
+     "title": {
+      "type": "string",
+      "title": "Title"
+     },
+     "tasks": {
+      "items": {
+       "$ref": "#/components/schemas/DayTaskInput"
+      },
+      "type": "array",
+      "title": "Tasks"
+     }
+    },
+    "type": "object",
+    "required": [
+     "title",
+     "tasks"
+    ],
+    "title": "DayPlanRequest"
+   },
+   "DayReportOut": {
+    "properties": {
+     "status": {
+      "type": "string",
+      "title": "Status"
+     },
+     "body": {
+      "type": "string",
+      "title": "Body"
+     },
+     "obstacle": {
+      "type": "string",
+      "title": "Obstacle"
+     },
+     "review_note": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Review Note"
+     },
+     "submitted_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Submitted At"
+     },
+     "reviewed_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Reviewed At"
+     },
+     "evidence_file_ids": {
+      "items": {
+       "type": "string",
+       "format": "uuid"
+      },
+      "type": "array",
+      "title": "Evidence File Ids"
+     }
+    },
+    "type": "object",
+    "required": [
+     "status",
+     "body",
+     "obstacle",
+     "review_note",
+     "submitted_at",
+     "reviewed_at",
+     "evidence_file_ids"
+    ],
+    "title": "DayReportOut"
+   },
+   "DayTaskInput": {
+    "properties": {
+     "title": {
+      "type": "string",
+      "title": "Title"
+     }
+    },
+    "type": "object",
+    "required": [
+     "title"
+    ],
+    "title": "DayTaskInput"
+   },
+   "DayTaskOut": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Id"
+     },
+     "title": {
+      "type": "string",
+      "title": "Title"
+     },
+     "sort_order": {
+      "type": "integer",
+      "title": "Sort Order"
+     },
+     "is_done": {
+      "type": "boolean",
+      "title": "Is Done"
+     },
+     "done_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Done At"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "title",
+     "sort_order",
+     "is_done",
+     "done_at"
+    ],
+    "title": "DayTaskOut"
+   },
+   "DecisionRequest": {
+    "properties": {
+     "reason": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Reason"
+     }
+    },
+    "type": "object",
+    "title": "DecisionRequest"
    },
    "DocumentListResponse": {
     "properties": {
@@ -4009,25 +6540,6 @@
     ],
     "title": "ExplanationRequest"
    },
-   "ExtensionRequest": {
-    "properties": {
-     "new_period_end": {
-      "type": "string",
-      "format": "date",
-      "title": "New Period End"
-     },
-     "reason": {
-      "type": "string",
-      "title": "Reason"
-     }
-    },
-    "type": "object",
-    "required": [
-     "new_period_end",
-     "reason"
-    ],
-    "title": "ExtensionRequest"
-   },
    "GeoPoint": {
     "properties": {
      "lat": {
@@ -4294,6 +6806,201 @@
     ],
     "title": "NeedsReviewResponse"
    },
+   "OvertimeCreate": {
+    "properties": {
+     "work_plan_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Work Plan Id"
+     },
+     "hours": {
+      "type": "number",
+      "title": "Hours"
+     },
+     "reason": {
+      "type": "string",
+      "title": "Reason"
+     }
+    },
+    "type": "object",
+    "required": [
+     "work_plan_id",
+     "hours",
+     "reason"
+    ],
+    "title": "OvertimeCreate",
+    "description": "domain.js REPORT_OVERTIME. Aturan (jam 0–12, alasan wajib) diperiksa di OvertimeService\nagar urutan & pesannya sama dengan prototipe."
+   },
+   "OvertimeRecapRow": {
+    "properties": {
+     "employee_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Employee Id"
+     },
+     "employee_name": {
+      "type": "string",
+      "title": "Employee Name"
+     },
+     "period_month": {
+      "type": "string",
+      "format": "date",
+      "title": "Period Month"
+     },
+     "approved_entries": {
+      "type": "integer",
+      "title": "Approved Entries"
+     },
+     "pending_entries": {
+      "type": "integer",
+      "title": "Pending Entries"
+     },
+     "approved_hours": {
+      "type": "number",
+      "title": "Approved Hours"
+     }
+    },
+    "type": "object",
+    "required": [
+     "employee_id",
+     "employee_name",
+     "period_month",
+     "approved_entries",
+     "pending_entries",
+     "approved_hours"
+    ],
+    "title": "OvertimeRecapRow",
+    "description": "Satu baris rekap dari v_overtime_recap (per karyawan per bulan)."
+   },
+   "OvertimeResponse": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Id"
+     },
+     "work_plan_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Work Plan Id"
+     },
+     "plan_document_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Plan Document Id"
+     },
+     "employee_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Employee Id"
+     },
+     "work_date": {
+      "type": "string",
+      "format": "date",
+      "title": "Work Date"
+     },
+     "hours": {
+      "type": "number",
+      "title": "Hours"
+     },
+     "reason": {
+      "type": "string",
+      "title": "Reason"
+     },
+     "status": {
+      "type": "string",
+      "title": "Status"
+     },
+     "reviewed_by": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Reviewed By"
+     },
+     "reviewed_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Reviewed At"
+     },
+     "review_note": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Review Note"
+     },
+     "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Created At"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "work_plan_id",
+     "plan_document_id",
+     "employee_id",
+     "work_date",
+     "hours",
+     "reason",
+     "status",
+     "reviewed_by",
+     "reviewed_at",
+     "review_note",
+     "created_at"
+    ],
+    "title": "OvertimeResponse"
+   },
+   "OvertimeReview": {
+    "properties": {
+     "decision": {
+      "type": "string",
+      "title": "Decision"
+     },
+     "note": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Note"
+     }
+    },
+    "type": "object",
+    "required": [
+     "decision"
+    ],
+    "title": "OvertimeReview",
+    "description": "domain.js REVIEW_OVERTIME: decision APPROVED | REJECTED (diperiksa di service)."
+   },
    "PlanDayCreate": {
     "properties": {
      "work_date": {
@@ -4317,6 +7024,55 @@
      "title"
     ],
     "title": "PlanDayCreate"
+   },
+   "PlanDayOut": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Id"
+     },
+     "work_date": {
+      "type": "string",
+      "format": "date",
+      "title": "Work Date"
+     },
+     "title": {
+      "type": "string",
+      "title": "Title"
+     },
+     "sort_order": {
+      "type": "integer",
+      "title": "Sort Order"
+     },
+     "tasks": {
+      "items": {
+       "$ref": "#/components/schemas/DayTaskOut"
+      },
+      "type": "array",
+      "title": "Tasks"
+     },
+     "report": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/DayReportOut"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "work_date",
+     "title",
+     "sort_order",
+     "tasks",
+     "report"
+    ],
+    "title": "PlanDayOut"
    },
    "PlanDayResponse": {
     "properties": {
@@ -4406,6 +7162,30 @@
      "is_done"
     ],
     "title": "PlanTaskResponse"
+   },
+   "ReportReviewRequest": {
+    "properties": {
+     "decision": {
+      "type": "string",
+      "title": "Decision"
+     },
+     "note": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Note"
+     }
+    },
+    "type": "object",
+    "required": [
+     "decision"
+    ],
+    "title": "ReportReviewRequest"
    },
    "ReviewRequest": {
     "properties": {
@@ -4571,6 +7351,166 @@
     ],
     "title": "TeamResponse"
    },
+   "TimelineDay": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "work_date": {
+      "type": "string",
+      "format": "date",
+      "title": "Work Date"
+     },
+     "title": {
+      "type": "string",
+      "title": "Title"
+     },
+     "state": {
+      "type": "string",
+      "title": "State"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "work_date",
+     "title",
+     "state"
+    ],
+    "title": "TimelineDay"
+   },
+   "TimelineGroup": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "number": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Number"
+     },
+     "title": {
+      "type": "string",
+      "title": "Title"
+     },
+     "status": {
+      "type": "string",
+      "title": "Status"
+     },
+     "unit_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Unit Id"
+     },
+     "location_text": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Location Text"
+     },
+     "period_start": {
+      "type": "string",
+      "format": "date",
+      "title": "Period Start"
+     },
+     "period_end": {
+      "type": "string",
+      "format": "date",
+      "title": "Period End"
+     },
+     "leader": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/TimelineLeader"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "total_days": {
+      "type": "integer",
+      "title": "Total Days"
+     },
+     "approved_days": {
+      "type": "integer",
+      "title": "Approved Days"
+     },
+     "late_days": {
+      "type": "integer",
+      "title": "Late Days"
+     },
+     "days": {
+      "items": {
+       "$ref": "#/components/schemas/TimelineDay"
+      },
+      "type": "array",
+      "title": "Days"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "number",
+     "title",
+     "status",
+     "unit_id",
+     "location_text",
+     "period_start",
+     "period_end",
+     "leader",
+     "total_days",
+     "approved_days",
+     "late_days",
+     "days"
+    ],
+    "title": "TimelineGroup"
+   },
+   "TimelineLeader": {
+    "properties": {
+     "employee_id": {
+      "type": "string",
+      "title": "Employee Id"
+     },
+     "full_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Full Name"
+     }
+    },
+    "type": "object",
+    "required": [
+     "employee_id",
+     "full_name"
+    ],
+    "title": "TimelineLeader"
+   },
    "TokenResponse": {
     "properties": {
      "access_token": {
@@ -4677,6 +7617,110 @@
      "type"
     ],
     "title": "ValidationError"
+   },
+   "WeeklyReportRequest": {
+    "properties": {
+     "body": {
+      "type": "string",
+      "title": "Body"
+     },
+     "obstacle": {
+      "type": "string",
+      "title": "Obstacle"
+     }
+    },
+    "type": "object",
+    "required": [
+     "body",
+     "obstacle"
+    ],
+    "title": "WeeklyReportRequest"
+   },
+   "WeeklyReportResponse": {
+    "properties": {
+     "week": {
+      "type": "integer",
+      "title": "Week"
+     },
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "starts_on": {
+      "type": "string",
+      "format": "date",
+      "title": "Starts On"
+     },
+     "ends_on": {
+      "type": "string",
+      "format": "date",
+      "title": "Ends On"
+     },
+     "status": {
+      "type": "string",
+      "title": "Status"
+     },
+     "body": {
+      "type": "string",
+      "title": "Body"
+     },
+     "obstacle": {
+      "type": "string",
+      "title": "Obstacle"
+     },
+     "review_note": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Review Note"
+     },
+     "days_approved": {
+      "type": "boolean",
+      "title": "Days Approved"
+     }
+    },
+    "type": "object",
+    "required": [
+     "week",
+     "name",
+     "starts_on",
+     "ends_on",
+     "status",
+     "body",
+     "obstacle",
+     "review_note",
+     "days_approved"
+    ],
+    "title": "WeeklyReportResponse"
+   },
+   "WeeklyReviewRequest": {
+    "properties": {
+     "decision": {
+      "type": "string",
+      "title": "Decision"
+     },
+     "note": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Note"
+     }
+    },
+    "type": "object",
+    "required": [
+     "decision"
+    ],
+    "title": "WeeklyReviewRequest"
    },
    "WorkPlanCreate": {
     "properties": {
@@ -4858,6 +7902,17 @@
        }
       ],
       "title": "Cancellation Reason"
+     },
+     "appeal_reason": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Appeal Reason"
      }
     },
     "type": "object",

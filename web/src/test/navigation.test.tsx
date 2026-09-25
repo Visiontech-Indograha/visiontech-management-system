@@ -9,11 +9,15 @@ const labels = (permissions: readonly string[]) => visibleNav(permissions).map((
 
 describe("menu berdasarkan izin API", () => {
   it("menampilkan menu hanya ketika izin API yang sesuai tersedia", () => {
-    expect(labels([])).toEqual(["Beranda"]);
-    expect(labels(["view:users"])).toEqual(["Beranda", "Direktori"]);
-    expect(labels(["manage:users"])).toEqual(["Beranda", "Pengguna"]);
-    expect(labels(["view:documents"])).toEqual(["Beranda", "Berkas saya"]);
-    expect(labels(["view:audit"])).toEqual(["Beranda", "Audit log"]);
+    expect(labels([])).toEqual(["Beranda", "Work plan", "Absensi", "Rekap absensi", "Kendaraan & alat"]);
+    expect(labels(["view:users"])).toEqual(["Beranda", "Work plan", "Absensi", "Rekap absensi", "Kendaraan & alat", "Direktori"]);
+    // API tidak punya endpoint /users: izin manage:users tidak membuka menu apa pun.
+    expect(labels(["manage:users"])).toEqual(["Beranda", "Work plan", "Absensi", "Rekap absensi", "Kendaraan & alat"]);
+    // "Berkas saya" ditahan: /auth/me belum mengirim employee_id untuk /employees/{emp_id}/documents.
+    expect(labels(["view:documents"])).toEqual(["Beranda", "Work plan", "Absensi", "Rekap absensi", "Kendaraan & alat"]);
+    expect(labels(["view:audit"])).toEqual(["Beranda", "Work plan", "Absensi", "Rekap absensi", "Kendaraan & alat", "Audit log"]);
+    expect(labels(["create:plan"])).toEqual(["Beranda", "Work plan", "Absensi", "Rekap absensi", "Rekap lembur", "Kendaraan & alat", "Lokasi kerja"]);
+    expect(labels(["review:overtime"])).toEqual(["Beranda", "Work plan", "Absensi", "Rekap absensi", "Rekap lembur", "Kendaraan & alat"]);
   });
 
   it("izin mock sama dengan peta peran API", () => {
@@ -24,9 +28,9 @@ describe("menu berdasarkan izin API", () => {
     for (const permissions of Object.values(MOCK_PERMISSIONS)) {
       for (const permission of permissions) expect(PERMISSIONS).toContain(permission);
     }
-    expect(labels(MOCK_PERMISSIONS.FINANCE)).not.toContain("Pengguna");
-    expect(labels(MOCK_PERMISSIONS.HR)).toContain("Pengguna");
-    expect(labels(MOCK_PERMISSIONS.field)).toEqual(["Beranda", "Direktori", "Berkas saya"]);
+    expect(labels(MOCK_PERMISSIONS.FINANCE)).not.toContain("Audit log");
+    expect(labels(MOCK_PERMISSIONS.OPS)).toContain("Audit log");
+    expect(labels(MOCK_PERMISSIONS.field)).toEqual(["Beranda", "Work plan", "Absensi", "Rekap absensi", "Kendaraan & alat", "Direktori"]);
   });
 
   it("shell memakai permissions[] dari /auth/me untuk menyaring menu", () => {
@@ -35,7 +39,6 @@ describe("menu berdasarkan izin API", () => {
     });
     const nav = screen.getByRole("navigation", { name: "Menu utama" });
     expect(nav).toHaveTextContent("Direktori");
-    expect(nav).not.toHaveTextContent("Pengguna");
     expect(nav).not.toHaveTextContent("Audit log");
   });
 });
@@ -46,8 +49,8 @@ describe("route guard", () => {
     expect(router.state.location.pathname).toBe("/login");
   });
 
-  it("izin view:users tidak cukup untuk membuka halaman Pengguna", () => {
-    const { router } = renderRoute("/users", {
+  it("izin view:users tidak cukup untuk membuka Audit log", () => {
+    const { router } = renderRoute("/audit-logs", {
       me: { user_id: "u1", email: "pm@example.com", role: "PM", permissions: ["view:users"] },
     });
     expect(router.state.location.pathname).toBe("/forbidden");

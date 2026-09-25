@@ -4,7 +4,6 @@ import { Fragment, useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { visibleNav } from "@/app/navigation";
 import { useSession } from "@/app/session";
-import { IncompleteDocumentsBanner } from "@/features/directory/MyDocuments";
 import { ROLE_LABEL } from "@/lib/types";
 
 /** Rail kiri 232 px (ciut 64 px); di < 768 px menjadi laci. */
@@ -112,7 +111,6 @@ export function AppShell() {
           </button>
           <span className="ml-2 font-bold text-lens">VMS</span>
         </header>
-        <IncompleteDocumentsBanner />
         <main className="mx-auto w-full max-w-[1280px] px-4 py-6 md:px-8">
           <Outlet />
         </main>

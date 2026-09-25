@@ -1,19 +1,22 @@
-﻿import { useState } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useState, type ReactNode } from "react";
+import { useForm } from "react-hook-form";
+import { Link, useLocation, useParams } from "react-router-dom";
 import { toast } from "sonner";
-import { Link, useParams } from "react-router-dom";
+import { z } from "zod";
 import { useSession } from "@/app/session";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/button";
-import { Dialog } from "@/components/ui/VmsDialog";
-import { SelectField, TextField } from "@/components/ui/Field";
+import { TextField } from "@/components/ui/Field";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Dialog } from "@/components/ui/VmsDialog";
 import { ApiError } from "@/lib/api";
 import { formatDate } from "@/lib/format";
-import { EMPLOYMENT_LABEL, ROLE_LABEL } from "@/lib/types";
-import { useEmployee, useUpdateProfile, type Employee } from "./api";
+import { useEmployee, useUpdateEmployee, type Employee, type EmployeeUpdate } from "./api";
 import { DocumentsPanel } from "./DocumentsPanel";
 
-const Row = ({ label, children }: { label: string; children: React.ReactNode }) => (
+const Row = ({ label, children }: { label: string; children: ReactNode }) => (
   <div className="flex justify-between gap-4 border-b border-line py-2 last:border-0">
     <dt className="text-mist">{label}</dt>
     <dd className="text-right font-medium">{children ?? "-"}</dd>
@@ -22,86 +25,115 @@ const Row = ({ label, children }: { label: string; children: React.ReactNode }) 
 
 export function EmployeeDetailPage() {
   const { id = "" } = useParams();
+  const fromList = (useLocation().state as { employee?: Employee } | null)?.employee;
   const { me } = useSession();
-  const employee = useEmployee(id);
+  const employee = useEmployee(id, fromList?.id === id ? fromList : undefined);
   const [editing, setEditing] = useState(false);
   const canEdit = !!me?.permissions.includes("manage:users");
   const canManageDocs = !!me?.permissions.includes("manage:employee_documents");
-  const seesDocs = canManageDocs || (me?.user_id === id && !!me.permissions.includes("view:documents"));
   const e = employee.data;
 
   if (employee.isError)
     return (
       <div className="mt-16 text-center">
-        <p className="mb-3 text-danger">Karyawan tidak ditemukan.</p>
+        <p className="mb-3 text-danger">{employee.error.message}</p>
         <Link to="/directory" className="font-semibold text-lens hover:underline">
           Kembali ke Direktori
         </Link>
       </div>
     );
 
+  if (!e)
+    return (
+      <div aria-hidden className="max-w-xl space-y-3">
+        <Skeleton className="h-8 w-1/2" />
+        <Skeleton className="h-40 w-full" />
+      </div>
+    );
+
   return (
     <>
       <PageHeader
-        title={e?.full_name ?? "Karyawan"}
-        action={canEdit && e && <Button variant="outline" onClick={() => setEditing(true)}>Ubah profil</Button>}
+        title={e.full_name}
+        action={canEdit && <Button variant="outline" onClick={() => setEditing(true)}>Ubah profil</Button>}
       />
-      {e && (
-        <div className="mb-8 max-w-xl rounded-panel border border-line bg-surface px-5 py-2">
-          <dl className="text-sm">
-            <Row label="Username">{e.username}</Row>
-            <Row label="Role">{ROLE_LABEL[e.user_type ?? e.role]}</Row>
-            <Row label="Status kerja">{e.employment_type ? EMPLOYMENT_LABEL[e.employment_type] : "-"}</Row>
-            <Row label="Akun">{e.is_active ? <Badge tone="success">Aktif</Badge> : <Badge>Nonaktif</Badge>}</Row>
-            <Row label="No. karyawan">{e.employee_no}</Row>
-            <Row label="No. telepon">{e.phone}</Row>
-            <Row label="Tanggal bergabung">{e.join_date ? formatDate(e.join_date) : null}</Row>
-            {e.employment_type === "CONTRACT" && (
-              <Row label="Kontrak">
-                {e.contract_start ? formatDate(e.contract_start) : "-"} Ã¢â‚¬â€œ {e.contract_end ? formatDate(e.contract_end) : "-"}
-              </Row>
-            )}
-          </dl>
-        </div>
-      )}
-      {e?.documents_missing && e.documents_missing.length > 0 && (
-        <p role="status" className="mb-4 rounded-control bg-warning-soft px-3 py-2 text-sm text-warning">
-          Berkas wajib yang kurang: {e.documents_missing.map((m) => m.name).join(", ")}.
-        </p>
-      )}
-      {seesDocs && <DocumentsPanel userId={id} canManage={canManageDocs} />}
-      {e && editing && <ProfileDialog employee={e} onClose={() => setEditing(false)} />}
+      <div className="mb-8 max-w-xl rounded-panel border border-line bg-surface px-5 py-2">
+        <dl className="text-sm">
+          <Row label="No. karyawan">{e.employee_no}</Row>
+          <Row label="Jabatan">{e.position}</Row>
+          <Row label="Akun">{e.is_active ? <Badge tone="success">Aktif</Badge> : <Badge>Nonaktif</Badge>}</Row>
+          <Row label="Email">{e.email}</Row>
+          <Row label="No. telepon">{e.phone}</Row>
+          <Row label="Tanggal bergabung">{formatDate(e.join_date)}</Row>
+          <Row label="Tanggal lahir">{e.birth_date ? formatDate(e.birth_date) : null}</Row>
+          <Row label="Alamat">{e.address}</Row>
+          <Row label="Kontak darurat">{e.emergency_contact}</Row>
+          {e.offboarded_at && (
+            <Row label="Keluar">
+              {formatDate(e.offboarded_at)} – {e.offboarding_reason ?? "-"}
+            </Row>
+          )}
+        </dl>
+      </div>
+      {canManageDocs && <DocumentsPanel employeeId={e.id} canManage />}
+      {editing && <ProfileDialog employee={e} onClose={() => setEditing(false)} />}
     </>
   );
 }
 
-function ProfileDialog({ employee, onClose }: { employee: Employee; onClose: () => void }) {
-  const update = useUpdateProfile(employee.id);
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [formError, setFormError] = useState<string | null>(null);
+const optional = z.string().trim();
+const profileSchema = z.object({
+  full_name: z.string().trim().min(1, "Nama wajib diisi."),
+  email: z.union([z.literal(""), z.email("Format email tidak valid.")]),
+  phone: optional.max(30, "No. telepon maksimal 30 karakter."),
+  birth_date: optional,
+  address: optional,
+  emergency_contact: optional,
+});
+type ProfileValues = z.infer<typeof profileSchema>;
+const FIELDS = ["full_name", "email", "phone", "birth_date", "address", "emergency_contact"] as const;
 
-  const submit = async (ev: React.FormEvent<HTMLFormElement>) => {
-    ev.preventDefault();
-    const f = new FormData(ev.currentTarget);
-    const val = (k: string) => String(f.get(k) ?? "").trim() || null;
-    setErrors({});
+function ProfileDialog({ employee, onClose }: { employee: Employee; onClose: () => void }) {
+  const update = useUpdateEmployee(employee.id);
+  const [formError, setFormError] = useState<string | null>(null);
+  const {
+    register,
+    handleSubmit,
+    setError,
+    formState: { errors, isSubmitting },
+  } = useForm<ProfileValues>({
+    resolver: zodResolver(profileSchema),
+    defaultValues: {
+      full_name: employee.full_name,
+      email: employee.email ?? "",
+      phone: employee.phone ?? "",
+      birth_date: employee.birth_date ?? "",
+      address: employee.address ?? "",
+      emergency_contact: employee.emergency_contact ?? "",
+    },
+  });
+
+  const onSubmit = handleSubmit(async (v) => {
     setFormError(null);
+    const body: EmployeeUpdate = {
+      full_name: v.full_name,
+      email: v.email || null,
+      phone: v.phone || null,
+      birth_date: v.birth_date || null,
+      address: v.address || null,
+      emergency_contact: v.emergency_contact || null,
+    };
     try {
-      await update.mutateAsync({
-        employment_type: f.get("employment_type"),
-        phone: val("phone"),
-        employee_no: val("employee_no"),
-        join_date: val("join_date"),
-        contract_start: val("contract_start"),
-        contract_end: val("contract_end"),
-      });
+      await update.mutateAsync(body);
       toast.success("Profil disimpan.");
       onClose();
     } catch (err) {
-      if (err instanceof ApiError && err.details.fields) setErrors(err.details.fields as Record<string, string>);
+      const fields = err instanceof ApiError ? ((err.details.fields ?? {}) as Record<string, string>) : {};
+      const known = FIELDS.filter((f) => fields[f]);
+      if (known.length) known.forEach((f) => setError(f, { message: fields[f] }));
       else setFormError(err instanceof ApiError ? err.message : "Terjadi kesalahan. Coba lagi.");
     }
-  };
+  });
 
   return (
     <Dialog
@@ -110,30 +142,27 @@ function ProfileDialog({ employee, onClose }: { employee: Employee; onClose: () 
       onClose={onClose}
       footer={
         <>
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
             Batal
           </Button>
-          <Button type="submit" form="profile-form" disabled={update.isPending}>
-            Simpan
+          <Button type="submit" form="profile-form" disabled={isSubmitting}>
+            {isSubmitting ? "Menyimpan..." : "Simpan"}
           </Button>
         </>
       }
     >
-      <form id="profile-form" onSubmit={submit} noValidate>
+      <form id="profile-form" onSubmit={onSubmit} noValidate>
         {formError && (
           <p role="alert" className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
             {formError}
           </p>
         )}
-        <SelectField name="employment_type" label="Status kerja" defaultValue={employee.employment_type ?? "CONTRACT"} error={errors.employment_type}>
-          <option value="PERMANENT">Tetap</option>
-          <option value="CONTRACT">Kontrak</option>
-        </SelectField>
-        <TextField name="employee_no" label="No. karyawan" defaultValue={employee.employee_no ?? ""} error={errors.employee_no} />
-        <TextField name="phone" label="No. telepon" defaultValue={employee.phone ?? ""} error={errors.phone} />
-        <TextField name="join_date" label="Tanggal bergabung" type="date" defaultValue={employee.join_date ?? ""} error={errors.join_date} />
-        <TextField name="contract_start" label="Awal kontrak" type="date" defaultValue={employee.contract_start ?? ""} error={errors.contract_start} />
-        <TextField name="contract_end" label="Akhir kontrak" type="date" defaultValue={employee.contract_end ?? ""} error={errors.contract_end} />
+        <TextField label="Nama lengkap" error={errors.full_name?.message} {...register("full_name")} />
+        <TextField label="Email" type="email" error={errors.email?.message} {...register("email")} />
+        <TextField label="No. telepon" error={errors.phone?.message} {...register("phone")} />
+        <TextField label="Tanggal lahir" type="date" error={errors.birth_date?.message} {...register("birth_date")} />
+        <TextField label="Alamat" error={errors.address?.message} {...register("address")} />
+        <TextField label="Kontak darurat" error={errors.emergency_contact?.message} {...register("emergency_contact")} />
       </form>
     </Dialog>
   );

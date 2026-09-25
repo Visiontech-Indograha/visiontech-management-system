@@ -11,7 +11,8 @@ describe("menu berdasarkan izin API", () => {
   it("menampilkan menu hanya ketika izin API yang sesuai tersedia", () => {
     expect(labels([])).toEqual(["Beranda"]);
     expect(labels(["view:users"])).toEqual(["Beranda", "Direktori"]);
-    expect(labels(["manage:users"])).toEqual(["Beranda", "Pengguna"]);
+    // API tidak punya endpoint /users: izin manage:users tidak membuka menu apa pun.
+    expect(labels(["manage:users"])).toEqual(["Beranda"]);
     expect(labels(["view:documents"])).toEqual(["Beranda", "Berkas saya"]);
     expect(labels(["view:audit"])).toEqual(["Beranda", "Audit log"]);
   });
@@ -24,8 +25,8 @@ describe("menu berdasarkan izin API", () => {
     for (const permissions of Object.values(MOCK_PERMISSIONS)) {
       for (const permission of permissions) expect(PERMISSIONS).toContain(permission);
     }
-    expect(labels(MOCK_PERMISSIONS.FINANCE)).not.toContain("Pengguna");
-    expect(labels(MOCK_PERMISSIONS.HR)).toContain("Pengguna");
+    expect(labels(MOCK_PERMISSIONS.FINANCE)).not.toContain("Audit log");
+    expect(labels(MOCK_PERMISSIONS.OPS)).toContain("Audit log");
     expect(labels(MOCK_PERMISSIONS.field)).toEqual(["Beranda", "Direktori", "Berkas saya"]);
   });
 
@@ -35,7 +36,6 @@ describe("menu berdasarkan izin API", () => {
     });
     const nav = screen.getByRole("navigation", { name: "Menu utama" });
     expect(nav).toHaveTextContent("Direktori");
-    expect(nav).not.toHaveTextContent("Pengguna");
     expect(nav).not.toHaveTextContent("Audit log");
   });
 });
@@ -46,8 +46,8 @@ describe("route guard", () => {
     expect(router.state.location.pathname).toBe("/login");
   });
 
-  it("izin view:users tidak cukup untuk membuka halaman Pengguna", () => {
-    const { router } = renderRoute("/users", {
+  it("izin view:users tidak cukup untuk membuka Audit log", () => {
+    const { router } = renderRoute("/audit-logs", {
       me: { user_id: "u1", email: "pm@example.com", role: "PM", permissions: ["view:users"] },
     });
     expect(router.state.location.pathname).toBe("/forbidden");

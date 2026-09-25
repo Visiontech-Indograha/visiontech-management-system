@@ -3,7 +3,6 @@ import {
   FolderOpen,
   House,
   ScrollText,
-  Users,
   type LucideIcon,
 } from "lucide-react";
 import type { Permission } from "@/lib/permissions";
@@ -20,7 +19,6 @@ export interface NavItem {
 /** Menu web memakai izin yang dikirim /auth/me; API tetap menegakkan otorisasi. */
 export const NAV_ITEMS: NavItem[] = [
   { path: "/", label: "Beranda", icon: House },
-  { path: "/users", label: "Pengguna", icon: Users, requires: ["manage:users"] },
   { path: "/directory", label: "Direktori", icon: BookUser, requires: ["view:users"] },
   { path: "/my-documents", label: "Berkas saya", icon: FolderOpen, requires: ["view:documents"] },
   { path: "/audit-logs", label: "Audit log", icon: ScrollText, requires: ["view:audit"] },

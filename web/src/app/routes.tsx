@@ -6,7 +6,6 @@ import { AuditLogPage } from "@/features/audit/AuditLogPage";
 import { DirectoryPage } from "@/features/directory/DirectoryPage";
 import { EmployeeDetailPage } from "@/features/directory/EmployeeDetailPage";
 import { MyDocumentsPage } from "@/features/directory/MyDocuments";
-import { UsersPage } from "@/features/users/UsersPage";
 import { ChangePasswordPage } from "@/pages/auth/ChangePasswordPage";
 import { LoginPage } from "@/pages/auth/LoginPage";
 import { ComingSoonPage, ForbiddenPage, HomePage, NotFoundPage } from "@/pages/Placeholders";
@@ -14,7 +13,6 @@ import { NAV_ITEMS } from "./navigation";
 
 /** Halaman yang sudah dibangun; sisanya tampil "dibangun pada fase berikutnya". */
 const PAGES: Record<string, ReactNode> = {
-  "/users": <UsersPage />,
   "/audit-logs": <AuditLogPage />,
   "/directory": <DirectoryPage />,
   "/my-documents": <MyDocumentsPage />,

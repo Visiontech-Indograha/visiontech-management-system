@@ -1,5 +1,6 @@
 import {
   BookUser,
+  ClipboardList,
   House,
   MapPin,
   ScrollText,
@@ -19,6 +20,7 @@ export interface NavItem {
 /** Menu web memakai izin yang dikirim /auth/me; API tetap menegakkan otorisasi. */
 export const NAV_ITEMS: NavItem[] = [
   { path: "/", label: "Beranda", icon: House },
+  { path: "/work-plans", label: "Work plan", icon: ClipboardList },
   { path: "/directory", label: "Direktori", icon: BookUser, requires: ["view:users"] },
   { path: "/sites", label: "Lokasi kerja", icon: MapPin, requires: ["create:plan"] },
   { path: "/audit-logs", label: "Audit log", icon: ScrollText, requires: ["view:audit"] },

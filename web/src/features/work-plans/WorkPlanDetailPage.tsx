@@ -10,6 +10,7 @@ import { errorMessage } from "@/lib/errors";
 import { formatDate } from "@/lib/format";
 import { employeeName, useActiveEmployees, useTransition, useWorkPlan, type Transition, type WorkPlan } from "./api";
 import { AddDayDialog, EditDraftDialog, ReasonDialog, TeamDialog } from "./PlanForms";
+import { WeeklyReports } from "./WeeklyReports";
 
 const Row = ({ label, children }: { label: string; children: ReactNode }) => (
   <div className="flex flex-col gap-0.5 border-b border-line py-2 last:border-0 md:flex-row md:justify-between md:gap-4">
@@ -53,6 +54,11 @@ export function WorkPlanDetailPage() {
               </dl>
             </section>
             <PlanActions plan={p} />
+          </div>
+        )}
+        {p && ["IN_PROGRESS", "COMPLETION_REVIEW", "COMPLETED"].includes(p.status) && (
+          <div className="mt-6">
+            <WeeklyReports plan={p} />
           </div>
         )}
       </QueryState>

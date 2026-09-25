@@ -39,6 +39,7 @@ class Profile:
     email: str
     role: str
     permissions: list[str]
+    employee_id: str | None = None   # karyawan milik akun ("Berkas saya"); None = akun tanpa karyawan
 
 
 def _inactive() -> AppError:
@@ -110,6 +111,7 @@ class AuthService:
             email=user.login,
             role=user.role or DEFAULT_ROLE,
             permissions=permissions,
+            employee_id=(str(emp) if (emp := await self.users.get_employee_id(user_id)) else None),
         )
 
     async def change_password(

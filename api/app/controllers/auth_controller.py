@@ -34,7 +34,7 @@ class AuthController:
         profile = await self.service.me(user_id, permissions)
         return UserMeResponse(
             user_id=profile.user_id, email=profile.email,
-            role=profile.role, permissions=profile.permissions,
+            role=profile.role, permissions=profile.permissions, employee_id=profile.employee_id,
         )
 
     async def change_password(

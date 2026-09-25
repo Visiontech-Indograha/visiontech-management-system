@@ -1,0 +1,109 @@
+"""
+app/services/signature_service.py
+Tanda tangan dokumen SK ber-QR (fase 6; keputusan pemilik 2026-09-26: otomatis — PM sebagai ISSUER saat
+terbit, ketua sebagai ACCEPTOR saat menerima). Payload JSON kanonik RFC 8785 ditandatangani lewat
+`DocumentSigner` (lokal dulu, KMS nanti). Verifikasi publik memakai `verify_signature_qr` (db/04).
+"""
+from __future__ import annotations
+
+import base64
+import io
+from typing import Any
+from urllib.parse import quote
+from uuid import UUID
+
+import qrcode
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.api.deps import CurrentUser
+from app.api.guards import PlanNeed, check_plan_access
+from app.core.config import settings
+from app.core.errors import AppError, NotFoundError, ValidationError
+from app.core.signing import canonical, get_document_signer
+from app.repositories.signature_repo import SignatureRepo
+
+ISSUER = "ISSUER"
+ACCEPTOR = "ACCEPTOR"
+
+
+def verify_url(raw_token: str) -> str:
+    return f"{settings.PUBLIC_VERIFY_URL.rstrip('/')}/{quote(raw_token, safe='')}"
+
+
+def qr_png_data_uri(text: str) -> str:
+    buffer = io.BytesIO()
+    qrcode.make(text, box_size=6, border=2).save(buffer, format="PNG")
+    return "data:image/png;base64," + base64.b64encode(buffer.getvalue()).decode("ascii")
+
+
+class SignatureService:
+    def __init__(self, db: AsyncSession) -> None:
+        self.db = db
+        self.repo = SignatureRepo(db)
+
+    async def sign_plan_document(self, document_id: UUID | str, signer_employee_id: str, role: str,
+                                 issued_by_user: str) -> Any:
+        document = await self.repo.plan_document(document_id)
+        if document is None:
+            raise NotFoundError("Dokumen")
+        signer = get_document_signer()
+        key_id = await self.repo.ensure_signing_key(
+            document.organization_id, f"doc-{str(document.organization_id)[:8]}-{signer.fingerprint}",
+            signer.public_key, signer.kms_ref, signer.algorithm)
+        payload = {
+            "type": "plan_document", "document_id": str(document.id), "document_number": document.number,
+            "document_version": document.version, "document_sha256": bytes(document.snapshot_sha256).hex(),
+            "signer_employee_id": str(signer_employee_id), "signer_role": role,
+            "organization_id": str(document.organization_id),
+        }
+        signature = signer.sign(canonical(payload))
+        return await self.repo.register(document.organization_id, document, signer_employee_id, role, key_id,
+                                        signature, payload, issued_by_user)
+
+    async def sign_latest_plan_document(self, plan_id: UUID | str, signer_employee_id: str, role: str,
+                                        issued_by_user: str) -> Any:
+        document_id = await self.repo.latest_document_id(plan_id)
+        if document_id is None:
+            raise NotFoundError("Dokumen")
+        return await self.sign_plan_document(document_id, signer_employee_id, role, issued_by_user)
+
+    async def _document_for(self, user: CurrentUser, document_id: UUID) -> Any:
+        document = await self.repo.plan_document(document_id)
+        if document is None or str(document.organization_id) != str(user.organization_id):
+            raise NotFoundError("Dokumen")
+        await check_plan_access(self.db, document.work_plan_id, user, PlanNeed.VIEW)   # tak terlihat → 404
+        return document
+
+    async def list_plan_documents(self, plan_id: UUID) -> list[Any]:
+        return await self.repo.plan_documents(plan_id)
+
+    async def list_signatures(self, user: CurrentUser, document_id: UUID) -> list[Any]:
+        await self._document_for(user, document_id)
+        return await self.repo.signatures_of_document(document_id)
+
+    async def document_with_qr(self, user: CurrentUser, document_id: UUID) -> tuple[Any, list[dict[str, Any]]]:
+        """Dokumen + tanda tangan beserta QR baru (token mentah tidak pernah disimpan, jadi diterbitkan ulang)."""
+        document = await self._document_for(user, document_id)
+        signed = []
+        for sig in await self.repo.signatures_of_document(document_id):
+            row = dict(sig._mapping)
+            if sig.revoked_at is None:
+                url = verify_url(await self.repo.issue_verify_token(document.organization_id, sig.id, user.user_id))
+                row.update(verify_url=url, qr=qr_png_data_uri(url))
+            signed.append(row)
+        return document, signed
+
+    async def revoke_signature(self, user: CurrentUser, signature_id: UUID, reason: str) -> None:
+        """Pencabutan (P6-6): PM unit/OPS SK tersebut, alasan wajib, tercatat (audit trigger)."""
+        sig = await self.repo.signature(signature_id)
+        if sig is None or str(sig.organization_id) != str(user.organization_id):
+            raise NotFoundError("Tanda tangan")
+        await check_plan_access(self.db, sig.work_plan_id, user, PlanNeed.PM_UNIT)
+        if not reason.strip():
+            raise ValidationError("Alasan pencabutan wajib diisi.")
+        if sig.revoked_at is not None:
+            raise AppError("INVALID_STATE", "Tanda tangan sudah dicabut.", status=409)
+        await self.repo.revoke(signature_id, reason.strip(), await self.repo.employee_of(user.user_id))
+
+    async def verify(self, raw_token: str) -> Any:
+        return await self.repo.verify(raw_token)

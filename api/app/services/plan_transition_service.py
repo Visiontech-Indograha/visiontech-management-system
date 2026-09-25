@@ -15,6 +15,7 @@ from app.core.time import jakarta_now
 from app.repositories.plan_member_repo import PlanMemberRepo
 from app.repositories.plan_transition_repo import PlanTransitionRepo
 from app.repositories.weekly_report_repo import WeeklyReportRepo
+from app.services.signature_service import ACCEPTOR, ISSUER, SignatureService
 
 # domain.js CANCEL_PLAN requireStatus
 CANCELLABLE = {PlanStatus.PUBLISHED, PlanStatus.ACCEPTED, PlanStatus.APPEALED, PlanStatus.IN_PROGRESS,
@@ -79,6 +80,8 @@ class PlanTransitionService:
         snapshot = await self.repo.snapshot(plan_id)
         await self.repo.insert_document(
             plan_id, plan.revision, snapshot if isinstance(snapshot, str) else json.dumps(snapshot), issuer)
+        # Fase 6 (keputusan pemilik 2026-09-26): penerbit menandatangani dokumen saat terbit.
+        await SignatureService(self.repo.db).sign_latest_plan_document(plan_id, issuer, ISSUER, user_id)
         return await self.repo.get_plan(plan_id)
 
     async def accept(self, plan_id: UUID, org_id: str, user_id: str, row_version: int) -> Any:
@@ -88,6 +91,8 @@ class PlanTransitionService:
         leader = await self.repo.employee_id_of(user_id)
         await self.repo.set_status(plan_id, PlanStatus.ACCEPTED)
         await self.repo.accept_document(plan_id, leader or "")
+        if leader:   # ketua menurut SK menandatangani sebagai penerima (fase 6)
+            await SignatureService(self.repo.db).sign_latest_plan_document(plan_id, leader, ACCEPTOR, user_id)
         return await self.repo.get_plan(plan_id)
 
     async def appeal(self, plan_id: UUID, org_id: str, user_id: str, row_version: int, reason: str) -> Any:

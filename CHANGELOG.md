@@ -14,6 +14,7 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 - `web/`: Hapus halaman Pengguna (`/users`) beserta dialog, hook, dan ujinya karena API tidak punya endpoint manajemen pengguna (L5).
 - `web/`: Tahan menu "Berkas saya" karena `/auth/me` belum mengirim `employee_id` yang dibutuhkan `GET /employees/{emp_id}/documents`; hapus impor `features/` dari `AppShell`.
 - `web/`: Bangkitkan ulang `openapi.json` + `api-types.ts` dari API terbaru; Direktori memakai `EmployeeResponse`/`EmployeeListResponse` (detail dari baris daftar karena tidak ada `GET /employees/{id}`), ubah profil lewat `PUT /employees/{id}` (react-hook-form + zod), unggah berkas membaca `file_id`.
+- `web/`: Audit log memakai tipe `AuditEventListResponse` hasil generator dan filter `entity_type` (tabel yang diaudit trigger), bukan filter `action` yang tidak ada di API.
 
 ### ✨ Ditambahkan
 

@@ -125,6 +125,9 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 #### V-23 · Rincian hari & centang tugas (Backend) — 2026-09-24
 - `PUT /work-plans/{id}/days/{day_id}/plan` `{title, tasks:[{title}]}` — PM unit/OPS menyusun ulang judul & 1–30 tugas satu hari selagi SK `DRAFT` (`domain.js` SAVE_DAY). `POST /work-plans/{id}/days/{day_id}/tasks/{task_id}/toggle` — ketua menurut SK mencentang/membatalkan tugas saat SK `IN_PROGRESS`, tanggal hari sudah tiba, dan laporan hari itu belum diserahkan; `done_at`/`done_by` tercatat (`domain.js` TOGGLE_TASK). Jalur `/plan` & `/toggle` dipilih karena `PUT …/days/{day_id}` sudah dipakai teks laporan (dok 10 Bagian C). Uji: `api/tests/test_day_plan_tasks.py`.
 
+#### Baca hari kerja SK (Backend) — 2026-09-25
+- `GET /work-plans/{id}/days` — hari kerja SK beserta tugas (`is_done`, `done_at`) dan laporan hariannya (status, isi, kendala, catatan tinjauan, waktu serah/tinjau, bukti berkas) dalam satu kueri; siapa pun yang melihat SK, tak terlihat → 404. Sebelumnya API hanya punya jalur tulis sehingga layar laporan harian web/mobile tidak bisa dibangun. Uji: `api/tests/test_plan_days_read.py`.
+
 #### Perbaikan keamanan `/audit-events` (Backend) — 2026-09-25
 - Daftar audit kini disaring `organization_id` secara eksplisit di SQL (sebelumnya hanya mengandalkan RLS, yang terlewati bila aplikasi terhubung sebagai pemilik tabel — keputusan T-12 masih terbuka) dan kuerinya statis (sebelumnya f-string). Uji: `api/tests/test_audit_org.py::test_audit_events_never_show_another_organisation`.
 

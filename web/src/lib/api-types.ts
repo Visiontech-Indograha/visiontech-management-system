@@ -251,7 +251,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Offboard Employee */
+        /**
+         * Offboard Employee
+         * @description domain.js OFFBOARD: HR mengakhiri masa kerja (tidak boleh saat masih di SK berjalan).
+         */
         post: operations["offboard_employee_api_v1_employees__emp_id__offboard_post"];
         delete?: never;
         options?: never;
@@ -858,6 +861,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/sync/operations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sync Operations
+         * @description Idempoten per client_op_id; dijalankan sesuai urutan kiriman perangkat (dok 04 §7).
+         */
+        post: operations["sync_operations_api_v1_sync_operations_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sync/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Sync Status
+         * @description Operasi milik pengguna sendiri — dasar layar "Perlu perhatian" (REJECTED).
+         */
+        get: operations["sync_status_api_v1_sync_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/work-plans/{plan_id}/weekly": {
         parameters: {
             query?: never;
@@ -977,6 +1020,103 @@ export interface paths {
         get: operations["list_attachments_api_v1_work_plans__plan_id__attachments_get"];
         /** Save Attachments */
         put: operations["save_attachments_api_v1_work_plans__plan_id__attachments_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-plans/{plan_id}/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Plan Documents
+         * @description Dok 05 §3.3: SK, revisi, dan adendum beserta jumlah tanda tangan yang berlaku.
+         */
+        get: operations["list_plan_documents_api_v1_work_plans__plan_id__documents_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/documents/{document_id}/signatures": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Signatures */
+        get: operations["list_signatures_api_v1_documents__document_id__signatures_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/documents/{document_id}/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Document Pdf
+         * @description PDF bertanda tangan + QR verifikasi (dok 05 §3.9). Render berat → threadpool (CLAUDE.md).
+         */
+        get: operations["document_pdf_api_v1_documents__document_id__pdf_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/signatures/{signature_id}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Revoke Signature
+         * @description P6-6: pencabutan beserta alasan (PM unit/OPS SK tersebut); tercatat di audit.
+         */
+        post: operations["revoke_signature_api_v1_signatures__signature_id__revoke_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/verify/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Verify Signature
+         * @description PUBLIK: hasil pemindaian QR — hanya data yang perlu dilihat pemverifikasi (db/04 verify_signature_qr).
+         */
+        get: operations["verify_signature_api_v1_verify__token__get"];
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -2249,6 +2389,57 @@ export interface components {
             /** Daily Average */
             daily_average: number;
         };
+        /** OfflineOperation */
+        OfflineOperation: {
+            /**
+             * Client Op Id
+             * Format: uuid
+             */
+            client_op_id: string;
+            /** Op Type */
+            op_type: string;
+            /** Payload */
+            payload: {
+                [key: string]: unknown;
+            };
+            /**
+             * Client Created At
+             * Format: date-time
+             */
+            client_created_at: string;
+        };
+        /** OperationResult */
+        OperationResult: {
+            /** Client Op Id */
+            client_op_id: string;
+            /** Status */
+            status: string;
+            /** Error Message */
+            error_message: string | null;
+        };
+        /** OperationStatus */
+        OperationStatus: {
+            /** Client Op Id */
+            client_op_id: string;
+            /** Op Type */
+            op_type: string;
+            /** Status */
+            status: string;
+            /** Error Message */
+            error_message: string | null;
+            /**
+             * Client Created At
+             * Format: date-time
+             */
+            client_created_at: string;
+            /**
+             * Received At
+             * Format: date-time
+             */
+            received_at: string;
+            /** Applied At */
+            applied_at: string | null;
+        };
         /**
          * OvertimeCreate
          * @description domain.js REPORT_OVERTIME. Aturan (jam 0–12, alasan wajib) diperiksa di OvertimeService
@@ -2401,6 +2592,32 @@ export interface components {
              */
             work_plan_id: string;
         };
+        /** PlanDocumentOut */
+        PlanDocumentOut: {
+            /** Id */
+            id: string;
+            /** Kind */
+            kind: string;
+            /** Version */
+            version: number;
+            /** Number */
+            number: string;
+            /** Status */
+            status: string;
+            /** Reason */
+            reason: string | null;
+            /**
+             * Issued At
+             * Format: date-time
+             */
+            issued_at: string;
+            /** Accepted At */
+            accepted_at: string | null;
+            /** Sha256 */
+            sha256: string;
+            /** Signature Count */
+            signature_count: number;
+        };
         /** PlanTaskCreate */
         PlanTaskCreate: {
             /** Title */
@@ -2447,6 +2664,41 @@ export interface components {
             /** Note */
             note?: string | null;
         };
+        /** RevokeRequest */
+        RevokeRequest: {
+            /** Reason */
+            reason: string;
+        };
+        /** SignatureOut */
+        SignatureOut: {
+            /** Id */
+            id: string;
+            /** Serial Number */
+            serial_number: string;
+            /** Signer Name */
+            signer_name: string;
+            /** Signer Position */
+            signer_position: string;
+            /** Signer Unit */
+            signer_unit: string | null;
+            /** Signer Role */
+            signer_role: string;
+            /**
+             * Signed At
+             * Format: date-time
+             */
+            signed_at: string;
+            /** Signature Alg */
+            signature_alg: string;
+            /** Kid */
+            kid: string;
+            /** Document Sha256 Hex */
+            document_sha256_hex: string;
+            /** Revoked At */
+            revoked_at: string | null;
+            /** Revoked Reason */
+            revoked_reason: string | null;
+        };
         /** SiteCreate */
         SiteCreate: {
             /** Name */
@@ -2477,6 +2729,18 @@ export interface components {
              * Format: uuid
              */
             id: string;
+        };
+        /** SyncRequest */
+        SyncRequest: {
+            /** Device Id */
+            device_id: string;
+            /** Operations */
+            operations: components["schemas"]["OfflineOperation"][];
+        };
+        /** SyncResponse */
+        SyncResponse: {
+            /** Results */
+            results: components["schemas"]["OperationResult"][];
         };
         /** TeamRequest */
         TeamRequest: {
@@ -2581,6 +2845,8 @@ export interface components {
             role: string;
             /** Permissions */
             permissions: string[];
+            /** Employee Id */
+            employee_id?: string | null;
         };
         /** ValidationError */
         ValidationError: {
@@ -2594,6 +2860,35 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
+        };
+        /** VerifyOut */
+        VerifyOut: {
+            /** State */
+            state: string;
+            /** Serial Number */
+            serial_number: string | null;
+            /** Signer Name */
+            signer_name: string | null;
+            /** Signer Position */
+            signer_position: string | null;
+            /** Signer Unit */
+            signer_unit: string | null;
+            /** Signer Role */
+            signer_role: string | null;
+            /** Document Number */
+            document_number: string | null;
+            /** Document Title */
+            document_title: string | null;
+            /** Signed At */
+            signed_at: string | null;
+            /** Key Id */
+            key_id: string | null;
+            /** Algorithm */
+            algorithm: string | null;
+            /** Document Sha256 Hex */
+            document_sha256_hex: string | null;
+            /** Note */
+            note: string | null;
         };
         /** WeeklyReportRequest */
         WeeklyReportRequest: {
@@ -3170,7 +3465,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Validation Error */
@@ -4388,6 +4685,70 @@ export interface operations {
             };
         };
     };
+    sync_operations_api_v1_sync_operations_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SyncRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyncResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sync_status_api_v1_sync_status_get: {
+        parameters: {
+            query?: {
+                since?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationStatus"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_weeks_api_v1_work_plans__plan_id__weekly_get: {
         parameters: {
             query?: never;
@@ -4639,6 +5000,165 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AttachmentResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_plan_documents_api_v1_work_plans__plan_id__documents_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanDocumentOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_signatures_api_v1_documents__document_id__signatures_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SignatureOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    document_pdf_api_v1_documents__document_id__pdf_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_signature_api_v1_signatures__signature_id__revoke_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                signature_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RevokeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    verify_signature_api_v1_verify__token__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VerifyOut"];
                 };
             };
             /** @description Validation Error */

@@ -632,6 +632,7 @@
      "Employees"
     ],
     "summary": "Offboard Employee",
+    "description": "domain.js OFFBOARD: HR mengakhiri masa kerja (tidak boleh saat masih di SK berjalan).",
     "operationId": "offboard_employee_api_v1_employees__emp_id__offboard_post",
     "security": [
      {
@@ -665,7 +666,11 @@
       "description": "Successful Response",
       "content": {
        "application/json": {
-        "schema": {}
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Offboard Employee Api V1 Employees  Emp Id  Offboard Post"
+        }
        }
       }
      },
@@ -2704,6 +2709,113 @@
     }
    }
   },
+  "/api/v1/sync/operations": {
+   "post": {
+    "tags": [
+     "Offline Sync"
+    ],
+    "summary": "Sync Operations",
+    "description": "Idempoten per client_op_id; dijalankan sesuai urutan kiriman perangkat (dok 04 §7).",
+    "operationId": "sync_operations_api_v1_sync_operations_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/SyncRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/SyncResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ]
+   }
+  },
+  "/api/v1/sync/status": {
+   "get": {
+    "tags": [
+     "Offline Sync"
+    ],
+    "summary": "Sync Status",
+    "description": "Operasi milik pengguna sendiri — dasar layar \"Perlu perhatian\" (REJECTED).",
+    "operationId": "sync_status_api_v1_sync_status_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "since",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date-time"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Since"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/OperationStatus"
+         },
+         "title": "Response Sync Status Api V1 Sync Status Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/v1/work-plans/{plan_id}/weekly": {
    "get": {
     "tags": [
@@ -3175,6 +3287,259 @@
           "$ref": "#/components/schemas/AttachmentResponse"
          },
          "title": "Response Save Attachments Api V1 Work Plans  Plan Id  Attachments Put"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/work-plans/{plan_id}/documents": {
+   "get": {
+    "tags": [
+     "Documents & Signatures"
+    ],
+    "summary": "List Plan Documents",
+    "description": "Dok 05 §3.3: SK, revisi, dan adendum beserta jumlah tanda tangan yang berlaku.",
+    "operationId": "list_plan_documents_api_v1_work_plans__plan_id__documents_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "plan_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Plan Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/PlanDocumentOut"
+         },
+         "title": "Response List Plan Documents Api V1 Work Plans  Plan Id  Documents Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/documents/{document_id}/signatures": {
+   "get": {
+    "tags": [
+     "Documents & Signatures"
+    ],
+    "summary": "List Signatures",
+    "operationId": "list_signatures_api_v1_documents__document_id__signatures_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "document_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Document Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/SignatureOut"
+         },
+         "title": "Response List Signatures Api V1 Documents  Document Id  Signatures Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/documents/{document_id}/pdf": {
+   "get": {
+    "tags": [
+     "Documents & Signatures"
+    ],
+    "summary": "Document Pdf",
+    "description": "PDF bertanda tangan + QR verifikasi (dok 05 §3.9). Render berat → threadpool (CLAUDE.md).",
+    "operationId": "document_pdf_api_v1_documents__document_id__pdf_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "document_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Document Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/signatures/{signature_id}/revoke": {
+   "post": {
+    "tags": [
+     "Documents & Signatures"
+    ],
+    "summary": "Revoke Signature",
+    "description": "P6-6: pencabutan beserta alasan (PM unit/OPS SK tersebut); tercatat di audit.",
+    "operationId": "revoke_signature_api_v1_signatures__signature_id__revoke_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "signature_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Signature Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/RevokeRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": {
+          "type": "string"
+         },
+         "title": "Response Revoke Signature Api V1 Signatures  Signature Id  Revoke Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/verify/{token}": {
+   "get": {
+    "tags": [
+     "Documents & Signatures"
+    ],
+    "summary": "Verify Signature",
+    "description": "PUBLIK: hasil pemindaian QR — hanya data yang perlu dilihat pemverifikasi (db/04 verify_signature_qr).",
+    "operationId": "verify_signature_api_v1_verify__token__get",
+    "parameters": [
+     {
+      "name": "token",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Token"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/VerifyOut"
         }
        }
       }
@@ -6806,6 +7171,127 @@
     ],
     "title": "NeedsReviewResponse"
    },
+   "OfflineOperation": {
+    "properties": {
+     "client_op_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Client Op Id"
+     },
+     "op_type": {
+      "type": "string",
+      "title": "Op Type"
+     },
+     "payload": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Payload"
+     },
+     "client_created_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Client Created At"
+     }
+    },
+    "type": "object",
+    "required": [
+     "client_op_id",
+     "op_type",
+     "payload",
+     "client_created_at"
+    ],
+    "title": "OfflineOperation"
+   },
+   "OperationResult": {
+    "properties": {
+     "client_op_id": {
+      "type": "string",
+      "title": "Client Op Id"
+     },
+     "status": {
+      "type": "string",
+      "title": "Status"
+     },
+     "error_message": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Error Message"
+     }
+    },
+    "type": "object",
+    "required": [
+     "client_op_id",
+     "status",
+     "error_message"
+    ],
+    "title": "OperationResult"
+   },
+   "OperationStatus": {
+    "properties": {
+     "client_op_id": {
+      "type": "string",
+      "title": "Client Op Id"
+     },
+     "op_type": {
+      "type": "string",
+      "title": "Op Type"
+     },
+     "status": {
+      "type": "string",
+      "title": "Status"
+     },
+     "error_message": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Error Message"
+     },
+     "client_created_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Client Created At"
+     },
+     "received_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Received At"
+     },
+     "applied_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Applied At"
+     }
+    },
+    "type": "object",
+    "required": [
+     "client_op_id",
+     "op_type",
+     "status",
+     "error_message",
+     "client_created_at",
+     "received_at",
+     "applied_at"
+    ],
+    "title": "OperationStatus"
+   },
    "OvertimeCreate": {
     "properties": {
      "work_plan_id": {
@@ -7110,6 +7596,80 @@
     ],
     "title": "PlanDayResponse"
    },
+   "PlanDocumentOut": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "kind": {
+      "type": "string",
+      "title": "Kind"
+     },
+     "version": {
+      "type": "integer",
+      "title": "Version"
+     },
+     "number": {
+      "type": "string",
+      "title": "Number"
+     },
+     "status": {
+      "type": "string",
+      "title": "Status"
+     },
+     "reason": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Reason"
+     },
+     "issued_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Issued At"
+     },
+     "accepted_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Accepted At"
+     },
+     "sha256": {
+      "type": "string",
+      "title": "Sha256"
+     },
+     "signature_count": {
+      "type": "integer",
+      "title": "Signature Count"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "kind",
+     "version",
+     "number",
+     "status",
+     "reason",
+     "issued_at",
+     "accepted_at",
+     "sha256",
+     "signature_count"
+    ],
+    "title": "PlanDocumentOut"
+   },
    "PlanTaskCreate": {
     "properties": {
      "title": {
@@ -7211,6 +7771,110 @@
     ],
     "title": "ReviewRequest"
    },
+   "RevokeRequest": {
+    "properties": {
+     "reason": {
+      "type": "string",
+      "title": "Reason"
+     }
+    },
+    "type": "object",
+    "required": [
+     "reason"
+    ],
+    "title": "RevokeRequest"
+   },
+   "SignatureOut": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "serial_number": {
+      "type": "string",
+      "title": "Serial Number"
+     },
+     "signer_name": {
+      "type": "string",
+      "title": "Signer Name"
+     },
+     "signer_position": {
+      "type": "string",
+      "title": "Signer Position"
+     },
+     "signer_unit": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Signer Unit"
+     },
+     "signer_role": {
+      "type": "string",
+      "title": "Signer Role"
+     },
+     "signed_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Signed At"
+     },
+     "signature_alg": {
+      "type": "string",
+      "title": "Signature Alg"
+     },
+     "kid": {
+      "type": "string",
+      "title": "Kid"
+     },
+     "document_sha256_hex": {
+      "type": "string",
+      "title": "Document Sha256 Hex"
+     },
+     "revoked_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Revoked At"
+     },
+     "revoked_reason": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Revoked Reason"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "serial_number",
+     "signer_name",
+     "signer_position",
+     "signer_unit",
+     "signer_role",
+     "signed_at",
+     "signature_alg",
+     "kid",
+     "document_sha256_hex",
+     "revoked_at",
+     "revoked_reason"
+    ],
+    "title": "SignatureOut"
+   },
    "SiteCreate": {
     "properties": {
      "name": {
@@ -7284,6 +7948,46 @@
      "id"
     ],
     "title": "SiteResponse"
+   },
+   "SyncRequest": {
+    "properties": {
+     "device_id": {
+      "type": "string",
+      "maxLength": 200,
+      "minLength": 1,
+      "title": "Device Id"
+     },
+     "operations": {
+      "items": {
+       "$ref": "#/components/schemas/OfflineOperation"
+      },
+      "type": "array",
+      "maxItems": 200,
+      "title": "Operations"
+     }
+    },
+    "type": "object",
+    "required": [
+     "device_id",
+     "operations"
+    ],
+    "title": "SyncRequest"
+   },
+   "SyncResponse": {
+    "properties": {
+     "results": {
+      "items": {
+       "$ref": "#/components/schemas/OperationResult"
+      },
+      "type": "array",
+      "title": "Results"
+     }
+    },
+    "type": "object",
+    "required": [
+     "results"
+    ],
+    "title": "SyncResponse"
    },
    "TeamRequest": {
     "properties": {
@@ -7567,6 +8271,17 @@
       },
       "type": "array",
       "title": "Permissions"
+     },
+     "employee_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Employee Id"
      }
     },
     "type": "object",
@@ -7617,6 +8332,164 @@
      "type"
     ],
     "title": "ValidationError"
+   },
+   "VerifyOut": {
+    "properties": {
+     "state": {
+      "type": "string",
+      "title": "State"
+     },
+     "serial_number": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Serial Number"
+     },
+     "signer_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Signer Name"
+     },
+     "signer_position": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Signer Position"
+     },
+     "signer_unit": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Signer Unit"
+     },
+     "signer_role": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Signer Role"
+     },
+     "document_number": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Document Number"
+     },
+     "document_title": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Document Title"
+     },
+     "signed_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Signed At"
+     },
+     "key_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Key Id"
+     },
+     "algorithm": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Algorithm"
+     },
+     "document_sha256_hex": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Document Sha256 Hex"
+     },
+     "note": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Note"
+     }
+    },
+    "type": "object",
+    "required": [
+     "state",
+     "serial_number",
+     "signer_name",
+     "signer_position",
+     "signer_unit",
+     "signer_role",
+     "document_number",
+     "document_title",
+     "signed_at",
+     "key_id",
+     "algorithm",
+     "document_sha256_hex",
+     "note"
+    ],
+    "title": "VerifyOut"
    },
    "WeeklyReportRequest": {
     "properties": {

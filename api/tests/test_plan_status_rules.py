@@ -59,8 +59,8 @@ def _asset(client, world: World, kind: str = "TOOL") -> str:
 
 
 def _allocate(client, world: World, asset_id: str, plan_id: str, driver: str | None = None):
-    return client.post("/assets/allocate", headers=world.headers(client, "asset"), json={
-        "asset_id": asset_id, "work_plan_id": plan_id,
+    return client.post(f"/assets/{asset_id}/reserve", headers=world.headers(client, "asset"), json={
+        "work_plan_id": plan_id,
         "driver_employee_id": world.employees[driver] if driver else None})
 
 

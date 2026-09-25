@@ -6,6 +6,7 @@ SQL statis; tidak ada f-string; CAST(:x AS tipe) sesuai standar backend.
 from __future__ import annotations
 
 from collections.abc import Sequence
+from datetime import date
 from typing import Any
 from uuid import UUID
 
@@ -115,16 +116,28 @@ class OvertimeRepo(BaseRepo):
             {"plan": plan_id, "org": org_id},
         )
 
-    async def recap(self, org_id: str, month: str | None) -> Sequence[Any]:
-        """Rekap dari v_overtime_recap; bila month diisi filter per bulan (YYYY-MM-01)."""
+    async def recap(self, org_id: str, month: date | None, pm_user_id: str | None) -> Sequence[Any]:
+        """Rekap per karyawan per bulan (padanan v_overtime_recap). `month` = tanggal 1 bulan itu atau None.
+        `pm_user_id`: hanya lembur pada SK di unit yang dipegang PM itu (keputusan pemilik, dok 10 V-28)."""
         return await self.fetchall(
             """
-            SELECT organization_id, period_month, employee_id, full_name AS employee_name,
-                   approved_entries, pending_entries, approved_hours
-              FROM vms.v_overtime_recap
-             WHERE organization_id = CAST(:org AS uuid)
-               AND (CAST(:month AS date) IS NULL OR period_month = CAST(:month AS date))
+            SELECT o.organization_id, CAST(date_trunc('month', o.work_date) AS date) AS period_month,
+                   o.employee_id, e.full_name AS employee_name,
+                   count(*) FILTER (WHERE o.status = 'APPROVED') AS approved_entries,
+                   count(*) FILTER (WHERE o.status = 'PENDING_PM') AS pending_entries,
+                   COALESCE(sum(o.hours) FILTER (WHERE o.status = 'APPROVED'), 0) AS approved_hours
+              FROM vms.overtime_log o
+              JOIN vms.employee e ON e.id = o.employee_id
+              JOIN vms.work_plan wp ON wp.id = o.work_plan_id
+             WHERE o.organization_id = CAST(:org AS uuid)
+               AND (CAST(:month AS date) IS NULL
+                    OR CAST(date_trunc('month', o.work_date) AS date) = CAST(:month AS date))
+               AND (CAST(:pm AS uuid) IS NULL OR EXISTS (
+                    SELECT 1 FROM vms.user_role ur
+                     WHERE ur.user_id = CAST(:pm AS uuid) AND ur.role = 'PM'
+                       AND (ur.unit_id IS NULL OR ur.unit_id = wp.unit_id)))
+             GROUP BY o.organization_id, period_month, o.employee_id, e.full_name
              ORDER BY period_month DESC, employee_name
             """,
-            {"org": org_id, "month": month},
+            {"org": org_id, "month": month, "pm": pm_user_id},
         )

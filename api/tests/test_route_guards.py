@@ -36,6 +36,7 @@ SELF_SERVICE = {
     ("POST", "/attendance/check-in"): "absensi sendiri",
     ("POST", "/attendance/check-out"): "absensi sendiri",
     ("POST", "/attendance/{att_id}/explain"): "hanya absensi milik sendiri — diuji di bawah",
+    ("GET", "/recaps/attendance"): "rekap sendiri; FINANCE/HR/OPS/ADMIN seluruh organisasi (V-30, diuji)",
 }
 # Kewenangan bergantung pada isi permintaan (SK di badan) atau tautan berkas → dijaga di handler.
 GUARDED_IN_HANDLER = {
@@ -47,6 +48,15 @@ GUARDED_IN_HANDLER = {
     ("POST", "/changes/{change_id}/accept"): "PlanChangeService: ketua (EXTEND) / ketua baru (PERSONNEL)",
     ("POST", "/changes/{change_id}/reject"): "PlanChangeService: ketua/PM (EXTEND) / ketua baru (PERSONNEL)",
     ("POST", "/changes/{change_id}/withdraw"): "PlanChangeService: PM unit/OPS, hanya PERSONNEL",
+    # V-27: SK ada di badan permintaan; pengemudi ditentukan alokasi aset.
+    ("POST", "/assets/{asset_id}/reserve"): "AssetReservationService: manage:assets atau PM unit/OPS SK (diuji)",
+    ("POST", "/assets/{asset_id}/release"): "AssetReservationService: manage:assets atau PM unit/OPS SK (diuji)",
+    ("POST", "/assets/{asset_id}/check"): "AssetReservationService: hanya pengemudi yang ditunjuk (diuji)",
+    # V-28: SK ada di badan/kueri atau ditentukan baris lembur.
+    ("POST", "/overtime"): "OvertimeService: SK terlihat + ketua/anggota (diuji)",
+    ("GET", "/overtime"): "OvertimeService: check_plan_access(VIEW) untuk work_plan_id (diuji)",
+    ("POST", "/overtime/{ot_id}/review"): "OvertimeService: PM unit/OPS SK, bukan pengaju (diuji)",
+    ("GET", "/recaps/overtime"): "OvertimeService: izin review:overtime (Finance/OPS/Admin) (diuji)",
 }
 _GUARDS = ("permission_checker", "plan_access.", "plan_day_access.", "allocation_plan_access.",
            "incident_plan_access.")
@@ -176,8 +186,8 @@ def test_only_the_leader_requests_an_asset_return(client, world, who, expected):
     asset = client.post("/assets", headers=officer,
                         json={"kind": "TOOL", "code": "TL-UJI", "name": "Tangga lipat", "condition": "BAIK"})
     assert asset.status_code == 201, asset.text
-    allocated = client.post("/assets/allocate", headers=officer,
-                            json={"asset_id": asset.json()["id"], "work_plan_id": plan_id})
+    allocated = client.post(f"/assets/{asset.json()['id']}/reserve", headers=officer,
+                            json={"work_plan_id": plan_id})
     assert allocated.status_code == 200, allocated.text
     alloc_id = allocated.json()["id"]
 

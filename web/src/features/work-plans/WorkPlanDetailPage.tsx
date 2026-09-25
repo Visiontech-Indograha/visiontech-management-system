@@ -13,6 +13,7 @@ import { CompletionDialog } from "./CompletionDialog";
 import { IncidentDialog, IncidentPanel } from "./Incidents";
 import { ChangePanel, ExtensionDialog, PersonnelDialog } from "./PlanChanges";
 import { AddDayDialog, EditDraftDialog, ReasonDialog, TeamDialog } from "./PlanForms";
+import { DailyReports } from "./DailyReports";
 import { WeeklyReports } from "./WeeklyReports";
 
 const Row = ({ label, children }: { label: string; children: ReactNode }) => (
@@ -60,7 +61,8 @@ export function WorkPlanDetailPage() {
           </div>
         )}
         {p && ["IN_PROGRESS", "COMPLETION_REVIEW", "COMPLETED"].includes(p.status) && (
-          <div className="mt-6">
+          <div className="mt-6 space-y-6">
+            <DailyReports plan={p} />
             <WeeklyReports plan={p} />
           </div>
         )}

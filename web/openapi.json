@@ -198,7 +198,7 @@
      "Audit"
     ],
     "summary": "Get Audit Events",
-    "description": "Mengambil daftar kejadian audit. Hanya dapat diakses oleh Admin atau peran dengan VIEW_REPORTS.\nData difilter otomatis berdasarkan organization_id lewat RLS jika diatur.",
+    "description": "Kejadian audit organisasi pengguna (VIEW_AUDIT). Disaring `organization_id` secara eksplisit —\ntidak hanya mengandalkan RLS, yang terlewati bila aplikasi terhubung sebagai pemilik tabel (T-12).",
     "operationId": "get_audit_events_api_v1_audit_events_get",
     "security": [
      {
@@ -234,7 +234,14 @@
       "in": "query",
       "required": false,
       "schema": {
-       "type": "string",
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
        "title": "Entity Type"
       }
      }
@@ -659,6 +666,108 @@
       "content": {
        "application/json": {
         "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/employees/{emp_id}/archive": {
+   "post": {
+    "tags": [
+     "Employees"
+    ],
+    "summary": "Archive Employee",
+    "description": "Hapus karyawan (V-29, keputusan pemilik): hanya yang sudah di-offboard; dibalik lewat /restore.",
+    "operationId": "archive_employee_api_v1_employees__emp_id__archive_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "emp_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Emp Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Archive Employee Api V1 Employees  Emp Id  Archive Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/employees/{emp_id}/restore": {
+   "post": {
+    "tags": [
+     "Employees"
+    ],
+    "summary": "Restore Employee",
+    "description": "domain.js RESTORE_EMPLOYEE (V-29): HR memulihkan karyawan terhapus sebagai nonaktif.",
+    "operationId": "restore_employee_api_v1_employees__emp_id__restore_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "emp_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Emp Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Restore Employee Api V1 Employees  Emp Id  Restore Post"
+        }
        }
       }
      },
@@ -1269,6 +1378,57 @@
        "application/json": {
         "schema": {
          "$ref": "#/components/schemas/PlanDayResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "get": {
+    "tags": [
+     "Daily Reports"
+    ],
+    "summary": "List Plan Days",
+    "description": "Siapa pun yang melihat SK (V-07); SK tak terlihat / organisasi lain → 404.",
+    "operationId": "list_plan_days_api_v1_work_plans__plan_id__days_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "plan_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Plan Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/PlanDayOut"
+         },
+         "title": "Response List Plan Days Api V1 Work Plans  Plan Id  Days Get"
         }
        }
       }
@@ -2920,6 +3080,118 @@
     }
    }
   },
+  "/api/v1/work-plans/{plan_id}/attachments": {
+   "get": {
+    "tags": [
+     "Work Plans"
+    ],
+    "summary": "List Attachments",
+    "operationId": "list_attachments_api_v1_work_plans__plan_id__attachments_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "plan_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Plan Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/AttachmentResponse"
+         },
+         "title": "Response List Attachments Api V1 Work Plans  Plan Id  Attachments Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "put": {
+    "tags": [
+     "Work Plans"
+    ],
+    "summary": "Save Attachments",
+    "operationId": "save_attachments_api_v1_work_plans__plan_id__attachments_put",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "plan_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Plan Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/AttachmentsRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/AttachmentResponse"
+         },
+         "title": "Response Save Attachments Api V1 Work Plans  Plan Id  Attachments Put"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/v1/attendance": {
    "get": {
     "tags": [
@@ -4118,6 +4390,225 @@
      }
     }
    }
+  },
+  "/api/v1/overtime": {
+   "post": {
+    "tags": [
+     "Overtime"
+    ],
+    "summary": "Report Overtime",
+    "description": "domain.js REPORT_OVERTIME (V-28): ketua atau anggota mengajukan lembur pada SK aktif.",
+    "operationId": "report_overtime_api_v1_overtime_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/OvertimeCreate"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/OvertimeResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "get": {
+    "tags": [
+     "Overtime"
+    ],
+    "summary": "List Overtime",
+    "description": "Daftar lembur satu SK — siapa pun yang dapat melihat SK (tidak terlihat → 404).",
+    "operationId": "list_overtime_api_v1_overtime_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "work_plan_id",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Work Plan Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/OvertimeResponse"
+         },
+         "title": "Response List Overtime Api V1 Overtime Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/overtime/{ot_id}/review": {
+   "post": {
+    "tags": [
+     "Overtime"
+    ],
+    "summary": "Review Overtime",
+    "description": "domain.js REVIEW_OVERTIME (V-28): PM unit/OPS menyetujui atau menolak lembur PENDING_PM.",
+    "operationId": "review_overtime_api_v1_overtime__ot_id__review_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "ot_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Ot Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/OvertimeReview"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/OvertimeResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/recaps/overtime": {
+   "get": {
+    "tags": [
+     "Overtime"
+    ],
+    "summary": "Overtime Recap",
+    "description": "Rekap lembur per karyawan per bulan — Finance/OPS/Admin seluruh organisasi, PM unitnya (dok 10 V-28).",
+    "operationId": "overtime_recap_api_v1_recaps_overtime_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "month",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Filter bulan dalam format YYYY-MM, contoh: 2026-09",
+       "title": "Month"
+      },
+      "description": "Filter bulan dalam format YYYY-MM, contoh: 2026-09"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/OvertimeRecapRow"
+         },
+         "title": "Response Overtime Recap Api V1 Recaps Overtime Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
   }
  },
  "components": {
@@ -4487,6 +4978,56 @@
      "status"
     ],
     "title": "AssetStatusResponse"
+   },
+   "AttachmentResponse": {
+    "properties": {
+     "file_id": {
+      "type": "string",
+      "title": "File Id"
+     },
+     "file_name": {
+      "type": "string",
+      "title": "File Name"
+     },
+     "mime_type": {
+      "type": "string",
+      "title": "Mime Type"
+     },
+     "byte_size": {
+      "type": "integer",
+      "title": "Byte Size"
+     },
+     "sort_order": {
+      "type": "integer",
+      "title": "Sort Order"
+     }
+    },
+    "type": "object",
+    "required": [
+     "file_id",
+     "file_name",
+     "mime_type",
+     "byte_size",
+     "sort_order"
+    ],
+    "title": "AttachmentResponse"
+   },
+   "AttachmentsRequest": {
+    "properties": {
+     "file_ids": {
+      "items": {
+       "type": "string",
+       "format": "uuid"
+      },
+      "type": "array",
+      "title": "File Ids"
+     }
+    },
+    "type": "object",
+    "required": [
+     "file_ids"
+    ],
+    "title": "AttachmentsRequest"
    },
    "AttendanceListResponse": {
     "properties": {
@@ -5152,6 +5693,76 @@
     ],
     "title": "DayPlanRequest"
    },
+   "DayReportOut": {
+    "properties": {
+     "status": {
+      "type": "string",
+      "title": "Status"
+     },
+     "body": {
+      "type": "string",
+      "title": "Body"
+     },
+     "obstacle": {
+      "type": "string",
+      "title": "Obstacle"
+     },
+     "review_note": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Review Note"
+     },
+     "submitted_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Submitted At"
+     },
+     "reviewed_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Reviewed At"
+     },
+     "evidence_file_ids": {
+      "items": {
+       "type": "string",
+       "format": "uuid"
+      },
+      "type": "array",
+      "title": "Evidence File Ids"
+     }
+    },
+    "type": "object",
+    "required": [
+     "status",
+     "body",
+     "obstacle",
+     "review_note",
+     "submitted_at",
+     "reviewed_at",
+     "evidence_file_ids"
+    ],
+    "title": "DayReportOut"
+   },
    "DayTaskInput": {
     "properties": {
      "title": {
@@ -5164,6 +5775,48 @@
      "title"
     ],
     "title": "DayTaskInput"
+   },
+   "DayTaskOut": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Id"
+     },
+     "title": {
+      "type": "string",
+      "title": "Title"
+     },
+     "sort_order": {
+      "type": "integer",
+      "title": "Sort Order"
+     },
+     "is_done": {
+      "type": "boolean",
+      "title": "Is Done"
+     },
+     "done_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Done At"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "title",
+     "sort_order",
+     "is_done",
+     "done_at"
+    ],
+    "title": "DayTaskOut"
    },
    "DecisionRequest": {
     "properties": {
@@ -6153,6 +6806,201 @@
     ],
     "title": "NeedsReviewResponse"
    },
+   "OvertimeCreate": {
+    "properties": {
+     "work_plan_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Work Plan Id"
+     },
+     "hours": {
+      "type": "number",
+      "title": "Hours"
+     },
+     "reason": {
+      "type": "string",
+      "title": "Reason"
+     }
+    },
+    "type": "object",
+    "required": [
+     "work_plan_id",
+     "hours",
+     "reason"
+    ],
+    "title": "OvertimeCreate",
+    "description": "domain.js REPORT_OVERTIME. Aturan (jam 0–12, alasan wajib) diperiksa di OvertimeService\nagar urutan & pesannya sama dengan prototipe."
+   },
+   "OvertimeRecapRow": {
+    "properties": {
+     "employee_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Employee Id"
+     },
+     "employee_name": {
+      "type": "string",
+      "title": "Employee Name"
+     },
+     "period_month": {
+      "type": "string",
+      "format": "date",
+      "title": "Period Month"
+     },
+     "approved_entries": {
+      "type": "integer",
+      "title": "Approved Entries"
+     },
+     "pending_entries": {
+      "type": "integer",
+      "title": "Pending Entries"
+     },
+     "approved_hours": {
+      "type": "number",
+      "title": "Approved Hours"
+     }
+    },
+    "type": "object",
+    "required": [
+     "employee_id",
+     "employee_name",
+     "period_month",
+     "approved_entries",
+     "pending_entries",
+     "approved_hours"
+    ],
+    "title": "OvertimeRecapRow",
+    "description": "Satu baris rekap dari v_overtime_recap (per karyawan per bulan)."
+   },
+   "OvertimeResponse": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Id"
+     },
+     "work_plan_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Work Plan Id"
+     },
+     "plan_document_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Plan Document Id"
+     },
+     "employee_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Employee Id"
+     },
+     "work_date": {
+      "type": "string",
+      "format": "date",
+      "title": "Work Date"
+     },
+     "hours": {
+      "type": "number",
+      "title": "Hours"
+     },
+     "reason": {
+      "type": "string",
+      "title": "Reason"
+     },
+     "status": {
+      "type": "string",
+      "title": "Status"
+     },
+     "reviewed_by": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Reviewed By"
+     },
+     "reviewed_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Reviewed At"
+     },
+     "review_note": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Review Note"
+     },
+     "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Created At"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "work_plan_id",
+     "plan_document_id",
+     "employee_id",
+     "work_date",
+     "hours",
+     "reason",
+     "status",
+     "reviewed_by",
+     "reviewed_at",
+     "review_note",
+     "created_at"
+    ],
+    "title": "OvertimeResponse"
+   },
+   "OvertimeReview": {
+    "properties": {
+     "decision": {
+      "type": "string",
+      "title": "Decision"
+     },
+     "note": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Note"
+     }
+    },
+    "type": "object",
+    "required": [
+     "decision"
+    ],
+    "title": "OvertimeReview",
+    "description": "domain.js REVIEW_OVERTIME: decision APPROVED | REJECTED (diperiksa di service)."
+   },
    "PlanDayCreate": {
     "properties": {
      "work_date": {
@@ -6176,6 +7024,55 @@
      "title"
     ],
     "title": "PlanDayCreate"
+   },
+   "PlanDayOut": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Id"
+     },
+     "work_date": {
+      "type": "string",
+      "format": "date",
+      "title": "Work Date"
+     },
+     "title": {
+      "type": "string",
+      "title": "Title"
+     },
+     "sort_order": {
+      "type": "integer",
+      "title": "Sort Order"
+     },
+     "tasks": {
+      "items": {
+       "$ref": "#/components/schemas/DayTaskOut"
+      },
+      "type": "array",
+      "title": "Tasks"
+     },
+     "report": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/DayReportOut"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "work_date",
+     "title",
+     "sort_order",
+     "tasks",
+     "report"
+    ],
+    "title": "PlanDayOut"
    },
    "PlanDayResponse": {
     "properties": {

@@ -7,7 +7,7 @@ NULL → operasinya gagal (NOT NULL), dan dengan konteks yang salah → tercatat
 from __future__ import annotations
 
 from tests.conftest import requires_db, sync_query
-from tests.test_flow_plans import run_plan_to_in_progress
+from tests.test_flow_plans import create_draft_plan, run_plan_to_in_progress
 
 pytestmark = requires_db
 
@@ -50,3 +50,18 @@ def test_employee_document_without_session_context_is_audited(client, world):
         "WHERE e.id = %s RETURNING id", (world.employees["member"],))[0][0]
 
     assert _audit_org(str(doc_id), "INSERT") == [(world.org_id,)]
+
+
+def test_audit_events_never_show_another_organisation(client, world, other_world):
+    """/audit-events disaring organization_id di SQL — tidak hanya bergantung pada RLS (T-12).
+    work_plan termasuk tabel yang diaudit (db/02 tg_audit_row); asset tidak."""
+    plan_id, _ = create_draft_plan(client, world, start_offset_days=7)
+
+    own = client.get("/audit-events", headers=world.headers(client, "admin"),
+                     params={"entity_type": "work_plan", "size": 100})
+    assert own.status_code == 200
+    assert plan_id in [e["entity_id"] for e in own.json()["items"]]
+    foreign = client.get("/audit-events", headers=other_world.headers(client, "admin"),
+                         params={"entity_type": "work_plan", "size": 100})
+    assert foreign.status_code == 200
+    assert plan_id not in [e["entity_id"] for e in foreign.json()["items"]]

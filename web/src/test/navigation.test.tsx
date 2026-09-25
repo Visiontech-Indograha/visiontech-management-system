@@ -9,14 +9,14 @@ const labels = (permissions: readonly string[]) => visibleNav(permissions).map((
 
 describe("menu berdasarkan izin API", () => {
   it("menampilkan menu hanya ketika izin API yang sesuai tersedia", () => {
-    expect(labels([])).toEqual(["Beranda", "Work plan"]);
-    expect(labels(["view:users"])).toEqual(["Beranda", "Work plan", "Direktori"]);
+    expect(labels([])).toEqual(["Beranda", "Work plan", "Kendaraan & alat"]);
+    expect(labels(["view:users"])).toEqual(["Beranda", "Work plan", "Kendaraan & alat", "Direktori"]);
     // API tidak punya endpoint /users: izin manage:users tidak membuka menu apa pun.
-    expect(labels(["manage:users"])).toEqual(["Beranda", "Work plan"]);
+    expect(labels(["manage:users"])).toEqual(["Beranda", "Work plan", "Kendaraan & alat"]);
     // "Berkas saya" ditahan: /auth/me belum mengirim employee_id untuk /employees/{emp_id}/documents.
-    expect(labels(["view:documents"])).toEqual(["Beranda", "Work plan"]);
-    expect(labels(["view:audit"])).toEqual(["Beranda", "Work plan", "Audit log"]);
-    expect(labels(["create:plan"])).toEqual(["Beranda", "Work plan", "Lokasi kerja"]);
+    expect(labels(["view:documents"])).toEqual(["Beranda", "Work plan", "Kendaraan & alat"]);
+    expect(labels(["view:audit"])).toEqual(["Beranda", "Work plan", "Kendaraan & alat", "Audit log"]);
+    expect(labels(["create:plan"])).toEqual(["Beranda", "Work plan", "Kendaraan & alat", "Lokasi kerja"]);
   });
 
   it("izin mock sama dengan peta peran API", () => {
@@ -29,7 +29,7 @@ describe("menu berdasarkan izin API", () => {
     }
     expect(labels(MOCK_PERMISSIONS.FINANCE)).not.toContain("Audit log");
     expect(labels(MOCK_PERMISSIONS.OPS)).toContain("Audit log");
-    expect(labels(MOCK_PERMISSIONS.field)).toEqual(["Beranda", "Work plan", "Direktori"]);
+    expect(labels(MOCK_PERMISSIONS.field)).toEqual(["Beranda", "Work plan", "Kendaraan & alat", "Direktori"]);
   });
 
   it("shell memakai permissions[] dari /auth/me untuk menyaring menu", () => {

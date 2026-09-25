@@ -54,3 +54,8 @@ export function statusTone(status: string): StatusTone {
 }
 
 export const statusLabel = (status: string) => STATUS_LABEL[status] ?? status;
+
+const SIGNER_ROLE: Record<string, string> = { ISSUER: "Penerbit", ACCEPTOR: "Penerima", WITNESS: "Saksi", APPROVER: "Penyetuju" };
+
+/** Label peran penanda tangan (enum signature_role). */
+export const signerRoleLabel = (role: string | null | undefined) => (role ? (SIGNER_ROLE[role] ?? role) : "-");

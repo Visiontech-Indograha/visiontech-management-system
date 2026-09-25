@@ -13,6 +13,7 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 - `web/`: Selaraskan sesi `/auth/me`, peran, izin, menu, dan guard ke kontrak API; tahan halaman Site sampai endpoint tersedia.
 - `web/`: Hapus halaman Pengguna (`/users`) beserta dialog, hook, dan ujinya karena API tidak punya endpoint manajemen pengguna (L5).
 - `web/`: Tahan menu "Berkas saya" karena `/auth/me` belum mengirim `employee_id` yang dibutuhkan `GET /employees/{emp_id}/documents`; hapus impor `features/` dari `AppShell`.
+- `web/`: Bangkitkan ulang `openapi.json` + `api-types.ts` dari API terbaru; Direktori memakai `EmployeeResponse`/`EmployeeListResponse` (detail dari baris daftar karena tidak ada `GET /employees/{id}`), ubah profil lewat `PUT /employees/{id}` (react-hook-form + zod), unggah berkas membaca `file_id`.
 
 ### ✨ Ditambahkan
 

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog } from "@/components/ui/VmsDialog";
 import { TextField } from "@/components/ui/Field";
 import { ApiError } from "@/lib/api";
@@ -14,9 +15,9 @@ import { FilePreview } from "@/components/molecules/FilePreview";
 
 type Errors = Record<string, string>;
 
-/** Daftar berkas + tambah (SA, HES) atau hanya lihat (pemilik). */
-export function DocumentsPanel({ userId, canManage }: { userId: string; canManage: boolean }) {
-  const docs = useEmployeeDocuments(userId);
+/** Daftar berkas karyawan + tambah (pemegang manage:employee_documents). */
+export function DocumentsPanel({ employeeId, canManage }: { employeeId: string; canManage: boolean }) {
+  const docs = useEmployeeDocuments(employeeId);
   const [editing, setEditing] = useState(false);
 
   return (
@@ -38,10 +39,20 @@ export function DocumentsPanel({ userId, canManage }: { userId: string; canManag
             </tr>
           </thead>
           <tbody>
+            {docs.isPending && (
+              <tr aria-hidden>
+                <td colSpan={5} className="px-4 py-3">
+                  <Skeleton className="h-4 w-1/2" />
+                </td>
+              </tr>
+            )}
             {docs.isError && (
               <tr>
                 <td colSpan={5} className="px-4 py-6 text-center text-danger">
-                  Berkas tidak dapat dimuat.
+                  Berkas tidak dapat dimuat.{" "}
+                  <Button variant="outline" size="sm" onClick={() => docs.refetch()}>
+                    Coba lagi
+                  </Button>
                 </td>
               </tr>
             )}
@@ -55,7 +66,7 @@ export function DocumentsPanel({ userId, canManage }: { userId: string; canManag
             {docs.data?.items.map((d) => (
               <tr key={d.id} className="h-11 border-b border-line last:border-0">
                 <td className="px-4 py-2 font-medium">{d.doc_type}</td>
-                <td className="px-4 py-2">{d.number_masked ?? "-"}</td>
+                <td className="px-4 py-2">{d.number_masked}</td>
                 <td className="px-4 py-2">
                   {d.expiry_date ? (
                     <span className="flex items-center gap-2">
@@ -66,9 +77,7 @@ export function DocumentsPanel({ userId, canManage }: { userId: string; canManag
                   )}
                 </td>
                 <td className="px-4 py-2">
-                  {d.file_id ? (<FilePreview fileId={d.file_id} fileName={d.doc_type ?? "Berkas"} />) : (
-                    <span className="text-mist">Belum ada file</span>
-                  )}
+                  <FilePreview fileId={d.file_id} fileName={d.doc_type} />
                 </td>
               </tr>
             ))}
@@ -76,14 +85,14 @@ export function DocumentsPanel({ userId, canManage }: { userId: string; canManag
         </table>
       </div>
 
-      {editing && <DocumentDialog userId={userId} onClose={() => setEditing(false)} />}
+      {editing && <DocumentDialog employeeId={employeeId} onClose={() => setEditing(false)} />}
     </section>
   );
 }
 
-function DocumentDialog({ userId, onClose }: { userId: string; onClose: () => void }) {
+function DocumentDialog({ employeeId, onClose }: { employeeId: string; onClose: () => void }) {
   const upload = useUploadFile();
-  const create = useCreateDocument(userId);
+  const create = useCreateDocument(employeeId);
   const [errors, setErrors] = useState<Errors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const pending = upload.isPending || create.isPending;
@@ -107,7 +116,7 @@ function DocumentDialog({ userId, onClose }: { userId: string; onClose: () => vo
     try {
       const fileForm = new FormData();
       fileForm.set("file", file);
-      const { id: file_id } = await upload.mutateAsync(fileForm);
+      const { file_id } = await upload.mutateAsync(fileForm);
       await create.mutateAsync({ doc_type, number, expiry_date, file_id });
       toast.success("Berkas ditambahkan.");
       onClose();

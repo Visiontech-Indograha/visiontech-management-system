@@ -7,6 +7,7 @@ import { AttendancePage } from "@/features/attendance/AttendancePage";
 import { AuditLogPage } from "@/features/audit/AuditLogPage";
 import { DirectoryPage } from "@/features/directory/DirectoryPage";
 import { EmployeeDetailPage } from "@/features/directory/EmployeeDetailPage";
+import { MyDocumentsPage } from "@/features/directory/MyDocuments";
 import { SitesPage } from "@/features/sites/SitesPage";
 import { WorkPlanDetailPage } from "@/features/work-plans/WorkPlanDetailPage";
 import { WorkPlansPage } from "@/features/work-plans/WorkPlansPage";
@@ -22,6 +23,7 @@ import { NAV_ITEMS } from "./navigation";
 const PAGES: Record<string, ReactNode> = {
   "/audit-logs": <AuditLogPage />,
   "/directory": <DirectoryPage />,
+  "/my-documents": <MyDocumentsPage />,
   "/sites": <SitesPage />,
   "/work-plans": <WorkPlansPage />,
   "/assets": <AssetsPage />,

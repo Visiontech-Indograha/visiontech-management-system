@@ -55,19 +55,12 @@ const day = (over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
-const setup = (
-  days: unknown[],
-  extra?: (
-    url: string,
-    method: string,
-  ) => { status?: number; data?: unknown } | undefined,
-) =>
+const setup = (days: unknown[], extra?: (url: string, method: string) => { status?: number; data?: unknown } | undefined) =>
   mockApi((c) => {
     const hit = extra?.(c.url ?? "", c.method ?? "get");
     if (hit) return hit;
     if (c.url === "/work-plans/p1") return { data: plan };
-    if (c.url === "/employees")
-      return { data: { items: [], total: 0, page: 1, size: 100 } };
+    if (c.url === "/employees") return { data: { items: [], total: 0, page: 1, size: 100 } };
     if (c.url === "/work-plans/p1/weekly") return { data: [] };
     if (c.url === "/work-plans/p1/days") return { data: days };
   });
@@ -77,60 +70,34 @@ const panel = () => screen.findByRole("article", { name: /Tarik kabel — / });
 describe("Laporan harian", () => {
   it("menampilkan tugas terurut dan mencentang lewat toggle", async () => {
     const calls = setup([day()], (url) =>
-      url === "/work-plans/p1/days/d1/tasks/t1/toggle"
-        ? { data: { id: "t1", is_done: true } }
-        : undefined,
+      url === "/work-plans/p1/days/d1/tasks/t1/toggle" ? { data: { id: "t1", is_done: true } } : undefined,
     );
     renderRoute("/work-plans/p1", { role: "field" });
     const p = await panel();
     const boxes = within(p).getAllByRole("checkbox");
-    expect(boxes.map((b) => b.closest("label")!.textContent)).toEqual([
-      "Tarik kabel lantai 1",
-      "Pasang kamera",
-    ]);
+    expect(boxes.map((b) => b.closest("label")!.textContent)).toEqual(["Tarik kabel lantai 1", "Pasang kamera"]);
     fireEvent.click(boxes[0]);
-    await waitFor(() =>
-      expect(
-        calls.some(
-          (c) =>
-            c.url === "/work-plans/p1/days/d1/tasks/t1/toggle" &&
-            c.method === "post",
-        ),
-      ).toBe(true),
-    );
+    await waitFor(() => expect(calls.some((c) => c.url === "/work-plans/p1/days/d1/tasks/t1/toggle" && c.method === "post")).toBe(true));
   });
 
   it("toggle ditolak API → pesan galat tampil", async () => {
     setup([day()], (url) =>
-      url.endsWith("/toggle")
-        ? apiError(
-            409,
-            "INVALID_STATE",
-            "Checklist tidak dapat diubah setelah laporan diserahkan.",
-          )
-        : undefined,
+      url.endsWith("/toggle") ? apiError(409, "INVALID_STATE", "Checklist tidak dapat diubah setelah laporan diserahkan.") : undefined,
     );
     renderRoute("/work-plans/p1", { role: "field" });
     fireEvent.click(within(await panel()).getAllByRole("checkbox")[0]);
-    expect(
-      await screen.findByText(
-        "Checklist tidak dapat diubah setelah laporan diserahkan.",
-      ),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("Checklist tidak dapat diubah setelah laporan diserahkan.")).toBeInTheDocument();
   });
 
   it("ketua menyimpan lalu mengirim (PUT lalu POST submit)", async () => {
     const calls = setup([day()], (url, method) => {
-      if (url === "/work-plans/p1/days/d1" && method === "put")
-        return { data: {} };
+      if (url === "/work-plans/p1/days/d1" && method === "put") return { data: {} };
       if (url === "/work-plans/p1/days/d1/submit") return { data: {} };
     });
     renderRoute("/work-plans/p1", { role: "field" });
     const p = await panel();
     fireEvent.click(within(p).getByRole("button", { name: "Kirim laporan" }));
-    expect(
-      await within(p).findByText("Laporan harian minimal 10 karakter."),
-    ).toBeInTheDocument();
+    expect(await within(p).findByText("Laporan harian minimal 10 karakter.")).toBeInTheDocument();
     fireEvent.change(within(p).getByLabelText("Laporan Harian"), {
       target: { value: "Kabel lantai 1 selesai" },
     });
@@ -138,11 +105,7 @@ describe("Laporan harian", () => {
       target: { value: "Tidak ada" },
     });
     fireEvent.click(within(p).getByRole("button", { name: "Kirim laporan" }));
-    await waitFor(() =>
-      expect(calls.some((c) => c.url === "/work-plans/p1/days/d1/submit")).toBe(
-        true,
-      ),
-    );
+    await waitFor(() => expect(calls.some((c) => c.url === "/work-plans/p1/days/d1/submit")).toBe(true));
     expect(calls.find((c) => c.method === "put")!.data).toEqual({
       body: "Kabel lantai 1 selesai",
       obstacle: "Tidak ada",
@@ -161,8 +124,7 @@ describe("Laporan harian", () => {
           }),
         }),
       ],
-      (url) =>
-        url === "/work-plans/p1/days/d1/review" ? { data: {} } : undefined,
+      (url) => (url === "/work-plans/p1/days/d1/review" ? { data: {} } : undefined),
     );
     renderRoute("/work-plans/p1", { role: "PM" });
     const p = await panel();
@@ -175,39 +137,20 @@ describe("Laporan harian", () => {
     fireEvent.change(within(p).getByLabelText("Keputusan"), {
       target: { value: "RETURN" },
     });
-    fireEvent.click(
-      within(p).getByRole("button", { name: "Simpan keputusan" }),
-    );
-    expect(
-      await within(p).findByText("Catatan revisi wajib diisi."),
-    ).toBeInTheDocument();
-    fireEvent.change(
-      within(p).getByLabelText("Catatan (wajib jika dikembalikan)"),
-      { target: { value: "Tambah foto" } },
-    );
-    fireEvent.click(
-      within(p).getByRole("button", { name: "Simpan keputusan" }),
-    );
-    await waitFor(() =>
-      expect(calls.some((c) => c.url === "/work-plans/p1/days/d1/review")).toBe(
-        true,
-      ),
-    );
-    expect(
-      calls.find((c) => c.url === "/work-plans/p1/days/d1/review")!.data,
-    ).toEqual({ decision: "RETURN", note: "Tambah foto" });
+    fireEvent.click(within(p).getByRole("button", { name: "Simpan keputusan" }));
+    expect(await within(p).findByText("Catatan revisi wajib diisi.")).toBeInTheDocument();
+    fireEvent.change(within(p).getByLabelText("Catatan (wajib jika dikembalikan)"), { target: { value: "Tambah foto" } });
+    fireEvent.click(within(p).getByRole("button", { name: "Simpan keputusan" }));
+    await waitFor(() => expect(calls.some((c) => c.url === "/work-plans/p1/days/d1/review")).toBe(true));
+    expect(calls.find((c) => c.url === "/work-plans/p1/days/d1/review")!.data).toEqual({ decision: "RETURN", note: "Tambah foto" });
   });
 
   it("hari yang belum tiba tidak bisa diisi", async () => {
     setup([day({ work_date: "2099-01-01" })]);
     renderRoute("/work-plans/p1", { role: "field" });
     const p = await panel();
-    expect(
-      within(p).getByText(/Laporan dapat diisi mulai/),
-    ).toBeInTheDocument();
-    expect(
-      within(p).queryByRole("button", { name: "Kirim laporan" }),
-    ).toBeNull();
+    expect(within(p).getByText(/Laporan dapat diisi mulai/)).toBeInTheDocument();
+    expect(within(p).queryByRole("button", { name: "Kirim laporan" })).toBeNull();
     expect(
       within(p)
         .getAllByRole("checkbox")

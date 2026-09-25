@@ -9,6 +9,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { errorMessage } from "@/lib/errors";
 import { formatDate } from "@/lib/format";
 import { employeeName, useActiveEmployees, useTransition, useWorkPlan, type Transition, type WorkPlan } from "./api";
+import { Attachments } from "./Attachments";
 import { CompletionDialog } from "./CompletionDialog";
 import { IncidentDialog, IncidentPanel } from "./Incidents";
 import { ChangePanel, ExtensionDialog, PersonnelDialog } from "./PlanChanges";
@@ -26,7 +27,9 @@ const Row = ({ label, children }: { label: string; children: ReactNode }) => (
 const CANCELLABLE = ["PUBLISHED", "APPEALED", "ACCEPTED", "IN_PROGRESS", "COMPLETION_REVIEW"];
 
 type Dialogs =
-  | { kind: "edit" | "team" | "day" | "completion" | "extension" | "personnel" | "incident" }
+  | {
+      kind: "edit" | "team" | "day" | "completion" | "extension" | "personnel" | "incident";
+    }
   | { kind: "reason"; action: Transition; title: string; label: string }
   | null;
 
@@ -60,6 +63,7 @@ export function WorkPlanDetailPage() {
             <PlanActions plan={p} />
           </div>
         )}
+        {p && <Attachments plan={p} />}
         {p && ["IN_PROGRESS", "COMPLETION_REVIEW", "COMPLETED"].includes(p.status) && (
           <div className="mt-6 space-y-6">
             <DailyReports plan={p} />

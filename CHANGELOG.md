@@ -17,6 +17,7 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 - `web/`: Audit log memakai tipe `AuditEventListResponse` hasil generator dan filter `entity_type` (tabel yang diaudit trigger), bukan filter `action` yang tidak ada di API.
 - `web/`: Halaman Lokasi kerja (`/sites`) dibangun ulang di atas `GET/POST/DELETE /sites` (`SiteResponse`, daftar biasa tanpa paginasi), hanya untuk izin `create:plan`; tambah lewat react-hook-form + zod, hapus lewat dialog konfirmasi.
 - `web/`: Layar Work plan (SK): daftar + filter status + draft terarsip (pulihkan), buat draft (unit = unit PM), detail, sunting draft, atur tim, tambah hari + tugas, terbitkan/terima/banding/revisi/mulai/batal/arsip dengan dialog alasan dan `row_version`. Hari, tugas, dan anggota belum dapat ditampilkan (API belum punya endpoint baca).
+- `web/`: Laporan mingguan di detail SK (`GET/PUT/submit/review /work-plans/{id}/weekly`): ketua menyimpan/mengirim, PM menyetujui/mengembalikan dengan catatan. Laporan harian dan centang tugas ditunda karena API belum punya endpoint baca hari/tugas/laporan.
 
 ### ✨ Ditambahkan
 

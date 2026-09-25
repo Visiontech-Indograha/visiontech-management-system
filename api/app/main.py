@@ -73,6 +73,8 @@ def create_app() -> FastAPI:
     from app.api.hse import days_router as daily_report_router
     from app.api.hse import router as hse_router
     from app.api.monitoring import router as monitoring_router
+    from app.api.overtime import overtime_router
+    from app.api.overtime import recaps_router as overtime_recaps_router
     from app.api.plan_attachments import router as plan_attachments_router
     from app.api.plan_changes import plan_router as plan_changes_router
     from app.api.plan_changes import router as changes_router
@@ -82,7 +84,7 @@ def create_app() -> FastAPI:
     from app.api.plans import router as plans_router
     from app.api.sites import router as sites_router
     from app.api.weekly_reports import router as weekly_reports_router
-    
+
     app.include_router(auth_router, prefix=API_PREFIX)
     app.include_router(audit_router, prefix=API_PREFIX)
     app.include_router(files_router, prefix=API_PREFIX)
@@ -104,6 +106,8 @@ def create_app() -> FastAPI:
     app.include_router(hse_router, prefix=API_PREFIX)
     app.include_router(daily_report_router, prefix=API_PREFIX)
     app.include_router(assets_router, prefix=API_PREFIX)
+    app.include_router(overtime_router, prefix=API_PREFIX)
+    app.include_router(overtime_recaps_router, prefix=API_PREFIX)
         
     return app
 

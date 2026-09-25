@@ -1,9 +1,14 @@
 import {
   BookUser,
-  FolderOpen,
+  CalendarRange,
+  Clock,
+  ChartColumn,
+  ClipboardList,
+  Hourglass,
   House,
+  MapPin,
+  Truck,
   ScrollText,
-  Users,
   type LucideIcon,
 } from "lucide-react";
 import type { Permission } from "@/lib/permissions";
@@ -20,9 +25,14 @@ export interface NavItem {
 /** Menu web memakai izin yang dikirim /auth/me; API tetap menegakkan otorisasi. */
 export const NAV_ITEMS: NavItem[] = [
   { path: "/", label: "Beranda", icon: House },
-  { path: "/users", label: "Pengguna", icon: Users, requires: ["manage:users"] },
+  { path: "/work-plans", label: "Work plan", icon: ClipboardList },
+  { path: "/timeline", label: "Timeline tim", icon: CalendarRange, requires: ["view:timeline"] },
+  { path: "/attendance", label: "Absensi", icon: Clock },
+  { path: "/attendance-recap", label: "Rekap absensi", icon: ChartColumn },
+  { path: "/overtime-recap", label: "Rekap lembur", icon: Hourglass, anyOf: ["review:overtime", "create:plan"] },
+  { path: "/assets", label: "Kendaraan & alat", icon: Truck },
   { path: "/directory", label: "Direktori", icon: BookUser, requires: ["view:users"] },
-  { path: "/my-documents", label: "Berkas saya", icon: FolderOpen, requires: ["view:documents"] },
+  { path: "/sites", label: "Lokasi kerja", icon: MapPin, requires: ["create:plan"] },
   { path: "/audit-logs", label: "Audit log", icon: ScrollText, requires: ["view:audit"] },
 ];
 

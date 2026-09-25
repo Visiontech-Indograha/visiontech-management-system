@@ -1,4 +1,4 @@
-import { forwardRef, useId, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from "react";
+import { forwardRef, useId, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from "react";
 import { Label } from "./label";
 import { Input } from "./input";
 import { cn } from "@/lib/utils";
@@ -77,3 +77,28 @@ export const SelectField = forwardRef<
   );
 });
 
+
+export const TextAreaField = forwardRef<
+  HTMLTextAreaElement,
+  TextareaHTMLAttributes<HTMLTextAreaElement> & { label: string; error?: string; hint?: string }
+>(function TextAreaField({ label, error, hint, className, ...props }, ref) {
+  return (
+    <FieldShell label={label} error={error} hint={hint}>
+      {(id, describedBy) => (
+        <textarea
+          id={id}
+          ref={ref}
+          rows={3}
+          aria-invalid={!!error}
+          aria-describedby={describedBy}
+          className={cn(
+            "flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
+            error && "border-destructive focus-visible:ring-destructive",
+            className,
+          )}
+          {...props}
+        />
+      )}
+    </FieldShell>
+  );
+});

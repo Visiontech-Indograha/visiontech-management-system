@@ -11,8 +11,26 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 - `web/`: Hapus antarmuka absensi untuk endpoint yang belum tersedia; halaman daftar dan tinjauan menunggu `GET /attendance`.
 - `web/`: Selaraskan sesi `/auth/me`, peran, izin, menu, dan guard ke kontrak API; tahan halaman Site sampai endpoint tersedia.
+- `web/`: Hapus halaman Pengguna (`/users`) beserta dialog, hook, dan ujinya karena API tidak punya endpoint manajemen pengguna (L5).
+- `web/`: Tahan menu "Berkas saya" karena `/auth/me` belum mengirim `employee_id` yang dibutuhkan `GET /employees/{emp_id}/documents`; hapus impor `features/` dari `AppShell`.
+- `web/`: Bangkitkan ulang `openapi.json` + `api-types.ts` dari API terbaru; Direktori memakai `EmployeeResponse`/`EmployeeListResponse` (detail dari baris daftar karena tidak ada `GET /employees/{id}`), ubah profil lewat `PUT /employees/{id}` (react-hook-form + zod), unggah berkas membaca `file_id`.
+- `web/`: Audit log memakai tipe `AuditEventListResponse` hasil generator dan filter `entity_type` (tabel yang diaudit trigger), bukan filter `action` yang tidak ada di API.
+- `web/`: Halaman Lokasi kerja (`/sites`) dibangun ulang di atas `GET/POST/DELETE /sites` (`SiteResponse`, daftar biasa tanpa paginasi), hanya untuk izin `create:plan`; tambah lewat react-hook-form + zod, hapus lewat dialog konfirmasi.
+- `web/`: Layar Work plan (SK): daftar + filter status + draft terarsip (pulihkan), buat draft (unit = unit PM), detail, sunting draft, atur tim, tambah hari + tugas, terbitkan/terima/banding/revisi/mulai/batal/arsip dengan dialog alasan dan `row_version`. Hari, tugas, dan anggota belum dapat ditampilkan (API belum punya endpoint baca).
+- `web/`: Laporan mingguan di detail SK (`GET/PUT/submit/review /work-plans/{id}/weekly`): ketua menyimpan/mengirim, PM menyetujui/mengembalikan dengan catatan. Laporan harian dan centang tugas ditunda karena API belum punya endpoint baca hari/tugas/laporan.
+- `web/`: Penyelesaian SK: ketua "Buat Laporan Akhir" (unggah lampiran ke `/files/upload` lalu `request-completion` dengan `file_id`), PM "Setujui penyelesaian" / "Kembalikan penyelesaian" (alasan wajib).
+- `web/`: Usulan perubahan SK: ketua "Ajukan perpanjangan" (EXTEND), PM "Adendum personel" (PERSONNEL), lalu setujui/terima/tolak/tarik lewat `/changes/{id}/...`. Usulan hanya tampil setelah diajukan di sesi yang sama karena API belum punya endpoint baca usulan.
+- `web/`: Layar Kendaraan & alat (`/assets`): daftar, tambah aset (`manage:assets`), alokasikan ke SK aktif (pengemudi wajib untuk kendaraan), lepas reservasi, periksa kendaraan (ACCEPT/APPEAL). Pengembalian & verifikasi ditunda (API belum mengirim id alokasi/pengembalian). Uji web: batas waktu `findBy*` 5 dtk dan uji 30 dtk agar stabil saat mesin sibuk.
+- `web/`: Insiden/HSE di detail SK: "Lapor Insiden/HSE" (kategori, keparahan, uraian, bukti via `/files/upload`) dan "Selesaikan" untuk PM/petugas aset. Daftar insiden hanya berisi yang dilaporkan di sesi ini karena API belum punya endpoint baca insiden.
+- `web/`: Timeline tim (`GET /timeline`, izin `view:timeline`, filter tanggal, label keadaan hari prototipe) dan Rekap absensi (`GET /recaps/attendance`, pilih bulan; kartu di ponsel, tabel di desktop).
+- `web/`: Layar Absensi (`GET /attendance` dengan filter status/tanggal + paginasi): Finance "Tinjau" (setujui/tolak, catatan wajib), karyawan "Beri penjelasan" untuk absensi yang perlu ditinjau. Catat masuk/keluar tetap di aplikasi mobile.
 
 ### ✨ Ditambahkan
+
+#### Web · layar kontrak MVP (feature/web-contract-sync) — 2026-09-26
+- Work plan (SK): daftar, draf, tim, hari, transisi; laporan harian (checklist tugas, isi/kirim/review) & mingguan; penyelesaian (laporan akhir, setujui, kembalikan); usulan perubahan (perpanjangan, adendum personel); lampiran draf.
+- Absensi (daftar, tinjauan Finance, penjelasan), timeline tim & rekap bulanan; insiden/HSE; kendaraan & alat; lokasi kerja; lembur (ajukan, tinjau, rekap); audit log; hapus/pulihkan karyawan (HR).
+- Tipe API diselaraskan dengan kontrak nyata; halaman Pengguna tanpa endpoint dihapus; "Berkas saya" ditahan sampai memakai `employee_id` dari /auth/me. verify-branch 92/92.
 
 #### Fitur Lembur (V-28) — 2026-09-25
 - `api/`: Endpoint `POST /work-plans/{id}/overtime` (ketua/anggota lapor lembur pada SK aktif).

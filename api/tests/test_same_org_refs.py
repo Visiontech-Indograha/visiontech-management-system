@@ -91,11 +91,12 @@ def test_allocation_with_a_reference_of_another_organisation_is_rejected(client,
         "driver_employee_id": lambda: other_world.employees["member"],
     }[foreign]()
 
-    response = client.post("/assets/allocate", headers=world.headers(client, "asset"), json=body)
+    asset_id = body.pop("asset_id")
+    response = client.post(f"/assets/{asset_id}/reserve", headers=world.headers(client, "asset"), json=body)
 
     _not_found(response)
-    assert _count("SELECT count(*) FROM vms.asset_allocation WHERE asset_id = %s", body["asset_id"]) == 0
-    assert _count("SELECT count(*) FROM vms.asset WHERE id = %s AND status = 'AVAILABLE'", body["asset_id"]) == 1
+    assert _count("SELECT count(*) FROM vms.asset_allocation WHERE asset_id = %s", asset_id) == 0
+    assert _count("SELECT count(*) FROM vms.asset WHERE id = %s AND status = 'AVAILABLE'", asset_id) == 1
 
 
 # ── Absensi ───────────────────────────────────────────────────────────────────────────────────

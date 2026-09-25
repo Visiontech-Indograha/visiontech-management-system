@@ -98,7 +98,7 @@ def test_r9_asset_cycle_has_no_dead_end(client, world):
     asset_id = asset.json()["id"]
 
     def allocate():
-        return client.post("/assets/allocate", headers=officer, json={"asset_id": asset_id, "work_plan_id": plan_id})
+        return client.post(f"/assets/{asset_id}/reserve", headers=officer, json={"work_plan_id": plan_id})
 
     def request_return():
         return client.post(f"/assets/allocations/{alloc_id}/return", headers=leader,
@@ -148,8 +148,8 @@ def test_asset_return_of_another_organisation_cannot_be_verified(client, world, 
     officer = world.headers(client, "asset")
     asset_id = client.post("/assets", headers=officer, json={
         "kind": "TOOL", "code": "TL-ASING", "name": "Bor", "condition": "BAIK"}).json()["id"]
-    alloc_id = client.post("/assets/allocate", headers=officer,
-                           json={"asset_id": asset_id, "work_plan_id": plan_id}).json()["id"]
+    alloc_id = client.post(f"/assets/{asset_id}/reserve", headers=officer,
+                           json={"work_plan_id": plan_id}).json()["id"]
     return_id = client.post(f"/assets/allocations/{alloc_id}/return", headers=world.headers(client, "leader"),
                             json={"condition_on_return": "BAIK"}).json()["id"]
 

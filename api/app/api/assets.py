@@ -2,23 +2,25 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import text
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, get_current_user, get_db_with_user, require_permission
 from app.api.guards import PlanAccess, PlanNeed, allocation_plan_access, ensure_same_org
-from app.core.enums import PlanStatus
-from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationError, trigger_rule_message
+from app.core.errors import AppError, ForbiddenError, NotFoundError
 from app.core.permissions import Permission, RoleCode
 from app.schemas.asset import (
-    AssetAllocationCreate,
     AssetAllocationResponse,
+    AssetCheckRequest,
     AssetCreate,
+    AssetReleaseRequest,
+    AssetReserveRequest,
     AssetResponse,
     AssetReturnCreate,
     AssetReturnResponse,
     AssetReturnVerify,
+    AssetStatusResponse,
 )
+from app.services.asset_reservation_service import AssetReservationService
 
 router = APIRouter(prefix="/assets", tags=["Assets"])
 _ALLOCATION_LEADER_ACCESS = Depends(allocation_plan_access(PlanNeed.LEADER))
@@ -53,72 +55,46 @@ async def get_assets(
     rows = (await db.execute(query, {"org": current_user.organization_id})).fetchall()
     return [AssetResponse(**r._mapping) for r in rows]
 
-@router.post("/allocate", response_model=AssetAllocationResponse)
-async def allocate_asset(
-    data: AssetAllocationCreate,
-    current_user: CurrentUser = Depends(require_permission(Permission.MANAGE_ASSETS)),
+@router.post("/{asset_id}/reserve", response_model=AssetAllocationResponse)
+async def reserve_asset(
+    asset_id: UUID,
+    data: AssetReserveRequest,
+    current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_with_user)
-):
-    await ensure_same_org(db, current_user.organization_id, assets=[data.asset_id],
+) -> AssetAllocationResponse:
+    """domain.js RESERVE_ASSET (V-27): petugas aset atau PM unit/OPS SK memesan aset untuk SK aktif."""
+    await ensure_same_org(db, current_user.organization_id, assets=[asset_id],
                           work_plans=[data.work_plan_id], employees=[data.driver_employee_id])
-    emp_q = text("SELECT employee_id FROM vms.app_user WHERE id = :uid")
-    my_emp = (await db.execute(emp_q, {"uid": current_user.user_id})).scalar()
+    allocation = await AssetReservationService(db).reserve(current_user, asset_id, data.work_plan_id,
+                                                           data.driver_employee_id)
+    return AssetAllocationResponse(**allocation._mapping)
 
-    # Check asset status
-    check_asset = text("SELECT status, kind FROM vms.asset WHERE id = :id FOR UPDATE")
-    asset = (await db.execute(check_asset, {"id": data.asset_id})).fetchone()
-    
-    if not asset or asset.status != 'AVAILABLE':
-        raise HTTPException(status_code=400, detail="Aset tidak tersedia atau sudah dialokasikan.")
 
-    # domain.js RESERVE_ASSET (V-11): SK masih aktif; kendaraan wajib berpengemudi dari tim penugasan.
-    plan_q = text("""
-        SELECT wp.status,
-               wp.leader_employee_id = CAST(:driver AS uuid) OR EXISTS (
-                   SELECT 1 FROM vms.work_plan_member m
-                   WHERE m.work_plan_id = wp.id AND m.employee_id = CAST(:driver AS uuid)
-                     AND upper_inf(m.valid_period)) AS driver_on_team
-        FROM vms.work_plan wp WHERE wp.id = :plan
-    """)
-    plan = (await db.execute(plan_q, {"plan": data.work_plan_id, "driver": data.driver_employee_id})).fetchone()
-    if plan.status in (PlanStatus.COMPLETED, PlanStatus.CANCELLED):
-        raise AppError("INVALID_STATE", "Pilih work plan yang masih aktif.", status=409)
-    if asset.kind == 'VEHICLE':
-        if not data.driver_employee_id:
-            raise ValidationError("Pilih pengemudi untuk aset kendaraan.")
-        if not plan.driver_on_team:
-            raise ValidationError("Pengemudi harus bagian dari tim penugasan.")
+@router.post("/{asset_id}/release", response_model=AssetStatusResponse)
+async def release_asset(
+    asset_id: UUID,
+    data: AssetReleaseRequest,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_with_user)
+) -> AssetStatusResponse:
+    """domain.js RELEASE_ASSET (V-27): reservasi yang belum dipakai dilepas."""
+    await ensure_same_org(db, current_user.organization_id, assets=[asset_id], work_plans=[data.work_plan_id])
+    status_ = await AssetReservationService(db).release(current_user, asset_id, data.work_plan_id)
+    return AssetStatusResponse(asset_id=asset_id, status=status_)
 
-    ins = text("""
-        INSERT INTO vms.asset_allocation (
-            asset_id, work_plan_id, driver_employee_id, allocated_by
-        ) VALUES (
-            :asset, :plan, :driver, :emp
-        ) RETURNING *
-    """)
-    try:
-        res = await db.execute(ins, {
-            "asset": data.asset_id, "plan": data.work_plan_id,
-            "driver": data.driver_employee_id, "emp": my_emp
-        })
-        allocation = res.fetchone()
-        
-        # Update asset status
-        await db.execute(text("UPDATE vms.asset SET status = 'IN_USE' WHERE id = :id"), {"id": data.asset_id})
-        
-        return AssetAllocationResponse(**allocation._mapping)
-    except IntegrityError as e:
-        # Aturan SIM hidup di trigger asset_allocation_driver — teruskan pesannya (V-11).
-        rule = trigger_rule_message(e)
-        if rule:
-            raise ValidationError(rule) from None
-        if "asset_allocation_no_overlap" in str(e):
-            raise HTTPException(status_code=409, detail="Aset sudah dialokasikan ke pekerjaan lain pada waktu yang sama (overlap).")
-        raise HTTPException(status_code=400, detail={"code": "DB_ERROR", "message": str(e)})
-    except Exception as e:
-        if "asset_allocation_no_overlap" in str(e):
-            raise HTTPException(status_code=409, detail="Aset sudah dialokasikan ke pekerjaan lain pada waktu yang sama (overlap).")
-        raise HTTPException(status_code=400, detail={"code": "DB_ERROR", "message": str(e)})
+
+@router.post("/{asset_id}/check", response_model=AssetStatusResponse)
+async def check_asset(
+    asset_id: UUID,
+    data: AssetCheckRequest,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_with_user)
+) -> AssetStatusResponse:
+    """domain.js CHECK_ASSET (V-27): pengemudi yang ditunjuk menyatakan kendaraan layak atau banding."""
+    await ensure_same_org(db, current_user.organization_id, assets=[asset_id])
+    status_ = await AssetReservationService(db).check(current_user, asset_id, data.decision, data.reason)
+    return AssetStatusResponse(asset_id=asset_id, status=status_)
+
 
 @router.post("/allocations/{alloc_id}/return", response_model=AssetReturnResponse)
 async def request_asset_return(

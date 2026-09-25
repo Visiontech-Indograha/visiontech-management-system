@@ -14,6 +14,7 @@ import { WorkPlansPage } from "@/features/work-plans/WorkPlansPage";
 import { AttendanceRecapPage } from "@/features/monitoring/AttendanceRecapPage";
 import { OvertimeRecapPage } from "@/features/monitoring/OvertimeRecapPage";
 import { TimelinePage } from "@/features/monitoring/TimelinePage";
+import { VerifyPage } from "@/features/verify/VerifyPage";
 import { ChangePasswordPage } from "@/pages/auth/ChangePasswordPage";
 import { LoginPage } from "@/pages/auth/LoginPage";
 import { ComingSoonPage, ForbiddenPage, HomePage, NotFoundPage } from "@/pages/Placeholders";
@@ -37,6 +38,8 @@ const PAGES: Record<string, ReactNode> = {
 export const routes: RouteObject[] = [
   { path: "/login", element: <LoginPage /> },
   { path: "/admin-login", element: <LoginPage admin /> }, // sengaja tidak ditautkan dari menu/halaman lain
+  // PUBLIK: tujuan pemindaian QR tanda tangan; tanpa login dan di luar AppShell. Token boleh memuat "/".
+  { path: "/verify/*", element: <VerifyPage /> },
   {
     element: <RequireAuth />,
     children: [

@@ -95,3 +95,21 @@ export const useUploadFile = () =>
   useMutation({
     mutationFn: async (form: FormData) => (await api.post<UploadedFile>("/files/upload", form)).data,
   });
+
+/** HR menghapus karyawan yang sudah di-offboard (POST /employees/{id}/archive, V-29). */
+export function useArchiveEmployee(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () => (await api.post<{ id: string; message: string }>(`/employees/${id}/archive`)).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["employees"] }),
+  });
+}
+
+/** HR memulihkan karyawan terhapus sebagai nonaktif (POST /employees/{id}/restore, V-29). */
+export function useRestoreEmployee(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () => (await api.post<{ id: string; message: string }>(`/employees/${id}/restore`)).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["employees"] }),
+  });
+}

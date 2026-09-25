@@ -46,8 +46,7 @@ function useDayMutation<V>(planId: string, fn: (v: V) => Promise<unknown>) {
 export function DailyReports({ plan }: { plan: WorkPlan }) {
   const days = useQuery({
     queryKey: daysKey(plan.id),
-    queryFn: async () =>
-      (await api.get<Day[]>(`/work-plans/${plan.id}/days`)).data,
+    queryFn: async () => (await api.get<Day[]>(`/work-plans/${plan.id}/days`)).data,
   });
   return (
     <section aria-label="Laporan harian" className="space-y-3">
@@ -71,66 +70,40 @@ function DayPanel({ plan, day }: { plan: WorkPlan; day: Day }) {
   const isPM = !!me?.permissions.includes("create:plan");
   const status = day.report?.status ?? "DRAFT";
   const reached = day.work_date <= today();
-  const editable =
-    plan.status === "IN_PROGRESS" && reached && !LOCKED.includes(status);
+  const editable = plan.status === "IN_PROGRESS" && reached && !LOCKED.includes(status);
   const label = `${day.title || "Hari kerja"} — ${formatDate(day.work_date)}`;
 
   return (
-    <article
-      aria-label={label}
-      className="rounded-panel border border-line bg-surface p-4"
-    >
+    <article aria-label={label} className="rounded-panel border border-line bg-surface p-4">
       <header className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div>
           <h3 className="font-medium">{day.title || "Hari kerja"}</h3>
           <p className="text-sm text-mist">{formatDate(day.work_date)}</p>
         </div>
-        {day.report ? (
-          <StatusBadge status={status} />
-        ) : (
-          <span className="text-sm text-mist">Belum ada laporan</span>
-        )}
+        {day.report ? <StatusBadge status={status} /> : <span className="text-sm text-mist">Belum ada laporan</span>}
       </header>
       <TaskList plan={plan} day={day} editable={editable} />
       {!reached ? (
-        <p className="mt-3 text-sm text-mist">
-          Laporan dapat diisi mulai {formatDate(day.work_date)}.
-        </p>
+        <p className="mt-3 text-sm text-mist">Laporan dapat diisi mulai {formatDate(day.work_date)}.</p>
       ) : editable ? (
         <DailyForm plan={plan} day={day} />
       ) : (
         <ReportView day={day} />
       )}
-      {status === "SUBMITTED" &&
-        isPM &&
-        ["IN_PROGRESS", "COMPLETION_REVIEW"].includes(plan.status) && (
-          <DailyReviewForm plan={plan} day={day} />
-        )}
+      {status === "SUBMITTED" && isPM && ["IN_PROGRESS", "COMPLETION_REVIEW"].includes(plan.status) && (
+        <DailyReviewForm plan={plan} day={day} />
+      )}
     </article>
   );
 }
 
-function TaskList({
-  plan,
-  day,
-  editable,
-}: {
-  plan: WorkPlan;
-  day: Day;
-  editable: boolean;
-}) {
+function TaskList({ plan, day, editable }: { plan: WorkPlan; day: Day; editable: boolean }) {
   const toggle = useDayMutation(
     plan.id,
-    async (t: Task) =>
-      (
-        await api.post(
-          `/work-plans/${plan.id}/days/${day.id}/tasks/${t.id}/toggle`,
-        )
-      ).data,
+    async (t: Task) => (await api.post(`/work-plans/${plan.id}/days/${day.id}/tasks/${t.id}/toggle`)).data,
   );
   const [error, setError] = useState<string | null>(null);
-  if (day.tasks.length === 0)
-    return <p className="text-sm text-mist">Belum ada tugas.</p>;
+  if (day.tasks.length === 0) return <p className="text-sm text-mist">Belum ada tugas.</p>;
   const onToggle = async (t: Task) => {
     setError(null);
     try {
@@ -142,10 +115,7 @@ function TaskList({
   return (
     <>
       {error && (
-        <p
-          role="alert"
-          className="mb-3 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger"
-        >
+        <p role="alert" className="mb-3 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
           {error}
         </p>
       )}
@@ -162,16 +132,8 @@ function TaskList({
                   disabled={!editable || toggle.isPending}
                   onChange={() => onToggle(t)}
                 />
-                <span
-                  className={t.is_done ? "text-mist line-through" : undefined}
-                >
-                  {t.title}
-                </span>
-                {t.done_at && (
-                  <span className="text-xs text-mist">
-                    {formatDateTime(t.done_at)}
-                  </span>
-                )}
+                <span className={t.is_done ? "text-mist line-through" : undefined}>{t.title}</span>
+                {t.done_at && <span className="text-xs text-mist">{formatDateTime(t.done_at)}</span>}
               </label>
             </li>
           ))}
@@ -182,8 +144,7 @@ function TaskList({
 
 function ReportView({ day }: { day: Day }) {
   const r = day.report;
-  if (!r || !r.body)
-    return <p className="mt-3 text-sm text-mist">Belum ada laporan harian.</p>;
+  if (!r || !r.body) return <p className="mt-3 text-sm text-mist">Belum ada laporan harian.</p>;
   return (
     <dl className="mt-3 space-y-2 text-sm">
       <div>
@@ -212,24 +173,15 @@ function ReportView({ day }: { day: Day }) {
 
 const dailySchema = z.object({
   body: z.string().trim().min(10, "Laporan harian minimal 10 karakter."),
-  obstacle: z
-    .string()
-    .trim()
-    .min(1, 'Kendala wajib diisi (isi "Tidak ada" jika lancar).'),
+  obstacle: z.string().trim().min(1, 'Kendala wajib diisi (isi "Tidak ada" jika lancar).'),
 });
 type DailyValues = z.infer<typeof dailySchema>;
 
 /** Ketua menyimpan (PUT /days/{day}) lalu mengirim (POST submit); bukti diunggah ke /files/upload dulu. */
 function DailyForm({ plan, day }: { plan: WorkPlan; day: Day }) {
   const base = `/work-plans/${plan.id}/days/${day.id}`;
-  const save = useDayMutation(
-    plan.id,
-    async (body: ReportIn) => (await api.put(base, body)).data,
-  );
-  const submit = useDayMutation<void>(
-    plan.id,
-    async () => (await api.post(`${base}/submit`)).data,
-  );
+  const save = useDayMutation(plan.id, async (body: ReportIn) => (await api.put(base, body)).data);
+  const submit = useDayMutation<void>(plan.id, async () => (await api.post(`${base}/submit`)).data);
   const [files, setFiles] = useState<File[]>([]);
   const [fileError, setFileError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
@@ -259,52 +211,26 @@ function DailyForm({ plan, day }: { plan: WorkPlan; day: Day }) {
         const uploaded = await uploadFiles(files);
         await save.mutateAsync({
           ...v,
-          evidence_file_ids: [
-            ...(day.report?.evidence_file_ids ?? []),
-            ...uploaded,
-          ],
+          evidence_file_ids: [...(day.report?.evidence_file_ids ?? []), ...uploaded],
         });
         if (andSubmit) await submit.mutateAsync();
         setFiles([]);
-        toast.success(
-          andSubmit
-            ? "Laporan harian dikirim."
-            : "Draft laporan harian disimpan.",
-        );
+        toast.success(andSubmit ? "Laporan harian dikirim." : "Draft laporan harian disimpan.");
       } catch (err) {
         setFormError(errorMessage(err));
       }
     });
 
   return (
-    <form
-      noValidate
-      onSubmit={send(true)}
-      className="mt-4 border-t border-line pt-4"
-    >
+    <form noValidate onSubmit={send(true)} className="mt-4 border-t border-line pt-4">
       {formError && (
-        <p
-          role="alert"
-          className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger"
-        >
+        <p role="alert" className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
           {formError}
         </p>
       )}
-      {day.report?.review_note && (
-        <p className="mb-3 text-sm text-warning">
-          Catatan PM: {day.report.review_note}
-        </p>
-      )}
-      <TextAreaField
-        label="Laporan Harian"
-        error={errors.body?.message}
-        {...register("body")}
-      />
-      <TextAreaField
-        label="Kendala (Wajib)"
-        error={errors.obstacle?.message}
-        {...register("obstacle")}
-      />
+      {day.report?.review_note && <p className="mb-3 text-sm text-warning">Catatan PM: {day.report.review_note}</p>}
+      <TextAreaField label="Laporan Harian" error={errors.body?.message} {...register("body")} />
+      <TextAreaField label="Kendala (Wajib)" error={errors.obstacle?.message} {...register("obstacle")} />
       <TextField
         label="Bukti Foto/PDF (Opsional)"
         type="file"
@@ -315,12 +241,7 @@ function DailyForm({ plan, day }: { plan: WorkPlan; day: Day }) {
         onChange={(e) => pickFiles(e.target.files)}
       />
       <div className="flex flex-col gap-2 md:flex-row md:justify-end">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={send(false)}
-          disabled={isSubmitting}
-        >
+        <Button type="button" variant="outline" onClick={send(false)} disabled={isSubmitting}>
           Simpan draft
         </Button>
         <Button type="submit" disabled={isSubmitting}>
@@ -342,9 +263,7 @@ type ReviewValues = z.infer<typeof reviewSchema>;
 function DailyReviewForm({ plan, day }: { plan: WorkPlan; day: Day }) {
   const review = useDayMutation(
     plan.id,
-    async (body: ReviewIn) =>
-      (await api.post(`/work-plans/${plan.id}/days/${day.id}/review`, body))
-        .data,
+    async (body: ReviewIn) => (await api.post(`/work-plans/${plan.id}/days/${day.id}/review`, body)).data,
   );
   const [formError, setFormError] = useState<string | null>(null);
   const {
@@ -365,16 +284,9 @@ function DailyReviewForm({ plan, day }: { plan: WorkPlan; day: Day }) {
     }
   });
   return (
-    <form
-      noValidate
-      onSubmit={onSubmit}
-      className="mt-4 border-t border-line pt-4"
-    >
+    <form noValidate onSubmit={onSubmit} className="mt-4 border-t border-line pt-4">
       {formError && (
-        <p
-          role="alert"
-          className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger"
-        >
+        <p role="alert" className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
           {formError}
         </p>
       )}
@@ -382,11 +294,7 @@ function DailyReviewForm({ plan, day }: { plan: WorkPlan; day: Day }) {
         <option value="APPROVE">Setujui laporan</option>
         <option value="RETURN">Minta perbaikan</option>
       </SelectField>
-      <TextAreaField
-        label="Catatan (wajib jika dikembalikan)"
-        error={errors.note?.message}
-        {...register("note")}
-      />
+      <TextAreaField label="Catatan (wajib jika dikembalikan)" error={errors.note?.message} {...register("note")} />
       <div className="flex justify-end">
         <Button type="submit" disabled={isSubmitting}>
           Simpan keputusan

@@ -1,6 +1,7 @@
 import {
   BookUser,
   House,
+  MapPin,
   ScrollText,
   type LucideIcon,
 } from "lucide-react";
@@ -19,6 +20,7 @@ export interface NavItem {
 export const NAV_ITEMS: NavItem[] = [
   { path: "/", label: "Beranda", icon: House },
   { path: "/directory", label: "Direktori", icon: BookUser, requires: ["view:users"] },
+  { path: "/sites", label: "Lokasi kerja", icon: MapPin, requires: ["create:plan"] },
   { path: "/audit-logs", label: "Audit log", icon: ScrollText, requires: ["view:audit"] },
 ];
 

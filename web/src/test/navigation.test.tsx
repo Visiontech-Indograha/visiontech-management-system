@@ -13,7 +13,8 @@ describe("menu berdasarkan izin API", () => {
     expect(labels(["view:users"])).toEqual(["Beranda", "Direktori"]);
     // API tidak punya endpoint /users: izin manage:users tidak membuka menu apa pun.
     expect(labels(["manage:users"])).toEqual(["Beranda"]);
-    expect(labels(["view:documents"])).toEqual(["Beranda", "Berkas saya"]);
+    // "Berkas saya" ditahan: /auth/me belum mengirim employee_id untuk /employees/{emp_id}/documents.
+    expect(labels(["view:documents"])).toEqual(["Beranda"]);
     expect(labels(["view:audit"])).toEqual(["Beranda", "Audit log"]);
   });
 
@@ -27,7 +28,7 @@ describe("menu berdasarkan izin API", () => {
     }
     expect(labels(MOCK_PERMISSIONS.FINANCE)).not.toContain("Audit log");
     expect(labels(MOCK_PERMISSIONS.OPS)).toContain("Audit log");
-    expect(labels(MOCK_PERMISSIONS.field)).toEqual(["Beranda", "Direktori", "Berkas saya"]);
+    expect(labels(MOCK_PERMISSIONS.field)).toEqual(["Beranda", "Direktori"]);
   });
 
   it("shell memakai permissions[] dari /auth/me untuk menyaring menu", () => {

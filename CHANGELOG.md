@@ -12,6 +12,7 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 - `web/`: Hapus antarmuka absensi untuk endpoint yang belum tersedia; halaman daftar dan tinjauan menunggu `GET /attendance`.
 - `web/`: Selaraskan sesi `/auth/me`, peran, izin, menu, dan guard ke kontrak API; tahan halaman Site sampai endpoint tersedia.
 - `web/`: Hapus halaman Pengguna (`/users`) beserta dialog, hook, dan ujinya karena API tidak punya endpoint manajemen pengguna (L5).
+- `web/`: Tahan menu "Berkas saya" karena `/auth/me` belum mengirim `employee_id` yang dibutuhkan `GET /employees/{emp_id}/documents`; hapus impor `features/` dari `AppShell`.
 
 ### ✨ Ditambahkan
 

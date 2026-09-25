@@ -17,6 +17,7 @@ class UserMeResponse(BaseModel):
     email: str
     role: str
     permissions: list[str]
+    employee_id: str | None = None
 
 
 class ChangePasswordRequest(BaseModel):

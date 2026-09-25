@@ -125,6 +125,20 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 #### V-23 · Rincian hari & centang tugas (Backend) — 2026-09-24
 - `PUT /work-plans/{id}/days/{day_id}/plan` `{title, tasks:[{title}]}` — PM unit/OPS menyusun ulang judul & 1–30 tugas satu hari selagi SK `DRAFT` (`domain.js` SAVE_DAY). `POST /work-plans/{id}/days/{day_id}/tasks/{task_id}/toggle` — ketua menurut SK mencentang/membatalkan tugas saat SK `IN_PROGRESS`, tanggal hari sudah tiba, dan laporan hari itu belum diserahkan; `done_at`/`done_by` tercatat (`domain.js` TOGGLE_TASK). Jalur `/plan` & `/toggle` dipilih karena `PUT …/days/{day_id}` sudah dipakai teks laporan (dok 10 Bagian C). Uji: `api/tests/test_day_plan_tasks.py`.
 
+#### M12 · Sinkronisasi luring (Backend) — 2026-09-26
+- `POST /sync/operations` `{device_id, operations:[{client_op_id, op_type, payload, client_created_at}]}` — antrean perangkat dijalankan berurutan, masing-masing dalam SAVEPOINT dengan aturan yang sama seperti jalur daring; idempoten per (pengguna, `client_op_id`) lewat `offline_operation`/`enqueue_offline_operation` (db) — kirim ulang mengembalikan hasil pertama tanpa menggandakan data. Boleh luring: `DAILY_REPORT_SAVE`, `DAILY_REPORT_SUBMIT`, `TASK_TOGGLE`, `INCIDENT_REPORT`, `OVERTIME_REPORT`; selain itu (absensi, penerbitan, persetujuan) → `REJECTED` "Aksi ini tidak dapat dikirim saat luring." (dok 02 A-08). Penolakan disimpan beserta alasannya; `GET /sync/status?since=` untuk layar "Perlu perhatian". Uji: `api/tests/test_offline_sync.py`.
+
+#### Fase 6 · Tanda tangan dokumen ber-QR & PDF (Backend) — 2026-09-26
+- Penandatanganan otomatis (keputusan pemilik 2026-09-26): penerbit menandatangani dokumen SK sebagai `ISSUER` saat terbit, ketua sebagai `ACCEPTOR` saat menerima. Yang ditandatangani adalah payload JSON kanonik RFC 8785 (dok 02 A-09) lewat antarmuka `DocumentSigner` (`app/core/signing.py`); nomor seri & token QR dari `register_document_signature` (db/04), token mentah tidak pernah disimpan.
+- `GET /work-plans/{id}/documents` (daftar SK/revisi/adendum + jumlah tanda tangan berlaku), `GET /documents/{id}/signatures`, `GET /documents/{id}/pdf` (Jinja2 → WeasyPrint, QR per tanda tangan diterbitkan ulang tiap render; 503 jelas bila Pango tidak tersedia), `POST /signatures/{id}/revoke` (PM unit/OPS, alasan wajib), `GET /verify/{token}` **publik** tanpa login, dibatasi 30/menit per IP.
+- Pustaka baru sesuai dok 14: `qrcode[pil]`, `rfc8785`. Pengaturan baru: `DOC_SIGNING_KEY_HEX`, `DOC_SIGNING_KMS_REF`, `PUBLIC_VERIFY_URL`. Uji: `api/tests/test_signatures.py`.
+
+#### `/auth/me` mengirim `employee_id` (Backend) — 2026-09-26
+- Respons `/auth/me` kini memuat `employee_id` (null bila akun tanpa data karyawan), dibutuhkan web untuk "Berkas saya" (`GET /employees/{employee_id}/documents`). Uji: `api/tests/test_me_employee.py`.
+
+#### OFFBOARD sesuai prototipe (Backend) — 2026-09-26
+- `POST /employees/{id}/offboard` kini menjalankan aturan `domain.js` OFFBOARD lewat `EmployeeService`: karyawan harus aktif ("Karyawan sudah nonaktif atau tidak ditemukan."), alasan wajib, **ditolak bila masih menjadi PM/ketua/anggota SK yang berjalan** ("Selesaikan atau serahterimakan penugasan aktif sebelum offboarding."); jabatan yang masih terbuka ditutup per tanggal organisasi, akun dicabut. Sebelumnya rute hanya menonaktifkan tanpa pemeriksaan dan menulis SQL di router. Uji: `api/tests/test_employee_offboard.py`.
+
 #### Baca hari kerja SK (Backend) — 2026-09-25
 - `GET /work-plans/{id}/days` — hari kerja SK beserta tugas (`is_done`, `done_at`) dan laporan hariannya (status, isi, kendala, catatan tinjauan, waktu serah/tinjau, bukti berkas) dalam satu kueri; siapa pun yang melihat SK, tak terlihat → 404. Sebelumnya API hanya punya jalur tulis sehingga layar laporan harian web/mobile tidak bisa dibangun. Uji: `api/tests/test_plan_days_read.py`.
 

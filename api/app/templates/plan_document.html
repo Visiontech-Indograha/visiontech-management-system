@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>{{ doc.number }} — {{ doc.title }}</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  body { font-family: "Plus Jakarta Sans", "DejaVu Sans", sans-serif; font-size: 10.5pt; color: #111827; }
+  h1 { font-size: 15pt; margin: 0 0 2mm; } h2 { font-size: 11.5pt; margin: 6mm 0 2mm; }
+  .meta { color: #4b5563; font-size: 9pt; }
+  table { width: 100%; border-collapse: collapse; margin-top: 2mm; }
+  th, td { border: 0.3mm solid #d1d5db; padding: 1.5mm 2mm; text-align: left; vertical-align: top; }
+  th { background: #f3f4f6; }
+  .sig { display: flex; gap: 4mm; margin-top: 3mm; }
+  .sig-box { border: 0.3mm solid #d1d5db; padding: 3mm; width: 50%; }
+  .sig-box img { width: 28mm; height: 28mm; }
+  .hash { font-family: "DejaVu Sans Mono", monospace; font-size: 7.5pt; word-break: break-all; color: #374151; }
+  .revoked { color: #b91c1c; font-weight: bold; }
+</style>
+</head>
+<body>
+  <h1>{{ doc.title }}</h1>
+  <div class="meta">Nomor {{ doc.number }} · {{ kind_label }} versi {{ doc.version }} · diterbitkan {{ issued_at }}</div>
+
+  <h2>Pelaksanaan</h2>
+  <table>
+    <tr><th>Lokasi</th><td>{{ plan.location_text or "-" }}</td></tr>
+    <tr><th>Periode</th><td>{{ plan.period_start }} s.d. {{ plan.period_end }}</td></tr>
+    {% if plan.description %}<tr><th>Uraian</th><td>{{ plan.description }}</td></tr>{% endif %}
+  </table>
+
+  <h2>Tim</h2>
+  <table>
+    <tr><th>Nama</th><th>Peran</th></tr>
+    {% for m in team %}<tr><td>{{ m.full_name }}</td><td>{{ "Ketua" if m.role_in_plan == "LEADER" else "Anggota" }}</td></tr>{% endfor %}
+  </table>
+
+  <h2>Rincian harian</h2>
+  <table>
+    <tr><th>Tanggal</th><th>Kegiatan</th><th>Tugas</th></tr>
+    {% for d in days %}<tr><td>{{ d.work_date }}</td><td>{{ d.title }}</td><td>{{ d.tasks | join(", ") }}</td></tr>{% endfor %}
+  </table>
+
+  {% if attachments %}
+  <h2>Lampiran</h2>
+  <ol>{% for a in attachments %}<li>{{ a.file_name }}</li>{% endfor %}</ol>
+  {% endif %}
+
+  <h2>Tanda tangan</h2>
+  {% if signatures %}
+  <div class="sig">
+    {% for s in signatures %}
+    <div class="sig-box">
+      <div><strong>{{ "Penerbit" if s.signer_role == "ISSUER" else ("Penerima" if s.signer_role == "ACCEPTOR" else s.signer_role) }}</strong></div>
+      <div>{{ s.signer_name }} — {{ s.signer_position }}{% if s.signer_unit %} · {{ s.signer_unit }}{% endif %}</div>
+      <div class="meta">No. seri {{ s.serial_number }} · {{ s.signed_at }}</div>
+      {% if s.revoked_at %}<div class="revoked">Dicabut: {{ s.revoked_reason }}</div>
+      {% else %}<img src="{{ s.qr }}" alt="QR verifikasi {{ s.serial_number }}">{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}<p class="meta">Belum ditandatangani.</p>{% endif %}
+
+  <p class="hash">SHA-256 isi dokumen: {{ sha256 }}<br>
+  Keabsahan diperiksa dengan memindai QR; yang ditandatangani adalah isi dokumen ini (bukan berkas PDF-nya).</p>
+</body>
+</html>

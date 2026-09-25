@@ -16,3 +16,5 @@ Pillow>=10.2.0
 filetype==1.2.0
 python-multipart==0.0.9
 tzdata==2026.4
+qrcode[pil]==8.2
+rfc8785==0.1.4

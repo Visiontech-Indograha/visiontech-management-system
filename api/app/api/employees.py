@@ -208,22 +208,9 @@ async def offboard_employee(
     data: EmployeeOffboard,
     current_user: CurrentUser = Depends(require_permission(Permission.MANAGE_USERS)),
     db: AsyncSession = Depends(get_db_with_user)
-):
-    offboard = text("""
-        UPDATE vms.employee 
-        SET is_active = false, offboarded_at = now(), offboarding_reason = :reason
-        WHERE id = :id AND organization_id = :org AND is_active = true
-        RETURNING id
-    """)
-    res = await db.execute(offboard, {"reason": data.reason, "id": emp_id, "org": current_user.organization_id})
-    if not res.scalar():
-        raise HTTPException(status_code=400, detail={"code": "INVALID_STATE", "message": "Gagal offboard (sudah offboard atau tidak ditemukan)."})
-        
-    # Jika ada app_user, nonaktifkan akunnya
-    off_user = text("UPDATE vms.app_user SET is_active = false WHERE employee_id = :emp_id")
-    await db.execute(off_user, {"emp_id": emp_id})
-    
-    return {"message": "Karyawan berhasil dioffboard."}
+) -> dict[str, Any]:
+    """domain.js OFFBOARD: HR mengakhiri masa kerja (tidak boleh saat masih di SK berjalan)."""
+    return await EmployeeService(db).offboard(emp_id, current_user.organization_id, data.reason)
 
 
 @router.post("/{emp_id}/archive")

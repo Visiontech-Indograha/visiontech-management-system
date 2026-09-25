@@ -3,6 +3,7 @@ import type { RouteObject } from "react-router-dom";
 import { AppShell } from "@/components/layout/AppShell";
 import { RequireAccess, RequireAuth } from "@/components/layout/guards";
 import { AssetsPage } from "@/features/assets/AssetsPage";
+import { AttendancePage } from "@/features/attendance/AttendancePage";
 import { AuditLogPage } from "@/features/audit/AuditLogPage";
 import { DirectoryPage } from "@/features/directory/DirectoryPage";
 import { EmployeeDetailPage } from "@/features/directory/EmployeeDetailPage";
@@ -24,6 +25,7 @@ const PAGES: Record<string, ReactNode> = {
   "/work-plans": <WorkPlansPage />,
   "/assets": <AssetsPage />,
   "/timeline": <TimelinePage />,
+  "/attendance": <AttendancePage />,
   "/attendance-recap": <AttendanceRecapPage />,
 };
 

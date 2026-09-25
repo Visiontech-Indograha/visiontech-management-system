@@ -16,6 +16,7 @@ describe("menu berdasarkan izin API", () => {
     // "Berkas saya" ditahan: /auth/me belum mengirim employee_id untuk /employees/{emp_id}/documents.
     expect(labels(["view:documents"])).toEqual(["Beranda"]);
     expect(labels(["view:audit"])).toEqual(["Beranda", "Audit log"]);
+    expect(labels(["create:plan"])).toEqual(["Beranda", "Lokasi kerja"]);
   });
 
   it("izin mock sama dengan peta peran API", () => {

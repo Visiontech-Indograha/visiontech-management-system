@@ -5,6 +5,7 @@ import { RequireAccess, RequireAuth } from "@/components/layout/guards";
 import { AuditLogPage } from "@/features/audit/AuditLogPage";
 import { DirectoryPage } from "@/features/directory/DirectoryPage";
 import { EmployeeDetailPage } from "@/features/directory/EmployeeDetailPage";
+import { SitesPage } from "@/features/sites/SitesPage";
 import { ChangePasswordPage } from "@/pages/auth/ChangePasswordPage";
 import { LoginPage } from "@/pages/auth/LoginPage";
 import { ComingSoonPage, ForbiddenPage, HomePage, NotFoundPage } from "@/pages/Placeholders";
@@ -14,6 +15,7 @@ import { NAV_ITEMS } from "./navigation";
 const PAGES: Record<string, ReactNode> = {
   "/audit-logs": <AuditLogPage />,
   "/directory": <DirectoryPage />,
+  "/sites": <SitesPage />,
 };
 
 /** Route dibangun dari NAV_ITEMS agar menu dan guard selalu sejalan. */

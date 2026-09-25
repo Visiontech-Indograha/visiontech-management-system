@@ -21,6 +21,7 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 - `web/`: Penyelesaian SK: ketua "Buat Laporan Akhir" (unggah lampiran ke `/files/upload` lalu `request-completion` dengan `file_id`), PM "Setujui penyelesaian" / "Kembalikan penyelesaian" (alasan wajib).
 - `web/`: Usulan perubahan SK: ketua "Ajukan perpanjangan" (EXTEND), PM "Adendum personel" (PERSONNEL), lalu setujui/terima/tolak/tarik lewat `/changes/{id}/...`. Usulan hanya tampil setelah diajukan di sesi yang sama karena API belum punya endpoint baca usulan.
 - `web/`: Layar Kendaraan & alat (`/assets`): daftar, tambah aset (`manage:assets`), alokasikan ke SK aktif (pengemudi wajib untuk kendaraan), lepas reservasi, periksa kendaraan (ACCEPT/APPEAL). Pengembalian & verifikasi ditunda (API belum mengirim id alokasi/pengembalian). Uji web: batas waktu `findBy*` 5 dtk dan uji 30 dtk agar stabil saat mesin sibuk.
+- `web/`: Insiden/HSE di detail SK: "Lapor Insiden/HSE" (kategori, keparahan, uraian, bukti via `/files/upload`) dan "Selesaikan" untuk PM/petugas aset. Daftar insiden hanya berisi yang dilaporkan di sesi ini karena API belum punya endpoint baca insiden.
 
 ### ✨ Ditambahkan
 

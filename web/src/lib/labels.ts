@@ -32,6 +32,7 @@ export const STATUS_LABEL: Record<string, string> = {
   AVAILABLE: "Tersedia",
   RETURN_PENDING: "Menunggu pemeriksaan",
   OPEN: "Terbuka",
+  IN_REVIEW: "Ditinjau",
   RESOLVED: "Selesai",
   WITHDRAWN: "Ditarik PM",
 };

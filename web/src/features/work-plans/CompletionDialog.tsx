@@ -11,21 +11,16 @@ import { api } from "@/lib/api";
 import type { components } from "@/lib/api-types";
 import { errorMessage } from "@/lib/errors";
 import { planKey, type WorkPlan } from "./api";
+import { oversize, uploadFiles } from "./uploads";
 
 type CompletionRequest = components["schemas"]["CompletionRequest"];
-const MAX_BYTES = 10 * 1024 * 1024;
 
 /** Unggah tiap berkas ke POST /files/upload, lalu POST request-completion dengan file_id-nya. */
 function useRequestCompletion(plan: WorkPlan) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ body, obstacle, files }: { body: string; obstacle: string; files: File[] }) => {
-      const evidence_file_ids: string[] = [];
-      for (const file of files) {
-        const form = new FormData();
-        form.set("file", file);
-        evidence_file_ids.push((await api.post<{ file_id: string }>("/files/upload", form)).data.file_id);
-      }
+      const evidence_file_ids = await uploadFiles(files);
       const payload: CompletionRequest = { row_version: plan.row_version, body, obstacle, evidence_file_ids };
       return (await api.post<WorkPlan>(`/work-plans/${plan.id}/request-completion`, payload)).data;
     },
@@ -56,8 +51,8 @@ export function CompletionDialog({ plan, onClose }: { plan: WorkPlan; onClose: (
 
   const pickFiles = (list: FileList | null) => {
     const picked = Array.from(list ?? []);
-    const tooBig = picked.find((f) => f.size > MAX_BYTES);
-    setFileError(tooBig ? `${tooBig.name} melebihi 10 MB.` : null);
+    const tooBig = oversize(picked);
+    setFileError(tooBig);
     setFiles(tooBig ? [] : picked);
   };
 

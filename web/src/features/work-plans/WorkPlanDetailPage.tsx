@@ -9,6 +9,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { errorMessage } from "@/lib/errors";
 import { formatDate } from "@/lib/format";
 import { employeeName, useActiveEmployees, useTransition, useWorkPlan, type Transition, type WorkPlan } from "./api";
+import { CompletionDialog } from "./CompletionDialog";
 import { AddDayDialog, EditDraftDialog, ReasonDialog, TeamDialog } from "./PlanForms";
 import { WeeklyReports } from "./WeeklyReports";
 
@@ -22,7 +23,7 @@ const Row = ({ label, children }: { label: string; children: ReactNode }) => (
 const CANCELLABLE = ["PUBLISHED", "APPEALED", "ACCEPTED", "IN_PROGRESS", "COMPLETION_REVIEW"];
 
 type Dialogs =
-  | { kind: "edit" | "team" | "day" }
+  | { kind: "edit" | "team" | "day" | "completion" }
   | { kind: "reason"; action: Transition; title: string; label: string }
   | null;
 
@@ -122,6 +123,19 @@ function PlanActions({ plan }: { plan: WorkPlan }) {
           Buka draft revisi
         </Button>,
       );
+    if (s === "COMPLETION_REVIEW")
+      manager.push(
+        <Button key="approve-completion" onClick={() => run("approve-completion", "Pekerjaan dinyatakan selesai.")} disabled={busy}>
+          Setujui penyelesaian
+        </Button>,
+        <Button
+          key="return-completion"
+          variant="outline"
+          onClick={reason("return-completion", "Kembalikan penyelesaian", "Alasan pengembalian")}
+        >
+          Kembalikan penyelesaian
+        </Button>,
+      );
     if (CANCELLABLE.includes(s))
       manager.push(
         <Button key="cancel" variant="destructive" onClick={reason("cancel", "Batalkan pekerjaan", "Alasan pembatalan")}>
@@ -142,6 +156,12 @@ function PlanActions({ plan }: { plan: WorkPlan }) {
     leader.push(
       <Button key="start" onClick={() => run("start", "Pelaksanaan dimulai.")} disabled={busy}>
         Mulai pelaksanaan
+      </Button>,
+    );
+  if (s === "IN_PROGRESS")
+    leader.push(
+      <Button key="completion" onClick={() => setDialog({ kind: "completion" })}>
+        Buat Laporan Akhir
       </Button>,
     );
 
@@ -167,6 +187,7 @@ function PlanActions({ plan }: { plan: WorkPlan }) {
       {dialog?.kind === "edit" && <EditDraftDialog plan={plan} onClose={() => setDialog(null)} />}
       {dialog?.kind === "team" && <TeamDialog plan={plan} onClose={() => setDialog(null)} />}
       {dialog?.kind === "day" && <AddDayDialog plan={plan} onClose={() => setDialog(null)} />}
+      {dialog?.kind === "completion" && <CompletionDialog plan={plan} onClose={() => setDialog(null)} />}
       {dialog?.kind === "reason" && (
         <ReasonDialog plan={plan} action={dialog.action} title={dialog.title} label={dialog.label} onClose={() => setDialog(null)} />
       )}

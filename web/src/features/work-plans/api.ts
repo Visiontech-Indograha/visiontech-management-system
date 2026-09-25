@@ -13,7 +13,17 @@ type EmployeeList = S["EmployeeListResponse"];
 type Site = S["SiteResponse"];
 
 /** Transisi SK yang memakai TransitionRequest {row_version, reason}. */
-export type Transition = "publish" | "accept" | "appeal" | "revise" | "start" | "cancel" | "archive" | "restore";
+export type Transition =
+  | "publish"
+  | "accept"
+  | "appeal"
+  | "revise"
+  | "start"
+  | "cancel"
+  | "archive"
+  | "restore"
+  | "approve-completion"
+  | "return-completion";
 
 export const planKey = (id: string) => ["work-plan", id] as const;
 

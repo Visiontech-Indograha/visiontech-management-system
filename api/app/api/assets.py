@@ -6,7 +6,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, get_current_user, get_db_with_user, require_permission
-from app.api.guards import PlanAccess, PlanNeed, allocation_plan_access, ensure_same_org
+from app.api.guards import PlanAccess, PlanNeed, allocation_plan_access, ensure_same_org, plan_access
 from app.core.errors import AppError, ForbiddenError, NotFoundError
 from app.core.permissions import Permission, RoleCode
 from app.schemas.asset import (
@@ -22,11 +22,14 @@ from app.schemas.asset import (
     AssetReturnResponse,
     AssetReturnVerify,
     AssetStatusResponse,
+    PlanAssetItem,
 )
 from app.services.asset_reservation_service import AssetReservationService
 from app.services.pdf_service import html_to_pdf, render_bast_html
 
 router = APIRouter(prefix="/assets", tags=["Assets"])
+plan_assets_router = APIRouter(prefix="/work-plans/{plan_id}", tags=["Assets"])
+_PLAN_VIEW_ACCESS = Depends(plan_access(PlanNeed.VIEW))
 _ALLOCATION_LEADER_ACCESS = Depends(allocation_plan_access(PlanNeed.LEADER))
 
 @router.post("", response_model=AssetResponse, status_code=status.HTTP_201_CREATED)
@@ -215,3 +218,14 @@ async def verify_asset_return(
         await db.execute(text("UPDATE vms.asset SET status = 'IN_USE' WHERE id = :id"), {"id": ret_info.asset_id})
 
     return AssetReturnResponse(**row._mapping)
+
+
+@plan_assets_router.get("/assets", response_model=list[PlanAssetItem])
+async def get_plan_assets(
+    plan_id: UUID,
+    access: PlanAccess = _PLAN_VIEW_ACCESS,
+    db: AsyncSession = Depends(get_db_with_user)
+) -> list[PlanAssetItem]:
+    """Aset yang dipakai SK beserta kondisi saat dikembalikan (mode presentasi, M5). SK tak terlihat → 404."""
+    return [PlanAssetItem(**r._mapping) for r in await AssetReservationService(db).plan_assets(plan_id)]
+

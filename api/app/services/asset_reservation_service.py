@@ -34,6 +34,10 @@ class AssetReservationService:
         """Daftar aset beserta alokasi berjalan & pengajuan pengembalian — dasar tombol kembali/periksa."""
         return await self.repo.list_with_state(org_id)
 
+    async def plan_assets(self, plan_id: UUID) -> list[Any]:
+        """Aset yang dipakai SK — akses VIEW SK diperiksa penjaga rute."""
+        return await self.repo.plan_assets(plan_id)
+
     async def return_history(self, org_id: str, asset_id: UUID) -> list[Any]:
         rows = await self.repo.return_history(asset_id, org_id)
         if rows is None:

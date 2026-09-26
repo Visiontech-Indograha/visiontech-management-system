@@ -5574,6 +5574,59 @@
     }
    }
   },
+  "/api/v1/work-plans/{plan_id}/assets": {
+   "get": {
+    "tags": [
+     "Assets"
+    ],
+    "summary": "Get Plan Assets",
+    "description": "Aset yang dipakai SK beserta kondisi saat dikembalikan (mode presentasi, M5). SK tak terlihat → 404.",
+    "operationId": "get_plan_assets_api_v1_work_plans__plan_id__assets_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "plan_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Plan Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/PlanAssetItem"
+         },
+         "title": "Response Get Plan Assets Api V1 Work Plans  Plan Id  Assets Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/v1/overtime": {
    "post": {
     "tags": [
@@ -8942,6 +8995,102 @@
      "items"
     ],
     "title": "PendingDocumentList"
+   },
+   "PlanAssetItem": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Id"
+     },
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "code": {
+      "type": "string",
+      "title": "Code"
+     },
+     "kind": {
+      "type": "string",
+      "title": "Kind"
+     },
+     "vehicle_type": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Vehicle Type"
+     },
+     "driver_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Driver Name"
+     },
+     "allocated_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Allocated At"
+     },
+     "released_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Released At"
+     },
+     "returned_condition": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Returned Condition"
+     },
+     "return_accepted": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Return Accepted"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "name",
+     "code",
+     "kind",
+     "vehicle_type",
+     "driver_name",
+     "allocated_at",
+     "released_at",
+     "returned_condition",
+     "return_accepted"
+    ],
+    "title": "PlanAssetItem"
    },
    "PlanDayCreate": {
     "properties": {

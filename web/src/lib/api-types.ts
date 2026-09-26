@@ -1767,6 +1767,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/work-plans/{plan_id}/assets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Plan Assets
+         * @description Aset yang dipakai SK beserta kondisi saat dikembalikan (mode presentasi, M5). SK tak terlihat → 404.
+         */
+        get: operations["get_plan_assets_api_v1_work_plans__plan_id__assets_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/overtime": {
         parameters: {
             query?: never;
@@ -2988,6 +3008,35 @@ export interface components {
         PendingDocumentList: {
             /** Items */
             items: components["schemas"]["PendingDocument"][];
+        };
+        /** PlanAssetItem */
+        PlanAssetItem: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Code */
+            code: string;
+            /** Kind */
+            kind: string;
+            /** Vehicle Type */
+            vehicle_type: string | null;
+            /** Driver Name */
+            driver_name: string | null;
+            /**
+             * Allocated At
+             * Format: date-time
+             */
+            allocated_at: string;
+            /** Released At */
+            released_at: string | null;
+            /** Returned Condition */
+            returned_condition: string | null;
+            /** Return Accepted */
+            return_accepted: boolean | null;
         };
         /** PlanDayCreate */
         PlanDayCreate: {
@@ -6882,6 +6931,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AssetReturnResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_plan_assets_api_v1_work_plans__plan_id__assets_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanAssetItem"][];
                 };
             };
             /** @description Validation Error */

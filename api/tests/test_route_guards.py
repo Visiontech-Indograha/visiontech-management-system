@@ -58,6 +58,7 @@ GUARDED_IN_HANDLER = {
     # V-28: SK ada di badan/kueri atau ditentukan baris lembur.
     ("POST", "/overtime"): "OvertimeService: SK terlihat + ketua/anggota (diuji)",
     ("GET", "/overtime"): "OvertimeService: check_plan_access(VIEW) untuk work_plan_id (diuji)",
+    ("GET", "/hse/incidents"): "check_plan_access(VIEW) untuk plan_id (diuji di test_flow_plans)",
     ("POST", "/overtime/{ot_id}/review"): "OvertimeService: PM unit/OPS SK, bukan pengaju (diuji)",
     ("GET", "/recaps/overtime"): "OvertimeService: izin review:overtime (Finance/OPS/Admin) (diuji)",
     # Fase 6: dokumen ditentukan id di jalur → SK-nya dicek check_plan_access di service.

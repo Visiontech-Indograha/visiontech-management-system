@@ -63,7 +63,7 @@ export function AuditLogPage() {
         ))}
       </select>
 
-      <div className="overflow-x-auto rounded-panel border border-line bg-surface">
+      <div className="overflow-x-auto rounded-panel border border-line bg-surface shadow-card">
         <table className="w-full text-left text-sm">
           <thead className="border-b border-line text-mist">
             <tr>

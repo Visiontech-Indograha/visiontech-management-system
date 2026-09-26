@@ -123,3 +123,13 @@ def test_hr_cannot_verify_document_they_uploaded(client, world, fake_storage):
     assert own.status_code == 409, own.text  # empat mata, bukan 500 dari CHECK basis data
     assert own.json()["error"]["code"] == "FOUR_EYES"
     assert sync_query("SELECT status::text FROM vms.employee_document WHERE id = %s", (doc_id,)) == [("PENDING",)]
+
+
+def test_get_single_employee_for_direct_link(client, world, other_world):
+    hr = world.headers(client, "hr")
+    emp = world.employees["member"]
+    got = client.get(f"/employees/{emp}", headers=hr)
+    assert got.status_code == 200, got.text
+    assert got.json()["id"] == str(emp)
+    # Karyawan organisasi lain tidak bocor lewat tautan langsung.
+    assert client.get(f"/employees/{other_world.employees['member']}", headers=hr).status_code == 404

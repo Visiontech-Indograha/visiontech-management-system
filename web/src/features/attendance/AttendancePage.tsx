@@ -102,7 +102,7 @@ export function AttendancePage() {
       <QueryState query={list} errorText="Absensi tidak dapat dimuat." empty={data?.items.length === 0} emptyText="Tidak ada catatan kehadiran yang cocok.">
         <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {data?.items.map((a) => (
-            <li key={a.id} className="flex flex-col gap-2 rounded-panel border border-line bg-surface p-4">
+            <li key={a.id} className="flex flex-col gap-2 rounded-panel border border-line bg-surface shadow-card p-4">
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <p className="font-medium">{employeeName(employees.data, a.employee_id)}</p>

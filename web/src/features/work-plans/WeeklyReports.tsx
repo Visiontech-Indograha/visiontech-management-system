@@ -48,7 +48,7 @@ export function WeeklyReports({ plan }: { plan: WorkPlan }) {
 
 function Panel({ week, children }: { week: Week; children: ReactNode }) {
   return (
-    <article aria-label={week.name} className="rounded-panel border border-line bg-surface p-4">
+    <article aria-label={week.name} className="rounded-panel border border-line bg-surface shadow-card p-4">
       <header className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div>
           <h3 className="font-medium">{week.name}</h3>

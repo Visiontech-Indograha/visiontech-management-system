@@ -147,7 +147,7 @@ export function IncidentPanel({ plan }: { plan: WorkPlan }) {
   const [resolving, setResolving] = useState<Incident | null>(null);
   if (incidents.length === 0) return null;
   return (
-    <section aria-label="Laporan Insiden / HSE" className="rounded-panel border border-line bg-surface p-4">
+    <section aria-label="Laporan Insiden / HSE" className="rounded-panel border border-line bg-surface shadow-card p-4">
       <h2 className="mb-3 text-base font-semibold">Laporan Insiden / HSE</h2>
       <ul className="space-y-3">
         {incidents.map((i) => (

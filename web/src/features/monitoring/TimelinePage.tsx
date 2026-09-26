@@ -40,7 +40,7 @@ export function TimelinePage() {
       >
         <div className="space-y-4">
           {timeline.data?.map((g) => (
-            <section key={g.id} aria-label={g.title} className="rounded-panel border border-line bg-surface p-4">
+            <section key={g.id} aria-label={g.title} className="rounded-panel border border-line bg-surface shadow-card p-4">
               <header className="mb-3 flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                 <div>
                   <Link to={`/work-plans/${g.id}`} className="font-medium text-lens hover:underline">

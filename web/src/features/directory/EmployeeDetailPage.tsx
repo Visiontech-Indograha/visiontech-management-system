@@ -64,7 +64,7 @@ export function EmployeeDetailPage() {
           )
         }
       />
-      <div className="mb-8 max-w-xl rounded-panel border border-line bg-surface px-5 py-2">
+      <div className="mb-8 max-w-xl rounded-panel border border-line bg-surface shadow-card px-5 py-2">
         <dl className="text-sm">
           <Row label="No. karyawan">{e.employee_no}</Row>
           <Row label="Jabatan">{e.position}</Row>
@@ -212,7 +212,7 @@ function ArchivePanel({ employee }: { employee: Employee }) {
   };
 
   return (
-    <section aria-label="Hapus karyawan" className="mb-8 max-w-xl rounded-panel border border-line bg-surface p-4">
+    <section aria-label="Hapus karyawan" className="mb-8 max-w-xl rounded-panel border border-line bg-surface shadow-card p-4">
       {error && (
         <p role="alert" className="mb-3 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
           {error}

@@ -2,23 +2,13 @@ import type { ReactNode } from "react";
 import type { RouteObject } from "react-router-dom";
 import { AppShell } from "@/components/layout/AppShell";
 import { RequireAccess, RequireAuth } from "@/components/layout/guards";
-import { AssetsPage } from "@/features/assets/AssetsPage";
-import { AttendancePage } from "@/features/attendance/AttendancePage";
-import { AuditLogPage } from "@/features/audit/AuditLogPage";
-import { DirectoryPage } from "@/features/directory/DirectoryPage";
-import { EmployeeDetailPage } from "@/features/directory/EmployeeDetailPage";
-import { MyDocumentsPage } from "@/features/directory/MyDocuments";
-import { SitesPage } from "@/features/sites/SitesPage";
-import { WorkPlanDetailPage } from "@/features/work-plans/WorkPlanDetailPage";
-import { WorkPlansPage } from "@/features/work-plans/WorkPlansPage";
-import { AttendanceRecapPage } from "@/features/monitoring/AttendanceRecapPage";
-import { OvertimeRecapPage } from "@/features/monitoring/OvertimeRecapPage";
-import { TimelinePage } from "@/features/monitoring/TimelinePage";
-import { VerifyPage } from "@/features/verify/VerifyPage";
-import { ChangePasswordPage } from "@/pages/auth/ChangePasswordPage";
 import { LoginPage } from "@/pages/auth/LoginPage";
 import { ComingSoonPage, ForbiddenPage, HomePage, NotFoundPage } from "@/pages/Placeholders";
 import { NAV_ITEMS } from "./navigation";
+import { AssetsPage, AttendancePage, AuditLogPage, DirectoryPage, EmployeeDetailPage, MyDocumentsPage, SitesPage, WorkPlanDetailPage, WorkPlansPage, AttendanceRecapPage, OvertimeRecapPage, TimelinePage } from "./lazyPages";
+import { VerifyPage } from "@/features/verify/VerifyPage";
+import { ChangePasswordPage } from "@/pages/auth/ChangePasswordPage";
+
 
 /** Halaman yang sudah dibangun; sisanya tampil "dibangun pada fase berikutnya". */
 const PAGES: Record<string, ReactNode> = {

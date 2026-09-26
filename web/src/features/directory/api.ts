@@ -1,5 +1,5 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, ApiError } from "@/lib/api";
+import { api } from "@/lib/api";
 import type { components } from "@/lib/api-types";
 
 type S = components["schemas"];
@@ -41,21 +41,17 @@ export function useEmployees(f: EmployeeFilters) {
   });
 }
 
-/**
- * API tidak punya GET /employees/{id}. Detail memakai baris yang dibawa dari daftar
- * (state navigasi) atau yang masih tersimpan di cache daftar; tanpa itu → minta buka dari Direktori.
- */
+/** Detail karyawan: baris dari daftar/cache bila ada, selain itu GET /employees/{id} (tautan langsung). */
 export function useEmployee(id: string, fromList?: Employee) {
   const qc = useQueryClient();
   return useQuery({
     queryKey: ["employee", id],
-    queryFn: () => {
+    queryFn: async () => {
       const cached = qc
         .getQueriesData<EmployeeList>({ queryKey: ["employees"] })
         .flatMap(([, data]) => data?.items ?? [])
         .find((e) => e.id === id);
-      if (cached) return cached;
-      throw new ApiError("NOT_FOUND", "Buka data karyawan dari Direktori.", 404);
+      return cached ?? (await api.get<Employee>(`/employees/${id}`)).data;
     },
     initialData: fromList,
     staleTime: Infinity,

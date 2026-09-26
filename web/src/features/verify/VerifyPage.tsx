@@ -59,7 +59,7 @@ export function VerifyPage() {
             {v.note && <p className="text-sm">{v.note}</p>}
           </div>
           {v.state !== "UNKNOWN" && (
-            <dl className="rounded-panel border border-line bg-surface px-5 py-2 text-sm">
+            <dl className="rounded-panel border border-line bg-surface shadow-card px-5 py-2 text-sm">
               <Row label="Nomor dokumen">{v.document_number}</Row>
               <Row label="Judul">{v.document_title}</Row>
               <Row label="Penanda tangan">{v.signer_name}</Row>

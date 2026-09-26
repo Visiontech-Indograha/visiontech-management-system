@@ -67,7 +67,7 @@ function DocumentCard({ doc }: { doc: PlanDocument }) {
   });
 
   return (
-    <li className="rounded-panel border border-line bg-surface p-4">
+    <li className="rounded-panel border border-line bg-surface shadow-card p-4">
       <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
         <div>
           <p className="font-semibold">

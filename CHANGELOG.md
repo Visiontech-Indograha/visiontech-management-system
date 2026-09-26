@@ -33,6 +33,10 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ### ✨ Ditambahkan
 
+- **Tampilan web kantor modern (R-12):** palet navy + emas dari logo Visiontech, logo di sidebar/bilah atas/login (tulisan "VMS" dihapus), login dua panel shadcn, Beranda ringkasan (SK berjalan/menunggu, absensi perlu diperiksa, pekerjaan aktif), `PageHeader` dengan keterangan. 31 berkas yang memakai kelas `bg-surface/text-mist/border-line/rounded-panel/…` tanpa definisi kini bergaya lewat alias token.
+- **Animasi ringan (R-13):** pegas pada hover/klik, cahaya relatif kursor (`lib/motion.ts`, satu listener + rAF), masuk/keluar viewport & bilah progres gulir dengan CSS scroll-driven, transisi antarhalaman; mati saat *reduce motion*. Halaman dimuat lazy (`app/lazyPages.ts`): bundle awal 876 → 460 KB.
+- **`GET /employees/{id}`** — tautan langsung `/directory/{id}` kini berfungsi (sebelumnya "Buka dari Direktori"); organisasi lain → 404.
+
 #### Lokasi penugasan (revisi PM, Web & Mobile) — 2026-09-26
 - Web: kartu "Lokasi penugasan" di detail SK (peta baca-saja, nama, radius); pengelola SK mendapat dialog "Atur titik lokasi" (cari kota → hasil → pin bisa digeser/klik → radius dengan lingkaran → "Simpan titik"), juga ditawarkan tepat setelah draf dibuat; SK berjalan menampilkan catatan audit. Leaflet + react-leaflet dengan tile & atribusi OpenStreetMap; CSP Caddy `img-src` mengizinkan tile.openstreetmap.org.
 - Mobile: absen masuk mendahulukan titik SK yang sedang berjalan.
@@ -250,6 +254,8 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 - `web/`: halaman, rute, menu, dan uji master `/products`, `/vehicles`, `/items` dihapus — sisa web lama yang memanggil endpoint di luar kontrak dok 05 (keputusan pemilik produk: ikuti dok 01 §4.3, dok 10 Bagian C). Aset kendaraan/alat kelak dari `/assets`. Uji master kini hanya untuk lokasi (`SitesPage`).
 
 ### 🔧 Diperbaiki
+
+- **Uji yang tertinggal dari R-10:** daftar izin yang diharapkan (`test_permissions`) dan daftar absensi PM (`test_attendance_list`) disesuaikan — PM kini melihat absensi unitnya. Tipe izin web (`lib/permissions.ts`, `api-types.ts`) ikut diperbarui; `npm run typecheck` (tsc -b) kembali hijau. Suite backend penuh: 574 lulus.
 
 - **PDF SK gagal di Linux/Docker** (`AttributeError: 'super' object has no attribute 'transform'`): WeasyPrint 62.3 tidak cocok dengan `pydyf` ≥ 0.11 → `pydyf==0.10.0` dikunci di `requirements.txt`. Ditemukan saat uji alur lokal dengan image API; PDF + QR + `/verify` lulus setelahnya.
 - **Waktu di PDF SK** kini WIB (`26-09-2026 17:41 WIB`) lewat `core/time.wib_text` (filter Jinja `wib`), bukan UTC mentah.

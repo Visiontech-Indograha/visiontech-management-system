@@ -129,7 +129,7 @@ export function OvertimePanel({ plan }: { plan: WorkPlan }) {
   const [reviewing, setReviewing] = useState<Overtime | null>(null);
   if (list.data?.length === 0) return null;
   return (
-    <section aria-label="Rekap Lembur" className="rounded-panel border border-line bg-surface p-4">
+    <section aria-label="Rekap Lembur" className="rounded-panel border border-line bg-surface shadow-card p-4">
       <h2 className="mb-3 text-base font-semibold">Rekap Lembur</h2>
       <QueryState query={list} errorText="Data lembur tidak dapat dimuat.">
         <ul className="space-y-3">

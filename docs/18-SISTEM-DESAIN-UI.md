@@ -21,6 +21,12 @@ perilaku & label prototipe → dokumen ini → dokumen 11. Nilai token hanya bol
 
 ---
 
+> **Perubahan atas arahan pemilik (R-12, R-13 — 2026-09-26), mengalahkan aturan di bawah bila bertentangan:**
+> palet brand kini **navy Visiontech `#232c6f` + aksen emas `#f0c000`** (dari logo), netral abu kebiruan;
+> kartu boleh **bayangan halus** (`shadow-card`) dan radius 16 px (`rounded-panel`); cahaya lembut relatif
+> kursor pada kartu dan animasi pegas/gulir diizinkan **asal hanya `transform`/`opacity`, tanpa pustaka,
+> dan mati saat `prefers-reduced-motion`**. Nilai sumber: `web/src/styles/index.css`.
+
 ## 1. Prinsip
 
 | # | Prinsip | Artinya |

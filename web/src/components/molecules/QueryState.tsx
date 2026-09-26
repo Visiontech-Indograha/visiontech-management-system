@@ -36,7 +36,7 @@ export function QueryState({
     );
   if (query.isError)
     return (
-      <div role="alert" className="rounded-panel border border-line bg-surface p-6 text-center">
+      <div role="alert" className="rounded-panel border border-line bg-surface shadow-card p-6 text-center">
         <p className="mb-3 text-danger">{errorText}</p>
         <Button variant="outline" onClick={() => query.refetch()}>
           Coba lagi
@@ -45,7 +45,7 @@ export function QueryState({
     );
   if (empty)
     return (
-      <div className="rounded-panel border border-line bg-surface p-6 text-center">
+      <div className="rounded-panel border border-line bg-surface shadow-card p-6 text-center">
         <p className="mb-3 text-mist">{emptyText}</p>
         {emptyAction}
       </div>

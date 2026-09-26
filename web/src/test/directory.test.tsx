@@ -63,10 +63,13 @@ describe("halaman direktori utama", () => {
 });
 
 describe("halaman detail karyawan (HR)", () => {
-  it("dibuka langsung tanpa data daftar meminta kembali ke Direktori", async () => {
-    mockApi(() => undefined);
+  it("dibuka langsung lewat tautan memuat karyawan dari GET /employees/{id}", async () => {
+    mockApi((c) => {
+      if (c.url === "/employees/e1") return { data: employee() };
+      if (c.url === "/employees/e1/documents") return { data: { items: [], total: 0 } };
+    });
     renderRoute("/directory/e1", { role: "HR" });
-    expect(await screen.findByText("Buka data karyawan dari Direktori.")).toBeInTheDocument();
+    expect(await screen.findByText("Test User")).toBeInTheDocument();
   });
 
   it("menambah berkas mengirim form ke upload lalu ke documents", async () => {

@@ -72,7 +72,7 @@ export function DayPlanList({ plan }: { plan: WorkPlan }) {
     queryFn: async () => (await api.get<Day[]>(`/work-plans/${plan.id}/days`)).data,
   });
   return (
-    <section aria-label="Rincian harian" className="rounded-panel border border-line bg-surface p-4">
+    <section aria-label="Rincian harian" className="rounded-panel border border-line bg-surface shadow-card p-4">
       <h2 className="mb-3 text-base font-semibold">Rincian harian</h2>
       <QueryState
         query={days}
@@ -108,7 +108,7 @@ function DayPanel({ plan, day }: { plan: WorkPlan; day: Day }) {
   const label = `${day.title || "Hari kerja"} — ${formatDate(day.work_date)}`;
 
   return (
-    <article aria-label={label} className="rounded-panel border border-line bg-surface p-4">
+    <article aria-label={label} className="rounded-panel border border-line bg-surface shadow-card p-4">
       <header className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div>
           <h3 className="font-medium">{day.title || "Hari kerja"}</h3>

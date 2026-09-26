@@ -15,12 +15,14 @@ from tests.conftest import login_headers, requires_db, sync_query
 P = Permission
 
 EXPECTED_EXTRA: dict[RoleCode, set[Permission]] = {
-    RoleCode.PM: {P.CREATE_PLAN, P.PUBLISH_PLAN, P.VIEW_TIMELINE},
+    # R-10: PM/OPS memeriksa absensi unitnya; Finance/Admin seluruh organisasi.
+    RoleCode.PM: {P.CREATE_PLAN, P.PUBLISH_PLAN, P.VIEW_TIMELINE, P.REVIEW_UNIT_ATTENDANCE},
     RoleCode.HR: {P.MANAGE_USERS, P.VERIFY_DOCUMENTS, P.MANAGE_EMPLOYEE_DOCUMENTS},
-    RoleCode.FINANCE: {P.REVIEW_ATTENDANCE, P.REVIEW_OVERTIME},
+    RoleCode.FINANCE: {P.REVIEW_ATTENDANCE, P.REVIEW_UNIT_ATTENDANCE, P.REVIEW_OVERTIME},
     RoleCode.ASSET: {P.MANAGE_ASSETS},
     # OPS memegang kewenangan PM lintas unit (domain.js permissions.OPS) di samping pemantauan.
-    RoleCode.OPS: {P.CREATE_PLAN, P.PUBLISH_PLAN, P.REVIEW_OVERTIME, P.VIEW_TIMELINE, P.VIEW_AUDIT},
+    RoleCode.OPS: {P.CREATE_PLAN, P.PUBLISH_PLAN, P.REVIEW_OVERTIME, P.VIEW_TIMELINE, P.VIEW_AUDIT,
+                   P.REVIEW_UNIT_ATTENDANCE},
     # Ketua/anggota berasal dari SK (is_plan_leader/is_plan_member), bukan peran global.
     RoleCode.LEADER: set(),
     RoleCode.MEMBER: set(),

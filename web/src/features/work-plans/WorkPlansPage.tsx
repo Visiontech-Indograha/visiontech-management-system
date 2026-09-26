@@ -59,7 +59,7 @@ export function WorkPlansPage() {
               ) : (
               <Link
                 to={`/work-plans/${p.id}`}
-                className="block h-full rounded-panel border border-line bg-surface p-4 hover:bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="block h-full rounded-panel border border-line bg-surface shadow-card p-4 hover:bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <div className="mb-2 flex items-start justify-between gap-2">
                   <span className="font-medium text-lens">{p.title}</span>
@@ -94,7 +94,7 @@ function ArchivedDraft({ plan }: { plan: WorkPlan }) {
     }
   };
   return (
-    <div className="flex h-full flex-col gap-2 rounded-panel border border-line bg-surface p-4">
+    <div className="flex h-full flex-col gap-2 rounded-panel border border-line bg-surface shadow-card p-4">
       <span className="font-medium">{plan.title}</span>
       <p className="text-sm text-mist">
         {plan.location_text} · {formatDate(plan.period_start)} – {formatDate(plan.period_end)}

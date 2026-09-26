@@ -27,6 +27,13 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ### ✨ Ditambahkan
 
+#### Web · dokumen SK, verifikasi publik, Berkas saya — 2026-09-26
+- Detail SK → bagian "Dokumen" (disembunyikan saat DRAFT): versi dokumen, daftar tanda tangan (ISSUER/ACCEPTOR, dicabut), "Unduh PDF" (503 → "Layanan PDF belum tersedia di server ini."), dialog "Cabut tanda tangan" dengan alasan wajib.
+- Halaman publik `/verify/*` tanpa login (token boleh berisi "/"); respons verifikasi tidak memuat versi dokumen sehingga versi tidak ditampilkan.
+- "Berkas saya" aktif lagi memakai `employee_id` dari /auth/me (kosong → keadaan kosong). Tipe OpenAPI dibuat ulang.
+- Dockerfile web menyalin `.npmrc` sebelum `npm ci` (sebelumnya ERESOLVE saat build image).
+- Belum: vitest/verify-branch untuk tiga layar ini (ditunda atas instruksi pemilik), uji manual di browser.
+
 #### Web · layar kontrak MVP (feature/web-contract-sync) — 2026-09-26
 - Work plan (SK): daftar, draf, tim, hari, transisi; laporan harian (checklist tugas, isi/kirim/review) & mingguan; penyelesaian (laporan akhir, setujui, kembalikan); usulan perubahan (perpanjangan, adendum personel); lampiran draf.
 - Absensi (daftar, tinjauan Finance, penjelasan), timeline tim & rekap bulanan; insiden/HSE; kendaraan & alat; lokasi kerja; lembur (ajukan, tinjau, rekap); audit log; hapus/pulihkan karyawan (HR).

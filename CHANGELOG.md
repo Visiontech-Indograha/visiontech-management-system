@@ -9,6 +9,7 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased] — `development`
 
+- `web/`: logo PNG transparan menggantikan JPEG (versi putih di panel navy login). `docs/18`: amandemen R-14 — aturan UI mobile (kit, bar tetap, kartu sorotan, navbar, pilihan, pembuka, safe zone, gerak, kamera).
 - `mobile/` (repo terpisah, `aa29e41`): **R-14/R-16** — UI mengikuti gaya rujukan Dribbble (palet Visiontech tetap): header terang dengan judul besar, bar logo tetap saat digulir (`VmsTopBar`), navbar datar berlabel, kartu sorotan navy + lengkung emas meniru swirl logo, `VmsSelectField` (lembar bawah) menggantikan dropdown, layar pembuka native Android 12+/lama identik dengan splash Flutter (navy + tanda "V + swirl"), bilah navigasi HP disembunyikan, *safe zone* (`safeListPadding`, SafeArea kiri/kanan), komponen shadcn memakai Plus Jakarta Sans, watermark kamera WYSIWYG, transisi halaman; folder lokal `Visiontech/{swafoto,laporan,insiden,berkas}`. Uji login disesuaikan (ShadApp). Catatan: 3 berkas uji sinkron mobile sudah rusak sejak `04e5f64` (API SyncEngine berubah) — ditandai sebagai tugas terpisah.
 - `api/`: pesan konflik alokasi aset kini "Aset ini sedang dialokasikan dan belum dikembalikan." (sebelumnya menyesatkan saat uji "pengemudi tanpa SIM").
 - `docs/19`: R-14 diperbarui (revisi lanjutan UI mobile) dan R-16 ditambahkan.

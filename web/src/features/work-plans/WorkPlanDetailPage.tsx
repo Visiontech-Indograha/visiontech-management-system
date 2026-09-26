@@ -15,7 +15,7 @@ import { IncidentDialog, IncidentPanel } from "./Incidents";
 import { OvertimeDialog, OvertimePanel } from "./Overtime";
 import { ChangePanel, ExtensionDialog, PersonnelDialog } from "./PlanChanges";
 import { AddDayDialog, EditDraftDialog, ReasonDialog, TeamDialog } from "./PlanForms";
-import { DailyReports } from "./DailyReports";
+import { DailyReports, DayPlanList } from "./DailyReports";
 import { Documents } from "./Documents";
 import { PlanLocationCard } from "./PlanLocation";
 import { WeeklyReports } from "./WeeklyReports";
@@ -67,6 +67,11 @@ export function WorkPlanDetailPage() {
           </div>
         )}
         {p && <PlanLocationCard plan={p} />}
+        {p && ["DRAFT", "PUBLISHED", "APPEALED", "ACCEPTED"].includes(p.status) && (
+          <div className="mt-6">
+            <DayPlanList plan={p} />
+          </div>
+        )}
         {p && <Attachments plan={p} />}
         {p && p.status !== "DRAFT" && <Documents plan={p} />}
         {p && ["IN_PROGRESS", "COMPLETION_REVIEW", "COMPLETED"].includes(p.status) && (
@@ -210,11 +215,6 @@ function PlanActions({ plan }: { plan: WorkPlan }) {
       {manager.length > 0 && (
         <section aria-label="Tindakan PM" className="rounded-panel border border-line bg-surface p-4">
           <h2 className="mb-3 text-base font-semibold">Tindakan PM</h2>
-          {s === "DRAFT" && (
-            <p className="mb-3 text-sm text-mist">
-              Rincian harian dan anggota tim belum dapat ditampilkan karena API belum menyediakan endpoint bacanya.
-            </p>
-          )}
           <div className="flex flex-col gap-2 [&>button]:w-full">{manager}</div>
         </section>
       )}

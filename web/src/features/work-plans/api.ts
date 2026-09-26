@@ -103,7 +103,10 @@ export function useAddDay(id: string) {
       await api.put(`/work-plans/${id}/days/${day.id}/plan`, body);
       return day;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: planKey(id) }),
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: planKey(id) });
+      await qc.invalidateQueries({ queryKey: ["plan-days", id] });
+    },
   });
 }
 

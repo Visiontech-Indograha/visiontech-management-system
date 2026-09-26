@@ -65,6 +65,40 @@ export function DailyReports({ plan }: { plan: WorkPlan }) {
   );
 }
 
+/** Rincian harian SK sebelum berjalan (draf s.d. diterima): tanggal, judul, tugas — hanya baca. */
+export function DayPlanList({ plan }: { plan: WorkPlan }) {
+  const days = useQuery({
+    queryKey: daysKey(plan.id),
+    queryFn: async () => (await api.get<Day[]>(`/work-plans/${plan.id}/days`)).data,
+  });
+  return (
+    <section aria-label="Rincian harian" className="rounded-panel border border-line bg-surface p-4">
+      <h2 className="mb-3 text-base font-semibold">Rincian harian</h2>
+      <QueryState
+        query={days}
+        errorText="Rincian harian tidak dapat dimuat."
+        empty={days.data?.length === 0}
+        emptyText="Belum ada hari kerja. Setiap tanggal dalam periode wajib diisi sebelum SK diterbitkan."
+      >
+        <ol className="space-y-3">
+          {days.data?.map((d) => (
+            <li key={d.id} className="border-b border-line pb-3 last:border-0 last:pb-0">
+              <p className="font-medium">
+                {formatDate(d.work_date)} · {d.title}
+              </p>
+              <ul className="mt-1 list-disc pl-5 text-sm text-mist">
+                {d.tasks.map((t) => (
+                  <li key={t.id}>{t.title}</li>
+                ))}
+              </ul>
+            </li>
+          ))}
+        </ol>
+      </QueryState>
+    </section>
+  );
+}
+
 function DayPanel({ plan, day }: { plan: WorkPlan; day: Day }) {
   const { me } = useSession();
   const isPM = !!me?.permissions.includes("create:plan");

@@ -17,6 +17,7 @@ import { ChangePanel, ExtensionDialog, PersonnelDialog } from "./PlanChanges";
 import { AddDayDialog, EditDraftDialog, ReasonDialog, TeamDialog } from "./PlanForms";
 import { DailyReports } from "./DailyReports";
 import { Documents } from "./Documents";
+import { PlanLocationCard } from "./PlanLocation";
 import { WeeklyReports } from "./WeeklyReports";
 
 const Row = ({ label, children }: { label: string; children: ReactNode }) => (
@@ -65,6 +66,7 @@ export function WorkPlanDetailPage() {
             <PlanActions plan={p} />
           </div>
         )}
+        {p && <PlanLocationCard plan={p} />}
         {p && <Attachments plan={p} />}
         {p && p.status !== "DRAFT" && <Documents plan={p} />}
         {p && ["IN_PROGRESS", "COMPLETION_REVIEW", "COMPLETED"].includes(p.status) && (

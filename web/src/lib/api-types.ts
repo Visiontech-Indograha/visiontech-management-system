@@ -901,6 +901,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/geo/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Geo Search
+         * @description Cari kota/tempat di Indonesia (Nominatim, di-cache). Hanya pengelola SK.
+         */
+        get: operations["geo_search_api_v1_geo_search_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-plans/{plan_id}/location": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Plan Location */
+        get: operations["get_plan_location_api_v1_work_plans__plan_id__location_get"];
+        /**
+         * Set Plan Location
+         * @description SK draf maupun berjalan; teks lokasi dokumen tetap, hanya titik absensi yang berubah.
+         */
+        put: operations["set_plan_location_api_v1_work_plans__plan_id__location_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/work-plans/{plan_id}/weekly": {
         parameters: {
             query?: never;
@@ -2285,6 +2326,17 @@ export interface components {
             /** Lng */
             lng: number;
         };
+        /** GeoResult */
+        GeoResult: {
+            /** Name */
+            name: string;
+            /** Lat */
+            lat: number;
+            /** Lng */
+            lng: number;
+            /** Type */
+            type: string;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -2617,6 +2669,40 @@ export interface components {
             sha256: string;
             /** Signature Count */
             signature_count: number;
+        };
+        /** PlanLocationIn */
+        PlanLocationIn: {
+            /** Name */
+            name: string;
+            /** Address */
+            address?: string | null;
+            /** Lat */
+            lat: number;
+            /** Lng */
+            lng: number;
+            /**
+             * Radius M
+             * @default 100
+             */
+            radius_m: number;
+        };
+        /** PlanLocationOut */
+        PlanLocationOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Address */
+            address: string | null;
+            /** Lat */
+            lat: number;
+            /** Lng */
+            lng: number;
+            /** Radius M */
+            radius_m: number | null;
         };
         /** PlanTaskCreate */
         PlanTaskCreate: {
@@ -4736,6 +4822,103 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OperationStatus"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    geo_search_api_v1_geo_search_get: {
+        parameters: {
+            query: {
+                q: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GeoResult"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_plan_location_api_v1_work_plans__plan_id__location_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanLocationOut"] | null;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_plan_location_api_v1_work_plans__plan_id__location_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlanLocationIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanLocationOut"];
                 };
             };
             /** @description Validation Error */

@@ -48,7 +48,7 @@ class AssetReservationService:
         if plan.status in (PlanStatus.COMPLETED, PlanStatus.CANCELLED):
             raise _state("Pilih work plan yang masih aktif.")
         if asset.status != "AVAILABLE" or await self.repo.active_allocation(asset_id) is not None:
-            raise _state("Aset sudah dialokasikan ke pekerjaan lain.")
+            raise _state("Aset ini sedang dialokasikan dan belum dikembalikan.")
         if asset.kind == "VEHICLE":
             if driver_id is None:
                 raise ValidationError("Pilih pengemudi untuk aset kendaraan.")
@@ -60,7 +60,7 @@ class AssetReservationService:
             allocation = await self.repo.insert_allocation(asset_id, plan_id, driver_id, user.user_id)
         except IntegrityError as exc:
             # Aturan SIM hidup di trigger asset_allocation_driver (V-11).
-            raise (trigger_rule_error(exc) or _state("Aset sudah dialokasikan ke pekerjaan lain.")) from None
+            raise (trigger_rule_error(exc) or _state("Aset ini sedang dialokasikan dan belum dikembalikan.")) from None
         in_use = asset.kind != "VEHICLE" and plan.status in RUNNING
         await self.repo.set_asset_status(asset_id, "IN_USE" if in_use else "RESERVED")
         return allocation

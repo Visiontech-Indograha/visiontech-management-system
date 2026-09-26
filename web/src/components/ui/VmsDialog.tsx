@@ -17,7 +17,8 @@ export function Dialog({
 }) {
   return (
     <ShadcnDialog open={open} onOpenChange={(val) => !val && onClose()}>
-      <DialogContent>
+      {/* Formulir panjang (mis. peta lokasi) tetap terjangkau di layar pendek. */}
+      <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>

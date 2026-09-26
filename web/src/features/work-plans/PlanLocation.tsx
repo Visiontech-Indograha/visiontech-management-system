@@ -107,7 +107,8 @@ export function PlanLocationCard({ plan }: { plan: WorkPlan }) {
           <p className="mb-3 text-sm text-mist">
             Radius absensi {l.radius_m ?? "-"} m · {l.lat.toFixed(6)}, {l.lng.toFixed(6)}
           </p>
-          <div className="h-56 overflow-hidden rounded-control border border-line md:h-72">
+          {/* isolate: panel Leaflet (z-index 400+) tidak menimpa dialog (z-50). */}
+          <div className="isolate h-56 overflow-hidden rounded-control border border-line md:h-72">
             <MapContainer
               key={`${l.lat},${l.lng},${l.radius_m}`}
               center={[l.lat, l.lng]}
@@ -237,7 +238,7 @@ function LocationDialog({ plan, current, onClose }: { plan: WorkPlan; current: P
           </div>
         )}
         <p className="mb-1 text-sm text-mist">Klik peta untuk menaruh titik, atau geser penanda.</p>
-        <div className="mb-1 h-64 overflow-hidden rounded-control border border-line">
+        <div className="isolate mb-1 h-64 overflow-hidden rounded-control border border-line">
           <MapContainer center={view.center} zoom={view.zoom} className="h-full w-full">
             <Tiles />
             <MapController center={view.center} zoom={view.zoom} />

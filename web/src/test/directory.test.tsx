@@ -84,6 +84,10 @@ describe("halaman detail karyawan (HR)", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Tambah berkas" }));
     const dialog = screen.getByRole("dialog", { name: "Tambah berkas" });
 
+    // Jenis baku dipilih, bukan diketik — aturan SIM pengemudi mencocokkan "SIM A"/"SIM C" persis.
+    const docType = within(dialog).getByRole("combobox", { name: /Jenis dokumen/ });
+    expect(within(docType).getByRole("option", { name: "SIM A" })).toBeInTheDocument();
+    expect(within(docType).getByRole("option", { name: "Lainnya…" })).toBeInTheDocument();
     fireEvent.change(within(dialog).getByLabelText(/Jenis dokumen/), { target: { value: "KTP" } });
     fireEvent.change(within(dialog).getByLabelText(/Nomor dokumen/), { target: { value: "123" } });
     

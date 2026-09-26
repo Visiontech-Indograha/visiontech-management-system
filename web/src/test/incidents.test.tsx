@@ -1,6 +1,10 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import { mockMe } from "@/app/mockSession";
 import { apiError, mockApi, renderRoute } from "./utils";
+
+/** PM yang juga ditunjuk sebagai ketua pada SK ini — sah melakukan tindakan ketua. */
+const pmAsLeader = () => ({ ...mockMe("PM")!, employee_id: "e-lead" });
 
 const plan = {
   id: "p1",
@@ -81,7 +85,7 @@ describe("Insiden / HSE", () => {
 
   it("penolakan API tampil di dialog", async () => {
     setup((url) => (url === "/hse/incidents" ? apiError(403, "FORBIDDEN", "Hanya ketua atau anggota tim pekerjaan ini yang dapat melakukan tindakan ini.") : undefined));
-    renderRoute("/work-plans/p1", { role: "PM" });
+    renderRoute("/work-plans/p1", { role: "field" });
     const dialog = await report();
     expect(await within(dialog).findByText(/Hanya ketua atau anggota tim/)).toBeInTheDocument();
   });
@@ -91,7 +95,7 @@ describe("Insiden / HSE", () => {
       if (url === "/hse/incidents") return { status: 201, data: incident() };
       if (url === "/hse/incidents/i1/resolve") return { data: incident({ status: "RESOLVED", resolution_note: "Sudah diobati" }) };
     });
-    renderRoute("/work-plans/p1", { role: "PM" });
+    renderRoute("/work-plans/p1", { me: pmAsLeader() });
     await report();
     fireEvent.click(await screen.findByRole("button", { name: "Selesaikan" }));
     const dialog = screen.getByRole("dialog", { name: "Selesaikan insiden" });

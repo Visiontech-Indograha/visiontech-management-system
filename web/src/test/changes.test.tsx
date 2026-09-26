@@ -1,6 +1,10 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import { mockMe } from "@/app/mockSession";
 import { mockApi, renderRoute } from "./utils";
+
+/** PM yang juga ditunjuk sebagai ketua pada SK ini — sah melakukan tindakan ketua. */
+const pmAsLeader = () => ({ ...mockMe("PM")!, employee_id: "e-lead" });
 
 const plan = {
   id: "p1",
@@ -97,7 +101,7 @@ describe("Usulan perubahan SK", () => {
       if (url === "/work-plans/p1/changes") return { status: 201, data: change() };
       if (url === "/changes/c1/approve") return { data: change({ status: "AWAITING_LEADER_ACCEPTANCE" }) };
     });
-    renderRoute("/work-plans/p1", { role: "PM" });
+    renderRoute("/work-plans/p1", { me: pmAsLeader() });
     fireEvent.click(await screen.findByRole("button", { name: "Ajukan perpanjangan" }));
     const dialog = screen.getByRole("dialog", { name: "Ajukan perpanjangan" });
     fireEvent.change(within(dialog).getByLabelText("Tanggal akhir baru"), { target: { value: "2026-10-25" } });

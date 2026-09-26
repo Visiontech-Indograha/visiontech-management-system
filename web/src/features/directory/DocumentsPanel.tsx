@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog } from "@/components/ui/VmsDialog";
-import { TextField } from "@/components/ui/Field";
+import { SelectField, TextField } from "@/components/ui/Field";
 import { ApiError } from "@/lib/api";
 import { formatDate } from "@/lib/format";
 import {
@@ -18,6 +18,10 @@ import {
 import { FilePreview } from "@/components/molecules/FilePreview";
 
 type Errors = Record<string, string>;
+
+/** Jenis baku — "SIM A"/"SIM C" dipakai aturan pengemudi kendaraan, jadi harus dipilih, bukan diketik. */
+const DOC_TYPES = ["KTP", "SIM A", "SIM B I", "SIM B II", "SIM C", "MCU", "Sertifikat K3", "Kontrak kerja"];
+const OTHER = "__other__";
 
 const STATUS: Record<string, { label: string; tone: "success" | "warning" | "danger" }> = {
   VERIFIED: { label: "Terverifikasi", tone: "success" },
@@ -139,12 +143,14 @@ function DocumentDialog({ employeeId, onClose }: { employeeId: string; onClose: 
   const create = useCreateDocument(employeeId);
   const [errors, setErrors] = useState<Errors>({});
   const [formError, setFormError] = useState<string | null>(null);
+  const [other, setOther] = useState(false);
   const pending = upload.isPending || create.isPending;
 
   const submit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
-    const doc_type = String(f.get("doc_type") ?? "").trim();
+    const picked = String(f.get("doc_type") ?? "");
+    const doc_type = (picked === OTHER ? String(f.get("doc_type_other") ?? "") : picked).trim();
     const number = String(f.get("number") ?? "").trim();
     const expiry_date = String(f.get("expiry_date") ?? "").trim() || null;
     const fileInput = e.currentTarget.elements.namedItem("file") as HTMLInputElement;
@@ -192,7 +198,24 @@ function DocumentDialog({ employeeId, onClose }: { employeeId: string; onClose: 
             {formError}
           </p>
         )}
-        <TextField name="doc_type" label="Jenis dokumen" error={errors.doc_type} hint="Contoh: KTP, SIM A, SIO Excavator" />
+        <SelectField
+          name="doc_type"
+          label="Jenis dokumen"
+          error={errors.doc_type}
+          defaultValue=""
+          onChange={(e) => setOther(e.target.value === OTHER)}
+        >
+          <option value="" disabled>
+            Pilih jenis dokumen
+          </option>
+          {DOC_TYPES.map((t) => (
+            <option key={t} value={t}>
+              {t}
+            </option>
+          ))}
+          <option value={OTHER}>Lainnya…</option>
+        </SelectField>
+        {other && <TextField name="doc_type_other" label="Jenis dokumen lainnya" hint="Contoh: SIO Excavator, Drone Pilot" />}
         <TextField name="number" label="Nomor dokumen" error={errors.number} />
         <TextField name="expiry_date" label="Tanggal kedaluwarsa" type="date" error={errors.expiry_date} hint="Bila ada." />
         <TextField name="file" label="File (jpg, png, pdf; maks. 10 MB)" type="file" accept=".jpg,.jpeg,.png,.pdf" error={errors.file} />

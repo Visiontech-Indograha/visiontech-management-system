@@ -34,6 +34,20 @@ class PlanLocationRepo(BaseRepo):
             {"org": org_id, "name": name})
         return {r.name for r in rows}
 
+    async def same_site(self, org_id: UUID | str, label: str, lat: float, lng: float,
+                        radius_m: int) -> Any:
+        """Site organisasi bernama `label` (atau "label (n)") di titik ≤ 5 m dengan radius sama."""
+        return await self.fetchone(
+            """
+            SELECT id FROM vms.site
+            WHERE organization_id = CAST(:org AS uuid) AND radius_m = :radius
+              AND (name = :name OR name LIKE :name || ' (%%)')
+              AND ST_DWithin(location, ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography, 5)
+            ORDER BY char_length(name), name
+            LIMIT 1
+            """,
+            {"org": org_id, "name": label, "radius": radius_m, "lat": lat, "lng": lng})
+
     async def create_site(self, org_id: UUID | str, name: str, address: str | None,
                           lat: float, lng: float, radius_m: int) -> Any:
         return await self.fetchone(

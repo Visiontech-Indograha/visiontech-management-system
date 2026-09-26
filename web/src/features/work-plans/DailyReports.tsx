@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 import { useSession } from "@/app/session";
+import { FilePreview } from "@/components/molecules/FilePreview";
 import { QueryState } from "@/components/molecules/QueryState";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
 import { Button } from "@/components/ui/button";
@@ -191,8 +192,13 @@ function ReportView({ day }: { day: Day }) {
       </div>
       {r.evidence_file_ids.length > 0 && (
         <div>
-          <dt className="text-mist">Bukti</dt>
-          <dd>{r.evidence_file_ids.length} berkas</dd>
+          <dt className="text-mist">Bukti ({r.evidence_file_ids.length} foto)</dt>
+          {/* PM menilai laporan dari foto bukti — tampilkan pratinjau, bukan sekadar jumlah (temuan uji nyata R-17). */}
+          <dd className="mt-1 flex flex-wrap gap-2">
+            {r.evidence_file_ids.map((id, i) => (
+              <FilePreview key={id} fileId={id} fileName={`Bukti ${i + 1}`} />
+            ))}
+          </dd>
         </div>
       )}
       {r.review_note && (

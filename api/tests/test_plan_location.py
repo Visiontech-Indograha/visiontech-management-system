@@ -47,6 +47,24 @@ def test_running_plan_gets_new_site_and_keeps_document_text(client, world: World
     assert again.json()["name"] == f"{DUMAI['name']} (2)" and again.json()["id"] != res.json()["id"]
 
 
+def test_same_point_saved_again_reuses_site_instead_of_numbering(client, world: World):
+    """Temuan uji: menyimpan titik yang sama berulang membuat daftar lokasi menumpuk
+    ("Gudang Dumai (2)", "(3)", …). Nama + titik (≤ 5 m) + radius sama → site dipakai ulang."""
+    plan_id, _ = create_draft_plan(client, world)
+    pm = world.headers(client, "pm")
+    first = client.put(f"/work-plans/{plan_id}/location", headers=pm, json=DUMAI)
+    again = client.put(f"/work-plans/{plan_id}/location", headers=pm,
+                       json={**DUMAI, "lat": DUMAI["lat"] + 0.00001})  # ±1 m
+    assert again.status_code == 200, again.text
+    assert again.json()["id"] == first.json()["id"] and again.json()["name"] == DUMAI["name"]
+    other_plan, _ = create_draft_plan(client, world)
+    shared = client.put(f"/work-plans/{other_plan}/location", headers=pm, json=DUMAI)
+    assert shared.json()["id"] == first.json()["id"]
+    # Radius berbeda → site baru (riwayat absensi memakai radius saat itu).
+    wider = client.put(f"/work-plans/{plan_id}/location", headers=pm, json={**DUMAI, "radius_m": 300})
+    assert wider.json()["id"] != first.json()["id"]
+
+
 def test_only_pm_unit_and_valid_radius(client, world: World):
     plan_id, _ = run_plan_to_in_progress(client, world)
     leader = client.put(f"/work-plans/{plan_id}/location", headers=world.headers(client, "leader"), json=DUMAI)

@@ -21,5 +21,7 @@ export function mockMe(key: string | undefined): Me | null {
     email: `${key.toLowerCase()}@example.com`,
     role: key,
     permissions: MOCK_PERMISSIONS[key],
+    // Karyawan lapangan tiruan = ketua pada data uji ("e-lead"), agar tindakan ketua terlihat.
+    employee_id: key === "field" ? "e-lead" : null,
   };
 }

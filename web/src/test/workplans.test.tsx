@@ -139,8 +139,19 @@ describe("Work plan — detail & tindakan", () => {
     for (const name of ["Sunting draft", "Atur tim", "Tambah hari", "Arsipkan draft"])
       expect(screen.getByRole("button", { name })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Terbitkan SK" }));
+    // Konfirmasi dulu — belum ada panggilan terbit sebelum "Ya, terbitkan".
+    expect(calls.find((c) => c.url === "/work-plans/p1/publish")).toBeUndefined();
+    fireEvent.click(await screen.findByRole("button", { name: "Ya, terbitkan" }));
     expect(await screen.findByText("SK/001")).toBeInTheDocument();
     expect(calls.find((c) => c.url === "/work-plans/p1/publish")!.data).toEqual({ row_version: 3, reason: "" });
+  });
+
+  it("PM yang bukan ketua SK tidak melihat tindakan ketua", async () => {
+    detail(plan({ status: "PUBLISHED", number: "SK/001" }));
+    renderRoute("/work-plans/p1", { role: "PM" });
+    await screen.findByText("SK/001");
+    expect(screen.queryByRole("button", { name: "Terima SK" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Ajukan banding" })).toBeNull();
   });
 
   it("karyawan tanpa create:plan tidak melihat tindakan PM", async () => {

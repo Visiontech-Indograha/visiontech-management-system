@@ -119,3 +119,31 @@ export function useRestoreEmployee(id: string) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["employees"] }),
   });
 }
+
+export type Assignment = S["EmployeeAssignmentResponse"];
+export type Unit = S["UnitOut"];
+
+/** Unit organisasi (GET /units) — pilihan unit mutasi/promosi & nama unit karyawan. */
+export const useUnits = () =>
+  useQuery({ queryKey: ["units"], staleTime: 5 * 60_000, queryFn: async () => (await api.get<Unit[]>("/units")).data });
+
+/** Riwayat jabatan/penempatan, terbaru dulu (GET /employees/{id}/assignments). */
+export const useAssignments = (employeeId: string) =>
+  useQuery({
+    queryKey: ["employee-assignments", employeeId],
+    queryFn: async () => (await api.get<Assignment[]>(`/employees/${employeeId}/assignments`)).data,
+  });
+
+/** HR: mutasi/promosi (POST /employees/{id}/assignments, domain.js PROMOTE). */
+export function usePromoteEmployee(employeeId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: S["EmployeeAssignmentCreate"]) =>
+      (await api.post<Assignment>(`/employees/${employeeId}/assignments`, body)).data,
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ["employee", employeeId] });
+      await qc.invalidateQueries({ queryKey: ["employee-assignments", employeeId] });
+      await qc.invalidateQueries({ queryKey: ["employees"] });
+    },
+  });
+}

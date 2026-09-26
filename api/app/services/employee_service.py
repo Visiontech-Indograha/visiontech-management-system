@@ -5,6 +5,7 @@ Karyawan — padanan `domain.js` OFFBOARD dan RESTORE_EMPLOYEE (V-29), plus hapu
 """
 from __future__ import annotations
 
+from datetime import date
 from typing import Any
 from uuid import UUID
 
@@ -46,6 +47,32 @@ class EmployeeService:
             raise AppError("INVALID_STATE", "Nonaktifkan (offboard) karyawan terlebih dahulu.", status=409)
         await self.repo.archive(employee_id)
         return {"id": str(employee_id), "message": ARCHIVED}
+
+    async def assignments(self, employee_id: UUID, org_id: str) -> list[Any]:
+        rows = await self.repo.assignments(employee_id, org_id)
+        if rows is None:
+            raise NotFoundError("Karyawan")
+        return rows
+
+    async def promote(self, employee_id: UUID, org_id: str, position: str, unit_id: UUID | None,
+                      valid_from: date) -> Any:
+        """domain.js PROMOTE — karyawan aktif, jabatan & unit valid, mutasi lintas unit diblokir selama
+        masih bertugas di SK aktif. Unit kosong = tetap di unit sekarang."""
+        employee = await self.repo.lock(employee_id, org_id)
+        if employee is None or employee.deleted:
+            raise NotFoundError("Karyawan")
+        if not employee.is_active:
+            raise AppError("INVALID_STATE", "Karyawan harus aktif.", status=409)
+        if not position.strip():
+            raise ValidationError("Jabatan dan unit wajib valid.")
+        target_unit = str(unit_id) if unit_id else employee.unit_id
+        if target_unit != employee.unit_id and await self.repo.on_running_plan(employee_id):
+            raise AppError("INVALID_STATE", "Mutasi lintas unit diblokir sampai penugasan aktif diserahterimakan.",
+                           status=409)
+        last_start = await self.repo.last_assignment_start(employee_id)
+        if last_start is not None and valid_from < last_start:
+            raise ValidationError("Tanggal berlaku tidak boleh sebelum penempatan terakhir.")
+        return await self.repo.promote(employee_id, position.strip(), target_unit, valid_from)
 
     async def offboard(self, employee_id: UUID, org_id: str, reason: str) -> dict[str, Any]:
         """domain.js OFFBOARD — urutan & pesan sama dengan prototipe."""

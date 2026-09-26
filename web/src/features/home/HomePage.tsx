@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, CalendarClock, ClipboardCheck, FileClock, MapPin } from "lucide-react";
+import { ArrowRight, CalendarClock, ClipboardCheck, FileClock, FileWarning, MapPin } from "lucide-react";
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { useSession } from "@/app/session";
@@ -12,6 +12,7 @@ import { formatDate } from "@/lib/format";
 import { useWorkPlans } from "@/features/work-plans/api";
 
 type AttendanceList = components["schemas"]["AttendanceListResponse"];
+type ExpiringList = components["schemas"]["ExpiringDocumentList"];
 
 const WAITING = ["DRAFT", "PUBLISHED", "ACCEPTED", "APPEALED", "COMPLETION_REVIEW"];
 
@@ -50,12 +51,64 @@ function Stat({ label, value, icon, to, loading }: { label: string; value: numbe
 }
 
 /** Beranda (R-12): sapaan, ringkasan angka, SK aktif, pintasan — semua dari endpoint yang sudah ada. */
+/** M2: dokumen pribadi kedaluwarsa atau berakhir ≤ 30 hari (GET /documents/expiring, izin verify:documents). */
+function useExpiringDocuments(enabled: boolean) {
+  return useQuery({
+    queryKey: ["documents", "expiring"],
+    enabled,
+    queryFn: async () =>
+      (await api.get<ExpiringList>("/documents/expiring")).data.items.filter((d) => d.urgency !== "AMAN"),
+  });
+}
+
+const URGENCY: Record<string, { label: string; tone: string }> = {
+  KEDALUWARSA: { label: "Kedaluwarsa", tone: "bg-danger-bg text-danger" },
+  KURANG_DARI_7_HARI: { label: "< 7 hari", tone: "bg-warning-bg text-warning" },
+  KURANG_DARI_30_HARI: { label: "< 30 hari", tone: "bg-info-bg text-info" },
+};
+
+function ExpiringDocumentsCard({ items }: { items: ExpiringList["items"] }) {
+  return (
+    <Card className="gap-4">
+      <CardHeader>
+        <CardTitle className="text-heading">Dokumen mendekati kedaluwarsa</CardTitle>
+        <CardDescription>Berakhir dalam 30 hari atau sudah lewat — minta karyawan memperpanjang.</CardDescription>
+      </CardHeader>
+      <CardContent className="px-3 md:px-4">
+        <ul className="divide-y divide-line">
+          {items.slice(0, 8).map((d) => (
+            <li key={d.id}>
+              <Link
+                to={`/directory/${d.employee_id}`}
+                className="flex items-center gap-4 rounded-control px-3 py-3 transition-colors hover:bg-hover"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium text-ink">{d.full_name}</p>
+                  <p className="mt-0.5 truncate text-body-sm text-mist">
+                    {d.doc_type} · berlaku s.d. {formatDate(d.expiry_date)}
+                  </p>
+                </div>
+                <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${URGENCY[d.urgency]?.tone ?? ""}`}>
+                  {URGENCY[d.urgency]?.label ?? d.urgency}
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+        {items.length > 8 && <p className="px-3 pt-2 text-body-sm text-mist">+{items.length - 8} dokumen lain.</p>}
+      </CardContent>
+    </Card>
+  );
+}
+
 export function HomePage() {
   const { me } = useSession();
   const perms = me?.permissions ?? [];
   const canReview = perms.includes("review:attendance") || perms.includes("review:unit_attendance");
   const plans = useWorkPlans({ status: "", archived: false });
   const toReview = useAttendanceToReview(canReview);
+  const canVerifyDocs = perms.includes("verify:documents");
+  const expiring = useExpiringDocuments(canVerifyDocs);
 
   const list = plans.data ?? [];
   const running = list.filter((p) => p.status === "IN_PROGRESS");
@@ -79,7 +132,12 @@ export function HomePage() {
         {canReview && (
           <Stat label="Absensi perlu diperiksa" value={toReview.data} loading={toReview.isPending} icon={<ClipboardCheck size={20} />} to="/attendance" />
         )}
+        {canVerifyDocs && (
+          <Stat label="Dokumen mendekati kedaluwarsa" value={expiring.data?.length} loading={expiring.isPending} icon={<FileWarning size={20} />} to="/directory" />
+        )}
       </div>
+
+      {canVerifyDocs && !!expiring.data?.length && <ExpiringDocumentsCard items={expiring.data} />}
 
       <Card className="gap-4">
         <CardHeader>

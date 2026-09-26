@@ -10,7 +10,8 @@ export function MyDocumentsPage() {
     <>
       <PageHeader title="Berkas saya" />
       {employeeId ? (
-        <DocumentsPanel employeeId={employeeId} canManage={false} canRenew />
+        // M2: karyawan mengajukan dokumen pribadinya sendiri (izin dasar upload:documents); HR memverifikasi.
+        <DocumentsPanel employeeId={employeeId} canManage={!!me?.permissions.includes("upload:documents")} canRenew />
       ) : (
         <p className="rounded-panel border border-line bg-surface shadow-card px-4 py-6 text-center text-mist">
           Akun Anda belum terhubung dengan data karyawan, jadi belum ada berkas untuk ditampilkan.

@@ -14,7 +14,8 @@ import { Dialog } from "@/components/ui/VmsDialog";
 import { ApiError } from "@/lib/api";
 import { errorMessage } from "@/lib/errors";
 import { formatDate } from "@/lib/format";
-import { useArchiveEmployee, useEmployee, useRestoreEmployee, useUpdateEmployee, type Employee, type EmployeeUpdate } from "./api";
+import { useArchiveEmployee, useEmployee, useRestoreEmployee, useUnits, useUpdateEmployee, type Employee, type EmployeeUpdate } from "./api";
+import { AssignmentHistory, PromoteDialog } from "./Assignments";
 import { DocumentsPanel } from "./DocumentsPanel";
 
 const Row = ({ label, children }: { label: string; children: ReactNode }) => (
@@ -30,6 +31,8 @@ export function EmployeeDetailPage() {
   const { me } = useSession();
   const employee = useEmployee(id, fromList?.id === id ? fromList : undefined);
   const [editing, setEditing] = useState(false);
+  const [promoting, setPromoting] = useState(false);
+  const units = useUnits();
   const canEdit = !!me?.permissions.includes("manage:users");
   const canManageDocs = !!me?.permissions.includes("manage:employee_documents");
   const e = employee.data;
@@ -58,9 +61,16 @@ export function EmployeeDetailPage() {
         title={e.full_name}
         action={
           canEdit && (
-            <Button variant="outline" onClick={() => setEditing(true)}>
-              Ubah profil
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              {e.is_active && (
+                <Button variant="outline" onClick={() => setPromoting(true)}>
+                  Mutasi / promosi
+                </Button>
+              )}
+              <Button variant="outline" onClick={() => setEditing(true)}>
+                Ubah profil
+              </Button>
+            </div>
           )
         }
       />
@@ -68,6 +78,7 @@ export function EmployeeDetailPage() {
         <dl className="text-sm">
           <Row label="No. karyawan">{e.employee_no}</Row>
           <Row label="Jabatan">{e.position}</Row>
+          <Row label="Unit">{units.data?.find((u) => u.id === e.unit_id)?.name ?? null}</Row>
           <Row label="Akun">{e.is_active ? <Badge tone="success">Aktif</Badge> : <Badge>Nonaktif</Badge>}</Row>
           <Row label="Email">{e.email}</Row>
           <Row label="No. telepon">{e.phone}</Row>
@@ -82,9 +93,11 @@ export function EmployeeDetailPage() {
           )}
         </dl>
       </div>
+      <AssignmentHistory employee={e} />
       {canEdit && !e.is_active && <ArchivePanel employee={e} />}
       {canManageDocs && <DocumentsPanel employeeId={e.id} canManage canVerify={!!me?.permissions.includes("verify:documents")} />}
       {editing && <ProfileDialog employee={e} onClose={() => setEditing(false)} />}
+      {promoting && <PromoteDialog employee={e} onClose={() => setPromoting(false)} />}
     </>
   );
 }

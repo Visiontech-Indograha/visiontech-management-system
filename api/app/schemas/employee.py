@@ -51,6 +51,7 @@ class EmployeeAssignmentResponse(EmployeeAssignmentBase):
     id: UUID
     employee_id: UUID
     valid_to: date | None = None
+    unit_name: str | None = None
 
 class EmployeeOffboard(BaseModel):
     reason: str

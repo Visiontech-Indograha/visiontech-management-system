@@ -175,6 +175,17 @@ async def update_employee(
         offboarding_reason=row.offboarding_reason
     )
 
+@router.get("/{emp_id}/assignments", response_model=list[EmployeeAssignmentResponse])
+async def list_assignments(
+    emp_id: UUID,
+    current_user: CurrentUser = Depends(require_permission(Permission.VIEW_USERS)),
+    db: AsyncSession = Depends(get_db_with_user)
+) -> list[EmployeeAssignmentResponse]:
+    """Riwayat jabatan/penempatan (M2), terbaru dulu. Karyawan organisasi lain → 404."""
+    rows = await EmployeeService(db).assignments(emp_id, current_user.organization_id)
+    return [EmployeeAssignmentResponse(**r._mapping) for r in rows]
+
+
 @router.post("/{emp_id}/assignments", response_model=EmployeeAssignmentResponse)
 async def add_assignment(
     emp_id: UUID,
@@ -182,44 +193,11 @@ async def add_assignment(
     current_user: CurrentUser = Depends(require_permission(Permission.MANAGE_USERS)),
     db: AsyncSession = Depends(get_db_with_user)
 ) -> EmployeeAssignmentResponse:
-    """Mutasi atau Promosi (mengubah unit/jabatan)."""
-    # 1. Pastikan karyawan milik org ini
-    check = text("SELECT id FROM vms.employee WHERE id = :id AND organization_id = :org")
-    if not (await db.execute(check, {"id": emp_id, "org": current_user.organization_id})).scalar():
-        raise HTTPException(status_code=404, detail="Karyawan tidak ditemukan.")
+    """domain.js PROMOTE — mutasi/promosi; aturan di EmployeeService.promote."""
     await ensure_same_org(db, current_user.organization_id, units=[data.unit_id])
-
-    # 2. Tutup assignment sebelumnya
-    close_prev = text("""
-        UPDATE vms.employee_assignment 
-        SET valid_to = :start_date 
-        WHERE employee_id = :emp_id AND valid_to IS NULL
-    """)
-    await db.execute(close_prev, {"start_date": data.valid_from, "emp_id": emp_id})
-    
-    # 3. Insert assignment baru
-    insert_asg = text("""
-        INSERT INTO vms.employee_assignment (employee_id, position, unit_id, valid_from)
-        VALUES (:emp_id, :pos, :unit, :start_date)
-        RETURNING id, valid_to
-    """)
-    res = await db.execute(insert_asg, {
-        "emp_id": emp_id, "pos": data.position, 
-        "unit": data.unit_id, "start_date": data.valid_from
-    })
-    row = res.one()
-
-    # 4. Sinkronisasi ke master employee
-    sync_emp = text("""
-        UPDATE vms.employee SET position = :pos, unit_id = :unit 
-        WHERE id = :emp_id
-    """)
-    await db.execute(sync_emp, {"pos": data.position, "unit": data.unit_id, "emp_id": emp_id})
-    
-    return EmployeeAssignmentResponse(
-        id=row.id, employee_id=emp_id, position=data.position,
-        unit_id=data.unit_id, valid_from=data.valid_from, valid_to=row.valid_to
-    )
+    row = await EmployeeService(db).promote(emp_id, current_user.organization_id, data.position, data.unit_id,
+                                            data.valid_from)
+    return EmployeeAssignmentResponse(**row._mapping)
 
 @router.post("/{emp_id}/offboard")
 async def offboard_employee(

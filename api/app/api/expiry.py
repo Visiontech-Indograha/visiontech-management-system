@@ -28,7 +28,7 @@ async def get_expiring_documents(
     urgency: str | None = None,
     current_user: CurrentUser = Depends(require_permission(Permission.VERIFY_DOCUMENTS)),
     db: AsyncSession = Depends(get_db_with_user)
-):
+) -> ExpiringDocumentList:
     """
     Mengambil daftar dokumen yang akan kedaluwarsa atau sudah kedaluwarsa.
     Memerlukan izin VERIFY_DOCUMENTS (biasanya HR).
@@ -61,7 +61,7 @@ async def get_expiring_documents(
 async def cron_expire_documents(
     current_user: CurrentUser = Depends(require_permission(Permission.RUN_SYSTEM_JOBS)),
     db: AsyncSession = Depends(get_db_with_user),
-):
+) -> dict[str, object]:
     """
     Dipanggil berkala oleh penjadwal: dokumen 'CURRENT' yang lewat masa berlaku → 'EXPIRED'.
     Hanya ADMIN (`run:system_jobs`, sama dengan cron absensi) dan hanya untuk organisasinya (V-09);

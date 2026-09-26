@@ -2,9 +2,10 @@
 import json
 import logging
 import uuid
+from collections.abc import Awaitable, Callable
 from contextvars import ContextVar
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.core.config import settings
@@ -12,7 +13,7 @@ from app.core.errors import register_error_handlers
 
 
 class JSONFormatter(logging.Formatter):
-    def format(self, record):
+    def format(self, record: logging.LogRecord) -> str:
         log_record = {
             "time": self.formatTime(record, self.datefmt),
             "level": record.levelname,
@@ -21,9 +22,9 @@ class JSONFormatter(logging.Formatter):
         }
         return json.dumps(log_record)
 
-request_id_context = ContextVar("request_id", default=None)
+request_id_context: ContextVar[str | None] = ContextVar("request_id", default=None)
 
-def setup_logging():
+def setup_logging() -> None:
     handler = logging.StreamHandler()
     handler.setFormatter(JSONFormatter())
     logging.root.addHandler(handler)
@@ -33,7 +34,9 @@ setup_logging()
 logger = logging.getLogger(__name__)
 
 class RequestIDMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
+    async def dispatch(
+        self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
+    ) -> Response:
         req_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
         request_id_context.set(req_id)
         response = await call_next(request)
@@ -53,11 +56,11 @@ def create_app() -> FastAPI:
 
 
     @app.get("/health")
-    async def health_check():
+    async def health_check() -> dict[str, str]:
         return {"status": "ok"}
         
     @app.get("/ready")
-    async def readiness_check():
+    async def readiness_check() -> dict[str, str]:
         # TODO: Add db connection check here
         return {"status": "ready"}
         

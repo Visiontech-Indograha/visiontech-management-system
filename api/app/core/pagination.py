@@ -32,7 +32,8 @@ def encode_cursor(data: dict[str, Any]) -> str:
 def decode_cursor(cursor: str) -> dict[str, Any]:
     """Decode cursor kembali ke dict. Lempar ValueError bila rusak."""
     try:
-        return json.loads(base64.urlsafe_b64decode(cursor.encode()))
+        data: dict[str, Any] = json.loads(base64.urlsafe_b64decode(cursor.encode()))
+        return data
     except Exception as exc:
         raise ValueError("Cursor tidak valid.") from exc
 

@@ -67,7 +67,7 @@ async def report_incident(
     data: IncidentCreate,
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_with_user)
-):
+) -> IncidentResponse:
     # domain.js REPORT_INCIDENT: hanya ketua atau anggota pekerjaan ini (V-09). SK asing/tak terlihat → 404.
     standing = await check_plan_access(db, data.work_plan_id, current_user, PlanNeed.LEADER_OR_MEMBER)
     require_plan_status(standing, PlanStatus.IN_PROGRESS)  # domain.js REPORT_INCIDENT (V-11)
@@ -91,7 +91,7 @@ async def report_incident(
         "emp": my_emp, "occ": today, "cat": data.category,
         "sev": data.severity, "desc": data.description
     })
-    incident = res.fetchone()
+    incident = res.one()
     
     # Insert evidence
     if data.evidence_file_ids:
@@ -107,7 +107,7 @@ async def resolve_incident(
     data: IncidentResolve,
     access: PlanAccess = _INCIDENT_VIEW_ACCESS,
     db: AsyncSession = Depends(get_db_with_user)
-):
+) -> IncidentResponse:
     # domain.js RESOLVE_INCIDENT: PM (unit SK), OPS, ASSET. R2: PM unit lain tidak melihat SK ini → 404.
     current_user = access.user
     if not (access.manages or RoleCode.ASSET in current_user.roles):
@@ -137,7 +137,7 @@ async def upsert_daily_report(
     data: DailyReportCreate,
     access: PlanAccess = _DAY_LEADER_ACCESS,
     db: AsyncSession = Depends(get_db_with_user)
-):
+) -> DailyReportResponse:
     current_user = access.user
     require_plan_status(access, PlanStatus.IN_PROGRESS)  # domain.js SAVE/SUBMIT_REPORT (V-11)
     await _ensure_day_reached(db, day_id)
@@ -174,7 +174,7 @@ async def submit_daily_report(
     day_id: UUID,
     access: PlanAccess = _DAY_LEADER_ACCESS,
     db: AsyncSession = Depends(get_db_with_user)
-):
+) -> DailyReportResponse:
     current_user = access.user
     require_plan_status(access, PlanStatus.IN_PROGRESS)  # domain.js SAVE/SUBMIT_REPORT (V-11)
     await _ensure_day_reached(db, day_id)
@@ -211,7 +211,7 @@ async def review_daily_report(
     data: ReportReviewRequest,
     access: PlanAccess = _DAY_PM_UNIT_ACCESS,
     db: AsyncSession = Depends(get_db_with_user)
-):
+) -> DailyReportResponse:
     """domain.js REVIEW_REPORT (V-24): PM unit/OPS menyetujui atau mengembalikan laporan yang diserahkan."""
     require_plan_status(access, PlanStatus.IN_PROGRESS, PlanStatus.COMPLETION_REVIEW)
     if data.decision not in ("APPROVE", "RETURN"):
@@ -241,7 +241,7 @@ async def toggle_task(
     task_id: UUID,
     access: PlanAccess = _DAY_LEADER_ACCESS,
     db: AsyncSession = Depends(get_db_with_user)
-) -> dict:
+) -> dict[str, object]:
     """domain.js TOGGLE_TASK (V-23): ketua mencentang tugas selama laporan hari itu belum diserahkan."""
     require_plan_status(access, PlanStatus.IN_PROGRESS)
     await _ensure_day_reached(db, day_id)

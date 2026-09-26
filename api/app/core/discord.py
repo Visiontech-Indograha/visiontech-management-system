@@ -31,7 +31,7 @@ def sanitize_for_discord(text: str) -> str:
     
     return text
 
-async def send_discord_alert(webhook_url: str, message: str, level: str = "error"):
+async def send_discord_alert(webhook_url: str, message: str, level: str = "error") -> None:
     """
     Send an alert to Discord webhook.
     """

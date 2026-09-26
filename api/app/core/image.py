@@ -2,6 +2,7 @@ import io
 import logging
 
 from PIL import Image, ImageOps
+from PIL.Image import Image as PILImage
 
 logger = logging.getLogger(__name__)
 
@@ -19,9 +20,9 @@ def compress_image(image_bytes: bytes) -> dict[str, bytes] | None:
     """
     try:
         results = {}
-        with Image.open(io.BytesIO(image_bytes)) as img:
+        with Image.open(io.BytesIO(image_bytes)) as src:
             # Hapus EXIF dan putar gambar ke arah yang benar berdasarkan EXIF orientation
-            img = ImageOps.exif_transpose(img)
+            img: PILImage = ImageOps.exif_transpose(src)
             
             # Konversi ke RGB jika format asli memiliki alpha/pallet yang tidak didukung JPEG/WebP
             if img.mode in ("RGBA", "P"):

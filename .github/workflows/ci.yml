@@ -74,7 +74,7 @@ jobs:
       - name: Lint (garis dasar di ruff.toml — hanya temuan BARU yang menggagalkan)
         run: ruff check app tests
 
-      - name: Tipe — mypy --strict (modul di mypy.ini)
+      - name: Tipe — mypy --strict (seluruh app/)
         run: python -m mypy
 
       - name: Uji — pytest

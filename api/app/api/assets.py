@@ -30,7 +30,7 @@ async def create_asset(
     data: AssetCreate,
     current_user: CurrentUser = Depends(require_permission(Permission.MANAGE_ASSETS)),
     db: AsyncSession = Depends(get_db_with_user)
-):
+) -> AssetResponse:
     ins = text("""
         INSERT INTO vms.asset (organization_id, kind, vehicle_type, code, name, condition)
         VALUES (:org, :kind, :vtype, :code, :name, :cond)
@@ -42,7 +42,7 @@ async def create_asset(
             "vtype": data.vehicle_type, "code": data.code,
             "name": data.name, "cond": data.condition
         })
-        return AssetResponse(**res.fetchone()._mapping)
+        return AssetResponse(**res.one()._mapping)
     except Exception as e:
         raise HTTPException(status_code=400, detail={"code": "DB_ERROR", "message": str(e)})
 
@@ -50,7 +50,7 @@ async def create_asset(
 async def get_assets(
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_with_user)
-):
+) -> list[AssetResponse]:
     query = text("SELECT * FROM vms.asset WHERE organization_id = :org AND deleted_at IS NULL ORDER BY name")
     rows = (await db.execute(query, {"org": current_user.organization_id})).fetchall()
     return [AssetResponse(**r._mapping) for r in rows]
@@ -102,7 +102,7 @@ async def request_asset_return(
     data: AssetReturnCreate,
     access: PlanAccess = _ALLOCATION_LEADER_ACCESS,
     db: AsyncSession = Depends(get_db_with_user)
-):
+) -> AssetReturnResponse:
     """P6-3: Formulir BAST pengembalian aset — diajukan ketua tim menurut SK peminjam (V-09)."""
     current_user = access.user
     if RoleCode.ASSET in current_user.roles:  # domain.js RETURN_ASSET
@@ -118,6 +118,8 @@ async def request_asset_return(
         FOR UPDATE OF s
     """)
     state = (await db.execute(state_q, {"alloc": alloc_id})).fetchone()
+    if state is None:
+        raise NotFoundError("Peminjaman aset")  # sebelumnya AttributeError → 500
     if not (state.active and state.asset_status in ("IN_USE", "RESERVED")):
         raise AppError("INVALID_STATE", "Aset belum dipinjam atau sudah menunggu verifikasi.", status=409)
 
@@ -133,7 +135,7 @@ async def request_asset_return(
         "cond": data.condition_on_return, "note": data.note
     })
     await db.execute(text("UPDATE vms.asset SET status = 'RETURN_PENDING' WHERE id = :id"), {"id": state.asset_id})
-    return AssetReturnResponse(**res.fetchone()._mapping)
+    return AssetReturnResponse(**res.one()._mapping)
 
 @router.post("/returns/{return_id}/verify", response_model=AssetReturnResponse)
 async def verify_asset_return(
@@ -141,7 +143,7 @@ async def verify_asset_return(
     data: AssetReturnVerify,
     current_user: CurrentUser = Depends(require_permission(Permission.MANAGE_ASSETS)),
     db: AsyncSession = Depends(get_db_with_user)
-):
+) -> AssetReturnResponse:
     """P6-3: Verifikasi BAST oleh OPS."""
     emp_q = text("SELECT employee_id FROM vms.app_user WHERE id = :uid")
     my_emp = (await db.execute(emp_q, {"uid": current_user.user_id})).scalar()
@@ -173,8 +175,8 @@ async def verify_asset_return(
         RETURNING *
     """)
     res = await db.execute(upd, {"emp": my_emp, "acc": data.is_accepted, "note": data.note or "", "id": return_id})
-    row = res.fetchone()
-    
+    row = res.one()
+
     if data.is_accepted:
         # Lepas alokasi & kembalikan status aset
         await db.execute(text("UPDATE vms.asset_allocation SET released_at = now() WHERE id = :id"), {"id": ret_info.alloc_id})

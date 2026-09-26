@@ -64,7 +64,7 @@ async def create_admin(email: str, password: str, organization_id: str | None = 
     return str(user_id)
 
 
-async def seed():
+async def seed() -> None:
     engine = make_engine()
     async with engine.begin() as conn:
         # Check org
@@ -88,7 +88,7 @@ async def seed():
         print("Database seeded with sample data.")
     await engine.dispose()
 
-async def cleanup_orphans():
+async def cleanup_orphans() -> None:
     engine = make_engine()
     async with engine.begin() as conn:
         # Hapus session kedaluwarsa atau ter-revoke yang lebih dari 30 hari
@@ -100,7 +100,7 @@ async def cleanup_orphans():
         print(f"Cleaned up {res.rowcount} orphan/expired sessions.")
     await engine.dispose()
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description="VMS CLI")
     subparsers = parser.add_subparsers(dest="command")
     

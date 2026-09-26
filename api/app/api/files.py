@@ -28,7 +28,7 @@ async def upload_document(
     file: UploadFile = File(...),
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_with_user)
-):
+) -> dict[str, str]:
     """
     Unggah file (maks 10MB).
     Gambar (jpeg/png) akan dikompresi ke WebP 3 ukuran (thumb, view, full) secara asinkron.
@@ -62,7 +62,7 @@ async def upload_document(
         
     # 4. Generate Storage Key & Simpan DB
     file_id = str(uuid.uuid4())
-    ext = kind.extension if kind else file.filename.split(".")[-1]
+    ext = kind.extension if kind else (file.filename or "bin").rsplit(".", 1)[-1]
     storage_key = f"{current_user.organization_id}/{file_id}.{ext}"
     
     insert_query = text("""
@@ -114,7 +114,7 @@ async def get_file_url(
     variant: str = "full",
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_with_user)
-):
+) -> dict[str, str]:
     """
     Mendapatkan URL Presigned MinIO untuk mengakses file (valid 5 menit).
     Varian: full, view, thumb. URL dibuat hanya setelah otorisasi per berkas (V-17, dok 13 §7).

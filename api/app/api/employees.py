@@ -31,7 +31,7 @@ async def get_employees(
     q: str | None = None,
     current_user: CurrentUser = Depends(require_permission(Permission.VIEW_USERS)),
     db: AsyncSession = Depends(get_db_with_user)
-):
+) -> EmployeeListResponse:
     offset = (page - 1) * size
     where_clauses = ["organization_id = :org", "deleted_at IS NULL"]  # karyawan terhapus disembunyikan (V-29)
     params = {"org": current_user.organization_id, "limit": size, "offset": offset}
@@ -78,7 +78,7 @@ async def get_employee(
     emp_id: UUID,
     current_user: CurrentUser = Depends(require_permission(Permission.VIEW_USERS)),
     db: AsyncSession = Depends(get_db_with_user)
-):
+) -> EmployeeResponse:
     """Satu karyawan (tautan langsung /directory/{id}); karyawan organisasi lain/terhapus → 404."""
     row = (await db.execute(text("""
         SELECT id, employee_no, full_name, position, unit_id, email, phone,
@@ -96,7 +96,7 @@ async def create_employee(
     data: EmployeeCreate,
     current_user: CurrentUser = Depends(require_permission(Permission.MANAGE_USERS)),
     db: AsyncSession = Depends(get_db_with_user)
-):
+) -> EmployeeResponse:
     await ensure_same_org(db, current_user.organization_id, units=[data.unit_id])
     query = text("""
         INSERT INTO vms.employee (
@@ -114,8 +114,8 @@ async def create_employee(
             "jdate": data.join_date, "bdate": data.birth_date, "addr": data.address,
             "emerg": data.emergency_contact
         })
-        row = res.fetchone()
-        
+        row = res.one()
+
         # Tambahkan ke employee_assignment perdana
         assign = text("""
             INSERT INTO vms.employee_assignment (employee_id, position, unit_id, valid_from)
@@ -143,7 +143,7 @@ async def update_employee(
     data: EmployeeUpdate,
     current_user: CurrentUser = Depends(require_permission(Permission.MANAGE_USERS)),
     db: AsyncSession = Depends(get_db_with_user)
-):
+) -> EmployeeResponse:
     # Hanya update info pribadi, jabatan diubah via assignment
     updates = []
     params = {"id": emp_id, "org": current_user.organization_id}
@@ -181,7 +181,7 @@ async def add_assignment(
     data: EmployeeAssignmentCreate,
     current_user: CurrentUser = Depends(require_permission(Permission.MANAGE_USERS)),
     db: AsyncSession = Depends(get_db_with_user)
-):
+) -> EmployeeAssignmentResponse:
     """Mutasi atau Promosi (mengubah unit/jabatan)."""
     # 1. Pastikan karyawan milik org ini
     check = text("SELECT id FROM vms.employee WHERE id = :id AND organization_id = :org")
@@ -207,8 +207,8 @@ async def add_assignment(
         "emp_id": emp_id, "pos": data.position, 
         "unit": data.unit_id, "start_date": data.valid_from
     })
-    row = res.fetchone()
-    
+    row = res.one()
+
     # 4. Sinkronisasi ke master employee
     sync_emp = text("""
         UPDATE vms.employee SET position = :pos, unit_id = :unit 
@@ -259,7 +259,7 @@ async def check_conflicts(
     exclude_plan: UUID | None = None,
     current_user: CurrentUser = Depends(require_permission(Permission.CREATE_PLAN)),
     db: AsyncSession = Depends(get_db_with_user)
-):
+) -> dict[str, Any]:
     """Mengecek bentrok jadwal (P3-6) — untuk penyusun SK (V-09). Karyawan/SK asing → 404."""
     await ensure_same_org(db, current_user.organization_id, employees=[emp_id], work_plans=[exclude_plan])
     query = text("""

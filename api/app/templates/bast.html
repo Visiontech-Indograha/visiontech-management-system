@@ -13,9 +13,10 @@
   th { background: #f3f4f6; width: 32%; }
   .result { font-weight: bold; }
   .ok { color: #047857; } .no { color: #b91c1c; }
-  .sign { display: flex; justify-content: space-between; gap: 8mm; margin-top: 14mm; text-align: center; }
-  .sign div { width: 50%; }
-  .sign .name { margin-top: 18mm; font-weight: bold; text-decoration: underline; }
+  .text { white-space: pre-line; }
+  table.sign { margin-top: 14mm; }
+  table.sign td { border: 0; width: 50%; text-align: center; vertical-align: top; }
+  table.sign .name { display: block; margin-top: 18mm; font-weight: bold; text-decoration: underline; }
   .kop { display: flex; align-items: center; justify-content: space-between;
          padding-bottom: 3mm; margin-bottom: 5mm; border-bottom: 0.8mm solid #232c6f; }
   .kop img { height: 13mm; }
@@ -49,15 +50,17 @@
   <table>
     <tr><th>Diajukan oleh</th><td>{{ r.requested_by_name }} · {{ r.requested_at | wib }}</td></tr>
     <tr><th>Kondisi saat dikembalikan</th><td>{{ r.condition_on_return or "-" }}</td></tr>
-    <tr><th>Catatan</th><td>{{ r.note or "-" }}</td></tr>
+    <tr><th>Catatan pengaju / pemeriksa</th><td class="text">{{ (r.note or "-") | trim }}</td></tr>
     <tr><th>Diperiksa oleh</th><td>{{ r.verified_by_name }} · {{ r.verified_at | wib }}</td></tr>
     <tr><th>Hasil pemeriksaan</th>
         <td class="result {{ 'ok' if r.is_accepted else 'no' }}">{{ "Diterima — aset kembali tersedia" if r.is_accepted else "Ditolak — aset kembali ke tim untuk diperbaiki" }}</td></tr>
   </table>
 
-  <div class="sign">
-    <div>Yang menyerahkan<br>(Ketua tim)<div class="name">{{ r.requested_by_name }}</div></div>
-    <div>Yang menerima<br>(Petugas aset)<div class="name">{{ r.verified_by_name }}</div></div>
-  </div>
+  <table class="sign">
+    <tr>
+      <td>Yang menyerahkan<br>(Ketua tim)<span class="name">{{ r.requested_by_name }}</span></td>
+      <td>Yang menerima<br>(Petugas aset)<span class="name">{{ r.verified_by_name }}</span></td>
+    </tr>
+  </table>
 </body>
 </html>

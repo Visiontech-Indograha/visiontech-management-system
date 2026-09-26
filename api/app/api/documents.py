@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, get_db_with_user, require_permission
 from app.api.guards import ensure_same_org
+from app.core.errors import AppError
 from app.core.permissions import Permission
 from app.schemas.document import (
     DocumentListResponse,
@@ -101,6 +102,15 @@ async def verify_document(
     current_user: CurrentUser = Depends(require_permission(Permission.VERIFY_DOCUMENTS)),
     db: AsyncSession = Depends(get_db_with_user)
 ):
+    uploader = (await db.execute(
+        text("SELECT uploaded_by FROM vms.employee_document WHERE id = :doc_id AND employee_id = :emp_id"),
+        {"doc_id": doc_id, "emp_id": emp_id},
+    )).scalar_one_or_none()
+    if uploader is None:
+        raise AppError("NOT_FOUND", "Dokumen tidak ditemukan.", status=404)
+    if str(uploader) == str(current_user.user_id):  # empat mata (CHECK di db/01): pengunggah bukan pemeriksa
+        raise AppError("FOUR_EYES", "Berkas yang Anda unggah harus diverifikasi petugas lain.", status=409)
+
     status_val = "VERIFIED" if data.is_approved else "REJECTED"
     lifecycle_val = "CURRENT" if data.is_approved else "PENDING"
     

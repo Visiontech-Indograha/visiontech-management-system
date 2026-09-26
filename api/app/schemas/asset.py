@@ -16,6 +16,30 @@ class AssetResponse(AssetCreate):
     id: UUID
     status: str
     
+class AssetListItem(AssetResponse):
+    """Aset + alokasi berjalan + pengajuan pengembalian yang menunggu (R-19, M6)."""
+    allocation_id: UUID | None = None
+    work_plan_id: UUID | None = None
+    plan_number: str | None = None
+    leader_employee_id: UUID | None = None
+    pending_return_id: UUID | None = None
+    return_condition: str | None = None
+    return_note: str | None = None
+    return_requested_by_name: str | None = None
+
+
+class AssetReturnHistoryItem(BaseModel):
+    id: UUID
+    plan_number: str | None
+    requested_by_name: str
+    requested_at: datetime
+    condition_on_return: str | None
+    note: str | None
+    verified_by_name: str | None
+    verified_at: datetime | None
+    is_accepted: bool | None
+
+
 class AssetReserveRequest(BaseModel):
     work_plan_id: UUID
     driver_employee_id: UUID | None = None

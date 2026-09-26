@@ -1,6 +1,7 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi.concurrency import run_in_threadpool
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,15 +13,18 @@ from app.schemas.asset import (
     AssetAllocationResponse,
     AssetCheckRequest,
     AssetCreate,
+    AssetListItem,
     AssetReleaseRequest,
     AssetReserveRequest,
     AssetResponse,
     AssetReturnCreate,
+    AssetReturnHistoryItem,
     AssetReturnResponse,
     AssetReturnVerify,
     AssetStatusResponse,
 )
 from app.services.asset_reservation_service import AssetReservationService
+from app.services.pdf_service import html_to_pdf, render_bast_html
 
 router = APIRouter(prefix="/assets", tags=["Assets"])
 _ALLOCATION_LEADER_ACCESS = Depends(allocation_plan_access(PlanNeed.LEADER))
@@ -46,14 +50,39 @@ async def create_asset(
     except Exception as e:
         raise HTTPException(status_code=400, detail={"code": "DB_ERROR", "message": str(e)})
 
-@router.get("", response_model=list[AssetResponse])
+@router.get("", response_model=list[AssetListItem])
 async def get_assets(
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_with_user)
-) -> list[AssetResponse]:
-    query = text("SELECT * FROM vms.asset WHERE organization_id = :org AND deleted_at IS NULL ORDER BY name")
-    rows = (await db.execute(query, {"org": current_user.organization_id})).fetchall()
-    return [AssetResponse(**r._mapping) for r in rows]
+) -> list[AssetListItem]:
+    """Aset organisasi + alokasi berjalan + pengajuan pengembalian yang menunggu (M6/R9 dari layar)."""
+    rows = await AssetReservationService(db).list_assets(current_user.organization_id)
+    return [AssetListItem(**r._mapping) for r in rows]
+
+@router.get("/{asset_id}/returns", response_model=list[AssetReturnHistoryItem])
+async def get_asset_returns(
+    asset_id: UUID,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_with_user)
+) -> list[AssetReturnHistoryItem]:
+    """Riwayat pengembalian aset (terbaru dulu). Aset organisasi lain → 404."""
+    rows = await AssetReservationService(db).return_history(current_user.organization_id, asset_id)
+    return [AssetReturnHistoryItem(**r._mapping) for r in rows]
+
+
+@router.get("/returns/{return_id}/pdf", response_class=Response)
+async def get_bast_pdf(
+    return_id: UUID,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_with_user)
+) -> Response:
+    """Berita acara serah terima (P6-4) untuk pengembalian yang sudah diperiksa. Render → threadpool."""
+    record = await AssetReservationService(db).bast(current_user.organization_id, return_id)
+    pdf = await run_in_threadpool(html_to_pdf, render_bast_html(record))
+    filename = f"BAST-{record.asset_code}-{record.plan_number}.pdf".replace("/", "-")
+    return Response(pdf, media_type="application/pdf",
+                    headers={"Content-Disposition": f'inline; filename="{filename}"'})
+
 
 @router.post("/{asset_id}/reserve", response_model=AssetAllocationResponse)
 async def reserve_asset(

@@ -13,6 +13,52 @@ from .base_repo import BaseRepo
 
 class AssetReservationRepo(BaseRepo):
 
+    async def list_with_state(self, org_id: UUID | str) -> list[Any]:
+        """Aset organisasi + alokasi yang sedang berjalan + pengajuan pengembalian yang menunggu (R-19)."""
+        return list(await self.fetchall(
+            """
+            SELECT a.*, al.id AS allocation_id, al.work_plan_id, wp.number AS plan_number,
+                   wp.leader_employee_id, r.id AS pending_return_id, r.condition_on_return AS return_condition,
+                   r.note AS return_note, re.full_name AS return_requested_by_name
+            FROM vms.asset a
+            LEFT JOIN vms.asset_allocation al ON al.asset_id = a.id AND al.released_at IS NULL
+            LEFT JOIN vms.work_plan wp ON wp.id = al.work_plan_id
+            LEFT JOIN LATERAL (SELECT * FROM vms.asset_return x
+                               WHERE x.asset_allocation_id = al.id AND x.verified_at IS NULL
+                               ORDER BY x.requested_at DESC LIMIT 1) r ON true
+            LEFT JOIN vms.employee re ON re.id = r.requested_by
+            WHERE a.organization_id = :org AND a.deleted_at IS NULL
+            ORDER BY a.name
+            """,
+            {"org": org_id}))
+
+    _RETURN_ROWS = """
+        SELECT r.id, r.requested_at, r.verified_at, r.condition_on_return, r.note, r.is_accepted,
+               rq.full_name AS requested_by_name, vf.full_name AS verified_by_name,
+               wp.number AS plan_number, wp.title AS plan_title, al.allocated_at, dr.full_name AS driver_name,
+               a.id AS asset_id, a.name AS asset_name, a.code AS asset_code, CAST(a.kind AS text) AS asset_kind,
+               a.vehicle_type
+        FROM vms.asset_return r
+        JOIN vms.asset_allocation al ON al.id = r.asset_allocation_id
+        JOIN vms.asset a ON a.id = al.asset_id
+        JOIN vms.work_plan wp ON wp.id = al.work_plan_id
+        JOIN vms.employee rq ON rq.id = r.requested_by
+        LEFT JOIN vms.employee vf ON vf.id = r.verified_by
+        LEFT JOIN vms.employee dr ON dr.id = al.driver_employee_id
+    """
+
+    async def return_history(self, asset_id: UUID | str, org_id: UUID | str) -> list[Any] | None:
+        """Riwayat pengembalian aset (terbaru dulu). None bila aset bukan milik organisasi ini."""
+        if not await self.scalar("SELECT 1 FROM vms.asset WHERE id = :id AND organization_id = :org",
+                                 {"id": asset_id, "org": org_id}):
+            return None
+        return list(await self.fetchall(self._RETURN_ROWS + " WHERE a.id = :id ORDER BY r.requested_at DESC",
+                                        {"id": asset_id}))
+
+    async def return_record(self, return_id: UUID | str, org_id: UUID | str) -> Any:
+        return await self.fetchone(self._RETURN_ROWS + " WHERE r.id = :id AND a.organization_id = :org",
+                                   {"id": return_id, "org": org_id})
+
     async def lock_asset(self, asset_id: UUID | str) -> Any:
         return await self.fetchone(
             """

@@ -51,6 +51,11 @@ def render_final_report_html(plan: Any, signatures: list[dict[str, Any]]) -> str
         signatures=signatures, sha256=bytes(plan.snapshot_sha256).hex())
 
 
+def render_bast_html(record: Any) -> str:
+    """Berita acara serah terima pengembalian aset (P6-4)."""
+    return _ENV.get_template("bast.html").render(logo=_LOGO, r=record)
+
+
 def html_to_pdf(html: str) -> bytes:
     try:
         from weasyprint import HTML

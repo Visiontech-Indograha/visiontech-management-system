@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>BAST {{ r.asset_code }} — {{ r.plan_number }}</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  body { font-family: "Plus Jakarta Sans", "DejaVu Sans", sans-serif; font-size: 10.5pt; color: #111827; }
+  h1 { font-size: 15pt; margin: 0 0 2mm; } h2 { font-size: 11.5pt; margin: 6mm 0 2mm; }
+  .meta { color: #4b5563; font-size: 9pt; }
+  table { width: 100%; border-collapse: collapse; margin-top: 2mm; }
+  th, td { border: 0.3mm solid #d1d5db; padding: 1.5mm 2mm; text-align: left; vertical-align: top; }
+  th { background: #f3f4f6; width: 32%; }
+  .result { font-weight: bold; }
+  .ok { color: #047857; } .no { color: #b91c1c; }
+  .sign { display: flex; justify-content: space-between; gap: 8mm; margin-top: 14mm; text-align: center; }
+  .sign div { width: 50%; }
+  .sign .name { margin-top: 18mm; font-weight: bold; text-decoration: underline; }
+  .kop { display: flex; align-items: center; justify-content: space-between;
+         padding-bottom: 3mm; margin-bottom: 5mm; border-bottom: 0.8mm solid #232c6f; }
+  .kop img { height: 13mm; }
+  .kop .kind { font-size: 9pt; font-weight: bold; color: #232c6f; letter-spacing: 0.3mm;
+               border-bottom: 0.6mm solid #f0c000; padding-bottom: 0.5mm; }
+</style>
+</head>
+<body>
+  <div class="kop">
+    <img src="{{ logo }}" alt="Visiontech Indograha">
+    <span class="kind">BERITA ACARA</span>
+  </div>
+  <h1>Berita Acara Serah Terima Pengembalian Aset</h1>
+  <div class="meta">Diterbitkan dari sistem VMS · {{ r.verified_at | wib }}</div>
+
+  <h2>Aset</h2>
+  <table>
+    <tr><th>Nama</th><td>{{ r.asset_name }}</td></tr>
+    <tr><th>Kode</th><td>{{ r.asset_code }}</td></tr>
+    <tr><th>Jenis</th><td>{{ "Kendaraan" if r.asset_kind == "VEHICLE" else "Peralatan" }}{% if r.vehicle_type %} · {{ r.vehicle_type }}{% endif %}</td></tr>
+  </table>
+
+  <h2>Pemakaian</h2>
+  <table>
+    <tr><th>Pekerjaan (SK)</th><td>{{ r.plan_number }} — {{ r.plan_title }}</td></tr>
+    <tr><th>Dialokasikan</th><td>{{ r.allocated_at | wib }}</td></tr>
+    {% if r.driver_name %}<tr><th>Pengemudi</th><td>{{ r.driver_name }}</td></tr>{% endif %}
+  </table>
+
+  <h2>Pengembalian</h2>
+  <table>
+    <tr><th>Diajukan oleh</th><td>{{ r.requested_by_name }} · {{ r.requested_at | wib }}</td></tr>
+    <tr><th>Kondisi saat dikembalikan</th><td>{{ r.condition_on_return or "-" }}</td></tr>
+    <tr><th>Catatan</th><td>{{ r.note or "-" }}</td></tr>
+    <tr><th>Diperiksa oleh</th><td>{{ r.verified_by_name }} · {{ r.verified_at | wib }}</td></tr>
+    <tr><th>Hasil pemeriksaan</th>
+        <td class="result {{ 'ok' if r.is_accepted else 'no' }}">{{ "Diterima — aset kembali tersedia" if r.is_accepted else "Ditolak — aset kembali ke tim untuk diperbaiki" }}</td></tr>
+  </table>
+
+  <div class="sign">
+    <div>Yang menyerahkan<br>(Ketua tim)<div class="name">{{ r.requested_by_name }}</div></div>
+    <div>Yang menerima<br>(Petugas aset)<div class="name">{{ r.verified_by_name }}</div></div>
+  </div>
+</body>
+</html>

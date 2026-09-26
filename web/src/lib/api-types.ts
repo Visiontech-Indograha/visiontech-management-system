@@ -1613,11 +1613,54 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get Assets */
+        /**
+         * Get Assets
+         * @description Aset organisasi + alokasi berjalan + pengajuan pengembalian yang menunggu (M6/R9 dari layar).
+         */
         get: operations["get_assets_api_v1_assets_get"];
         put?: never;
         /** Create Asset */
         post: operations["create_asset_api_v1_assets_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assets/{asset_id}/returns": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Asset Returns
+         * @description Riwayat pengembalian aset (terbaru dulu). Aset organisasi lain → 404.
+         */
+        get: operations["get_asset_returns_api_v1_assets__asset_id__returns_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assets/returns/{return_id}/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Bast Pdf
+         * @description Berita acara serah terima (P6-4) untuk pengembalian yang sudah diperiksa. Render → threadpool.
+         */
+        get: operations["get_bast_pdf_api_v1_assets_returns__return_id__pdf_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1853,6 +1896,51 @@ export interface components {
              */
             condition: string;
         };
+        /**
+         * AssetListItem
+         * @description Aset + alokasi berjalan + pengajuan pengembalian yang menunggu (R-19, M6).
+         */
+        AssetListItem: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "VEHICLE" | "TOOL";
+            /** Vehicle Type */
+            vehicle_type?: string | null;
+            /** Code */
+            code: string;
+            /** Name */
+            name: string;
+            /**
+             * Condition
+             * @default Baik
+             */
+            condition: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Status */
+            status: string;
+            /** Allocation Id */
+            allocation_id?: string | null;
+            /** Work Plan Id */
+            work_plan_id?: string | null;
+            /** Plan Number */
+            plan_number?: string | null;
+            /** Leader Employee Id */
+            leader_employee_id?: string | null;
+            /** Pending Return Id */
+            pending_return_id?: string | null;
+            /** Return Condition */
+            return_condition?: string | null;
+            /** Return Note */
+            return_note?: string | null;
+            /** Return Requested By Name */
+            return_requested_by_name?: string | null;
+        };
         /** AssetReleaseRequest */
         AssetReleaseRequest: {
             /**
@@ -1903,6 +1991,33 @@ export interface components {
             condition_on_return: string;
             /** Note */
             note?: string | null;
+        };
+        /** AssetReturnHistoryItem */
+        AssetReturnHistoryItem: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Plan Number */
+            plan_number: string | null;
+            /** Requested By Name */
+            requested_by_name: string;
+            /**
+             * Requested At
+             * Format: date-time
+             */
+            requested_at: string;
+            /** Condition On Return */
+            condition_on_return: string | null;
+            /** Note */
+            note: string | null;
+            /** Verified By Name */
+            verified_by_name: string | null;
+            /** Verified At */
+            verified_at: string | null;
+            /** Is Accepted */
+            is_accepted: boolean | null;
         };
         /** AssetReturnResponse */
         AssetReturnResponse: {
@@ -6507,7 +6622,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AssetResponse"][];
+                    "application/json": components["schemas"]["AssetListItem"][];
                 };
             };
         };
@@ -6533,6 +6648,66 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["AssetResponse"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_asset_returns_api_v1_assets__asset_id__returns_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                asset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssetReturnHistoryItem"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_bast_pdf_api_v1_assets_returns__return_id__pdf_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                return_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

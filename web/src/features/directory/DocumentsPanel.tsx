@@ -23,6 +23,20 @@ type Errors = Record<string, string>;
 const DOC_TYPES = ["KTP", "SIM A", "SIM B I", "SIM B II", "SIM C", "MCU", "Sertifikat K3", "Kontrak kerja"];
 const OTHER = "__other__";
 
+/** Sisa hari sampai kedaluwarsa menurut tanggal WIB (M2: peringatan ≤ 30 hari). */
+function daysUntil(isoDate: string): number {
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(new Date());
+  return Math.round((Date.parse(isoDate) - Date.parse(today)) / 86_400_000);
+}
+
+function ExpiryWarning({ doc }: { doc: EmployeeDocument }) {
+  if (!doc.expiry_date || doc.status !== "VERIFIED" || !["CURRENT", "EXPIRED"].includes(doc.lifecycle)) return null;
+  const days = daysUntil(doc.expiry_date);
+  if (days < 0 || doc.lifecycle === "EXPIRED") return <Badge tone="danger">Kedaluwarsa</Badge>;
+  if (days <= 30) return <Badge tone="warning">{days === 0 ? "Berakhir hari ini" : `${days} hari lagi`}</Badge>;
+  return null;
+}
+
 const STATUS: Record<string, { label: string; tone: "success" | "warning" | "danger" }> = {
   VERIFIED: { label: "Terverifikasi", tone: "success" },
   REJECTED: { label: "Ditolak", tone: "danger" },
@@ -101,8 +115,9 @@ export function DocumentsPanel({
                 <td className="px-4 py-2">{d.number_masked}</td>
                 <td className="px-4 py-2">
                   {d.expiry_date ? (
-                    <span className="flex items-center gap-2">
+                    <span className="flex flex-wrap items-center gap-2">
                       {formatDate(d.expiry_date)}
+                      <ExpiryWarning doc={d} />
                     </span>
                   ) : (
                     "-"

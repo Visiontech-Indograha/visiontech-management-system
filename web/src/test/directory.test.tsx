@@ -287,3 +287,31 @@ describe("Berkas saya: karyawan mengajukan dokumen sendiri (M2)", () => {
   });
 });
 
+describe("peringatan masa berlaku di daftar berkas (M2)", () => {
+  it("≤ 30 hari dan kedaluwarsa ditandai; yang masih lama tidak", async () => {
+    const inDays = (n: number) => {
+      const d = new Date(Date.now() + n * 86_400_000);
+      return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(d);
+    };
+    mockApi((c) =>
+      c.url === "/employees/e-lead/documents"
+        ? {
+            data: {
+              items: [
+                doc({ id: "a", doc_type: "SIM A", status: "VERIFIED", lifecycle: "CURRENT", expiry_date: inDays(10) }),
+                doc({ id: "b", doc_type: "MCU", status: "VERIFIED", lifecycle: "EXPIRED", expiry_date: inDays(-3) }),
+                doc({ id: "c", doc_type: "KTP", status: "VERIFIED", lifecycle: "CURRENT", expiry_date: inDays(400) }),
+              ],
+              total: 3,
+            },
+          }
+        : undefined,
+    );
+    renderRoute("/my-documents", { role: "field" });
+    expect(await screen.findByText("10 hari lagi")).toBeInTheDocument();
+    const mcuRow = screen.getByText("MCU").closest("tr") as HTMLElement;
+    expect(within(mcuRow).getByText("Kedaluwarsa")).toBeInTheDocument();
+    expect(screen.queryByText(/400 hari/)).toBeNull();
+  });
+});
+

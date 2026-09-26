@@ -13,7 +13,7 @@ import pytest
 from PIL import Image
 
 from app.core.time import jakarta_now
-from tests.conftest import World, requires_db
+from tests.conftest import World, requires_db, sync_query
 from tests.test_flow_plans import run_plan_to_in_progress
 
 pytestmark = requires_db
@@ -87,3 +87,16 @@ def test_unattached_upload_is_only_for_its_uploader(client, world, other_world, 
 @pytest.mark.parametrize("file_id", [str(uuid.uuid4()), "bukan-uuid"])
 def test_unknown_or_malformed_file_id_never_crashes(client, world, file_id):
     assert _status(client, world, "admin", file_id) in (404, 422)
+
+
+def test_upload_fails_and_leaves_no_record_when_storage_is_down(client, world, monkeypatch):
+    """Temuan uji HP: MinIO mati → dulu 200 + file_id berkas yang tidak ada. Kini 503 dan tanpa baris."""
+    import app.api.files as files_api
+
+    monkeypatch.setattr(files_api, "upload_file", lambda name, data, content_type: False)
+    before = sync_query("SELECT count(*) FROM vms.file_object WHERE organization_id = %s", (world.org_id,))[0][0]
+    res = client.post("/files/upload", headers=world.headers(client, "member"),
+                      files={"file": ("catatan.pdf", b"%PDF-1.4 penyimpanan mati", "application/pdf")})
+    assert res.status_code == 503 and res.json()["error"]["code"] == "STORAGE_UNAVAILABLE"
+    after = sync_query("SELECT count(*) FROM vms.file_object WHERE organization_id = %s", (world.org_id,))[0][0]
+    assert after == before

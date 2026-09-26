@@ -22,6 +22,7 @@ Status: **Selesai** · **Berjalan** · **Menunggu keputusan** · **Ditunda (pasc
 | R-07 | 2026-09-26 | Pemilik | Deploy ke server; hapus backend & frontend lama | Kontainer lama dihapus (dengan persetujuan); API :8000 & web :8080 baru jalan; DB & MinIO tidak disentuh | Selesai |
 | R-08 | 2026-09-26 | Pemilik | Laporan progres dalam bentuk PPT (persentase jadi/belum) | Deck 8 slide (Artifact Slides, unduh .pptx/PDF) | Selesai — perbarui tiap sprint |
 | R-10 | 2026-09-26 | Pemilik | Validasi absensi dilakukan juga oleh **PM per divisinya** | PM memeriksa (setujui/tolak + catatan) absensi `NEEDS_REVIEW` karyawan di unit yang dipegangnya; di luar unit ditolak. OPS lintas unit, Finance tetap seluruh organisasi; ekspor CSV tetap Finance. PM melihat daftar absensi unitnya di web | Selesai (kode + uji API); swafoto: lihat Q-06 |
+| R-11 | 2026-09-26 | Pemilik | Watermark foto laporan diberi **logo Visiontech** (berkas `Logo-Visiontech.jpeg` di akar proyek) | Logo jadi aset mobile `assets/branding/logo_visiontech.jpeg`; dibakar sebagai lencana di kanan kotak watermark setiap foto kamera (laporan harian, insiden, swafoto) dan tampil di pratinjau kamera | Selesai (kode); uji di HP berjalan |
 | R-09 | 2026-09-26 | Pemilik | Desain Figma sampai prototype | Prototype 5 alur (web & mobile) terhubung; layar menu samping PM & kamera swafoto belum; **desain ditunda** atas permintaan pemilik ("desain nanti saja") | Ditunda |
 
 ## Menunggu keputusan pemilik
@@ -29,7 +30,7 @@ Status: **Selesai** · **Berjalan** · **Menunggu keputusan** · **Ditunda (pasc
 | # | Pertanyaan | Pilihan | Dampak bila dibiarkan |
 |---|---|---|---|
 | Q-01 | Batas ukuran unggahan berkas | API sekarang 10 MB; dok 13 menyebut 15/25 MB | Foto/dokumen besar ditolak |
-| Q-02 | Berkas logo perusahaan | Kirim berkas logo (SVG/PNG) | Desain & PDF SK memakai placeholder |
+| Q-02 | Berkas logo perusahaan | **Diterima 2026-09-26** (`Logo-Visiontech.jpeg`, JPEG latar putih) — dipakai di watermark foto (R-11). Versi SVG/PNG transparan masih dibutuhkan untuk web & PDF SK | Web & PDF SK masih memakai placeholder |
 | Q-03 | Label status aset `RETIRED` | Usulan: "Dipensiunkan" | Label tampil sebagai kode |
 | Q-04 | Domain + HTTPS untuk staging/produksi | Nama domain | Sesi web tidak bisa diperpanjang otomatis (cookie Secure), kamera/GPS peramban terbatas |
 | Q-05 | HR boleh melihat swafoto absensi? (V-17) | Ya / Tidak | Sekarang hanya pemilik & Finance/Admin |

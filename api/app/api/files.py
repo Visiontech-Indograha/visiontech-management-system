@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, get_current_user, get_db_with_user
 from app.api.guards import check_file_access
+from app.core.errors import AppError
 from app.core.image import compress_image
 from app.core.storage import get_presigned_url, upload_file
 
@@ -82,23 +83,27 @@ async def upload_document(
     # 5. Proses penyimpanan
     is_image = mime_type.startswith("image/")
     
-    def process_and_upload():
+    def process_and_upload() -> bool:
         # Jika gambar, lakukan kompresi
         if is_image:
             results = compress_image(file_bytes)
             if results:
                 # Simpan 3 varian WebP
-                for variant, v_bytes in results.items():
-                    v_key = f"{current_user.organization_id}/{file_id}_{variant}.webp"
-                    upload_file(v_key, v_bytes, "image/webp")
-                return
-        
+                return all(
+                    upload_file(f"{current_user.organization_id}/{file_id}_{variant}.webp", v_bytes, "image/webp")
+                    for variant, v_bytes in results.items()
+                )
+
         # Simpan utuh jika bukan gambar, atau jika kompresi gambar gagal
-        upload_file(storage_key, file_bytes, mime_type)
-        
+        return upload_file(storage_key, file_bytes, mime_type)
+
     # Run di threadpool agar tidak nge-block FastAPI event loop
     loop = asyncio.get_running_loop()
-    await loop.run_in_executor(None, process_and_upload)
+    if not await loop.run_in_executor(None, process_and_upload):
+        # Penyimpanan gagal → galat; transaksi permintaan di-rollback sehingga baris file_object
+        # tidak tertinggal tanpa objek (sebelumnya klien menerima file_id berkas yang tidak ada).
+        raise AppError("STORAGE_UNAVAILABLE",
+                       "Penyimpanan berkas sedang tidak tersedia. Coba lagi beberapa saat.", status=503)
     
     return {"file_id": file_id, "message": "Berkas berhasil diunggah."}
 

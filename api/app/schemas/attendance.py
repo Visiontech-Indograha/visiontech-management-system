@@ -1,4 +1,5 @@
 from datetime import date, datetime
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -20,14 +21,16 @@ class SiteResponse(SiteCreate):
 class CheckInRequest(BaseModel):
     site_id: UUID
     location: GeoPoint
-    location_origin: str = "GPS"  # GPS, SIMULASI
+    location_origin: Literal["GPS", "SIMULASI"] = "GPS"  # MESIN hanya dari mesin absen, bukan API
+    # Radius ketidakpastian GPS perangkat (m). Opsional: klien lama / antrean luring tidak ditolak (K-12).
+    accuracy_m: float | None = Field(None, ge=0)
     selfie_file_id: UUID | None = None
-    face_result: str | None = None  # MATCH, NO_MATCH, LOW_QUALITY, SKIPPED
+    face_result: Literal["MATCH", "NO_MATCH", "LOW_QUALITY", "NOT_ENROLLED", "SKIPPED"] | None = None
     face_similarity: float | None = None
 
 class CheckOutRequest(BaseModel):
     location: GeoPoint
-    location_origin: str = "GPS"
+    location_origin: Literal["GPS", "SIMULASI"] = "GPS"
 
 class ExplanationRequest(BaseModel):
     explanation: str

@@ -396,14 +396,18 @@ JOIN employee e ON e.id = o.employee_id
 GROUP BY o.organization_id, period_month, o.employee_id, e.full_name;
 
 CREATE OR REPLACE VIEW v_document_expiry AS
+-- "Hari ini" menurut zona waktu organisasi (K-11), bukan CURRENT_DATE server DB (UTC) — dulu
+-- dokumen yang kedaluwarsa kemarin masih "kurang dari 7 hari" antara 00.00–07.00 WIB (R-18).
 SELECT d.id, e.organization_id, e.id AS employee_id, e.full_name, d.doc_type, d.expiry_date,
-       (d.expiry_date - CURRENT_DATE) AS days_left,
-       CASE WHEN d.expiry_date < CURRENT_DATE THEN 'KEDALUWARSA'
-            WHEN d.expiry_date <= CURRENT_DATE + 7 THEN 'KURANG_DARI_7_HARI'
-            WHEN d.expiry_date <= CURRENT_DATE + 30 THEN 'KURANG_DARI_30_HARI'
+       (d.expiry_date - t.today) AS days_left,
+       CASE WHEN d.expiry_date < t.today THEN 'KEDALUWARSA'
+            WHEN d.expiry_date <= t.today + 7 THEN 'KURANG_DARI_7_HARI'
+            WHEN d.expiry_date <= t.today + 30 THEN 'KURANG_DARI_30_HARI'
             ELSE 'AMAN' END AS urgency
 FROM employee_document d
 JOIN employee e ON e.id = d.employee_id
+JOIN organization o ON o.id = e.organization_id
+CROSS JOIN LATERAL (SELECT (now() AT TIME ZONE o.timezone)::date AS today) t
 WHERE d.lifecycle = 'CURRENT' AND d.expiry_date IS NOT NULL AND e.deleted_at IS NULL;
 
 CREATE OR REPLACE VIEW v_plan_progress AS
@@ -411,13 +415,15 @@ SELECT wp.id AS work_plan_id, wp.organization_id, wp.unit_id, wp.title, wp.statu
        count(d.id) AS total_days,
        count(*) FILTER (WHERE r.status = 'APPROVED') AS approved_days,
        count(*) FILTER (WHERE r.status = 'SUBMITTED') AS waiting_review,
-       count(*) FILTER (WHERE lower(wp.period) <= CURRENT_DATE AND d.work_date < CURRENT_DATE
+       count(*) FILTER (WHERE lower(wp.period) <= t.today AND d.work_date < t.today
                               AND (r.status IS NULL OR r.status <> 'APPROVED')) AS late_days
 FROM work_plan wp
+JOIN organization o ON o.id = wp.organization_id
+CROSS JOIN LATERAL (SELECT (now() AT TIME ZONE o.timezone)::date AS today) t
 LEFT JOIN work_plan_day d ON d.work_plan_id = wp.id
 LEFT JOIN daily_report r ON r.work_plan_day_id = d.id
 WHERE wp.deleted_at IS NULL
-GROUP BY wp.id;
+GROUP BY wp.id, t.today;
 
 -- Pembuatan partisi bulan berikutnya; jadwalkan lewat pg_cron atau tugas harian.
 CREATE OR REPLACE FUNCTION ensure_month_partitions(p_months integer DEFAULT 3) RETURNS void

@@ -1,11 +1,12 @@
 from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel
 
 
 class AssetCreate(BaseModel):
-    kind: str
+    kind: Literal["VEHICLE", "TOOL"]  # enum DB asset_kind
     vehicle_type: str | None = None
     code: str
     name: str
@@ -25,7 +26,7 @@ class AssetReleaseRequest(BaseModel):
 
 
 class AssetCheckRequest(BaseModel):
-    decision: str            # ACCEPT | APPEAL
+    decision: Literal["ACCEPT", "APPEAL"]
     reason: str | None = None
 
 

@@ -187,3 +187,40 @@ def test_pm_reviews_attendance_only_in_own_unit(client, world, fake_storage):
     assert _row(mine_id)[0] == "REJECTED"
     assert client.post(f"/attendance/{mine_id}/review", headers=world.headers(client, "leader"),
                        json=body).status_code == 403
+
+
+# ── K-12 · akurasi GPS & batas radius (dok 07 §4.3) ──────────────────────────────────────────
+def test_poor_gps_accuracy_is_rejected_with_a_reason(client, world):
+    """K-12: akurasi GPS > 100 m ditolak dengan alasan — bukan diterima diam-diam — dan tidak ada
+    baris absensi yang tersimpan."""
+    response = _check_in(client, world, accuracy_m=150.0)
+    assert response.status_code == 422, response.text
+    assert response.json()["error"]["code"] == "GPS_INACCURATE"
+    assert "akurasi" in response.json()["error"]["message"].lower()
+    assert sync_query("SELECT count(*) FROM vms.attendance WHERE employee_id = %s",
+                      (world.employees["member"],))[0][0] == 0
+
+
+def test_gps_accuracy_at_the_limit_or_unknown_is_accepted(client, world):
+    """Tepat 100 m masih diterima; klien lama / antrean luring tanpa `accuracy_m` tidak ditolak."""
+    at_limit = _check_in(client, world, accuracy_m=100.0)
+    assert at_limit.status_code == 200, at_limit.text
+    assert _check_out(client, world).status_code == 200
+    unknown = _check_in(client, world, "leader")
+    assert unknown.status_code == 200, unknown.text
+
+
+def test_radius_boundary_is_decided_consistently(client, world):
+    """Tepat di tepi radius (dok 07 §4.3): titik ±99 m di dalam, ±101 m di luar — keputusan server
+    stabil, tidak bergantung pembulatan klien."""
+    radius = sync_query("SELECT radius_m FROM vms.site WHERE id = %s", (world.site_id,))[0][0]
+    deg_per_m = 1 / 111_320  # derajat lintang per meter
+    inside = {"lat": INSIDE["lat"] + (radius - 1) * deg_per_m, "lng": INSIDE["lng"]}
+    outside = {"lat": INSIDE["lat"] - (radius + 1) * deg_per_m, "lng": INSIDE["lng"]}
+
+    near = _check_in(client, world, location=inside)
+    assert near.status_code == 200, near.text
+    assert near.json()["status"] == "AUTO_VALID" and near.json()["distance_m"] <= radius
+
+    far = _check_in(client, world, "leader", outside)
+    assert far.status_code == 422, far.text  # di luar radius tanpa swafoto → ditolak trigger

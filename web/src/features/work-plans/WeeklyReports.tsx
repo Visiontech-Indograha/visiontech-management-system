@@ -2,6 +2,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 import { useForm } from "react-hook-form";
+import { useFormDraft } from "@/lib/drafts";
 import { toast } from "sonner";
 import { z } from "zod";
 import { useSession } from "@/app/session";
@@ -118,17 +119,20 @@ function WeeklyForm({ plan, week }: { plan: WorkPlan; week: Week }) {
   const save = useWeekMutation(plan.id, async (body: WeeklyReportRequest) => (await api.put<Week>(`/work-plans/${plan.id}/weekly/${week.week}`, body)).data);
   const submit = useWeekMutation<void>(plan.id, async () => (await api.post<Week>(`/work-plans/${plan.id}/weekly/${week.week}/submit`)).data);
   const [formError, setFormError] = useState<string | null>(null);
+  const form = useForm<WeeklyReportRequest>({ resolver: zodResolver(weeklySchema), defaultValues: { body: week.body, obstacle: week.obstacle } });
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<WeeklyReportRequest>({ resolver: zodResolver(weeklySchema), defaultValues: { body: week.body, obstacle: week.obstacle } });
+  } = form;
+  const dropDraft = useFormDraft(`weekly:${plan.id}:${week.week}`, form);
 
   const send = (andSubmit: boolean) =>
     handleSubmit(async (v) => {
       setFormError(null);
       try {
         await save.mutateAsync(v);
+        dropDraft();
         if (andSubmit) await submit.mutateAsync();
         toast.success(andSubmit ? "Laporan mingguan dikirim." : "Draft laporan mingguan disimpan.");
       } catch (err) {

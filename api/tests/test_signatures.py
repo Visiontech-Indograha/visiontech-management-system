@@ -115,3 +115,63 @@ def test_public_verification_is_rate_limited(client, world: World, monkeypatch):
 
     assert codes == [200, 200, 200, 429]
     signatures_api._verify_hits.clear()
+
+
+# ── dok 07 §4.2 · pemalsuan isi & rotasi kunci ─────────────────────────────────────────────────
+def _signatures(client, world: World, document_id: str) -> list[dict]:
+    rows = client.get(f"/documents/{document_id}/signatures", headers=world.headers(client, "pm"))
+    assert rows.status_code == 200, rows.text
+    return rows.json()
+
+
+def test_tampered_document_is_reported_as_changed(client, world: World):
+    """Satu byte isi dokumen diubah langsung di basis data (melewati trigger kekekalan R4) →
+    verifikasi publik menyatakan DOCUMENT_CHANGED, bukan VALID."""
+    plan_id, _ = run_plan_to_accepted(client, world)
+    document = _document(client, world, plan_id)
+    token = _token(world, _signatures(client, world, document["id"])[0]["id"])
+    assert _verify(client, token).json()["state"] == "VALID"
+
+    sync_query("SET session_replication_role = replica; "
+               "UPDATE vms.plan_document SET snapshot_sha256 = digest(snapshot::text || 'x', 'sha256') WHERE id = %s; "
+               "SET session_replication_role = origin;", (document["id"],))
+
+    tampered = _verify(client, token).json()
+    assert tampered["state"] == "DOCUMENT_CHANGED"
+    assert "berbeda" in tampered["note"]
+
+
+def test_rotated_key_keeps_old_signatures_valid(client, world: World, monkeypatch):
+    """Kunci dirotasi → tanda tangan baru memakai kunci baru, tanda tangan lama tetap VALID dan
+    tetap terverifikasi secara kriptografis oleh kunci publik lamanya."""
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+
+    from app.core import signing
+    from app.core.config import settings
+
+    def rotate(seed: str) -> None:
+        monkeypatch.setattr(settings, "DOC_SIGNING_KEY_HEX", seed)
+        signing.get_document_signer.cache_clear()
+
+    rotate("0a" * 32)
+    old_plan, _ = run_plan_to_accepted(client, world)
+    old_doc = _document(client, world, old_plan)
+    old_sig = _signatures(client, world, old_doc["id"])[0]
+
+    rotate("0b" * 32)
+    try:
+        new_plan, _ = run_plan_to_accepted(client, world, start_offset_days=10)  # tim sama, periode lain
+        new_sig = _signatures(client, world, _document(client, world, new_plan)["id"])[0]
+    finally:
+        signing.get_document_signer.cache_clear()
+
+    keys = sync_query("SELECT s.id::text, k.kid, k.public_key, s.signature, s.signed_payload "
+                      "FROM vms.document_signature s JOIN vms.signing_key k ON k.id = s.signing_key_id "
+                      "WHERE s.id IN (%s, %s)", (old_sig["id"], new_sig["id"]))
+    by_id = {row[0]: row for row in keys}
+    assert by_id[old_sig["id"]][1] != by_id[new_sig["id"]][1]      # kid berbeda = kunci berbeda
+
+    _, _, public_key, signature, payload = by_id[old_sig["id"]]
+    Ed25519PublicKey.from_public_bytes(bytes(public_key)).verify(bytes(signature), signing.canonical(payload))
+    assert _verify(client, _token(world, old_sig["id"])).json()["state"] == "VALID"
+    assert _verify(client, _token(world, new_sig["id"])).json()["state"] == "VALID"

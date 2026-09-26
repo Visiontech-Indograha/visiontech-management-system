@@ -65,6 +65,8 @@ function useSetPlan() {
   return async (plan: WorkPlan) => {
     qc.setQueryData(planKey(plan.id), plan);
     await qc.invalidateQueries({ queryKey: ["work-plans"] });
+    // Terbit/terima menandatangani dokumen di server; muat ulang daftar dokumennya.
+    await qc.invalidateQueries({ queryKey: ["plan-documents", plan.id] });
   };
 }
 

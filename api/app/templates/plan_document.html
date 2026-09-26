@@ -53,7 +53,7 @@
     <div class="sig-box">
       <div><strong>{{ "Penerbit" if s.signer_role == "ISSUER" else ("Penerima" if s.signer_role == "ACCEPTOR" else s.signer_role) }}</strong></div>
       <div>{{ s.signer_name }} — {{ s.signer_position }}{% if s.signer_unit %} · {{ s.signer_unit }}{% endif %}</div>
-      <div class="meta">No. seri {{ s.serial_number }} · {{ s.signed_at }}</div>
+      <div class="meta">No. seri {{ s.serial_number }} · {{ s.signed_at | wib }}</div>
       {% if s.revoked_at %}<div class="revoked">Dicabut: {{ s.revoked_reason }}</div>
       {% else %}<img src="{{ s.qr }}" alt="QR verifikasi {{ s.serial_number }}">{% endif %}
     </div>

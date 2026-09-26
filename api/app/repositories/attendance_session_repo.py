@@ -87,11 +87,28 @@ class AttendanceSessionRepo(BaseRepo):
             {"id": attendance_id, "org": org_id},
         )
 
+    async def manages_employee(self, user_id: UUID | str, employee_id: UUID | str) -> bool:
+        """PM unit karyawan itu (atau PM tanpa unit), OPS, atau ADMIN — revisi pemilik R-10."""
+        return bool(await self.scalar(
+            """
+            SELECT EXISTS (
+                SELECT 1 FROM vms.employee e
+                JOIN vms.user_role ur ON ur.user_id = CAST(:user AS uuid)
+                WHERE e.id = CAST(:emp AS uuid)
+                  AND (ur.role IN ('OPS', 'ADMIN')
+                       OR (ur.role = 'PM' AND (ur.unit_id IS NULL OR ur.unit_id = e.unit_id)))
+            )
+            """,
+            {"user": str(user_id), "emp": str(employee_id)},
+        ))
+
     async def list_page(self, org_id: str, *, employee_id: Any, date_from: Any, date_to: Any,
-                        status: str | None, limit: int, offset: int) -> tuple[list[Any], int]:
-        """Absensi organisasi dengan filter opsional (NULL = semua), terbaru dulu. → (baris, total)."""
+                        status: str | None, limit: int, offset: int,
+                        pm_user_id: Any = None) -> tuple[list[Any], int]:
+        """Absensi organisasi dengan filter opsional (NULL = semua), terbaru dulu. → (baris, total).
+        `pm_user_id`: hanya absensi sendiri dan karyawan di unit yang dipegang PM itu (R-10)."""
         params = {"org": org_id, "emp": employee_id, "date_from": date_from, "date_to": date_to,
-                  "status": status, "limit": limit, "offset": offset}
+                  "status": status, "limit": limit, "offset": offset, "pm": pm_user_id}
         rows = await self.fetchall(
             """
             SELECT id, employee_id, work_date, site_id, site_label, check_in_at, check_out_at,
@@ -102,6 +119,12 @@ class AttendanceSessionRepo(BaseRepo):
               AND (CAST(:date_from AS date) IS NULL OR work_date >= CAST(:date_from AS date))
               AND (CAST(:date_to AS date) IS NULL OR work_date <= CAST(:date_to AS date))
               AND (CAST(:status AS text) IS NULL OR CAST(status AS text) = CAST(:status AS text))
+              AND (CAST(:pm AS uuid) IS NULL
+                   OR employee_id = (SELECT employee_id FROM vms.app_user WHERE id = CAST(:pm AS uuid))
+                   OR EXISTS (SELECT 1 FROM vms.employee e
+                              JOIN vms.user_role ur ON ur.user_id = CAST(:pm AS uuid) AND ur.role = 'PM'
+                              WHERE e.id = attendance.employee_id
+                                AND (ur.unit_id IS NULL OR ur.unit_id = e.unit_id)))
             ORDER BY work_date DESC, check_in_at DESC
             LIMIT :limit OFFSET :offset
             """,
@@ -115,6 +138,12 @@ class AttendanceSessionRepo(BaseRepo):
               AND (CAST(:date_from AS date) IS NULL OR work_date >= CAST(:date_from AS date))
               AND (CAST(:date_to AS date) IS NULL OR work_date <= CAST(:date_to AS date))
               AND (CAST(:status AS text) IS NULL OR CAST(status AS text) = CAST(:status AS text))
+              AND (CAST(:pm AS uuid) IS NULL
+                   OR employee_id = (SELECT employee_id FROM vms.app_user WHERE id = CAST(:pm AS uuid))
+                   OR EXISTS (SELECT 1 FROM vms.employee e
+                              JOIN vms.user_role ur ON ur.user_id = CAST(:pm AS uuid) AND ur.role = 'PM'
+                              WHERE e.id = attendance.employee_id
+                                AND (ur.unit_id IS NULL OR ur.unit_id = e.unit_id)))
             """,
             params,
         )

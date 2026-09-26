@@ -41,6 +41,8 @@ class Permission(str, Enum):
 
     # Absensi & lembur
     REVIEW_ATTENDANCE = "review:attendance"
+    # PM (unit sendiri) & OPS (lintas unit) memvalidasi absensi — revisi pemilik R-10; cakupan dicek di service
+    REVIEW_UNIT_ATTENDANCE = "review:unit_attendance"
     REVIEW_OVERTIME = "review:overtime"
 
     # Aset
@@ -61,13 +63,14 @@ BASE_PERMISSIONS: frozenset[Permission] = frozenset({P.VIEW_USERS, P.VIEW_DOCUME
 
 _ROLE_EXTRA: dict[RoleCode, frozenset[Permission]] = {
     RoleCode.ADMIN: frozenset(Permission),
-    RoleCode.PM: frozenset({P.CREATE_PLAN, P.PUBLISH_PLAN, P.VIEW_TIMELINE}),
+    RoleCode.PM: frozenset({P.CREATE_PLAN, P.PUBLISH_PLAN, P.VIEW_TIMELINE, P.REVIEW_UNIT_ATTENDANCE}),
     RoleCode.HR: frozenset({P.MANAGE_USERS, P.VERIFY_DOCUMENTS, P.MANAGE_EMPLOYEE_DOCUMENTS}),
-    RoleCode.FINANCE: frozenset({P.REVIEW_ATTENDANCE, P.REVIEW_OVERTIME}),
+    RoleCode.FINANCE: frozenset({P.REVIEW_ATTENDANCE, P.REVIEW_UNIT_ATTENDANCE, P.REVIEW_OVERTIME}),
     RoleCode.ASSET: frozenset({P.MANAGE_ASSETS}),
     # OPS memegang kewenangan PM lintas unit (domain.js permissions.OPS; dok 10 Bagian C, V-07).
     # PROMOTE/OFFBOARD prototipe belum dipetakan: MANAGE_USERS juga mencakup ubah data karyawan (HR saja).
-    RoleCode.OPS: frozenset({P.CREATE_PLAN, P.PUBLISH_PLAN, P.REVIEW_OVERTIME, P.VIEW_TIMELINE, P.VIEW_AUDIT}),
+    RoleCode.OPS: frozenset({P.CREATE_PLAN, P.PUBLISH_PLAN, P.REVIEW_OVERTIME, P.REVIEW_UNIT_ATTENDANCE,
+                             P.VIEW_TIMELINE, P.VIEW_AUDIT}),
     RoleCode.LEADER: frozenset(),
     RoleCode.MEMBER: frozenset(),
 }

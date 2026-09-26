@@ -7,10 +7,10 @@ const BASE: Permission[] = ["view:users", "view:documents", "upload:documents"];
 export const MOCK_PERMISSIONS: Record<string, Permission[]> = {
   ADMIN: [...PERMISSIONS],
   HR: [...BASE, "manage:users", "verify:documents", "manage:employee_documents"],
-  PM: [...BASE, "create:plan", "publish:plan", "view:timeline"],
+  PM: [...BASE, "create:plan", "publish:plan", "view:timeline", "review:unit_attendance"],
   FINANCE: [...BASE, "review:attendance", "review:overtime"],
   ASSET: [...BASE, "manage:assets"],
-  OPS: [...BASE, "create:plan", "publish:plan", "review:overtime", "view:timeline", "view:audit"],
+  OPS: [...BASE, "create:plan", "publish:plan", "review:overtime", "review:unit_attendance", "view:timeline", "view:audit"],
   field: BASE,
 };
 

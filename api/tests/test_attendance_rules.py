@@ -168,3 +168,22 @@ def test_review_rules(client, world, fake_storage):
         "Catatan pemeriksaan wajib diisi."
     assert review(waiting_id, note="Lokasi sesuai surat tugas").status_code == 200
     assert _row(waiting_id)[0] == "APPROVED" and _row(waiting_id)[6] == "Lokasi sesuai surat tugas"
+
+
+def test_pm_reviews_attendance_only_in_own_unit(client, world, fake_storage):
+    """Revisi pemilik R-10: PM memvalidasi absensi karyawan di unitnya; unit lain tidak terlihat & 403."""
+    other_unit = str(sync_query("INSERT INTO vms.business_unit (organization_id, code, name) "
+                                "VALUES (%s, 'LAIN', 'Unit lain') RETURNING id", (world.org_id,))[0][0])
+    world.add_person("luar", None, unit_id=other_unit)
+    pm = world.headers(client, "pm")
+    mine_id = _needs_review(client, world)
+    other_id = _needs_review(client, world, who="luar")
+
+    listed = {a["id"] for a in client.get("/attendance", headers=pm).json()["items"]}
+    assert mine_id in listed and other_id not in listed
+    body = {"is_approved": False, "note": "Tidak ada surat tugas di lokasi itu"}
+    assert client.post(f"/attendance/{other_id}/review", headers=pm, json=body).status_code == 403
+    assert client.post(f"/attendance/{mine_id}/review", headers=pm, json=body).status_code == 200
+    assert _row(mine_id)[0] == "REJECTED"
+    assert client.post(f"/attendance/{mine_id}/review", headers=world.headers(client, "leader"),
+                       json=body).status_code == 403

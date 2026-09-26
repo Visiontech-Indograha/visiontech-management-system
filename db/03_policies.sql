@@ -80,12 +80,16 @@ USING (
 CREATE POLICY plan_document_visibility ON plan_document
 USING (EXISTS (SELECT 1 FROM work_plan wp WHERE wp.id = work_plan_id));  -- mewarisi kebijakan work_plan
 
--- Absensi: milik sendiri, atau peran pemeriksa (Finance/HR/OPS).
+-- Absensi: milik sendiri, peran pemeriksa (Finance/HR/OPS), atau PM unit karyawan (R-10).
 CREATE POLICY attendance_visibility ON attendance
 USING (
   organization_id = current_org_id() AND (
     has_role('FINANCE') OR has_role('HR') OR has_role('OPS') OR has_role('ADMIN')
     OR employee_id = (SELECT employee_id FROM app_user WHERE id = current_user_id())
+    -- PM memvalidasi absensi karyawan di unit yang dipegangnya (revisi pemilik R-10)
+    OR EXISTS (SELECT 1 FROM employee e
+               JOIN user_role ur ON ur.user_id = current_user_id() AND ur.role = 'PM'
+               WHERE e.id = attendance.employee_id AND (ur.unit_id IS NULL OR ur.unit_id = e.unit_id))
   )
 );
 

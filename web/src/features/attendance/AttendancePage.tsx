@@ -63,11 +63,13 @@ function useAttendanceAction<V>(fn: (v: V) => Promise<unknown>) {
 
 /**
  * Daftar absensi (GET /attendance) — prototype/js/operations.js attendance(). Cakupan data diatur API
- * (FINANCE/HR/OPS/ADMIN: seluruh organisasi; lainnya: milik sendiri). Catat masuk/keluar ada di aplikasi mobile.
+ * (FINANCE/HR/OPS/ADMIN: seluruh organisasi; PM: unitnya — R-10; lainnya: milik sendiri).
+ * Catat masuk/keluar ada di aplikasi mobile.
  */
 export function AttendancePage() {
   const { me } = useSession();
-  const canReview = !!me?.permissions.includes("review:attendance");
+  // Finance seluruh organisasi; PM unitnya & OPS lintas unit (R-10) — cakupan dicek API.
+  const canReview = !!me?.permissions.some((p) => p === "review:attendance" || p === "review:unit_attendance");
   const [f, setF] = useState<Filters>({ status: canReview ? "NEEDS_REVIEW" : "", from: "", to: "", page: 1 });
   const list = useAttendance(f);
   const employees = useActiveEmployees();
@@ -134,13 +136,13 @@ export function AttendancePage() {
                   {a.status === "AUTO_VALID"
                     ? "Tidak perlu ditinjau · jarak dalam radius"
                     : a.status === "NEEDS_REVIEW"
-                      ? "Menunggu pemeriksaan Finance"
+                      ? "Menunggu pemeriksaan"
                       : `Ditinjau ${a.reviewed_at ? formatDateTime(a.reviewed_at) : ""}`}
                 </div>
               </dl>
               {a.status === "NEEDS_REVIEW" && (
                 <div className="mt-auto flex flex-col gap-2 md:flex-row">
-                  {canReview ? (
+                  {canReview && a.employee_id !== me?.employee_id ? (
                     <Button onClick={() => setOpen({ kind: "review", item: a })}>Tinjau</Button>
                   ) : (
                     <Button variant="outline" onClick={() => setOpen({ kind: "explain", item: a })}>

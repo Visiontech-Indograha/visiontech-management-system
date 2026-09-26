@@ -9,6 +9,7 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased] — `development`
 
+- `api/`, `db/`, `web/`: **Revisi pemilik R-10 — PM memvalidasi absensi per divisi.** Izin baru `review:unit_attendance` (PM, OPS, Finance): PM hanya karyawan di unit yang dipegangnya (403 di luar unit), OPS lintas unit, Finance/Admin tetap seluruh organisasi. `GET /attendance` untuk PM kini memuat absensi sendiri + karyawan unitnya; kebijakan RLS `attendance_visibility` diperluas (migrasi `0010_attendance_pm_unit`, `db/03`). Ekspor CSV tetap Finance. Web: tombol Tinjau muncul untuk PM (tidak pada absensi sendiri), label "Menunggu pemeriksaan". Uji `test_pm_reviews_attendance_only_in_own_unit`.
 - `web/`: Hapus antarmuka absensi untuk endpoint yang belum tersedia; halaman daftar dan tinjauan menunggu `GET /attendance`.
 - `web/`: Selaraskan sesi `/auth/me`, peran, izin, menu, dan guard ke kontrak API; tahan halaman Site sampai endpoint tersedia.
 - `web/`: Hapus halaman Pengguna (`/users`) beserta dialog, hook, dan ujinya karena API tidak punya endpoint manajemen pengguna (L5).

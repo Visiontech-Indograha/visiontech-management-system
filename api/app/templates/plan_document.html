@@ -16,9 +16,18 @@
   .sig-box img { width: 28mm; height: 28mm; }
   .hash { font-family: "DejaVu Sans Mono", monospace; font-size: 7.5pt; word-break: break-all; color: #374151; }
   .revoked { color: #b91c1c; font-weight: bold; }
+  .kop { display: flex; align-items: center; justify-content: space-between;
+         padding-bottom: 3mm; margin-bottom: 5mm; border-bottom: 0.8mm solid #232c6f; }
+  .kop img { height: 13mm; }
+  .kop .kind { font-size: 9pt; font-weight: bold; color: #232c6f; letter-spacing: 0.3mm;
+               border-bottom: 0.6mm solid #f0c000; padding-bottom: 0.5mm; }
 </style>
 </head>
 <body>
+  <div class="kop">
+    <img src="{{ logo }}" alt="Visiontech Indograha">
+    <span class="kind">{{ kind_label | upper }}</span>
+  </div>
   <h1>{{ doc.title }}</h1>
   <div class="meta">Nomor {{ doc.number }} · {{ kind_label }} versi {{ doc.version }} · diterbitkan {{ issued_at }}</div>
 

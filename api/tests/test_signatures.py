@@ -102,7 +102,8 @@ def test_pdf_shows_qr_for_each_valid_signature(client, world: World, monkeypatch
     assert pdf.status_code == 200, pdf.text
     assert pdf.headers["content-type"] == "application/pdf"
     html = rendered["html"]
-    assert html.count("data:image/png;base64,") == 2
+    assert html.count('alt="QR verifikasi') == 2  # satu QR per tanda tangan berlaku
+    assert html.count("data:image/png;base64,") == 3  # 2 QR + logo kop
     assert "Karyawan uji pm" in html and "Karyawan uji leader" in html and document["sha256"] in html
 
 

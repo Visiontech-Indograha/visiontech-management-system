@@ -74,6 +74,24 @@ def run_plan_to_accepted(client, world: World, length_days: int = 2) -> tuple[st
     return plan_id, day_ids
 
 
+def test_plans_created_back_to_back_get_distinct_numbers(client, world: World):
+    """Temuan uji nyata R-17: nomor SK memakai 8 karakter AWAL id (UUIDv7 = cap waktu), jadi SK yang
+    dibuat berdekatan bernomor sama → terbit gagal 500 (duplicate key). Kini bagian acak id yang dipakai."""
+    pm = world.headers(client, "pm")
+    numbers = []
+    for offset in (20, 25):  # tanggal berbeda: tidak bentrok jadwal ketua/anggota
+        plan_id, _ = create_draft_plan(client, world, start_offset_days=offset, length_days=1)
+        members = client.put(f"/work-plans/{plan_id}/members", headers=pm, json={
+            "leader_employee_id": world.employees["leader"],
+            "member_employee_ids": [world.employees["member"]], "row_version": _row_version(plan_id)})
+        assert members.status_code == 200, members.text
+        published = client.post(f"/work-plans/{plan_id}/publish", headers=pm,
+                                json={"row_version": _row_version(plan_id), "reason": ""})
+        assert published.status_code == 200, published.text
+        numbers.append(published.json()["number"])
+    assert numbers[0] != numbers[1]
+
+
 def test_asset_cycle_reserve_return_verify(client, world):
     # Pengembalian diajukan ketua menurut SK peminjam (V-09); SK draf belum terlihat oleh ketua.
     plan_id, _ = run_plan_to_in_progress(client, world)

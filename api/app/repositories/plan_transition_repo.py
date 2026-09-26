@@ -201,11 +201,13 @@ class PlanTransitionRepo(BaseRepo):
 
     async def publish(self, plan_id: UUID | str) -> None:
         # Nomor SK sementara; format resmi ditetapkan fase 6 dari contoh dokumen perusahaan (K-14).
+        # Pakai 8 karakter TERAKHIR id: awal UUIDv7 adalah cap waktu, sehingga SK yang dibuat
+        # berdekatan dulu bernomor sama → terbit gagal duplicate key (temuan uji nyata R-17).
         await self.execute(
             """
             UPDATE vms.work_plan
                SET status = :published, row_version = row_version + 1,
-                   number = COALESCE(number, 'SK-' || to_char(CURRENT_DATE, 'YYYYMM') || '-' || substr(id::text, 1, 8))
+                   number = COALESCE(number, 'SK-' || to_char(CURRENT_DATE, 'YYYYMM') || '-' || right(id::text, 8))
              WHERE id = :plan
             """,
             {"plan": plan_id, "published": PlanStatus.PUBLISHED},

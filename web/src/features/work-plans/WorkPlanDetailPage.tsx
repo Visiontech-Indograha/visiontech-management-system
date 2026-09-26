@@ -5,6 +5,7 @@ import { useSession } from "@/app/session";
 import { QueryState } from "@/components/molecules/QueryState";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
 import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/VmsDialog";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { errorMessage } from "@/lib/errors";
 import { formatDate } from "@/lib/format";
@@ -31,7 +32,7 @@ const CANCELLABLE = ["PUBLISHED", "APPEALED", "ACCEPTED", "IN_PROGRESS", "COMPLE
 
 type Dialogs =
   | {
-      kind: "edit" | "team" | "day" | "completion" | "extension" | "personnel" | "incident" | "overtime";
+      kind: "edit" | "team" | "day" | "completion" | "extension" | "personnel" | "incident" | "overtime" | "publish";
     }
   | { kind: "reason"; action: Transition; title: string; label: string }
   | null;
@@ -92,12 +93,15 @@ export function WorkPlanDetailPage() {
 
 /**
  * Tindakan sesuai prototype/js/workplans.js `controls`. Tindakan pengelola memakai izin create:plan;
- * tindakan ketua ditampilkan kepada semua yang melihat SK karena API belum mengirim kedudukan
- * (ketua/anggota) — API menolak dengan pesan yang jelas bila bukan ketua.
+ * tindakan ketua hanya untuk karyawan yang menjadi ketua pada SK ini (`leader_employee_id`) —
+ * kewenangan mengikuti SK, bukan jabatan. API tetap menjadi penjaga terakhir.
  */
 function PlanActions({ plan }: { plan: WorkPlan }) {
   const { me } = useSession();
   const canManage = !!me?.permissions.includes("create:plan");
+  const isLeader = !!me?.employee_id && me.employee_id === plan.leader_employee_id;
+  // Insiden & lembur boleh diajukan anggota tim; PM/pengelola tidak melihatnya kecuali ia ketua SK ini.
+  const isCrew = isLeader || !canManage;
   const transition = useTransition(plan.id);
   const [dialog, setDialog] = useState<Dialogs>(null);
   const s = plan.status;
@@ -118,7 +122,7 @@ function PlanActions({ plan }: { plan: WorkPlan }) {
   if (canManage) {
     if (s === "DRAFT") {
       manager.push(
-        <Button key="publish" onClick={() => run("publish", "SK diterbitkan.")} disabled={busy}>
+        <Button key="publish" onClick={() => setDialog({ kind: "publish" })} disabled={busy}>
           Terbitkan SK
         </Button>,
         <Button key="edit" variant="outline" onClick={() => setDialog({ kind: "edit" })}>
@@ -167,7 +171,7 @@ function PlanActions({ plan }: { plan: WorkPlan }) {
         </Button>,
       );
   }
-  if (s === "PUBLISHED")
+  if (isLeader && s === "PUBLISHED")
     leader.push(
       <Button key="accept" onClick={() => run("accept", "SK diterima.")} disabled={busy}>
         Terima SK
@@ -176,31 +180,31 @@ function PlanActions({ plan }: { plan: WorkPlan }) {
         Ajukan banding
       </Button>,
     );
-  if (s === "ACCEPTED")
+  if (isLeader && s === "ACCEPTED")
     leader.push(
       <Button key="start" onClick={() => run("start", "Pelaksanaan dimulai.")} disabled={busy}>
         Mulai pelaksanaan
       </Button>,
     );
-  if (s === "ACCEPTED" || s === "IN_PROGRESS")
+  if (isLeader && (s === "ACCEPTED" || s === "IN_PROGRESS"))
     leader.push(
       <Button key="extension" variant="outline" onClick={() => setDialog({ kind: "extension" })}>
         Ajukan perpanjangan
       </Button>,
     );
-  if (s === "IN_PROGRESS")
+  if (isCrew && s === "IN_PROGRESS")
     leader.push(
       <Button key="incident" variant="destructive" onClick={() => setDialog({ kind: "incident" })}>
         Lapor Insiden/HSE
       </Button>,
     );
-  if (s === "IN_PROGRESS")
+  if (isCrew && s === "IN_PROGRESS")
     leader.push(
       <Button key="overtime" variant="outline" onClick={() => setDialog({ kind: "overtime" })}>
         Ajukan Lembur
       </Button>,
     );
-  if (s === "IN_PROGRESS")
+  if (isLeader && s === "IN_PROGRESS")
     leader.push(
       <Button key="completion" onClick={() => setDialog({ kind: "completion" })}>
         Buat Laporan Akhir
@@ -223,6 +227,34 @@ function PlanActions({ plan }: { plan: WorkPlan }) {
           <h2 className="mb-3 text-base font-semibold">Tindakan ketua tim</h2>
           <div className="flex flex-col gap-2 [&>button]:w-full">{leader}</div>
         </section>
+      )}
+      {dialog?.kind === "publish" && (
+        <Dialog
+          open
+          title="Terbitkan SK?"
+          onClose={() => setDialog(null)}
+          footer={
+            <>
+              <Button variant="outline" onClick={() => setDialog(null)} disabled={busy}>
+                Batal
+              </Button>
+              <Button
+                onClick={async () => {
+                  await run("publish", "SK diterbitkan.");
+                  setDialog(null);
+                }}
+                disabled={busy}
+              >
+                {busy ? "Menerbitkan..." : "Ya, terbitkan"}
+              </Button>
+            </>
+          }
+        >
+          <p className="text-sm text-mist">
+            SK <strong className="text-ink">{plan.title}</strong> akan diberi nomor dan dikirim ke ketua tim untuk diterima.
+            Setelah terbit, isi SK tidak dapat diubah — perubahan hanya lewat adendum atau revisi.
+          </p>
+        </Dialog>
       )}
       {dialog?.kind === "edit" && <EditDraftDialog plan={plan} onClose={() => setDialog(null)} />}
       {dialog?.kind === "team" && <TeamDialog plan={plan} onClose={() => setDialog(null)} />}

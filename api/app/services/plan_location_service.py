@@ -38,15 +38,21 @@ class PlanLocationService:
         if not MIN_RADIUS <= radius_m <= MAX_RADIUS:
             raise ValidationError(f"Radius absensi harus {MIN_RADIUS}–{MAX_RADIUS} meter.")
         label = (" ".join(name.split()) or str(plan.location_text))[:190]
-        # Tiap penetapan membuat `site` baru (riwayat absensi tetap), padahal nama unik per organisasi:
-        # nama yang sudah dipakai diberi nomor, mis. "Gudang Dumai (2)".
-        taken = await self.repo.names_like(access.user.organization_id, label)
-        n = 2
-        unique = label
-        while unique in taken:
-            unique, n = f"{label} ({n})", n + 1
-        created = await self.repo.create_site(access.user.organization_id, unique, address,
-                                              lat, lng, radius_m)
-        await self.repo.set_plan_site(plan.id, created.id)
-        row = await self.repo.site(created.id, access.user.organization_id)
+        org_id = access.user.organization_id
+        # Titik yang sama disimpan lagi (nama + titik ≤ 5 m + radius sama) → pakai site yang ada,
+        # agar daftar lokasi tidak menumpuk "Gudang Dumai (2)", "(3)", …
+        same = await self.repo.same_site(org_id, label, lat, lng, radius_m)
+        if same is not None:
+            site_id = same.id
+        else:
+            # Titik/radius berubah → `site` baru (site lama tetap: riwayat absensi sah), padahal nama
+            # unik per organisasi: nama yang sudah dipakai diberi nomor, mis. "Gudang Dumai (2)".
+            taken = await self.repo.names_like(org_id, label)
+            n = 2
+            unique = label
+            while unique in taken:
+                unique, n = f"{label} ({n})", n + 1
+            site_id = (await self.repo.create_site(org_id, unique, address, lat, lng, radius_m)).id
+        await self.repo.set_plan_site(plan.id, site_id)
+        row = await self.repo.site(site_id, org_id)
         return dict(row._mapping)

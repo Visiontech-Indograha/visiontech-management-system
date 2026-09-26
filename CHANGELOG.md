@@ -9,6 +9,7 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased] — `development`
 
+- `web/`: **Temuan uji alur** — SK draf/terbit/diterima kini menampilkan "Rincian harian" (tanggal, judul, tugas) dari `GET /work-plans/{id}/days`, sehingga PM tahu hari mana yang belum diisi sebelum terbit; catatan usang "API belum menyediakan endpoint baca" dihapus; "Tambah hari" menyegarkan daftar hari.
 - `api/`, `web/`: **Temuan uji alur HP→web** — insiden yang dilaporkan dari aplikasi mobile tidak pernah terlihat PM karena API tidak punya endpoint baca. Tambah `GET /hse/incidents?plan_id=` (izin lihat SK, SK asing → 404, termasuk `evidence_file_ids`); panel insiden web kini memuat dari API (sebelumnya hanya cache sesi). Uji baca-ulang di `test_flow_plans.py`, inventaris rute di `test_route_guards.py`.
 - `api/`: **Temuan uji HP** — `POST /files/upload` menjawab 200 + `file_id` walau penyimpanan (MinIO) gagal, sehingga swafoto/lampiran merujuk berkas yang tidak ada. Kini 503 `STORAGE_UNAVAILABLE` dan transaksi di-rollback (tanpa baris `file_object`); uji `test_upload_fails_and_leaves_no_record_when_storage_is_down`.
 - `mobile/` (repo terpisah): logo Visiontech di watermark foto (R-11); antrean luring dicoba ulang tiap 60 dtk saat jaringan tersambung tetapi server tak terjangkau; spanduk sinkron dipindah ke atas bilah navigasi (dulu menumpuk di status bar); label status laporan berbahasa Indonesia; pilihan lokasi absen ikut pindah bila titik SK berjalan diubah PM; label login "Email".

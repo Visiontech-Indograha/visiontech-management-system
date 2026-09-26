@@ -183,7 +183,7 @@ describe("Work plan — detail & tindakan", () => {
     fireEvent.change(within(dialog).getByLabelText("Tugas 1"), { target: { value: "Ukur" } });
     fireEvent.click(within(dialog).getByRole("button", { name: "Simpan" }));
     await waitFor(() => expect(calls.some((c) => c.url === "/work-plans/p1/days/d1/plan")).toBe(true));
-    expect(calls.find((c) => c.url === "/work-plans/p1/days")!.data).toEqual({ work_date: "2026-10-02", title: "Survei" });
+    expect(calls.find((c) => c.url === "/work-plans/p1/days" && c.method === "post")!.data).toEqual({ work_date: "2026-10-02", title: "Survei" });
     expect(calls.find((c) => c.url === "/work-plans/p1/days/d1/plan")!.data).toEqual({ title: "Survei", tasks: [{ title: "Ukur" }] });
   });
 

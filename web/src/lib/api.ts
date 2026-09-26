@@ -58,7 +58,7 @@ function toApiError(error: AxiosError): ApiError {
 // Satu refresh berjalan pada satu waktu; request lain menunggu hasilnya (rotasi refresh token).
 let refreshing: Promise<string> | null = null;
 
-async function refreshAccessToken(): Promise<string> {
+export async function refreshAccessToken(): Promise<string> {
   refreshing ??= axios
     .post<{ access_token: string }>(`${baseURL}/auth/refresh`, null, { withCredentials: true })
     .then((r) => {

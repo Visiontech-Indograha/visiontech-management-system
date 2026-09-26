@@ -24,6 +24,16 @@ class PlanLocationRepo(BaseRepo):
             """,
             {"id": site_id, "org": org_id})
 
+    async def names_like(self, org_id: UUID | str, name: str) -> set[str]:
+        """Nama lokasi organisasi yang diawali `name` — nama `site` unik per organisasi."""
+        rows = await self.fetchall(
+            """
+            SELECT name FROM vms.site
+            WHERE organization_id = CAST(:org AS uuid) AND left(name, char_length(:name)) = :name
+            """,
+            {"org": org_id, "name": name})
+        return {r.name for r in rows}
+
     async def create_site(self, org_id: UUID | str, name: str, address: str | None,
                           lat: float, lng: float, radius_m: int) -> Any:
         return await self.fetchone(

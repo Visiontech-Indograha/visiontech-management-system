@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { api, setAccessToken, setSessionExpiredHandler } from "@/lib/api";
+import { api, refreshAccessToken, setAccessToken, setSessionExpiredHandler } from "@/lib/api";
 import type { Me, TokenOut } from "@/lib/types";
 import { mockMe } from "./mockSession";
 import { queryClient } from "@/lib/queryClient";
@@ -57,8 +57,9 @@ export const useSession = create<SessionState>((set, get) => {
     initSession: async () => {
       if (get().ready) return;
       try {
-        const { data } = await api.post<TokenOut>("/auth/refresh");
-        setAccessToken(data.access_token);
+        // Lewat refresh tunggal: efek ganda (StrictMode) atau request paralel tidak boleh merotasi
+        // cookie dua kali — refresh kedua memakai token lama dan sesi ikut dicabut.
+        await refreshAccessToken();
         const { data: profile } = await api.get<Me>("/auth/me");
         set({ me: profile });
       } catch {

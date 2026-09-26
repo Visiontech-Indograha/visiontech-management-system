@@ -41,6 +41,10 @@ def test_running_plan_gets_new_site_and_keeps_document_text(client, world: World
     assert after["location_text"] == before["location_text"] and after["status"] == "IN_PROGRESS"
     # Site lama tidak diubah (absensi lama tetap merujuk titik & radius saat itu).
     assert sync_query("SELECT count(*) FROM vms.site WHERE id = %s", (before["site_id"],)) == [(1,)]
+    # Nama sama disimpan lagi (penyesuaian titik) → tidak 500; nama diberi nomor karena site unik per organisasi.
+    again = client.put(f"/work-plans/{plan_id}/location", headers=pm, json={**DUMAI, "lat": DUMAI["lat"] + 0.001})
+    assert again.status_code == 200, again.text
+    assert again.json()["name"] == f"{DUMAI['name']} (2)" and again.json()["id"] != res.json()["id"]
 
 
 def test_only_pm_unit_and_valid_radius(client, world: World):

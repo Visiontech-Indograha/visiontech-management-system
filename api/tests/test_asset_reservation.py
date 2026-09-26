@@ -107,7 +107,7 @@ def test_reserve_permissions_and_double_booking(client, world, other_world):
     assert by_pm.status_code == 200, by_pm.text
     double = _reserve(client, world, tool, plan_id)
     assert double.status_code == 409
-    assert double.json()["error"]["message"] == "Aset sudah dialokasikan ke pekerjaan lain."
+    assert double.json()["error"]["message"] == "Aset ini sedang dialokasikan dan belum dikembalikan."
     assert _open_allocations(tool) == 1
 
 

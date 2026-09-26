@@ -69,7 +69,7 @@ async def check_in(
     row = await _service(db).check_in(
         current_user.organization_id, current_user.user_id, site_id=data.site_id,
         lng=data.location.lng, lat=data.location.lat, origin=data.location_origin,
-        selfie_file_id=data.selfie_file_id, face_result=data.face_result, face_similarity=data.face_similarity,
+        accuracy_m=data.accuracy_m, selfie_file_id=data.selfie_file_id, face_result=data.face_result, face_similarity=data.face_similarity,
     )
     return _response(row)
 

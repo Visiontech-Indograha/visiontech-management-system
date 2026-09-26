@@ -89,7 +89,7 @@ export function HomePage() {
         <CardContent className="px-3 md:px-4">
           {plans.isPending && <Skeleton className="mx-3 h-14" />}
           {plans.isError && <p className="px-3 text-danger">Daftar SK tidak dapat dimuat.</p>}
-          {!plans.isPending && active.length === 0 && <p className="px-3 text-mist">Belum ada SK aktif.</p>}
+          {plans.isSuccess && active.length === 0 && <p className="px-3 text-mist">Belum ada SK aktif.</p>}
           <ul className="divide-y divide-line">
             {active.map((p) => (
               <li key={p.id}>

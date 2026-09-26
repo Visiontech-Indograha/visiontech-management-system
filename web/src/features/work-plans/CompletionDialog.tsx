@@ -2,6 +2,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
+import { useFormDraft } from "@/lib/drafts";
 import { toast } from "sonner";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
@@ -43,11 +44,14 @@ export function CompletionDialog({ plan, onClose }: { plan: WorkPlan; onClose: (
   const [files, setFiles] = useState<File[]>([]);
   const [fileError, setFileError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const form = useForm<Values>({ resolver: zodResolver(schema), defaultValues: { body: "", obstacle: "" } });
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<Values>({ resolver: zodResolver(schema), defaultValues: { body: "", obstacle: "" } });
+  } = form;
+  // Dialog ditutup ("Batal") atau pindah layar → teks laporan akhir tetap ada saat dibuka lagi (R5).
+  const dropDraft = useFormDraft(`completion:${plan.id}`, form);
 
   const pickFiles = (list: FileList | null) => {
     const picked = Array.from(list ?? []);
@@ -61,6 +65,7 @@ export function CompletionDialog({ plan, onClose }: { plan: WorkPlan; onClose: (
     setFormError(null);
     try {
       await request.mutateAsync({ ...v, files });
+      dropDraft();
       toast.success("Penyelesaian diajukan ke PM.");
       onClose();
     } catch (err) {

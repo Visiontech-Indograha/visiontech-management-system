@@ -2,6 +2,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
+import { useFormDraft } from "@/lib/drafts";
 import { toast } from "sonner";
 import { z } from "zod";
 import { useSession } from "@/app/session";
@@ -225,17 +226,19 @@ function DailyForm({ plan, day }: { plan: WorkPlan; day: Day }) {
   const [files, setFiles] = useState<File[]>([]);
   const [fileError, setFileError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<DailyValues>({
+  const form = useForm<DailyValues>({
     resolver: zodResolver(dailySchema),
     defaultValues: {
       body: day.report?.body ?? "",
       obstacle: day.report?.obstacle ?? "",
     },
   });
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = form;
+  const dropDraft = useFormDraft(`daily:${day.id}`, form);
 
   const pickFiles = (list: FileList | null) => {
     const picked = list ? Array.from(list) : [];
@@ -253,6 +256,7 @@ function DailyForm({ plan, day }: { plan: WorkPlan; day: Day }) {
           ...v,
           evidence_file_ids: [...(day.report?.evidence_file_ids ?? []), ...uploaded],
         });
+        dropDraft();
         if (andSubmit) await submit.mutateAsync();
         setFiles([]);
         toast.success(andSubmit ? "Laporan harian dikirim." : "Draft laporan harian disimpan.");

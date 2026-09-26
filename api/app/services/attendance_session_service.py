@@ -18,6 +18,7 @@ from app.repositories.org_clock_repo import OrgClockRepo
 OPEN_SESSION = "Masih ada sesi absensi terbuka."
 SEE_ALL = {"FINANCE", "HR", "OPS", "ADMIN"}  # prototipe operations.js attendance(): canAll (+ ADMIN)
 ALREADY_TODAY = "Absensi untuk hari ini sudah tercatat (hanya dapat mengajukan ulang jika absensi sebelumnya ditolak)."
+MAX_GPS_ACCURACY_M = 100  # K-12 (docs/10): akurasi GPS > 100 m ditolak
 
 
 class AttendanceSessionService:
@@ -33,7 +34,12 @@ class AttendanceSessionService:
 
     async def check_in(self, org_id: str, user_id: str, *, site_id: UUID, lng: float, lat: float,
                        origin: str, selfie_file_id: UUID | None, face_result: str | None,
-                       face_similarity: float | None) -> Any:
+                       face_similarity: float | None, accuracy_m: float | None = None) -> Any:
+        # K-12: titik GPS yang terlalu kabur tidak bisa membuktikan kehadiran — tolak dengan alasan.
+        if accuracy_m is not None and accuracy_m > MAX_GPS_ACCURACY_M:
+            raise AppError("GPS_INACCURATE",
+                           f"Akurasi GPS {accuracy_m:.0f} m terlalu rendah (maksimal {MAX_GPS_ACCURACY_M} m). "
+                           "Pindah ke tempat terbuka, tunggu sinyal GPS menguat, lalu coba lagi.", status=422)
         employee_id = await self._employee(user_id)
         if await self.repo.open_session(employee_id) is not None:
             raise AppError("OPEN_SESSION", OPEN_SESSION, status=409)

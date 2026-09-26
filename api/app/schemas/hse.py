@@ -1,4 +1,5 @@
 from datetime import date, datetime
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -7,8 +8,9 @@ from pydantic import BaseModel
 class IncidentCreate(BaseModel):
     work_plan_id: UUID
     # occurred_on tidak diterima dari klien: tanggal insiden = hari ini menurut server (V-10).
-    category: str
-    severity: str
+    # Nilai enum DB (db/01 incident_category / incident_severity): nilai lain → 422, bukan 500.
+    category: Literal["K3_RINGAN", "K3_BERAT", "K3_LINGKUNGAN", "K3_HAMPIR", "ASET"]
+    severity: Literal["RENDAH", "SEDANG", "TINGGI", "KRITIS"]
     description: str
     evidence_file_ids: list[UUID] = []
 

@@ -14,7 +14,13 @@
       "description": "Successful Response",
       "content": {
        "application/json": {
-        "schema": {}
+        "schema": {
+         "additionalProperties": {
+          "type": "string"
+         },
+         "type": "object",
+         "title": "Response Health Check Health Get"
+        }
        }
       }
      }
@@ -30,7 +36,13 @@
       "description": "Successful Response",
       "content": {
        "application/json": {
-        "schema": {}
+        "schema": {
+         "additionalProperties": {
+          "type": "string"
+         },
+         "type": "object",
+         "title": "Response Readiness Check Ready Get"
+        }
        }
       }
      }
@@ -293,7 +305,13 @@
       "description": "Successful Response",
       "content": {
        "application/json": {
-        "schema": {}
+        "schema": {
+         "additionalProperties": {
+          "type": "string"
+         },
+         "type": "object",
+         "title": "Response Upload Document Api V1 Files Upload Post"
+        }
        }
       }
      },
@@ -355,7 +373,13 @@
       "description": "Successful Response",
       "content": {
        "application/json": {
-        "schema": {}
+        "schema": {
+         "type": "object",
+         "additionalProperties": {
+          "type": "string"
+         },
+         "title": "Response Get File Url Api V1 Files  File Id  Url Get"
+        }
        }
       }
      },
@@ -903,7 +927,11 @@
       "description": "Successful Response",
       "content": {
        "application/json": {
-        "schema": {}
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Check Conflicts Api V1 Employees  Emp Id  Conflicts Get"
+        }
        }
       }
      },
@@ -1160,7 +1188,11 @@
       "description": "Successful Response",
       "content": {
        "application/json": {
-        "schema": {}
+        "schema": {
+         "additionalProperties": true,
+         "type": "object",
+         "title": "Response Cron Expire Documents Api V1 Documents Cron Expire Documents Post"
+        }
        }
       }
      }
@@ -2739,7 +2771,13 @@
       "description": "Successful Response",
       "content": {
        "application/json": {
-        "schema": {}
+        "schema": {
+         "type": "object",
+         "additionalProperties": {
+          "type": "string"
+         },
+         "title": "Response Delete Site Api V1 Sites  Site Id  Delete"
+        }
        }
       }
      },
@@ -6109,6 +6147,18 @@
       "type": "string",
       "title": "Location Origin",
       "default": "GPS"
+     },
+     "accuracy_m": {
+      "anyOf": [
+       {
+        "type": "number",
+        "minimum": 0.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Accuracy M"
      },
      "selfie_file_id": {
       "anyOf": [

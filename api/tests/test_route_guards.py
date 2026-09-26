@@ -32,6 +32,7 @@ SELF_SERVICE = {
     ("POST", "/files/upload"): "setiap karyawan mengunggah bukti/dokumen sendiri",
     ("GET", "/work-plans"): "hanya SK yang terlihat (V-07)",
     ("GET", "/sites"): "daftar lokasi organisasi untuk check-in",
+    ("GET", "/units"): "daftar unit organisasi sendiri (pilihan mutasi/promosi, R-19)",
     ("GET", "/assets"): "daftar aset organisasi (CHECK_ASSET oleh tim)",
     ("GET", "/attendance"): "milik sendiri; FINANCE/HR/OPS/ADMIN seluruh organisasi (diuji)",
     ("POST", "/attendance/check-in"): "absensi sendiri",

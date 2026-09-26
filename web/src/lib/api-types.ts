@@ -233,11 +233,15 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * List Assignments
+         * @description Riwayat jabatan/penempatan (M2), terbaru dulu. Karyawan organisasi lain → 404.
+         */
+        get: operations["list_assignments_api_v1_employees__emp_id__assignments_get"];
         put?: never;
         /**
          * Add Assignment
-         * @description Mutasi atau Promosi (mengubah unit/jabatan).
+         * @description domain.js PROMOTE — mutasi/promosi; aturan di EmployeeService.promote.
          */
         post: operations["add_assignment_api_v1_employees__emp_id__assignments_post"];
         delete?: never;
@@ -885,6 +889,26 @@ export interface paths {
         post?: never;
         /** Delete Site */
         delete: operations["delete_site_api_v1_sites__site_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/units": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Units
+         * @description Unit milik organisasi pengguna saja (V-09).
+         */
+        get: operations["list_units_api_v1_units_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -2168,6 +2192,8 @@ export interface components {
             employee_id: string;
             /** Valid To */
             valid_to?: string | null;
+            /** Unit Name */
+            unit_name?: string | null;
         };
         /** EmployeeCreate */
         EmployeeCreate: {
@@ -3013,6 +3039,18 @@ export interface components {
              */
             reason: string;
         };
+        /** UnitOut */
+        UnitOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Code */
+            code: string;
+            /** Name */
+            name: string;
+        };
         /** UserMeResponse */
         UserMeResponse: {
             /** User Id */
@@ -3613,6 +3651,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EmployeeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_assignments_api_v1_employees__emp_id__assignments_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                emp_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmployeeAssignmentResponse"][];
                 };
             };
             /** @description Validation Error */
@@ -4966,6 +5035,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_units_api_v1_units_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnitOut"][];
                 };
             };
         };

@@ -1,6 +1,6 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { mockApi, renderRoute } from "./utils";
+import { apiError, mockApi, renderRoute } from "./utils";
 
 const page = (items: unknown[]) => ({ items, total: items.length, page: 1, size: 25 });
 const employee = (id = "e1") => ({
@@ -194,6 +194,96 @@ describe("R8 · perpanjang berkas dari daftar (termasuk Berkas saya)", () => {
     });
     renderRoute("/directory/e1", { role: "HR" });
     expect(await screen.findByRole("button", { name: "Perpanjang KTP" })).toBeInTheDocument();
+  });
+});
+
+describe("mutasi / promosi & riwayat jabatan (M2, domain.js PROMOTE)", () => {
+  const units = [
+    { id: "u1", code: "CCTV", name: "CCTV & ACS" },
+    { id: "u2", code: "WALLD", name: "Wall Display" },
+  ];
+  const history = [
+    { id: "a2", employee_id: "e1", position: "Teknisi", unit_id: "u1", unit_name: "CCTV & ACS", valid_from: "2025-01-01", valid_to: null },
+    { id: "a1", employee_id: "e1", position: "Helper", unit_id: "u1", unit_name: "CCTV & ACS", valid_from: "2024-01-01", valid_to: "2025-01-01" },
+  ];
+  const api = (extra?: (url: string, method: string) => { status?: number; data?: unknown } | undefined) =>
+    mockApi((c) => {
+      const hit = extra?.(c.url ?? "", c.method ?? "get");
+      if (hit) return hit;
+      if (c.url === "/employees/e1") return { data: { ...employee(), unit_id: "u1" } };
+      if (c.url === "/employees/e1/documents") return { data: { items: [], total: 0 } };
+      if (c.url === "/employees/e1/assignments" && c.method === "get") return { data: history };
+      if (c.url === "/units") return { data: units };
+    });
+
+  it("HR melihat unit & riwayat, lalu memutasi ke unit lain", async () => {
+    const calls = api((url, method) =>
+      url === "/employees/e1/assignments" && method === "post"
+        ? { data: { ...history[0], id: "a3", position: "Supervisor", unit_id: "u2", unit_name: "Wall Display", valid_from: "2026-10-01" } }
+        : undefined,
+    );
+    renderRoute("/directory/e1", { role: "HR" });
+
+    const riwayat = await screen.findByRole("region", { name: "Riwayat jabatan" });
+    expect(await within(riwayat).findByText("Helper")).toBeInTheDocument();
+    expect(within(riwayat).getByText(/sekarang/)).toBeInTheDocument();
+    expect(await screen.findByText("CCTV & ACS", { selector: "dd" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Mutasi / promosi" }));
+    const dialog = screen.getByRole("dialog", { name: "Mutasi / promosi" });
+    fireEvent.change(within(dialog).getByLabelText("Jabatan"), { target: { value: "Supervisor" } });
+    await within(dialog).findByRole("option", { name: "Wall Display" });
+    fireEvent.change(within(dialog).getByLabelText("Unit"), { target: { value: "u2" } });
+    fireEvent.change(within(dialog).getByLabelText("Berlaku mulai"), { target: { value: "2026-10-01" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Simpan" }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(calls.find((c) => c.method === "post")!.data).toEqual({ position: "Supervisor", unit_id: "u2", valid_from: "2026-10-01" });
+  });
+
+  it("mutasi lintas unit ditolak API (masih bertugas di SK aktif): pesan tampil di dialog", async () => {
+    api((url, method) =>
+      url === "/employees/e1/assignments" && method === "post"
+        ? apiError(409, "INVALID_STATE", "Mutasi lintas unit diblokir sampai penugasan aktif diserahterimakan.")
+        : undefined,
+    );
+    renderRoute("/directory/e1", { role: "HR" });
+    fireEvent.click(await screen.findByRole("button", { name: "Mutasi / promosi" }));
+    const dialog = screen.getByRole("dialog", { name: "Mutasi / promosi" });
+    await within(dialog).findByRole("option", { name: "Wall Display" });
+    fireEvent.change(within(dialog).getByLabelText("Unit"), { target: { value: "u2" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Simpan" }));
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent("Mutasi lintas unit diblokir");
+  });
+
+  it("peran tanpa manage:users tidak melihat tombol mutasi", async () => {
+    api();
+    renderRoute("/directory/e1", { role: "FINANCE" });
+    await screen.findByRole("region", { name: "Riwayat jabatan" });
+    expect(screen.queryByRole("button", { name: "Mutasi / promosi" })).toBeNull();
+  });
+});
+
+describe("Berkas saya: karyawan mengajukan dokumen sendiri (M2)", () => {
+  it("tombol Tambah berkas tersedia dan dokumen dikirim atas nama karyawan sendiri", async () => {
+    const calls = mockApi((c) => {
+      if (c.url === "/employees/e-lead/documents" && c.method === "get") return { data: { items: [], total: 0 } };
+      if (c.url === "/files/upload") return { data: { file_id: "f7", message: "ok" } };
+      if (c.url === "/employees/e-lead/documents" && c.method === "post") return { status: 201, data: doc({ id: "d9" }) };
+    });
+    renderRoute("/my-documents", { role: "field" });
+    fireEvent.click(await screen.findByRole("button", { name: "Tambah berkas" }));
+    const dialog = screen.getByRole("dialog", { name: "Tambah berkas" });
+    fireEvent.change(within(dialog).getByLabelText(/Jenis dokumen/), { target: { value: "MCU" } });
+    fireEvent.change(within(dialog).getByLabelText(/Nomor dokumen/), { target: { value: "MCU-2026-01" } });
+    const fileInput = within(dialog).getByLabelText(/File/);
+    Object.defineProperty(fileInput, "files", { value: [new File(["x"], "mcu.pdf", { type: "application/pdf" })] });
+    fireEvent.change(fileInput);
+    fireEvent.click(within(dialog).getByRole("button", { name: "Simpan" }));
+    await waitFor(() => expect(calls.some((c) => c.method === "post" && c.url === "/employees/e-lead/documents")).toBe(true));
+    expect(calls.find((c) => c.method === "post" && c.url === "/employees/e-lead/documents")!.data).toMatchObject({
+      doc_type: "MCU", number: "MCU-2026-01", file_id: "f7",
+    });
   });
 });
 

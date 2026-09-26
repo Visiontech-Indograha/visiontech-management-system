@@ -639,12 +639,63 @@
    }
   },
   "/api/v1/employees/{emp_id}/assignments": {
+   "get": {
+    "tags": [
+     "Employees"
+    ],
+    "summary": "List Assignments",
+    "description": "Riwayat jabatan/penempatan (M2), terbaru dulu. Karyawan organisasi lain → 404.",
+    "operationId": "list_assignments_api_v1_employees__emp_id__assignments_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "emp_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Emp Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/EmployeeAssignmentResponse"
+         },
+         "title": "Response List Assignments Api V1 Employees  Emp Id  Assignments Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
    "post": {
     "tags": [
      "Employees"
     ],
     "summary": "Add Assignment",
-    "description": "Mutasi atau Promosi (mengubah unit/jabatan).",
+    "description": "domain.js PROMOTE — mutasi/promosi; aturan di EmployeeService.promote.",
     "operationId": "add_assignment_api_v1_employees__emp_id__assignments_post",
     "security": [
      {
@@ -2900,6 +2951,37 @@
       }
      }
     }
+   }
+  },
+  "/api/v1/units": {
+   "get": {
+    "tags": [
+     "Units"
+    ],
+    "summary": "List Units",
+    "description": "Unit milik organisasi pengguna saja (V-09).",
+    "operationId": "list_units_api_v1_units_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/UnitOut"
+         },
+         "type": "array",
+         "title": "Response List Units Api V1 Units Get"
+        }
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ]
    }
   },
   "/api/v1/sync/operations": {
@@ -6746,6 +6828,17 @@
        }
       ],
       "title": "Valid To"
+     },
+     "unit_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Unit Name"
      }
     },
     "type": "object",
@@ -8997,6 +9090,30 @@
      "row_version"
     ],
     "title": "TransitionRequest"
+   },
+   "UnitOut": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Id"
+     },
+     "code": {
+      "type": "string",
+      "title": "Code"
+     },
+     "name": {
+      "type": "string",
+      "title": "Name"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "code",
+     "name"
+    ],
+    "title": "UnitOut"
    },
    "UserMeResponse": {
     "properties": {

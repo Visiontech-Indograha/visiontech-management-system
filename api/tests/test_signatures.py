@@ -175,3 +175,15 @@ def test_rotated_key_keeps_old_signatures_valid(client, world: World, monkeypatc
     Ed25519PublicKey.from_public_bytes(bytes(public_key)).verify(bytes(signature), signing.canonical(payload))
     assert _verify(client, _token(world, old_sig["id"])).json()["state"] == "VALID"
     assert _verify(client, _token(world, new_sig["id"])).json()["state"] == "VALID"
+
+
+def test_signing_key_row_belongs_to_the_signing_organisation(client, world: World, other_world: World):
+    """Temuan R-19: `kid` dari 8 karakter AWAL id organisasi (cap waktu UUIDv7) → organisasi yang dibuat
+    berdekatan berbagi baris signing_key milik organisasi lain."""
+    for w in (world, other_world):
+        run_plan_to_accepted(client, w)
+    mismatched = sync_query(
+        "SELECT count(*) FROM vms.document_signature s JOIN vms.signing_key k ON k.id = s.signing_key_id "
+        "WHERE s.organization_id IN (%s, %s) AND k.organization_id <> s.organization_id",
+        (world.org_id, other_world.org_id))
+    assert mismatched == [(0,)]

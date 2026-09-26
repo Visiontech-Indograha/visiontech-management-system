@@ -42,15 +42,19 @@ class SignatureService:
         self.db = db
         self.repo = SignatureRepo(db)
 
+    async def _signing_key(self, org_id: Any, signer: Any) -> str:
+        """Baris signing_key MILIK organisasi ini. `kid` memakai id organisasi lengkap — dulu 8 karakter
+        awal (cap waktu UUIDv7), sehingga organisasi yang dibuat berdekatan berbagi kunci (temuan R-19)."""
+        return await self.repo.ensure_signing_key(
+            org_id, f"doc-{org_id}-{signer.fingerprint}", signer.public_key, signer.kms_ref, signer.algorithm)
+
     async def sign_plan_document(self, document_id: UUID | str, signer_employee_id: str, role: str,
                                  issued_by_user: str) -> Any:
         document = await self.repo.plan_document(document_id)
         if document is None:
             raise NotFoundError("Dokumen")
         signer = get_document_signer()
-        key_id = await self.repo.ensure_signing_key(
-            document.organization_id, f"doc-{str(document.organization_id)[:8]}-{signer.fingerprint}",
-            signer.public_key, signer.kms_ref, signer.algorithm)
+        key_id = await self._signing_key(document.organization_id, signer)
         payload = {
             "type": "plan_document", "document_id": str(document.id), "document_number": document.number,
             "document_version": document.version, "document_sha256": bytes(document.snapshot_sha256).hex(),
@@ -82,9 +86,7 @@ class SignatureService:
         if plan is None or plan.snapshot_sha256 is None:
             raise NotFoundError("Laporan akhir")
         signer = get_document_signer()
-        key_id = await self.repo.ensure_signing_key(
-            plan.organization_id, f"doc-{str(plan.organization_id)[:8]}-{signer.fingerprint}",
-            signer.public_key, signer.kms_ref, signer.algorithm)
+        key_id = await self._signing_key(plan.organization_id, signer)
         payload = {
             "type": "final_report", "document_id": str(plan.id), "document_number": f"{plan.number}-LA",
             "document_sha256": bytes(plan.snapshot_sha256).hex(), "signer_employee_id": str(signer_employee_id),

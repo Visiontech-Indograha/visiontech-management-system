@@ -26,6 +26,11 @@ class Settings(BaseSettings):
     MINIO_SECRET_KEY: str = "[REDACTED-MINIO-USER]"
     MINIO_BUCKET: str = "vms-files"
     MINIO_SECURE: bool = False
+    # Asal (origin) publik untuk URL presigned, mis. "https://vms.visiontech.id": Caddy meneruskan
+    # /<bucket>/* ke MinIO sehingga peramban & HP memuat berkas dari domain aplikasi (CSP img-src 'self',
+    # MinIO tanpa port publik). Kosong = pakai MINIO_ENDPOINT (lokal).
+    MINIO_PUBLIC_URL: str = ""
+    MINIO_REGION: str = "us-east-1"
     
     # "production" menyalakan penjaga di bawah; nilai lain (development/test) memakai bawaan lokal.
     APP_ENV: str = "development"

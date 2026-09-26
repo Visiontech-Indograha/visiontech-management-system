@@ -63,3 +63,34 @@ def test_client_uses_short_timeouts():
     pool = storage.minio_client._http
     assert pool.connection_pool_kw["timeout"].connect_timeout <= 3
     assert pool.connection_pool_kw["retries"].total <= 1
+
+
+# ── URL presigned untuk peramban/HP (temuan audit R-18) ────────────────────────────────────────
+def test_presigned_url_uses_public_origin_when_configured(monkeypatch):
+    """Produksi: CSP web `img-src 'self'` dan MinIO tanpa port publik → URL presigned harus dibuat
+    untuk domain aplikasi (Caddy meneruskan /<bucket>/* ke MinIO). Tanda tangan S3 mengikat host,
+    jadi host tidak bisa sekadar ditulis ulang setelahnya. Tidak ada panggilan jaringan (region tetap)."""
+    monkeypatch.setattr(storage.settings, "MINIO_PUBLIC_URL", "https://vms.contoh.id")
+    import urllib3
+
+    def no_network(*a, **k):
+        raise AssertionError("penandatanganan URL tidak boleh menghubungi MinIO")
+
+    monkeypatch.setattr(urllib3.PoolManager, "urlopen", no_network)
+    storage.presign_client.cache_clear()
+    try:
+        url = storage.get_presigned_url("org/berkas_view.webp")
+    finally:
+        storage.presign_client.cache_clear()
+
+    assert url.startswith(f"https://vms.contoh.id/{storage.settings.MINIO_BUCKET}/org/berkas_view.webp?")
+    assert "X-Amz-Signature=" in url and "X-Amz-Expires=300" in url
+
+
+def test_presigned_url_defaults_to_internal_endpoint(monkeypatch):
+    monkeypatch.setattr(storage.settings, "MINIO_PUBLIC_URL", "")
+    storage.presign_client.cache_clear()
+    try:
+        assert storage.presign_client() is storage.minio_client
+    finally:
+        storage.presign_client.cache_clear()

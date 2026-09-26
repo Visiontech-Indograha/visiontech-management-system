@@ -64,6 +64,7 @@ def create_app() -> FastAPI:
         # TODO: Add db connection check here
         return {"status": "ready"}
         
+    from app.api.assets import plan_assets_router
     from app.api.assets import router as assets_router
     from app.api.attendance import router as attendance_router
     from app.api.attendance_cron import router as attendance_cron_router
@@ -119,6 +120,7 @@ def create_app() -> FastAPI:
     app.include_router(hse_router, prefix=API_PREFIX)
     app.include_router(daily_report_router, prefix=API_PREFIX)
     app.include_router(assets_router, prefix=API_PREFIX)
+    app.include_router(plan_assets_router, prefix=API_PREFIX)
     app.include_router(overtime_router, prefix=API_PREFIX)
     app.include_router(overtime_recaps_router, prefix=API_PREFIX)
         

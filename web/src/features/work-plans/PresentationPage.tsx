@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { useWorkPlan } from "./api";
 import { INCIDENT_CATEGORY, INCIDENT_SEVERITY, useSessionIncidents } from "./incidents-api";
-import { useFinalReport, usePlanTeam } from "./report-api";
+import { useFinalReport, usePlanAssets, usePlanTeam } from "./report-api";
 
 /** Satu slide: setinggi layar saat ditampilkan, satu halaman lanskap saat dicetak. */
 function Slide({ title, index, total, children }: { title?: string; index: number; total: number; children: ReactNode }) {
@@ -40,10 +40,11 @@ export function PresentationPage() {
   const team = usePlanTeam(id);
   const report = useFinalReport(id, completed);
   const incidents = useSessionIncidents(id);
+  const assets = usePlanAssets(id, completed);
   const p = plan.data;
   const r = report.data;
 
-  if (plan.isPending || (completed && (team.isPending || report.isPending || incidents.isPending)))
+  if (plan.isPending || (completed && (team.isPending || report.isPending || incidents.isPending || assets.isPending)))
     return (
       <main className="mx-auto max-w-4xl space-y-4 p-6">
         <Skeleton className="h-10 w-2/3" />
@@ -82,15 +83,33 @@ export function PresentationPage() {
       ),
     },
     {
-      title: "Tim",
+      title: "Tim & aset",
       body: (
-        <ul className="space-y-3 text-lg md:text-2xl">
-          <li><span className="text-mist">Ketua:</span> <strong>{leader?.full_name ?? "-"}</strong></li>
-          <li>
-            <span className="text-mist">Anggota:</span>{" "}
-            {members.length ? members.map((m) => m.full_name).join(", ") : "-"}
-          </li>
-        </ul>
+        <div className="grid gap-8 md:grid-cols-2">
+          <div>
+            <p className="mb-3 font-semibold text-brand-700">Personel</p>
+            <ul className="space-y-2 text-lg md:text-xl">
+              <li><span className="text-mist">Ketua:</span> <strong>{leader?.full_name ?? "-"}</strong></li>
+              <li>
+                <span className="text-mist">Anggota:</span>{" "}
+                {members.length ? members.map((m) => m.full_name).join(", ") : "-"}
+              </li>
+            </ul>
+          </div>
+          <div>
+            <p className="mb-3 font-semibold text-brand-700">Aset yang digunakan</p>
+            <ul className="space-y-2 text-lg md:text-xl">
+              {(assets.data ?? []).map((a) => (
+                <li key={`${a.id}-${a.allocated_at}`}>
+                  {a.name} ({a.code})
+                  {a.driver_name && <span className="text-mist"> · pengemudi {a.driver_name}</span>}
+                  {a.returned_condition && <span className="text-mist"> · dikembalikan {a.returned_condition}</span>}
+                </li>
+              ))}
+              {!assets.data?.length && <li className="text-mist">Tidak ada aset.</li>}
+            </ul>
+          </div>
+        </div>
       ),
     },
     {

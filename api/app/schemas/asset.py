@@ -28,6 +28,19 @@ class AssetListItem(AssetResponse):
     return_requested_by_name: str | None = None
 
 
+class PlanAssetItem(BaseModel):
+    id: UUID
+    name: str
+    code: str
+    kind: str
+    vehicle_type: str | None
+    driver_name: str | None
+    allocated_at: datetime
+    released_at: datetime | None
+    returned_condition: str | None
+    return_accepted: bool | None
+
+
 class AssetReturnHistoryItem(BaseModel):
     id: UUID
     plan_number: str | None

@@ -5,7 +5,7 @@ mengembalikan aset dan petugas aset tidak bisa memeriksanya (siklus hanya bisa l
 """
 from __future__ import annotations
 
-from tests.conftest import World, requires_db
+from tests.conftest import World, requires_db, sync_query
 from tests.test_flow_plans import run_plan_to_in_progress
 
 pytestmark = requires_db
@@ -96,3 +96,16 @@ def test_bast_needs_a_verified_return(client, world: World):
     ret = client.post(f"/assets/allocations/{alloc['id']}/return", headers=world.headers(client, "leader"),
                       json={"condition_on_return": "Baik"}).json()
     assert client.get(f"/assets/returns/{ret['id']}/pdf", headers=officer).status_code == 409
+
+
+def test_plan_assets_for_presentation(client, world: World, other_world):
+    """Mode presentasi (prototipe slide "Tim & Sumber Daya"): aset yang dipakai SK + kondisi kembalinya."""
+    asset_id, _ = _cycle(client, world)
+    plan_id = sync_query("SELECT work_plan_id::text FROM vms.asset_allocation WHERE asset_id = %s", (asset_id,))[0][0]
+    rows = client.get(f"/work-plans/{plan_id}/assets", headers=world.headers(client, "member"))
+    assert rows.status_code == 200, rows.text
+    item = rows.json()[0]
+    assert (item["name"], item["code"], item["kind"]) == ("Bor listrik", "TL-B1", "TOOL")
+    assert (item["returned_condition"], item["return_accepted"]) == ("Baik", True)
+    assert item["released_at"] is not None
+    assert client.get(f"/work-plans/{plan_id}/assets", headers=other_world.headers(client, "pm")).status_code == 404

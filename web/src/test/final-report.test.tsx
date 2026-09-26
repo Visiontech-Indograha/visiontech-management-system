@@ -36,6 +36,10 @@ const setup = (status: string, finalReport: unknown, incidents: unknown[] = []) 
     if (c.url === "/work-plans/p1/members") return { data: team };
     if (c.url === "/work-plans/p1/completion") return { data: finalReport };
     if (c.url === "/hse/incidents") return { data: incidents };
+    if (c.url === "/work-plans/p1/assets")
+      return { data: [{ id: "a1", name: "Tangga lipat", code: "TL-01", kind: "TOOL", vehicle_type: null, driver_name: null,
+                        allocated_at: "2026-10-02T01:00:00Z", released_at: "2026-10-19T01:00:00Z",
+                        returned_condition: "Baik", return_accepted: true }] };
     if (c.url === "/employees") return { data: { items: [], total: 0, page: 1, size: 100 } };
     if (c.url === "/work-plans/p1/weekly" || c.url === "/work-plans/p1/days") return { data: [] };
   });
@@ -107,7 +111,9 @@ describe("mode presentasi laporan (M5)", () => {
     expect(await screen.findByRole("button", { name: "Simpan PDF" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 1, name: "Instalasi CCTV" })).toBeInTheDocument();
     const titles = screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent);
-    expect(titles).toEqual(["Tim", "Hasil pelaksanaan", "Insiden / K3", "Lampiran pendukung", "Pengesahan"]);
+    expect(titles).toEqual(["Tim & aset", "Hasil pelaksanaan", "Insiden / K3", "Lampiran pendukung", "Pengesahan"]);
+    expect(screen.getByText(/Tangga lipat \(TL-01\)/)).toBeInTheDocument();
+    expect(screen.getByText(/dikembalikan Baik/)).toBeInTheDocument();
     expect(screen.getByText("SK-202610-1a2b3c4d")).toBeInTheDocument();
     expect(screen.getByText("Asrul Mulya")).toBeInTheDocument();
     expect(screen.getByText(/Tangga licin/)).toBeInTheDocument();

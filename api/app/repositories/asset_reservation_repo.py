@@ -59,6 +59,23 @@ class AssetReservationRepo(BaseRepo):
         return await self.fetchone(self._RETURN_ROWS + " WHERE r.id = :id AND a.organization_id = :org",
                                    {"id": return_id, "org": org_id})
 
+    async def plan_assets(self, plan_id: UUID | str) -> list[Any]:
+        """Aset yang pernah dialokasikan ke SK + pengembalian terakhirnya (mode presentasi)."""
+        return list(await self.fetchall(
+            """
+            SELECT a.id, a.name, a.code, CAST(a.kind AS text) AS kind, a.vehicle_type, dr.full_name AS driver_name,
+                   al.allocated_at, al.released_at, r.condition_on_return AS returned_condition,
+                   r.is_accepted AS return_accepted
+            FROM vms.asset_allocation al
+            JOIN vms.asset a ON a.id = al.asset_id
+            LEFT JOIN vms.employee dr ON dr.id = al.driver_employee_id
+            LEFT JOIN LATERAL (SELECT x.condition_on_return, x.is_accepted FROM vms.asset_return x
+                               WHERE x.asset_allocation_id = al.id ORDER BY x.requested_at DESC LIMIT 1) r ON true
+            WHERE al.work_plan_id = :plan
+            ORDER BY al.allocated_at
+            """,
+            {"plan": plan_id}))
+
     async def lock_asset(self, asset_id: UUID | str) -> Any:
         return await self.fetchone(
             """

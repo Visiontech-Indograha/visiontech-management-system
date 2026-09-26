@@ -96,6 +96,7 @@ Tidak ada pustaka kompresi PDF atau Office: dokumen disimpan apa adanya (A-20, d
 | `sonner` | Notifikasi (pengganti `alert()`) |
 | `tw-animate-css` | Animasi shadcn |
 | `@fontsource-variable/plus-jakarta-sans` | Font variabel |
+| `leaflet`, `react-leaflet`, `@types/leaflet` | Peta lokasi penugasan SK (tile OpenStreetMap; revisi R-06, 2026-09-26) |
 
 ### Data & state
 | Paket | Untuk apa |

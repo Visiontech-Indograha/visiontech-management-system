@@ -27,6 +27,12 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ### ✨ Ditambahkan
 
+#### Lokasi penugasan (revisi PM, Web & Mobile) — 2026-09-26
+- Web: kartu "Lokasi penugasan" di detail SK (peta baca-saja, nama, radius); pengelola SK mendapat dialog "Atur titik lokasi" (cari kota → hasil → pin bisa digeser/klik → radius dengan lingkaran → "Simpan titik"), juga ditawarkan tepat setelah draf dibuat; SK berjalan menampilkan catatan audit. Leaflet + react-leaflet dengan tile & atribusi OpenStreetMap; CSP Caddy `img-src` mengizinkan tile.openstreetmap.org.
+- Mobile: absen masuk mendahulukan titik SK yang sedang berjalan.
+- Catatan revisi pemilik/PM kini diindeks di `docs/19-CATATAN-REVISI-PEMILIK.md`.
+- Belum: uji peta di peramban & HP; tombol edit tampil untuk semua pemegang `create:plan` (API tetap membatasi ke PM unit/OPS).
+
 #### Lokasi penugasan lewat titik koordinat (revisi PM, Backend) — 2026-09-26
 - `GET /geo/search?q=` (pengelola SK, `create:plan`): cari kota/tempat di Indonesia lewat Nominatim/OpenStreetMap dari backend (User-Agent jelas, ≤ 1 permintaan/detik, cache 24 jam; gagal → 503 "Pencarian lokasi sedang tidak tersedia…").
 - `GET /work-plans/{id}/location` (siapa pun yang melihat SK) · `PUT /work-plans/{id}/location {name, address?, lat, lng, radius_m}` (PM unit/OPS): untuk SK draf **dan berjalan**; tiap penetapan membuat `site` baru lalu ditautkan ke SK (site lama tidak diubah → riwayat absensi tetap sah); teks lokasi dokumen SK tidak berubah; radius 10–5000 m; SK selesai/batal → 409.

@@ -25,6 +25,14 @@
 		reverse_proxy api:8000
 	}
 
+	# Berkas (URL presigned) lewat origin yang sama: API mengisi MINIO_PUBLIC_URL = domain ini,
+	# sehingga CSP img-src 'self' tetap ketat dan MinIO tidak perlu port publik. Host asli ikut
+	# diteruskan (bawaan Caddy) karena tanda tangan S3 mengikat host. Bucket privat → hanya URL
+	# bertanda tangan yang berhasil.
+	handle /{$MINIO_BUCKET:vms-files}/* {
+		reverse_proxy {$MINIO_UPSTREAM:minio:9000}
+	}
+
 	handle {
 		root * /srv
 		try_files {path} /index.html

@@ -21,6 +21,7 @@ Status: **Selesai** · **Berjalan** · **Menunggu keputusan** · **Ditunda (pasc
 | R-06 | 2026-09-26 | PM (sprint) | Lokasi penugasan lewat **titik koordinat**: cari kota (mis. Dumai) lalu tetapkan titik pasti, untuk SK yang dibuat **dan yang sedang berjalan** | Pemilik: **tanpa adendum** — pada SK berjalan hanya titik absensi & radius yang berubah (tercatat di audit), teks lokasi dokumen tetap. Peta **Leaflet + OpenStreetMap**, pencarian kota lewat backend (Nominatim). Mobile: absen masuk mendahulukan titik SK berjalan | Selesai (kode); uji di peramban & HP belum |
 | R-07 | 2026-09-26 | Pemilik | Deploy ke server; hapus backend & frontend lama | Kontainer lama dihapus (dengan persetujuan); API :8000 & web :8080 baru jalan; DB & MinIO tidak disentuh | Selesai |
 | R-08 | 2026-09-26 | Pemilik | Laporan progres dalam bentuk PPT (persentase jadi/belum) | Deck 8 slide (Artifact Slides, unduh .pptx/PDF) | Selesai — perbarui tiap sprint |
+| R-10 | 2026-09-26 | Pemilik | Validasi absensi dilakukan juga oleh **PM per divisinya** | PM memeriksa (setujui/tolak + catatan) absensi `NEEDS_REVIEW` karyawan di unit yang dipegangnya; di luar unit ditolak. OPS lintas unit, Finance tetap seluruh organisasi; ekspor CSV tetap Finance. PM melihat daftar absensi unitnya di web | Selesai (kode + uji API); swafoto: lihat Q-06 |
 | R-09 | 2026-09-26 | Pemilik | Desain Figma sampai prototype | Prototype 5 alur (web & mobile) terhubung; layar menu samping PM & kamera swafoto belum; **desain ditunda** atas permintaan pemilik ("desain nanti saja") | Ditunda |
 
 ## Menunggu keputusan pemilik
@@ -32,3 +33,4 @@ Status: **Selesai** · **Berjalan** · **Menunggu keputusan** · **Ditunda (pasc
 | Q-03 | Label status aset `RETIRED` | Usulan: "Dipensiunkan" | Label tampil sebagai kode |
 | Q-04 | Domain + HTTPS untuk staging/produksi | Nama domain | Sesi web tidak bisa diperpanjang otomatis (cookie Secure), kamera/GPS peramban terbatas |
 | Q-05 | HR boleh melihat swafoto absensi? (V-17) | Ya / Tidak | Sekarang hanya pemilik & Finance/Admin |
+| Q-06 | PM boleh melihat swafoto absensi karyawan unitnya saat memvalidasi (R-10)? | Ya / Tidak | PM memvalidasi dari jarak, lokasi, dan penjelasan saja, tanpa foto |

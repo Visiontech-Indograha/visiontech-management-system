@@ -100,12 +100,13 @@ async def explain_attendance(
 async def review_attendance(
     att_id: UUID,
     data: ReviewRequest,
-    current_user: CurrentUser = Depends(require_permission(Permission.REVIEW_ATTENDANCE)),
+    current_user: CurrentUser = Depends(require_permission(Permission.REVIEW_UNIT_ATTENDANCE)),
     db: AsyncSession = Depends(get_db_with_user)
 ) -> dict[str, str]:
-    """P4-4 · domain.js REVIEW_ATTENDANCE (Finance)."""
+    """P4-4 · domain.js REVIEW_ATTENDANCE: Finance seluruh organisasi; PM unitnya, OPS lintas unit (R-10)."""
     status = await _service(db).review_attendance(
-        current_user.organization_id, current_user.user_id, att_id, data.is_approved, data.note)
+        current_user.organization_id, current_user.user_id, att_id, data.is_approved, data.note,
+        review_all=Permission.REVIEW_ATTENDANCE in current_user.permissions)
     return {"message": f"Absensi di-{status.lower()}."}
 
 

@@ -71,8 +71,13 @@ class AttendanceSessionService:
                               date_from: Any, date_to: Any, status: str | None,
                               page: int, size: int) -> tuple[list[Any], int]:
         """Prototipe (operations.js): FINANCE, HR, OPS — dan ADMIN — melihat seluruh organisasi;
+        PM: miliknya dan karyawan di unit yang dipegangnya (R-10);
         selain itu hanya absensi sendiri (filter karyawan lain → daftar kosong, tidak dibocorkan)."""
         scope: Any = employee_id
+        if not set(roles) & SEE_ALL and "PM" in roles:
+            return await self.repo.list_page(org_id, employee_id=employee_id, date_from=date_from, date_to=date_to,
+                                             status=status, limit=size, offset=(page - 1) * size,
+                                             pm_user_id=user_id)
         if not set(roles) & SEE_ALL:
             own = await self.repo.employee_of(user_id)
             if own is None or (employee_id is not None and str(employee_id) != str(own)):
@@ -94,10 +99,14 @@ class AttendanceSessionService:
         await self.repo.set_explanation(attendance_id, explanation.strip())
 
     async def review_attendance(self, org_id: str, user_id: str, attendance_id: UUID,
-                                approve: bool, note: str | None) -> str:
+                                approve: bool, note: str | None, *, review_all: bool) -> str:
+        """Finance/Admin (review:attendance) seluruh organisasi; PM hanya karyawan di unitnya,
+        OPS lintas unit (revisi pemilik R-10)."""
         attendance = await self.repo.get(attendance_id, org_id)
         if attendance is None:
             raise NotFoundError("Absensi")
+        if not review_all and not await self.repo.manages_employee(user_id, attendance.employee_id):
+            raise ForbiddenError("Absensi ini berada di luar unit atau kewenangan Anda.")
         if attendance.status != "NEEDS_REVIEW":
             raise AppError("INVALID_STATE", "Absensi tidak menunggu pemeriksaan.", status=409)
         reviewer = await self.repo.employee_of(user_id)

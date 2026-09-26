@@ -79,6 +79,7 @@ def create_app() -> FastAPI:
     from app.api.plan_changes import plan_router as plan_changes_router
     from app.api.plan_changes import router as changes_router
     from app.api.plan_days import router as plan_days_router
+    from app.api.plan_location import router as plan_location_router
     from app.api.plan_members import router as plan_members_router
     from app.api.plan_transitions import router as transitions_router
     from app.api.plans import router as plans_router
@@ -86,7 +87,6 @@ def create_app() -> FastAPI:
     from app.api.signatures import router as signatures_router
     from app.api.sites import router as sites_router
     from app.api.sync import router as sync_router
-    from app.api.plan_location import router as plan_location_router
     from app.api.weekly_reports import router as weekly_reports_router
 
     app.include_router(auth_router, prefix=API_PREFIX)

@@ -156,7 +156,8 @@ async def http_error_handler(request: Request, exc: StarletteHTTPException) -> J
         code = str(detail.get("code") or code)
         details = dict(detail.get("details") or {})
         if code == "DB_ERROR":
-            logger.error("DB_ERROR: %s", detail.get("message"))
+            # Hanya baris pertama: sisanya "[SQL: …] [parameters: …]" memuat data pribadi (dok 08).
+            logger.error("DB_ERROR: %s", str(detail.get("message") or "").split("\n", 1)[0])
             message = _DB_ERROR_MESSAGE
         else:
             message = str(detail.get("message") or message)

@@ -29,7 +29,7 @@ async def get_employee_documents(
     emp_id: UUID,
     current_user: CurrentUser = Depends(require_permission(Permission.VIEW_DOCUMENTS)),
     db: AsyncSession = Depends(get_db_with_user)
-):
+) -> DocumentListResponse:
     # Dapatkan employee_id dari user yang sedang login
     user_emp = text("SELECT employee_id FROM vms.app_user WHERE id = :uid")
     my_emp_id = (await db.execute(user_emp, {"uid": current_user.user_id})).scalar()
@@ -60,7 +60,7 @@ async def upload_document(
     data: EmployeeDocumentCreate,
     current_user: CurrentUser = Depends(require_permission(Permission.UPLOAD_DOCUMENTS)),
     db: AsyncSession = Depends(get_db_with_user)
-):
+) -> EmployeeDocumentResponse:
     # Dapatkan employee_id dari user yang login
     user_emp = text("SELECT employee_id FROM vms.app_user WHERE id = :uid")
     my_emp_id = (await db.execute(user_emp, {"uid": current_user.user_id})).scalar()
@@ -89,7 +89,7 @@ async def upload_document(
             "expiry": data.expiry_date, "fid": data.file_id,
             "uid": current_user.user_id, "super_id": data.supersedes_id
         })
-        row = res.fetchone()
+        row = res.one()
         return EmployeeDocumentResponse(**row._mapping)
     except Exception as e:
         raise HTTPException(status_code=400, detail={"code": "DB_ERROR", "message": str(e)})
@@ -101,7 +101,7 @@ async def verify_document(
     data: EmployeeDocumentVerify,
     current_user: CurrentUser = Depends(require_permission(Permission.VERIFY_DOCUMENTS)),
     db: AsyncSession = Depends(get_db_with_user)
-):
+) -> EmployeeDocumentResponse:
     uploader = (await db.execute(
         text("SELECT uploaded_by FROM vms.employee_document WHERE id = :doc_id AND employee_id = :emp_id"),
         {"doc_id": doc_id, "emp_id": emp_id},

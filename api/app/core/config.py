@@ -1,4 +1,5 @@
-from pydantic_settings import BaseSettings
+from pydantic import model_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -26,7 +27,25 @@ class Settings(BaseSettings):
     MINIO_BUCKET: str = "vms-files"
     MINIO_SECURE: bool = False
     
-    class Config:
-        env_file = ".env"
+    # "production" menyalakan penjaga di bawah; nilai lain (development/test) memakai bawaan lokal.
+    APP_ENV: str = "development"
+
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+    @model_validator(mode="after")
+    def _production_requires_secrets(self) -> "Settings":
+        """Produksi tidak boleh diam-diam memakai kunci JWT sementara, tanpa kunci tanda tangan,
+        atau kredensial MinIO bawaan — API menolak start (dok 08)."""
+        if self.APP_ENV.strip().lower() != "production":
+            return self
+        missing = [name for name, bad in (
+            ("JWT_PRIVATE_KEY_HEX", not self.JWT_PRIVATE_KEY_HEX),
+            ("DOC_SIGNING_KEY_HEX", self.DOC_SIGNING_KMS_REF.startswith("env:") and not self.DOC_SIGNING_KEY_HEX),
+            ("MINIO_ACCESS_KEY", self.MINIO_ACCESS_KEY in ("", "[REDACTED-MINIO-USER]")),
+            ("MINIO_SECRET_KEY", self.MINIO_SECRET_KEY in ("", "[REDACTED-MINIO-USER]")),
+        ) if bad]
+        if missing:
+            raise ValueError("APP_ENV=production tetapi rahasia belum diisi / masih bawaan: " + ", ".join(missing))
+        return self
 
 settings = Settings()

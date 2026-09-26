@@ -41,7 +41,7 @@ async def get_plans(
     archived: bool = False,
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_with_user)
-):
+) -> list[WorkPlanResponse]:
     """Hanya SK yang terlihat oleh pengguna (V-07, `domain.js` visiblePlans). `archived=true`: draf
     terarsip — hanya untuk pengelola (V-21)."""
     rows = await PlanAccessRepo(db).visible_plans(current_user.organization_id, current_user.user_id,
@@ -49,7 +49,7 @@ async def get_plans(
     return [WorkPlanResponse(**row._mapping) for row in rows]
 
 @router.get("/{plan_id}", response_model=WorkPlanResponse)
-async def get_plan(access: PlanAccess = _VIEW_ACCESS):
+async def get_plan(access: PlanAccess = _VIEW_ACCESS) -> WorkPlanResponse:
     return WorkPlanResponse(**access.plan._mapping)
 
 @router.post("", response_model=WorkPlanResponse, status_code=status.HTTP_201_CREATED)
@@ -57,7 +57,7 @@ async def create_plan(
     data: WorkPlanCreate,
     current_user: CurrentUser = Depends(require_permission(Permission.CREATE_PLAN)),
     db: AsyncSession = Depends(get_db_with_user)
-):
+) -> WorkPlanResponse:
     await check_unit_manager(db, data.unit_id, current_user)
     await ensure_same_org(db, current_user.organization_id, sites=[data.site_id],
                           employees=[data.pm_employee_id, data.leader_employee_id])
@@ -78,8 +78,8 @@ async def create_plan(
             "start": data.period_start, "end": data.period_end,
             "pm": data.pm_employee_id, "leader": data.leader_employee_id
         })
-        row = res.fetchone()
-        
+        row = res.one()
+
         # Tambahkan Leader ke tabel work_plan_member secara otomatis
         if data.leader_employee_id:
             add_member = text("""
@@ -115,7 +115,7 @@ async def update_plan(
     data: WorkPlanUpdate,
     access: PlanAccess = _PM_UNIT_ACCESS,
     db: AsyncSession = Depends(get_db_with_user)
-):
+) -> WorkPlanResponse:
     current_user = access.user
     await ensure_same_org(db, current_user.organization_id, sites=[data.site_id], employees=[data.leader_employee_id])
     # Optimistic locking
@@ -206,7 +206,7 @@ async def add_day(
     data: PlanDayCreate,
     access: PlanAccess = _PM_UNIT_ACCESS,
     db: AsyncSession = Depends(get_db_with_user)
-):
+) -> PlanDayResponse:
     current_user = access.user
     # Verifikasi status DRAFT
     check = text("SELECT status FROM vms.work_plan WHERE id = :id AND organization_id = :org")
@@ -224,7 +224,7 @@ async def add_day(
             "plan": plan_id, "date": data.work_date,
             "title": data.title, "sort": data.sort_order
         })
-        day_id = res.scalar()
+        day_id = res.scalar_one()
         return PlanDayResponse(id=day_id, work_plan_id=plan_id, **data.model_dump())
     except Exception:
         raise HTTPException(status_code=400, detail={"code": "DB_ERROR", "message": "Gagal menambahkan hari (mungkin tanggal bentrok)."})
@@ -236,7 +236,7 @@ async def add_task(
     data: PlanTaskCreate,
     access: PlanAccess = _DAY_PM_UNIT_ACCESS,
     db: AsyncSession = Depends(get_db_with_user)
-):
+) -> PlanTaskResponse:
     insert_task = text("""
         INSERT INTO vms.work_plan_task (work_plan_day_id, title, sort_order)
         VALUES (:day, :title, :sort)
@@ -245,7 +245,7 @@ async def add_task(
     res = await db.execute(insert_task, {
         "day": day_id, "title": data.title, "sort": data.sort_order
     })
-    task_id = res.scalar()
+    task_id = res.scalar_one()
     return PlanTaskResponse(id=task_id, work_plan_day_id=day_id, is_done=False, **data.model_dump())
 
 
@@ -265,7 +265,7 @@ async def save_day(
     data: DayPlanRequest,
     access: PlanAccess = _DAY_PM_UNIT_ACCESS,
     db: AsyncSession = Depends(get_db_with_user)
-) -> dict:
+) -> dict[str, object]:
     """domain.js SAVE_DAY (V-23): PM menyusun ulang judul & tugas satu hari selagi SK masih draf."""
     require_plan_status(access, PlanStatus.DRAFT)
     if not 1 <= len(data.tasks) <= 30:

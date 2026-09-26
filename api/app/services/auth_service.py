@@ -50,6 +50,16 @@ def _revoked() -> AppError:
     return AppError("SESSION_REVOKED", "Sesi tidak valid atau telah dicabut", status=401, persist=True)
 
 
+_DUMMY_HASH: str | None = None
+
+
+def _dummy_hash() -> str:
+    global _DUMMY_HASH
+    if _DUMMY_HASH is None:
+        _DUMMY_HASH = hash_password("vms-login-tiruan")
+    return _DUMMY_HASH
+
+
 class AuthService:
     def __init__(self, users: UserRepo, sessions: SessionRepo) -> None:
         self.users = users
@@ -63,7 +73,9 @@ class AuthService:
             raise AppError("LOCKED", "Terlalu banyak kegagalan login. Coba lagi nanti.", status=403)
 
         user = await self.users.find_by_login(login)
-        if not user or not user.password_hash or not verify_password(password, user.password_hash):
+        # Selalu hitung argon2 — tanpa ini login tak terdaftar jauh lebih cepat & bisa ditebak (dok 08).
+        stored_hash = user.password_hash if user and user.password_hash else _dummy_hash()
+        if not verify_password(password, stored_hash) or not user or not user.password_hash:
             await self.sessions.record_login_attempt(login, client.ip, False, "Invalid credentials")
             raise AppError("INVALID_CREDENTIALS", "Email atau kata sandi salah", status=400, persist=True)
 

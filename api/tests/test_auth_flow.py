@@ -4,6 +4,7 @@ Bentuk respons dan kode galat dijaga sama dengan perilaku sebelum refactor A-2.
 """
 from __future__ import annotations
 
+import pytest
 from fastapi.testclient import TestClient
 
 from tests.conftest import SeededUser, requires_db
@@ -161,3 +162,31 @@ def test_change_password_rotates_all_sessions(client, seeded_user):
     assert _refresh(client, old_refresh).status_code == 401
     assert _refresh(client, new_refresh).status_code == 200
     assert _login(client, seeded_user, "KataSandiBaru-456").status_code == 200
+
+
+def test_unknown_login_still_runs_password_hash(monkeypatch):
+    """Login tak terdaftar tetap memverifikasi argon2 (hash tiruan) — waktu respons tidak membocorkan
+    email mana yang terdaftar."""
+    import asyncio
+
+    from app.services import auth_service as svc
+
+    calls: list[str] = []
+    monkeypatch.setattr(svc, "verify_password", lambda pw, h: calls.append(h) or False)
+
+    class _Users:
+        async def find_by_login(self, login: str) -> None:
+            return None
+
+    class _Sessions:
+        async def login_is_locked(self, login: str) -> bool:
+            return False
+
+        async def record_login_attempt(self, *a: object, **k: object) -> None:
+            return None
+
+    service = svc.AuthService(_Users(), _Sessions())  # type: ignore[arg-type]
+    with pytest.raises(svc.AppError) as err:
+        asyncio.run(service.login("tidak-ada@contoh.id", "salah", svc.ClientInfo(ip=None, user_agent="uji")))
+    assert err.value.code == "INVALID_CREDENTIALS"
+    assert len(calls) == 1 and calls[0].startswith("$argon2")

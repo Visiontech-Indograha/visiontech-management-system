@@ -29,6 +29,19 @@ class PlanMemberRepo(BaseRepo):
             {"id": plan_id, "org": org_id},
         )
 
+    async def active_team(self, plan_id: UUID | str) -> list[Any]:
+        """Tim aktif SK (valid_period terbuka): ketua dulu, lalu anggota menurut nama."""
+        return list(await self.fetchall(
+            """
+            SELECT CAST(m.employee_id AS text) AS employee_id, CAST(m.role_in_plan AS text) AS role_in_plan,
+                   e.full_name, e.position, lower(m.valid_period) AS valid_from
+            FROM vms.work_plan_member m JOIN vms.employee e ON e.id = m.employee_id
+            WHERE m.work_plan_id = :plan AND upper_inf(m.valid_period)
+            ORDER BY (m.role_in_plan = 'LEADER') DESC, e.full_name
+            """,
+            {"plan": plan_id},
+        ))
+
     async def active_employees(self, employee_ids: Iterable[UUID | str], org_id: UUID | str) -> set[str]:
         ids = [str(e) for e in employee_ids]
         rows = await self.fetchall(

@@ -163,6 +163,10 @@ class PlanTransitionService:
         return await self.repo.get_plan(plan_id)
 
     # ── Penyelesaian (V-26) ───────────────────────────────────────────────────────────────────
+    async def final_report(self, plan_id: UUID) -> Any:
+        """Laporan akhir untuk dibaca tim & pemeriksa (akses VIEW diperiksa penjaga rute). None bila belum ada."""
+        return await self.repo.final_report(plan_id)
+
     async def _weeks_approved(self, plan_id: UUID) -> bool:
         weeks = await WeeklyReportRepo(self.repo.db).list_weeks(plan_id)
         return all(week.status == "APPROVED" for week in weeks)

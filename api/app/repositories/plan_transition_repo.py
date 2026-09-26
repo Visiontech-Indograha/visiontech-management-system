@@ -274,6 +274,23 @@ class PlanTransitionRepo(BaseRepo):
             """,
             {"plan": plan_id})
 
+    async def final_report(self, plan_id: UUID | str) -> Any:
+        """Laporan akhir beserta nama pengaju/pemeriksa dan bukti. None bila belum pernah diajukan."""
+        return await self.fetchone(
+            """
+            SELECT CAST(fr.status AS text) AS status, fr.body, fr.obstacle,
+                   fr.submitted_at, se.full_name AS submitted_by_name,
+                   fr.review_note, fr.reviewed_at, re.full_name AS reviewed_by_name,
+                   COALESCE(ARRAY(SELECT CAST(ev.file_id AS text) FROM vms.final_report_evidence ev
+                                  WHERE ev.work_plan_id = fr.work_plan_id ORDER BY ev.file_id), '{}')
+                       AS evidence_file_ids
+            FROM vms.final_report fr
+            LEFT JOIN vms.employee se ON se.id = fr.submitted_by
+            LEFT JOIN vms.employee re ON re.id = fr.reviewed_by
+            WHERE fr.work_plan_id = :plan
+            """,
+            {"plan": plan_id})
+
     async def final_report_status(self, plan_id: UUID | str) -> str | None:
         status: str | None = await self.scalar(
             "SELECT CAST(status AS text) FROM vms.final_report WHERE work_plan_id = :plan", {"plan": plan_id})

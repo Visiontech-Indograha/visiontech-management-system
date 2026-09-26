@@ -1670,6 +1670,57 @@
    }
   },
   "/api/v1/work-plans/{plan_id}/members": {
+   "get": {
+    "tags": [
+     "Plan Members"
+    ],
+    "summary": "Get Plan Team",
+    "description": "Tim aktif SK (ketua dulu). SK tak terlihat / organisasi lain → 404 (penjaga VIEW).",
+    "operationId": "get_plan_team_api_v1_work_plans__plan_id__members_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "plan_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Plan Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/TeamMemberOut"
+         },
+         "title": "Response Get Plan Team Api V1 Work Plans  Plan Id  Members Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
    "put": {
     "tags": [
      "Plan Members"
@@ -1710,6 +1761,63 @@
        "application/json": {
         "schema": {
          "$ref": "#/components/schemas/TeamResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/work-plans/{plan_id}/completion": {
+   "get": {
+    "tags": [
+     "Work Plan Transitions"
+    ],
+    "summary": "Get Final Report",
+    "description": "Laporan akhir SK — dibaca PM sebelum menyetujui/mengembalikan, dan untuk mode presentasi.\nnull bila belum pernah diajukan; SK tak terlihat → 404 (penjaga VIEW).",
+    "operationId": "get_final_report_api_v1_work_plans__plan_id__completion_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "plan_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Plan Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "anyOf": [
+          {
+           "$ref": "#/components/schemas/FinalReportOut"
+          },
+          {
+           "type": "null"
+          }
+         ],
+         "title": "Response Get Final Report Api V1 Work Plans  Plan Id  Completion Get"
         }
        }
       }
@@ -5349,6 +5457,10 @@
     "properties": {
      "decision": {
       "type": "string",
+      "enum": [
+       "ACCEPT",
+       "APPEAL"
+      ],
       "title": "Decision"
      },
      "reason": {
@@ -5373,6 +5485,10 @@
     "properties": {
      "kind": {
       "type": "string",
+      "enum": [
+       "VEHICLE",
+       "TOOL"
+      ],
       "title": "Kind"
      },
      "vehicle_type": {
@@ -5452,6 +5568,10 @@
     "properties": {
      "kind": {
       "type": "string",
+      "enum": [
+       "VEHICLE",
+       "TOOL"
+      ],
       "title": "Kind"
      },
      "vehicle_type": {
@@ -6145,6 +6265,10 @@
      },
      "location_origin": {
       "type": "string",
+      "enum": [
+       "GPS",
+       "SIMULASI"
+      ],
       "title": "Location Origin",
       "default": "GPS"
      },
@@ -6175,7 +6299,14 @@
      "face_result": {
       "anyOf": [
        {
-        "type": "string"
+        "type": "string",
+        "enum": [
+         "MATCH",
+         "NO_MATCH",
+         "LOW_QUALITY",
+         "NOT_ENROLLED",
+         "SKIPPED"
+        ]
        },
        {
         "type": "null"
@@ -6209,6 +6340,10 @@
      },
      "location_origin": {
       "type": "string",
+      "enum": [
+       "GPS",
+       "SIMULASI"
+      ],
       "title": "Location Origin",
       "default": "GPS"
      }
@@ -7220,6 +7355,106 @@
     ],
     "title": "ExplanationRequest"
    },
+   "FinalReportOut": {
+    "properties": {
+     "status": {
+      "type": "string",
+      "title": "Status"
+     },
+     "body": {
+      "type": "string",
+      "title": "Body"
+     },
+     "obstacle": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Obstacle"
+     },
+     "evidence_file_ids": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Evidence File Ids"
+     },
+     "submitted_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Submitted At"
+     },
+     "submitted_by_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Submitted By Name"
+     },
+     "review_note": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Review Note"
+     },
+     "reviewed_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Reviewed At"
+     },
+     "reviewed_by_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Reviewed By Name"
+     }
+    },
+    "type": "object",
+    "required": [
+     "status",
+     "body",
+     "obstacle",
+     "evidence_file_ids",
+     "submitted_at",
+     "submitted_by_name",
+     "review_note",
+     "reviewed_at",
+     "reviewed_by_name"
+    ],
+    "title": "FinalReportOut"
+   },
    "GeoPoint": {
     "properties": {
      "lat": {
@@ -7292,10 +7527,23 @@
      },
      "category": {
       "type": "string",
+      "enum": [
+       "K3_RINGAN",
+       "K3_BERAT",
+       "K3_LINGKUNGAN",
+       "K3_HAMPIR",
+       "ASET"
+      ],
       "title": "Category"
      },
      "severity": {
       "type": "string",
+      "enum": [
+       "RENDAH",
+       "SEDANG",
+       "TINGGI",
+       "KRITIS"
+      ],
       "title": "Severity"
      },
      "description": {
@@ -8439,6 +8687,54 @@
      "results"
     ],
     "title": "SyncResponse"
+   },
+   "TeamMemberOut": {
+    "properties": {
+     "employee_id": {
+      "type": "string",
+      "title": "Employee Id"
+     },
+     "full_name": {
+      "type": "string",
+      "title": "Full Name"
+     },
+     "position": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Position"
+     },
+     "role_in_plan": {
+      "type": "string",
+      "title": "Role In Plan"
+     },
+     "valid_from": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Valid From"
+     }
+    },
+    "type": "object",
+    "required": [
+     "employee_id",
+     "full_name",
+     "position",
+     "role_in_plan",
+     "valid_from"
+    ],
+    "title": "TeamMemberOut"
    },
    "TeamRequest": {
     "properties": {

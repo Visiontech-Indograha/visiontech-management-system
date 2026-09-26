@@ -2,6 +2,7 @@
 Susunan tim SK draft (V-05). Tipis: aturan di services/plan_member_service.py, SQL di
 repositories/plan_member_repo.py; transaksi dibuka dependency sesi (get_db).
 """
+from datetime import date
 from uuid import UUID
 
 from fastapi import APIRouter, Depends
@@ -15,6 +16,26 @@ from app.services.plan_member_service import PlanMemberService
 
 router = APIRouter(prefix="/work-plans/{plan_id}", tags=["Plan Members"])
 _PM_UNIT_ACCESS = Depends(plan_access(PlanNeed.PM_UNIT))
+_VIEW_ACCESS = Depends(plan_access(PlanNeed.VIEW))
+
+
+class TeamMemberOut(BaseModel):
+    employee_id: str
+    full_name: str
+    position: str | None
+    role_in_plan: str  # LEADER | MEMBER
+    valid_from: date | None
+
+
+@router.get("/members", response_model=list[TeamMemberOut])
+async def get_plan_team(
+    plan_id: UUID,
+    access: PlanAccess = _VIEW_ACCESS,
+    db: AsyncSession = Depends(get_db_with_user),
+) -> list[TeamMemberOut]:
+    """Tim aktif SK (ketua dulu). SK tak terlihat / organisasi lain → 404 (penjaga VIEW)."""
+    rows = await PlanMemberService(PlanMemberRepo(db)).team(plan_id)
+    return [TeamMemberOut(**r._mapping) for r in rows]
 
 
 class TeamRequest(BaseModel):

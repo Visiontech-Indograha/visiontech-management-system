@@ -1,11 +1,11 @@
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 import type { RouteObject } from "react-router-dom";
 import { AppShell } from "@/components/layout/AppShell";
 import { RequireAccess, RequireAuth } from "@/components/layout/guards";
 import { LoginPage } from "@/pages/auth/LoginPage";
 import { ComingSoonPage, ForbiddenPage, HomePage, NotFoundPage } from "@/pages/Placeholders";
 import { NAV_ITEMS } from "./navigation";
-import { AssetsPage, AttendancePage, AuditLogPage, DirectoryPage, EmployeeDetailPage, MyDocumentsPage, SitesPage, WorkPlanDetailPage, WorkPlansPage, AttendanceRecapPage, OvertimeRecapPage, TimelinePage } from "./lazyPages";
+import { AssetsPage, AttendancePage, AuditLogPage, DirectoryPage, EmployeeDetailPage, MyDocumentsPage, SitesPage, WorkPlanDetailPage, WorkPlansPage, AttendanceRecapPage, OvertimeRecapPage, PresentationPage, TimelinePage } from "./lazyPages";
 import { VerifyPage } from "@/features/verify/VerifyPage";
 import { ChangePasswordPage } from "@/pages/auth/ChangePasswordPage";
 
@@ -34,6 +34,15 @@ export const routes: RouteObject[] = [
     element: <RequireAuth />,
     children: [
       { path: "/change-password", element: <ChangePasswordPage /> },
+      // Mode presentasi laporan (M5): layar penuh untuk rapat, di luar AppShell.
+      {
+        path: "/work-plans/:id/presentation",
+        element: (
+          <Suspense fallback={null}>
+            <PresentationPage />
+          </Suspense>
+        ),
+      },
       {
         element: <AppShell />,
         children: [

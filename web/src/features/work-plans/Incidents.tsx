@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -10,30 +10,11 @@ import { Button } from "@/components/ui/button";
 import { SelectField, TextAreaField, TextField } from "@/components/ui/Field";
 import { Dialog } from "@/components/ui/VmsDialog";
 import { api } from "@/lib/api";
-import type { components } from "@/lib/api-types";
 import { errorMessage } from "@/lib/errors";
 import { formatDate } from "@/lib/format";
 import type { WorkPlan } from "./api";
+import { INCIDENT_CATEGORY, INCIDENT_SEVERITY, key, useSessionIncidents, type Incident } from "./incidents-api";
 import { oversize, uploadFiles } from "./uploads";
-
-type Incident = components["schemas"]["IncidentResponse"];
-
-const INCIDENT_CATEGORY: Record<string, string> = {
-  K3_RINGAN: "K3 ringan",
-  K3_BERAT: "K3 berat",
-  K3_LINGKUNGAN: "K3 lingkungan",
-  K3_HAMPIR: "Hampir celaka",
-  ASET: "Aset",
-};
-const INCIDENT_SEVERITY: Record<string, string> = { RENDAH: "Rendah", SEDANG: "Sedang", TINGGI: "Tinggi", KRITIS: "Kritis" };
-
-/** Insiden SK (GET /hse/incidents?plan_id=) — termasuk yang dilaporkan tim dari aplikasi mobile. */
-const key = (planId: string) => ["incidents", planId] as const;
-const useSessionIncidents = (planId: string) =>
-  useQuery<Incident[]>({
-    queryKey: key(planId),
-    queryFn: async () => (await api.get<Incident[]>("/hse/incidents", { params: { plan_id: planId } })).data,
-  });
 
 function useStoreIncident(planId: string) {
   const qc = useQueryClient();

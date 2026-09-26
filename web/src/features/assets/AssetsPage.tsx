@@ -10,11 +10,13 @@ import { Button } from "@/components/ui/button";
 import { SelectField, TextAreaField, TextField } from "@/components/ui/Field";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Dialog } from "@/components/ui/VmsDialog";
+import { api, ApiError } from "@/lib/api";
 import { errorMessage } from "@/lib/errors";
+import { formatDateTime } from "@/lib/format";
 import { useActiveEmployees } from "@/features/work-plans/api";
-import { useActivePlans, useAssets, useCheckAsset, useCreateAsset, useReleaseAsset, useReserveAsset, type Asset } from "./api";
+import { useActivePlans, useAssets, useCheckAsset, useCreateAsset, useAssetReturns, useReleaseAsset, useRequestReturn, useReserveAsset, useVerifyReturn, type Asset, type AssetReturnItem } from "./api";
 
-type Open = { kind: "create" } | { kind: "reserve" | "release" | "check"; asset: Asset } | null;
+type Open = { kind: "create" } | { kind: "reserve" | "release" | "check" | "return" | "verify" | "history"; asset: Asset } | null;
 
 /** "Kendaraan & alat" (prototype/js/operations.js assets). Aturan alokasi tetap di API. */
 export function AssetsPage() {
@@ -22,6 +24,8 @@ export function AssetsPage() {
   const perms = me?.permissions ?? [];
   const canManage = perms.includes("manage:assets");
   const canReserve = canManage || perms.includes("create:plan");
+  // RETURN_ASSET: ketua SK peminjam (bukan petugas aset); VERIFY_RETURN: petugas aset.
+  const isBorrowingLeader = (a: Asset) => !!me?.employee_id && a.leader_employee_id === me.employee_id && !canManage;
   const assets = useAssets();
   const [open, setOpen] = useState<Open>(null);
   const close = () => setOpen(null);
@@ -42,6 +46,13 @@ export function AssetsPage() {
                 <div>Kode: {a.code}</div>
                 <div>Kondisi: {a.condition}</div>
                 {a.vehicle_type && <div>Jenis: {a.vehicle_type}</div>}
+                {a.plan_number && <div>Dipakai: SK {a.plan_number}</div>}
+                {a.pending_return_id && (
+                  <div className="mt-1 text-warning">
+                    Pengembalian diajukan {a.return_requested_by_name ?? "ketua tim"} · kondisi {a.return_condition}
+                    {a.return_note ? ` — ${a.return_note}` : ""}
+                  </div>
+                )}
               </dl>
               <div className="mt-auto flex flex-col gap-2 md:flex-row md:flex-wrap">
                 {canReserve && a.status === "AVAILABLE" && <Button onClick={() => setOpen({ kind: "reserve", asset: a })}>Alokasikan</Button>}
@@ -50,6 +61,17 @@ export function AssetsPage() {
                     Lepas reservasi
                   </Button>
                 )}
+                {isBorrowingLeader(a) && a.allocation_id && !a.pending_return_id && ["IN_USE", "RESERVED"].includes(a.status) && (
+                  <Button variant="outline" onClick={() => setOpen({ kind: "return", asset: a })}>
+                    Ajukan pengembalian
+                  </Button>
+                )}
+                {canManage && a.status === "RETURN_PENDING" && a.pending_return_id && (
+                  <Button onClick={() => setOpen({ kind: "verify", asset: a })}>Periksa pengembalian</Button>
+                )}
+                <Button variant="ghost" onClick={() => setOpen({ kind: "history", asset: a })}>
+                  Riwayat
+                </Button>
                 {a.kind === "VEHICLE" && a.status === "RESERVED" && (
                   <Button variant="outline" onClick={() => setOpen({ kind: "check", asset: a })}>
                     Periksa Kendaraan
@@ -64,6 +86,9 @@ export function AssetsPage() {
       {open?.kind === "reserve" && <ReserveDialog asset={open.asset} onClose={close} />}
       {open?.kind === "release" && <ReleaseDialog asset={open.asset} onClose={close} />}
       {open?.kind === "check" && <CheckDialog asset={open.asset} onClose={close} />}
+      {open?.kind === "return" && <ReturnDialog asset={open.asset} onClose={close} />}
+      {open?.kind === "verify" && <VerifyReturnDialog asset={open.asset} onClose={close} />}
+      {open?.kind === "history" && <ReturnHistoryDialog asset={open.asset} onClose={close} />}
     </>
   );
 }
@@ -276,5 +301,134 @@ function CheckDialog({ asset, onClose }: { asset: Asset; onClose: () => void }) 
       </SelectField>
       <TextAreaField label="Alasan (wajib jika banding)" error={errors.reason?.message} {...register("reason")} />
     </FormDialog>
+  );
+}
+
+const returnSchema = z.object({
+  condition_on_return: z.string().trim().min(1, "Kondisi saat dikembalikan wajib diisi."),
+  note: z.string().trim(),
+});
+type ReturnValues = z.infer<typeof returnSchema>;
+
+/** Ketua SK peminjam mengajukan pengembalian (BAST) — petugas aset memeriksanya. */
+function ReturnDialog({ asset, onClose }: { asset: Asset; onClose: () => void }) {
+  const requestReturn = useRequestReturn();
+  const [formError, setFormError] = useState<string | null>(null);
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<ReturnValues>({ resolver: zodResolver(returnSchema), defaultValues: { condition_on_return: asset.condition, note: "" } });
+  const onSubmit = handleSubmit(async (v) => {
+    setFormError(null);
+    try {
+      await requestReturn.mutateAsync({ allocation_id: asset.allocation_id!, condition_on_return: v.condition_on_return, note: v.note || null });
+      toast.success("Pengembalian diajukan. Petugas aset akan memeriksa kondisinya.");
+      onClose();
+    } catch (err) {
+      setFormError(errorMessage(err));
+    }
+  });
+  return (
+    <FormDialog title={`Kembalikan ${asset.name}`} submitLabel="Ajukan pengembalian" submitting={isSubmitting} formError={formError} onClose={onClose} onSubmit={onSubmit}>
+      <TextField label="Kondisi saat dikembalikan" error={errors.condition_on_return?.message} {...register("condition_on_return")} />
+      <TextAreaField label="Catatan (opsional)" {...register("note")} />
+    </FormDialog>
+  );
+}
+
+const verifySchema = z
+  .object({ decision: z.enum(["ACCEPT", "REJECT"]), note: z.string().trim() })
+  .refine((v) => v.decision === "ACCEPT" || v.note.length > 0, { path: ["note"], message: "Alasan penolakan wajib diisi." });
+type VerifyValues = z.infer<typeof verifySchema>;
+
+/** Petugas aset: terima → aset tersedia lagi; tolak → kembali ke tim untuk diperbaiki (R9, tanpa jalan buntu). */
+function VerifyReturnDialog({ asset, onClose }: { asset: Asset; onClose: () => void }) {
+  const verify = useVerifyReturn();
+  const [formError, setFormError] = useState<string | null>(null);
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<VerifyValues>({ resolver: zodResolver(verifySchema), defaultValues: { decision: "ACCEPT", note: "" } });
+  const onSubmit = handleSubmit(async (v) => {
+    setFormError(null);
+    try {
+      await verify.mutateAsync({ return_id: asset.pending_return_id!, is_accepted: v.decision === "ACCEPT", note: v.note || null });
+      toast.success(v.decision === "ACCEPT" ? "Pengembalian diterima. Aset tersedia lagi." : "Pengembalian ditolak. Aset kembali ke tim.");
+      onClose();
+    } catch (err) {
+      setFormError(errorMessage(err));
+    }
+  });
+  return (
+    <FormDialog title={`Periksa pengembalian ${asset.name}`} submitLabel="Simpan hasil" submitting={isSubmitting} formError={formError} onClose={onClose} onSubmit={onSubmit}>
+      <p className="mb-3 text-sm text-mist">
+        Diajukan {asset.return_requested_by_name ?? "ketua tim"} · kondisi {asset.return_condition}
+        {asset.return_note ? ` — ${asset.return_note}` : ""}
+      </p>
+      <SelectField label="Hasil pemeriksaan" {...register("decision")}>
+        <option value="ACCEPT">Terima — aset tersedia lagi</option>
+        <option value="REJECT">Tolak — kembali ke tim untuk diperbaiki</option>
+      </SelectField>
+      <TextAreaField label="Catatan (wajib jika ditolak)" error={errors.note?.message} {...register("note")} />
+    </FormDialog>
+  );
+}
+
+/** Unduh BAST (GET /assets/returns/{id}/pdf, blob). */
+async function downloadBast(asset: Asset, item: AssetReturnItem) {
+  try {
+    const res = await api.get<Blob>(`/assets/returns/${item.id}/pdf`, { responseType: "blob" });
+    const url = URL.createObjectURL(res.data);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `BAST-${asset.code}-${item.plan_number ?? ""}.pdf`.replace(/\//g, "-");
+    link.click();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    toast.error(err instanceof ApiError && err.status === 503 ? "Layanan PDF belum tersedia di server ini." : errorMessage(err));
+  }
+}
+
+/** Riwayat pengembalian + berita acara serah terima (P6-4). */
+function ReturnHistoryDialog({ asset, onClose }: { asset: Asset; onClose: () => void }) {
+  const history = useAssetReturns(asset.id);
+  return (
+    <Dialog
+      open
+      title={`Riwayat pengembalian ${asset.name}`}
+      onClose={onClose}
+      footer={
+        <Button variant="outline" onClick={onClose}>
+          Tutup
+        </Button>
+      }
+    >
+      {history.isPending && <p className="text-sm text-mist">Memuat…</p>}
+      {history.isError && <p className="text-sm text-danger">Riwayat tidak dapat dimuat.</p>}
+      {history.data?.length === 0 && <p className="text-sm text-mist">Belum pernah dikembalikan.</p>}
+      <ul className="divide-y divide-line text-sm">
+        {history.data?.map((r) => (
+          <li key={r.id} className="flex flex-col gap-2 py-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="font-medium">
+                SK {r.plan_number} ·{" "}
+                {r.verified_at ? (r.is_accepted ? "Diterima" : "Ditolak") : "Menunggu pemeriksaan"}
+              </p>
+              <p className="text-mist">
+                {r.requested_by_name} · {formatDateTime(r.requested_at)} · kondisi {r.condition_on_return ?? "-"}
+                {r.verified_by_name && ` · diperiksa ${r.verified_by_name}`}
+              </p>
+            </div>
+            {r.verified_at && (
+              <Button size="sm" variant="outline" onClick={() => downloadBast(asset, r)}>
+                Unduh BAST
+              </Button>
+            )}
+          </li>
+        ))}
+      </ul>
+    </Dialog>
   );
 }

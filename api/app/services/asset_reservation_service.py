@@ -30,6 +30,26 @@ class AssetReservationService:
         self.db = db
         self.repo = AssetReservationRepo(db)
 
+    async def list_assets(self, org_id: str) -> list[Any]:
+        """Daftar aset beserta alokasi berjalan & pengajuan pengembalian — dasar tombol kembali/periksa."""
+        return await self.repo.list_with_state(org_id)
+
+    async def return_history(self, org_id: str, asset_id: UUID) -> list[Any]:
+        rows = await self.repo.return_history(asset_id, org_id)
+        if rows is None:
+            raise NotFoundError("Aset")
+        return rows
+
+    async def bast(self, org_id: str, return_id: UUID) -> Any:
+        """Berita acara serah terima (P6-4): hanya untuk pengembalian yang sudah diperiksa petugas aset."""
+        record = await self.repo.return_record(return_id, org_id)
+        if record is None:
+            raise NotFoundError("Pengembalian aset")
+        if record.verified_at is None:
+            raise AppError("INVALID_STATE", "Berita acara tersedia setelah pengembalian diperiksa petugas aset.",
+                           status=409)
+        return record
+
     async def _manager_of(self, user: CurrentUser, plan_id: UUID | str) -> None:
         """domain.js RESERVE/RELEASE_ASSET: ASSET, OPS, atau PM unit SK itu."""
         if Permission.MANAGE_ASSETS not in user.permissions:

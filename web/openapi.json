@@ -5115,6 +5115,7 @@
      "Assets"
     ],
     "summary": "Get Assets",
+    "description": "Aset organisasi + alokasi berjalan + pengajuan pengembalian yang menunggu (M6/R9 dari layar).",
     "operationId": "get_assets_api_v1_assets_get",
     "responses": {
      "200": {
@@ -5123,7 +5124,7 @@
        "application/json": {
         "schema": {
          "items": {
-          "$ref": "#/components/schemas/AssetResponse"
+          "$ref": "#/components/schemas/AssetListItem"
          },
          "type": "array",
          "title": "Response Get Assets Api V1 Assets Get"
@@ -5181,6 +5182,101 @@
       "HTTPBearer": []
      }
     ]
+   }
+  },
+  "/api/v1/assets/{asset_id}/returns": {
+   "get": {
+    "tags": [
+     "Assets"
+    ],
+    "summary": "Get Asset Returns",
+    "description": "Riwayat pengembalian aset (terbaru dulu). Aset organisasi lain → 404.",
+    "operationId": "get_asset_returns_api_v1_assets__asset_id__returns_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "asset_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Asset Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/AssetReturnHistoryItem"
+         },
+         "title": "Response Get Asset Returns Api V1 Assets  Asset Id  Returns Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/assets/returns/{return_id}/pdf": {
+   "get": {
+    "tags": [
+     "Assets"
+    ],
+    "summary": "Get Bast Pdf",
+    "description": "Berita acara serah terima (P6-4) untuk pengembalian yang sudah diperiksa. Render → threadpool.",
+    "operationId": "get_bast_pdf_api_v1_assets_returns__return_id__pdf_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "return_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Return Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
    }
   },
   "/api/v1/assets/{asset_id}/reserve": {
@@ -5835,6 +5931,153 @@
     ],
     "title": "AssetCreate"
    },
+   "AssetListItem": {
+    "properties": {
+     "kind": {
+      "type": "string",
+      "enum": [
+       "VEHICLE",
+       "TOOL"
+      ],
+      "title": "Kind"
+     },
+     "vehicle_type": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Vehicle Type"
+     },
+     "code": {
+      "type": "string",
+      "title": "Code"
+     },
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "condition": {
+      "type": "string",
+      "title": "Condition",
+      "default": "Baik"
+     },
+     "id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Id"
+     },
+     "status": {
+      "type": "string",
+      "title": "Status"
+     },
+     "allocation_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Allocation Id"
+     },
+     "work_plan_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Work Plan Id"
+     },
+     "plan_number": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Plan Number"
+     },
+     "leader_employee_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Leader Employee Id"
+     },
+     "pending_return_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Pending Return Id"
+     },
+     "return_condition": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Return Condition"
+     },
+     "return_note": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Return Note"
+     },
+     "return_requested_by_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Return Requested By Name"
+     }
+    },
+    "type": "object",
+    "required": [
+     "kind",
+     "code",
+     "name",
+     "id",
+     "status"
+    ],
+    "title": "AssetListItem",
+    "description": "Aset + alokasi berjalan + pengajuan pengembalian yang menunggu (R-19, M6)."
+   },
    "AssetReleaseRequest": {
     "properties": {
      "work_plan_id": {
@@ -5952,6 +6195,104 @@
      "condition_on_return"
     ],
     "title": "AssetReturnCreate"
+   },
+   "AssetReturnHistoryItem": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Id"
+     },
+     "plan_number": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Plan Number"
+     },
+     "requested_by_name": {
+      "type": "string",
+      "title": "Requested By Name"
+     },
+     "requested_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Requested At"
+     },
+     "condition_on_return": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Condition On Return"
+     },
+     "note": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Note"
+     },
+     "verified_by_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Verified By Name"
+     },
+     "verified_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Verified At"
+     },
+     "is_accepted": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Is Accepted"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "plan_number",
+     "requested_by_name",
+     "requested_at",
+     "condition_on_return",
+     "note",
+     "verified_by_name",
+     "verified_at",
+     "is_accepted"
+    ],
+    "title": "AssetReturnHistoryItem"
    },
    "AssetReturnResponse": {
     "properties": {

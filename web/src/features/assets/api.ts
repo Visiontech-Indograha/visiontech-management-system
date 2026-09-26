@@ -3,7 +3,8 @@ import { api } from "@/lib/api";
 import type { components } from "@/lib/api-types";
 
 type S = components["schemas"];
-export type Asset = S["AssetResponse"];
+/** Aset + alokasi berjalan + pengajuan pengembalian yang menunggu (GET /assets, R-19). */
+export type Asset = S["AssetListItem"];
 export type AssetCreate = S["AssetCreate"];
 type WorkPlan = S["WorkPlanResponse"];
 
@@ -37,6 +38,27 @@ export const useReleaseAsset = () =>
   useAssetMutation(async ({ id, ...body }: { id: string } & S["AssetReleaseRequest"]) =>
     (await api.post<S["AssetStatusResponse"]>(`/assets/${id}/release`, body)).data,
   );
+
+/** Ketua SK peminjam mengajukan pengembalian (domain.js RETURN_ASSET). */
+export const useRequestReturn = () =>
+  useAssetMutation(async ({ allocation_id, ...body }: { allocation_id: string } & S["AssetReturnCreate"]) =>
+    (await api.post<S["AssetReturnResponse"]>(`/assets/allocations/${allocation_id}/return`, body)).data,
+  );
+
+/** Petugas aset memeriksa pengembalian: terima (aset tersedia lagi) / tolak (kembali ke tim) — VERIFY_RETURN. */
+export const useVerifyReturn = () =>
+  useAssetMutation(async ({ return_id, ...body }: { return_id: string } & S["AssetReturnVerify"]) =>
+    (await api.post<S["AssetReturnResponse"]>(`/assets/returns/${return_id}/verify`, body)).data,
+  );
+
+export type AssetReturnItem = S["AssetReturnHistoryItem"];
+
+/** Riwayat pengembalian aset (GET /assets/{id}/returns) — dasar BAST. */
+export const useAssetReturns = (assetId: string) =>
+  useQuery({
+    queryKey: [...KEY, assetId, "returns"],
+    queryFn: async () => (await api.get<AssetReturnItem[]>(`/assets/${assetId}/returns`)).data,
+  });
 
 export const useCheckAsset = () =>
   useAssetMutation(async ({ id, ...body }: { id: string } & S["AssetCheckRequest"]) =>

@@ -148,4 +148,52 @@ describe("halaman detail karyawan (HR)", () => {
   });
 });
 
+describe("R8 · perpanjang berkas dari daftar (termasuk Berkas saya)", () => {
+  it("karyawan memperpanjang SIM dari profilnya: jenis tetap, supersedes_id terkirim", async () => {
+    const calls = mockApi((c) => {
+      if (c.url === "/employees/e-lead/documents" && c.method === "get")
+        return {
+          data: {
+            items: [
+              doc({ id: "d1", employee_id: "e-lead", doc_type: "SIM A", status: "VERIFIED", lifecycle: "CURRENT" }),
+              doc({ id: "d2", employee_id: "e-lead", doc_type: "MCU", status: "PENDING", lifecycle: "PENDING" }),
+            ],
+            total: 2,
+          },
+        };
+      if (c.url === "/files/upload") return { data: { file_id: "f9", message: "ok" } };
+      if (c.url === "/employees/e-lead/documents" && c.method === "post") return { status: 201, data: doc({ id: "d3" }) };
+    });
+    renderRoute("/my-documents", { role: "field" });
+
+    fireEvent.click(await screen.findByRole("button", { name: "Perpanjang SIM A" }));
+    expect(screen.queryByRole("button", { name: "Perpanjang MCU" })).toBeNull(); // belum terverifikasi
+    const dialog = screen.getByRole("dialog", { name: "Perpanjang berkas" });
+    expect(within(dialog).queryByRole("combobox", { name: /Jenis dokumen/ })).toBeNull(); // jenis tidak bisa diganti
+    fireEvent.change(within(dialog).getByLabelText(/Nomor dokumen/), { target: { value: "987654321" } });
+    fireEvent.change(within(dialog).getByLabelText(/Tanggal kedaluwarsa/), { target: { value: "2031-01-01" } });
+    const fileInput = within(dialog).getByLabelText(/File/);
+    Object.defineProperty(fileInput, "files", { value: [new File(["x"], "sim.png", { type: "image/png" })] });
+    fireEvent.change(fileInput);
+    fireEvent.click(within(dialog).getByRole("button", { name: "Simpan" }));
+
+    await waitFor(() => expect(calls.some((c) => c.method === "post" && c.url === "/employees/e-lead/documents")).toBe(true));
+    expect(calls.find((c) => c.method === "post" && c.url === "/employees/e-lead/documents")!.data).toEqual({
+      doc_type: "SIM A",
+      number: "987654321",
+      expiry_date: "2031-01-01",
+      file_id: "f9",
+      supersedes_id: "d1",
+    });
+  });
+
+  it("HR juga melihat Perpanjang di daftar berkas karyawan", async () => {
+    mockApi((c) => {
+      if (c.url === "/employees/e1") return { data: employee() };
+      if (c.url === "/employees/e1/documents") return { data: { items: [doc({ status: "VERIFIED", lifecycle: "EXPIRED" })], total: 1 } };
+    });
+    renderRoute("/directory/e1", { role: "HR" });
+    expect(await screen.findByRole("button", { name: "Perpanjang KTP" })).toBeInTheDocument();
+  });
+});
 

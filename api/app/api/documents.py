@@ -113,6 +113,14 @@ async def verify_document(
 
     status_val = "VERIFIED" if data.is_approved else "REJECTED"
     lifecycle_val = "CURRENT" if data.is_approved else "PENDING"
+    if data.is_approved:
+        # domain.js VERIFY_DOCUMENT (R8): dokumen berlaku berjenis sama digantikan yang baru. Tanpa ini
+        # indeks unik CURRENT per (karyawan, jenis) menolak perpanjangan → 500.
+        await db.execute(text("""
+            UPDATE vms.employee_document SET lifecycle = 'SUPERSEDED'
+            WHERE employee_id = :emp_id AND lifecycle = 'CURRENT' AND id <> :doc_id
+              AND doc_type = (SELECT doc_type FROM vms.employee_document WHERE id = :doc_id)
+        """), {"emp_id": emp_id, "doc_id": doc_id})
     
     verify_query = text("""
         UPDATE vms.employee_document 

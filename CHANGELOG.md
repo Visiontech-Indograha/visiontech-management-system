@@ -27,6 +27,11 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ### ✨ Ditambahkan
 
+#### Lokasi penugasan lewat titik koordinat (revisi PM, Backend) — 2026-09-26
+- `GET /geo/search?q=` (pengelola SK, `create:plan`): cari kota/tempat di Indonesia lewat Nominatim/OpenStreetMap dari backend (User-Agent jelas, ≤ 1 permintaan/detik, cache 24 jam; gagal → 503 "Pencarian lokasi sedang tidak tersedia…").
+- `GET /work-plans/{id}/location` (siapa pun yang melihat SK) · `PUT /work-plans/{id}/location {name, address?, lat, lng, radius_m}` (PM unit/OPS): untuk SK draf **dan berjalan**; tiap penetapan membuat `site` baru lalu ditautkan ke SK (site lama tidak diubah → riwayat absensi tetap sah); teks lokasi dokumen SK tidak berubah; radius 10–5000 m; SK selesai/batal → 409.
+- Uji: `api/tests/test_plan_location.py` (5 uji, lulus).
+
 #### Web · dokumen SK, verifikasi publik, Berkas saya — 2026-09-26
 - Detail SK → bagian "Dokumen" (disembunyikan saat DRAFT): versi dokumen, daftar tanda tangan (ISSUER/ACCEPTOR, dicabut), "Unduh PDF" (503 → "Layanan PDF belum tersedia di server ini."), dialog "Cabut tanda tangan" dengan alasan wajib.
 - Halaman publik `/verify/*` tanpa login (token boleh berisi "/"); respons verifikasi tidak memuat versi dokumen sehingga versi tidak ditampilkan.

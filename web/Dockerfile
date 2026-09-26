@@ -1,7 +1,7 @@
 # Tahap 1: build Vite. Tahap 2: Caddy menyajikan static + proxy /api (D-14).
 FROM node:24-alpine AS builder
 WORKDIR /app
-COPY package.json package-lock.json ./
+COPY package.json package-lock.json .npmrc ./
 RUN npm ci
 COPY . .
 # Nama harus sama dengan yang dibaca kode (import.meta.env.VITE_API_BASE_URL).

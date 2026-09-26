@@ -13,7 +13,10 @@ class Settings(BaseSettings):
     DOC_SIGNING_KEY_HEX: str = ""
     DOC_SIGNING_KMS_REF: str = "env:DOC_SIGNING_KEY_HEX"
     PUBLIC_VERIFY_URL: str = "http://localhost:5173/verify"   # isi QR: <PUBLIC_VERIFY_URL>/<token>
-    
+    # Pencarian lokasi penugasan (revisi PM 2026-09-26): Nominatim/OpenStreetMap lewat backend.
+    GEOCODER_URL: str = "https://nominatim.openstreetmap.org/search"
+    GEOCODER_USER_AGENT: str = "VisiontechVMS/1.0 (lokasi-penugasan)"
+
     # Discord #vms-alerts (dok 17). Kosong = peringatan hanya dicatat di log.
     DISCORD_WEBHOOK_ALERTS: str = ""
 

@@ -72,6 +72,45 @@ class SessionRepo(BaseRepo):
             {"rt": raw_refresh_token, "reason": reason},
         )
 
+    async def list_active(self, user_id: UUID | str) -> list[Any]:
+        """Satu baris per perangkat (rantai rotasi): sesi AKTIF belum kedaluwarsa; `issued_at` = masuk
+        pertama kali di perangkat itu, bukan rotasi terakhir."""
+        return list(await self.fetchall(
+            """
+            SELECT CAST(s.id AS text) AS id, s.device_label, CAST(host(s.ip_address) AS text) AS ip_address,
+                   s.user_agent, s.last_used_at,
+                   (SELECT min(f.issued_at) FROM vms.user_session f WHERE f.family_id = s.family_id) AS issued_at
+            FROM vms.user_session s
+            WHERE s.user_id = :uid AND s.state = 'ACTIVE' AND s.expires_at > now()
+            ORDER BY COALESCE(s.last_used_at, s.issued_at) DESC
+            """,
+            {"uid": user_id}))
+
+    async def revoke_session(self, user_id: UUID | str, session_id: UUID | str, reason: str) -> bool:
+        """Cabut satu perangkat milik pengguna ini. False bila bukan miliknya / sudah tidak aktif."""
+        revoked = await self.scalar(
+            """
+            WITH target AS (SELECT family_id FROM vms.user_session
+                            WHERE id = :sid AND user_id = :uid AND state = 'ACTIVE')
+            UPDATE vms.user_session s SET state = 'REVOKED', revoked_at = now(), revoked_reason = :reason
+            FROM target WHERE s.family_id = target.family_id AND s.state = 'ACTIVE'
+            RETURNING 1
+            """,
+            {"sid": session_id, "uid": user_id, "reason": reason})
+        return bool(revoked)
+
+    async def revoke_other_sessions(self, user_id: UUID | str, keep_session_id: UUID | str, reason: str) -> int:
+        """Cabut semua perangkat lain; rantai sesi yang sedang dipakai tetap."""
+        rows = await self.fetchall(
+            """
+            UPDATE vms.user_session SET state = 'REVOKED', revoked_at = now(), revoked_reason = :reason
+            WHERE user_id = :uid AND state = 'ACTIVE'
+              AND family_id IS DISTINCT FROM (SELECT family_id FROM vms.user_session WHERE id = :keep)
+            RETURNING id
+            """,
+            {"uid": user_id, "keep": keep_session_id, "reason": reason})
+        return len(rows)
+
     async def revoke_all_for_user(self, user_id: UUID | str, reason: str) -> int:
         return int(await self.scalar(
             "SELECT vms.revoke_sessions(:uid, :reason)", {"uid": user_id, "reason": reason}

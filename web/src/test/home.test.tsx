@@ -81,4 +81,29 @@ describe("beranda", () => {
     await screen.findByText("Belum ada SK aktif.");
     expect(calls.some((c) => c.url === "/documents/expiring")).toBe(false);
   });
+
+  it("HR: antrean dokumen menunggu verifikasi, terlama dulu, menuju halaman karyawan", async () => {
+    mockApi((c) => {
+      if (c.url === "/work-plans") return { data: [] };
+      if (c.url === "/documents/expiring") return { data: { items: [] } };
+      if (c.url === "/documents/pending")
+        return {
+          data: {
+            items: [
+              { id: "p1", employee_id: "emp-1", full_name: "Asrul Mulya", doc_type: "MCU", number_masked: "***1",
+                expiry_date: null, file_id: "f1", uploaded_at: "2026-09-20T02:00:00Z", uploaded_by_me: false },
+              { id: "p2", employee_id: "emp-2", full_name: "Aris Setyawan", doc_type: "SIM A", number_masked: "***2",
+                expiry_date: "2031-01-01", file_id: "f2", uploaded_at: "2026-09-21T02:00:00Z", uploaded_by_me: true },
+            ],
+          },
+        };
+    });
+    renderRoute("/", { role: "HR" });
+    const statLink = await screen.findByRole("link", { name: /Dokumen menunggu verifikasi/ });
+    expect(await within(statLink).findByText("2")).toBeInTheDocument();
+    const card = (await screen.findByText("Dokumen menunggu verifikasi", { selector: "[data-slot=card-title]" })).closest("[data-slot=card]") as HTMLElement;
+    expect(within(card).getByRole("link", { name: /Asrul Mulya/ })).toHaveAttribute("href", "/directory/emp-1");
+    expect(within(card).getByText("Unggahan Anda")).toBeInTheDocument();
+  });
 });
+

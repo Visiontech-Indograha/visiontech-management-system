@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends
@@ -8,6 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, get_db_with_user, require_permission
 from app.core.permissions import Permission
+from app.repositories.document_repo import DocumentRepo
+from app.services.document_service import DocumentService
 
 router = APIRouter(prefix="/documents", tags=["Document Expiry"])
 
@@ -56,6 +58,33 @@ async def get_expiring_documents(
         items.append(ExpiringDocumentResponse(**row._mapping))
         
     return ExpiringDocumentList(items=items)
+
+class PendingDocument(BaseModel):
+    id: UUID
+    employee_id: UUID
+    full_name: str
+    doc_type: str
+    number_masked: str | None
+    expiry_date: date | None
+    file_id: UUID | None
+    uploaded_at: datetime
+    uploaded_by_me: bool
+
+
+class PendingDocumentList(BaseModel):
+    items: list[PendingDocument]
+
+
+@router.get("/pending", response_model=PendingDocumentList)
+async def get_pending_documents(
+    current_user: CurrentUser = Depends(require_permission(Permission.VERIFY_DOCUMENTS)),
+    db: AsyncSession = Depends(get_db_with_user),
+) -> PendingDocumentList:
+    """Antrean verifikasi HR (P2-5): dokumen pribadi berstatus PENDING di organisasi ini, terlama dulu."""
+    rows = await DocumentService(DocumentRepo(db)).pending_queue(current_user.organization_id,
+                                                                current_user.user_id)
+    return PendingDocumentList(items=[PendingDocument(**r._mapping) for r in rows])
+
 
 @router.post("/cron/expire-documents")
 async def cron_expire_documents(

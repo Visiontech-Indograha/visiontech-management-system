@@ -223,8 +223,12 @@ BEGIN
     ELSE
       v_scan_result := 'VALID';
       -- Dokumen yang ditandatangani harus masih sama persis dengan saat ditandatangani.
-      IF v_sig.signable_type = 'plan_document' THEN
-        SELECT snapshot_sha256 INTO v_current_hash FROM plan_document WHERE id = v_sig.signable_id;
+      IF v_sig.signable_type IN ('plan_document', 'final_report') THEN
+        IF v_sig.signable_type = 'plan_document' THEN
+          SELECT snapshot_sha256 INTO v_current_hash FROM plan_document WHERE id = v_sig.signable_id;
+        ELSE   -- laporan akhir (R-19): snapshot saat disetujui
+          SELECT snapshot_sha256 INTO v_current_hash FROM final_report WHERE work_plan_id = v_sig.signable_id;
+        END IF;
         IF v_current_hash IS DISTINCT FROM v_sig.document_sha256 THEN
           v_state := 'DOCUMENT_CHANGED';
           v_note := 'Isi dokumen berbeda dengan yang ditandatangani. Jangan dipercaya.';

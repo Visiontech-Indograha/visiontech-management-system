@@ -166,6 +166,26 @@ END $$;
 CREATE TRIGGER plan_document_immutable BEFORE UPDATE ON plan_document
   FOR EACH ROW EXECUTE FUNCTION tg_plan_document_immutable();
 
+CREATE OR REPLACE FUNCTION tg_final_report_locked() RETURNS trigger
+LANGUAGE plpgsql AS $$
+BEGIN
+  -- Laporan akhir yang disetujui adalah dokumen bertanda tangan (R-19): isinya tidak pernah berubah
+  -- (UPDATE ditolak; hapus berantai data organisasi tetap boleh — yang ditandatangani adalah snapshot).
+  IF TG_TABLE_NAME = 'final_report' THEN
+    IF OLD.status = 'APPROVED' THEN
+      RAISE EXCEPTION 'Laporan akhir yang sudah disetujui tidak dapat diubah.' USING ERRCODE = '23514';
+    END IF;
+  ELSIF EXISTS (SELECT 1 FROM final_report
+                WHERE work_plan_id = NEW.work_plan_id AND status = 'APPROVED') THEN
+    RAISE EXCEPTION 'Laporan akhir yang sudah disetujui tidak dapat diubah.' USING ERRCODE = '23514';
+  END IF;
+  RETURN NEW;
+END $$;
+CREATE TRIGGER final_report_locked BEFORE UPDATE ON final_report
+  FOR EACH ROW EXECUTE FUNCTION tg_final_report_locked();
+CREATE TRIGGER final_report_evidence_locked BEFORE INSERT OR UPDATE ON final_report_evidence
+  FOR EACH ROW EXECUTE FUNCTION tg_final_report_locked();
+
 CREATE OR REPLACE FUNCTION tg_plan_document_hash() RETURNS trigger
 LANGUAGE plpgsql AS $$
 BEGIN

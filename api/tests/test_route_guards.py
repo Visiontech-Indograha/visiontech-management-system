@@ -28,6 +28,9 @@ from tests.test_route_smoke import PUBLIC_ROUTES
 # Boleh dipanggil setiap pengguna yang login; data tetap dibatasi organisasi / milik sendiri.
 SELF_SERVICE = {
     ("GET", "/auth/me"): "profil sendiri",
+    ("GET", "/auth/sessions"): "perangkat milik sendiri (P1-7, diuji)",
+    ("POST", "/auth/sessions/revoke-others"): "mencabut perangkat lain milik sendiri (P1-7, diuji)",
+    ("POST", "/auth/sessions/{session_id}/revoke"): "hanya sesi milik sendiri; milik orang lain → 404 (diuji)",
     ("POST", "/auth/change-password"): "kata sandi sendiri",
     ("POST", "/files/upload"): "setiap karyawan mengunggah bukti/dokumen sendiri",
     ("GET", "/work-plans"): "hanya SK yang terlihat (V-07)",

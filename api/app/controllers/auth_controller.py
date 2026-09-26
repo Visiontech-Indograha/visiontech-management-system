@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.transaction import unit_of_work
 from app.repositories.session_repo import SessionRepo
 from app.repositories.user_repo import UserRepo
-from app.schemas.auth import UserMeResponse
+from app.schemas.auth import SessionOut, UserMeResponse
 from app.services.auth_service import AuthService, ClientInfo, IssuedTokens
 
 
@@ -36,6 +36,18 @@ class AuthController:
             user_id=profile.user_id, email=profile.email,
             role=profile.role, permissions=profile.permissions, employee_id=profile.employee_id,
         )
+
+    async def active_sessions(self, user_id: str, current_session_id: str) -> list[SessionOut]:
+        rows = await self.service.active_sessions(user_id)
+        return [SessionOut(**r._mapping, current=r.id == current_session_id) for r in rows]
+
+    async def revoke_session(self, user_id: str, session_id: str) -> None:
+        async with unit_of_work(self.db):
+            await self.service.revoke_session(user_id, session_id)
+
+    async def revoke_other_sessions(self, user_id: str, current_session_id: str) -> int:
+        async with unit_of_work(self.db):
+            return await self.service.revoke_other_sessions(user_id, current_session_id)
 
     async def change_password(
         self, user_id: str, current_password: str, new_password: str, client: ClientInfo

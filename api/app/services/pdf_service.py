@@ -35,6 +35,22 @@ def render_plan_document_html(document: Any, signatures: list[dict[str, Any]]) -
         sha256=bytes(document.snapshot_sha256).hex())
 
 
+INCIDENT_CATEGORY = {"K3_RINGAN": "K3 ringan", "K3_BERAT": "K3 berat", "K3_LINGKUNGAN": "K3 lingkungan",
+                     "K3_HAMPIR": "Hampir celaka", "ASET": "Aset"}
+INCIDENT_SEVERITY = {"RENDAH": "Rendah", "SEDANG": "Sedang", "TINGGI": "Tinggi", "KRITIS": "Kritis"}
+
+
+def render_final_report_html(plan: Any, signatures: list[dict[str, Any]]) -> str:
+    """Laporan akhir yang disetujui (R-19, P6-4) — dari snapshot yang ditandatangani, bukan data hidup."""
+    snap = plan.snapshot if isinstance(plan.snapshot, dict) else json.loads(plan.snapshot)
+    incidents = [{**i, "category": INCIDENT_CATEGORY.get(i["category"], i["category"]),
+                  "severity": INCIDENT_SEVERITY.get(i["severity"], i["severity"])} for i in snap.get("incidents", [])]
+    return _ENV.get_template("final_report.html").render(
+        logo=_LOGO, number=f"{plan.number}-LA", plan=snap.get("plan", {}), team=snap.get("team", []),
+        report=snap.get("report", {}), approval=snap.get("approval", {}), incidents=incidents,
+        signatures=signatures, sha256=bytes(plan.snapshot_sha256).hex())
+
+
 def html_to_pdf(html: str) -> bytes:
     try:
         from weasyprint import HTML

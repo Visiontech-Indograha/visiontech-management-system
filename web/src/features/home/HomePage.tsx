@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, CalendarClock, ClipboardCheck, FileClock, FileWarning, MapPin } from "lucide-react";
+import { ArrowRight, CalendarClock, ClipboardCheck, FileCheck2, FileClock, FileWarning, MapPin } from "lucide-react";
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { useSession } from "@/app/session";
@@ -13,6 +13,7 @@ import { useWorkPlans } from "@/features/work-plans/api";
 
 type AttendanceList = components["schemas"]["AttendanceListResponse"];
 type ExpiringList = components["schemas"]["ExpiringDocumentList"];
+type PendingList = components["schemas"]["PendingDocumentList"];
 
 const WAITING = ["DRAFT", "PUBLISHED", "ACCEPTED", "APPEALED", "COMPLETION_REVIEW"];
 
@@ -59,6 +60,48 @@ function useExpiringDocuments(enabled: boolean) {
     queryFn: async () =>
       (await api.get<ExpiringList>("/documents/expiring")).data.items.filter((d) => d.urgency !== "AMAN"),
   });
+}
+
+/** P2-5: antrean verifikasi HR — dokumen pribadi berstatus PENDING (GET /documents/pending). */
+function usePendingDocuments(enabled: boolean) {
+  return useQuery({
+    queryKey: ["documents", "pending"],
+    enabled,
+    queryFn: async () => (await api.get<PendingList>("/documents/pending")).data.items,
+  });
+}
+
+function PendingDocumentsCard({ items }: { items: PendingList["items"] }) {
+  return (
+    <Card className="gap-4">
+      <CardHeader>
+        <CardTitle className="text-heading">Dokumen menunggu verifikasi</CardTitle>
+        <CardDescription>Terlama dulu. Unggahan Anda sendiri diperiksa petugas lain.</CardDescription>
+      </CardHeader>
+      <CardContent className="px-3 md:px-4">
+        <ul className="divide-y divide-line">
+          {items.slice(0, 8).map((d) => (
+            <li key={d.id}>
+              <Link
+                to={`/directory/${d.employee_id}`}
+                className="flex items-center gap-4 rounded-control px-3 py-3 transition-colors hover:bg-hover"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium text-ink">{d.full_name}</p>
+                  <p className="mt-0.5 truncate text-body-sm text-mist">
+                    {d.doc_type} · diunggah {formatDate(d.uploaded_at)}
+                  </p>
+                </div>
+                {d.uploaded_by_me && <span className="shrink-0 text-xs text-mist">Unggahan Anda</span>}
+                <ArrowRight size={18} aria-hidden className="shrink-0 text-mist" />
+              </Link>
+            </li>
+          ))}
+        </ul>
+        {items.length > 8 && <p className="px-3 pt-2 text-body-sm text-mist">+{items.length - 8} dokumen lain.</p>}
+      </CardContent>
+    </Card>
+  );
 }
 
 const URGENCY: Record<string, { label: string; tone: string }> = {
@@ -109,6 +152,7 @@ export function HomePage() {
   const toReview = useAttendanceToReview(canReview);
   const canVerifyDocs = perms.includes("verify:documents");
   const expiring = useExpiringDocuments(canVerifyDocs);
+  const pending = usePendingDocuments(canVerifyDocs);
 
   const list = plans.data ?? [];
   const running = list.filter((p) => p.status === "IN_PROGRESS");
@@ -133,10 +177,14 @@ export function HomePage() {
           <Stat label="Absensi perlu diperiksa" value={toReview.data} loading={toReview.isPending} icon={<ClipboardCheck size={20} />} to="/attendance" />
         )}
         {canVerifyDocs && (
+          <Stat label="Dokumen menunggu verifikasi" value={pending.data?.length} loading={pending.isPending} icon={<FileCheck2 size={20} />} to="/directory" />
+        )}
+        {canVerifyDocs && (
           <Stat label="Dokumen mendekati kedaluwarsa" value={expiring.data?.length} loading={expiring.isPending} icon={<FileWarning size={20} />} to="/directory" />
         )}
       </div>
 
+      {canVerifyDocs && !!pending.data?.length && <PendingDocumentsCard items={pending.data} />}
       {canVerifyDocs && !!expiring.data?.length && <ExpiringDocumentsCard items={expiring.data} />}
 
       <Card className="gap-4">

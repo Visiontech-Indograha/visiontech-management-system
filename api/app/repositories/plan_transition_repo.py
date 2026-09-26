@@ -291,6 +291,49 @@ class PlanTransitionRepo(BaseRepo):
             """,
             {"plan": plan_id})
 
+    async def final_report_snapshot(self, plan_id: UUID | str, approver: str | None, note: str | None) -> Any:
+        """Isi laporan akhir yang dibekukan saat disetujui (R-19): SK, tim, laporan, lampiran, insiden,
+        dan persetujuannya."""
+        return await self.scalar(
+            """
+            SELECT jsonb_build_object(
+              'type', 'final_report',
+              'approval', jsonb_build_object(
+                  'approved_by', (SELECT full_name FROM vms.employee WHERE id = CAST(:approver AS uuid)),
+                  'note', CAST(:note AS text)),
+              'plan', (SELECT jsonb_build_object('id', p.id, 'number', p.number, 'title', p.title,
+                          'location_text', p.location_text, 'period_start', lower(p.period),
+                          'period_end', upper(p.period) - 1)
+                       FROM vms.work_plan p WHERE p.id = :plan),
+              'team', COALESCE((SELECT jsonb_agg(jsonb_build_object('full_name', e.full_name,
+                                          'role_in_plan', m.role_in_plan) ORDER BY m.role_in_plan, e.full_name)
+                                FROM vms.work_plan_member m JOIN vms.employee e ON e.id = m.employee_id
+                                WHERE m.work_plan_id = :plan AND upper_inf(m.valid_period)), '[]'::jsonb),
+              'report', (SELECT jsonb_build_object('body', fr.body, 'obstacle', fr.obstacle,
+                            'submitted_by', se.full_name, 'submitted_at', fr.submitted_at,
+                            'evidence_file_ids', COALESCE((SELECT jsonb_agg(ev.file_id ORDER BY ev.file_id)
+                                FROM vms.final_report_evidence ev WHERE ev.work_plan_id = fr.work_plan_id),
+                                '[]'::jsonb))
+                         FROM vms.final_report fr LEFT JOIN vms.employee se ON se.id = fr.submitted_by
+                         WHERE fr.work_plan_id = :plan),
+              'incidents', COALESCE((SELECT jsonb_agg(jsonb_build_object('category', i.category,
+                                'severity', i.severity, 'description', i.description, 'occurred_on', i.occurred_on,
+                                'status', i.status) ORDER BY i.occurred_on, i.created_at)
+                                FROM vms.incident_report i WHERE i.work_plan_id = :plan), '[]'::jsonb))
+            """,
+            {"plan": plan_id, "approver": approver, "note": note})
+
+    async def store_final_snapshot(self, plan_id: UUID | str, snapshot: str, sha256: bytes) -> None:
+        await self.execute(
+            "UPDATE vms.final_report SET snapshot = CAST(:snap AS jsonb), snapshot_sha256 = :sha "
+            "WHERE work_plan_id = :plan",
+            {"plan": plan_id, "snap": snapshot, "sha": sha256})
+
+    async def final_report_submitter(self, plan_id: UUID | str) -> str | None:
+        value = await self.scalar(
+            "SELECT CAST(submitted_by AS text) FROM vms.final_report WHERE work_plan_id = :plan", {"plan": plan_id})
+        return str(value) if value else None
+
     async def final_report_status(self, plan_id: UUID | str) -> str | None:
         status: str | None = await self.scalar(
             "SELECT CAST(status AS text) FROM vms.final_report WHERE work_plan_id = :plan", {"plan": plan_id})

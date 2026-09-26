@@ -306,7 +306,9 @@ CREATE TABLE final_report (
   submitted_at  timestamptz,
   reviewed_by   uuid REFERENCES employee(id),
   reviewed_at   timestamptz,
-  review_note   text
+  review_note   text,
+  snapshot        jsonb,      -- isi kanonik saat disetujui (R-19) — yang ditandatangani
+  snapshot_sha256 bytea
 );
 
 CREATE TABLE final_report_evidence (

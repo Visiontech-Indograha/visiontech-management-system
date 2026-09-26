@@ -7,7 +7,8 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Response
+from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,7 +17,9 @@ from app.api.guards import PlanAccess, PlanNeed, ensure_same_org, plan_access
 from app.repositories.plan_member_repo import PlanMemberRepo
 from app.repositories.plan_transition_repo import PlanTransitionRepo
 from app.schemas.plan import WorkPlanResponse
+from app.services.pdf_service import html_to_pdf, render_final_report_html
 from app.services.plan_transition_service import PlanTransitionService
+from app.services.signature_service import SignatureService
 
 router = APIRouter(prefix="/work-plans/{plan_id}", tags=["Work Plan Transitions"])
 _LEADER_ACCESS = Depends(plan_access(PlanNeed.LEADER))
@@ -35,6 +38,46 @@ class FinalReportOut(BaseModel):
     review_note: str | None
     reviewed_at: datetime | None
     reviewed_by_name: str | None
+
+
+class FinalReportSignatureOut(BaseModel):
+    id: str
+    serial_number: str
+    signer_name: str
+    signer_position: str | None
+    signer_unit: str | None
+    signer_role: str
+    signed_at: datetime
+    signature_alg: str
+    kid: str
+    document_sha256_hex: str
+    revoked_at: datetime | None
+    revoked_reason: str | None
+
+
+@router.get("/completion/signatures", response_model=list[FinalReportSignatureOut])
+async def get_final_report_signatures(
+    plan_id: UUID,
+    access: PlanAccess = _VIEW_ACCESS,
+    db: AsyncSession = Depends(get_db_with_user),
+) -> list[FinalReportSignatureOut]:
+    """Tanda tangan laporan akhir (ketua = ISSUER, pemeriksa = APPROVER), R-19."""
+    rows = await SignatureService(db).final_report_signatures(plan_id)
+    return [FinalReportSignatureOut(**r._mapping) for r in rows]
+
+
+@router.get("/completion/pdf", response_class=Response)
+async def get_final_report_pdf(
+    plan_id: UUID,
+    access: PlanAccess = _VIEW_ACCESS,
+    db: AsyncSession = Depends(get_db_with_user),
+) -> Response:
+    """PDF laporan akhir ber-QR (P6-4, UAT langkah 10). Hanya setelah disetujui (409). Render → threadpool."""
+    plan, signatures = await SignatureService(db).final_report_with_qr(access.user, plan_id)
+    pdf = await run_in_threadpool(html_to_pdf, render_final_report_html(plan, signatures))
+    filename = f"{plan.number}-laporan-akhir.pdf".replace("/", "-")
+    return Response(pdf, media_type="application/pdf",
+                    headers={"Content-Disposition": f'inline; filename="{filename}"'})
 
 
 @router.get("/completion", response_model=FinalReportOut | None)

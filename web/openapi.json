@@ -158,6 +158,113 @@
     ]
    }
   },
+  "/api/v1/auth/sessions": {
+   "get": {
+    "tags": [
+     "Authentication"
+    ],
+    "summary": "List Sessions",
+    "description": "P1-7: perangkat yang sedang masuk dengan akun ini; yang sedang dipakai ditandai `current`.",
+    "operationId": "list_sessions_api_v1_auth_sessions_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/SessionOut"
+         },
+         "type": "array",
+         "title": "Response List Sessions Api V1 Auth Sessions Get"
+        }
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ]
+   }
+  },
+  "/api/v1/auth/sessions/revoke-others": {
+   "post": {
+    "tags": [
+     "Authentication"
+    ],
+    "summary": "Revoke Other Sessions",
+    "description": "Keluarkan semua perangkat lain. Token akses mereka habis paling lama 15 menit; refresh langsung ditolak.",
+    "operationId": "revoke_other_sessions_api_v1_auth_sessions_revoke_others_post",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/RevokeOthersResponse"
+        }
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ]
+   }
+  },
+  "/api/v1/auth/sessions/{session_id}/revoke": {
+   "post": {
+    "tags": [
+     "Authentication"
+    ],
+    "summary": "Revoke Session",
+    "description": "Keluarkan satu perangkat milik sendiri. Sesi orang lain → 404.",
+    "operationId": "revoke_session_api_v1_auth_sessions__session_id__revoke_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "session_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Session Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/MessageResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/v1/auth/change-password": {
    "post": {
     "tags": [
@@ -1226,6 +1333,33 @@
     }
    }
   },
+  "/api/v1/documents/pending": {
+   "get": {
+    "tags": [
+     "Document Expiry"
+    ],
+    "summary": "Get Pending Documents",
+    "description": "Antrean verifikasi HR (P2-5): dokumen pribadi berstatus PENDING di organisasi ini, terlama dulu.",
+    "operationId": "get_pending_documents_api_v1_documents_pending_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/PendingDocumentList"
+        }
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ]
+   }
+  },
   "/api/v1/documents/cron/expire-documents": {
    "post": {
     "tags": [
@@ -1815,6 +1949,101 @@
         }
        }
       }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/work-plans/{plan_id}/completion/signatures": {
+   "get": {
+    "tags": [
+     "Work Plan Transitions"
+    ],
+    "summary": "Get Final Report Signatures",
+    "description": "Tanda tangan laporan akhir (ketua = ISSUER, pemeriksa = APPROVER), R-19.",
+    "operationId": "get_final_report_signatures_api_v1_work_plans__plan_id__completion_signatures_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "plan_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Plan Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/FinalReportSignatureOut"
+         },
+         "title": "Response Get Final Report Signatures Api V1 Work Plans  Plan Id  Completion Signatures Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/work-plans/{plan_id}/completion/pdf": {
+   "get": {
+    "tags": [
+     "Work Plan Transitions"
+    ],
+    "summary": "Get Final Report Pdf",
+    "description": "PDF laporan akhir ber-QR (P6-4, UAT langkah 10). Hanya setelah disetujui (409). Render → threadpool.",
+    "operationId": "get_final_report_pdf_api_v1_work_plans__plan_id__completion_pdf_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "plan_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Plan Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response"
      },
      "422": {
       "description": "Validation Error",
@@ -7548,6 +7777,104 @@
     ],
     "title": "FinalReportOut"
    },
+   "FinalReportSignatureOut": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "serial_number": {
+      "type": "string",
+      "title": "Serial Number"
+     },
+     "signer_name": {
+      "type": "string",
+      "title": "Signer Name"
+     },
+     "signer_position": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Signer Position"
+     },
+     "signer_unit": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Signer Unit"
+     },
+     "signer_role": {
+      "type": "string",
+      "title": "Signer Role"
+     },
+     "signed_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Signed At"
+     },
+     "signature_alg": {
+      "type": "string",
+      "title": "Signature Alg"
+     },
+     "kid": {
+      "type": "string",
+      "title": "Kid"
+     },
+     "document_sha256_hex": {
+      "type": "string",
+      "title": "Document Sha256 Hex"
+     },
+     "revoked_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Revoked At"
+     },
+     "revoked_reason": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Revoked Reason"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "serial_number",
+     "signer_name",
+     "signer_position",
+     "signer_unit",
+     "signer_role",
+     "signed_at",
+     "signature_alg",
+     "kid",
+     "document_sha256_hex",
+     "revoked_at",
+     "revoked_reason"
+    ],
+    "title": "FinalReportSignatureOut"
+   },
    "GeoPoint": {
     "properties": {
      "lat": {
@@ -8180,6 +8507,101 @@
     "title": "OvertimeReview",
     "description": "domain.js REVIEW_OVERTIME: decision APPROVED | REJECTED (diperiksa di service)."
    },
+   "PendingDocument": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Id"
+     },
+     "employee_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Employee Id"
+     },
+     "full_name": {
+      "type": "string",
+      "title": "Full Name"
+     },
+     "doc_type": {
+      "type": "string",
+      "title": "Doc Type"
+     },
+     "number_masked": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Number Masked"
+     },
+     "expiry_date": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Expiry Date"
+     },
+     "file_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "File Id"
+     },
+     "uploaded_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Uploaded At"
+     },
+     "uploaded_by_me": {
+      "type": "boolean",
+      "title": "Uploaded By Me"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "employee_id",
+     "full_name",
+     "doc_type",
+     "number_masked",
+     "expiry_date",
+     "file_id",
+     "uploaded_at",
+     "uploaded_by_me"
+    ],
+    "title": "PendingDocument"
+   },
+   "PendingDocumentList": {
+    "properties": {
+     "items": {
+      "items": {
+       "$ref": "#/components/schemas/PendingDocument"
+      },
+      "type": "array",
+      "title": "Items"
+     }
+    },
+    "type": "object",
+    "required": [
+     "items"
+    ],
+    "title": "PendingDocumentList"
+   },
    "PlanDayCreate": {
     "properties": {
      "work_date": {
@@ -8563,6 +8985,24 @@
     ],
     "title": "ReviewRequest"
    },
+   "RevokeOthersResponse": {
+    "properties": {
+     "revoked": {
+      "type": "integer",
+      "title": "Revoked"
+     },
+     "message": {
+      "type": "string",
+      "title": "Message"
+     }
+    },
+    "type": "object",
+    "required": [
+     "revoked",
+     "message"
+    ],
+    "title": "RevokeOthersResponse"
+   },
    "RevokeRequest": {
     "properties": {
      "reason": {
@@ -8575,6 +9015,87 @@
      "reason"
     ],
     "title": "RevokeRequest"
+   },
+   "SessionOut": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "device_label": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Device Label"
+     },
+     "ip_address": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Ip Address"
+     },
+     "user_agent": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "User Agent"
+     },
+     "issued_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Issued At"
+     },
+     "last_used_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Last Used At"
+     },
+     "current": {
+      "type": "boolean",
+      "title": "Current"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "device_label",
+     "ip_address",
+     "user_agent",
+     "issued_at",
+     "last_used_at",
+     "current"
+    ],
+    "title": "SessionOut",
+    "description": "Satu perangkat yang sedang masuk (P1-7). `current` = perangkat yang sedang dipakai."
    },
    "SignatureOut": {
     "properties": {

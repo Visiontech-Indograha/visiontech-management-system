@@ -1,5 +1,5 @@
-import { act, screen, waitFor, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import { mockApi, renderRoute } from "./utils";
 
 /**
@@ -31,6 +31,7 @@ const report = (over: Record<string, unknown> = {}) => ({
 
 const setup = (status: string, finalReport: unknown, incidents: unknown[] = []) =>
   mockApi((c) => {
+    if (c.url === "/work-plans/p1/completion/pdf") return { data: new Blob(["%PDF"]) };
     if (c.url === "/work-plans/p1") return { data: plan(status) };
     if (c.url === "/work-plans/p1/members") return { data: team };
     if (c.url === "/work-plans/p1/completion") return { data: finalReport };
@@ -54,6 +55,23 @@ describe("detail SK: tim & laporan akhir", () => {
     await waitFor(() => expect(within(tim).getByText("Asrul Mulya")).toBeInTheDocument());
     expect(within(tim).getByText("Ketua")).toBeInTheDocument();
     expect(within(tim).getByText("Anggota")).toBeInTheDocument();
+  });
+
+  it("disetujui: PDF laporan akhir ber-QR bisa diunduh (menunggu persetujuan: belum)", async () => {
+    URL.createObjectURL = vi.fn(() => "blob:uji");
+    URL.revokeObjectURL = vi.fn();
+    const calls = setup("COMPLETED", report({ status: "APPROVED", reviewed_by_name: "Ade Candra" }));
+    renderRoute("/work-plans/p1", { role: "field" });
+    const panel = await screen.findByRole("region", { name: "Laporan akhir" });
+    fireEvent.click(within(panel).getByRole("button", { name: "Unduh PDF laporan akhir" }));
+    await waitFor(() => expect(calls.some((c) => c.url === "/work-plans/p1/completion/pdf")).toBe(true));
+  });
+
+  it("menunggu persetujuan: belum ada tombol PDF", async () => {
+    setup("COMPLETION_REVIEW", report());
+    renderRoute("/work-plans/p1", { role: "PM" });
+    const panel = await screen.findByRole("region", { name: "Laporan akhir" });
+    expect(within(panel).queryByRole("button", { name: "Unduh PDF laporan akhir" })).toBeNull();
   });
 
   it("tanpa laporan akhir: panel tidak tampil", async () => {

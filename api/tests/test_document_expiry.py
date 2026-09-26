@@ -80,3 +80,34 @@ def test_unknown_incident_category_is_422_not_500(client, world):
         "work_plan_id": plan_id, "category": "NEAR_MISS", "severity": "LOW", "description": "Uji nilai salah."})
     assert response.status_code == 422, response.text
     assert response.json()["error"]["code"] == "VALIDATION_ERROR"
+
+
+# ── Antrean verifikasi HR (P2-5, R-19) ─────────────────────────────────────────────────────────
+def _pending(world: World, who: str = "member", doc_type: str = "MCU") -> str:
+    return str(sync_query(
+        "WITH _ctx AS (SELECT set_config('app.organization_id', %s, true)) "
+        "INSERT INTO vms.employee_document (employee_id, doc_type, number_masked, status, lifecycle, uploaded_by) "
+        "SELECT e.id, %s, '****0001', 'PENDING', 'PENDING', u.id "
+        "FROM vms.employee e JOIN vms.app_user u ON u.employee_id = e.id, _ctx WHERE e.id = %s RETURNING id",
+        (world.org_id, doc_type, world.employees[who]))[0][0])
+
+
+def test_hr_sees_pending_documents_of_own_organisation(client, world, other_world):
+    mine = _pending(world)
+    verified = _document(world, 100, "KTP")                          # sudah VERIFIED → tidak masuk antrean
+    foreign = _pending(other_world)
+
+    response = client.get("/documents/pending", headers=world.headers(client, "hr"))
+    assert response.status_code == 200, response.text
+    items = response.json()["items"]
+    ids = [i["id"] for i in items]
+    assert mine in ids and verified not in ids and foreign not in ids
+    row = next(i for i in items if i["id"] == mine)
+    assert (row["employee_id"], row["full_name"], row["doc_type"]) == \
+        (world.employees["member"], "Karyawan uji member", "MCU")
+    assert row["uploaded_at"] and row["uploaded_by_me"] is False
+
+
+def test_pending_queue_needs_verify_permission(client, world):
+    for who in ("member", "pm", "finance"):
+        assert client.get("/documents/pending", headers=world.headers(client, who)).status_code == 403, who

@@ -12,6 +12,7 @@ import { formatDate } from "@/lib/format";
 import { employeeName, useActiveEmployees, useTransition, useWorkPlan, type Transition, type WorkPlan } from "./api";
 import { Attachments } from "./Attachments";
 import { CompletionDialog } from "./CompletionDialog";
+import { FinalReportPanel, TeamCard } from "./FinalReport";
 import { IncidentDialog, IncidentPanel } from "./Incidents";
 import { OvertimeDialog, OvertimePanel } from "./Overtime";
 import { ChangePanel, ExtensionDialog, PersonnelDialog } from "./PlanChanges";
@@ -67,6 +68,8 @@ export function WorkPlanDetailPage() {
             <PlanActions plan={p} />
           </div>
         )}
+        {p && p.status !== "DRAFT" && <TeamCard plan={p} />}
+        {p && ["IN_PROGRESS", "COMPLETION_REVIEW", "COMPLETED"].includes(p.status) && <FinalReportPanel plan={p} />}
         {p && <PlanLocationCard plan={p} />}
         {p && ["DRAFT", "PUBLISHED", "APPEALED", "ACCEPTED"].includes(p.status) && (
           <div className="mt-6">
@@ -213,6 +216,12 @@ function PlanActions({ plan }: { plan: WorkPlan }) {
 
   return (
     <aside className="space-y-4">
+      {/* Mode presentasi laporan (M5) — prototipe: semua peran kecuali petugas aset. */}
+      {s === "COMPLETED" && me?.role !== "ASSET" && (
+        <Button asChild className="w-full">
+          <Link to={`/work-plans/${plan.id}/presentation`}>Mode presentasi laporan</Link>
+        </Button>
+      )}
       <ChangePanel plan={plan} />
       <IncidentPanel plan={plan} />
       <OvertimePanel plan={plan} />

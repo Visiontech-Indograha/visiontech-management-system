@@ -91,3 +91,33 @@ def test_open_change_and_unfinished_weeks_block_completion(client, world: World)
     assert blocked.status_code == 409
     assert blocked.json()["error"]["message"] == "Masih ada usulan perubahan yang belum selesai."
     assert _state(plan_id) == [("IN_PROGRESS", None, None)]
+
+
+# ── Baca laporan akhir (temuan R-18: PM menyetujui tanpa bisa membaca isinya) ────────────────
+def _read(client, world: World, plan_id: str, who: str):
+    return client.get(f"/work-plans/{plan_id}/completion", headers=world.headers(client, who))
+
+
+def test_final_report_can_be_read_by_plan_viewers_before_and_after_review(client, world: World, other_world):
+    plan_id, day_ids = run_plan_to_in_progress(client, world)
+    none_yet = _read(client, world, plan_id, "pm")
+    assert none_yet.status_code == 200 and none_yet.json() is None       # belum diajukan
+
+    _approve_days(day_ids)
+    assert _post(client, world, plan_id, "request-completion", "leader", **FINAL).status_code == 200
+
+    pm_view = _read(client, world, plan_id, "pm")
+    assert pm_view.status_code == 200, pm_view.text
+    report = pm_view.json()
+    assert (report["status"], report["body"], report["obstacle"]) == ("SUBMITTED", FINAL["body"], FINAL["obstacle"])
+    assert report["submitted_by_name"] == "Karyawan uji leader" and report["submitted_at"]
+    assert report["evidence_file_ids"] == [] and report["reviewed_at"] is None
+    assert _read(client, world, plan_id, "member").json()["body"] == FINAL["body"]   # anggota tim boleh membaca
+
+    assert _post(client, world, plan_id, "approve-completion", "pm", reason="Rapi").status_code == 200
+    done = _read(client, world, plan_id, "leader").json()
+    assert (done["status"], done["review_note"], done["reviewed_by_name"]) == ("APPROVED", "Rapi", "Karyawan uji pm")
+
+    # V-09: SK organisasi lain / yang tidak terlihat → 404
+    assert client.get(f"/work-plans/{plan_id}/completion",
+                      headers=other_world.headers(client, "pm")).status_code == 404

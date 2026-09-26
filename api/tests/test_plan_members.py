@@ -116,3 +116,19 @@ def test_only_plan_managers_may_set_the_team(client, world):
 
     # SK draf tidak terlihat oleh anggota (V-07, domain.js visiblePlans) → 404, bukan 403.
     assert response.status_code == 404
+
+
+def test_team_can_be_read_by_plan_viewers(client, world, other_world):
+    """Detail SK menampilkan tim aktif (temuan R-18: web hanya menampilkan ketua)."""
+    plan_id, _ = create_draft_plan(client, world)
+    assert _put(client, world, plan_id, world.employees["leader"], [world.employees["member"]]).status_code == 200
+
+    team = client.get(f"/work-plans/{plan_id}/members", headers=world.headers(client, "pm"))
+    assert team.status_code == 200, team.text
+    assert [(m["employee_id"], m["role_in_plan"], m["full_name"]) for m in team.json()] == [
+        (world.employees["leader"], "LEADER", "Karyawan uji leader"),
+        (world.employees["member"], "MEMBER", "Karyawan uji member"),
+    ]
+    assert all(m["position"] == "Teknisi" for m in team.json())
+    assert client.get(f"/work-plans/{plan_id}/members",
+                      headers=other_world.headers(client, "pm")).status_code == 404

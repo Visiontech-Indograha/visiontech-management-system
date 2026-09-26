@@ -3,6 +3,7 @@ Transisi SK: terbitkan (PM unit/OPS), terima & mulai (ketua menurut SK) — dija
 (V-07). Tipis (dok 12 §2): aturan di services/plan_transition_service.py, SQL di
 repositories/plan_transition_repo.py.
 """
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
@@ -21,6 +22,31 @@ router = APIRouter(prefix="/work-plans/{plan_id}", tags=["Work Plan Transitions"
 _LEADER_ACCESS = Depends(plan_access(PlanNeed.LEADER))
 _PM_UNIT_ACCESS = Depends(plan_access(PlanNeed.PM_UNIT))
 _PM_UNIT_ANY_ACCESS = Depends(plan_access(PlanNeed.PM_UNIT, archived=None))  # aktif maupun terarsip
+_VIEW_ACCESS = Depends(plan_access(PlanNeed.VIEW))
+
+
+class FinalReportOut(BaseModel):
+    status: str  # SUBMITTED | CHANGES_REQUESTED | APPROVED
+    body: str
+    obstacle: str | None
+    evidence_file_ids: list[str]
+    submitted_at: datetime | None
+    submitted_by_name: str | None
+    review_note: str | None
+    reviewed_at: datetime | None
+    reviewed_by_name: str | None
+
+
+@router.get("/completion", response_model=FinalReportOut | None)
+async def get_final_report(
+    plan_id: UUID,
+    access: PlanAccess = _VIEW_ACCESS,
+    db: AsyncSession = Depends(get_db_with_user),
+) -> FinalReportOut | None:
+    """Laporan akhir SK — dibaca PM sebelum menyetujui/mengembalikan, dan untuk mode presentasi.
+    null bila belum pernah diajukan; SK tak terlihat → 404 (penjaga VIEW)."""
+    row = await _service(db).final_report(plan_id)
+    return FinalReportOut(**row._mapping) if row else None
 
 
 class TransitionRequest(BaseModel):

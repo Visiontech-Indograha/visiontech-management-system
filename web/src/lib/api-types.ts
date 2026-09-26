@@ -509,9 +509,34 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Get Plan Team
+         * @description Tim aktif SK (ketua dulu). SK tak terlihat / organisasi lain → 404 (penjaga VIEW).
+         */
+        get: operations["get_plan_team_api_v1_work_plans__plan_id__members_get"];
         /** Set Plan Team */
         put: operations["set_plan_team_api_v1_work_plans__plan_id__members_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-plans/{plan_id}/completion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Final Report
+         * @description Laporan akhir SK — dibaca PM sebelum menyetujui/mengembalikan, dan untuk mode presentasi.
+         *     null bila belum pernah diajukan; SK tak terlihat → 404 (penjaga VIEW).
+         */
+        get: operations["get_final_report_api_v1_work_plans__plan_id__completion_get"];
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -1657,15 +1682,21 @@ export interface components {
         };
         /** AssetCheckRequest */
         AssetCheckRequest: {
-            /** Decision */
-            decision: string;
+            /**
+             * Decision
+             * @enum {string}
+             */
+            decision: "ACCEPT" | "APPEAL";
             /** Reason */
             reason?: string | null;
         };
         /** AssetCreate */
         AssetCreate: {
-            /** Kind */
-            kind: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "VEHICLE" | "TOOL";
             /** Vehicle Type */
             vehicle_type?: string | null;
             /** Code */
@@ -1698,8 +1729,11 @@ export interface components {
         };
         /** AssetResponse */
         AssetResponse: {
-            /** Kind */
-            kind: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "VEHICLE" | "TOOL";
             /** Vehicle Type */
             vehicle_type?: string | null;
             /** Code */
@@ -1969,14 +2003,15 @@ export interface components {
             /**
              * Location Origin
              * @default GPS
+             * @enum {string}
              */
-            location_origin: string;
+            location_origin: "GPS" | "SIMULASI";
             /** Accuracy M */
             accuracy_m?: number | null;
             /** Selfie File Id */
             selfie_file_id?: string | null;
             /** Face Result */
-            face_result?: string | null;
+            face_result?: ("MATCH" | "NO_MATCH" | "LOW_QUALITY" | "NOT_ENROLLED" | "SKIPPED") | null;
             /** Face Similarity */
             face_similarity?: number | null;
         };
@@ -1986,8 +2021,9 @@ export interface components {
             /**
              * Location Origin
              * @default GPS
+             * @enum {string}
              */
-            location_origin: string;
+            location_origin: "GPS" | "SIMULASI";
         };
         /** CompletionRequest */
         CompletionRequest: {
@@ -2330,6 +2366,27 @@ export interface components {
             /** Explanation */
             explanation: string;
         };
+        /** FinalReportOut */
+        FinalReportOut: {
+            /** Status */
+            status: string;
+            /** Body */
+            body: string;
+            /** Obstacle */
+            obstacle: string | null;
+            /** Evidence File Ids */
+            evidence_file_ids: string[];
+            /** Submitted At */
+            submitted_at: string | null;
+            /** Submitted By Name */
+            submitted_by_name: string | null;
+            /** Review Note */
+            review_note: string | null;
+            /** Reviewed At */
+            reviewed_at: string | null;
+            /** Reviewed By Name */
+            reviewed_by_name: string | null;
+        };
         /** GeoPoint */
         GeoPoint: {
             /** Lat */
@@ -2360,10 +2417,16 @@ export interface components {
              * Format: uuid
              */
             work_plan_id: string;
-            /** Category */
-            category: string;
-            /** Severity */
-            severity: string;
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "K3_RINGAN" | "K3_BERAT" | "K3_LINGKUNGAN" | "K3_HAMPIR" | "ASET";
+            /**
+             * Severity
+             * @enum {string}
+             */
+            severity: "RENDAH" | "SEDANG" | "TINGGI" | "KRITIS";
             /** Description */
             description: string;
             /**
@@ -2843,6 +2906,19 @@ export interface components {
         SyncResponse: {
             /** Results */
             results: components["schemas"]["OperationResult"][];
+        };
+        /** TeamMemberOut */
+        TeamMemberOut: {
+            /** Employee Id */
+            employee_id: string;
+            /** Full Name */
+            full_name: string;
+            /** Position */
+            position: string | null;
+            /** Role In Plan */
+            role_in_plan: string;
+            /** Valid From */
+            valid_from: string | null;
         };
         /** TeamRequest */
         TeamRequest: {
@@ -4151,6 +4227,37 @@ export interface operations {
             };
         };
     };
+    get_plan_team_api_v1_work_plans__plan_id__members_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeamMemberOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     set_plan_team_api_v1_work_plans__plan_id__members_put: {
         parameters: {
             query?: never;
@@ -4173,6 +4280,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TeamResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_final_report_api_v1_work_plans__plan_id__completion_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FinalReportOut"] | null;
                 };
             };
             /** @description Validation Error */

@@ -5,6 +5,7 @@ Aturan susunan tim SK draft — padanan `checkMembers`/`checkSchedule` di protot
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 from uuid import UUID
 
 from app.core.enums import PlanStatus
@@ -22,6 +23,10 @@ class Team:
 class PlanMemberService:
     def __init__(self, repo: PlanMemberRepo) -> None:
         self.repo = repo
+
+    async def team(self, plan_id: UUID) -> list[Any]:
+        """Tim aktif untuk detail SK — akses VIEW sudah diperiksa penjaga rute."""
+        return await self.repo.active_team(plan_id)
 
     async def set_team(
         self,

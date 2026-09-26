@@ -121,9 +121,10 @@ export function CreatePlanDialog({ onClose }: { onClose: () => void }) {
         site_id: v.site_id || null,
         unit_id,
       });
-      toast.success("Draft SK dibuat.");
+      toast.success("Draft SK dibuat. Tetapkan titik lokasi penugasan.");
       onClose();
-      navigate(`/work-plans/${plan.id}`);
+      // Dialog "Atur titik lokasi" langsung ditawarkan di halaman detail.
+      navigate(`/work-plans/${plan.id}`, { state: { setLocation: true } });
     } catch (err) {
       setFormError(errorMessage(err));
     }

@@ -212,7 +212,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Get Employee
+         * @description Satu karyawan (tautan langsung /directory/{id}); karyawan organisasi lain/terhapus → 404.
+         */
+        get: operations["get_employee_api_v1_employees__emp_id__get"];
         /** Update Employee */
         put: operations["update_employee_api_v1_employees__emp_id__put"];
         post?: never;
@@ -1257,7 +1261,7 @@ export interface paths {
         put?: never;
         /**
          * Review Attendance
-         * @description P4-4 · domain.js REVIEW_ATTENDANCE (Finance).
+         * @description P4-4 · domain.js REVIEW_ATTENDANCE: Finance seluruh organisasi; PM unitnya, OPS lintas unit (R-10).
          */
         post: operations["review_attendance_api_v1_attendance__att_id__review_post"];
         delete?: never;
@@ -1327,7 +1331,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * List Incidents
+         * @description Insiden satu SK, terbaru dulu — siapa pun yang dapat melihat SK (temuan uji alur: insiden dari
+         *     lapangan tidak terlihat PM karena belum ada endpoint baca). SK asing/tak terlihat → 404.
+         */
+        get: operations["list_incidents_api_v1_hse_incidents_get"];
         put?: never;
         /** Report Incident */
         post: operations["report_incident_api_v1_hse_incidents_post"];
@@ -2407,6 +2416,11 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /**
+             * Evidence File Ids
+             * @default []
+             */
+            evidence_file_ids: string[];
         };
         /** LoginRequest */
         LoginRequest: {
@@ -3442,6 +3456,37 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmployeeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_employee_api_v1_employees__emp_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                emp_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5599,6 +5644,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["NeedsReviewResponse"];
+                };
+            };
+        };
+    };
+    list_incidents_api_v1_hse_incidents_get: {
+        parameters: {
+            query: {
+                plan_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IncidentResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

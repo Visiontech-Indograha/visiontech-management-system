@@ -1,28 +1,46 @@
 import clsx from "clsx";
 import { LogOut, Menu, PanelLeftClose, PanelLeftOpen, X } from "lucide-react";
-import { Fragment, useState } from "react";
-import { NavLink, Outlet } from "react-router-dom";
+import { Fragment, Suspense, useState } from "react";
+import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { visibleNav } from "@/app/navigation";
 import { useSession } from "@/app/session";
+import logo from "@/assets/brand/logo-visiontech.jpeg";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ROLE_LABEL } from "@/lib/types";
+
+function initials(email: string) {
+  const name = email.split("@")[0].replace(/[^a-z]/gi, " ").trim();
+  const parts = name.split(/\s+/).filter(Boolean);
+  return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? parts[0]?.[1] ?? "")).toUpperCase() || "V";
+}
+
+function PageFallback() {
+  return (
+    <div aria-busy className="space-y-4">
+      <Skeleton className="h-9 w-64" />
+      <Skeleton className="h-40 w-full" />
+    </div>
+  );
+}
 
 /** Rail kiri 232 px (ciut 64 px); di < 768 px menjadi laci. */
 export function AppShell() {
   const { me, logout } = useSession();
+  const { pathname } = useLocation();
   const [collapsed, setCollapsed] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const items = visibleNav(me?.permissions ?? []);
   const roleLabel = me ? (ROLE_LABEL[me.role] ?? me.role) : "";
 
   const nav = (
-    <nav aria-label="Menu utama" className="flex-1 overflow-y-auto px-2 py-3">
+    <nav aria-label="Menu utama" className="flex-1 space-y-0.5 overflow-y-auto px-3 py-2">
       {items.map((item, i) => {
         const Icon = item.icon;
         const newGroup = item.group && item.group !== items[i - 1]?.group;
         return (
           <Fragment key={item.path}>
             {newGroup && !collapsed && (
-              <p className="px-3 pb-1 pt-4 text-xs font-semibold text-mist">{item.group}</p>
+              <p className="overline px-3 pb-1.5 pt-5">{item.group}</p>
             )}
             <NavLink
               to={item.path}
@@ -31,13 +49,15 @@ export function AppShell() {
               onClick={() => setDrawerOpen(false)}
               className={({ isActive }) =>
                 clsx(
-                  "flex h-10 items-center gap-3 rounded-control px-3 text-sm font-medium",
+                  "group relative flex h-10 items-center gap-3 rounded-control px-3 text-sm font-medium",
                   "transition-colors duration-[var(--motion-fast)]",
-                  isActive ? "bg-lens-soft text-lens" : "text-ink hover:bg-hover",
+                  isActive
+                    ? "bg-surface text-lens shadow-card ring-1 ring-line before:absolute before:inset-y-2 before:-left-3 before:w-1 before:rounded-full before:bg-gold"
+                    : "text-foreground hover:bg-hover hover:text-ink",
                 )
               }
             >
-              <Icon size={20} strokeWidth={1.75} aria-hidden />
+              <Icon size={19} strokeWidth={1.75} aria-hidden className="shrink-0" />
               <span className={clsx(collapsed && "md:sr-only")}>{item.label}</span>
             </NavLink>
           </Fragment>
@@ -47,17 +67,25 @@ export function AppShell() {
   );
 
   const profile = me && (
-    <div className="border-t border-line p-3">
-      <div className={clsx("mb-2 min-w-0", collapsed && "md:sr-only")}>
-        <p className="truncate text-sm font-semibold">{me.email}</p>
-        <p className="text-xs text-mist">{roleLabel}</p>
+    <div className="p-3">
+      <div className={clsx("flex items-center gap-3 rounded-panel bg-surface p-2.5 shadow-card ring-1 ring-line", collapsed && "md:justify-center md:p-1.5")}>
+        <span
+          aria-hidden
+          className="grid size-9 shrink-0 place-items-center rounded-full bg-accent text-sm font-semibold text-lens"
+        >
+          {initials(me.email)}
+        </span>
+        <div className={clsx("min-w-0 flex-1", collapsed && "md:sr-only")}>
+          <p className="truncate text-sm font-semibold text-ink">{me.email}</p>
+          <p className="text-xs text-mist">{roleLabel}</p>
+        </div>
       </div>
       <button
         type="button"
         onClick={() => void logout()}
-        className="flex h-10 w-full items-center gap-3 rounded-control px-3 text-sm text-mist hover:bg-hover"
+        className="mt-2 flex h-10 w-full items-center gap-3 rounded-control px-3 text-sm text-mist transition-colors hover:bg-danger-bg hover:text-danger"
       >
-        <LogOut size={20} strokeWidth={1.75} aria-hidden />
+        <LogOut size={19} strokeWidth={1.75} aria-hidden />
         <span className={clsx(collapsed && "md:sr-only")}>Keluar</span>
       </button>
     </div>
@@ -65,22 +93,29 @@ export function AppShell() {
 
   return (
     <div className="flex min-h-screen">
+      <div className="scroll-progress" aria-hidden />
       {drawerOpen && (
-        <div className="fixed inset-0 z-30 bg-ink/40 md:hidden" onClick={() => setDrawerOpen(false)} aria-hidden />
+        <div className="fixed inset-0 z-30 bg-scrim md:hidden" onClick={() => setDrawerOpen(false)} aria-hidden />
       )}
       <aside
         className={clsx(
-          "fixed inset-y-0 left-0 z-40 flex w-[232px] flex-col border-r border-line bg-surface",
-          "transition-transform duration-[var(--motion-base)] ease-out md:static md:translate-x-0",
-          collapsed && "md:w-16",
+          "fixed inset-y-0 left-0 z-40 flex w-[248px] flex-col border-r border-sidebar-border bg-sidebar",
+          "transition-[transform,width] duration-[var(--motion-base)] ease-out md:sticky md:top-0 md:h-screen md:translate-x-0",
+          collapsed && "md:w-[76px]",
           drawerOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
-        <div className="flex h-14 items-center justify-between px-4">
-          <span className={clsx("text-lg font-bold text-lens", collapsed && "md:sr-only")}>VMS</span>
+        <div className={clsx("flex h-16 items-center justify-between gap-2 px-4", collapsed && "md:flex-col md:justify-center md:gap-1 md:h-auto md:py-3")}>
+          <span className="flex min-w-0 items-center">
+            <img
+              src={logo}
+              alt="Visiontech Indograha"
+              className={clsx("h-9 w-auto max-w-[168px] object-contain", collapsed && "md:h-auto md:max-w-[44px]")}
+            />
+          </span>
           <button
             type="button"
-            className="hidden rounded-control p-1 text-mist hover:bg-hover md:block"
+            className="hidden rounded-control p-1.5 text-mist transition-colors hover:bg-hover hover:text-ink md:block"
             onClick={() => setCollapsed((c) => !c)}
             aria-label={collapsed ? "Perluas menu" : "Ciutkan menu"}
           >
@@ -100,7 +135,7 @@ export function AppShell() {
       </aside>
 
       <div className="min-w-0 flex-1">
-        <header className="flex h-14 items-center border-b border-line bg-surface px-4 md:hidden">
+        <header className="sticky top-0 z-20 flex h-14 items-center border-b border-line bg-surface/90 px-4 backdrop-blur-sm md:hidden">
           <button
             type="button"
             className="rounded-control p-2 text-ink hover:bg-hover"
@@ -109,10 +144,14 @@ export function AppShell() {
           >
             <Menu size={20} />
           </button>
-          <span className="ml-2 font-bold text-lens">VMS</span>
+          <img src={logo} alt="Visiontech Indograha" className="ml-2 h-7 w-auto object-contain" />
         </header>
-        <main className="mx-auto w-full max-w-[1280px] px-4 py-6 md:px-8">
-          <Outlet />
+        <main className="mx-auto w-full max-w-[1320px] px-4 py-6 md:px-8 md:py-8 lg:px-10">
+          <div key={pathname} className="page-enter">
+            <Suspense fallback={<PageFallback />}>
+              <Outlet />
+            </Suspense>
+          </div>
         </main>
       </div>
     </div>

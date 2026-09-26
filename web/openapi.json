@@ -510,6 +510,53 @@
    }
   },
   "/api/v1/employees/{emp_id}": {
+   "get": {
+    "tags": [
+     "Employees"
+    ],
+    "summary": "Get Employee",
+    "description": "Satu karyawan (tautan langsung /directory/{id}); karyawan organisasi lain/terhapus → 404.",
+    "operationId": "get_employee_api_v1_employees__emp_id__get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "emp_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Emp Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/EmployeeResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
    "put": {
     "tags": [
      "Employees"
@@ -4016,7 +4063,7 @@
      "Attendance"
     ],
     "summary": "Review Attendance",
-    "description": "P4-4 · domain.js REVIEW_ATTENDANCE (Finance).",
+    "description": "P4-4 · domain.js REVIEW_ATTENDANCE: Finance seluruh organisasi; PM unitnya, OPS lintas unit (R-10).",
     "operationId": "review_attendance_api_v1_attendance__att_id__review_post",
     "security": [
      {
@@ -4185,21 +4232,77 @@
    }
   },
   "/api/v1/hse/incidents": {
+   "get": {
+    "tags": [
+     "HSE & Reports"
+    ],
+    "summary": "List Incidents",
+    "description": "Insiden satu SK, terbaru dulu — siapa pun yang dapat melihat SK (temuan uji alur: insiden dari\nlapangan tidak terlihat PM karena belum ada endpoint baca). SK asing/tak terlihat → 404.",
+    "operationId": "list_incidents_api_v1_hse_incidents_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "plan_id",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Plan Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/IncidentResponse"
+         },
+         "title": "Response List Incidents Api V1 Hse Incidents Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
    "post": {
     "tags": [
      "HSE & Reports"
     ],
     "summary": "Report Incident",
     "operationId": "report_incident_api_v1_hse_incidents_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
     "requestBody": {
+     "required": true,
      "content": {
       "application/json": {
        "schema": {
         "$ref": "#/components/schemas/IncidentCreate"
        }
       }
-     },
-     "required": true
+     }
     },
     "responses": {
      "201": {
@@ -4222,12 +4325,7 @@
        }
       }
      }
-    },
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ]
+    }
    }
   },
   "/api/v1/hse/incidents/{inc_id}/resolve": {
@@ -7263,6 +7361,15 @@
       "type": "string",
       "format": "date-time",
       "title": "Created At"
+     },
+     "evidence_file_ids": {
+      "items": {
+       "type": "string",
+       "format": "uuid"
+      },
+      "type": "array",
+      "title": "Evidence File Ids",
+      "default": []
      }
     },
     "type": "object",

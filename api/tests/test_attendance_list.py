@@ -58,7 +58,16 @@ def test_reviewers_see_the_whole_organisation_but_nothing_else(client, world, da
     assert listed["total"] == len(ids) == 3
 
 
-@pytest.mark.parametrize("who", ["member", "leader", "pm", "asset"])
+def test_pm_sees_attendance_of_their_unit_but_not_other_organisations(client, world, day):
+    # R-10: PM memvalidasi absensi unitnya sendiri, jadi daftar PM memuat absensi karyawan unitnya.
+    ids = {a["id"] for a in _list(client, world, "pm")["items"]}
+    assert {day["member"], day["leader"], day["pm"]} <= ids
+    assert day["foreign"] not in ids
+    by_leader = _list(client, world, "pm", employee_id=world.employees["leader"])
+    assert [a["id"] for a in by_leader["items"]] == [day["leader"]]
+
+
+@pytest.mark.parametrize("who", ["member", "leader", "asset"])
 def test_everyone_else_sees_only_their_own(client, world, day, who):
     listed = _list(client, world, who, employee_id=world.employees["leader"])   # upaya melihat milik orang lain
 

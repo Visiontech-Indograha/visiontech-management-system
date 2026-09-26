@@ -32,7 +32,7 @@ export function AssetsPage() {
       <QueryState query={assets} errorText="Daftar aset tidak dapat dimuat." empty={assets.data?.length === 0} emptyText="Belum ada kendaraan atau alat.">
         <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {assets.data?.map((a) => (
-            <li key={a.id} className="flex flex-col gap-2 rounded-panel border border-line bg-surface p-4">
+            <li key={a.id} className="flex flex-col gap-2 rounded-panel border border-line bg-surface shadow-card p-4">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs font-semibold tracking-wide text-mist">{a.kind === "VEHICLE" ? "KENDARAAN" : "PERALATAN"}</span>
                 <StatusBadge status={a.status} />

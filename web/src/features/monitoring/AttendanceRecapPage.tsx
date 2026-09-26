@@ -39,7 +39,7 @@ export function AttendanceRecapPage() {
       >
         <ul className="grid gap-3 md:hidden">
           {rows.map((r) => (
-            <li key={r.employee_id} className="rounded-panel border border-line bg-surface p-4">
+            <li key={r.employee_id} className="rounded-panel border border-line bg-surface shadow-card p-4">
               <p className="mb-2 font-medium">{r.full_name}</p>
               <dl className="grid grid-cols-2 gap-1 text-sm">
                 {COLS.map(([label, k]) => (
@@ -52,7 +52,7 @@ export function AttendanceRecapPage() {
             </li>
           ))}
         </ul>
-        <div className="hidden overflow-x-auto rounded-panel border border-line bg-surface md:block">
+        <div className="hidden overflow-x-auto rounded-panel border border-line bg-surface shadow-card md:block">
           <table className="w-full text-left text-sm">
             <thead className="border-b border-line text-mist">
               <tr>

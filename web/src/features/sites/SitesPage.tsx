@@ -29,7 +29,7 @@ export function SitesPage() {
         </div>
       )}
       {sites.isError && (
-        <div role="alert" className="rounded-panel border border-line bg-surface p-6 text-center">
+        <div role="alert" className="rounded-panel border border-line bg-surface shadow-card p-6 text-center">
           <p className="mb-3 text-danger">Lokasi kerja tidak dapat dimuat.</p>
           <Button variant="outline" onClick={() => sites.refetch()}>
             Coba lagi
@@ -37,7 +37,7 @@ export function SitesPage() {
         </div>
       )}
       {sites.data?.length === 0 && (
-        <div className="rounded-panel border border-line bg-surface p-6 text-center">
+        <div className="rounded-panel border border-line bg-surface shadow-card p-6 text-center">
           <p className="mb-3 text-mist">Belum ada lokasi kerja. Tambahkan lokasi agar absensi bisa memeriksa radius.</p>
           <Button onClick={() => setAdding(true)}>Tambah lokasi</Button>
         </div>
@@ -45,7 +45,7 @@ export function SitesPage() {
       {sites.data && sites.data.length > 0 && (
         <ul className="grid gap-3 md:grid-cols-2">
           {sites.data.map((s) => (
-            <li key={s.id} className="flex items-start gap-3 rounded-panel border border-line bg-surface p-4">
+            <li key={s.id} className="flex items-start gap-3 rounded-panel border border-line bg-surface shadow-card p-4">
               <MapPin className="mt-0.5 shrink-0 text-lens" size={20} aria-hidden />
               <div className="min-w-0 flex-1">
                 <p className="font-medium">{s.name}</p>

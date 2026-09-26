@@ -9,6 +9,7 @@ export const PERMISSIONS = [
   "create:plan",
   "publish:plan",
   "review:attendance",
+  "review:unit_attendance",
   "review:overtime",
   "manage:assets",
   "view:timeline",

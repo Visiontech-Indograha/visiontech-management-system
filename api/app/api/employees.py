@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, get_db_with_user, require_permission
 from app.api.guards import ensure_same_org
+from app.core.errors import AppError
 from app.core.permissions import Permission
 from app.schemas.employee import (
     EmployeeAssignmentCreate,
@@ -71,6 +72,24 @@ async def get_employees(
         ))
         
     return EmployeeListResponse(items=items, total=total, page=page, size=size)
+
+@router.get("/{emp_id}", response_model=EmployeeResponse)
+async def get_employee(
+    emp_id: UUID,
+    current_user: CurrentUser = Depends(require_permission(Permission.VIEW_USERS)),
+    db: AsyncSession = Depends(get_db_with_user)
+):
+    """Satu karyawan (tautan langsung /directory/{id}); karyawan organisasi lain/terhapus → 404."""
+    row = (await db.execute(text("""
+        SELECT id, employee_no, full_name, position, unit_id, email, phone,
+               join_date, birth_date, address, emergency_contact,
+               is_active, offboarded_at, offboarding_reason
+        FROM vms.employee
+        WHERE id = :id AND organization_id = :org AND deleted_at IS NULL
+    """), {"id": emp_id, "org": current_user.organization_id})).fetchone()
+    if row is None:
+        raise AppError("NOT_FOUND", "Karyawan tidak ditemukan.", status=404)
+    return EmployeeResponse(**row._mapping)
 
 @router.post("", response_model=EmployeeResponse, status_code=status.HTTP_201_CREATED)
 async def create_employee(

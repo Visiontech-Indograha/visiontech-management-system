@@ -48,7 +48,7 @@ export function WorkPlanDetailPage() {
       <QueryState query={plan} errorText="Work plan tidak ditemukan atau Anda tidak berwenang melihatnya.">
         {p && (
           <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-            <section aria-label="Rincian SK" className="rounded-panel border border-line bg-surface px-5 py-2">
+            <section aria-label="Rincian SK" className="rounded-panel border border-line bg-surface shadow-card px-5 py-2">
               <dl className="text-sm">
                 <Row label="Nomor SK">{p.number ?? "Belum terbit"}</Row>
                 <Row label="Revisi">{p.revision}</Row>
@@ -213,13 +213,13 @@ function PlanActions({ plan }: { plan: WorkPlan }) {
       <IncidentPanel plan={plan} />
       <OvertimePanel plan={plan} />
       {manager.length > 0 && (
-        <section aria-label="Tindakan PM" className="rounded-panel border border-line bg-surface p-4">
+        <section aria-label="Tindakan PM" className="rounded-panel border border-line bg-surface shadow-card p-4">
           <h2 className="mb-3 text-base font-semibold">Tindakan PM</h2>
           <div className="flex flex-col gap-2 [&>button]:w-full">{manager}</div>
         </section>
       )}
       {leader.length > 0 && (
-        <section aria-label="Tindakan ketua tim" className="rounded-panel border border-line bg-surface p-4">
+        <section aria-label="Tindakan ketua tim" className="rounded-panel border border-line bg-surface shadow-card p-4">
           <h2 className="mb-3 text-base font-semibold">Tindakan ketua tim</h2>
           <div className="flex flex-col gap-2 [&>button]:w-full">{leader}</div>
         </section>

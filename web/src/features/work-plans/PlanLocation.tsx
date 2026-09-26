@@ -81,7 +81,7 @@ export function PlanLocationCard({ plan }: { plan: WorkPlan }) {
 
   const l = loc.data;
   return (
-    <section aria-label="Lokasi penugasan" className="mt-6 rounded-panel border border-line bg-surface p-4">
+    <section aria-label="Lokasi penugasan" className="mt-6 rounded-panel border border-line bg-surface shadow-card p-4">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-base font-semibold">Lokasi penugasan</h2>
         {canEdit && (

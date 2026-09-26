@@ -1,5 +1,6 @@
 /*
  * VMS — tema web untuk shadcn/ui + Tailwind CSS v4.
+ * R-12 (2026-09-26): palet mengikuti logo Visiontech (navy #232c6f + aksen emas), gaya kantor modern.
  * Sumber nilai: docs/design/tokens.json · Aturan: docs/18-SISTEM-DESAIN-UI.md
  *
  *
@@ -22,33 +23,33 @@
 /* 1. Variabel semantik (kontrak shadcn/ui) + token tambahan VMS       */
 /* ------------------------------------------------------------------ */
 :root {
-  --radius: 0.5rem; /* 8 px — tombol, input */
+  --radius: 0.625rem; /* 10 px — tombol, input (R-12: gaya kantor modern 2026) */
 
-  --background: #f3f6f3;
-  --foreground: #243b33;
-  --heading: #16241f;
+  --background: #f4f5f8;
+  --foreground: #252a36;
+  --heading: #161a24;
   --card: #ffffff;
-  --card-foreground: #243b33;
+  --card-foreground: #252a36;
   --popover: #ffffff;
-  --popover-foreground: #243b33;
-  --primary: #164d40;
-  --primary-hover: #1f634d;
-  --primary-pressed: #113d33;
+  --popover-foreground: #252a36;
+  --primary: #232c6f;
+  --primary-hover: #2e3a86;
+  --primary-pressed: #1b2359;
   --primary-foreground: #ffffff;
-  --secondary: #e9eee9;
-  --secondary-foreground: #243b33;
-  --muted: #e9eee9;
-  --muted-foreground: #5f6b64;
-  --accent: #eef5f2;
-  --accent-foreground: #164d40;
+  --secondary: #eceef3;
+  --secondary-foreground: #252a36;
+  --muted: #eceef3;
+  --muted-foreground: #5e6573;
+  --accent: #eef0fa;
+  --accent-foreground: #232c6f;
   --destructive: #b93c2d;
   --destructive-foreground: #ffffff;
-  --border: #dde4de;
-  --border-hover: #c6cfc8;
-  --input: #8a968e;
-  --ring: #2d7a60;
-  --table-header: #f8faf8;
-  --scrim: rgb(22 36 31 / 0.48);
+  --border: #e2e5ec;
+  --border-hover: #cbd0da;
+  --input: #8a91a0;
+  --ring: #3d4a9c;
+  --table-header: #f9fafb;
+  --scrim: rgb(22 26 36 / 0.48);
 
   --success: #1e6b43;
   --success-bg: #e8f3ec;
@@ -67,20 +68,27 @@
   --info-border: #bcd2e8;
   --info-solid: #3569a0;
 
-  --chart-1: #164d40;
+  --chart-1: #232c6f;
   --chart-2: #3569a0;
   --chart-3: #c7892a;
-  --chart-4: #5f6b64;
-  --chart-5: #4f977d;
+  --chart-4: #5e6573;
+  --chart-5: #1e6b43;
 
-  --sidebar: #ffffff;
-  --sidebar-foreground: #243b33;
-  --sidebar-primary: #164d40;
+  --sidebar: #fafbfc;
+  --sidebar-foreground: #252a36;
+  --sidebar-primary: #232c6f;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #eef5f2;
-  --sidebar-accent-foreground: #164d40;
-  --sidebar-border: #dde4de;
-  --sidebar-ring: #2d7a60;
+  --sidebar-accent: #eef0fa;
+  --sidebar-accent-foreground: #232c6f;
+  --sidebar-border: #e2e5ec;
+  --sidebar-ring: #3d4a9c;
+
+  /* Aksen emas logo Visiontech — dekoratif saja (penanda menu aktif), bukan untuk teks. */
+  --gold: #f0c000;
+
+  /* Gerak (dipakai AppShell: duration-[var(--motion-fast)]) */
+  --motion-fast: 150ms;
+  --motion-base: 220ms;
 }
 
 /* ------------------------------------------------------------------ */
@@ -93,12 +101,13 @@
   --inset-shadow-*: initial;
   --drop-shadow-*: initial;
   --blur-*: initial;
+  --blur-sm: 8px; /* hanya bilah atas ponsel yang lengket (R-12) */
   --font-*: initial;
   --radius-*: initial;
 
   /* Warna dasar */
   --color-white: #ffffff;
-  --color-black: #16241f; /* dipakai overlay shadcn (bg-black/50) → scrim bernada hijau gelap */
+  --color-black: #161a24; /* dipakai overlay shadcn (bg-black/50) → scrim bernada hijau gelap */
 
   /* Kontrak shadcn/ui */
   --color-background: var(--background);
@@ -140,6 +149,18 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
+  /* Alias nama lama yang dipakai kode fitur (sebelumnya tidak terdefinisi → tanpa gaya). */
+  --color-surface: var(--card);
+  --color-paper: var(--background);
+  --color-ink: var(--heading);
+  --color-mist: var(--muted-foreground);
+  --color-line: var(--border);
+  --color-hover: var(--muted);
+  --color-lens: var(--primary);
+  --color-lens-soft: var(--accent);
+  --color-danger-soft: var(--danger-bg);
+  --color-gold: var(--gold);
+
   /* Status: text-success, bg-success-bg, border-success-border, bg-success-solid, ... */
   --color-success: var(--success);
   --color-success-bg: var(--success-bg);
@@ -159,28 +180,28 @@
   --color-info-solid: var(--info-solid);
 
   /* Skala mentah — hanya untuk kasus yang tidak tercakup token semantik di atas. */
-  --color-brand-50: #eef5f2;
-  --color-brand-100: #d5e8e0;
-  --color-brand-200: #aed3c3;
-  --color-brand-300: #7fb7a0;
-  --color-brand-400: #4f977d;
-  --color-brand-500: #2d7a60;
-  --color-brand-600: #1f634d;
-  --color-brand-700: #164d40;
-  --color-brand-800: #113d33;
-  --color-brand-900: #0c2d26;
+  --color-brand-50: #eef0fa;
+  --color-brand-100: #dde1f3;
+  --color-brand-200: #bcc3e6;
+  --color-brand-300: #8f99d1;
+  --color-brand-400: #5f6bb6;
+  --color-brand-500: #3d4a9c;
+  --color-brand-600: #2e3a86;
+  --color-brand-700: #232c6f;
+  --color-brand-800: #1b2359;
+  --color-brand-900: #141a43;
   --color-neutral-0: #ffffff;
-  --color-neutral-25: #f8faf8;
-  --color-neutral-50: #f3f6f3;
-  --color-neutral-100: #e9eee9;
-  --color-neutral-200: #dde4de;
-  --color-neutral-300: #c6cfc8;
-  --color-neutral-400: #8a968e;
-  --color-neutral-500: #5f6b64;
-  --color-neutral-600: #4a5650;
-  --color-neutral-700: #36423c;
-  --color-neutral-800: #243b33;
-  --color-neutral-900: #16241f;
+  --color-neutral-25: #f9fafb;
+  --color-neutral-50: #f4f5f8;
+  --color-neutral-100: #eceef3;
+  --color-neutral-200: #e2e5ec;
+  --color-neutral-300: #cbd0da;
+  --color-neutral-400: #8a91a0;
+  --color-neutral-500: #5e6573;
+  --color-neutral-600: #4a505d;
+  --color-neutral-700: #363b46;
+  --color-neutral-800: #252a36;
+  --color-neutral-900: #161a24;
 
   /* Huruf */
   --font-sans: "Plus Jakarta Sans Variable", system-ui, "Segoe UI", Roboto, sans-serif;
@@ -216,18 +237,24 @@
   --text-caption: 0.75rem;    --text-caption--line-height: 1rem;     --text-caption--letter-spacing: 0.01em;    --text-caption--font-weight: 500;
   --text-overline: 0.75rem;   --text-overline--line-height: 1rem;    --text-overline--letter-spacing: 0.06em;   --text-overline--font-weight: 600;
 
-  /* Radius: 4 · 6 · 8 · 12. Tidak ada 2xl/3xl. */
+  /* Radius: 6 · 8 · 10 · 14 · 16 (R-12). Tidak ada 3xl. */
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 6px);
+  --radius-full: 9999px;
+  --radius-control: var(--radius);             /* tombol, input, item menu */
+  --radius-panel: calc(var(--radius) + 6px);   /* kartu & panel */
+  --radius-tag: 9999px;                        /* chip status */
 
-  /* Bayangan: shadow-xs/sm sengaja kosong (kartu & kontrol datar). md = melayang, lg = dialog. */
-  --shadow-xs: 0 0 #0000;
-  --shadow-sm: 0 0 #0000;
-  --shadow-elevation-1: 0 1px 2px rgb(22 36 31 / 0.06);
-  --shadow-md: 0 8px 24px rgb(22 36 31 / 0.12);
-  --shadow-lg: 0 16px 48px rgb(22 36 31 / 0.16);
+  /* Bayangan lembut ala kantor modern: xs = kontrol, sm/card = kartu, md = melayang, lg = dialog. */
+  --shadow-xs: 0 1px 1px rgb(22 26 36 / 0.03);
+  --shadow-sm: 0 1px 2px rgb(22 26 36 / 0.04), 0 1px 3px rgb(22 26 36 / 0.03);
+  --shadow-card: 0 1px 2px rgb(22 26 36 / 0.04), 0 4px 12px -4px rgb(22 26 36 / 0.06);
+  --shadow-elevation-1: 0 1px 2px rgb(22 26 36 / 0.06);
+  --shadow-md: 0 8px 24px rgb(22 26 36 / 0.12);
+  --shadow-lg: 0 16px 48px rgb(22 26 36 / 0.16);
 
   /* Lebar konten */
   --container-narrow: 25rem;   /* 400 */
@@ -300,6 +327,130 @@
   font-weight: var(--text-overline--font-weight);
   text-transform: uppercase;
   color: var(--muted-foreground);
+}
+
+/* ------------------------------------------------------------------ */
+/* 4. Gerak (R-12) — performa nomor satu:                              */
+/*    hanya transform/opacity, scroll-driven CSS (thread compositor),  */
+/*    tanpa pustaka; semua mati otomatis saat prefers-reduced-motion.  */
+/* ------------------------------------------------------------------ */
+:root {
+  /* Pegas ringan (sedikit memantul) & keluar halus. */
+  --ease-spring: linear(0, 0.29 7%, 0.78 17%, 1.04 27%, 1.1 33%, 1.07 41%, 1 52%, 0.98 63%, 1);
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Kartu & panel: naik sedikit saat hover dengan pegas; bayangan ikut menguat. */
+@media (hover: hover) and (pointer: fine) {
+  .shadow-card,
+  [data-slot="card"] {
+    transition: transform 420ms var(--ease-spring), box-shadow 240ms var(--ease-out-soft);
+  }
+  .shadow-card:hover,
+  [data-slot="card"]:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 2px 4px rgb(22 26 36 / 0.04), 0 12px 28px -8px rgb(22 26 36 / 0.14);
+  }
+
+  /* Cahaya relatif kursor: --mx/--my diisi motion.ts (rAF, hanya saat kursor di atas kartu). */
+  .shadow-card,
+  [data-slot="card"] {
+    position: relative;
+    isolation: isolate;
+  }
+  .shadow-card::after,
+  [data-slot="card"]::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0;
+    background: radial-gradient(420px circle at var(--mx, 50%) var(--my, 50%), rgb(61 74 156 / 0.07), transparent 60%);
+    transition: opacity 300ms var(--ease-out-soft);
+  }
+  .shadow-card:hover::after,
+  [data-slot="card"]:hover::after {
+    opacity: 1;
+  }
+
+  /* Ikon menu memantul kecil saat hover. */
+  nav a:hover > svg {
+    transform: translateX(2px) scale(1.08);
+  }
+  nav a > svg {
+    transition: transform 420ms var(--ease-spring);
+  }
+}
+
+/* Klik: tekan mengecil lalu memantul kembali (semua tombol & tautan-tombol). */
+button:not(:disabled),
+[role="button"],
+nav a {
+  transition-property: color, background-color, border-color, box-shadow, transform;
+  transition-duration: 180ms, 180ms, 180ms, 180ms, 420ms;
+  transition-timing-function: var(--ease-out-soft), var(--ease-out-soft), var(--ease-out-soft), var(--ease-out-soft), var(--ease-spring);
+}
+button:not(:disabled):active,
+[role="button"]:active,
+nav a:active {
+  transform: scale(0.96);
+  transition-duration: 80ms;
+}
+
+/* Masuk halaman: konten naik halus setiap pindah rute (AppShell memberi key per rute). */
+@keyframes vms-page-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+.page-enter {
+  animation: vms-page-in 360ms var(--ease-out-soft) both;
+}
+
+/* Dialog & toast: masuk dengan pegas. */
+@keyframes vms-pop-in {
+  from { opacity: 0; transform: translateY(6px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+[role="dialog"][data-state="open"] {
+  animation: vms-pop-in 380ms var(--ease-spring) both;
+}
+
+/* Masuk/keluar viewport + progres gulir — CSS scroll-driven (Chrome/Edge/Safari baru).
+   Peramban lama cukup tanpa animasi; tidak ada JS gulir sama sekali. */
+@supports (animation-timeline: view()) {
+  @keyframes vms-reveal {
+    entry 0% { opacity: 0; transform: translateY(18px) scale(0.985); }
+    entry 100% { opacity: 1; transform: none; }
+    exit 0% { opacity: 1; transform: none; }
+    exit 100% { opacity: 0.35; transform: translateY(-10px) scale(0.99); }
+  }
+  /* Hanya blok terluar — blok bersarang tidak ikut dianimasikan dua kali. */
+  main :is(section, article, .shadow-card, [data-slot="card"]):not(:is(section, article, .shadow-card, [data-slot="card"]) *) {
+    animation: vms-reveal linear both;
+    animation-timeline: view();
+    animation-range: entry 0% cover 30%, exit 70% exit 100%;
+  }
+
+  @keyframes vms-progress {
+    from { transform: scaleX(0); }
+    to { transform: scaleX(1); }
+  }
+  .scroll-progress {
+    position: fixed;
+    inset: 0 0 auto 0;
+    z-index: 50;
+    height: 3px;
+    transform-origin: 0 50%;
+    background: linear-gradient(90deg, var(--primary), var(--gold));
+    animation: vms-progress linear both;
+    animation-timeline: scroll(root);
+    pointer-events: none;
+  }
+}
+@supports not (animation-timeline: view()) {
+  .scroll-progress { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {

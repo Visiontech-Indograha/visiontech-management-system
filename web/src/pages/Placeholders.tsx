@@ -1,16 +1,6 @@
-﻿import { Link } from "react-router-dom";
+export { HomePage } from "@/features/home/HomePage";
+import { Link } from "react-router-dom";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { useSession } from "@/app/session";
-
-export function HomePage() {
-  const { me } = useSession();
-  return (
-    <>
-      <PageHeader title="Beranda" />
-      <p className="text-mist">Selamat datang, {me?.email}.</p>
-    </>
-  );
-}
 
 export function ComingSoonPage({ title }: { title: string }) {
   return (

@@ -46,7 +46,7 @@ describe("login dan sesi API", () => {
     fireEvent.click(screen.getByRole("button", { name: "Masuk" }));
     await waitFor(() => expect(router.state.location.pathname).toBe("/"));
     expect(getAccessToken()).toBe("tok");
-    expect(await screen.findByText("Selamat datang, budi@example.com.")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 1, name: /budi/ })).toBeInTheDocument();
     expect(await screen.findByText("Karyawan lapangan")).toBeInTheDocument();
     expect(calls.some((call) => call.url === "/auth/me")).toBe(true);
   });

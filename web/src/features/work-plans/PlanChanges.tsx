@@ -241,7 +241,7 @@ export function ChangePanel({ plan }: { plan: WorkPlan }) {
   }
 
   return (
-    <section aria-label="Usulan perubahan" className="rounded-panel border border-line bg-surface p-4">
+    <section aria-label="Usulan perubahan" className="rounded-panel border border-line bg-surface shadow-card p-4">
       <div className="mb-2 flex items-center justify-between gap-2">
         <h2 className="text-base font-semibold">{TYPE_LABEL[change.change_type] ?? change.change_type}</h2>
         <StatusBadge status={change.status} />

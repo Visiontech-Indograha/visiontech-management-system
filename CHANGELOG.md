@@ -253,6 +253,8 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 - **PDF SK gagal di Linux/Docker** (`AttributeError: 'super' object has no attribute 'transform'`): WeasyPrint 62.3 tidak cocok dengan `pydyf` ≥ 0.11 → `pydyf==0.10.0` dikunci di `requirements.txt`. Ditemukan saat uji alur lokal dengan image API; PDF + QR + `/verify` lulus setelahnya.
 - **Waktu di PDF SK** kini WIB (`26-09-2026 17:41 WIB`) lewat `core/time.wib_text` (filter Jinja `wib`), bukan UTC mentah.
+- **Verifikasi berkas karyawan (web):** tabel Berkas kini punya kolom Status + tombol Verifikasi/Tolak (izin `verify:documents`). Sebelumnya tidak ada tombolnya, sehingga SIM tidak pernah `CURRENT` dan kendaraan tidak bisa dialokasikan ("Pengemudi tidak memiliki SIM A aktif"). Berkas yang diunggah sendiri menampilkan "Menunggu petugas lain".
+- **`POST /employees/{id}/documents/{doc}/verify`:** pengunggah yang memverifikasi berkasnya sendiri kini mendapat 409 `FOUR_EYES` dengan pesan jelas, bukan 500 dari CHECK basis data (+ uji `test_hr_cannot_verify_document_they_uploaded`).
 - **Web:** setelah terbit/terima SK, daftar dokumen & tanda tangan dimuat ulang (sebelumnya masih "Menunggu penerimaan" sampai halaman di-refresh).
 - **`attendance_cron.py`**: Import `send_security_alert` yang tidak ada diganti dengan `send_discord_alert` yang benar — mencegah `ImportError` saat aplikasi dimulai.
 - **`plan_transitions.py`**: `issued_by` di tabel `plan_document` sekarang diisi `employee_id` (bukan `user_id`) sesuai FK constraint skema database.

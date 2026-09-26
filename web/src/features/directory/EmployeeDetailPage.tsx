@@ -83,7 +83,7 @@ export function EmployeeDetailPage() {
         </dl>
       </div>
       {canEdit && !e.is_active && <ArchivePanel employee={e} />}
-      {canManageDocs && <DocumentsPanel employeeId={e.id} canManage />}
+      {canManageDocs && <DocumentsPanel employeeId={e.id} canManage canVerify={!!me?.permissions.includes("verify:documents")} />}
       {editing && <ProfileDialog employee={e} onClose={() => setEditing(false)} />}
     </>
   );

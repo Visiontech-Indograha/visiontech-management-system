@@ -110,3 +110,16 @@ def test_site_and_attendance_day(client, world, fake_storage):
     export = client.get("/attendance/export", headers=world.headers(client, "finance"),
                         params={"start_date": "2026-01-01", "end_date": "2026-12-31"})
     assert export.status_code == 200, export.text
+
+
+def test_hr_cannot_verify_document_they_uploaded(client, world, fake_storage):
+    hr = world.headers(client, "hr")
+    emp = world.employees["member"]
+    file_id = client.post("/files/upload", headers=hr, files={"file": ("sim.png", _png(), "image/png")}).json()["file_id"]
+    doc_id = client.post(f"/employees/{emp}/documents", headers=hr,
+                         json={"doc_type": "SIM A", "number": "123456789012", "file_id": file_id}).json()["id"]
+
+    own = client.post(f"/employees/{emp}/documents/{doc_id}/verify", headers=hr, json={"is_approved": True})
+    assert own.status_code == 409, own.text  # empat mata, bukan 500 dari CHECK basis data
+    assert own.json()["error"]["code"] == "FOUR_EYES"
+    assert sync_query("SELECT status::text FROM vms.employee_document WHERE id = %s", (doc_id,)) == [("PENDING",)]

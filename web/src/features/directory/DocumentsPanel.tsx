@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
+import { useSession } from "@/app/session";
+import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog } from "@/components/ui/VmsDialog";
@@ -10,14 +12,22 @@ import {
   useCreateDocument,
   useEmployeeDocuments,
   useUploadFile,
+  useVerifyDocument,
+  type EmployeeDocument,
 } from "./api";
 import { FilePreview } from "@/components/molecules/FilePreview";
 
 type Errors = Record<string, string>;
 
-/** Daftar berkas karyawan + tambah (pemegang manage:employee_documents). */
-export function DocumentsPanel({ employeeId, canManage }: { employeeId: string; canManage: boolean }) {
+const STATUS: Record<string, { label: string; tone: "success" | "warning" | "danger" }> = {
+  VERIFIED: { label: "Terverifikasi", tone: "success" },
+  REJECTED: { label: "Ditolak", tone: "danger" },
+};
+
+/** Daftar berkas karyawan + tambah (manage:employee_documents) + verifikasi (verify:documents). */
+export function DocumentsPanel({ employeeId, canManage, canVerify = false }: { employeeId: string; canManage: boolean; canVerify?: boolean }) {
   const docs = useEmployeeDocuments(employeeId);
+  const { me } = useSession();
   const [editing, setEditing] = useState(false);
 
   return (
@@ -34,21 +44,22 @@ export function DocumentsPanel({ employeeId, canManage }: { employeeId: string; 
               <th className="px-4 py-3 font-medium">Berkas</th>
               <th className="px-4 py-3 font-medium">Nomor</th>
               <th className="px-4 py-3 font-medium">Kedaluwarsa</th>
+              <th className="px-4 py-3 font-medium">Status</th>
               <th className="px-4 py-3 font-medium">File</th>
-              {canManage && <th className="px-4 py-3 text-right font-medium">Aksi</th>}
+              {canVerify && <th className="px-4 py-3 text-right font-medium">Aksi</th>}
             </tr>
           </thead>
           <tbody>
             {docs.isPending && (
               <tr aria-hidden>
-                <td colSpan={5} className="px-4 py-3">
+                <td colSpan={6} className="px-4 py-3">
                   <Skeleton className="h-4 w-1/2" />
                 </td>
               </tr>
             )}
             {docs.isError && (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-danger">
+                <td colSpan={6} className="px-4 py-6 text-center text-danger">
                   Berkas tidak dapat dimuat.{" "}
                   <Button variant="outline" size="sm" onClick={() => docs.refetch()}>
                     Coba lagi
@@ -58,7 +69,7 @@ export function DocumentsPanel({ employeeId, canManage }: { employeeId: string; 
             )}
             {docs.data?.items.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-mist">
+                <td colSpan={6} className="px-4 py-6 text-center text-mist">
                   Belum ada berkas.
                 </td>
               </tr>
@@ -77,8 +88,19 @@ export function DocumentsPanel({ employeeId, canManage }: { employeeId: string; 
                   )}
                 </td>
                 <td className="px-4 py-2">
+                  <Badge tone={STATUS[d.status]?.tone ?? "warning"}>{STATUS[d.status]?.label ?? "Menunggu verifikasi"}</Badge>
+                </td>
+                <td className="px-4 py-2">
                   <FilePreview fileId={d.file_id} fileName={d.doc_type} />
                 </td>
+                {canVerify && (
+                  <td className="px-4 py-2 text-right">
+                    {d.status === "PENDING" && d.uploaded_by === me?.user_id && (
+                      <span className="text-xs text-mist">Menunggu petugas lain</span>
+                    )}
+                    {d.status === "PENDING" && d.uploaded_by !== me?.user_id && <VerifyActions employeeId={employeeId} doc={d} />}
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
@@ -87,6 +109,28 @@ export function DocumentsPanel({ employeeId, canManage }: { employeeId: string; 
 
       {editing && <DocumentDialog employeeId={employeeId} onClose={() => setEditing(false)} />}
     </section>
+  );
+}
+
+function VerifyActions({ employeeId, doc }: { employeeId: string; doc: EmployeeDocument }) {
+  const verify = useVerifyDocument(employeeId);
+  const decide = (is_approved: boolean) =>
+    verify.mutate(
+      { docId: doc.id, is_approved },
+      {
+        onSuccess: () => toast.success(is_approved ? `${doc.doc_type} terverifikasi.` : `${doc.doc_type} ditolak.`),
+        onError: (err) => toast.error(err instanceof ApiError ? err.message : "Terjadi kesalahan. Coba lagi."),
+      },
+    );
+  return (
+    <span className="inline-flex gap-2">
+      <Button size="sm" onClick={() => decide(true)} disabled={verify.isPending}>
+        Verifikasi
+      </Button>
+      <Button size="sm" variant="outline" onClick={() => decide(false)} disabled={verify.isPending}>
+        Tolak
+      </Button>
+    </span>
   );
 }
 

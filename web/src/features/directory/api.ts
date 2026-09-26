@@ -91,6 +91,16 @@ export function useCreateDocument(employeeId: string) {
   });
 }
 
+/** HR memverifikasi/menolak berkas; hanya berkas terverifikasi yang berlaku (mis. SIM untuk pengemudi). */
+export function useVerifyDocument(employeeId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ docId, ...body }: { docId: string; is_approved: boolean; review_note?: string | null }) =>
+      (await api.post<EmployeeDocument>(`/employees/${employeeId}/documents/${docId}/verify`, body)).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["employee-documents", employeeId] }),
+  });
+}
+
 export const useUploadFile = () =>
   useMutation({
     mutationFn: async (form: FormData) => (await api.post<UploadedFile>("/files/upload", form)).data,

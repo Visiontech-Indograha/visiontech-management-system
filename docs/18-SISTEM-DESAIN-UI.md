@@ -26,6 +26,29 @@ perilaku & label prototipe → dokumen ini → dokumen 11. Nilai token hanya bol
 > kartu boleh **bayangan halus** (`shadow-card`) dan radius 16 px (`rounded-panel`); cahaya lembut relatif
 > kursor pada kartu dan animasi pegas/gulir diizinkan **asal hanya `transform`/`opacity`, tanpa pustaka,
 > dan mati saat `prefers-reduced-motion`**. Nilai sumber: `web/src/styles/index.css`.
+>
+> **Mobile (R-14, 2026-09-26) — gaya mengikuti rujukan Dribbble *Delivery Mobile App* (Ronas IT), palet tetap
+> Visiontech.** Sumber kode: `mobile/lib/shared/ui/` dan `mobile/lib/core/theme/`.
+>
+> | Unsur | Aturan |
+> |---|---|
+> | Huruf | Plus Jakarta Sans (google_fonts) untuk Material **dan** shadcn (`ShadTextTheme.fromGoogleFont`) |
+> | Latar | `#F4F5F8`; kartu putih, garis tipis `neutral200`, radius 22, tanpa bayangan berat |
+> | Header | `HeroHeader`: label kecil `brand500` + judul 28 px w800 `brand900`, ikut bergulir |
+> | Bar atas | `VmsTopBar` (appBar, **tetap saat digulir**): logo berwarna atau tombol kembali + aksi bulat bergaris 44 px |
+> | Kartu sorotan | `SurfaceCard(highlight: true)` — navy `brand800` + lengkung emas meniru swirl logo; **satu per layar** (absensi hari ini, SK berjalan teratas, deskripsi SK, sambutan login). Teks putih; aksi utama di atasnya `PrimaryAction(gold: true)` |
+> | Navigasi bawah | `FloatingNavBar`: datar di latar halaman, garis atas tipis, semua tab berlabel; aktif = ikon terisi + label navy tebal + titik emas |
+> | Pilihan | `VmsSelectField` (ikon bulat · label+nilai · chevron bulat) → lembar bawah di root navigator. **Jangan** `DropdownButtonFormField` |
+> | Ikon & ubin | `IconTile` bulat (warna `Accent`); `ActionTile` bergaris: ikon di atas, label di bawah |
+> | Status | `StatusPill` pil terisi lembut, tanpa titik; peta di `statusStyle()` |
+> | Tombol utama | `PrimaryAction` solid radius 18, tinggi 56, tanpa gradasi/bayangan |
+> | Pembuka & muat | Native (API 31+ `values-v31`, lama `launch_background.xml`) = `SplashScreen` Flutter: navy `#232C6F` + `splash_mark.png` 288 dp di tengah; Flutter menambah logo putih + bilah muat emas |
+> | Sistem | Bilah navigasi HP disembunyikan (`MainActivity`, usap untuk memunculkan sementara); status bar gelap di layar terang, terang di navy |
+> | Safe zone | Daftar memakai `safeListPadding(context)` (bawah = max(padding, gesture inset) + 24); `ShadApp.builder` SafeArea kiri/kanan; lembar bawah `useSafeArea` |
+> | Gerak | Transisi halaman fade + geser (`VmsPageTransitionsBuilder`), tekan memantul (`Pressable`), masuk bertahap (`FadeSlideIn`) — patuh "kurangi gerakan" |
+> | Kamera | Watermark = snapshot panel kamera (`RepaintBoundary`) → foto tersimpan sama dengan tampilan kamera |
+>
+> Web memakai logo PNG transparan (`logo-visiontech.png`; versi putih di panel navy login).
 
 ## 1. Prinsip
 
@@ -85,7 +108,7 @@ Dasar diambil dari prototipe yang sudah disetujui (hijau hutan `#164d40`, netral
 lalu dirapikan menjadi skala dan **diuji kontrasnya** (target WCAG AA: teks ≥ 4,5:1, garis
 kontrol ≥ 3:1). Semua nilai ada di `docs/design/tokens.json`.
 
-### 3.1 Brand — hijau Visiontech
+### 3.1 Brand — (usang: kini navy + emas, lihat amandemen R-12 di atas)
 
 | Token | Hex | Pemakaian |
 |---|---|---|

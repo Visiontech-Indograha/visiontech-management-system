@@ -4,7 +4,7 @@ import { Fragment, Suspense, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { visibleNav } from "@/app/navigation";
 import { useSession } from "@/app/session";
-import logo from "@/assets/brand/logo-visiontech.jpeg";
+import logo from "@/assets/brand/logo-visiontech.png";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ROLE_LABEL } from "@/lib/types";
 

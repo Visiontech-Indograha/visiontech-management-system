@@ -5,7 +5,8 @@ import { Navigate, useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { AlertCircle } from "lucide-react";
 import { useSession } from "@/app/session";
-import logo from "@/assets/brand/logo-visiontech.jpeg";
+import logo from "@/assets/brand/logo-visiontech.png";
+import logoWhite from "@/assets/brand/logo-visiontech-white.png";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -49,7 +50,7 @@ export function LoginPage({ admin = false }: { admin?: boolean }) {
         <div className="absolute -right-24 -top-24 size-96 rounded-full bg-brand-600/60" />
         <div className="absolute -bottom-32 -left-16 size-80 rounded-full bg-brand-800/70" />
         <div className="relative inline-flex w-fit rounded-panel bg-white px-5 py-3 shadow-card">
-          <img src={logo} alt="" className="h-10 w-auto" />
+          <img src={logoWhite} alt="" className="h-10 w-auto" />
         </div>
         <div className="relative max-w-md">
           <span className="mb-4 block h-1 w-12 rounded-full bg-gold" />

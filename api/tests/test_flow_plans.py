@@ -6,6 +6,7 @@ begitu xfail ketat mendeteksi alurnya lulus (2026-09-24).
 """
 from __future__ import annotations
 
+import uuid
 from datetime import timedelta
 
 from app.core.time import jakarta_now
@@ -125,6 +126,12 @@ def test_incident_and_daily_report_on_running_plan(client, world):
     resolved = client.post(f"/hse/incidents/{incident.json()['id']}/resolve", headers=world.headers(client, "pm"),
                            json={"resolution_note": "Dipasang karpet anti selip"})
     assert resolved.status_code == 200, resolved.text
+    # Baca ulang: PM melihat insiden SK beserta statusnya; SK asing → 404.
+    listed = client.get("/hse/incidents", params={"plan_id": plan_id}, headers=world.headers(client, "pm"))
+    assert listed.status_code == 200, listed.text
+    assert [(i["id"], i["status"]) for i in listed.json()] == [(incident.json()["id"], "RESOLVED")]
+    assert client.get("/hse/incidents", params={"plan_id": str(uuid.uuid4())},
+                      headers=world.headers(client, "pm")).status_code == 404
 
     report = client.put(f"/work-plans/{plan_id}/days/{day_ids[0]}", headers=leader,
                          json={"body": "Kamera 1-4 terpasang dan diuji", "obstacle": "Tidak ada", "evidence_file_ids": []})

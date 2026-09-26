@@ -28,6 +28,7 @@ class IncidentResponse(BaseModel):
     resolved_at: datetime | None
     resolution_note: str | None
     created_at: datetime
+    evidence_file_ids: list[UUID] = []
     
 class DailyReportCreate(BaseModel):
     body: str

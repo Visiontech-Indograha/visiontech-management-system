@@ -41,6 +41,27 @@ async def _ensure_day_reached(db: AsyncSession, day_id: UUID) -> None:
     if not await OrgClockRepo(db).day_reached(day_id):
         raise ValidationError("Laporan hanya dapat diisi pada atau setelah tanggal pelaksanaan.")
 
+@router.get("/incidents", response_model=list[IncidentResponse])
+async def list_incidents(
+    plan_id: UUID,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_with_user)
+) -> list[IncidentResponse]:
+    """Insiden satu SK, terbaru dulu — siapa pun yang dapat melihat SK (temuan uji alur: insiden dari
+    lapangan tidak terlihat PM karena belum ada endpoint baca). SK asing/tak terlihat → 404."""
+    await check_plan_access(db, plan_id, current_user, PlanNeed.VIEW)
+    rows = (await db.execute(text("""
+        SELECT ir.id, ir.work_plan_id, ir.reported_by, ir.occurred_on, ir.category, ir.severity,
+               ir.description, ir.status, ir.resolved_by, ir.resolved_at, ir.resolution_note, ir.created_at,
+               COALESCE(ARRAY(SELECT ie.file_id FROM vms.incident_evidence ie WHERE ie.incident_id = ir.id),
+                        '{}') AS evidence_file_ids
+        FROM vms.incident_report ir
+        WHERE ir.work_plan_id = :plan AND ir.organization_id = :org
+        ORDER BY ir.created_at DESC
+    """), {"plan": plan_id, "org": current_user.organization_id})).fetchall()
+    return [IncidentResponse(**r._mapping) for r in rows]
+
+
 @router.post("/incidents", response_model=IncidentResponse, status_code=status.HTTP_201_CREATED)
 async def report_incident(
     data: IncidentCreate,

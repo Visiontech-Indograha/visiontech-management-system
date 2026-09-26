@@ -38,6 +38,8 @@ const incident = (over: Record<string, unknown> = {}) => ({
 
 const setup = (extra?: (url: string) => { status?: number; data?: unknown } | undefined) =>
   mockApi((c) => {
+    // Daftar insiden SK (GET) — kosong di awal; POST ditangani `extra`.
+    if (c.url === "/hse/incidents" && (c.method ?? "get").toLowerCase() === "get") return { data: [] };
     const hit = extra?.(c.url ?? "");
     if (hit) return hit;
     if (c.url === "/work-plans/p1") return { data: plan };
@@ -66,7 +68,7 @@ describe("Insiden / HSE", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "Batal" }));
     await report();
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-    expect(calls.find((c) => c.url === "/hse/incidents")!.data).toEqual({
+    expect(calls.find((c) => c.url === "/hse/incidents" && c.method === "post")!.data).toEqual({
       work_plan_id: "p1",
       category: "K3_RINGAN",
       severity: "SEDANG",

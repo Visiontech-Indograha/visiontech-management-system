@@ -27,13 +27,13 @@ const INCIDENT_CATEGORY: Record<string, string> = {
 };
 const INCIDENT_SEVERITY: Record<string, string> = { RENDAH: "Rendah", SEDANG: "Sedang", TINGGI: "Tinggi", KRITIS: "Kritis" };
 
-/**
- * API belum punya GET insiden per SK. Insiden yang dilaporkan/diselesaikan di sesi ini disimpan
- * di cache query dari respons API agar bisa ditindaklanjuti; setelah muat ulang daftar kosong.
- */
+/** Insiden SK (GET /hse/incidents?plan_id=) — termasuk yang dilaporkan tim dari aplikasi mobile. */
 const key = (planId: string) => ["incidents", planId] as const;
 const useSessionIncidents = (planId: string) =>
-  useQuery<Incident[]>({ queryKey: key(planId), queryFn: () => [], staleTime: Infinity, gcTime: Infinity });
+  useQuery<Incident[]>({
+    queryKey: key(planId),
+    queryFn: async () => (await api.get<Incident[]>("/hse/incidents", { params: { plan_id: planId } })).data,
+  });
 
 function useStoreIncident(planId: string) {
   const qc = useQueryClient();

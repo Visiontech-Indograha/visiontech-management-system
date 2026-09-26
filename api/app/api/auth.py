@@ -3,6 +3,7 @@ Rute autentikasi. Tipis (dok 12 §2): jalur, status, skema, dependency, dan cook
 Aturan bisnis ada di services/auth_service.py; transaksi di controllers/auth_controller.py.
 """
 import ipaddress
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,6 +14,8 @@ from app.schemas.auth import (
     ChangePasswordRequest,
     LoginRequest,
     MessageResponse,
+    RevokeOthersResponse,
+    SessionOut,
     TokenResponse,
     UserMeResponse,
 )
@@ -81,6 +84,36 @@ async def get_me(
     controller: AuthController = Depends(get_auth_controller),
 ) -> UserMeResponse:
     return await controller.me(current_user.user_id, current_user.permissions)
+
+
+@router.get("/sessions", response_model=list[SessionOut])
+async def list_sessions(
+    current_user: CurrentUser = Depends(get_current_user),
+    controller: AuthController = Depends(get_auth_controller),
+) -> list[SessionOut]:
+    """P1-7: perangkat yang sedang masuk dengan akun ini; yang sedang dipakai ditandai `current`."""
+    return await controller.active_sessions(current_user.user_id, current_user.session_id)
+
+
+@router.post("/sessions/revoke-others", response_model=RevokeOthersResponse)
+async def revoke_other_sessions(
+    current_user: CurrentUser = Depends(get_current_user),
+    controller: AuthController = Depends(get_auth_controller),
+) -> RevokeOthersResponse:
+    """Keluarkan semua perangkat lain. Token akses mereka habis paling lama 15 menit; refresh langsung ditolak."""
+    revoked = await controller.revoke_other_sessions(current_user.user_id, current_user.session_id)
+    return RevokeOthersResponse(revoked=revoked, message="Perangkat lain dikeluarkan (paling lambat 15 menit).")
+
+
+@router.post("/sessions/{session_id}/revoke", response_model=MessageResponse)
+async def revoke_session(
+    session_id: UUID,
+    current_user: CurrentUser = Depends(get_current_user),
+    controller: AuthController = Depends(get_auth_controller),
+) -> MessageResponse:
+    """Keluarkan satu perangkat milik sendiri. Sesi orang lain → 404."""
+    await controller.revoke_session(current_user.user_id, str(session_id))
+    return MessageResponse(message="Perangkat dikeluarkan (paling lambat 15 menit).")
 
 
 @router.post("/change-password", response_model=TokenResponse)

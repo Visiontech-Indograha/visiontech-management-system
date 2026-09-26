@@ -5,17 +5,19 @@ dan checkSchedule. Pesan galat mengikuti prototipe.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 from typing import Any
 from uuid import UUID
 
 from app.core.enums import PlanStatus
 from app.core.errors import AppError, ConflictError, ForbiddenError, NotFoundError
+from app.core.signing import canonical
 from app.core.time import jakarta_now
 from app.repositories.plan_member_repo import PlanMemberRepo
 from app.repositories.plan_transition_repo import PlanTransitionRepo
 from app.repositories.weekly_report_repo import WeeklyReportRepo
-from app.services.signature_service import ACCEPTOR, ISSUER, SignatureService
+from app.services.signature_service import ACCEPTOR, APPROVER, ISSUER, SignatureService
 
 # domain.js CANCEL_PLAN requireStatus
 CANCELLABLE = {PlanStatus.PUBLISHED, PlanStatus.ACCEPTED, PlanStatus.APPEALED, PlanStatus.IN_PROGRESS,
@@ -199,8 +201,19 @@ class PlanTransitionService:
             raise _state("Laporan akhir belum diserahkan.")
         if await self.repo.has_active_allocation(plan_id):
             raise _state("Masih ada aset yang belum dikembalikan atau diverifikasi (Asset).")
+        # R-19 (P6-4): laporan akhir dibekukan & ditandatangani — ketua (penerbit) dan pemeriksa (APPROVER).
+        approver = await self.repo.employee_id_of(user_id)
+        snapshot = await self.repo.final_report_snapshot(plan_id, approver, note.strip() or None)
+        frozen = json.loads(snapshot) if isinstance(snapshot, str) else snapshot
+        await self.repo.store_final_snapshot(plan_id, json.dumps(frozen), hashlib.sha256(canonical(frozen)).digest())
         await self.repo.review_final_report(plan_id, user_id, "APPROVED", note.strip() or None)
         await self.repo.set_status(plan_id, PlanStatus.COMPLETED)
+        signatures = SignatureService(self.repo.db)
+        leader = await self.repo.final_report_submitter(plan_id)
+        if leader:
+            await signatures.sign_final_report(plan_id, leader, ISSUER, user_id)
+        if approver:
+            await signatures.sign_final_report(plan_id, approver, APPROVER, user_id)
         return await self.repo.get_plan(plan_id)
 
     async def return_complete(self, plan_id: UUID, org_id: str, user_id: str, row_version: int,

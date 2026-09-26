@@ -114,6 +114,17 @@ class AuthService:
         if raw_refresh_token:
             await self.sessions.revoke_by_refresh_token(raw_refresh_token, "User logged out")
 
+    async def active_sessions(self, user_id: str) -> list[Any]:
+        """P1-7: perangkat yang sedang masuk dengan akun ini."""
+        return await self.sessions.list_active(user_id)
+
+    async def revoke_session(self, user_id: str, session_id: str) -> None:
+        if not await self.sessions.revoke_session(user_id, session_id, "Dikeluarkan dari perangkat lain"):
+            raise NotFoundError("Sesi")
+
+    async def revoke_other_sessions(self, user_id: str, current_session_id: str) -> int:
+        return await self.sessions.revoke_other_sessions(user_id, current_session_id, "Keluarkan perangkat lain")
+
     async def me(self, user_id: str, permissions: list[str]) -> Profile:
         user = await self.users.find_by_id(user_id)
         if not user:

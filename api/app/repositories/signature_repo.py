@@ -75,6 +75,42 @@ class SignatureRepo(BaseRepo):
              "sha": document.snapshot_sha256, "signer": signer_employee_id, "role": role, "key": key_id,
              "signature": signature, "payload": json.dumps(payload), "issued_by": issued_by})
 
+    async def final_report_document(self, plan_id: UUID | str) -> Any:
+        """Laporan akhir yang disetujui sebagai dokumen bertanda tangan (R-19). None bila belum ada."""
+        return await self.fetchone(
+            """
+            SELECT wp.id, wp.organization_id, wp.number, wp.title, CAST(fr.status AS text) AS status,
+                   fr.snapshot, fr.snapshot_sha256
+            FROM vms.final_report fr JOIN vms.work_plan wp ON wp.id = fr.work_plan_id
+            WHERE fr.work_plan_id = :plan
+            """,
+            {"plan": plan_id})
+
+    async def register_final_report(self, org_id: UUID | str, plan: Any, signer_employee_id: str, role: str,
+                                    key_id: str, signature: bytes, payload: dict[str, Any], issued_by: str) -> Any:
+        return await self.fetchone(
+            """
+            SELECT * FROM vms.register_document_signature(
+                CAST(:org AS uuid), 'final_report', CAST(:plan AS uuid), :number, :title, :sha,
+                CAST(:signer AS uuid), CAST(:role AS vms.signature_role), CAST(:key AS uuid), :signature,
+                CAST(:payload AS jsonb), CAST(:issued_by AS uuid))
+            """,
+            {"org": org_id, "plan": plan.id, "number": f"{plan.number}-LA", "title": f"Laporan akhir: {plan.title}",
+             "sha": plan.snapshot_sha256, "signer": signer_employee_id, "role": role, "key": key_id,
+             "signature": signature, "payload": json.dumps(payload), "issued_by": issued_by})
+
+    async def signatures_of(self, signable_type: str, signable_id: UUID | str) -> list[Any]:
+        return list(await self.fetchall(
+            """
+            SELECT CAST(s.id AS text) AS id, s.serial_number, s.signer_name, s.signer_position, s.signer_unit,
+                   CAST(s.signer_role AS text) AS signer_role, s.signed_at, s.signature_alg, k.kid,
+                   encode(s.document_sha256, 'hex') AS document_sha256_hex, s.revoked_at, s.revoked_reason
+            FROM vms.document_signature s JOIN vms.signing_key k ON k.id = s.signing_key_id
+            WHERE s.signable_type = :type AND s.signable_id = :id
+            ORDER BY s.signed_at, s.serial_number
+            """,
+            {"type": signable_type, "id": signable_id}))
+
     async def signatures_of_document(self, document_id: UUID | str) -> list[Any]:
         return list(await self.fetchall(
             """
@@ -90,7 +126,9 @@ class SignatureRepo(BaseRepo):
     async def signature(self, signature_id: UUID | str) -> Any:
         return await self.fetchone(
             """
-            SELECT s.id, s.organization_id, s.signable_id, s.revoked_at, d.work_plan_id
+            SELECT s.id, s.organization_id, s.signable_id, s.revoked_at,
+                   COALESCE(d.work_plan_id, CASE WHEN s.signable_type = 'final_report' THEN s.signable_id END)
+                       AS work_plan_id
             FROM vms.document_signature s LEFT JOIN vms.plan_document d ON d.id = s.plan_document_id
             WHERE s.id = :id
             """,

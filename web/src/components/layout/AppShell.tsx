@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import { LogOut, Menu, PanelLeftClose, PanelLeftOpen, X } from "lucide-react";
+import { LogOut, Menu, PanelLeftClose, PanelLeftOpen, ShieldCheck, X } from "lucide-react";
 import { Fragment, Suspense, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { visibleNav } from "@/app/navigation";
@@ -80,10 +80,17 @@ export function AppShell() {
           <p className="text-xs text-mist">{roleLabel}</p>
         </div>
       </div>
+      <NavLink
+        to="/account"
+        className="mt-2 flex h-10 w-full items-center gap-3 rounded-control px-3 text-sm text-mist transition-colors hover:bg-hover hover:text-ink"
+      >
+        <ShieldCheck size={19} strokeWidth={1.75} aria-hidden />
+        <span className={clsx(collapsed && "md:sr-only")}>Akun & keamanan</span>
+      </NavLink>
       <button
         type="button"
         onClick={() => void logout()}
-        className="mt-2 flex h-10 w-full items-center gap-3 rounded-control px-3 text-sm text-mist transition-colors hover:bg-danger-bg hover:text-danger"
+        className="flex h-10 w-full items-center gap-3 rounded-control px-3 text-sm text-mist transition-colors hover:bg-danger-bg hover:text-danger"
       >
         <LogOut size={19} strokeWidth={1.75} aria-hidden />
         <span className={clsx(collapsed && "md:sr-only")}>Keluar</span>

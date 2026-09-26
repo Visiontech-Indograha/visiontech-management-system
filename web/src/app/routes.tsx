@@ -5,7 +5,7 @@ import { RequireAccess, RequireAuth } from "@/components/layout/guards";
 import { LoginPage } from "@/pages/auth/LoginPage";
 import { ComingSoonPage, ForbiddenPage, HomePage, NotFoundPage } from "@/pages/Placeholders";
 import { NAV_ITEMS } from "./navigation";
-import { AssetsPage, AttendancePage, AuditLogPage, DirectoryPage, EmployeeDetailPage, MyDocumentsPage, SitesPage, WorkPlanDetailPage, WorkPlansPage, AttendanceRecapPage, OvertimeRecapPage, PresentationPage, TimelinePage } from "./lazyPages";
+import { AssetsPage, AttendancePage, AuditLogPage, DirectoryPage, EmployeeDetailPage, MyDocumentsPage, SitesPage, WorkPlanDetailPage, WorkPlansPage, AttendanceRecapPage, OvertimeRecapPage, PresentationPage, TimelinePage, AccountPage } from "./lazyPages";
 import { VerifyPage } from "@/features/verify/VerifyPage";
 import { ChangePasswordPage } from "@/pages/auth/ChangePasswordPage";
 
@@ -62,6 +62,7 @@ export const routes: RouteObject[] = [
             ),
           },
           { path: "/work-plans/:id", element: <WorkPlanDetailPage /> },
+          { path: "/account", element: <AccountPage /> },
           { path: "/forbidden", element: <ForbiddenPage /> },
           { path: "*", element: <NotFoundPage /> },
         ],

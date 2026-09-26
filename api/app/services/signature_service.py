@@ -24,6 +24,7 @@ from app.repositories.signature_repo import SignatureRepo
 
 ISSUER = "ISSUER"
 ACCEPTOR = "ACCEPTOR"
+APPROVER = "APPROVER"
 
 
 def verify_url(raw_token: str) -> str:
@@ -73,6 +74,42 @@ class SignatureService:
             raise NotFoundError("Dokumen")
         await check_plan_access(self.db, document.work_plan_id, user, PlanNeed.VIEW)   # tak terlihat → 404
         return document
+
+    async def sign_final_report(self, plan_id: UUID | str, signer_employee_id: str, role: str,
+                                issued_by_user: str) -> Any:
+        """Laporan akhir yang disetujui (R-19, P6-4): payload kanonik atas snapshot SHA-256-nya."""
+        plan = await self.repo.final_report_document(plan_id)
+        if plan is None or plan.snapshot_sha256 is None:
+            raise NotFoundError("Laporan akhir")
+        signer = get_document_signer()
+        key_id = await self.repo.ensure_signing_key(
+            plan.organization_id, f"doc-{str(plan.organization_id)[:8]}-{signer.fingerprint}",
+            signer.public_key, signer.kms_ref, signer.algorithm)
+        payload = {
+            "type": "final_report", "document_id": str(plan.id), "document_number": f"{plan.number}-LA",
+            "document_sha256": bytes(plan.snapshot_sha256).hex(), "signer_employee_id": str(signer_employee_id),
+            "signer_role": role, "organization_id": str(plan.organization_id),
+        }
+        return await self.repo.register_final_report(plan.organization_id, plan, signer_employee_id, role, key_id,
+                                                     signer.sign(canonical(payload)), payload, issued_by_user)
+
+    async def final_report_signatures(self, plan_id: UUID) -> list[Any]:
+        """Tanda tangan laporan akhir — akses VIEW SK diperiksa penjaga rute."""
+        return await self.repo.signatures_of("final_report", plan_id)
+
+    async def final_report_with_qr(self, user: CurrentUser, plan_id: UUID) -> tuple[Any, list[dict[str, Any]]]:
+        """Laporan akhir yang disetujui + tanda tangan ber-QR baru, untuk PDF."""
+        plan = await self.repo.final_report_document(plan_id)
+        if plan is None or plan.status != "APPROVED" or plan.snapshot is None:
+            raise AppError("INVALID_STATE", "PDF laporan akhir tersedia setelah penyelesaian disetujui.", status=409)
+        signed = []
+        for sig in await self.repo.signatures_of("final_report", plan_id):
+            row = dict(sig._mapping)
+            if sig.revoked_at is None:
+                url = verify_url(await self.repo.issue_verify_token(plan.organization_id, sig.id, user.user_id))
+                row.update(verify_url=url, qr=qr_png_data_uri(url))
+            signed.append(row)
+        return plan, signed
 
     async def list_plan_documents(self, plan_id: UUID) -> list[Any]:
         return await self.repo.plan_documents(plan_id)

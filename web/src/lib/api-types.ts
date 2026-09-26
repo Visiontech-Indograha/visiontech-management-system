@@ -106,6 +106,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Sessions
+         * @description P1-7: perangkat yang sedang masuk dengan akun ini; yang sedang dipakai ditandai `current`.
+         */
+        get: operations["list_sessions_api_v1_auth_sessions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/sessions/revoke-others": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Revoke Other Sessions
+         * @description Keluarkan semua perangkat lain. Token akses mereka habis paling lama 15 menit; refresh langsung ditolak.
+         */
+        post: operations["revoke_other_sessions_api_v1_auth_sessions_revoke_others_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/sessions/{session_id}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Revoke Session
+         * @description Keluarkan satu perangkat milik sendiri. Sesi orang lain → 404.
+         */
+        post: operations["revoke_session_api_v1_auth_sessions__session_id__revoke_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/change-password": {
         parameters: {
             query?: never;
@@ -386,6 +446,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/documents/pending": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Pending Documents
+         * @description Antrean verifikasi HR (P2-5): dokumen pribadi berstatus PENDING di organisasi ini, terlama dulu.
+         */
+        get: operations["get_pending_documents_api_v1_documents_pending_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/documents/cron/expire-documents": {
         parameters: {
             query?: never;
@@ -520,6 +600,46 @@ export interface paths {
         get: operations["get_plan_team_api_v1_work_plans__plan_id__members_get"];
         /** Set Plan Team */
         put: operations["set_plan_team_api_v1_work_plans__plan_id__members_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-plans/{plan_id}/completion/signatures": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Final Report Signatures
+         * @description Tanda tangan laporan akhir (ketua = ISSUER, pemeriksa = APPROVER), R-19.
+         */
+        get: operations["get_final_report_signatures_api_v1_work_plans__plan_id__completion_signatures_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-plans/{plan_id}/completion/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Final Report Pdf
+         * @description PDF laporan akhir ber-QR (P6-4, UAT langkah 10). Hanya setelah disetujui (409). Render → threadpool.
+         */
+        get: operations["get_final_report_pdf_api_v1_work_plans__plan_id__completion_pdf_get"];
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -2413,6 +2533,36 @@ export interface components {
             /** Reviewed By Name */
             reviewed_by_name: string | null;
         };
+        /** FinalReportSignatureOut */
+        FinalReportSignatureOut: {
+            /** Id */
+            id: string;
+            /** Serial Number */
+            serial_number: string;
+            /** Signer Name */
+            signer_name: string;
+            /** Signer Position */
+            signer_position: string | null;
+            /** Signer Unit */
+            signer_unit: string | null;
+            /** Signer Role */
+            signer_role: string;
+            /**
+             * Signed At
+             * Format: date-time
+             */
+            signed_at: string;
+            /** Signature Alg */
+            signature_alg: string;
+            /** Kid */
+            kid: string;
+            /** Document Sha256 Hex */
+            document_sha256_hex: string;
+            /** Revoked At */
+            revoked_at: string | null;
+            /** Revoked Reason */
+            revoked_reason: string | null;
+        };
         /** GeoPoint */
         GeoPoint: {
             /** Lat */
@@ -2689,6 +2839,41 @@ export interface components {
             /** Note */
             note?: string | null;
         };
+        /** PendingDocument */
+        PendingDocument: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Employee Id
+             * Format: uuid
+             */
+            employee_id: string;
+            /** Full Name */
+            full_name: string;
+            /** Doc Type */
+            doc_type: string;
+            /** Number Masked */
+            number_masked: string | null;
+            /** Expiry Date */
+            expiry_date: string | null;
+            /** File Id */
+            file_id: string | null;
+            /**
+             * Uploaded At
+             * Format: date-time
+             */
+            uploaded_at: string;
+            /** Uploaded By Me */
+            uploaded_by_me: boolean;
+        };
+        /** PendingDocumentList */
+        PendingDocumentList: {
+            /** Items */
+            items: components["schemas"]["PendingDocument"][];
+        };
         /** PlanDayCreate */
         PlanDayCreate: {
             /**
@@ -2855,10 +3040,37 @@ export interface components {
             /** Note */
             note?: string | null;
         };
+        /** RevokeOthersResponse */
+        RevokeOthersResponse: {
+            /** Revoked */
+            revoked: number;
+            /** Message */
+            message: string;
+        };
         /** RevokeRequest */
         RevokeRequest: {
             /** Reason */
             reason: string;
+        };
+        /**
+         * SessionOut
+         * @description Satu perangkat yang sedang masuk (P1-7). `current` = perangkat yang sedang dipakai.
+         */
+        SessionOut: {
+            /** Id */
+            id: string;
+            /** Device Label */
+            device_label: string | null;
+            /** Ip Address */
+            ip_address: string | null;
+            /** User Agent */
+            user_agent: string | null;
+            /** Issued At */
+            issued_at: string | null;
+            /** Last Used At */
+            last_used_at: string | null;
+            /** Current */
+            current: boolean;
         };
         /** SignatureOut */
         SignatureOut: {
@@ -3391,6 +3603,77 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UserMeResponse"];
+                };
+            };
+        };
+    };
+    list_sessions_api_v1_auth_sessions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionOut"][];
+                };
+            };
+        };
+    };
+    revoke_other_sessions_api_v1_auth_sessions_revoke_others_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RevokeOthersResponse"];
+                };
+            };
+        };
+    };
+    revoke_session_api_v1_auth_sessions__session_id__revoke_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -4003,6 +4286,26 @@ export interface operations {
             };
         };
     };
+    get_pending_documents_api_v1_documents_pending_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PendingDocumentList"];
+                };
+            };
+        };
+    };
     cron_expire_documents_api_v1_documents_cron_expire_documents_post: {
         parameters: {
             query?: never;
@@ -4350,6 +4653,66 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["TeamResponse"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_final_report_signatures_api_v1_work_plans__plan_id__completion_signatures_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FinalReportSignatureOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_final_report_pdf_api_v1_work_plans__plan_id__completion_pdf_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

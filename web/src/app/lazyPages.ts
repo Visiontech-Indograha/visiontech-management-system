@@ -13,4 +13,5 @@ export const WorkPlansPage = lazy(() => import("@/features/work-plans/WorkPlansP
 export const AttendanceRecapPage = lazy(() => import("@/features/monitoring/AttendanceRecapPage").then((m) => ({ default: m.AttendanceRecapPage })));
 export const OvertimeRecapPage = lazy(() => import("@/features/monitoring/OvertimeRecapPage").then((m) => ({ default: m.OvertimeRecapPage })));
 export const TimelinePage = lazy(() => import("@/features/monitoring/TimelinePage").then((m) => ({ default: m.TimelinePage })));
+export const AccountPage = lazy(() => import("@/features/account/AccountPage").then((m) => ({ default: m.AccountPage })));
 export const PresentationPage = lazy(() => import("@/features/work-plans/PresentationPage").then((m) => ({ default: m.PresentationPage })));

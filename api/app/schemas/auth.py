@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel
 
 
@@ -27,3 +29,20 @@ class ChangePasswordRequest(BaseModel):
 
 class MessageResponse(BaseModel):
     message: str
+
+
+class SessionOut(BaseModel):
+    """Satu perangkat yang sedang masuk (P1-7). `current` = perangkat yang sedang dipakai."""
+    id: str
+    device_label: str | None
+    ip_address: str | None
+    user_agent: str | None
+    issued_at: datetime | None
+    last_used_at: datetime | None
+    current: bool
+
+
+class RevokeOthersResponse(BaseModel):
+    revoked: int
+    message: str
+

@@ -1,6 +1,11 @@
+import { useState } from "react";
+import { toast } from "sonner";
 import { FilePreview } from "@/components/molecules/FilePreview";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { api, ApiError } from "@/lib/api";
+import { errorMessage } from "@/lib/errors";
 import { formatDateTime } from "@/lib/format";
 import type { WorkPlan } from "./api";
 import { useFinalReport, usePlanTeam } from "./report-api";
@@ -33,12 +38,29 @@ export function TeamCard({ plan }: { plan: WorkPlan }) {
   );
 }
 
+/** PDF laporan akhir ber-QR (GET /work-plans/{id}/completion/pdf, blob) — tersedia setelah disetujui. */
+async function downloadFinalReportPdf(plan: WorkPlan) {
+  try {
+    const res = await api.get<Blob>(`/work-plans/${plan.id}/completion/pdf`, { responseType: "blob" });
+    const url = URL.createObjectURL(res.data);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${plan.number ?? "SK"}-laporan-akhir.pdf`.replace(/\//g, "-");
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    // Badan galat berbentuk Blob; 503 = layanan PDF tidak terpasang di server ini.
+    toast.error(err instanceof ApiError && err.status === 503 ? "Layanan PDF belum tersedia di server ini." : errorMessage(err));
+  }
+}
+
 /**
  * Laporan akhir: PM membacanya sebelum menyetujui/mengembalikan penyelesaian (dulu tidak bisa dibaca
  * sama sekali — temuan R-19), tim melihat catatan pengembalian.
  */
 export function FinalReportPanel({ plan }: { plan: WorkPlan }) {
   const report = useFinalReport(plan.id);
+  const [downloading, setDownloading] = useState(false);
   const r = report.data;
   if (report.isPending || (!r && !report.isError)) return null;
   return (
@@ -47,6 +69,20 @@ export function FinalReportPanel({ plan }: { plan: WorkPlan }) {
         <h2 className="text-base font-semibold">Laporan akhir</h2>
         {r && <StatusBadge status={r.status} />}
       </div>
+      {r?.status === "APPROVED" && (
+        <Button
+          variant="outline"
+          className="mb-3"
+          disabled={downloading}
+          onClick={async () => {
+            setDownloading(true);
+            await downloadFinalReportPdf(plan);
+            setDownloading(false);
+          }}
+        >
+          {downloading ? "Mengunduh..." : "Unduh PDF laporan akhir"}
+        </Button>
+      )}
       {report.isError && <p className="text-sm text-danger">Laporan akhir tidak dapat dimuat.</p>}
       {r && (
         <dl className="space-y-3 text-sm">

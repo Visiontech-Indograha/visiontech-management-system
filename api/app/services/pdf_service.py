@@ -13,9 +13,11 @@ from typing import Any
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from app.core.errors import AppError
+from app.core.time import wib_text
 
 _ENV = Environment(loader=FileSystemLoader(Path(__file__).resolve().parent.parent / "templates"),
                    autoescape=select_autoescape(["html"]))
+_ENV.filters["wib"] = wib_text
 KIND_LABEL = {"INITIAL_ORDER": "SK", "REVISION": "Revisi SK", "ADDENDUM": "Adendum"}
 
 
@@ -23,7 +25,7 @@ def render_plan_document_html(document: Any, signatures: list[dict[str, Any]]) -
     snapshot = document.snapshot if isinstance(document.snapshot, dict) else json.loads(document.snapshot)
     return _ENV.get_template("plan_document.html").render(
         doc=document, kind_label=KIND_LABEL.get(document.kind, document.kind),
-        issued_at=f"{document.issued_at:%d-%m-%Y %H:%M}", plan=snapshot.get("plan", {}),
+        issued_at=wib_text(document.issued_at), plan=snapshot.get("plan", {}),
         team=snapshot.get("team", []), days=snapshot.get("days", []),
         attachments=snapshot.get("attachments", []), signatures=signatures,
         sha256=bytes(document.snapshot_sha256).hex())

@@ -28,11 +28,28 @@ const STATUS: Record<string, { label: string; tone: "success" | "warning" | "dan
   REJECTED: { label: "Ditolak", tone: "danger" },
 };
 
-/** Daftar berkas karyawan + tambah (manage:employee_documents) + verifikasi (verify:documents). */
-export function DocumentsPanel({ employeeId, canManage, canVerify = false }: { employeeId: string; canManage: boolean; canVerify?: boolean }) {
+/**
+ * Daftar berkas karyawan + tambah (manage:employee_documents) + verifikasi (verify:documents) +
+ * perpanjang per berkas (R8: tombolnya ada di daftar — termasuk "Berkas saya" — bukan hanya di detail).
+ */
+export function DocumentsPanel({
+  employeeId,
+  canManage,
+  canVerify = false,
+  canRenew = canManage,
+}: {
+  employeeId: string;
+  canManage: boolean;
+  canVerify?: boolean;
+  canRenew?: boolean;
+}) {
   const docs = useEmployeeDocuments(employeeId);
   const { me } = useSession();
   const [editing, setEditing] = useState(false);
+  const [renewing, setRenewing] = useState<EmployeeDocument | null>(null);
+  const showActions = canVerify || canRenew;
+  const renewable = (d: EmployeeDocument) =>
+    canRenew && d.status === "VERIFIED" && (d.lifecycle === "CURRENT" || d.lifecycle === "EXPIRED");
 
   return (
     <section aria-label="Berkas">
@@ -50,7 +67,7 @@ export function DocumentsPanel({ employeeId, canManage, canVerify = false }: { e
               <th className="px-4 py-3 font-medium">Kedaluwarsa</th>
               <th className="px-4 py-3 font-medium">Status</th>
               <th className="px-4 py-3 font-medium">File</th>
-              {canVerify && <th className="px-4 py-3 text-right font-medium">Aksi</th>}
+              {showActions && <th className="px-4 py-3 text-right font-medium">Aksi</th>}
             </tr>
           </thead>
           <tbody>
@@ -97,12 +114,19 @@ export function DocumentsPanel({ employeeId, canManage, canVerify = false }: { e
                 <td className="px-4 py-2">
                   <FilePreview fileId={d.file_id} fileName={d.doc_type} />
                 </td>
-                {canVerify && (
+                {showActions && (
                   <td className="px-4 py-2 text-right">
-                    {d.status === "PENDING" && d.uploaded_by === me?.user_id && (
+                    {canVerify && d.status === "PENDING" && d.uploaded_by === me?.user_id && (
                       <span className="text-xs text-mist">Menunggu petugas lain</span>
                     )}
-                    {d.status === "PENDING" && d.uploaded_by !== me?.user_id && <VerifyActions employeeId={employeeId} doc={d} />}
+                    {canVerify && d.status === "PENDING" && d.uploaded_by !== me?.user_id && (
+                      <VerifyActions employeeId={employeeId} doc={d} />
+                    )}
+                    {renewable(d) && (
+                      <Button size="sm" variant="outline" aria-label={`Perpanjang ${d.doc_type}`} onClick={() => setRenewing(d)}>
+                        Perpanjang
+                      </Button>
+                    )}
                   </td>
                 )}
               </tr>
@@ -112,6 +136,7 @@ export function DocumentsPanel({ employeeId, canManage, canVerify = false }: { e
       </div>
 
       {editing && <DocumentDialog employeeId={employeeId} onClose={() => setEditing(false)} />}
+      {renewing && <DocumentDialog employeeId={employeeId} renew={renewing} onClose={() => setRenewing(null)} />}
     </section>
   );
 }
@@ -138,7 +163,16 @@ function VerifyActions({ employeeId, doc }: { employeeId: string; doc: EmployeeD
   );
 }
 
-function DocumentDialog({ employeeId, onClose }: { employeeId: string; onClose: () => void }) {
+function DocumentDialog({
+  employeeId,
+  renew,
+  onClose,
+}: {
+  employeeId: string;
+  /** Berkas yang diperpanjang: jenisnya tetap, berkas baru menggantikannya setelah diverifikasi. */
+  renew?: EmployeeDocument;
+  onClose: () => void;
+}) {
   const upload = useUploadFile();
   const create = useCreateDocument(employeeId);
   const [errors, setErrors] = useState<Errors>({});
@@ -167,8 +201,8 @@ function DocumentDialog({ employeeId, onClose }: { employeeId: string; onClose: 
       const fileForm = new FormData();
       fileForm.set("file", file);
       const { file_id } = await upload.mutateAsync(fileForm);
-      await create.mutateAsync({ doc_type, number, expiry_date, file_id });
-      toast.success("Berkas ditambahkan.");
+      await create.mutateAsync({ doc_type, number, expiry_date, file_id, supersedes_id: renew?.id ?? null });
+      toast.success(renew ? "Perpanjangan dikirim, menunggu verifikasi." : "Berkas ditambahkan.");
       onClose();
     } catch (err) {
       if (err instanceof ApiError && err.details.fields) setErrors(err.details.fields as Errors);
@@ -179,7 +213,7 @@ function DocumentDialog({ employeeId, onClose }: { employeeId: string; onClose: 
   return (
     <Dialog
       open
-      title="Tambah berkas"
+      title={renew ? "Perpanjang berkas" : "Tambah berkas"}
       onClose={onClose}
       footer={
         <>
@@ -198,24 +232,35 @@ function DocumentDialog({ employeeId, onClose }: { employeeId: string; onClose: 
             {formError}
           </p>
         )}
-        <SelectField
-          name="doc_type"
-          label="Jenis dokumen"
-          error={errors.doc_type}
-          defaultValue=""
-          onChange={(e) => setOther(e.target.value === OTHER)}
-        >
-          <option value="" disabled>
-            Pilih jenis dokumen
-          </option>
-          {DOC_TYPES.map((t) => (
-            <option key={t} value={t}>
-              {t}
-            </option>
-          ))}
-          <option value={OTHER}>Lainnya…</option>
-        </SelectField>
-        {other && <TextField name="doc_type_other" label="Jenis dokumen lainnya" hint="Contoh: SIO Excavator, Drone Pilot" />}
+        {renew ? (
+          <p className="mb-4 text-sm">
+            <input type="hidden" name="doc_type" value={renew.doc_type} />
+            <span className="text-mist">Jenis dokumen: </span>
+            <span className="font-medium">{renew.doc_type}</span>
+            {renew.expiry_date && <span className="text-mist"> · berlaku sampai {formatDate(renew.expiry_date)}</span>}
+          </p>
+        ) : (
+          <>
+            <SelectField
+              name="doc_type"
+              label="Jenis dokumen"
+              error={errors.doc_type}
+              defaultValue=""
+              onChange={(e) => setOther(e.target.value === OTHER)}
+            >
+              <option value="" disabled>
+                Pilih jenis dokumen
+              </option>
+              {DOC_TYPES.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+              <option value={OTHER}>Lainnya…</option>
+            </SelectField>
+            {other && <TextField name="doc_type_other" label="Jenis dokumen lainnya" hint="Contoh: SIO Excavator, Drone Pilot" />}
+          </>
+        )}
         <TextField name="number" label="Nomor dokumen" error={errors.number} />
         <TextField name="expiry_date" label="Tanggal kedaluwarsa" type="date" error={errors.expiry_date} hint="Bila ada." />
         <TextField name="file" label="File (jpg, png, pdf; maks. 10 MB)" type="file" accept=".jpg,.jpeg,.png,.pdf" error={errors.file} />

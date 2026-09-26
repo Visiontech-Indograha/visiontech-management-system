@@ -133,3 +133,33 @@ def test_get_single_employee_for_direct_link(client, world, other_world):
     assert got.json()["id"] == str(emp)
     # Karyawan organisasi lain tidak bocor lewat tautan langsung.
     assert client.get(f"/employees/{other_world.employees['member']}", headers=hr).status_code == 404
+
+
+def test_r8_renewed_document_supersedes_the_old_one_when_verified(client, world, fake_storage):
+    """R8 / domain.js VERIFY_DOCUMENT: dokumen pengganti disetujui → dokumen lama berjenis sama
+    menjadi SUPERSEDED, yang baru CURRENT. Dulu: indeks unik CURRENT per (karyawan, jenis) → 500."""
+    member, hr = world.headers(client, "member"), world.headers(client, "hr")
+    emp = world.employees["member"]
+
+    def upload(color: int) -> str:
+        buf = io.BytesIO()
+        Image.new("RGB", (32, 32), (color, 10, 10)).save(buf, "PNG")
+        return client.post("/files/upload", headers=member,
+                           files={"file": ("sim.png", buf.getvalue(), "image/png")}).json()["file_id"]
+
+    old = client.post(f"/employees/{emp}/documents", headers=member, json={
+        "doc_type": "SIM A", "number": "111122223333", "expiry_date": "2026-10-01", "file_id": upload(1)}).json()["id"]
+    assert client.post(f"/employees/{emp}/documents/{old}/verify", headers=hr,
+                       json={"is_approved": True}).status_code == 200
+
+    new = client.post(f"/employees/{emp}/documents", headers=member, json={
+        "doc_type": "SIM A", "number": "111122223333", "expiry_date": "2031-10-01", "file_id": upload(2),
+        "supersedes_id": old})
+    assert new.status_code == 201, new.text
+    verified = client.post(f"/employees/{emp}/documents/{new.json()['id']}/verify", headers=hr,
+                           json={"is_approved": True})
+    assert verified.status_code == 200, verified.text
+
+    lifecycle = "SELECT lifecycle::text FROM vms.employee_document WHERE id = %s"
+    assert sync_query(lifecycle, (old,)) == [("SUPERSEDED",)]
+    assert sync_query(lifecycle, (new.json()["id"],)) == [("CURRENT",)]

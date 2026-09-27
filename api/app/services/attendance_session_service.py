@@ -92,6 +92,10 @@ class AttendanceSessionService:
         return await self.repo.list_page(org_id, employee_id=scope, date_from=date_from, date_to=date_to,
                                          status=status, limit=size, offset=(page - 1) * size)
 
+    async def today(self, org_id: str) -> Any:
+        """Tanggal kerja hari ini menurut zona waktu organisasi — sama dengan `work_date` absen masuk."""
+        return (await self.clock.local_now(org_id)).today
+
     async def explain_attendance(self, org_id: str, user_id: str, attendance_id: UUID, explanation: str) -> None:
         attendance = await self.repo.get(attendance_id, org_id)
         employee_id = await self.repo.employee_of(user_id)

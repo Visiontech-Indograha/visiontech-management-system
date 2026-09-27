@@ -34,8 +34,8 @@ async def upload_document(
     Gambar (jpeg/png) akan dikompresi ke WebP 3 ukuran (thumb, view, full) secara asinkron.
     Deduplikasi otomatis berbasis SHA-256 (mencegah double upload untuk org yang sama).
     """
-    # 1. Read file & Check Size
-    file_bytes = await file.read()
+    # 1. Baca paling banyak batas + 1 bita: berkas raksasa tidak pernah dimuat utuh ke memori (O-12).
+    file_bytes = await file.read(MAX_FILE_SIZE + 1)
     byte_size = len(file_bytes)
     
     if byte_size > MAX_FILE_SIZE:

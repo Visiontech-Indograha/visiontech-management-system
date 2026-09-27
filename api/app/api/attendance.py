@@ -52,10 +52,12 @@ async def list_attendance(
 ) -> AttendanceListResponse:
     """Dok 05 §3.5. FINANCE/HR/OPS/ADMIN: seluruh organisasi; lainnya: hanya milik sendiri.
     Filter `plan_id` di dok 05 belum didukung — absensi belum tertaut ke SK (dok 10 Bagian C)."""
-    rows, total = await _service(db).list_attendance(
+    service = _service(db)
+    rows, total = await service.list_attendance(
         current_user.organization_id, current_user.user_id, current_user.roles,
         employee_id=employee_id, date_from=date_from, date_to=date_to, status=status, page=page, size=size)
-    return AttendanceListResponse(items=[_response(r) for r in rows], total=total, page=page, size=size)
+    return AttendanceListResponse(items=[_response(r) for r in rows], total=total, page=page, size=size,
+                                  today=await service.today(current_user.organization_id))
 
 
 @router.post("/check-in", response_model=AttendanceResponse)

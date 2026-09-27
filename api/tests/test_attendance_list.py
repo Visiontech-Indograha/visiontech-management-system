@@ -11,7 +11,7 @@ import pytest
 from PIL import Image
 
 from app.core.time import jakarta_now
-from tests.conftest import World, requires_db
+from tests.conftest import World, requires_db, sync_query
 
 pytestmark = requires_db
 
@@ -87,3 +87,16 @@ def test_filters_status_employee_and_dates(client, world, day):
     assert _list(client, world, "finance", **{"from": "2020-01-01", "to": "2020-01-31"})["total"] == 0
     paged = _list(client, world, "finance", page=2, size=2)
     assert (paged["total"], len(paged["items"]), paged["page"], paged["size"]) == (3, 1, 2, 2)
+
+
+@pytest.mark.parametrize("tz", ["Pacific/Kiritimati", "Pacific/Pago_Pago"])
+def test_list_carries_today_in_the_organisation_timezone(client, world: World, tz):
+    """O-10 · HP menandai "absensi hari ini" dengan tanggal server (zona waktu organisasi), bukan jam HP.
+    UTC+14 dan UTC-11 terpaut sehari penuh: tanggal harus mengikuti organisasi."""
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    sync_query("UPDATE vms.organization SET timezone = %s WHERE id = %s RETURNING id", (tz, world.org_id))
+    listed = client.get("/attendance", headers=world.headers(client, "member"))
+    assert listed.status_code == 200, listed.text
+    assert listed.json()["today"] == datetime.now(ZoneInfo(tz)).date().isoformat()

@@ -2115,6 +2115,8 @@ export interface components {
             page: number;
             /** Size */
             size: number;
+            /** Today */
+            today?: string | null;
         };
         /** AttendanceRecap */
         AttendanceRecap: {

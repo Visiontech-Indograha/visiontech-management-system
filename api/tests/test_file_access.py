@@ -100,3 +100,30 @@ def test_upload_fails_and_leaves_no_record_when_storage_is_down(client, world, m
     assert res.status_code == 503 and res.json()["error"]["code"] == "STORAGE_UNAVAILABLE"
     after = sync_query("SELECT count(*) FROM vms.file_object WHERE organization_id = %s", (world.org_id,))[0][0]
     assert after == before
+
+
+def test_upload_over_the_limit_is_rejected_without_reading_it_whole(client, world, fake_storage, monkeypatch):
+    """O-12 · batas ukuran diperiksa dengan membaca paling banyak batas + 1 bita."""
+    from starlette.datastructures import UploadFile
+
+    import app.api.files as files_api
+
+    monkeypatch.setattr(files_api, "MAX_FILE_SIZE", 64)
+    sizes: list[int] = []
+    real_read = UploadFile.read
+
+    async def spy_read(self: UploadFile, size: int = -1) -> bytes:
+        sizes.append(size)
+        return await real_read(self, size)
+
+    monkeypatch.setattr(UploadFile, "read", spy_read)
+    big = b"%PDF-1.7\n" + b"0" * 5000
+    too_large = client.post("/files/upload", headers=world.headers(client, "member"),
+                            files={"file": ("besar.pdf", big, "application/pdf")})
+    assert too_large.status_code == 413, too_large.text
+    assert "FILE_TOO_LARGE" in too_large.text
+    assert sizes == [65]                                   # tidak pernah read() tanpa batas
+
+    empty = client.post("/files/upload", headers=world.headers(client, "member"),
+                        files={"file": ("kosong.pdf", b"", "application/pdf")})
+    assert empty.status_code == 400 and "FILE_EMPTY" in empty.text

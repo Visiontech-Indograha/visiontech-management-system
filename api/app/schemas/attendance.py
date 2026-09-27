@@ -59,3 +59,6 @@ class AttendanceListResponse(BaseModel):
     total: int
     page: int
     size: int
+    # O-10: tanggal hari ini menurut zona waktu organisasi — HP menandai "absensi hari ini" dengan ini,
+    # bukan dengan jam perangkat (server yang memutuskan `work_date`).
+    today: date | None = None

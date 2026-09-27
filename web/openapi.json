@@ -6542,6 +6542,18 @@
      "size": {
       "type": "integer",
       "title": "Size"
+     },
+     "today": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Today"
      }
     },
     "type": "object",

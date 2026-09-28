@@ -12,6 +12,9 @@ from .base_repo import BaseRepo
 
 class EmployeeRepo(BaseRepo):
 
+    async def employee_of_user(self, user_id: UUID | str) -> Any:
+        return await self.scalar("SELECT employee_id FROM vms.app_user WHERE id = CAST(:uid AS uuid)", {"uid": user_id})
+
     async def lock(self, employee_id: UUID | str, org_id: UUID | str) -> Any:
         return await self.fetchone(
             """

@@ -35,6 +35,8 @@ export function EmployeeDetailPage() {
   const units = useUnits();
   const canEdit = !!me?.permissions.includes("manage:users");
   const canManageDocs = !!me?.permissions.includes("manage:employee_documents");
+  // M2-01 (prototipe privateAccess): data kontak pribadi hanya untuk HR/admin & pemiliknya — server pun menyaringnya.
+  const canSeePrivate = canManageDocs || me?.employee_id === id;
   const e = employee.data;
 
   if (employee.isError)
@@ -80,18 +82,27 @@ export function EmployeeDetailPage() {
           <Row label="Jabatan">{e.position}</Row>
           <Row label="Unit">{units.data?.find((u) => u.id === e.unit_id)?.name ?? null}</Row>
           <Row label="Akun">{e.is_active ? <Badge tone="success">Aktif</Badge> : <Badge>Nonaktif</Badge>}</Row>
-          <Row label="Email">{e.email}</Row>
-          <Row label="No. telepon">{e.phone}</Row>
           <Row label="Tanggal bergabung">{formatDate(e.join_date)}</Row>
-          <Row label="Tanggal lahir">{e.birth_date ? formatDate(e.birth_date) : null}</Row>
-          <Row label="Alamat">{e.address}</Row>
-          <Row label="Kontak darurat">{e.emergency_contact}</Row>
+          {canSeePrivate && (
+            <>
+              <Row label="Email">{e.email}</Row>
+              <Row label="No. telepon">{e.phone}</Row>
+              <Row label="Tanggal lahir">{e.birth_date ? formatDate(e.birth_date) : null}</Row>
+              <Row label="Alamat">{e.address}</Row>
+              <Row label="Kontak darurat">{e.emergency_contact}</Row>
+            </>
+          )}
           {e.offboarded_at && (
             <Row label="Keluar">
               {formatDate(e.offboarded_at)} – {e.offboarding_reason ?? "-"}
             </Row>
           )}
         </dl>
+        {!canSeePrivate && (
+          <p className="border-t border-line py-3 text-caption text-mist">
+            Data kontak pribadi dan dokumen identitas hanya terlihat oleh pemilik serta HR.
+          </p>
+        )}
       </div>
       <AssignmentHistory employee={e} />
       {canEdit && !e.is_active && <ArchivePanel employee={e} />}

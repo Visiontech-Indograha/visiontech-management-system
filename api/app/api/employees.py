@@ -21,6 +21,17 @@ from app.schemas.employee import (
 )
 from app.services.employee_service import EmployeeService
 
+PRIVATE_FIELDS = ("email", "phone", "address", "birth_date", "emergency_contact")
+
+
+def _shown(emp: EmployeeResponse, scope: tuple[bool, str | None]) -> EmployeeResponse:
+    """M2-01: data kontak pribadi dikosongkan kecuali untuk HR/admin atau pemiliknya (404-style: tidak dibocorkan)."""
+    see_all, own = scope
+    if see_all or str(emp.id) == own:
+        return emp
+    return emp.model_copy(update=dict.fromkeys(PRIVATE_FIELDS))
+
+
 router = APIRouter(prefix="/employees", tags=["Employees"])
 
 @router.get("", response_model=EmployeeListResponse)
@@ -60,16 +71,17 @@ async def get_employees(
     """)
     rows = (await db.execute(query, params)).fetchall()
     
+    scope = await EmployeeService(db).private_viewer(current_user.user_id, current_user.permissions)
     items = []
     for row in rows:
-        items.append(EmployeeResponse(
+        items.append(_shown(EmployeeResponse(
             id=row.id, employee_no=row.employee_no, full_name=row.full_name,
             position=row.position, unit_id=row.unit_id, email=row.email,
             phone=row.phone, join_date=row.join_date, birth_date=row.birth_date,
             address=row.address, emergency_contact=row.emergency_contact,
             is_active=row.is_active, offboarded_at=row.offboarded_at,
             offboarding_reason=row.offboarding_reason
-        ))
+        ), scope))
         
     return EmployeeListResponse(items=items, total=total, page=page, size=size)
 
@@ -89,7 +101,8 @@ async def get_employee(
     """), {"id": emp_id, "org": current_user.organization_id})).fetchone()
     if row is None:
         raise AppError("NOT_FOUND", "Karyawan tidak ditemukan.", status=404)
-    return EmployeeResponse(**row._mapping)
+    scope = await EmployeeService(db).private_viewer(current_user.user_id, current_user.permissions)
+    return _shown(EmployeeResponse(**row._mapping), scope)
 
 @router.post("", response_model=EmployeeResponse, status_code=status.HTTP_201_CREATED)
 async def create_employee(

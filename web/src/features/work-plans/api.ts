@@ -11,6 +11,7 @@ export type TeamRequest = S["TeamRequest"];
 type Employee = S["EmployeeResponse"];
 type EmployeeList = S["EmployeeListResponse"];
 type Site = S["SiteResponse"];
+type Asset = S["AssetListItem"];
 export type AssignmentOptions = S["PlanAssignmentOptions"];
 
 /** Transisi SK yang memakai TransitionRequest {row_version, reason}. */
@@ -67,6 +68,13 @@ export const useAssignmentOptions = (periodStart: string, periodEnd: string) =>
     enabled: Boolean(periodStart && periodEnd && periodEnd >= periodStart),
   });
 
+export const useAvailableVehicles = () =>
+  useQuery({
+    queryKey: ["assets", "available-vehicles"],
+    queryFn: async () => (await api.get<Asset[]>("/assets")).data,
+    select: (assets) => assets.filter((asset) => asset.kind === "VEHICLE" && asset.status === "AVAILABLE" && !asset.allocation_id),
+  });
+
 /** Peta id → nama karyawan untuk menampilkan PM/ketua. */
 export function employeeName(list: Employee[] | undefined, id: string | null | undefined): string {
   if (!id) return "-";
@@ -98,10 +106,14 @@ export function useCreatePlanWithTeam() {
       plan: body,
       leader_employee_id,
       member_employee_ids,
+      vehicle_id,
+      driver_employee_id,
     }: {
       plan: WorkPlanCreate;
       leader_employee_id: string;
       member_employee_ids: string[];
+      vehicle_id?: string;
+      driver_employee_id?: string;
     }) => {
       const plan = (await api.post<WorkPlan>("/work-plans", body)).data;
       const team = (
@@ -111,6 +123,12 @@ export function useCreatePlanWithTeam() {
           row_version: plan.row_version,
         })
       ).data;
+      if (vehicle_id) {
+        await api.post(`/assets/${vehicle_id}/reserve`, {
+          work_plan_id: plan.id,
+          driver_employee_id,
+        });
+      }
       return { ...plan, leader_employee_id: team.leader_employee_id, row_version: team.row_version };
     },
     onSuccess: setPlan,

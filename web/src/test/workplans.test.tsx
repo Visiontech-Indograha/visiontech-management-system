@@ -78,10 +78,13 @@ describe("Work plan — daftar", () => {
     const calls = mockApi((c) => {
       if (c.url === "/work-plans" && c.method === "get") return { data: [] };
       if (c.url === "/sites") return { data: [{ id: "s1", name: "Cikarang", radius_m: 100, location: { lat: -6.2, lng: 106.8 } }] };
+      if (c.url === "/assets")
+        return { data: [{ id: "v1", kind: "VEHICLE", vehicle_type: "CAR", code: "MOB-01", name: "Mobil 1", condition: "Baik", status: "AVAILABLE", allocation_id: null }] };
       if (c.url === "/work-plans/assignment-options") return { data: assignmentOptions };
       if (c.url === "/work-plans" && c.method === "post") return { status: 201, data: plan() };
       if (c.url === "/work-plans/p1/members")
         return { data: { leader_employee_id: "e-lead", member_employee_ids: ["e-member"], row_version: 4 } };
+      if (c.url === "/assets/v1/reserve") return { data: { id: "al1" } };
       if (c.url === "/work-plans/p1") return { data: plan() };
     });
     const { router } = renderRoute("/work-plans", { role: "PM" });
@@ -97,6 +100,9 @@ describe("Work plan — daftar", () => {
     await within(dialog).findByRole("option", { name: /Bu Ketua/ });
     fireEvent.change(within(dialog).getByLabelText("Ketua tim"), { target: { value: "e-lead" } });
     fireEvent.click(within(dialog).getByLabelText(/Pak Anggota/));
+    await within(dialog).findByRole("option", { name: /Mobil 1/ });
+    fireEvent.change(within(dialog).getByLabelText("Kendaraan (opsional)"), { target: { value: "v1" } });
+    fireEvent.change(within(dialog).getByLabelText("Pengemudi kendaraan"), { target: { value: "e-lead" } });
     fireEvent.click(within(dialog).getByRole("button", { name: "Simpan" }));
     await waitFor(() => expect(calls.some((c) => c.method === "post")).toBe(true));
     await waitFor(() => expect(router.state.location.pathname).toBe("/work-plans/p1"));
@@ -115,6 +121,10 @@ describe("Work plan — daftar", () => {
       leader_employee_id: "e-lead",
       member_employee_ids: ["e-member"],
       row_version: 3,
+    });
+    expect(calls.find((c) => c.url === "/assets/v1/reserve")!.data).toEqual({
+      work_plan_id: "p1",
+      driver_employee_id: "e-lead",
     });
   });
 

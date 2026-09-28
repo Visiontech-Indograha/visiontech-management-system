@@ -61,12 +61,13 @@ Yang dibagikan ke penguji adalah APK, bukan `.aab`: file `.aab` hanya untuk Play
 | R-23 | Ketua dapat menerima SK terbit di mobile; PM mendapat petunjuk agar ketua membuka mobile | lihat `git log` |
 | R-23 | Form SK: PM otomatis, lokasi tunggal, tim sekaligus, kandidat bebas konflik; hari kerja tiga kolom | lihat `git log` |
 | R-23 | Workflow CD lama berbasis tag diganti penjaga sumber `prod`; build nyata server tetap dari `origin/prod` | lihat `git log` |
+| R-23 | Kendaraan tersedia dapat dipilih dan langsung direservasi saat membuat draft SK; pengemudi dipilih dari tim | lihat `git log` |
 
 ## 4. Terbuka — kerjakan / tanyakan berikutnya
 
-1. **Lanjutkan R-23**: alokasi kendaraan saat pembuatan SK. Putuskan arti "sudah diinspeksi": skema
-   sekarang hanya punya `asset_allocation.driver_checked_at`, yang baru dapat diisi pengemudi setelah
-   kendaraan direservasi ke SK; belum ada inspeksi kendaraan mandiri sebelum alokasi.
+1. **Uji R-23 di produksi setelah merge `development` → `prod`**. Catatan istilah: inspeksi kendaraan
+   yang tersedia pada sistem adalah pemeriksaan pengemudi setelah reservasi (`driver_checked_at`);
+   belum ada inspeksi aset mandiri sebelum alokasi.
 2. **Salin `autodeploy.sh` baru ke server** setelah commit R-22 masuk `prod`. Skrip di server adalah
    salinan dan tidak ikut ter-update. Perintahnya ada di `deploy/README.md` bagian "Memasang
    perubahan skrip". Deploy yang membawa R-22 masih dilaporkan oleh skrip lama; format baru baru

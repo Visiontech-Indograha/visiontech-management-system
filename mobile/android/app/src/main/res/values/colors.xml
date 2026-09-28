@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Navy brand (VmsColors.brand700) — latar layar pembuka. -->
+    <color name="vms_splash_bg">#FF232C6F</color>
+</resources>

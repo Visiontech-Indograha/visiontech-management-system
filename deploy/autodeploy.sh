@@ -34,7 +34,7 @@ LOG="$LOGDIR/deploy-$STAMP.log"
 SHORT=${NEW:0:8}
 SUBJECT=$(git -C src log -1 --format='%s' "$NEW")
 AUTHOR=$(git -C src log -1 --format='%an' "$NEW")
-CHANGES=$( [ -n "$OLD" ] && git -C src log --format='• %h %s' "$OLD..$NEW" | head -15 || echo "• (deploy pertama)")
+if [ -n "$OLD" ]; then CHANGES=$(git -C src log --format='• %h %s' "$OLD..$NEW" | head -15); else CHANGES="• (deploy pertama)"; fi
 T0=$(date +%s)
 
 json() { python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))'; }
@@ -42,11 +42,19 @@ discord() {  # $1 = judul, $2 = warna (desimal), $3 = isi, $4 = lampiran (opsion
   local payload
   payload=$(printf '{"embeds":[{"title":%s,"color":%s,"description":%s,"footer":{"text":"vms-mvp · %s"}}]}' \
     "$(printf '%s' "$1" | json)" "$2" "$(printf '%s' "$3" | head -c 3900 | json)" "$(hostname)")
+  local body code
+  body=$(mktemp); printf '%s' "$payload" > "$body"
+  # Isi dibaca dari berkas (`<`): pesan commit ber-`;` tidak lagi merusak argumen curl -F.
   if [ -n "${4:-}" ] && [ -f "$4" ]; then
-    curl -s -o /dev/null -F "payload_json=$payload" -F "file=@$4;type=text/plain" "$DISCORD_WEBHOOK_DEPLOY"
+    code=$(curl -s -o /dev/null -w '%{http_code}' -F "payload_json=<$body" -F "file=@$4;type=text/plain" "$DISCORD_WEBHOOK_DEPLOY")
   else
-    curl -s -o /dev/null -H 'Content-Type: application/json' -d "$payload" "$DISCORD_WEBHOOK_DEPLOY"
+    code=$(curl -s -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' --data-binary "@$body" "$DISCORD_WEBHOOK_DEPLOY")
   fi
+  case "$code" in 2*) ;; *)                      # cadangan: tanpa lampiran, tetap kabari
+    echo "discord gagal ($code), kirim ulang tanpa lampiran" >&2
+    curl -s -o /dev/null -H 'Content-Type: application/json' --data-binary "@$body" "$DISCORD_WEBHOOK_DEPLOY" ;;
+  esac
+  rm -f "$body"
 }
 
 step() { echo; echo "===== $(date '+%H:%M:%S') · $* ====="; }
@@ -79,10 +87,8 @@ $CHANGES"
   rm -f api/.env web/.env
   step "Build image (docker compose build)"
   docker compose build --progress=plain 2>&1 || exit 12
-  step "Backup database"
-  docker exec vms_db_prod sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' > "backups/pre-$SHORT-$STAMP.dump" || exit 13
-  ls -la "backups/pre-$SHORT-$STAMP.dump"
-  ls -1t backups/*.dump | tail -n +15 | xargs -r rm -f          # simpan 14 backup terakhir
+  step "Backup database (DB aplikasi → lokal + MinIO vms-backups)"
+  ./backup.sh "pra-deploy-$SHORT" || exit 13
   step "Jalankan kontainer baru (up -d)"
   docker compose up -d 2>&1 || exit 14
   sleep 8
@@ -116,5 +122,5 @@ discord "✅ Deploy berhasil — $SHORT" 3066993 \
 **Migrasi:** ${MIG:-tidak ada migrasi baru}
 **Versi DB:** $(grep -E '\(head\)' "$LOG" | tail -1)
 **Kesehatan:** $(grep -E '^api=' "$LOG" | tail -1)
-**Backup DB:** backups/pre-$SHORT-$STAMP.dump
+**Backup DB:** $(grep -E '^minio:' "$LOG" | tail -1)
 Log build lengkap terlampir." "$LOG"

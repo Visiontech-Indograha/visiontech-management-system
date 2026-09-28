@@ -16,6 +16,7 @@ import { errorMessage } from "@/lib/errors";
 import { formatDate } from "@/lib/format";
 import { useArchiveEmployee, useEmployee, useRestoreEmployee, useUnits, useUpdateEmployee, type Employee, type EmployeeUpdate } from "./api";
 import { AssignmentHistory, PromoteDialog } from "./Assignments";
+import { OffboardDialog } from "./Lifecycle";
 import { DocumentsPanel } from "./DocumentsPanel";
 
 const Row = ({ label, children }: { label: string; children: ReactNode }) => (
@@ -32,6 +33,7 @@ export function EmployeeDetailPage() {
   const employee = useEmployee(id, fromList?.id === id ? fromList : undefined);
   const [editing, setEditing] = useState(false);
   const [promoting, setPromoting] = useState(false);
+  const [offboarding, setOffboarding] = useState(false);
   const units = useUnits();
   const canEdit = !!me?.permissions.includes("manage:users");
   const canManageDocs = !!me?.permissions.includes("manage:employee_documents");
@@ -67,6 +69,11 @@ export function EmployeeDetailPage() {
               {e.is_active && (
                 <Button variant="outline" onClick={() => setPromoting(true)}>
                   Mutasi / promosi
+                </Button>
+              )}
+              {e.is_active && (
+                <Button variant="outline" onClick={() => setOffboarding(true)}>
+                  Offboarding
                 </Button>
               )}
               <Button variant="outline" onClick={() => setEditing(true)}>
@@ -109,6 +116,7 @@ export function EmployeeDetailPage() {
       {canManageDocs && <DocumentsPanel employeeId={e.id} canManage canVerify={!!me?.permissions.includes("verify:documents")} />}
       {editing && <ProfileDialog employee={e} onClose={() => setEditing(false)} />}
       {promoting && <PromoteDialog employee={e} onClose={() => setPromoting(false)} />}
+      {offboarding && <OffboardDialog employee={e} onClose={() => setOffboarding(false)} />}
     </>
   );
 }

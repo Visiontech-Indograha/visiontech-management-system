@@ -326,3 +326,53 @@ describe("peringatan masa berlaku di daftar berkas (M2)", () => {
   });
 });
 
+
+describe("siklus karyawan oleh HR (M2-02, M2-03)", () => {
+  it("Tambah karyawan: validasi lalu POST /employees", async () => {
+    const calls = mockApi((c) => {
+      if (c.url === "/employees" && c.method === "get") return { data: { items: [], total: 0, page: 1, size: 25 } };
+      if (c.url === "/units") return { data: [{ id: "u1", code: "OPS", name: "Operasional" }] };
+      if (c.url === "/employees" && c.method === "post") return { data: employee("e9") };
+      if (c.url === "/employees/e9") return { data: employee("e9") };
+    });
+    renderRoute("/directory", { role: "HR" });
+    fireEvent.click(await screen.findByRole("button", { name: "Tambah karyawan" }));
+    const dialog = screen.getByRole("dialog", { name: "Tambah karyawan" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Simpan" }));
+    expect(await within(dialog).findByText("Nama lengkap wajib diisi.")).toBeInTheDocument();
+    fireEvent.change(within(dialog).getByLabelText("No. karyawan"), { target: { value: "VT-099" } });
+    fireEvent.change(within(dialog).getByLabelText("Nama lengkap"), { target: { value: "Karyawan Baru" } });
+    fireEvent.change(within(dialog).getByLabelText("Jabatan"), { target: { value: "Teknisi" } });
+    await within(dialog).findByRole("option", { name: "Operasional" });
+    fireEvent.change(within(dialog).getByLabelText("Unit"), { target: { value: "u1" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Simpan" }));
+    await waitFor(() => expect(calls.some((c) => c.url === "/employees" && c.method === "post")).toBe(true));
+    const body = calls.find((c) => c.url === "/employees" && c.method === "post")!.data as Record<string, unknown>;
+    expect(body).toMatchObject({ employee_no: "VT-099", full_name: "Karyawan Baru", unit_id: "u1", email: null });
+  });
+
+  it("Offboarding: alasan wajib, lalu POST offboard", async () => {
+    const calls = mockApi((c) => {
+      if (c.url === "/employees/e1") return { data: employee() };
+      if (c.url === "/employees/e1/offboard") return { data: { id: "e1" } };
+    });
+    renderRoute("/directory/e1", { role: "HR" });
+    fireEvent.click(await screen.findByRole("button", { name: "Offboarding" }));
+    const dialog = screen.getByRole("dialog", { name: "Offboarding Test User" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Akhiri masa kerja" }));
+    expect(await within(dialog).findByText("Alasan offboarding wajib diisi.")).toBeInTheDocument();
+    fireEvent.change(within(dialog).getByLabelText("Alasan"), { target: { value: "Kontrak selesai" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Akhiri masa kerja" }));
+    await waitFor(() => expect(calls.some((c) => c.url === "/employees/e1/offboard")).toBe(true));
+    expect(calls.find((c) => c.url === "/employees/e1/offboard")!.data).toEqual({ reason: "Kontrak selesai" });
+  });
+
+  it("bukan HR: tidak ada tombol Tambah karyawan", async () => {
+    mockApi((c) => {
+      if (c.url === "/employees") return { data: { items: [], total: 0, page: 1, size: 25 } };
+    });
+    renderRoute("/directory", { role: "field" });
+    await screen.findByRole("heading", { name: "Direktori" });
+    expect(screen.queryByRole("button", { name: "Tambah karyawan" })).toBeNull();
+  });
+});

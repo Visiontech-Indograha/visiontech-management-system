@@ -1,5 +1,8 @@
 # MULAI DI SINI
 
+> **Melanjutkan pekerjaan yang sedang berjalan?** Baca `docs/23-SERAH-TERIMA-AGEN.md`: berisi
+> keadaan terakhir, aturan kerja dari pemilik, lingkungan (server, APK, Flutter), dan daftar yang terbuka.
+
 **Dokumen pembuka.** Ditulis untuk dibaca lebih dulu oleh siapa pun — manusia atau agen AI —
 yang membuka folder ini **tanpa konteks percakapan sebelumnya**.
 

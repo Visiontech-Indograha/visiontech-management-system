@@ -427,7 +427,9 @@ nav a:active {
     exit 100% { opacity: 0.35; transform: translateY(-10px) scale(0.99); }
   }
   /* Hanya blok terluar — blok bersarang tidak ikut dianimasikan dua kali. */
-  main :is(section, article, .shadow-card, [data-slot="card"]):not(:is(section, article, .shadow-card, [data-slot="card"]) *) {
+  /* `.no-reveal`: halaman setinggi layar (login) — tanpa ini seluruh halaman tertahan setengah
+     transparan ("berkabut") karena blok sudah berada di rentang keluar sejak awal. */
+  main:not(.no-reveal) :is(section, article, .shadow-card, [data-slot="card"]):not(:is(section, article, .shadow-card, [data-slot="card"]) *) {
     animation: vms-reveal linear both;
     animation-timeline: view();
     animation-range: entry 0% cover 30%, exit 70% exit 100%;

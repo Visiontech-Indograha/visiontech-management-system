@@ -70,6 +70,17 @@ describe("halaman detail karyawan (HR)", () => {
     });
     renderRoute("/directory/e1", { role: "HR" });
     expect(await screen.findByText("Test User")).toBeInTheDocument();
+    expect(screen.getByText("Kontak darurat")).toBeInTheDocument();
+  });
+
+  it("M2-01: rekan kerja tidak melihat baris data pribadi, hanya catatan", async () => {
+    mockApi((c) => {
+      if (c.url === "/employees/e1") return { data: employee() };
+    });
+    renderRoute("/directory/e1", { role: "field" });
+    expect(await screen.findByText("Test User")).toBeInTheDocument();
+    expect(screen.queryByText("Kontak darurat")).toBeNull();
+    expect(screen.getByText(/hanya terlihat oleh pemilik serta HR/)).toBeInTheDocument();
   });
 
   it("menambah berkas mengirim form ke upload lalu ke documents", async () => {

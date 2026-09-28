@@ -12,6 +12,7 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import AppError, NotFoundError, ValidationError
+from app.core.permissions import Permission
 from app.repositories.employee_repo import EmployeeRepo
 from app.repositories.org_clock_repo import OrgClockRepo
 
@@ -24,6 +25,14 @@ class EmployeeService:
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
         self.repo = EmployeeRepo(db)
+
+    async def private_viewer(self, user_id: str, permissions: list[str]) -> tuple[bool, str | None]:
+        """Prototipe `privateAccess`: data kontak pribadi hanya untuk HR (dan admin) serta pemiliknya.
+        Hasil: (boleh melihat semua, employee_id milik pengguna)."""
+        if Permission.MANAGE_EMPLOYEE_DOCUMENTS.value in permissions:
+            return True, None
+        own = await self.repo.employee_of_user(user_id)
+        return False, str(own) if own else None
 
     async def restore_employee(self, employee_id: UUID, org_id: str) -> dict[str, Any]:
         employee = await self.repo.lock(employee_id, org_id)

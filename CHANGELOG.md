@@ -9,6 +9,7 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased] — `development`
 
+- **R-20 · M2-01 data pribadi rekan:** `api/` `GET /employees` & `GET /employees/{id}` mengosongkan email, telepon, alamat, tanggal lahir, kontak darurat kecuali untuk HR/admin atau pemiliknya (prototipe `privateAccess`); uji `test_employee_privacy.py` (dicek mutasi). `web/` detail karyawan menyembunyikan baris itu dan menampilkan catatan prototipe.
 - **R-20 · kode mobile kini benar-benar di repo utama:** `mobile/` dulu hanya gitlink (penunjuk commit ke repo lama `vti-vms-mobile`, tanpa `.gitmodules`) sehingga folder kosong di GitHub; kini 201 berkas biasa. `.gitignore` utama (`lib/` warisan Python) diberi pengecualian `!mobile/lib/`. CI: job **Mobile (flutter analyze + test)** di `ci.yml`; laporan `#vms-ci` kini dikirim **berhasil maupun gagal** dengan status API/Web/Mobile/pindai rahasia + tautan log.
 - **R-20 · halaman login tidak lagi "berkabut":** `web/` animasi scroll-driven `vms-reveal` menahan blok setinggi layar di opasitas rendah → dimatikan lewat `main.no-reveal`; logo panel brand memakai logo berwarna (logo putih di atas kotak putih tidak terlihat).
 - **R-20 · deploy otomatis:** `deploy/autodeploy.sh` + `deploy/README.md` — server memeriksa branch `prod` tiap menit (cron + deploy key hanya-baca); commit baru → build, backup DB, up, migrasi, cek kesehatan; laporan ke Discord `#vms-deploy` (mulai/berhasil/gagal + log build lengkap terlampir).

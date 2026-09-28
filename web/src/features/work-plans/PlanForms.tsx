@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState, type ReactNode } from "react";
-import { useFieldArray, useForm, useWatch } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -9,9 +9,9 @@ import { SelectField, TextAreaField, TextField } from "@/components/ui/Field";
 import { Dialog } from "@/components/ui/VmsDialog";
 import { errorMessage } from "@/lib/errors";
 import {
-  useActiveEmployees,
   useAddDay,
-  useCreatePlan,
+  useAssignmentOptions,
+  useCreatePlanWithTeam,
   useSetTeam,
   useSiteOptions,
   useTransition,
@@ -74,57 +74,75 @@ const periodIssue = { path: ["period_end"], message: "Tanggal selesai tidak bole
 const createSchema = z
   .object({
     title: required("Judul pekerjaan wajib diisi."),
-    location_text: required("Lokasi wajib diisi."),
     description: z.string().trim(),
     period_start: required("Tanggal mulai wajib diisi."),
     period_end: required("Tanggal selesai wajib diisi."),
-    pm_employee_id: required("Pilih PM pekerjaan."),
-    leader_employee_id: z.string(),
-    site_id: z.string(),
+    pm_employee_id: z.string(),
+    leader_employee_id: required("Pilih ketua tim."),
+    member_employee_ids: z.array(z.string()).min(1, "Pilih minimal satu anggota tim."),
+    site_id: required("Pilih lokasi pekerjaan."),
   })
   .refine(period, periodIssue);
 type CreateValues = z.infer<typeof createSchema>;
 
 /** Buat draft SK (POST /work-plans). Unit SK = unit karyawan PM yang dipilih. */
 export function CreatePlanDialog({ onClose }: { onClose: () => void }) {
-  const employees = useActiveEmployees();
   const sites = useSiteOptions();
-  const create = useCreatePlan();
+  const create = useCreatePlanWithTeam();
   const navigate = useNavigate();
   const [formError, setFormError] = useState<string | null>(null);
   const {
     register,
     handleSubmit,
-    setError,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<CreateValues>({
     resolver: zodResolver(createSchema),
-    defaultValues: { title: "", location_text: "", description: "", period_start: "", period_end: "", pm_employee_id: "", leader_employee_id: "", site_id: "" },
+    defaultValues: {
+      title: "",
+      description: "",
+      period_start: "",
+      period_end: "",
+      pm_employee_id: "",
+      leader_employee_id: "",
+      member_employee_ids: [],
+      site_id: "",
+    },
   });
+  const periodStart = useWatch({ control, name: "period_start" });
+  const periodEnd = useWatch({ control, name: "period_end" });
+  const selectedPm = useWatch({ control, name: "pm_employee_id" });
+  const selectedLeader = useWatch({ control, name: "leader_employee_id" });
+  const options = useAssignmentOptions(periodStart, periodEnd);
+  const effectivePm = selectedPm || options.data?.fixed_pm_employee_id;
 
   const onSubmit = handleSubmit(async (v) => {
     setFormError(null);
-    const unit_id = employees.data?.find((e) => e.id === v.pm_employee_id)?.unit_id;
-    if (!unit_id) {
-      setError("pm_employee_id", { message: "Karyawan ini belum terdaftar di unit bisnis mana pun." });
-      return;
-    }
+    const pm_employee_id = options.data?.can_choose_pm ? v.pm_employee_id : options.data?.fixed_pm_employee_id;
+    const unit_id = options.data?.can_choose_pm
+      ? options.data.pm_options.find((employee) => employee.id === pm_employee_id)?.unit_id
+      : options.data?.fixed_unit_id;
+    const location = sites.data?.find((site) => site.id === v.site_id);
+    if (!pm_employee_id || !unit_id || !location) return setFormError("Pilihan PM atau lokasi belum lengkap.");
     try {
       const plan = await create.mutateAsync({
-        title: v.title,
-        location_text: v.location_text,
-        description: v.description || null,
-        period_start: v.period_start,
-        period_end: v.period_end,
-        pm_employee_id: v.pm_employee_id,
-        leader_employee_id: v.leader_employee_id || null,
-        site_id: v.site_id || null,
-        unit_id,
+        plan: {
+          title: v.title,
+          location_text: location.name,
+          description: v.description || null,
+          period_start: v.period_start,
+          period_end: v.period_end,
+          pm_employee_id,
+          leader_employee_id: v.leader_employee_id,
+          site_id: v.site_id,
+          unit_id,
+        },
+        leader_employee_id: v.leader_employee_id,
+        member_employee_ids: v.member_employee_ids.filter((id) => id !== v.leader_employee_id),
       });
-      toast.success("Draft SK dibuat. Tetapkan titik lokasi penugasan.");
+      toast.success("Draft SK dan tim berhasil dibuat.");
       onClose();
-      // Dialog "Atur titik lokasi" langsung ditawarkan di halaman detail.
-      navigate(`/work-plans/${plan.id}`, { state: { setLocation: true } });
+      navigate(`/work-plans/${plan.id}`);
     } catch (err) {
       setFormError(errorMessage(err));
     }
@@ -133,9 +151,8 @@ export function CreatePlanDialog({ onClose }: { onClose: () => void }) {
   return (
     <FormDialog title="Buat SK" formId="create-plan" submitting={isSubmitting} formError={formError} onClose={onClose} onSubmit={onSubmit}>
       <TextField label="Judul pekerjaan" error={errors.title?.message} {...register("title")} />
-      <TextField label="Lokasi" error={errors.location_text?.message} {...register("location_text")} />
-      <SelectField label="Lokasi kerja (absensi)" {...register("site_id")}>
-        <option value="">Tanpa lokasi kerja</option>
+      <SelectField label="Lokasi pekerjaan" error={errors.site_id?.message} {...register("site_id")}>
+        <option value="">Pilih lokasi</option>
         {sites.data?.map((s) => (
           <option key={s.id} value={s.id}>
             {s.name}
@@ -147,30 +164,37 @@ export function CreatePlanDialog({ onClose }: { onClose: () => void }) {
         <TextField label="Tanggal mulai" type="date" error={errors.period_start?.message} {...register("period_start")} />
         <TextField label="Tanggal selesai" type="date" error={errors.period_end?.message} {...register("period_end")} />
       </div>
-      <EmployeeSelect label="PM pekerjaan" error={errors.pm_employee_id?.message} emptyLabel="Pilih PM" {...register("pm_employee_id")} />
-      <EmployeeSelect label="Ketua tim" emptyLabel="Tentukan nanti" {...register("leader_employee_id")} />
+      {options.data?.can_choose_pm ? (
+        <SelectField label="PM pekerjaan" error={errors.pm_employee_id?.message} {...register("pm_employee_id")}>
+          <option value="">Pilih PM</option>
+          {options.data.pm_options.map((employee) => (
+            <option key={employee.id} value={employee.id}>{employee.full_name} · {employee.position}</option>
+          ))}
+        </SelectField>
+      ) : (
+        <p className="mb-4 rounded-control bg-canvas px-3 py-2 text-sm text-mist">PM pekerjaan otomatis adalah Anda.</p>
+      )}
+      <SelectField label="Ketua tim" error={errors.leader_employee_id?.message} {...register("leader_employee_id")}>
+        <option value="">{options.isPending ? "Memuat..." : "Pilih ketua"}</option>
+        {options.data?.personnel_options.filter((employee) => employee.id !== effectivePm).map((employee) => (
+          <option key={employee.id} value={employee.id}>{employee.full_name} · {employee.position}</option>
+        ))}
+      </SelectField>
+      <fieldset className="mb-4">
+        <legend className="mb-2 text-sm font-medium">Anggota tim</legend>
+        <div className="max-h-48 space-y-1 overflow-y-auto rounded-control border border-line p-2">
+          {options.data?.personnel_options
+            .filter((employee) => employee.id !== effectivePm && employee.id !== selectedLeader)
+            .map((employee) => (
+              <label key={employee.id} className="flex min-h-11 items-center gap-2 text-sm">
+                <input type="checkbox" className="size-5" value={employee.id} {...register("member_employee_ids")} />
+                {employee.full_name} · {employee.position}
+              </label>
+            ))}
+        </div>
+        {errors.member_employee_ids && <p className="mt-1 text-sm text-destructive">{errors.member_employee_ids.message}</p>}
+      </fieldset>
     </FormDialog>
-  );
-}
-
-function EmployeeSelect({
-  label,
-  error,
-  emptyLabel,
-  ...props
-}: React.SelectHTMLAttributes<HTMLSelectElement> & { label: string; error?: string; emptyLabel: string } & {
-  ref?: React.Ref<HTMLSelectElement>;
-}) {
-  const employees = useActiveEmployees();
-  return (
-    <SelectField label={label} error={error} hint={employees.isError ? "Daftar karyawan tidak dapat dimuat." : undefined} {...props}>
-      <option value="">{employees.isPending ? "Memuat..." : emptyLabel}</option>
-      {employees.data?.map((e) => (
-        <option key={e.id} value={e.id}>
-          {e.full_name} · {e.position}
-        </option>
-      ))}
-    </SelectField>
   );
 }
 
@@ -234,7 +258,7 @@ type TeamValues = z.infer<typeof teamSchema>;
 
 /** Tetapkan ketua & anggota (PUT /work-plans/{id}/members). API tidak mengirim daftar anggota saat ini. */
 export function TeamDialog({ plan, onClose }: { plan: WorkPlan; onClose: () => void }) {
-  const employees = useActiveEmployees();
+  const options = useAssignmentOptions(plan.period_start, plan.period_end);
   const setTeam = useSetTeam(plan.id);
   const [formError, setFormError] = useState<string | null>(null);
   const {
@@ -263,12 +287,17 @@ export function TeamDialog({ plan, onClose }: { plan: WorkPlan; onClose: () => v
   });
   return (
     <FormDialog title="Atur tim" formId="team" submitting={isSubmitting} formError={formError} onClose={onClose} onSubmit={onSubmit}>
-      <EmployeeSelect label="Ketua tim" emptyLabel="Pilih ketua" error={errors.leader_employee_id?.message} {...register("leader_employee_id")} />
+      <SelectField label="Ketua tim" error={errors.leader_employee_id?.message} {...register("leader_employee_id")}>
+        <option value="">{options.isPending ? "Memuat..." : "Pilih ketua"}</option>
+        {options.data?.personnel_options
+          .filter((employee) => employee.id !== plan.pm_employee_id)
+          .map((employee) => <option key={employee.id} value={employee.id}>{employee.full_name} · {employee.position}</option>)}
+      </SelectField>
       <fieldset className="mb-4">
         <legend className="mb-2 text-sm font-medium">Anggota tim</legend>
         <div className="max-h-56 space-y-1 overflow-y-auto rounded-control border border-line p-2">
-          {employees.data
-            ?.filter((e) => e.id !== leader)
+          {options.data?.personnel_options
+            .filter((e) => e.id !== leader && e.id !== plan.pm_employee_id)
             .map((e) => (
               <label key={e.id} className="flex min-h-11 items-center gap-2 text-sm">
                 <input type="checkbox" className="size-5" value={e.id} {...register("member_employee_ids")} />
@@ -288,11 +317,8 @@ export function TeamDialog({ plan, onClose }: { plan: WorkPlan; onClose: () => v
 
 const daySchema = z.object({
   work_date: required("Tanggal wajib diisi."),
-  title: required("Judul hari wajib diisi."),
-  tasks: z
-    .array(z.object({ title: required("Tugas wajib diisi.") }))
-    .min(1, "Isi minimal satu tugas.")
-    .max(30, "Maksimal 30 tugas per hari."),
+  title: required("Nama pekerjaan wajib diisi."),
+  description: required("Deskripsi pekerjaan wajib diisi."),
 });
 type DayValues = z.infer<typeof daySchema>;
 
@@ -302,18 +328,16 @@ export function AddDayDialog({ plan, onClose }: { plan: WorkPlan; onClose: () =>
   const [formError, setFormError] = useState<string | null>(null);
   const {
     register,
-    control,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<DayValues>({
     resolver: zodResolver(daySchema),
-    defaultValues: { work_date: plan.period_start, title: "", tasks: [{ title: "" }] },
+    defaultValues: { work_date: plan.period_start, title: "", description: "" },
   });
-  const tasks = useFieldArray({ control, name: "tasks" });
   const onSubmit = handleSubmit(async (v) => {
     setFormError(null);
     try {
-      await addDay.mutateAsync({ work_date: v.work_date, title: v.title, tasks: v.tasks.map((t) => t.title) });
+      await addDay.mutateAsync({ work_date: v.work_date, title: v.title, tasks: [v.description] });
       toast.success("Rincian hari ditambahkan.");
       onClose();
     } catch (err) {
@@ -323,25 +347,8 @@ export function AddDayDialog({ plan, onClose }: { plan: WorkPlan; onClose: () =>
   return (
     <FormDialog title="Tambah hari" formId="add-day" submitting={isSubmitting} formError={formError} onClose={onClose} onSubmit={onSubmit}>
       <TextField label="Tanggal" type="date" min={plan.period_start} max={plan.period_end} error={errors.work_date?.message} {...register("work_date")} />
-      <TextField label="Judul hari" error={errors.title?.message} {...register("title")} />
-      {tasks.fields.map((f, i) => (
-        <div key={f.id} className="flex items-end gap-2">
-          <div className="flex-1">
-            <TextField label={`Tugas ${i + 1}`} error={errors.tasks?.[i]?.title?.message} {...register(`tasks.${i}.title`)} />
-          </div>
-          {tasks.fields.length > 1 && (
-            <Button type="button" variant="ghost" className="mb-4" onClick={() => tasks.remove(i)} aria-label={`Hapus tugas ${i + 1}`}>
-              Hapus
-            </Button>
-          )}
-        </div>
-      ))}
-      {errors.tasks?.root && <p className="mb-2 text-sm text-destructive">{errors.tasks.root.message}</p>}
-      {tasks.fields.length < 30 && (
-        <Button type="button" variant="outline" onClick={() => tasks.append({ title: "" })}>
-          Tambah tugas
-        </Button>
-      )}
+      <TextField label="Nama pekerjaan" error={errors.title?.message} {...register("title")} />
+      <TextAreaField label="Deskripsi pekerjaan" error={errors.description?.message} {...register("description")} />
     </FormDialog>
   );
 }

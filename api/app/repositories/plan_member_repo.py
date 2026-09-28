@@ -21,7 +21,7 @@ class PlanMemberRepo(BaseRepo):
         """SK milik organisasi ini, dikunci untuk diubah. None bila tidak ada / milik organisasi lain."""
         return await self.fetchone(
             """
-            SELECT id, status, row_version, pm_employee_id, lower(period) AS period_start
+            SELECT id, unit_id, status, row_version, pm_employee_id, lower(period) AS period_start
             FROM vms.work_plan
             WHERE id = :id AND organization_id = :org AND deleted_at IS NULL
             FOR UPDATE

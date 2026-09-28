@@ -58,7 +58,7 @@ async def set_plan_team(
     db: AsyncSession = Depends(get_db_with_user),
 ) -> TeamResponse:
     team = await PlanMemberService(PlanMemberRepo(db)).set_team(
-        access.user.organization_id, plan_id, payload.leader_employee_id,
+        access.user, plan_id, payload.leader_employee_id,
         payload.member_employee_ids, payload.row_version,
     )
     return TeamResponse(leader_employee_id=team.leader_employee_id,

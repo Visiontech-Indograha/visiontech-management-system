@@ -8,9 +8,12 @@ from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
 
+from app.api.deps import CurrentUser
 from app.core.enums import PlanStatus
 from app.core.errors import AppError, ConflictError, NotFoundError
+from app.repositories.plan_assignment_repo import PlanAssignmentRepo
 from app.repositories.plan_member_repo import PlanMemberRepo
+from app.services.plan_assignment_service import PlanAssignmentService
 
 
 @dataclass(frozen=True)
@@ -30,13 +33,13 @@ class PlanMemberService:
 
     async def set_team(
         self,
-        org_id: str,
+        user: CurrentUser,
         plan_id: UUID,
         leader_id: UUID | None,
         member_ids: list[UUID],
         row_version: int,
     ) -> Team:
-        plan = await self.repo.lock_plan(plan_id, org_id)
+        plan = await self.repo.lock_plan(plan_id, user.organization_id)
         if plan is None:
             raise NotFoundError("SK")
         if plan.status != PlanStatus.DRAFT:
@@ -56,9 +59,11 @@ class PlanMemberService:
             raise AppError("VALIDATION_ERROR", "Ketua tim tidak boleh sama dengan PM pekerjaan ini.", status=422)
 
         people = ([leader] if leader else []) + members
-        known = await self.repo.active_employees(people, org_id)
+        known = await self.repo.active_employees(people, user.organization_id)
         if set(people) - known:
             raise NotFoundError("Karyawan")
+        await PlanAssignmentService(PlanAssignmentRepo(self.repo.db)).validate_team_scope(
+            user, plan.unit_id, people)
 
         conflicts = await self.repo.schedule_conflicts(people, plan_id)
         if conflicts:

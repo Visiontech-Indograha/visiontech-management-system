@@ -11,6 +11,7 @@ import { errorMessage } from "@/lib/errors";
 import {
   useAddDay,
   useAssignmentOptions,
+  useAvailableVehicles,
   useCreatePlanWithTeam,
   useSetTeam,
   useSiteOptions,
@@ -81,13 +82,20 @@ const createSchema = z
     leader_employee_id: required("Pilih ketua tim."),
     member_employee_ids: z.array(z.string()).min(1, "Pilih minimal satu anggota tim."),
     site_id: required("Pilih lokasi pekerjaan."),
+    vehicle_id: z.string(),
+    driver_employee_id: z.string(),
   })
-  .refine(period, periodIssue);
+  .refine(period, periodIssue)
+  .refine((value) => !value.vehicle_id || value.driver_employee_id.length > 0, {
+    path: ["driver_employee_id"],
+    message: "Pilih pengemudi kendaraan.",
+  });
 type CreateValues = z.infer<typeof createSchema>;
 
 /** Buat draft SK (POST /work-plans). Unit SK = unit karyawan PM yang dipilih. */
 export function CreatePlanDialog({ onClose }: { onClose: () => void }) {
   const sites = useSiteOptions();
+  const vehicles = useAvailableVehicles();
   const create = useCreatePlanWithTeam();
   const navigate = useNavigate();
   const [formError, setFormError] = useState<string | null>(null);
@@ -107,12 +115,16 @@ export function CreatePlanDialog({ onClose }: { onClose: () => void }) {
       leader_employee_id: "",
       member_employee_ids: [],
       site_id: "",
+      vehicle_id: "",
+      driver_employee_id: "",
     },
   });
   const periodStart = useWatch({ control, name: "period_start" });
   const periodEnd = useWatch({ control, name: "period_end" });
   const selectedPm = useWatch({ control, name: "pm_employee_id" });
   const selectedLeader = useWatch({ control, name: "leader_employee_id" });
+  const selectedVehicle = useWatch({ control, name: "vehicle_id" });
+  const selectedMembers = useWatch({ control, name: "member_employee_ids" });
   const options = useAssignmentOptions(periodStart, periodEnd);
   const effectivePm = selectedPm || options.data?.fixed_pm_employee_id;
 
@@ -139,6 +151,8 @@ export function CreatePlanDialog({ onClose }: { onClose: () => void }) {
         },
         leader_employee_id: v.leader_employee_id,
         member_employee_ids: v.member_employee_ids.filter((id) => id !== v.leader_employee_id),
+        vehicle_id: v.vehicle_id || undefined,
+        driver_employee_id: v.driver_employee_id || undefined,
       });
       toast.success("Draft SK dan tim berhasil dibuat.");
       onClose();
@@ -194,6 +208,24 @@ export function CreatePlanDialog({ onClose }: { onClose: () => void }) {
         </div>
         {errors.member_employee_ids && <p className="mt-1 text-sm text-destructive">{errors.member_employee_ids.message}</p>}
       </fieldset>
+      <SelectField
+        label="Kendaraan (opsional)"
+        hint={vehicles.isError ? "Daftar kendaraan tidak dapat dimuat." : "Hanya kendaraan berstatus tersedia dan belum terikat SK."}
+        {...register("vehicle_id")}
+      >
+        <option value="">Tanpa kendaraan</option>
+        {vehicles.data?.map((vehicle) => (
+          <option key={vehicle.id} value={vehicle.id}>{vehicle.name} · {vehicle.code}</option>
+        ))}
+      </SelectField>
+      {selectedVehicle && (
+        <SelectField label="Pengemudi kendaraan" error={errors.driver_employee_id?.message} {...register("driver_employee_id")}>
+          <option value="">Pilih pengemudi</option>
+          {options.data?.personnel_options
+            .filter((employee) => employee.id === selectedLeader || selectedMembers.includes(employee.id))
+            .map((employee) => <option key={employee.id} value={employee.id}>{employee.full_name}</option>)}
+        </SelectField>
+      )}
     </FormDialog>
   );
 }

@@ -147,3 +147,24 @@ export function usePromoteEmployee(employeeId: string) {
     },
   });
 }
+
+/** HR: karyawan baru (POST /employees, manage:users) — M2-03. */
+export function useCreateEmployee() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: S["EmployeeCreate"]) => (await api.post<Employee>("/employees", body)).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["employees"] }),
+  });
+}
+
+/** HR: akhiri masa kerja (POST /employees/{id}/offboard, domain.js OFFBOARD) — M2-02. Akses login ikut dicabut. */
+export function useOffboardEmployee(employeeId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (reason: string) => (await api.post(`/employees/${employeeId}/offboard`, { reason })).data,
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ["employee", employeeId] });
+      await qc.invalidateQueries({ queryKey: ["employees"] });
+    },
+  });
+}

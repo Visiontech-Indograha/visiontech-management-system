@@ -5,7 +5,9 @@ import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { formatDate } from "@/lib/format";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
+import { useSession } from "@/app/session";
 import { PAGE_SIZE, useEmployees } from "./api";
+import { CreateEmployeeDialog } from "./Lifecycle";
 
 const inputCls = "h-10 rounded-control border border-line bg-surface px-3 text-sm";
 
@@ -13,6 +15,8 @@ export function DirectoryPage() {
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("active");
   const [page, setPage] = useState(1);
+  const [creating, setCreating] = useState(false);
+  const canManage = !!useSession().me?.permissions.includes("manage:users");
   const search = useDebouncedValue(q, 300);
   const list = useEmployees({ q: search, status, page });
   const data = list.data;
@@ -25,7 +29,11 @@ export function DirectoryPage() {
 
   return (
     <>
-      <PageHeader title="Direktori" />
+      <PageHeader
+        title="Direktori"
+        action={canManage && <Button onClick={() => setCreating(true)}>Tambah karyawan</Button>}
+      />
+      {creating && <CreateEmployeeDialog onClose={() => setCreating(false)} />}
       <div className="mb-4 flex flex-wrap gap-3">
         <input
           aria-label="Cari nama atau no. karyawan"

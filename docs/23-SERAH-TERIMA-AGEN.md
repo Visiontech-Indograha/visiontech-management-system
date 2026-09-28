@@ -57,28 +57,24 @@ Yang dibagikan ke penguji adalah APK, bukan `.aab`: file `.aab` hanya untuk Play
 | R-21 | Kartu "Akun kantor" / PM "Segera hadir" di HP; penanda gagal login dan cooldown 15 mnt (HP, web, Direktori HR); perbaikan pesan galat login HP | `276b011e` (sudah di `prod` & server) |
 | R-21 | Rencana uji nyata di produksi | `docs/22-RENCANA-UJI-PRODUKSI.md` |
 | R-22 | Repo pindah: remote laptop, remote server, `autodeploy.sh` | `cd60871c` (di server) |
-| R-22 | `/ready` cek DB; autodeploy lapor ✅ hanya setelah siap pakai 3× berturut-turut; embed Discord rapi | commit R-22 (lihat `git log`) |
+| R-22 | `/ready` cek DB; autodeploy lapor ✅ hanya setelah siap pakai 3× berturut-turut; embed Discord rapi; skrip terbaru sudah dipasang di server dengan backup | commit R-22 (lihat `git log`) |
 | R-23 | Ketua dapat menerima SK terbit di mobile; PM mendapat petunjuk agar ketua membuka mobile | lihat `git log` |
 | R-23 | Form SK: PM otomatis, lokasi tunggal, tim sekaligus, kandidat bebas konflik; hari kerja tiga kolom | lihat `git log` |
 | R-23 | Workflow CD lama berbasis tag diganti penjaga sumber `prod`; build nyata server tetap dari `origin/prod` | lihat `git log` |
 | R-23 | Kendaraan tersedia dapat dipilih dan langsung direservasi saat membuat draft SK; pengemudi dipilih dari tim | lihat `git log` |
-| R-23 | SK tidak dapat dimulai sebelum seluruh kendaraan teralokasi selesai diperiksa pengemudi | lihat `git log` |
+| R-23 | SK tidak dapat dimulai sebelum seluruh kendaraan teralokasi selesai diperiksa pengemudi | `69836807`; sudah di produksi melalui `2678343b` |
 
 ## 4. Terbuka — kerjakan / tanyakan berikutnya
 
-1. **Uji R-23 di produksi setelah merge `development` → `prod`**. Inspeksi kendaraan dilakukan
+1. **Uji R-23 di produksi** (kode sudah aktif melalui `2678343b`). Inspeksi kendaraan dilakukan
    pengemudi setelah reservasi (`driver_checked_at`) dan kini wajib lulus sebelum SK dapat dimulai.
-2. **Salin `autodeploy.sh` baru ke server** setelah commit R-22 masuk `prod`. Skrip di server adalah
-   salinan dan tidak ikut ter-update. Perintahnya ada di `deploy/README.md` bagian "Memasang
-   perubahan skrip". Deploy yang membawa R-22 masih dilaporkan oleh skrip lama; format baru baru
-   berlaku mulai deploy berikutnya.
-3. **UAT seminggu** mengikuti `docs/22`. Temuan dicatat di tabel Temuan di docs/22, lalu ke docs/19.
+2. **UAT seminggu** mengikuti `docs/22`. Temuan dicatat di tabel Temuan di docs/22, lalu ke docs/19.
    Belum ada skenario yang diuji di HP nyata.
-4. Keputusan pemilik yang masih ditunggu:
+3. Keputusan pemilik yang masih ditunggu:
    - **M1-02**: siapa yang memberi peran global.
    - **RLS R3/R4**: lihat docs/19 bagian "Menunggu keputusan" (Q-xx).
-5. Menu PM di HP (R-09) masih "Segera hadir". Desainnya ditunda sampai pemilik memutuskan.
-6. Jam server: NTP aktif dan tersinkron (dicek 2026-09-28). `StartedAt` kontainer DB pernah tercatat
+4. Menu PM di HP (R-09) masih "Segera hadir". Desainnya ditunda sampai pemilik memutuskan.
+5. Jam server: NTP aktif dan tersinkron (dicek 2026-09-28). `StartedAt` kontainer DB pernah tercatat
    ±2 jam di depan, kemungkinan sisa lonjakan jam sebelum NTP. Pantau saja.
 
 ## 5. Cara memverifikasi cepat

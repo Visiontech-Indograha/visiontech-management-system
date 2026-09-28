@@ -14,6 +14,14 @@ Server (`~/deploy/vms-mvp`): `autodeploy.sh` dijalankan cron tiap menit (dengan 
 Urutan: checkout → `docker compose build` → backup DB (14 terakhir disimpan di `backups/`) →
 `up -d` → `alembic upgrade head` → **cek siap pakai**.
 
+Sumber build dikunci ke branch **`prod`**, bukan `main` dan bukan tag:
+
+- `deploy/autodeploy.sh` memakai `BRANCH="${VMS_DEPLOY_BRANCH:-prod}"` lalu mengambil `origin/$BRANCH`.
+- `.github/workflows/cd.yml` hanya berjalan pada push `prod` (atau manual dengan checkout tetap `prod`)
+  dan memverifikasi bahwa commit yang diperiksa sama dengan `origin/prod`.
+- Workflow GitHub tidak melakukan deploy kedua. Build produksi yang nyata tetap dilakukan di server agar
+  backup, migrasi, dan pemeriksaan readiness berada dalam satu alur yang sama.
+
 ## Cek siap pakai (2026-09-28)
 
 Cek ini diulang tiap 5 detik, maksimal ±2 menit. Semua syarat berikut harus lolos **3× berturut-turut**:

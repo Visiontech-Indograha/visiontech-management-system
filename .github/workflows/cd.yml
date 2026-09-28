@@ -1,57 +1,44 @@
-name: CD
+# Penjaga sumber produksi. Deploy nyata dijalankan cron server melalui deploy/autodeploy.sh.
+name: CD · Production source guard
 
 on:
   push:
-    tags:
-      - 'v*.*.*'
+    branches: [prod]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: production-source-prod
+  cancel-in-progress: false
+
 jobs:
-  deploy:
+  verify-prod-source:
+    name: Pastikan sumber deploy = prod
     runs-on: ubuntu-latest
-    environment: production
     steps:
-      - uses: actions/checkout@v4
-      - name: Build Docker Image
-        run: |
-          echo "Building docker image..."
-          # docker build -t vms_api:${{ github.sha }} .
-      - name: Notify Deploy Start
-        run: |
-          curl -H "Content-Type: application/json" \
-               -X POST \
-               -d "{\"content\": \"🚀 Memulai deploy produksi untuk tag ${{ github.ref_name }}...\"}" \
-               ${{ secrets.DISCORD_WEBHOOK_DEPLOY }}
-      
-      - name: Setup Tailscale
-        uses: tailscale/github-action@v2
+      - name: Checkout branch prod
+        uses: actions/checkout@v4
         with:
-          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
-          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
-          tags: tag:ci
-          
-      - name: Run Migrations and Deploy
+          ref: prod
+          fetch-depth: 0
+
+      - name: Verifikasi commit berasal dari prod
+        shell: bash
         run: |
-          echo "Connecting to server and running migrations via SSH..."
-          # ssh -o StrictHostKeyChecking=no ageng@visiontech "cd /vms && docker-compose up -d"
-      
-      - name: Smoke Test
+          git fetch --quiet origin prod
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/prod)"
+          echo "Sumber produksi: prod @ $(git rev-parse --short HEAD)"
+
+      - name: Periksa skrip deploy
+        shell: bash
         run: |
-          echo "Running smoke tests..."
-          # curl -f https://vms.visiontech/api/health
-          
-      - name: Notify Deploy Success
-        if: success()
+          bash -n deploy/autodeploy.sh
+          bash -n deploy/backup.sh
+          grep -F 'BRANCH="${VMS_DEPLOY_BRANCH:-prod}"' deploy/autodeploy.sh
+
+      - name: Catat mekanisme deploy nyata
         run: |
-          curl -H "Content-Type: application/json" \
-               -X POST \
-               -d "{\"content\": \"✅ Deploy produksi ${{ github.ref_name }} berhasil! Waktu henti minimal.\"}" \
-               ${{ secrets.DISCORD_WEBHOOK_DEPLOY }}
-               
-      - name: Notify Deploy Failure
-        if: failure()
-        run: |
-          curl -H "Content-Type: application/json" \
-               -X POST \
-               -d "{\"content\": \"🔴 ROLLBACK - Deploy produksi ${{ github.ref_name }} GAGAL. Periksa log tindakan.\"}" \
-               ${{ secrets.DISCORD_WEBHOOK_DEPLOY }}
+          echo "Server mengambil origin/prod tiap menit melalui deploy/autodeploy.sh."
+          echo "Workflow ini hanya menjaga sumber prod; build, backup, migrasi, dan readiness dijalankan server."

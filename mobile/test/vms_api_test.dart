@@ -111,6 +111,21 @@ void main() {
     expect(backend.requests.map((r) => r.method).toSet(), {'GET'});
   });
 
+  test('ketua menerima SK secara daring dengan row version terbaru', () async {
+    backend.routes['/work-plans/p1/accept'] = (_) => {
+      'id': 'p1',
+      'status': 'ACCEPTED',
+      'row_version': 8,
+    };
+
+    final accepted = await api.acceptPlan('p1', rowVersion: 7);
+
+    expect(accepted['status'], 'ACCEPTED');
+    expect(last().method, 'POST');
+    expect(last().path, '/api/v1/work-plans/p1/accept');
+    expect(last().data, {'row_version': 7, 'reason': ''});
+  });
+
   group('berkas & sinkron', () {
     test('unggah berkas mengembalikan file_id', () async {
       final dir = await Directory.systemTemp.createTemp('vms-uji');

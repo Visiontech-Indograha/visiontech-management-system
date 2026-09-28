@@ -29,6 +29,18 @@ class VmsApi {
   Future<List<Map<String, dynamic>>> planDays(String planId) async =>
       _list((await _dio.get('$_p/work-plans/$planId/days')).data);
 
+  /// Penerimaan SK wajib daring karena menandatangani dokumen di server.
+  Future<Map<String, dynamic>> acceptPlan(
+    String planId, {
+    required int rowVersion,
+  }) async => Map<String, dynamic>.from(
+    (await _dio.post(
+          '$_p/work-plans/$planId/accept',
+          data: {'row_version': rowVersion, 'reason': ''},
+        )).data
+        as Map,
+  );
+
   // --- Lokasi & absensi ---------------------------------------------------
   Future<List<Map<String, dynamic>>> sites() async =>
       _list((await _dio.get('$_p/sites')).data);

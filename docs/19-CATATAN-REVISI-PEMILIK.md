@@ -13,6 +13,7 @@ Status: **Selesai** · **Berjalan** · **Menunggu keputusan** · **Ditunda (pasc
 
 | # | Tanggal | Dari | Permintaan | Keputusan / cara dikerjakan | Status |
 |---|---|---|---|---|---|
+| R-23 | 2026-09-28 | Pemilik (UAT produksi) | Sederhanakan pembuatan SK: PM otomatis; hari kerja cukup tanggal, nama, deskripsi; penerimaan ketua harus bisa di mobile; lokasi jangan ganda; OM bebas memilih personel yang tidak terikat SK, PM hanya bawahannya; kendaraan dialokasikan saat membuat SK bila tersedia & sudah diperiksa; PM diberi petunjuk membuka mobile | Dikerjakan bertahap sesuai aturan satu task per iterasi. **Selesai:** penerimaan SK oleh ketua di mobile (daring + konfirmasi + tanda tangan server) dan petunjuk persisten di web PM agar ketua membuka mobile. **Berikutnya:** form pembuatan, kandidat personel server-side, lokasi tunggal, dan alokasi kendaraan. | Berjalan |
 | R-01 | 2026-09-25 | Pemilik | PM melihat rekap lembur untuk unitnya sendiri (V-28) | Rekap lembur: PM unit hanya unitnya; Finance/HR/OPS/Admin seluruh organisasi | Selesai |
 | R-02 | 2026-09-25 | Pemilik | Tambah fitur "hapus karyawan" | Dikerjakan sebagai **arsip & pulihkan** (data historis tetap), plus **offboarding** (akhiri masa kerja, cabut akses) | Selesai |
 | R-03 | 2026-09-26 | Pemilik | Kunci tanda tangan dokumen (fase 6) | Kunci Ed25519 lokal dari env dulu; **adaptor KMS wajib sebelum produksi** | Selesai (KMS: Ditunda sebelum produksi) |

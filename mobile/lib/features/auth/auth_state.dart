@@ -75,6 +75,10 @@ class AuthLocked extends AuthState {
 }
 
 class AuthUnauthenticated extends AuthState {
-  const AuthUnauthenticated({this.error});
+  const AuthUnauthenticated({this.error, this.lockedUntil});
   final String? error;
+
+  /// Terisi bila server mengunci login sementara (5 kali gagal / 15 menit,
+  /// R-21) -- tombol Masuk dimatikan dan hitung mundur ditampilkan sampai jam ini.
+  final DateTime? lockedUntil;
 }

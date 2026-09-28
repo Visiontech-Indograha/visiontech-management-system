@@ -103,6 +103,17 @@ export function AccountCard({ employee }: { employee: Employee }) {
                 ? formatDateTime(a.last_login_at)
                 : "belum pernah"}
             </p>
+            {a.locked_until && new Date(a.locked_until) > new Date() ? (
+              <p className="text-danger" data-testid="account-locked">
+                <Badge tone="danger">Terkunci</Badge> {a.failed_logins} kali gagal login dalam 15 menit — bisa
+                masuk lagi pukul {formatDateTime(a.locked_until)}.
+              </p>
+            ) : (a.failed_logins ?? 0) > 0 ? (
+              <p className="text-warning" data-testid="account-failed">
+                <Badge tone="warning">Gagal login</Badge> {a.failed_logins} kali dalam 15 menit terakhir (terkunci
+                setelah 5 kali).
+              </p>
+            ) : null}
             <div className="flex flex-wrap gap-2">
               <Button
                 variant="outline"

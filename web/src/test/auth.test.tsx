@@ -35,6 +35,21 @@ describe("login dan sesi API", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Email atau password salah.");
   });
 
+  it("akun terkunci: hitung mundur cooldown & tombol Masuk mati (R-21)", async () => {
+    mockApi(() =>
+      apiError(403, "LOCKED", "Terlalu banyak kegagalan login. Coba lagi dalam 15 menit.", {
+        retry_after_seconds: 900,
+        locked_until: "2026-09-28T10:00:00+07:00",
+      }),
+    );
+    renderRoute("/login");
+    type("Email", "budi@example.com");
+    type("Password", "salah");
+    fireEvent.click(screen.getByRole("button", { name: "Masuk" }));
+    expect(await screen.findByTestId("login-locked")).toHaveTextContent("15:00");
+    expect(screen.getByRole("button", { name: /Tunggu 1[45]:/ })).toBeDisabled();
+  });
+
   it("/auth/me dengan hanya empat field kontrak membuka beranda tanpa crash", async () => {
     const calls = mockApi((request) => {
       if (request.url === "/auth/login") return { data: TOKEN };

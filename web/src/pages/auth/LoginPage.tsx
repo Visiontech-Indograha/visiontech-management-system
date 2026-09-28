@@ -1,9 +1,9 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Navigate, useNavigate } from "react-router-dom";
 import { z } from "zod";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Timer } from "lucide-react";
 import { useSession } from "@/app/session";
 import logo from "@/assets/brand/logo-visiontech.png";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -24,6 +24,7 @@ export function LoginPage({ admin = false }: { admin?: boolean }) {
   const { me, login } = useSession();
   const navigate = useNavigate();
   const [formError, setFormError] = useState<string | null>(null);
+  const lockLeft = useLockCountdown();
   const {
     register,
     handleSubmit,
@@ -39,6 +40,8 @@ export function LoginPage({ admin = false }: { admin?: boolean }) {
       navigate("/", { replace: true });
     } catch (e) {
       setFormError(e instanceof ApiError ? e.message : "Tidak dapat masuk. Coba lagi.");
+      const retry = e instanceof ApiError && e.code === "LOCKED" ? Number(e.details.retry_after_seconds) : 0;
+      if (retry > 0) lockLeft.start(retry);
     }
   });
 
@@ -70,7 +73,15 @@ export function LoginPage({ admin = false }: { admin?: boolean }) {
           </CardHeader>
           <CardContent>
             <form onSubmit={onSubmit} noValidate className="space-y-4">
-              {formError && (
+              {lockLeft.seconds > 0 ? (
+                <Alert variant="destructive" data-testid="login-locked">
+                  <Timer aria-hidden />
+                  <AlertDescription>
+                    Login dikunci sementara karena terlalu banyak percobaan gagal. Coba lagi dalam{" "}
+                    <strong>{mmss(lockLeft.seconds)}</strong>.
+                  </AlertDescription>
+                </Alert>
+              ) : formError && (
                 <Alert variant="destructive">
                   <AlertCircle aria-hidden />
                   <AlertDescription>{formError}</AlertDescription>
@@ -86,8 +97,8 @@ export function LoginPage({ admin = false }: { admin?: boolean }) {
                 <Input id="password" type="password" autoComplete="current-password" {...register("password")} />
                 {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
               </div>
-              <Button type="submit" className="h-11 w-full" disabled={isSubmitting}>
-                {isSubmitting ? "Memproses..." : "Masuk"}
+              <Button type="submit" className="h-11 w-full" disabled={isSubmitting || lockLeft.seconds > 0}>
+                {isSubmitting ? "Memproses..." : lockLeft.seconds > 0 ? `Tunggu ${mmss(lockLeft.seconds)}` : "Masuk"}
               </Button>
             </form>
           </CardContent>
@@ -95,4 +106,27 @@ export function LoginPage({ admin = false }: { admin?: boolean }) {
       </section>
     </main>
   );
+}
+
+function mmss(total: number): string {
+  return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+}
+
+/** Hitung mundur cooldown login (R-21) dari `retry_after_seconds` server; server tetap penentunya. */
+function useLockCountdown() {
+  const [until, setUntil] = useState(0);
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (until <= now) return;
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, [until, now]);
+  return {
+    seconds: Math.max(0, Math.ceil((until - now) / 1000)),
+    start: (secs: number) => {
+      const t = Date.now();
+      setNow(t);
+      setUntil(t + secs * 1000);
+    },
+  };
 }

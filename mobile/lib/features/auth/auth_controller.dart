@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api_client.dart';
 import '../../core/biometric_auth.dart';
+import '../../core/error_message.dart';
 import '../../core/providers.dart';
 import '../../core/session_policy.dart';
 import 'auth_state.dart';
@@ -231,8 +232,25 @@ class AuthController extends Notifier<AuthState> {
         AuthUser.fromJson(meResponse.data as Map<String, dynamic>),
       );
     } on DioException catch (e) {
-      state = AuthUnauthenticated(error: _extractErrorMessage(e));
+      state = AuthUnauthenticated(
+        error: _extractErrorMessage(e),
+        lockedUntil: _lockedUntil(e),
+      );
     }
+  }
+
+  /// Cooldown dari server (`LOCKED`, details.retry_after_seconds) dihitung
+  /// relatif terhadap jam HP saat jawaban diterima -- hanya untuk hitung
+  /// mundur tampilan; server tetap yang memutuskan kapan login dibuka lagi.
+  DateTime? _lockedUntil(DioException e) {
+    final data = e.response?.data;
+    if (data is! Map || data['error'] is! Map) return null;
+    final error = data['error'] as Map;
+    if (error['code'] != 'LOCKED') return null;
+    final details = error['details'];
+    final seconds = details is Map ? details['retry_after_seconds'] : null;
+    if (seconds is! num || seconds <= 0) return null;
+    return DateTime.now().add(Duration(seconds: seconds.ceil()));
   }
 
   /// Logout MANUAL dari layar Profil: bersihkan seluruh jejak sesi di HP,
@@ -286,14 +304,12 @@ class AuthController extends Notifier<AuthState> {
   }
 
   String _extractErrorMessage(DioException e) {
-    final data = e.response?.data;
-    if (data is Map && data['detail'] is String) {
-      return data['detail'] as String;
-    }
     if (isNetworkFailure(e)) {
       return 'Tidak bisa terhubung ke server. Periksa koneksi & alamat server.';
     }
-    return 'Login gagal. Coba lagi.';
+    // Dulu hanya membaca `detail` (format FastAPI) sehingga pesan VMS
+    // (`error.message`: salah sandi, sisa percobaan, terkunci) tak pernah tampil.
+    return apiErrorMessage(e, fallback: 'Login gagal. Coba lagi.');
   }
 }
 

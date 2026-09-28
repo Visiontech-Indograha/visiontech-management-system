@@ -7,6 +7,7 @@ import '../auth/auth_state.dart';
 import '../sync/sync_queue_screen.dart';
 import '../../core/theme/theme.dart';
 import '../../shared/ui/vms_ui.dart';
+import '../auth/office_role_notice.dart';
 
 const _roleLabel = {
   'ADMIN': 'Admin',
@@ -245,6 +246,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                const OfficeRoleNotice(),
                 const SectionTitle('Sinkronisasi data'),
                 FadeSlideIn(
                   child: SurfaceCard(

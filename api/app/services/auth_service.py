@@ -12,7 +12,7 @@ from typing import Any
 from app.core.alerts import send_security_alert
 from app.core.errors import AppError, NotFoundError
 from app.core.security import create_jwt_token, hash_password, verify_password
-from app.repositories.session_repo import SessionRepo
+from app.repositories.session_repo import MAX_LOGIN_FAILURES, SessionRepo
 from app.repositories.user_repo import UserRepo
 
 ACCESS_TOKEN_TTL = timedelta(minutes=15)
@@ -60,24 +60,40 @@ def _dummy_hash() -> str:
     return _DUMMY_HASH
 
 
+def _locked(state: Any, *, persist: bool = False) -> AppError:
+    minutes = max(1, -(-state.retry_after_seconds // 60))
+    return AppError(
+        "LOCKED", f"Terlalu banyak kegagalan login. Coba lagi dalam {minutes} menit.", status=403,
+        persist=persist,
+        details={"retry_after_seconds": state.retry_after_seconds, "locked_until": state.locked_until.isoformat()},
+    )
+
+
 class AuthService:
     def __init__(self, users: UserRepo, sessions: SessionRepo) -> None:
         self.users = users
         self.sessions = sessions
 
     async def login(self, login: str, password: str, client: ClientInfo) -> IssuedTokens:
-        if await self.sessions.login_is_locked(login):
+        state = await self.sessions.failed_logins(login)
+        if state.locked_until:
             await send_security_alert(
                 "Lonjakan Kegagalan Login", f"Sebuah akun terkunci sementara dari IP {client.ip}."
             )
-            raise AppError("LOCKED", "Terlalu banyak kegagalan login. Coba lagi nanti.", status=403)
+            raise _locked(state)
 
         user = await self.users.find_by_login(login)
         # Selalu hitung argon2 — tanpa ini login tak terdaftar jauh lebih cepat & bisa ditebak (dok 08).
         stored_hash = user.password_hash if user and user.password_hash else _dummy_hash()
         if not verify_password(password, stored_hash) or not user or not user.password_hash:
             await self.sessions.record_login_attempt(login, client.ip, False, "Invalid credentials")
-            raise AppError("INVALID_CREDENTIALS", "Email atau kata sandi salah", status=400, persist=True)
+            # Sisa percobaan & cooldown dihitung sama untuk login terdaftar maupun tidak (tak membocorkan akun).
+            after = await self.sessions.failed_logins(login)
+            if after.locked_until:
+                raise _locked(after, persist=True)
+            remaining = MAX_LOGIN_FAILURES - after.failures
+            raise AppError("INVALID_CREDENTIALS", f"Email atau kata sandi salah. Sisa {remaining} percobaan.",
+                           status=400, persist=True, details={"remaining_attempts": remaining})
 
         if not user.is_active:
             raise _inactive()

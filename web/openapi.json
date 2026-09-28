@@ -6166,6 +6166,23 @@
        }
       ],
       "title": "Last Login At"
+     },
+     "failed_logins": {
+      "type": "integer",
+      "title": "Failed Logins",
+      "default": 0
+     },
+     "locked_until": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Locked Until"
      }
     },
     "type": "object",
@@ -6225,6 +6242,23 @@
        }
       ],
       "title": "Last Login At"
+     },
+     "failed_logins": {
+      "type": "integer",
+      "title": "Failed Logins",
+      "default": 0
+     },
+     "locked_until": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Locked Until"
      },
      "temporary_password": {
       "type": "string",

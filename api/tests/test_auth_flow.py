@@ -47,13 +47,30 @@ def test_wrong_password_is_rejected_and_failure_is_persisted(client, seeded_user
 
 
 def test_five_failures_lock_the_login(client, seeded_user):
-    for _ in range(5):
-        _login(client, seeded_user, "salah")
+    remaining = [_login(client, seeded_user, "salah").json()["error"] for _ in range(5)]
+    # Kegagalan 1–4 memberi tahu sisa percobaan; yang ke-5 langsung mengunci & menyebut cooldown.
+    assert [e["details"].get("remaining_attempts") for e in remaining[:4]] == [4, 3, 2, 1]
+    assert remaining[4]["code"] == "LOCKED"
 
-    response = _login(client, seeded_user)
+    response = _login(client, seeded_user)  # kata sandi benar pun ditolak selama cooldown
 
     assert response.status_code == 403
-    assert response.json()["error"]["code"] == "LOCKED"
+    error = response.json()["error"]
+    assert error["code"] == "LOCKED"
+    assert 14 * 60 < error["details"]["retry_after_seconds"] <= 15 * 60
+    assert "15 menit" in error["message"]
+
+
+def test_cooldown_ends_when_the_oldest_counted_failure_leaves_the_window(client, seeded_user):
+    for _ in range(5):
+        _login(client, seeded_user, "salah")
+    # Mundurkan kegagalan seolah terjadi 20 menit lalu → di luar jendela 15 menit.
+    seeded_user.query(
+        "UPDATE vms.login_attempt SET attempted_at = now() - interval '20 minutes' WHERE login = %s",
+        (seeded_user.login,),
+    )
+
+    assert _login(client, seeded_user).status_code == 200
 
 
 def test_inactive_account_cannot_log_in(client, seeded_user):
@@ -179,8 +196,9 @@ def test_unknown_login_still_runs_password_hash(monkeypatch):
             return None
 
     class _Sessions:
-        async def login_is_locked(self, login: str) -> bool:
-            return False
+        async def failed_logins(self, login: str) -> object:
+            from types import SimpleNamespace
+            return SimpleNamespace(failures=1, locked_until=None, retry_after_seconds=0)
 
         async def record_login_attempt(self, *a: object, **k: object) -> None:
             return None

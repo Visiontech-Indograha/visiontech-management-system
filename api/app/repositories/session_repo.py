@@ -10,11 +10,34 @@ from uuid import UUID
 
 from .base_repo import BaseRepo
 
+# Sama dengan default vms.login_is_locked (db/04_signature_auth.sql): 5 gagal dalam 15 menit → terkunci.
+MAX_LOGIN_FAILURES = 5
+LOCK_WINDOW = "15 minutes"
+
+# Kegagalan dalam jendela + kapan kunci lepas: saat kegagalan ke-5 terbaru keluar dari jendela.
+# Pemanggil menyediakan `{login}` (parameter atau kolom berkorelasi).
+FAILED_LOGINS_SQL = f"""
+    SELECT count(*)::int AS failures,
+           CASE WHEN count(*) >= {MAX_LOGIN_FAILURES}
+                THEN (array_agg(attempted_at ORDER BY attempted_at DESC))[{MAX_LOGIN_FAILURES}]
+                     + interval '{LOCK_WINDOW}' END AS locked_until
+    FROM vms.login_attempt
+    WHERE login = {{login}} AND NOT successful AND attempted_at > now() - interval '{LOCK_WINDOW}'
+"""
+
 
 class SessionRepo(BaseRepo):
 
-    async def login_is_locked(self, login: str) -> bool:
-        return bool(await self.scalar("SELECT vms.login_is_locked(:login)", {"login": login}))
+    async def failed_logins(self, login: str) -> Any:
+        """(failures, locked_until, retry_after_seconds) — dihitung dengan jam basis data."""
+        return await self.fetchone(
+            f"""
+            SELECT f.failures, f.locked_until,
+                   GREATEST(0, CEIL(EXTRACT(EPOCH FROM f.locked_until - now())))::int AS retry_after_seconds
+            FROM ({FAILED_LOGINS_SQL.format(login=":login")}) f
+            """,
+            {"login": login},
+        )
 
     async def record_login_attempt(
         self, login: str, ip: str | None, successful: bool, reason: str | None = None

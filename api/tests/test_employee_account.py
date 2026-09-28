@@ -74,3 +74,21 @@ def test_only_account_managers_in_the_same_organisation(client, world: World, ot
     assert client.get(f"/employees/{emp}/account", headers=outsider).status_code == 404
     assert client.post(f"/employees/{emp}/account", headers=outsider,
                        json={"login": f"x.{world.tag}@contoh.id"}).status_code == 404
+
+
+def test_account_shows_failed_logins_and_lock(client, world: World):
+    """R-21: HR melihat penanda akun yang gagal login & kapan kuncinya lepas."""
+    hr = world.headers(client, "hr")
+    emp = _new_employee(client, world, f"AK-{world.tag}-5")
+    login = f"gagal.{world.tag}@contoh.id"
+    client.post(f"/employees/{emp}/account", headers=hr, json={"login": login})
+
+    for _ in range(2):
+        client.post("/auth/login", json={"email": login, "password": "salah-sekali"})
+    state = client.get(f"/employees/{emp}/account", headers=hr).json()
+    assert (state["failed_logins"], state["locked_until"]) == (2, None)
+
+    for _ in range(3):
+        client.post("/auth/login", json={"email": login, "password": "salah-sekali"})
+    state = client.get(f"/employees/{emp}/account", headers=hr).json()
+    assert state["failed_logins"] == 5 and state["locked_until"] is not None

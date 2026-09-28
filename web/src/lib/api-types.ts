@@ -1950,6 +1950,13 @@ export interface components {
             is_active?: boolean | null;
             /** Last Login At */
             last_login_at?: string | null;
+            /**
+             * Failed Logins
+             * @default 0
+             */
+            failed_logins: number;
+            /** Locked Until */
+            locked_until?: string | null;
         };
         /** AccountWithPassword */
         AccountWithPassword: {
@@ -1963,6 +1970,13 @@ export interface components {
             is_active?: boolean | null;
             /** Last Login At */
             last_login_at?: string | null;
+            /**
+             * Failed Logins
+             * @default 0
+             */
+            failed_logins: number;
+            /** Locked Until */
+            locked_until?: string | null;
             /** Temporary Password */
             temporary_password: string;
         };

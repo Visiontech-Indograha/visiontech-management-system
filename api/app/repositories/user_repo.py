@@ -8,6 +8,7 @@ from typing import Any
 from uuid import UUID
 
 from .base_repo import BaseRepo
+from .session_repo import FAILED_LOGINS_SQL
 
 # Peran global pertama; peran per pekerjaan (LEADER/MEMBER) berasal dari SK, bukan dari sini.
 _USER_WITH_ROLE = """
@@ -56,7 +57,12 @@ class UserRepo(BaseRepo):
     # ── Akun karyawan (M1-01, R-20) ─────────────────────────────────────────────────────────────
     async def account_of_employee(self, employee_id: UUID | str) -> Any:
         return await self.fetchone(
-            "SELECT id, login, is_active, last_login_at FROM vms.app_user WHERE employee_id = CAST(:emp AS uuid)",
+            f"""
+            SELECT u.id, u.login, u.is_active, u.last_login_at, f.failures, f.locked_until
+            FROM vms.app_user u
+            LEFT JOIN LATERAL ({FAILED_LOGINS_SQL.format(login="u.login")}) f ON true
+            WHERE u.employee_id = CAST(:emp AS uuid)
+            """,
             {"emp": employee_id})
 
     async def login_taken(self, org_id: UUID | str, login: str) -> bool:

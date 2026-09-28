@@ -16,6 +16,7 @@ import '../auth/auth_state.dart';
 import '../../core/theme/theme.dart';
 import '../../shared/ui/vms_select_field.dart';
 import '../../shared/ui/vms_ui.dart';
+import '../auth/office_role_notice.dart';
 
 /// Absensi (M5, dok 05 §3.5). Wajib daring: waktu & geofence ditentukan server.
 /// Di luar radius lokasi, server mewajibkan swafoto — aplikasi memintanya lebih dulu.
@@ -336,6 +337,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  const OfficeRoleNotice(),
                   if (_cachedAt != null)
                     NoticeBanner(
                       icon: Icons.cloud_off_rounded,

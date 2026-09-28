@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -22,14 +24,37 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
 
+  /// Detak per detik untuk hitung mundur cooldown login (R-21); hanya hidup
+  /// selama akun terkunci.
+  Timer? _ticker;
+
   @override
   void dispose() {
+    _ticker?.cancel();
     _usernameController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
+  void _syncTicker(bool locked) {
+    if (locked && _ticker == null) {
+      _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
+        if (mounted) setState(() {});
+      });
+    } else if (!locked && _ticker != null) {
+      _ticker!.cancel();
+      _ticker = null;
+    }
+  }
+
+  static String _mmss(Duration d) {
+    final m = d.inMinutes.toString().padLeft(2, '0');
+    final s = (d.inSeconds % 60).toString().padLeft(2, '0');
+    return '$m:$s';
+  }
+
   void _submit() {
+    if (_lockRemaining() != null) return;
     if (!_formKey.currentState!.validate()) return;
     ref
         .read(authControllerProvider.notifier)
@@ -39,6 +64,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         );
   }
 
+  /// Sisa cooldown, atau null bila tidak sedang terkunci.
+  Duration? _lockRemaining() {
+    final auth = ref.read(authControllerProvider);
+    final until = auth is AuthUnauthenticated ? auth.lockedUntil : null;
+    if (until == null) return null;
+    final left = until.difference(DateTime.now());
+    return left > Duration.zero ? left : null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authControllerProvider);
@@ -46,6 +80,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final errorMessage = authState is AuthUnauthenticated
         ? authState.error
         : null;
+    final lockRemaining = _lockRemaining();
+    _syncTicker(lockRemaining != null);
     final theme = ShadTheme.of(context);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -143,7 +179,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
-                                if (errorMessage != null) ...[
+                                if (lockRemaining != null) ...[
+                                  ShadAlert.destructive(
+                                    key: const Key('login-locked'),
+                                    icon: const Icon(LucideIcons.timer),
+                                    title: const Text(
+                                      'Login dikunci sementara',
+                                    ),
+                                    description: Text(
+                                      'Terlalu banyak percobaan gagal. Coba lagi '
+                                      'dalam ${_mmss(lockRemaining)}.',
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                ] else if (errorMessage != null) ...[
                                   ShadAlert.destructive(
                                     icon: const Icon(LucideIcons.circleAlert),
                                     description: Text(errorMessage),
@@ -200,7 +249,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 const SizedBox(height: 20),
                                 ShadButton(
                                   height: 54,
-                                  onPressed: isLoading ? null : _submit,
+                                  onPressed: isLoading || lockRemaining != null
+                                      ? null
+                                      : _submit,
                                   leading: isLoading
                                       ? const SizedBox.square(
                                           dimension: 16,
@@ -211,7 +262,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                         )
                                       : null,
                                   child: Text(
-                                    isLoading ? 'Memproses...' : 'Masuk',
+                                    isLoading
+                                        ? 'Memproses...'
+                                        : lockRemaining != null
+                                        ? 'Tunggu ${_mmss(lockRemaining)}'
+                                        : 'Masuk',
                                   ),
                                 ),
                               ],

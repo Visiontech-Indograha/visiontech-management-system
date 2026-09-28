@@ -396,4 +396,19 @@ describe("akun login karyawan (M1-01)", () => {
     expect(await screen.findByText("Sementara123")).toBeInTheDocument();
     expect(calls.find((c) => c.url === "/employees/e1/account" && c.method === "post")!.data).toEqual({ login: "baru@contoh.id" });
   });
+
+  it("HR melihat penanda akun terkunci karena gagal login (R-21)", async () => {
+    mockApi((c) => {
+      if (c.url === "/employees/e1") return { data: employee() };
+      if (c.url === "/employees/e1/account")
+        return {
+          data: {
+            exists: true, login: "a@contoh.id", is_active: true, last_login_at: null,
+            failed_logins: 5, locked_until: new Date(Date.now() + 600_000).toISOString(),
+          },
+        };
+    });
+    renderRoute("/directory/e1", { role: "HR" });
+    expect(await screen.findByTestId("account-locked")).toHaveTextContent("5 kali gagal login");
+  });
 });

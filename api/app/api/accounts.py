@@ -28,6 +28,9 @@ class AccountOut(BaseModel):
     login: str | None = None
     is_active: bool | None = None
     last_login_at: datetime | None = None
+    failed_logins: int = 0
+    """Kegagalan login dalam 15 menit terakhir; `locked_until` terisi bila akun sedang terkunci."""
+    locked_until: datetime | None = None
 
 
 class AccountCreate(BaseModel):
@@ -46,7 +49,8 @@ def _out(row: Any) -> AccountOut:
     if row is None:
         return AccountOut(exists=False)
     return AccountOut(exists=True, user_id=row.id, login=str(row.login), is_active=row.is_active,
-                      last_login_at=row.last_login_at)
+                      last_login_at=row.last_login_at, failed_logins=getattr(row, "failures", None) or 0,
+                      locked_until=getattr(row, "locked_until", None))
 
 
 @router.get("", response_model=AccountOut)

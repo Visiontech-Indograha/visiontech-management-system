@@ -160,6 +160,8 @@ class PlanTransitionService:
         if plan.period_start > today:
             raise _invalid(f"Pekerjaan baru dapat dimulai pada {plan.period_start:%d-%m-%Y}.")
         await self._check_members(plan)
+        if await self.repo.has_unchecked_vehicle(plan_id):
+            raise _state("Semua kendaraan harus diperiksa dan dinyatakan layak oleh pengemudi sebelum pekerjaan dimulai.")
         await self.repo.set_status(plan_id, PlanStatus.IN_PROGRESS)
         await self.repo.activate_reserved_assets(plan_id)
         return await self.repo.get_plan(plan_id)

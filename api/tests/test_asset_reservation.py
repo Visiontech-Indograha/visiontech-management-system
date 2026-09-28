@@ -147,9 +147,12 @@ def test_driver_checks_vehicles_before_they_are_used(client, world):
     again = _check(client, world, checked, "member", "ACCEPT")
     assert again.status_code == 409 and again.json()["error"]["message"] == "Kendaraan ini sudah diperiksa."
 
-    _start(client, world, plan_id)
-    assert _status(checked) == "IN_USE"
-    assert _status(unchecked) == "RESERVED"                       # belum diperiksa pengemudi
+    blocked = client.post(f"/work-plans/{plan_id}/start", headers=world.headers(client, "leader"),
+                          json={"row_version": _row_version(plan_id), "reason": ""})
+    assert blocked.status_code == 409
+    assert blocked.json()["error"]["message"] == \
+        "Semua kendaraan harus diperiksa dan dinyatakan layak oleh pengemudi sebelum pekerjaan dimulai."
+    assert _status(checked) == "RESERVED" and _status(unchecked) == "RESERVED"
 
     no_reason = _check(client, world, unchecked, "member", "APPEAL", " ")
     assert no_reason.status_code == 422
@@ -159,3 +162,6 @@ def test_driver_checks_vehicles_before_they_are_used(client, world):
     assert sync_query("SELECT status::text, condition FROM vms.asset WHERE id = %s", (unchecked,)) \
         == [("AVAILABLE", "Banding pengemudi: Rem depan bunyi")]
     assert _open_allocations(unchecked) == 0
+
+    _start(client, world, plan_id)
+    assert _status(checked) == "IN_USE"

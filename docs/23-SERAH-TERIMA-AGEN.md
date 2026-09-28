@@ -7,9 +7,11 @@ setiap kali Anda menutup sesi dengan perubahan berarti.
 ## 1. Aturan kerja dari pemilik (wajib)
 
 - Balas pemilik dalam **Bahasa Indonesia**, dengan laporan singkat.
-- **Jangan memakai subagen atau Workflow** kecuali diminta, karena kuota token pemilik terbatas.
-  Kerjakan sendiri, hemat, dan tanpa polling berulang.
-- Setiap permintaan pemilik atau PM **dicatat** di `docs/19-CATATAN-REVISI-PEMILIK.md` (nomor R-xx berikutnya: **R-25**).
+- Subagen **boleh** dipakai (larangan dicabut pemilik 2026-09-28, R-25). Tiap subagen bekerja di
+  branch `feature/...` dan worktree sendiri, dengan DB uji sendiri, lalu digabung ke `development`.
+  Tetap hemat: tanpa polling berulang.
+- Setiap permintaan pemilik atau PM **dicatat** di `docs/19-CATATAN-REVISI-PEMILIK.md` (nomor R-xx berikutnya: **R-26**).
+- Figma: tim **my-edu** (kursi Full). Tim `vms` hanya kursi View, tidak bisa diubah.
 - Commit dan push ke `development`.
   - `prod` hanya digabung bila pemilik meminta. Caranya fast-forward:
     `git push origin development:prod`, setelah memastikan `origin/prod` adalah leluhur `development`.

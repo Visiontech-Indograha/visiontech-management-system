@@ -150,6 +150,7 @@ describe("Work plan — detail & tindakan", () => {
     detail(plan({ status: "PUBLISHED", number: "SK/001" }));
     renderRoute("/work-plans/p1", { role: "PM" });
     await screen.findByText("SK/001");
+    expect(screen.getByText(/Minta ketua membuka aplikasi mobile/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Terima SK" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Ajukan banding" })).toBeNull();
   });

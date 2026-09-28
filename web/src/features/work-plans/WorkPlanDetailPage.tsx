@@ -228,6 +228,11 @@ function PlanActions({ plan }: { plan: WorkPlan }) {
       {manager.length > 0 && (
         <section aria-label="Tindakan PM" className="rounded-panel border border-line bg-surface shadow-card p-4">
           <h2 className="mb-3 text-base font-semibold">Tindakan PM</h2>
+          {s === "PUBLISHED" && (
+            <p className="mb-3 rounded-control bg-warning-bg px-3 py-2 text-sm text-warning">
+              Menunggu ketua tim menerima SK. Minta ketua membuka aplikasi mobile, masuk ke menu <strong>SK Anda</strong>, lalu tekan <strong>Terima SK</strong>.
+            </p>
+          )}
           <div className="flex flex-col gap-2 [&>button]:w-full">{manager}</div>
         </section>
       )}
@@ -249,7 +254,7 @@ function PlanActions({ plan }: { plan: WorkPlan }) {
               </Button>
               <Button
                 onClick={async () => {
-                  await run("publish", "SK diterbitkan.");
+                  await run("publish", "SK diterbitkan. Minta ketua tim membuka aplikasi mobile untuk menerimanya.");
                   setDialog(null);
                 }}
                 disabled={busy}

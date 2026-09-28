@@ -135,11 +135,14 @@ class _WorkPlansScreenState extends ConsumerState<WorkPlansScreen> {
                         child: SurfaceCard(
                           // Kartu sorotan emas untuk SK berjalan teratas (gaya rujukan).
                           highlight: i == 0 && p['status'] == 'IN_PROGRESS',
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => PlanDetailScreen(plan: p),
-                            ),
-                          ),
+                          onTap: () async {
+                            await Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => PlanDetailScreen(plan: p),
+                              ),
+                            );
+                            await _load();
+                          },
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -206,16 +209,56 @@ class PlanDetailScreen extends ConsumerStatefulWidget {
 
 class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
   List<Map<String, dynamic>> _days = [];
+  late Map<String, dynamic> _plan;
   bool _loading = true;
+  bool _accepting = false;
   String? _error;
 
-  String get _planId => widget.plan['id'] as String;
-  bool get _running => widget.plan['status'] == 'IN_PROGRESS';
+  String get _planId => _plan['id'] as String;
+  bool get _running => _plan['status'] == 'IN_PROGRESS';
 
   @override
   void initState() {
     super.initState();
+    _plan = Map<String, dynamic>.from(widget.plan);
     _load();
+  }
+
+  Future<void> _acceptPlan() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Terima surat kerja ini?'),
+        content: const Text(
+          'Penerimaan akan dicatat dan ditandatangani secara digital. Pastikan rincian SK sudah benar.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Batal'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Terima'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || _accepting) return;
+    setState(() => _accepting = true);
+    try {
+      final accepted = await ref
+          .read(syncEngineProvider)
+          .api
+          .acceptPlan(_planId, rowVersion: _plan['row_version'] as int);
+      if (!mounted) return;
+      setState(() => _plan = accepted);
+      _snack('SK berhasil diterima.');
+    } catch (e) {
+      if (mounted) _snack(apiErrorMessage(e));
+    } finally {
+      if (mounted) setState(() => _accepting = false);
+    }
   }
 
   Future<void> _load() async {
@@ -337,7 +380,7 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final p = widget.plan;
+    final p = _plan;
     final isLeader = p['leader_employee_id'] == employeeIdOf(ref);
     return Scaffold(
       appBar: VmsTopBar(onBack: () => Navigator.of(context).maybePop()),
@@ -407,6 +450,26 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
                         ),
                       ),
                     ),
+                  if (isLeader && p['status'] == 'PUBLISHED') ...[
+                    const SectionTitle('Penerimaan SK'),
+                    NoticeBanner(
+                      icon: Icons.verified_user_outlined,
+                      text: 'Periksa rincian pekerjaan. Penerimaan memerlukan koneksi internet dan akan ditandatangani secara digital.',
+                      accent: Accent.amber,
+                    ),
+                    const SizedBox(height: 10),
+                    FilledButton.icon(
+                      key: const Key('accept-plan-button'),
+                      onPressed: _accepting ? null : _acceptPlan,
+                      icon: _accepting
+                          ? const SizedBox.square(
+                              dimension: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.check_circle_outline_rounded),
+                      label: Text(_accepting ? 'Menerima...' : 'Terima SK'),
+                    ),
+                  ],
                   if (_running) ...[
                     const SectionTitle('Aksi cepat'),
                     Row(

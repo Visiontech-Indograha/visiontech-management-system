@@ -74,6 +74,8 @@ Map<String, dynamic> _plan(String id, String status) => {
   'period_start': '2026-09-01',
   'period_end': '2026-09-30',
   'site_id': null,
+  'leader_employee_id': 'e1',
+  'row_version': 7,
 };
 
 void main() {
@@ -161,6 +163,34 @@ void main() {
         expect(find.text('Luring — menampilkan data tersimpan.'), findsNothing);
       },
     );
+
+    testWidgets('ketua dapat menerima SK terbit dari layar mobile', (
+      tester,
+    ) async {
+      backend.routes['/work-plans'] = (_) => [_plan('a', 'PUBLISHED')];
+      backend.routes['/work-plans/a/days'] = (_) => <Object>[];
+      backend.routes['/work-plans/a/accept'] = (_) => {
+        ..._plan('a', 'ACCEPTED'),
+        'row_version': 8,
+      };
+      await show(tester, const WorkPlansScreen());
+
+      await tester.tap(find.text('SK a'));
+      await settle(tester);
+      expect(find.text('Terima SK'), findsOneWidget);
+
+      await tester.tap(find.text('Terima SK'));
+      await tester.pumpAndSettle();
+      expect(find.text('Terima surat kerja ini?'), findsOneWidget);
+      await tester.tap(find.widgetWithText(FilledButton, 'Terima'));
+      await settle(tester);
+
+      final request = backend.requests.singleWhere(
+        (r) => r.path.endsWith('/work-plans/a/accept'),
+      );
+      expect(request.data, {'row_version': 7, 'reason': ''});
+      expect(find.text('Diterima'), findsWidgets);
+    });
   });
 
   group('Absensi', () {
@@ -252,23 +282,22 @@ void main() {
       },
     );
 
-    testWidgets(
-      'O-10: "hari ini" mengikuti tanggal server, bukan jam HP',
-      (tester) async {
-        online();
-        backend.routes['/attendance'] = (_) => {
-          'items': [record('2099-01-01', out: '2099-01-01T10:00:00Z')],
-          'total': 1,
-          'today': '2099-01-01',
-        };
-        await show(tester, const AttendanceScreen());
-        expect(
-          find.text('Absensi hari ini selesai. Terima kasih!'),
-          findsOneWidget,
-        );
-        expect(find.text('Absen masuk'), findsNothing);
-      },
-    );
+    testWidgets('O-10: "hari ini" mengikuti tanggal server, bukan jam HP', (
+      tester,
+    ) async {
+      online();
+      backend.routes['/attendance'] = (_) => {
+        'items': [record('2099-01-01', out: '2099-01-01T10:00:00Z')],
+        'total': 1,
+        'today': '2099-01-01',
+      };
+      await show(tester, const AttendanceScreen());
+      expect(
+        find.text('Absensi hari ini selesai. Terima kasih!'),
+        findsOneWidget,
+      );
+      expect(find.text('Absen masuk'), findsNothing);
+    });
   });
 
   group('Antrian sinkronisasi', () {

@@ -6,6 +6,7 @@ from collections.abc import Awaitable, Callable
 from contextvars import ContextVar
 
 from fastapi import FastAPI, Request, Response
+from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.core.config import settings
@@ -60,9 +61,21 @@ def create_app() -> FastAPI:
         return {"status": "ok"}
         
     @app.get("/ready")
-    async def readiness_check() -> dict[str, str]:
-        # TODO: Add db connection check here
-        return {"status": "ready"}
+    async def readiness_check() -> JSONResponse:
+        # Siap = basis data benar-benar menjawab; dipakai autodeploy sebelum lapor "berhasil".
+        from sqlalchemy import text
+        from sqlalchemy.exc import SQLAlchemyError
+
+        from app.db.session import engine
+
+        try:
+            async with engine.connect() as conn:
+                schema_ok = await conn.scalar(text("SELECT to_regclass('vms.organization') IS NOT NULL"))
+        except (OSError, SQLAlchemyError):
+            schema_ok = None
+        if not schema_ok:
+            return JSONResponse({"status": "not_ready", "db": "unreachable"}, status_code=503)
+        return JSONResponse({"status": "ready", "db": "ok"})
         
     from app.api.accounts import router as accounts_router
     from app.api.assets import plan_assets_router

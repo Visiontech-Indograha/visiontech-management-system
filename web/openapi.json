@@ -36,13 +36,7 @@
       "description": "Successful Response",
       "content": {
        "application/json": {
-        "schema": {
-         "additionalProperties": {
-          "type": "string"
-         },
-         "type": "object",
-         "title": "Response Readiness Check Ready Get"
-        }
+        "schema": {}
        }
       }
      }
@@ -1388,6 +1382,65 @@
       "HTTPBearer": []
      }
     ]
+   }
+  },
+  "/api/v1/work-plans/assignment-options": {
+   "get": {
+    "tags": [
+     "Work Plans"
+    ],
+    "summary": "Assignment Options",
+    "description": "Pilihan PM/personel yang sah untuk periode SK baru (R-23).",
+    "operationId": "assignment_options_api_v1_work_plans_assignment_options_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "period_start",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "date",
+       "title": "Period Start"
+      }
+     },
+     {
+      "name": "period_end",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "date",
+       "title": "Period End"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/PlanAssignmentOptions"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
    }
   },
   "/api/v1/work-plans": {
@@ -6895,6 +6948,42 @@
     ],
     "title": "AssetStatusResponse"
    },
+   "AssignmentEmployeeOption": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Id"
+     },
+     "full_name": {
+      "type": "string",
+      "title": "Full Name"
+     },
+     "position": {
+      "type": "string",
+      "title": "Position"
+     },
+     "unit_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Unit Id"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "full_name",
+     "position"
+    ],
+    "title": "AssignmentEmployeeOption"
+   },
    "AttachmentResponse": {
     "properties": {
      "file_id": {
@@ -9526,6 +9615,59 @@
      "return_accepted"
     ],
     "title": "PlanAssetItem"
+   },
+   "PlanAssignmentOptions": {
+    "properties": {
+     "can_choose_pm": {
+      "type": "boolean",
+      "title": "Can Choose Pm"
+     },
+     "fixed_pm_employee_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Fixed Pm Employee Id"
+     },
+     "fixed_unit_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Fixed Unit Id"
+     },
+     "pm_options": {
+      "items": {
+       "$ref": "#/components/schemas/AssignmentEmployeeOption"
+      },
+      "type": "array",
+      "title": "Pm Options"
+     },
+     "personnel_options": {
+      "items": {
+       "$ref": "#/components/schemas/AssignmentEmployeeOption"
+      },
+      "type": "array",
+      "title": "Personnel Options"
+     }
+    },
+    "type": "object",
+    "required": [
+     "can_choose_pm",
+     "pm_options",
+     "personnel_options"
+    ],
+    "title": "PlanAssignmentOptions"
    },
    "PlanDayCreate": {
     "properties": {

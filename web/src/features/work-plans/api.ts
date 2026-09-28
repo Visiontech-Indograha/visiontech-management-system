@@ -11,6 +11,7 @@ export type TeamRequest = S["TeamRequest"];
 type Employee = S["EmployeeResponse"];
 type EmployeeList = S["EmployeeListResponse"];
 type Site = S["SiteResponse"];
+export type AssignmentOptions = S["PlanAssignmentOptions"];
 
 /** Transisi SK yang memakai TransitionRequest {row_version, reason}. */
 export type Transition =
@@ -54,6 +55,18 @@ export const useActiveEmployees = () =>
 export const useSiteOptions = () =>
   useQuery({ queryKey: ["sites"], queryFn: async () => (await api.get<Site[]>("/sites")).data });
 
+export const useAssignmentOptions = (periodStart: string, periodEnd: string) =>
+  useQuery({
+    queryKey: ["plan-assignment-options", periodStart, periodEnd],
+    queryFn: async () =>
+      (
+        await api.get<AssignmentOptions>("/work-plans/assignment-options", {
+          params: { period_start: periodStart, period_end: periodEnd },
+        })
+      ).data,
+    enabled: Boolean(periodStart && periodEnd && periodEnd >= periodStart),
+  });
+
 /** Peta id → nama karyawan untuk menampilkan PM/ketua. */
 export function employeeName(list: Employee[] | undefined, id: string | null | undefined): string {
   if (!id) return "-";
@@ -74,6 +87,32 @@ export function useCreatePlan() {
   const setPlan = useSetPlan();
   return useMutation({
     mutationFn: async (body: WorkPlanCreate) => (await api.post<WorkPlan>("/work-plans", body)).data,
+    onSuccess: setPlan,
+  });
+}
+
+export function useCreatePlanWithTeam() {
+  const setPlan = useSetPlan();
+  return useMutation({
+    mutationFn: async ({
+      plan: body,
+      leader_employee_id,
+      member_employee_ids,
+    }: {
+      plan: WorkPlanCreate;
+      leader_employee_id: string;
+      member_employee_ids: string[];
+    }) => {
+      const plan = (await api.post<WorkPlan>("/work-plans", body)).data;
+      const team = (
+        await api.put<S["TeamResponse"]>(`/work-plans/${plan.id}/members`, {
+          leader_employee_id,
+          member_employee_ids,
+          row_version: plan.row_version,
+        })
+      ).data;
+      return { ...plan, leader_employee_id: team.leader_employee_id, row_version: team.row_version };
+    },
     onSuccess: setPlan,
   });
 }

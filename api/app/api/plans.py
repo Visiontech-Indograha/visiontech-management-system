@@ -1,6 +1,7 @@
+from datetime import date
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
@@ -20,7 +21,10 @@ from app.core.enums import PlanStatus
 from app.core.errors import ValidationError, trigger_rule_error
 from app.core.permissions import Permission
 from app.repositories.plan_access_repo import PlanAccessRepo
+from app.repositories.plan_assignment_repo import PlanAssignmentRepo
 from app.schemas.plan import (
+    AssignmentEmployeeOption,
+    PlanAssignmentOptions,
     PlanDayCreate,
     PlanDayResponse,
     PlanTaskCreate,
@@ -29,11 +33,30 @@ from app.schemas.plan import (
     WorkPlanResponse,
     WorkPlanUpdate,
 )
+from app.services.plan_assignment_service import PlanAssignmentService
 
 router = APIRouter(prefix="/work-plans", tags=["Work Plans"])  # jalur dok 05 §3.3 (V-16)
 _VIEW_ACCESS = Depends(plan_access(PlanNeed.VIEW))
 _PM_UNIT_ACCESS = Depends(plan_access(PlanNeed.PM_UNIT))
 _DAY_PM_UNIT_ACCESS = Depends(plan_day_access(PlanNeed.PM_UNIT))
+
+
+@router.get("/assignment-options", response_model=PlanAssignmentOptions)
+async def assignment_options(
+    period_start: date = Query(...),
+    period_end: date = Query(...),
+    current_user: CurrentUser = Depends(require_permission(Permission.CREATE_PLAN)),
+    db: AsyncSession = Depends(get_db_with_user),
+) -> PlanAssignmentOptions:
+    """Pilihan PM/personel yang sah untuk periode SK baru (R-23)."""
+    values = await PlanAssignmentService(PlanAssignmentRepo(db)).options(current_user, period_start, period_end)
+    return PlanAssignmentOptions(
+        can_choose_pm=values["can_choose_pm"],
+        fixed_pm_employee_id=values["fixed_pm_employee_id"],
+        fixed_unit_id=values["fixed_unit_id"],
+        pm_options=[AssignmentEmployeeOption(**row._mapping) for row in values["pm_options"]],
+        personnel_options=[AssignmentEmployeeOption(**row._mapping) for row in values["personnel_options"]],
+    )
 
 @router.get("", response_model=list[WorkPlanResponse])
 async def get_plans(
@@ -61,6 +84,8 @@ async def create_plan(
     await check_unit_manager(db, data.unit_id, current_user)
     await ensure_same_org(db, current_user.organization_id, sites=[data.site_id],
                           employees=[data.pm_employee_id, data.leader_employee_id])
+    await PlanAssignmentService(PlanAssignmentRepo(db)).validate_owner(
+        current_user, data.unit_id, data.pm_employee_id)
     query = text("""
         INSERT INTO vms.work_plan (
             organization_id, unit_id, site_id, title, location_text, description,

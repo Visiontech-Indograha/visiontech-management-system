@@ -491,6 +491,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/work-plans/assignment-options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Assignment Options
+         * @description Pilihan PM/personel yang sah untuk periode SK baru (R-23).
+         */
+        get: operations["assignment_options_api_v1_work_plans_assignment_options_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/work-plans": {
         parameters: {
             query?: never;
@@ -2212,6 +2232,20 @@ export interface components {
             /** Status */
             status: string;
         };
+        /** AssignmentEmployeeOption */
+        AssignmentEmployeeOption: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Full Name */
+            full_name: string;
+            /** Position */
+            position: string;
+            /** Unit Id */
+            unit_id?: string | null;
+        };
         /** AttachmentResponse */
         AttachmentResponse: {
             /** File Id */
@@ -3165,6 +3199,19 @@ export interface components {
             /** Return Accepted */
             return_accepted: boolean | null;
         };
+        /** PlanAssignmentOptions */
+        PlanAssignmentOptions: {
+            /** Can Choose Pm */
+            can_choose_pm: boolean;
+            /** Fixed Pm Employee Id */
+            fixed_pm_employee_id?: string | null;
+            /** Fixed Unit Id */
+            fixed_unit_id?: string | null;
+            /** Pm Options */
+            pm_options: components["schemas"]["AssignmentEmployeeOption"][];
+            /** Personnel Options */
+            personnel_options: components["schemas"]["AssignmentEmployeeOption"][];
+        };
         /** PlanDayCreate */
         PlanDayCreate: {
             /**
@@ -3798,9 +3845,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: string;
-                    };
+                    "application/json": unknown;
                 };
             };
         };
@@ -4615,6 +4660,38 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+        };
+    };
+    assignment_options_api_v1_work_plans_assignment_options_get: {
+        parameters: {
+            query: {
+                period_start: string;
+                period_end: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanAssignmentOptions"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

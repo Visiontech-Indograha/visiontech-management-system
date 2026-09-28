@@ -37,6 +37,21 @@ class WorkPlanResponse(WorkPlanBase):
     cancellation_reason: str | None = None
     appeal_reason: str | None = None
 
+
+class AssignmentEmployeeOption(BaseModel):
+    id: UUID
+    full_name: str
+    position: str
+    unit_id: UUID | None = None
+
+
+class PlanAssignmentOptions(BaseModel):
+    can_choose_pm: bool
+    fixed_pm_employee_id: UUID | None = None
+    fixed_unit_id: UUID | None = None
+    pm_options: list[AssignmentEmployeeOption]
+    personnel_options: list[AssignmentEmployeeOption]
+
 class PlanMemberListResponse(BaseModel):
     id: UUID
     employee_id: UUID

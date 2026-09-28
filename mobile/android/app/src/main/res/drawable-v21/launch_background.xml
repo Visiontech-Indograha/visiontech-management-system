@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Layar pembuka native (R-14): latar navy Visiontech + tanda "V + swirl emas" di tengah,
+     identik dengan SplashScreen Flutter sehingga tidak ada lompatan saat Flutter mengambil alih. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/vms_splash_bg" />
+    <item>
+        <bitmap
+            android:gravity="center"
+            android:src="@drawable/splash_mark" />
+    </item>
+</layer-list>

@@ -110,19 +110,62 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # mobile/ adalah submodule dengan repo & workflow sendiri (mobile/.github/workflows/flutter-ci.yml).
+  mobile:
+    name: Mobile (Flutter analyze + test)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
 
-  notify-failure:
-    name: Kabari #vms-ci bila gagal
-    needs: [api, web, secrets]
-    if: failure()
+  notify:
+    name: Laporan ke #vms-ci
+    needs: [api, web, mobile, secrets]
+    if: always()
     runs-on: ubuntu-latest
     steps:
-      - name: Kirim ke Discord (tanpa data pribadi — dok 17 §2)
+      - name: Kirim ke Discord (berhasil & gagal; tanpa data pribadi — dok 17 §2)
         env:
           WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_CI }}
           RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          API: ${{ needs.api.result }}
+          WEB: ${{ needs.web.result }}
+          MOBILE: ${{ needs.mobile.result }}
+          SECRETS: ${{ needs.secrets.result }}
+          TITLE: ${{ github.event.head_commit.message || github.event.pull_request.title }}
+          ACTOR: ${{ github.actor }}
         run: |
           if [ -z "$WEBHOOK" ]; then echo "DISCORD_WEBHOOK_CI belum diset; notifikasi dilewati."; exit 0; fi
-          payload=$(printf '{"content":"❌ CI gagal di %s (%s)\\nLihat: %s"}' "${GITHUB_REF_NAME}" "${GITHUB_SHA::8}" "$RUN_URL")
+          icon() { case "$1" in success) echo "✅";; skipped) echo "⏭️";; cancelled) echo "⚪";; *) echo "❌";; esac; }
+          ok=true; for r in "$API" "$WEB" "$MOBILE" "$SECRETS"; do [ "$r" = success ] || [ "$r" = skipped ] || ok=false; done
+          if $ok; then head="✅ CI berhasil"; color=3066993; else head="❌ CI GAGAL"; color=15158332; fi
+          SUBJECT=$(printf '%s' "$TITLE" | head -1 | cut -c1-150)
+          export HEAD="$head" COLOR="$color" SUBJECT
+          export I_API=$(icon "$API") I_WEB=$(icon "$WEB") I_MOBILE=$(icon "$MOBILE") I_SECRETS=$(icon "$SECRETS")
+          payload=$(python3 - <<'PY'
+          import json, os
+          e = os.environ
+          desc = "\n".join([
+              f"**Branch:** `{e['GITHUB_REF_NAME']}` · **Commit:** `{e['GITHUB_SHA'][:8]}`",
+              f"**Pesan:** {e['SUBJECT']}",
+              f"**Oleh:** {e['ACTOR']}",
+              "",
+              f"{e['I_API']} API (ruff, mypy, pytest)",
+              f"{e['I_WEB']} Web (lint, typecheck, test, build)",
+              f"{e['I_MOBILE']} Mobile (flutter analyze, test)",
+              f"{e['I_SECRETS']} Pindai rahasia",
+              "",
+              f"[Buka log lengkap]({e['RUN_URL']})",
+          ])
+          print(json.dumps({"embeds": [{"title": e["HEAD"], "color": int(e["COLOR"]), "description": desc}]}))
+          PY
+          )
           curl -fsS -H "Content-Type: application/json" -X POST -d "$payload" "$WEBHOOK"

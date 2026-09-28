@@ -60,6 +60,7 @@ Yang dibagikan ke penguji adalah APK, bukan `.aab`: file `.aab` hanya untuk Play
 | R-22 | `/ready` cek DB; autodeploy lapor ✅ hanya setelah siap pakai 3× berturut-turut; embed Discord rapi | commit R-22 (lihat `git log`) |
 | R-23 | Ketua dapat menerima SK terbit di mobile; PM mendapat petunjuk agar ketua membuka mobile | lihat `git log` |
 | R-23 | Form SK: PM otomatis, lokasi tunggal, tim sekaligus, kandidat bebas konflik; hari kerja tiga kolom | lihat `git log` |
+| R-23 | Workflow CD lama berbasis tag diganti penjaga sumber `prod`; build nyata server tetap dari `origin/prod` | lihat `git log` |
 
 ## 4. Terbuka — kerjakan / tanyakan berikutnya
 

@@ -63,7 +63,7 @@ Yang dibagikan ke penguji adalah APK, bukan `.aab`: file `.aab` hanya untuk Play
 | R-23 | Workflow CD lama berbasis tag diganti penjaga sumber `prod`; build nyata server tetap dari `origin/prod` | lihat `git log` |
 | R-23 | Kendaraan tersedia dapat dipilih dan langsung direservasi saat membuat draft SK; pengemudi dipilih dari tim | lihat `git log` |
 | R-23 | SK tidak dapat dimulai sebelum seluruh kendaraan teralokasi selesai diperiksa pengemudi | `69836807`; sudah di produksi melalui `2678343b` |
-| R-24 | Loop deploy palsu pada commit dokumentasi dihentikan dengan `--force-recreate`; skrip server dipasang setelah backup | lihat `git log` |
+| R-24 | Loop deploy palsu pada commit dokumentasi dihentikan dengan `--force-recreate`; skrip server dipasang setelah backup dan cron berikutnya tidak mengulang | `415408df`; produksi `2cdf1cde` |
 
 ## 4. Terbuka — kerjakan / tanyakan berikutnya
 

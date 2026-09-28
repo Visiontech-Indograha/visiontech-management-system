@@ -64,6 +64,7 @@ def create_app() -> FastAPI:
         # TODO: Add db connection check here
         return {"status": "ready"}
         
+    from app.api.accounts import router as accounts_router
     from app.api.assets import plan_assets_router
     from app.api.assets import router as assets_router
     from app.api.attendance import router as attendance_router
@@ -107,6 +108,7 @@ def create_app() -> FastAPI:
     app.include_router(changes_router, prefix=API_PREFIX)
     app.include_router(sites_router, prefix=API_PREFIX)
     app.include_router(units_router, prefix=API_PREFIX)
+    app.include_router(accounts_router, prefix=API_PREFIX)
     app.include_router(sync_router, prefix=API_PREFIX)
     app.include_router(plan_location_router, prefix=API_PREFIX)
     app.include_router(weekly_reports_router, prefix=API_PREFIX)

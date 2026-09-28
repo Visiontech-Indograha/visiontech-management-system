@@ -17,6 +17,7 @@ import { formatDate } from "@/lib/format";
 import { useArchiveEmployee, useEmployee, useRestoreEmployee, useUnits, useUpdateEmployee, type Employee, type EmployeeUpdate } from "./api";
 import { AssignmentHistory, PromoteDialog } from "./Assignments";
 import { OffboardDialog } from "./Lifecycle";
+import { AccountCard } from "./AccountCard";
 import { DocumentsPanel } from "./DocumentsPanel";
 
 const Row = ({ label, children }: { label: string; children: ReactNode }) => (
@@ -111,6 +112,7 @@ export function EmployeeDetailPage() {
           </p>
         )}
       </div>
+      {canEdit && <AccountCard employee={e} />}
       <AssignmentHistory employee={e} />
       {canEdit && !e.is_active && <ArchivePanel employee={e} />}
       {canManageDocs && <DocumentsPanel employeeId={e.id} canManage canVerify={!!me?.permissions.includes("verify:documents")} />}

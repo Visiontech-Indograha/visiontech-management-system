@@ -168,3 +168,27 @@ export function useOffboardEmployee(employeeId: string) {
     },
   });
 }
+
+export type Account = S["AccountOut"];
+export type AccountWithPassword = S["AccountWithPassword"];
+
+/** M1-01 · akun login karyawan (GET /employees/{id}/account, manage:users). */
+export const useAccount = (employeeId: string) =>
+  useQuery({
+    queryKey: ["employee-account", employeeId],
+    queryFn: async () => (await api.get<Account>(`/employees/${employeeId}/account`)).data,
+  });
+
+/** Buat akun / reset password / nonaktifkan / aktifkan. Password sementara hanya ada di respons (sekali). */
+export function useAccountAction(employeeId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (a: { kind: "create"; login: string } | { kind: "reset" | "deactivate" | "activate" }) => {
+      const base = `/employees/${employeeId}/account`;
+      if (a.kind === "create") return (await api.post<AccountWithPassword>(base, { login: a.login })).data;
+      const path = a.kind === "reset" ? "reset-password" : a.kind;
+      return (await api.post<Account | AccountWithPassword>(`${base}/${path}`)).data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["employee-account", employeeId] }),
+  });
+}

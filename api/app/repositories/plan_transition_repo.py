@@ -240,6 +240,20 @@ class PlanTransitionRepo(BaseRepo):
             {"plan": plan_id},
         )
 
+    async def has_unchecked_vehicle(self, plan_id: UUID | str) -> bool:
+        return bool(await self.scalar(
+            """
+            SELECT EXISTS (
+                SELECT 1
+                FROM vms.asset_allocation al
+                JOIN vms.asset a ON a.id = al.asset_id
+                WHERE al.work_plan_id = :plan AND al.released_at IS NULL
+                  AND a.kind = 'VEHICLE' AND al.driver_checked_at IS NULL
+            )
+            """,
+            {"plan": plan_id},
+        ))
+
     async def set_status(self, plan_id: UUID | str, status: PlanStatus) -> None:
         await self.execute(
             "UPDATE vms.work_plan SET status = CAST(:status AS vms.plan_status), row_version = row_version + 1 WHERE id = :plan",

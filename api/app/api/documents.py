@@ -1,141 +1,62 @@
-import hashlib
+"""
+Dokumen pribadi karyawan. Tipis (dok 12 §2): izin di sini, aturan & batas organisasi di
+services/document_service.py (R-20 — dulu SQL langsung di router tanpa cek organisasi).
+"""
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import text
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, get_db_with_user, require_permission
 from app.api.guards import ensure_same_org
-from app.core.errors import AppError
 from app.core.permissions import Permission
+from app.repositories.document_repo import DocumentRepo
 from app.schemas.document import (
     DocumentListResponse,
     EmployeeDocumentCreate,
     EmployeeDocumentResponse,
     EmployeeDocumentVerify,
 )
+from app.services.document_service import DocumentService
 
 router = APIRouter(prefix="/employees/{emp_id}/documents", tags=["Employee Documents"])
 
-def mask_number(number: str) -> str:
-    """Mengubah nomor dokumen menjadi tersamar (Misal: 1234567890 -> ******7890)"""
-    if len(number) <= 4:
-        return "*" * len(number)
-    return "*" * (len(number) - 4) + number[-4:]
+_viewer = Depends(require_permission(Permission.VIEW_DOCUMENTS))
+_uploader = Depends(require_permission(Permission.UPLOAD_DOCUMENTS))
+_verifier = Depends(require_permission(Permission.VERIFY_DOCUMENTS))
+_db = Depends(get_db_with_user)
+
+
+def _service(db: AsyncSession) -> DocumentService:
+    return DocumentService(DocumentRepo(db))
+
 
 @router.get("", response_model=DocumentListResponse)
 async def get_employee_documents(
-    emp_id: UUID,
-    current_user: CurrentUser = Depends(require_permission(Permission.VIEW_DOCUMENTS)),
-    db: AsyncSession = Depends(get_db_with_user)
+    emp_id: UUID, current_user: CurrentUser = _viewer, db: AsyncSession = _db,
 ) -> DocumentListResponse:
-    # Dapatkan employee_id dari user yang sedang login
-    user_emp = text("SELECT employee_id FROM vms.app_user WHERE id = :uid")
-    my_emp_id = (await db.execute(user_emp, {"uid": current_user.user_id})).scalar()
-    
-    if Permission.MANAGE_EMPLOYEE_DOCUMENTS.value not in current_user.permissions and my_emp_id != emp_id:
-        # DoD: "pengguna lain tidak bisa melihat dokumen pribadi orang lain (404, bukan 403)"
-        raise HTTPException(status_code=404, detail="Dokumen tidak ditemukan.")
-        
-    query = text("""
-        SELECT id, employee_id, doc_type, number_masked, expiry_date, 
-               status, lifecycle, file_id, uploaded_by, verified_by, 
-               verified_at, review_note, created_at
-        FROM vms.employee_document
-        WHERE employee_id = :emp_id
-        ORDER BY created_at DESC
-    """)
-    rows = (await db.execute(query, {"emp_id": emp_id})).fetchall()
-    
-    items = []
-    for row in rows:
-        items.append(EmployeeDocumentResponse(**row._mapping))
-        
+    """Dokumen milik sendiri, atau milik siapa pun di organisasi bagi pengelola dokumen (HR). Lainnya 404."""
+    rows = await _service(db).documents_of(current_user.organization_id, current_user.user_id,
+                                           current_user.permissions, emp_id)
+    items = [EmployeeDocumentResponse(**r._mapping) for r in rows]
     return DocumentListResponse(items=items, total=len(items))
+
 
 @router.post("", response_model=EmployeeDocumentResponse, status_code=status.HTTP_201_CREATED)
 async def upload_document(
-    emp_id: UUID,
-    data: EmployeeDocumentCreate,
-    current_user: CurrentUser = Depends(require_permission(Permission.UPLOAD_DOCUMENTS)),
-    db: AsyncSession = Depends(get_db_with_user)
+    emp_id: UUID, data: EmployeeDocumentCreate, current_user: CurrentUser = _uploader, db: AsyncSession = _db,
 ) -> EmployeeDocumentResponse:
-    # Dapatkan employee_id dari user yang login
-    user_emp = text("SELECT employee_id FROM vms.app_user WHERE id = :uid")
-    my_emp_id = (await db.execute(user_emp, {"uid": current_user.user_id})).scalar()
-    
-    if Permission.MANAGE_EMPLOYEE_DOCUMENTS.value not in current_user.permissions and my_emp_id != emp_id:
-        raise HTTPException(status_code=404, detail="Dokumen tidak ditemukan.")
-    # HR memegang izin dokumen siapa pun — tetapi hanya di organisasinya sendiri (V-08).
-    await ensure_same_org(db, current_user.organization_id, employees=[emp_id], files=[data.file_id])
+    # Berkas lampiran harus milik organisasi ini (V-08) — sebelum menulis apa pun.
+    await ensure_same_org(db, current_user.organization_id, files=[data.file_id])
+    row = await _service(db).upload(current_user.organization_id, current_user.user_id,
+                                    current_user.permissions, emp_id, data)
+    return EmployeeDocumentResponse(**row._mapping)
 
-    # Masking dan hashing
-    number_masked = mask_number(data.number)
-    number_sha256 = hashlib.sha256(data.number.encode('utf-8')).digest()
-    
-    insert_query = text("""
-        INSERT INTO vms.employee_document (
-            employee_id, doc_type, number_masked, number_sha256, 
-            expiry_date, file_id, uploaded_by, supersedes_id
-        ) VALUES (
-            :emp_id, :type, :masked, :hash, :expiry, :fid, :uid, :super_id
-        ) RETURNING *
-    """)
-    try:
-        res = await db.execute(insert_query, {
-            "emp_id": emp_id, "type": data.doc_type,
-            "masked": number_masked, "hash": number_sha256,
-            "expiry": data.expiry_date, "fid": data.file_id,
-            "uid": current_user.user_id, "super_id": data.supersedes_id
-        })
-        row = res.one()
-        return EmployeeDocumentResponse(**row._mapping)
-    except Exception as e:
-        raise HTTPException(status_code=400, detail={"code": "DB_ERROR", "message": str(e)})
 
 @router.post("/{doc_id}/verify", response_model=EmployeeDocumentResponse)
 async def verify_document(
-    emp_id: UUID,
-    doc_id: UUID,
-    data: EmployeeDocumentVerify,
-    current_user: CurrentUser = Depends(require_permission(Permission.VERIFY_DOCUMENTS)),
-    db: AsyncSession = Depends(get_db_with_user)
+    emp_id: UUID, doc_id: UUID, data: EmployeeDocumentVerify,
+    current_user: CurrentUser = _verifier, db: AsyncSession = _db,
 ) -> EmployeeDocumentResponse:
-    uploader = (await db.execute(
-        text("SELECT uploaded_by FROM vms.employee_document WHERE id = :doc_id AND employee_id = :emp_id"),
-        {"doc_id": doc_id, "emp_id": emp_id},
-    )).scalar_one_or_none()
-    if uploader is None:
-        raise AppError("NOT_FOUND", "Dokumen tidak ditemukan.", status=404)
-    if str(uploader) == str(current_user.user_id):  # empat mata (CHECK di db/01): pengunggah bukan pemeriksa
-        raise AppError("FOUR_EYES", "Berkas yang Anda unggah harus diverifikasi petugas lain.", status=409)
-
-    status_val = "VERIFIED" if data.is_approved else "REJECTED"
-    lifecycle_val = "CURRENT" if data.is_approved else "PENDING"
-    if data.is_approved:
-        # domain.js VERIFY_DOCUMENT (R8): dokumen berlaku berjenis sama digantikan yang baru. Tanpa ini
-        # indeks unik CURRENT per (karyawan, jenis) menolak perpanjangan → 500.
-        await db.execute(text("""
-            UPDATE vms.employee_document SET lifecycle = 'SUPERSEDED'
-            WHERE employee_id = :emp_id AND lifecycle = 'CURRENT' AND id <> :doc_id
-              AND doc_type = (SELECT doc_type FROM vms.employee_document WHERE id = :doc_id)
-        """), {"emp_id": emp_id, "doc_id": doc_id})
-    
-    verify_query = text("""
-        UPDATE vms.employee_document 
-        SET status = :status, lifecycle = :lifecycle, 
-            verified_by = :uid, verified_at = now(), review_note = :note
-        WHERE id = :doc_id AND employee_id = :emp_id
-        RETURNING *
-    """)
-    res = await db.execute(verify_query, {
-        "status": status_val, "lifecycle": lifecycle_val,
-        "uid": current_user.user_id, "note": data.review_note,
-        "doc_id": doc_id, "emp_id": emp_id
-    })
-    row = res.fetchone()
-    if not row:
-        raise HTTPException(status_code=404, detail="Dokumen tidak ditemukan.")
-        
+    row = await _service(db).verify(current_user.organization_id, current_user.user_id, emp_id, doc_id, data)
     return EmployeeDocumentResponse(**row._mapping)

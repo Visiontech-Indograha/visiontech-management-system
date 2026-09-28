@@ -81,7 +81,8 @@ def test_other_peoples_documents_are_hidden_as_404(client, make_user, role):
 
 
 @requires_db
-def test_hr_may_list_any_employee_documents(client, make_user):
+def test_hr_gets_404_for_an_employee_outside_the_organisation(client, make_user):
+    """R-20: izin HR berlaku untuk karyawan organisasinya saja — id tak dikenal/asing → 404 (V-08)."""
     response = client.get(f"/employees/{uuid.uuid4()}/documents", headers=login_headers(client, make_user("HR")))
 
-    assert response.status_code == 200, response.text
+    assert response.status_code == 404, response.text

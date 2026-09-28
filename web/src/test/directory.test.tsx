@@ -376,3 +376,24 @@ describe("siklus karyawan oleh HR (M2-02, M2-03)", () => {
     expect(screen.queryByRole("button", { name: "Tambah karyawan" })).toBeNull();
   });
 });
+
+describe("akun login karyawan (M1-01)", () => {
+  it("HR membuat akun; password sementara tampil sekali", async () => {
+    let exists = false;
+    const calls = mockApi((c) => {
+      if (c.url === "/employees/e1") return { data: employee() };
+      if (c.url === "/employees/e1/account" && c.method === "get")
+        return { data: exists ? { exists: true, login: "baru@contoh.id", is_active: true, last_login_at: null } : { exists: false } };
+      if (c.url === "/employees/e1/account" && c.method === "post") {
+        exists = true;
+        return { data: { exists: true, login: "baru@contoh.id", is_active: true, temporary_password: "Sementara123" } };
+      }
+    });
+    renderRoute("/directory/e1", { role: "HR" });
+    expect(await screen.findByText("Karyawan ini belum punya akun login.")).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Email login"), { target: { value: "baru@contoh.id" } });
+    fireEvent.click(screen.getByRole("button", { name: "Buat akun" }));
+    expect(await screen.findByText("Sementara123")).toBeInTheDocument();
+    expect(calls.find((c) => c.url === "/employees/e1/account" && c.method === "post")!.data).toEqual({ login: "baru@contoh.id" });
+  });
+});

@@ -52,3 +52,28 @@ class UserRepo(BaseRepo):
             {"uid": user_id},
         )
         return employee_id
+
+    # ── Akun karyawan (M1-01, R-20) ─────────────────────────────────────────────────────────────
+    async def account_of_employee(self, employee_id: UUID | str) -> Any:
+        return await self.fetchone(
+            "SELECT id, login, is_active, last_login_at FROM vms.app_user WHERE employee_id = CAST(:emp AS uuid)",
+            {"emp": employee_id})
+
+    async def login_taken(self, org_id: UUID | str, login: str) -> bool:
+        return bool(await self.scalar(
+            "SELECT EXISTS (SELECT 1 FROM vms.app_user WHERE organization_id = :org AND login = :login)",
+            {"org": org_id, "login": login}))
+
+    async def create_for_employee(self, org_id: UUID | str, employee_id: UUID | str, login: str,
+                                  password_hash: str) -> Any:
+        return await self.fetchone(
+            """
+            INSERT INTO vms.app_user (organization_id, employee_id, login, password_hash, is_active)
+            VALUES (:org, CAST(:emp AS uuid), :login, :hash, true)
+            RETURNING id, login, is_active, last_login_at
+            """,
+            {"org": org_id, "emp": employee_id, "login": login, "hash": password_hash})
+
+    async def set_active(self, user_id: UUID | str, active: bool) -> None:
+        await self.execute("UPDATE vms.app_user SET is_active = :a, updated_at = now() WHERE id = :id",
+                           {"a": active, "id": user_id})

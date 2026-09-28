@@ -18,7 +18,7 @@ source "$BASE/notify.env"
 LOGDIR="$BASE/logs"; mkdir -p "$LOGDIR" backups
 LAST_FILE="$BASE/.last-deployed"
 
-REPO="${VMS_DEPLOY_REPO:-git@github-vms:consep33t/visiontech-management-system.git}"
+REPO="${VMS_DEPLOY_REPO:-git@github-vms:Visiontech-Indograha/visiontech-management-system.git}"
 if [ ! -d src/.git ]; then
   # Klon pertama: tandai `prod` saat ini sebagai sudah terpasang — yang dideploy hanya merge berikutnya.
   git clone -q --branch "$BRANCH" "$REPO" src || exit 1

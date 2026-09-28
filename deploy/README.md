@@ -12,7 +12,8 @@ Log build **lengkap** selalu terlampir. Pesan memakai embed Discord (kolom, taut
 
 Server (`~/deploy/vms-mvp`): `autodeploy.sh` dijalankan cron tiap menit (dengan kunci `flock`).
 Urutan: checkout → `docker compose build` → backup DB (14 terakhir disimpan di `backups/`) →
-`up -d` → `alembic upgrade head` → **cek siap pakai**.
+`up -d --force-recreate` → `alembic upgrade head` → **cek siap pakai**. `--force-recreate`
+memastikan kontainer memakai ID image hasil build terbaru meskipun commit hanya mengubah dokumentasi.
 
 Sumber build dikunci ke branch **`prod`**, bukan `main` dan bukan tag:
 

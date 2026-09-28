@@ -112,11 +112,13 @@ $CHANGES
   git -C src checkout -q --force "$NEW" && rm -rf api web && cp -a src/api src/web . || exit 11
   rm -f api/.env web/.env
   step "Build image (docker compose build)"
-  docker compose build --progress=plain 2>&1 || exit 12
+  docker compose --progress=plain build 2>&1 || exit 12
   step "Backup database (DB aplikasi → lokal + MinIO vms-backups)"
   ./backup.sh "pra-deploy-$SHORT" || exit 13
   step "Jalankan kontainer baru (up -d)"
-  docker compose up -d 2>&1 || exit 14
+  # Compose dapat mempertahankan kontainer lama bila isi image baru identik (mis. commit hanya docs),
+  # padahal pemeriksaan di bawah sengaja mewajibkan ID image hasil build terbaru.
+  docker compose up -d --force-recreate 2>&1 || exit 14
   sleep 8
   step "Migrasi database (alembic upgrade head)"
   docker exec vms_api alembic upgrade head 2>&1 || exit 15

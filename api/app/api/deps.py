@@ -17,10 +17,10 @@ from app.core.database import AsyncSessionLocal, set_request_context, unit_of_wo
 from app.core.errors import AppError, ForbiddenError, NotFoundError
 from app.core.permissions import NO_GLOBAL_ROLE, Permission, permissions_for_roles
 from app.core.security import verify_jwt_token
-from app.repositories.file_access_repo import FileAccessRepo
-from app.repositories.org_ref_repo import OrgRefRepo
-from app.repositories.plan_access_repo import PlanAccessRepo
-from app.repositories.user_repo import UserRepo
+from app.crud.crud_file_access import CRUDFileAccess
+from app.crud.crud_org_ref import CRUDOrgRef
+from app.crud.crud_plan_access import CRUDPlanAccess
+from app.crud.crud_user import CRUDUser
 
 logger = logging.getLogger(__name__)
 security = HTTPBearer(auto_error=False)  # token hilang → 401 UNAUTHENTICATED kita sendiri
@@ -69,7 +69,7 @@ async def get_current_user(
     if not user_id or not session_id:
         raise _unauthenticated()
 
-    identity = await UserRepo(db).find_identity(user_id)
+    identity = await CRUDUser(db).find_identity(user_id)
     if not identity or not identity.is_active:
         raise _unauthenticated()
 
@@ -173,7 +173,7 @@ def satisfies(need: PlanNeed, *, manages: bool, is_leader: bool, is_member: bool
 async def check_plan_access(
     db: AsyncSession, plan_id: UUID | str, user: CurrentUser, need: PlanNeed, archived: bool | None = False
 ) -> PlanAccess:
-    row = await PlanAccessRepo(db).standing(plan_id, user.organization_id, user.user_id, archived)
+    row = await CRUDPlanAccess(db).standing(plan_id, user.organization_id, user.user_id, archived)
     if row is None:
         raise NotFoundError("SK")
     if not satisfies(need, manages=row.manages, is_leader=row.is_leader, is_member=row.is_member):
@@ -183,7 +183,7 @@ async def check_plan_access(
 
 async def check_unit_manager(db: AsyncSession, unit_id: UUID | str, user: CurrentUser) -> None:
     """Membuat SK di sebuah unit: PM unit itu, OPS, atau ADMIN. Unit organisasi lain → 404."""
-    row = await PlanAccessRepo(db).unit_standing(unit_id, user.organization_id, user.user_id)
+    row = await CRUDPlanAccess(db).unit_standing(unit_id, user.organization_id, user.user_id)
     if row is None:
         raise NotFoundError("Unit bisnis")
     if not row.manages:
@@ -197,7 +197,7 @@ async def check_file_access(db: AsyncSession, file_id: UUID, user: CurrentUser) 
     - swafoto absensi: karyawan pemilik & peninjau absensi (`review:attendance`);
     - bukti laporan/insiden/laporan akhir: siapa pun yang melihat SK-nya (V-07);
     - selain itu (belum dilampirkan, QR, wajah): hanya pengunggah."""
-    row = await FileAccessRepo(db).links(file_id, user.organization_id, user.user_id)
+    row = await CRUDFileAccess(db).links(file_id, user.organization_id, user.user_id)
     if row is None:
         raise NotFoundError("Berkas")
     if row.is_uploader:
@@ -210,7 +210,7 @@ async def check_file_access(db: AsyncSession, file_id: UUID, user: CurrentUser) 
         if row.own_selfie or Permission.REVIEW_ATTENDANCE.value in user.permissions:
             return row
         raise NotFoundError("Berkas")
-    plans = PlanAccessRepo(db)
+    plans = CRUDPlanAccess(db)
     for plan_id in row.plan_ids:
         if await plans.standing(plan_id, user.organization_id, user.user_id) is not None:
             return row
@@ -243,7 +243,7 @@ async def ensure_same_org(
     }
     if not any(refs.values()):
         return
-    owned = await OrgRefRepo(db).owned_counts(org_id, **refs)
+    owned = await CRUDOrgRef(db).owned_counts(org_id, **refs)
     for kind, label in _REF_LABELS:
         if getattr(owned, kind) != len(refs[kind]):
             raise NotFoundError(label)
@@ -268,7 +268,7 @@ def allocation_plan_access(need: PlanNeed) -> Callable[..., Awaitable[PlanAccess
         current_user: CurrentUser = Depends(get_current_user),
         db: AsyncSession = Depends(get_db_with_user),
     ) -> PlanAccess:
-        plan_id = await PlanAccessRepo(db).plan_of_allocation(alloc_id)
+        plan_id = await CRUDPlanAccess(db).plan_of_allocation(alloc_id)
         if plan_id is None:
             raise NotFoundError("Alokasi aset")
         return await check_plan_access(db, plan_id, current_user, need)
@@ -282,7 +282,7 @@ def incident_plan_access(need: PlanNeed) -> Callable[..., Awaitable[PlanAccess]]
         current_user: CurrentUser = Depends(get_current_user),
         db: AsyncSession = Depends(get_db_with_user),
     ) -> PlanAccess:
-        plan_id = await PlanAccessRepo(db).plan_of_incident(inc_id, current_user.organization_id)
+        plan_id = await CRUDPlanAccess(db).plan_of_incident(inc_id, current_user.organization_id)
         if plan_id is None:
             raise NotFoundError("Insiden")
         return await check_plan_access(db, plan_id, current_user, need)
@@ -299,7 +299,7 @@ def plan_day_access(need: PlanNeed) -> Callable[..., Awaitable[PlanAccess]]:
         db: AsyncSession = Depends(get_db_with_user),
     ) -> PlanAccess:
         access = await check_plan_access(db, plan_id, current_user, need)
-        if str(await PlanAccessRepo(db).plan_of_day(day_id)) != str(plan_id):
+        if str(await CRUDPlanAccess(db).plan_of_day(day_id)) != str(plan_id):
             raise NotFoundError("Hari kerja")
         return access
     return guard

@@ -1,5 +1,5 @@
 """
-app/repositories/plan_transition_repo.py
+app/crud/crud_plan_transition.py
 Kueri untuk transisi SK (publish, accept, start). Satu-satunya tempat SQL-nya (dok 12).
 """
 from __future__ import annotations
@@ -9,13 +9,13 @@ from uuid import UUID
 
 from app.core.enums import ChangeStatus, DocumentKind, DocumentStatus, PlanStatus
 
-from .base_repo import BaseRepo
+from .base import CRUDBase
 
 # Daftar kolom ditulis ulang di setiap kueri (bukan disambung) agar tiap kueri tetap literal statis
 # yang diperiksa terhadap skema oleh tests/test_sql_matches_schema.py.
 
 
-class PlanTransitionRepo(BaseRepo):
+class CRUDPlanTransition(CRUDBase):
 
     async def lock_plan(self, plan_id: UUID | str, org_id: UUID | str, include_archived: bool = False) -> Any:
         return await self.fetchone(

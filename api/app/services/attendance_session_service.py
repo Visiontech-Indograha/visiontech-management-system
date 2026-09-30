@@ -12,8 +12,8 @@ from uuid import UUID
 from sqlalchemy.exc import IntegrityError
 
 from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationError, trigger_rule_message
-from app.repositories.attendance_session_repo import AttendanceSessionRepo
-from app.repositories.org_clock_repo import OrgClockRepo
+from app.crud.crud_attendance_session import CRUDAttendanceSession
+from app.crud.crud_org_clock import CRUDOrgClock
 
 OPEN_SESSION = "Masih ada sesi absensi terbuka."
 SEE_ALL = {"FINANCE", "HR", "OPS", "ADMIN"}  # prototipe operations.js attendance(): canAll (+ ADMIN)
@@ -22,7 +22,7 @@ MAX_GPS_ACCURACY_M = 100  # K-12 (docs/10): akurasi GPS > 100 m ditolak
 
 
 class AttendanceSessionService:
-    def __init__(self, repo: AttendanceSessionRepo, clock: OrgClockRepo) -> None:
+    def __init__(self, repo: CRUDAttendanceSession, clock: CRUDOrgClock) -> None:
         self.repo = repo
         self.clock = clock
 

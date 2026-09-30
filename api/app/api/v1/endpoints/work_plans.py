@@ -22,8 +22,8 @@ from app.api.deps import (
 from app.core.enums import PlanStatus
 from app.core.errors import ValidationError, trigger_rule_error
 from app.core.permissions import Permission
-from app.repositories.plan_access_repo import PlanAccessRepo
-from app.repositories.plan_assignment_repo import PlanAssignmentRepo
+from app.crud.crud_plan_access import CRUDPlanAccess
+from app.crud.crud_plan_assignment import CRUDPlanAssignment
 from app.schemas.plan import (
     AssignmentEmployeeOption,
     DayPlanRequest,
@@ -52,7 +52,7 @@ async def assignment_options(
     db: AsyncSession = Depends(get_db_with_user),
 ) -> PlanAssignmentOptions:
     """Pilihan PM/personel yang sah untuk periode SK baru (R-23)."""
-    values = await PlanAssignmentService(PlanAssignmentRepo(db)).options(current_user, period_start, period_end)
+    values = await PlanAssignmentService(CRUDPlanAssignment(db)).options(current_user, period_start, period_end)
     return PlanAssignmentOptions(
         can_choose_pm=values["can_choose_pm"],
         fixed_pm_employee_id=values["fixed_pm_employee_id"],
@@ -70,7 +70,7 @@ async def get_plans(
 ) -> list[WorkPlanResponse]:
     """Hanya SK yang terlihat oleh pengguna (V-07, `domain.js` visiblePlans). `archived=true`: draf
     terarsip — hanya untuk pengelola (V-21)."""
-    rows = await PlanAccessRepo(db).visible_plans(current_user.organization_id, current_user.user_id,
+    rows = await CRUDPlanAccess(db).visible_plans(current_user.organization_id, current_user.user_id,
                                                   status_filter, archived)
     return [WorkPlanResponse(**row._mapping) for row in rows]
 
@@ -87,7 +87,7 @@ async def create_plan(
     await check_unit_manager(db, data.unit_id, current_user)
     await ensure_same_org(db, current_user.organization_id, sites=[data.site_id],
                           employees=[data.pm_employee_id, data.leader_employee_id])
-    assignments = PlanAssignmentService(PlanAssignmentRepo(db))
+    assignments = PlanAssignmentService(CRUDPlanAssignment(db))
     await assignments.validate_owner(current_user, data.unit_id, data.pm_employee_id)
     if data.leader_employee_id:
         await assignments.validate_team_scope(current_user, data.unit_id, [data.leader_employee_id])
@@ -189,7 +189,7 @@ async def update_plan(
         
         if data.leader_employee_id != row.leader_employee_id:
             # R-26: ketua baru melewati aturan yang sama dengan buat SK / simpan tim (staf lapangan, unit PM).
-            await PlanAssignmentService(PlanAssignmentRepo(db)).validate_team_scope(
+            await PlanAssignmentService(CRUDPlanAssignment(db)).validate_team_scope(
                 current_user, row.unit_id, [data.leader_employee_id])
             # Hapus leader lama jika ada
             await db.execute(text("DELETE FROM vms.work_plan_member WHERE work_plan_id = :plan AND role_in_plan = 'LEADER'"), {"plan": plan_id})

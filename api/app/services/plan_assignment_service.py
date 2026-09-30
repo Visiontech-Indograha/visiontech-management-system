@@ -9,11 +9,11 @@ from uuid import UUID
 from app.api.deps import CurrentUser
 from app.core.errors import AppError, ForbiddenError
 from app.core.permissions import RoleCode
-from app.repositories.plan_assignment_repo import PlanAssignmentRepo
+from app.crud.crud_plan_assignment import CRUDPlanAssignment
 
 
 class PlanAssignmentService:
-    def __init__(self, repo: PlanAssignmentRepo) -> None:
+    def __init__(self, repo: CRUDPlanAssignment) -> None:
         self.repo = repo
 
     @staticmethod

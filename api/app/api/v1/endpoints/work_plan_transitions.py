@@ -1,7 +1,7 @@
 """
 Transisi SK: terbitkan (PM unit/OPS), terima & mulai (ketua menurut SK) — dijaga `plan_access`
 (V-07). Tipis (dok 12 §2): aturan di services/plan_transition_service.py, SQL di
-repositories/plan_transition_repo.py.
+crud/crud_plan_transition.py.
 """
 from typing import Any
 from uuid import UUID
@@ -11,8 +11,8 @@ from fastapi.concurrency import run_in_threadpool
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import PlanAccess, PlanNeed, ensure_same_org, get_db_with_user, plan_access
-from app.repositories.plan_member_repo import PlanMemberRepo
-from app.repositories.plan_transition_repo import PlanTransitionRepo
+from app.crud.crud_plan_member import CRUDPlanMember
+from app.crud.crud_plan_transition import CRUDPlanTransition
 from app.schemas.plan import WorkPlanResponse
 from app.schemas.plan_transition import (
     CompletionRequest,
@@ -75,7 +75,7 @@ async def get_final_report(
 
 
 def _service(db: AsyncSession) -> PlanTransitionService:
-    return PlanTransitionService(PlanTransitionRepo(db), PlanMemberRepo(db))
+    return PlanTransitionService(CRUDPlanTransition(db), CRUDPlanMember(db))
 
 
 def _response(row: Any) -> WorkPlanResponse:

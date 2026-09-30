@@ -21,43 +21,33 @@ ALLOWED_DIRS = {"api", "core", "models", "schemas", "crud", "services", "templat
 # folder lama → berkas .py yang masih boleh ada (dikosongkan oleh tahap migrasi di docs/26).
 LEGACY_DIRS: dict[str, set[str]] = {
     "controllers": {"__init__.py", "auth_controller.py"},  # M4
-    "repositories": {  # M3
-        "__init__.py", "asset_reservation_repo.py", "attendance_monitor_repo.py",
-        "attendance_session_repo.py", "base_repo.py", "document_repo.py", "employee_repo.py",
-        "file_access_repo.py", "monitoring_repo.py", "org_clock_repo.py", "org_ref_repo.py",
-        "overtime_repo.py", "plan_access_repo.py", "plan_assignment_repo.py", "plan_attachment_repo.py",
-        "plan_change_repo.py", "plan_day_repo.py", "plan_location_repo.py", "plan_member_repo.py",
-        "plan_transition_repo.py", "session_repo.py", "signature_repo.py", "sync_repo.py", "unit_repo.py",
-        "user_repo.py", "weekly_report_repo.py",
-    },
 }
 
 # lapisan (folder teratas di app/) → lapisan yang tidak boleh diimpornya.
 FORBIDDEN: dict[str, set[str]] = {
-    "core": {"api", "services", "crud", "repositories", "controllers"},
+    "core": {"api", "services", "crud", "controllers"},
     "crud": {"api", "services", "controllers"},
-    "repositories": {"api", "services", "controllers"},
     "services": {"api", "controllers"},
-    "schemas": {"api", "services", "crud", "repositories", "controllers"},
-    "api": {"crud", "repositories"},
+    "schemas": {"api", "services", "crud", "controllers"},
+    "api": {"crud"},
 }
 # `api/deps.py` adalah tempat perakitan dependency; boleh mengimpor apa saja.
 EXEMPT_FILES = {"api/deps.py"}
 
 # "berkas -> lapisan terlarang yang diimpor"; hanya boleh menyusut.
-# api -> repositories: perakitan service pindah ke api/deps.py (M5).
+# api -> crud: perakitan service pindah ke api/deps.py (M5).
 # services -> api: penjaga akses & `CurrentUser` dari api/deps.py pindah ke core/security.py (M5).
 KNOWN_VIOLATIONS: set[str] = {
-    "api/v1/endpoints/accounts.py -> repositories",
-    "api/v1/endpoints/attendance.py -> repositories",
-    "api/v1/endpoints/attendance_cron.py -> repositories",
-    "api/v1/endpoints/documents.py -> repositories",
-    "api/v1/endpoints/expiry.py -> repositories",
-    "api/v1/endpoints/hse.py -> repositories",
-    "api/v1/endpoints/units.py -> repositories",
-    "api/v1/endpoints/work_plan_members.py -> repositories",
-    "api/v1/endpoints/work_plan_transitions.py -> repositories",
-    "api/v1/endpoints/work_plans.py -> repositories",
+    "api/v1/endpoints/accounts.py -> crud",
+    "api/v1/endpoints/attendance.py -> crud",
+    "api/v1/endpoints/attendance_cron.py -> crud",
+    "api/v1/endpoints/documents.py -> crud",
+    "api/v1/endpoints/expiry.py -> crud",
+    "api/v1/endpoints/hse.py -> crud",
+    "api/v1/endpoints/units.py -> crud",
+    "api/v1/endpoints/work_plan_members.py -> crud",
+    "api/v1/endpoints/work_plan_transitions.py -> crud",
+    "api/v1/endpoints/work_plans.py -> crud",
     "services/asset_reservation_service.py -> api",
     "services/monitoring_service.py -> api",
     "services/overtime_service.py -> api",

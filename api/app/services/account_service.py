@@ -12,9 +12,9 @@ from typing import Any
 
 from app.core.errors import AppError, NotFoundError
 from app.core.security import hash_password
-from app.repositories.employee_repo import EmployeeRepo
-from app.repositories.session_repo import SessionRepo
-from app.repositories.user_repo import UserRepo
+from app.crud.crud_employee import CRUDEmployee
+from app.crud.crud_session import CRUDSession
+from app.crud.crud_user import CRUDUser
 
 _ALPHABET = string.ascii_letters + string.digits
 
@@ -26,7 +26,7 @@ def temporary_password() -> str:
 
 
 class AccountService:
-    def __init__(self, users: UserRepo, employees: EmployeeRepo, sessions: SessionRepo) -> None:
+    def __init__(self, users: CRUDUser, employees: CRUDEmployee, sessions: CRUDSession) -> None:
         self.users, self.employees, self.sessions = users, employees, sessions
 
     async def _employee(self, employee_id: Any, org_id: str) -> Any:

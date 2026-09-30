@@ -1,5 +1,5 @@
 """
-app/repositories/plan_attachment_repo.py
+app/crud/crud_plan_attachment.py
 Lampiran draf SK (V-29, domain.js SAVE_ATTACHMENTS): daftar berkas berurutan per SK.
 """
 from __future__ import annotations
@@ -7,10 +7,10 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
-from .base_repo import BaseRepo
+from .base import CRUDBase
 
 
-class PlanAttachmentRepo(BaseRepo):
+class CRUDPlanAttachment(CRUDBase):
 
     async def list_for_plan(self, plan_id: UUID | str) -> list[Any]:
         return list(await self.fetchall(

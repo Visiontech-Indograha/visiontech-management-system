@@ -1,5 +1,5 @@
 """
-app/repositories/attendance_monitor_repo.py
+app/crud/crud_attendance_monitor.py
 Kueri agregat untuk pemantauan absensi (dok 17 §5.3). Selalu per organisasi, hanya angka.
 """
 from __future__ import annotations
@@ -7,10 +7,10 @@ from __future__ import annotations
 from datetime import date, datetime, timedelta
 from uuid import UUID
 
-from .base_repo import BaseRepo
+from .base import CRUDBase
 
 
-class AttendanceMonitorRepo(BaseRepo):
+class CRUDAttendanceMonitor(CRUDBase):
 
     async def active_employee_count(self, org_id: UUID | str) -> int:
         return int(await self.scalar(

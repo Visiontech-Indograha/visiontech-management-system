@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, ensure_same_org, get_db_with_user, require_permission
 from app.core.permissions import Permission
-from app.repositories.document_repo import DocumentRepo
+from app.crud.crud_document import CRUDDocument
 from app.schemas.document import (
     DocumentListResponse,
     EmployeeDocumentCreate,
@@ -27,7 +27,7 @@ _db = Depends(get_db_with_user)
 
 
 def _service(db: AsyncSession) -> DocumentService:
-    return DocumentService(DocumentRepo(db))
+    return DocumentService(CRUDDocument(db))
 
 
 @router.get("", response_model=DocumentListResponse)

@@ -1,6 +1,6 @@
 """
 Susunan tim SK draft (V-05). Tipis: aturan di services/plan_member_service.py, SQL di
-repositories/plan_member_repo.py; transaksi dibuka dependency sesi (get_db).
+crud/crud_plan_member.py; transaksi dibuka dependency sesi (get_db).
 """
 from uuid import UUID
 
@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import PlanAccess, PlanNeed, get_db_with_user, plan_access
-from app.repositories.plan_member_repo import PlanMemberRepo
+from app.crud.crud_plan_member import CRUDPlanMember
 from app.schemas.plan_member import TeamMemberOut, TeamRequest, TeamResponse
 from app.services.plan_member_service import PlanMemberService
 
@@ -26,7 +26,7 @@ async def get_plan_team(
     db: AsyncSession = Depends(get_db_with_user),
 ) -> list[TeamMemberOut]:
     """Tim aktif SK (ketua dulu). SK tak terlihat / organisasi lain → 404 (penjaga VIEW)."""
-    rows = await PlanMemberService(PlanMemberRepo(db)).team(plan_id)
+    rows = await PlanMemberService(CRUDPlanMember(db)).team(plan_id)
     return [TeamMemberOut(**r._mapping) for r in rows]
 
 
@@ -41,7 +41,7 @@ async def set_plan_team(
     access: PlanAccess = _PM_UNIT_ACCESS,
     db: AsyncSession = Depends(get_db_with_user),
 ) -> TeamResponse:
-    team = await PlanMemberService(PlanMemberRepo(db)).set_team(
+    team = await PlanMemberService(CRUDPlanMember(db)).set_team(
         access.user, plan_id, payload.leader_employee_id,
         payload.member_employee_ids, payload.row_version,
     )

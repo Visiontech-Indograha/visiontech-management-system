@@ -1,6 +1,6 @@
 """
 Adendum SK — perpanjangan & personel (V-22, dok 05 §3.4). Tipis: aturan di
-services/plan_change_service.py, SQL di repositories/plan_change_repo.py.
+services/plan_change_service.py, SQL di crud/crud_plan_change.py.
 
 Sebelumnya: `/plans/{id}/changes/extension` + `/{change_id}/approve` yang langsung MENERAPKAN
 perubahan saat PM menyetujui — tanpa penerimaan ketua, tanpa dokumen adendum, dan PERSONNEL tidak

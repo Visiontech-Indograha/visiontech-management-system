@@ -1,5 +1,5 @@
 """
-app/repositories/plan_location_repo.py
+app/crud/crud_plan_location.py
 Titik lokasi penugasan SK (revisi PM 2026-09-26). Setiap penetapan membuat baris `site` baru
 lalu menautkannya ke SK — site lama tidak diubah agar riwayat absensi (jarak & radius saat itu)
 tetap sah.
@@ -9,10 +9,10 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
-from .base_repo import BaseRepo
+from .base import CRUDBase
 
 
-class PlanLocationRepo(BaseRepo):
+class CRUDPlanLocation(CRUDBase):
 
     async def site(self, site_id: UUID | str, org_id: UUID | str) -> Any:
         return await self.fetchone(

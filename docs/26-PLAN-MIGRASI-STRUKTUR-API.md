@@ -32,7 +32,7 @@
 
 | Tahap | Isi | Risiko | Bukti selesai |
 |---|---|---|---|
-| **M0** | Penjaga struktur: `tests/test_structure.py` + snapshot OpenAPI | Rendah | uji baru hijau; snapshot tersimpan |
+| **M0** | Penjaga struktur: `tests/test_structure.py` + snapshot OpenAPI | Rendah | uji baru hijau; snapshot tersimpan — **selesai 2026-09-30** |
 | **M1** | `db/*` → `core/database.py` | Rendah | suite hijau; OpenAPI identik |
 | **M2** | Router → `api/v1/endpoints/` + `api/v1/router.py`; `guards.py` → `api/deps.py` | Sedang (impor banyak) | suite hijau; OpenAPI **identik byte-per-byte** |
 | **M3** | `repositories/` → `crud/` (nama `crud_<entitas>.py`) | Sedang | suite hijau; tidak ada `repositories` tersisa |

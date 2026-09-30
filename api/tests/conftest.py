@@ -240,7 +240,7 @@ def fake_storage(monkeypatch) -> dict[str, bytes]:
         stored[object_name] = data
         return True
 
-    import app.api.files as files_api
+    import app.api.v1.endpoints.files as files_api
 
     monkeypatch.setattr(files_api, "upload_file", upload)
     monkeypatch.setattr(files_api, "get_presigned_url", lambda name, expires=None: f"https://minio.uji/{name}")

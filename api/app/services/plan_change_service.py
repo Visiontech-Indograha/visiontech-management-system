@@ -14,8 +14,7 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import CurrentUser
-from app.api.guards import PlanNeed, check_plan_access
+from app.api.deps import CurrentUser, PlanNeed, check_plan_access
 from app.core.enums import ChangeStatus, ChangeType, DocumentKind, DocumentStatus, PlanStatus
 from app.core.errors import AppError, ForbiddenError, NotFoundError
 from app.repositories.plan_assignment_repo import PlanAssignmentRepo

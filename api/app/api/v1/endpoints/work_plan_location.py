@@ -5,8 +5,7 @@ from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import CurrentUser, get_db_with_user, require_permission
-from app.api.guards import PlanAccess, PlanNeed, plan_access
+from app.api.deps import CurrentUser, PlanAccess, PlanNeed, get_db_with_user, plan_access, require_permission
 from app.core.permissions import Permission
 from app.services.geocode_service import GeocodeService
 from app.services.plan_location_service import PlanLocationService

@@ -6,8 +6,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_db_with_user
-from app.api.guards import PlanAccess, PlanNeed, ensure_same_org, plan_access
+from app.api.deps import PlanAccess, PlanNeed, ensure_same_org, get_db_with_user, plan_access
 from app.services.plan_attachment_service import PlanAttachmentService
 
 router = APIRouter(prefix="/work-plans/{plan_id}/attachments", tags=["Work Plans"])

@@ -12,8 +12,7 @@ from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_db_with_user
-from app.api.guards import PlanAccess, PlanNeed, ensure_same_org, plan_access
+from app.api.deps import PlanAccess, PlanNeed, ensure_same_org, get_db_with_user, plan_access
 from app.repositories.plan_member_repo import PlanMemberRepo
 from app.repositories.plan_transition_repo import PlanTransitionRepo
 from app.schemas.plan import WorkPlanResponse

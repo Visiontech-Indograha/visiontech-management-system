@@ -91,7 +91,7 @@ def test_unknown_or_malformed_file_id_never_crashes(client, world, file_id):
 
 def test_upload_fails_and_leaves_no_record_when_storage_is_down(client, world, monkeypatch):
     """Temuan uji HP: MinIO mati → dulu 200 + file_id berkas yang tidak ada. Kini 503 dan tanpa baris."""
-    import app.api.files as files_api
+    import app.api.v1.endpoints.files as files_api
 
     monkeypatch.setattr(files_api, "upload_file", lambda name, data, content_type: False)
     before = sync_query("SELECT count(*) FROM vms.file_object WHERE organization_id = %s", (world.org_id,))[0][0]
@@ -106,7 +106,7 @@ def test_upload_over_the_limit_is_rejected_without_reading_it_whole(client, worl
     """O-12 · batas ukuran diperiksa dengan membaca paling banyak batas + 1 bita."""
     from starlette.datastructures import UploadFile
 
-    import app.api.files as files_api
+    import app.api.v1.endpoints.files as files_api
 
     monkeypatch.setattr(files_api, "MAX_FILE_SIZE", 64)
     sizes: list[int] = []

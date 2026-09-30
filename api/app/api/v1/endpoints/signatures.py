@@ -14,8 +14,15 @@ from fastapi.responses import Response
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import CurrentUser, get_current_user, get_db, get_db_with_user
-from app.api.guards import PlanAccess, PlanNeed, plan_access
+from app.api.deps import (
+    CurrentUser,
+    PlanAccess,
+    PlanNeed,
+    get_current_user,
+    get_db,
+    get_db_with_user,
+    plan_access,
+)
 from app.core.errors import AppError
 from app.services.pdf_service import html_to_pdf, render_plan_document_html
 from app.services.signature_service import SignatureService

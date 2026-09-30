@@ -5,12 +5,14 @@ from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import CurrentUser, get_current_user, get_db_with_user
-from app.api.guards import (
+from app.api.deps import (
+    CurrentUser,
     PlanAccess,
     PlanNeed,
     check_plan_access,
     ensure_same_org,
+    get_current_user,
+    get_db_with_user,
     incident_plan_access,
     plan_day_access,
     require_plan_status,

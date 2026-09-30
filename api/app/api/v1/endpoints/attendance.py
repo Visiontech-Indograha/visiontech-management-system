@@ -13,8 +13,7 @@ from fastapi.responses import PlainTextResponse
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import CurrentUser, get_current_user, get_db_with_user, require_permission
-from app.api.guards import ensure_same_org
+from app.api.deps import CurrentUser, ensure_same_org, get_current_user, get_db_with_user, require_permission
 from app.core.permissions import Permission
 from app.repositories.attendance_session_repo import AttendanceSessionRepo
 from app.repositories.org_clock_repo import OrgClockRepo

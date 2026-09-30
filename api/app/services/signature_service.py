@@ -15,8 +15,7 @@ from uuid import UUID
 import qrcode
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import CurrentUser
-from app.api.guards import PlanNeed, check_plan_access
+from app.api.deps import CurrentUser, PlanNeed, check_plan_access
 from app.core.config import settings
 from app.core.errors import AppError, NotFoundError, ValidationError
 from app.core.signing import canonical, get_document_signer

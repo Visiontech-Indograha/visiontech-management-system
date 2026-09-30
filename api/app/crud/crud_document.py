@@ -1,5 +1,5 @@
 """
-app/repositories/document_repo.py
+app/crud/crud_document.py
 Dokumen pribadi karyawan — seluruh kueri modul (antrean HR R-19; daftar/ajukan/verifikasi R-20).
 """
 from __future__ import annotations
@@ -7,10 +7,10 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
-from .base_repo import BaseRepo
+from .base import CRUDBase
 
 
-class DocumentRepo(BaseRepo):
+class CRUDDocument(CRUDBase):
 
     async def pending_for_org(self, org_id: UUID | str, user_id: UUID | str) -> list[Any]:
         """Antrean verifikasi HR: dokumen PENDING milik karyawan organisasi ini, terlama dulu."""

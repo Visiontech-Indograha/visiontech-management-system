@@ -1,5 +1,5 @@
 """
-app/repositories/asset_reservation_repo.py
+app/crud/crud_asset_reservation.py
 Reservasi aset per SK (V-27) — padanan `domain.js` RESERVE_ASSET, RELEASE_ASSET, CHECK_ASSET.
 Satu baris `asset_allocation` terbuka (released_at NULL) = aset sedang dipesan/dipakai SK itu.
 """
@@ -8,10 +8,10 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
-from .base_repo import BaseRepo
+from .base import CRUDBase
 
 
-class AssetReservationRepo(BaseRepo):
+class CRUDAssetReservation(CRUDBase):
 
     async def list_with_state(self, org_id: UUID | str) -> list[Any]:
         """Aset organisasi + alokasi yang sedang berjalan + pengajuan pengembalian yang menunggu (R-19)."""

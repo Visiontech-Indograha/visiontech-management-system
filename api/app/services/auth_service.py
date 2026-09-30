@@ -1,7 +1,7 @@
 """
 app/services/auth_service.py
 Aturan bisnis autentikasi: login, rotasi refresh token, logout, ganti kata sandi.
-Tidak menulis SQL (lewat repository) dan tidak tahu HTTP (cookie diurus router).
+Tidak menulis SQL (lewat crud) dan tidak tahu HTTP (cookie diurus router).
 """
 from __future__ import annotations
 
@@ -12,8 +12,8 @@ from typing import Any
 from app.core.alerts import send_security_alert
 from app.core.errors import AppError, NotFoundError
 from app.core.security import create_jwt_token, hash_password, verify_password
-from app.repositories.session_repo import MAX_LOGIN_FAILURES, SessionRepo
-from app.repositories.user_repo import UserRepo
+from app.crud.crud_session import MAX_LOGIN_FAILURES, CRUDSession
+from app.crud.crud_user import CRUDUser
 
 ACCESS_TOKEN_TTL = timedelta(minutes=15)
 DEFAULT_ROLE = "field"
@@ -70,7 +70,7 @@ def _locked(state: Any, *, persist: bool = False) -> AppError:
 
 
 class AuthService:
-    def __init__(self, users: UserRepo, sessions: SessionRepo) -> None:
+    def __init__(self, users: CRUDUser, sessions: CRUDSession) -> None:
         self.users = users
         self.sessions = sessions
 

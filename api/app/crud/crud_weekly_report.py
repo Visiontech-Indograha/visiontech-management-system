@@ -1,5 +1,5 @@
 """
-app/repositories/weekly_report_repo.py
+app/crud/crud_weekly_report.py
 Laporan mingguan SK (V-25). Minggu dihitung dari hari kerja SK: potongan 7 hari urut tanggal,
 hanya bila SK punya ≥ 7 hari (`domain.js` chunkDays). Baris `weekly_report` dibuat saat pertama disimpan.
 """
@@ -8,7 +8,7 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
-from .base_repo import BaseRepo
+from .base import CRUDBase
 
 _WEEKS = """
     WITH d AS (
@@ -33,7 +33,7 @@ _WEEKS = """
 """
 
 
-class WeeklyReportRepo(BaseRepo):
+class CRUDWeeklyReport(CRUDBase):
 
     async def list_weeks(self, plan_id: UUID | str) -> list[Any]:
         return list(await self.fetchall(_WEEKS, {"plan": plan_id, "week": None}))

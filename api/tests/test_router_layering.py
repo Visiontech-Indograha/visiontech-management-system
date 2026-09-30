@@ -1,6 +1,6 @@
 """
 O-02 (docs/20 §5, R-25) · Router tidak pernah menyentuh basis data (CLAUDE.md, docs/12 §2).
-Router hanya: jalur, metode, status, model respons, dependency; SQL tinggal di repository.
+Router hanya: jalur, metode, status, model respons, dependency; SQL tinggal di crud.
 
 Pemeriksaan statis (AST) atas `app/api/v1/endpoints/*.py`: router tidak boleh mengimpor pembangun kueri
 SQLAlchemy (`text`, `select`, `insert`, `update`, `delete`) dan tidak boleh memanggil metode sesi
@@ -73,7 +73,7 @@ def test_scanner_detects_a_router_that_queries(tmp_path: Path) -> None:
 
 def test_no_new_router_touches_the_database() -> None:
     new = {name: v for name, v in _all().items() if name not in LEGACY}
-    assert not new, "Router menyentuh DB — pindahkan kueri ke repository:\n" + "\n".join(
+    assert not new, "Router menyentuh DB — pindahkan kueri ke crud:\n" + "\n".join(
         f"  {line}" for v in new.values() for line in v
     )
 

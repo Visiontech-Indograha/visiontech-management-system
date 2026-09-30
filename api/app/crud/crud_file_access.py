@@ -1,5 +1,5 @@
 """
-app/repositories/file_access_repo.py
+app/crud/crud_file_access.py
 Tautan sebuah berkas (V-17): dokumen pribadi, swafoto absensi, bukti pekerjaan (laporan harian,
 insiden, laporan akhir) — beserta apakah pengguna pemiliknya. Keputusan boleh/tidak ada di
 `api/deps.py::check_file_access`.
@@ -9,10 +9,10 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
-from .base_repo import BaseRepo
+from .base import CRUDBase
 
 
-class FileAccessRepo(BaseRepo):
+class CRUDFileAccess(CRUDBase):
 
     async def links(self, file_id: UUID | str, org_id: UUID | str, user_id: UUID | str) -> Any:
         """None bila berkas tidak ada atau milik organisasi lain."""

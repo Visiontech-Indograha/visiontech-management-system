@@ -1,5 +1,5 @@
 """
-app/repositories/org_clock_repo.py
+app/crud/crud_org_clock.py
 Jam organisasi (V-10): waktu & tanggal lokal menurut `organization.timezone`, dari jam server
 basis data — sama dengan yang dipakai trigger dan kueri lain (`now() AT TIME ZONE o.timezone`).
 Bukan jam perangkat, bukan zona waktu mesin aplikasi (Docker = UTC).
@@ -9,10 +9,10 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
-from .base_repo import BaseRepo
+from .base import CRUDBase
 
 
-class OrgClockRepo(BaseRepo):
+class CRUDOrgClock(CRUDBase):
 
     async def local_now(self, org_id: UUID | str) -> Any:
         """Baris `(local_now, today)` untuk organisasi."""

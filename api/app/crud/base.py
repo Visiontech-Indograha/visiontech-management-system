@@ -1,6 +1,6 @@
 """
-app/repositories/base_repo.py
-Base class untuk semua repository. Menyediakan helper umum.
+app/crud/base.py
+Kelas dasar untuk semua crud. Menyediakan helper umum.
 Repository adalah satu-satunya tempat query SQL ditulis — lihat docs/12-STANDAR-BACKEND.md.
 """
 from __future__ import annotations
@@ -12,7 +12,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
-class BaseRepo:
+class CRUDBase:
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
 

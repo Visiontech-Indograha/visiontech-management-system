@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import PlanAccess, require_plan_status
 from app.core.enums import PlanStatus
 from app.core.errors import AppError, NotFoundError, ValidationError
-from app.repositories.weekly_report_repo import WeeklyReportRepo
+from app.crud.crud_weekly_report import CRUDWeeklyReport
 
 EDITABLE = ("DRAFT", "CHANGES_REQUESTED")
 
@@ -23,7 +23,7 @@ def _state(message: str) -> AppError:
 
 class WeeklyReportService:
     def __init__(self, db: AsyncSession) -> None:
-        self.repo = WeeklyReportRepo(db)
+        self.repo = CRUDWeeklyReport(db)
 
     async def list_weeks(self, access: PlanAccess) -> list[Any]:
         return await self.repo.list_weeks(access.plan.id)

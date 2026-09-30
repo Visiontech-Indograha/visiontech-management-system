@@ -1,5 +1,5 @@
 """
-app/repositories/session_repo.py
+app/crud/crud_session.py
 Sesi login dan percobaan masuk — membungkus fungsi di db/04_signature_auth.sql.
 Refresh token mentah tidak pernah disimpan; basis data hanya menyimpan SHA-256-nya.
 """
@@ -8,7 +8,7 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
-from .base_repo import BaseRepo
+from .base import CRUDBase
 
 # Sama dengan default vms.login_is_locked (db/04_signature_auth.sql): 5 gagal dalam 15 menit → terkunci.
 MAX_LOGIN_FAILURES = 5
@@ -26,7 +26,7 @@ FAILED_LOGINS_SQL = f"""
 """
 
 
-class SessionRepo(BaseRepo):
+class CRUDSession(CRUDBase):
 
     async def failed_logins(self, login: str) -> Any:
         """(failures, locked_until, retry_after_seconds) — dihitung dengan jam basis data."""

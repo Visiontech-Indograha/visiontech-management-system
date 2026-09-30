@@ -14,9 +14,9 @@ from app.core.enums import PlanStatus
 from app.core.errors import AppError, ConflictError, ForbiddenError, NotFoundError
 from app.core.signing import canonical
 from app.core.time import jakarta_now
-from app.repositories.plan_member_repo import PlanMemberRepo
-from app.repositories.plan_transition_repo import PlanTransitionRepo
-from app.repositories.weekly_report_repo import WeeklyReportRepo
+from app.crud.crud_plan_member import CRUDPlanMember
+from app.crud.crud_plan_transition import CRUDPlanTransition
+from app.crud.crud_weekly_report import CRUDWeeklyReport
 from app.services.signature_service import ACCEPTOR, APPROVER, ISSUER, SignatureService
 
 # domain.js CANCEL_PLAN requireStatus
@@ -33,7 +33,7 @@ def _state(message: str) -> AppError:
 
 
 class PlanTransitionService:
-    def __init__(self, repo: PlanTransitionRepo, members: PlanMemberRepo) -> None:
+    def __init__(self, repo: CRUDPlanTransition, members: CRUDPlanMember) -> None:
         self.repo = repo
         self.members = members
 
@@ -172,7 +172,7 @@ class PlanTransitionService:
         return await self.repo.final_report(plan_id)
 
     async def _weeks_approved(self, plan_id: UUID) -> bool:
-        weeks = await WeeklyReportRepo(self.repo.db).list_weeks(plan_id)
+        weeks = await CRUDWeeklyReport(self.repo.db).list_weeks(plan_id)
         return all(week.status == "APPROVED" for week in weeks)
 
     async def request_complete(self, plan_id: UUID, org_id: str, user_id: str, row_version: int,

@@ -1,5 +1,5 @@
 """
-app/repositories/org_ref_repo.py
+app/crud/crud_org_ref.py
 Kepemilikan rujukan di badan permintaan (V-08). FK hanya memastikan baris ada — bukan milik
 organisasi pengguna — jadi setiap id yang dikirim klien dihitung di sini per jenis.
 """
@@ -8,10 +8,10 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from .base_repo import BaseRepo
+from .base import CRUDBase
 
 
-class OrgRefRepo(BaseRepo):
+class CRUDOrgRef(CRUDBase):
 
     async def owned_counts(
         self,

@@ -17,10 +17,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import CurrentUser, PlanNeed, check_plan_access
 from app.core.enums import ChangeStatus, ChangeType, DocumentKind, DocumentStatus, PlanStatus
 from app.core.errors import AppError, ForbiddenError, NotFoundError
-from app.repositories.plan_assignment_repo import PlanAssignmentRepo
-from app.repositories.plan_change_repo import PlanChangeRepo
-from app.repositories.plan_member_repo import PlanMemberRepo
-from app.repositories.plan_transition_repo import PlanTransitionRepo
+from app.crud.crud_plan_assignment import CRUDPlanAssignment
+from app.crud.crud_plan_change import CRUDPlanChange
+from app.crud.crud_plan_member import CRUDPlanMember
+from app.crud.crud_plan_transition import CRUDPlanTransition
 from app.services.plan_assignment_service import PlanAssignmentService
 
 ACTIVE = (PlanStatus.ACCEPTED, PlanStatus.IN_PROGRESS)   # domain.js requireStatus(['ACCEPTED','IN_PROGRESS'])
@@ -44,9 +44,9 @@ def _require_reason(reason: str | None, message: str) -> str:
 class PlanChangeService:
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
-        self.repo = PlanChangeRepo(db)
-        self.plans = PlanTransitionRepo(db)
-        self.members = PlanMemberRepo(db)
+        self.repo = CRUDPlanChange(db)
+        self.plans = CRUDPlanTransition(db)
+        self.members = CRUDPlanMember(db)
 
     async def _snapshot(self, plan_id: UUID | str) -> Any:
         raw = await self.plans.snapshot(plan_id)
@@ -101,7 +101,7 @@ class PlanChangeService:
         people = [leader, *members]
         if set(people) - await self.members.active_employees(people, user.organization_id):
             raise _invalid("Semua anggota tim harus aktif.")
-        await PlanAssignmentService(PlanAssignmentRepo(self.db)).validate_team_scope(
+        await PlanAssignmentService(CRUDPlanAssignment(self.db)).validate_team_scope(
             user, plan.unit_id, people, current_team=current,
         )
         conflicts = await self.members.schedule_conflicts(people, plan_id)

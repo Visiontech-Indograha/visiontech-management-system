@@ -1,5 +1,5 @@
 """
-app/repositories/monitoring_repo.py
+app/crud/crud_monitoring.py
 Pemantauan OPS (V-30): hari kerja per SK untuk lini masa, dan rekap absensi per karyawan.
 """
 from __future__ import annotations
@@ -8,10 +8,10 @@ from datetime import date
 from typing import Any
 from uuid import UUID
 
-from .base_repo import BaseRepo
+from .base import CRUDBase
 
 
-class MonitoringRepo(BaseRepo):
+class CRUDMonitoring(CRUDBase):
 
     async def plan_days(self, plan_ids: list[str]) -> list[Any]:
         """Hari kerja + status laporan hariannya untuk sekumpulan SK, urut tanggal."""

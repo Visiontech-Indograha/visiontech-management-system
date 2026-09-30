@@ -1,5 +1,5 @@
 """
-app/repositories/employee_repo.py
+app/crud/crud_employee.py
 Kueri karyawan untuk servis baru (V-29). Rute lama di api/employees.py belum dipindah ke sini.
 """
 from __future__ import annotations
@@ -7,10 +7,10 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
-from .base_repo import BaseRepo
+from .base import CRUDBase
 
 
-class EmployeeRepo(BaseRepo):
+class CRUDEmployee(CRUDBase):
 
     async def employee_of_user(self, user_id: UUID | str) -> Any:
         return await self.scalar("SELECT employee_id FROM vms.app_user WHERE id = CAST(:uid AS uuid)", {"uid": user_id})

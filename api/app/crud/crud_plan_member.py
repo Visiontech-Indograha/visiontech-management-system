@@ -1,5 +1,5 @@
 """
-app/repositories/plan_member_repo.py
+app/crud/crud_plan_member.py
 Susunan tim pekerjaan (`work_plan_member`). Anggota aktif = `valid_period` terbuka
 (sama dengan `vms.is_plan_member`); adendum personel kelak menutup baris, bukan menghapus.
 """
@@ -12,10 +12,10 @@ from uuid import UUID
 
 from app.core.enums import PlanStatus
 
-from .base_repo import BaseRepo
+from .base import CRUDBase
 
 
-class PlanMemberRepo(BaseRepo):
+class CRUDPlanMember(CRUDBase):
 
     async def lock_plan(self, plan_id: UUID | str, org_id: UUID | str) -> Any:
         """SK milik organisasi ini, dikunci untuk diubah. None bila tidak ada / milik organisasi lain."""

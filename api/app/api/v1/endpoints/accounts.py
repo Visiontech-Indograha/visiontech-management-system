@@ -9,9 +9,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, get_db_with_user, require_permission
 from app.core.permissions import Permission
-from app.repositories.employee_repo import EmployeeRepo
-from app.repositories.session_repo import SessionRepo
-from app.repositories.user_repo import UserRepo
+from app.crud.crud_employee import CRUDEmployee
+from app.crud.crud_session import CRUDSession
+from app.crud.crud_user import CRUDUser
 from app.schemas.account import AccountCreate, AccountOut, AccountWithPassword
 from app.services.account_service import AccountService
 
@@ -28,7 +28,7 @@ _db = Depends(get_db_with_user)
 
 
 def _service(db: AsyncSession) -> AccountService:
-    return AccountService(UserRepo(db), EmployeeRepo(db), SessionRepo(db))
+    return AccountService(CRUDUser(db), CRUDEmployee(db), CRUDSession(db))
 
 
 def _out(row: Any) -> AccountOut:

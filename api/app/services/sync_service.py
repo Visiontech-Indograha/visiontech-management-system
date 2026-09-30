@@ -17,8 +17,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import CurrentUser, PlanAccess, PlanNeed, check_plan_access, ensure_same_org
 from app.api.v1.endpoints import hse
 from app.core.errors import AppError, NotFoundError
-from app.repositories.plan_access_repo import PlanAccessRepo
-from app.repositories.sync_repo import SyncRepo
+from app.crud.crud_plan_access import CRUDPlanAccess
+from app.crud.crud_sync import CRUDSync
 from app.schemas.hse import DailyReportCreate, IncidentCreate
 from app.services.overtime_service import OvertimeService
 
@@ -39,11 +39,11 @@ def _message(exc: Exception) -> str:
 class SyncService:
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
-        self.repo = SyncRepo(db)
+        self.repo = CRUDSync(db)
 
     async def _day_access(self, user: CurrentUser, plan_id: UUID, day_id: UUID) -> PlanAccess:
         access = await check_plan_access(self.db, plan_id, user, PlanNeed.LEADER)
-        if str(await PlanAccessRepo(self.db).plan_of_day(day_id)) != str(plan_id):
+        if str(await CRUDPlanAccess(self.db).plan_of_day(day_id)) != str(plan_id):
             raise NotFoundError("Hari kerja")
         return access
 

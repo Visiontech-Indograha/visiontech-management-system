@@ -1,5 +1,5 @@
 """
-app/repositories/plan_day_repo.py
+app/crud/crud_plan_day.py
 Baca hari kerja SK beserta tugas & laporan hariannya (satu kueri, tanpa N+1).
 """
 from __future__ import annotations
@@ -7,10 +7,10 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
-from .base_repo import BaseRepo
+from .base import CRUDBase
 
 
-class PlanDayRepo(BaseRepo):
+class CRUDPlanDay(CRUDBase):
 
     async def days_with_tasks_and_reports(self, plan_id: UUID | str) -> list[Any]:
         return list(await self.fetchall(

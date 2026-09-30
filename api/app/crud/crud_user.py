@@ -1,5 +1,5 @@
 """
-app/repositories/user_repo.py
+app/crud/crud_user.py
 Query untuk vms.app_user dan peran globalnya.
 """
 from __future__ import annotations
@@ -7,8 +7,8 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
-from .base_repo import BaseRepo
-from .session_repo import FAILED_LOGINS_SQL
+from .base import CRUDBase
+from .crud_session import FAILED_LOGINS_SQL
 
 # Peran global pertama; peran per pekerjaan (LEADER/MEMBER) berasal dari SK, bukan dari sini.
 _USER_WITH_ROLE = """
@@ -18,7 +18,7 @@ _USER_WITH_ROLE = """
 """
 
 
-class UserRepo(BaseRepo):
+class CRUDUser(CRUDBase):
 
     async def find_by_login(self, login: str) -> Any:
         return await self.fetchone(f"{_USER_WITH_ROLE} WHERE u.login = :login", {"login": login})

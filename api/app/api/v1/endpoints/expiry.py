@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, get_db_with_user, require_permission
 from app.core.permissions import Permission
-from app.repositories.document_repo import DocumentRepo
+from app.crud.crud_document import CRUDDocument
 from app.schemas.document import (
     ExpiringDocumentList,
     ExpiringDocumentResponse,
@@ -62,7 +62,7 @@ async def get_pending_documents(
     db: AsyncSession = Depends(get_db_with_user),
 ) -> PendingDocumentList:
     """Antrean verifikasi HR (P2-5): dokumen pribadi berstatus PENDING di organisasi ini, terlama dulu."""
-    rows = await DocumentService(DocumentRepo(db)).pending_queue(current_user.organization_id,
+    rows = await DocumentService(CRUDDocument(db)).pending_queue(current_user.organization_id,
                                                                 current_user.user_id)
     return PendingDocumentList(items=[PendingDocument(**r._mapping) for r in rows])
 

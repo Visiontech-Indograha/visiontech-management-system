@@ -1,6 +1,6 @@
 """
 Absensi lapangan. Tipis (dok 12 §2): aturan di services/attendance_session_service.py (V-12),
-SQL di repositories/attendance_session_repo.py; jarak/status/terlambat/pulang cepat diputuskan trigger.
+SQL di crud/crud_attendance_session.py; jarak/status/terlambat/pulang cepat diputuskan trigger.
 """
 import csv
 import io
@@ -15,8 +15,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, ensure_same_org, get_current_user, get_db_with_user, require_permission
 from app.core.permissions import Permission
-from app.repositories.attendance_session_repo import AttendanceSessionRepo
-from app.repositories.org_clock_repo import OrgClockRepo
+from app.crud.crud_attendance_session import CRUDAttendanceSession
+from app.crud.crud_org_clock import CRUDOrgClock
 from app.schemas.attendance import (
     AttendanceListResponse,
     AttendanceResponse,
@@ -31,7 +31,7 @@ router = APIRouter(prefix="/attendance", tags=["Attendance"])
 
 
 def _service(db: AsyncSession) -> AttendanceSessionService:
-    return AttendanceSessionService(AttendanceSessionRepo(db), OrgClockRepo(db))
+    return AttendanceSessionService(CRUDAttendanceSession(db), CRUDOrgClock(db))
 
 
 def _response(row: Any) -> AttendanceResponse:

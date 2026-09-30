@@ -35,7 +35,7 @@
 | **M0** | Penjaga struktur: `tests/test_structure.py` + snapshot OpenAPI | Rendah | uji baru hijau; snapshot tersimpan — **selesai 2026-09-30** |
 | **M1** | `db/*` → `core/database.py` | Rendah | suite hijau; OpenAPI identik — **selesai 2026-09-30** |
 | **M2** | Router → `api/v1/endpoints/` + `api/v1/router.py`; `guards.py` → `api/deps.py` | Sedang (impor banyak) | suite hijau; OpenAPI **identik byte-per-byte** — **selesai 2026-09-30** ; butir 5 (skema keluar dari endpoint) selesai sebagai M2b |
-| **M3** | `repositories/` → `crud/` (nama `crud_<entitas>.py`) | Sedang | suite hijau; tidak ada `repositories` tersisa |
+| **M3** | `repositories/` → `crud/` (nama `crud_<entitas>.py`) | Sedang | suite hijau; tidak ada `repositories` tersisa — **selesai 2026-09-30** |
 | **M4** | `controllers/` → `services/` | Rendah | suite hijau |
 | **M5** | `dependencies.py` (perakitan service) | Rendah | endpoint tidak lagi `Service(Repo(db))` |
 | **M6** | Per modul: SQL keluar dari endpoint ke `crud`, `HTTPException` → `AppError` (= R-25b / O-02). Urutan: `plans` → `attendance` → `employees` → `assets` → `hse` → `files` → `sites` → `audit` → `expiry` | Sedang per modul | modul keluar dari daftar `LEGACY` di `test_router_layering.py` |

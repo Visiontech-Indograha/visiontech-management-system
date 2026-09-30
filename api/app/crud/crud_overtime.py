@@ -1,5 +1,5 @@
 """
-app/repositories/overtime_repo.py
+app/crud/crud_overtime.py
 Kueri lembur (V-28) — domain.js REPORT_OVERTIME, REVIEW_OVERTIME, rekap v_overtime_recap.
 SQL statis; tidak ada f-string; CAST(:x AS tipe) sesuai standar backend.
 """
@@ -10,10 +10,10 @@ from datetime import date
 from typing import Any
 from uuid import UUID
 
-from .base_repo import BaseRepo
+from .base import CRUDBase
 
 
-class OvertimeRepo(BaseRepo):
+class CRUDOvertime(CRUDBase):
 
     async def employee_of(self, user_id: UUID | str) -> str | None:
         """UUID karyawan yang terhubung ke akun pengguna."""

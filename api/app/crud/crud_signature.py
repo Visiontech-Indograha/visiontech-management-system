@@ -1,5 +1,5 @@
 """
-app/repositories/signature_repo.py
+app/crud/crud_signature.py
 Tanda tangan dokumen ber-QR (fase 6). Logika inti hidup di db/04: register_document_signature
 (nomor seri atomik + token QR), verify_signature_qr (VALID/REVOKED/KEY_EXPIRED/DOCUMENT_CHANGED),
 issue_qr_token (db/02). Token QR mentah tidak pernah disimpan — hanya hash-nya.
@@ -10,10 +10,10 @@ import json
 from typing import Any
 from uuid import UUID
 
-from .base_repo import BaseRepo
+from .base import CRUDBase
 
 
-class SignatureRepo(BaseRepo):
+class CRUDSignature(CRUDBase):
 
     async def ensure_signing_key(self, org_id: UUID | str, kid: str, public_key: bytes, kms_ref: str,
                                  algorithm: str) -> str:

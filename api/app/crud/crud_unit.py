@@ -1,5 +1,5 @@
 """
-app/repositories/unit_repo.py
+app/crud/crud_unit.py
 Unit bisnis organisasi (pilihan unit untuk mutasi/promosi, R-19).
 """
 from __future__ import annotations
@@ -7,10 +7,10 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
-from .base_repo import BaseRepo
+from .base import CRUDBase
 
 
-class UnitRepo(BaseRepo):
+class CRUDUnit(CRUDBase):
 
     async def list_for_org(self, org_id: UUID | str) -> list[Any]:
         return list(await self.fetchall(

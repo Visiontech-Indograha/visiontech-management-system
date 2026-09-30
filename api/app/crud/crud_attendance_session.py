@@ -1,5 +1,5 @@
 """
-app/repositories/attendance_session_repo.py
+app/crud/crud_attendance_session.py
 Sesi absensi (V-12). Jarak, radius, status, terlambat, dan pulang cepat TIDAK ditulis di sini —
 trigger `attendance_geofence` / `attendance_checkout` (db/02) yang menghitungnya dari jam & lokasi
 server; aplikasi hanya membaca hasilnya kembali. SQL ditulis utuh (bukan f-string) agar diperiksa V-01.
@@ -9,10 +9,10 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
-from .base_repo import BaseRepo
+from .base import CRUDBase
 
 
-class AttendanceSessionRepo(BaseRepo):
+class CRUDAttendanceSession(CRUDBase):
 
     async def employee_of(self, user_id: UUID | str) -> Any:
         return await self.scalar("SELECT employee_id FROM vms.app_user WHERE id = :uid", {"uid": user_id})

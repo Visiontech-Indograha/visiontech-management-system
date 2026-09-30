@@ -1,5 +1,5 @@
 """
-app/repositories/sync_repo.py
+app/crud/crud_sync.py
 Antrean luring (M12, dok 02 A-08): offline_operation + enqueue_offline_operation (db/01, db/02).
 Idempoten per (user_id, client_op_id).
 """
@@ -10,10 +10,10 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from .base_repo import BaseRepo
+from .base import CRUDBase
 
 
-class SyncRepo(BaseRepo):
+class CRUDSync(CRUDBase):
 
     async def enqueue(self, org_id: UUID | str, user_id: UUID | str, device_id: str, client_op_id: UUID,
                       op_type: str, payload: dict[str, Any], client_created_at: datetime) -> Any:

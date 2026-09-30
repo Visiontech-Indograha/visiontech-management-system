@@ -13,12 +13,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import PlanAccess, require_plan_status
 from app.core.enums import PlanStatus
 from app.core.errors import ValidationError
-from app.repositories.plan_attachment_repo import PlanAttachmentRepo
+from app.crud.crud_plan_attachment import CRUDPlanAttachment
 
 
 class PlanAttachmentService:
     def __init__(self, db: AsyncSession) -> None:
-        self.repo = PlanAttachmentRepo(db)
+        self.repo = CRUDPlanAttachment(db)
 
     async def list_attachments(self, access: PlanAccess) -> list[Any]:
         return await self.repo.list_for_plan(access.plan.id)

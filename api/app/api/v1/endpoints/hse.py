@@ -19,7 +19,7 @@ from app.api.deps import (
 from app.core.enums import PlanStatus
 from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationError
 from app.core.permissions import RoleCode
-from app.repositories.org_clock_repo import OrgClockRepo
+from app.crud.crud_org_clock import CRUDOrgClock
 from app.schemas.hse import (
     DailyReportCreate,
     DailyReportResponse,
@@ -40,7 +40,7 @@ days_router = APIRouter(prefix="/work-plans/{plan_id}/days", tags=["Daily Report
 async def _ensure_day_reached(db: AsyncSession, day_id: UUID) -> None:
     """R6 · domain.js SAVE_REPORT/SUBMIT_REPORT: laporan hanya pada atau setelah tanggal pelaksanaan
     (tanggal server menurut zona waktu organisasi, V-10)."""
-    if not await OrgClockRepo(db).day_reached(day_id):
+    if not await CRUDOrgClock(db).day_reached(day_id):
         raise ValidationError("Laporan hanya dapat diisi pada atau setelah tanggal pelaksanaan.")
 
 @router.get("/incidents", response_model=list[IncidentResponse])
@@ -87,7 +87,7 @@ async def report_incident(
             :org, :plan, :emp, :occ, :cat, :sev, :desc
         ) RETURNING *
     """)
-    today = (await OrgClockRepo(db).local_now(current_user.organization_id)).today
+    today = (await CRUDOrgClock(db).local_now(current_user.organization_id)).today
     res = await db.execute(ins, {
         "org": current_user.organization_id, "plan": data.work_plan_id,
         "emp": my_emp, "occ": today, "cat": data.category,

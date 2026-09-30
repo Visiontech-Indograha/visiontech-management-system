@@ -1,5 +1,5 @@
 """
-app/repositories/plan_change_repo.py
+app/crud/crud_plan_change.py
 Usulan perubahan SK — perpanjangan & personel (V-22). SQL saja; aturan di
 services/plan_change_service.py. Dokumen adendum ditulis ke `plan_document` (isi terkunci, R4).
 """
@@ -12,14 +12,14 @@ from uuid import UUID
 
 from app.core.enums import ChangeStatus, ChangeType, DocumentKind, DocumentStatus
 
-from .base_repo import BaseRepo
+from .base import CRUDBase
 
 # domain.js makeDay — hari baru dari perpanjangan
 _DAY_TITLES = ("Persiapan & survei lokasi", "Instalasi & konfigurasi", "Pengujian & serah terima")
 _DAY_TASKS = ("Briefing keselamatan dan pemeriksaan area", "Pelaksanaan pekerjaan sesuai rencana")
 
 
-class PlanChangeRepo(BaseRepo):
+class CRUDPlanChange(CRUDBase):
 
     async def employee_of(self, user_id: UUID | str) -> Any:
         return await self.scalar("SELECT employee_id::text FROM vms.app_user WHERE id = :uid", {"uid": user_id})

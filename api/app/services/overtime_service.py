@@ -1,7 +1,7 @@
 """
 app/services/overtime_service.py
 Aturan bisnis lembur (V-28) — domain.js REPORT_OVERTIME (baris 607–614), REVIEW_OVERTIME (616–627).
-Router tipis → service → repository; aturan bisnis di sini, SQL di repository.
+Router tipis → service → crud; aturan bisnis di sini, SQL di crud.
 """
 from __future__ import annotations
 
@@ -17,9 +17,9 @@ from app.api.deps import CurrentUser, PlanNeed, check_plan_access
 from app.core.enums import PlanStatus
 from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationError
 from app.core.permissions import Permission, RoleCode
-from app.repositories.org_clock_repo import OrgClockRepo
-from app.repositories.overtime_repo import OvertimeRepo
-from app.repositories.plan_access_repo import PlanAccessRepo
+from app.crud.crud_org_clock import CRUDOrgClock
+from app.crud.crud_overtime import CRUDOvertime
+from app.crud.crud_plan_access import CRUDPlanAccess
 
 
 def _state(msg: str) -> AppError:
@@ -29,7 +29,7 @@ def _state(msg: str) -> AppError:
 class OvertimeService:
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
-        self.repo = OvertimeRepo(db)
+        self.repo = CRUDOvertime(db)
 
     # ------------------------------------------------------------------
     # domain.js REPORT_OVERTIME (baris 607–614)
@@ -49,7 +49,7 @@ class OvertimeService:
             raise ForbiddenError("Hanya ketua atau anggota pekerjaan ini yang dapat mengajukan lembur.")
 
         # Tanggal dari server (V-10, domain.js memakai state.demoDate — bukan tanggal klien).
-        today = (await OrgClockRepo(self.db).local_now(user.organization_id)).today
+        today = (await CRUDOrgClock(self.db).local_now(user.organization_id)).today
 
         emp_id = await self.repo.employee_of(user.user_id)
         if emp_id is None:
@@ -92,8 +92,8 @@ class OvertimeService:
             raise _state("Lembur tidak tersedia untuk direview.")
 
         # domain.js baris 620: can(actor, 'REVIEW_OVERTIME', unit) = PM unit SK, OPS, ADMIN.
-        # Realisasi: cek plan.manages (PM unit / OPS / ADMIN) dari PlanAccessRepo.
-        plan_access = await PlanAccessRepo(self.db).standing(
+        # Realisasi: cek plan.manages (PM unit / OPS / ADMIN) dari CRUDPlanAccess.
+        plan_access = await CRUDPlanAccess(self.db).standing(
             ot.work_plan_id, user.organization_id, user.user_id
         )
         if plan_access is None or not plan_access.manages:

@@ -6,10 +6,10 @@ from datetime import date
 from typing import Any
 from uuid import UUID
 
-from .base_repo import BaseRepo
+from .base import CRUDBase
 
 
-class PlanAssignmentRepo(BaseRepo):
+class CRUDPlanAssignment(CRUDBase):
     async def employee_of_user(self, user_id: UUID | str) -> Any:
         return await self.fetchone(
             """

@@ -7,8 +7,8 @@ from __future__ import annotations
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import unit_of_work
-from app.repositories.session_repo import SessionRepo
-from app.repositories.user_repo import UserRepo
+from app.crud.crud_session import CRUDSession
+from app.crud.crud_user import CRUDUser
 from app.schemas.auth import SessionOut, UserMeResponse
 from app.services.auth_service import AuthService, ClientInfo, IssuedTokens
 
@@ -16,7 +16,7 @@ from app.services.auth_service import AuthService, ClientInfo, IssuedTokens
 class AuthController:
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
-        self.service = AuthService(UserRepo(db), SessionRepo(db))
+        self.service = AuthService(CRUDUser(db), CRUDSession(db))
 
     async def login(self, login: str, password: str, client: ClientInfo) -> IssuedTokens:
         async with unit_of_work(self.db):

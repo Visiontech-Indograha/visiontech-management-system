@@ -19,7 +19,7 @@ from app.api.deps import CurrentUser, PlanNeed, check_plan_access
 from app.core.config import settings
 from app.core.errors import AppError, NotFoundError, ValidationError
 from app.core.signing import canonical, get_document_signer
-from app.repositories.signature_repo import SignatureRepo
+from app.crud.crud_signature import CRUDSignature
 
 ISSUER = "ISSUER"
 ACCEPTOR = "ACCEPTOR"
@@ -39,7 +39,7 @@ def qr_png_data_uri(text: str) -> str:
 class SignatureService:
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
-        self.repo = SignatureRepo(db)
+        self.repo = CRUDSignature(db)
 
     async def _signing_key(self, org_id: Any, signer: Any) -> str:
         """Baris signing_key MILIK organisasi ini. `kid` memakai id organisasi lengkap — dulu 8 karakter

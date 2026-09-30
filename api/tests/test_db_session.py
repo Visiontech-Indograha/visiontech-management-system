@@ -6,7 +6,7 @@ import asyncio
 from sqlalchemy import text
 from sqlalchemy.pool import NullPool
 
-from app.db.session import make_engine
+from app.core.database import make_engine
 from tests.conftest import requires_db
 
 pytestmark = requires_db

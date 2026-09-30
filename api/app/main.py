@@ -66,7 +66,7 @@ def create_app() -> FastAPI:
         from sqlalchemy import text
         from sqlalchemy.exc import SQLAlchemyError
 
-        from app.db.session import engine
+        from app.core.database import engine
 
         try:
             async with engine.connect() as conn:

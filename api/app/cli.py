@@ -5,9 +5,9 @@ import sys
 
 from sqlalchemy import text
 
+from app.core.database import make_engine
 from app.core.permissions import RoleCode
 from app.core.security import hash_password
-from app.db.session import make_engine
 
 ADMIN_PASSWORD_MIN_LENGTH = 12
 

@@ -21,7 +21,6 @@ ALLOWED_DIRS = {"api", "core", "models", "schemas", "crud", "services", "templat
 # folder lama → berkas .py yang masih boleh ada (dikosongkan oleh tahap migrasi di docs/26).
 LEGACY_DIRS: dict[str, set[str]] = {
     "controllers": {"__init__.py", "auth_controller.py"},  # M4
-    "db": {"context.py", "session.py", "transaction.py"},  # M1
     "repositories": {  # M3
         "__init__.py", "asset_reservation_repo.py", "attendance_monitor_repo.py",
         "attendance_session_repo.py", "base_repo.py", "document_repo.py", "employee_repo.py",

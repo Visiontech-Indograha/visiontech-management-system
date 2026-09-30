@@ -8,7 +8,7 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.guards import PlanAccess
+from app.api.deps import PlanAccess
 from app.repositories.plan_day_repo import PlanDayRepo
 
 

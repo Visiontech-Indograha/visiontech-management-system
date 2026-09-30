@@ -14,7 +14,7 @@ from urllib.parse import quote
 import psycopg2
 import pytest
 
-import app.api.plan_transitions as transitions_api
+import app.api.v1.endpoints.work_plan_transitions as transitions_api
 from tests.conftest import World, requires_db, sync_query
 from tests.test_flow_plans import _row_version, run_plan_to_in_progress
 from tests.test_weekly_reports import _approve_days

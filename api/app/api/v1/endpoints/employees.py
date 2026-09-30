@@ -6,8 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import CurrentUser, get_db_with_user, require_permission
-from app.api.guards import ensure_same_org
+from app.api.deps import CurrentUser, ensure_same_org, get_db_with_user, require_permission
 from app.core.errors import AppError
 from app.core.permissions import Permission
 from app.schemas.employee import (

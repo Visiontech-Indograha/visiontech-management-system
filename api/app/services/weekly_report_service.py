@@ -9,7 +9,7 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.guards import PlanAccess, require_plan_status
+from app.api.deps import PlanAccess, require_plan_status
 from app.core.enums import PlanStatus
 from app.core.errors import AppError, NotFoundError, ValidationError
 from app.repositories.weekly_report_repo import WeeklyReportRepo

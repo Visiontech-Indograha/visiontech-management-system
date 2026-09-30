@@ -7,8 +7,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_db_with_user
-from app.api.guards import PlanAccess, PlanNeed, plan_access
+from app.api.deps import PlanAccess, PlanNeed, get_db_with_user, plan_access
 from app.services.plan_day_service import PlanDayService
 
 router = APIRouter(prefix="/work-plans/{plan_id}/days", tags=["Daily Reports"])

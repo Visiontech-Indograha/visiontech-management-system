@@ -9,8 +9,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_db_with_user
-from app.api.guards import PlanAccess, PlanNeed, plan_access
+from app.api.deps import PlanAccess, PlanNeed, get_db_with_user, plan_access
 from app.repositories.plan_member_repo import PlanMemberRepo
 from app.services.plan_member_service import PlanMemberService
 

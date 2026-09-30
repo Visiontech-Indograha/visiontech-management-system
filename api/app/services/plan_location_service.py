@@ -10,7 +10,7 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.guards import PlanAccess
+from app.api.deps import PlanAccess
 from app.core.errors import AppError, ValidationError
 from app.repositories.plan_location_repo import PlanLocationRepo
 

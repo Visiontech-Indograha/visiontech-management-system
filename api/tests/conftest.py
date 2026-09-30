@@ -16,10 +16,19 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.pool import NullPool
 
+from tests.db_guard import unsafe_test_database, unsafe_test_storage, use_test_database
+
+use_test_database()   # harus sebelum app.* diimpor: pengaturan dibaca saat impor
+
 from app.core.config import settings
 from app.core.security import hash_password
 from app.db.session import SEARCH_PATH, AsyncSessionLocal, make_engine
 from app.main import API_PREFIX, app
+
+_UNSAFE = unsafe_test_database(settings.DATABASE_URL) or unsafe_test_storage(settings.MINIO_ENDPOINT)
+if _UNSAFE:
+    # A-00 (docs/24): lebih baik suite berhenti daripada menulis data uji ke produksi.
+    raise pytest.UsageError(_UNSAFE)
 
 _DB = urlparse(settings.DATABASE_URL.replace("+asyncpg", ""))
 

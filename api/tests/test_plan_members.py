@@ -41,15 +41,16 @@ def test_leader_and_members_are_recognised_by_db_authority_functions(client, wor
 
 
 def test_replacing_the_team_drops_previous_members(client, world):
+    replacement = world.add_person("replacement_member", None)
     plan_id, _ = create_draft_plan(client, world)
     _put(client, world, plan_id, world.employees["leader"], [world.employees["member"]])
 
-    response = _put(client, world, plan_id, world.employees["leader"], [world.employees["finance"]])
+    response = _put(client, world, plan_id, world.employees["leader"], [replacement])
 
     assert response.status_code == 200, response.text
     members = {str(e) for (e,) in sync_query(
         "SELECT employee_id FROM vms.work_plan_member WHERE work_plan_id = %s AND role_in_plan = 'MEMBER'", (plan_id,))}
-    assert members == {world.employees["finance"]}
+    assert members == {replacement}
 
 
 def test_create_plan_with_leader_writes_an_active_leader_row(client, world):
@@ -96,12 +97,13 @@ def test_team_is_locked_once_plan_is_not_draft(client, world):
 
 
 def test_schedule_conflict_is_reported_with_the_other_plan(client, world):
+    alternate_leader = world.add_person("alternate_leader", None)
     busy_plan, _ = create_draft_plan(client, world)
     _put(client, world, busy_plan, world.employees["leader"], [world.employees["member"]])
     sync_query("UPDATE vms.work_plan SET status = 'PUBLISHED' WHERE id = %s", (busy_plan,))
-    plan_id, _ = create_draft_plan(client, world, leader="ops")  # periode sama, ketua lain
+    plan_id, _ = create_draft_plan(client, world, leader="alternate_leader")  # periode sama, ketua lain
 
-    response = _put(client, world, plan_id, world.employees["ops"], [world.employees["member"]])
+    response = _put(client, world, plan_id, alternate_leader, [world.employees["member"]])
 
     assert response.status_code == 409
     error = response.json()["error"]

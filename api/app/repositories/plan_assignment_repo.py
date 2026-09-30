@@ -59,6 +59,17 @@ class PlanAssignmentRepo(BaseRepo):
             SELECT e.id, e.full_name, e.position, e.unit_id
             FROM vms.employee e
             WHERE e.organization_id = :org AND e.is_active AND e.deleted_at IS NULL
+              AND EXISTS (
+                  SELECT 1 FROM vms.app_user field_user
+                  WHERE field_user.employee_id = e.id AND field_user.is_active
+              )
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM vms.app_user office_user
+                  JOIN vms.user_role office_role ON office_role.user_id = office_user.id
+                  WHERE office_user.employee_id = e.id AND office_user.is_active
+                    AND office_role.role IN ('PM', 'OPS', 'ADMIN', 'HR', 'FINANCE', 'ASSET')
+              )
               AND (CAST(:unit AS uuid) IS NULL OR e.unit_id = CAST(:unit AS uuid))
               AND NOT EXISTS (
                   SELECT 1 FROM vms.personnel_conflict(
@@ -69,4 +80,34 @@ class PlanAssignmentRepo(BaseRepo):
             """,
             {"org": org_id, "start": period_start, "end": period_end, "unit": unit_id},
         ))
+
+    async def eligible_field_staff(
+        self,
+        employee_ids: Iterable[UUID | str],
+        org_id: UUID | str,
+    ) -> set[str]:
+        ids = [str(value) for value in employee_ids]
+        if not ids:
+            return set()
+        rows = await self.fetchall(
+            """
+            SELECT e.id::text AS employee_id
+            FROM vms.employee e
+            WHERE e.id = ANY(CAST(:ids AS uuid[])) AND e.organization_id = :org
+              AND e.is_active AND e.deleted_at IS NULL
+              AND EXISTS (
+                  SELECT 1 FROM vms.app_user field_user
+                  WHERE field_user.employee_id = e.id AND field_user.is_active
+              )
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM vms.app_user office_user
+                  JOIN vms.user_role office_role ON office_role.user_id = office_user.id
+                  WHERE office_user.employee_id = e.id AND office_user.is_active
+                    AND office_role.role IN ('PM', 'OPS', 'ADMIN', 'HR', 'FINANCE', 'ASSET')
+              )
+            """,
+            {"ids": ids, "org": org_id},
+        )
+        return {str(row.employee_id) for row in rows}
 

@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -20,6 +20,7 @@ import {
   type Transition,
   type WorkPlan,
 } from "./api";
+import { usePlanTeam } from "./report-api";
 
 function FormDialog({
   title,
@@ -288,21 +289,40 @@ const teamSchema = z.object({
 });
 type TeamValues = z.infer<typeof teamSchema>;
 
-/** Tetapkan ketua & anggota (PUT /work-plans/{id}/members). API tidak mengirim daftar anggota saat ini. */
+/** Tetapkan ketua & anggota (PUT /work-plans/{id}/members). Dialog dibuka dengan tim saat ini
+ * (GET /members); anggota yang sudah ada tetap tampil walau tidak ada di pilihan PM, misalnya personel
+ * lintas unit pilihan OPS (R-26), agar tidak terhapus diam-diam saat disimpan. */
 export function TeamDialog({ plan, onClose }: { plan: WorkPlan; onClose: () => void }) {
   const options = useAssignmentOptions(plan.period_start, plan.period_end);
+  const team = usePlanTeam(plan.id);
   const setTeam = useSetTeam(plan.id);
   const [formError, setFormError] = useState<string | null>(null);
   const {
     register,
     handleSubmit,
     control,
-    formState: { errors, isSubmitting },
+    reset,
+    formState: { errors, isSubmitting, isDirty },
   } = useForm<TeamValues>({
     resolver: zodResolver(teamSchema),
     defaultValues: { leader_employee_id: plan.leader_employee_id ?? "", member_employee_ids: [] },
   });
   const leader = useWatch({ control, name: "leader_employee_id" });
+  const ready = !options.isPending && !team.isPending;
+  useEffect(() => {
+    if (!ready || isDirty || !team.data) return;
+    reset({
+      leader_employee_id: team.data.find((m) => m.role_in_plan === "LEADER")?.employee_id ?? plan.leader_employee_id ?? "",
+      member_employee_ids: team.data.filter((m) => m.role_in_plan === "MEMBER").map((m) => m.employee_id),
+    });
+  }, [ready, isDirty, team.data, reset, plan.leader_employee_id]);
+  const offered = options.data?.personnel_options ?? [];
+  const people = [
+    ...offered,
+    ...(team.data ?? [])
+      .filter((m) => !offered.some((o) => o.id === m.employee_id))
+      .map((m) => ({ id: m.employee_id, full_name: m.full_name, position: m.position })),
+  ];
   const onSubmit = handleSubmit(async (v) => {
     setFormError(null);
     try {
@@ -320,15 +340,15 @@ export function TeamDialog({ plan, onClose }: { plan: WorkPlan; onClose: () => v
   return (
     <FormDialog title="Atur tim" formId="team" submitting={isSubmitting} formError={formError} onClose={onClose} onSubmit={onSubmit}>
       <SelectField label="Ketua tim" error={errors.leader_employee_id?.message} {...register("leader_employee_id")}>
-        <option value="">{options.isPending ? "Memuat..." : "Pilih ketua"}</option>
-        {options.data?.personnel_options
+        <option value="">{ready ? "Pilih ketua" : "Memuat..."}</option>
+        {people
           .filter((employee) => employee.id !== plan.pm_employee_id)
           .map((employee) => <option key={employee.id} value={employee.id}>{employee.full_name} · {employee.position}</option>)}
       </SelectField>
       <fieldset className="mb-4">
         <legend className="mb-2 text-sm font-medium">Anggota tim</legend>
         <div className="max-h-56 space-y-1 overflow-y-auto rounded-control border border-line p-2">
-          {options.data?.personnel_options
+          {people
             .filter((e) => e.id !== leader && e.id !== plan.pm_employee_id)
             .map((e) => (
               <label key={e.id} className="flex min-h-11 items-center gap-2 text-sm">

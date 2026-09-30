@@ -84,8 +84,10 @@ async def create_plan(
     await check_unit_manager(db, data.unit_id, current_user)
     await ensure_same_org(db, current_user.organization_id, sites=[data.site_id],
                           employees=[data.pm_employee_id, data.leader_employee_id])
-    await PlanAssignmentService(PlanAssignmentRepo(db)).validate_owner(
-        current_user, data.unit_id, data.pm_employee_id)
+    assignments = PlanAssignmentService(PlanAssignmentRepo(db))
+    await assignments.validate_owner(current_user, data.unit_id, data.pm_employee_id)
+    if data.leader_employee_id:
+        await assignments.validate_team_scope(current_user, data.unit_id, [data.leader_employee_id])
     query = text("""
         INSERT INTO vms.work_plan (
             organization_id, unit_id, site_id, title, location_text, description,
@@ -183,6 +185,9 @@ async def update_plan(
         params["leader"] = data.leader_employee_id
         
         if data.leader_employee_id != row.leader_employee_id:
+            # R-26: ketua baru melewati aturan yang sama dengan buat SK / simpan tim (staf lapangan, unit PM).
+            await PlanAssignmentService(PlanAssignmentRepo(db)).validate_team_scope(
+                current_user, row.unit_id, [data.leader_employee_id])
             # Hapus leader lama jika ada
             await db.execute(text("DELETE FROM vms.work_plan_member WHERE work_plan_id = :plan AND role_in_plan = 'LEADER'"), {"plan": plan_id})
             # Tambahkan leader baru

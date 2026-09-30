@@ -1,12 +1,11 @@
 """Laporan mingguan SK (V-25, dok 05 §3.6) — `domain.js` SAVE_WEEKLY, SUBMIT_WEEKLY, REVIEW_WEEKLY."""
-from datetime import date
 from typing import Any
 
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import PlanAccess, PlanNeed, get_db_with_user, plan_access
+from app.schemas.weekly_report import WeeklyReportRequest, WeeklyReportResponse, WeeklyReviewRequest
 from app.services.weekly_report_service import WeeklyReportService
 
 router = APIRouter(prefix="/work-plans/{plan_id}/weekly", tags=["Weekly Reports"])
@@ -15,26 +14,10 @@ _LEADER_ACCESS = Depends(plan_access(PlanNeed.LEADER))      # domain.js SAVE/SUB
 _PM_UNIT_ACCESS = Depends(plan_access(PlanNeed.PM_UNIT))    # domain.js REVIEW_WEEKLY
 
 
-class WeeklyReportRequest(BaseModel):
-    body: str
-    obstacle: str
 
 
-class WeeklyReviewRequest(BaseModel):
-    decision: str
-    note: str | None = None
 
 
-class WeeklyReportResponse(BaseModel):
-    week: int
-    name: str
-    starts_on: date
-    ends_on: date
-    status: str
-    body: str
-    obstacle: str
-    review_note: str | None
-    days_approved: bool
 
 
 def _out(row: Any) -> WeeklyReportResponse:

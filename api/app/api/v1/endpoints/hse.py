@@ -1,7 +1,6 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -27,6 +26,7 @@ from app.schemas.hse import (
     IncidentCreate,
     IncidentResolve,
     IncidentResponse,
+    ReportReviewRequest,
 )
 
 router = APIRouter(prefix="/hse", tags=["HSE & Reports"])
@@ -202,9 +202,6 @@ async def submit_daily_report(
     return DailyReportResponse(**report._mapping)
 
 
-class ReportReviewRequest(BaseModel):
-    decision: str
-    note: str | None = None
 
 
 @days_router.post("/{day_id}/review", response_model=DailyReportResponse)

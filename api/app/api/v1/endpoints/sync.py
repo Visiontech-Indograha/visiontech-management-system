@@ -1,48 +1,24 @@
 """Sinkronisasi luring (M12, dok 05 §3.12): kirim antrean perangkat & baca status (perlu perhatian)."""
 from datetime import datetime
-from typing import Any
-from uuid import UUID
 
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, get_current_user, get_db_with_user
+from app.schemas.sync import OperationResult, OperationStatus, SyncRequest, SyncResponse
 from app.services.sync_service import SyncService
 
 router = APIRouter(prefix="/sync", tags=["Offline Sync"])
 
 
-class OfflineOperation(BaseModel):
-    client_op_id: UUID
-    op_type: str
-    payload: dict[str, Any]
-    client_created_at: datetime
 
 
-class SyncRequest(BaseModel):
-    device_id: str = Field(min_length=1, max_length=200)
-    operations: list[OfflineOperation] = Field(max_length=200)
 
 
-class OperationResult(BaseModel):
-    client_op_id: str
-    status: str               # APPLIED | REJECTED | CONFLICT | PENDING
-    error_message: str | None
 
 
-class SyncResponse(BaseModel):
-    results: list[OperationResult]
 
 
-class OperationStatus(BaseModel):
-    client_op_id: str
-    op_type: str
-    status: str
-    error_message: str | None
-    client_created_at: datetime
-    received_at: datetime
-    applied_at: datetime | None
 
 
 @router.post("/operations", response_model=SyncResponse)

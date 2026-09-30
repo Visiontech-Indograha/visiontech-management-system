@@ -1,59 +1,28 @@
 """Pemantauan OPS (V-30, dok 05 §3.13): lini masa per pekerjaan & rekap absensi."""
 from datetime import date
-from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
-from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, get_current_user, get_db_with_user, require_permission
 from app.core.permissions import Permission
+from app.schemas.monitoring import (
+    AttendanceRecap,
+    TimelineGroup,
+)
 from app.services.monitoring_service import MonitoringService
 
 router = APIRouter(tags=["Monitoring"])
 
 
-class TimelineLeader(BaseModel):
-    employee_id: str
-    full_name: str | None
 
 
-class TimelineDay(BaseModel):
-    id: str
-    work_date: date
-    title: str
-    state: str          # APPROVED | SUBMITTED | CHANGES_REQUESTED | LATE | TODAY | UPCOMING
 
 
-class TimelineGroup(BaseModel):
-    id: str
-    number: str | None
-    title: str
-    status: str
-    unit_id: UUID | None
-    location_text: str | None
-    period_start: date
-    period_end: date
-    leader: TimelineLeader | None
-    total_days: int
-    approved_days: int
-    late_days: int
-    days: list[TimelineDay]
 
 
-class AttendanceRecapRow(BaseModel):
-    employee_id: str
-    full_name: str
-    days_present: int
-    auto_valid: int
-    needs_review: int
-    approved: int
-    rejected: int
 
 
-class AttendanceRecap(BaseModel):
-    month: str
-    employees: list[AttendanceRecapRow]
 
 
 @router.get("/timeline", response_model=list[TimelineGroup])

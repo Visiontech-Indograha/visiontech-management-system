@@ -2,7 +2,6 @@ from datetime import date
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -27,6 +26,7 @@ from app.repositories.plan_access_repo import PlanAccessRepo
 from app.repositories.plan_assignment_repo import PlanAssignmentRepo
 from app.schemas.plan import (
     AssignmentEmployeeOption,
+    DayPlanRequest,
     PlanAssignmentOptions,
     PlanDayCreate,
     PlanDayResponse,
@@ -282,13 +282,8 @@ async def add_task(
     return PlanTaskResponse(id=task_id, work_plan_day_id=day_id, is_done=False, **data.model_dump())
 
 
-class DayTaskInput(BaseModel):
-    title: str
 
 
-class DayPlanRequest(BaseModel):
-    title: str
-    tasks: list[DayTaskInput]
 
 
 @router.put("/{plan_id}/days/{day_id}/plan")

@@ -34,7 +34,7 @@
 |---|---|---|---|
 | **M0** | Penjaga struktur: `tests/test_structure.py` + snapshot OpenAPI | Rendah | uji baru hijau; snapshot tersimpan — **selesai 2026-09-30** |
 | **M1** | `db/*` → `core/database.py` | Rendah | suite hijau; OpenAPI identik — **selesai 2026-09-30** |
-| **M2** | Router → `api/v1/endpoints/` + `api/v1/router.py`; `guards.py` → `api/deps.py` | Sedang (impor banyak) | suite hijau; OpenAPI **identik byte-per-byte** — **selesai 2026-09-30** kecuali butir 5 (skema keluar dari endpoint → M2b) |
+| **M2** | Router → `api/v1/endpoints/` + `api/v1/router.py`; `guards.py` → `api/deps.py` | Sedang (impor banyak) | suite hijau; OpenAPI **identik byte-per-byte** — **selesai 2026-09-30** ; butir 5 (skema keluar dari endpoint) selesai sebagai M2b |
 | **M3** | `repositories/` → `crud/` (nama `crud_<entitas>.py`) | Sedang | suite hijau; tidak ada `repositories` tersisa |
 | **M4** | `controllers/` → `services/` | Rendah | suite hijau |
 | **M5** | `dependencies.py` (perakitan service) | Rendah | endpoint tidak lagi `Service(Repo(db))` |

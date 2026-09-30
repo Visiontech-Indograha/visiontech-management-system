@@ -185,7 +185,8 @@ def test_replaced_leader_loses_leader_rights_and_keeps_member_rights_only_if_lis
 def test_day_of_another_plan_is_404_under_this_plan_path(client, world):
     """V-16 · `/work-plans/{id}/days/{day_id}`: hari harus milik SK di jalur, walau keduanya boleh dikelola."""
     plan_a, _ = create_draft_plan(client, world)
-    _, days_b = create_draft_plan(client, world, start_offset_days=30, leader="ops")
+    world.add_person("other_leader", None)  # R-26: ketua harus staf lapangan, bukan peran kantor
+    _, days_b = create_draft_plan(client, world, start_offset_days=30, leader="other_leader")
 
     response = client.post(f"/work-plans/{plan_a}/days/{days_b[0]}/tasks", headers=world.headers(client, "pm"),
                            json={"title": "Tugas nyasar"})

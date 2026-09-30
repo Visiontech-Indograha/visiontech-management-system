@@ -181,3 +181,39 @@ def test_changes_need_an_accepted_or_running_plan(client, world):
     response = _extend(client, world, plan_id)
 
     assert response.status_code == 409 and response.json()["error"]["code"] == "INVALID_STATE"
+
+
+def _put_on_team(plan_id: str, employee_id: str) -> None:
+    """Anggota yang dulu dipasang OPS (lintas unit) atau data lama sebelum R-26."""
+    sync_query("INSERT INTO vms.work_plan_member (work_plan_id, employee_id, role_in_plan, valid_period) "
+               "VALUES (%s, %s, 'MEMBER', daterange(current_date, NULL, '[)'))", (plan_id, employee_id))
+
+
+def test_pm_personnel_change_keeps_cross_unit_members_but_cannot_add_new_ones(client, world):
+    """R-26: cakupan unit PM hanya untuk orang yang BARU ditambahkan; anggota lintas unit pilihan OPS tetap boleh."""
+    plan_id, _ = run_plan_to_in_progress(client, world)
+    other_unit = world.add_unit("OTHER_R26")
+    world.add_person("kept_outsider", None, unit_id=other_unit)
+    world.add_person("new_outsider", None, unit_id=other_unit)
+    world.add_person("leader2", None)
+    _put_on_team(plan_id, world.employees["kept_outsider"])
+
+    added = _personnel(client, world, plan_id, "leader2", ["member", "leader", "kept_outsider", "new_outsider"])
+    assert added.status_code == 422, added.text
+    assert added.json()["error"]["code"] == "PERSONNEL_OUTSIDE_PM_UNIT"
+
+    kept = _personnel(client, world, plan_id, "leader2", ["member", "leader", "kept_outsider"])
+    assert kept.status_code == 201, kept.text
+
+
+def test_personnel_change_cannot_keep_office_staff_on_the_team(client, world):
+    """R-26: staf lapangan berlaku untuk seluruh tim hasil adendum, termasuk yang dipertahankan."""
+    plan_id, _ = run_plan_to_in_progress(client, world)
+    world.add_person("leader2", None)
+    _put_on_team(plan_id, world.employees["finance"])
+
+    response = _personnel(client, world, plan_id, "leader2", ["member", "leader", "finance"])
+
+    assert response.status_code == 422, response.text
+    assert response.json()["error"]["code"] == "PERSONNEL_NOT_FIELD_STAFF"
+    assert _personnel(client, world, plan_id, "leader2", ["member", "leader"]).status_code == 201

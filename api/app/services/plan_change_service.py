@@ -18,9 +18,11 @@ from app.api.deps import CurrentUser
 from app.api.guards import PlanNeed, check_plan_access
 from app.core.enums import ChangeStatus, ChangeType, DocumentKind, DocumentStatus, PlanStatus
 from app.core.errors import AppError, ForbiddenError, NotFoundError
+from app.repositories.plan_assignment_repo import PlanAssignmentRepo
 from app.repositories.plan_change_repo import PlanChangeRepo
 from app.repositories.plan_member_repo import PlanMemberRepo
 from app.repositories.plan_transition_repo import PlanTransitionRepo
+from app.services.plan_assignment_service import PlanAssignmentService
 
 ACTIVE = (PlanStatus.ACCEPTED, PlanStatus.IN_PROGRESS)   # domain.js requireStatus(['ACCEPTED','IN_PROGRESS'])
 OPEN = (ChangeStatus.PENDING_PM, ChangeStatus.AWAITING_LEADER_ACCEPTANCE)
@@ -100,6 +102,9 @@ class PlanChangeService:
         people = [leader, *members]
         if set(people) - await self.members.active_employees(people, user.organization_id):
             raise _invalid("Semua anggota tim harus aktif.")
+        await PlanAssignmentService(PlanAssignmentRepo(self.db)).validate_team_scope(
+            user, plan.unit_id, people, current_team=current,
+        )
         conflicts = await self.members.schedule_conflicts(people, plan_id)
         if conflicts:
             other = conflicts[0].number or conflicts[0].title or "work plan lain"

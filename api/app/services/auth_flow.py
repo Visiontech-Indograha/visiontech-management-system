@@ -1,6 +1,6 @@
 """
-app/controllers/auth_controller.py
 Kasus pakai autentikasi: membuka transaksi, memanggil AuthService, mengubah hasil ke skema.
+Dipindah dari app/controllers/auth_controller.py (R-28 M4) tanpa perubahan perilaku.
 """
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from app.schemas.auth import SessionOut, UserMeResponse
 from app.services.auth_service import AuthService, ClientInfo, IssuedTokens
 
 
-class AuthController:
+class AuthFlowService:
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
         self.service = AuthService(CRUDUser(db), CRUDSession(db))

@@ -18,7 +18,7 @@ def test_ready_check():
 
 
 def test_ready_reports_503_when_db_unreachable(monkeypatch):
-    import app.db.session as db_session
+    import app.core.database as db_session
 
     class _Down:
         def connect(self):

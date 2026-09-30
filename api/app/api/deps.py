@@ -10,12 +10,10 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.alerts import send_security_alert
+from app.core.database import AsyncSessionLocal, set_request_context, unit_of_work
 from app.core.errors import AppError
 from app.core.permissions import NO_GLOBAL_ROLE, Permission, permissions_for_roles
 from app.core.security import verify_jwt_token
-from app.db.context import set_request_context
-from app.db.session import AsyncSessionLocal
-from app.db.transaction import unit_of_work
 from app.repositories.user_repo import UserRepo
 
 logger = logging.getLogger(__name__)
@@ -95,7 +93,7 @@ async def get_db_with_user(
     db: AsyncSession = Depends(get_db, scope=DB_SCOPE),
     current_user: CurrentUser = Depends(get_current_user),
 ) -> AsyncSession:
-    # Konteks RLS & audit untuk transaksi permintaan ini (app/db/context.py).
+    # Konteks RLS & audit untuk transaksi permintaan ini (app/core/database.py).
     try:
         await set_request_context(
             db,

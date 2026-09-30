@@ -46,19 +46,18 @@ EXEMPT_FILES = {"api/deps.py"}
 
 # "berkas -> lapisan terlarang yang diimpor"; hanya boleh menyusut.
 # api -> repositories: perakitan service pindah ke api/deps.py (M5).
-# services -> api: `guards` pindah (M2), `CurrentUser` ke core/security.py (M5).
+# services -> api: penjaga akses & `CurrentUser` dari api/deps.py pindah ke core/security.py (M5).
 KNOWN_VIOLATIONS: set[str] = {
-    "api/accounts.py -> repositories",
-    "api/attendance.py -> repositories",
-    "api/attendance_cron.py -> repositories",
-    "api/documents.py -> repositories",
-    "api/expiry.py -> repositories",
-    "api/guards.py -> repositories",
-    "api/hse.py -> repositories",
-    "api/plan_members.py -> repositories",
-    "api/plan_transitions.py -> repositories",
-    "api/plans.py -> repositories",
-    "api/units.py -> repositories",
+    "api/v1/endpoints/accounts.py -> repositories",
+    "api/v1/endpoints/attendance.py -> repositories",
+    "api/v1/endpoints/attendance_cron.py -> repositories",
+    "api/v1/endpoints/documents.py -> repositories",
+    "api/v1/endpoints/expiry.py -> repositories",
+    "api/v1/endpoints/hse.py -> repositories",
+    "api/v1/endpoints/units.py -> repositories",
+    "api/v1/endpoints/work_plan_members.py -> repositories",
+    "api/v1/endpoints/work_plan_transitions.py -> repositories",
+    "api/v1/endpoints/work_plans.py -> repositories",
     "services/asset_reservation_service.py -> api",
     "services/monitoring_service.py -> api",
     "services/overtime_service.py -> api",

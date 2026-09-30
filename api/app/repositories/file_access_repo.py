@@ -2,7 +2,7 @@
 app/repositories/file_access_repo.py
 Tautan sebuah berkas (V-17): dokumen pribadi, swafoto absensi, bukti pekerjaan (laporan harian,
 insiden, laporan akhir) — beserta apakah pengguna pemiliknya. Keputusan boleh/tidak ada di
-`api/guards.py::check_file_access`.
+`api/deps.py::check_file_access`.
 """
 from __future__ import annotations
 

@@ -88,14 +88,18 @@ def _routes() -> dict[tuple[str, str], list[str]]:
     """(METODE, jalur tanpa awalan API) → nama dependency. Router yang di-include disimpan malas
     sejak FastAPI 0.14x (`_IncludedRouter.original_router`)."""
     found = {}
-    for included in app.routes:
-        router = getattr(included, "original_router", None)
-        for route in getattr(router, "routes", []):
-            if isinstance(route, APIRoute):
+
+    def walk(routes, nested: bool) -> None:
+        for route in routes:
+            if nested and isinstance(route, APIRoute):  # /health & /ready di akar: publik
                 for method in route.methods:
                     # "{token:path}" → "{token}", sama seperti inventaris rute publik (test_route_smoke)
                     path = re.sub(r"\{(\w+):\w+\}", lambda m: "{" + m.group(1) + "}", route.path)
                     found[(method, path)] = _dependency_names(route.dependant)
+            # router bertingkat sejak R-28 M2: app → api_router (api/v1/router.py) → router modul
+            walk(getattr(getattr(route, "original_router", None), "routes", []), True)
+
+    walk(app.routes, False)
     return found
 
 

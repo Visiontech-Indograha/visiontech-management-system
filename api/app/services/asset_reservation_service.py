@@ -11,8 +11,7 @@ from uuid import UUID
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import CurrentUser
-from app.api.guards import PlanNeed, check_plan_access
+from app.api.deps import CurrentUser, PlanNeed, check_plan_access
 from app.core.enums import PlanStatus
 from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationError, trigger_rule_error
 from app.core.permissions import Permission

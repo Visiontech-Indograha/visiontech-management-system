@@ -5,8 +5,17 @@ from fastapi.concurrency import run_in_threadpool
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import CurrentUser, get_current_user, get_db_with_user, require_permission
-from app.api.guards import PlanAccess, PlanNeed, allocation_plan_access, ensure_same_org, plan_access
+from app.api.deps import (
+    CurrentUser,
+    PlanAccess,
+    PlanNeed,
+    allocation_plan_access,
+    ensure_same_org,
+    get_current_user,
+    get_db_with_user,
+    plan_access,
+    require_permission,
+)
 from app.core.errors import AppError, ForbiddenError, NotFoundError
 from app.core.permissions import Permission, RoleCode
 from app.schemas.asset import (

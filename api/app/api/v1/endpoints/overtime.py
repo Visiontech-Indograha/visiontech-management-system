@@ -1,5 +1,5 @@
 """
-app/api/overtime.py
+app/api/v1/endpoints/overtime.py
 Router lembur (V-28, dok 05 §3.8 & §3.13) — domain.js REPORT_OVERTIME, REVIEW_OVERTIME + rekap bulanan.
 Jalur: POST/GET /overtime, POST /overtime/{id}/review, GET /recaps/overtime.
 Router tipis: hanya marshalling HTTP ↔ service.
@@ -10,8 +10,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import CurrentUser, get_current_user, get_db_with_user
-from app.api.guards import ensure_same_org
+from app.api.deps import CurrentUser, ensure_same_org, get_current_user, get_db_with_user
 from app.schemas.overtime import (
     OvertimeCreate,
     OvertimeRecapRow,

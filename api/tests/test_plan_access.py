@@ -9,7 +9,7 @@ from datetime import timedelta
 
 import pytest
 
-from app.api.guards import PlanNeed, satisfies
+from app.api.deps import PlanNeed, satisfies
 from app.core.time import jakarta_now
 from tests.conftest import World, requires_db, sync_query
 from tests.test_flow_plans import create_draft_plan, run_plan_to_in_progress

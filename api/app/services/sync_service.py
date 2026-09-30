@@ -14,9 +14,8 @@ from fastapi import HTTPException
 from pydantic import ValidationError as PydanticValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api import hse
-from app.api.deps import CurrentUser
-from app.api.guards import PlanAccess, PlanNeed, check_plan_access, ensure_same_org
+from app.api.deps import CurrentUser, PlanAccess, PlanNeed, check_plan_access, ensure_same_org
+from app.api.v1.endpoints import hse
 from app.core.errors import AppError, NotFoundError
 from app.repositories.plan_access_repo import PlanAccessRepo
 from app.repositories.sync_repo import SyncRepo

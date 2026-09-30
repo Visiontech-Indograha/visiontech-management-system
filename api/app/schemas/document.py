@@ -65,3 +65,34 @@ class EmployeeDocumentResponse(BaseModel):
 class DocumentListResponse(BaseModel):
     items: list[EmployeeDocumentResponse]
     total: int
+
+
+# ── Dipindah dari api/v1/endpoints/expiry.py (R-28 M2b) ──
+class ExpiringDocumentResponse(BaseModel):
+    id: UUID
+    employee_id: UUID
+    full_name: str
+    doc_type: str
+    expiry_date: date
+    days_left: int
+    urgency: str
+
+
+class ExpiringDocumentList(BaseModel):
+    items: list[ExpiringDocumentResponse]
+
+
+class PendingDocument(BaseModel):
+    id: UUID
+    employee_id: UUID
+    full_name: str
+    doc_type: str
+    number_masked: str | None
+    expiry_date: date | None
+    file_id: UUID | None
+    uploaded_at: datetime
+    uploaded_by_me: bool
+
+
+class PendingDocumentList(BaseModel):
+    items: list[PendingDocument]

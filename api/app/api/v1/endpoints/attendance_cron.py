@@ -2,26 +2,19 @@
 Tugas terjadwal pemantauan absensi (P4-9, dok 17 §5.3). Dipanggil penjadwal dengan token ADMIN.
 """
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, get_db_with_user, require_permission
 from app.core.permissions import Permission
 from app.repositories.attendance_monitor_repo import AttendanceMonitorRepo
+from app.schemas.attendance import MissingCheckInResponse, NeedsReviewResponse
 from app.services.attendance_monitor_service import AttendanceMonitorService
 
 router = APIRouter(prefix="/cron/attendance", tags=["Attendance Cron"])
 
 
-class MissingCheckInResponse(BaseModel):
-    alerted: bool
-    check_ins_today: int
 
 
-class NeedsReviewResponse(BaseModel):
-    alerted: bool
-    needs_review_today: int
-    daily_average: float
 
 
 @router.post("/alert-missing", response_model=MissingCheckInResponse)

@@ -1,12 +1,11 @@
 """Lampiran draf SK (V-29) — `domain.js` SAVE_ATTACHMENTS. Dibekukan di snapshot dokumen saat terbit."""
 from typing import Any
-from uuid import UUID
 
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import PlanAccess, PlanNeed, ensure_same_org, get_db_with_user, plan_access
+from app.schemas.plan_attachment import AttachmentResponse, AttachmentsRequest
 from app.services.plan_attachment_service import PlanAttachmentService
 
 router = APIRouter(prefix="/work-plans/{plan_id}/attachments", tags=["Work Plans"])
@@ -14,16 +13,8 @@ _VIEW_ACCESS = Depends(plan_access(PlanNeed.VIEW))
 _PM_UNIT_ACCESS = Depends(plan_access(PlanNeed.PM_UNIT))    # domain.js SAVE_ATTACHMENTS: PM (unitnya), OPS
 
 
-class AttachmentsRequest(BaseModel):
-    file_ids: list[UUID]
 
 
-class AttachmentResponse(BaseModel):
-    file_id: str
-    file_name: str
-    mime_type: str
-    byte_size: int
-    sort_order: int
 
 
 def _out(rows: list[Any]) -> list[AttachmentResponse]:

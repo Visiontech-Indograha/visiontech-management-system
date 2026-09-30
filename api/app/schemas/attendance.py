@@ -62,3 +62,15 @@ class AttendanceListResponse(BaseModel):
     # O-10: tanggal hari ini menurut zona waktu organisasi — HP menandai "absensi hari ini" dengan ini,
     # bukan dengan jam perangkat (server yang memutuskan `work_date`).
     today: date | None = None
+
+
+# ── Dipindah dari api/v1/endpoints/attendance_cron.py (R-28 M2b) ──
+class MissingCheckInResponse(BaseModel):
+    alerted: bool
+    check_ins_today: int
+
+
+class NeedsReviewResponse(BaseModel):
+    alerted: bool
+    needs_review_today: int
+    daily_average: float

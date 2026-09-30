@@ -46,7 +46,7 @@ async def get_db_session() -> AsyncIterator[AsyncSession]:
 
 # ── Batas transaksi ──────────────────────────────────────────────────────────
 # Dok 12 §2: satu permintaan / satu kasus pakai = satu transaksi.
-# Dipakai dependency sesi (app/api/deps.py::get_db) dan controller.
+# Dipakai dependency sesi (app/api/deps.py::get_db) dan services/auth_flow.py.
 @asynccontextmanager
 async def unit_of_work(db: AsyncSession) -> AsyncIterator[None]:
     """

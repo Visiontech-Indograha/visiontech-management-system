@@ -3,19 +3,23 @@ Transisi SK: terbitkan (PM unit/OPS), terima & mulai (ketua menurut SK) — dija
 (V-07). Tipis (dok 12 §2): aturan di services/plan_transition_service.py, SQL di
 repositories/plan_transition_repo.py.
 """
-from datetime import datetime
 from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Response
 from fastapi.concurrency import run_in_threadpool
-from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import PlanAccess, PlanNeed, ensure_same_org, get_db_with_user, plan_access
 from app.repositories.plan_member_repo import PlanMemberRepo
 from app.repositories.plan_transition_repo import PlanTransitionRepo
 from app.schemas.plan import WorkPlanResponse
+from app.schemas.plan_transition import (
+    CompletionRequest,
+    FinalReportOut,
+    FinalReportSignatureOut,
+    TransitionRequest,
+)
 from app.services.pdf_service import html_to_pdf, render_final_report_html
 from app.services.plan_transition_service import PlanTransitionService
 from app.services.signature_service import SignatureService
@@ -27,31 +31,8 @@ _PM_UNIT_ANY_ACCESS = Depends(plan_access(PlanNeed.PM_UNIT, archived=None))  # a
 _VIEW_ACCESS = Depends(plan_access(PlanNeed.VIEW))
 
 
-class FinalReportOut(BaseModel):
-    status: str  # SUBMITTED | CHANGES_REQUESTED | APPROVED
-    body: str
-    obstacle: str | None
-    evidence_file_ids: list[str]
-    submitted_at: datetime | None
-    submitted_by_name: str | None
-    review_note: str | None
-    reviewed_at: datetime | None
-    reviewed_by_name: str | None
 
 
-class FinalReportSignatureOut(BaseModel):
-    id: str
-    serial_number: str
-    signer_name: str
-    signer_position: str | None
-    signer_unit: str | None
-    signer_role: str
-    signed_at: datetime
-    signature_alg: str
-    kid: str
-    document_sha256_hex: str
-    revoked_at: datetime | None
-    revoked_reason: str | None
 
 
 @router.get("/completion/signatures", response_model=list[FinalReportSignatureOut])
@@ -91,9 +72,6 @@ async def get_final_report(
     return FinalReportOut(**row._mapping) if row else None
 
 
-class TransitionRequest(BaseModel):
-    row_version: int
-    reason: str = ""
 
 
 def _service(db: AsyncSession) -> PlanTransitionService:
@@ -197,11 +175,6 @@ async def start_plan(
     return _response(plan)
 
 
-class CompletionRequest(BaseModel):
-    row_version: int
-    body: str
-    obstacle: str
-    evidence_file_ids: list[UUID] = []
 
 
 @router.post("/request-completion", response_model=WorkPlanResponse)

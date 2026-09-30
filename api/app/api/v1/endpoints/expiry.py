@@ -1,29 +1,22 @@
-from datetime import date, datetime
-from uuid import UUID
 
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, get_db_with_user, require_permission
 from app.core.permissions import Permission
 from app.repositories.document_repo import DocumentRepo
+from app.schemas.document import (
+    ExpiringDocumentList,
+    ExpiringDocumentResponse,
+    PendingDocument,
+    PendingDocumentList,
+)
 from app.services.document_service import DocumentService
 
 router = APIRouter(prefix="/documents", tags=["Document Expiry"])
 
-class ExpiringDocumentResponse(BaseModel):
-    id: UUID
-    employee_id: UUID
-    full_name: str
-    doc_type: str
-    expiry_date: date
-    days_left: int
-    urgency: str
 
-class ExpiringDocumentList(BaseModel):
-    items: list[ExpiringDocumentResponse]
 
 @router.get("/expiring", response_model=ExpiringDocumentList)
 async def get_expiring_documents(
@@ -59,20 +52,8 @@ async def get_expiring_documents(
         
     return ExpiringDocumentList(items=items)
 
-class PendingDocument(BaseModel):
-    id: UUID
-    employee_id: UUID
-    full_name: str
-    doc_type: str
-    number_masked: str | None
-    expiry_date: date | None
-    file_id: UUID | None
-    uploaded_at: datetime
-    uploaded_by_me: bool
 
 
-class PendingDocumentList(BaseModel):
-    items: list[PendingDocument]
 
 
 @router.get("/pending", response_model=PendingDocumentList)

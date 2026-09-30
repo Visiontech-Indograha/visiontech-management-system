@@ -1,12 +1,10 @@
 """
 Akun login karyawan (M1-01, R-20). Tipis: izin manage:users di sini, aturan di services/account_service.py.
 """
-from datetime import datetime
 from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
-from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, get_db_with_user, require_permission
@@ -14,6 +12,7 @@ from app.core.permissions import Permission
 from app.repositories.employee_repo import EmployeeRepo
 from app.repositories.session_repo import SessionRepo
 from app.repositories.user_repo import UserRepo
+from app.schemas.account import AccountCreate, AccountOut, AccountWithPassword
 from app.services.account_service import AccountService
 
 router = APIRouter(prefix="/employees/{emp_id}/account", tags=["Employee Account"])
@@ -22,23 +21,10 @@ _manager = Depends(require_permission(Permission.MANAGE_USERS))
 _db = Depends(get_db_with_user)
 
 
-class AccountOut(BaseModel):
-    exists: bool
-    user_id: UUID | None = None
-    login: str | None = None
-    is_active: bool | None = None
-    last_login_at: datetime | None = None
-    failed_logins: int = 0
-    """Kegagalan login dalam 15 menit terakhir; `locked_until` terisi bila akun sedang terkunci."""
-    locked_until: datetime | None = None
 
 
-class AccountCreate(BaseModel):
-    login: str = Field(pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$", max_length=254)
 
 
-class AccountWithPassword(AccountOut):
-    temporary_password: str
 
 
 def _service(db: AsyncSession) -> AccountService:

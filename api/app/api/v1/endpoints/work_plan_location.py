@@ -1,12 +1,11 @@
 """Lokasi penugasan SK: cari kota → tetapkan titik koordinat & radius absensi (revisi PM 2026-09-26)."""
-from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
-from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, PlanAccess, PlanNeed, get_db_with_user, plan_access, require_permission
 from app.core.permissions import Permission
+from app.schemas.plan_location import GeoResult, PlanLocationIn, PlanLocationOut
 from app.services.geocode_service import GeocodeService
 from app.services.plan_location_service import PlanLocationService
 
@@ -15,28 +14,10 @@ _VIEW = Depends(plan_access(PlanNeed.VIEW))
 _PM_UNIT = Depends(plan_access(PlanNeed.PM_UNIT))
 
 
-class GeoResult(BaseModel):
-    name: str
-    lat: float
-    lng: float
-    type: str
 
 
-class PlanLocationIn(BaseModel):
-    name: str = Field(min_length=1, max_length=200)
-    address: str | None = Field(default=None, max_length=500)
-    lat: float = Field(ge=-90, le=90)
-    lng: float = Field(ge=-180, le=180)
-    radius_m: int = 100
 
 
-class PlanLocationOut(BaseModel):
-    id: UUID
-    name: str
-    address: str | None
-    lat: float
-    lng: float
-    radius_m: int | None
 
 
 @router.get("/geo/search", response_model=list[GeoResult])

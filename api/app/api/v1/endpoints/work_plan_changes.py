@@ -6,40 +6,24 @@ Sebelumnya: `/plans/{id}/changes/extension` + `/{change_id}/approve` yang langsu
 perubahan saat PM menyetujui — tanpa penerimaan ketua, tanpa dokumen adendum, dan PERSONNEL tidak
 pernah bisa diajukan lewat API.
 """
-from datetime import date
-from typing import Any, Literal
+from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
-from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, get_current_user, get_db_with_user
+from app.schemas.plan_change import ChangeRequest, ChangeResponse, DecisionRequest
 from app.services.plan_change_service import PlanChangeService
 
 plan_router = APIRouter(prefix="/work-plans/{plan_id}/changes", tags=["Plan Changes / Addendums"])
 router = APIRouter(prefix="/changes", tags=["Plan Changes / Addendums"])
 
 
-class ChangeRequest(BaseModel):
-    type: Literal["EXTEND", "PERSONNEL"]
-    reason: str = ""
-    new_period_end: date | None = None                        # EXTEND
-    leader_employee_id: UUID | None = None                    # PERSONNEL
-    member_employee_ids: list[UUID] = Field(default_factory=list)
 
 
-class DecisionRequest(BaseModel):
-    reason: str | None = None
 
 
-class ChangeResponse(BaseModel):
-    id: UUID
-    work_plan_id: UUID
-    change_type: str
-    status: str
-    reason: str
-    decision_reason: str | None = None
 
 
 async def _read(db: AsyncSession, change_id: Any) -> ChangeResponse:

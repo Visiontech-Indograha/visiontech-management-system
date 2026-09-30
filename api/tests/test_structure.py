@@ -19,16 +19,14 @@ APP_DIR = Path(__file__).resolve().parents[1] / "app"
 ALLOWED_DIRS = {"api", "core", "models", "schemas", "crud", "services", "templates"}
 
 # folder lama → berkas .py yang masih boleh ada (dikosongkan oleh tahap migrasi di docs/26).
-LEGACY_DIRS: dict[str, set[str]] = {
-    "controllers": {"__init__.py", "auth_controller.py"},  # M4
-}
+LEGACY_DIRS: dict[str, set[str]] = {}  # kosong sejak M4: db/, repositories/, controllers/ sudah dipindah
 
 # lapisan (folder teratas di app/) → lapisan yang tidak boleh diimpornya.
 FORBIDDEN: dict[str, set[str]] = {
-    "core": {"api", "services", "crud", "controllers"},
-    "crud": {"api", "services", "controllers"},
-    "services": {"api", "controllers"},
-    "schemas": {"api", "services", "crud", "controllers"},
+    "core": {"api", "services", "crud"},
+    "crud": {"api", "services"},
+    "services": {"api"},
+    "schemas": {"api", "services", "crud"},
     "api": {"crud"},
 }
 # `api/deps.py` adalah tempat perakitan dependency; boleh mengimpor apa saja.

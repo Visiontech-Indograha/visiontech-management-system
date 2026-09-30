@@ -46,7 +46,8 @@ def test_r4_published_document_content_cannot_be_updated(client, world, column, 
     plan_id, _ = run_plan_to_accepted(client, world)
     params: tuple = ()
     if column == "work_plan_id":   # SK lain di organisasi yang sama, tanpa bentrok jadwal
-        params = (create_draft_plan(client, world, start_offset_days=30, leader="ops")[0],)
+        world.add_person("other_leader", None)  # R-26: ketua harus staf lapangan
+        params = (create_draft_plan(client, world, start_offset_days=30, leader="other_leader")[0],)
     doc_id, before = sync_query(f"SELECT id::text, {column}::text FROM vms.plan_document WHERE work_plan_id = %s",
                                 (plan_id,))[0]
 

@@ -62,8 +62,9 @@ class PlanMemberService:
         known = await self.repo.active_employees(people, user.organization_id)
         if set(people) - known:
             raise NotFoundError("Karyawan")
+        current = [m.employee_id for m in await self.repo.active_team(plan_id)]
         await PlanAssignmentService(PlanAssignmentRepo(self.repo.db)).validate_team_scope(
-            user, plan.unit_id, people)
+            user, plan.unit_id, people, current_team=current)
 
         conflicts = await self.repo.schedule_conflicts(people, plan_id)
         if conflicts:

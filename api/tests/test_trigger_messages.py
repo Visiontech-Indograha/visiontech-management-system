@@ -38,7 +38,8 @@ def test_creating_a_plan_with_a_busy_leader_explains_the_conflict(client, world)
 
 def test_changing_to_a_busy_leader_is_409_not_500(client, world):
     number = _busy_plan_number(client, world)
-    draft_id, _ = create_draft_plan(client, world, leader="ops")   # periode sama, ketua lain
+    world.add_person("other_leader", None)  # R-26: ketua harus staf lapangan, bukan peran kantor
+    draft_id, _ = create_draft_plan(client, world, leader="other_leader")   # periode sama, ketua lain
     row_version = sync_query("SELECT row_version FROM vms.work_plan WHERE id = %s", (draft_id,))[0][0]
 
     response = client.patch(f"/work-plans/{draft_id}", headers=world.headers(client, "pm"),
@@ -47,4 +48,4 @@ def test_changing_to_a_busy_leader_is_409_not_500(client, world):
     assert response.status_code == 409, response.text
     assert response.json()["error"]["message"] == f"Jadwal personel bertabrakan dengan {number}."
     assert sync_query("SELECT leader_employee_id::text FROM vms.work_plan WHERE id = %s", (draft_id,)) \
-        == [(world.employees["ops"],)]
+        == [(world.employees["other_leader"],)]

@@ -9,6 +9,8 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased] — `development`
 
+- **Laporan uji E2E absensi R-33/R-34 di build produksi (2026-10-02):** `docs/27-LAPORAN-UJI-E2E-ABSENSI.md` — 9 skenario web (W1–W9) dan 8 skenario HP (M1–M8) lewat klik pada citra API/web & APK dari `prod` @ `31cf0b82`, DB uji lokal PG18. Semua lulus, tidak ada perbaikan kode. Catatan: GPS emulator bisa macet (cold boot memulihkan).
+
 - **PostgreSQL 18 untuk compose, CI, dan DB uji lokal (keputusan pemilik 2026-10-02, A-05):**
   - **Citra tunggal** `db/Dockerfile`: `postgis/postgis:18-3.6` + `postgresql-18-pgvector`. `docker-compose.yml` membangunnya (volume baru `postgres18_data` di `/var/lib/postgresql`, data PG16 lama tidak tertimpa).
   - **CI:** service postgis 16-3.4 + `apt install` saat berjalan diganti build citra lalu `docker run`. Penyebab gagal saat merge PR #6: repo PGDG bullseye diarsipkan (404), dan setelah dialihkan ke arsip, apt memperbarui biner PG di bawah server yang hidup (`btree_gist.so: undefined symbol`).

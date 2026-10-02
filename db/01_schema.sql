@@ -50,7 +50,7 @@ CREATE TYPE document_status AS ENUM ('AWAITING_ACCEPTANCE','EFFECTIVE','SUPERSED
 CREATE TYPE change_type AS ENUM ('EXTEND','PERSONNEL');
 CREATE TYPE change_status AS ENUM ('PENDING_PM','AWAITING_LEADER_ACCEPTANCE','EFFECTIVE','REJECTED','WITHDRAWN');
 CREATE TYPE report_status AS ENUM ('DRAFT','SUBMITTED','CHANGES_REQUESTED','APPROVED');
-CREATE TYPE attendance_source AS ENUM ('MOBILE','MACHINE');
+CREATE TYPE attendance_source AS ENUM ('MOBILE','MACHINE','WEB');
 CREATE TYPE attendance_status AS ENUM ('AUTO_VALID','NEEDS_REVIEW','APPROVED','REJECTED');
 CREATE TYPE asset_kind AS ENUM ('VEHICLE','TOOL');
 CREATE TYPE asset_status AS ENUM ('AVAILABLE','RESERVED','IN_USE','RETURN_PENDING','MAINTENANCE','RETIRED');
@@ -109,6 +109,8 @@ CREATE TABLE employee (
   birth_date      date,
   address         text,
   emergency_contact text,
+  -- FIELD = absen lewat aplikasi HP; OFFICE = absen lewat web (Alembic 0013)
+  attendance_mode text NOT NULL DEFAULT 'FIELD' CHECK (attendance_mode IN ('FIELD','OFFICE')),
   is_active       boolean NOT NULL DEFAULT true,
   offboarded_at   timestamptz,
   offboarding_reason text,
@@ -181,10 +183,13 @@ CREATE TABLE site (
   address         text,
   location        geography(Point,4326) NOT NULL,
   radius_m        integer CHECK (radius_m BETWEEN 10 AND 5000),  -- NULL = pakai default organisasi
+  -- NULL = lokasi kantor (Finance); terisi = lokasi proyek unit itu (PM, untuk bawahannya) — Alembic 0014
+  unit_id         uuid REFERENCES business_unit(id),
   deleted_at      timestamptz,
   UNIQUE (organization_id, name)
 );
 CREATE INDEX site_location_gix ON site USING gist (location);
+CREATE INDEX site_unit_idx ON site (organization_id, unit_id) WHERE deleted_at IS NULL;
 
 -- -----------------------------------------------------------------------------
 -- Work plan (SK) dan susunannya

@@ -15,14 +15,15 @@ from tests.conftest import login_headers, requires_db, sync_query
 P = Permission
 
 EXPECTED_EXTRA: dict[RoleCode, set[Permission]] = {
-    # R-10: PM/OPS memeriksa absensi unitnya; Finance/Admin seluruh organisasi.
-    RoleCode.PM: {P.CREATE_PLAN, P.PUBLISH_PLAN, P.VIEW_TIMELINE, P.REVIEW_UNIT_ATTENDANCE},
+    # R-33 (menggantikan R-10): PM meninjau bawahan lapangan & mengelola lokasi proyek unitnya;
+    # Finance melihat semua, meninjau pekerja kantor, ekspor, lokasi kantor; OPS melihat semua & meninjau Finance.
+    RoleCode.PM: {P.CREATE_PLAN, P.PUBLISH_PLAN, P.VIEW_TIMELINE, P.REVIEW_ATTENDANCE, P.MANAGE_SITES},
     RoleCode.HR: {P.MANAGE_USERS, P.VERIFY_DOCUMENTS, P.MANAGE_EMPLOYEE_DOCUMENTS},
-    RoleCode.FINANCE: {P.REVIEW_ATTENDANCE, P.REVIEW_UNIT_ATTENDANCE, P.REVIEW_OVERTIME},
+    RoleCode.FINANCE: {P.VIEW_ALL_ATTENDANCE, P.REVIEW_ATTENDANCE, P.EXPORT_ATTENDANCE, P.REVIEW_OVERTIME,
+                       P.MANAGE_SITES},
     RoleCode.ASSET: {P.MANAGE_ASSETS},
-    # OPS memegang kewenangan PM lintas unit (domain.js permissions.OPS) di samping pemantauan.
     RoleCode.OPS: {P.CREATE_PLAN, P.PUBLISH_PLAN, P.REVIEW_OVERTIME, P.VIEW_TIMELINE, P.VIEW_AUDIT,
-                   P.REVIEW_UNIT_ATTENDANCE},
+                   P.VIEW_ALL_ATTENDANCE, P.REVIEW_ATTENDANCE},
     # Ketua/anggota berasal dari SK (is_plan_leader/is_plan_member), bukan peran global.
     RoleCode.LEADER: set(),
     RoleCode.MEMBER: set(),
@@ -36,8 +37,10 @@ def test_role_codes_match_database_enum():
     assert {r.value for r in RoleCode} == set(labels)
 
 
-def test_admin_has_every_permission():
-    assert set(get_role_permissions(RoleCode.ADMIN)) == {p.value for p in Permission}
+def test_admin_has_every_permission_except_attendance_and_sites():
+    """R-33: Admin tidak melihat/meninjau absensi orang lain dan tidak mengelola lokasi."""
+    excluded = {P.VIEW_ALL_ATTENDANCE, P.REVIEW_ATTENDANCE, P.EXPORT_ATTENDANCE, P.MANAGE_SITES}
+    assert set(get_role_permissions(RoleCode.ADMIN)) == {p.value for p in Permission} - {p.value for p in excluded}
 
 
 @pytest.mark.parametrize("role", list(EXPECTED_EXTRA))

@@ -3,6 +3,13 @@ app/crud/crud_attendance_session.py
 Sesi absensi (V-12). Jarak, radius, status, terlambat, dan pulang cepat TIDAK ditulis di sini —
 trigger `attendance_geofence` / `attendance_checkout` (db/02) yang menghitungnya dari jam & lokasi
 server; aplikasi hanya membaca hasilnya kembali. SQL ditulis utuh (bukan f-string) agar diperiksa V-01.
+
+Cakupan R-33 (keputusan pemilik 2026-10-02) ada di fungsi SQL (Alembic 0015, db/02) — satu sumber aturan
+untuk daftar, rekap, swafoto, dan tinjau:
+- `vms.attendance_viewable(viewer, view_all, employee)`: milik sendiri; Finance & OPS (`view_all`); PM → bawahan
+  lapangan di unitnya.
+- `vms.attendance_can_review(viewer, employee)`: tidak pernah milik sendiri; PM → bawahan lapangan;
+  Finance → pekerja kantor selain Finance; OPS → Finance.
 """
 from __future__ import annotations
 
@@ -17,17 +24,30 @@ class CRUDAttendanceSession(CRUDBase):
     async def employee_of(self, user_id: UUID | str) -> Any:
         return await self.scalar("SELECT employee_id FROM vms.app_user WHERE id = :uid", {"uid": user_id})
 
-    async def open_session(self, employee_id: UUID | str) -> Any:
-        """Sesi terbuka terbaru (belum check-out, tidak ditolak) — tanggal berapa pun."""
+    async def attendance_mode_of(self, user_id: UUID | str) -> Any:
+        """(employee_id, attendance_mode, unit_id) milik akun; None bila akun tidak tertaut karyawan."""
+        return await self.fetchone(
+            """
+            SELECT e.id AS employee_id, e.attendance_mode, e.unit_id
+            FROM vms.app_user u JOIN vms.employee e ON e.id = u.employee_id
+            WHERE u.id = :uid
+            """,
+            {"uid": user_id},
+        )
+
+    async def open_session(self, employee_id: UUID | str, *, valid_only: bool = False) -> Any:
+        """Sesi terbuka terbaru (belum check-out, tidak ditolak) — tanggal berapa pun.
+        `valid_only`: hanya yang sudah valid (Valid otomatis / Disetujui) — syarat absen pulang (R-33)."""
         return await self.fetchone(
             """
             SELECT id, employee_id, work_date, site_id, site_label, check_in_at, check_out_at,
-                   distance_m, is_late, is_early_leave, status, explanation, reviewed_at
+                   distance_m, is_late, is_early_leave, status, explanation, reviewed_at, selfie_file_id
             FROM vms.attendance
             WHERE employee_id = :emp AND check_out_at IS NULL AND status <> 'REJECTED'
+              AND (NOT CAST(:valid AS boolean) OR status IN ('AUTO_VALID', 'APPROVED'))
             ORDER BY check_in_at DESC LIMIT 1
             """,
-            {"emp": employee_id},
+            {"emp": employee_id, "valid": valid_only},
         )
 
     async def active_on(self, employee_id: UUID | str, work_date: Any) -> bool:
@@ -39,31 +59,52 @@ class CRUDAttendanceSession(CRUDBase):
             {"emp": employee_id, "day": work_date},
         ))
 
-    async def site_label(self, site_id: UUID | str, org_id: UUID | str) -> Any:
-        return await self.scalar(
-            "SELECT name FROM vms.site WHERE id = :site AND organization_id = :org AND deleted_at IS NULL",
-            {"site": site_id, "org": org_id},
+    async def rejected_on(self, employee_id: UUID | str, work_date: Any) -> int:
+        """Jumlah pengajuan absensi yang ditolak pada tanggal itu."""
+        return int(await self.scalar(
+            """
+            SELECT count(*) FROM vms.attendance
+            WHERE employee_id = :emp AND work_date = :day AND status = 'REJECTED'
+            """,
+            {"emp": employee_id, "day": work_date},
+        ) or 0)
+
+    async def site_for_check_in(self, site_id: UUID | str, org_id: UUID | str, lng: float, lat: float) -> Any:
+        """Nama, unit, jarak (m), dan radius lokasi — rumus sama dengan trigger `attendance_geofence`,
+        dipakai untuk mewajibkan penjelasan sebelum insert. Status tetap diputuskan trigger."""
+        return await self.fetchone(
+            """
+            SELECT s.name, s.unit_id,
+                   round(ST_Distance(ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography,
+                                     s.location)::numeric, 1) AS distance_m,
+                   COALESCE(s.radius_m, o.geofence_radius_m, 100) AS radius_m
+            FROM vms.site s JOIN vms.organization o ON o.id = s.organization_id
+            WHERE s.id = :site AND s.organization_id = :org AND s.deleted_at IS NULL
+            """,
+            {"site": site_id, "org": org_id, "lng": lng, "lat": lat},
         )
 
     async def insert(self, *, org_id: str, employee_id: Any, work_date: Any, site_id: UUID, site_label: str,
                      lng: float, lat: float, origin: str, selfie_file_id: UUID | None,
-                     face_result: str | None, face_similarity: float | None) -> Any:
+                     face_result: str | None, face_similarity: float | None, source: str = "MOBILE",
+                     explanation: str | None = None) -> Any:
         # radius_m NOT NULL diisi trigger; nilai 0 hanya pengisi sebelum trigger berjalan.
         return await self.fetchone(
             """
             INSERT INTO vms.attendance (
-                organization_id, employee_id, work_date, site_id, site_label, check_in_at,
-                location, location_origin, radius_m, selfie_file_id, face_result, face_similarity
+                organization_id, employee_id, work_date, site_id, site_label, source, check_in_at,
+                location, location_origin, radius_m, selfie_file_id, face_result, face_similarity, explanation
             ) VALUES (
-                :org, :emp, :day, :site, :label, now(),
-                ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography, :origin, 0, :selfie, :face, :sim
+                :org, :emp, :day, :site, :label, CAST(:source AS vms.attendance_source),
+                now(),
+                ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography, :origin, 0, :selfie, :face, :sim, :exp
             )
             RETURNING id, employee_id, work_date, site_id, site_label, check_in_at, check_out_at,
-                      distance_m, is_late, is_early_leave, status, explanation, reviewed_at
+                      distance_m, is_late, is_early_leave, status, explanation, reviewed_at, selfie_file_id
             """,
             {"org": org_id, "emp": employee_id, "day": work_date, "site": site_id, "label": site_label,
              "lng": lng, "lat": lat, "origin": origin, "selfie": selfie_file_id,
-             "face": face_result, "sim": face_similarity},
+             "face": face_result, "sim": face_similarity, "source": source, "exp": explanation},
         )
 
     async def close(self, attendance_id: UUID | str) -> Any:
@@ -71,7 +112,7 @@ class CRUDAttendanceSession(CRUDBase):
             """
             UPDATE vms.attendance SET check_out_at = now() WHERE id = :id
             RETURNING id, employee_id, work_date, site_id, site_label, check_in_at, check_out_at,
-                      distance_m, is_late, is_early_leave, status, explanation, reviewed_at
+                      distance_m, is_late, is_early_leave, status, explanation, reviewed_at, selfie_file_id
             """,
             {"id": attendance_id},
         )
@@ -80,70 +121,53 @@ class CRUDAttendanceSession(CRUDBase):
         return await self.fetchone(
             """
             SELECT id, employee_id, work_date, site_id, site_label, check_in_at, check_out_at,
-                   distance_m, is_late, is_early_leave, status, explanation, reviewed_at
+                   distance_m, is_late, is_early_leave, status, explanation, reviewed_at, selfie_file_id
             FROM vms.attendance WHERE id = :id AND organization_id = :org
             FOR UPDATE
             """,
             {"id": attendance_id, "org": org_id},
         )
 
-    async def manages_employee(self, user_id: UUID | str, employee_id: UUID | str) -> bool:
-        """PM unit karyawan itu (atau PM tanpa unit), OPS, atau ADMIN — revisi pemilik R-10."""
+    async def can_review(self, viewer_user_id: UUID | str, employee_id: UUID | str) -> bool:
         return bool(await self.scalar(
-            """
-            SELECT EXISTS (
-                SELECT 1 FROM vms.employee e
-                JOIN vms.user_role ur ON ur.user_id = CAST(:user AS uuid)
-                WHERE e.id = CAST(:emp AS uuid)
-                  AND (ur.role IN ('OPS', 'ADMIN')
-                       OR (ur.role = 'PM' AND (ur.unit_id IS NULL OR ur.unit_id = e.unit_id)))
-            )
-            """,
-            {"user": str(user_id), "emp": str(employee_id)},
+            "SELECT vms.attendance_can_review(CAST(:viewer AS uuid), CAST(:emp AS uuid))",
+            {"viewer": str(viewer_user_id), "emp": str(employee_id)},
         ))
 
-    async def list_page(self, org_id: str, *, employee_id: Any, date_from: Any, date_to: Any,
-                        status: str | None, limit: int, offset: int,
-                        pm_user_id: Any = None) -> tuple[list[Any], int]:
-        """Absensi organisasi dengan filter opsional (NULL = semua), terbaru dulu. → (baris, total).
-        `pm_user_id`: hanya absensi sendiri dan karyawan di unit yang dipegang PM itu (R-10)."""
-        params = {"org": org_id, "emp": employee_id, "date_from": date_from, "date_to": date_to,
-                  "status": status, "limit": limit, "offset": offset, "pm": pm_user_id}
+    async def list_page(self, org_id: str, viewer_user_id: str, *, view_all: bool, employee_id: Any,
+                        date_from: Any, date_to: Any, status: str | None,
+                        limit: int, offset: int) -> tuple[list[Any], int]:
+        """Absensi dalam cakupan LIHAT peminta (R-33), terbaru dulu, + `can_review` per baris. → (baris, total)."""
+        params = {"org": org_id, "viewer": viewer_user_id, "view_all": view_all, "emp": employee_id,
+                  "date_from": date_from, "date_to": date_to, "status": status,
+                  "limit": limit, "offset": offset}
         rows = await self.fetchall(
             """
-            SELECT id, employee_id, work_date, site_id, site_label, check_in_at, check_out_at,
-                   distance_m, is_late, is_early_leave, status, explanation, reviewed_at
-            FROM vms.attendance
-            WHERE organization_id = CAST(:org AS uuid)
-              AND (CAST(:emp AS uuid) IS NULL OR employee_id = CAST(:emp AS uuid))
-              AND (CAST(:date_from AS date) IS NULL OR work_date >= CAST(:date_from AS date))
-              AND (CAST(:date_to AS date) IS NULL OR work_date <= CAST(:date_to AS date))
-              AND (CAST(:status AS text) IS NULL OR CAST(status AS text) = CAST(:status AS text))
-              AND (CAST(:pm AS uuid) IS NULL
-                   OR employee_id = (SELECT employee_id FROM vms.app_user WHERE id = CAST(:pm AS uuid))
-                   OR EXISTS (SELECT 1 FROM vms.employee e
-                              JOIN vms.user_role ur ON ur.user_id = CAST(:pm AS uuid) AND ur.role = 'PM'
-                              WHERE e.id = attendance.employee_id
-                                AND (ur.unit_id IS NULL OR ur.unit_id = e.unit_id)))
-            ORDER BY work_date DESC, check_in_at DESC
+            SELECT a.id, a.employee_id, a.work_date, a.site_id, a.site_label, a.check_in_at, a.check_out_at,
+                   a.distance_m, a.is_late, a.is_early_leave, a.status, a.explanation, a.reviewed_at,
+                   a.selfie_file_id, a.review_note, e.full_name AS employee_name,
+                   vms.attendance_can_review(CAST(:viewer AS uuid), a.employee_id) AS can_review
+            FROM vms.attendance a JOIN vms.employee e ON e.id = a.employee_id
+            WHERE a.organization_id = CAST(:org AS uuid)
+              AND vms.attendance_viewable(CAST(:viewer AS uuid), CAST(:view_all AS boolean), a.employee_id)
+              AND (CAST(:emp AS uuid) IS NULL OR a.employee_id = CAST(:emp AS uuid))
+              AND (CAST(:date_from AS date) IS NULL OR a.work_date >= CAST(:date_from AS date))
+              AND (CAST(:date_to AS date) IS NULL OR a.work_date <= CAST(:date_to AS date))
+              AND (CAST(:status AS text) IS NULL OR CAST(a.status AS text) = CAST(:status AS text))
+            ORDER BY a.work_date DESC, a.check_in_at DESC
             LIMIT :limit OFFSET :offset
             """,
             params,
         )
         total = await self.scalar(
             """
-            SELECT count(*) FROM vms.attendance
-            WHERE organization_id = CAST(:org AS uuid)
-              AND (CAST(:emp AS uuid) IS NULL OR employee_id = CAST(:emp AS uuid))
-              AND (CAST(:date_from AS date) IS NULL OR work_date >= CAST(:date_from AS date))
-              AND (CAST(:date_to AS date) IS NULL OR work_date <= CAST(:date_to AS date))
-              AND (CAST(:status AS text) IS NULL OR CAST(status AS text) = CAST(:status AS text))
-              AND (CAST(:pm AS uuid) IS NULL
-                   OR employee_id = (SELECT employee_id FROM vms.app_user WHERE id = CAST(:pm AS uuid))
-                   OR EXISTS (SELECT 1 FROM vms.employee e
-                              JOIN vms.user_role ur ON ur.user_id = CAST(:pm AS uuid) AND ur.role = 'PM'
-                              WHERE e.id = attendance.employee_id
-                                AND (ur.unit_id IS NULL OR ur.unit_id = e.unit_id)))
+            SELECT count(*) FROM vms.attendance a
+            WHERE a.organization_id = CAST(:org AS uuid)
+              AND vms.attendance_viewable(CAST(:viewer AS uuid), CAST(:view_all AS boolean), a.employee_id)
+              AND (CAST(:emp AS uuid) IS NULL OR a.employee_id = CAST(:emp AS uuid))
+              AND (CAST(:date_from AS date) IS NULL OR a.work_date >= CAST(:date_from AS date))
+              AND (CAST(:date_to AS date) IS NULL OR a.work_date <= CAST(:date_to AS date))
+              AND (CAST(:status AS text) IS NULL OR CAST(a.status AS text) = CAST(:status AS text))
             """,
             params,
         )

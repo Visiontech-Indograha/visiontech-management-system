@@ -17,9 +17,17 @@ class SiteCreate(BaseModel):
 
 class SiteResponse(SiteCreate):
     id: UUID
+    unit_id: UUID | None = None  # None = lokasi kantor; terisi = lokasi proyek unit itu (R-33)
+    can_manage: bool = False  # peminta boleh mengelola (menghapus) lokasi ini
     
+AttendanceChannel = Literal["MOBILE", "WEB"]
+
+
 class CheckInRequest(BaseModel):
     site_id: UUID
+    # Aplikasi pengirim. Default MOBILE agar APK lama tetap jalan; server mencocokkannya dengan
+    # `employee.attendance_mode` (lapangan → HP, kantor → web) dan menolak bila tidak sesuai.
+    channel: AttendanceChannel = "MOBILE"
     location: GeoPoint
     location_origin: Literal["GPS", "SIMULASI"] = "GPS"  # MESIN hanya dari mesin absen, bukan API
     # Radius ketidakpastian GPS perangkat (m). Opsional: klien lama / antrean luring tidak ditolak (K-12).
@@ -27,8 +35,11 @@ class CheckInRequest(BaseModel):
     selfie_file_id: UUID | None = None
     face_result: Literal["MATCH", "NO_MATCH", "LOW_QUALITY", "NOT_ENROLLED", "SKIPPED"] | None = None
     face_similarity: float | None = None
+    # R-33: wajib bila di luar radius lokasi atau saat mengajukan ulang absensi yang ditolak (dicek server).
+    explanation: str | None = Field(None, max_length=1000)
 
 class CheckOutRequest(BaseModel):
+    channel: AttendanceChannel = "MOBILE"
     location: GeoPoint
     location_origin: Literal["GPS", "SIMULASI"] = "GPS"
 
@@ -53,6 +64,11 @@ class AttendanceResponse(BaseModel):
     status: str
     explanation: str | None
     reviewed_at: datetime | None
+    selfie_file_id: UUID | None = None
+    # Hanya terisi di daftar GET /attendance:
+    review_note: str | None = None  # alasan peninjau bila ditolak
+    employee_name: str | None = None
+    can_review: bool = False  # peminta berwenang meninjau baris ini (R-33, dihitung server)
 
 class AttendanceListResponse(BaseModel):
     items: list[AttendanceResponse]

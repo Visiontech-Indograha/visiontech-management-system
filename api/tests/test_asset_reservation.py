@@ -67,8 +67,16 @@ def _give_sim_a(world: World, who: str) -> None:
         (world.org_id, world.employees[who]))
 
 
-def test_tool_is_reserved_until_the_plan_starts(client, world):
+def _accepted_not_started(client, world) -> str:
+    """Alur SK v2: SK yang tanggal mulainya hari ini otomatis Berjalan saat diterima. Uji reservasi
+    membutuhkan SK Diterima yang belum berjalan (mis. tanggal mulai besok) — status dikembalikan langsung."""
     plan_id, _ = run_plan_to_accepted(client, world)
+    sync_query("UPDATE vms.work_plan SET status = 'ACCEPTED' WHERE id = %s", (plan_id,))
+    return plan_id
+
+
+def test_tool_is_reserved_until_the_plan_starts(client, world):
+    plan_id = _accepted_not_started(client, world)
     tool = _asset(client, world, "TL-RSV")
 
     reserved = _reserve(client, world, tool, plan_id)
@@ -130,7 +138,7 @@ def test_release_only_frees_the_reservation_of_that_plan(client, world):
 
 
 def test_driver_checks_vehicles_before_they_are_used(client, world):
-    plan_id, _ = run_plan_to_accepted(client, world)
+    plan_id = _accepted_not_started(client, world)
     _give_sim_a(world, "member")
     checked, unchecked = _asset(client, world, "KD-01", "VEHICLE"), _asset(client, world, "KD-02", "VEHICLE")
     assert _reserve(client, world, checked, plan_id, driver="member").status_code == 200

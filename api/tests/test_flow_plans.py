@@ -54,7 +54,8 @@ def run_plan_to_in_progress(client, world: World, length_days: int = 2) -> tuple
 
 def run_plan_to_accepted(client, world: World, length_days: int = 2,
                          start_offset_days: int = 0) -> tuple[str, list[str]]:
-    """SK terbit & diterima ketua, belum dimulai (status ACCEPTED)."""
+    """SK terbit & diterima ketua. Alur SK v2: bila tanggal mulai sudah tiba (offset 0) SK langsung Berjalan;
+    pakai `start_offset_days=1` untuk SK Diterima yang belum berjalan."""
     plan_id, day_ids = create_draft_plan(client, world, start_offset_days, length_days=length_days)
     pm = world.headers(client, "pm")
 

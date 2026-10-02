@@ -23,7 +23,7 @@ def _error(response) -> dict:
 
 # ── Laporan & insiden hanya untuk SK yang sedang berjalan ─────────────────────────────────────
 def test_daily_report_needs_a_running_plan(client, world):
-    plan_id, day_ids = run_plan_to_accepted(client, world)          # diterima, belum dimulai
+    plan_id, day_ids = run_plan_to_accepted(client, world, start_offset_days=1)  # diterima, mulai besok
     leader = world.headers(client, "leader")
 
     saved = client.put(f"/work-plans/{plan_id}/days/{day_ids[0]}", headers=leader,
@@ -37,7 +37,7 @@ def test_daily_report_needs_a_running_plan(client, world):
 
 
 def test_incident_needs_a_running_plan(client, world):
-    plan_id, _ = run_plan_to_accepted(client, world)
+    plan_id, _ = run_plan_to_accepted(client, world, start_offset_days=1)   # alur v2: hari ini = otomatis berjalan
 
     response = client.post("/hse/incidents", headers=world.headers(client, "member"), json={
         "work_plan_id": plan_id, "category": "K3_RINGAN", "severity": "RENDAH",

@@ -5,3 +5,8 @@ f3fe44324588a23c6a779cd49a3121713d2df7aa:api/tests/test_discord.py:jwt:20
 # Kata sandi sementara karangan dalam respons tiruan (mock) uji web.
 15b8641fbc4cb17f2502fa86189c3c004f6cf23e:web/src/test/users.test.tsx:generic-api-key:61
 15b8641fbc4cb17f2502fa86189c3c004f6cf23e:web/src/test/users.test.tsx:generic-api-key:113
+# 2026-10-02 (CLI gitleaks 8.30.1): sidik jari yang sama setelah riwayat ditulis ulang (a700c870).
+a700c8703299f9ee67a5fa11becfb23d8c83e50e:web/src/test/users.test.tsx:generic-api-key:61
+a700c8703299f9ee67a5fa11becfb23d8c83e50e:web/src/test/users.test.tsx:generic-api-key:113
+# Positif palsu: komentar contoh nama berkas foto (`laporan_20260926_184512_123.jpg`), bukan kunci.
+4067cab705c3f2ddc8cc0fb1586a988051da4f84:mobile/lib/core/local_storage.dart:generic-api-key:39

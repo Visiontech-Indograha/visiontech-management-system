@@ -11,11 +11,12 @@ from uuid import UUID
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import CurrentUser, PlanNeed, check_plan_access
 from app.core.enums import PlanStatus
 from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationError, trigger_rule_error
 from app.core.permissions import Permission
+from app.core.security import CurrentUser
 from app.crud.crud_asset_reservation import CRUDAssetReservation
+from app.services.access_service import PlanNeed, check_plan_access
 
 RUNNING = (PlanStatus.IN_PROGRESS, PlanStatus.COMPLETION_REVIEW)
 

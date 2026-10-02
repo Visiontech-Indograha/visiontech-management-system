@@ -14,13 +14,14 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import CurrentUser, PlanNeed, check_plan_access
 from app.core.enums import ChangeStatus, ChangeType, DocumentKind, DocumentStatus, PlanStatus
 from app.core.errors import AppError, ForbiddenError, NotFoundError
+from app.core.security import CurrentUser
 from app.crud.crud_plan_assignment import CRUDPlanAssignment
 from app.crud.crud_plan_change import CRUDPlanChange
 from app.crud.crud_plan_member import CRUDPlanMember
 from app.crud.crud_plan_transition import CRUDPlanTransition
+from app.services.access_service import PlanNeed, check_plan_access
 from app.services.plan_assignment_service import PlanAssignmentService
 
 ACTIVE = (PlanStatus.ACCEPTED, PlanStatus.IN_PROGRESS)   # domain.js requireStatus(['ACCEPTED','IN_PROGRESS'])

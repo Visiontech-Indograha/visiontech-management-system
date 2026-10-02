@@ -7,10 +7,12 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import CurrentUser, check_file_access, get_current_user, get_db_with_user
+from app.api.deps import get_current_user, get_db_with_user
 from app.core.errors import AppError
 from app.core.image import compress_image
+from app.core.security import CurrentUser
 from app.core.storage import get_presigned_url, upload_file
+from app.services.access_service import check_file_access
 
 router = APIRouter(prefix="/files", tags=["Files"])
 

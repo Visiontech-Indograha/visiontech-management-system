@@ -10,9 +10,9 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import PlanAccess
 from app.core.errors import AppError, ValidationError
 from app.crud.crud_plan_location import CRUDPlanLocation
+from app.services.access_service import PlanAccess
 
 CLOSED = ("COMPLETED", "CANCELLED")
 CLOSED_MESSAGE = "Titik lokasi tidak dapat diubah pada SK yang sudah selesai atau dibatalkan."

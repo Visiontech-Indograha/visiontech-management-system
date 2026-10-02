@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 
 /// Hasil pengambilan lokasi -- [position] null berarti gagal, cek [errorMessage]
@@ -38,13 +39,27 @@ Future<LocationResult> getCurrentPositionSafely() async {
     // GPS chip tidak butuh internet untuk dapat titik -- timeLimit di sini
     // cuma jaring pengaman supaya tidak menunggu tanpa batas di area sinyal
     // GPS lemah (mis. dalam ruangan).
+    // Android: baca langsung dari LocationManager (chip GPS). Tanpa ini geolocator memakai
+    // layanan lokasi Google yang memunculkan dialog "Location Accuracy" di setiap absen;
+    // bila pengguna memilih "No thanks", lokasi gagal dibaca dan absen tidak bisa dilakukan.
+    final settings = defaultTargetPlatform == TargetPlatform.android
+        ? AndroidSettings(
+            accuracy: LocationAccuracy.high,
+            forceLocationManager: true,
+            timeLimit: const Duration(seconds: 30),
+          )
+        : const LocationSettings(
+            accuracy: LocationAccuracy.high,
+            timeLimit: Duration(seconds: 30),
+          );
     final position = await Geolocator.getCurrentPosition(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.high,
-        timeLimit: Duration(seconds: 30),
-      ),
+      locationSettings: settings,
     );
     return LocationResult(position: position);
+  } on LocationServiceDisabledException {
+    return const LocationResult(
+      errorMessage: 'Aktifkan Layanan Lokasi (GPS) terlebih dahulu.',
+    );
   } on TimeoutException {
     return const LocationResult(
       errorMessage: 'Gagal mendapatkan lokasi -- pastikan berada di area terbuka, lalu coba lagi.',

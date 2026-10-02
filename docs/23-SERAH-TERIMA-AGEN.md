@@ -10,7 +10,7 @@ setiap kali Anda menutup sesi dengan perubahan berarti.
 - Subagen **boleh** dipakai (larangan dicabut pemilik 2026-09-28, R-25). Tiap subagen bekerja di
   branch `feature/...` dan worktree sendiri, dengan DB uji sendiri, lalu digabung ke `development`.
   Tetap hemat: tanpa polling berulang.
-- Setiap permintaan pemilik atau PM **dicatat** di `docs/19-CATATAN-REVISI-PEMILIK.md` (nomor R-xx berikutnya: **R-31**).
+- Setiap permintaan pemilik atau PM **dicatat** di `docs/19-CATATAN-REVISI-PEMILIK.md` (nomor R-xx berikutnya: **R-35**).
 - Figma: tim **my-edu** (kursi Full). Tim `vms` hanya kursi View, tidak bisa diubah.
 - **Commit hanya setelah uji otomatis dan uji nyata lulus** (web di peramban terhadap API + DB nyata; mobile di HP nyata). Rencana & temuan audit: `docs/24`.
 - **Struktur folder `api/` WAJIB** mengikuti `docs/12` §1 (R-28); migrasi bertahap `docs/26`. Berkas baru hanya di tempat yang benar.

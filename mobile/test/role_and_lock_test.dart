@@ -7,9 +7,8 @@ import 'package:vms_mobile/core/theme/theme.dart';
 import 'package:vms_mobile/features/auth/auth_controller.dart';
 import 'package:vms_mobile/features/auth/auth_state.dart';
 import 'package:vms_mobile/features/auth/login_screen.dart';
-import 'package:vms_mobile/features/auth/office_role_notice.dart';
 
-/// R-21: cooldown login terlihat di HP & penanda peran kantor ("Segera hadir" untuk PM).
+/// R-21: cooldown login terlihat di HP. (Kartu peran kantor dihapus — R-33: akun kantor ditolak login HP.)
 
 class _Locked extends AuthController {
   @override
@@ -23,18 +22,6 @@ class _Wrong extends AuthController {
   @override
   AuthState build() => const AuthUnauthenticated(
     error: 'Email atau kata sandi salah. Sisa 3 percobaan.',
-  );
-}
-
-AuthController Function() _as(UserRole role) =>
-    () => _SignedInAs(role);
-
-class _SignedInAs extends AuthController {
-  _SignedInAs(this.role);
-  final UserRole role;
-  @override
-  AuthState build() => AuthAuthenticated(
-    AuthUser(id: 'u1', username: 'x@contoh.test', role: role, employeeId: 'e1'),
   );
 }
 
@@ -73,28 +60,5 @@ void main() {
       findsOneWidget,
     );
     expect(find.byKey(const Key('login-locked')), findsNothing);
-  });
-
-  testWidgets('PM melihat "Segera hadir"', (tester) async {
-    await tester.pumpWidget(_app(_as(UserRole.pm), const OfficeRoleNotice()));
-    await tester.pump();
-    expect(find.text('Segera hadir'), findsOneWidget);
-  });
-
-  testWidgets('HR: kartu akun kantor tanpa "Segera hadir"', (tester) async {
-    await tester.pumpWidget(_app(_as(UserRole.hr), const OfficeRoleNotice()));
-    await tester.pump();
-    expect(find.byKey(const Key('office-role-notice')), findsOneWidget);
-    expect(find.text('Segera hadir'), findsNothing);
-  });
-
-  testWidgets('anggota lapangan tidak melihat kartu peran kantor', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      _app(_as(UserRole.member), const OfficeRoleNotice()),
-    );
-    await tester.pump();
-    expect(find.byKey(const Key('office-role-notice')), findsNothing);
   });
 }

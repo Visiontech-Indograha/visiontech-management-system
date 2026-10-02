@@ -39,6 +39,7 @@ void main() {
       expect(last().method, 'POST');
       expect(last().path, '/api/v1/attendance/check-in');
       expect(last().data, {
+        'channel': 'MOBILE',
         'site_id': 's1',
         'location': {'lat': -6.2, 'lng': 106.8},
         'location_origin': 'GPS',
@@ -66,6 +67,7 @@ void main() {
 
       await api.checkOut(lat: -6.2, lng: 106.8);
       expect(last().data, {
+        'channel': 'MOBILE',
         'location': {'lat': -6.2, 'lng': 106.8},
         'location_origin': 'GPS',
       });

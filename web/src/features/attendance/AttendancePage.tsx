@@ -125,6 +125,7 @@ export function AttendancePage() {
                   <dd className="inline">
                     {Math.round(a.distance_m)} m{a.is_late ? " · terlambat" : ""}
                     {a.is_early_leave ? " · pulang cepat" : ""}
+                    {a.offline ? " · absen luring" : ""}
                   </dd>
                 </div>
                 {a.explanation && (
@@ -256,6 +257,17 @@ function ReviewDialog({ item, onClose }: { item: Attendance; onClose: () => void
       <p className="mb-3 text-sm text-mist">
         {item.site_label} · {Math.round(item.distance_m)} m · masuk {formatDateTime(item.check_in_at)}
       </p>
+      {item.offline && (
+        <div role="status" className="mb-3 rounded-control border border-warning-border bg-warning-bg px-3 py-2 text-sm text-warning">
+          <p className="font-medium">Absen luring (direkam tanpa sinyal, dikirim saat online)</p>
+          {item.offline_note && <p>Catatan server: {item.offline_note}</p>}
+          {item.check_out_requested_at && (
+            <p>
+              Absen pulang {formatDateTime(item.check_out_requested_at)} berlaku bila absensi ini disetujui.
+            </p>
+          )}
+        </div>
+      )}
       {item.selfie_file_id ? (
         <div className="mb-3">
           <p className="mb-1 text-sm font-medium">Swafoto</p>

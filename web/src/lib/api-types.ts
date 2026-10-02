@@ -1464,6 +1464,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/attendance/device-key": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Register Device Key
+         * @description R-34: daftarkan kunci publik Android Keystore perangkat ini untuk memverifikasi absen luring.
+         */
+        post: operations["register_device_key_api_v1_attendance_device_key_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attendance/offline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Submit Offline Attendance
+         * @description R-34: terima satu absen luring yang ditandatangani perangkat (idempoten per client_op_id).
+         */
+        post: operations["submit_offline_attendance_api_v1_attendance_offline_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/attendance/check-in": {
         parameters: {
             query?: never;
@@ -2285,6 +2325,8 @@ export interface components {
             size: number;
             /** Today */
             today?: string | null;
+            /** Time Anchor */
+            time_anchor?: string | null;
         };
         /** AttendanceRecap */
         AttendanceRecap: {
@@ -2398,6 +2440,15 @@ export interface components {
              * @default false
              */
             can_review: boolean;
+            /**
+             * Offline
+             * @default false
+             */
+            offline: boolean;
+            /** Offline Note */
+            offline_note?: string | null;
+            /** Check Out Requested At */
+            check_out_requested_at?: string | null;
         };
         /** AuditEventListResponse */
         AuditEventListResponse: {
@@ -2636,6 +2687,16 @@ export interface components {
         DecisionRequest: {
             /** Reason */
             reason?: string | null;
+        };
+        /**
+         * DeviceKeyRequest
+         * @description Kunci publik EC P-256 (X.509 SubjectPublicKeyInfo DER, base64) dari Android Keystore.
+         */
+        DeviceKeyRequest: {
+            /** Device Id */
+            device_id: string;
+            /** Public Key */
+            public_key: string;
         };
         /** DocumentListResponse */
         DocumentListResponse: {
@@ -3070,6 +3131,54 @@ export interface components {
             needs_review_today: number;
             /** Daily Average */
             daily_average: number;
+        };
+        /**
+         * OfflineAttendanceEvent
+         * @description Satu absen luring: `payload` = JSON persis seperti yang ditandatangani HP; `signature` = ECDSA SHA-256
+         *     (DER, base64). Swafoto diunggah lebih dulu; kecocokannya dicek lewat `selfie_sha256` di payload.
+         */
+        OfflineAttendanceEvent: {
+            /** Device Id */
+            device_id: string;
+            /**
+             * Client Op Id
+             * Format: uuid
+             */
+            client_op_id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "CHECK_IN" | "CHECK_OUT";
+            /** Payload */
+            payload: string;
+            /** Signature */
+            signature: string;
+            /** Selfie File Id */
+            selfie_file_id?: string | null;
+        };
+        /** OfflineAttendanceResult */
+        OfflineAttendanceResult: {
+            /**
+             * Client Op Id
+             * Format: uuid
+             */
+            client_op_id: string;
+            /** Result */
+            result: string;
+            /** Attendance Id */
+            attendance_id: string | null;
+            /** Duplicate */
+            duplicate: boolean;
+            /** Event Time */
+            event_time?: string | null;
+            /** Time Trusted */
+            time_trusted?: boolean | null;
+            /**
+             * Notes
+             * @default []
+             */
+            notes: string[];
         };
         /** OfflineOperation */
         OfflineOperation: {
@@ -6655,6 +6764,74 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AttendanceListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    register_device_key_api_v1_attendance_device_key_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeviceKeyRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    submit_offline_attendance_api_v1_attendance_offline_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OfflineAttendanceEvent"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfflineAttendanceResult"];
                 };
             };
             /** @description Validation Error */

@@ -472,6 +472,10 @@ CREATE TABLE attendance (
   reviewed_by     uuid REFERENCES employee(id),
   reviewed_at     timestamptz,
   review_note     text,
+  -- Absensi luring (R-34, Alembic 0017): alasan perlu review & absen pulang yang menunggu disetujui
+  offline         boolean NOT NULL DEFAULT false,
+  offline_note    text,
+  check_out_requested_at timestamptz,
   created_at      timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (id, work_date),
   CHECK (check_out_at IS NULL OR check_out_at >= check_in_at)
@@ -486,6 +490,32 @@ CREATE INDEX attendance_status_idx ON attendance (organization_id, status) WHERE
 CREATE INDEX attendance_location_gix ON attendance USING gist (location);
 -- Satu kehadiran aktif per karyawan per hari; yang ditolak boleh diajukan ulang.
 CREATE UNIQUE INDEX attendance_active_uidx ON attendance (employee_id, work_date) WHERE status <> 'REJECTED';
+
+-- Absensi luring (R-34, Alembic 0017): kunci publik Android Keystore per akun & perangkat, dan jejak
+-- peristiwa luring (idempoten per client_op_id). Tanda tangan menjamin tanggal, jam, dan lokasi tidak diubah.
+CREATE TABLE attendance_device_key (
+  id              uuid PRIMARY KEY DEFAULT new_id(),
+  organization_id uuid NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
+  user_id         uuid NOT NULL REFERENCES app_user(id) ON DELETE CASCADE,
+  device_id       text NOT NULL,
+  public_key      text NOT NULL,
+  created_at      timestamptz NOT NULL DEFAULT now(),
+  revoked_at      timestamptz
+);
+CREATE UNIQUE INDEX attendance_device_key_active_uidx ON attendance_device_key (user_id, device_id)
+  WHERE revoked_at IS NULL;
+
+CREATE TABLE attendance_offline_event (
+  client_op_id    uuid PRIMARY KEY,
+  organization_id uuid NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
+  user_id         uuid NOT NULL REFERENCES app_user(id) ON DELETE CASCADE,
+  kind            text NOT NULL CHECK (kind IN ('CHECK_IN','CHECK_OUT')),
+  attendance_id   uuid,
+  event_time      timestamptz NOT NULL,
+  time_trusted    boolean NOT NULL,
+  result          text NOT NULL,
+  received_at     timestamptz NOT NULL DEFAULT now()
+);
 
 -- -----------------------------------------------------------------------------
 -- Insiden / HSE dan lembur

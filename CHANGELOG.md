@@ -9,6 +9,8 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased] — `development`
 
+- **CI · laporan Discord:** run yang dibatalkan `concurrency: cancel-in-progress` (ada push lebih baru ke branch yang sama) tidak lagi dilaporkan sebagai "❌ CI GAGAL" — notifikasi dilewati, run pengganti yang melapor (laporan palsu 48f9300f, 2026-10-02).
+
 - **PostgreSQL 18 di server (2026-10-02):** DB uji server `vms_db_test` dipindah ke citra `vms-db:18` (PG 18.6, PostGIS 3.6, pgvector) lewat `pg_dumpall`/restore — hitungan baris semua tabel identik, suite API yang disetujui 334 lolos di server. Kontainer & volume PG16 lama (`vms_db_test16`, `vms_db_test_data`) disimpan untuk rollback. **Produksi** (izin pemilik): `vms_db_prod` → PG18.6 dengan `pg_dumpall`/restore (4 DB, hitungan identik, henti ±2 menit 19.49–19.51); sandi `vms_app` yang masih sama dengan sandi di riwayat Git **dirotasi** (sandi lama ditolak); API `/ready` 200, alembic 0017, backup pasca-pindah ke MinIO berhasil. DB lama `vms_db_prod16` disimpan untuk rollback.
 
 - **Uji E2E absensi di server produksi (2026-10-02):** `docs/27` §5 — P1–P8 lulus (web https Tailscale + HP nyata Realme, mode pesawat sungguhan; akun UJI di organisasi uji terpisah). Temuan: bug kiriman ulang setelah refresh token (diperbaiki, T-5), web via http LAN tidak bisa absen (T-6), label menu akun kantor (T-7).

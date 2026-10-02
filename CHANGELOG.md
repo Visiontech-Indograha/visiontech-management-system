@@ -9,6 +9,8 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased] — `development`
 
+- **PostgreSQL 18 di server (2026-10-02):** DB uji server `vms_db_test` dipindah ke citra `vms-db:18` (PG 18.6, PostGIS 3.6, pgvector) lewat `pg_dumpall`/restore — hitungan baris semua tabel identik, suite API yang disetujui 334 lolos di server. Kontainer & volume PG16 lama (`vms_db_test16`, `vms_db_test_data`) disimpan untuk rollback. **Produksi belum:** gladi pada salinan prod lulus (4 DB identik), tetapi pemindahan digabung dengan rotasi sandi DB `vms_app` (masih sama dengan sandi di riwayat Git) yang harus dijalankan pemilik; layanan sempat dihentikan ±2 menit lalu dinyalakan kembali di PG16 tanpa perubahan data.
+
 - **Uji E2E absensi di server produksi (2026-10-02):** `docs/27` §5 — P1–P8 lulus (web https Tailscale + HP nyata Realme, mode pesawat sungguhan; akun UJI di organisasi uji terpisah). Temuan: bug kiriman ulang setelah refresh token (diperbaiki, T-5), web via http LAN tidak bisa absen (T-6), label menu akun kantor (T-7).
 
 - **Perbaikan absensi HP — absen tidak hilang saat kiriman ulang setelah refresh token putus (uji nyata prod 2026-10-02):** di HP Realme (4G + Tailscale), token akses habis tepat saat absen; refresh berhasil, tetapi kiriman ulang putus di jaringan dan interceptor `ApiClient` meneruskan 401 lama → layar Absensi tidak beralih ke absen luring (R-34), absen hilang (2× di log prod). Kini kegagalan kiriman ulang diteruskan apa adanya. Uji baru `mobile/test/api_client_retry_test.dart` (server HTTP lokal sungguhan) gagal sebelum perbaikan, lulus sesudahnya; `flutter analyze` bersih, `flutter test` 88 lulus.

@@ -13,12 +13,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.enums import PlanStatus
 from app.core.errors import ValidationError
+from app.core.permissions import Permission
 from app.core.security import CurrentUser
-from app.crud.crud_attendance_session import CRUDAttendanceSession
 from app.crud.crud_monitoring import CRUDMonitoring
 from app.crud.crud_org_clock import CRUDOrgClock
 from app.crud.crud_plan_access import CRUDPlanAccess
-from app.services.attendance_session_service import SEE_ALL
 
 HIDDEN = (PlanStatus.CANCELLED, PlanStatus.COMPLETED)   # operations.js timeline()
 REPORTED = ("APPROVED", "SUBMITTED", "CHANGES_REQUESTED")
@@ -85,11 +84,14 @@ class MonitoringService:
 
     async def attendance_recap(self, user: CurrentUser, month: str | None) -> dict[str, Any]:
         label, starts, ends = _month_range(month, await self._today(user.organization_id))
-        scope: str | None = None
-        if not set(user.roles) & SEE_ALL:
-            own = await CRUDAttendanceSession(self.db).employee_of(user.user_id)
-            if own is None:
-                return {"month": label, "employees": []}
-            scope = str(own)
-        rows = await self.repo.attendance_recap(user.organization_id, starts, ends, scope)
-        return {"month": label, "employees": [dict(row._mapping) for row in rows]}
+        # R-33: Finance & OPS semua; PM hanya bawahan lapangan di unitnya; selain itu milik sendiri.
+        if Permission.VIEW_ALL_ATTENDANCE.value in user.permissions:
+            scope = "all"
+        elif "PM" in user.roles:
+            scope = "subordinates"
+        else:
+            scope = "own"
+        rows = await self.repo.attendance_recap(user.organization_id, starts, ends, user.user_id, scope)
+        days = await self.repo.attendance_recap_days(user.organization_id, starts, ends, user.user_id, scope)
+        return {"month": label, "employees": [dict(row._mapping) for row in rows],
+                "records": [dict(row._mapping) for row in days]}

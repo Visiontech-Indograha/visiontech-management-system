@@ -39,11 +39,14 @@ class Permission(str, Enum):
     CREATE_PLAN = "create:plan"
     PUBLISH_PLAN = "publish:plan"
 
-    # Absensi & lembur
-    REVIEW_ATTENDANCE = "review:attendance"
-    # PM (unit sendiri) & OPS (lintas unit) memvalidasi absensi — revisi pemilik R-10; cakupan dicek di service
-    REVIEW_UNIT_ATTENDANCE = "review:unit_attendance"
+    # Absensi & lembur — cakupan per absen dicek di service/CRUD (R-33, menggantikan R-10)
+    VIEW_ALL_ATTENDANCE = "view:all_attendance"  # Finance & OPS melihat semua absensi
+    REVIEW_ATTENDANCE = "review:attendance"  # PM → bawahan lapangan, Finance → kantor non-Finance, OPS → Finance
+    EXPORT_ATTENDANCE = "export:attendance"  # ekspor CSV — Finance
     REVIEW_OVERTIME = "review:overtime"
+
+    # Lokasi kerja: PM → lokasi proyek unitnya, Finance → lokasi kantor (R-33)
+    MANAGE_SITES = "manage:sites"
 
     # Aset
     MANAGE_ASSETS = "manage:assets"
@@ -61,16 +64,21 @@ P = Permission
 # Setiap karyawan yang login: direktori, dokumen pribadinya sendiri.
 BASE_PERMISSIONS: frozenset[Permission] = frozenset({P.VIEW_USERS, P.VIEW_DOCUMENTS, P.UPLOAD_DOCUMENTS})
 
+# R-33: Admin tidak melihat/meninjau absensi orang lain dan tidak mengelola lokasi (hanya riwayat sendiri).
+_ADMIN_EXCLUDED = frozenset({P.VIEW_ALL_ATTENDANCE, P.REVIEW_ATTENDANCE, P.EXPORT_ATTENDANCE, P.MANAGE_SITES})
+
 _ROLE_EXTRA: dict[RoleCode, frozenset[Permission]] = {
-    RoleCode.ADMIN: frozenset(Permission),
-    RoleCode.PM: frozenset({P.CREATE_PLAN, P.PUBLISH_PLAN, P.VIEW_TIMELINE, P.REVIEW_UNIT_ATTENDANCE}),
+    RoleCode.ADMIN: frozenset(Permission) - _ADMIN_EXCLUDED,
+    RoleCode.PM: frozenset({P.CREATE_PLAN, P.PUBLISH_PLAN, P.VIEW_TIMELINE, P.REVIEW_ATTENDANCE, P.MANAGE_SITES}),
     RoleCode.HR: frozenset({P.MANAGE_USERS, P.VERIFY_DOCUMENTS, P.MANAGE_EMPLOYEE_DOCUMENTS}),
-    RoleCode.FINANCE: frozenset({P.REVIEW_ATTENDANCE, P.REVIEW_UNIT_ATTENDANCE, P.REVIEW_OVERTIME}),
+    RoleCode.FINANCE: frozenset({P.VIEW_ALL_ATTENDANCE, P.REVIEW_ATTENDANCE, P.EXPORT_ATTENDANCE,
+                                 P.REVIEW_OVERTIME, P.MANAGE_SITES}),
     RoleCode.ASSET: frozenset({P.MANAGE_ASSETS}),
     # OPS memegang kewenangan PM lintas unit (domain.js permissions.OPS; dok 10 Bagian C, V-07).
     # PROMOTE/OFFBOARD prototipe belum dipetakan: MANAGE_USERS juga mencakup ubah data karyawan (HR saja).
-    RoleCode.OPS: frozenset({P.CREATE_PLAN, P.PUBLISH_PLAN, P.REVIEW_OVERTIME, P.REVIEW_UNIT_ATTENDANCE,
-                             P.VIEW_TIMELINE, P.VIEW_AUDIT}),
+    # R-33: OPS melihat semua absensi (baca saja) dan hanya meninjau absensi Finance.
+    RoleCode.OPS: frozenset({P.CREATE_PLAN, P.PUBLISH_PLAN, P.REVIEW_OVERTIME, P.VIEW_ALL_ATTENDANCE,
+                             P.REVIEW_ATTENDANCE, P.VIEW_TIMELINE, P.VIEW_AUDIT}),
     RoleCode.LEADER: frozenset(),
     RoleCode.MEMBER: frozenset(),
 }

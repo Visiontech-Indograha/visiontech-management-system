@@ -1,5 +1,5 @@
 """Skema permintaan & respons: monitoring (dipindah dari api/v1/endpoints/monitoring.py, R-28 M2b)."""
-from datetime import date
+from datetime import date, datetime
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -43,6 +43,21 @@ class AttendanceRecapRow(BaseModel):
     rejected: int
 
 
+class AttendanceRecapRecord(BaseModel):
+    """Satu absensi dalam riwayat rekap — jam masuk & keluar (R-33)."""
+    id: str
+    employee_id: str
+    full_name: str
+    work_date: date
+    site_label: str
+    check_in_at: datetime
+    check_out_at: datetime | None
+    status: str
+    is_late: bool
+    is_early_leave: bool
+
+
 class AttendanceRecap(BaseModel):
     month: str
     employees: list[AttendanceRecapRow]
+    records: list[AttendanceRecapRecord] = []

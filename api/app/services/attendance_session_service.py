@@ -16,9 +16,27 @@ from app.crud.crud_attendance_session import CRUDAttendanceSession
 from app.crud.crud_org_clock import CRUDOrgClock
 
 OPEN_SESSION = "Masih ada sesi absensi terbuka."
-SEE_ALL = {"FINANCE", "HR", "OPS", "ADMIN"}  # prototipe operations.js attendance(): canAll (+ ADMIN)
+VALID_STATUSES = ("AUTO_VALID", "APPROVED")
+# R-33 (keputusan pemilik 2026-10-02): absen pulang hanya untuk absen masuk yang sudah valid.
+CHECKOUT_NOT_VALID = ("Absen pulang hanya bisa dilakukan setelah absen masuk valid. "
+                      "Absen masuk Anda masih menunggu pemeriksaan.")
 ALREADY_TODAY = "Absensi untuk hari ini sudah tercatat (hanya dapat mengajukan ulang jika absensi sebelumnya ditolak)."
+# Keputusan pemilik 2026-10-02: ditolak → boleh mengajukan ulang SEKALI; ditolak lagi → hari itu terkunci (tercatat ditolak).
+MAX_ATTEMPTS_PER_DAY = 2
+ATTEMPTS_USED = ("Absensi hari ini sudah ditolak {n} kali dan tidak dapat diajukan lagi. "
+                 "Hari ini tercatat ditolak.")
 MAX_GPS_ACCURACY_M = 100  # K-12 (docs/10): akurasi GPS > 100 m ditolak
+# Absen web: lokasi browser laptop/PC berasal dari WiFi, bukan GPS — lebih kabur (docs/10 Bagian C).
+MAX_WEB_ACCURACY_M = 300
+# Lapangan absen di HP, kantor di web (docs/10 Bagian C, 2026-10-01).
+CHANNEL_OF_MODE = {"FIELD": "MOBILE", "OFFICE": "WEB"}
+WRONG_CHANNEL = {
+    "MOBILE": "Anda terdaftar sebagai pekerja kantor — absen lewat web, bukan aplikasi HP.",
+    "WEB": "Anda terdaftar sebagai pekerja lapangan — absen lewat aplikasi HP, bukan web.",
+}
+# R-33: penjelasan wajib saat absen di luar zona dan saat mengajukan ulang absensi yang ditolak.
+EXPLANATION_OUTSIDE = "Anda {d:.0f} m dari {site} (radius {r} m). Isi penjelasan mengapa absen di luar zona."
+EXPLANATION_RESUBMIT = "Isi penjelasan untuk mengajukan ulang absensi yang ditolak."
 
 
 class AttendanceSessionService:
@@ -26,34 +44,66 @@ class AttendanceSessionService:
         self.repo = repo
         self.clock = clock
 
-    async def _employee(self, user_id: str) -> Any:
-        employee_id = await self.repo.employee_of(user_id)
-        if employee_id is None:
+    async def _employee_for_channel(self, user_id: str, channel: str) -> Any:
+        """Karyawan milik akun (employee_id, attendance_mode, unit_id), dengan syarat kanal absen sesuai
+        jenis pekerjanya (FIELD → aplikasi HP, OFFICE → web). Jenis pekerja dibaca dari DB, bukan dari klien."""
+        row = await self.repo.attendance_mode_of(user_id)
+        if row is None:
             raise ValidationError("Akun ini belum tertaut ke data karyawan.")
-        return employee_id
+        if CHANNEL_OF_MODE.get(row.attendance_mode, "MOBILE") != channel:
+            raise AppError("WRONG_ATTENDANCE_CHANNEL", WRONG_CHANNEL[channel], status=403)
+        return row
 
     async def check_in(self, org_id: str, user_id: str, *, site_id: UUID, lng: float, lat: float,
                        origin: str, selfie_file_id: UUID | None, face_result: str | None,
-                       face_similarity: float | None, accuracy_m: float | None = None) -> Any:
+                       face_similarity: float | None, accuracy_m: float | None = None,
+                       channel: str = "MOBILE", explanation: str | None = None) -> Any:
+        worker = await self._employee_for_channel(user_id, channel)
+        employee_id = worker.employee_id
         # K-12: titik GPS yang terlalu kabur tidak bisa membuktikan kehadiran — tolak dengan alasan.
-        if accuracy_m is not None and accuracy_m > MAX_GPS_ACCURACY_M:
+        if channel == "WEB":
+            if accuracy_m is not None and accuracy_m > MAX_WEB_ACCURACY_M:
+                raise AppError("GPS_INACCURATE",
+                               f"Akurasi lokasi browser {accuracy_m:.0f} m terlalu rendah (maksimal "
+                               f"{MAX_WEB_ACCURACY_M} m). Nyalakan WiFi perangkat, izinkan akses lokasi, "
+                               "lalu coba lagi.", status=422)
+        elif accuracy_m is not None and accuracy_m > MAX_GPS_ACCURACY_M:
             raise AppError("GPS_INACCURATE",
                            f"Akurasi GPS {accuracy_m:.0f} m terlalu rendah (maksimal {MAX_GPS_ACCURACY_M} m). "
                            "Pindah ke tempat terbuka, tunggu sinyal GPS menguat, lalu coba lagi.", status=422)
-        employee_id = await self._employee(user_id)
-        if await self.repo.open_session(employee_id) is not None:
-            raise AppError("OPEN_SESSION", OPEN_SESSION, status=409)
         today = (await self.clock.local_now(org_id)).today
+        # Sesi valid yang lupa ditutup mengunci absen masuk berikutnya (O-10); absen hari lalu yang masih
+        # menunggu pemeriksaan tidak mengunci hari baru (R-33).
         if await self.repo.active_on(employee_id, today):
             raise AppError("ALREADY_CHECKED_IN", ALREADY_TODAY, status=409)
-        label = await self.repo.site_label(site_id, org_id)
-        if label is None:
+        opened = await self.repo.open_session(employee_id)
+        if opened is not None and opened.status in VALID_STATUSES:
+            raise AppError("OPEN_SESSION", OPEN_SESSION, status=409)
+        rejected = await self.repo.rejected_on(employee_id, today)
+        if rejected >= MAX_ATTEMPTS_PER_DAY:
+            raise AppError("ATTENDANCE_DAY_LOCKED", ATTEMPTS_USED.format(n=rejected), status=409)
+        site = await self.repo.site_for_check_in(site_id, org_id, lng, lat)
+        if site is None:
             raise NotFoundError("Lokasi")
+        # R-33: pekerja lapangan hanya di lokasi proyek unitnya, pekerja kantor hanya di lokasi kantor.
+        if worker.attendance_mode == "OFFICE":
+            allowed = site.unit_id is None
+        else:
+            allowed = site.unit_id is not None and site.unit_id == worker.unit_id
+        if not allowed:
+            raise AppError("SITE_NOT_ALLOWED", "Lokasi ini tidak berlaku untuk Anda. Pilih lokasi kerja Anda.",
+                           status=403)
+        note = (explanation or "").strip() or None
+        if note is None and float(site.distance_m) > site.radius_m:
+            raise AppError("EXPLANATION_REQUIRED", EXPLANATION_OUTSIDE.format(
+                d=float(site.distance_m), site=site.name, r=site.radius_m), status=422)
+        if note is None and rejected >= 1:
+            raise AppError("EXPLANATION_REQUIRED", EXPLANATION_RESUBMIT, status=422)
         try:
             return await self.repo.insert(
-                org_id=org_id, employee_id=employee_id, work_date=today, site_id=site_id, site_label=label,
+                org_id=org_id, employee_id=employee_id, work_date=today, site_id=site_id, site_label=site.name,
                 lng=lng, lat=lat, origin=origin, selfie_file_id=selfie_file_id,
-                face_result=face_result, face_similarity=face_similarity,
+                face_result=face_result, face_similarity=face_similarity, source=channel, explanation=note,
             )
         except IntegrityError as exc:
             # Aturan dari trigger (mis. di luar radius tanpa swafoto) → 422 dengan pesannya.
@@ -64,33 +114,27 @@ class AttendanceSessionService:
                 raise AppError("ALREADY_CHECKED_IN", ALREADY_TODAY, status=409) from None
             raise
 
-    async def check_out(self, user_id: str) -> Any:
+    async def check_out(self, user_id: str, channel: str = "MOBILE") -> Any:
         """Menutup sesi terbuka milik sendiri — tanggal berapa pun, agar sesi yang lupa ditutup tidak
-        mengunci check-in berikutnya. Status tidak diubah; pulang cepat diputuskan trigger."""
-        employee_id = await self._employee(user_id)
-        session = await self.repo.open_session(employee_id)
+        mengunci check-in berikutnya. Status tidak diubah; pulang cepat diputuskan trigger.
+        R-33: hanya sesi yang sudah valid (Valid otomatis / Disetujui) yang boleh absen pulang."""
+        worker = await self._employee_for_channel(user_id, channel)
+        session = await self.repo.open_session(worker.employee_id, valid_only=True)
         if session is None:
+            if await self.repo.open_session(worker.employee_id) is not None:
+                raise AppError("CHECKOUT_NOT_VALID", CHECKOUT_NOT_VALID, status=409)
             raise AppError("NO_OPEN_SESSION", "Tidak ada sesi absensi terbuka.", status=409)
         return await self.repo.close(session.id)
 
-    async def list_attendance(self, org_id: str, user_id: str, roles: list[str], *, employee_id: UUID | None,
+    async def list_attendance(self, org_id: str, user_id: str, *, view_all: bool, employee_id: UUID | None,
                               date_from: Any, date_to: Any, status: str | None,
                               page: int, size: int) -> tuple[list[Any], int]:
-        """Prototipe (operations.js): FINANCE, HR, OPS — dan ADMIN — melihat seluruh organisasi;
-        PM: miliknya dan karyawan di unit yang dipegangnya (R-10);
-        selain itu hanya absensi sendiri (filter karyawan lain → daftar kosong, tidak dibocorkan)."""
-        scope: Any = employee_id
-        if not set(roles) & SEE_ALL and "PM" in roles:
-            return await self.repo.list_page(org_id, employee_id=employee_id, date_from=date_from, date_to=date_to,
-                                             status=status, limit=size, offset=(page - 1) * size,
-                                             pm_user_id=user_id)
-        if not set(roles) & SEE_ALL:
-            own = await self.repo.employee_of(user_id)
-            if own is None or (employee_id is not None and str(employee_id) != str(own)):
-                return [], 0
-            scope = own
-        return await self.repo.list_page(org_id, employee_id=scope, date_from=date_from, date_to=date_to,
-                                         status=status, limit=size, offset=(page - 1) * size)
+        """R-33: Finance & OPS (`view:all_attendance`) melihat semua; PM melihat miliknya + bawahan lapangan
+        di unitnya; selain itu hanya milik sendiri. Di luar cakupan → tidak tampil (tidak dibocorkan).
+        Setiap baris membawa `can_review` dari server."""
+        return await self.repo.list_page(org_id, user_id, view_all=view_all, employee_id=employee_id,
+                                         date_from=date_from, date_to=date_to, status=status,
+                                         limit=size, offset=(page - 1) * size)
 
     async def today(self, org_id: str) -> Any:
         """Tanggal kerja hari ini menurut zona waktu organisasi — sama dengan `work_date` absen masuk."""
@@ -109,19 +153,19 @@ class AttendanceSessionService:
         await self.repo.set_explanation(attendance_id, explanation.strip())
 
     async def review_attendance(self, org_id: str, user_id: str, attendance_id: UUID,
-                                approve: bool, note: str | None, *, review_all: bool) -> str:
-        """Finance/Admin (review:attendance) seluruh organisasi; PM hanya karyawan di unitnya,
-        OPS lintas unit (revisi pemilik R-10)."""
+                                approve: bool, note: str | None) -> str:
+        """R-33: PM → bawahan lapangan di unitnya; Finance → pekerja kantor selain Finance; OPS → Finance.
+        Tidak ada yang meninjau absensinya sendiri (cakupan: CRUD `CAN_REVIEW`)."""
         attendance = await self.repo.get(attendance_id, org_id)
         if attendance is None:
             raise NotFoundError("Absensi")
-        if not review_all and not await self.repo.manages_employee(user_id, attendance.employee_id):
-            raise ForbiddenError("Absensi ini berada di luar unit atau kewenangan Anda.")
-        if attendance.status != "NEEDS_REVIEW":
-            raise AppError("INVALID_STATE", "Absensi tidak menunggu pemeriksaan.", status=409)
         reviewer = await self.repo.employee_of(user_id)
         if attendance.employee_id == reviewer:
             raise ForbiddenError("Anda tidak boleh memverifikasi absensi sendiri.")
+        if not await self.repo.can_review(user_id, attendance.employee_id):
+            raise ForbiddenError("Absensi ini berada di luar kewenangan peninjauan Anda.")
+        if attendance.status != "NEEDS_REVIEW":
+            raise AppError("INVALID_STATE", "Absensi tidak menunggu pemeriksaan.", status=409)
         if not (note or "").strip():
             raise ValidationError("Catatan pemeriksaan wajib diisi.")
         status = "APPROVED" if approve else "REJECTED"

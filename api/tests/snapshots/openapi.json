@@ -937,6 +937,14 @@
      "month": {
       "title": "Month",
       "type": "string"
+     },
+     "records": {
+      "default": [],
+      "items": {
+       "$ref": "#/components/schemas/AttendanceRecapRecord"
+      },
+      "title": "Records",
+      "type": "array"
      }
     },
     "required": [
@@ -944,6 +952,75 @@
      "employees"
     ],
     "title": "AttendanceRecap",
+    "type": "object"
+   },
+   "AttendanceRecapRecord": {
+    "description": "Satu absensi dalam riwayat rekap — jam masuk & keluar (R-33).",
+    "properties": {
+     "check_in_at": {
+      "format": "date-time",
+      "title": "Check In At",
+      "type": "string"
+     },
+     "check_out_at": {
+      "anyOf": [
+       {
+        "format": "date-time",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Check Out At"
+     },
+     "employee_id": {
+      "title": "Employee Id",
+      "type": "string"
+     },
+     "full_name": {
+      "title": "Full Name",
+      "type": "string"
+     },
+     "id": {
+      "title": "Id",
+      "type": "string"
+     },
+     "is_early_leave": {
+      "title": "Is Early Leave",
+      "type": "boolean"
+     },
+     "is_late": {
+      "title": "Is Late",
+      "type": "boolean"
+     },
+     "site_label": {
+      "title": "Site Label",
+      "type": "string"
+     },
+     "status": {
+      "title": "Status",
+      "type": "string"
+     },
+     "work_date": {
+      "format": "date",
+      "title": "Work Date",
+      "type": "string"
+     }
+    },
+    "required": [
+     "id",
+     "employee_id",
+     "full_name",
+     "work_date",
+     "site_label",
+     "check_in_at",
+     "check_out_at",
+     "status",
+     "is_late",
+     "is_early_leave"
+    ],
+    "title": "AttendanceRecapRecord",
     "type": "object"
    },
    "AttendanceRecapRow": {
@@ -991,6 +1068,11 @@
    },
    "AttendanceResponse": {
     "properties": {
+     "can_review": {
+      "default": false,
+      "title": "Can Review",
+      "type": "boolean"
+     },
      "check_in_at": {
       "format": "date-time",
       "title": "Check In At",
@@ -1017,6 +1099,17 @@
       "title": "Employee Id",
       "type": "string"
      },
+     "employee_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Employee Name"
+     },
      "explanation": {
       "anyOf": [
        {
@@ -1041,6 +1134,17 @@
       "title": "Is Late",
       "type": "boolean"
      },
+     "review_note": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Review Note"
+     },
      "reviewed_at": {
       "anyOf": [
        {
@@ -1052,6 +1156,18 @@
        }
       ],
       "title": "Reviewed At"
+     },
+     "selfie_file_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Selfie File Id"
      },
      "site_id": {
       "anyOf": [
@@ -1344,6 +1460,27 @@
       ],
       "title": "Accuracy M"
      },
+     "channel": {
+      "default": "MOBILE",
+      "enum": [
+       "MOBILE",
+       "WEB"
+      ],
+      "title": "Channel",
+      "type": "string"
+     },
+     "explanation": {
+      "anyOf": [
+       {
+        "maxLength": 1000,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Explanation"
+     },
      "face_result": {
       "anyOf": [
        {
@@ -1412,6 +1549,15 @@
    },
    "CheckOutRequest": {
     "properties": {
+     "channel": {
+      "default": "MOBILE",
+      "enum": [
+       "MOBILE",
+       "WEB"
+      ],
+      "title": "Channel",
+      "type": "string"
+     },
      "location": {
       "$ref": "#/components/schemas/GeoPoint"
      },
@@ -2177,6 +2323,15 @@
       ],
       "title": "Address"
      },
+     "attendance_mode": {
+      "default": "FIELD",
+      "enum": [
+       "FIELD",
+       "OFFICE"
+      ],
+      "title": "Attendance Mode",
+      "type": "string"
+     },
      "birth_date": {
       "anyOf": [
        {
@@ -2307,6 +2462,21 @@
        }
       ],
       "title": "Address"
+     },
+     "attendance_mode": {
+      "anyOf": [
+       {
+        "enum": [
+         "FIELD",
+         "OFFICE"
+        ],
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Attendance Mode"
      },
      "birth_date": {
       "anyOf": [
@@ -4150,6 +4320,11 @@
       ],
       "title": "Address"
      },
+     "can_manage": {
+      "default": false,
+      "title": "Can Manage",
+      "type": "boolean"
+     },
      "id": {
       "format": "uuid",
       "title": "Id",
@@ -4167,6 +4342,18 @@
       "minimum": 10.0,
       "title": "Radius M",
       "type": "integer"
+     },
+     "unit_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Unit Id"
      }
     },
     "required": [
@@ -4553,6 +4740,17 @@
    },
    "UserMeResponse": {
     "properties": {
+     "attendance_mode": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Attendance Mode"
+     },
      "email": {
       "title": "Email",
       "type": "string"
@@ -5678,7 +5876,7 @@
   },
   "/api/v1/attendance": {
    "get": {
-    "description": "Dok 05 §3.5. FINANCE/HR/OPS/ADMIN: seluruh organisasi; lainnya: hanya milik sendiri.\nFilter `plan_id` di dok 05 belum didukung — absensi belum tertaut ke SK (dok 10 Bagian C).",
+    "description": "Dok 05 §3.5 · R-33: Finance & OPS seluruh organisasi; PM miliknya + bawahan lapangan di unitnya;\nlainnya hanya milik sendiri. Filter `plan_id` di dok 05 belum didukung (dok 10 Bagian C).",
     "operationId": "list_attendance_api_v1_attendance_get",
     "parameters": [
      {
@@ -5807,7 +6005,7 @@
   },
   "/api/v1/attendance/check-in": {
    "post": {
-    "description": "P4-2 · domain.js CHECK_IN. Waktu, tanggal, jarak, dan status dari server (aturan inti #3).",
+    "description": "P4-2 · domain.js CHECK_IN. Waktu, tanggal, jarak, dan status dari server (aturan inti #3).\nPekerja lapangan lewat HP (`channel` MOBILE), pekerja kantor lewat web (`channel` WEB).",
     "operationId": "check_in_api_v1_attendance_check_in_post",
     "requestBody": {
      "content": {
@@ -5854,7 +6052,7 @@
   },
   "/api/v1/attendance/check-out": {
    "post": {
-    "description": "domain.js CHECK_OUT — menutup sesi terbuka milik sendiri.",
+    "description": "domain.js CHECK_OUT — menutup sesi terbuka milik sendiri, dari kanal sesuai jenis pekerja.",
     "operationId": "check_out_api_v1_attendance_check_out_post",
     "requestBody": {
      "content": {
@@ -6023,7 +6221,7 @@
   },
   "/api/v1/attendance/{att_id}/review": {
    "post": {
-    "description": "P4-4 · domain.js REVIEW_ATTENDANCE: Finance seluruh organisasi; PM unitnya, OPS lintas unit (R-10).",
+    "description": "P4-4 · domain.js REVIEW_ATTENDANCE · R-33: PM → bawahan lapangan, Finance → kantor non-Finance,\nOPS → Finance; tidak pernah absensi sendiri.",
     "operationId": "review_attendance_api_v1_attendance__att_id__review_post",
     "parameters": [
      {
@@ -8606,7 +8804,20 @@
   },
   "/api/v1/sites": {
    "get": {
+    "description": "R-33: lapangan → lokasi unitnya; kantor → lokasi kantor; PM → kantor + unitnya; OPS → semua.\n`for_attendance=true`: hanya lokasi yang sah untuk absen peminta. `can_manage`: boleh dihapus peminta.",
     "operationId": "get_sites_api_v1_sites_get",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "for_attendance",
+      "required": false,
+      "schema": {
+       "default": false,
+       "title": "For Attendance",
+       "type": "boolean"
+      }
+     }
+    ],
     "responses": {
      "200": {
       "content": {
@@ -8621,6 +8832,16 @@
        }
       },
       "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
      }
     },
     "security": [
@@ -8634,6 +8855,7 @@
     ]
    },
    "post": {
+    "description": "R-33: PM → lokasi proyek unitnya (untuk bawahannya); Finance → lokasi kantor. Unit ditetapkan server.",
     "operationId": "create_site_api_v1_sites_post",
     "requestBody": {
      "content": {

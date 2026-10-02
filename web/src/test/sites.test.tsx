@@ -11,7 +11,7 @@ const site = {
 };
 
 describe("Lokasi kerja (/sites)", () => {
-  it("tanpa create:plan ditolak", () => {
+  it("tanpa manage:sites ditolak", () => {
     mockApi(() => undefined);
     const { router } = renderRoute("/sites", { role: "HR" });
     expect(router.state.location.pathname).toBe("/forbidden");
@@ -62,10 +62,10 @@ describe("Lokasi kerja (/sites)", () => {
 
   it("menghapus lewat dialog konfirmasi", async () => {
     const calls = mockApi((c) => {
-      if (c.url === "/sites") return { data: [site] };
-      if (c.url === "/sites/s1" && c.method === "delete") return { data: { message: "Site deleted" } };
+      if (c.url === "/sites") return { data: [{ ...site, can_manage: true }] };
+      if (c.url === "/sites/s1" && c.method === "delete") return { data: { message: "Lokasi dihapus." } };
     });
-    renderRoute("/sites", { role: "OPS" });
+    renderRoute("/sites", { role: "PM" });
     fireEvent.click(await screen.findByRole("button", { name: "Hapus Gudang Cikarang" }));
     const dialog = screen.getByRole("dialog", { name: "Hapus lokasi kerja" });
     fireEvent.click(within(dialog).getByRole("button", { name: "Hapus" }));

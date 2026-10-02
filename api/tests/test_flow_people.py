@@ -73,10 +73,11 @@ def test_personal_document_upload_and_hr_verification(client, world, fake_storag
 
 
 def test_site_and_attendance_day(client, world, fake_storage):
-    admin = world.headers(client, "admin")
+    pm = world.headers(client, "pm")
     member = world.headers(client, "member")
 
-    site = client.post("/sites", headers=admin, json={
+    # R-33: lokasi proyek dibuat PM untuk unitnya (bawahannya).
+    site = client.post("/sites", headers=pm, json={
         "name": "Gedung uji", "location": {"lat": -6.21, "lng": 106.81}, "radius_m": 150})
     assert site.status_code == 201, site.text
     assert sync_query("SELECT radius_m FROM vms.site WHERE id = %s", (site.json()["id"],)) == [(150,)]
@@ -85,27 +86,30 @@ def test_site_and_attendance_day(client, world, fake_storage):
     selfie = client.post("/files/upload", headers=member, files={"file": ("swafoto.png", _png(), "image/png")})
     check_in = client.post("/attendance/check-in", headers=member, json={
         "site_id": world.site_id, "location": {"lat": -6.3, "lng": 106.8}, "location_origin": "GPS",
-        "selfie_file_id": selfie.json()["file_id"]})
+        "selfie_file_id": selfie.json()["file_id"], "explanation": "Survei titik baru"})
     assert check_in.status_code == 200, check_in.text
     att_id = check_in.json()["id"]
     # Jarak & status dihitung server (aturan inti #3), bukan dikirim perangkat.
     assert sync_query("SELECT status::text, distance_m > radius_m FROM vms.attendance WHERE id = %s", (att_id,)) \
         == [("NEEDS_REVIEW", True)]
 
-    check_out = client.post("/attendance/check-out", headers=member,
-                            json={"location": {"lat": -6.2, "lng": 106.8}, "location_origin": "GPS"})
-    assert check_out.status_code == 200, check_out.text
-    assert sync_query("SELECT check_out_at IS NOT NULL FROM vms.attendance WHERE id = %s", (att_id,)) == [(True,)]
+    out_body = {"location": {"lat": -6.2, "lng": 106.8}, "location_origin": "GPS"}
+    # R-33: belum valid → belum boleh absen pulang.
+    assert client.post("/attendance/check-out", headers=member, json=out_body).status_code == 409
 
     explained = client.post(f"/attendance/{att_id}/explain", headers=member, json={"explanation": "Macet di tol"})
     assert explained.status_code == 200, explained.text
     assert sync_query("SELECT explanation FROM vms.attendance WHERE id = %s", (att_id,)) == [("Macet di tol",)]
 
-    reviewed = client.post(f"/attendance/{att_id}/review", headers=world.headers(client, "finance"),
+    reviewed = client.post(f"/attendance/{att_id}/review", headers=pm,
                            json={"is_approved": True, "note": "Macet dibenarkan PM"})
     assert reviewed.status_code == 200, reviewed.text
     assert sync_query("SELECT status::text, reviewed_at IS NOT NULL, review_note FROM vms.attendance WHERE id = %s",
                       (att_id,)) == [("APPROVED", True, "Macet dibenarkan PM")]
+
+    check_out = client.post("/attendance/check-out", headers=member, json=out_body)
+    assert check_out.status_code == 200, check_out.text
+    assert sync_query("SELECT check_out_at IS NOT NULL FROM vms.attendance WHERE id = %s", (att_id,)) == [(True,)]
 
     export = client.get("/attendance/export", headers=world.headers(client, "finance"),
                         params={"start_date": "2026-01-01", "end_date": "2026-12-31"})

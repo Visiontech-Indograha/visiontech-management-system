@@ -64,7 +64,7 @@ async def get_employees(
     
     query = text(f"""
         SELECT id, employee_no, full_name, position, unit_id, email, phone, 
-               join_date, birth_date, address, emergency_contact, 
+               join_date, birth_date, address, emergency_contact, attendance_mode,
                is_active, offboarded_at, offboarding_reason
         FROM vms.employee
         WHERE {where_str}
@@ -81,6 +81,7 @@ async def get_employees(
             position=row.position, unit_id=row.unit_id, email=row.email,
             phone=row.phone, join_date=row.join_date, birth_date=row.birth_date,
             address=row.address, emergency_contact=row.emergency_contact,
+            attendance_mode=row.attendance_mode,
             is_active=row.is_active, offboarded_at=row.offboarded_at,
             offboarding_reason=row.offboarding_reason
         ), scope))
@@ -97,7 +98,7 @@ async def get_employee(
     """Satu karyawan (tautan langsung /directory/{id}); karyawan organisasi lain/terhapus → 404."""
     row = (await db.execute(text("""
         SELECT id, employee_no, full_name, position, unit_id, email, phone,
-               join_date, birth_date, address, emergency_contact,
+               join_date, birth_date, address, emergency_contact, attendance_mode,
                is_active, offboarded_at, offboarding_reason
         FROM vms.employee
         WHERE id = :id AND organization_id = :org AND deleted_at IS NULL
@@ -165,6 +166,8 @@ async def update_employee(
     params = {"id": emp_id, "org": current_user.organization_id}
     
     for field, value in data.model_dump(exclude_unset=True).items():
+        if field == "attendance_mode" and value is None:
+            continue  # kolom wajib; null berarti "tidak diubah"
         updates.append(f"{field} = :{field}")
         params[field] = value
         
@@ -187,6 +190,7 @@ async def update_employee(
         position=row.position, unit_id=row.unit_id, email=row.email,
         phone=row.phone, join_date=row.join_date, birth_date=row.birth_date,
         address=row.address, emergency_contact=row.emergency_contact,
+        attendance_mode=row.attendance_mode,
         is_active=row.is_active, offboarded_at=row.offboarded_at,
         offboarding_reason=row.offboarding_reason
     )

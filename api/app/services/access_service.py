@@ -93,10 +93,12 @@ async def check_file_access(db: AsyncSession, file_id: UUID, user: CurrentUser) 
     """V-17 — siapa boleh membuka berkas (dok 08, dok 13 §7). Tidak boleh → 404, bukan 403.
     - pengunggahnya sendiri;
     - dokumen pribadi: karyawan pemilik & pemegang `manage:employee_documents` (HR);
-    - swafoto absensi: karyawan pemilik & peninjau absensi (`review:attendance`);
+    - swafoto absensi: karyawan pemilik & siapa pun yang boleh melihat absensi itu (R-33: PM bawahannya,
+      Finance & OPS semua);
     - bukti laporan/insiden/laporan akhir: siapa pun yang melihat SK-nya (V-07);
     - selain itu (belum dilampirkan, QR, wajah): hanya pengunggah."""
-    row = await CRUDFileAccess(db).links(file_id, user.organization_id, user.user_id)
+    row = await CRUDFileAccess(db).links(file_id, user.organization_id, user.user_id,
+                                         Permission.VIEW_ALL_ATTENDANCE.value in user.permissions)
     if row is None:
         raise NotFoundError("Berkas")
     if row.is_uploader:
@@ -106,7 +108,7 @@ async def check_file_access(db: AsyncSession, file_id: UUID, user: CurrentUser) 
             return row
         raise NotFoundError("Berkas")
     if row.selfie:
-        if row.own_selfie or Permission.REVIEW_ATTENDANCE.value in user.permissions:
+        if row.own_selfie or row.selfie_viewable:
             return row
         raise NotFoundError("Berkas")
     plans = CRUDPlanAccess(db)

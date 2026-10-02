@@ -16,7 +16,8 @@ import type { components } from "@/lib/api-types";
 import { errorMessage } from "@/lib/errors";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { STATUS_LABEL } from "@/lib/labels";
-import { employeeName, useActiveEmployees } from "@/features/work-plans/api";
+import { FilePreview } from "@/components/molecules/FilePreview";
+import { OfficeCheckInCard } from "./OfficeCheckInCard";
 
 type Attendance = components["schemas"]["AttendanceResponse"];
 type AttendanceList = components["schemas"]["AttendanceListResponse"];
@@ -62,17 +63,16 @@ function useAttendanceAction<V>(fn: (v: V) => Promise<unknown>) {
 }
 
 /**
- * Daftar absensi (GET /attendance) — prototype/js/operations.js attendance(). Cakupan data diatur API
- * (FINANCE/HR/OPS/ADMIN: seluruh organisasi; PM: unitnya — R-10; lainnya: milik sendiri).
- * Catat masuk/keluar ada di aplikasi mobile.
+ * Daftar absensi (GET /attendance) — prototype/js/operations.js attendance(). Cakupan data diatur API (R-33):
+ * Finance & OPS seluruh organisasi; PM miliknya + bawahan lapangan di unitnya; lainnya milik sendiri.
+ * Tombol Tinjau hanya bila server menandai `can_review` (PM → bawahan, Finance → kantor, OPS → Finance).
+ * Absen masuk/pulang: pekerja kantor di sini (OfficeCheckInCard), pekerja lapangan di aplikasi HP.
  */
 export function AttendancePage() {
   const { me } = useSession();
-  // Finance seluruh organisasi; PM unitnya & OPS lintas unit (R-10) — cakupan dicek API.
-  const canReview = !!me?.permissions.some((p) => p === "review:attendance" || p === "review:unit_attendance");
+  const canReview = !!me?.permissions.includes("review:attendance");
   const [f, setF] = useState<Filters>({ status: canReview ? "NEEDS_REVIEW" : "", from: "", to: "", page: 1 });
   const list = useAttendance(f);
-  const employees = useActiveEmployees();
   const [open, setOpen] = useState<{ kind: "review" | "explain"; item: Attendance } | null>(null);
   const data = list.data;
   const lastPage = data ? Math.max(1, Math.ceil(data.total / data.size)) : 1;
@@ -81,6 +81,7 @@ export function AttendancePage() {
   return (
     <>
       <PageHeader title="Absensi" />
+      <OfficeCheckInCard />
       <div className="mb-4 grid gap-x-3 md:grid-cols-3">
         <div className="mb-4 space-y-1.5">
           <label htmlFor="att-status" className="text-sm font-medium">
@@ -105,7 +106,7 @@ export function AttendancePage() {
             <li key={a.id} className="flex flex-col gap-2 rounded-panel border border-line bg-surface shadow-card p-4">
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <p className="font-medium">{employeeName(employees.data, a.employee_id)}</p>
+                  <p className="font-medium">{a.employee_name ?? "-"}</p>
                   <p className="text-sm text-mist">
                     {formatDate(a.work_date)} · {a.site_label}
                   </p>
@@ -142,13 +143,13 @@ export function AttendancePage() {
               </dl>
               {a.status === "NEEDS_REVIEW" && (
                 <div className="mt-auto flex flex-col gap-2 md:flex-row">
-                  {canReview && a.employee_id !== me?.employee_id ? (
+                  {a.can_review ? (
                     <Button onClick={() => setOpen({ kind: "review", item: a })}>Tinjau</Button>
-                  ) : (
+                  ) : a.employee_id === me?.employee_id ? (
                     <Button variant="outline" onClick={() => setOpen({ kind: "explain", item: a })}>
-                      Beri penjelasan
+                      {a.explanation ? "Ubah penjelasan" : "Beri penjelasan"}
                     </Button>
-                  )}
+                  ) : null}
                 </div>
               )}
             </li>
@@ -251,7 +252,19 @@ function ReviewDialog({ item, onClose }: { item: Attendance; onClose: () => void
   });
   return (
     <FormDialog title="Tinjau absensi" submitLabel="Simpan keputusan" submitting={isSubmitting} formError={formError} onClose={onClose} onSubmit={onSubmit}>
-      {item.explanation && <p className="mb-3 text-sm">Penjelasan karyawan: {item.explanation}</p>}
+      <p className="mb-1 text-sm font-medium">{item.employee_name}</p>
+      <p className="mb-3 text-sm text-mist">
+        {item.site_label} · {Math.round(item.distance_m)} m · masuk {formatDateTime(item.check_in_at)}
+      </p>
+      {item.selfie_file_id ? (
+        <div className="mb-3">
+          <p className="mb-1 text-sm font-medium">Swafoto</p>
+          <FilePreview fileId={item.selfie_file_id} fileName="Swafoto absen" />
+        </div>
+      ) : (
+        <p className="mb-3 text-sm text-mist">Tanpa swafoto.</p>
+      )}
+      <p className="mb-3 text-sm">Penjelasan karyawan: {item.explanation ?? "belum diisi"}</p>
       <SelectField label="Keputusan" {...register("decision")}>
         <option value="APPROVE">Setujui</option>
         <option value="REJECT">Tolak</option>

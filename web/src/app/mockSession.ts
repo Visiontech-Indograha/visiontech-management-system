@@ -5,12 +5,14 @@ import { PERMISSIONS, type Permission } from "@/lib/permissions";
 const BASE: Permission[] = ["view:users", "view:documents", "upload:documents"];
 
 export const MOCK_PERMISSIONS: Record<string, Permission[]> = {
-  ADMIN: [...PERMISSIONS],
+  ADMIN: PERMISSIONS.filter(
+    (p) => !["view:all_attendance", "review:attendance", "export:attendance", "manage:sites"].includes(p),
+  ),
   HR: [...BASE, "manage:users", "verify:documents", "manage:employee_documents"],
-  PM: [...BASE, "create:plan", "publish:plan", "view:timeline", "review:unit_attendance"],
-  FINANCE: [...BASE, "review:attendance", "review:overtime"],
+  PM: [...BASE, "create:plan", "publish:plan", "view:timeline", "review:attendance", "manage:sites"],
+  FINANCE: [...BASE, "view:all_attendance", "review:attendance", "export:attendance", "review:overtime", "manage:sites"],
   ASSET: [...BASE, "manage:assets"],
-  OPS: [...BASE, "create:plan", "publish:plan", "review:overtime", "review:unit_attendance", "view:timeline", "view:audit"],
+  OPS: [...BASE, "create:plan", "publish:plan", "review:overtime", "view:all_attendance", "review:attendance", "view:timeline", "view:audit"],
   field: BASE,
 };
 

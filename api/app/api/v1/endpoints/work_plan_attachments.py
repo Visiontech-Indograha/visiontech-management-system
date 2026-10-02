@@ -4,8 +4,9 @@ from typing import Any
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import PlanAccess, PlanNeed, ensure_same_org, get_db_with_user, plan_access
+from app.api.deps import get_db_with_user, get_plan_attachment_service, plan_access
 from app.schemas.plan_attachment import AttachmentResponse, AttachmentsRequest
+from app.services.access_service import PlanAccess, PlanNeed, ensure_same_org
 from app.services.plan_attachment_service import PlanAttachmentService
 
 router = APIRouter(prefix="/work-plans/{plan_id}/attachments", tags=["Work Plans"])
@@ -23,12 +24,13 @@ def _out(rows: list[Any]) -> list[AttachmentResponse]:
 
 @router.get("", response_model=list[AttachmentResponse])
 async def list_attachments(access: PlanAccess = _VIEW_ACCESS,
-                           db: AsyncSession = Depends(get_db_with_user)) -> list[AttachmentResponse]:
-    return _out(await PlanAttachmentService(db).list_attachments(access))
+                           plan_attachment_service: PlanAttachmentService = Depends(get_plan_attachment_service)) -> list[AttachmentResponse]:
+    return _out(await plan_attachment_service.list_attachments(access))
 
 
 @router.put("", response_model=list[AttachmentResponse])
 async def save_attachments(data: AttachmentsRequest, access: PlanAccess = _PM_UNIT_ACCESS,
-                           db: AsyncSession = Depends(get_db_with_user)) -> list[AttachmentResponse]:
+                           db: AsyncSession = Depends(get_db_with_user),
+                           plan_attachment_service: PlanAttachmentService = Depends(get_plan_attachment_service)) -> list[AttachmentResponse]:
     await ensure_same_org(db, access.user.organization_id, files=data.file_ids)
-    return _out(await PlanAttachmentService(db).save_attachments(access, data.file_ids))
+    return _out(await plan_attachment_service.save_attachments(access, data.file_ids))

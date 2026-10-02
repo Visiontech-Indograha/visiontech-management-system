@@ -4,21 +4,11 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import (
-    CurrentUser,
-    PlanAccess,
-    PlanNeed,
-    check_plan_access,
-    ensure_same_org,
-    get_current_user,
-    get_db_with_user,
-    incident_plan_access,
-    plan_day_access,
-    require_plan_status,
-)
+from app.api.deps import get_current_user, get_db_with_user, incident_plan_access, plan_day_access
 from app.core.enums import PlanStatus
 from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationError
 from app.core.permissions import RoleCode
+from app.core.security import CurrentUser
 from app.crud.crud_org_clock import CRUDOrgClock
 from app.schemas.hse import (
     DailyReportCreate,
@@ -27,6 +17,13 @@ from app.schemas.hse import (
     IncidentResolve,
     IncidentResponse,
     ReportReviewRequest,
+)
+from app.services.access_service import (
+    PlanAccess,
+    PlanNeed,
+    check_plan_access,
+    ensure_same_org,
+    require_plan_status,
 )
 
 router = APIRouter(prefix="/hse", tags=["HSE & Reports"])

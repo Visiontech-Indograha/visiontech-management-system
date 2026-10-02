@@ -13,10 +13,14 @@ from fastapi.responses import PlainTextResponse
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import CurrentUser, ensure_same_org, get_current_user, get_db_with_user, require_permission
+from app.api.deps import (
+    get_attendance_session_service,
+    get_current_user,
+    get_db_with_user,
+    require_permission,
+)
 from app.core.permissions import Permission
-from app.crud.crud_attendance_session import CRUDAttendanceSession
-from app.crud.crud_org_clock import CRUDOrgClock
+from app.core.security import CurrentUser
 from app.schemas.attendance import (
     AttendanceListResponse,
     AttendanceResponse,
@@ -25,13 +29,10 @@ from app.schemas.attendance import (
     ExplanationRequest,
     ReviewRequest,
 )
+from app.services.access_service import ensure_same_org
 from app.services.attendance_session_service import AttendanceSessionService
 
 router = APIRouter(prefix="/attendance", tags=["Attendance"])
-
-
-def _service(db: AsyncSession) -> AttendanceSessionService:
-    return AttendanceSessionService(CRUDAttendanceSession(db), CRUDOrgClock(db))
 
 
 def _response(row: Any) -> AttendanceResponse:
@@ -47,11 +48,11 @@ async def list_attendance(
     page: int = Query(1, ge=1),
     size: int = Query(50, ge=1, le=200),
     current_user: CurrentUser = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db_with_user)
+    attendance_session_service: AttendanceSessionService = Depends(get_attendance_session_service)
 ) -> AttendanceListResponse:
     """Dok 05 §3.5. FINANCE/HR/OPS/ADMIN: seluruh organisasi; lainnya: hanya milik sendiri.
     Filter `plan_id` di dok 05 belum didukung — absensi belum tertaut ke SK (dok 10 Bagian C)."""
-    service = _service(db)
+    service = attendance_session_service
     rows, total = await service.list_attendance(
         current_user.organization_id, current_user.user_id, current_user.roles,
         employee_id=employee_id, date_from=date_from, date_to=date_to, status=status, page=page, size=size)
@@ -63,11 +64,12 @@ async def list_attendance(
 async def check_in(
     data: CheckInRequest,
     current_user: CurrentUser = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db_with_user)
+    db: AsyncSession = Depends(get_db_with_user),
+    attendance_session_service: AttendanceSessionService = Depends(get_attendance_session_service)
 ) -> AttendanceResponse:
     """P4-2 · domain.js CHECK_IN. Waktu, tanggal, jarak, dan status dari server (aturan inti #3)."""
     await ensure_same_org(db, current_user.organization_id, sites=[data.site_id], files=[data.selfie_file_id])
-    row = await _service(db).check_in(
+    row = await attendance_session_service.check_in(
         current_user.organization_id, current_user.user_id, site_id=data.site_id,
         lng=data.location.lng, lat=data.location.lat, origin=data.location_origin,
         accuracy_m=data.accuracy_m, selfie_file_id=data.selfie_file_id, face_result=data.face_result, face_similarity=data.face_similarity,
@@ -79,10 +81,10 @@ async def check_in(
 async def check_out(
     data: CheckOutRequest,
     current_user: CurrentUser = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db_with_user)
+    attendance_session_service: AttendanceSessionService = Depends(get_attendance_session_service)
 ) -> AttendanceResponse:
     """domain.js CHECK_OUT — menutup sesi terbuka milik sendiri."""
-    return _response(await _service(db).check_out(current_user.user_id))
+    return _response(await attendance_session_service.check_out(current_user.user_id))
 
 
 @router.post("/{att_id}/explain")
@@ -90,10 +92,10 @@ async def explain_attendance(
     att_id: UUID,
     data: ExplanationRequest,
     current_user: CurrentUser = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db_with_user)
+    attendance_session_service: AttendanceSessionService = Depends(get_attendance_session_service)
 ) -> dict[str, str]:
     """P4-4 · domain.js EXPLAIN_ATTENDANCE — hanya absensi sendiri yang menunggu pemeriksaan."""
-    await _service(db).explain_attendance(current_user.organization_id, current_user.user_id, att_id, data.explanation)
+    await attendance_session_service.explain_attendance(current_user.organization_id, current_user.user_id, att_id, data.explanation)
     return {"message": "Penjelasan ditambahkan."}
 
 
@@ -102,10 +104,10 @@ async def review_attendance(
     att_id: UUID,
     data: ReviewRequest,
     current_user: CurrentUser = Depends(require_permission(Permission.REVIEW_UNIT_ATTENDANCE)),
-    db: AsyncSession = Depends(get_db_with_user)
+    attendance_session_service: AttendanceSessionService = Depends(get_attendance_session_service)
 ) -> dict[str, str]:
     """P4-4 · domain.js REVIEW_ATTENDANCE: Finance seluruh organisasi; PM unitnya, OPS lintas unit (R-10)."""
-    status = await _service(db).review_attendance(
+    status = await attendance_session_service.review_attendance(
         current_user.organization_id, current_user.user_id, att_id, data.is_approved, data.note,
         review_all=Permission.REVIEW_ATTENDANCE in current_user.permissions)
     return {"message": f"Absensi di-{status.lower()}."}

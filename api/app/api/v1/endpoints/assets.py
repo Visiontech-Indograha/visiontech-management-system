@@ -6,11 +6,8 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import (
-    CurrentUser,
-    PlanAccess,
-    PlanNeed,
     allocation_plan_access,
-    ensure_same_org,
+    get_asset_reservation_service,
     get_current_user,
     get_db_with_user,
     plan_access,
@@ -18,6 +15,7 @@ from app.api.deps import (
 )
 from app.core.errors import AppError, ForbiddenError, NotFoundError
 from app.core.permissions import Permission, RoleCode
+from app.core.security import CurrentUser
 from app.schemas.asset import (
     AssetAllocationResponse,
     AssetCheckRequest,
@@ -33,6 +31,7 @@ from app.schemas.asset import (
     AssetStatusResponse,
     PlanAssetItem,
 )
+from app.services.access_service import PlanAccess, PlanNeed, ensure_same_org
 from app.services.asset_reservation_service import AssetReservationService
 from app.services.pdf_service import html_to_pdf, render_bast_html
 
@@ -65,20 +64,20 @@ async def create_asset(
 @router.get("", response_model=list[AssetListItem])
 async def get_assets(
     current_user: CurrentUser = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db_with_user)
+    asset_reservation_service: AssetReservationService = Depends(get_asset_reservation_service)
 ) -> list[AssetListItem]:
     """Aset organisasi + alokasi berjalan + pengajuan pengembalian yang menunggu (M6/R9 dari layar)."""
-    rows = await AssetReservationService(db).list_assets(current_user.organization_id)
+    rows = await asset_reservation_service.list_assets(current_user.organization_id)
     return [AssetListItem(**r._mapping) for r in rows]
 
 @router.get("/{asset_id}/returns", response_model=list[AssetReturnHistoryItem])
 async def get_asset_returns(
     asset_id: UUID,
     current_user: CurrentUser = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db_with_user)
+    asset_reservation_service: AssetReservationService = Depends(get_asset_reservation_service)
 ) -> list[AssetReturnHistoryItem]:
     """Riwayat pengembalian aset (terbaru dulu). Aset organisasi lain → 404."""
-    rows = await AssetReservationService(db).return_history(current_user.organization_id, asset_id)
+    rows = await asset_reservation_service.return_history(current_user.organization_id, asset_id)
     return [AssetReturnHistoryItem(**r._mapping) for r in rows]
 
 
@@ -86,10 +85,10 @@ async def get_asset_returns(
 async def get_bast_pdf(
     return_id: UUID,
     current_user: CurrentUser = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db_with_user)
+    asset_reservation_service: AssetReservationService = Depends(get_asset_reservation_service)
 ) -> Response:
     """Berita acara serah terima (P6-4) untuk pengembalian yang sudah diperiksa. Render → threadpool."""
-    record = await AssetReservationService(db).bast(current_user.organization_id, return_id)
+    record = await asset_reservation_service.bast(current_user.organization_id, return_id)
     pdf = await run_in_threadpool(html_to_pdf, render_bast_html(record))
     filename = f"BAST-{record.asset_code}-{record.plan_number}.pdf".replace("/", "-")
     return Response(pdf, media_type="application/pdf",
@@ -101,12 +100,13 @@ async def reserve_asset(
     asset_id: UUID,
     data: AssetReserveRequest,
     current_user: CurrentUser = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db_with_user)
+    db: AsyncSession = Depends(get_db_with_user),
+    asset_reservation_service: AssetReservationService = Depends(get_asset_reservation_service)
 ) -> AssetAllocationResponse:
     """domain.js RESERVE_ASSET (V-27): petugas aset atau PM unit/OPS SK memesan aset untuk SK aktif."""
     await ensure_same_org(db, current_user.organization_id, assets=[asset_id],
                           work_plans=[data.work_plan_id], employees=[data.driver_employee_id])
-    allocation = await AssetReservationService(db).reserve(current_user, asset_id, data.work_plan_id,
+    allocation = await asset_reservation_service.reserve(current_user, asset_id, data.work_plan_id,
                                                            data.driver_employee_id)
     return AssetAllocationResponse(**allocation._mapping)
 
@@ -116,11 +116,12 @@ async def release_asset(
     asset_id: UUID,
     data: AssetReleaseRequest,
     current_user: CurrentUser = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db_with_user)
+    db: AsyncSession = Depends(get_db_with_user),
+    asset_reservation_service: AssetReservationService = Depends(get_asset_reservation_service)
 ) -> AssetStatusResponse:
     """domain.js RELEASE_ASSET (V-27): reservasi yang belum dipakai dilepas."""
     await ensure_same_org(db, current_user.organization_id, assets=[asset_id], work_plans=[data.work_plan_id])
-    status_ = await AssetReservationService(db).release(current_user, asset_id, data.work_plan_id)
+    status_ = await asset_reservation_service.release(current_user, asset_id, data.work_plan_id)
     return AssetStatusResponse(asset_id=asset_id, status=status_)
 
 
@@ -129,11 +130,12 @@ async def check_asset(
     asset_id: UUID,
     data: AssetCheckRequest,
     current_user: CurrentUser = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db_with_user)
+    db: AsyncSession = Depends(get_db_with_user),
+    asset_reservation_service: AssetReservationService = Depends(get_asset_reservation_service)
 ) -> AssetStatusResponse:
     """domain.js CHECK_ASSET (V-27): pengemudi yang ditunjuk menyatakan kendaraan layak atau banding."""
     await ensure_same_org(db, current_user.organization_id, assets=[asset_id])
-    status_ = await AssetReservationService(db).check(current_user, asset_id, data.decision, data.reason)
+    status_ = await asset_reservation_service.check(current_user, asset_id, data.decision, data.reason)
     return AssetStatusResponse(asset_id=asset_id, status=status_)
 
 
@@ -233,8 +235,8 @@ async def verify_asset_return(
 async def get_plan_assets(
     plan_id: UUID,
     access: PlanAccess = _PLAN_VIEW_ACCESS,
-    db: AsyncSession = Depends(get_db_with_user)
+    asset_reservation_service: AssetReservationService = Depends(get_asset_reservation_service)
 ) -> list[PlanAssetItem]:
     """Aset yang dipakai SK beserta kondisi saat dikembalikan (mode presentasi, M5). SK tak terlihat → 404."""
-    return [PlanAssetItem(**r._mapping) for r in await AssetReservationService(db).plan_assets(plan_id)]
+    return [PlanAssetItem(**r._mapping) for r in await asset_reservation_service.plan_assets(plan_id)]
 

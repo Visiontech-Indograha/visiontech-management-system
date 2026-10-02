@@ -6,9 +6,9 @@ from __future__ import annotations
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import unit_of_work
 from app.crud.crud_session import CRUDSession
 from app.crud.crud_user import CRUDUser
+from app.db.session import unit_of_work
 from app.schemas.auth import SessionOut, UserMeResponse
 from app.services.auth_service import AuthService, ClientInfo, IssuedTokens
 

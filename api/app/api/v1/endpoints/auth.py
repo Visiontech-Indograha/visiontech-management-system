@@ -6,9 +6,9 @@ import ipaddress
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Request, Response
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import DB_SCOPE, CurrentUser, get_current_user, get_db
+from app.api.deps import get_auth_flow_service, get_current_user
+from app.core.security import CurrentUser
 from app.schemas.auth import (
     ChangePasswordRequest,
     LoginRequest,
@@ -28,9 +28,6 @@ REFRESH_COOKIE_MAX_AGE = 7 * 24 * 60 * 60
 # Dok 02 A-11: cookie hanya dikirim ke rute auth, tidak pernah lintas situs.
 REFRESH_COOKIE_PATH = "/api/v1/auth"
 
-
-def get_auth_flow(db: AsyncSession = Depends(get_db, scope=DB_SCOPE)) -> AuthFlowService:
-    return AuthFlowService(db)
 
 
 def client_info(request: Request) -> ClientInfo:
@@ -53,7 +50,7 @@ def _issue(response: Response, tokens: IssuedTokens) -> TokenResponse:
 @router.post("/login", response_model=TokenResponse)
 async def login(
     payload: LoginRequest, request: Request, response: Response,
-    flow: AuthFlowService = Depends(get_auth_flow),
+    flow: AuthFlowService = Depends(get_auth_flow_service),
 ) -> TokenResponse:
     tokens = await flow.login(payload.email, payload.password, client_info(request))
     return _issue(response, tokens)
@@ -62,7 +59,7 @@ async def login(
 @router.post("/refresh", response_model=TokenResponse)
 async def refresh_token(
     request: Request, response: Response,
-    flow: AuthFlowService = Depends(get_auth_flow),
+    flow: AuthFlowService = Depends(get_auth_flow_service),
 ) -> TokenResponse:
     tokens = await flow.refresh(request.cookies.get(REFRESH_COOKIE), client_info(request))
     return _issue(response, tokens)
@@ -71,7 +68,7 @@ async def refresh_token(
 @router.post("/logout", response_model=MessageResponse)
 async def logout(
     request: Request, response: Response,
-    flow: AuthFlowService = Depends(get_auth_flow),
+    flow: AuthFlowService = Depends(get_auth_flow_service),
 ) -> MessageResponse:
     await flow.logout(request.cookies.get(REFRESH_COOKIE))
     response.delete_cookie(REFRESH_COOKIE, path=REFRESH_COOKIE_PATH, secure=True, httponly=True, samesite="strict")
@@ -81,7 +78,7 @@ async def logout(
 @router.get("/me", response_model=UserMeResponse)
 async def get_me(
     current_user: CurrentUser = Depends(get_current_user),
-    flow: AuthFlowService = Depends(get_auth_flow),
+    flow: AuthFlowService = Depends(get_auth_flow_service),
 ) -> UserMeResponse:
     return await flow.me(current_user.user_id, current_user.permissions)
 
@@ -89,7 +86,7 @@ async def get_me(
 @router.get("/sessions", response_model=list[SessionOut])
 async def list_sessions(
     current_user: CurrentUser = Depends(get_current_user),
-    flow: AuthFlowService = Depends(get_auth_flow),
+    flow: AuthFlowService = Depends(get_auth_flow_service),
 ) -> list[SessionOut]:
     """P1-7: perangkat yang sedang masuk dengan akun ini; yang sedang dipakai ditandai `current`."""
     return await flow.active_sessions(current_user.user_id, current_user.session_id)
@@ -98,7 +95,7 @@ async def list_sessions(
 @router.post("/sessions/revoke-others", response_model=RevokeOthersResponse)
 async def revoke_other_sessions(
     current_user: CurrentUser = Depends(get_current_user),
-    flow: AuthFlowService = Depends(get_auth_flow),
+    flow: AuthFlowService = Depends(get_auth_flow_service),
 ) -> RevokeOthersResponse:
     """Keluarkan semua perangkat lain. Token akses mereka habis paling lama 15 menit; refresh langsung ditolak."""
     revoked = await flow.revoke_other_sessions(current_user.user_id, current_user.session_id)
@@ -109,7 +106,7 @@ async def revoke_other_sessions(
 async def revoke_session(
     session_id: UUID,
     current_user: CurrentUser = Depends(get_current_user),
-    flow: AuthFlowService = Depends(get_auth_flow),
+    flow: AuthFlowService = Depends(get_auth_flow_service),
 ) -> MessageResponse:
     """Keluarkan satu perangkat milik sendiri. Sesi orang lain → 404."""
     await flow.revoke_session(current_user.user_id, str(session_id))
@@ -120,7 +117,7 @@ async def revoke_session(
 async def change_password(
     payload: ChangePasswordRequest, request: Request, response: Response,
     current_user: CurrentUser = Depends(get_current_user),
-    flow: AuthFlowService = Depends(get_auth_flow),
+    flow: AuthFlowService = Depends(get_auth_flow_service),
 ) -> TokenResponse:
     tokens = await flow.change_password(
         current_user.user_id, payload.current_password, payload.new_password, client_info(request)

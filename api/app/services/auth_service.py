@@ -40,6 +40,7 @@ class Profile:
     role: str
     permissions: list[str]
     employee_id: str | None = None   # karyawan milik akun ("Berkas saya"); None = akun tanpa karyawan
+    attendance_mode: str | None = None  # FIELD = absen di HP, OFFICE = absen di web; None = tanpa karyawan
 
 
 def _inactive() -> AppError:
@@ -74,7 +75,7 @@ class AuthService:
         self.users = users
         self.sessions = sessions
 
-    async def login(self, login: str, password: str, client: ClientInfo) -> IssuedTokens:
+    async def login(self, login: str, password: str, client: ClientInfo, platform: str = "web") -> IssuedTokens:
         state = await self.sessions.failed_logins(login)
         if state.locked_until:
             await send_security_alert(
@@ -97,6 +98,16 @@ class AuthService:
 
         if not user.is_active:
             raise _inactive()
+
+        # R-33: aplikasi HP hanya untuk staf lapangan, web hanya untuk akun kantor (attendance_mode).
+        # Kredensial sudah benar, jadi penolakan ini tidak dihitung sebagai gagal login.
+        mode = await self.users.get_attendance_mode(user.id)
+        if platform == "mobile" and mode != "FIELD":
+            raise AppError("NOT_FIELD_STAFF", "Akun Anda tidak termasuk kategori staf lapangan. "
+                           "Silakan masuk lewat web.", status=403)
+        if platform != "mobile" and mode == "FIELD":
+            raise AppError("NOT_OFFICE_ACCOUNT", "Akun Anda bukan kategori akun kantor. "
+                           "Silakan gunakan aplikasi HP Visiontech.", status=403)
 
         await self.sessions.record_login_attempt(login, client.ip, True)
         return await self._start_session(user, client)
@@ -151,6 +162,7 @@ class AuthService:
             role=user.role or DEFAULT_ROLE,
             permissions=permissions,
             employee_id=(str(emp) if (emp := await self.users.get_employee_id(user_id)) else None),
+            attendance_mode=await self.users.get_attendance_mode(user_id),
         )
 
     async def change_password(

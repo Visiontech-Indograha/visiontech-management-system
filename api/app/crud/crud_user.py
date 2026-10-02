@@ -54,6 +54,16 @@ class CRUDUser(CRUDBase):
         )
         return employee_id
 
+    async def get_attendance_mode(self, user_id: UUID | str) -> str | None:
+        mode: str | None = await self.scalar(
+            """
+            SELECT e.attendance_mode FROM vms.app_user u JOIN vms.employee e ON e.id = u.employee_id
+            WHERE u.id = :uid
+            """,
+            {"uid": user_id},
+        )
+        return mode
+
     # ── Akun karyawan (M1-01, R-20) ─────────────────────────────────────────────────────────────
     async def account_of_employee(self, employee_id: UUID | str) -> Any:
         return await self.fetchone(

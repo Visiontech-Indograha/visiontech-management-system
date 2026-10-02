@@ -9,6 +9,14 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased] — `development`
 
+- **PostgreSQL 18 untuk compose, CI, dan DB uji lokal (keputusan pemilik 2026-10-02, A-05):**
+  - **Citra tunggal** `db/Dockerfile`: `postgis/postgis:18-3.6` + `postgresql-18-pgvector`. `docker-compose.yml` membangunnya (volume baru `postgres18_data` di `/var/lib/postgresql`, data PG16 lama tidak tertimpa).
+  - **CI:** service postgis 16-3.4 + `apt install` saat berjalan diganti build citra lalu `docker run`. Penyebab gagal saat merge PR #6: repo PGDG bullseye diarsipkan (404), dan setelah dialihkan ke arsip, apt memperbarui biner PG di bawah server yang hidup (`btree_gist.so: undefined symbol`).
+  - **CI · gitleaks:** `gitleaks-action@v3` mewajibkan lisensi untuk organisasi → CLI gitleaks 8.30.1 (checksum diperiksa), rentang commit sama (PR/push/branch baru). Positif palsu yang sudah diperiksa masuk `.gitleaksignore`. Riwayat lama masih memuat 1 kata sandi DB asli di `docker-compose.yml` versi 2026-09-23 (dihapus di 70412bee) — tidak dikecualikan; rotasi bila masih dipakai.
+  - **DB uji lokal** `vms_db_test_local` (PG16) → `vms_db_test_local18` (PG18.6) via `pg_dumpall --globals-only` + `pg_dump`/`pg_restore`: 15 akun, 14 karyawan, 11 absensi, alembic 0017, pemilik & hak akses identik. Kontainer lama dihentikan, tidak dihapus.
+  - **Uji:** suite yang disetujui di PG18 baru (`db/*.sql` + `alembic stamp head`): 334 lolos; di server (citra API produksi, DB uji server): 334 lolos.
+  - **Belum:** produksi & DB uji server masih PG16.15 — dipindah terpisah setelah konfirmasi pemilik (backup → PG18 → restore → alihkan API).
+
 - **R-34 · absen lapangan luring (keputusan pemilik 2026-10-02, mengubah K-13):**
   - **Disimpan di mana:** antrean SQLite internal aplikasi (`pending_sync_operations`, jenis `attendance_offline`) + swafoto di folder internal `offline_attendance/` — tidak terlihat dari pengelola file.
   - **Tidak bisa diubah:** setiap absen luring ditandatangani kunci EC P-256 Android Keystore (`AttendanceAttest.kt`, kunci tidak bisa dikeluarkan dari HP); server memverifikasi dengan kunci publik terdaftar (`POST /attendance/device-key`). Lokasi/jam/alasan/swafoto yang diubah → `422 OFFLINE_TAMPERED`.

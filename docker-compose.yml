@@ -22,7 +22,9 @@ services:
       - api
 
   db:
-    image: postgis/postgis:16-3.4
+    # PostgreSQL 18 + PostGIS 3.6 + pgvector (A-05) — citra yang sama dipakai CI.
+    build: ./db
+    image: vms-db:18
     environment:
       POSTGRES_USER: vms_app
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?isi POSTGRES_PASSWORD di .env}
@@ -30,7 +32,8 @@ services:
     ports:
       - "5433:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      # PG18 menyimpan data di /var/lib/postgresql/18/docker; volume baru agar data PG16 lama tidak tertimpa.
+      - postgres18_data:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U vms_app -d visiontech_db"]
       interval: 5s
@@ -38,4 +41,4 @@ services:
       retries: 5
 
 volumes:
-  postgres_data:
+  postgres18_data:

@@ -25,14 +25,33 @@ _LOGO = "data:image/png;base64," + base64.b64encode(
 KIND_LABEL = {"INITIAL_ORDER": "SK", "REVISION": "Revisi SK", "ADDENDUM": "Adendum"}
 
 
+CATEGORY_LABEL = {"INSTALASI": "Instalasi", "PEMELIHARAAN": "Pemeliharaan", "PERBAIKAN": "Perbaikan",
+                  "SURVEI": "Survei", "LAINNYA": "Lainnya"}
+DOCUMENT_STATUS_LABEL = {"AWAITING_ACCEPTANCE": "Menunggu tanda tangan", "EFFECTIVE": "Berlaku",
+                         "SUPERSEDED": "Tidak berlaku", "REJECTED": "Ditolak", "WITHDRAWN": "Ditarik"}
+
+
 def render_plan_document_html(document: Any, signatures: list[dict[str, Any]]) -> str:
     snapshot = document.snapshot if isinstance(document.snapshot, dict) else json.loads(document.snapshot)
+    status = getattr(document, "status", None)
     return _ENV.get_template("plan_document.html").render(
         doc=document, logo=_LOGO, kind_label=KIND_LABEL.get(document.kind, document.kind),
         issued_at=wib_text(document.issued_at), plan=snapshot.get("plan", {}),
-        team=snapshot.get("team", []), days=snapshot.get("days", []),
-        attachments=snapshot.get("attachments", []), signatures=signatures,
-        sha256=bytes(document.snapshot_sha256).hex())
+        team=snapshot.get("team", []), days=snapshot.get("days", []), assets=snapshot.get("assets", []),
+        attachments=snapshot.get("attachments", []), signatures=signatures, categories=CATEGORY_LABEL,
+        status_label=DOCUMENT_STATUS_LABEL.get(str(status), None) if status else None,
+        sha256=bytes(document.snapshot_sha256).hex(), preview=False)
+
+
+def render_plan_preview_html(snapshot: dict[str, Any]) -> str:
+    """Pratinjau A4 draf SK ("Sunting SK", flowchart SK2-C) — format sama dengan dokumen terbit, tanpa TTD."""
+    plan = snapshot.get("plan", {})
+    doc = {"number": plan.get("number"), "title": plan.get("title"), "version": plan.get("revision", 1)}
+    return _ENV.get_template("plan_document.html").render(
+        doc=doc, logo=_LOGO, kind_label="SK", issued_at=None, plan=plan, team=snapshot.get("team", []),
+        days=snapshot.get("days", []), assets=snapshot.get("assets", []),
+        attachments=snapshot.get("attachments", []), signatures=[], categories=CATEGORY_LABEL,
+        status_label="Draf", sha256=None, preview=True)
 
 
 INCIDENT_CATEGORY = {"K3_RINGAN": "K3 ringan", "K3_BERAT": "K3 berat", "K3_LINGKUNGAN": "K3 lingkungan",

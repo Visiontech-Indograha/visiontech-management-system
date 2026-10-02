@@ -31,7 +31,7 @@ def test_hr_creates_account_and_employee_can_log_in(client, world: World):
 
     state = client.get(f"/employees/{emp}/account", headers=hr).json()
     assert (state["exists"], state["login"], state["is_active"]) == (True, login, True)
-    assert client.post("/auth/login", json={"email": login, "password": temp}).status_code == 200
+    assert client.post("/auth/login", json={"email": login, "password": temp, "platform": "mobile"}).status_code == 200
 
     again = client.post(f"/employees/{emp}/account", headers=hr, json={"login": f"lain.{world.tag}@contoh.id"})
     assert again.status_code == 409 and again.json()["error"]["code"] == "ACCOUNT_EXISTS"
@@ -51,10 +51,10 @@ def test_deactivate_revokes_access_and_reset_issues_new_password(client, world: 
     emp = _new_employee(client, world, f"AK-{world.tag}-3")
     login = f"nonaktif.{world.tag}@contoh.id"
     temp = client.post(f"/employees/{emp}/account", headers=hr, json={"login": login}).json()["temporary_password"]
-    token = client.post("/auth/login", json={"email": login, "password": temp}).json()["access_token"]
+    token = client.post("/auth/login", json={"email": login, "password": temp, "platform": "mobile"}).json()["access_token"]
 
     assert client.post(f"/employees/{emp}/account/deactivate", headers=hr).status_code == 200
-    assert client.post("/auth/login", json={"email": login, "password": temp}).status_code == 403
+    assert client.post("/auth/login", json={"email": login, "password": temp, "platform": "mobile"}).status_code == 403
     assert client.get("/auth/me", headers={"Authorization": f"Bearer {token}"}).status_code == 401
     uid = sync_query("SELECT id FROM vms.app_user WHERE employee_id = %s", (emp,))[0][0]
     assert sync_query("SELECT count(*) FROM vms.user_session WHERE user_id = %s AND revoked_at IS NULL", (uid,)) == [(0,)]
@@ -63,8 +63,8 @@ def test_deactivate_revokes_access_and_reset_issues_new_password(client, world: 
     fresh = client.post(f"/employees/{emp}/account/reset-password", headers=hr)
     assert fresh.status_code == 200, fresh.text
     new = fresh.json()["temporary_password"]
-    assert client.post("/auth/login", json={"email": login, "password": temp}).status_code != 200
-    assert client.post("/auth/login", json={"email": login, "password": new}).status_code == 200
+    assert client.post("/auth/login", json={"email": login, "password": temp, "platform": "mobile"}).status_code != 200
+    assert client.post("/auth/login", json={"email": login, "password": new, "platform": "mobile"}).status_code == 200
 
 
 def test_only_account_managers_in_the_same_organisation(client, world: World, other_world: World):

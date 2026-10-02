@@ -39,7 +39,7 @@ SELF_SERVICE = {
     ("GET", "/assets/{asset_id}/returns"): "riwayat pengembalian aset organisasi sendiri; asing → 404 (diuji)",
     ("GET", "/assets/returns/{return_id}/pdf"): "BAST pengembalian organisasi sendiri; asing → 404 (diuji)",
     ("GET", "/assets"): "daftar aset organisasi (CHECK_ASSET oleh tim)",
-    ("GET", "/attendance"): "milik sendiri; FINANCE/HR/OPS/ADMIN seluruh organisasi (diuji)",
+    ("GET", "/attendance"): "R-33: milik sendiri; PM + bawahan lapangan unitnya; FINANCE/OPS seluruh organisasi (diuji)",
     ("POST", "/attendance/check-in"): "absensi sendiri",
     ("POST", "/attendance/check-out"): "absensi sendiri",
     ("POST", "/attendance/{att_id}/explain"): "hanya absensi milik sendiri — diuji di bawah",
@@ -229,7 +229,7 @@ def test_only_the_owner_explains_an_attendance(client, world, other_world, fake_
     selfie = client.post("/files/upload", headers=member, files={"file": ("s.png", buf.getvalue(), "image/png")})
     check_in = client.post("/attendance/check-in", headers=member, json={
         "site_id": world.site_id, "location": {"lat": -6.3, "lng": 106.8},
-        "selfie_file_id": selfie.json()["file_id"]})
+        "selfie_file_id": selfie.json()["file_id"], "explanation": "Survei titik baru"})
     assert check_in.status_code == 200, check_in.text
     att_id = check_in.json()["id"]
 
@@ -237,7 +237,7 @@ def test_only_the_owner_explains_an_attendance(client, world, other_world, fake_
                      other_world.headers(client, "member")):
         response = client.post(f"/attendance/{att_id}/explain", headers=outsider, json={"explanation": "Titipan"})
         assert response.status_code == 404, response.text
-    assert sync_query("SELECT explanation FROM vms.attendance WHERE id = %s", (att_id,)) == [(None,)]
+    assert sync_query("SELECT explanation FROM vms.attendance WHERE id = %s", (att_id,)) == [("Survei titik baru",)]
 
     own = client.post(f"/attendance/{att_id}/explain", headers=member, json={"explanation": "GPS ponsel mati"})
     assert own.status_code == 200, own.text

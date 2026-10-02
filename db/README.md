@@ -3,7 +3,7 @@
 Rancangan PostgreSQL untuk membangun ulang prototipe ini menjadi aplikasi sungguhan.
 Disusun dari pemindaian model data prototipe (`js/domain.js`) agar tidak ada aturan bisnis yang hilang.
 
-**Target:** PostgreSQL 16+, PostGIS 3.4+, pgvector 0.7+, pgcrypto, btree_gist, pg_trgm, citext.
+**Target:** PostgreSQL 18 (keputusan pemilik 2026-10-02; skema tetap jalan di 16+), PostGIS 3.6, pgvector 0.7+, pgcrypto, btree_gist, pg_trgm, citext.
 
 Kunci utama memakai fungsi pembungkus `new_id()` yang saat ini mengembalikan `gen_random_uuid()`.
 Pada PostgreSQL 18+ cukup ganti isinya menjadi `uuidv7()` supaya nilainya urut waktu — tanpa
@@ -35,10 +35,9 @@ Urutan pemasangan: `01` → `02` → `03` → `04` → `05`.
 > docker exec -i vms-db psql -U postgres -d vms -v ON_ERROR_STOP=1 < db/05_face.sql
 > ```
 >
-> Citra `pgvector/pgvector:pg16` belum memuat PostGIS. Untuk memakai keduanya sekaligus, pakai
-> citra yang menggabungkan PostGIS + pgvector (misalnya `postgis/postgis:16-3.4` lalu pasang
-> pgvector, atau citra pihak ketiga yang sudah menyatukan keduanya). Beri tahu saya bila ingin
-> saya jalankan dan perbaiki galat yang muncul.
+> Citra resmi proyek: `db/Dockerfile` (PostgreSQL 18 + PostGIS 3.6 + pgvector), dipakai
+> `docker-compose.yml` dan CI. Bangun dengan `docker build -t vms-db:18 db`. Data PG18 ada di
+> `/var/lib/postgresql/18/docker` — pasang volume di `/var/lib/postgresql`, bukan `.../data`.
 
 ---
 

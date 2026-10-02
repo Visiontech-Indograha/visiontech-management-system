@@ -19,18 +19,6 @@ jobs:
   api:
     name: API · ruff · mypy · pytest (PostgreSQL nyata)
     runs-on: ubuntu-latest
-    services:
-      db:
-        # Sama dengan docker-compose.yml / server dev (PostgreSQL 16 + PostGIS); pgvector dipasang di bawah.
-        image: postgis/postgis:16-3.4
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: visiontech_db
-        ports: ["5432:5432"]
-        options: >-
-          --health-cmd "pg_isready -U postgres -d visiontech_db"
-          --health-interval 5s --health-timeout 5s --health-retries 20
     env:
       # Kredensial khusus container CI sekali pakai — bukan rahasia.
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/visiontech_db
@@ -48,13 +36,20 @@ jobs:
           cache: pip
           cache-dependency-path: api/requirements-dev.txt
 
-      - name: Pasang pgvector di container DB
-        # Image postgis 16-3.4 berbasis Debian bullseye; repo PGDG bullseye sudah dipindah ke arsip
-        # (apt.postgresql.org → 404, CI gagal 2026-10-02), jadi sumber apt diarahkan ke apt-archive.
+      - name: Jalankan DB — PostgreSQL 18 + PostGIS 3.6 + pgvector dari db/Dockerfile (sama dengan compose)
+        # Dulu: service postgis 16-3.4 + apt install pgvector saat berjalan. Repo PGDG bullseye diarsipkan
+        # dan apt ikut memperbarui biner PG di bawah server yang sedang hidup (btree_gist.so gagal dimuat,
+        # CI 2026-10-02). Citra dibangun dulu, baru server dinyalakan.
+        working-directory: db
         run: |
-          docker exec ${{ job.services.db.id }} bash -c \
-            "sed -i 's#http://apt.postgresql.org/#https://apt-archive.postgresql.org/#' /etc/apt/sources.list.d/pgdg.list \
-             && apt-get update -qq && apt-get install -y -qq postgresql-16-pgvector >/dev/null"
+          docker build -q -t vms-db:18 .
+          docker run -d --name vms-db -p 5432:5432 -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=visiontech_db vms-db:18
+          # Lewat TCP dari runner: selama init, server sementara citra hanya mendengar soket Unix.
+          for i in $(seq 90); do
+            pg_isready -h localhost -p 5432 -U postgres -d visiontech_db -q && break
+            sleep 2
+          done
+          PGPASSWORD=postgres psql -h localhost -U postgres -d visiontech_db -Atc "show server_version"
 
       - name: Pasang skema dari db/*.sql (urutan 01 → 05)
         working-directory: db

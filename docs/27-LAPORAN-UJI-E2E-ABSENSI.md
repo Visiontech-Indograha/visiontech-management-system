@@ -54,5 +54,35 @@ sama persis seperti aplikasi.
 
 ## 5. Uji di server produksi
 
-Belum dijalankan. Lihat rencana di bagian bawah laporan ini setelah dijalankan (akun UJI di server dibuat pemilik
-lewat `.local_tests/buat-akun-uji.bat`; login di server dilakukan pemilik sendiri).
+| | |
+|---|---|
+| Tanggal | 2026-10-02, 16.30–19.30 WIB |
+| Server | Produksi `visiontech-bar`: API `vms_api` + DB `vms_db_prod` (PostgreSQL 16.15), kode `prod` @ `31cf0b82` |
+| Web | `https://visiontech-bar.tail827174.ts.net` (Tailscale). Lihat T-6 untuk alamat http LAN |
+| HP | HP nyata Realme RMX3933, 4G + Tailscale, APK debug → `http://100.117.92.14:8000`. Lokasi dari GPS asli; mode pesawat sungguhan |
+| Akun | 3 akun UJI di organisasi uji terpisah "Dunia uji" (unit UJI): `pm@`, `kantor@`, `lapangan@uji.visiontech.local`. Sandi diketik pemilik sendiri (direset pemilik dengan `.local_tests/reset-sandi-uji-server.sh`), tidak dicatat di dokumen |
+| Data | Absensi uji hanya milik akun UJI; tidak masuk antrean tinjau karyawan sungguhan |
+
+| ID | Deskripsi | Langkah | Hasil yang diharapkan | Hasil aktual | Status |
+|---|---|---|---|---|---|
+| P1 | Akun lapangan tidak bisa masuk web | Login web `lapangan@` | Ditolak | "Akun Anda bukan kategori akun kantor. Silakan gunakan aplikasi HP Visiontech." | Pass |
+| P2 | Absen kantor di web, dalam radius | Login `kantor@` → Absen masuk → Absen pulang (posisi peramban disimulasikan di "Gudang uji") | Valid otomatis | Valid otomatis 0 m, masuk 18.06, pulang 18.06; DB `AUTO_VALID` | Pass |
+| P3 | PM menambah lokasi proyek | `pm@` → Lokasi kerja → Tambah lokasi "UJI Lokasi HP" di titik GPS HP, r 200 m | Tersimpan untuk unit PM | Tampil di daftar lokasi; HP langsung menawarkannya sebagai lokasi kerja | Pass |
+| P4 | Akun kantor tidak bisa masuk HP | Login HP `kantor@` | Ditolak | "Akun Anda tidak termasuk kategori staf lapangan. Silakan masuk lewat web." | Pass |
+| P5 | Absen HP di luar zona, kamera asli | `lapangan@` → Absen masuk di "UJI Lokasi Proyek" (± 952 km) → penjelasan → swafoto | Perlu review; tombol pulang tidak ada | Kamera dengan watermark koordinat & jam; "Perlu review" masuk 18.43; tanpa tombol pulang | Pass (setelah perbaikan T-5) |
+| P6 | PM meninjau: swafoto tampil, tolak | `pm@` → Absensi → Tinjau → Tolak + catatan | Swafoto tampil; Ditolak; HP menawarkan ajukan ulang | Swafoto HP termuat di dialog; Ditolak; HP: catatan penolakan + "Ajukan absen ulang" | Pass |
+| P7 | Ajukan ulang & pulang saat luring (HP nyata) | Mode pesawat → Ajukan absen ulang di "UJI Lokasi HP" + alasan → Absen pulang → matikan mode pesawat | "Tersimpan luring"; sinkron otomatis → Valid; jam dari rekaman HP | HP: "Tersimpan luring", masuk 19:18, pulang 19:19, 2 data menunggu. Online → 2× `POST /attendance/offline` 200 tanpa diketuk; DB `AUTO_VALID`, 16 m, `offline = true`, masuk 19:18:36 / pulang 19:19:50 (diterima 19:23:25); HP "Valid · Absensi hari ini selesai"; antrean 0/0/0 | Pass |
+| P8 | Daftar & rekap PM | `pm@` → Absensi (Semua status) → Rekap absensi | Hanya unit PM; tanda luring; jam masuk/keluar | Hanya UJI Staf Lapangan; "· absen luring"; rekap Hadir 1, Ditolak 1, "Masuk 19.18 · Keluar 19.19" | Pass |
+
+Tidak diulang di produksi (sudah lulus di §2–§3 dengan kode yang sama): absen kantor di luar radius,
+ditolak 2× → terkunci, server mati sementara (M7), dan simulasi data diubah / jam palsu (M8).
+
+### Catatan uji produksi
+
+| # | Temuan | Tingkat | Tindak lanjut |
+|---|---|---|---|
+| T-5 | **Bug alur absensi.** Token akses habis tepat saat absen; refresh berhasil, tetapi kiriman ulang putus di jaringan (4G + Tailscale, HP baru aktif lagi). Interceptor `ApiClient` meneruskan **401 lama**, sehingga layar Absensi tidak mengenalinya sebagai "tanpa sinyal", tidak menyimpan absen luring, dan absen hilang. Terlihat 2× di log prod (17.53 & 18.09) | Tinggi | **Diperbaiki** (`fix(mobile)` 14ebce0d): kegagalan kiriman ulang diteruskan apa adanya. Uji baru `mobile/test/api_client_retry_test.dart` (server HTTP lokal) gagal sebelum, lulus sesudah; `flutter test` 88 lulus. Di development, ikut PR #7 ke prod |
+| T-6 | Web lewat `http://192.168.88.160:8080`: cookie refresh ber-`Secure` dibuang peramban (sesi hilang saat halaman dimuat ulang), kamera/GPS peramban mati di http | Sedang (bukan alur absensi) | Dicatat. Arahkan pengguna kantor ke alamat https Tailscale |
+| T-7 | Di web, akun kantor tanpa peran tampil berlabel "Karyawan lapangan" di menu samping | Rendah (tampilan) | Dicatat |
+| T-8 | Di HP nyata dalam ruangan + mode pesawat, GPS tidak dapat titik → pesan "Gagal mendapatkan lokasi -- pastikan berada di area terbuka" setelah 30 detik | — | Perilaku benar (menjawab T-2); di area terbuka berhasil |
+| T-9 | Bilah "2 data menunggu dikirim" bertahan ± 20 detik setelah data terkirim | Rendah | Diperbarui sendiri; Profil 0/0/0 |

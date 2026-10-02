@@ -42,6 +42,8 @@ SELF_SERVICE = {
     ("GET", "/attendance"): "R-33: milik sendiri; PM + bawahan lapangan unitnya; FINANCE/OPS seluruh organisasi (diuji)",
     ("POST", "/attendance/check-in"): "absensi sendiri",
     ("POST", "/attendance/check-out"): "absensi sendiri",
+    ("POST", "/attendance/device-key"): "kunci perangkat milik sendiri (R-34, diuji)",
+    ("POST", "/attendance/offline"): "absen luring milik sendiri, bertanda tangan perangkat (R-34, diuji)",
     ("POST", "/attendance/{att_id}/explain"): "hanya absensi milik sendiri — diuji di bawah",
     ("GET", "/recaps/attendance"): "rekap sendiri; FINANCE/HR/OPS/ADMIN seluruh organisasi (V-30, diuji)",
     ("POST", "/sync/operations"): "antrean luring milik sendiri; tiap operasi dijaga seperti jalur daring (M12)",

@@ -86,7 +86,7 @@ def test_member_can_also_report_overtime(client, world: World):
 
 def test_report_requires_in_progress_status(client, world: World):
     """domain.js baris 608: SK yang bukan IN_PROGRESS → 409."""
-    plan_id, _ = run_plan_to_accepted(client, world)   # ACCEPTED bukan IN_PROGRESS
+    plan_id, _ = run_plan_to_accepted(client, world, start_offset_days=1)   # ACCEPTED, mulai besok (alur v2)
 
     resp = _report(client, world, plan_id, "leader")
     assert resp.status_code == 409

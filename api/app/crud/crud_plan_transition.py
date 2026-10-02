@@ -102,7 +102,7 @@ class CRUDPlanTransition(CRUDBase):
             SELECT id, unit_id, site_id, number, title, location_text, description,
                    lower(period) AS period_start, upper(period) - 1 AS period_end,
                    status, pm_employee_id, leader_employee_id, revision, row_version, cancellation_reason,
-                   appeal_reason
+                   appeal_reason, category
             FROM vms.work_plan WHERE id = :id
             """,
             {"id": plan_id},

@@ -7,6 +7,7 @@ import { useSession } from "@/app/session";
 import logo from "@/assets/brand/logo-visiontech.png";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ROLE_LABEL } from "@/lib/types";
+import { NotificationBell } from "./NotificationBell";
 
 function initials(email: string) {
   const name = email.split("@")[0].replace(/[^a-z]/gi, " ").trim();
@@ -152,8 +153,12 @@ export function AppShell() {
             <Menu size={20} />
           </button>
           <img src={logo} alt="Visiontech Indograha" className="ml-2 h-7 w-auto object-contain" />
+          <NotificationBell className="ml-auto" />
         </header>
-        <main className="mx-auto w-full max-w-[1320px] px-4 py-6 md:px-8 md:py-8 lg:px-10">
+        <div className="sticky top-0 z-20 hidden justify-end px-8 pt-3 md:flex lg:px-10">
+          <NotificationBell className="bg-surface shadow-card ring-1 ring-line" />
+        </div>
+        <main className="mx-auto w-full max-w-[1320px] px-4 py-6 md:px-8 md:pb-8 md:pt-2 lg:px-10">
           <div key={pathname} className="page-enter">
             <Suspense fallback={<PageFallback />}>
               <Outlet />

@@ -39,7 +39,7 @@
     {% if plan.category %}<tr><th>Kategori</th><td>{{ categories.get(plan.category, plan.category) }}</td></tr>{% endif %}
     {% if plan.unit_name %}<tr><th>Tipe</th><td>{{ plan.unit_name }}</td></tr>{% endif %}
     <tr><th>Lokasi</th><td>{{ plan.location_text or "-" }}{% if plan.site_description %}<br><span class="meta">{{ plan.site_description }}</span>{% endif %}{% if plan.lat is not none and plan.lng is not none %}<br><span class="meta">{{ "%.6f"|format(plan.lat) }}, {{ "%.6f"|format(plan.lng) }}</span>{% endif %}</td></tr>
-    <tr><th>Periode</th><td>{{ plan.period_start }} s.d. {{ plan.period_end }}</td></tr>
+    <tr><th>Periode</th><td>{{ plan.period_start | tgl }} s.d. {{ plan.period_end | tgl }}</td></tr>
     {% if plan.pm_name %}<tr><th>Project Manager</th><td>{{ plan.pm_name }}{% if plan.pm_position %} — {{ plan.pm_position }}{% endif %}</td></tr>{% endif %}
     {% if plan.description %}<tr><th>Deskripsi pekerjaan</th><td>{{ plan.description }}</td></tr>{% endif %}
   </table>
@@ -61,7 +61,7 @@
   <h2>Detail pekerjaan per hari</h2>
   <table>
     <tr><th style="width:24mm">Tanggal</th><th>Detail pekerjaan</th></tr>
-    {% for d in days %}<tr><td>{{ d.work_date }}</td><td>
+    {% for d in days %}<tr><td>{{ d.work_date | tgl }}</td><td>
       {% for t in d.tasks %}{% if t is string %}<div>{{ t }}</div>{% else %}
       <div class="task"><strong>{{ t.title }}</strong>{% if t.description %} — {{ t.description }}{% endif %}
         {% if t.files %}<div class="meta">Lampiran: {{ t.files | join(", ") }}</div>{% endif %}</div>{% endif %}{% endfor %}

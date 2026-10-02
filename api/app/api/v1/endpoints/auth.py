@@ -52,7 +52,8 @@ async def login(
     payload: LoginRequest, request: Request, response: Response,
     flow: AuthFlowService = Depends(get_auth_flow_service),
 ) -> TokenResponse:
-    tokens = await flow.login(payload.email, payload.password, client_info(request))
+    tokens = await flow.login(payload.email, payload.password, client_info(request),
+                              platform=payload.platform or "web")
     return _issue(response, tokens)
 
 

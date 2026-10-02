@@ -20,6 +20,8 @@ class UserMeResponse(BaseModel):
     role: str
     permissions: list[str]
     employee_id: str | None = None
+    # FIELD = absen lewat aplikasi HP, OFFICE = absen lewat web; None = akun tanpa karyawan.
+    attendance_mode: str | None = None
 
 
 class ChangePasswordRequest(BaseModel):

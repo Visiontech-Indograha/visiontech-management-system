@@ -18,9 +18,9 @@ class AuthFlowService:
         self.db = db
         self.service = AuthService(CRUDUser(db), CRUDSession(db))
 
-    async def login(self, login: str, password: str, client: ClientInfo) -> IssuedTokens:
+    async def login(self, login: str, password: str, client: ClientInfo, platform: str = "web") -> IssuedTokens:
         async with unit_of_work(self.db):
-            return await self.service.login(login, password, client)
+            return await self.service.login(login, password, client, platform=platform)
 
     async def refresh(self, raw_refresh_token: str | None, client: ClientInfo) -> IssuedTokens:
         async with unit_of_work(self.db):
@@ -35,6 +35,7 @@ class AuthFlowService:
         return UserMeResponse(
             user_id=profile.user_id, email=profile.email,
             role=profile.role, permissions=profile.permissions, employee_id=profile.employee_id,
+            attendance_mode=profile.attendance_mode,
         )
 
     async def active_sessions(self, user_id: str, current_session_id: str) -> list[SessionOut]:

@@ -30,6 +30,8 @@ def _selfie(client, world: World, who: str) -> str:
 
 
 def _check_in(client, world: World, who: str = "member", location=INSIDE, **extra):
+    # R-33: penjelasan wajib di luar zona & saat mengajukan ulang — uji di sini selalu menyertakannya.
+    extra.setdefault("explanation", "Survei titik di luar lokasi")
     return client.post("/attendance/check-in", headers=world.headers(client, who),
                        json={"site_id": world.site_id, "location": location, **extra})
 
@@ -73,14 +75,16 @@ def test_open_session_blocks_check_in_until_it_is_checked_out(client, world):
 
 def test_one_attendance_per_day_unless_the_previous_one_was_rejected(client, world, fake_storage):
     att_id = _needs_review(client, world)
-    assert _check_out(client, world).status_code == 200
+    # R-33: absen pulang hanya setelah absen masuk valid.
+    pending_out = _check_out(client, world)
+    assert pending_out.status_code == 409 and pending_out.json()["error"]["code"] == "CHECKOUT_NOT_VALID"
 
     again = _check_in(client, world)
     assert again.status_code == 409, again.text
     assert again.json()["error"]["message"] == \
         "Absensi untuk hari ini sudah tercatat (hanya dapat mengajukan ulang jika absensi sebelumnya ditolak)."
 
-    rejected = client.post(f"/attendance/{att_id}/review", headers=world.headers(client, "finance"),
+    rejected = client.post(f"/attendance/{att_id}/review", headers=world.headers(client, "pm"),
                            json={"is_approved": False, "note": "Lokasi tidak sesuai penugasan"})
     assert rejected.status_code == 200, rejected.text
     assert _check_in(client, world).status_code == 200
@@ -152,13 +156,18 @@ def test_only_own_attendance_waiting_for_review_can_be_explained(client, world, 
 
 
 def test_review_rules(client, world, fake_storage):
-    finance = world.headers(client, "finance")
+    """R-33: pekerja lapangan ditinjau PM unitnya (bukan Finance); tidak pernah absensi sendiri."""
+    pm = world.headers(client, "pm")
     valid_id = _check_in(client, world, who="leader").json()["id"]
-    own_id = _needs_review(client, world, who="finance")
+    own_id = _needs_review(client, world, who="pm")
     waiting_id = _needs_review(client, world)
 
     def review(att_id, **body):
-        return client.post(f"/attendance/{att_id}/review", headers=finance, json={"is_approved": True, **body})
+        return client.post(f"/attendance/{att_id}/review", headers=pm, json={"is_approved": True, **body})
+
+    by_finance = client.post(f"/attendance/{waiting_id}/review", headers=world.headers(client, "finance"),
+                             json={"is_approved": True, "note": "Oke"})
+    assert by_finance.status_code == 403, by_finance.text
 
     assert review(valid_id, note="Oke").json()["error"]["message"] == "Absensi tidak menunggu pemeriksaan."
     own = review(own_id, note="Oke")
@@ -171,13 +180,21 @@ def test_review_rules(client, world, fake_storage):
 
 
 def test_pm_reviews_attendance_only_in_own_unit(client, world, fake_storage):
-    """Revisi pemilik R-10: PM memvalidasi absensi karyawan di unitnya; unit lain tidak terlihat & 403."""
+    """R-33 (dulu R-10): PM memvalidasi absensi bawahan lapangan di unitnya; unit lain tidak terlihat & 403."""
     other_unit = str(sync_query("INSERT INTO vms.business_unit (organization_id, code, name) "
                                 "VALUES (%s, 'LAIN', 'Unit lain') RETURNING id", (world.org_id,))[0][0])
     world.add_person("luar", None, unit_id=other_unit)
+    # R-33: pekerja lapangan hanya absen di lokasi proyek unitnya.
+    other_site = str(sync_query(
+        "INSERT INTO vms.site (organization_id, name, location, radius_m, unit_id) "
+        "VALUES (%s, 'Gudang unit lain', ST_GeogFromText('POINT(106.8 -6.2)'), 100, %s) RETURNING id",
+        (world.org_id, other_unit))[0][0])
     pm = world.headers(client, "pm")
     mine_id = _needs_review(client, world)
-    other_id = _needs_review(client, world, who="luar")
+    outside = _check_in(client, world, "luar", OUTSIDE, site_id=other_site,
+                        selfie_file_id=_selfie(client, world, "luar"))
+    assert outside.status_code == 200, outside.text
+    other_id = outside.json()["id"]
 
     listed = {a["id"] for a in client.get("/attendance", headers=pm).json()["items"]}
     assert mine_id in listed and other_id not in listed

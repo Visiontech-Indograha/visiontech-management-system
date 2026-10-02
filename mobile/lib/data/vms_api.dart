@@ -41,6 +41,53 @@ class VmsApi {
         as Map,
   );
 
+  /// Alur SK v2: isi lengkap SK (tim, alat & kendaraan, detail pekerjaan per hari).
+  Future<Map<String, dynamic>> planDetail(String planId) async =>
+      Map<String, dynamic>.from(
+        (await _dio.get('$_p/work-plans/$planId/detail')).data as Map,
+      );
+
+  /// Dokumen SK (versi terbit, revisi, adendum), urut versi naik — yang terbaru di posisi terakhir.
+  Future<List<Map<String, dynamic>>> planDocuments(String planId) async =>
+      _list((await _dio.get('$_p/work-plans/$planId/documents')).data);
+
+  /// HTML A4 yang sama persis dengan PDF (isi + tanda tangan + QR) untuk "Tinjau SK".
+  Future<String> documentHtml(String documentId) async =>
+      (await _dio.get<String>(
+        '$_p/documents/$documentId/html',
+        options: Options(responseType: ResponseType.plain),
+      )).data ??
+      '';
+
+  /// "Ajukan adendum" ketua atas SK terbit (alasan wajib) — status menjadi Adendum diminta.
+  Future<Map<String, dynamic>> requestAmendment(
+    String planId, {
+    required int rowVersion,
+    required String reason,
+  }) async => Map<String, dynamic>.from(
+    (await _dio.post(
+          '$_p/work-plans/$planId/appeal',
+          data: {'row_version': rowVersion, 'reason': reason},
+        )).data
+        as Map,
+  );
+
+  // --- Notifikasi dalam aplikasi (alur SK v2) -----------------------------
+  Future<({int unread, List<Map<String, dynamic>> items})>
+  notifications() async {
+    final data = (await _dio.get('$_p/notifications')).data as Map;
+    return (
+      unread: (data['unread'] as num).toInt(),
+      items: _list(data['items']),
+    );
+  }
+
+  Future<void> readNotification(String id) async =>
+      _dio.post('$_p/notifications/$id/read');
+
+  Future<void> readAllNotifications() async =>
+      _dio.post('$_p/notifications/read-all');
+
   // --- Lokasi & absensi ---------------------------------------------------
   Future<List<Map<String, dynamic>>> sites() async =>
       _list((await _dio.get('$_p/sites')).data);

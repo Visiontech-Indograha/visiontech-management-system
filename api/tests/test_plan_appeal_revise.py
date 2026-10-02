@@ -49,14 +49,15 @@ def test_leader_appeals_a_published_plan_with_a_reason(client, world):
     assert response.status_code == 200, response.text
     assert response.json()["status"] == "APPEALED"
     assert _plan(plan_id) == ("APPEALED", 1, "Lokasi tidak sesuai survei")
-    assert _documents(plan_id) == [(1, "INITIAL_ORDER", "AWAITING_ACCEPTANCE")]   # dokumen lama tetap tercatat
+    # Alur SK v2: dokumen yang menunggu tanda tangan menjadi Tidak berlaku (tetap tercatat).
+    assert _documents(plan_id) == [(1, "INITIAL_ORDER", "SUPERSEDED")]
 
 
 def test_appeal_needs_a_reason_the_leader_and_a_published_plan(client, world):
     plan_id = _published(client, world)
 
     empty = _do(client, world, plan_id, "appeal", "leader", reason="   ")
-    assert empty.status_code == 422 and empty.json()["error"]["message"] == "Alasan banding wajib diisi."
+    assert empty.status_code == 422 and empty.json()["error"]["message"] == "Alasan adendum wajib diisi."
     for who in ("member", "pm"):
         assert _do(client, world, plan_id, "appeal", who).status_code == 403
     assert _plan(plan_id)[0] == "PUBLISHED"

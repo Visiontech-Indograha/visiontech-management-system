@@ -172,6 +172,11 @@ class PlanTransitionService:
         return await self.repo.get_plan(plan_id)
 
     async def start(self, plan_id: UUID, org_id: str, user_id: str, row_version: int) -> Any:
+        # Alur SK v2: SK biasanya sudah Berjalan otomatis pada tanggal mulai — "mulai" manual menjadi idempoten.
+        current = await self.repo.lock_plan(plan_id, org_id)
+        if current is not None and current.status == PlanStatus.IN_PROGRESS:
+            await self._leader_only(plan_id, user_id)
+            return await self.repo.get_plan(plan_id)
         plan = await self._load(plan_id, org_id, row_version, PlanStatus.ACCEPTED)
         await self._leader_only(plan_id, user_id)
         today = jakarta_now().date()  # jam server, bukan perangkat (aturan inti #3)

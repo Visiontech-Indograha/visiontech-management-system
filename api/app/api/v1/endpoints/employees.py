@@ -6,9 +6,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import CurrentUser, ensure_same_org, get_db_with_user, require_permission
+from app.api.deps import get_db_with_user, get_employee_service, require_permission
 from app.core.errors import AppError
 from app.core.permissions import Permission
+from app.core.security import CurrentUser
 from app.schemas.employee import (
     EmployeeAssignmentCreate,
     EmployeeAssignmentResponse,
@@ -18,6 +19,7 @@ from app.schemas.employee import (
     EmployeeResponse,
     EmployeeUpdate,
 )
+from app.services.access_service import ensure_same_org
 from app.services.employee_service import EmployeeService
 
 PRIVATE_FIELDS = ("email", "phone", "address", "birth_date", "emergency_contact")
@@ -40,7 +42,8 @@ async def get_employees(
     is_active: bool | None = None,
     q: str | None = None,
     current_user: CurrentUser = Depends(require_permission(Permission.VIEW_USERS)),
-    db: AsyncSession = Depends(get_db_with_user)
+    db: AsyncSession = Depends(get_db_with_user),
+    employee_service: EmployeeService = Depends(get_employee_service)
 ) -> EmployeeListResponse:
     offset = (page - 1) * size
     where_clauses = ["organization_id = :org", "deleted_at IS NULL"]  # karyawan terhapus disembunyikan (V-29)
@@ -70,7 +73,7 @@ async def get_employees(
     """)
     rows = (await db.execute(query, params)).fetchall()
     
-    scope = await EmployeeService(db).private_viewer(current_user.user_id, current_user.permissions)
+    scope = await employee_service.private_viewer(current_user.user_id, current_user.permissions)
     items = []
     for row in rows:
         items.append(_shown(EmployeeResponse(
@@ -88,7 +91,8 @@ async def get_employees(
 async def get_employee(
     emp_id: UUID,
     current_user: CurrentUser = Depends(require_permission(Permission.VIEW_USERS)),
-    db: AsyncSession = Depends(get_db_with_user)
+    db: AsyncSession = Depends(get_db_with_user),
+    employee_service: EmployeeService = Depends(get_employee_service)
 ) -> EmployeeResponse:
     """Satu karyawan (tautan langsung /directory/{id}); karyawan organisasi lain/terhapus → 404."""
     row = (await db.execute(text("""
@@ -100,7 +104,7 @@ async def get_employee(
     """), {"id": emp_id, "org": current_user.organization_id})).fetchone()
     if row is None:
         raise AppError("NOT_FOUND", "Karyawan tidak ditemukan.", status=404)
-    scope = await EmployeeService(db).private_viewer(current_user.user_id, current_user.permissions)
+    scope = await employee_service.private_viewer(current_user.user_id, current_user.permissions)
     return _shown(EmployeeResponse(**row._mapping), scope)
 
 @router.post("", response_model=EmployeeResponse, status_code=status.HTTP_201_CREATED)
@@ -191,10 +195,10 @@ async def update_employee(
 async def list_assignments(
     emp_id: UUID,
     current_user: CurrentUser = Depends(require_permission(Permission.VIEW_USERS)),
-    db: AsyncSession = Depends(get_db_with_user)
+    employee_service: EmployeeService = Depends(get_employee_service)
 ) -> list[EmployeeAssignmentResponse]:
     """Riwayat jabatan/penempatan (M2), terbaru dulu. Karyawan organisasi lain → 404."""
-    rows = await EmployeeService(db).assignments(emp_id, current_user.organization_id)
+    rows = await employee_service.assignments(emp_id, current_user.organization_id)
     return [EmployeeAssignmentResponse(**r._mapping) for r in rows]
 
 
@@ -203,11 +207,12 @@ async def add_assignment(
     emp_id: UUID,
     data: EmployeeAssignmentCreate,
     current_user: CurrentUser = Depends(require_permission(Permission.MANAGE_USERS)),
-    db: AsyncSession = Depends(get_db_with_user)
+    db: AsyncSession = Depends(get_db_with_user),
+    employee_service: EmployeeService = Depends(get_employee_service)
 ) -> EmployeeAssignmentResponse:
     """domain.js PROMOTE — mutasi/promosi; aturan di EmployeeService.promote."""
     await ensure_same_org(db, current_user.organization_id, units=[data.unit_id])
-    row = await EmployeeService(db).promote(emp_id, current_user.organization_id, data.position, data.unit_id,
+    row = await employee_service.promote(emp_id, current_user.organization_id, data.position, data.unit_id,
                                             data.valid_from)
     return EmployeeAssignmentResponse(**row._mapping)
 
@@ -216,30 +221,30 @@ async def offboard_employee(
     emp_id: UUID,
     data: EmployeeOffboard,
     current_user: CurrentUser = Depends(require_permission(Permission.MANAGE_USERS)),
-    db: AsyncSession = Depends(get_db_with_user)
+    employee_service: EmployeeService = Depends(get_employee_service)
 ) -> dict[str, Any]:
     """domain.js OFFBOARD: HR mengakhiri masa kerja (tidak boleh saat masih di SK berjalan)."""
-    return await EmployeeService(db).offboard(emp_id, current_user.organization_id, data.reason)
+    return await employee_service.offboard(emp_id, current_user.organization_id, data.reason)
 
 
 @router.post("/{emp_id}/archive")
 async def archive_employee(
     emp_id: UUID,
     current_user: CurrentUser = Depends(require_permission(Permission.MANAGE_USERS)),
-    db: AsyncSession = Depends(get_db_with_user),
+    employee_service: EmployeeService = Depends(get_employee_service),
 ) -> dict[str, Any]:
     """Hapus karyawan (V-29, keputusan pemilik): hanya yang sudah di-offboard; dibalik lewat /restore."""
-    return await EmployeeService(db).archive_employee(emp_id, current_user.organization_id)
+    return await employee_service.archive_employee(emp_id, current_user.organization_id)
 
 
 @router.post("/{emp_id}/restore")
 async def restore_employee(
     emp_id: UUID,
     current_user: CurrentUser = Depends(require_permission(Permission.MANAGE_USERS)),
-    db: AsyncSession = Depends(get_db_with_user),
+    employee_service: EmployeeService = Depends(get_employee_service),
 ) -> dict[str, Any]:
     """domain.js RESTORE_EMPLOYEE (V-29): HR memulihkan karyawan terhapus sebagai nonaktif."""
-    return await EmployeeService(db).restore_employee(emp_id, current_user.organization_id)
+    return await employee_service.restore_employee(emp_id, current_user.organization_id)
 
 @router.get("/{emp_id}/conflicts")
 async def check_conflicts(

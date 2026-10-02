@@ -3,9 +3,9 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import CurrentUser, get_db_with_user, require_permission
+from app.api.deps import get_db_with_user, get_document_service, require_permission
 from app.core.permissions import Permission
-from app.crud.crud_document import CRUDDocument
+from app.core.security import CurrentUser
 from app.schemas.document import (
     ExpiringDocumentList,
     ExpiringDocumentResponse,
@@ -59,10 +59,10 @@ async def get_expiring_documents(
 @router.get("/pending", response_model=PendingDocumentList)
 async def get_pending_documents(
     current_user: CurrentUser = Depends(require_permission(Permission.VERIFY_DOCUMENTS)),
-    db: AsyncSession = Depends(get_db_with_user),
+    document_service: DocumentService = Depends(get_document_service),
 ) -> PendingDocumentList:
     """Antrean verifikasi HR (P2-5): dokumen pribadi berstatus PENDING di organisasi ini, terlama dulu."""
-    rows = await DocumentService(CRUDDocument(db)).pending_queue(current_user.organization_id,
+    rows = await document_service.pending_queue(current_user.organization_id,
                                                                 current_user.user_id)
     return PendingDocumentList(items=[PendingDocument(**r._mapping) for r in rows])
 

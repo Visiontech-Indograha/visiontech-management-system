@@ -8,8 +8,8 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import PlanAccess
 from app.crud.crud_plan_day import CRUDPlanDay
+from app.services.access_service import PlanAccess
 
 
 class PlanDayService:

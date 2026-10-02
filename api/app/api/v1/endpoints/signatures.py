@@ -10,19 +10,12 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Request
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import Response
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import (
-    CurrentUser,
-    PlanAccess,
-    PlanNeed,
-    get_current_user,
-    get_db,
-    get_db_with_user,
-    plan_access,
-)
+from app.api.deps import get_current_user, get_public_signature_service, get_signature_service, plan_access
 from app.core.errors import AppError
+from app.core.security import CurrentUser
 from app.schemas.signature import PlanDocumentOut, RevokeRequest, SignatureOut, VerifyOut
+from app.services.access_service import PlanAccess, PlanNeed
 from app.services.pdf_service import html_to_pdf, render_plan_document_html
 from app.services.signature_service import SignatureService
 
@@ -58,22 +51,22 @@ def _rows(rows: list[Any], model: Any) -> list[Any]:
 
 @plan_documents_router.get("", response_model=list[PlanDocumentOut])
 async def list_plan_documents(access: PlanAccess = _VIEW_ACCESS,
-                              db: AsyncSession = Depends(get_db_with_user)) -> list[PlanDocumentOut]:
+                              signature_service: SignatureService = Depends(get_signature_service)) -> list[PlanDocumentOut]:
     """Dok 05 §3.3: SK, revisi, dan adendum beserta jumlah tanda tangan yang berlaku."""
-    return _rows(await SignatureService(db).list_plan_documents(access.plan.id), PlanDocumentOut)
+    return _rows(await signature_service.list_plan_documents(access.plan.id), PlanDocumentOut)
 
 
 @router.get("/documents/{document_id}/signatures", response_model=list[SignatureOut])
 async def list_signatures(document_id: UUID, current_user: CurrentUser = Depends(get_current_user),
-                          db: AsyncSession = Depends(get_db_with_user)) -> list[SignatureOut]:
-    return _rows(await SignatureService(db).list_signatures(current_user, document_id), SignatureOut)
+                          signature_service: SignatureService = Depends(get_signature_service)) -> list[SignatureOut]:
+    return _rows(await signature_service.list_signatures(current_user, document_id), SignatureOut)
 
 
 @router.get("/documents/{document_id}/pdf", response_class=Response)
 async def document_pdf(document_id: UUID, current_user: CurrentUser = Depends(get_current_user),
-                       db: AsyncSession = Depends(get_db_with_user)) -> Response:
+                       signature_service: SignatureService = Depends(get_signature_service)) -> Response:
     """PDF bertanda tangan + QR verifikasi (dok 05 §3.9). Render berat → threadpool (CLAUDE.md)."""
-    document, signatures = await SignatureService(db).document_with_qr(current_user, document_id)
+    document, signatures = await signature_service.document_with_qr(current_user, document_id)
     html = render_plan_document_html(document, signatures)
     pdf = await run_in_threadpool(html_to_pdf, html)
     filename = f"{document.number}-v{document.version}.pdf".replace("/", "-")
@@ -84,17 +77,17 @@ async def document_pdf(document_id: UUID, current_user: CurrentUser = Depends(ge
 @router.post("/signatures/{signature_id}/revoke")
 async def revoke_signature(signature_id: UUID, data: RevokeRequest,
                            current_user: CurrentUser = Depends(get_current_user),
-                           db: AsyncSession = Depends(get_db_with_user)) -> dict[str, str]:
+                           signature_service: SignatureService = Depends(get_signature_service)) -> dict[str, str]:
     """P6-6: pencabutan beserta alasan (PM unit/OPS SK tersebut); tercatat di audit."""
-    await SignatureService(db).revoke_signature(current_user, signature_id, data.reason)
+    await signature_service.revoke_signature(current_user, signature_id, data.reason)
     return {"message": "Tanda tangan dicabut."}
 
 
 @router.get("/verify/{token:path}", response_model=VerifyOut)
-async def verify_signature(token: str, request: Request, db: AsyncSession = Depends(get_db)) -> VerifyOut:
+async def verify_signature(token: str, request: Request, public_signature_service: SignatureService = Depends(get_public_signature_service)) -> VerifyOut:
     """PUBLIK: hasil pemindaian QR — hanya data yang perlu dilihat pemverifikasi (db/04 verify_signature_qr)."""
     _rate_limit(request.client.host if request.client else "unknown")
-    row = await SignatureService(db).verify(token)
+    row = await public_signature_service.verify(token)
     data = dict(row._mapping)
     data["state"] = str(data["state"])
     data["signer_role"] = str(data["signer_role"]) if data.get("signer_role") else None

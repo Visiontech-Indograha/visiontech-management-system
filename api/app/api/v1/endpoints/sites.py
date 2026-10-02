@@ -4,9 +4,10 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import CurrentUser, get_current_user, get_db_with_user, require_permission
+from app.api.deps import get_current_user, get_db_with_user, require_permission
 from app.core.errors import AppError
 from app.core.permissions import Permission
+from app.core.security import CurrentUser
 from app.schemas.attendance import GeoPoint, SiteCreate, SiteResponse
 
 router = APIRouter(prefix="/sites", tags=["Sites"])

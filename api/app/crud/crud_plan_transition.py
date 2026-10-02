@@ -102,14 +102,14 @@ class CRUDPlanTransition(CRUDBase):
             SELECT id, unit_id, site_id, number, title, location_text, description,
                    lower(period) AS period_start, upper(period) - 1 AS period_end,
                    status, pm_employee_id, leader_employee_id, revision, row_version, cancellation_reason,
-                   appeal_reason
+                   appeal_reason, category
             FROM vms.work_plan WHERE id = :id
             """,
             {"id": plan_id},
         )
 
     async def appeal(self, plan_id: UUID | str, reason: str) -> None:
-        """domain.js APPEAL: SK terbit → APPEALED dengan alasan; dokumen tidak diubah."""
+        """domain.js APPEAL (alur v2: Ajukan adendum): SK terbit → APPEALED dengan alasan."""
         await self.execute(
             """
             UPDATE vms.work_plan
@@ -118,6 +118,26 @@ class CRUDPlanTransition(CRUDBase):
             """,
             {"plan": plan_id, "reason": reason, "appealed": PlanStatus.APPEALED},
         )
+        # Alur SK v2: dokumen yang menunggu tanda tangan ketua tidak berlaku lagi (direvisi PM).
+        await self.execute(
+            "UPDATE vms.plan_document SET status = CAST(:superseded AS vms.document_status) "
+            "WHERE work_plan_id = :plan AND status = :awaiting",
+            {"plan": plan_id, "superseded": DocumentStatus.SUPERSEDED, "awaiting": DocumentStatus.AWAITING_ACCEPTANCE},
+        )
+
+    async def start_due(self, org_id: UUID | str, today: Any) -> list[str]:
+        """SK Diterima yang tanggal mulainya sudah tiba → Berjalan. Mengembalikan id yang berubah."""
+        rows = await self.fetchall(
+            """
+            UPDATE vms.work_plan
+               SET status = CAST(:running AS vms.plan_status), row_version = row_version + 1
+             WHERE organization_id = CAST(:org AS uuid) AND status = 'ACCEPTED' AND deleted_at IS NULL
+               AND lower(period) <= :today
+            RETURNING CAST(id AS text) AS id
+            """,
+            {"org": str(org_id), "today": today, "running": PlanStatus.IN_PROGRESS},
+        )
+        return [str(r.id) for r in rows]
 
     async def revise(self, plan_id: UUID | str) -> None:
         """domain.js REVISE: kembali ke DRAFT, revisi berikutnya; semua dokumen lama digantikan."""
@@ -169,20 +189,41 @@ class CRUDPlanTransition(CRUDBase):
             """
             SELECT jsonb_build_object(
               'plan', (SELECT to_jsonb(p) - 'row_version' FROM (
-                  SELECT id, unit_id, site_id, number, title, location_text, description,
-                   lower(period) AS period_start, upper(period) - 1 AS period_end,
-                   status, pm_employee_id, leader_employee_id, revision, row_version, cancellation_reason
-                  FROM vms.work_plan WHERE id = :plan) p),
+                  SELECT wp.id, wp.unit_id, wp.site_id, wp.number, wp.title, wp.location_text, wp.description,
+                   lower(wp.period) AS period_start, upper(wp.period) - 1 AS period_end,
+                   wp.status, wp.pm_employee_id, wp.leader_employee_id, wp.revision, wp.row_version,
+                   wp.cancellation_reason, wp.category, bu.name AS unit_name, s.description AS site_description,
+                   ST_Y(s.location::geometry) AS lat, ST_X(s.location::geometry) AS lng,
+                   pm.full_name AS pm_name, pm.position AS pm_position
+                  FROM vms.work_plan wp
+                  LEFT JOIN vms.business_unit bu ON bu.id = wp.unit_id
+                  LEFT JOIN vms.site s ON s.id = wp.site_id
+                  LEFT JOIN vms.employee pm ON pm.id = wp.pm_employee_id
+                  WHERE wp.id = :plan) p),
               'team', COALESCE((SELECT jsonb_agg(jsonb_build_object('employee_id', m.employee_id,
-                                        'full_name', e.full_name, 'role_in_plan', m.role_in_plan)
+                                        'full_name', e.full_name, 'position', e.position,
+                                        'role_in_plan', m.role_in_plan)
                                         ORDER BY m.role_in_plan, e.full_name)
                                 FROM vms.work_plan_member m JOIN vms.employee e ON e.id = m.employee_id
                                 WHERE m.work_plan_id = :plan AND upper_inf(m.valid_period)), '[]'),
               'days', COALESCE((SELECT jsonb_agg(jsonb_build_object('work_date', d.work_date, 'title', d.title,
-                                        'tasks', (SELECT COALESCE(jsonb_agg(t.title ORDER BY t.sort_order, t.title), '[]')
+                                        'tasks', (SELECT COALESCE(jsonb_agg(jsonb_build_object(
+                                                    'title', t.title, 'description', t.description,
+                                                    'files', (SELECT COALESCE(jsonb_agg(f.file_name
+                                                                ORDER BY ta.sort_order), '[]')
+                                                              FROM vms.work_plan_task_attachment ta
+                                                              JOIN vms.file_object f ON f.id = ta.file_id
+                                                              WHERE ta.task_id = t.id))
+                                                    ORDER BY t.sort_order, t.title), '[]')
                                                   FROM vms.work_plan_task t WHERE t.work_plan_day_id = d.id))
                                         ORDER BY d.work_date)
                                 FROM vms.work_plan_day d WHERE d.work_plan_id = :plan), '[]'),
+              'assets', COALESCE((SELECT jsonb_agg(jsonb_build_object('kind', a.kind, 'code', a.code,
+                                        'name', a.name, 'vehicle_type', a.vehicle_type, 'driver_name', de.full_name)
+                                        ORDER BY a.kind, a.name)
+                                FROM vms.asset_allocation al JOIN vms.asset a ON a.id = al.asset_id
+                                LEFT JOIN vms.employee de ON de.id = al.driver_employee_id
+                                WHERE al.work_plan_id = :plan AND al.released_at IS NULL), '[]'),
               'attachments', COALESCE((SELECT jsonb_agg(jsonb_build_object('file_id', a.file_id,
                                         'file_name', f.file_name) ORDER BY a.sort_order)
                                 FROM vms.work_plan_attachment a JOIN vms.file_object f ON f.id = a.file_id

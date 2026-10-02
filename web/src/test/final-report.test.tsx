@@ -34,6 +34,8 @@ const setup = (status: string, finalReport: unknown, incidents: unknown[] = []) 
     if (c.url === "/work-plans/p1/completion/pdf") return { data: new Blob(["%PDF"]) };
     if (c.url === "/work-plans/p1") return { data: plan(status) };
     if (c.url === "/work-plans/p1/members") return { data: team };
+    if (c.url === "/work-plans/p1/detail")
+      return { data: { plan: { ...plan(status), unit_name: "Infrastruktur" }, team, days: [], assets: [] } };
     if (c.url === "/work-plans/p1/completion") return { data: finalReport };
     if (c.url === "/hse/incidents") return { data: incidents };
     if (c.url === "/work-plans/p1/assets")
@@ -57,7 +59,7 @@ describe("detail SK: tim & laporan akhir", () => {
 
     const tim = screen.getByRole("region", { name: "Tim" });
     await waitFor(() => expect(within(tim).getByText("Asrul Mulya")).toBeInTheDocument());
-    expect(within(tim).getByText("Ketua")).toBeInTheDocument();
+    expect(within(tim).getByText("Ketua tim")).toBeInTheDocument();
     expect(within(tim).getByText("Anggota")).toBeInTheDocument();
   });
 

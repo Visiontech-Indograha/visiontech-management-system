@@ -29,6 +29,7 @@ GRANT SELECT ON ALL TABLES IN SCHEMA vms TO vms_readonly;
 GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA vms TO vms_app;
 -- Lampiran draf SK diganti seluruhnya (V-29) → perlu DELETE.
 GRANT DELETE ON work_plan_attachment TO vms_app;
+GRANT DELETE ON work_plan_task_attachment TO vms_app;   -- detail pekerjaan draf diganti seluruhnya (0018)
 -- Penghapusan permanen tidak diberikan: pengarsipan memakai kolom deleted_at.
 REVOKE DELETE ON ALL TABLES IN SCHEMA vms FROM vms_app;
 -- Audit tidak boleh disunting atau dihapus oleh aplikasi.

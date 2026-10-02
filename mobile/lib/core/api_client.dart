@@ -70,6 +70,9 @@ class ApiClient {
             retryOptions.extra['retriedAfterRefresh'] = true;
             final newToken = await _tokenStorage.readAccessToken();
             retryOptions.headers['Authorization'] = 'Bearer $newToken';
+            // FormData (unggahan berkas) hanya bisa dikirim sekali — kirim salinannya.
+            final data = retryOptions.data;
+            if (data is FormData) retryOptions.data = data.clone();
             final response = await dio.fetch(retryOptions);
             handler.resolve(response);
           } catch (_) {

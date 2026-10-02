@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 
 import '../../core/local_storage.dart';
@@ -6,6 +8,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
 
+import 'package:dio/dio.dart';
+
+import '../../core/api_client.dart';
 import '../../core/error_message.dart';
 import '../../core/location_helper.dart';
 import '../../core/photo_capture.dart';
@@ -28,6 +33,8 @@ class AttendanceScreen extends ConsumerStatefulWidget {
 
 class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
   List<Map<String, dynamic>> _records = [];
+  // R-34: absen luring yang belum terkirim (antrean bertanda tangan di HP).
+  List<Map<String, dynamic>> _offline = [];
   String? _serverToday;
   List<Map<String, dynamic>> _sites = [];
   String? _siteId;
@@ -56,12 +63,24 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       _error = null;
     });
     final engine = ref.read(syncEngineProvider);
+    final offline = engine.offlineAttendance;
+    _offline = await offline.pending();
     try {
+      String? anchor;
       final att = await engine.fetchList('attendance', () async {
         final res = await engine.api.myAttendance(employeeId: _employeeId);
         _serverToday = res.today;
+        anchor = res.timeAnchor;
         return res.items;
       });
+      // R-34: saat online, simpan jangkar jam server & daftarkan kunci Keystore untuk absen luring.
+      if (anchor != null) {
+        await offline.saveAnchor(anchor);
+        final auth = ref.read(authControllerProvider);
+        if (auth is AuthAuthenticated) {
+          await offline.ensureDeviceKey(auth.user.id).catchError((_) {});
+        }
+      }
       final sites = await engine.fetchList('sites', engine.api.sites);
       final plans = await engine.fetchList('work_plans', engine.api.workPlans);
       // Titik lokasi SK yang sedang berjalan (ditetapkan PM) didahulukan sebagai lokasi absen.
@@ -101,12 +120,34 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
   /// masuk selama ada sesi terbuka, jadi tombol absen pulang harus tetap muncul lewat tengah malam.
   /// Selain itu pakai tanggal dari server (zona waktu organisasi); jam HP hanya cadangan saat luring.
   Map<String, dynamic>? get _today {
+    // R-34: absen luring yang belum terkirim tampil sebagai absensi hari ini.
+    final offIn = _offline
+        .where((o) => o['kind'] == 'CHECK_IN' && o['dead'] != true)
+        .lastOrNull;
+    final offOut = _offline
+        .where((o) => o['kind'] == 'CHECK_OUT' && o['dead'] != true)
+        .lastOrNull;
+    String iso(Map o) =>
+        DateTime.fromMillisecondsSinceEpoch(o['device_time_ms'] as int)
+            .toIso8601String();
+    if (offIn != null) {
+      return {
+        'site_label': offIn['site_name'],
+        'check_in_at': iso(offIn),
+        'check_out_at': offOut == null ? null : iso(offOut),
+        'status': 'OFFLINE',
+      };
+    }
     // R-33: hanya sesi valid yang bisa absen pulang; absen hari lalu yang menunggu pemeriksaan tidak
     // mengunci hari baru, jadi tidak didahulukan di kartu "hari ini".
     for (final r in _records) {
       if (r['check_in_at'] != null &&
           r['check_out_at'] == null &&
           (r['status'] == 'AUTO_VALID' || r['status'] == 'APPROVED')) {
+        // Absen pulang luring yang belum terkirim: tampilkan jamnya & jangan tawarkan pulang lagi.
+        if (offOut != null) {
+          return {...r, 'check_out_at': iso(offOut), 'checkout_offline': true};
+        }
         return r;
       }
     }
@@ -180,6 +221,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
         if (explanation == null) return;
       }
       String? selfieId;
+      File? selfieFile;
       if (outside) {
         if (!mounted) return;
         final (file, err) = await captureWatermarkedPhoto(
@@ -194,20 +236,48 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
           if (err != null) _snack(err);
           return;
         }
-        selfieId = await ref.read(syncEngineProvider).api.uploadFile(file);
+        selfieFile = file;
       }
-      await ref
-          .read(syncEngineProvider)
-          .api
-          .checkIn(
-            siteId: site['id'] as String,
-            lat: pos.latitude,
-            lng: pos.longitude,
-            accuracyM: pos.accuracy,
-            selfieFileId: selfieId,
-            explanation: explanation,
-          );
-      _snack('Absen masuk tercatat.');
+      try {
+        if (selfieFile != null) {
+          selfieId = await ref
+              .read(syncEngineProvider)
+              .api
+              .uploadFile(selfieFile);
+        }
+        await ref
+            .read(syncEngineProvider)
+            .api
+            .checkIn(
+              siteId: site['id'] as String,
+              lat: pos.latitude,
+              lng: pos.longitude,
+              accuracyM: pos.accuracy,
+              selfieFileId: selfieId,
+              explanation: explanation,
+            );
+        _snack('Absen masuk tercatat.');
+      } on DioException catch (e) {
+        if (!isNetworkFailure(e)) rethrow;
+        // R-34: tanpa sinyal → rekam luring bertanda tangan, kirim otomatis saat online.
+        await ref
+            .read(syncEngineProvider)
+            .offlineAttendance
+            .record(
+              kind: 'CHECK_IN',
+              site: site,
+              lat: pos.latitude,
+              lng: pos.longitude,
+              accuracyM: pos.accuracy,
+              mocked: pos.isMocked,
+              gpsTime: pos.timestamp,
+              explanation: explanation,
+              selfie: selfieFile,
+            );
+        _snack(
+          'Tidak ada sinyal — absen masuk tersimpan luring dan dikirim otomatis saat online.',
+        );
+      }
       await _load();
     } catch (e) {
       _snack(apiErrorMessage(e));
@@ -221,11 +291,38 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     try {
       final pos = await _position();
       if (pos == null) return;
-      await ref
+      Future<void> recordOffline() => ref
           .read(syncEngineProvider)
-          .api
-          .checkOut(lat: pos.latitude, lng: pos.longitude);
-      _snack('Absen pulang tercatat.');
+          .offlineAttendance
+          .record(
+            kind: 'CHECK_OUT',
+            site: {'id': null, 'name': _today?['site_label']},
+            lat: pos.latitude,
+            lng: pos.longitude,
+            accuracyM: pos.accuracy,
+            mocked: pos.isMocked,
+            gpsTime: pos.timestamp,
+          );
+      if (_today?['status'] == 'OFFLINE') {
+        await recordOffline();
+        _snack(
+          'Absen pulang tersimpan luring dan dikirim otomatis saat online.',
+        );
+      } else {
+        try {
+          await ref
+              .read(syncEngineProvider)
+              .api
+              .checkOut(lat: pos.latitude, lng: pos.longitude);
+          _snack('Absen pulang tercatat.');
+        } on DioException catch (e) {
+          if (!isNetworkFailure(e)) rethrow;
+          await recordOffline();
+          _snack(
+            'Tidak ada sinyal — absen pulang tersimpan luring dan dikirim otomatis saat online.',
+          );
+        }
+      }
       await _load();
     } catch (e) {
       _snack(apiErrorMessage(e));
@@ -366,6 +463,8 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Sinkron latar selesai (mis. absen luring baru terkirim) → muat ulang kartu & riwayat.
+    ref.listen(syncTickProvider, (_, _) => _load());
     final today = _today;
     final auth = ref.watch(authControllerProvider);
     final name = auth is AuthAuthenticated
@@ -529,7 +628,20 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                                   ? null
                                   : _checkIn,
                             ),
-                          ] else if (today['status'] == 'REJECTED')
+                          ] else if ((today['status'] == 'OFFLINE' ||
+                                  today['checkout_offline'] == true) &&
+                              today['check_out_at'] != null)
+                            NoticeBanner(
+                              key: const Key('absen-luring-lengkap'),
+                              icon: Icons.cloud_upload_rounded,
+                              accent: Accent.indigo,
+                              text: today['status'] == 'OFFLINE'
+                                  ? 'Absen masuk & pulang tersimpan luring. Dikirim '
+                                        'otomatis saat ada sinyal.'
+                                  : 'Absen pulang tersimpan luring. Dikirim '
+                                        'otomatis saat ada sinyal.',
+                            )
+                          else if (today['status'] == 'REJECTED')
                             NoticeBanner(
                               key: const Key('absen-hari-ini-terkunci'),
                               icon: Icons.block_rounded,

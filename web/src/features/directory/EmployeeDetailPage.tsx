@@ -7,7 +7,7 @@ import { z } from "zod";
 import { useSession } from "@/app/session";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/button";
-import { TextField } from "@/components/ui/Field";
+import { SelectField, TextField } from "@/components/ui/Field";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog } from "@/components/ui/VmsDialog";
@@ -91,6 +91,7 @@ export function EmployeeDetailPage() {
           <Row label="Unit">{units.data?.find((u) => u.id === e.unit_id)?.name ?? null}</Row>
           <Row label="Akun">{e.is_active ? <Badge tone="success">Aktif</Badge> : <Badge>Nonaktif</Badge>}</Row>
           <Row label="Tanggal bergabung">{formatDate(e.join_date)}</Row>
+          <Row label="Absen lewat">{ATTENDANCE_MODE_LABEL[e.attendance_mode ?? "FIELD"]}</Row>
           {canSeePrivate && (
             <>
               <Row label="Email">{e.email}</Row>
@@ -131,9 +132,15 @@ const profileSchema = z.object({
   birth_date: optional,
   address: optional,
   emergency_contact: optional,
+  attendance_mode: z.enum(["FIELD", "OFFICE"], "Pilih cara absen."),
 });
 type ProfileValues = z.infer<typeof profileSchema>;
-const FIELDS = ["full_name", "email", "phone", "birth_date", "address", "emergency_contact"] as const;
+const FIELDS = ["full_name", "email", "phone", "birth_date", "address", "emergency_contact", "attendance_mode"] as const;
+/** FIELD = pekerja lapangan (absen di aplikasi HP), OFFICE = pekerja kantor (absen di web). */
+const ATTENDANCE_MODE_LABEL: Record<string, string> = {
+  FIELD: "Aplikasi HP (pekerja lapangan)",
+  OFFICE: "Web (pekerja kantor)",
+};
 
 function ProfileDialog({ employee, onClose }: { employee: Employee; onClose: () => void }) {
   const update = useUpdateEmployee(employee.id);
@@ -152,6 +159,7 @@ function ProfileDialog({ employee, onClose }: { employee: Employee; onClose: () 
       birth_date: employee.birth_date ?? "",
       address: employee.address ?? "",
       emergency_contact: employee.emergency_contact ?? "",
+      attendance_mode: employee.attendance_mode ?? "FIELD",
     },
   });
 
@@ -164,6 +172,7 @@ function ProfileDialog({ employee, onClose }: { employee: Employee; onClose: () 
       birth_date: v.birth_date || null,
       address: v.address || null,
       emergency_contact: v.emergency_contact || null,
+      attendance_mode: v.attendance_mode,
     };
     try {
       await update.mutateAsync(body);
@@ -205,6 +214,10 @@ function ProfileDialog({ employee, onClose }: { employee: Employee; onClose: () 
         <TextField label="Tanggal lahir" type="date" error={errors.birth_date?.message} {...register("birth_date")} />
         <TextField label="Alamat" error={errors.address?.message} {...register("address")} />
         <TextField label="Kontak darurat" error={errors.emergency_contact?.message} {...register("emergency_contact")} />
+        <SelectField label="Absen lewat" error={errors.attendance_mode?.message} {...register("attendance_mode")}>
+          <option value="FIELD">{ATTENDANCE_MODE_LABEL.FIELD}</option>
+          <option value="OFFICE">{ATTENDANCE_MODE_LABEL.OFFICE}</option>
+        </SelectField>
       </form>
     </Dialog>
   );

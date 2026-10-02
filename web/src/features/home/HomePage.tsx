@@ -147,7 +147,7 @@ function ExpiringDocumentsCard({ items }: { items: ExpiringList["items"] }) {
 export function HomePage() {
   const { me } = useSession();
   const perms = me?.permissions ?? [];
-  const canReview = perms.includes("review:attendance") || perms.includes("review:unit_attendance");
+  const canReview = perms.includes("review:attendance");
   const plans = useWorkPlans({ status: "", archived: false });
   const toReview = useAttendanceToReview(canReview);
   const canVerifyDocs = perms.includes("verify:documents");

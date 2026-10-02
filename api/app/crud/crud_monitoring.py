@@ -33,9 +33,10 @@ class CRUDMonitoring(CRUDBase):
             {"ids": employee_ids})
         return {row.id: row.full_name for row in rows}
 
-    async def attendance_recap(self, org_id: UUID | str, starts: date, ends: date,
-                               employee_id: str | None) -> list[Any]:
-        """Hitungan absensi per karyawan dalam [starts, ends); `employee_id` membatasi ke satu orang."""
+    async def attendance_recap(self, org_id: UUID | str, starts: date, ends: date, viewer_user_id: str,
+                               scope: str) -> list[Any]:
+        """Hitungan absensi per karyawan dalam [starts, ends). `scope` (R-33): 'all' (Finance/OPS),
+        'subordinates' (PM — pekerja lapangan di unitnya, tanpa dirinya), 'own' (milik sendiri)."""
         return list(await self.fetchall(
             """
             SELECT CAST(e.id AS text) AS employee_id, e.full_name,
@@ -47,9 +48,34 @@ class CRUDMonitoring(CRUDBase):
             FROM vms.attendance a
             JOIN vms.employee e ON e.id = a.employee_id
             WHERE a.organization_id = :org AND a.work_date >= :starts AND a.work_date < :ends
-              AND (CAST(:emp AS uuid) IS NULL OR a.employee_id = CAST(:emp AS uuid))
+              AND (CAST(:scope AS text) = 'all'
+                   OR (CAST(:scope AS text) = 'subordinates'
+                       AND vms.attendance_pm_subordinate(CAST(:viewer AS uuid), a.employee_id))
+                   OR (CAST(:scope AS text) = 'own'
+                       AND a.employee_id = (SELECT employee_id FROM vms.app_user WHERE id = CAST(:viewer AS uuid))))
             GROUP BY e.id, e.full_name
             ORDER BY e.full_name
             """,
-            {"org": org_id, "starts": starts, "ends": ends, "emp": employee_id},
+            {"org": org_id, "starts": starts, "ends": ends, "viewer": viewer_user_id, "scope": scope},
+        ))
+
+    async def attendance_recap_days(self, org_id: UUID | str, starts: date, ends: date, viewer_user_id: str,
+                                    scope: str) -> list[Any]:
+        """Riwayat per absensi (jam masuk & keluar) dalam [starts, ends), cakupan sama dengan rekap (R-33)."""
+        return list(await self.fetchall(
+            """
+            SELECT CAST(a.id AS text) AS id, CAST(e.id AS text) AS employee_id, e.full_name, a.work_date,
+                   a.site_label, a.check_in_at, a.check_out_at, CAST(a.status AS text) AS status,
+                   a.is_late, a.is_early_leave
+            FROM vms.attendance a
+            JOIN vms.employee e ON e.id = a.employee_id
+            WHERE a.organization_id = :org AND a.work_date >= :starts AND a.work_date < :ends
+              AND (CAST(:scope AS text) = 'all'
+                   OR (CAST(:scope AS text) = 'subordinates'
+                       AND vms.attendance_pm_subordinate(CAST(:viewer AS uuid), a.employee_id))
+                   OR (CAST(:scope AS text) = 'own'
+                       AND a.employee_id = (SELECT employee_id FROM vms.app_user WHERE id = CAST(:viewer AS uuid))))
+            ORDER BY a.work_date DESC, e.full_name, a.check_in_at DESC
+            """,
+            {"org": org_id, "starts": starts, "ends": ends, "viewer": viewer_user_id, "scope": scope},
         ))

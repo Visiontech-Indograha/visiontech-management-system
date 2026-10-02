@@ -122,8 +122,17 @@ def seeded_user(make_user: Callable[..., SeededUser]) -> SeededUser:
     return make_user("ADMIN")
 
 
+def login_platform(login: str) -> str:
+    """R-33: aplikasi HP hanya untuk staf lapangan, web hanya untuk akun kantor — uji login lewat
+    klien yang sesuai jenis pekerja akun (seperti aplikasi sungguhan)."""
+    rows = sync_query("SELECT e.attendance_mode FROM vms.app_user u LEFT JOIN vms.employee e ON e.id = u.employee_id "
+                      "WHERE u.login = %s", (login,))
+    return "mobile" if rows and rows[0][0] == "FIELD" else "web"
+
+
 def login_headers(client: TestClient, user: SeededUser) -> dict[str, str]:
-    response = client.post("/auth/login", json={"email": user.login, "password": user.password})
+    response = client.post("/auth/login", json={"email": user.login, "password": user.password,
+                                                "platform": login_platform(user.login)})
     assert response.status_code == 200, response.text
     return {"Authorization": f"Bearer {response.json()['access_token']}"}
 
@@ -175,7 +184,8 @@ class World:
 
     def headers(self, client: TestClient, who: str) -> dict[str, str]:
         if who not in self._headers:
-            response = client.post("/auth/login", json={"email": self.logins[who], "password": WORLD_PASSWORD})
+            response = client.post("/auth/login", json={"email": self.logins[who], "password": WORLD_PASSWORD,
+                                                        "platform": login_platform(self.logins[who])})
             assert response.status_code == 200, response.text
             self._headers[who] = {"Authorization": f"Bearer {response.json()['access_token']}"}
         return self._headers[who]
@@ -205,8 +215,10 @@ def _build_world() -> Iterator[World]:
             "INSERT INTO vms.business_unit (organization_id, code, name) VALUES (%s, 'CCTV_ACS', 'CCTV & ACS') RETURNING id",
             (org_id,))[0][0])
         site_id = str(sync_query(
-            "INSERT INTO vms.site (organization_id, name, location, radius_m) "
-            "VALUES (%s, 'Gudang uji', ST_GeogFromText('POINT(106.8 -6.2)'), 100) RETURNING id", (org_id,))[0][0])
+            # R-33: lokasi proyek milik unit uji — pekerja lapangan hanya absen di lokasi unitnya.
+            "INSERT INTO vms.site (organization_id, name, location, radius_m, unit_id) "
+            "VALUES (%s, 'Gudang uji', ST_GeogFromText('POINT(106.8 -6.2)'), 100, %s) RETURNING id",
+            (org_id, unit_id))[0][0])
         built = World(tag, org_id, unit_id, site_id)
         for who, (role, per_unit) in _WORLD_PEOPLE.items():
             built.add_person(who, role, per_unit=per_unit)

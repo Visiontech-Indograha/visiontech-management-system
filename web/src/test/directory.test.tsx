@@ -138,6 +138,7 @@ describe("halaman detail karyawan (HR)", () => {
       birth_date: "1990-05-01",
       address: null,
       emergency_contact: null,
+      attendance_mode: "FIELD",
     });
   });
 

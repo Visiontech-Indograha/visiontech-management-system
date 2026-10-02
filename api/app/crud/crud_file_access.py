@@ -14,7 +14,8 @@ from .base import CRUDBase
 
 class CRUDFileAccess(CRUDBase):
 
-    async def links(self, file_id: UUID | str, org_id: UUID | str, user_id: UUID | str) -> Any:
+    async def links(self, file_id: UUID | str, org_id: UUID | str, user_id: UUID | str,
+                    view_all_attendance: bool = False) -> Any:
         """None bila berkas tidak ada atau milik organisasi lain."""
         return await self.fetchone(
             """
@@ -28,6 +29,10 @@ class CRUDFileAccess(CRUDBase):
                    EXISTS (SELECT 1 FROM vms.attendance a
                            JOIN vms.app_user u ON u.employee_id = a.employee_id
                            WHERE a.selfie_file_id = f.id AND u.id = CAST(:user AS uuid)) AS own_selfie,
+                   EXISTS (SELECT 1 FROM vms.attendance a
+                           WHERE a.selfie_file_id = f.id
+                             AND vms.attendance_viewable(CAST(:viewer AS uuid), CAST(:view_all AS boolean),
+                                                         a.employee_id)) AS selfie_viewable,
                    ARRAY(
                        SELECT wd.work_plan_id FROM vms.report_evidence re
                        JOIN vms.daily_report dr ON dr.id = re.daily_report_id
@@ -43,5 +48,6 @@ class CRUDFileAccess(CRUDBase):
             FROM vms.file_object f
             WHERE f.id = CAST(:file AS uuid) AND f.organization_id = CAST(:org AS uuid)
             """,
-            {"file": str(file_id), "org": org_id, "user": user_id},
+            {"file": str(file_id), "org": org_id, "user": user_id,
+             "viewer": str(user_id), "view_all": view_all_attendance},
         )

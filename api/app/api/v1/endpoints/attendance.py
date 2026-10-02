@@ -50,11 +50,12 @@ async def list_attendance(
     current_user: CurrentUser = Depends(get_current_user),
     attendance_session_service: AttendanceSessionService = Depends(get_attendance_session_service)
 ) -> AttendanceListResponse:
-    """Dok 05 §3.5. FINANCE/HR/OPS/ADMIN: seluruh organisasi; lainnya: hanya milik sendiri.
-    Filter `plan_id` di dok 05 belum didukung — absensi belum tertaut ke SK (dok 10 Bagian C)."""
+    """Dok 05 §3.5 · R-33: Finance & OPS seluruh organisasi; PM miliknya + bawahan lapangan di unitnya;
+    lainnya hanya milik sendiri. Filter `plan_id` di dok 05 belum didukung (dok 10 Bagian C)."""
     service = attendance_session_service
     rows, total = await service.list_attendance(
-        current_user.organization_id, current_user.user_id, current_user.roles,
+        current_user.organization_id, current_user.user_id,
+        view_all=Permission.VIEW_ALL_ATTENDANCE.value in current_user.permissions,
         employee_id=employee_id, date_from=date_from, date_to=date_to, status=status, page=page, size=size)
     return AttendanceListResponse(items=[_response(r) for r in rows], total=total, page=page, size=size,
                                   today=await service.today(current_user.organization_id))
@@ -67,12 +68,14 @@ async def check_in(
     db: AsyncSession = Depends(get_db_with_user),
     attendance_session_service: AttendanceSessionService = Depends(get_attendance_session_service)
 ) -> AttendanceResponse:
-    """P4-2 · domain.js CHECK_IN. Waktu, tanggal, jarak, dan status dari server (aturan inti #3)."""
+    """P4-2 · domain.js CHECK_IN. Waktu, tanggal, jarak, dan status dari server (aturan inti #3).
+    Pekerja lapangan lewat HP (`channel` MOBILE), pekerja kantor lewat web (`channel` WEB)."""
     await ensure_same_org(db, current_user.organization_id, sites=[data.site_id], files=[data.selfie_file_id])
     row = await attendance_session_service.check_in(
         current_user.organization_id, current_user.user_id, site_id=data.site_id,
         lng=data.location.lng, lat=data.location.lat, origin=data.location_origin,
         accuracy_m=data.accuracy_m, selfie_file_id=data.selfie_file_id, face_result=data.face_result, face_similarity=data.face_similarity,
+        channel=data.channel, explanation=data.explanation,
     )
     return _response(row)
 
@@ -83,8 +86,8 @@ async def check_out(
     current_user: CurrentUser = Depends(get_current_user),
     attendance_session_service: AttendanceSessionService = Depends(get_attendance_session_service)
 ) -> AttendanceResponse:
-    """domain.js CHECK_OUT — menutup sesi terbuka milik sendiri."""
-    return _response(await attendance_session_service.check_out(current_user.user_id))
+    """domain.js CHECK_OUT — menutup sesi terbuka milik sendiri, dari kanal sesuai jenis pekerja."""
+    return _response(await attendance_session_service.check_out(current_user.user_id, data.channel))
 
 
 @router.post("/{att_id}/explain")
@@ -103,13 +106,13 @@ async def explain_attendance(
 async def review_attendance(
     att_id: UUID,
     data: ReviewRequest,
-    current_user: CurrentUser = Depends(require_permission(Permission.REVIEW_UNIT_ATTENDANCE)),
+    current_user: CurrentUser = Depends(require_permission(Permission.REVIEW_ATTENDANCE)),
     attendance_session_service: AttendanceSessionService = Depends(get_attendance_session_service)
 ) -> dict[str, str]:
-    """P4-4 · domain.js REVIEW_ATTENDANCE: Finance seluruh organisasi; PM unitnya, OPS lintas unit (R-10)."""
+    """P4-4 · domain.js REVIEW_ATTENDANCE · R-33: PM → bawahan lapangan, Finance → kantor non-Finance,
+    OPS → Finance; tidak pernah absensi sendiri."""
     status = await attendance_session_service.review_attendance(
-        current_user.organization_id, current_user.user_id, att_id, data.is_approved, data.note,
-        review_all=Permission.REVIEW_ATTENDANCE in current_user.permissions)
+        current_user.organization_id, current_user.user_id, att_id, data.is_approved, data.note)
     return {"message": f"Absensi di-{status.lower()}."}
 
 
@@ -117,7 +120,7 @@ async def review_attendance(
 async def export_attendance(
     start_date: date,
     end_date: date,
-    current_user: CurrentUser = Depends(require_permission(Permission.REVIEW_ATTENDANCE)),
+    current_user: CurrentUser = Depends(require_permission(Permission.EXPORT_ATTENDANCE)),
     db: AsyncSession = Depends(get_db_with_user)
 ) -> str:
     """P4-5: Ekspor CSV untuk Finance. Jam dalam zona waktu organisasi (sebelumnya tercetak UTC)."""

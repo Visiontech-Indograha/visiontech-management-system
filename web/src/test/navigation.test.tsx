@@ -15,7 +15,9 @@ describe("menu berdasarkan izin API", () => {
     expect(labels(["manage:users"])).toEqual(["Beranda", "Work plan", "Absensi", "Rekap absensi", "Kendaraan & alat"]);
     expect(labels(["view:documents"])).toEqual(["Beranda", "Work plan", "Absensi", "Rekap absensi", "Kendaraan & alat", "Berkas saya"]);
     expect(labels(["view:audit"])).toEqual(["Beranda", "Work plan", "Absensi", "Rekap absensi", "Kendaraan & alat", "Audit log"]);
-    expect(labels(["create:plan"])).toEqual(["Beranda", "Work plan", "Absensi", "Rekap absensi", "Rekap lembur", "Kendaraan & alat", "Lokasi kerja"]);
+    expect(labels(["create:plan"])).toEqual(["Beranda", "Work plan", "Absensi", "Rekap absensi", "Rekap lembur", "Kendaraan & alat"]);
+    // R-33: lokasi kerja dikelola PM (proyek) & Finance (kantor) lewat manage:sites.
+    expect(labels(["manage:sites"])).toEqual(["Beranda", "Work plan", "Absensi", "Rekap absensi", "Kendaraan & alat", "Lokasi kerja"]);
     expect(labels(["review:overtime"])).toEqual(["Beranda", "Work plan", "Absensi", "Rekap absensi", "Rekap lembur", "Kendaraan & alat"]);
   });
 
@@ -23,7 +25,9 @@ describe("menu berdasarkan izin API", () => {
     expect(Object.keys(MOCK_PERMISSIONS).sort()).toEqual(
       ["ADMIN", "ASSET", "FINANCE", "HR", "OPS", "PM", "field"].sort(),
     );
-    expect(MOCK_PERMISSIONS.ADMIN).toEqual([...PERMISSIONS]);
+    // R-33: Admin tidak melihat/meninjau absensi orang lain dan tidak mengelola lokasi.
+    const adminExcluded = ["view:all_attendance", "review:attendance", "export:attendance", "manage:sites"];
+    expect(MOCK_PERMISSIONS.ADMIN).toEqual(PERMISSIONS.filter((p) => !adminExcluded.includes(p)));
     for (const permissions of Object.values(MOCK_PERMISSIONS)) {
       for (const permission of permissions) expect(PERMISSIONS).toContain(permission);
     }

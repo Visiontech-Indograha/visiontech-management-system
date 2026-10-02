@@ -67,16 +67,19 @@ class VmsApi {
     required double lng,
     double? accuracyM,
     String? selfieFileId,
+    String? explanation,
   }) async {
     final res = await _dio.post(
       '$_p/attendance/check-in',
       data: {
+        'channel': 'MOBILE',
         'site_id': siteId,
         'location': {'lat': lat, 'lng': lng},
         'location_origin': 'GPS',
         'accuracy_m': ?accuracyM,
         'selfie_file_id': ?selfieFileId,
         if (selfieFileId != null) 'face_result': 'SKIPPED',
+        'explanation': ?explanation,
       },
     );
     return Map<String, dynamic>.from(res.data as Map);
@@ -89,6 +92,7 @@ class VmsApi {
     final res = await _dio.post(
       '$_p/attendance/check-out',
       data: {
+        'channel': 'MOBILE',
         'location': {'lat': lat, 'lng': lng},
         'location_origin': 'GPS',
       },

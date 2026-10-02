@@ -1,6 +1,7 @@
 """
-GET /attendance (dok 05 §3.5). Siapa melihat apa mengikuti prototipe (operations.js attendance()):
-FINANCE, HR, OPS — dan ADMIN — melihat seluruh absensi organisasinya; selain itu hanya milik sendiri.
+GET /attendance (dok 05 §3.5). Siapa melihat apa — R-33 (keputusan pemilik 2026-10-02, menggantikan R-10):
+FINANCE & OPS melihat seluruh absensi organisasinya; PM miliknya + bawahan lapangan di unitnya;
+HR, ASSET, ADMIN, dan lainnya hanya milik sendiri.
 Filter: employee_id, from, to, status. Organisasi lain tidak pernah terlihat.
 """
 from __future__ import annotations
@@ -26,6 +27,7 @@ def _check_in(client, world: World, who: str, location=INSIDE) -> str:
         Image.new("RGB", (32, 32), (sum(map(ord, who)) % 255, 40, 200)).save(buf, "PNG")
         body["selfie_file_id"] = client.post("/files/upload", headers=world.headers(client, who), files={
             "file": ("s.png", buf.getvalue(), "image/png")}).json()["file_id"]
+        body["explanation"] = "Survei titik di luar lokasi"  # R-33: wajib di luar zona
     response = client.post("/attendance/check-in", headers=world.headers(client, who), json=body)
     assert response.status_code == 200, response.text
     return response.json()["id"]
@@ -48,8 +50,8 @@ def day(client, world, other_world, fake_storage):
     }
 
 
-@pytest.mark.parametrize("who", ["finance", "hr", "ops", "admin"])
-def test_reviewers_see_the_whole_organisation_but_nothing_else(client, world, day, who):
+@pytest.mark.parametrize("who", ["finance", "ops"])
+def test_finance_and_ops_see_the_whole_organisation_but_nothing_else(client, world, day, who):
     listed = _list(client, world, who)
     ids = {a["id"] for a in listed["items"]}
 
@@ -59,7 +61,7 @@ def test_reviewers_see_the_whole_organisation_but_nothing_else(client, world, da
 
 
 def test_pm_sees_attendance_of_their_unit_but_not_other_organisations(client, world, day):
-    # R-10: PM memvalidasi absensi unitnya sendiri, jadi daftar PM memuat absensi karyawan unitnya.
+    # R-33: PM meninjau bawahan lapangan di unitnya, jadi daftar PM memuat miliknya + bawahannya.
     ids = {a["id"] for a in _list(client, world, "pm")["items"]}
     assert {day["member"], day["leader"], day["pm"]} <= ids
     assert day["foreign"] not in ids
@@ -67,7 +69,7 @@ def test_pm_sees_attendance_of_their_unit_but_not_other_organisations(client, wo
     assert [a["id"] for a in by_leader["items"]] == [day["leader"]]
 
 
-@pytest.mark.parametrize("who", ["member", "leader", "asset"])
+@pytest.mark.parametrize("who", ["member", "leader", "asset", "hr", "admin"])
 def test_everyone_else_sees_only_their_own(client, world, day, who):
     listed = _list(client, world, who, employee_id=world.employees["leader"])   # upaya melihat milik orang lain
 

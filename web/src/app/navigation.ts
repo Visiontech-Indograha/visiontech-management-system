@@ -34,7 +34,7 @@ export const NAV_ITEMS: NavItem[] = [
   { path: "/assets", label: "Kendaraan & alat", icon: Truck },
   { path: "/my-documents", label: "Berkas saya", icon: FolderOpen, requires: ["view:documents"] },
   { path: "/directory", label: "Direktori", icon: BookUser, requires: ["view:users"] },
-  { path: "/sites", label: "Lokasi kerja", icon: MapPin, requires: ["create:plan"] },
+  { path: "/sites", label: "Lokasi kerja", icon: MapPin, requires: ["manage:sites"] },
   { path: "/audit-logs", label: "Audit log", icon: ScrollText, requires: ["view:audit"] },
 ];
 

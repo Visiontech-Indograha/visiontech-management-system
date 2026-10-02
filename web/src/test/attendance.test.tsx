@@ -16,6 +16,9 @@ const row = (over: Record<string, unknown> = {}) => ({
   status: "NEEDS_REVIEW",
   explanation: null,
   reviewed_at: null,
+  employee_name: "Budi",
+  selfie_file_id: null,
+  can_review: true, // R-33: tombol Tinjau mengikuti penanda server
   ...over,
 });
 const employees = { items: [{ id: "e1", full_name: "Budi", position: "Teknisi", employee_no: "1", join_date: "2024-01-01", is_active: true }], total: 1, page: 1, size: 100 };
@@ -45,7 +48,11 @@ describe("Absensi", () => {
   });
 
   it("karyawan memberi penjelasan", async () => {
-    const calls = setup((url) => (url === "/attendance/a1/explain" ? { data: { message: "Penjelasan ditambahkan." } } : undefined));
+    // Absensi milik sendiri (karyawan tiruan "e-lead"), bukan wewenang tinjau.
+    const own = { data: { items: [row({ employee_id: "e-lead", can_review: false })], total: 1, page: 1, size: 50 } };
+    const calls = setup((url) =>
+      url === "/attendance/a1/explain" ? { data: { message: "Penjelasan ditambahkan." } } : url === "/attendance" ? own : undefined,
+    );
     renderRoute("/attendance", { role: "field" });
     fireEvent.click(await screen.findByRole("button", { name: "Beri penjelasan" }));
     const dialog = screen.getByRole("dialog", { name: "Beri penjelasan" });

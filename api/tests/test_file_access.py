@@ -55,8 +55,9 @@ def test_attendance_selfie_is_only_for_its_owner_and_reviewers(client, world, fa
         "site_id": world.site_id, "location": {"lat": -6.2, "lng": 106.8}, "selfie_file_id": file_id})
     assert check_in.status_code == 200, check_in.text
 
-    _expect(client, world, file_id, allowed={"member", "finance", "admin"},
-            denied={"leader", "pm", "ops", "hr", "asset"})
+    # R-33: swafoto terlihat oleh yang boleh melihat absensinya — pemilik, PM unitnya, Finance & OPS.
+    _expect(client, world, file_id, allowed={"member", "pm", "finance", "ops"},
+            denied={"leader", "hr", "asset", "admin"})
 
 
 def test_incident_evidence_follows_plan_visibility(client, world, fake_storage):

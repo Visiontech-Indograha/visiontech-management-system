@@ -18,6 +18,7 @@ from app.api.v1.endpoints.files import router as files_router
 from app.api.v1.endpoints.hse import days_router as daily_report_router
 from app.api.v1.endpoints.hse import router as hse_router
 from app.api.v1.endpoints.monitoring import router as monitoring_router
+from app.api.v1.endpoints.notifications import router as notifications_router
 from app.api.v1.endpoints.overtime import overtime_router
 from app.api.v1.endpoints.overtime import recaps_router as overtime_recaps_router
 from app.api.v1.endpoints.signatures import plan_documents_router
@@ -67,3 +68,4 @@ api_router.include_router(assets_router)
 api_router.include_router(plan_assets_router)
 api_router.include_router(overtime_router)
 api_router.include_router(overtime_recaps_router)
+api_router.include_router(notifications_router)

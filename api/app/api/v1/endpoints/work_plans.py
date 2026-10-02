@@ -2,6 +2,7 @@ from datetime import date
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import HTMLResponse
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,6 +11,8 @@ from app.api.deps import (
     get_current_user,
     get_db_with_user,
     get_plan_assignment_service,
+    get_plan_draft_service,
+    get_plan_transition_service,
     plan_access,
     plan_day_access,
     require_permission,
@@ -31,6 +34,14 @@ from app.schemas.plan import (
     WorkPlanResponse,
     WorkPlanUpdate,
 )
+from app.schemas.plan_draft import (
+    FormAsset,
+    FormPerson,
+    FormSite,
+    PlanDetailOut,
+    PlanDraftRequest,
+    PlanFormOptions,
+)
 from app.services.access_service import (
     PlanAccess,
     PlanNeed,
@@ -38,7 +49,10 @@ from app.services.access_service import (
     ensure_same_org,
     require_plan_status,
 )
+from app.services.pdf_service import render_plan_preview_html
 from app.services.plan_assignment_service import PlanAssignmentService
+from app.services.plan_draft_service import PlanDraftService
+from app.services.plan_transition_service import PlanTransitionService
 
 router = APIRouter(prefix="/work-plans", tags=["Work Plans"])  # jalur dok 05 §3.3 (V-16)
 _VIEW_ACCESS = Depends(plan_access(PlanNeed.VIEW))
@@ -63,15 +77,58 @@ async def assignment_options(
         personnel_options=[AssignmentEmployeeOption(**row._mapping) for row in values["personnel_options"]],
     )
 
+@router.get("/form-options", response_model=PlanFormOptions)
+async def form_options(
+    plan_id: UUID | None = None,
+    current_user: CurrentUser = Depends(require_permission(Permission.CREATE_PLAN)),
+    plan_draft_service: PlanDraftService = Depends(get_plan_draft_service),
+) -> PlanFormOptions:
+    """Pilihan form "Buat SK" alur v2 (SK2-A/B). `plan_id` = draf yang sedang diubah (pilihannya ikut tampil)."""
+    values = await plan_draft_service.form_options(current_user, plan_id)
+    return PlanFormOptions(
+        unit_name=values["unit_name"], categories=values["categories"],
+        sites=[FormSite(**r._mapping) for r in values["sites"]],
+        leaders=[FormPerson(**r._mapping) for r in values["leaders"]],
+        members=[FormPerson(**r._mapping) for r in values["members"]],
+        tools=[FormAsset(**r._mapping) for r in values["tools"]],
+        vehicles=[FormAsset(**r._mapping) for r in values["vehicles"]],
+    )
+
+
+@router.get("/driver-options", response_model=list[UUID])
+async def driver_options(
+    vehicle_id: UUID,
+    period_end: date,
+    candidate_ids: list[UUID] = Query(default=[]),
+    plan_id: UUID | None = None,
+    current_user: CurrentUser = Depends(require_permission(Permission.CREATE_PLAN)),
+    plan_draft_service: PlanDraftService = Depends(get_plan_draft_service),
+) -> list[str]:
+    """Calon driver dari ketua + anggota terpilih yang ber-SIM sesuai tipe kendaraan dan tidak terikat SK lain."""
+    return await plan_draft_service.driver_options(current_user, vehicle_id, candidate_ids, period_end, plan_id)
+
+
+@router.post("/full", response_model=PlanDetailOut, status_code=status.HTTP_201_CREATED)
+async def create_full_plan(
+    data: PlanDraftRequest,
+    current_user: CurrentUser = Depends(require_permission(Permission.CREATE_PLAN)),
+    plan_draft_service: PlanDraftService = Depends(get_plan_draft_service),
+) -> PlanDetailOut:
+    """Buat SK lengkap dalam satu transaksi (alur v2) → status Draf."""
+    return PlanDetailOut(**await plan_draft_service.create_plan(current_user, data))
+
+
 @router.get("", response_model=list[WorkPlanResponse])
 async def get_plans(
     status_filter: str | None = None,
     archived: bool = False,
     current_user: CurrentUser = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db_with_user)
+    db: AsyncSession = Depends(get_db_with_user),
+    plan_transition_service: PlanTransitionService = Depends(get_plan_transition_service),
 ) -> list[WorkPlanResponse]:
     """Hanya SK yang terlihat oleh pengguna (V-07, `domain.js` visiblePlans). `archived=true`: draf
-    terarsip — hanya untuk pengelola (V-21)."""
+    terarsip — hanya untuk pengelola (V-21). SK Diterima yang tanggal mulainya tiba dijalankan dulu (alur v2)."""
+    await plan_transition_service.start_due_plans(current_user.organization_id)
     rows = await CRUDPlanAccess(db).visible_plans(current_user.organization_id, current_user.user_id,
                                                   status_filter, archived)
     return [WorkPlanResponse(**row._mapping) for row in rows]
@@ -79,6 +136,37 @@ async def get_plans(
 @router.get("/{plan_id}", response_model=WorkPlanResponse)
 async def get_plan(access: PlanAccess = _VIEW_ACCESS) -> WorkPlanResponse:
     return WorkPlanResponse(**access.plan._mapping)
+
+
+@router.get("/{plan_id}/detail", response_model=PlanDetailOut)
+async def get_plan_detail(
+    plan_id: UUID,
+    access: PlanAccess = _VIEW_ACCESS,
+    plan_draft_service: PlanDraftService = Depends(get_plan_draft_service),
+) -> PlanDetailOut:
+    """Isi lengkap SK: data umum, lokasi, tim, detail pekerjaan per hari, alat & kendaraan."""
+    return PlanDetailOut(**await plan_draft_service.detail(plan_id))
+
+
+@router.put("/{plan_id}/full", response_model=PlanDetailOut)
+async def edit_full_plan(
+    plan_id: UUID,
+    data: PlanDraftRequest,
+    access: PlanAccess = _PM_UNIT_ACCESS,
+    plan_draft_service: PlanDraftService = Depends(get_plan_draft_service),
+) -> PlanDetailOut:
+    """Ubah isi SK berstatus Draf (termasuk draf revisi setelah adendum diminta) dalam satu transaksi."""
+    return PlanDetailOut(**await plan_draft_service.edit_draft(access.user, plan_id, data))
+
+
+@router.get("/{plan_id}/preview", response_class=HTMLResponse)
+async def preview_plan(
+    plan_id: UUID,
+    access: PlanAccess = _VIEW_ACCESS,
+    plan_draft_service: PlanDraftService = Depends(get_plan_draft_service),
+) -> HTMLResponse:
+    """Pratinjau A4 draf SK ("Sunting SK", SK2-C) — format sama dengan dokumen terbit."""
+    return HTMLResponse(render_plan_preview_html(await plan_draft_service.detail(plan_id)))
 
 @router.post("", response_model=WorkPlanResponse, status_code=status.HTTP_201_CREATED)
 async def create_plan(

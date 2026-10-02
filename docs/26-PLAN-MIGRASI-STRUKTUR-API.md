@@ -3,6 +3,8 @@
 **Dasar:** keputusan pemilik 2026-09-29 (R-28, **kritis**): `api/` wajib mengikuti struktur
 `docs/12` §1 (`api/v1/endpoints`, `api/deps.py`, `core/`, `models/`, `schemas/`, `crud/`, `services/`,
 `main.py`, `dependencies.py`), supaya mudah dibaca, di-debug, dan dirawat.
+
+> **Koreksi R-30 (2026-09-30):** target struktur = **persis contoh pemilik** (docs/12 §1): koneksi & sesi di `app/db/session.py` (+ `db/base.py` saat model dibuat), **tanpa** `core/database.py` dan **tanpa** `app/dependencies.py`; perakitan service di `api/deps.py`. Hasil M1 dipindah ke `app/db/session.py` dalam commit M5.
 **Prinsip:**
 - **Perilaku API tidak boleh berubah.** Pemindahan ≠ penulisan ulang.
 - Satu langkah = satu commit = semua uji hijau, ditambah uji nyata singkat (aturan pemilik 2026-09-29).
@@ -18,10 +20,10 @@
 | `api/deps.py` | 1 | `api/deps.py` | tetap |
 | `api/guards.py` | 1 | `api/deps.py` | penjaga akses SK adalah `Depends`, dipindah ke `api/deps.py` (bagian "Penjaga akses") |
 | rakitan `APIRouter` di `main.py` | — | `api/v1/router.py` | `main.py` hanya memasang satu router |
-| `db/session.py`, `db/context.py`, `db/transaction.py` | 3 | `core/database.py` | satu berkas; `SEARCH_PATH`, `make_engine`, `AsyncSessionLocal`, `SET LOCAL`, transaksi |
+| `db/session.py`, `db/context.py`, `db/transaction.py` | 3 | `db/session.py` (R-30; sempat `core/database.py`) | satu berkas; `SEARCH_PATH`, `make_engine`, `AsyncSessionLocal`, `SET LOCAL`, transaksi |
 | `repositories/*_repo.py` | 25 | `crud/crud_<entitas>.py` | `base_repo.py` → `crud/base.py`; kelas `XxxRepo` → `CRUDXxx` |
 | `controllers/auth_controller.py` | 1 | `services/auth_service.py` | orkestrasi digabung; folder `controllers/` dihapus |
-| pembuat service tersebar di router (`Service(Repo(db))`) | ±60 | `dependencies.py` | `get_<nama>_service(db=Depends(get_db_with_user))` |
+| pembuat service tersebar di router (`Service(Repo(db))`) | ±60 | `api/deps.py` (R-30) | `get_<nama>_service(db=Depends(get_db_with_user))` |
 | `schemas/*.py` | 9 | `schemas/<entitas>.py` | skema yang masih didefinisikan di router ikut dipindah (M2) |
 | `models/` | 0 | `models/<entitas>.py` | dibuat bertahap. Sekarang kueri SQL mentah, jadi `models/` diisi saat sebuah modul memakai SQLModel (lihat §3 Keputusan) |
 | `core/*` (13 berkas) | 13 | `core/*` | tetap; `core` tidak boleh mengimpor lapisan lain |
@@ -33,11 +35,11 @@
 | Tahap | Isi | Risiko | Bukti selesai |
 |---|---|---|---|
 | **M0** | Penjaga struktur: `tests/test_structure.py` + snapshot OpenAPI | Rendah | uji baru hijau; snapshot tersimpan — **selesai 2026-09-30** |
-| **M1** | `db/*` → `core/database.py` | Rendah | suite hijau; OpenAPI identik — **selesai 2026-09-30** |
+| **M1** | `db/*` disatukan ke satu berkas sesi | Rendah | suite hijau; OpenAPI identik — **selesai 2026-09-30**; letak dikoreksi ke `db/session.py` (R-30) |
 | **M2** | Router → `api/v1/endpoints/` + `api/v1/router.py`; `guards.py` → `api/deps.py` | Sedang (impor banyak) | suite hijau; OpenAPI **identik byte-per-byte** — **selesai 2026-09-30** ; butir 5 (skema keluar dari endpoint) selesai sebagai M2b |
 | **M3** | `repositories/` → `crud/` (nama `crud_<entitas>.py`) | Sedang | suite hijau; tidak ada `repositories` tersisa — **selesai 2026-09-30** |
 | **M4** | `controllers/` → `services/` | Rendah | suite hijau — **selesai 2026-09-30** (`services/auth_flow.py`) |
-| **M5** | `dependencies.py` (perakitan service) | Rendah | endpoint tidak lagi `Service(Repo(db))` |
+| **M5** | Perakitan service di `api/deps.py`; `CurrentUser` → `core/security.py`; penjaga SK → `services/access_service.py` | Rendah | endpoint tidak lagi `Service(Repo(db))`; service tidak mengimpor `api` — **selesai 2026-09-30** |
 | **M6** | Per modul: SQL keluar dari endpoint ke `crud`, `HTTPException` → `AppError` (= R-25b / O-02). Urutan: `plans` → `attendance` → `employees` → `assets` → `hse` → `files` → `sites` → `audit` → `expiry` | Sedang per modul | modul keluar dari daftar `LEGACY` di `test_router_layering.py` |
 | **M7** | `pyproject.toml` | Rendah | CI & Docker tetap hijau |
 | **M8** | Dokumen: `docs/12`, `PETA-KODE.md`, `CLAUDE.md`, docs/23 | — | tidak ada rujukan jalur lama |

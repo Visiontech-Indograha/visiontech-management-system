@@ -17,11 +17,13 @@ typedef VoidCallback = void Function();
 /// diisi belakangan (bukan lewat constructor) supaya tidak ada dependency
 /// melingkar dengan provider auth yang justru memakai ApiClient ini.
 class ApiClient {
-  ApiClient({required TokenStorage tokenStorage})
+  /// [baseUrl]: bawaan [ApiConfig.baseUrl]; diisi uji yang memakai server HTTP lokal.
+  ApiClient({required TokenStorage tokenStorage, String? baseUrl})
     : _tokenStorage = tokenStorage, // ignore: prefer_initializing_formals
+      _baseUrl = baseUrl ?? ApiConfig.baseUrl,
       dio = Dio(
         BaseOptions(
-          baseUrl: ApiConfig.baseUrl,
+          baseUrl: baseUrl ?? ApiConfig.baseUrl,
           connectTimeout: ApiConfig.connectTimeout,
           receiveTimeout: ApiConfig.receiveTimeout,
           sendTimeout: ApiConfig.sendTimeout,
@@ -75,6 +77,10 @@ class ApiClient {
             if (data is FormData) retryOptions.data = data.clone();
             final response = await dio.fetch(retryOptions);
             handler.resolve(response);
+          } on DioException catch (retryError) {
+            // Teruskan kegagalan kiriman ULANG, bukan 401 lama: bila sinyal putus di sini, pemanggil
+            // harus melihat gangguan jaringan (mis. layar Absensi lalu menyimpan absen luring, R-34).
+            handler.next(retryError);
           } catch (_) {
             handler.next(error);
           }
@@ -85,6 +91,7 @@ class ApiClient {
 
   final Dio dio;
   final TokenStorage _tokenStorage;
+  final String _baseUrl;
 
   /// Diisi oleh authControllerProvider setelah ApiClient dibuat.
   VoidCallback? onSessionExpired;
@@ -113,7 +120,7 @@ class ApiClient {
       }
       final freshDio = Dio(
         BaseOptions(
-          baseUrl: ApiConfig.baseUrl,
+          baseUrl: _baseUrl,
           connectTimeout: ApiConfig.connectTimeout,
           receiveTimeout: ApiConfig.receiveTimeout,
           sendTimeout: ApiConfig.sendTimeout,

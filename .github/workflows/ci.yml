@@ -19,18 +19,6 @@ jobs:
   api:
     name: API · ruff · mypy · pytest (PostgreSQL nyata)
     runs-on: ubuntu-latest
-    services:
-      db:
-        # Sama dengan docker-compose.yml / server dev (PostgreSQL 16 + PostGIS); pgvector dipasang di bawah.
-        image: postgis/postgis:16-3.4
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: visiontech_db
-        ports: ["5432:5432"]
-        options: >-
-          --health-cmd "pg_isready -U postgres -d visiontech_db"
-          --health-interval 5s --health-timeout 5s --health-retries 20
     env:
       # Kredensial khusus container CI sekali pakai — bukan rahasia.
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/visiontech_db
@@ -48,10 +36,20 @@ jobs:
           cache: pip
           cache-dependency-path: api/requirements-dev.txt
 
-      - name: Pasang pgvector di container DB
+      - name: Jalankan DB — PostgreSQL 18 + PostGIS 3.6 + pgvector dari db/Dockerfile (sama dengan compose)
+        # Dulu: service postgis 16-3.4 + apt install pgvector saat berjalan. Repo PGDG bullseye diarsipkan
+        # dan apt ikut memperbarui biner PG di bawah server yang sedang hidup (btree_gist.so gagal dimuat,
+        # CI 2026-10-02). Citra dibangun dulu, baru server dinyalakan.
+        working-directory: db
         run: |
-          docker exec ${{ job.services.db.id }} bash -c \
-            "apt-get update -qq && apt-get install -y -qq postgresql-16-pgvector >/dev/null"
+          docker build -q -t vms-db:18 .
+          docker run -d --name vms-db -p 5432:5432 -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=visiontech_db vms-db:18
+          # Lewat TCP dari runner: selama init, server sementara citra hanya mendengar soket Unix.
+          for i in $(seq 90); do
+            pg_isready -h localhost -p 5432 -U postgres -d visiontech_db -q && break
+            sleep 2
+          done
+          PGPASSWORD=postgres psql -h localhost -U postgres -d visiontech_db -Atc "show server_version"
 
       - name: Pasang skema dari db/*.sql (urutan 01 → 05)
         working-directory: db
@@ -106,9 +104,26 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: gitleaks/gitleaks-action@v3
+      # gitleaks-action@v3 mewajibkan lisensi untuk akun organisasi (CI gagal 2026-10-02), jadi
+      # CLI gitleaks (MIT, gratis) dipasang langsung — versi dikunci & checksum diperiksa.
+      - name: Pasang gitleaks 8.30.1
+        run: |
+          curl -sSfL -o gl.tgz https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz
+          echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  gl.tgz" | sha256sum -c -
+          tar -xzf gl.tgz gitleaks && rm gl.tgz
+      - name: Pindai commit baru (push / PR) — sama dengan cakupan gitleaks-action
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          if [ -n "$BASE_SHA" ]; then range="$BASE_SHA..$HEAD_SHA"
+          elif [ -n "$BEFORE" ] && git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then range="$BEFORE..$HEAD_SHA"
+          else  # branch baru: commit yang belum ada di prod/development
+            range="$HEAD_SHA --not $(git for-each-ref --format='%(objectname)' refs/remotes/origin/prod refs/remotes/origin/development | tr '\n' ' ')"
+          fi
+          echo "Rentang: $range"
+          ./gitleaks git --redact --no-banner --exit-code 1 --log-opts="$range" .
 
   mobile:
     name: Mobile (Flutter analyze + test)

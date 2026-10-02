@@ -1,6 +1,6 @@
 """
-Basis data (docs/12 §1): engine & sesi, batas transaksi, dan konteks RLS permintaan.
-Dipindah dari `app/db/{session,transaction,context}.py` (R-28 M1) tanpa perubahan perilaku.
+Koneksi & sesi database (docs/12 §1): engine & sesi, batas transaksi, dan konteks RLS permintaan.
+Gabungan `app/db/{session,transaction,context}.py` lama (R-28 M1); letaknya di `app/db/` sesuai contoh pemilik (R-30).
 """
 from __future__ import annotations
 

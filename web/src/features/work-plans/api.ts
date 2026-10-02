@@ -176,3 +176,74 @@ export function useSetTeam(id: string) {
     onSuccess: () => qc.invalidateQueries({ queryKey: planKey(id) }),
   });
 }
+
+// ── Alur SK v2 (keputusan pemilik 2026-10-03, flowchart SK2) ─────────────────────────────────
+export type PlanFormOptions = S["PlanFormOptions"];
+export type PlanDraftRequest = S["PlanDraftRequest"];
+export type PlanDetail = S["PlanDetailOut"];
+export type FormPerson = S["FormPerson"];
+export type FormAsset = S["FormAsset"];
+
+export const planDetailKey = (id: string) => ["work-plan-detail", id] as const;
+
+/** Pilihan form Buat/Ubah SK: kategori, lokasi, ketua, anggota, alat, kendaraan (sudah disaring server). */
+export const usePlanFormOptions = (planId?: string) =>
+  useQuery({
+    queryKey: ["plan-form-options", planId ?? "new"],
+    queryFn: async () =>
+      (await api.get<PlanFormOptions>("/work-plans/form-options", { params: planId ? { plan_id: planId } : {} })).data,
+  });
+
+/** Calon driver (dari ketua + anggota terpilih) yang ber-SIM sesuai tipe kendaraan dan tidak terikat SK lain. */
+export const useDriverOptions = (q: { vehicleId: string; periodEnd: string; candidates: string[]; planId?: string }) =>
+  useQuery({
+    queryKey: ["plan-driver-options", q],
+    queryFn: async () =>
+      (
+        await api.get<string[]>("/work-plans/driver-options", {
+          params: {
+            vehicle_id: q.vehicleId,
+            period_end: q.periodEnd,
+            candidate_ids: q.candidates,
+            ...(q.planId ? { plan_id: q.planId } : {}),
+          },
+          paramsSerializer: { indexes: null },
+        })
+      ).data,
+    enabled: Boolean(q.vehicleId && q.periodEnd && q.candidates.length),
+  });
+
+export const usePlanDetail = (id: string, enabled = true) =>
+  useQuery({
+    queryKey: planDetailKey(id),
+    queryFn: async () => (await api.get<PlanDetail>(`/work-plans/${id}/detail`)).data,
+    enabled: Boolean(id) && enabled,
+  });
+
+/** Simpan SK lengkap dalam satu transaksi: buat (POST /full) atau ubah draf (PUT /{id}/full). */
+export function useSavePlanDraft(planId?: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: PlanDraftRequest) =>
+      planId
+        ? (await api.put<PlanDetail>(`/work-plans/${planId}/full`, body)).data
+        : (await api.post<PlanDetail>("/work-plans/full", body)).data,
+    onSuccess: async (detail) => {
+      const id = String(detail.plan.id);
+      qc.setQueryData(planDetailKey(id), detail);
+      await qc.invalidateQueries({ queryKey: planKey(id) });
+      await qc.invalidateQueries({ queryKey: ["work-plans"] });
+      await qc.invalidateQueries({ queryKey: ["plan-form-options"] });
+      await qc.invalidateQueries({ queryKey: ["sites"] });
+    },
+  });
+}
+
+/** HTML A4 (pratinjau draf atau dokumen terbit beserta TTD) untuk ditampilkan di iframe. */
+export const useHtmlDocument = (path: string | null) =>
+  useQuery({
+    queryKey: ["html-document", path],
+    queryFn: async () => (await api.get<string>(path ?? "", { responseType: "text" })).data,
+    enabled: Boolean(path),
+    staleTime: 0,
+  });

@@ -30,7 +30,6 @@ LEGACY: dict[str, str] = {
     "files.py": "R-25b",
     "hse.py": "R-25b",
     "work_plans.py": "R-25b",
-    "sites.py": "R-25b",
 }
 
 

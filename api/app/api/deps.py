@@ -23,6 +23,7 @@ from app.crud.crud_plan_assignment import CRUDPlanAssignment
 from app.crud.crud_plan_member import CRUDPlanMember
 from app.crud.crud_plan_transition import CRUDPlanTransition
 from app.crud.crud_session import CRUDSession
+from app.crud.crud_site import CRUDSite
 from app.crud.crud_unit import CRUDUnit
 from app.crud.crud_user import CRUDUser
 from app.db.session import AsyncSessionLocal, set_request_context, unit_of_work
@@ -44,6 +45,7 @@ from app.services.plan_location_service import PlanLocationService
 from app.services.plan_member_service import PlanMemberService
 from app.services.plan_transition_service import PlanTransitionService
 from app.services.signature_service import SignatureService
+from app.services.site_service import SiteService
 from app.services.sync_service import SyncService
 from app.services.unit_service import UnitService
 from app.services.weekly_report_service import WeeklyReportService
@@ -210,6 +212,10 @@ def get_attendance_monitor_service(db: AsyncSession = Depends(get_db_with_user))
 
 def get_attendance_session_service(db: AsyncSession = Depends(get_db_with_user)) -> AttendanceSessionService:
     return AttendanceSessionService(CRUDAttendanceSession(db), CRUDOrgClock(db))
+
+
+def get_site_service(db: AsyncSession = Depends(get_db_with_user)) -> SiteService:
+    return SiteService(CRUDSite(db))
 
 
 def get_document_service(db: AsyncSession = Depends(get_db_with_user)) -> DocumentService:

@@ -9,25 +9,9 @@ import '../auth/auth_controller.dart';
 import '../auth/auth_state.dart';
 import '../../core/theme/theme.dart';
 import '../../shared/ui/vms_ui.dart';
+import '../notifications/notifications_screen.dart';
 import 'plan_day_screen.dart';
-
-const planStatusLabels = {
-  'DRAFT': 'Draf',
-  'PUBLISHED': 'Terbit',
-  'APPEALED': 'Banding',
-  'ACCEPTED': 'Diterima',
-  'IN_PROGRESS': 'Berjalan',
-  'COMPLETION_REQUESTED': 'Menunggu selesai',
-  'COMPLETED': 'Selesai',
-  'CANCELLED': 'Batal',
-};
-
-const reportStatusLabels = {
-  'DRAFT': 'Draf',
-  'SUBMITTED': 'Menunggu review',
-  'APPROVED': 'Disetujui',
-  'CHANGES_REQUESTED': 'Perlu perbaikan',
-};
+import 'sk_viewer_screen.dart';
 
 final _date = DateFormat('d MMM yyyy', 'id_ID');
 
@@ -81,10 +65,17 @@ class _WorkPlansScreenState extends ConsumerState<WorkPlansScreen> {
     final running = _plans.where((p) => p['status'] == 'IN_PROGRESS').length;
     return Scaffold(
       appBar: VmsTopBar(
-        trailing: HeaderAction(
-          icon: Icons.refresh_rounded,
-          tooltip: 'Muat ulang',
-          onTap: _load,
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            NotificationBell(onReturn: _load),
+            const SizedBox(width: 8),
+            HeaderAction(
+              icon: Icons.refresh_rounded,
+              tooltip: 'Muat ulang',
+              onTap: _load,
+            ),
+          ],
         ),
       ),
       body: RefreshIndicator(
@@ -212,6 +203,8 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
   late Map<String, dynamic> _plan;
   bool _loading = true;
   bool _accepting = false;
+  bool _amending = false;
+  Map<String, dynamic>? _detail;
   String? _error;
 
   String get _planId => _plan['id'] as String;
@@ -253,7 +246,8 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
           .acceptPlan(_planId, rowVersion: _plan['row_version'] as int);
       if (!mounted) return;
       setState(() => _plan = accepted);
-      _snack('SK berhasil diterima.');
+      _snack('SK berhasil diterima dan ditandatangani.');
+      await _load();
     } catch (e) {
       if (mounted) _snack(apiErrorMessage(e));
     } finally {
@@ -261,8 +255,83 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
     }
   }
 
+  Future<void> _requestAmendment() async {
+    final reason = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Ajukan adendum'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'SK akan dikembalikan ke PM untuk direvisi. Tuliskan apa yang perlu diubah.',
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: reason,
+              autofocus: true,
+              maxLines: 4,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: const InputDecoration(
+                labelText: 'Alasan adendum',
+                hintText: 'mis. Meminta penambahan hari kerja',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Batal'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Kirim ke PM'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || _amending) return;
+    if (reason.text.trim().isEmpty) {
+      return _snack('Alasan adendum wajib diisi.');
+    }
+    setState(() => _amending = true);
+    try {
+      final updated = await ref
+          .read(syncEngineProvider)
+          .api
+          .requestAmendment(
+            _planId,
+            rowVersion: _plan['row_version'] as int,
+            reason: reason.text.trim(),
+          );
+      if (!mounted) return;
+      setState(() => _plan = updated);
+      _snack('Adendum dikirim ke PM.');
+    } catch (e) {
+      if (mounted) _snack(apiErrorMessage(e));
+    } finally {
+      if (mounted) setState(() => _amending = false);
+    }
+  }
+
   Future<void> _load() async {
     final engine = ref.read(syncEngineProvider);
+    // Header & isi SK dimuat ulang saat daring (status bisa berubah: terbit -> diterima -> berjalan).
+    try {
+      final fresh = await engine.api.workPlan(_planId);
+      final detail = await engine.api.planDetail(_planId);
+      if (mounted) {
+        setState(() {
+          _plan = fresh;
+          _detail = detail;
+        });
+      }
+    } catch (_) {
+      // Luring: tetap tampilkan data dari daftar yang tersimpan.
+    }
     try {
       final res = await engine.fetchList(
         'days:$_planId',
@@ -450,14 +519,60 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
                         ),
                       ),
                     ),
+                  if (_detail != null) _summary(_detail!),
+                  if (p['status'] != 'DRAFT') ...[
+                    const SizedBox(height: 10),
+                    OutlinedButton.icon(
+                      key: const Key('review-plan-button'),
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => SkViewerScreen(
+                            planId: _planId,
+                            title: '${p['number'] ?? p['title']}',
+                          ),
+                        ),
+                      ),
+                      icon: const Icon(Icons.description_outlined),
+                      label: const Text('Tinjau SK'),
+                    ),
+                  ],
+                  if (p['status'] == 'APPEALED')
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: NoticeBanner(
+                        icon: Icons.edit_note_rounded,
+                        text:
+                            'Adendum diminta${p['appeal_reason'] != null ? ': ${p['appeal_reason']}' : ''}. Menunggu PM merevisi dan menerbitkan ulang SK.',
+                        accent: Accent.amber,
+                      ),
+                    ),
+                  if (p['status'] == 'ACCEPTED')
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: NoticeBanner(
+                        icon: Icons.event_available_rounded,
+                        text:
+                            'SK diterima. Status otomatis menjadi Berjalan pada ${_date.format(DateTime.parse(p['period_start'] as String))}.',
+                        accent: Accent.emerald,
+                      ),
+                    ),
                   if (isLeader && p['status'] == 'PUBLISHED') ...[
                     const SectionTitle('Penerimaan SK'),
                     NoticeBanner(
                       icon: Icons.verified_user_outlined,
-                      text: 'Periksa rincian pekerjaan. Penerimaan memerlukan koneksi internet dan akan ditandatangani secara digital.',
+                      text: 'Tinjau SK lebih dulu. Terima SK = menandatangani secara digital (perlu internet). Bila ada yang perlu diubah, ajukan adendum ke PM.',
                       accent: Accent.amber,
                     ),
                     const SizedBox(height: 10),
+                    OutlinedButton.icon(
+                      key: const Key('amend-plan-button'),
+                      onPressed: _amending || _accepting
+                          ? null
+                          : _requestAmendment,
+                      icon: const Icon(Icons.edit_note_rounded),
+                      label: Text(_amending ? 'Mengirim...' : 'Ajukan adendum'),
+                    ),
+                    const SizedBox(height: 8),
                     FilledButton.icon(
                       key: const Key('accept-plan-button'),
                       onPressed: _accepting ? null : _acceptPlan,
@@ -523,6 +638,68 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// Ringkasan isi SK alur v2: periode, kategori & tipe, tim, alat & kendaraan, detail per hari.
+  Widget _summary(Map<String, dynamic> detail) {
+    final plan = Map<String, dynamic>.from(detail['plan'] as Map);
+    final team = (detail['team'] as List).cast<Map>();
+    final assets = (detail['assets'] as List).cast<Map>();
+    final days = (detail['days'] as List).cast<Map>();
+    String date(Object? v) => _date.format(DateTime.parse('$v'));
+    Widget line(IconData icon, String text) => Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: InfoRow(icon: icon, text: text),
+    );
+    return SurfaceCard(
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          line(
+            Icons.date_range_rounded,
+            '${date(plan['period_start'])} – ${date(plan['period_end'])}',
+          ),
+          if (plan['category_label'] != null)
+            line(
+              Icons.category_outlined,
+              '${plan['category_label']} · ${plan['unit_name'] ?? '-'}',
+            ),
+          if (plan['pm_name'] != null)
+            line(Icons.badge_outlined, 'PM: ${plan['pm_name']}'),
+          for (final m in team)
+            line(
+              m['role_in_plan'] == 'LEADER'
+                  ? Icons.star_rounded
+                  : Icons.person_outline_rounded,
+              '${m['full_name']} — ${m['position']} (${m['role_in_plan'] == 'LEADER' ? 'Ketua tim' : 'Anggota'})',
+            ),
+          for (final a in assets)
+            line(
+              a['kind'] == 'VEHICLE'
+                  ? Icons.directions_car_outlined
+                  : Icons.handyman_outlined,
+              '${a['name']} · ${a['code']}${a['driver_name'] != null ? ' — driver ${a['driver_name']}' : ''}',
+            ),
+          const Divider(height: 20),
+          for (final (i, d) in days.indexed) ...[
+            Text(
+              'Hari ${i + 1} · ${date(d['work_date'])}',
+              style: VmsTextStyles.bodySm.copyWith(fontWeight: FontWeight.w700),
+            ),
+            for (final t in (d['tasks'] as List).cast<Map>())
+              Padding(
+                padding: const EdgeInsets.only(left: 8, top: 2),
+                child: Text(
+                  '• ${t['title']} — ${t['description']}',
+                  style: VmsTextStyles.caption,
+                ),
+              ),
+            const SizedBox(height: 6),
+          ],
+        ],
       ),
     );
   }

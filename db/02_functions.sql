@@ -310,6 +310,23 @@ LANGUAGE sql STABLE AS $$
     AND wp.period && p_period
 $$;
 
+-- Alur SK v2 (Alembic 0018): "tidak terikat SK" = bukan ketua/anggota/driver SK aktif mana pun,
+-- tanpa melihat tanggal. Dipakai pilihan form "Buat SK" dan validasi simpan.
+CREATE OR REPLACE FUNCTION employee_is_bound(p_employee uuid, p_exclude_plan uuid DEFAULT NULL)
+RETURNS boolean LANGUAGE sql STABLE AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM work_plan wp
+    WHERE wp.deleted_at IS NULL
+      AND wp.status IN ('PUBLISHED','APPEALED','ACCEPTED','IN_PROGRESS','COMPLETION_REVIEW')
+      AND (p_exclude_plan IS NULL OR wp.id <> p_exclude_plan)
+      AND (EXISTS (SELECT 1 FROM work_plan_member m
+                   WHERE m.work_plan_id = wp.id AND m.employee_id = p_employee AND upper_inf(m.valid_period))
+           OR EXISTS (SELECT 1 FROM asset_allocation al
+                      WHERE al.work_plan_id = wp.id AND al.driver_employee_id = p_employee
+                        AND al.released_at IS NULL))
+  )
+$$;
+
 CREATE OR REPLACE FUNCTION tg_member_no_conflict() RETURNS trigger
 LANGUAGE plpgsql AS $$
 DECLARE v_period daterange; v_conflict record;

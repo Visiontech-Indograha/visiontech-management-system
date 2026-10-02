@@ -22,7 +22,7 @@ import type { WorkPlan } from "./api";
 type S = components["schemas"];
 type PlanLocation = S["PlanLocationOut"];
 type GeoResult = S["GeoResult"];
-type LatLng = [number, number];
+export type LatLng = [number, number];
 
 // Vite mengubah nama berkas gambar; ikon penanda bawaan Leaflet perlu URL eksplisit.
 delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown })._getIconUrl;
@@ -43,12 +43,12 @@ function usePlanLocation(planId: string) {
   });
 }
 
-function Tiles() {
+export function Tiles() {
   return <TileLayer url={TILE_URL} attribution={ATTRIBUTION} />;
 }
 
 /** Peta di dalam dialog: ukuran dihitung ulang setelah animasi, dan dipusatkan ke titik terpilih. */
-function MapController({ center, zoom }: { center: LatLng; zoom: number }) {
+export function MapController({ center, zoom }: { center: LatLng; zoom: number }) {
   const map = useMap();
   useEffect(() => {
     const t = setTimeout(() => map.invalidateSize(), 200);
@@ -60,7 +60,7 @@ function MapController({ center, zoom }: { center: LatLng; zoom: number }) {
   return null;
 }
 
-function ClickToPlace({ onPick }: { onPick: (p: LatLng) => void }) {
+export function ClickToPlace({ onPick }: { onPick: (p: LatLng) => void }) {
   useMapEvents({ click: (e) => onPick([e.latlng.lat, e.latlng.lng]) });
   return null;
 }

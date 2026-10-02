@@ -55,6 +55,7 @@ dependencies:
   shadcn_ui: ^0.57.1
   google_fonts: ^6.2.1
   camera_android: ^0.10.12
+  webview_flutter: ^4.14.1
 
 dev_dependencies:
   flutter_test:

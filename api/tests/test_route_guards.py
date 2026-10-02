@@ -34,6 +34,9 @@ SELF_SERVICE = {
     ("POST", "/auth/change-password"): "kata sandi sendiri",
     ("POST", "/files/upload"): "setiap karyawan mengunggah bukti/dokumen sendiri",
     ("GET", "/work-plans"): "hanya SK yang terlihat (V-07)",
+    ("GET", "/notifications"): "notifikasi milik sendiri (alur SK v2)",
+    ("POST", "/notifications/read-all"): "menandai notifikasi milik sendiri",
+    ("POST", "/notifications/{notification_id}/read"): "hanya notifikasi milik sendiri; milik orang lain tidak berubah",
     ("GET", "/sites"): "daftar lokasi organisasi untuk check-in",
     ("GET", "/units"): "daftar unit organisasi sendiri (pilihan mutasi/promosi, R-19)",
     ("GET", "/assets/{asset_id}/returns"): "riwayat pengembalian aset organisasi sendiri; asing → 404 (diuji)",
@@ -72,6 +75,7 @@ GUARDED_IN_HANDLER = {
     # Fase 6: dokumen ditentukan id di jalur → SK-nya dicek check_plan_access di service.
     ("GET", "/documents/{document_id}/signatures"): "SignatureService: SK dokumen terlihat (VIEW), selain itu 404",
     ("GET", "/documents/{document_id}/pdf"): "SignatureService: SK dokumen terlihat (VIEW), selain itu 404",
+    ("GET", "/documents/{document_id}/html"): "SignatureService: SK dokumen terlihat (VIEW), selain itu 404",
     ("POST", "/signatures/{signature_id}/revoke"): "SignatureService: PM unit/OPS SK (PM_UNIT)",
 }
 _GUARDS = ("permission_checker", "plan_access.", "plan_day_access.", "allocation_plan_access.",

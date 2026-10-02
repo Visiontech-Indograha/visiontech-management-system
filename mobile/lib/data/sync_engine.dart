@@ -8,6 +8,7 @@ import 'package:uuid/uuid.dart';
 import '../core/api_client.dart';
 import '../core/device_id.dart';
 import 'app_database.dart';
+import 'offline_attendance.dart';
 import 'vms_api.dart';
 
 class SyncSummary {
@@ -32,6 +33,7 @@ class OfflineOp {
     taskToggle: 'Centang tugas',
     incidentReport: 'Laporan insiden',
     overtimeReport: 'Laporan lembur',
+    OfflineAttendance.entityType: 'Absensi luring',
   };
 }
 
@@ -47,7 +49,17 @@ class SyncEngine {
     required DeviceIdProvider deviceId,
   }) : _api = VmsApi(apiClient),
        _db = db, // ignore: prefer_initializing_formals
-       _deviceId = deviceId; // ignore: prefer_initializing_formals
+       _deviceId = deviceId {
+    // ignore: prefer_initializing_formals
+    offlineAttendance = OfflineAttendance(
+      db: db,
+      api: _api,
+      deviceId: deviceId,
+    );
+  }
+
+  /// R-34: absen lapangan luring — disimpan bertanda tangan, dikirim otomatis saat online.
+  late final OfflineAttendance offlineAttendance;
 
   final VmsApi _api;
   final AppDatabase _db;
@@ -110,9 +122,15 @@ class SyncEngine {
   }
 
   Future<void> _push() async {
+    // Absen luring dikirim lebih dulu lewat endpoint-nya sendiri (bertanda tangan).
+    await offlineAttendance.push();
     final rows =
         await (_db.select(_db.pendingSyncOperations)
-              ..where((t) => t.deadLetter.equals(false))
+              ..where(
+                (t) =>
+                    t.deadLetter.equals(false) &
+                    t.entityType.equals(OfflineAttendance.entityType).not(),
+              )
               ..orderBy([(t) => OrderingTerm.asc(t.id)]))
             .get();
     if (rows.isEmpty) return;
@@ -307,9 +325,21 @@ class SyncEngine {
     await syncAll();
   }
 
-  Future<void> deleteOperation(int id) => (_db.delete(
-    _db.pendingSyncOperations,
-  )..where((t) => t.id.equals(id))).go();
+  Future<void> deleteOperation(int id) async {
+    final row = await (_db.select(
+      _db.pendingSyncOperations,
+    )..where((t) => t.id.equals(id))).getSingleOrNull();
+    await (_db.delete(
+      _db.pendingSyncOperations,
+    )..where((t) => t.id.equals(id))).go();
+    // Absen luring: swafotonya di folder internal ikut dibuang.
+    if (row?.entityType == OfflineAttendance.entityType) {
+      final path = (jsonDecode(row!.payloadJson) as Map)['selfie_path'];
+      if (path is String) {
+        await File(path).delete().catchError((_) => File(path));
+      }
+    }
+  }
 
   Future<void> retryAttachment(int id) async {}
 
@@ -329,7 +359,15 @@ class SyncEngine {
     for (final row in await (_db.select(
       _db.pendingSyncOperations,
     )..where((t) => t.deadLetter.equals(false))).get()) {
-      final payload = (jsonDecode(row.payloadJson) as Map)['payload'] as Map;
+      final record = jsonDecode(row.payloadJson) as Map;
+      if (row.entityType == OfflineAttendance.entityType) {
+        // Absen luring: payload-nya string bertanda tangan; swafotonya di selfie_path.
+        if (record['selfie_path'] != null && record['selfie_file_id'] == null) {
+          n++;
+        }
+        continue;
+      }
+      final payload = record['payload'] as Map;
       n += ((payload[_localFiles] as List?) ?? const []).length;
     }
     return n;

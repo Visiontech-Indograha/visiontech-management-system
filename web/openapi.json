@@ -4685,6 +4685,104 @@
     }
    }
   },
+  "/api/v1/attendance/device-key": {
+   "post": {
+    "tags": [
+     "Attendance"
+    ],
+    "summary": "Register Device Key",
+    "description": "R-34: daftarkan kunci publik Android Keystore perangkat ini untuk memverifikasi absen luring.",
+    "operationId": "register_device_key_api_v1_attendance_device_key_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/DeviceKeyRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": {
+          "type": "string"
+         },
+         "type": "object",
+         "title": "Response Register Device Key Api V1 Attendance Device Key Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ]
+   }
+  },
+  "/api/v1/attendance/offline": {
+   "post": {
+    "tags": [
+     "Attendance"
+    ],
+    "summary": "Submit Offline Attendance",
+    "description": "R-34: terima satu absen luring yang ditandatangani perangkat (idempoten per client_op_id).",
+    "operationId": "submit_offline_attendance_api_v1_attendance_offline_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/OfflineAttendanceEvent"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/OfflineAttendanceResult"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ]
+   }
+  },
   "/api/v1/attendance/check-in": {
    "post": {
     "tags": [
@@ -7090,6 +7188,17 @@
        }
       ],
       "title": "Today"
+     },
+     "time_anchor": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Time Anchor"
      }
     },
     "type": "object",
@@ -7369,6 +7478,34 @@
       "type": "boolean",
       "title": "Can Review",
       "default": false
+     },
+     "offline": {
+      "type": "boolean",
+      "title": "Offline",
+      "default": false
+     },
+     "offline_note": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Offline Note"
+     },
+     "check_out_requested_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Check Out Requested At"
      }
     },
     "type": "object",
@@ -8048,6 +8185,29 @@
     },
     "type": "object",
     "title": "DecisionRequest"
+   },
+   "DeviceKeyRequest": {
+    "properties": {
+     "device_id": {
+      "type": "string",
+      "maxLength": 100,
+      "minLength": 8,
+      "title": "Device Id"
+     },
+     "public_key": {
+      "type": "string",
+      "maxLength": 1000,
+      "minLength": 40,
+      "title": "Public Key"
+     }
+    },
+    "type": "object",
+    "required": [
+     "device_id",
+     "public_key"
+    ],
+    "title": "DeviceKeyRequest",
+    "description": "Kunci publik EC P-256 (X.509 SubjectPublicKeyInfo DER, base64) dari Android Keystore."
    },
    "DocumentListResponse": {
     "properties": {
@@ -9302,6 +9462,129 @@
      "daily_average"
     ],
     "title": "NeedsReviewResponse"
+   },
+   "OfflineAttendanceEvent": {
+    "properties": {
+     "device_id": {
+      "type": "string",
+      "maxLength": 100,
+      "minLength": 8,
+      "title": "Device Id"
+     },
+     "client_op_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Client Op Id"
+     },
+     "kind": {
+      "type": "string",
+      "enum": [
+       "CHECK_IN",
+       "CHECK_OUT"
+      ],
+      "title": "Kind"
+     },
+     "payload": {
+      "type": "string",
+      "maxLength": 10000,
+      "title": "Payload"
+     },
+     "signature": {
+      "type": "string",
+      "maxLength": 500,
+      "title": "Signature"
+     },
+     "selfie_file_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Selfie File Id"
+     }
+    },
+    "type": "object",
+    "required": [
+     "device_id",
+     "client_op_id",
+     "kind",
+     "payload",
+     "signature"
+    ],
+    "title": "OfflineAttendanceEvent",
+    "description": "Satu absen luring: `payload` = JSON persis seperti yang ditandatangani HP; `signature` = ECDSA SHA-256\n(DER, base64). Swafoto diunggah lebih dulu; kecocokannya dicek lewat `selfie_sha256` di payload."
+   },
+   "OfflineAttendanceResult": {
+    "properties": {
+     "client_op_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Client Op Id"
+     },
+     "result": {
+      "type": "string",
+      "title": "Result"
+     },
+     "attendance_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Attendance Id"
+     },
+     "duplicate": {
+      "type": "boolean",
+      "title": "Duplicate"
+     },
+     "event_time": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Event Time"
+     },
+     "time_trusted": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Time Trusted"
+     },
+     "notes": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Notes",
+      "default": []
+     }
+    },
+    "type": "object",
+    "required": [
+     "client_op_id",
+     "result",
+     "attendance_id",
+     "duplicate"
+    ],
+    "title": "OfflineAttendanceResult"
    },
    "OfflineOperation": {
     "properties": {

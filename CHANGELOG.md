@@ -9,6 +9,17 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased] — `development`
 
+- **R-34 · absen lapangan luring (keputusan pemilik 2026-10-02, mengubah K-13):**
+  - **Disimpan di mana:** antrean SQLite internal aplikasi (`pending_sync_operations`, jenis `attendance_offline`) + swafoto di folder internal `offline_attendance/` — tidak terlihat dari pengelola file.
+  - **Tidak bisa diubah:** setiap absen luring ditandatangani kunci EC P-256 Android Keystore (`AttendanceAttest.kt`, kunci tidak bisa dikeluarkan dari HP); server memverifikasi dengan kunci publik terdaftar (`POST /attendance/device-key`). Lokasi/jam/alasan/swafoto yang diubah → `422 OFFLINE_TAMPERED`.
+  - **Jam:** jangkar jam bertanda tangan server (`time_anchor` di `GET /attendance`) + `SystemClock.elapsedRealtime`; jam HP diabaikan. Dicocokkan dengan waktu satelit GPS (±5 menit); HP dinyalakan ulang saat luring → jam GPS saja + Perlu review.
+  - **Status:** Valid otomatis bila jam terverifikasi, terkirim ≤ 24 jam, lokasi asli, dalam radius; selain itu Perlu review dengan `offline_note`; > 7 hari ditolak (`OFFLINE_TOO_OLD`). Aturan R-33 (lokasi unit, penjelasan & swafoto wajib di luar zona) tetap berlaku.
+  - **Absen pulang luring:** masuk valid → langsung tercatat pada jam rekamnya; Perlu review → ditahan (`check_out_requested_at`), berlaku otomatis saat disetujui, gugur bila ditolak.
+  - **Sinkron:** `POST /attendance/offline` idempoten per `client_op_id`; HP mengirim berurutan dan berhenti pada gangguan sementara (tanpa sinyal, 401, 5xx); unggahan swafoto diulang setelah token diperbarui (`FormData.clone`); layar Absensi diperbarui otomatis setelah sinkron (`syncTickProvider`); kartu "Tersimpan luring" & jam pulang luring tampil, tombol pulang tidak muncul dua kali; hapus item antrean ikut membuang swafotonya.
+  - **Web:** tanda "absen luring" di daftar Absensi; dialog Tinjau menampilkan catatan server & jam pulang yang ditahan.
+  - **Uji nyata (emulator + web, 2026-10-02):** masuk & pulang luring tersinkron otomatis dengan jam rekam (bukan jam terima); data diubah di DB HP ditolak; di luar zona + HP restart → Perlu review, PM menyetujui di web → jam pulang luring berlaku; rekap PM menampilkan jam masuk/keluar. Flowchart FigJam "Alur Absensi" diperbarui (cabang luring, ajukan ulang dicek lokasi lagi).
+  - **Suite uji (hanya absensi yang disetujui pemilik):** `api/tests/test_attendance_offline.py` (15) + suite absensi & uji format API **322 lulus**; web `attendance.test.tsx`, `attendance-office.test.tsx` (baru, R-33) + terkait **54 lulus**, lint & typecheck bersih; mobile `offline_attendance_test.dart` (12) + terkait **65 lulus**, `flutter analyze` bersih.
+
 - **R-33 · aturan absensi per peran (keputusan pemilik 2026-10-02, menggantikan R-10):**
   - **Login:** akun kantor ditolak di HP (`403 NOT_FIELD_STAFF`), akun lapangan ditolak di web (`403 NOT_OFFICE_ACCOUNT`); `platform` dari `LoginRequest` kini dipakai.
   - **Cakupan:** Finance & OPS melihat semua absensi (`view:all_attendance`); PM melihat miliknya + bawahan lapangan di unitnya, rekap PM hanya bawahan; HR/Asset/Admin hanya milik sendiri. Tinjau: PM → bawahan lapangan, Finance → pekerja kantor selain Finance, OPS → Finance; tidak pernah absensi sendiri. Aturan satu sumber di `crud/crud_attendance_session.py` (`VIEWABLE`, `CAN_REVIEW`); `GET /attendance` membawa `employee_name`, `selfie_file_id`, `review_note`, `can_review`. Swafoto dapat dibuka siapa pun yang boleh melihat absensinya.

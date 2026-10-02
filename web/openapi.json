@@ -3116,44 +3116,73 @@
      "Sites"
     ],
     "summary": "Get Sites",
+    "description": "R-33: lapangan → lokasi unitnya; kantor → lokasi kantor; PM → kantor + unitnya; OPS → semua.\n`for_attendance=true`: hanya lokasi yang sah untuk absen peminta. `can_manage`: boleh dihapus peminta.",
     "operationId": "get_sites_api_v1_sites_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "for_attendance",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "boolean",
+       "default": false,
+       "title": "For Attendance"
+      }
+     }
+    ],
     "responses": {
      "200": {
       "description": "Successful Response",
       "content": {
        "application/json": {
         "schema": {
+         "type": "array",
          "items": {
           "$ref": "#/components/schemas/SiteResponse"
          },
-         "type": "array",
          "title": "Response Get Sites Api V1 Sites Get"
         }
        }
       }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
      }
-    },
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ]
+    }
    },
    "post": {
     "tags": [
      "Sites"
     ],
     "summary": "Create Site",
+    "description": "R-33: PM → lokasi proyek unitnya (untuk bawahannya); Finance → lokasi kantor. Unit ditetapkan server.",
     "operationId": "create_site_api_v1_sites_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
     "requestBody": {
+     "required": true,
      "content": {
       "application/json": {
        "schema": {
         "$ref": "#/components/schemas/SiteCreate"
        }
       }
-     },
-     "required": true
+     }
     },
     "responses": {
      "201": {
@@ -3176,12 +3205,7 @@
        }
       }
      }
-    },
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ]
+    }
    }
   },
   "/api/v1/sites/{site_id}": {
@@ -4538,7 +4562,7 @@
      "Attendance"
     ],
     "summary": "List Attendance",
-    "description": "Dok 05 §3.5. FINANCE/HR/OPS/ADMIN: seluruh organisasi; lainnya: hanya milik sendiri.\nFilter `plan_id` di dok 05 belum didukung — absensi belum tertaut ke SK (dok 10 Bagian C).",
+    "description": "Dok 05 §3.5 · R-33: Finance & OPS seluruh organisasi; PM miliknya + bawahan lapangan di unitnya;\nlainnya hanya milik sendiri. Filter `plan_id` di dok 05 belum didukung (dok 10 Bagian C).",
     "operationId": "list_attendance_api_v1_attendance_get",
     "security": [
      {
@@ -4667,7 +4691,7 @@
      "Attendance"
     ],
     "summary": "Check In",
-    "description": "P4-2 · domain.js CHECK_IN. Waktu, tanggal, jarak, dan status dari server (aturan inti #3).",
+    "description": "P4-2 · domain.js CHECK_IN. Waktu, tanggal, jarak, dan status dari server (aturan inti #3).\nPekerja lapangan lewat HP (`channel` MOBILE), pekerja kantor lewat web (`channel` WEB).",
     "operationId": "check_in_api_v1_attendance_check_in_post",
     "requestBody": {
      "content": {
@@ -4714,7 +4738,7 @@
      "Attendance"
     ],
     "summary": "Check Out",
-    "description": "domain.js CHECK_OUT — menutup sesi terbuka milik sendiri.",
+    "description": "domain.js CHECK_OUT — menutup sesi terbuka milik sendiri, dari kanal sesuai jenis pekerja.",
     "operationId": "check_out_api_v1_attendance_check_out_post",
     "requestBody": {
      "content": {
@@ -4824,7 +4848,7 @@
      "Attendance"
     ],
     "summary": "Review Attendance",
-    "description": "P4-4 · domain.js REVIEW_ATTENDANCE: Finance seluruh organisasi; PM unitnya, OPS lintas unit (R-10).",
+    "description": "P4-4 · domain.js REVIEW_ATTENDANCE · R-33: PM → bawahan lapangan, Finance → kantor non-Finance,\nOPS → Finance; tidak pernah absensi sendiri.",
     "operationId": "review_attendance_api_v1_attendance__att_id__review_post",
     "security": [
      {
@@ -7089,6 +7113,14 @@
       },
       "type": "array",
       "title": "Employees"
+     },
+     "records": {
+      "items": {
+       "$ref": "#/components/schemas/AttendanceRecapRecord"
+      },
+      "type": "array",
+      "title": "Records",
+      "default": []
      }
     },
     "type": "object",
@@ -7097,6 +7129,75 @@
      "employees"
     ],
     "title": "AttendanceRecap"
+   },
+   "AttendanceRecapRecord": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "employee_id": {
+      "type": "string",
+      "title": "Employee Id"
+     },
+     "full_name": {
+      "type": "string",
+      "title": "Full Name"
+     },
+     "work_date": {
+      "type": "string",
+      "format": "date",
+      "title": "Work Date"
+     },
+     "site_label": {
+      "type": "string",
+      "title": "Site Label"
+     },
+     "check_in_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Check In At"
+     },
+     "check_out_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Check Out At"
+     },
+     "status": {
+      "type": "string",
+      "title": "Status"
+     },
+     "is_late": {
+      "type": "boolean",
+      "title": "Is Late"
+     },
+     "is_early_leave": {
+      "type": "boolean",
+      "title": "Is Early Leave"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "employee_id",
+     "full_name",
+     "work_date",
+     "site_label",
+     "check_in_at",
+     "check_out_at",
+     "status",
+     "is_late",
+     "is_early_leave"
+    ],
+    "title": "AttendanceRecapRecord",
+    "description": "Satu absensi dalam riwayat rekap — jam masuk & keluar (R-33)."
    },
    "AttendanceRecapRow": {
     "properties": {
@@ -7229,6 +7330,45 @@
        }
       ],
       "title": "Reviewed At"
+     },
+     "selfie_file_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Selfie File Id"
+     },
+     "review_note": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Review Note"
+     },
+     "employee_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Employee Name"
+     },
+     "can_review": {
+      "type": "boolean",
+      "title": "Can Review",
+      "default": false
      }
     },
     "type": "object",
@@ -7489,6 +7629,15 @@
       "format": "uuid",
       "title": "Site Id"
      },
+     "channel": {
+      "type": "string",
+      "enum": [
+       "MOBILE",
+       "WEB"
+      ],
+      "title": "Channel",
+      "default": "MOBILE"
+     },
      "location": {
       "$ref": "#/components/schemas/GeoPoint"
      },
@@ -7553,6 +7702,18 @@
        }
       ],
       "title": "Face Similarity"
+     },
+     "explanation": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 1000
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Explanation"
      }
     },
     "type": "object",
@@ -7564,6 +7725,15 @@
    },
    "CheckOutRequest": {
     "properties": {
+     "channel": {
+      "type": "string",
+      "enum": [
+       "MOBILE",
+       "WEB"
+      ],
+      "title": "Channel",
+      "default": "MOBILE"
+     },
      "location": {
       "$ref": "#/components/schemas/GeoPoint"
      },
@@ -8408,6 +8578,15 @@
       "format": "uuid",
       "title": "Id"
      },
+     "attendance_mode": {
+      "type": "string",
+      "enum": [
+       "FIELD",
+       "OFFICE"
+      ],
+      "title": "Attendance Mode",
+      "default": "FIELD"
+     },
      "is_active": {
       "type": "boolean",
       "title": "Is Active"
@@ -8459,6 +8638,21 @@
        }
       ],
       "title": "Full Name"
+     },
+     "attendance_mode": {
+      "anyOf": [
+       {
+        "type": "string",
+        "enum": [
+         "FIELD",
+         "OFFICE"
+        ]
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Attendance Mode"
      },
      "email": {
       "anyOf": [
@@ -10319,6 +10513,23 @@
       "type": "string",
       "format": "uuid",
       "title": "Id"
+     },
+     "unit_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Unit Id"
+     },
+     "can_manage": {
+      "type": "boolean",
+      "title": "Can Manage",
+      "default": false
      }
     },
     "type": "object",
@@ -10734,6 +10945,17 @@
        }
       ],
       "title": "Employee Id"
+     },
+     "attendance_mode": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Attendance Mode"
      }
     },
     "type": "object",

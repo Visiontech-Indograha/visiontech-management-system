@@ -38,9 +38,8 @@ describe("halaman direktori utama", () => {
     const calls = mockApi((c) => (c.url === "/employees" ? { data: page([]) } : undefined));
     renderRoute("/directory", { role: "HR" });
     await screen.findByText("Tidak ada karyawan yang cocok.");
-    expect(calls[0]).toBeDefined();
-
-    expect(calls[0].url).toBe("/employees");
+    // Lonceng notifikasi ikut memanggil /notifications; yang diperiksa hanya panggilan daftar karyawan.
+    expect(calls.find((c) => c.url === "/employees")).toBeDefined();
 
     fireEvent.change(screen.getByLabelText("Cari nama atau no. karyawan"), { target: { value: "test" } });
     await waitFor(() => expect(calls.length).toBeGreaterThan(1));

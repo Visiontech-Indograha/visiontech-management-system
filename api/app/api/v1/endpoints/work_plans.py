@@ -7,23 +7,18 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import (
-    CurrentUser,
-    PlanAccess,
-    PlanNeed,
-    check_unit_manager,
-    ensure_same_org,
     get_current_user,
     get_db_with_user,
+    get_plan_assignment_service,
     plan_access,
     plan_day_access,
     require_permission,
-    require_plan_status,
 )
 from app.core.enums import PlanStatus
 from app.core.errors import ValidationError, trigger_rule_error
 from app.core.permissions import Permission
+from app.core.security import CurrentUser
 from app.crud.crud_plan_access import CRUDPlanAccess
-from app.crud.crud_plan_assignment import CRUDPlanAssignment
 from app.schemas.plan import (
     AssignmentEmployeeOption,
     DayPlanRequest,
@@ -35,6 +30,13 @@ from app.schemas.plan import (
     WorkPlanCreate,
     WorkPlanResponse,
     WorkPlanUpdate,
+)
+from app.services.access_service import (
+    PlanAccess,
+    PlanNeed,
+    check_unit_manager,
+    ensure_same_org,
+    require_plan_status,
 )
 from app.services.plan_assignment_service import PlanAssignmentService
 
@@ -49,10 +51,10 @@ async def assignment_options(
     period_start: date = Query(...),
     period_end: date = Query(...),
     current_user: CurrentUser = Depends(require_permission(Permission.CREATE_PLAN)),
-    db: AsyncSession = Depends(get_db_with_user),
+    plan_assignment_service: PlanAssignmentService = Depends(get_plan_assignment_service),
 ) -> PlanAssignmentOptions:
     """Pilihan PM/personel yang sah untuk periode SK baru (R-23)."""
-    values = await PlanAssignmentService(CRUDPlanAssignment(db)).options(current_user, period_start, period_end)
+    values = await plan_assignment_service.options(current_user, period_start, period_end)
     return PlanAssignmentOptions(
         can_choose_pm=values["can_choose_pm"],
         fixed_pm_employee_id=values["fixed_pm_employee_id"],
@@ -82,12 +84,13 @@ async def get_plan(access: PlanAccess = _VIEW_ACCESS) -> WorkPlanResponse:
 async def create_plan(
     data: WorkPlanCreate,
     current_user: CurrentUser = Depends(require_permission(Permission.CREATE_PLAN)),
-    db: AsyncSession = Depends(get_db_with_user)
+    db: AsyncSession = Depends(get_db_with_user),
+    plan_assignment_service: PlanAssignmentService = Depends(get_plan_assignment_service)
 ) -> WorkPlanResponse:
     await check_unit_manager(db, data.unit_id, current_user)
     await ensure_same_org(db, current_user.organization_id, sites=[data.site_id],
                           employees=[data.pm_employee_id, data.leader_employee_id])
-    assignments = PlanAssignmentService(CRUDPlanAssignment(db))
+    assignments = plan_assignment_service
     await assignments.validate_owner(current_user, data.unit_id, data.pm_employee_id)
     if data.leader_employee_id:
         await assignments.validate_team_scope(current_user, data.unit_id, [data.leader_employee_id])
@@ -144,7 +147,8 @@ async def update_plan(
     plan_id: UUID,
     data: WorkPlanUpdate,
     access: PlanAccess = _PM_UNIT_ACCESS,
-    db: AsyncSession = Depends(get_db_with_user)
+    db: AsyncSession = Depends(get_db_with_user),
+    plan_assignment_service: PlanAssignmentService = Depends(get_plan_assignment_service)
 ) -> WorkPlanResponse:
     current_user = access.user
     await ensure_same_org(db, current_user.organization_id, sites=[data.site_id], employees=[data.leader_employee_id])
@@ -189,7 +193,7 @@ async def update_plan(
         
         if data.leader_employee_id != row.leader_employee_id:
             # R-26: ketua baru melewati aturan yang sama dengan buat SK / simpan tim (staf lapangan, unit PM).
-            await PlanAssignmentService(CRUDPlanAssignment(db)).validate_team_scope(
+            await plan_assignment_service.validate_team_scope(
                 current_user, row.unit_id, [data.leader_employee_id])
             # Hapus leader lama jika ada
             await db.execute(text("DELETE FROM vms.work_plan_member WHERE work_plan_id = :plan AND role_in_plan = 'LEADER'"), {"plan": plan_id})

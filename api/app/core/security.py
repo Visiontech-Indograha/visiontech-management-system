@@ -15,6 +15,7 @@ import jwt
 from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHashError, VerificationError
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from pydantic import BaseModel
 
 from app.core.config import settings
 from app.core.time import utcnow
@@ -70,3 +71,14 @@ def verify_jwt_token(token: str) -> dict[str, Any]:
         options={"require": ["exp", "iat", "sub", "jti"]},
     )
     return claims
+
+
+# Identitas pengguna yang sedang masuk (dibangun api/deps.py::get_current_user dari token + DB).
+class CurrentUser(BaseModel):
+    user_id: str
+    organization_id: str
+    email: str
+    role: str
+    roles: list[str]
+    session_id: str
+    permissions: list[str]

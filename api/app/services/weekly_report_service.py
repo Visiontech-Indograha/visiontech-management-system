@@ -9,10 +9,10 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import PlanAccess, require_plan_status
 from app.core.enums import PlanStatus
 from app.core.errors import AppError, NotFoundError, ValidationError
 from app.crud.crud_weekly_report import CRUDWeeklyReport
+from app.services.access_service import PlanAccess, require_plan_status
 
 EDITABLE = ("DRAFT", "CHANGES_REQUESTED")
 

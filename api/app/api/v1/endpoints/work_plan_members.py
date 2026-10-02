@@ -5,11 +5,10 @@ crud/crud_plan_member.py; transaksi dibuka dependency sesi (get_db).
 from uuid import UUID
 
 from fastapi import APIRouter, Depends
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import PlanAccess, PlanNeed, get_db_with_user, plan_access
-from app.crud.crud_plan_member import CRUDPlanMember
+from app.api.deps import get_plan_member_service, plan_access
 from app.schemas.plan_member import TeamMemberOut, TeamRequest, TeamResponse
+from app.services.access_service import PlanAccess, PlanNeed
 from app.services.plan_member_service import PlanMemberService
 
 router = APIRouter(prefix="/work-plans/{plan_id}", tags=["Plan Members"])
@@ -23,10 +22,10 @@ _VIEW_ACCESS = Depends(plan_access(PlanNeed.VIEW))
 async def get_plan_team(
     plan_id: UUID,
     access: PlanAccess = _VIEW_ACCESS,
-    db: AsyncSession = Depends(get_db_with_user),
+    plan_member_service: PlanMemberService = Depends(get_plan_member_service),
 ) -> list[TeamMemberOut]:
     """Tim aktif SK (ketua dulu). SK tak terlihat / organisasi lain → 404 (penjaga VIEW)."""
-    rows = await PlanMemberService(CRUDPlanMember(db)).team(plan_id)
+    rows = await plan_member_service.team(plan_id)
     return [TeamMemberOut(**r._mapping) for r in rows]
 
 
@@ -39,9 +38,9 @@ async def set_plan_team(
     plan_id: UUID,
     payload: TeamRequest,
     access: PlanAccess = _PM_UNIT_ACCESS,
-    db: AsyncSession = Depends(get_db_with_user),
+    plan_member_service: PlanMemberService = Depends(get_plan_member_service),
 ) -> TeamResponse:
-    team = await PlanMemberService(CRUDPlanMember(db)).set_team(
+    team = await plan_member_service.set_team(
         access.user, plan_id, payload.leader_employee_id,
         payload.member_employee_ids, payload.row_version,
     )

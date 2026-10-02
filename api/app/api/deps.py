@@ -1,26 +1,52 @@
 import logging
-from collections.abc import AsyncIterator, Awaitable, Callable, Coroutine, Iterable
-from dataclasses import dataclass
-from enum import StrEnum
+from collections.abc import AsyncIterator, Awaitable, Callable, Coroutine
 from typing import Any, Literal
 from uuid import UUID
 
 import jwt
 from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from pydantic import BaseModel
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.alerts import send_security_alert
-from app.core.database import AsyncSessionLocal, set_request_context, unit_of_work
-from app.core.errors import AppError, ForbiddenError, NotFoundError
+from app.core.errors import AppError, NotFoundError
 from app.core.permissions import NO_GLOBAL_ROLE, Permission, permissions_for_roles
-from app.core.security import verify_jwt_token
-from app.crud.crud_file_access import CRUDFileAccess
-from app.crud.crud_org_ref import CRUDOrgRef
+from app.core.security import CurrentUser, verify_jwt_token
+from app.crud.crud_attendance_monitor import CRUDAttendanceMonitor
+from app.crud.crud_attendance_session import CRUDAttendanceSession
+from app.crud.crud_document import CRUDDocument
+from app.crud.crud_employee import CRUDEmployee
+from app.crud.crud_org_clock import CRUDOrgClock
 from app.crud.crud_plan_access import CRUDPlanAccess
+from app.crud.crud_plan_assignment import CRUDPlanAssignment
+from app.crud.crud_plan_member import CRUDPlanMember
+from app.crud.crud_plan_transition import CRUDPlanTransition
+from app.crud.crud_session import CRUDSession
+from app.crud.crud_unit import CRUDUnit
 from app.crud.crud_user import CRUDUser
+from app.db.session import AsyncSessionLocal, set_request_context, unit_of_work
+from app.services.access_service import PlanAccess, PlanNeed, check_plan_access
+from app.services.account_service import AccountService
+from app.services.asset_reservation_service import AssetReservationService
+from app.services.attendance_monitor_service import AttendanceMonitorService
+from app.services.attendance_session_service import AttendanceSessionService
+from app.services.auth_flow import AuthFlowService
+from app.services.document_service import DocumentService
+from app.services.employee_service import EmployeeService
+from app.services.monitoring_service import MonitoringService
+from app.services.overtime_service import OvertimeService
+from app.services.plan_assignment_service import PlanAssignmentService
+from app.services.plan_attachment_service import PlanAttachmentService
+from app.services.plan_change_service import PlanChangeService
+from app.services.plan_day_service import PlanDayService
+from app.services.plan_location_service import PlanLocationService
+from app.services.plan_member_service import PlanMemberService
+from app.services.plan_transition_service import PlanTransitionService
+from app.services.signature_service import SignatureService
+from app.services.sync_service import SyncService
+from app.services.unit_service import UnitService
+from app.services.weekly_report_service import WeeklyReportService
 
 logger = logging.getLogger(__name__)
 security = HTTPBearer(auto_error=False)  # token hilang → 401 UNAUTHENTICATED kita sendiri
@@ -36,14 +62,6 @@ async def get_db() -> AsyncIterator[AsyncSession]:
         yield session
 
 
-class CurrentUser(BaseModel):
-    user_id: str
-    organization_id: str
-    email: str
-    role: str
-    roles: list[str]
-    session_id: str
-    permissions: list[str]
 
 
 def _unauthenticated() -> AppError:
@@ -99,7 +117,7 @@ async def get_db_with_user(
     db: AsyncSession = Depends(get_db, scope=DB_SCOPE),
     current_user: CurrentUser = Depends(get_current_user),
 ) -> AsyncSession:
-    # Konteks RLS & audit untuk transaksi permintaan ini (app/core/database.py).
+    # Konteks RLS & audit untuk transaksi permintaan ini (app/db/session.py).
     try:
         await set_request_context(
             db,
@@ -115,138 +133,6 @@ async def get_db_with_user(
         )
         raise AppError("INTERNAL_ERROR", "Terjadi kesalahan internal pada server.", status=500) from None
     return db
-
-
-# ── Penjaga akses (dipindah dari api/guards.py, R-28 M2) ─────────────────────
-# Penjaga keterlibatan pekerjaan (V-07). Kewenangan mengikuti SK, bukan jabatan (CLAUDE.md aturan 1):
-# ketua & anggota dibaca dari SK yang berlaku setiap permintaan (`is_plan_leader`/`is_plan_member`).
-#
-# SK organisasi lain atau yang tidak terlihat oleh pengguna → 404 (keberadaannya tidak dibocorkan);
-# terlihat tetapi tidak berwenang → 403.
-
-
-class PlanNeed(StrEnum):
-    PM_UNIT = "PM_UNIT"                    # PM unit SK, OPS, ADMIN
-    LEADER = "LEADER"                      # ketua menurut SK yang berlaku
-    MEMBER = "MEMBER"                      # anggota aktif (termasuk ketua)
-    LEADER_OR_MEMBER = "LEADER_OR_MEMBER"
-    VIEW = "VIEW"
-
-
-_REFUSAL = {
-    PlanNeed.PM_UNIT: "Hanya PM unit pekerjaan ini yang dapat melakukan tindakan ini.",
-    PlanNeed.LEADER: "Hanya ketua tim menurut SK yang berlaku yang dapat melakukan tindakan ini.",
-    PlanNeed.MEMBER: "Hanya anggota tim pekerjaan ini yang dapat melakukan tindakan ini.",
-    PlanNeed.LEADER_OR_MEMBER: "Hanya ketua atau anggota tim pekerjaan ini yang dapat melakukan tindakan ini.",
-}
-
-
-@dataclass(frozen=True)
-class PlanAccess:
-    plan: Any               # baris SK (kolom WorkPlanResponse + kedudukan)
-    user: CurrentUser
-    manages: bool
-    is_leader: bool
-    is_member: bool
-
-
-STAGE_MISMATCH = "Tahap work plan belum sesuai untuk tindakan ini."  # domain.js requireStatus
-
-
-def require_plan_status(access: PlanAccess, *allowed: str) -> None:
-    """`domain.js` requireStatus — tindakan hanya pada tahap SK tertentu (V-11). → 409 INVALID_STATE."""
-    if access.plan.status not in allowed:
-        raise AppError("INVALID_STATE", STAGE_MISMATCH, status=409)
-
-
-def satisfies(need: PlanNeed, *, manages: bool, is_leader: bool, is_member: bool) -> bool:
-    """Apakah kedudukan pengguna (yang sudah terlihat) memenuhi kebutuhan tindakan."""
-    return {
-        PlanNeed.VIEW: True,
-        PlanNeed.PM_UNIT: manages,
-        PlanNeed.LEADER: is_leader,
-        PlanNeed.MEMBER: is_member,
-        PlanNeed.LEADER_OR_MEMBER: is_leader or is_member,
-    }[need]
-
-
-async def check_plan_access(
-    db: AsyncSession, plan_id: UUID | str, user: CurrentUser, need: PlanNeed, archived: bool | None = False
-) -> PlanAccess:
-    row = await CRUDPlanAccess(db).standing(plan_id, user.organization_id, user.user_id, archived)
-    if row is None:
-        raise NotFoundError("SK")
-    if not satisfies(need, manages=row.manages, is_leader=row.is_leader, is_member=row.is_member):
-        raise ForbiddenError(_REFUSAL[need])
-    return PlanAccess(plan=row, user=user, manages=row.manages, is_leader=row.is_leader, is_member=row.is_member)
-
-
-async def check_unit_manager(db: AsyncSession, unit_id: UUID | str, user: CurrentUser) -> None:
-    """Membuat SK di sebuah unit: PM unit itu, OPS, atau ADMIN. Unit organisasi lain → 404."""
-    row = await CRUDPlanAccess(db).unit_standing(unit_id, user.organization_id, user.user_id)
-    if row is None:
-        raise NotFoundError("Unit bisnis")
-    if not row.manages:
-        raise ForbiddenError("Hanya PM unit ini yang dapat membuat SK untuk unit tersebut.")
-
-
-async def check_file_access(db: AsyncSession, file_id: UUID, user: CurrentUser) -> Any:
-    """V-17 — siapa boleh membuka berkas (dok 08, dok 13 §7). Tidak boleh → 404, bukan 403.
-    - pengunggahnya sendiri;
-    - dokumen pribadi: karyawan pemilik & pemegang `manage:employee_documents` (HR);
-    - swafoto absensi: karyawan pemilik & peninjau absensi (`review:attendance`);
-    - bukti laporan/insiden/laporan akhir: siapa pun yang melihat SK-nya (V-07);
-    - selain itu (belum dilampirkan, QR, wajah): hanya pengunggah."""
-    row = await CRUDFileAccess(db).links(file_id, user.organization_id, user.user_id)
-    if row is None:
-        raise NotFoundError("Berkas")
-    if row.is_uploader:
-        return row
-    if row.personal_document:
-        if row.own_document or Permission.MANAGE_EMPLOYEE_DOCUMENTS.value in user.permissions:
-            return row
-        raise NotFoundError("Berkas")
-    if row.selfie:
-        if row.own_selfie or Permission.REVIEW_ATTENDANCE.value in user.permissions:
-            return row
-        raise NotFoundError("Berkas")
-    plans = CRUDPlanAccess(db)
-    for plan_id in row.plan_ids:
-        if await plans.standing(plan_id, user.organization_id, user.user_id) is not None:
-            return row
-    raise NotFoundError("Berkas")
-
-
-_REF_LABELS = (
-    ("work_plans", "SK"), ("sites", "Lokasi"), ("assets", "Aset"),
-    ("files", "Berkas"), ("employees", "Karyawan"), ("units", "Unit bisnis"),
-)
-
-
-async def ensure_same_org(
-    db: AsyncSession,
-    org_id: str,
-    *,
-    work_plans: Iterable[UUID | str | None] = (),
-    sites: Iterable[UUID | str | None] = (),
-    assets: Iterable[UUID | str | None] = (),
-    files: Iterable[UUID | str | None] = (),
-    employees: Iterable[UUID | str | None] = (),
-    units: Iterable[UUID | str | None] = (),
-) -> None:
-    """V-08: setiap id di badan permintaan milik organisasi pengguna; bila tidak → 404 (bukan 403,
-    agar keberadaan data organisasi lain tidak bocor). Dipanggil SEBELUM menulis apa pun."""
-    refs = {
-        kind: sorted({str(i) for i in ids if i is not None})
-        for kind, ids in (("work_plans", work_plans), ("sites", sites), ("assets", assets),
-                          ("files", files), ("employees", employees), ("units", units))
-    }
-    if not any(refs.values()):
-        return
-    owned = await CRUDOrgRef(db).owned_counts(org_id, **refs)
-    for kind, label in _REF_LABELS:
-        if getattr(owned, kind) != len(refs[kind]):
-            raise NotFoundError(label)
 
 
 def plan_access(need: PlanNeed, archived: bool | None = False) -> Callable[..., Awaitable[PlanAccess]]:
@@ -303,3 +189,92 @@ def plan_day_access(need: PlanNeed) -> Callable[..., Awaitable[PlanAccess]]:
             raise NotFoundError("Hari kerja")
         return access
     return guard
+
+
+# ── Perakitan service (R-28 M5) ─────────────────────────────────────────────
+# Getter memakai dependency sesi yang SAMA dengan handler (`get_db_with_user`; `get_db` untuk rute publik;
+# `get_db` + `DB_SCOPE` untuk auth), sehingga FastAPI memakai ulang satu sesi = satu transaksi per permintaan.
+
+
+def get_account_service(db: AsyncSession = Depends(get_db_with_user)) -> AccountService:
+    return AccountService(CRUDUser(db), CRUDEmployee(db), CRUDSession(db))
+
+
+def get_asset_reservation_service(db: AsyncSession = Depends(get_db_with_user)) -> AssetReservationService:
+    return AssetReservationService(db)
+
+
+def get_attendance_monitor_service(db: AsyncSession = Depends(get_db_with_user)) -> AttendanceMonitorService:
+    return AttendanceMonitorService(CRUDAttendanceMonitor(db))
+
+
+def get_attendance_session_service(db: AsyncSession = Depends(get_db_with_user)) -> AttendanceSessionService:
+    return AttendanceSessionService(CRUDAttendanceSession(db), CRUDOrgClock(db))
+
+
+def get_document_service(db: AsyncSession = Depends(get_db_with_user)) -> DocumentService:
+    return DocumentService(CRUDDocument(db))
+
+
+def get_employee_service(db: AsyncSession = Depends(get_db_with_user)) -> EmployeeService:
+    return EmployeeService(db)
+
+
+def get_monitoring_service(db: AsyncSession = Depends(get_db_with_user)) -> MonitoringService:
+    return MonitoringService(db)
+
+
+def get_overtime_service(db: AsyncSession = Depends(get_db_with_user)) -> OvertimeService:
+    return OvertimeService(db)
+
+
+def get_plan_assignment_service(db: AsyncSession = Depends(get_db_with_user)) -> PlanAssignmentService:
+    return PlanAssignmentService(CRUDPlanAssignment(db))
+
+
+def get_plan_attachment_service(db: AsyncSession = Depends(get_db_with_user)) -> PlanAttachmentService:
+    return PlanAttachmentService(db)
+
+
+def get_plan_change_service(db: AsyncSession = Depends(get_db_with_user)) -> PlanChangeService:
+    return PlanChangeService(db)
+
+
+def get_plan_day_service(db: AsyncSession = Depends(get_db_with_user)) -> PlanDayService:
+    return PlanDayService(db)
+
+
+def get_plan_location_service(db: AsyncSession = Depends(get_db_with_user)) -> PlanLocationService:
+    return PlanLocationService(db)
+
+
+def get_plan_member_service(db: AsyncSession = Depends(get_db_with_user)) -> PlanMemberService:
+    return PlanMemberService(CRUDPlanMember(db))
+
+
+def get_plan_transition_service(db: AsyncSession = Depends(get_db_with_user)) -> PlanTransitionService:
+    return PlanTransitionService(CRUDPlanTransition(db), CRUDPlanMember(db))
+
+
+def get_signature_service(db: AsyncSession = Depends(get_db_with_user)) -> SignatureService:
+    return SignatureService(db)
+
+
+def get_sync_service(db: AsyncSession = Depends(get_db_with_user)) -> SyncService:
+    return SyncService(db)
+
+
+def get_unit_service(db: AsyncSession = Depends(get_db_with_user)) -> UnitService:
+    return UnitService(CRUDUnit(db))
+
+
+def get_weekly_report_service(db: AsyncSession = Depends(get_db_with_user)) -> WeeklyReportService:
+    return WeeklyReportService(db)
+
+
+def get_public_signature_service(db: AsyncSession = Depends(get_db)) -> SignatureService:
+    return SignatureService(db)
+
+
+def get_auth_flow_service(db: AsyncSession = Depends(get_db, scope=DB_SCOPE)) -> AuthFlowService:
+    return AuthFlowService(db)

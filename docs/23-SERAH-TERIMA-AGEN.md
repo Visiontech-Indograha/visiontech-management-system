@@ -10,7 +10,7 @@ setiap kali Anda menutup sesi dengan perubahan berarti.
 - Subagen **boleh** dipakai (larangan dicabut pemilik 2026-09-28, R-25). Tiap subagen bekerja di
   branch `feature/...` dan worktree sendiri, dengan DB uji sendiri, lalu digabung ke `development`.
   Tetap hemat: tanpa polling berulang.
-- Setiap permintaan pemilik atau PM **dicatat** di `docs/19-CATATAN-REVISI-PEMILIK.md` (nomor R-xx berikutnya: **R-30**).
+- Setiap permintaan pemilik atau PM **dicatat** di `docs/19-CATATAN-REVISI-PEMILIK.md` (nomor R-xx berikutnya: **R-31**).
 - Figma: tim **my-edu** (kursi Full). Tim `vms` hanya kursi View, tidak bisa diubah.
 - **Commit hanya setelah uji otomatis dan uji nyata lulus** (web di peramban terhadap API + DB nyata; mobile di HP nyata). Rencana & temuan audit: `docs/24`.
 - **Struktur folder `api/` WAJIB** mengikuti `docs/12` §1 (R-28); migrasi bertahap `docs/26`. Berkas baru hanya di tempat yang benar.
@@ -73,7 +73,7 @@ Yang dibagikan ke penguji adalah APK, bukan `.aab`: file `.aab` hanya untuk Play
 
 ## 4. Terbuka — kerjakan / tanyakan berikutnya
 
-0. **R-28 lanjut dari M5** (`docs/26`): `dependencies.py`, `CurrentUser`/penjaga → `core/security.py`, lalu M6 (SQL keluar dari endpoint per modul), M6b (model semua tabel), M7, M8. Setiap tahap: suite penuh di DB uji, OpenAPI identik, uji nyata web (+ HP; sementara dilewati per R-29, uji HP menyeluruh setelah R-28 selesai), baru commit. **R-27** (audit prototipe) baru setelah R-28 selesai. Merge R-26 ke `prod` ditunda pemilik.
+0. **R-28 lanjut dari M6** (`docs/26`): `dependencies.py`, `CurrentUser`/penjaga → `core/security.py`, lalu M6 (SQL keluar dari endpoint per modul), M6b (model semua tabel), M7, M8. Setiap tahap: suite penuh di DB uji, OpenAPI identik, uji nyata web (+ HP; sementara dilewati per R-29, uji HP menyeluruh setelah R-28 selesai), baru commit. **R-27** (audit prototipe) baru setelah R-28 selesai. Merge R-26 ke `prod` ditunda pemilik.
 1. **Uji R-23 di produksi** (kode sudah aktif melalui `2678343b`). Inspeksi kendaraan dilakukan
    pengemudi setelah reservasi (`driver_checked_at`) dan kini wajib lulus sebelum SK dapat dimulai.
 2. **UAT seminggu** mengikuti `docs/22`. Temuan dicatat di tabel Temuan di docs/22, lalu ke docs/19.

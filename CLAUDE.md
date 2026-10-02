@@ -63,9 +63,11 @@ docs/           seluruh rencana dan standar
 
 ## Aturan backend
 
-- **Struktur folder `api/app/` WAJIB (keputusan pemilik 2026-09-29, kritis):**
-  `api/v1/endpoints/<modul>.py` + `api/v1/router.py` + `api/deps.py` · `core/` (`config.py`, `database.py`, …) ·
-  `models/` · `schemas/` · `crud/crud_<entitas>.py` · `services/` · `main.py` · `dependencies.py`.
+- **Struktur folder `api/app/` WAJIB (keputusan pemilik 2026-09-29, kritis; dikoreksi R-30 2026-09-30) — persis contoh pemilik:**
+  `api/v1/endpoints/<modul>.py` + `api/v1/router.py` + `api/deps.py` (sesi, auth, izin, penjaga akses, perakitan
+  service `get_<nama>_service`) · `core/` (`config.py`, `security.py` + `CurrentUser`, …) · `crud/crud_<entitas>.py` ·
+  `models/` · `schemas/` · `services/` · `db/` (`base.py`, `session.py`) · `main.py`.
+  **Tidak ada** `core/database.py`, `app/dependencies.py`, `controllers/`, `repositories/`.
   Berkas baru hanya boleh dibuat di tempat ini. Rincian & pemetaan: `docs/12` §1; migrasi: `docs/26`.
 - Lapisan: **endpoint → service → crud**. Endpoint tidak pernah menyentuh
   basis data. Service tidak pernah menulis SQL.

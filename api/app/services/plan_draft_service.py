@@ -1,0 +1,227 @@
+"""
+app/services/plan_draft_service.py
+Form "Buat SK" / "Ubah isi SK" alur v2 (keputusan pemilik 2026-10-03, flowchart SK2-A/B).
+
+Satu simpan = satu transaksi: SK, lokasi baru, hari & detail pekerjaan, tim, alat, kendaraan, driver.
+Aturan pilihan (dikonfirmasi pemilik):
+- ketua: staf lapangan (bukan akun kantor) yang tidak terikat SK aktif mana pun;
+- anggota: syarat sama + bawahan PM (unit yang sama) + bukan ketua terpilih;
+- alat/kendaraan: siap pakai, tidak teralokasi, tidak dipinjam;
+- driver: ketua/anggota terpilih dengan SIM sesuai tipe kendaraan (roda dua = SIM C) yang tidak terikat SK lain.
+"""
+from __future__ import annotations
+
+import json
+from datetime import date, timedelta
+from typing import Any
+from uuid import UUID
+
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.enums import PlanStatus
+from app.core.errors import AppError, ConflictError, ForbiddenError, NotFoundError, trigger_rule_error
+from app.core.permissions import RoleCode
+from app.core.security import CurrentUser
+from app.crud.crud_asset_reservation import CRUDAssetReservation
+from app.crud.crud_plan_draft import CRUDPlanDraft
+from app.schemas.plan_draft import PlanDraftRequest
+
+CATEGORIES = {"INSTALASI": "Instalasi", "PEMELIHARAAN": "Pemeliharaan", "PERBAIKAN": "Perbaikan",
+              "SURVEI": "Survei", "LAINNYA": "Lainnya"}
+MAX_TASKS_PER_DAY = 30
+
+
+def _invalid(message: str) -> AppError:
+    return AppError("VALIDATION_ERROR", message, status=422)
+
+
+def licence_for(vehicle_type: str | None) -> str:
+    """Sama dengan trigger tg_vehicle_driver_licence: roda dua → SIM C, selain itu SIM A."""
+    return "SIM C" if vehicle_type == "MOTORCYCLE" else "SIM A"
+
+
+class PlanDraftService:
+    def __init__(self, db: AsyncSession) -> None:
+        self.db = db
+        self.repo = CRUDPlanDraft(db)
+        self.assets = CRUDAssetReservation(db)
+
+    async def _creator(self, user: CurrentUser) -> Any:
+        creator = await self.repo.creator(user.user_id)
+        if creator is None or not creator.unit_id:
+            raise ForbiddenError("Akun Anda belum tertaut ke data karyawan aktif pada sebuah unit.")
+        return creator
+
+    @staticmethod
+    def _oversees(user: CurrentUser) -> bool:
+        return RoleCode.ADMIN in user.roles or RoleCode.OPS in user.roles
+
+    # ── Pilihan form ──────────────────────────────────────────────────────────────────────────
+    async def form_options(self, user: CurrentUser, plan_id: UUID | None) -> dict[str, Any]:
+        creator = await self._creator(user)
+        unit = creator.unit_id
+        assets = await self.repo.free_assets(user.organization_id, plan_id)
+        return {
+            "unit_name": creator.unit_name,
+            "categories": [{"code": k, "label": v} for k, v in CATEGORIES.items()],
+            "sites": await self.repo.sites(user.organization_id, None if self._oversees(user) else unit),
+            "leaders": await self.repo.field_staff(user.organization_id, None, plan_id),
+            "members": await self.repo.field_staff(user.organization_id, unit, plan_id),
+            "tools": [a for a in assets if a.kind == "TOOL"],
+            "vehicles": [a for a in assets if a.kind == "VEHICLE"],
+        }
+
+    async def driver_options(self, user: CurrentUser, vehicle_id: UUID, candidate_ids: list[UUID],
+                             period_end: date, plan_id: UUID | None) -> list[str]:
+        """Calon driver (dari ketua + anggota terpilih) yang ber-SIM sesuai dan tidak terikat SK lain."""
+        vehicle = next((a for a in await self.repo.free_assets(user.organization_id, plan_id)
+                        if str(a.id) == str(vehicle_id) and a.kind == "VEHICLE"), None)
+        if vehicle is None:
+            raise NotFoundError("Kendaraan")
+        ids = [str(c) for c in candidate_ids]
+        licensed = await self.repo.licensed(ids, licence_for(vehicle.vehicle_type), period_end)
+        bound = await self.repo.employees_bound(ids, plan_id)
+        return [i for i in ids if i in licensed and i not in bound]
+
+    # ── Validasi isi form ─────────────────────────────────────────────────────────────────────
+    async def _validate(self, user: CurrentUser, unit_id: str, data: PlanDraftRequest,
+                        plan_id: UUID | None) -> None:
+        if not data.title.strip():
+            raise _invalid("Judul pekerjaan wajib diisi.")
+        if not data.description.strip():
+            raise _invalid("Deskripsi pekerjaan wajib diisi.")
+        if data.period_end < data.period_start:
+            raise _invalid("Tanggal selesai tidak boleh sebelum tanggal mulai.")
+        if data.site_id is None and data.new_site is None:
+            raise _invalid("Pilih lokasi kerja atau tambahkan lokasi baru.")
+        if data.new_site is not None and not data.new_site.name.strip():
+            raise _invalid("Nama lokasi wajib diisi.")
+
+        expected = {data.period_start + timedelta(days=i)
+                    for i in range((data.period_end - data.period_start).days + 1)}
+        given = [d.work_date for d in data.days]
+        if len(given) != len(set(given)) or set(given) != expected:
+            raise _invalid("Setiap tanggal dalam rentang work plan wajib punya detail pekerjaan.")
+        files: list[UUID] = []
+        for day in data.days:
+            if not 1 <= len(day.tasks) <= MAX_TASKS_PER_DAY:
+                raise _invalid(f"Isi 1 sampai {MAX_TASKS_PER_DAY} detail pekerjaan per hari ({day.work_date:%d-%m-%Y}).")
+            for task in day.tasks:
+                if not task.title.strip() or not task.description.strip():
+                    raise _invalid(f"Judul dan deskripsi setiap detail pekerjaan wajib diisi ({day.work_date:%d-%m-%Y}).")
+                files.extend(task.file_ids)
+        if files and len(await self.repo.org_files(files, user.organization_id)) != len(set(map(str, files))):
+            raise NotFoundError("Berkas")
+
+        leader = str(data.leader_employee_id)
+        members = [str(m) for m in data.member_employee_ids]
+        if not members:
+            raise _invalid("Pilih minimal satu anggota tim.")
+        if leader in members or len(set(members)) != len(members):
+            raise _invalid("Ketua tim tidak boleh dipilih lagi sebagai anggota.")
+        staff = await self.repo.field_staff_ids([leader, *members], user.organization_id)
+        if {leader, *members} - set(staff):
+            raise AppError("PERSONNEL_NOT_FIELD_STAFF",
+                           "Ketua dan anggota tim hanya dapat dipilih dari staf lapangan (bukan akun kantor).",
+                           status=422)
+        if any(staff[m] != unit_id for m in members):
+            raise AppError("PERSONNEL_OUTSIDE_PM_UNIT", "Anggota tim harus bawahan PM (unit yang sama).", status=422)
+        if await self.repo.employees_bound([leader, *members], plan_id):
+            raise AppError("PERSONNEL_BOUND", "Ada ketua/anggota yang masih terikat work plan lain.", status=409)
+
+        free = {str(a.id): a for a in await self.repo.free_assets(user.organization_id, plan_id)}
+        for tool in data.tool_ids:
+            if str(tool) not in free or free[str(tool)].kind != "TOOL":
+                raise AppError("ASSET_UNAVAILABLE", "Ada alat yang tidak lagi tersedia. Muat ulang pilihan.", status=409)
+        if data.vehicle_id is not None:
+            vehicle = free.get(str(data.vehicle_id))
+            if vehicle is None or vehicle.kind != "VEHICLE":
+                raise AppError("ASSET_UNAVAILABLE", "Kendaraan tidak lagi tersedia. Muat ulang pilihan.", status=409)
+            if data.driver_employee_id is None:
+                raise _invalid("Pilih driver kendaraan.")
+            driver = str(data.driver_employee_id)
+            if driver not in {leader, *members}:
+                raise _invalid("Driver harus ketua atau anggota tim yang dipilih.")
+            needed = licence_for(vehicle.vehicle_type)
+            if driver not in await self.repo.licensed([driver], needed, data.period_end):
+                raise _invalid(f"Driver tidak memiliki {needed} yang berlaku sampai tanggal selesai.")
+
+    async def _site(self, user: CurrentUser, unit_id: str, data: PlanDraftRequest) -> tuple[str, str]:
+        if data.new_site is not None:
+            try:
+                async with self.db.begin_nested():
+                    site = await self.repo.insert_site(user.organization_id, unit_id, data.new_site.name.strip(),
+                                                       (data.new_site.description or "").strip() or None,
+                                                       data.new_site.lat, data.new_site.lng)
+            except IntegrityError:
+                raise AppError("SITE_INVALID", "Nama lokasi sudah dipakai. Pilih dari daftar atau ganti nama.",
+                               status=409) from None
+            return str(site.id), str(site.name)
+        name = await self.repo.site_name(data.site_id or "", user.organization_id)
+        if name is None:
+            raise NotFoundError("Lokasi")
+        return str(data.site_id), name
+
+    async def _fill(self, user: CurrentUser, plan_id: str, data: PlanDraftRequest) -> None:
+        for order, day in enumerate(sorted(data.days, key=lambda d: d.work_date)):
+            day_id = await self.repo.insert_day(plan_id, day.work_date, day.tasks[0].title.strip(), order)
+            for t_order, task in enumerate(day.tasks):
+                task_id = await self.repo.insert_task(day_id, task.title.strip(), task.description.strip(), t_order)
+                for f_order, file_id in enumerate(dict.fromkeys(task.file_ids)):
+                    await self.repo.insert_task_file(task_id, file_id, f_order)
+        try:
+            await self.repo.insert_member(plan_id, data.leader_employee_id, "LEADER", data.period_start)
+            for member in data.member_employee_ids:
+                await self.repo.insert_member(plan_id, member, "MEMBER", data.period_start)
+            for tool in data.tool_ids:
+                await self.assets.insert_allocation(tool, plan_id, None, user.user_id)
+                await self.assets.set_asset_status(tool, "RESERVED")
+            if data.vehicle_id is not None:
+                await self.assets.insert_allocation(data.vehicle_id, plan_id, data.driver_employee_id, user.user_id)
+                await self.assets.set_asset_status(data.vehicle_id, "RESERVED")
+        except IntegrityError as exc:
+            rule = trigger_rule_error(exc)
+            raise (rule or AppError("CONFLICT", "Data bentrok dengan work plan lain. Muat ulang pilihan.",
+                                    status=409)) from None
+
+    # ── Simpan ────────────────────────────────────────────────────────────────────────────────
+    async def create_plan(self, user: CurrentUser, data: PlanDraftRequest) -> Any:
+        """domain.js CREATE_PLAN versi form lengkap — hasilnya status Draf."""
+        creator = await self._creator(user)
+        await self._validate(user, creator.unit_id, data, None)
+        site_id, site_name = await self._site(user, creator.unit_id, data)
+        row = await self.repo.insert_plan(
+            user.organization_id, creator.unit_id, user.user_id, title=data.title.strip(),
+            description=data.description.strip(), category=data.category, site_id=site_id,
+            location_text=site_name, period_start=data.period_start, period_end=data.period_end,
+            pm_employee_id=creator.employee_id, leader_employee_id=data.leader_employee_id)
+        await self._fill(user, str(row.id), data)
+        return await self.detail(row.id)
+
+    async def edit_draft(self, user: CurrentUser, plan_id: UUID, data: PlanDraftRequest) -> Any:
+        """domain.js EDIT_DRAFT versi form lengkap — isi draf disusun ulang seluruhnya."""
+        plan = await self.repo.lock_draft(plan_id, user.organization_id)
+        if plan is None:
+            raise NotFoundError("SK")
+        if plan.status != PlanStatus.DRAFT:
+            raise AppError("INVALID_STATE", "Isi SK hanya dapat diubah selama berstatus Draf.", status=409)
+        if data.row_version is None or plan.row_version != data.row_version:
+            raise ConflictError()
+        unit_id = str(plan.unit_id)
+        await self._validate(user, unit_id, data, plan_id)
+        await self.repo.clear_draft_parts(plan_id)
+        site_id, site_name = await self._site(user, unit_id, data)
+        await self.repo.update_plan(
+            plan_id, title=data.title.strip(), description=data.description.strip(), category=data.category,
+            site_id=site_id, location_text=site_name, period_start=data.period_start, period_end=data.period_end,
+            leader_employee_id=data.leader_employee_id)
+        await self._fill(user, str(plan_id), data)
+        return await self.detail(plan_id)
+
+    async def detail(self, plan_id: UUID | str) -> dict[str, Any]:
+        value = await self.repo.plan_detail(plan_id)
+        detail: dict[str, Any] = json.loads(value) if isinstance(value, str) else value
+        category = detail["plan"].get("category")
+        detail["plan"]["category_label"] = CATEGORIES.get(category, category) if category else None
+        return detail

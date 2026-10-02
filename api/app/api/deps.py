@@ -38,11 +38,13 @@ from app.services.auth_flow import AuthFlowService
 from app.services.document_service import DocumentService
 from app.services.employee_service import EmployeeService
 from app.services.monitoring_service import MonitoringService
+from app.services.notification_service import NotificationService
 from app.services.overtime_service import OvertimeService
 from app.services.plan_assignment_service import PlanAssignmentService
 from app.services.plan_attachment_service import PlanAttachmentService
 from app.services.plan_change_service import PlanChangeService
 from app.services.plan_day_service import PlanDayService
+from app.services.plan_draft_service import PlanDraftService
 from app.services.plan_location_service import PlanLocationService
 from app.services.plan_member_service import PlanMemberService
 from app.services.plan_transition_service import PlanTransitionService
@@ -255,6 +257,14 @@ def get_plan_change_service(db: AsyncSession = Depends(get_db_with_user)) -> Pla
 
 def get_plan_day_service(db: AsyncSession = Depends(get_db_with_user)) -> PlanDayService:
     return PlanDayService(db)
+
+
+def get_plan_draft_service(db: AsyncSession = Depends(get_db_with_user)) -> PlanDraftService:
+    return PlanDraftService(db)
+
+
+def get_notification_service(db: AsyncSession = Depends(get_db_with_user)) -> NotificationService:
+    return NotificationService(db)
 
 
 def get_plan_location_service(db: AsyncSession = Depends(get_db_with_user)) -> PlanLocationService:

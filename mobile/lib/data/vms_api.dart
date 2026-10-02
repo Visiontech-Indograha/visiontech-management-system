@@ -47,9 +47,10 @@ class VmsApi {
 
   /// Absensi milik sendiri (server membatasi ke pengguna ini bila bukan HR/Finance).
   /// `today` = tanggal hari ini menurut zona waktu organisasi (O-10), bukan jam HP.
-  Future<({List<Map<String, dynamic>> items, String? today})> myAttendance({
-    required String employeeId,
-  }) async {
+  Future<
+    ({List<Map<String, dynamic>> items, String? today, String? timeAnchor})
+  >
+  myAttendance({required String employeeId}) async {
     final res = await _dio.get(
       '$_p/attendance',
       queryParameters: {
@@ -58,7 +59,11 @@ class VmsApi {
       },
     );
     final data = res.data as Map;
-    return (items: _list(data['items']), today: data['today'] as String?);
+    return (
+      items: _list(data['items']),
+      today: data['today'] as String?,
+      timeAnchor: data['time_anchor'] as String?,
+    );
   }
 
   Future<Map<String, dynamic>> checkIn({
@@ -95,6 +100,38 @@ class VmsApi {
         'channel': 'MOBILE',
         'location': {'lat': lat, 'lng': lng},
         'location_origin': 'GPS',
+      },
+    );
+    return Map<String, dynamic>.from(res.data as Map);
+  }
+
+  /// R-34: daftarkan kunci publik Android Keystore untuk absen luring.
+  Future<void> registerDeviceKey({
+    required String deviceId,
+    required String publicKey,
+  }) => _dio.post(
+    '$_p/attendance/device-key',
+    data: {'device_id': deviceId, 'public_key': publicKey},
+  );
+
+  /// R-34: kirim satu absen luring bertanda tangan (idempoten per client_op_id).
+  Future<Map<String, dynamic>> submitOfflineAttendance({
+    required String deviceId,
+    required String clientOpId,
+    required String kind,
+    required String payload,
+    required String signature,
+    String? selfieFileId,
+  }) async {
+    final res = await _dio.post(
+      '$_p/attendance/offline',
+      data: {
+        'device_id': deviceId,
+        'client_op_id': clientOpId,
+        'kind': kind,
+        'payload': payload,
+        'signature': signature,
+        'selfie_file_id': ?selfieFileId,
       },
     );
     return Map<String, dynamic>.from(res.data as Map);

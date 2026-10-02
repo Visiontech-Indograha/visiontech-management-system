@@ -6,9 +6,9 @@ from datetime import date
 from typing import Any
 from uuid import UUID
 
-from app.api.deps import CurrentUser
 from app.core.errors import AppError, ForbiddenError
 from app.core.permissions import RoleCode
+from app.core.security import CurrentUser
 from app.crud.crud_plan_assignment import CRUDPlanAssignment
 
 

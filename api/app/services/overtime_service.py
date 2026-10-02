@@ -13,13 +13,14 @@ from uuid import UUID
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import CurrentUser, PlanNeed, check_plan_access
 from app.core.enums import PlanStatus
 from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationError
 from app.core.permissions import Permission, RoleCode
+from app.core.security import CurrentUser
 from app.crud.crud_org_clock import CRUDOrgClock
 from app.crud.crud_overtime import CRUDOvertime
 from app.crud.crud_plan_access import CRUDPlanAccess
+from app.services.access_service import PlanNeed, check_plan_access
 
 
 def _state(msg: str) -> AppError:

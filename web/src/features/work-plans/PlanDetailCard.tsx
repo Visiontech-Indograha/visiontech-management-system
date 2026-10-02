@@ -15,10 +15,10 @@ export function PlanDetailCard({ plan }: { plan: WorkPlan }) {
   const assets = (d?.assets ?? []) as Asset[];
   const days = (d?.days ?? []) as Day[];
   return (
-    <section aria-label="Isi SK" className="mt-6 space-y-6">
+    <div className="mt-6 space-y-6">
       <QueryState query={detail} errorText="Isi SK tidak dapat dimuat.">
         <div className="grid gap-6 md:grid-cols-2">
-          <div className="rounded-panel border border-line bg-surface p-4 shadow-card">
+          <section aria-label="Tim" className="rounded-panel border border-line bg-surface p-4 shadow-card">
             <h2 className="mb-3 text-base font-semibold">Tim</h2>
             {team.length === 0 ? (
               <p className="text-sm text-mist">Belum ada tim.</p>
@@ -34,7 +34,7 @@ export function PlanDetailCard({ plan }: { plan: WorkPlan }) {
                 ))}
               </ul>
             )}
-          </div>
+          </section>
           <div className="rounded-panel border border-line bg-surface p-4 shadow-card">
             <h2 className="mb-3 text-base font-semibold">Alat &amp; kendaraan</h2>
             {assets.length === 0 ? (
@@ -77,6 +77,6 @@ export function PlanDetailCard({ plan }: { plan: WorkPlan }) {
           )}
         </div>
       </QueryState>
-    </section>
+    </div>
   );
 }

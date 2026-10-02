@@ -21,8 +21,8 @@ from tests.db_guard import unsafe_test_database, unsafe_test_storage, use_test_d
 use_test_database()   # harus sebelum app.* diimpor: pengaturan dibaca saat impor
 
 from app.core.config import settings
-from app.core.database import SEARCH_PATH, AsyncSessionLocal, make_engine
 from app.core.security import hash_password
+from app.db.session import SEARCH_PATH, AsyncSessionLocal, make_engine
 from app.main import API_PREFIX, app
 
 _UNSAFE = unsafe_test_database(settings.DATABASE_URL) or unsafe_test_storage(settings.MINIO_ENDPOINT)
@@ -60,6 +60,8 @@ def _sync_conn():
         host=_DB.hostname, port=_DB.port, dbname=_DB.path.lstrip("/"),
         user=_DB.username, password=_DB.password,
         options=f"-c search_path={SEARCH_PATH.replace(' ', '')}",
+        # DB uji ada di server (Tailscale): jaringan putus → gagal cepat, bukan menggantung berjam-jam.
+        connect_timeout=15, keepalives=1, keepalives_idle=30, keepalives_interval=10, keepalives_count=3,
     )
 
 

@@ -14,12 +14,12 @@ from fastapi import HTTPException
 from pydantic import ValidationError as PydanticValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import CurrentUser, PlanAccess, PlanNeed, check_plan_access, ensure_same_org
-from app.api.v1.endpoints import hse
 from app.core.errors import AppError, NotFoundError
+from app.core.security import CurrentUser
 from app.crud.crud_plan_access import CRUDPlanAccess
 from app.crud.crud_sync import CRUDSync
 from app.schemas.hse import DailyReportCreate, IncidentCreate
+from app.services.access_service import PlanAccess, PlanNeed, check_plan_access, ensure_same_org
 from app.services.overtime_service import OvertimeService
 
 OFFLINE_ALLOWED = ("DAILY_REPORT_SAVE", "DAILY_REPORT_SUBMIT", "TASK_TOGGLE", "INCIDENT_REPORT", "OVERTIME_REPORT")
@@ -48,6 +48,10 @@ class SyncService:
         return access
 
     async def _apply(self, user: CurrentUser, op_type: str, p: dict[str, Any]) -> None:
+        # Sementara: logika laporan harian & insiden masih di endpoint hse (SQL di endpoint, R-25b).
+        # Impor di dalam fungsi agar tidak melingkar dengan api/deps.py; dibereskan di docs/26 M6 modul hse.
+        from app.api.v1.endpoints import hse
+
         if op_type in ("DAILY_REPORT_SAVE", "DAILY_REPORT_SUBMIT", "TASK_TOGGLE"):
             plan_id, day_id = UUID(str(p["plan_id"])), UUID(str(p["day_id"]))
             access = await self._day_access(user, plan_id, day_id)

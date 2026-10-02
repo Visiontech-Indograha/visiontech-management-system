@@ -11,9 +11,9 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import CurrentUser
 from app.core.enums import PlanStatus
 from app.core.errors import ValidationError
+from app.core.security import CurrentUser
 from app.crud.crud_attendance_session import CRUDAttendanceSession
 from app.crud.crud_monitoring import CRUDMonitoring
 from app.crud.crud_org_clock import CRUDOrgClock

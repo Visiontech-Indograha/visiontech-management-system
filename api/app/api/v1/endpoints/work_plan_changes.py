@@ -10,9 +10,9 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import CurrentUser, get_current_user, get_db_with_user
+from app.api.deps import get_current_user, get_plan_change_service
+from app.core.security import CurrentUser
 from app.schemas.plan_change import ChangeRequest, ChangeResponse, DecisionRequest
 from app.services.plan_change_service import PlanChangeService
 
@@ -26,8 +26,8 @@ router = APIRouter(prefix="/changes", tags=["Plan Changes / Addendums"])
 
 
 
-async def _read(db: AsyncSession, change_id: Any) -> ChangeResponse:
-    return ChangeResponse(**(await PlanChangeService(db).read(change_id))._mapping)
+async def _read(service: PlanChangeService, change_id: Any) -> ChangeResponse:
+    return ChangeResponse(**(await service.read(change_id))._mapping)
 
 
 @plan_router.post("", response_model=ChangeResponse, status_code=status.HTTP_201_CREATED)
@@ -35,16 +35,16 @@ async def request_change(
     plan_id: UUID,
     data: ChangeRequest,
     current_user: CurrentUser = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db_with_user),
+    plan_change_service: PlanChangeService = Depends(get_plan_change_service),
 ) -> ChangeResponse:
     """REQUEST_CHANGE (ketua, perpanjangan) · REQUEST_PERSONNEL_CHANGE (PM unit/OPS, personel)."""
-    service = PlanChangeService(db)
+    service = plan_change_service
     if data.type == "EXTEND":
         change_id = await service.request_change(plan_id, current_user, data.new_period_end, data.reason)
     else:
         change_id = await service.request_personnel_change(
             plan_id, current_user, data.leader_employee_id, data.member_employee_ids, data.reason)
-    return await _read(db, change_id)
+    return await _read(plan_change_service, change_id)
 
 
 @router.post("/{change_id}/approve", response_model=ChangeResponse)
@@ -52,10 +52,10 @@ async def approve_change(
     change_id: UUID,
     data: DecisionRequest,
     current_user: CurrentUser = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db_with_user),
+    plan_change_service: PlanChangeService = Depends(get_plan_change_service),
 ) -> ChangeResponse:
     """APPROVE_CHANGE — PM unit/OPS menandatangani perpanjangan."""
-    return await _read(db, await PlanChangeService(db).approve_change(change_id, current_user))
+    return await _read(plan_change_service, await plan_change_service.approve_change(change_id, current_user))
 
 
 @router.post("/{change_id}/accept", response_model=ChangeResponse)
@@ -63,10 +63,10 @@ async def accept_change(
     change_id: UUID,
     data: DecisionRequest,
     current_user: CurrentUser = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db_with_user),
+    plan_change_service: PlanChangeService = Depends(get_plan_change_service),
 ) -> ChangeResponse:
     """ACCEPT_CHANGE — ketua (perpanjangan) / ketua baru (personel) mengaktifkan adendum."""
-    return await _read(db, await PlanChangeService(db).accept_change(change_id, current_user))
+    return await _read(plan_change_service, await plan_change_service.accept_change(change_id, current_user))
 
 
 @router.post("/{change_id}/reject", response_model=ChangeResponse)
@@ -74,10 +74,10 @@ async def reject_change(
     change_id: UUID,
     data: DecisionRequest,
     current_user: CurrentUser = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db_with_user),
+    plan_change_service: PlanChangeService = Depends(get_plan_change_service),
 ) -> ChangeResponse:
     """REJECT_CHANGE — alasan wajib."""
-    return await _read(db, await PlanChangeService(db).reject_change(change_id, current_user, data.reason))
+    return await _read(plan_change_service, await plan_change_service.reject_change(change_id, current_user, data.reason))
 
 
 @router.post("/{change_id}/withdraw", response_model=ChangeResponse)
@@ -85,7 +85,7 @@ async def withdraw_change(
     change_id: UUID,
     data: DecisionRequest,
     current_user: CurrentUser = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db_with_user),
+    plan_change_service: PlanChangeService = Depends(get_plan_change_service),
 ) -> ChangeResponse:
     """WITHDRAW_CHANGE — PM menarik adendum personel."""
-    return await _read(db, await PlanChangeService(db).withdraw_change(change_id, current_user, data.reason))
+    return await _read(plan_change_service, await plan_change_service.withdraw_change(change_id, current_user, data.reason))

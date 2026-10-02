@@ -16,7 +16,10 @@ from pathlib import Path
 
 APP_DIR = Path(__file__).resolve().parents[1] / "app"
 
-ALLOWED_DIRS = {"api", "core", "models", "schemas", "crud", "services", "templates"}
+# Persis contoh pemilik (docs/12 §1, R-28/R-30) + `templates/` (Jinja2 PDF).
+ALLOWED_DIRS = {"api", "core", "crud", "models", "schemas", "services", "db", "templates"}
+# Berkas di akar app/: main.py (contoh pemilik) + cli.py (seed/create-admin). Tidak ada dependencies.py.
+ALLOWED_ROOT_FILES = {"main.py", "cli.py"}
 
 # folder lama → berkas .py yang masih boleh ada (dikosongkan oleh tahap migrasi di docs/26).
 LEGACY_DIRS: dict[str, set[str]] = {}  # kosong sejak M4: db/, repositories/, controllers/ sudah dipindah
@@ -24,6 +27,7 @@ LEGACY_DIRS: dict[str, set[str]] = {}  # kosong sejak M4: db/, repositories/, co
 # lapisan (folder teratas di app/) → lapisan yang tidak boleh diimpornya.
 FORBIDDEN: dict[str, set[str]] = {
     "core": {"api", "services", "crud"},
+    "db": {"api", "services", "crud"},
     "crud": {"api", "services"},
     "services": {"api"},
     "schemas": {"api", "services", "crud"},
@@ -33,31 +37,12 @@ FORBIDDEN: dict[str, set[str]] = {
 EXEMPT_FILES = {"api/deps.py"}
 
 # "berkas -> lapisan terlarang yang diimpor"; hanya boleh menyusut.
-# api -> crud: perakitan service pindah ke api/deps.py (M5).
-# services -> api: penjaga akses & `CurrentUser` dari api/deps.py pindah ke core/security.py (M5).
+# endpoint -> crud: SQL/crud keluar dari endpoint per modul (docs/26 M6).
+# services/sync_service.py -> api: logika hse masih di endpoint (M6 modul hse).
 KNOWN_VIOLATIONS: set[str] = {
-    "api/v1/endpoints/accounts.py -> crud",
-    "api/v1/endpoints/attendance.py -> crud",
-    "api/v1/endpoints/attendance_cron.py -> crud",
-    "api/v1/endpoints/documents.py -> crud",
-    "api/v1/endpoints/expiry.py -> crud",
     "api/v1/endpoints/hse.py -> crud",
-    "api/v1/endpoints/units.py -> crud",
-    "api/v1/endpoints/work_plan_members.py -> crud",
-    "api/v1/endpoints/work_plan_transitions.py -> crud",
     "api/v1/endpoints/work_plans.py -> crud",
-    "services/asset_reservation_service.py -> api",
-    "services/monitoring_service.py -> api",
-    "services/overtime_service.py -> api",
-    "services/plan_assignment_service.py -> api",
-    "services/plan_attachment_service.py -> api",
-    "services/plan_change_service.py -> api",
-    "services/plan_day_service.py -> api",
-    "services/plan_location_service.py -> api",
-    "services/plan_member_service.py -> api",
-    "services/signature_service.py -> api",
     "services/sync_service.py -> api",
-    "services/weekly_report_service.py -> api",
 }
 
 
@@ -102,6 +87,11 @@ def _dirs() -> set[str]:
 def test_only_allowed_folders_under_app():
     unknown = _dirs() - ALLOWED_DIRS - set(LEGACY_DIRS)
     assert not unknown, f"Folder di luar struktur wajib (docs/12 §1): {sorted(unknown)}"
+
+
+def test_only_allowed_files_at_app_root():
+    extra = {p.name for p in APP_DIR.glob("*.py")} - ALLOWED_ROOT_FILES
+    assert not extra, f"Berkas di akar app/ di luar struktur wajib (docs/12 §1): {sorted(extra)}"
 
 
 def test_legacy_folders_do_not_grow():

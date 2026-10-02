@@ -10,13 +10,15 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import CurrentUser, ensure_same_org, get_current_user, get_db_with_user
+from app.api.deps import get_current_user, get_db_with_user, get_overtime_service
+from app.core.security import CurrentUser
 from app.schemas.overtime import (
     OvertimeCreate,
     OvertimeRecapRow,
     OvertimeResponse,
     OvertimeReview,
 )
+from app.services.access_service import ensure_same_org
 from app.services.overtime_service import OvertimeService
 
 overtime_router = APIRouter(prefix="/overtime", tags=["Overtime"])
@@ -28,10 +30,11 @@ async def report_overtime(
     data: OvertimeCreate,
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_with_user),
+    overtime_service: OvertimeService = Depends(get_overtime_service),
 ) -> OvertimeResponse:
     """domain.js REPORT_OVERTIME (V-28): ketua atau anggota mengajukan lembur pada SK aktif."""
     await ensure_same_org(db, current_user.organization_id, work_plans=[data.work_plan_id])
-    row = await OvertimeService(db).report(current_user, data.work_plan_id, data.hours, data.reason)
+    row = await overtime_service.report(current_user, data.work_plan_id, data.hours, data.reason)
     return OvertimeResponse(**row._mapping)
 
 
@@ -39,10 +42,10 @@ async def report_overtime(
 async def list_overtime(
     work_plan_id: UUID,
     current_user: CurrentUser = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db_with_user),
+    overtime_service: OvertimeService = Depends(get_overtime_service),
 ) -> list[OvertimeResponse]:
     """Daftar lembur satu SK — siapa pun yang dapat melihat SK (tidak terlihat → 404)."""
-    rows = await OvertimeService(db).list_by_plan(current_user, work_plan_id)
+    rows = await overtime_service.list_by_plan(current_user, work_plan_id)
     return [OvertimeResponse(**r._mapping) for r in rows]
 
 
@@ -51,10 +54,10 @@ async def review_overtime(
     ot_id: UUID,
     data: OvertimeReview,
     current_user: CurrentUser = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db_with_user),
+    overtime_service: OvertimeService = Depends(get_overtime_service),
 ) -> OvertimeResponse:
     """domain.js REVIEW_OVERTIME (V-28): PM unit/OPS menyetujui atau menolak lembur PENDING_PM."""
-    row = await OvertimeService(db).review(current_user, ot_id, data.decision, data.note)
+    row = await overtime_service.review(current_user, ot_id, data.decision, data.note)
     return OvertimeResponse(**row._mapping)
 
 
@@ -66,10 +69,10 @@ async def overtime_recap(
         pattern=r"^\d{4}-(0[1-9]|1[0-2])$",
     ),
     current_user: CurrentUser = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db_with_user),
+    overtime_service: OvertimeService = Depends(get_overtime_service),
 ) -> list[OvertimeRecapRow]:
     """Rekap lembur per karyawan per bulan — Finance/OPS/Admin seluruh organisasi, PM unitnya (dok 10 V-28)."""
     # asyncpg butuh objek date untuk CAST(:month AS date); period_month = date_trunc('month', work_date)
     month_date = date.fromisoformat(f"{month}-01") if month else None
-    rows = await OvertimeService(db).recap(current_user, month_date)
+    rows = await overtime_service.recap(current_user, month_date)
     return [OvertimeRecapRow(**r._mapping) for r in rows]

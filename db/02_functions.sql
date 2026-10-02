@@ -231,7 +231,8 @@ BEGIN
   NEW.status := CASE WHEN NEW.distance_m > v_radius THEN 'NEEDS_REVIEW'::attendance_status
                      ELSE 'AUTO_VALID'::attendance_status END;
 
-  IF NEW.status = 'NEEDS_REVIEW' AND NEW.source = 'MOBILE' AND NEW.selfie_file_id IS NULL THEN
+  -- R-33: swafoto wajib di luar radius untuk absen HP maupun web (mesin absen dikecualikan).
+  IF NEW.status = 'NEEDS_REVIEW' AND NEW.source IN ('MOBILE','WEB') AND NEW.selfie_file_id IS NULL THEN
     RAISE EXCEPTION 'Di luar radius toleransi (% m > % m): swafoto wajib dilampirkan.', NEW.distance_m, v_radius
       USING ERRCODE = '23514';
   END IF;
@@ -254,6 +255,43 @@ BEGIN
 END $$;
 CREATE TRIGGER attendance_checkout BEFORE UPDATE ON attendance
   FOR EACH ROW EXECUTE FUNCTION tg_attendance_checkout();
+
+-- -----------------------------------------------------------------------------
+-- Cakupan absensi R-33 (Alembic 0015): siapa melihat & siapa meninjau — satu sumber aturan.
+-- -----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION attendance_pm_subordinate(p_viewer uuid, p_employee uuid) RETURNS boolean
+LANGUAGE sql STABLE AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM vms.employee te
+    JOIN vms.user_role pr ON pr.user_id = p_viewer AND pr.role = 'PM'
+    WHERE te.id = p_employee AND te.attendance_mode = 'FIELD'
+      AND pr.unit_id IS NOT NULL AND pr.unit_id = te.unit_id)
+$$;
+
+CREATE OR REPLACE FUNCTION attendance_is_finance(p_employee uuid) RETURNS boolean
+LANGUAGE sql STABLE AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM vms.app_user tu JOIN vms.user_role tr ON tr.user_id = tu.id
+    WHERE tu.employee_id = p_employee AND tr.role = 'FINANCE')
+$$;
+
+CREATE OR REPLACE FUNCTION attendance_viewable(p_viewer uuid, p_view_all boolean, p_employee uuid) RETURNS boolean
+LANGUAGE sql STABLE AS $$
+  SELECT p_view_all
+      OR p_employee = (SELECT employee_id FROM vms.app_user WHERE id = p_viewer)
+      OR vms.attendance_pm_subordinate(p_viewer, p_employee)
+$$;
+
+CREATE OR REPLACE FUNCTION attendance_can_review(p_viewer uuid, p_employee uuid) RETURNS boolean
+LANGUAGE sql STABLE AS $$
+  SELECT p_employee IS DISTINCT FROM (SELECT employee_id FROM vms.app_user WHERE id = p_viewer)
+     AND (vms.attendance_pm_subordinate(p_viewer, p_employee)
+          OR (EXISTS (SELECT 1 FROM vms.user_role r WHERE r.user_id = p_viewer AND r.role = 'FINANCE')
+              AND EXISTS (SELECT 1 FROM vms.employee te WHERE te.id = p_employee AND te.attendance_mode = 'OFFICE')
+              AND NOT vms.attendance_is_finance(p_employee))
+          OR (EXISTS (SELECT 1 FROM vms.user_role r WHERE r.user_id = p_viewer AND r.role = 'OPS')
+              AND vms.attendance_is_finance(p_employee)))
+$$;
 
 -- -----------------------------------------------------------------------------
 -- Bentrok jadwal personel: satu orang tidak boleh berada di dua pekerjaan aktif

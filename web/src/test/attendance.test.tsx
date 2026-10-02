@@ -62,6 +62,41 @@ describe("Absensi", () => {
     expect(calls.find((c) => c.url === "/attendance/a1/explain")!.data).toEqual({ explanation: "GPS melenceng" });
   });
 
+  it("R-34: absen luring ditandai di daftar & dialog tinjau menampilkan catatan server dan jam pulang yang ditahan", async () => {
+    const offline = {
+      data: {
+        items: [
+          row({
+            offline: true,
+            offline_note: "jam hanya dari satelit GPS (HP dinyalakan ulang saat luring)",
+            check_out_requested_at: "2026-10-02T02:33:45Z",
+          }),
+        ],
+        total: 1,
+        page: 1,
+        size: 50,
+      },
+    };
+    setup((url) => (url === "/attendance" ? offline : undefined));
+    renderRoute("/attendance", { role: "PM" });
+    expect(await screen.findByText(/· absen luring/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Tinjau" }));
+    const dialog = screen.getByRole("dialog", { name: "Tinjau absensi" });
+    const notice = within(dialog).getByRole("status");
+    expect(notice).toHaveTextContent("Absen luring (direkam tanpa sinyal, dikirim saat online)");
+    expect(notice).toHaveTextContent("Catatan server: jam hanya dari satelit GPS (HP dinyalakan ulang saat luring)");
+    expect(notice).toHaveTextContent(/Absen pulang 02 Okt 2026 09\.33 WIB berlaku bila absensi ini disetujui\./);
+  });
+
+  it("absen daring biasa tidak memunculkan tanda luring", async () => {
+    setup();
+    renderRoute("/attendance", { role: "PM" });
+    expect(await screen.findByText("Gudang Cikarang", { exact: false })).toBeInTheDocument();
+    expect(screen.queryByText(/absen luring/)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Tinjau" }));
+    expect(within(screen.getByRole("dialog", { name: "Tinjau absensi" })).queryByRole("status")).not.toBeInTheDocument();
+  });
+
   it("kosong", async () => {
     mockApi((c) => (c.url === "/attendance" ? { data: { items: [], total: 0, page: 1, size: 50 } } : c.url === "/employees" ? { data: employees } : undefined));
     renderRoute("/attendance", { role: "field" });

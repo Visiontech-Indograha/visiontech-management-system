@@ -14,6 +14,7 @@ from app.core.errors import AppError, NotFoundError
 from app.core.permissions import NO_GLOBAL_ROLE, Permission, permissions_for_roles
 from app.core.security import CurrentUser, verify_jwt_token
 from app.crud.crud_attendance_monitor import CRUDAttendanceMonitor
+from app.crud.crud_attendance_offline import CRUDAttendanceOffline
 from app.crud.crud_attendance_session import CRUDAttendanceSession
 from app.crud.crud_document import CRUDDocument
 from app.crud.crud_employee import CRUDEmployee
@@ -31,6 +32,7 @@ from app.services.access_service import PlanAccess, PlanNeed, check_plan_access
 from app.services.account_service import AccountService
 from app.services.asset_reservation_service import AssetReservationService
 from app.services.attendance_monitor_service import AttendanceMonitorService
+from app.services.attendance_offline_service import AttendanceOfflineService
 from app.services.attendance_session_service import AttendanceSessionService
 from app.services.auth_flow import AuthFlowService
 from app.services.document_service import DocumentService
@@ -216,6 +218,11 @@ def get_attendance_session_service(db: AsyncSession = Depends(get_db_with_user))
 
 def get_site_service(db: AsyncSession = Depends(get_db_with_user)) -> SiteService:
     return SiteService(CRUDSite(db))
+
+
+def get_attendance_offline_service(db: AsyncSession = Depends(get_db_with_user)) -> AttendanceOfflineService:
+    return AttendanceOfflineService(CRUDAttendanceOffline(db),
+                                    AttendanceSessionService(CRUDAttendanceSession(db), CRUDOrgClock(db)))
 
 
 def get_document_service(db: AsyncSession = Depends(get_db_with_user)) -> DocumentService:

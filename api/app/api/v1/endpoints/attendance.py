@@ -14,22 +14,27 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import (
+    get_attendance_offline_service,
     get_attendance_session_service,
     get_current_user,
     get_db_with_user,
     require_permission,
 )
 from app.core.permissions import Permission
-from app.core.security import CurrentUser
+from app.core.security import CurrentUser, create_time_anchor
 from app.schemas.attendance import (
     AttendanceListResponse,
     AttendanceResponse,
     CheckInRequest,
     CheckOutRequest,
+    DeviceKeyRequest,
     ExplanationRequest,
+    OfflineAttendanceEvent,
+    OfflineAttendanceResult,
     ReviewRequest,
 )
 from app.services.access_service import ensure_same_org
+from app.services.attendance_offline_service import AttendanceOfflineService
 from app.services.attendance_session_service import AttendanceSessionService
 
 router = APIRouter(prefix="/attendance", tags=["Attendance"])
@@ -58,7 +63,32 @@ async def list_attendance(
         view_all=Permission.VIEW_ALL_ATTENDANCE.value in current_user.permissions,
         employee_id=employee_id, date_from=date_from, date_to=date_to, status=status, page=page, size=size)
     return AttendanceListResponse(items=[_response(r) for r in rows], total=total, page=page, size=size,
-                                  today=await service.today(current_user.organization_id))
+                                  today=await service.today(current_user.organization_id),
+                                  time_anchor=create_time_anchor(current_user.user_id))
+
+
+@router.post("/device-key")
+async def register_device_key(
+    data: DeviceKeyRequest,
+    current_user: CurrentUser = Depends(get_current_user),
+    offline_service: AttendanceOfflineService = Depends(get_attendance_offline_service),
+) -> dict[str, str]:
+    """R-34: daftarkan kunci publik Android Keystore perangkat ini untuk memverifikasi absen luring."""
+    await offline_service.register_device_key(current_user, data.device_id, data.public_key)
+    return {"message": "Kunci perangkat terdaftar."}
+
+
+@router.post("/offline", response_model=OfflineAttendanceResult)
+async def submit_offline_attendance(
+    data: OfflineAttendanceEvent,
+    current_user: CurrentUser = Depends(get_current_user),
+    offline_service: AttendanceOfflineService = Depends(get_attendance_offline_service),
+) -> OfflineAttendanceResult:
+    """R-34: terima satu absen luring yang ditandatangani perangkat (idempoten per client_op_id)."""
+    result = await offline_service.apply(
+        current_user, device_id=data.device_id, client_op_id=data.client_op_id, kind=data.kind,
+        payload=data.payload, signature=data.signature, selfie_file_id=data.selfie_file_id)
+    return OfflineAttendanceResult(**result)
 
 
 @router.post("/check-in", response_model=AttendanceResponse)

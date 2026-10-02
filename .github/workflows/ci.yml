@@ -159,6 +159,11 @@ jobs:
           ACTOR: ${{ github.actor }}
         run: |
           if [ -z "$WEBHOOK" ]; then echo "DISCORD_WEBHOOK_CI belum diset; notifikasi dilewati."; exit 0; fi
+          # Run yang dibatalkan `concurrency: cancel-in-progress` (ada push lebih baru ke branch yang sama)
+          # bukan kegagalan — run pengganti yang akan melapor. Dulu terhitung "❌ CI GAGAL" (2026-10-02).
+          for r in "$API" "$WEB" "$MOBILE" "$SECRETS"; do
+            if [ "$r" = cancelled ]; then echo "Run dibatalkan (digantikan run lebih baru); notifikasi dilewati."; exit 0; fi
+          done
           icon() { case "$1" in success) echo "✅";; skipped) echo "⏭️";; cancelled) echo "⚪";; *) echo "❌";; esac; }
           ok=true; for r in "$API" "$WEB" "$MOBILE" "$SECRETS"; do [ "$r" = success ] || [ "$r" = skipped ] || ok=false; done
           if $ok; then head="✅ CI berhasil"; color=3066993; else head="❌ CI GAGAL"; color=15158332; fi

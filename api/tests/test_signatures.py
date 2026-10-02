@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from urllib.parse import quote
 
-import app.api.signatures as signatures_api
+import app.api.v1.endpoints.signatures as signatures_api
 from tests.conftest import World, requires_db, sync_query
 from tests.test_flow_plans import run_plan_to_accepted
 

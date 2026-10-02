@@ -16,6 +16,9 @@ const row = (over: Record<string, unknown> = {}) => ({
   status: "NEEDS_REVIEW",
   explanation: null,
   reviewed_at: null,
+  employee_name: "Budi",
+  selfie_file_id: null,
+  can_review: true, // R-33: tombol Tinjau mengikuti penanda server
   ...over,
 });
 const employees = { items: [{ id: "e1", full_name: "Budi", position: "Teknisi", employee_no: "1", join_date: "2024-01-01", is_active: true }], total: 1, page: 1, size: 100 };
@@ -45,7 +48,11 @@ describe("Absensi", () => {
   });
 
   it("karyawan memberi penjelasan", async () => {
-    const calls = setup((url) => (url === "/attendance/a1/explain" ? { data: { message: "Penjelasan ditambahkan." } } : undefined));
+    // Absensi milik sendiri (karyawan tiruan "e-lead"), bukan wewenang tinjau.
+    const own = { data: { items: [row({ employee_id: "e-lead", can_review: false })], total: 1, page: 1, size: 50 } };
+    const calls = setup((url) =>
+      url === "/attendance/a1/explain" ? { data: { message: "Penjelasan ditambahkan." } } : url === "/attendance" ? own : undefined,
+    );
     renderRoute("/attendance", { role: "field" });
     fireEvent.click(await screen.findByRole("button", { name: "Beri penjelasan" }));
     const dialog = screen.getByRole("dialog", { name: "Beri penjelasan" });
@@ -53,6 +60,41 @@ describe("Absensi", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "Kirim penjelasan" }));
     await waitFor(() => expect(calls.some((c) => c.url === "/attendance/a1/explain")).toBe(true));
     expect(calls.find((c) => c.url === "/attendance/a1/explain")!.data).toEqual({ explanation: "GPS melenceng" });
+  });
+
+  it("R-34: absen luring ditandai di daftar & dialog tinjau menampilkan catatan server dan jam pulang yang ditahan", async () => {
+    const offline = {
+      data: {
+        items: [
+          row({
+            offline: true,
+            offline_note: "jam hanya dari satelit GPS (HP dinyalakan ulang saat luring)",
+            check_out_requested_at: "2026-10-02T02:33:45Z",
+          }),
+        ],
+        total: 1,
+        page: 1,
+        size: 50,
+      },
+    };
+    setup((url) => (url === "/attendance" ? offline : undefined));
+    renderRoute("/attendance", { role: "PM" });
+    expect(await screen.findByText(/· absen luring/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Tinjau" }));
+    const dialog = screen.getByRole("dialog", { name: "Tinjau absensi" });
+    const notice = within(dialog).getByRole("status");
+    expect(notice).toHaveTextContent("Absen luring (direkam tanpa sinyal, dikirim saat online)");
+    expect(notice).toHaveTextContent("Catatan server: jam hanya dari satelit GPS (HP dinyalakan ulang saat luring)");
+    expect(notice).toHaveTextContent(/Absen pulang 02 Okt 2026 09\.33 WIB berlaku bila absensi ini disetujui\./);
+  });
+
+  it("absen daring biasa tidak memunculkan tanda luring", async () => {
+    setup();
+    renderRoute("/attendance", { role: "PM" });
+    expect(await screen.findByText("Gudang Cikarang", { exact: false })).toBeInTheDocument();
+    expect(screen.queryByText(/absen luring/)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Tinjau" }));
+    expect(within(screen.getByRole("dialog", { name: "Tinjau absensi" })).queryByRole("status")).not.toBeInTheDocument();
   });
 
   it("kosong", async () => {

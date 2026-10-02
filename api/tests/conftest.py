@@ -16,10 +16,19 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.pool import NullPool
 
+from tests.db_guard import unsafe_test_database, unsafe_test_storage, use_test_database
+
+use_test_database()   # harus sebelum app.* diimpor: pengaturan dibaca saat impor
+
 from app.core.config import settings
 from app.core.security import hash_password
 from app.db.session import SEARCH_PATH, AsyncSessionLocal, make_engine
 from app.main import API_PREFIX, app
+
+_UNSAFE = unsafe_test_database(settings.DATABASE_URL) or unsafe_test_storage(settings.MINIO_ENDPOINT)
+if _UNSAFE:
+    # A-00 (docs/24): lebih baik suite berhenti daripada menulis data uji ke produksi.
+    raise pytest.UsageError(_UNSAFE)
 
 _DB = urlparse(settings.DATABASE_URL.replace("+asyncpg", ""))
 
@@ -51,6 +60,8 @@ def _sync_conn():
         host=_DB.hostname, port=_DB.port, dbname=_DB.path.lstrip("/"),
         user=_DB.username, password=_DB.password,
         options=f"-c search_path={SEARCH_PATH.replace(' ', '')}",
+        # DB uji ada di server (Tailscale): jaringan putus → gagal cepat, bukan menggantung berjam-jam.
+        connect_timeout=15, keepalives=1, keepalives_idle=30, keepalives_interval=10, keepalives_count=3,
     )
 
 
@@ -111,8 +122,17 @@ def seeded_user(make_user: Callable[..., SeededUser]) -> SeededUser:
     return make_user("ADMIN")
 
 
+def login_platform(login: str) -> str:
+    """R-33: aplikasi HP hanya untuk staf lapangan, web hanya untuk akun kantor — uji login lewat
+    klien yang sesuai jenis pekerja akun (seperti aplikasi sungguhan)."""
+    rows = sync_query("SELECT e.attendance_mode FROM vms.app_user u LEFT JOIN vms.employee e ON e.id = u.employee_id "
+                      "WHERE u.login = %s", (login,))
+    return "mobile" if rows and rows[0][0] == "FIELD" else "web"
+
+
 def login_headers(client: TestClient, user: SeededUser) -> dict[str, str]:
-    response = client.post("/auth/login", json={"email": user.login, "password": user.password})
+    response = client.post("/auth/login", json={"email": user.login, "password": user.password,
+                                                "platform": login_platform(user.login)})
     assert response.status_code == 200, response.text
     return {"Authorization": f"Bearer {response.json()['access_token']}"}
 
@@ -164,7 +184,8 @@ class World:
 
     def headers(self, client: TestClient, who: str) -> dict[str, str]:
         if who not in self._headers:
-            response = client.post("/auth/login", json={"email": self.logins[who], "password": WORLD_PASSWORD})
+            response = client.post("/auth/login", json={"email": self.logins[who], "password": WORLD_PASSWORD,
+                                                        "platform": login_platform(self.logins[who])})
             assert response.status_code == 200, response.text
             self._headers[who] = {"Authorization": f"Bearer {response.json()['access_token']}"}
         return self._headers[who]
@@ -194,8 +215,10 @@ def _build_world() -> Iterator[World]:
             "INSERT INTO vms.business_unit (organization_id, code, name) VALUES (%s, 'CCTV_ACS', 'CCTV & ACS') RETURNING id",
             (org_id,))[0][0])
         site_id = str(sync_query(
-            "INSERT INTO vms.site (organization_id, name, location, radius_m) "
-            "VALUES (%s, 'Gudang uji', ST_GeogFromText('POINT(106.8 -6.2)'), 100) RETURNING id", (org_id,))[0][0])
+            # R-33: lokasi proyek milik unit uji — pekerja lapangan hanya absen di lokasi unitnya.
+            "INSERT INTO vms.site (organization_id, name, location, radius_m, unit_id) "
+            "VALUES (%s, 'Gudang uji', ST_GeogFromText('POINT(106.8 -6.2)'), 100, %s) RETURNING id",
+            (org_id, unit_id))[0][0])
         built = World(tag, org_id, unit_id, site_id)
         for who, (role, per_unit) in _WORLD_PEOPLE.items():
             built.add_person(who, role, per_unit=per_unit)
@@ -231,7 +254,7 @@ def fake_storage(monkeypatch) -> dict[str, bytes]:
         stored[object_name] = data
         return True
 
-    import app.api.files as files_api
+    import app.api.v1.endpoints.files as files_api
 
     monkeypatch.setattr(files_api, "upload_file", upload)
     monkeypatch.setattr(files_api, "get_presigned_url", lambda name, expires=None: f"https://minio.uji/{name}")

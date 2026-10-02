@@ -13,8 +13,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import AppError, NotFoundError, ValidationError
 from app.core.permissions import Permission
-from app.repositories.employee_repo import EmployeeRepo
-from app.repositories.org_clock_repo import OrgClockRepo
+from app.crud.crud_employee import CRUDEmployee
+from app.crud.crud_org_clock import CRUDOrgClock
 
 RESTORED = "Data dipulihkan sebagai nonaktif. Akses lama tetap dicabut."
 ARCHIVED = "Karyawan dihapus. Data historis tetap tersimpan."
@@ -24,7 +24,7 @@ OFFBOARDED = "Masa kerja diakhiri dan akses dicabut. Data historis tetap tersedi
 class EmployeeService:
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
-        self.repo = EmployeeRepo(db)
+        self.repo = CRUDEmployee(db)
 
     async def private_viewer(self, user_id: str, permissions: list[str]) -> tuple[bool, str | None]:
         """Prototipe `privateAccess`: data kontak pribadi hanya untuk HR (dan admin) serta pemiliknya.
@@ -95,6 +95,6 @@ class EmployeeService:
         if await self.repo.on_running_plan(employee_id):
             raise AppError("INVALID_STATE", "Selesaikan atau serahterimakan penugasan aktif sebelum offboarding.",
                            status=409)
-        today = (await OrgClockRepo(self.db).local_now(org_id)).today
+        today = (await CRUDOrgClock(self.db).local_now(org_id)).today
         await self.repo.offboard(employee_id, reason.strip(), today)
         return {"id": str(employee_id), "message": OFFBOARDED}

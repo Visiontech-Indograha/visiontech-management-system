@@ -8,11 +8,11 @@ from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
 
-from app.api.deps import CurrentUser
 from app.core.enums import PlanStatus
 from app.core.errors import AppError, ConflictError, NotFoundError
-from app.repositories.plan_assignment_repo import PlanAssignmentRepo
-from app.repositories.plan_member_repo import PlanMemberRepo
+from app.core.security import CurrentUser
+from app.crud.crud_plan_assignment import CRUDPlanAssignment
+from app.crud.crud_plan_member import CRUDPlanMember
 from app.services.plan_assignment_service import PlanAssignmentService
 
 
@@ -24,7 +24,7 @@ class Team:
 
 
 class PlanMemberService:
-    def __init__(self, repo: PlanMemberRepo) -> None:
+    def __init__(self, repo: CRUDPlanMember) -> None:
         self.repo = repo
 
     async def team(self, plan_id: UUID) -> list[Any]:
@@ -62,8 +62,9 @@ class PlanMemberService:
         known = await self.repo.active_employees(people, user.organization_id)
         if set(people) - known:
             raise NotFoundError("Karyawan")
-        await PlanAssignmentService(PlanAssignmentRepo(self.repo.db)).validate_team_scope(
-            user, plan.unit_id, people)
+        current = [m.employee_id for m in await self.repo.active_team(plan_id)]
+        await PlanAssignmentService(CRUDPlanAssignment(self.repo.db)).validate_team_scope(
+            user, plan.unit_id, people, current_team=current)
 
         conflicts = await self.repo.schedule_conflicts(people, plan_id)
         if conflicts:

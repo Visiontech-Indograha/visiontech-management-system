@@ -39,9 +39,11 @@ SELF_SERVICE = {
     ("GET", "/assets/{asset_id}/returns"): "riwayat pengembalian aset organisasi sendiri; asing → 404 (diuji)",
     ("GET", "/assets/returns/{return_id}/pdf"): "BAST pengembalian organisasi sendiri; asing → 404 (diuji)",
     ("GET", "/assets"): "daftar aset organisasi (CHECK_ASSET oleh tim)",
-    ("GET", "/attendance"): "milik sendiri; FINANCE/HR/OPS/ADMIN seluruh organisasi (diuji)",
+    ("GET", "/attendance"): "R-33: milik sendiri; PM + bawahan lapangan unitnya; FINANCE/OPS seluruh organisasi (diuji)",
     ("POST", "/attendance/check-in"): "absensi sendiri",
     ("POST", "/attendance/check-out"): "absensi sendiri",
+    ("POST", "/attendance/device-key"): "kunci perangkat milik sendiri (R-34, diuji)",
+    ("POST", "/attendance/offline"): "absen luring milik sendiri, bertanda tangan perangkat (R-34, diuji)",
     ("POST", "/attendance/{att_id}/explain"): "hanya absensi milik sendiri — diuji di bawah",
     ("GET", "/recaps/attendance"): "rekap sendiri; FINANCE/HR/OPS/ADMIN seluruh organisasi (V-30, diuji)",
     ("POST", "/sync/operations"): "antrean luring milik sendiri; tiap operasi dijaga seperti jalur daring (M12)",
@@ -88,14 +90,18 @@ def _routes() -> dict[tuple[str, str], list[str]]:
     """(METODE, jalur tanpa awalan API) → nama dependency. Router yang di-include disimpan malas
     sejak FastAPI 0.14x (`_IncludedRouter.original_router`)."""
     found = {}
-    for included in app.routes:
-        router = getattr(included, "original_router", None)
-        for route in getattr(router, "routes", []):
-            if isinstance(route, APIRoute):
+
+    def walk(routes, nested: bool) -> None:
+        for route in routes:
+            if nested and isinstance(route, APIRoute):  # /health & /ready di akar: publik
                 for method in route.methods:
                     # "{token:path}" → "{token}", sama seperti inventaris rute publik (test_route_smoke)
                     path = re.sub(r"\{(\w+):\w+\}", lambda m: "{" + m.group(1) + "}", route.path)
                     found[(method, path)] = _dependency_names(route.dependant)
+            # router bertingkat sejak R-28 M2: app → api_router (api/v1/router.py) → router modul
+            walk(getattr(getattr(route, "original_router", None), "routes", []), True)
+
+    walk(app.routes, False)
     return found
 
 
@@ -225,7 +231,7 @@ def test_only_the_owner_explains_an_attendance(client, world, other_world, fake_
     selfie = client.post("/files/upload", headers=member, files={"file": ("s.png", buf.getvalue(), "image/png")})
     check_in = client.post("/attendance/check-in", headers=member, json={
         "site_id": world.site_id, "location": {"lat": -6.3, "lng": 106.8},
-        "selfie_file_id": selfie.json()["file_id"]})
+        "selfie_file_id": selfie.json()["file_id"], "explanation": "Survei titik baru"})
     assert check_in.status_code == 200, check_in.text
     att_id = check_in.json()["id"]
 
@@ -233,7 +239,7 @@ def test_only_the_owner_explains_an_attendance(client, world, other_world, fake_
                      other_world.headers(client, "member")):
         response = client.post(f"/attendance/{att_id}/explain", headers=outsider, json={"explanation": "Titipan"})
         assert response.status_code == 404, response.text
-    assert sync_query("SELECT explanation FROM vms.attendance WHERE id = %s", (att_id,)) == [(None,)]
+    assert sync_query("SELECT explanation FROM vms.attendance WHERE id = %s", (att_id,)) == [("Survei titik baru",)]
 
     own = client.post(f"/attendance/{att_id}/explain", headers=member, json={"explanation": "GPS ponsel mati"})
     assert own.status_code == 200, own.text

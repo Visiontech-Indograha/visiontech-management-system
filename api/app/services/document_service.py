@@ -10,7 +10,7 @@ from typing import Any
 
 from app.core.errors import AppError, NotFoundError
 from app.core.permissions import Permission
-from app.repositories.document_repo import DocumentRepo
+from app.crud.crud_document import CRUDDocument
 from app.schemas.document import EmployeeDocumentCreate, EmployeeDocumentVerify
 
 NOT_FOUND = "Dokumen"
@@ -24,7 +24,7 @@ def mask_number(number: str) -> str:
 
 
 class DocumentService:
-    def __init__(self, repo: DocumentRepo) -> None:
+    def __init__(self, repo: CRUDDocument) -> None:
         self.repo = repo
 
     async def pending_queue(self, org_id: str, user_id: str) -> list[Any]:

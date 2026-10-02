@@ -76,3 +76,13 @@ class PlanTaskResponse(PlanTaskCreate):
     id: UUID
     work_plan_day_id: UUID
     is_done: bool
+
+
+# ── Dipindah dari api/v1/endpoints/work_plans.py (R-28 M2b) ──
+class DayTaskInput(BaseModel):
+    title: str
+
+
+class DayPlanRequest(BaseModel):
+    title: str
+    tasks: list[DayTaskInput]

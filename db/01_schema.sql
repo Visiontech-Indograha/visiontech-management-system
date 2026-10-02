@@ -50,7 +50,7 @@ CREATE TYPE document_status AS ENUM ('AWAITING_ACCEPTANCE','EFFECTIVE','SUPERSED
 CREATE TYPE change_type AS ENUM ('EXTEND','PERSONNEL');
 CREATE TYPE change_status AS ENUM ('PENDING_PM','AWAITING_LEADER_ACCEPTANCE','EFFECTIVE','REJECTED','WITHDRAWN');
 CREATE TYPE report_status AS ENUM ('DRAFT','SUBMITTED','CHANGES_REQUESTED','APPROVED');
-CREATE TYPE attendance_source AS ENUM ('MOBILE','MACHINE');
+CREATE TYPE attendance_source AS ENUM ('MOBILE','MACHINE','WEB');
 CREATE TYPE attendance_status AS ENUM ('AUTO_VALID','NEEDS_REVIEW','APPROVED','REJECTED');
 CREATE TYPE asset_kind AS ENUM ('VEHICLE','TOOL');
 CREATE TYPE asset_status AS ENUM ('AVAILABLE','RESERVED','IN_USE','RETURN_PENDING','MAINTENANCE','RETIRED');
@@ -109,6 +109,8 @@ CREATE TABLE employee (
   birth_date      date,
   address         text,
   emergency_contact text,
+  -- FIELD = absen lewat aplikasi HP; OFFICE = absen lewat web (Alembic 0013)
+  attendance_mode text NOT NULL DEFAULT 'FIELD' CHECK (attendance_mode IN ('FIELD','OFFICE')),
   is_active       boolean NOT NULL DEFAULT true,
   offboarded_at   timestamptz,
   offboarding_reason text,
@@ -181,10 +183,13 @@ CREATE TABLE site (
   address         text,
   location        geography(Point,4326) NOT NULL,
   radius_m        integer CHECK (radius_m BETWEEN 10 AND 5000),  -- NULL = pakai default organisasi
+  -- NULL = lokasi kantor (Finance); terisi = lokasi proyek unit itu (PM, untuk bawahannya) — Alembic 0014
+  unit_id         uuid REFERENCES business_unit(id),
   deleted_at      timestamptz,
   UNIQUE (organization_id, name)
 );
 CREATE INDEX site_location_gix ON site USING gist (location);
+CREATE INDEX site_unit_idx ON site (organization_id, unit_id) WHERE deleted_at IS NULL;
 
 -- -----------------------------------------------------------------------------
 -- Work plan (SK) dan susunannya
@@ -467,6 +472,10 @@ CREATE TABLE attendance (
   reviewed_by     uuid REFERENCES employee(id),
   reviewed_at     timestamptz,
   review_note     text,
+  -- Absensi luring (R-34, Alembic 0017): alasan perlu review & absen pulang yang menunggu disetujui
+  offline         boolean NOT NULL DEFAULT false,
+  offline_note    text,
+  check_out_requested_at timestamptz,
   created_at      timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (id, work_date),
   CHECK (check_out_at IS NULL OR check_out_at >= check_in_at)
@@ -481,6 +490,32 @@ CREATE INDEX attendance_status_idx ON attendance (organization_id, status) WHERE
 CREATE INDEX attendance_location_gix ON attendance USING gist (location);
 -- Satu kehadiran aktif per karyawan per hari; yang ditolak boleh diajukan ulang.
 CREATE UNIQUE INDEX attendance_active_uidx ON attendance (employee_id, work_date) WHERE status <> 'REJECTED';
+
+-- Absensi luring (R-34, Alembic 0017): kunci publik Android Keystore per akun & perangkat, dan jejak
+-- peristiwa luring (idempoten per client_op_id). Tanda tangan menjamin tanggal, jam, dan lokasi tidak diubah.
+CREATE TABLE attendance_device_key (
+  id              uuid PRIMARY KEY DEFAULT new_id(),
+  organization_id uuid NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
+  user_id         uuid NOT NULL REFERENCES app_user(id) ON DELETE CASCADE,
+  device_id       text NOT NULL,
+  public_key      text NOT NULL,
+  created_at      timestamptz NOT NULL DEFAULT now(),
+  revoked_at      timestamptz
+);
+CREATE UNIQUE INDEX attendance_device_key_active_uidx ON attendance_device_key (user_id, device_id)
+  WHERE revoked_at IS NULL;
+
+CREATE TABLE attendance_offline_event (
+  client_op_id    uuid PRIMARY KEY,
+  organization_id uuid NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
+  user_id         uuid NOT NULL REFERENCES app_user(id) ON DELETE CASCADE,
+  kind            text NOT NULL CHECK (kind IN ('CHECK_IN','CHECK_OUT')),
+  attendance_id   uuid,
+  event_time      timestamptz NOT NULL,
+  time_trusted    boolean NOT NULL,
+  result          text NOT NULL,
+  received_at     timestamptz NOT NULL DEFAULT now()
+);
 
 -- -----------------------------------------------------------------------------
 -- Insiden / HSE dan lembur

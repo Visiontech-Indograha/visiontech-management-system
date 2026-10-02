@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 
 import '../../core/local_storage.dart';
@@ -6,6 +8,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
 
+import 'package:dio/dio.dart';
+
+import '../../core/api_client.dart';
 import '../../core/error_message.dart';
 import '../../core/location_helper.dart';
 import '../../core/photo_capture.dart';
@@ -16,7 +21,6 @@ import '../auth/auth_state.dart';
 import '../../core/theme/theme.dart';
 import '../../shared/ui/vms_select_field.dart';
 import '../../shared/ui/vms_ui.dart';
-import '../auth/office_role_notice.dart';
 
 /// Absensi (M5, dok 05 §3.5). Wajib daring: waktu & geofence ditentukan server.
 /// Di luar radius lokasi, server mewajibkan swafoto — aplikasi memintanya lebih dulu.
@@ -29,6 +33,8 @@ class AttendanceScreen extends ConsumerStatefulWidget {
 
 class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
   List<Map<String, dynamic>> _records = [];
+  // R-34: absen luring yang belum terkirim (antrean bertanda tangan di HP).
+  List<Map<String, dynamic>> _offline = [];
   String? _serverToday;
   List<Map<String, dynamic>> _sites = [];
   String? _siteId;
@@ -57,12 +63,24 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       _error = null;
     });
     final engine = ref.read(syncEngineProvider);
+    final offline = engine.offlineAttendance;
+    _offline = await offline.pending();
     try {
+      String? anchor;
       final att = await engine.fetchList('attendance', () async {
         final res = await engine.api.myAttendance(employeeId: _employeeId);
         _serverToday = res.today;
+        anchor = res.timeAnchor;
         return res.items;
       });
+      // R-34: saat online, simpan jangkar jam server & daftarkan kunci Keystore untuk absen luring.
+      if (anchor != null) {
+        await offline.saveAnchor(anchor);
+        final auth = ref.read(authControllerProvider);
+        if (auth is AuthAuthenticated) {
+          await offline.ensureDeviceKey(auth.user.id).catchError((_) {});
+        }
+      }
       final sites = await engine.fetchList('sites', engine.api.sites);
       final plans = await engine.fetchList('work_plans', engine.api.workPlans);
       // Titik lokasi SK yang sedang berjalan (ditetapkan PM) didahulukan sebagai lokasi absen.
@@ -102,10 +120,34 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
   /// masuk selama ada sesi terbuka, jadi tombol absen pulang harus tetap muncul lewat tengah malam.
   /// Selain itu pakai tanggal dari server (zona waktu organisasi); jam HP hanya cadangan saat luring.
   Map<String, dynamic>? get _today {
+    // R-34: absen luring yang belum terkirim tampil sebagai absensi hari ini.
+    final offIn = _offline
+        .where((o) => o['kind'] == 'CHECK_IN' && o['dead'] != true)
+        .lastOrNull;
+    final offOut = _offline
+        .where((o) => o['kind'] == 'CHECK_OUT' && o['dead'] != true)
+        .lastOrNull;
+    String iso(Map o) =>
+        DateTime.fromMillisecondsSinceEpoch(o['device_time_ms'] as int)
+            .toIso8601String();
+    if (offIn != null) {
+      return {
+        'site_label': offIn['site_name'],
+        'check_in_at': iso(offIn),
+        'check_out_at': offOut == null ? null : iso(offOut),
+        'status': 'OFFLINE',
+      };
+    }
+    // R-33: hanya sesi valid yang bisa absen pulang; absen hari lalu yang menunggu pemeriksaan tidak
+    // mengunci hari baru, jadi tidak didahulukan di kartu "hari ini".
     for (final r in _records) {
       if (r['check_in_at'] != null &&
           r['check_out_at'] == null &&
-          r['status'] != 'REJECTED') {
+          (r['status'] == 'AUTO_VALID' || r['status'] == 'APPROVED')) {
+        // Absen pulang luring yang belum terkirim: tampilkan jamnya & jangan tawarkan pulang lagi.
+        if (offOut != null) {
+          return {...r, 'check_out_at': iso(offOut), 'checkout_offline': true};
+        }
         return r;
       }
     }
@@ -115,6 +157,18 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       if (r['work_date'] == today) return r;
     }
     return null;
+  }
+
+  /// Keputusan pemilik 2026-10-02: ditolak → boleh mengajukan ulang sekali; ditolak lagi →
+  /// hari itu terkunci dan tercatat ditolak (server menolak dengan ATTENDANCE_DAY_LOCKED).
+  static const _maxAttemptsPerDay = 2;
+
+  int get _rejectedToday {
+    final today =
+        _serverToday ?? DateFormat('yyyy-MM-dd').format(DateTime.now());
+    return _records
+        .where((r) => r['work_date'] == today && r['status'] == 'REJECTED')
+        .length;
   }
 
   void _snack(String msg) =>
@@ -151,8 +205,24 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
         (loc['lat'] as num).toDouble(),
         (loc['lng'] as num).toDouble(),
       );
+      final radius = (site['radius_m'] as num?) ?? 50;
+      final outside = distance > radius;
+      // R-33: penjelasan wajib di luar zona dan saat mengajukan ulang absensi yang ditolak (dicek server juga).
+      String? explanation;
+      if (outside || _rejectedToday > 0) {
+        if (!mounted) return;
+        explanation = await _askExplanation(
+          title: outside ? 'Absen di luar zona' : 'Ajukan absen ulang',
+          info: outside
+              ? 'Anda ${distance.round()} m dari ${site['name']} (radius ${radius.round()} m). '
+                    'Jelaskan mengapa absen di luar zona.'
+              : 'Jelaskan alasan pengajuan ulang absensi yang ditolak.',
+        );
+        if (explanation == null) return;
+      }
       String? selfieId;
-      if (distance > ((site['radius_m'] as num?) ?? 50)) {
+      File? selfieFile;
+      if (outside) {
         if (!mounted) return;
         final (file, err) = await captureWatermarkedPhoto(
           context: context,
@@ -166,19 +236,48 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
           if (err != null) _snack(err);
           return;
         }
-        selfieId = await ref.read(syncEngineProvider).api.uploadFile(file);
+        selfieFile = file;
       }
-      await ref
-          .read(syncEngineProvider)
-          .api
-          .checkIn(
-            siteId: site['id'] as String,
-            lat: pos.latitude,
-            lng: pos.longitude,
-            accuracyM: pos.accuracy,
-            selfieFileId: selfieId,
-          );
-      _snack('Absen masuk tercatat.');
+      try {
+        if (selfieFile != null) {
+          selfieId = await ref
+              .read(syncEngineProvider)
+              .api
+              .uploadFile(selfieFile);
+        }
+        await ref
+            .read(syncEngineProvider)
+            .api
+            .checkIn(
+              siteId: site['id'] as String,
+              lat: pos.latitude,
+              lng: pos.longitude,
+              accuracyM: pos.accuracy,
+              selfieFileId: selfieId,
+              explanation: explanation,
+            );
+        _snack('Absen masuk tercatat.');
+      } on DioException catch (e) {
+        if (!isNetworkFailure(e)) rethrow;
+        // R-34: tanpa sinyal → rekam luring bertanda tangan, kirim otomatis saat online.
+        await ref
+            .read(syncEngineProvider)
+            .offlineAttendance
+            .record(
+              kind: 'CHECK_IN',
+              site: site,
+              lat: pos.latitude,
+              lng: pos.longitude,
+              accuracyM: pos.accuracy,
+              mocked: pos.isMocked,
+              gpsTime: pos.timestamp,
+              explanation: explanation,
+              selfie: selfieFile,
+            );
+        _snack(
+          'Tidak ada sinyal — absen masuk tersimpan luring dan dikirim otomatis saat online.',
+        );
+      }
       await _load();
     } catch (e) {
       _snack(apiErrorMessage(e));
@@ -192,11 +291,38 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     try {
       final pos = await _position();
       if (pos == null) return;
-      await ref
+      Future<void> recordOffline() => ref
           .read(syncEngineProvider)
-          .api
-          .checkOut(lat: pos.latitude, lng: pos.longitude);
-      _snack('Absen pulang tercatat.');
+          .offlineAttendance
+          .record(
+            kind: 'CHECK_OUT',
+            site: {'id': null, 'name': _today?['site_label']},
+            lat: pos.latitude,
+            lng: pos.longitude,
+            accuracyM: pos.accuracy,
+            mocked: pos.isMocked,
+            gpsTime: pos.timestamp,
+          );
+      if (_today?['status'] == 'OFFLINE') {
+        await recordOffline();
+        _snack(
+          'Absen pulang tersimpan luring dan dikirim otomatis saat online.',
+        );
+      } else {
+        try {
+          await ref
+              .read(syncEngineProvider)
+              .api
+              .checkOut(lat: pos.latitude, lng: pos.longitude);
+          _snack('Absen pulang tercatat.');
+        } on DioException catch (e) {
+          if (!isNetworkFailure(e)) rethrow;
+          await recordOffline();
+          _snack(
+            'Tidak ada sinyal — absen pulang tersimpan luring dan dikirim otomatis saat online.',
+          );
+        }
+      }
       await _load();
     } catch (e) {
       _snack(apiErrorMessage(e));
@@ -205,32 +331,69 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     }
   }
 
-  Future<void> _explain(Map<String, dynamic> record) async {
-    final controller = TextEditingController();
-    final text = await showDialog<String>(
+  /// Dialog penjelasan wajib: Kirim dengan isian kosong menampilkan pesan, bukan menutup diam-diam.
+  /// Mengembalikan teks (sudah di-trim) atau null bila dibatalkan.
+  Future<String?> _askExplanation({
+    required String title,
+    String? info,
+    String initial = '',
+  }) {
+    final controller = TextEditingController(text: initial);
+    String? error;
+    return showDialog<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Beri penjelasan'),
-        content: TextField(
-          controller: controller,
-          maxLines: 4,
-          decoration: const InputDecoration(
-            hintText: 'Mis. ban bocor di jalan menuju lokasi',
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialog) => AlertDialog(
+          title: Text(title),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (info != null) ...[
+                Text(info, style: VmsTextStyles.bodySm),
+                const SizedBox(height: 12),
+              ],
+              TextField(
+                key: const Key('explanation-field'),
+                controller: controller,
+                autofocus: true,
+                maxLines: 4,
+                maxLength: 1000,
+                decoration: InputDecoration(
+                  hintText: 'Mis. ban bocor di jalan menuju lokasi',
+                  errorText: error,
+                ),
+              ),
+            ],
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Batal'),
+            ),
+            FilledButton(
+              onPressed: () {
+                final text = controller.text.trim();
+                if (text.isEmpty) {
+                  setDialog(() => error = 'Penjelasan wajib diisi.');
+                  return;
+                }
+                Navigator.pop(ctx, text);
+              },
+              child: const Text('Kirim'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Batal'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-            child: const Text('Kirim'),
-          ),
-        ],
       ),
     );
-    if (text == null || text.isEmpty) return;
+  }
+
+  Future<void> _explain(Map<String, dynamic> record) async {
+    final text = await _askExplanation(
+      title: 'Beri penjelasan',
+      initial: record['explanation'] as String? ?? '',
+    );
+    if (text == null) return;
     try {
       await ref
           .read(syncEngineProvider)
@@ -300,11 +463,14 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Sinkron latar selesai (mis. absen luring baru terkirim) → muat ulang kartu & riwayat.
+    ref.listen(syncTickProvider, (_, _) => _load());
     final today = _today;
     final auth = ref.watch(authControllerProvider);
     final name = auth is AuthAuthenticated
         ? auth.user.username.split('@').first
         : '';
+    final lewatWeb = auth is AuthAuthenticated && auth.user.absensiLewatWeb;
     final hour = DateTime.now().hour;
     final greet = hour < 11
         ? 'Selamat pagi'
@@ -337,7 +503,6 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const OfficeRoleNotice(),
                   if (_cachedAt != null)
                     NoticeBanner(
                       icon: Icons.cloud_off_rounded,
@@ -413,7 +578,31 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                             ],
                           ),
                           const SizedBox(height: 16),
-                          if (today == null) ...[
+                          if (lewatWeb)
+                            // Pekerja kantor absen lewat web; server juga menolak absen dari HP.
+                            const NoticeBanner(
+                              key: Key('absen-lewat-web'),
+                              icon: Icons.computer_rounded,
+                              text:
+                                  'Anda terdaftar sebagai pekerja kantor. Absen masuk '
+                                  'dan pulang dilakukan lewat web. Riwayat tetap '
+                                  'terlihat di sini.',
+                            )
+                          else if (today == null ||
+                              (today['status'] == 'REJECTED' &&
+                                  _rejectedToday < _maxAttemptsPerDay)) ...[
+                            if (today != null) ...[
+                              NoticeBanner(
+                                key: const Key('absen-ditolak-bisa-ulang'),
+                                icon: Icons.replay_rounded,
+                                accent: Accent.rose,
+                                text:
+                                    'Absensi ditolak'
+                                    '${today['review_note'] != null ? ': ${today['review_note']}' : ''}. '
+                                    'Anda dapat mengajukan absen ulang satu kali hari ini.',
+                              ),
+                              const SizedBox(height: 12),
+                            ],
                             VmsSelectField<String>(
                               label: 'Lokasi kerja',
                               icon: Icons.place_rounded,
@@ -429,7 +618,9 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                             ),
                             const SizedBox(height: 14),
                             PrimaryAction(
-                              label: 'Absen masuk',
+                              label: today == null
+                                  ? 'Absen masuk'
+                                  : 'Ajukan absen ulang',
                               icon: Icons.login_rounded,
                               gold: true,
                               busy: _busy,
@@ -437,7 +628,39 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                                   ? null
                                   : _checkIn,
                             ),
-                          ] else if (today['check_out_at'] == null)
+                          ] else if ((today['status'] == 'OFFLINE' ||
+                                  today['checkout_offline'] == true) &&
+                              today['check_out_at'] != null)
+                            NoticeBanner(
+                              key: const Key('absen-luring-lengkap'),
+                              icon: Icons.cloud_upload_rounded,
+                              accent: Accent.indigo,
+                              text: today['status'] == 'OFFLINE'
+                                  ? 'Absen masuk & pulang tersimpan luring. Dikirim '
+                                        'otomatis saat ada sinyal.'
+                                  : 'Absen pulang tersimpan luring. Dikirim '
+                                        'otomatis saat ada sinyal.',
+                            )
+                          else if (today['status'] == 'REJECTED')
+                            NoticeBanner(
+                              key: const Key('absen-hari-ini-terkunci'),
+                              icon: Icons.block_rounded,
+                              accent: Accent.rose,
+                              text:
+                                  'Absensi hari ini ditolak $_rejectedToday kali dan '
+                                  'tidak dapat diajukan lagi. Hari ini tercatat ditolak.',
+                            )
+                          else if (today['check_out_at'] == null &&
+                              today['status'] == 'NEEDS_REVIEW')
+                            const NoticeBanner(
+                              key: Key('pulang-menunggu-review'),
+                              icon: Icons.hourglass_top_rounded,
+                              accent: Accent.amber,
+                              text:
+                                  'Absen masuk menunggu pemeriksaan. Absen pulang '
+                                  'bisa dilakukan setelah absen masuk disetujui.',
+                            )
+                          else if (today['check_out_at'] == null)
                             PrimaryAction(
                               label: 'Absen pulang',
                               icon: Icons.logout_rounded,
@@ -524,12 +747,16 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                                   ],
                                 ),
                               ),
-                              if ((r['is_late'] == true ||
-                                      r['is_early_leave'] == true) &&
-                                  r['explanation'] == null)
+                              // Sama dengan server & prototipe (EXPLAIN_ATTENDANCE): hanya absensi
+                              // yang menunggu pemeriksaan yang dapat diberi/diubah penjelasannya.
+                              if (r['status'] == 'NEEDS_REVIEW')
                                 TextButton(
                                   onPressed: () => _explain(r),
-                                  child: const Text('Jelaskan'),
+                                  child: Text(
+                                    r['explanation'] == null
+                                        ? 'Jelaskan'
+                                        : 'Ubah penjelasan',
+                                  ),
                                 ),
                             ],
                           ),

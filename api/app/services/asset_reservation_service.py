@@ -11,12 +11,12 @@ from uuid import UUID
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import CurrentUser
-from app.api.guards import PlanNeed, check_plan_access
 from app.core.enums import PlanStatus
 from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationError, trigger_rule_error
 from app.core.permissions import Permission
-from app.repositories.asset_reservation_repo import AssetReservationRepo
+from app.core.security import CurrentUser
+from app.crud.crud_asset_reservation import CRUDAssetReservation
+from app.services.access_service import PlanNeed, check_plan_access
 
 RUNNING = (PlanStatus.IN_PROGRESS, PlanStatus.COMPLETION_REVIEW)
 
@@ -28,7 +28,7 @@ def _state(message: str) -> AppError:
 class AssetReservationService:
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
-        self.repo = AssetReservationRepo(db)
+        self.repo = CRUDAssetReservation(db)
 
     async def list_assets(self, org_id: str) -> list[Any]:
         """Daftar aset beserta alokasi berjalan & pengajuan pengembalian — dasar tombol kembali/periksa."""

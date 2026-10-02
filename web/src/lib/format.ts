@@ -16,6 +16,19 @@ export function formatDateTime(iso: string | null | undefined): string {
   return `${get("day")} ${MONTHS[Number(get("month")) - 1]} ${get("year")} ${get("hour")}.${get("minute")} WIB`;
 }
 
+/** Jam WIB saja: "07.42". */
+export function formatTime(iso: string | null | undefined): string {
+  if (!iso) return "-";
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Jakarta",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(new Date(iso));
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
+  return `${get("hour")}.${get("minute")}`;
+}
+
 export function formatDate(iso: string | null | undefined): string {
   if (!iso) return "-";
   const [y, m, d] = iso.slice(0, 10).split("-").map(Number);

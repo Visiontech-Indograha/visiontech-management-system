@@ -31,6 +31,14 @@ const emp = (id: string, name: string, unit_id: string | null = "u1") => ({
   is_active: true,
 });
 const employees = { items: [emp("e-pm", "Pak PM"), emp("e-lead", "Bu Ketua"), emp("e-x", "Tanpa Unit", null)], total: 3, page: 1, size: 100 };
+const teamMember = (employee_id: string, full_name: string, role_in_plan: string) => ({
+  employee_id,
+  full_name,
+  position: "Teknisi",
+  role_in_plan,
+  valid_from: "2026-10-01",
+});
+
 const assignmentOptions = {
   can_choose_pm: false,
   fixed_pm_employee_id: "e-pm",
@@ -223,20 +231,48 @@ describe("Work plan — detail & tindakan", () => {
   });
 
   it("atur tim mengirim ketua, anggota tanpa ketua, dan row_version", async () => {
-    const calls = detail(plan(), (url) =>
-      url === "/work-plans/p1/members" ? { data: { leader_employee_id: "e-lead", member_employee_ids: ["e-pm"], row_version: 4 } } : undefined,
-    );
+    const calls = detail(plan(), (url, method) => {
+      if (url !== "/work-plans/p1/members") return undefined;
+      if (method === "get") return { data: [teamMember("e-lead", "Bu Ketua", "LEADER")] };
+      return { data: { leader_employee_id: "e-lead", member_employee_ids: ["e-pm"], row_version: 4 } };
+    });
     renderRoute("/work-plans/p1", { role: "PM" });
     fireEvent.click(await screen.findByRole("button", { name: "Atur tim" }));
     const dialog = screen.getByRole("dialog", { name: "Atur tim" });
     fireEvent.click(await within(dialog).findByLabelText(/Pak Anggota/));
     fireEvent.click(within(dialog).getByRole("button", { name: "Simpan" }));
-    await waitFor(() => expect(calls.some((c) => c.url === "/work-plans/p1/members")).toBe(true));
-    expect(calls.find((c) => c.url === "/work-plans/p1/members")!.data).toEqual({
+    await waitFor(() => expect(calls.some((c) => c.url === "/work-plans/p1/members" && c.method === "put")).toBe(true));
+    expect(calls.find((c) => c.url === "/work-plans/p1/members" && c.method === "put")!.data).toEqual({
       leader_employee_id: "e-lead",
       member_employee_ids: ["e-member"],
       row_version: 3,
     });
+  });
+
+  it("atur tim memuat tim saat ini dan mempertahankan anggota lintas unit pilihan OPS (R-26)", async () => {
+    const calls = detail(plan(), (url, method) => {
+      if (url !== "/work-plans/p1/members") return undefined;
+      if (method === "get")
+        return {
+          data: [
+            teamMember("e-lead", "Bu Ketua", "LEADER"),
+            teamMember("e-member", "Pak Anggota", "MEMBER"),
+            teamMember("e-out", "Bu Lintas Unit", "MEMBER"),
+          ],
+        };
+      return { data: { leader_employee_id: "e-lead", member_employee_ids: ["e-member", "e-out"], row_version: 4 } };
+    });
+    renderRoute("/work-plans/p1", { role: "PM" });
+    fireEvent.click(await screen.findByRole("button", { name: "Atur tim" }));
+    const dialog = screen.getByRole("dialog", { name: "Atur tim" });
+    const kept = await within(dialog).findByLabelText(/Bu Lintas Unit/);
+    expect(kept).toBeChecked();
+    expect(within(dialog).getByLabelText(/Pak Anggota/)).toBeChecked();
+    await waitFor(() => expect(within(dialog).getByLabelText("Ketua tim")).toHaveValue("e-lead"));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Simpan" }));
+    await waitFor(() => expect(calls.some((c) => c.url === "/work-plans/p1/members" && c.method === "put")).toBe(true));
+    const body = calls.find((c) => c.url === "/work-plans/p1/members" && c.method === "put")!.data as { member_employee_ids: string[] };
+    expect([...body.member_employee_ids].sort()).toEqual(["e-member", "e-out"]);
   });
 
   it("SK tidak ditemukan menampilkan galat", async () => {

@@ -7,11 +7,11 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
-from app.repositories.unit_repo import UnitRepo
+from app.crud.crud_unit import CRUDUnit
 
 
 class UnitService:
-    def __init__(self, repo: UnitRepo) -> None:
+    def __init__(self, repo: CRUDUnit) -> None:
         self.repo = repo
 
     async def list_units(self, org_id: UUID | str) -> list[Any]:

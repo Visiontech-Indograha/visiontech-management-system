@@ -22,14 +22,14 @@ extend-immutable-calls = [
 # Daftar ini hanya boleh menyusut: hapus barisnya begitu berkas dibersihkan (A-3/A-4 dst).
 # Berkas baru tidak boleh ditambahkan ke sini.
 [lint.per-file-ignores]
-"app/api/assets.py" = ["BLE001"]
-"app/api/attendance.py" = ["BLE001", "DTZ005"]  # DTZ005 = datetime.now() tanpa zona → A-4
-"app/api/audit.py" = ["RUF013"]
-"app/api/documents.py" = ["BLE001"]
-"app/api/employees.py" = ["BLE001"]
-"app/api/hse.py" = ["BLE001", "F841"]
-"app/api/plans.py" = ["BLE001"]
-"app/api/sites.py" = ["BLE001"]
+"app/api/v1/endpoints/assets.py" = ["BLE001"]
+"app/api/v1/endpoints/attendance.py" = ["BLE001", "DTZ005"]  # DTZ005 = datetime.now() tanpa zona → A-4
+"app/api/v1/endpoints/audit.py" = ["RUF013"]
+"app/api/v1/endpoints/documents.py" = ["BLE001"]
+"app/api/v1/endpoints/employees.py" = ["BLE001"]
+"app/api/v1/endpoints/hse.py" = ["BLE001", "F841"]
+"app/api/v1/endpoints/work_plans.py" = ["BLE001"]
+"app/api/v1/endpoints/sites.py" = ["BLE001"]
 "app/core/discord.py" = ["BLE001"]
 "app/core/image.py" = ["BLE001"]
 "app/core/pagination.py" = ["UP046"]

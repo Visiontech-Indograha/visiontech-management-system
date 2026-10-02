@@ -41,7 +41,7 @@ Daftar pustaka lengkap dan aturan menambah pustaka: `docs/14-DAFTAR-PUSTAKA-TEKN
 ## Struktur
 
 ```
-api/            FastAPI — router → controller → service → repository
+api/            FastAPI — endpoint → service → crud (struktur WAJIB: docs/12 §1, migrasi: docs/26)
 web/            React — components/{ui,molecules,organisms,templates} + features/
 mobile/         Flutter — core/, shared/, features/
 face-service/   layanan wajah (fase 8)
@@ -63,7 +63,13 @@ docs/           seluruh rencana dan standar
 
 ## Aturan backend
 
-- Lapisan: **router → controller → service → repository**. Router tidak pernah menyentuh
+- **Struktur folder `api/app/` WAJIB (keputusan pemilik 2026-09-29, kritis; dikoreksi R-30 2026-09-30) — persis contoh pemilik:**
+  `api/v1/endpoints/<modul>.py` + `api/v1/router.py` + `api/deps.py` (sesi, auth, izin, penjaga akses, perakitan
+  service `get_<nama>_service`) · `core/` (`config.py`, `security.py` + `CurrentUser`, …) · `crud/crud_<entitas>.py` ·
+  `models/` · `schemas/` · `services/` · `db/` (`base.py`, `session.py`) · `main.py`.
+  **Tidak ada** `core/database.py`, `app/dependencies.py`, `controllers/`, `repositories/`.
+  Berkas baru hanya boleh dibuat di tempat ini. Rincian & pemetaan: `docs/12` §1; migrasi: `docs/26`.
+- Lapisan: **endpoint → service → crud**. Endpoint tidak pernah menyentuh
   basis data. Service tidak pernah menulis SQL.
 - Nama fungsi servis **sama** dengan transaksi di `prototype/js/domain.js`
   (`publish`, `accept`, `request_personnel_change`, …).

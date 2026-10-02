@@ -148,8 +148,8 @@ class CRUDPlanDraft(CRUDBase):
                           description: str | None, lat: float, lng: float) -> Any:
         return await self.fetchone(
             """
-            INSERT INTO vms.site (organization_id, name, address, description, location, unit_id)
-            VALUES (CAST(:org AS uuid), :name, :desc, :desc, ST_SetSRID(ST_MakePoint(:lng, :lat), 4326),
+            INSERT INTO vms.site (organization_id, name, address, description, location, radius_m, unit_id)
+            VALUES (CAST(:org AS uuid), :name, :desc, :desc, ST_SetSRID(ST_MakePoint(:lng, :lat), 4326), 100,
                     CAST(:unit AS uuid))
             RETURNING id, name
             """,

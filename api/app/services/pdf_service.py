@@ -19,6 +19,21 @@ from app.core.time import wib_text
 _TEMPLATES = Path(__file__).resolve().parent.parent / "templates"
 _ENV = Environment(loader=FileSystemLoader(_TEMPLATES), autoescape=select_autoescape(["html"]))
 _ENV.filters["wib"] = wib_text
+_MONTHS = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober",
+           "November", "Desember"]
+
+
+def _tgl(value: Any) -> str:
+    """'2026-10-03' / date → '3 Oktober 2026' (dokumen SK)."""
+    text = str(value or "")[:10]
+    try:
+        y, m, d = (int(x) for x in text.split("-"))
+        return f"{d} {_MONTHS[m - 1]} {y}"
+    except (ValueError, IndexError):
+        return text
+
+
+_ENV.filters["tgl"] = _tgl
 # Logo kop SK sebagai data URI: WeasyPrint tidak perlu mengambil berkas/URL dari luar.
 _LOGO = "data:image/png;base64," + base64.b64encode(
     (_TEMPLATES / "assets" / "logo-visiontech.png").read_bytes()).decode("ascii")

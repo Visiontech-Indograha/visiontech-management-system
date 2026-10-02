@@ -1,25 +1,26 @@
 /**
- * Label status Bahasa Indonesia — satu sumber (docs/11 §5), disalin dari prototype/js/ui.js `states`.
+ * Label status Bahasa Indonesia — satu sumber (docs/11 §5). Status SK & dokumen mengikuti alur SK v2
+ * (keputusan pemilik 2026-10-03, flowchart SK2 di FigJam).
  * Nilai yang tidak dikenal ditampilkan apa adanya.
  */
 export const STATUS_LABEL: Record<string, string> = {
-  DRAFT: "Draft",
-  PUBLISHED: "SK terbit",
+  DRAFT: "Draf",
+  PUBLISHED: "Terbit",
   ACCEPTED: "Diterima",
-  APPEALED: "Banding",
+  APPEALED: "Adendum diminta",
   IN_PROGRESS: "Berjalan",
-  COMPLETION_REVIEW: "Review penyelesaian",
+  COMPLETION_REVIEW: "Pengajuan penutupan",
   COMPLETED: "Selesai",
   CANCELLED: "Dibatalkan",
-  SUBMITTED: "Menunggu review",
+  SUBMITTED: "Dikirim",
   APPROVED: "Disetujui",
   CHANGES_REQUESTED: "Perlu perbaikan",
   PENDING_PM: "Menunggu PM",
   AWAITING_LEADER_ACCEPTANCE: "Menunggu ketua",
-  AWAITING_ACCEPTANCE: "Menunggu penerimaan",
-  EFFECTIVE: "Efektif",
+  AWAITING_ACCEPTANCE: "Menunggu tanda tangan",
+  EFFECTIVE: "Berlaku",
   REJECTED: "Ditolak",
-  SUPERSEDED: "Versi sebelumnya",
+  SUPERSEDED: "Tidak berlaku",
   ACTIVE: "Aktif",
   INACTIVE: "Nonaktif",
   VERIFIED: "Terverifikasi",
@@ -59,3 +60,12 @@ const SIGNER_ROLE: Record<string, string> = { ISSUER: "Penerbit", ACCEPTOR: "Pen
 
 /** Label peran penanda tangan (enum signature_role). */
 export const signerRoleLabel = (role: string | null | undefined) => (role ? (SIGNER_ROLE[role] ?? role) : "-");
+
+/** Kategori pekerjaan SK (daftar tetap, alur SK v2). */
+export const CATEGORY_LABEL: Record<string, string> = {
+  INSTALASI: "Instalasi",
+  PEMELIHARAAN: "Pemeliharaan",
+  PERBAIKAN: "Perbaikan",
+  SURVEI: "Survei",
+  LAINNYA: "Lainnya",
+};

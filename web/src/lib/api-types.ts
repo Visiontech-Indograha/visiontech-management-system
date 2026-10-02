@@ -1009,10 +1009,17 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get Sites */
+        /**
+         * Get Sites
+         * @description R-33: lapangan → lokasi unitnya; kantor → lokasi kantor; PM → kantor + unitnya; OPS → semua.
+         *     `for_attendance=true`: hanya lokasi yang sah untuk absen peminta. `can_manage`: boleh dihapus peminta.
+         */
         get: operations["get_sites_api_v1_sites_get"];
         put?: never;
-        /** Create Site */
+        /**
+         * Create Site
+         * @description R-33: PM → lokasi proyek unitnya (untuk bawahannya); Finance → lokasi kantor. Unit ditetapkan server.
+         */
         post: operations["create_site_api_v1_sites_post"];
         delete?: never;
         options?: never;
@@ -1445,8 +1452,8 @@ export interface paths {
         };
         /**
          * List Attendance
-         * @description Dok 05 §3.5. FINANCE/HR/OPS/ADMIN: seluruh organisasi; lainnya: hanya milik sendiri.
-         *     Filter `plan_id` di dok 05 belum didukung — absensi belum tertaut ke SK (dok 10 Bagian C).
+         * @description Dok 05 §3.5 · R-33: Finance & OPS seluruh organisasi; PM miliknya + bawahan lapangan di unitnya;
+         *     lainnya hanya milik sendiri. Filter `plan_id` di dok 05 belum didukung (dok 10 Bagian C).
          */
         get: operations["list_attendance_api_v1_attendance_get"];
         put?: never;
@@ -1469,6 +1476,7 @@ export interface paths {
         /**
          * Check In
          * @description P4-2 · domain.js CHECK_IN. Waktu, tanggal, jarak, dan status dari server (aturan inti #3).
+         *     Pekerja lapangan lewat HP (`channel` MOBILE), pekerja kantor lewat web (`channel` WEB).
          */
         post: operations["check_in_api_v1_attendance_check_in_post"];
         delete?: never;
@@ -1488,7 +1496,7 @@ export interface paths {
         put?: never;
         /**
          * Check Out
-         * @description domain.js CHECK_OUT — menutup sesi terbuka milik sendiri.
+         * @description domain.js CHECK_OUT — menutup sesi terbuka milik sendiri, dari kanal sesuai jenis pekerja.
          */
         post: operations["check_out_api_v1_attendance_check_out_post"];
         delete?: never;
@@ -1528,7 +1536,8 @@ export interface paths {
         put?: never;
         /**
          * Review Attendance
-         * @description P4-4 · domain.js REVIEW_ATTENDANCE: Finance seluruh organisasi; PM unitnya, OPS lintas unit (R-10).
+         * @description P4-4 · domain.js REVIEW_ATTENDANCE · R-33: PM → bawahan lapangan, Finance → kantor non-Finance,
+         *     OPS → Finance; tidak pernah absensi sendiri.
          */
         post: operations["review_attendance_api_v1_attendance__att_id__review_post"];
         delete?: never;
@@ -2283,6 +2292,43 @@ export interface components {
             month: string;
             /** Employees */
             employees: components["schemas"]["AttendanceRecapRow"][];
+            /**
+             * Records
+             * @default []
+             */
+            records: components["schemas"]["AttendanceRecapRecord"][];
+        };
+        /**
+         * AttendanceRecapRecord
+         * @description Satu absensi dalam riwayat rekap — jam masuk & keluar (R-33).
+         */
+        AttendanceRecapRecord: {
+            /** Id */
+            id: string;
+            /** Employee Id */
+            employee_id: string;
+            /** Full Name */
+            full_name: string;
+            /**
+             * Work Date
+             * Format: date
+             */
+            work_date: string;
+            /** Site Label */
+            site_label: string;
+            /**
+             * Check In At
+             * Format: date-time
+             */
+            check_in_at: string;
+            /** Check Out At */
+            check_out_at: string | null;
+            /** Status */
+            status: string;
+            /** Is Late */
+            is_late: boolean;
+            /** Is Early Leave */
+            is_early_leave: boolean;
         };
         /** AttendanceRecapRow */
         AttendanceRecapRow: {
@@ -2341,6 +2387,17 @@ export interface components {
             explanation: string | null;
             /** Reviewed At */
             reviewed_at: string | null;
+            /** Selfie File Id */
+            selfie_file_id?: string | null;
+            /** Review Note */
+            review_note?: string | null;
+            /** Employee Name */
+            employee_name?: string | null;
+            /**
+             * Can Review
+             * @default false
+             */
+            can_review: boolean;
         };
         /** AuditEventListResponse */
         AuditEventListResponse: {
@@ -2439,6 +2496,12 @@ export interface components {
              * Format: uuid
              */
             site_id: string;
+            /**
+             * Channel
+             * @default MOBILE
+             * @enum {string}
+             */
+            channel: "MOBILE" | "WEB";
             location: components["schemas"]["GeoPoint"];
             /**
              * Location Origin
@@ -2454,9 +2517,17 @@ export interface components {
             face_result?: ("MATCH" | "NO_MATCH" | "LOW_QUALITY" | "NOT_ENROLLED" | "SKIPPED") | null;
             /** Face Similarity */
             face_similarity?: number | null;
+            /** Explanation */
+            explanation?: string | null;
         };
         /** CheckOutRequest */
         CheckOutRequest: {
+            /**
+             * Channel
+             * @default MOBILE
+             * @enum {string}
+             */
+            channel: "MOBILE" | "WEB";
             location: components["schemas"]["GeoPoint"];
             /**
              * Location Origin
@@ -2750,6 +2821,12 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /**
+             * Attendance Mode
+             * @default FIELD
+             * @enum {string}
+             */
+            attendance_mode: "FIELD" | "OFFICE";
             /** Is Active */
             is_active: boolean;
             /** Offboarded At */
@@ -2761,6 +2838,8 @@ export interface components {
         EmployeeUpdate: {
             /** Full Name */
             full_name?: string | null;
+            /** Attendance Mode */
+            attendance_mode?: ("FIELD" | "OFFICE") | null;
             /** Email */
             email?: string | null;
             /** Phone */
@@ -3470,6 +3549,13 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /** Unit Id */
+            unit_id?: string | null;
+            /**
+             * Can Manage
+             * @default false
+             */
+            can_manage: boolean;
         };
         /** SyncRequest */
         SyncRequest: {
@@ -3613,6 +3699,8 @@ export interface components {
             permissions: string[];
             /** Employee Id */
             employee_id?: string | null;
+            /** Attendance Mode */
+            attendance_mode?: string | null;
         };
         /** ValidationError */
         ValidationError: {
@@ -5686,7 +5774,9 @@ export interface operations {
     };
     get_sites_api_v1_sites_get: {
         parameters: {
-            query?: never;
+            query?: {
+                for_attendance?: boolean;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -5700,6 +5790,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SiteResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

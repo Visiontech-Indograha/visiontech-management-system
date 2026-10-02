@@ -12,7 +12,8 @@ import { Dialog } from "@/components/ui/VmsDialog";
 import { ApiError } from "@/lib/api";
 import { useCreateSite, useDeleteSite, useSites, type Site } from "./api";
 
-/** Master lokasi kerja (geofence absensi): GET/POST/DELETE /sites, izin create:plan. */
+/** Master lokasi kerja (geofence absensi): GET/POST/DELETE /sites, izin manage:sites (R-33).
+ * PM → lokasi proyek untuk bawahannya (unit ditetapkan server); Finance → lokasi kantor. */
 export function SitesPage() {
   const sites = useSites();
   const [adding, setAdding] = useState(false);
@@ -49,14 +50,17 @@ export function SitesPage() {
               <MapPin className="mt-0.5 shrink-0 text-lens" size={20} aria-hidden />
               <div className="min-w-0 flex-1">
                 <p className="font-medium">{s.name}</p>
+                <p className="text-xs text-mist">{s.unit_id ? "Lokasi proyek" : "Lokasi kantor"}</p>
                 {s.address && <p className="text-sm text-mist">{s.address}</p>}
                 <p className="text-sm text-mist">
                   {s.location.lat.toFixed(6)}, {s.location.lng.toFixed(6)} · radius {s.radius_m} m
                 </p>
               </div>
-              <Button variant="ghost" size="sm" onClick={() => setRemoving(s)} aria-label={`Hapus ${s.name}`}>
-                Hapus
-              </Button>
+              {s.can_manage && (
+                <Button variant="ghost" size="sm" onClick={() => setRemoving(s)} aria-label={`Hapus ${s.name}`}>
+                  Hapus
+                </Button>
+              )}
             </li>
           ))}
         </ul>

@@ -11,6 +11,13 @@ const KEY = ["sites"] as const;
 export const useSites = () =>
   useQuery({ queryKey: KEY, queryFn: async () => (await api.get<Site[]>("/sites")).data });
 
+/** Lokasi yang sah untuk absen peminta (R-33: kantor → lokasi kantor, lapangan → lokasi unitnya). */
+export const useAttendanceSites = () =>
+  useQuery({
+    queryKey: [...KEY, "attendance"],
+    queryFn: async () => (await api.get<Site[]>("/sites", { params: { for_attendance: true } })).data,
+  });
+
 export function useCreateSite() {
   const qc = useQueryClient();
   return useMutation({

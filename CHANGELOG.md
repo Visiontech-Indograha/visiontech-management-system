@@ -9,6 +9,8 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased] — `development`
 
+- **Uji E2E absensi di server produksi (2026-10-02):** `docs/27` §5 — P1–P8 lulus (web https Tailscale + HP nyata Realme, mode pesawat sungguhan; akun UJI di organisasi uji terpisah). Temuan: bug kiriman ulang setelah refresh token (diperbaiki, T-5), web via http LAN tidak bisa absen (T-6), label menu akun kantor (T-7).
+
 - **Perbaikan absensi HP — absen tidak hilang saat kiriman ulang setelah refresh token putus (uji nyata prod 2026-10-02):** di HP Realme (4G + Tailscale), token akses habis tepat saat absen; refresh berhasil, tetapi kiriman ulang putus di jaringan dan interceptor `ApiClient` meneruskan 401 lama → layar Absensi tidak beralih ke absen luring (R-34), absen hilang (2× di log prod). Kini kegagalan kiriman ulang diteruskan apa adanya. Uji baru `mobile/test/api_client_retry_test.dart` (server HTTP lokal sungguhan) gagal sebelum perbaikan, lulus sesudahnya; `flutter analyze` bersih, `flutter test` 88 lulus.
 
 - **Laporan uji E2E absensi R-33/R-34 di build produksi (2026-10-02):** `docs/27-LAPORAN-UJI-E2E-ABSENSI.md` — 9 skenario web (W1–W9) dan 8 skenario HP (M1–M8) lewat klik pada citra API/web & APK dari `prod` @ `31cf0b82`, DB uji lokal PG18. Semua lulus, tidak ada perbaikan kode. Catatan: GPS emulator bisa macet (cold boot memulihkan).

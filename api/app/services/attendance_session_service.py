@@ -57,7 +57,10 @@ class AttendanceSessionService:
     async def check_in(self, org_id: str, user_id: str, *, site_id: UUID, lng: float, lat: float,
                        origin: str, selfie_file_id: UUID | None, face_result: str | None,
                        face_similarity: float | None, accuracy_m: float | None = None,
-                       channel: str = "MOBILE", explanation: str | None = None) -> Any:
+                       channel: str = "MOBILE", explanation: str | None = None,
+                       at: Any = None, work_date: Any = None) -> Any:
+        """`at`/`work_date`: absen luring (R-34) — jam & tanggal peristiwa yang sudah diverifikasi server
+        (jangkar waktu + tanda tangan perangkat), bukan jam terima."""
         worker = await self._employee_for_channel(user_id, channel)
         employee_id = worker.employee_id
         # K-12: titik GPS yang terlalu kabur tidak bisa membuktikan kehadiran — tolak dengan alasan.
@@ -71,7 +74,7 @@ class AttendanceSessionService:
             raise AppError("GPS_INACCURATE",
                            f"Akurasi GPS {accuracy_m:.0f} m terlalu rendah (maksimal {MAX_GPS_ACCURACY_M} m). "
                            "Pindah ke tempat terbuka, tunggu sinyal GPS menguat, lalu coba lagi.", status=422)
-        today = (await self.clock.local_now(org_id)).today
+        today = work_date or (await self.clock.local_now(org_id)).today
         # Sesi valid yang lupa ditutup mengunci absen masuk berikutnya (O-10); absen hari lalu yang masih
         # menunggu pemeriksaan tidak mengunci hari baru (R-33).
         if await self.repo.active_on(employee_id, today):
@@ -104,6 +107,7 @@ class AttendanceSessionService:
                 org_id=org_id, employee_id=employee_id, work_date=today, site_id=site_id, site_label=site.name,
                 lng=lng, lat=lat, origin=origin, selfie_file_id=selfie_file_id,
                 face_result=face_result, face_similarity=face_similarity, source=channel, explanation=note,
+                at=at,
             )
         except IntegrityError as exc:
             # Aturan dari trigger (mis. di luar radius tanpa swafoto) → 422 dengan pesannya.

@@ -87,7 +87,7 @@ class CRUDAttendanceSession(CRUDBase):
     async def insert(self, *, org_id: str, employee_id: Any, work_date: Any, site_id: UUID, site_label: str,
                      lng: float, lat: float, origin: str, selfie_file_id: UUID | None,
                      face_result: str | None, face_similarity: float | None, source: str = "MOBILE",
-                     explanation: str | None = None) -> Any:
+                     explanation: str | None = None, at: Any = None) -> Any:
         # radius_m NOT NULL diisi trigger; nilai 0 hanya pengisi sebelum trigger berjalan.
         return await self.fetchone(
             """
@@ -96,7 +96,7 @@ class CRUDAttendanceSession(CRUDBase):
                 location, location_origin, radius_m, selfie_file_id, face_result, face_similarity, explanation
             ) VALUES (
                 :org, :emp, :day, :site, :label, CAST(:source AS vms.attendance_source),
-                now(),
+                COALESCE(CAST(:at AS timestamptz), now()),
                 ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography, :origin, 0, :selfie, :face, :sim, :exp
             )
             RETURNING id, employee_id, work_date, site_id, site_label, check_in_at, check_out_at,
@@ -104,7 +104,7 @@ class CRUDAttendanceSession(CRUDBase):
             """,
             {"org": org_id, "emp": employee_id, "day": work_date, "site": site_id, "label": site_label,
              "lng": lng, "lat": lat, "origin": origin, "selfie": selfie_file_id,
-             "face": face_result, "sim": face_similarity, "source": source, "exp": explanation},
+             "face": face_result, "sim": face_similarity, "source": source, "exp": explanation, "at": at},
         )
 
     async def close(self, attendance_id: UUID | str) -> Any:
@@ -146,6 +146,7 @@ class CRUDAttendanceSession(CRUDBase):
             SELECT a.id, a.employee_id, a.work_date, a.site_id, a.site_label, a.check_in_at, a.check_out_at,
                    a.distance_m, a.is_late, a.is_early_leave, a.status, a.explanation, a.reviewed_at,
                    a.selfie_file_id, a.review_note, e.full_name AS employee_name,
+                   a.offline, a.offline_note, a.check_out_requested_at,
                    vms.attendance_can_review(CAST(:viewer AS uuid), a.employee_id) AS can_review
             FROM vms.attendance a JOIN vms.employee e ON e.id = a.employee_id
             WHERE a.organization_id = CAST(:org AS uuid)
@@ -182,7 +183,10 @@ class CRUDAttendanceSession(CRUDBase):
             """
             UPDATE vms.attendance
             SET status = CAST(:status AS vms.attendance_status), reviewed_by = :emp, reviewed_at = now(),
-                review_note = :note
+                review_note = :note,
+                -- R-34: absen pulang luring yang menunggu absen masuk disetujui → berlaku saat disetujui.
+                check_out_at = CASE WHEN CAST(:status AS text) = 'APPROVED' AND check_out_at IS NULL
+                                    THEN check_out_requested_at ELSE check_out_at END
             WHERE id = :id
             """,
             {"status": status, "emp": reviewer, "note": note, "id": attendance_id},

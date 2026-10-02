@@ -75,7 +75,7 @@ export function WorkPlanDetailPage() {
         {p && <PlanDetailCard plan={p} />}
         {p && ["IN_PROGRESS", "COMPLETION_REVIEW", "COMPLETED"].includes(p.status) && <FinalReportPanel plan={p} />}
         {p && <PlanLocationCard plan={p} />}
-        {p && p.status !== "DRAFT" && <Attachments plan={p} />}
+        {p && <Attachments plan={p} />}
         {p && p.status !== "DRAFT" && <Documents plan={p} />}
         {p && ["IN_PROGRESS", "COMPLETION_REVIEW", "COMPLETED"].includes(p.status) && (
           <div className="mt-6 space-y-6">

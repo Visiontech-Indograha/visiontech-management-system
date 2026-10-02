@@ -9,6 +9,13 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased] — `development`
 
+- **Alur SK v2 — PR1 (keputusan pemilik 2026-10-03, flowchart SK2 di FigJam):**
+  - **DB (Alembic 0018):** `work_plan.category`, `work_plan_task.description` + `work_plan_task_attachment`, `site.description`, tabel `notification`, fungsi `employee_is_bound()`.
+  - **API:** `GET /work-plans/form-options`, `/driver-options`; `POST /work-plans/full`, `PUT /work-plans/{id}/full` (satu transaksi — menutup celah "3 simpan terpisah"); `GET /{id}/detail`, `/{id}/preview` (A4); `GET /documents/{id}/html`; `/notifications`. Terbit → notifikasi ketua & anggota; Ajukan adendum (appeal) → dokumen menunggu jadi Tidak berlaku + notifikasi PM; Terima → notifikasi + otomatis Berjalan pada tanggal mulai; draf revisi bisa dibatalkan; `/start` idempoten.
+  - **Web PM:** halaman Buat/Ubah isi SK, modal Lokasi baru berpeta, "Sunting SK" (pratinjau A4, Cetak, Ubah isi), "Lihat dokumen", isi SK lengkap di detail, lonceng notifikasi; tombol ketua dipindah ke HP.
+  - **HP:** Tinjau SK (dokumen A4 + TTD), Ajukan adendum, Terima SK, notifikasi, ringkasan isi SK.
+  - **Uji:** E2E nyata web + HP nyata (ketua) + emulator (anggota) — `docs/29-LAPORAN-UJI-E2E-SK.md`. Uji lama yang memeriksa alur lama disesuaikan (web 145 lulus, Flutter 88 lulus).
+
 - **CI · laporan Discord:** run yang dibatalkan `concurrency: cancel-in-progress` (ada push lebih baru ke branch yang sama) tidak lagi dilaporkan sebagai "❌ CI GAGAL" — notifikasi dilewati, run pengganti yang melapor (laporan palsu 48f9300f, 2026-10-02).
 
 - **PostgreSQL 18 di server (2026-10-02):** DB uji server `vms_db_test` dipindah ke citra `vms-db:18` (PG 18.6, PostGIS 3.6, pgvector) lewat `pg_dumpall`/restore — hitungan baris semua tabel identik, suite API yang disetujui 334 lolos di server. Kontainer & volume PG16 lama (`vms_db_test16`, `vms_db_test_data`) disimpan untuk rollback. **Produksi** (izin pemilik): `vms_db_prod` → PG18.6 dengan `pg_dumpall`/restore (4 DB, hitungan identik, henti ±2 menit 19.49–19.51); sandi `vms_app` yang masih sama dengan sandi di riwayat Git **dirotasi** (sandi lama ditolak); API `/ready` 200, alembic 0017, backup pasca-pindah ke MinIO berhasil. DB lama `vms_db_prod16` disimpan untuk rollback.

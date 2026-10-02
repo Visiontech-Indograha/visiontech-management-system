@@ -46,3 +46,9 @@ class DailyReportResponse(BaseModel):
     submitted_by: UUID | None
     submitted_at: datetime | None
     reviewed_at: datetime | None
+
+
+# ── Dipindah dari api/v1/endpoints/hse.py (R-28 M2b) ──
+class ReportReviewRequest(BaseModel):
+    decision: str
+    note: str | None = None

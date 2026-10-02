@@ -15,6 +15,7 @@ import jwt
 from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHashError, VerificationError
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from pydantic import BaseModel
 
 from app.core.config import settings
 from app.core.time import utcnow
@@ -70,3 +71,43 @@ def verify_jwt_token(token: str) -> dict[str, Any]:
         options={"require": ["exp", "iat", "sub", "jti"]},
     )
     return claims
+
+
+# ── Jangkar waktu absensi luring (R-34) ─────────────────────────────────────────────────────────
+# Diterbitkan setiap HP online membaca absensi: `iat` = jam server saat itu. HP menyimpannya bersama
+# penghitung waktu internal (elapsedRealtime) lalu menghitung jam absen luring = iat + selisih penghitung,
+# sehingga jam HP yang diubah tidak berpengaruh. Audience terpisah: tidak pernah diterima sebagai token akses.
+TIME_ANCHOR_AUDIENCE = "vms-time-anchor"
+
+
+def create_time_anchor(user_id: str) -> str:
+    now = utcnow()
+    claims = {"sub": user_id, "iat": now, "exp": now + timedelta(days=30),
+              "aud": TIME_ANCHOR_AUDIENCE, "iss": ACCESS_ISSUER}
+    return jwt.encode(claims, _private_key, algorithm=_ALGORITHM, headers={"kid": settings.JWT_KID})
+
+
+def verify_time_anchor(token: str, user_id: str) -> int | None:
+    """Jam server (epoch ms) yang tercantum di jangkar bila sah & milik pengguna ini; selain itu None."""
+    try:
+        if jwt.get_unverified_header(token).get("kid") != settings.JWT_KID:
+            return None
+        claims = jwt.decode(token, _public_key, algorithms=[_ALGORITHM], audience=TIME_ANCHOR_AUDIENCE,
+                            issuer=ACCESS_ISSUER, options={"require": ["exp", "iat", "sub"]},
+                            leeway=timedelta(days=7))
+    except jwt.PyJWTError:
+        return None
+    if claims.get("sub") != user_id:
+        return None
+    return int(claims["iat"]) * 1000
+
+
+# Identitas pengguna yang sedang masuk (dibangun api/deps.py::get_current_user dari token + DB).
+class CurrentUser(BaseModel):
+    user_id: str
+    organization_id: str
+    email: str
+    role: str
+    roles: list[str]
+    session_id: str
+    permissions: list[str]

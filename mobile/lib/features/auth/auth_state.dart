@@ -27,6 +27,7 @@ class AuthUser {
     required this.username,
     required this.role,
     required this.employeeId,
+    this.attendanceMode = 'FIELD',
   });
 
   final String id;
@@ -36,13 +37,20 @@ class AuthUser {
   /// Kosong bila akun tidak tertaut ke karyawan (mis. admin murni).
   final String employeeId;
 
-  /// Bentuk `GET /api/v1/auth/me`: user_id, email, role, permissions, employee_id.
+  /// `FIELD` = pekerja lapangan (absen di HP), `OFFICE` = pekerja kantor (absen di web).
+  /// Server tetap menolak kanal yang salah; nilai ini hanya untuk tampilan.
+  final String attendanceMode;
+
+  bool get absensiLewatWeb => attendanceMode == 'OFFICE';
+
+  /// Bentuk `GET /api/v1/auth/me`: user_id, email, role, permissions, employee_id, attendance_mode.
   factory AuthUser.fromJson(Map<String, dynamic> json) {
     return AuthUser(
       id: json['user_id'] as String,
       username: json['email'] as String,
       role: UserRole.fromWire(json['role'] as String),
       employeeId: (json['employee_id'] as String?) ?? '',
+      attendanceMode: (json['attendance_mode'] as String?) ?? 'FIELD',
     );
   }
 }

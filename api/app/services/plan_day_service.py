@@ -8,13 +8,13 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.guards import PlanAccess
-from app.repositories.plan_day_repo import PlanDayRepo
+from app.crud.crud_plan_day import CRUDPlanDay
+from app.services.access_service import PlanAccess
 
 
 class PlanDayService:
     def __init__(self, db: AsyncSession) -> None:
-        self.repo = PlanDayRepo(db)
+        self.repo = CRUDPlanDay(db)
 
     async def list_days(self, access: PlanAccess) -> list[Any]:
         return await self.repo.days_with_tasks_and_reports(access.plan.id)

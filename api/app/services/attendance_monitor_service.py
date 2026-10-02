@@ -11,7 +11,7 @@ from zoneinfo import ZoneInfo
 
 from app.core.alerts import send_business_alert
 from app.core.time import jakarta_now
-from app.repositories.attendance_monitor_repo import AttendanceMonitorRepo
+from app.crud.crud_attendance_monitor import CRUDAttendanceMonitor
 
 WIB = ZoneInfo("Asia/Jakarta")
 CHECK_IN_DEADLINE = time(9, 0)
@@ -34,7 +34,7 @@ class NeedsReviewResult:
 
 
 class AttendanceMonitorService:
-    def __init__(self, repo: AttendanceMonitorRepo) -> None:
+    def __init__(self, repo: CRUDAttendanceMonitor) -> None:
         self.repo = repo
 
     async def check_missing_check_ins(self, org_id: UUID | str) -> MissingCheckInResult:

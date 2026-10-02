@@ -5,86 +5,62 @@ PostgreSQL 18 (PostGIS + pgvector), MinIO.
 
 ---
 
-## 1. Struktur folder
+## 1. Struktur folder (WAJIB — keputusan pemilik 2026-09-29, dikoreksi 2026-09-30 R-30)
+
+> **Kritis.** Struktur ini **persis** contoh yang diberikan pemilik (R-28). Versi 2026-09-29 di dokumen ini
+> sempat menyimpang (`core/database.py`, `app/dependencies.py`) dan sudah dikoreksi (R-30). Kode lama
+> dimigrasikan bertahap (`docs/26-PLAN-MIGRASI-STRUKTUR-API.md`); **berkas baru wajib** dibuat di tempat
+> yang benar menurut struktur ini.
 
 ```
 api/
-├── app/
-│   ├── main.py                 app factory, pemasangan router, middleware
-│   │
-│   ├── core/                   fondasi, tidak tahu apa-apa soal domain
-│   │   ├── config.py           pydantic-settings, semua env var
-│   │   ├── database.py         engine async, session maker, SET LOCAL
-│   │   ├── security.py         argon2id, JWT EdDSA, verifikasi token
-│   │   ├── permissions.py      peta peran → izin, require_permission
-│   │   ├── time.py             sekarang(), bisa dibekukan saat uji
-│   │   ├── errors.py           AppError + pemetaan ke HTTP
-│   │   ├── logging.py          JSON + request_id
-│   │   └── pagination.py
-│   │
-│   ├── models/                 SQLModel — bentuk tabel
-│   │   ├── base.py             BaseModel, mixin waktu & audit
-│   │   ├── organization.py
-│   │   ├── employee.py
-│   │   ├── work_plan.py
-│   │   ├── attendance.py
-│   │   └── ...
-│   │
-│   ├── schemas/                SQLModel/Pydantic — bentuk permintaan & respons
-│   │   ├── work_plan.py        WorkPlanCreate, WorkPlanRead, WorkPlanList
-│   │   └── ...
-│   │
-│   ├── repositories/           akses data — SATU-SATUNYA tempat ada kueri
-│   │   ├── base.py             CRUD generik
-│   │   ├── work_plan_repo.py
-│   │   └── ...
-│   │
-│   ├── services/               aturan bisnis — padanan domain.js
-│   │   ├── work_plan_service.py
-│   │   ├── attendance_service.py
-│   │   ├── signature_service.py
-│   │   └── ...
-│   │
-│   ├── controllers/            orkestrasi kasus pakai, batas transaksi
-│   │   ├── work_plan_controller.py
-│   │   └── ...
-│   │
-│   ├── api/
-│   │   └── v1/
-│   │       ├── router.py       menggabungkan semua rute
-│   │       └── routes/
-│   │           ├── work_plans.py
-│   │           ├── attendance.py
-│   │           └── ...
-│   │
-│   ├── deps/                   dependency FastAPI
-│   │   ├── auth.py             pengguna aktif, izin
-│   │   └── db.py               sesi + SET LOCAL
-│   │
-│   ├── storage/                MinIO + kompresi gambar (dokumen 13)
-│   │   ├── client.py
-│   │   ├── image_compressor.py    hanya gambar; dokumen disimpan apa adanya
-│   │   └── service.py
-│   │
-│   ├── integrations/           sistem luar
-│   │   ├── face_client.py
-│   │   └── kms_client.py
-│   │
-│   ├── reports/                Jinja2 + WeasyPrint
-│   │   ├── templates/
-│   │   └── renderer.py
-│   │
-│   └── cli.py                  seed, create-admin, cleanup
-│
-├── alembic/                    migrasi (mode async)
-├── tests/
-│   ├── conftest.py             PostgreSQL nyata, bukan SQLite
-│   ├── unit/                   servis
-│   ├── integration/            repository + trigger + RLS
-│   └── api/                    endpoint + matriks RBAC
-├── pyproject.toml
-└── Dockerfile
+├── alembic/                  migrasi database (Alembic)
+├── app/                      kode sumber aplikasi
+│   ├── api/                  endpoint API (routing)
+│   │   ├── v1/
+│   │   │   ├── endpoints/    satu berkas per modul: auth.py, work_plans.py, attendance.py, …
+│   │   │   └── router.py     menggabungkan semua router v1
+│   │   └── deps.py           dependency injection global: get_db, get_current_user, izin, penjaga akses,
+│   │                         dan perakitan service (get_<nama>_service)
+│   ├── core/                 konfigurasi inti dan keamanan
+│   │   ├── config.py         pengaturan env via pydantic-settings — SATU-SATUNYA sumber rahasia
+│   │   └── security.py       hashing password, JWT, identitas pengguna (CurrentUser)
+│   ├── crud/                 operasi database — SATU-SATUNYA tempat ada kueri SQL
+│   │   ├── crud_user.py      satu berkas per entitas: crud_<entitas>.py, kelas CRUD<Entitas>
+│   │   └── …
+│   ├── models/               model ORM (SQLModel) — satu berkas per entitas: user.py, work_plan.py, …
+│   ├── schemas/              skema validasi & serialisasi (Pydantic) — satu berkas per entitas
+│   ├── services/             logika bisnis (padanan prototype/js/domain.js), tanpa SQL
+│   ├── db/                   koneksi dan sesi database
+│   │   ├── base.py           basis deklaratif model (metadata untuk Alembic)
+│   │   └── session.py        engine async, session maker, transaksi, konteks RLS (SET LOCAL app.*)
+│   └── main.py               titik masuk aplikasi (instance FastAPI)
+├── tests/                    pytest: conftest.py, test_<fitur>.py
+├── .env                      variabel lingkungan lokal (tidak di-commit)
+├── Dockerfile
+└── pyproject.toml            dependensi + konfigurasi ruff/mypy/pytest
 ```
+
+Tambahan proyek yang dipertahankan (tidak ada di contoh, dibutuhkan produk): `app/core/` berisi juga
+`errors.py`, `permissions.py`, `time.py`, `storage.py`, dsb. (fondasi tanpa domain); `app/templates/`
+(Jinja2 untuk PDF); `app/cli.py` (seed, create-admin).
+
+**Aturan penulisan**
+
+| Lapisan | Boleh | Tidak boleh |
+|---|---|---|
+| `api/v1/endpoints/*` | `Depends(...)` dari `api/deps.py`, panggil **service**, kembalikan **schema** | SQL, `text()`, `db.execute`, aturan bisnis, `HTTPException` (pakai `AppError`) |
+| `api/deps.py` | sesi DB, autentikasi, izin, penjaga akses, perakitan service | kueri di luar `crud` |
+| `services/*` | aturan bisnis, memanggil **crud**, melempar `AppError` | SQL, objek `Request`/`Response`, impor `app.api` |
+| `crud/*` | kueri SQL/SQLModel, mengembalikan baris/model | aturan bisnis, `AppError` bisnis |
+| `models/*` / `schemas/*` | definisi bentuk data | logika |
+| `db/*` | engine, sesi, transaksi, basis model | kueri domain |
+
+- Nama berkas: endpoint = jamak modul (`work_plans.py`), crud = `crud_<entitas tunggal>.py`,
+  service = `<entitas>_service.py`, schema/model = `<entitas>.py`.
+- Satu arah impor: `endpoints → services → crud → models`; `core` dan `db` tidak mengimpor lapisan domain.
+  Dijaga uji `tests/test_structure.py` (docs/26 M0).
+- Tidak ada folder lain di `app/` (mis. `controllers/`, `repositories/`, `dependencies.py`).
 
 ---
 

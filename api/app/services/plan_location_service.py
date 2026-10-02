@@ -10,9 +10,9 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.guards import PlanAccess
 from app.core.errors import AppError, ValidationError
-from app.repositories.plan_location_repo import PlanLocationRepo
+from app.crud.crud_plan_location import CRUDPlanLocation
+from app.services.access_service import PlanAccess
 
 CLOSED = ("COMPLETED", "CANCELLED")
 CLOSED_MESSAGE = "Titik lokasi tidak dapat diubah pada SK yang sudah selesai atau dibatalkan."
@@ -21,7 +21,7 @@ MIN_RADIUS, MAX_RADIUS = 10, 5000
 
 class PlanLocationService:
     def __init__(self, db: AsyncSession) -> None:
-        self.repo = PlanLocationRepo(db)
+        self.repo = CRUDPlanLocation(db)
 
     async def location(self, access: PlanAccess) -> dict[str, Any] | None:
         site_id = access.plan.site_id

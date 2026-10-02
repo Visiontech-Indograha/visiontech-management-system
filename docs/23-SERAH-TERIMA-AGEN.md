@@ -7,9 +7,13 @@ setiap kali Anda menutup sesi dengan perubahan berarti.
 ## 1. Aturan kerja dari pemilik (wajib)
 
 - Balas pemilik dalam **Bahasa Indonesia**, dengan laporan singkat.
-- **Jangan memakai subagen atau Workflow** kecuali diminta, karena kuota token pemilik terbatas.
-  Kerjakan sendiri, hemat, dan tanpa polling berulang.
-- Setiap permintaan pemilik atau PM **dicatat** di `docs/19-CATATAN-REVISI-PEMILIK.md` (nomor R-xx berikutnya: **R-25**).
+- Subagen **boleh** dipakai (larangan dicabut pemilik 2026-09-28, R-25). Tiap subagen bekerja di
+  branch `feature/...` dan worktree sendiri, dengan DB uji sendiri, lalu digabung ke `development`.
+  Tetap hemat: tanpa polling berulang.
+- Setiap permintaan pemilik atau PM **dicatat** di `docs/19-CATATAN-REVISI-PEMILIK.md` (nomor R-xx berikutnya: **R-35**).
+- Figma: tim **my-edu** (kursi Full). Tim `vms` hanya kursi View, tidak bisa diubah.
+- **Commit hanya setelah uji otomatis dan uji nyata lulus** (web di peramban terhadap API + DB nyata; mobile di HP nyata). Rencana & temuan audit: `docs/24`.
+- **Struktur folder `api/` WAJIB** mengikuti `docs/12` §1 (R-28); migrasi bertahap `docs/26`. Berkas baru hanya di tempat yang benar.
 - Commit dan push ke `development`.
   - `prod` hanya digabung bila pemilik meminta. Caranya fast-forward:
     `git push origin development:prod`, setelah memastikan `origin/prod` adalah leluhur `development`.
@@ -64,9 +68,12 @@ Yang dibagikan ke penguji adalah APK, bukan `.aab`: file `.aab` hanya untuk Play
 | R-23 | Kendaraan tersedia dapat dipilih dan langsung direservasi saat membuat draft SK; pengemudi dipilih dari tim | lihat `git log` |
 | R-23 | SK tidak dapat dimulai sebelum seluruh kendaraan teralokasi selesai diperiksa pengemudi | `69836807`; sudah di produksi melalui `2678343b` |
 | R-24 | Loop deploy palsu pada commit dokumentasi dihentikan dengan `--force-recreate`; skrip server dipasang setelah backup dan cron berikutnya tidak mengulang | `415408df`; produksi `2cdf1cde` |
+| R-26 | Tim SK hanya staf lapangan; celah PATCH ketua; dialog Atur tim; DB/MinIO uji terpisah (`tests/db_guard.py`) | `b8d53a6e` (belum di `prod`, ditunda pemilik) |
+| R-28 | Migrasi struktur API M0–M4 selesai: penjaga struktur + snapshot OpenAPI, `core/database.py`, `api/v1/endpoints` + `router.py`, skema keluar dari endpoint, `crud/`, `services/auth_flow.py` | `1c9c0e99`…M4 (lihat `git log`) |
 
 ## 4. Terbuka — kerjakan / tanyakan berikutnya
 
+0. **R-28 lanjut dari M6** (`docs/26`): `dependencies.py`, `CurrentUser`/penjaga → `core/security.py`, lalu M6 (SQL keluar dari endpoint per modul), M6b (model semua tabel), M7, M8. Setiap tahap: suite penuh di DB uji, OpenAPI identik, uji nyata web (+ HP; sementara dilewati per R-29, uji HP menyeluruh setelah R-28 selesai), baru commit. **R-27** (audit prototipe) baru setelah R-28 selesai. Merge R-26 ke `prod` ditunda pemilik.
 1. **Uji R-23 di produksi** (kode sudah aktif melalui `2678343b`). Inspeksi kendaraan dilakukan
    pengemudi setelah reservasi (`driver_checked_at`) dan kini wajib lulus sebelum SK dapat dimulai.
 2. **UAT seminggu** mengikuti `docs/22`. Temuan dicatat di tabel Temuan di docs/22, lalu ke docs/19.

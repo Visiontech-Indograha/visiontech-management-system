@@ -3116,44 +3116,73 @@
      "Sites"
     ],
     "summary": "Get Sites",
+    "description": "R-33: lapangan → lokasi unitnya; kantor → lokasi kantor; PM → kantor + unitnya; OPS → semua.\n`for_attendance=true`: hanya lokasi yang sah untuk absen peminta. `can_manage`: boleh dihapus peminta.",
     "operationId": "get_sites_api_v1_sites_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "for_attendance",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "boolean",
+       "default": false,
+       "title": "For Attendance"
+      }
+     }
+    ],
     "responses": {
      "200": {
       "description": "Successful Response",
       "content": {
        "application/json": {
         "schema": {
+         "type": "array",
          "items": {
           "$ref": "#/components/schemas/SiteResponse"
          },
-         "type": "array",
          "title": "Response Get Sites Api V1 Sites Get"
         }
        }
       }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
      }
-    },
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ]
+    }
    },
    "post": {
     "tags": [
      "Sites"
     ],
     "summary": "Create Site",
+    "description": "R-33: PM → lokasi proyek unitnya (untuk bawahannya); Finance → lokasi kantor. Unit ditetapkan server.",
     "operationId": "create_site_api_v1_sites_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
     "requestBody": {
+     "required": true,
      "content": {
       "application/json": {
        "schema": {
         "$ref": "#/components/schemas/SiteCreate"
        }
       }
-     },
-     "required": true
+     }
     },
     "responses": {
      "201": {
@@ -3176,12 +3205,7 @@
        }
       }
      }
-    },
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ]
+    }
    }
   },
   "/api/v1/sites/{site_id}": {
@@ -4538,7 +4562,7 @@
      "Attendance"
     ],
     "summary": "List Attendance",
-    "description": "Dok 05 §3.5. FINANCE/HR/OPS/ADMIN: seluruh organisasi; lainnya: hanya milik sendiri.\nFilter `plan_id` di dok 05 belum didukung — absensi belum tertaut ke SK (dok 10 Bagian C).",
+    "description": "Dok 05 §3.5 · R-33: Finance & OPS seluruh organisasi; PM miliknya + bawahan lapangan di unitnya;\nlainnya hanya milik sendiri. Filter `plan_id` di dok 05 belum didukung (dok 10 Bagian C).",
     "operationId": "list_attendance_api_v1_attendance_get",
     "security": [
      {
@@ -4661,13 +4685,111 @@
     }
    }
   },
+  "/api/v1/attendance/device-key": {
+   "post": {
+    "tags": [
+     "Attendance"
+    ],
+    "summary": "Register Device Key",
+    "description": "R-34: daftarkan kunci publik Android Keystore perangkat ini untuk memverifikasi absen luring.",
+    "operationId": "register_device_key_api_v1_attendance_device_key_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/DeviceKeyRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": {
+          "type": "string"
+         },
+         "type": "object",
+         "title": "Response Register Device Key Api V1 Attendance Device Key Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ]
+   }
+  },
+  "/api/v1/attendance/offline": {
+   "post": {
+    "tags": [
+     "Attendance"
+    ],
+    "summary": "Submit Offline Attendance",
+    "description": "R-34: terima satu absen luring yang ditandatangani perangkat (idempoten per client_op_id).",
+    "operationId": "submit_offline_attendance_api_v1_attendance_offline_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/OfflineAttendanceEvent"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/OfflineAttendanceResult"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ]
+   }
+  },
   "/api/v1/attendance/check-in": {
    "post": {
     "tags": [
      "Attendance"
     ],
     "summary": "Check In",
-    "description": "P4-2 · domain.js CHECK_IN. Waktu, tanggal, jarak, dan status dari server (aturan inti #3).",
+    "description": "P4-2 · domain.js CHECK_IN. Waktu, tanggal, jarak, dan status dari server (aturan inti #3).\nPekerja lapangan lewat HP (`channel` MOBILE), pekerja kantor lewat web (`channel` WEB).",
     "operationId": "check_in_api_v1_attendance_check_in_post",
     "requestBody": {
      "content": {
@@ -4714,7 +4836,7 @@
      "Attendance"
     ],
     "summary": "Check Out",
-    "description": "domain.js CHECK_OUT — menutup sesi terbuka milik sendiri.",
+    "description": "domain.js CHECK_OUT — menutup sesi terbuka milik sendiri, dari kanal sesuai jenis pekerja.",
     "operationId": "check_out_api_v1_attendance_check_out_post",
     "requestBody": {
      "content": {
@@ -4824,7 +4946,7 @@
      "Attendance"
     ],
     "summary": "Review Attendance",
-    "description": "P4-4 · domain.js REVIEW_ATTENDANCE: Finance seluruh organisasi; PM unitnya, OPS lintas unit (R-10).",
+    "description": "P4-4 · domain.js REVIEW_ATTENDANCE · R-33: PM → bawahan lapangan, Finance → kantor non-Finance,\nOPS → Finance; tidak pernah absensi sendiri.",
     "operationId": "review_attendance_api_v1_attendance__att_id__review_post",
     "security": [
      {
@@ -7066,6 +7188,17 @@
        }
       ],
       "title": "Today"
+     },
+     "time_anchor": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Time Anchor"
      }
     },
     "type": "object",
@@ -7089,6 +7222,14 @@
       },
       "type": "array",
       "title": "Employees"
+     },
+     "records": {
+      "items": {
+       "$ref": "#/components/schemas/AttendanceRecapRecord"
+      },
+      "type": "array",
+      "title": "Records",
+      "default": []
      }
     },
     "type": "object",
@@ -7097,6 +7238,75 @@
      "employees"
     ],
     "title": "AttendanceRecap"
+   },
+   "AttendanceRecapRecord": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "employee_id": {
+      "type": "string",
+      "title": "Employee Id"
+     },
+     "full_name": {
+      "type": "string",
+      "title": "Full Name"
+     },
+     "work_date": {
+      "type": "string",
+      "format": "date",
+      "title": "Work Date"
+     },
+     "site_label": {
+      "type": "string",
+      "title": "Site Label"
+     },
+     "check_in_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Check In At"
+     },
+     "check_out_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Check Out At"
+     },
+     "status": {
+      "type": "string",
+      "title": "Status"
+     },
+     "is_late": {
+      "type": "boolean",
+      "title": "Is Late"
+     },
+     "is_early_leave": {
+      "type": "boolean",
+      "title": "Is Early Leave"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "employee_id",
+     "full_name",
+     "work_date",
+     "site_label",
+     "check_in_at",
+     "check_out_at",
+     "status",
+     "is_late",
+     "is_early_leave"
+    ],
+    "title": "AttendanceRecapRecord",
+    "description": "Satu absensi dalam riwayat rekap — jam masuk & keluar (R-33)."
    },
    "AttendanceRecapRow": {
     "properties": {
@@ -7229,6 +7439,73 @@
        }
       ],
       "title": "Reviewed At"
+     },
+     "selfie_file_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Selfie File Id"
+     },
+     "review_note": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Review Note"
+     },
+     "employee_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Employee Name"
+     },
+     "can_review": {
+      "type": "boolean",
+      "title": "Can Review",
+      "default": false
+     },
+     "offline": {
+      "type": "boolean",
+      "title": "Offline",
+      "default": false
+     },
+     "offline_note": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Offline Note"
+     },
+     "check_out_requested_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Check Out Requested At"
      }
     },
     "type": "object",
@@ -7489,6 +7766,15 @@
       "format": "uuid",
       "title": "Site Id"
      },
+     "channel": {
+      "type": "string",
+      "enum": [
+       "MOBILE",
+       "WEB"
+      ],
+      "title": "Channel",
+      "default": "MOBILE"
+     },
      "location": {
       "$ref": "#/components/schemas/GeoPoint"
      },
@@ -7553,6 +7839,18 @@
        }
       ],
       "title": "Face Similarity"
+     },
+     "explanation": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 1000
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Explanation"
      }
     },
     "type": "object",
@@ -7564,6 +7862,15 @@
    },
    "CheckOutRequest": {
     "properties": {
+     "channel": {
+      "type": "string",
+      "enum": [
+       "MOBILE",
+       "WEB"
+      ],
+      "title": "Channel",
+      "default": "MOBILE"
+     },
      "location": {
       "$ref": "#/components/schemas/GeoPoint"
      },
@@ -7878,6 +8185,29 @@
     },
     "type": "object",
     "title": "DecisionRequest"
+   },
+   "DeviceKeyRequest": {
+    "properties": {
+     "device_id": {
+      "type": "string",
+      "maxLength": 100,
+      "minLength": 8,
+      "title": "Device Id"
+     },
+     "public_key": {
+      "type": "string",
+      "maxLength": 1000,
+      "minLength": 40,
+      "title": "Public Key"
+     }
+    },
+    "type": "object",
+    "required": [
+     "device_id",
+     "public_key"
+    ],
+    "title": "DeviceKeyRequest",
+    "description": "Kunci publik EC P-256 (X.509 SubjectPublicKeyInfo DER, base64) dari Android Keystore."
    },
    "DocumentListResponse": {
     "properties": {
@@ -8408,6 +8738,15 @@
       "format": "uuid",
       "title": "Id"
      },
+     "attendance_mode": {
+      "type": "string",
+      "enum": [
+       "FIELD",
+       "OFFICE"
+      ],
+      "title": "Attendance Mode",
+      "default": "FIELD"
+     },
      "is_active": {
       "type": "boolean",
       "title": "Is Active"
@@ -8459,6 +8798,21 @@
        }
       ],
       "title": "Full Name"
+     },
+     "attendance_mode": {
+      "anyOf": [
+       {
+        "type": "string",
+        "enum": [
+         "FIELD",
+         "OFFICE"
+        ]
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Attendance Mode"
      },
      "email": {
       "anyOf": [
@@ -9108,6 +9462,129 @@
      "daily_average"
     ],
     "title": "NeedsReviewResponse"
+   },
+   "OfflineAttendanceEvent": {
+    "properties": {
+     "device_id": {
+      "type": "string",
+      "maxLength": 100,
+      "minLength": 8,
+      "title": "Device Id"
+     },
+     "client_op_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Client Op Id"
+     },
+     "kind": {
+      "type": "string",
+      "enum": [
+       "CHECK_IN",
+       "CHECK_OUT"
+      ],
+      "title": "Kind"
+     },
+     "payload": {
+      "type": "string",
+      "maxLength": 10000,
+      "title": "Payload"
+     },
+     "signature": {
+      "type": "string",
+      "maxLength": 500,
+      "title": "Signature"
+     },
+     "selfie_file_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Selfie File Id"
+     }
+    },
+    "type": "object",
+    "required": [
+     "device_id",
+     "client_op_id",
+     "kind",
+     "payload",
+     "signature"
+    ],
+    "title": "OfflineAttendanceEvent",
+    "description": "Satu absen luring: `payload` = JSON persis seperti yang ditandatangani HP; `signature` = ECDSA SHA-256\n(DER, base64). Swafoto diunggah lebih dulu; kecocokannya dicek lewat `selfie_sha256` di payload."
+   },
+   "OfflineAttendanceResult": {
+    "properties": {
+     "client_op_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Client Op Id"
+     },
+     "result": {
+      "type": "string",
+      "title": "Result"
+     },
+     "attendance_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Attendance Id"
+     },
+     "duplicate": {
+      "type": "boolean",
+      "title": "Duplicate"
+     },
+     "event_time": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Event Time"
+     },
+     "time_trusted": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Time Trusted"
+     },
+     "notes": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Notes",
+      "default": []
+     }
+    },
+    "type": "object",
+    "required": [
+     "client_op_id",
+     "result",
+     "attendance_id",
+     "duplicate"
+    ],
+    "title": "OfflineAttendanceResult"
    },
    "OfflineOperation": {
     "properties": {
@@ -10319,6 +10796,23 @@
       "type": "string",
       "format": "uuid",
       "title": "Id"
+     },
+     "unit_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Unit Id"
+     },
+     "can_manage": {
+      "type": "boolean",
+      "title": "Can Manage",
+      "default": false
      }
     },
     "type": "object",
@@ -10734,6 +11228,17 @@
        }
       ],
       "title": "Employee Id"
+     },
+     "attendance_mode": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Attendance Mode"
      }
     },
     "type": "object",

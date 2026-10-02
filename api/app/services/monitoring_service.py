@@ -11,14 +11,13 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import CurrentUser
 from app.core.enums import PlanStatus
 from app.core.errors import ValidationError
-from app.repositories.attendance_session_repo import AttendanceSessionRepo
-from app.repositories.monitoring_repo import MonitoringRepo
-from app.repositories.org_clock_repo import OrgClockRepo
-from app.repositories.plan_access_repo import PlanAccessRepo
-from app.services.attendance_session_service import SEE_ALL
+from app.core.permissions import Permission
+from app.core.security import CurrentUser
+from app.crud.crud_monitoring import CRUDMonitoring
+from app.crud.crud_org_clock import CRUDOrgClock
+from app.crud.crud_plan_access import CRUDPlanAccess
 
 HIDDEN = (PlanStatus.CANCELLED, PlanStatus.COMPLETED)   # operations.js timeline()
 REPORTED = ("APPROVED", "SUBMITTED", "CHANGES_REQUESTED")
@@ -45,15 +44,15 @@ def _month_range(month: str | None, today: date) -> tuple[str, date, date]:
 class MonitoringService:
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
-        self.repo = MonitoringRepo(db)
+        self.repo = CRUDMonitoring(db)
 
     async def _today(self, org_id: str) -> date:
-        today: date = (await OrgClockRepo(self.db).local_now(org_id)).today
+        today: date = (await CRUDOrgClock(self.db).local_now(org_id)).today
         return today
 
     async def timeline(self, user: CurrentUser, date_from: date | None, date_to: date | None) -> list[dict[str, Any]]:
         plans = [
-            p for p in await PlanAccessRepo(self.db).visible_plans(user.organization_id, user.user_id, None)
+            p for p in await CRUDPlanAccess(self.db).visible_plans(user.organization_id, user.user_id, None)
             if p.status not in HIDDEN
             and (date_from is None or p.period_end >= date_from)
             and (date_to is None or p.period_start <= date_to)
@@ -85,11 +84,14 @@ class MonitoringService:
 
     async def attendance_recap(self, user: CurrentUser, month: str | None) -> dict[str, Any]:
         label, starts, ends = _month_range(month, await self._today(user.organization_id))
-        scope: str | None = None
-        if not set(user.roles) & SEE_ALL:
-            own = await AttendanceSessionRepo(self.db).employee_of(user.user_id)
-            if own is None:
-                return {"month": label, "employees": []}
-            scope = str(own)
-        rows = await self.repo.attendance_recap(user.organization_id, starts, ends, scope)
-        return {"month": label, "employees": [dict(row._mapping) for row in rows]}
+        # R-33: Finance & OPS semua; PM hanya bawahan lapangan di unitnya; selain itu milik sendiri.
+        if Permission.VIEW_ALL_ATTENDANCE.value in user.permissions:
+            scope = "all"
+        elif "PM" in user.roles:
+            scope = "subordinates"
+        else:
+            scope = "own"
+        rows = await self.repo.attendance_recap(user.organization_id, starts, ends, user.user_id, scope)
+        days = await self.repo.attendance_recap_days(user.organization_id, starts, ends, user.user_id, scope)
+        return {"month": label, "employees": [dict(row._mapping) for row in rows],
+                "records": [dict(row._mapping) for row in days]}

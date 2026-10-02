@@ -28,9 +28,10 @@ def _group(body: list[dict], plan_id: str) -> dict | None:
 def test_timeline_groups_days_per_plan(client, world: World):
     running, days = run_plan_to_in_progress(client, world)
     _approve_days(days[:1])
+    world.add_person("other_leader", None)  # R-26: ketua harus staf lapangan, bukan peran kantor
     # Ketua lain: ketua SK berjalan sudah terjadwal di tanggal ini (PERSONNEL_CONFLICT).
-    late_draft, _ = create_draft_plan(client, world, start_offset_days=-1, leader="hr")
-    cancelled, _ = create_draft_plan(client, world, start_offset_days=30, leader="hr")
+    late_draft, _ = create_draft_plan(client, world, start_offset_days=-1, leader="other_leader")
+    cancelled, _ = create_draft_plan(client, world, start_offset_days=30, leader="other_leader")
     sync_query("UPDATE vms.work_plan SET status = 'CANCELLED' WHERE id = %s", (cancelled,))
     today = jakarta_now().date()
 

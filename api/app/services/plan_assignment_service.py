@@ -6,14 +6,14 @@ from datetime import date
 from typing import Any
 from uuid import UUID
 
-from app.api.deps import CurrentUser
 from app.core.errors import AppError, ForbiddenError
 from app.core.permissions import RoleCode
-from app.repositories.plan_assignment_repo import PlanAssignmentRepo
+from app.core.security import CurrentUser
+from app.crud.crud_plan_assignment import CRUDPlanAssignment
 
 
 class PlanAssignmentService:
-    def __init__(self, repo: PlanAssignmentRepo) -> None:
+    def __init__(self, repo: CRUDPlanAssignment) -> None:
         self.repo = repo
 
     @staticmethod
@@ -44,13 +44,24 @@ class PlanAssignmentService:
         user: CurrentUser,
         plan_unit_id: UUID | str,
         employee_ids: Iterable[UUID | str],
+        current_team: Iterable[UUID | str] = (),
     ) -> None:
-        """OPS/ADMIN bebas lintas unit; PM hanya dapat memilih karyawan pada unit SK-nya."""
+        """Seluruh tim wajib staf lapangan (R-26). OPS/ADMIN bebas lintas unit; PM hanya dapat
+        MENAMBAHKAN karyawan unit SK-nya: anggota yang sudah ada di tim (`current_team`, mis. pilihan
+        OPS lintas unit) tidak diperiksa ulang cakupan unitnya (docs/10 Bagian C, R-26)."""
+        ids = [str(value) for value in employee_ids]
+        eligible = await self.repo.eligible_field_staff(ids, user.organization_id)
+        if set(ids) - eligible:
+            raise AppError(
+                "PERSONNEL_NOT_FIELD_STAFF",
+                "Ketua dan anggota tim hanya dapat dipilih dari staf lapangan dengan akun aktif.",
+                status=422,
+            )
         if self._oversees(user):
             return
-        ids = [str(value) for value in employee_ids]
-        units = await self.repo.employee_units(ids, user.organization_id)
-        if any(units.get(employee_id) != str(plan_unit_id) for employee_id in ids):
+        added = [employee_id for employee_id in ids if employee_id not in {str(v) for v in current_team}]
+        units = await self.repo.employee_units(added, user.organization_id)
+        if any(units.get(employee_id) != str(plan_unit_id) for employee_id in added):
             raise AppError(
                 "PERSONNEL_OUTSIDE_PM_UNIT",
                 "PM hanya dapat memilih ketua dan anggota dari unitnya sendiri.",

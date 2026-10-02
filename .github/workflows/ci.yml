@@ -49,9 +49,12 @@ jobs:
           cache-dependency-path: api/requirements-dev.txt
 
       - name: Pasang pgvector di container DB
+        # Image postgis 16-3.4 berbasis Debian bullseye; repo PGDG bullseye sudah dipindah ke arsip
+        # (apt.postgresql.org → 404, CI gagal 2026-10-02), jadi sumber apt diarahkan ke apt-archive.
         run: |
           docker exec ${{ job.services.db.id }} bash -c \
-            "apt-get update -qq && apt-get install -y -qq postgresql-16-pgvector >/dev/null"
+            "sed -i 's#http://apt.postgresql.org/#https://apt-archive.postgresql.org/#' /etc/apt/sources.list.d/pgdg.list \
+             && apt-get update -qq && apt-get install -y -qq postgresql-16-pgvector >/dev/null"
 
       - name: Pasang skema dari db/*.sql (urutan 01 → 05)
         working-directory: db

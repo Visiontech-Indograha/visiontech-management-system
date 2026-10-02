@@ -9,7 +9,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.concurrency import run_in_threadpool
-from fastapi.responses import Response
+from fastapi.responses import HTMLResponse, Response
 
 from app.api.deps import get_current_user, get_public_signature_service, get_signature_service, plan_access
 from app.core.errors import AppError
@@ -72,6 +72,14 @@ async def document_pdf(document_id: UUID, current_user: CurrentUser = Depends(ge
     filename = f"{document.number}-v{document.version}.pdf".replace("/", "-")
     return Response(pdf, media_type="application/pdf",
                     headers={"Content-Disposition": f'inline; filename="{filename}"'})
+
+
+@router.get("/documents/{document_id}/html", response_class=HTMLResponse)
+async def document_html(document_id: UUID, current_user: CurrentUser = Depends(get_current_user),
+                        signature_service: SignatureService = Depends(get_signature_service)) -> HTMLResponse:
+    """Isi yang sama persis dengan PDF (templat A4 + TTD + QR) — untuk penampil di web & HP ("Tinjau SK")."""
+    document, signatures = await signature_service.document_with_qr(current_user, document_id)
+    return HTMLResponse(render_plan_document_html(document, signatures))
 
 
 @router.post("/signatures/{signature_id}/revoke")

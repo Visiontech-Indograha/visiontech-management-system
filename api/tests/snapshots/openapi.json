@@ -1956,6 +1956,55 @@
     "title": "DocumentListResponse",
     "type": "object"
    },
+   "DraftDayInput": {
+    "properties": {
+     "tasks": {
+      "items": {
+       "$ref": "#/components/schemas/DraftTaskInput"
+      },
+      "title": "Tasks",
+      "type": "array"
+     },
+     "work_date": {
+      "format": "date",
+      "title": "Work Date",
+      "type": "string"
+     }
+    },
+    "required": [
+     "work_date",
+     "tasks"
+    ],
+    "title": "DraftDayInput",
+    "type": "object"
+   },
+   "DraftTaskInput": {
+    "properties": {
+     "description": {
+      "title": "Description",
+      "type": "string"
+     },
+     "file_ids": {
+      "default": [],
+      "items": {
+       "format": "uuid",
+       "type": "string"
+      },
+      "title": "File Ids",
+      "type": "array"
+     },
+     "title": {
+      "title": "Title",
+      "type": "string"
+     }
+    },
+    "required": [
+     "title",
+     "description"
+    ],
+    "title": "DraftTaskInput",
+    "type": "object"
+   },
    "EmployeeAssignmentCreate": {
     "properties": {
      "position": {
@@ -2873,6 +2922,128 @@
     "title": "FinalReportSignatureOut",
     "type": "object"
    },
+   "FormAsset": {
+    "properties": {
+     "code": {
+      "title": "Code",
+      "type": "string"
+     },
+     "id": {
+      "format": "uuid",
+      "title": "Id",
+      "type": "string"
+     },
+     "kind": {
+      "title": "Kind",
+      "type": "string"
+     },
+     "name": {
+      "title": "Name",
+      "type": "string"
+     },
+     "vehicle_type": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Vehicle Type"
+     }
+    },
+    "required": [
+     "id",
+     "kind",
+     "code",
+     "name"
+    ],
+    "title": "FormAsset",
+    "type": "object"
+   },
+   "FormCategory": {
+    "properties": {
+     "code": {
+      "title": "Code",
+      "type": "string"
+     },
+     "label": {
+      "title": "Label",
+      "type": "string"
+     }
+    },
+    "required": [
+     "code",
+     "label"
+    ],
+    "title": "FormCategory",
+    "type": "object"
+   },
+   "FormPerson": {
+    "properties": {
+     "full_name": {
+      "title": "Full Name",
+      "type": "string"
+     },
+     "id": {
+      "format": "uuid",
+      "title": "Id",
+      "type": "string"
+     },
+     "position": {
+      "title": "Position",
+      "type": "string"
+     }
+    },
+    "required": [
+     "id",
+     "full_name",
+     "position"
+    ],
+    "title": "FormPerson",
+    "type": "object"
+   },
+   "FormSite": {
+    "properties": {
+     "description": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Description"
+     },
+     "id": {
+      "format": "uuid",
+      "title": "Id",
+      "type": "string"
+     },
+     "lat": {
+      "title": "Lat",
+      "type": "number"
+     },
+     "lng": {
+      "title": "Lng",
+      "type": "number"
+     },
+     "name": {
+      "title": "Name",
+      "type": "string"
+     }
+    },
+    "required": [
+     "id",
+     "name",
+     "lat",
+     "lng"
+    ],
+    "title": "FormSite",
+    "type": "object"
+   },
    "GeoPoint": {
     "properties": {
      "lat": {
@@ -3187,6 +3358,127 @@
      "daily_average"
     ],
     "title": "NeedsReviewResponse",
+    "type": "object"
+   },
+   "NewSiteInput": {
+    "properties": {
+     "description": {
+      "anyOf": [
+       {
+        "maxLength": 500,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Description"
+     },
+     "lat": {
+      "maximum": 90.0,
+      "minimum": -90.0,
+      "title": "Lat",
+      "type": "number"
+     },
+     "lng": {
+      "maximum": 180.0,
+      "minimum": -180.0,
+      "title": "Lng",
+      "type": "number"
+     },
+     "name": {
+      "maxLength": 200,
+      "minLength": 1,
+      "title": "Name",
+      "type": "string"
+     }
+    },
+    "required": [
+     "name",
+     "lat",
+     "lng"
+    ],
+    "title": "NewSiteInput",
+    "type": "object"
+   },
+   "NotificationList": {
+    "properties": {
+     "items": {
+      "items": {
+       "$ref": "#/components/schemas/NotificationOut"
+      },
+      "title": "Items",
+      "type": "array"
+     },
+     "unread": {
+      "title": "Unread",
+      "type": "integer"
+     }
+    },
+    "required": [
+     "unread",
+     "items"
+    ],
+    "title": "NotificationList",
+    "type": "object"
+   },
+   "NotificationOut": {
+    "properties": {
+     "body": {
+      "title": "Body",
+      "type": "string"
+     },
+     "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+     },
+     "id": {
+      "format": "uuid",
+      "title": "Id",
+      "type": "string"
+     },
+     "kind": {
+      "title": "Kind",
+      "type": "string"
+     },
+     "read_at": {
+      "anyOf": [
+       {
+        "format": "date-time",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Read At"
+     },
+     "title": {
+      "title": "Title",
+      "type": "string"
+     },
+     "work_plan_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Work Plan Id"
+     }
+    },
+    "required": [
+     "id",
+     "kind",
+     "title",
+     "body",
+     "created_at"
+    ],
+    "title": "NotificationOut",
     "type": "object"
    },
    "OfflineAttendanceEvent": {
@@ -3981,6 +4273,47 @@
     "title": "PlanDayResponse",
     "type": "object"
    },
+   "PlanDetailOut": {
+    "properties": {
+     "assets": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "title": "Assets",
+      "type": "array"
+     },
+     "days": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "title": "Days",
+      "type": "array"
+     },
+     "plan": {
+      "additionalProperties": true,
+      "title": "Plan",
+      "type": "object"
+     },
+     "team": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "title": "Team",
+      "type": "array"
+     }
+    },
+    "required": [
+     "plan",
+     "team",
+     "days",
+     "assets"
+    ],
+    "title": "PlanDetailOut",
+    "type": "object"
+   },
    "PlanDocumentOut": {
     "properties": {
      "accepted_at": {
@@ -4053,6 +4386,205 @@
      "signature_count"
     ],
     "title": "PlanDocumentOut",
+    "type": "object"
+   },
+   "PlanDraftRequest": {
+    "properties": {
+     "category": {
+      "enum": [
+       "INSTALASI",
+       "PEMELIHARAAN",
+       "PERBAIKAN",
+       "SURVEI",
+       "LAINNYA"
+      ],
+      "title": "Category",
+      "type": "string"
+     },
+     "days": {
+      "items": {
+       "$ref": "#/components/schemas/DraftDayInput"
+      },
+      "title": "Days",
+      "type": "array"
+     },
+     "description": {
+      "title": "Description",
+      "type": "string"
+     },
+     "driver_employee_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Driver Employee Id"
+     },
+     "leader_employee_id": {
+      "format": "uuid",
+      "title": "Leader Employee Id",
+      "type": "string"
+     },
+     "member_employee_ids": {
+      "items": {
+       "format": "uuid",
+       "type": "string"
+      },
+      "title": "Member Employee Ids",
+      "type": "array"
+     },
+     "new_site": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/NewSiteInput"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "period_end": {
+      "format": "date",
+      "title": "Period End",
+      "type": "string"
+     },
+     "period_start": {
+      "format": "date",
+      "title": "Period Start",
+      "type": "string"
+     },
+     "row_version": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Row Version"
+     },
+     "site_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Id"
+     },
+     "title": {
+      "title": "Title",
+      "type": "string"
+     },
+     "tool_ids": {
+      "default": [],
+      "items": {
+       "format": "uuid",
+       "type": "string"
+      },
+      "title": "Tool Ids",
+      "type": "array"
+     },
+     "vehicle_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Vehicle Id"
+     }
+    },
+    "required": [
+     "title",
+     "description",
+     "category",
+     "period_start",
+     "period_end",
+     "days",
+     "leader_employee_id",
+     "member_employee_ids"
+    ],
+    "title": "PlanDraftRequest",
+    "type": "object"
+   },
+   "PlanFormOptions": {
+    "properties": {
+     "categories": {
+      "items": {
+       "$ref": "#/components/schemas/FormCategory"
+      },
+      "title": "Categories",
+      "type": "array"
+     },
+     "leaders": {
+      "items": {
+       "$ref": "#/components/schemas/FormPerson"
+      },
+      "title": "Leaders",
+      "type": "array"
+     },
+     "members": {
+      "items": {
+       "$ref": "#/components/schemas/FormPerson"
+      },
+      "title": "Members",
+      "type": "array"
+     },
+     "sites": {
+      "items": {
+       "$ref": "#/components/schemas/FormSite"
+      },
+      "title": "Sites",
+      "type": "array"
+     },
+     "tools": {
+      "items": {
+       "$ref": "#/components/schemas/FormAsset"
+      },
+      "title": "Tools",
+      "type": "array"
+     },
+     "unit_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Unit Name"
+     },
+     "vehicles": {
+      "items": {
+       "$ref": "#/components/schemas/FormAsset"
+      },
+      "title": "Vehicles",
+      "type": "array"
+     }
+    },
+    "required": [
+     "unit_name",
+     "categories",
+     "sites",
+     "leaders",
+     "members",
+     "tools",
+     "vehicles"
+    ],
+    "title": "PlanFormOptions",
     "type": "object"
    },
    "PlanLocationIn": {
@@ -5378,6 +5910,17 @@
        }
       ],
       "title": "Cancellation Reason"
+     },
+     "category": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Category"
      },
      "description": {
       "anyOf": [
@@ -7304,6 +7847,55 @@
     ]
    }
   },
+  "/api/v1/documents/{document_id}/html": {
+   "get": {
+    "description": "Isi yang sama persis dengan PDF (templat A4 + TTD + QR) — untuk penampil di web & HP (\"Tinjau SK\").",
+    "operationId": "document_html_api_v1_documents__document_id__html_get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "document_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Document Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "text/html": {
+        "schema": {
+         "type": "string"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Document Html",
+    "tags": [
+     "Documents & Signatures"
+    ]
+   }
+  },
   "/api/v1/documents/{document_id}/pdf": {
    "get": {
     "description": "PDF bertanda tangan + QR verifikasi (dok 05 §3.9). Render berat → threadpool (CLAUDE.md).",
@@ -8747,6 +9339,146 @@
     ]
    }
   },
+  "/api/v1/notifications": {
+   "get": {
+    "operationId": "list_notifications_api_v1_notifications_get",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "unread_only",
+      "required": false,
+      "schema": {
+       "default": false,
+       "title": "Unread Only",
+       "type": "boolean"
+      }
+     },
+     {
+      "in": "query",
+      "name": "limit",
+      "required": false,
+      "schema": {
+       "default": 50,
+       "title": "Limit",
+       "type": "integer"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/NotificationList"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "List Notifications",
+    "tags": [
+     "Notifications"
+    ]
+   }
+  },
+  "/api/v1/notifications/read-all": {
+   "post": {
+    "operationId": "read_all_api_v1_notifications_read_all_post",
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": {
+          "type": "integer"
+         },
+         "title": "Response Read All Api V1 Notifications Read All Post",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Read All",
+    "tags": [
+     "Notifications"
+    ]
+   }
+  },
+  "/api/v1/notifications/{notification_id}/read": {
+   "post": {
+    "operationId": "read_one_api_v1_notifications__notification_id__read_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "notification_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Notification Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": {
+          "type": "integer"
+         },
+         "title": "Response Read One Api V1 Notifications  Notification Id  Read Post",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Read One",
+    "tags": [
+     "Notifications"
+    ]
+   }
+  },
   "/api/v1/overtime": {
    "get": {
     "description": "Daftar lembur satu SK — siapa pun yang dapat melihat SK (tidak terlihat → 404).",
@@ -9495,7 +10227,7 @@
   },
   "/api/v1/work-plans": {
    "get": {
-    "description": "Hanya SK yang terlihat oleh pengguna (V-07, `domain.js` visiblePlans). `archived=true`: draf\nterarsip — hanya untuk pengelola (V-21).",
+    "description": "Hanya SK yang terlihat oleh pengguna (V-07, `domain.js` visiblePlans). `archived=true`: draf\nterarsip — hanya untuk pengelola (V-21). SK Diterima yang tanggal mulainya tiba dijalankan dulu (alur v2).",
     "operationId": "get_plans_api_v1_work_plans_get",
     "parameters": [
      {
@@ -9660,6 +10392,204 @@
      }
     ],
     "summary": "Assignment Options",
+    "tags": [
+     "Work Plans"
+    ]
+   }
+  },
+  "/api/v1/work-plans/driver-options": {
+   "get": {
+    "description": "Calon driver dari ketua + anggota terpilih yang ber-SIM sesuai tipe kendaraan dan tidak terikat SK lain.",
+    "operationId": "driver_options_api_v1_work_plans_driver_options_get",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "vehicle_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Vehicle Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "period_end",
+      "required": true,
+      "schema": {
+       "format": "date",
+       "title": "Period End",
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "candidate_ids",
+      "required": false,
+      "schema": {
+       "default": [],
+       "items": {
+        "format": "uuid",
+        "type": "string"
+       },
+       "title": "Candidate Ids",
+       "type": "array"
+      }
+     },
+     {
+      "in": "query",
+      "name": "plan_id",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "format": "uuid",
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Plan Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "format": "uuid",
+          "type": "string"
+         },
+         "title": "Response Driver Options Api V1 Work Plans Driver Options Get",
+         "type": "array"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Driver Options",
+    "tags": [
+     "Work Plans"
+    ]
+   }
+  },
+  "/api/v1/work-plans/form-options": {
+   "get": {
+    "description": "Pilihan form \"Buat SK\" alur v2 (SK2-A/B). `plan_id` = draf yang sedang diubah (pilihannya ikut tampil).",
+    "operationId": "form_options_api_v1_work_plans_form_options_get",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "plan_id",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "format": "uuid",
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Plan Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/PlanFormOptions"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Form Options",
+    "tags": [
+     "Work Plans"
+    ]
+   }
+  },
+  "/api/v1/work-plans/full": {
+   "post": {
+    "description": "Buat SK lengkap dalam satu transaksi (alur v2) → status Draf.",
+    "operationId": "create_full_plan_api_v1_work_plans_full_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PlanDraftRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/PlanDetailOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Create Full Plan",
     "tags": [
      "Work Plans"
     ]
@@ -10953,6 +11883,55 @@
     ]
    }
   },
+  "/api/v1/work-plans/{plan_id}/detail": {
+   "get": {
+    "description": "Isi lengkap SK: data umum, lokasi, tim, detail pekerjaan per hari, alat & kendaraan.",
+    "operationId": "get_plan_detail_api_v1_work_plans__plan_id__detail_get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "plan_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Plan Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/PlanDetailOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Get Plan Detail",
+    "tags": [
+     "Work Plans"
+    ]
+   }
+  },
   "/api/v1/work-plans/{plan_id}/documents": {
    "get": {
     "description": "Dok 05 §3.3: SK, revisi, dan adendum beserta jumlah tanda tangan yang berlaku.",
@@ -11003,6 +11982,65 @@
     "summary": "List Plan Documents",
     "tags": [
      "Documents & Signatures"
+    ]
+   }
+  },
+  "/api/v1/work-plans/{plan_id}/full": {
+   "put": {
+    "description": "Ubah isi SK berstatus Draf (termasuk draf revisi setelah adendum diminta) dalam satu transaksi.",
+    "operationId": "edit_full_plan_api_v1_work_plans__plan_id__full_put",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "plan_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Plan Id",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PlanDraftRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/PlanDetailOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Edit Full Plan",
+    "tags": [
+     "Work Plans"
     ]
    }
   },
@@ -11225,6 +12263,55 @@
     "summary": "Set Plan Team",
     "tags": [
      "Plan Members"
+    ]
+   }
+  },
+  "/api/v1/work-plans/{plan_id}/preview": {
+   "get": {
+    "description": "Pratinjau A4 draf SK (\"Sunting SK\", SK2-C) — format sama dengan dokumen terbit.",
+    "operationId": "preview_plan_api_v1_work_plans__plan_id__preview_get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "plan_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Plan Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "text/html": {
+        "schema": {
+         "type": "string"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Preview Plan",
+    "tags": [
+     "Work Plans"
     ]
    }
   },

@@ -36,6 +36,7 @@ class WorkPlanResponse(WorkPlanBase):
     row_version: int
     cancellation_reason: str | None = None
     appeal_reason: str | None = None
+    category: str | None = None   # alur SK v2
 
 
 class AssignmentEmployeeOption(BaseModel):

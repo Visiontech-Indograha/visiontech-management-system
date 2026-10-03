@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { apiError, mockApi, renderRoute } from "./utils";
 
@@ -6,16 +6,17 @@ const plan = (over: Record<string, unknown> = {}) => ({
   id: "p1",
   title: "Instalasi CCTV Gudang",
   unit_id: "u1",
-  site_id: null,
+  site_id: "s1",
   location_text: "Cikarang",
-  description: null,
+  description: "Pasang 6 kamera",
+  category: "INSTALASI",
   period_start: "2026-10-01",
-  period_end: "2026-10-05",
+  period_end: "2026-10-02",
   pm_employee_id: "e-pm",
   leader_employee_id: "e-lead",
   number: null,
   status: "DRAFT",
-  revision: 0,
+  revision: 1,
   row_version: 3,
   cancellation_reason: null,
   appeal_reason: null,
@@ -30,21 +31,36 @@ const emp = (id: string, name: string, unit_id: string | null = "u1") => ({
   unit_id,
   is_active: true,
 });
-const employees = { items: [emp("e-pm", "Pak PM"), emp("e-lead", "Bu Ketua"), emp("e-x", "Tanpa Unit", null)], total: 3, page: 1, size: 100 };
-const teamMember = (employee_id: string, full_name: string, role_in_plan: string) => ({
-  employee_id,
-  full_name,
-  position: "Teknisi",
-  role_in_plan,
-  valid_from: "2026-10-01",
+const employees = { items: [emp("e-pm", "Pak PM"), emp("e-lead", "Bu Ketua")], total: 2, page: 1, size: 100 };
+const planDetail = (p: ReturnType<typeof plan>) => ({
+  plan: { ...p, unit_name: "Infrastruktur", category_label: "Instalasi" },
+  team: [
+    { employee_id: "e-lead", full_name: "Bu Ketua", position: "Teknisi Senior", role_in_plan: "LEADER" },
+    { employee_id: "e-member", full_name: "Pak Anggota", position: "Teknisi", role_in_plan: "MEMBER" },
+  ],
+  days: [
+    { work_date: "2026-10-01", title: "Pasang", tasks: [{ title: "Pasang CCTV 1", description: "Area A", files: [] }] },
+    { work_date: "2026-10-02", title: "Uji", tasks: [{ title: "Uji kamera", description: "Semua", files: [] }] },
+  ],
+  assets: [],
 });
-
-const assignmentOptions = {
-  can_choose_pm: false,
-  fixed_pm_employee_id: "e-pm",
-  fixed_unit_id: "u1",
-  pm_options: [],
-  personnel_options: [emp("e-lead", "Bu Ketua"), emp("e-member", "Pak Anggota")],
+const formOptions = {
+  unit_name: "Infrastruktur",
+  categories: [
+    { code: "INSTALASI", label: "Instalasi" },
+    { code: "SURVEI", label: "Survei" },
+  ],
+  sites: [{ id: "s1", name: "Cikarang", description: null, lat: -6.2, lng: 106.8 }],
+  leaders: [
+    { id: "e-lead", full_name: "Bu Ketua", position: "Teknisi Senior" },
+    { id: "e-member", full_name: "Pak Anggota", position: "Teknisi" },
+  ],
+  members: [
+    { id: "e-lead", full_name: "Bu Ketua", position: "Teknisi Senior" },
+    { id: "e-member", full_name: "Pak Anggota", position: "Teknisi" },
+  ],
+  tools: [{ id: "t1", kind: "TOOL", vehicle_type: null, code: "ALT-1", name: "Tangga" }],
+  vehicles: [{ id: "v1", kind: "VEHICLE", vehicle_type: "CAR", code: "MOB-01", name: "Mobil 1" }],
 };
 
 describe("Work plan — daftar", () => {
@@ -69,86 +85,92 @@ describe("Work plan — daftar", () => {
     expect(await screen.findByRole("button", { name: "Coba lagi" })).toBeInTheDocument();
   });
 
-  it("draft terarsip dipulihkan dari daftar (restore)", async () => {
+  it("draf terarsip dipulihkan dari daftar (restore)", async () => {
     const calls = mockApi((c) => {
       if (c.url === "/work-plans") return { data: [plan()] };
       if (c.url === "/work-plans/p1/restore") return { data: plan({ row_version: 4 }) };
     });
     renderRoute("/work-plans", { role: "PM" });
     await screen.findByText("Instalasi CCTV Gudang");
-    fireEvent.click(screen.getByLabelText("Tampilkan draft terarsip"));
-    fireEvent.click(await screen.findByRole("button", { name: "Pulihkan draft" }));
+    fireEvent.click(screen.getByLabelText("Tampilkan draf terarsip"));
+    fireEvent.click(await screen.findByRole("button", { name: "Pulihkan draf" }));
     await waitFor(() => expect(calls.some((c) => c.url === "/work-plans/p1/restore")).toBe(true));
     expect(calls.find((c) => c.url === "/work-plans/p1/restore")!.data).toEqual({ row_version: 3, reason: "" });
   });
 
-  it("PM membuat SK tanpa memilih dirinya atau lokasi dua kali", async () => {
+  it("Buat SK v2: satu permintaan POST /work-plans/full berisi hari, detail, tim, alat, kendaraan, driver", async () => {
     const calls = mockApi((c) => {
       if (c.url === "/work-plans" && c.method === "get") return { data: [] };
-      if (c.url === "/sites") return { data: [{ id: "s1", name: "Cikarang", radius_m: 100, location: { lat: -6.2, lng: 106.8 } }] };
-      if (c.url === "/assets")
-        return { data: [{ id: "v1", kind: "VEHICLE", vehicle_type: "CAR", code: "MOB-01", name: "Mobil 1", condition: "Baik", status: "AVAILABLE", allocation_id: null }] };
-      if (c.url === "/work-plans/assignment-options") return { data: assignmentOptions };
-      if (c.url === "/work-plans" && c.method === "post") return { status: 201, data: plan() };
-      if (c.url === "/work-plans/p1/members")
-        return { data: { leader_employee_id: "e-lead", member_employee_ids: ["e-member"], row_version: 4 } };
-      if (c.url === "/assets/v1/reserve") return { data: { id: "al1" } };
+      if (c.url === "/work-plans/form-options") return { data: formOptions };
+      if (c.url === "/work-plans/driver-options") return { data: ["e-member"] };
+      if (c.url === "/work-plans/full") return { status: 201, data: planDetail(plan()) };
       if (c.url === "/work-plans/p1") return { data: plan() };
+      if (c.url === "/work-plans/p1/detail") return { data: planDetail(plan()) };
     });
     const { router } = renderRoute("/work-plans", { role: "PM" });
     fireEvent.click((await screen.findAllByRole("button", { name: "Buat SK" }))[0]);
-    const dialog = screen.getByRole("dialog", { name: "Buat SK" });
-    await within(dialog).findByRole("option", { name: "Cikarang" });
-    fireEvent.change(within(dialog).getByLabelText("Judul pekerjaan"), { target: { value: "Instalasi CCTV Gudang" } });
-    fireEvent.change(within(dialog).getByLabelText("Lokasi pekerjaan"), { target: { value: "s1" } });
-    fireEvent.change(within(dialog).getByLabelText("Tanggal mulai"), { target: { value: "2026-10-01" } });
-    fireEvent.change(within(dialog).getByLabelText("Tanggal selesai"), { target: { value: "2026-10-05" } });
-    expect(await within(dialog).findByText("PM pekerjaan otomatis adalah Anda.")).toBeInTheDocument();
-    expect(within(dialog).queryByLabelText("PM pekerjaan")).toBeNull();
-    await within(dialog).findByRole("option", { name: /Bu Ketua/ });
-    fireEvent.change(within(dialog).getByLabelText("Ketua tim"), { target: { value: "e-lead" } });
-    fireEvent.click(within(dialog).getByLabelText(/Pak Anggota/));
-    await within(dialog).findByRole("option", { name: /Mobil 1/ });
-    fireEvent.change(within(dialog).getByLabelText("Kendaraan (opsional)"), { target: { value: "v1" } });
-    fireEvent.change(within(dialog).getByLabelText("Pengemudi kendaraan"), { target: { value: "e-lead" } });
-    fireEvent.click(within(dialog).getByRole("button", { name: "Simpan" }));
-    await waitFor(() => expect(calls.some((c) => c.method === "post")).toBe(true));
+    await waitFor(() => expect(router.state.location.pathname).toBe("/work-plans/new"));
+    await screen.findByRole("option", { name: "Cikarang" });
+    expect(screen.getByLabelText("Tipe")).toHaveValue("Infrastruktur");
+    fireEvent.change(screen.getByLabelText("Judul pekerjaan"), { target: { value: "Instalasi CCTV Gudang" } });
+    fireEvent.change(screen.getByLabelText("Deskripsi pekerjaan keseluruhan"), { target: { value: "Pasang 6 kamera" } });
+    fireEvent.change(screen.getByLabelText("Kategori pekerjaan"), { target: { value: "INSTALASI" } });
+    fireEvent.change(screen.getByRole("combobox", { name: "Lokasi kerja" }), { target: { value: "s1" } });
+    fireEvent.change(screen.getByLabelText("Tanggal mulai"), { target: { value: "2026-10-01" } });
+    fireEvent.change(screen.getByLabelText("Tanggal selesai"), { target: { value: "2026-10-01" } });
+    expect(await screen.findByText("Hari 1 · 1 Okt 2026")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Tambah hari kerja" }));
+    expect(await screen.findByText("Hari 2 · 2 Okt 2026")).toBeInTheDocument();
+    const titles = screen.getAllByPlaceholderText("mis. Pemasangan CCTV 1");
+    const descs = screen.getAllByPlaceholderText("mis. Memasang CCTV 1 di area A");
+    fireEvent.change(titles[0], { target: { value: "Pasang CCTV 1" } });
+    fireEvent.change(descs[0], { target: { value: "Area A" } });
+    fireEvent.change(titles[1], { target: { value: "Uji kamera" } });
+    fireEvent.change(descs[1], { target: { value: "Semua" } });
+    fireEvent.change(screen.getByLabelText("Ketua tim"), { target: { value: "e-lead" } });
+    // Ketua tidak muncul lagi di daftar anggota.
+    await waitFor(() => expect(screen.queryByRole("checkbox", { name: /Bu Ketua/ })).toBeNull());
+    fireEvent.click(screen.getByRole("checkbox", { name: /Pak Anggota/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /Tangga/ }));
+    fireEvent.change(screen.getByLabelText(/Kendaraan/), { target: { value: "v1" } });
+    await screen.findByRole("option", { name: "Pak Anggota" });
+    fireEvent.change(screen.getByLabelText("Driver"), { target: { value: "e-member" } });
+    fireEvent.click(screen.getByRole("button", { name: "Simpan" }));
     await waitFor(() => expect(router.state.location.pathname).toBe("/work-plans/p1"));
-    expect(calls.find((c) => c.method === "post")!.data).toEqual({
+    expect(calls.filter((c) => c.method === "post")).toHaveLength(1);
+    expect(calls.find((c) => c.url === "/work-plans/full")!.data).toEqual({
       title: "Instalasi CCTV Gudang",
-      location_text: "Cikarang",
-      description: null,
-      period_start: "2026-10-01",
-      period_end: "2026-10-05",
-      pm_employee_id: "e-pm",
-      leader_employee_id: "e-lead",
+      description: "Pasang 6 kamera",
+      category: "INSTALASI",
       site_id: "s1",
-      unit_id: "u1",
-    });
-    expect(calls.find((c) => c.url === "/work-plans/p1/members")!.data).toEqual({
+      new_site: null,
+      period_start: "2026-10-01",
+      period_end: "2026-10-02",
+      days: [
+        { work_date: "2026-10-01", tasks: [{ title: "Pasang CCTV 1", description: "Area A", file_ids: [] }] },
+        { work_date: "2026-10-02", tasks: [{ title: "Uji kamera", description: "Semua", file_ids: [] }] },
+      ],
       leader_employee_id: "e-lead",
       member_employee_ids: ["e-member"],
-      row_version: 3,
-    });
-    expect(calls.find((c) => c.url === "/assets/v1/reserve")!.data).toEqual({
-      work_plan_id: "p1",
-      driver_employee_id: "e-lead",
+      tool_ids: ["t1"],
+      vehicle_id: "v1",
+      driver_employee_id: "e-member",
+      row_version: null,
     });
   });
 
-  it("validasi: tanggal selesai sebelum mulai", async () => {
+  it("validasi Buat SK: wajib isi & tanggal selesai sebelum mulai", async () => {
     const calls = mockApi((c) => {
-      if (c.url === "/work-plans") return { data: [] };
-      if (c.url === "/sites") return { data: [] };
+      if (c.url === "/work-plans/form-options") return { data: formOptions };
     });
-    renderRoute("/work-plans", { role: "PM" });
-    fireEvent.click((await screen.findAllByRole("button", { name: "Buat SK" }))[0]);
-    const dialog = screen.getByRole("dialog", { name: "Buat SK" });
-    fireEvent.change(within(dialog).getByLabelText("Judul pekerjaan"), { target: { value: "X" } });
-    fireEvent.change(within(dialog).getByLabelText("Tanggal mulai"), { target: { value: "2026-10-05" } });
-    fireEvent.change(within(dialog).getByLabelText("Tanggal selesai"), { target: { value: "2026-10-01" } });
-    fireEvent.click(within(dialog).getByRole("button", { name: "Simpan" }));
-    expect(await within(dialog).findByText("Tanggal selesai tidak boleh sebelum tanggal mulai.")).toBeInTheDocument();
+    renderRoute("/work-plans/new", { role: "PM" });
+    await screen.findByRole("option", { name: "Cikarang" });
+    fireEvent.change(screen.getByLabelText("Tanggal mulai"), { target: { value: "2026-10-05" } });
+    fireEvent.change(screen.getByLabelText("Tanggal selesai"), { target: { value: "2026-10-01" } });
+    fireEvent.click(screen.getByRole("button", { name: "Simpan" }));
+    expect(await screen.findByText("Tanggal selesai tidak boleh sebelum tanggal mulai.")).toBeInTheDocument();
+    expect(screen.getByText("Judul pekerjaan wajib diisi.")).toBeInTheDocument();
+    expect(screen.getByText("Pilih ketua tim.")).toBeInTheDocument();
     expect(calls.some((c) => c.method === "post")).toBe(false);
   });
 });
@@ -159,120 +181,63 @@ describe("Work plan — detail & tindakan", () => {
       const hit = extra?.(c.url ?? "", c.method ?? "get");
       if (hit) return hit;
       if (c.url === "/work-plans/p1") return { data: p };
+      if (c.url === "/work-plans/p1/detail") return { data: planDetail(p) };
       if (c.url === "/employees") return { data: employees };
-      if (c.url === "/work-plans/assignment-options") return { data: assignmentOptions };
     });
 
-  it("PM melihat tindakan draft dan menerbitkan dengan row_version", async () => {
+  it("PM melihat isi SK dan tindakan draf, lalu menerbitkan dengan row_version", async () => {
     const calls = detail(plan(), (url) => (url === "/work-plans/p1/publish" ? { data: plan({ status: "PUBLISHED", number: "SK/001" }) } : undefined));
     renderRoute("/work-plans/p1", { role: "PM" });
-    expect(await screen.findByText("Bu Ketua")).toBeInTheDocument();
-    for (const name of ["Sunting draft", "Atur tim", "Tambah hari", "Arsipkan draft"])
-      expect(screen.getByRole("button", { name })).toBeInTheDocument();
+    expect(await screen.findByText("Pasang CCTV 1")).toBeInTheDocument();
+    expect(screen.getByText("Instalasi")).toBeInTheDocument();
+    for (const name of ["Sunting SK", "Terbitkan SK", "Arsipkan draf"]) expect(screen.getByRole("button", { name })).toBeInTheDocument();
+    for (const name of ["Sunting draft", "Atur tim", "Tambah hari"]) expect(screen.queryByRole("button", { name })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Terbitkan SK" }));
-    // Konfirmasi dulu — belum ada panggilan terbit sebelum "Ya, terbitkan".
     expect(calls.find((c) => c.url === "/work-plans/p1/publish")).toBeUndefined();
     fireEvent.click(await screen.findByRole("button", { name: "Ya, terbitkan" }));
     expect(await screen.findByText("SK/001")).toBeInTheDocument();
     expect(calls.find((c) => c.url === "/work-plans/p1/publish")!.data).toEqual({ row_version: 3, reason: "" });
   });
 
-  it("PM yang bukan ketua SK tidak melihat tindakan ketua", async () => {
+  it("terbit gagal: dialog tetap terbuka", async () => {
+    const calls = detail(plan(), (url) =>
+      url === "/work-plans/p1/publish" ? apiError(422, "VALIDATION_ERROR", "Rincian harian belum lengkap.") : undefined,
+    );
+    renderRoute("/work-plans/p1", { role: "PM" });
+    fireEvent.click(await screen.findByRole("button", { name: "Terbitkan SK" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Ya, terbitkan" }));
+    await waitFor(() => expect(calls.some((c) => c.url === "/work-plans/p1/publish")).toBe(true));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Ya, terbitkan" })).toBeEnabled());
+    expect(screen.getByRole("dialog", { name: "Terbitkan SK?" })).toBeInTheDocument();
+  });
+
+  it("SK terbit: PM tidak punya tombol ketua; menunggu ketua di HP", async () => {
     detail(plan({ status: "PUBLISHED", number: "SK/001" }));
     renderRoute("/work-plans/p1", { role: "PM" });
     await screen.findByText("SK/001");
-    expect(screen.getByText(/Minta ketua membuka aplikasi mobile/)).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Terima SK" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Ajukan banding" })).toBeNull();
+    expect(screen.getByText(/Notifikasi sudah dikirim ke ketua tim dan anggota/)).toBeInTheDocument();
+    for (const name of ["Terima SK", "Ajukan banding", "Mulai pelaksanaan"]) expect(screen.queryByRole("button", { name })).toBeNull();
+  });
+
+  it("adendum diminta: alasan ketua tampil dan PM membuka revisi", async () => {
+    const calls = detail(plan({ status: "APPEALED", number: "SK/001", appeal_reason: "Tambah 1 hari" }), (url) =>
+      url === "/work-plans/p1/revise" ? { data: plan({ status: "DRAFT", number: "SK/001", revision: 2 }) } : undefined,
+    );
+    renderRoute("/work-plans/p1", { role: "PM" });
+    expect(await screen.findByText(/Ketua tim meminta adendum: "Tambah 1 hari"/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Buka revisi" }));
+    await waitFor(() => expect(calls.some((c) => c.url === "/work-plans/p1/revise")).toBe(true));
+    // Draf revisi tidak bisa diarsip, tetapi bisa dibatalkan.
+    expect(await screen.findByRole("button", { name: "Batalkan pekerjaan" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Arsipkan draf" })).toBeNull();
   });
 
   it("karyawan tanpa create:plan tidak melihat tindakan PM", async () => {
     detail(plan());
     renderRoute("/work-plans/p1", { role: "field" });
-    await screen.findByText("Cikarang");
+    await screen.findByText("Pasang CCTV 1");
     expect(screen.queryByRole("button", { name: "Terbitkan SK" })).toBeNull();
-  });
-
-  it("ketua: banding memerlukan alasan, galat API ditampilkan apa adanya", async () => {
-    const calls = detail(plan({ status: "PUBLISHED" }), (url) =>
-      url === "/work-plans/p1/appeal"
-        ? apiError(403, "FORBIDDEN", "Hanya ketua tim menurut SK yang berlaku yang dapat melakukan tindakan ini.")
-        : undefined,
-    );
-    renderRoute("/work-plans/p1", { role: "field" });
-    fireEvent.click(await screen.findByRole("button", { name: "Ajukan banding" }));
-    const dialog = screen.getByRole("dialog", { name: "Ajukan banding" });
-    fireEvent.click(within(dialog).getByRole("button", { name: "Ajukan banding" }));
-    expect(await within(dialog).findByText("Alasan wajib diisi.")).toBeInTheDocument();
-    fireEvent.change(within(dialog).getByLabelText("Alasan banding"), { target: { value: "Jadwal bentrok" } });
-    fireEvent.click(within(dialog).getByRole("button", { name: "Ajukan banding" }));
-    expect(
-      await within(dialog).findByText("Hanya ketua tim menurut SK yang berlaku yang dapat melakukan tindakan ini."),
-    ).toBeInTheDocument();
-    expect(calls.find((c) => c.url === "/work-plans/p1/appeal")!.data).toEqual({ row_version: 3, reason: "Jadwal bentrok" });
-  });
-
-  it("tambah hari mengirim POST days lalu PUT plan dengan tugas", async () => {
-    const calls = detail(plan(), (url, method) => {
-      if (url === "/work-plans/p1/days" && method === "post")
-        return { data: { id: "d1", work_plan_id: "p1", work_date: "2026-10-02", title: "Survei", sort_order: 0 } };
-      if (url === "/work-plans/p1/days/d1/plan") return { data: { id: "d1", title: "Survei", tasks: ["Ukur"] } };
-    });
-    renderRoute("/work-plans/p1", { role: "PM" });
-    fireEvent.click(await screen.findByRole("button", { name: "Tambah hari" }));
-    const dialog = screen.getByRole("dialog", { name: "Tambah hari" });
-    fireEvent.change(within(dialog).getByLabelText("Tanggal"), { target: { value: "2026-10-02" } });
-    fireEvent.change(within(dialog).getByLabelText("Nama pekerjaan"), { target: { value: "Survei" } });
-    fireEvent.change(within(dialog).getByLabelText("Deskripsi pekerjaan"), { target: { value: "Ukur" } });
-    fireEvent.click(within(dialog).getByRole("button", { name: "Simpan" }));
-    await waitFor(() => expect(calls.some((c) => c.url === "/work-plans/p1/days/d1/plan")).toBe(true));
-    expect(calls.find((c) => c.url === "/work-plans/p1/days" && c.method === "post")!.data).toEqual({ work_date: "2026-10-02", title: "Survei" });
-    expect(calls.find((c) => c.url === "/work-plans/p1/days/d1/plan")!.data).toEqual({ title: "Survei", tasks: [{ title: "Ukur" }] });
-  });
-
-  it("atur tim mengirim ketua, anggota tanpa ketua, dan row_version", async () => {
-    const calls = detail(plan(), (url, method) => {
-      if (url !== "/work-plans/p1/members") return undefined;
-      if (method === "get") return { data: [teamMember("e-lead", "Bu Ketua", "LEADER")] };
-      return { data: { leader_employee_id: "e-lead", member_employee_ids: ["e-pm"], row_version: 4 } };
-    });
-    renderRoute("/work-plans/p1", { role: "PM" });
-    fireEvent.click(await screen.findByRole("button", { name: "Atur tim" }));
-    const dialog = screen.getByRole("dialog", { name: "Atur tim" });
-    fireEvent.click(await within(dialog).findByLabelText(/Pak Anggota/));
-    fireEvent.click(within(dialog).getByRole("button", { name: "Simpan" }));
-    await waitFor(() => expect(calls.some((c) => c.url === "/work-plans/p1/members" && c.method === "put")).toBe(true));
-    expect(calls.find((c) => c.url === "/work-plans/p1/members" && c.method === "put")!.data).toEqual({
-      leader_employee_id: "e-lead",
-      member_employee_ids: ["e-member"],
-      row_version: 3,
-    });
-  });
-
-  it("atur tim memuat tim saat ini dan mempertahankan anggota lintas unit pilihan OPS (R-26)", async () => {
-    const calls = detail(plan(), (url, method) => {
-      if (url !== "/work-plans/p1/members") return undefined;
-      if (method === "get")
-        return {
-          data: [
-            teamMember("e-lead", "Bu Ketua", "LEADER"),
-            teamMember("e-member", "Pak Anggota", "MEMBER"),
-            teamMember("e-out", "Bu Lintas Unit", "MEMBER"),
-          ],
-        };
-      return { data: { leader_employee_id: "e-lead", member_employee_ids: ["e-member", "e-out"], row_version: 4 } };
-    });
-    renderRoute("/work-plans/p1", { role: "PM" });
-    fireEvent.click(await screen.findByRole("button", { name: "Atur tim" }));
-    const dialog = screen.getByRole("dialog", { name: "Atur tim" });
-    const kept = await within(dialog).findByLabelText(/Bu Lintas Unit/);
-    expect(kept).toBeChecked();
-    expect(within(dialog).getByLabelText(/Pak Anggota/)).toBeChecked();
-    await waitFor(() => expect(within(dialog).getByLabelText("Ketua tim")).toHaveValue("e-lead"));
-    fireEvent.click(within(dialog).getByRole("button", { name: "Simpan" }));
-    await waitFor(() => expect(calls.some((c) => c.url === "/work-plans/p1/members" && c.method === "put")).toBe(true));
-    const body = calls.find((c) => c.url === "/work-plans/p1/members" && c.method === "put")!.data as { member_employee_ids: string[] };
-    expect([...body.member_employee_ids].sort()).toEqual(["e-member", "e-out"]);
+    expect(screen.queryByRole("button", { name: "Sunting SK" })).toBeNull();
   });
 
   it("SK tidak ditemukan menampilkan galat", async () => {

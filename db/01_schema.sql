@@ -181,6 +181,7 @@ CREATE TABLE site (
   organization_id uuid NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
   name            text NOT NULL,
   address         text,
+  description     text,                        -- deskripsi lokasi (Alembic 0018)
   location        geography(Point,4326) NOT NULL,
   radius_m        integer CHECK (radius_m BETWEEN 10 AND 5000),  -- NULL = pakai default organisasi
   -- NULL = lokasi kantor (Finance); terisi = lokasi proyek unit itu (PM, untuk bawahannya) — Alembic 0014
@@ -203,6 +204,8 @@ CREATE TABLE work_plan (
   title           text NOT NULL,
   location_text   text NOT NULL,               -- teks lokasi apa adanya dari lapangan
   description     text,
+  -- Kategori pekerjaan, daftar tetap (alur SK v2, Alembic 0018). Tipe = nama unit PM.
+  category        text CHECK (category IN ('INSTALASI','PEMELIHARAAN','PERBAIKAN','SURVEI','LAINNYA')),
   period          daterange NOT NULL,          -- [mulai, selesai]; eksklusif di ujung atas
   status          plan_status NOT NULL DEFAULT 'DRAFT',
   pm_employee_id      uuid NOT NULL REFERENCES employee(id),
@@ -249,12 +252,21 @@ CREATE TABLE work_plan_task (
   id                uuid PRIMARY KEY DEFAULT new_id(),
   work_plan_day_id  uuid NOT NULL REFERENCES work_plan_day(id) ON DELETE CASCADE,
   title             text NOT NULL,
+  description       text NOT NULL DEFAULT '',     -- detail pekerjaan (Alembic 0018)
   is_done           boolean NOT NULL DEFAULT false,
   done_at           timestamptz,
   done_by           uuid REFERENCES employee(id),
   sort_order        integer NOT NULL DEFAULT 0
 );
 CREATE INDEX work_plan_task_day_idx ON work_plan_task (work_plan_day_id);
+
+-- Foto/PDF opsional per detail pekerjaan (alur SK v2, Alembic 0018).
+CREATE TABLE work_plan_task_attachment (
+  task_id     uuid NOT NULL REFERENCES work_plan_task(id) ON DELETE CASCADE,
+  file_id     uuid NOT NULL REFERENCES file_object(id),
+  sort_order  integer NOT NULL DEFAULT 0,
+  PRIMARY KEY (task_id, file_id)
+);
 
 -- -----------------------------------------------------------------------------
 -- Laporan harian, mingguan, dan laporan akhir
@@ -636,6 +648,22 @@ CREATE TABLE offline_operation (
   UNIQUE (user_id, client_op_id)              -- kirim ulang tidak menggandakan data
 );
 CREATE INDEX offline_pending_idx ON offline_operation (organization_id, status) WHERE status = 'PENDING';
+
+-- -----------------------------------------------------------------------------
+-- Notifikasi dalam aplikasi (alur SK v2, Alembic 0018): lonceng web + daftar di HP, tanpa push.
+-- -----------------------------------------------------------------------------
+CREATE TABLE notification (
+  id                    uuid PRIMARY KEY DEFAULT new_id(),
+  organization_id       uuid NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
+  recipient_employee_id uuid NOT NULL REFERENCES employee(id) ON DELETE CASCADE,
+  kind                  text NOT NULL,
+  title                 text NOT NULL,
+  body                  text NOT NULL DEFAULT '',
+  work_plan_id          uuid REFERENCES work_plan(id) ON DELETE CASCADE,
+  created_at            timestamptz NOT NULL DEFAULT now(),
+  read_at               timestamptz
+);
+CREATE INDEX notification_recipient_idx ON notification (recipient_employee_id, read_at, created_at DESC);
 
 -- -----------------------------------------------------------------------------
 -- Audit: satu tabel untuk seluruh perubahan penting, dipartisi bulanan.

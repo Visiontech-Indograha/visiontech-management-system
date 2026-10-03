@@ -17,6 +17,7 @@ from app.core.time import jakarta_now
 from app.crud.crud_plan_member import CRUDPlanMember
 from app.crud.crud_plan_transition import CRUDPlanTransition
 from app.crud.crud_weekly_report import CRUDWeeklyReport
+from app.services.notification_service import NotificationService
 from app.services.signature_service import ACCEPTOR, APPROVER, ISSUER, SignatureService
 
 # domain.js CANCEL_PLAN requireStatus
@@ -84,6 +85,7 @@ class PlanTransitionService:
             plan_id, plan.revision, snapshot if isinstance(snapshot, str) else json.dumps(snapshot), issuer)
         # Fase 6 (keputusan pemilik 2026-09-26): penerbit menandatangani dokumen saat terbit.
         await SignatureService(self.repo.db).sign_latest_plan_document(plan_id, issuer, ISSUER, user_id)
+        await NotificationService(self.repo.db).plan_published(plan_id)   # alur SK v2: ketua + anggota
         return await self.repo.get_plan(plan_id)
 
     async def accept(self, plan_id: UUID, org_id: str, user_id: str, row_version: int) -> Any:
@@ -95,16 +97,30 @@ class PlanTransitionService:
         await self.repo.accept_document(plan_id, leader or "")
         if leader:   # ketua menurut SK menandatangani sebagai penerima (fase 6)
             await SignatureService(self.repo.db).sign_latest_plan_document(plan_id, leader, ACCEPTOR, user_id)
+        await NotificationService(self.repo.db).plan_accepted(plan_id)
+        await self.start_due_plans(org_id)   # SK yang tanggal mulainya sudah tiba langsung Berjalan
         return await self.repo.get_plan(plan_id)
 
     async def appeal(self, plan_id: UUID, org_id: str, user_id: str, row_version: int, reason: str) -> Any:
-        """domain.js APPEAL — ketua menurut SK, hanya dari PUBLISHED, alasan wajib."""
+        """Alur SK v2 "Ajukan adendum" (dulu banding, domain.js APPEAL) — ketua menurut SK, hanya dari Terbit,
+        alasan wajib. Status menjadi Adendum diminta; dokumen yang menunggu tanda tangan menjadi Tidak berlaku."""
         await self._load(plan_id, org_id, row_version, PlanStatus.PUBLISHED)
         await self._leader_only(plan_id, user_id)
         if not reason.strip():
-            raise AppError("VALIDATION_ERROR", "Alasan banding wajib diisi.", status=422)
+            raise AppError("VALIDATION_ERROR", "Alasan adendum wajib diisi.", status=422)
         await self.repo.appeal(plan_id, reason.strip())
+        await NotificationService(self.repo.db).amendment_requested(plan_id, reason.strip())
         return await self.repo.get_plan(plan_id)
+
+    async def start_due_plans(self, org_id: str) -> int:
+        """Alur SK v2: SK Diterima otomatis Berjalan saat tanggal mulai tiba (jam server, aturan inti #3).
+        Kendaraan yang belum diperiksa driver tidak menahan (keputusan pemilik 2026-10-03)."""
+        started = await self.repo.start_due(org_id, jakarta_now().date())
+        notifications = NotificationService(self.repo.db)
+        for plan_id in started:
+            await self.repo.activate_reserved_assets(plan_id)
+            await notifications.plan_started(plan_id)
+        return len(started)
 
     async def revise(self, plan_id: UUID, org_id: str, row_version: int) -> Any:
         """domain.js REVISE — PM unit/OPS (dijaga router), hanya dari APPEALED."""
@@ -117,7 +133,9 @@ class PlanTransitionService:
         plan = await self.repo.lock_plan(plan_id, org_id)
         if plan is None:
             raise NotFoundError("SK")
-        if plan.status not in CANCELLABLE:
+        # Draf hasil revisi (pernah terbit) tidak bisa diarsip, jadi harus bisa dibatalkan (CELAH 8, docs/28).
+        revised_draft = plan.status == PlanStatus.DRAFT and await self.repo.ever_published(plan_id)
+        if plan.status not in CANCELLABLE and not revised_draft:
             raise AppError("INVALID_STATE", "Tahap work plan belum sesuai untuk tindakan ini.", status=409)
         if plan.row_version != row_version:
             raise ConflictError()
@@ -154,6 +172,11 @@ class PlanTransitionService:
         return await self.repo.get_plan(plan_id)
 
     async def start(self, plan_id: UUID, org_id: str, user_id: str, row_version: int) -> Any:
+        # Alur SK v2: SK biasanya sudah Berjalan otomatis pada tanggal mulai — "mulai" manual menjadi idempoten.
+        current = await self.repo.lock_plan(plan_id, org_id)
+        if current is not None and current.status == PlanStatus.IN_PROGRESS:
+            await self._leader_only(plan_id, user_id)
+            return await self.repo.get_plan(plan_id)
         plan = await self._load(plan_id, org_id, row_version, PlanStatus.ACCEPTED)
         await self._leader_only(plan_id, user_id)
         today = jakarta_now().date()  # jam server, bukan perangkat (aturan inti #3)

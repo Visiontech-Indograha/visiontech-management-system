@@ -186,7 +186,12 @@ describe("Work plan — detail & tindakan", () => {
     });
 
   it("PM melihat isi SK dan tindakan draf, lalu menerbitkan dengan row_version", async () => {
-    const calls = detail(plan(), (url) => (url === "/work-plans/p1/publish" ? { data: plan({ status: "PUBLISHED", number: "SK/001" }) } : undefined));
+    // Setelah terbit, GET /work-plans/p1 mengembalikan SK terbit (detail dimuat ulang setelah transisi).
+    let current = plan();
+    const calls = detail(plan(), (url) => {
+      if (url === "/work-plans/p1/publish") return { data: (current = plan({ status: "PUBLISHED", number: "SK/001" })) };
+      if (url === "/work-plans/p1") return { data: current };
+    });
     renderRoute("/work-plans/p1", { role: "PM" });
     expect(await screen.findByText("Pasang CCTV 1")).toBeInTheDocument();
     expect(screen.getByText("Instalasi")).toBeInTheDocument();

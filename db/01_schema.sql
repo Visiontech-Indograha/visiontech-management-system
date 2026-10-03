@@ -324,6 +324,7 @@ CREATE TABLE weekly_report (
   submitted_by  uuid REFERENCES employee(id),
   reviewed_by   uuid REFERENCES employee(id),
   review_note   text,
+  resubmitted   boolean NOT NULL DEFAULT false,   -- "Dikirim ulang" setelah perlu perbaikan (Alembic 0019)
   UNIQUE (work_plan_id, name)
 );
 

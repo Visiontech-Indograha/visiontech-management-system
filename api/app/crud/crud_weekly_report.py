@@ -1,7 +1,7 @@
 """
 app/crud/crud_weekly_report.py
 Laporan mingguan SK (V-25). Minggu dihitung dari hari kerja SK: potongan 7 hari urut tanggal,
-hanya bila SK punya ≥ 7 hari (`domain.js` chunkDays). Baris `weekly_report` dibuat saat pertama disimpan.
+hanya bila SK lebih dari 7 hari (alur SK v2: "lebih dari 1 minggu"). Baris `weekly_report` dibuat saat pertama disimpan.
 """
 from __future__ import annotations
 
@@ -21,11 +21,12 @@ _WEEKS = """
     ), w AS (
         SELECT week, min(work_date) AS starts_on, max(work_date) AS ends_on,
                bool_and(report_status IS NOT DISTINCT FROM 'APPROVED') AS days_approved
-        FROM d WHERE total >= 7 GROUP BY week
+        FROM d WHERE total > 7 GROUP BY week
     )
     SELECT w.week, 'Laporan Mingguan ' || w.week AS name, w.starts_on, w.ends_on, w.days_approved,
            COALESCE(CAST(wr.status AS text), 'DRAFT') AS status,
-           COALESCE(wr.body, '') AS body, COALESCE(wr.obstacle, '') AS obstacle, wr.review_note
+           COALESCE(wr.body, '') AS body, COALESCE(wr.obstacle, '') AS obstacle, wr.review_note,
+           COALESCE(wr.resubmitted, false) AS resubmitted
     FROM w
     LEFT JOIN vms.weekly_report wr ON wr.work_plan_id = :plan AND wr.name = 'Laporan Mingguan ' || w.week
     WHERE CAST(:week AS integer) IS NULL OR w.week = CAST(:week AS integer)
@@ -60,7 +61,7 @@ class CRUDWeeklyReport(CRUDBase):
         return await self.fetchone(
             """
             UPDATE vms.weekly_report
-               SET status = 'SUBMITTED',
+               SET status = 'SUBMITTED', resubmitted = resubmitted OR status = 'CHANGES_REQUESTED',
                    submitted_by = (SELECT employee_id FROM vms.app_user WHERE id = :uid)
              WHERE work_plan_id = :plan AND name = :name AND status IN ('DRAFT', 'CHANGES_REQUESTED')
             RETURNING id

@@ -21,6 +21,7 @@ class DayReportOut(BaseModel):
     submitted_at: datetime | None
     reviewed_at: datetime | None
     evidence_file_ids: list[UUID]
+    resubmitted: bool = False   # "Dikirim ulang" (alur SK v2)
 
 
 class PlanDayOut(BaseModel):
@@ -30,3 +31,4 @@ class PlanDayOut(BaseModel):
     sort_order: int
     tasks: list[DayTaskOut]
     report: DayReportOut | None
+    member_reports_sent: int = 0

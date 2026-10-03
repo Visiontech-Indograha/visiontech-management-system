@@ -55,7 +55,7 @@ describe("detail SK: tim & laporan akhir", () => {
     expect(within(panel).getByText("28 kamera terpasang dan diuji.")).toBeInTheDocument();
     expect(within(panel).getByText("Hujan dua hari.")).toBeInTheDocument();
     expect(within(panel).getByText(/Diajukan Aris Setyawan/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Setujui penyelesaian" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Setujui penutupan" })).toBeInTheDocument();
 
     const tim = screen.getByRole("region", { name: "Tim" });
     await waitFor(() => expect(within(tim).getByText("Asrul Mulya")).toBeInTheDocument());

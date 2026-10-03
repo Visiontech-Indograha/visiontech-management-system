@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 
 import '../../core/local_storage.dart';
@@ -11,6 +13,7 @@ import '../../data/sync_engine.dart';
 import '../../core/theme/theme.dart';
 import '../../shared/ui/vms_select_field.dart';
 import '../../shared/ui/vms_ui.dart';
+import 'sk_viewer_screen.dart';
 
 /// Satu hari kerja SK: checklist tugas + laporan harian (dok 05 §3.7). Ketua SK
 /// mengisi & mengirim; semua aksi lewat antrean luring (idempoten per client_op_id).
@@ -20,10 +23,16 @@ class PlanDayScreen extends ConsumerStatefulWidget {
     required this.planId,
     required this.day,
     required this.canEdit,
+    this.isLeader = false,
+    this.running = false,
   });
   final String planId;
   final Map<String, dynamic> day;
   final bool canEdit;
+
+  /// Alur SK v2: ketua menghimpun laporan anggota; anggota mengirim laporannya ke ketua.
+  final bool isLeader;
+  final bool running;
 
   @override
   ConsumerState<PlanDayScreen> createState() => _PlanDayScreenState();
@@ -45,8 +54,108 @@ class _PlanDayScreenState extends ConsumerState<PlanDayScreen> {
   final List<String> _photos = [];
   bool _busy = false;
 
+  // Laporan anggota (alur SK v2 PR2).
+  List<Map<String, dynamic>> _memberReports = [];
+  Map<String, dynamic>? _mine;
+  final _mBody = TextEditingController();
+  final _mObstacle = TextEditingController();
+  final List<String> _mPhotos = [];
+  bool _mBusy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMembers();
+  }
+
+  Future<void> _loadMembers() async {
+    final api = ref.read(syncEngineProvider).api;
+    try {
+      if (widget.isLeader) {
+        final list = await api.memberReports(widget.planId, _dayId);
+        if (mounted) setState(() => _memberReports = list);
+      } else if (widget.running) {
+        final mine = await api.myMemberReport(widget.planId, _dayId);
+        if (mounted) {
+          setState(() {
+            _mine = mine;
+            _mBody.text = mine?['body'] as String? ?? '';
+            _mObstacle.text = mine?['obstacle'] as String? ?? '';
+          });
+        }
+      }
+    } catch (_) {
+      // Luring: bagian laporan anggota tidak ditampilkan.
+    }
+  }
+
+  /// Ketua: susun uraian & kendala dari laporan anggota yang sudah dikirim (bisa diedit setelahnya).
+  void _compile() {
+    final sent = _memberReports.where((m) => m['status'] == 'SENT').toList();
+    if (sent.isEmpty) return _snack('Belum ada laporan anggota yang dikirim.');
+    _body.text = sent.map((m) => '${m['full_name']}: ${m['body']}').join('\n');
+    final obstacles = sent
+        .where((m) => '${m['obstacle']}'.trim().isNotEmpty)
+        .map((m) => '${m['full_name']}: ${m['obstacle']}')
+        .toList();
+    _obstacle.text = obstacles.isEmpty ? 'Tidak ada' : obstacles.join('\n');
+    _snack(
+      'Uraian disusun dari ${sent.length} laporan anggota. Silakan periksa sebelum dikirim.',
+    );
+  }
+
+  Future<void> _memberPhoto() async {
+    final (file, err) = await captureWatermarkedPhoto(
+      context: context,
+      label: 'Foto bukti',
+      kind: LocalFileKind.dailyReport,
+      hint: 'Foto hasil pekerjaan Anda hari ini',
+    );
+    if (file != null) {
+      setState(() => _mPhotos.add(file.path));
+    } else if (err != null) {
+      _snack(err);
+    }
+  }
+
+  Future<void> _memberSave({required bool send}) async {
+    if (_mBody.text.trim().length < 10) {
+      return _snack('Uraian laporan minimal 10 karakter.');
+    }
+    setState(() => _mBusy = true);
+    final api = ref.read(syncEngineProvider).api;
+    try {
+      final uploaded = <String>[];
+      for (final path in _mPhotos) {
+        uploaded.add(await api.uploadFile(File(path)));
+      }
+      final existing = List<String>.from(
+        (_mine?['evidence_file_ids'] as List?) ?? const [],
+      );
+      var mine = await api.saveMemberReport(
+        widget.planId,
+        _dayId,
+        body: _mBody.text.trim(),
+        obstacle: _mObstacle.text.trim(),
+        evidenceFileIds: [...existing, ...uploaded],
+      );
+      _mPhotos.clear();
+      if (send) mine = await api.sendMemberReport(widget.planId, _dayId);
+      if (!mounted) return;
+      setState(() => _mine = mine);
+      _snack(send ? 'Laporan dikirim ke ketua tim.' : 'Draf laporan disimpan.');
+    } catch (e) {
+      if (mounted) _snack(apiErrorMessage(e));
+    } finally {
+      if (mounted) setState(() => _mBusy = false);
+    }
+  }
+
   String get _dayId => widget.day['id'] as String;
   String get _status => (_report?['status'] as String?) ?? 'DRAFT';
+  String get _badge => _status == 'SUBMITTED' && _report?['resubmitted'] == true
+      ? 'RESUBMITTED'
+      : _status;
   bool get _editable =>
       widget.canEdit && (_status == 'DRAFT' || _status == 'CHANGES_REQUESTED');
 
@@ -117,10 +226,12 @@ class _PlanDayScreenState extends ConsumerState<PlanDayScreen> {
       ),
     }, files: List.of(_photos));
     if (saved) _photos.clear();
-    if (saved && submit) await _send(OfflineOp.dailyReportSubmit, base);
+    final submitted =
+        saved && submit && await _send(OfflineOp.dailyReportSubmit, base);
     if (mounted) {
       setState(() => _busy = false);
-      if (saved && submit) Navigator.of(context).pop();
+      // Layar hanya ditutup bila pengiriman ke PM berhasil (CELAH 9, docs/28).
+      if (submitted) Navigator.of(context).pop();
     }
   }
 
@@ -137,7 +248,9 @@ class _PlanDayScreenState extends ConsumerState<PlanDayScreen> {
             eyebrow: 'Hari kerja',
             title: '${widget.day['title']}',
             subtitle: '$done dari ${_tasks.length} tugas selesai',
-            bottom: StatusPill(_status),
+            bottom: StatusPill(
+              widget.isLeader || _mine == null ? _badge : '${_mine!['status']}',
+            ),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
@@ -207,7 +320,29 @@ class _PlanDayScreenState extends ConsumerState<PlanDayScreen> {
                       ),
                     ),
                   ),
+                if (!widget.isLeader && widget.running) ..._memberSection(),
+                if (widget.isLeader && _memberReports.isNotEmpty)
+                  ..._leaderMembersSection(),
                 const SectionTitle('Laporan harian'),
+                if (_status == 'APPROVED')
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: OutlinedButton.icon(
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => SkViewerScreen(
+                            planId: widget.planId,
+                            title:
+                                'Laporan harian · ${widget.day['work_date']}',
+                            htmlPath:
+                                '/work-plans/${widget.planId}/days/$_dayId/report/html',
+                          ),
+                        ),
+                      ),
+                      icon: const Icon(Icons.description_outlined),
+                      label: const Text('Lihat laporan (disetujui PM)'),
+                    ),
+                  ),
                 if (_report?['review_note'] != null)
                   NoticeBanner(
                     icon: Icons.rate_review_rounded,
@@ -292,6 +427,125 @@ class _PlanDayScreenState extends ConsumerState<PlanDayScreen> {
         ],
       ),
     );
+  }
+}
+
+extension on _PlanDayScreenState {
+  List<Widget> _leaderMembersSection() => [
+    SectionTitle(
+      'Laporan anggota (${_memberReports.where((m) => m['status'] == 'SENT').length})',
+    ),
+    for (final m in _memberReports)
+      Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: SurfaceCard(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '${m['full_name']} — ${m['position']}',
+                      style: VmsTextStyles.bodySm.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  StatusPill(m['status'] == 'SENT' ? 'SENT' : 'DRAFT'),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text('${m['body']}', style: VmsTextStyles.bodySm),
+              if ('${m['obstacle']}'.isNotEmpty)
+                Text('Kendala: ${m['obstacle']}', style: VmsTextStyles.caption),
+            ],
+          ),
+        ),
+      ),
+    if (_editable)
+      OutlinedButton.icon(
+        key: const Key('compile-member-reports'),
+        onPressed: _compile,
+        icon: const Icon(Icons.merge_type_rounded),
+        label: const Text('Susun dari laporan anggota'),
+      ),
+  ];
+
+  List<Widget> _memberSection() {
+    final sent = _mine?['status'] == 'SENT';
+    final savedPhotos =
+        ((_mine?['evidence_file_ids'] as List?) ?? const []).length;
+    return [
+      const SectionTitle('Laporan saya untuk ketua'),
+      if (sent)
+        const NoticeBanner(
+          icon: Icons.check_circle_outline_rounded,
+          text: 'Laporan Anda sudah dikirim ke ketua tim.',
+          accent: Accent.emerald,
+        ),
+      SurfaceCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextField(
+              key: const Key('member-report-body'),
+              controller: _mBody,
+              enabled: !sent,
+              maxLines: 4,
+              decoration: const InputDecoration(
+                labelText: 'Uraian pekerjaan saya',
+                alignLabelWithHint: true,
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _mObstacle,
+              enabled: !sent,
+              maxLines: 2,
+              decoration: const InputDecoration(
+                labelText: 'Kendala (boleh kosong)',
+                alignLabelWithHint: true,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '$savedPhotos foto tersimpan${_mPhotos.isEmpty ? '' : ' · ${_mPhotos.length} baru'}',
+                    style: VmsTextStyles.bodySm,
+                  ),
+                ),
+                if (!sent)
+                  TextButton.icon(
+                    onPressed: _memberPhoto,
+                    icon: const Icon(Icons.add_a_photo_rounded),
+                    label: const Text('Foto'),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+      const SizedBox(height: 12),
+      if (!sent) ...[
+        PrimaryAction(
+          label: 'Kirim ke ketua',
+          icon: Icons.send_rounded,
+          busy: _mBusy,
+          onTap: () => _memberSave(send: true),
+        ),
+        const SizedBox(height: 8),
+        OutlinedButton.icon(
+          onPressed: _mBusy ? null : () => _memberSave(send: false),
+          icon: const Icon(Icons.save_rounded),
+          label: const Text('Simpan draf'),
+        ),
+      ],
+      const SizedBox(height: 16),
+    ];
   }
 }
 

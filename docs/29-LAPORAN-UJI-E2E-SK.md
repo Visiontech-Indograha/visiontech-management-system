@@ -38,3 +38,38 @@ lewat `adb reverse tcp:8000 tcp:8000`.
 - T-4: aplikasi debug di emulator sempat tertahan di layar pembuka setelah emulator dinyalakan ulang; pulih setelah data aplikasi dibersihkan (bukan bug alur).
 
 **Suite (hanya penyesuaian uji lama yang memeriksa alur lama):** web 145 lulus, Flutter 88 lulus, API — lihat CHANGELOG.
+
+## 2. PR2 — Laporan harian berjenjang & mingguan (lokal, 2026-10-03, commit lokal tanpa push)
+
+SK uji `SK-202610-5faedca4` (8 hari, mulai 26 Sep → Berjalan; >7 hari sehingga ada laporan mingguan).
+Ketua Eko di HP nyata, anggota Fajar di emulator, PM Dimas di web. Video: `presentasi/video/v01–v04`.
+
+| # | Langkah | Hasil |
+|---|---|---|
+| L1 | Emulator anggota: hari 1 → "Laporan saya untuk ketua" (uraian, kendala) → **Kirim ke ketua** | Chip "Terkirim ke ketua", form terkunci; ubah setelah kirim ditolak (409) ✔ |
+| L2 | HP ketua: hari 1 → "Laporan anggota (1)" → **Susun dari laporan anggota** → tambah kalimat → **Kirim ke PM** | Uraian & kendala terisi dari laporan anggota; status **Dikirim** ✔ |
+| L3 | Web PM: panel hari 1 menampilkan laporan ketua + "Laporan anggota (1)" → **Minta perbaikan** + catatan | ✔ notifikasi ke ketua |
+| L4 | HP ketua: hari 1 berstatus **Perlu perbaikan**, banner "Catatan PM" → ambil foto bukti (watermark GPS) → **Kirim ke PM** | Status **Dikirim ulang**; layar baru menutup setelah kirim berhasil ✔ |
+| L5 | Web PM: badge "Dikirim ulang" → **Setujui** → **Lihat laporan** | Dokumen A4 laporan harian: uraian, kendala, bukti, laporan anggota, status Disetujui ✔ |
+| L6 | HP ketua: **Lihat laporan (disetujui PM)** | Dokumen yang sama tampil di HP ✔ |
+| L7 | (Hari 2–7 disetujui lewat API agar minggu 1 lengkap.) HP ketua: Laporan Mingguan 1 → **Susun dari laporan harian** → **Kirim ke PM** | Disusun dari 7 laporan harian; status Dikirim ✔ |
+| L8 | Web PM: setujui mingguan → **Lihat laporan** | Dokumen "LAPORAN MINGGUAN 1", 26 September–2 Oktober 2026, Disetujui ✔ |
+
+## 3. PR3 — Adendum saat Berjalan, pengembalian aset, laporan akhir, penutupan (lokal, 2026-10-03, commit lokal)
+
+SK uji `SK-202610-c02c327e` (3 hari, Berjalan, laporan harian disetujui, alat Fusion Splicer). Video: `presentasi/video/v05–v07`.
+
+| # | Langkah | Hasil |
+|---|---|---|
+| A1 | HP ketua: **Ajukan adendum** "Tambah 1 hari untuk pasang access point di lantai 2" | Status SK tetap **Berjalan**; banner "menunggu keputusan PM" ✔ |
+| A2 | Web PM: panel "Usulan perubahan SK" → **Terima & ubah isi SK** → tambah anggota Gilang → Simpan | Dokumen ADDENDUM terbit dengan TTD PM; "Menunggu tanda tangan ketua di HP" ✔ |
+| A3 | HP ketua: **Terima adendum** → konfirmasi | Adendum Berlaku (TTD ketua), SK versi 1 **Tidak berlaku** ✔ |
+| A4 | HP ketua: Laporan akhir → **Susun dari laporan harian & mingguan** → **Ajukan penutupan** | Ditolak: "Kembalikan alat dan kendaraan terlebih dahulu: Fusion Splicer…" ✔ |
+| A5 | HP ketua: **Kembalikan** alat → ajukan penutupan lagi | Alat "Menunggu pemeriksaan petugas aset"; status **Pengajuan penutupan** ✔ |
+| A6 | Web PM: **Kembalikan (perlu perbaikan)** + catatan | SK kembali Berjalan; HP: "Laporan akhir perlu perbaikan: …" ✔ |
+| A7 | HP ketua: **Perbaiki laporan akhir** → tambah foto → ajukan ulang | Pengajuan penutupan lagi ✔ |
+| A8 | Petugas aset memverifikasi pengembalian (API) → Web PM **Setujui penutupan** → dialog konfirmasi **Ya, setujui** | Status **Selesai**; dokumen SK Tidak berlaku; laporan akhir dikunci dengan TTD ketua & PM + QR ✔ |
+| A9 | Web & HP: **Lihat laporan akhir** | Dokumen A4 laporan akhir (tim termasuk anggota dari adendum) ✔ |
+| A10 | Form Buat SK baru | Ketua & anggota SK selesai muncul lagi sebagai pilihan (uji API) ✔ |
+
+Temuan & perbaikan: setelah penutupan disetujui, panel laporan akhir di web belum menyegar tanpa muat ulang → transisi kini memuat ulang data turunan SK.

@@ -39,6 +39,8 @@ class PlanAssetItem(BaseModel):
     released_at: datetime | None
     returned_condition: str | None
     return_accepted: bool | None
+    allocation_id: UUID | None = None      # alur SK v2: tombol "Kembalikan" di HP ketua
+    asset_status: str | None = None
 
 
 class AssetReturnHistoryItem(BaseModel):

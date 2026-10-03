@@ -16,6 +16,7 @@ import type { components } from "@/lib/api-types";
 import { errorMessage } from "@/lib/errors";
 import { formatDate, formatDateTime } from "@/lib/format";
 import type { WorkPlan } from "./api";
+import { SkPreviewDialog } from "./SkPreviewDialog";
 import { oversize, uploadFiles } from "./uploads";
 
 type S = components["schemas"];
@@ -23,6 +24,7 @@ type Day = S["PlanDayOut"];
 type Task = S["DayTaskOut"];
 type ReportIn = S["DailyReportCreate"];
 type ReviewIn = S["ReportReviewRequest"];
+type MemberReport = S["MemberReportOut"];
 
 const LOCKED = ["SUBMITTED", "APPROVED"];
 const daysKey = (planId: string) => ["plan-days", planId] as const;
@@ -104,9 +106,13 @@ export function DayPlanList({ plan }: { plan: WorkPlan }) {
 function DayPanel({ plan, day }: { plan: WorkPlan; day: Day }) {
   const { me } = useSession();
   const isPM = !!me?.permissions.includes("create:plan");
+  // Alur SK v2: hanya ketua menurut SK yang mengisi laporan (di HP); PM tidak melihat form ketua (CELAH 7).
+  const isLeader = !!me?.employee_id && me.employee_id === plan.leader_employee_id;
   const status = day.report?.status ?? "DRAFT";
+  const badge = status === "SUBMITTED" && day.report?.resubmitted ? "RESUBMITTED" : status;
   const reached = day.work_date <= today();
-  const editable = plan.status === "IN_PROGRESS" && reached && !LOCKED.includes(status);
+  const editable = isLeader && plan.status === "IN_PROGRESS" && reached && !LOCKED.includes(status);
+  const [viewing, setViewing] = useState(false);
   const label = `${day.title || "Hari kerja"} — ${formatDate(day.work_date)}`;
 
   return (
@@ -116,7 +122,14 @@ function DayPanel({ plan, day }: { plan: WorkPlan; day: Day }) {
           <h3 className="font-medium">{day.title || "Hari kerja"}</h3>
           <p className="text-sm text-mist">{formatDate(day.work_date)}</p>
         </div>
-        {day.report ? <StatusBadge status={status} /> : <span className="text-sm text-mist">Belum ada laporan</span>}
+        <div className="flex items-center gap-2">
+          {day.report ? <StatusBadge status={badge} /> : <span className="text-sm text-mist">Belum ada laporan</span>}
+          {status === "APPROVED" && (
+            <Button variant="outline" size="sm" onClick={() => setViewing(true)}>
+              Lihat laporan
+            </Button>
+          )}
+        </div>
       </header>
       <TaskList plan={plan} day={day} editable={editable} />
       {!reached ? (
@@ -126,8 +139,16 @@ function DayPanel({ plan, day }: { plan: WorkPlan; day: Day }) {
       ) : (
         <ReportView day={day} />
       )}
+      {(day.member_reports_sent ?? 0) > 0 && <MemberReports plan={plan} day={day} />}
       {status === "SUBMITTED" && isPM && ["IN_PROGRESS", "COMPLETION_REVIEW"].includes(plan.status) && (
         <DailyReviewForm plan={plan} day={day} />
+      )}
+      {viewing && (
+        <SkPreviewDialog
+          title={`Laporan harian — ${formatDate(day.work_date)}`}
+          path={`/work-plans/${plan.id}/days/${day.id}/report/html`}
+          onClose={() => setViewing(false)}
+        />
       )}
     </article>
   );
@@ -175,6 +196,31 @@ function TaskList({ plan, day, editable }: { plan: WorkPlan; day: Day; editable:
           ))}
       </ul>
     </>
+  );
+}
+
+/** Laporan anggota yang dikirim ke ketua (alur SK v2) — dibaca PM saat memeriksa laporan ketua. */
+function MemberReports({ plan, day }: { plan: WorkPlan; day: Day }) {
+  const reports = useQuery({
+    queryKey: ["member-reports", day.id],
+    queryFn: async () => (await api.get<MemberReport[]>(`/work-plans/${plan.id}/days/${day.id}/member-reports`)).data,
+  });
+  const sent = (reports.data ?? []).filter((r) => r.status === "SENT");
+  return (
+    <details className="mt-3 rounded-control border border-line p-3 text-sm">
+      <summary className="cursor-pointer font-medium">Laporan anggota ({day.member_reports_sent})</summary>
+      <ul className="mt-2 space-y-2">
+        {sent.map((r) => (
+          <li key={r.id}>
+            <p className="font-medium">
+              {r.full_name} <span className="font-normal text-mist">— {r.position}</span>
+            </p>
+            <p className="whitespace-pre-line">{r.body}</p>
+            {r.obstacle && <p className="text-mist">Kendala: {r.obstacle}</p>}
+          </li>
+        ))}
+      </ul>
+    </details>
   );
 }
 

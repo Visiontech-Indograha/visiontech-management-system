@@ -97,3 +97,17 @@ def html_to_pdf(html: str) -> bytes:
         raise AppError("PDF_UNAVAILABLE", "Layanan PDF belum tersedia di server ini.", status=503) from None
     pdf: bytes = HTML(string=html).write_pdf()
     return pdf
+
+
+REPORT_STATUS_LABEL = {"DRAFT": "Draf", "SUBMITTED": "Dikirim", "CHANGES_REQUESTED": "Perlu perbaikan",
+                       "APPROVED": "Disetujui"}
+
+
+def render_report_html(title: str, header: Any, report: Any, *, period: Any, members: list[Any]) -> str:
+    """Dokumen A4 laporan harian/mingguan (alur SK v2 PR2) — dibaca di web & HP setelah disetujui PM."""
+    status = REPORT_STATUS_LABEL.get(report.status, report.status)
+    if report.status == "SUBMITTED" and getattr(report, "resubmitted", False):
+        status = "Dikirim ulang"
+    return _ENV.get_template("report_document.html").render(
+        logo=_LOGO, title=title, plan=header, report=report, status_label=status, period=period,
+        members=members, categories=CATEGORY_LABEL)

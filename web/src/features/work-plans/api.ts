@@ -239,6 +239,22 @@ export function useSavePlanDraft(planId?: string) {
   });
 }
 
+/** PM menerima adendum ketua dengan mengubah isi SK yang sedang berjalan (PUT /amendments/{changeId}). */
+export function useApplyAmendment(planId: string, changeId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: PlanDraftRequest) =>
+      (await api.put<PlanDetail>(`/work-plans/${planId}/amendments/${changeId}`, body)).data,
+    onSuccess: async (detail) => {
+      qc.setQueryData(planDetailKey(planId), detail);
+      await qc.invalidateQueries({ queryKey: planKey(planId) });
+      await qc.invalidateQueries({ queryKey: ["plan-changes", planId] });
+      await qc.invalidateQueries({ queryKey: ["plan-documents", planId] });
+      await qc.invalidateQueries({ queryKey: ["plan-days", planId] });
+    },
+  });
+}
+
 /** HTML A4 (pratinjau draf atau dokumen terbit beserta TTD) untuk ditampilkan di iframe. */
 export const useHtmlDocument = (path: string | null) =>
   useQuery({

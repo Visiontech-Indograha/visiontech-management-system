@@ -105,3 +105,22 @@ class NotificationOut(BaseModel):
 class NotificationList(BaseModel):
     unread: int
     items: list[NotificationOut]
+
+
+# ── Laporan berjenjang (PR2) ─────────────────────────────────────────────────────────────────
+class MemberReportIn(BaseModel):
+    body: str
+    obstacle: str = ""
+    evidence_file_ids: list[UUID] = []
+
+
+class MemberReportOut(BaseModel):
+    id: UUID
+    employee_id: UUID
+    full_name: str
+    position: str
+    status: str
+    body: str
+    obstacle: str
+    sent_at: datetime | None = None
+    evidence_file_ids: list[UUID] = []

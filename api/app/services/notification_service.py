@@ -58,3 +58,22 @@ class NotificationService:
 
     async def mark_read(self, user_id: str, notification_id: UUID | None) -> int:
         return await self.repo.mark_read(user_id, notification_id)
+
+    # ── Laporan berjenjang (PR2) ─────────────────────────────────────────────────────────────
+    async def member_report_sent(self, plan_id: UUID | str, member_name: str, work_date: Any) -> None:
+        p = await self._plan(plan_id)
+        await self.repo.insert_many(p.organization_id, [p.leader], "MEMBER_REPORT_SENT",
+                                    f"Laporan anggota masuk: {self._label(p)}",
+                                    f"{member_name} mengirim laporan {work_date:%d-%m-%Y}.", plan_id)
+
+    async def report_submitted(self, plan_id: UUID | str, what: str, resubmitted: bool) -> None:
+        p = await self._plan(plan_id)
+        verb = "dikirim ulang" if resubmitted else "dikirim"
+        await self.repo.insert_many(p.organization_id, [p.pm], "REPORT_SUBMITTED",
+                                    f"{what} {verb}: {self._label(p)}", f"{p.title} — menunggu pemeriksaan PM.", plan_id)
+
+    async def report_reviewed(self, plan_id: UUID | str, what: str, approved: bool, note: str | None) -> None:
+        p = await self._plan(plan_id)
+        title = f"{what} {'disetujui' if approved else 'perlu perbaikan'}: {self._label(p)}"
+        await self.repo.insert_many(p.organization_id, [p.leader], "REPORT_REVIEWED", title,
+                                    note or p.title, plan_id)

@@ -37,6 +37,7 @@ from app.services.attendance_session_service import AttendanceSessionService
 from app.services.auth_flow import AuthFlowService
 from app.services.document_service import DocumentService
 from app.services.employee_service import EmployeeService
+from app.services.member_report_service import MemberReportService
 from app.services.monitoring_service import MonitoringService
 from app.services.notification_service import NotificationService
 from app.services.overtime_service import OvertimeService
@@ -261,6 +262,10 @@ def get_plan_day_service(db: AsyncSession = Depends(get_db_with_user)) -> PlanDa
 
 def get_plan_draft_service(db: AsyncSession = Depends(get_db_with_user)) -> PlanDraftService:
     return PlanDraftService(db)
+
+
+def get_member_report_service(db: AsyncSession = Depends(get_db_with_user)) -> MemberReportService:
+    return MemberReportService(db)
 
 
 def get_notification_service(db: AsyncSession = Depends(get_db_with_user)) -> NotificationService:

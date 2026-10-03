@@ -24,3 +24,4 @@ class WeeklyReportResponse(BaseModel):
     obstacle: str
     review_note: str | None
     days_approved: bool
+    resubmitted: bool = False   # "Dikirim ulang" (alur SK v2)

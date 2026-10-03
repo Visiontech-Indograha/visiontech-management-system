@@ -8,6 +8,7 @@ import { api, ApiError } from "@/lib/api";
 import { errorMessage } from "@/lib/errors";
 import { formatDateTime } from "@/lib/format";
 import type { WorkPlan } from "./api";
+import { SkPreviewDialog } from "./SkPreviewDialog";
 import { useFinalReport, usePlanTeam } from "./report-api";
 
 const ROLE: Record<string, string> = { LEADER: "Ketua", MEMBER: "Anggota" };
@@ -69,6 +70,7 @@ export function FinalReportPanel({ plan }: { plan: WorkPlan }) {
         <h2 className="text-base font-semibold">Laporan akhir</h2>
         {r && <StatusBadge status={r.status} />}
       </div>
+      {r?.status === "APPROVED" && <FinalReportView plan={plan} />}
       {r?.status === "APPROVED" && (
         <Button
           variant="outline"
@@ -120,5 +122,20 @@ export function FinalReportPanel({ plan }: { plan: WorkPlan }) {
         </dl>
       )}
     </section>
+  );
+}
+
+/** Laporan akhir yang disetujui sebagai dokumen A4 (TTD ketua & PM + QR). */
+function FinalReportView({ plan }: { plan: WorkPlan }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button variant="outline" className="mr-2" onClick={() => setOpen(true)}>
+        Lihat laporan akhir
+      </Button>
+      {open && (
+        <SkPreviewDialog title={`Laporan akhir — ${plan.title}`} path={`/work-plans/${plan.id}/completion/html`} onClose={() => setOpen(false)} />
+      )}
+    </>
   );
 }

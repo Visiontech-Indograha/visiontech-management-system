@@ -13,6 +13,7 @@ from app.core.enums import PlanStatus
 from app.core.errors import AppError, NotFoundError, ValidationError
 from app.crud.crud_weekly_report import CRUDWeeklyReport
 from app.services.access_service import PlanAccess, require_plan_status
+from app.services.notification_service import NotificationService
 
 EDITABLE = ("DRAFT", "CHANGES_REQUESTED")
 
@@ -55,6 +56,8 @@ class WeeklyReportService:
         if not row.obstacle:
             raise ValidationError('Ringkasan kendala mingguan wajib diisi (isi "Tidak ada" jika lancar).')
         await self.repo.submit(access.plan.id, row.name, access.user.user_id)
+        await NotificationService(self.repo.db).report_submitted(access.plan.id, row.name,
+                                                                 row.status == "CHANGES_REQUESTED")
         return await self._week(access, week)
 
     async def review_weekly(self, access: PlanAccess, week: int, decision: str, note: str | None) -> Any:
@@ -68,4 +71,6 @@ class WeeklyReportService:
         status = "APPROVED" if decision == "APPROVE" else "CHANGES_REQUESTED"
         if await self.repo.review(access.plan.id, row.name, status, clean_note or None, access.user.user_id) is None:
             raise _state("Laporan mingguan belum menunggu pemeriksaan.")
+        await NotificationService(self.repo.db).report_reviewed(access.plan.id, row.name, decision == "APPROVE",
+                                                                clean_note or None)
         return await self._week(access, week)

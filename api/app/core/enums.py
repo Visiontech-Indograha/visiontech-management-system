@@ -37,6 +37,7 @@ class DocumentStatus(StrEnum):
 class ChangeType(StrEnum):
     EXTEND = "EXTEND"
     PERSONNEL = "PERSONNEL"
+    AMENDMENT = "AMENDMENT"   # alur SK v2: adendum diajukan ketua saat SK Berjalan
 
 
 class ChangeStatus(StrEnum):

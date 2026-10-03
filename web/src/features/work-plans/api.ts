@@ -88,6 +88,10 @@ function useSetPlan() {
     await qc.invalidateQueries({ queryKey: ["work-plans"] });
     // Terbit/terima menandatangani dokumen di server; muat ulang daftar dokumennya.
     await qc.invalidateQueries({ queryKey: ["plan-documents", plan.id] });
+    // Laporan akhir, tim, aset, isi SK, dan usulan ikut berubah saat transisi (mis. penutupan disetujui).
+    await qc.invalidateQueries({ queryKey: planKey(plan.id) });
+    await qc.invalidateQueries({ queryKey: planDetailKey(plan.id) });
+    await qc.invalidateQueries({ queryKey: ["plan-changes", plan.id] });
   };
 }
 
@@ -235,6 +239,22 @@ export function useSavePlanDraft(planId?: string) {
       await qc.invalidateQueries({ queryKey: ["work-plans"] });
       await qc.invalidateQueries({ queryKey: ["plan-form-options"] });
       await qc.invalidateQueries({ queryKey: ["sites"] });
+    },
+  });
+}
+
+/** PM menerima adendum ketua dengan mengubah isi SK yang sedang berjalan (PUT /amendments/{changeId}). */
+export function useApplyAmendment(planId: string, changeId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: PlanDraftRequest) =>
+      (await api.put<PlanDetail>(`/work-plans/${planId}/amendments/${changeId}`, body)).data,
+    onSuccess: async (detail) => {
+      qc.setQueryData(planDetailKey(planId), detail);
+      await qc.invalidateQueries({ queryKey: planKey(planId) });
+      await qc.invalidateQueries({ queryKey: ["plan-changes", planId] });
+      await qc.invalidateQueries({ queryKey: ["plan-documents", planId] });
+      await qc.invalidateQueries({ queryKey: ["plan-days", planId] });
     },
   });
 }

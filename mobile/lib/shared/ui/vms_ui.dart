@@ -421,13 +421,20 @@ class SectionTitle extends StatelessWidget {
   'ACCEPTED' => (label: 'Diterima', accent: Accent.indigo),
   'APPEALED' => (label: 'Adendum diminta', accent: Accent.amber),
   'IN_PROGRESS' => (label: 'Berjalan', accent: Accent.blue),
-  'COMPLETION_REVIEW' ||
-  'COMPLETION_REQUESTED' => (label: 'Pengajuan penutupan', accent: Accent.violet),
+  'COMPLETION_REVIEW' || 'COMPLETION_REQUESTED' => (
+    label: 'Pengajuan penutupan',
+    accent: Accent.violet,
+  ),
   'COMPLETED' => (label: 'Selesai', accent: Accent.emerald),
   'CANCELLED' => (label: 'Dibatalkan', accent: Accent.rose),
   'SUBMITTED' => (label: 'Dikirim', accent: Accent.amber),
+  'RESUBMITTED' => (label: 'Dikirim ulang', accent: Accent.amber),
+  'SENT' => (label: 'Terkirim ke ketua', accent: Accent.emerald),
   // Dokumen SK (alur SK v2).
-  'AWAITING_ACCEPTANCE' => (label: 'Menunggu tanda tangan', accent: Accent.amber),
+  'AWAITING_ACCEPTANCE' => (
+    label: 'Menunggu tanda tangan',
+    accent: Accent.amber,
+  ),
   'EFFECTIVE' => (label: 'Berlaku', accent: Accent.emerald),
   'SUPERSEDED' => (label: 'Tidak berlaku', accent: Accent.slate),
   'APPROVED' => (label: 'Disetujui', accent: Accent.emerald),

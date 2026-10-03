@@ -13,6 +13,7 @@ export const STATUS_LABEL: Record<string, string> = {
   COMPLETED: "Selesai",
   CANCELLED: "Dibatalkan",
   SUBMITTED: "Dikirim",
+  RESUBMITTED: "Dikirim ulang",
   APPROVED: "Disetujui",
   CHANGES_REQUESTED: "Perlu perbaikan",
   PENDING_PM: "Menunggu PM",

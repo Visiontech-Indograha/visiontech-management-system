@@ -72,6 +72,75 @@ class VmsApi {
         as Map,
   );
 
+  /// HTML A4 sembarang dari API (laporan harian/mingguan yang disetujui).
+  Future<String> html(String path) async =>
+      (await _dio.get<String>(
+        '$_p$path',
+        options: Options(responseType: ResponseType.plain),
+      )).data ??
+      '';
+
+  // --- Laporan berjenjang (alur SK v2 PR2) --------------------------------
+  Future<List<Map<String, dynamic>>> memberReports(
+    String planId,
+    String dayId,
+  ) async => _list(
+    (await _dio.get('$_p/work-plans/$planId/days/$dayId/member-reports')).data,
+  );
+
+  Future<Map<String, dynamic>?> myMemberReport(
+    String planId,
+    String dayId,
+  ) async {
+    final data = (await _dio.get(
+      '$_p/work-plans/$planId/days/$dayId/member-report',
+    )).data;
+    return data == null ? null : Map<String, dynamic>.from(data as Map);
+  }
+
+  Future<Map<String, dynamic>> saveMemberReport(
+    String planId,
+    String dayId, {
+    required String body,
+    required String obstacle,
+    required List<String> evidenceFileIds,
+  }) async => Map<String, dynamic>.from(
+    (await _dio.put(
+          '$_p/work-plans/$planId/days/$dayId/member-report',
+          data: {
+            'body': body,
+            'obstacle': obstacle,
+            'evidence_file_ids': evidenceFileIds,
+          },
+        )).data
+        as Map,
+  );
+
+  Future<Map<String, dynamic>> sendMemberReport(
+    String planId,
+    String dayId,
+  ) async => Map<String, dynamic>.from(
+    (await _dio.post('$_p/work-plans/$planId/days/$dayId/member-report/send'))
+            .data
+        as Map,
+  );
+
+  Future<List<Map<String, dynamic>>> weeklyReports(String planId) async =>
+      _list((await _dio.get('$_p/work-plans/$planId/weekly')).data);
+
+  Future<void> saveWeekly(
+    String planId,
+    int week, {
+    required String body,
+    required String obstacle,
+  }) async => _dio.put(
+    '$_p/work-plans/$planId/weekly/$week',
+    data: {'body': body, 'obstacle': obstacle},
+  );
+
+  Future<void> submitWeekly(String planId, int week) async =>
+      _dio.post('$_p/work-plans/$planId/weekly/$week/submit');
+
   // --- Notifikasi dalam aplikasi (alur SK v2) -----------------------------
   Future<({int unread, List<Map<String, dynamic>> items})>
   notifications() async {

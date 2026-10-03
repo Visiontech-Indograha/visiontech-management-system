@@ -426,6 +426,8 @@ class SectionTitle extends StatelessWidget {
   'COMPLETED' => (label: 'Selesai', accent: Accent.emerald),
   'CANCELLED' => (label: 'Dibatalkan', accent: Accent.rose),
   'SUBMITTED' => (label: 'Dikirim', accent: Accent.amber),
+  'RESUBMITTED' => (label: 'Dikirim ulang', accent: Accent.amber),
+  'SENT' => (label: 'Terkirim ke ketua', accent: Accent.emerald),
   // Dokumen SK (alur SK v2).
   'AWAITING_ACCEPTANCE' => (label: 'Menunggu tanda tangan', accent: Accent.amber),
   'EFFECTIVE' => (label: 'Berlaku', accent: Accent.emerald),

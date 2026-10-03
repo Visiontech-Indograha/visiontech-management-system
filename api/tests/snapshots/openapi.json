@@ -173,6 +173,19 @@
     "title": "AccountWithPassword",
     "type": "object"
    },
+   "AmendmentReasonIn": {
+    "properties": {
+     "reason": {
+      "title": "Reason",
+      "type": "string"
+     }
+    },
+    "required": [
+     "reason"
+    ],
+    "title": "AmendmentReasonIn",
+    "type": "object"
+   },
    "AssetAllocationResponse": {
     "properties": {
      "allocated_at": {
@@ -1788,6 +1801,11 @@
       "title": "Obstacle",
       "type": "string"
      },
+     "resubmitted": {
+      "default": false,
+      "title": "Resubmitted",
+      "type": "boolean"
+     },
      "review_note": {
       "anyOf": [
        {
@@ -3306,6 +3324,99 @@
     "title": "LoginRequest",
     "type": "object"
    },
+   "MemberReportIn": {
+    "properties": {
+     "body": {
+      "title": "Body",
+      "type": "string"
+     },
+     "evidence_file_ids": {
+      "default": [],
+      "items": {
+       "format": "uuid",
+       "type": "string"
+      },
+      "title": "Evidence File Ids",
+      "type": "array"
+     },
+     "obstacle": {
+      "default": "",
+      "title": "Obstacle",
+      "type": "string"
+     }
+    },
+    "required": [
+     "body"
+    ],
+    "title": "MemberReportIn",
+    "type": "object"
+   },
+   "MemberReportOut": {
+    "properties": {
+     "body": {
+      "title": "Body",
+      "type": "string"
+     },
+     "employee_id": {
+      "format": "uuid",
+      "title": "Employee Id",
+      "type": "string"
+     },
+     "evidence_file_ids": {
+      "default": [],
+      "items": {
+       "format": "uuid",
+       "type": "string"
+      },
+      "title": "Evidence File Ids",
+      "type": "array"
+     },
+     "full_name": {
+      "title": "Full Name",
+      "type": "string"
+     },
+     "id": {
+      "format": "uuid",
+      "title": "Id",
+      "type": "string"
+     },
+     "obstacle": {
+      "title": "Obstacle",
+      "type": "string"
+     },
+     "position": {
+      "title": "Position",
+      "type": "string"
+     },
+     "sent_at": {
+      "anyOf": [
+       {
+        "format": "date-time",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Sent At"
+     },
+     "status": {
+      "title": "Status",
+      "type": "string"
+     }
+    },
+    "required": [
+     "id",
+     "employee_id",
+     "full_name",
+     "position",
+     "status",
+     "body",
+     "obstacle"
+    ],
+    "title": "MemberReportOut",
+    "type": "object"
+   },
    "MessageResponse": {
     "properties": {
      "message": {
@@ -4022,6 +4133,29 @@
       "title": "Allocated At",
       "type": "string"
      },
+     "allocation_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Allocation Id"
+     },
+     "asset_status": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Asset Status"
+     },
      "code": {
       "title": "Code",
       "type": "string"
@@ -4164,6 +4298,86 @@
     "title": "PlanAssignmentOptions",
     "type": "object"
    },
+   "PlanChangeOut": {
+    "properties": {
+     "change_type": {
+      "title": "Change Type",
+      "type": "string"
+     },
+     "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+     },
+     "decided_by_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Decided By Name"
+     },
+     "decision_reason": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Decision Reason"
+     },
+     "document_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Document Id"
+     },
+     "id": {
+      "format": "uuid",
+      "title": "Id",
+      "type": "string"
+     },
+     "reason": {
+      "title": "Reason",
+      "type": "string"
+     },
+     "requested_by_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Requested By Name"
+     },
+     "status": {
+      "title": "Status",
+      "type": "string"
+     }
+    },
+    "required": [
+     "id",
+     "change_type",
+     "status",
+     "reason",
+     "created_at"
+    ],
+    "title": "PlanChangeOut",
+    "type": "object"
+   },
    "PlanDayCreate": {
     "properties": {
      "sort_order": {
@@ -4194,6 +4408,11 @@
       "format": "uuid",
       "title": "Id",
       "type": "string"
+     },
+     "member_reports_sent": {
+      "default": 0,
+      "title": "Member Reports Sent",
+      "type": "integer"
      },
      "report": {
       "anyOf": [
@@ -5746,6 +5965,11 @@
      "obstacle": {
       "title": "Obstacle",
       "type": "string"
+     },
+     "resubmitted": {
+      "default": false,
+      "title": "Resubmitted",
+      "type": "boolean"
      },
      "review_note": {
       "anyOf": [
@@ -10757,6 +10981,273 @@
     ]
    }
   },
+  "/api/v1/work-plans/{plan_id}/amendments": {
+   "post": {
+    "description": "Ketua mengajukan adendum saat SK Berjalan (status SK tetap Berjalan).",
+    "operationId": "request_amendment_api_v1_work_plans__plan_id__amendments_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "plan_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Plan Id",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/AmendmentReasonIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/PlanChangeOut"
+         },
+         "title": "Response Request Amendment Api V1 Work Plans  Plan Id  Amendments Post",
+         "type": "array"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Request Amendment",
+    "tags": [
+     "Work Plan Amendments"
+    ]
+   }
+  },
+  "/api/v1/work-plans/{plan_id}/amendments/{change_id}": {
+   "put": {
+    "description": "PM menerima usulan dengan mengubah isi SK; dokumen adendum terbit dengan tanda tangan PM.",
+    "operationId": "apply_amendment_api_v1_work_plans__plan_id__amendments__change_id__put",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "plan_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Plan Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "path",
+      "name": "change_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Change Id",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PlanDraftRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/PlanDetailOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Apply Amendment",
+    "tags": [
+     "Work Plan Amendments"
+    ]
+   }
+  },
+  "/api/v1/work-plans/{plan_id}/amendments/{change_id}/accept": {
+   "post": {
+    "description": "Ketua menandatangani adendum; versi SK lama Tidak berlaku.",
+    "operationId": "accept_amendment_api_v1_work_plans__plan_id__amendments__change_id__accept_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "plan_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Plan Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "path",
+      "name": "change_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Change Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/PlanChangeOut"
+         },
+         "title": "Response Accept Amendment Api V1 Work Plans  Plan Id  Amendments  Change Id  Accept Post",
+         "type": "array"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Accept Amendment",
+    "tags": [
+     "Work Plan Amendments"
+    ]
+   }
+  },
+  "/api/v1/work-plans/{plan_id}/amendments/{change_id}/reject": {
+   "post": {
+    "operationId": "reject_amendment_api_v1_work_plans__plan_id__amendments__change_id__reject_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "plan_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Plan Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "path",
+      "name": "change_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Change Id",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/AmendmentReasonIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/PlanChangeOut"
+         },
+         "title": "Response Reject Amendment Api V1 Work Plans  Plan Id  Amendments  Change Id  Reject Post",
+         "type": "array"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Reject Amendment",
+    "tags": [
+     "Work Plan Amendments"
+    ]
+   }
+  },
   "/api/v1/work-plans/{plan_id}/appeal": {
    "post": {
     "description": "domain.js APPEAL (V-20): ketua mengajukan banding atas SK terbit.",
@@ -11159,6 +11650,57 @@
    }
   },
   "/api/v1/work-plans/{plan_id}/changes": {
+   "get": {
+    "description": "Riwayat usulan perubahan SK (menutup celah: usulan tidak bisa dibaca ulang, docs/28).",
+    "operationId": "list_changes_api_v1_work_plans__plan_id__changes_get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "plan_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Plan Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/PlanChangeOut"
+         },
+         "title": "Response List Changes Api V1 Work Plans  Plan Id  Changes Get",
+         "type": "array"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "List Changes",
+    "tags": [
+     "Work Plan Amendments"
+    ]
+   },
    "post": {
     "description": "REQUEST_CHANGE (ketua, perpanjangan) · REQUEST_PERSONNEL_CHANGE (PM unit/OPS, personel).",
     "operationId": "request_change_api_v1_work_plans__plan_id__changes_post",
@@ -11271,6 +11813,55 @@
     "summary": "Get Final Report",
     "tags": [
      "Work Plan Transitions"
+    ]
+   }
+  },
+  "/api/v1/work-plans/{plan_id}/completion/html": {
+   "get": {
+    "description": "Laporan akhir yang disetujui (A4, TTD ketua & PM + QR) — penampil web & HP.",
+    "operationId": "final_report_html_api_v1_work_plans__plan_id__completion_html_get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "plan_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Plan Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "text/html": {
+        "schema": {
+         "type": "string"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Final Report Html",
+    "tags": [
+     "Work Plan Amendments"
     ]
    }
   },
@@ -11546,6 +12137,260 @@
     ]
    }
   },
+  "/api/v1/work-plans/{plan_id}/days/{day_id}/member-report": {
+   "get": {
+    "operationId": "my_member_report_api_v1_work_plans__plan_id__days__day_id__member_report_get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "day_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Day Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "path",
+      "name": "plan_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Plan Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "anyOf": [
+          {
+           "$ref": "#/components/schemas/MemberReportOut"
+          },
+          {
+           "type": "null"
+          }
+         ],
+         "title": "Response My Member Report Api V1 Work Plans  Plan Id  Days  Day Id  Member Report Get"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "My Member Report",
+    "tags": [
+     "Daily Reports"
+    ]
+   },
+   "put": {
+    "operationId": "save_member_report_api_v1_work_plans__plan_id__days__day_id__member_report_put",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "day_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Day Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "path",
+      "name": "plan_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Plan Id",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/MemberReportIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/MemberReportOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Save Member Report",
+    "tags": [
+     "Daily Reports"
+    ]
+   }
+  },
+  "/api/v1/work-plans/{plan_id}/days/{day_id}/member-report/send": {
+   "post": {
+    "description": "Anggota mengirim laporannya ke ketua tim (notifikasi ke ketua).",
+    "operationId": "send_member_report_api_v1_work_plans__plan_id__days__day_id__member_report_send_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "day_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Day Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "path",
+      "name": "plan_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Plan Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/MemberReportOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Send Member Report",
+    "tags": [
+     "Daily Reports"
+    ]
+   }
+  },
+  "/api/v1/work-plans/{plan_id}/days/{day_id}/member-reports": {
+   "get": {
+    "description": "Laporan anggota satu hari — dibaca ketua untuk disusun, dan PM saat memeriksa.",
+    "operationId": "member_reports_api_v1_work_plans__plan_id__days__day_id__member_reports_get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "day_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Day Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "path",
+      "name": "plan_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Plan Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/MemberReportOut"
+         },
+         "title": "Response Member Reports Api V1 Work Plans  Plan Id  Days  Day Id  Member Reports Get",
+         "type": "array"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Member Reports",
+    "tags": [
+     "Daily Reports"
+    ]
+   }
+  },
   "/api/v1/work-plans/{plan_id}/days/{day_id}/plan": {
    "put": {
     "description": "domain.js SAVE_DAY (V-23): PM menyusun ulang judul & tugas satu hari selagi SK masih draf.",
@@ -11614,6 +12459,65 @@
     "summary": "Save Day",
     "tags": [
      "Work Plans"
+    ]
+   }
+  },
+  "/api/v1/work-plans/{plan_id}/days/{day_id}/report/html": {
+   "get": {
+    "description": "Dokumen A4 laporan harian (isi ketua + laporan anggota + pemeriksaan PM).",
+    "operationId": "daily_report_html_api_v1_work_plans__plan_id__days__day_id__report_html_get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "day_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Day Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "path",
+      "name": "plan_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Plan Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "text/html": {
+        "schema": {
+         "type": "string"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Daily Report Html",
+    "tags": [
+     "Daily Reports"
     ]
    }
   },
@@ -12783,6 +13687,63 @@
     "summary": "Save Weekly",
     "tags": [
      "Weekly Reports"
+    ]
+   }
+  },
+  "/api/v1/work-plans/{plan_id}/weekly/{week}/report/html": {
+   "get": {
+    "operationId": "weekly_report_html_api_v1_work_plans__plan_id__weekly__week__report_html_get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "week",
+      "required": true,
+      "schema": {
+       "title": "Week",
+       "type": "integer"
+      }
+     },
+     {
+      "in": "path",
+      "name": "plan_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Plan Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "text/html": {
+        "schema": {
+         "type": "string"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Weekly Report Html",
+    "tags": [
+     "Daily Reports"
     ]
    }
   },

@@ -12,11 +12,10 @@ import { formatDate } from "@/lib/format";
 import { CATEGORY_LABEL } from "@/lib/labels";
 import { employeeName, useActiveEmployees, useTransition, useWorkPlan, type Transition, type WorkPlan } from "./api";
 import { Attachments } from "./Attachments";
-import { CompletionDialog } from "./CompletionDialog";
 import { FinalReportPanel } from "./FinalReport";
 import { IncidentDialog, IncidentPanel } from "./Incidents";
 import { OvertimeDialog, OvertimePanel } from "./Overtime";
-import { ChangePanel, ExtensionDialog, PersonnelDialog } from "./PlanChanges";
+import { AmendmentPanel } from "./AmendmentPanel";
 import { PlanDetailCard } from "./PlanDetailCard";
 import { ReasonDialog } from "./PlanForms";
 import { DailyReports } from "./DailyReports";
@@ -36,7 +35,7 @@ const CANCELLABLE = ["PUBLISHED", "APPEALED", "ACCEPTED", "IN_PROGRESS", "COMPLE
 
 type Dialogs =
   | {
-      kind: "preview" | "completion" | "extension" | "personnel" | "incident" | "overtime" | "publish";
+      kind: "preview" | "incident" | "overtime" | "publish" | "approve";
     }
   | { kind: "reason"; action: Transition; title: string; label: string }
   | null;
@@ -147,23 +146,17 @@ function PlanActions({ plan }: { plan: WorkPlan }) {
           Buka revisi
         </Button>,
       );
-    if (s === "ACCEPTED" || s === "IN_PROGRESS")
-      manager.push(
-        <Button key="personnel" variant="outline" onClick={() => setDialog({ kind: "personnel" })}>
-          Adendum personel
-        </Button>,
-      );
     if (s === "COMPLETION_REVIEW")
       manager.push(
-        <Button key="approve-completion" onClick={() => run("approve-completion", "Pekerjaan dinyatakan selesai.")} disabled={busy}>
-          Setujui penyelesaian
+        <Button key="approve-completion" onClick={() => setDialog({ kind: "approve" })} disabled={busy}>
+          Setujui penutupan
         </Button>,
         <Button
           key="return-completion"
           variant="outline"
-          onClick={reason("return-completion", "Kembalikan penyelesaian", "Alasan pengembalian")}
+          onClick={reason("return-completion", "Kembalikan (perlu perbaikan)", "Catatan untuk ketua tim")}
         >
-          Kembalikan penyelesaian
+          Kembalikan (perlu perbaikan)
         </Button>,
       );
     if (CANCELLABLE.includes(s) || (s === "DRAFT" && plan.revision > 1))
@@ -174,12 +167,6 @@ function PlanActions({ plan }: { plan: WorkPlan }) {
       );
   }
   // Alur SK v2: Terima SK / Ajukan adendum dilakukan ketua di aplikasi HP; status Berjalan otomatis.
-  if (isLeader && (s === "ACCEPTED" || s === "IN_PROGRESS"))
-    leader.push(
-      <Button key="extension" variant="outline" onClick={() => setDialog({ kind: "extension" })}>
-        Ajukan perpanjangan
-      </Button>,
-    );
   if (isCrew && s === "IN_PROGRESS")
     leader.push(
       <Button key="incident" variant="destructive" onClick={() => setDialog({ kind: "incident" })}>
@@ -192,12 +179,6 @@ function PlanActions({ plan }: { plan: WorkPlan }) {
         Ajukan Lembur
       </Button>,
     );
-  if (isLeader && s === "IN_PROGRESS")
-    leader.push(
-      <Button key="completion" onClick={() => setDialog({ kind: "completion" })}>
-        Buat Laporan Akhir
-      </Button>,
-    );
 
   return (
     <aside className="space-y-4">
@@ -207,7 +188,7 @@ function PlanActions({ plan }: { plan: WorkPlan }) {
           <Link to={`/work-plans/${plan.id}/presentation`}>Mode presentasi laporan</Link>
         </Button>
       )}
-      <ChangePanel plan={plan} />
+      <AmendmentPanel plan={plan} />
       <IncidentPanel plan={plan} />
       <OvertimePanel plan={plan} />
       {manager.length > 0 && (
@@ -275,9 +256,34 @@ function PlanActions({ plan }: { plan: WorkPlan }) {
           onClose={() => setDialog(null)}
         />
       )}
-      {dialog?.kind === "completion" && <CompletionDialog plan={plan} onClose={() => setDialog(null)} />}
-      {dialog?.kind === "extension" && <ExtensionDialog plan={plan} onClose={() => setDialog(null)} />}
-      {dialog?.kind === "personnel" && <PersonnelDialog plan={plan} onClose={() => setDialog(null)} />}
+      {dialog?.kind === "approve" && (
+        <Dialog
+          open
+          title="Setujui penutupan?"
+          onClose={() => setDialog(null)}
+          footer={
+            <>
+              <Button variant="outline" onClick={() => setDialog(null)} disabled={busy}>
+                Batal
+              </Button>
+              <Button
+                disabled={busy}
+                onClick={async () => {
+                  if (await run("approve-completion", "Pekerjaan selesai. Laporan akhir ditandatangani; tim dan aset dilepas."))
+                    setDialog(null);
+                }}
+              >
+                {busy ? "Menyimpan..." : "Ya, setujui"}
+              </Button>
+            </>
+          }
+        >
+          <p className="text-sm text-mist">
+            Laporan akhir <strong className="text-ink">{plan.title}</strong> akan dikunci dan ditandatangani ketua tim serta Anda. SK
+            yang berlaku menjadi tidak berlaku, ketua & anggota bebas dipilih untuk SK baru, dan status menjadi Selesai.
+          </p>
+        </Dialog>
+      )}
       {dialog?.kind === "incident" && <IncidentDialog plan={plan} onClose={() => setDialog(null)} />}
       {dialog?.kind === "overtime" && <OvertimeDialog plan={plan} onClose={() => setDialog(null)} />}
       {dialog?.kind === "reason" && (

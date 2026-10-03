@@ -25,6 +25,7 @@ from app.services.access_service import (
     ensure_same_org,
     require_plan_status,
 )
+from app.services.notification_service import NotificationService
 
 router = APIRouter(prefix="/hse", tags=["HSE & Reports"])
 _INCIDENT_VIEW_ACCESS = Depends(incident_plan_access(PlanNeed.VIEW))
@@ -183,7 +184,8 @@ async def submit_daily_report(
     # Ajukan dari DRAFT atau setelah dikembalikan PM (domain.js SUBMIT_REPORT, V-24)
     sub = text("""
         UPDATE vms.daily_report
-        SET status = 'SUBMITTED', submitted_by = :emp, submitted_at = now()
+        SET status = 'SUBMITTED', submitted_by = :emp, submitted_at = now(),
+            resubmitted = resubmitted OR status = 'CHANGES_REQUESTED'   -- "Dikirim ulang" (alur SK v2)
         WHERE work_plan_day_id = :day AND status IN ('DRAFT', 'CHANGES_REQUESTED')
         RETURNING *
     """)
@@ -196,6 +198,7 @@ async def submit_daily_report(
     report = res.fetchone()
     if not report:
         raise AppError("INVALID_STATE", "Laporan sudah diserahkan atau belum dibuat.", status=409)
+    await NotificationService(db).report_submitted(access.plan.id, "Laporan harian", bool(report.resubmitted))
     return DailyReportResponse(**report._mapping)
 
 
@@ -228,6 +231,7 @@ async def review_daily_report(
     })).fetchone()
     if report is None:
         raise AppError("INVALID_STATE", "Laporan belum menunggu pemeriksaan.", status=409)
+    await NotificationService(db).report_reviewed(access.plan.id, "Laporan harian", data.decision == "APPROVE", note or None)
     return DailyReportResponse(**report._mapping)
 
 

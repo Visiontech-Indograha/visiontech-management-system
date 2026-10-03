@@ -11,9 +11,17 @@ import '../../shared/ui/vms_ui.dart';
 /// isi SK, tanda tangan PM/ketua beserta QR, dan statusnya. HTML diambil dengan token pengguna lalu
 /// dirender di WebView tanpa JavaScript.
 class SkViewerScreen extends ConsumerStatefulWidget {
-  const SkViewerScreen({super.key, required this.planId, required this.title});
+  const SkViewerScreen({
+    super.key,
+    required this.planId,
+    required this.title,
+    this.htmlPath,
+  });
   final String planId;
   final String title;
+
+  /// Bila diisi: tampilkan HTML dari jalur API ini (mis. laporan yang disetujui), bukan dokumen SK.
+  final String? htmlPath;
 
   @override
   ConsumerState<SkViewerScreen> createState() => _SkViewerScreenState();
@@ -40,9 +48,19 @@ class _SkViewerScreenState extends ConsumerState<SkViewerScreen> {
     });
     try {
       final api = ref.read(syncEngineProvider).api;
+      if (widget.htmlPath != null) {
+        await _controller.loadHtmlString(
+          (await api.html(widget.htmlPath!)).replaceFirst(
+            '<head>',
+            '<head><meta name="viewport" content="width=820, initial-scale=0.4">',
+          ),
+        );
+        return;
+      }
       final docs = await api.planDocuments(widget.planId);
       if (docs.isEmpty) throw StateError('Dokumen SK belum terbit.');
-      final latest = docs.last; // API mengurutkan versi naik; yang berlaku = terakhir
+      final latest =
+          docs.last; // API mengurutkan versi naik; yang berlaku = terakhir
       final html = await api.documentHtml(latest['id'] as String);
       // Lebar A4 diskalakan ke layar HP.
       await _controller.loadHtmlString(

@@ -12,6 +12,8 @@ import '../../shared/ui/vms_ui.dart';
 import '../notifications/notifications_screen.dart';
 import 'plan_day_screen.dart';
 import 'sk_viewer_screen.dart';
+import 'final_report_screen.dart';
+import 'weekly_report_screen.dart';
 
 final _date = DateFormat('d MMM yyyy', 'id_ID');
 
@@ -205,6 +207,10 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
   bool _accepting = false;
   bool _amending = false;
   Map<String, dynamic>? _detail;
+  List<Map<String, dynamic>> _weeks = [];
+  List<Map<String, dynamic>> _changes = [];
+  List<Map<String, dynamic>> _assets = [];
+  Map<String, dynamic>? _final;
   String? _error;
 
   String get _planId => _plan['id'] as String;
@@ -317,16 +323,112 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
     }
   }
 
+  Future<void> _runningAmendment() async {
+    final reason = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Ajukan adendum'),
+        content: TextField(
+          controller: reason,
+          autofocus: true,
+          maxLines: 4,
+          decoration: const InputDecoration(
+            labelText: 'Isi pengajuan',
+            hintText: 'mis. Tambah 1 hari kerja untuk setting NVR',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Batal'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Kirim ke PM'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    if (reason.text.trim().isEmpty) {
+      return _snack('Isi pengajuan adendum wajib diisi.');
+    }
+    try {
+      await ref
+          .read(syncEngineProvider)
+          .api
+          .requestRunningAmendment(_planId, reason.text.trim());
+      _snack('Adendum dikirim ke PM. Status SK tetap Berjalan.');
+      await _load();
+    } catch (e) {
+      _snack(apiErrorMessage(e));
+    }
+  }
+
+  Future<void> _acceptAmendment(String changeId) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Terima adendum?'),
+        content: const Text(
+          'Adendum akan ditandatangani secara digital. Versi SK sebelumnya menjadi tidak berlaku.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Batal'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Terima'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await ref.read(syncEngineProvider).api.acceptAmendment(_planId, changeId);
+      _snack('Adendum diterima dan ditandatangani.');
+      await _load();
+    } catch (e) {
+      _snack(apiErrorMessage(e));
+    }
+  }
+
+  Future<void> _returnAsset(Map<String, dynamic> a) async {
+    try {
+      await ref
+          .read(syncEngineProvider)
+          .api
+          .returnAsset('${a['allocation_id']}');
+      _snack(
+        '${a['name']} diajukan kembali. Menunggu pemeriksaan petugas aset.',
+      );
+      await _load();
+    } catch (e) {
+      _snack(apiErrorMessage(e));
+    }
+  }
+
   Future<void> _load() async {
     final engine = ref.read(syncEngineProvider);
     // Header & isi SK dimuat ulang saat daring (status bisa berubah: terbit -> diterima -> berjalan).
     try {
       final fresh = await engine.api.workPlan(_planId);
       final detail = await engine.api.planDetail(_planId);
+      final weeks = await engine.api.weeklyReports(_planId);
+      final changes = await engine.api.planChanges(_planId);
+      final assets = await engine.api.planAssets(_planId);
+      final finalReport = await engine.api.finalReport(_planId);
       if (mounted) {
         setState(() {
           _plan = fresh;
           _detail = detail;
+          _weeks = weeks;
+          _changes = changes;
+          _assets = assets;
+          _final = finalReport;
         });
       }
     } catch (_) {
@@ -520,6 +622,7 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
                       ),
                     ),
                   if (_detail != null) _summary(_detail!),
+                  ..._closingSection(isLeader),
                   if (p['status'] != 'DRAFT') ...[
                     const SizedBox(height: 10),
                     OutlinedButton.icon(
@@ -633,6 +736,53 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
                       title: 'Belum ada rincian hari',
                     ),
                   for (final (i, d) in _days.indexed) _dayCard(d, i, isLeader),
+                  if (_weeks.isNotEmpty) ...[
+                    const SectionTitle('Laporan mingguan'),
+                    for (final w in _weeks)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: SurfaceCard(
+                          padding: const EdgeInsets.all(14),
+                          onTap: () async {
+                            await Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => WeeklyReportScreen(
+                                  planId: _planId,
+                                  week: w,
+                                  days: _days,
+                                  canEdit: isLeader && _running,
+                                ),
+                              ),
+                            );
+                            await _load();
+                          },
+                          child: Row(
+                            children: [
+                              const IconTile(
+                                icon: Icons.view_week_rounded,
+                                accent: Accent.violet,
+                                size: 40,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  '${w['name']}',
+                                  style: VmsTextStyles.bodySm.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                              StatusPill(
+                                w['status'] == 'SUBMITTED' &&
+                                        w['resubmitted'] == true
+                                    ? 'RESUBMITTED'
+                                    : w['status'] as String?,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
                 ],
               ),
             ),
@@ -640,6 +790,167 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
         ),
       ),
     );
+  }
+
+  /// Adendum saat berjalan, alat & kendaraan, laporan akhir, dan hasil penutupan (alur SK v2 PR3).
+  List<Widget> _closingSection(bool isLeader) {
+    final status = _plan['status'];
+    final open = _changes.where(
+      (c) =>
+          c['status'] == 'PENDING_PM' ||
+          c['status'] == 'AWAITING_LEADER_ACCEPTANCE',
+    );
+    final pending = open.isEmpty ? null : open.first;
+    final finalStatus = _final?['status'];
+    return [
+      if (pending != null)
+        Padding(
+          padding: const EdgeInsets.only(top: 12),
+          child: NoticeBanner(
+            icon: Icons.edit_note_rounded,
+            text: pending['status'] == 'PENDING_PM'
+                ? 'Adendum "${pending['reason']}" menunggu keputusan PM.'
+                : 'PM sudah mengubah isi SK. Tinjau SK lalu terima adendum.',
+            accent: Accent.amber,
+          ),
+        ),
+      if (isLeader && pending?['status'] == 'AWAITING_LEADER_ACCEPTANCE')
+        Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: FilledButton.icon(
+            key: const Key('accept-amendment'),
+            onPressed: () => _acceptAmendment('${pending!['id']}'),
+            icon: const Icon(Icons.verified_rounded),
+            label: const Text('Terima adendum'),
+          ),
+        ),
+      for (final c in _changes.where((c) => c['status'] == 'REJECTED').take(1))
+        Padding(
+          padding: const EdgeInsets.only(top: 12),
+          child: NoticeBanner(
+            icon: Icons.block_rounded,
+            text: 'Adendum ditolak PM: ${c['decision_reason'] ?? '-'}',
+            accent: Accent.rose,
+          ),
+        ),
+      if (isLeader && status == 'IN_PROGRESS' && pending == null)
+        Padding(
+          padding: const EdgeInsets.only(top: 10),
+          child: OutlinedButton.icon(
+            key: const Key('running-amendment'),
+            onPressed: _runningAmendment,
+            icon: const Icon(Icons.edit_note_rounded),
+            label: const Text('Ajukan adendum'),
+          ),
+        ),
+      if (_assets.isNotEmpty) ...[
+        const SectionTitle('Alat & kendaraan'),
+        for (final a in _assets)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: SurfaceCard(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                children: [
+                  Icon(
+                    a['kind'] == 'VEHICLE'
+                        ? Icons.directions_car_outlined
+                        : Icons.handyman_outlined,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      '${a['name']}\n${a['released_at'] != null
+                          ? 'Sudah dikembalikan'
+                          : a['asset_status'] == 'RETURN_PENDING'
+                          ? 'Menunggu pemeriksaan petugas aset'
+                          : 'Dipakai'}',
+                      style: VmsTextStyles.bodySm,
+                    ),
+                  ),
+                  if (isLeader &&
+                      a['released_at'] == null &&
+                      (a['asset_status'] == 'IN_USE' ||
+                          a['asset_status'] == 'RESERVED'))
+                    TextButton(
+                      onPressed: () => _returnAsset(a),
+                      child: const Text('Kembalikan'),
+                    ),
+                ],
+              ),
+            ),
+          ),
+      ],
+      if (isLeader && status == 'IN_PROGRESS')
+        Padding(
+          padding: const EdgeInsets.only(top: 10),
+          child: FilledButton.icon(
+            key: const Key('final-report'),
+            onPressed: () async {
+              final sent = await Navigator.of(context).push<bool>(
+                MaterialPageRoute(
+                  builder: (_) => FinalReportScreen(
+                    plan: _plan,
+                    days: _days,
+                    weeks: _weeks,
+                    existing: _final,
+                  ),
+                ),
+              );
+              if (sent == true) await _load();
+            },
+            icon: const Icon(Icons.flag_rounded),
+            label: Text(
+              finalStatus == 'CHANGES_REQUESTED'
+                  ? 'Perbaiki laporan akhir'
+                  : 'Laporan akhir & ajukan penutupan',
+            ),
+          ),
+        ),
+      if (status == 'IN_PROGRESS' && finalStatus == 'CHANGES_REQUESTED')
+        Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: NoticeBanner(
+            icon: Icons.rate_review_rounded,
+            text:
+                'Laporan akhir perlu perbaikan: ${_final?['review_note'] ?? '-'}',
+            accent: Accent.rose,
+          ),
+        ),
+      if (status == 'COMPLETION_REVIEW')
+        const Padding(
+          padding: EdgeInsets.only(top: 12),
+          child: NoticeBanner(
+            icon: Icons.hourglass_top_rounded,
+            text: 'Pengajuan penutupan menunggu persetujuan PM.',
+            accent: Accent.amber,
+          ),
+        ),
+      if (status == 'COMPLETED') ...[
+        const Padding(
+          padding: EdgeInsets.only(top: 12),
+          child: NoticeBanner(
+            icon: Icons.check_circle_rounded,
+            text: 'Pekerjaan selesai. Laporan akhir disetujui dan ditandatangani.',
+            accent: Accent.emerald,
+          ),
+        ),
+        const SizedBox(height: 8),
+        OutlinedButton.icon(
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => SkViewerScreen(
+                planId: _planId,
+                title: 'Laporan akhir',
+                htmlPath: '/work-plans/$_planId/completion/html',
+              ),
+            ),
+          ),
+          icon: const Icon(Icons.description_outlined),
+          label: const Text('Lihat laporan akhir'),
+        ),
+      ],
+    ];
   }
 
   /// Ringkasan isi SK alur v2: periode, kategori & tipe, tim, alat & kendaraan, detail per hari.
@@ -709,7 +1020,10 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
     final tasks = d['tasks'] as List;
     final done = tasks.where((t) => t['is_done'] == true).length;
     final progress = tasks.isEmpty ? 0.0 : done / tasks.length;
-    final report = (d['report'] as Map?)?['status'] as String?;
+    final rep = d['report'] as Map?;
+    final report = rep?['status'] == 'SUBMITTED' && rep?['resubmitted'] == true
+        ? 'RESUBMITTED'
+        : rep?['status'] as String?;
     final accent = statusStyle(report).accent;
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -724,6 +1038,8 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
                   planId: _planId,
                   day: d,
                   canEdit: isLeader && _running,
+                  isLeader: isLeader,
+                  running: _running,
                 ),
               ),
             );

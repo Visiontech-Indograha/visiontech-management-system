@@ -77,3 +77,31 @@ class NotificationService:
         title = f"{what} {'disetujui' if approved else 'perlu perbaikan'}: {self._label(p)}"
         await self.repo.insert_many(p.organization_id, [p.leader], "REPORT_REVIEWED", title,
                                     note or p.title, plan_id)
+
+    # ── Adendum saat berjalan & penutupan (PR3) ──────────────────────────────────────────────
+    async def amendment_decided(self, plan_id: UUID | str, *, accepted: bool, note: str | None) -> None:
+        p = await self._plan(plan_id)
+        if accepted:
+            title, body = f"Adendum {self._label(p)} siap ditandatangani", "PM sudah mengubah isi SK. Tinjau lalu terima adendum."
+        else:
+            title, body = f"Adendum {self._label(p)} ditolak", note or p.title
+        await self.repo.insert_many(p.organization_id, [p.leader], "AMENDMENT_DECIDED", title, body, plan_id)
+
+    async def amendment_accepted(self, plan_id: UUID | str) -> None:
+        p = await self._plan(plan_id)
+        await self.repo.insert_many(p.organization_id, [p.pm, *p.members], "AMENDMENT_ACCEPTED",
+                                    f"Adendum {self._label(p)} berlaku", "Versi SK sebelumnya tidak berlaku lagi.", plan_id)
+
+    async def completion_requested(self, plan_id: UUID | str) -> None:
+        p = await self._plan(plan_id)
+        await self.repo.insert_many(p.organization_id, [p.pm], "COMPLETION_REQUESTED",
+                                    f"Pengajuan penutupan: {self._label(p)}", f"{p.title} — laporan akhir menunggu pemeriksaan.", plan_id)
+
+    async def completion_decided(self, plan_id: UUID | str, *, approved: bool, note: str | None) -> None:
+        p = await self._plan(plan_id)
+        if approved:
+            await self.repo.insert_many(p.organization_id, [p.leader, *p.members], "PLAN_COMPLETED",
+                                        f"{self._label(p)} selesai", f"{p.title} — tim dan aset sudah dilepas.", plan_id)
+        else:
+            await self.repo.insert_many(p.organization_id, [p.leader], "COMPLETION_RETURNED",
+                                        f"Laporan akhir {self._label(p)} perlu perbaikan", note or p.title, plan_id)

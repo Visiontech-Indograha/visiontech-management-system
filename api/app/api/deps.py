@@ -41,6 +41,7 @@ from app.services.member_report_service import MemberReportService
 from app.services.monitoring_service import MonitoringService
 from app.services.notification_service import NotificationService
 from app.services.overtime_service import OvertimeService
+from app.services.plan_amendment_service import PlanAmendmentService
 from app.services.plan_assignment_service import PlanAssignmentService
 from app.services.plan_attachment_service import PlanAttachmentService
 from app.services.plan_change_service import PlanChangeService
@@ -258,6 +259,10 @@ def get_plan_change_service(db: AsyncSession = Depends(get_db_with_user)) -> Pla
 
 def get_plan_day_service(db: AsyncSession = Depends(get_db_with_user)) -> PlanDayService:
     return PlanDayService(db)
+
+
+def get_plan_amendment_service(db: AsyncSession = Depends(get_db_with_user)) -> PlanAmendmentService:
+    return PlanAmendmentService(db)
 
 
 def get_plan_draft_service(db: AsyncSession = Depends(get_db_with_user)) -> PlanDraftService:

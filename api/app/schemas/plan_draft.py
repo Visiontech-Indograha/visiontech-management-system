@@ -124,3 +124,20 @@ class MemberReportOut(BaseModel):
     obstacle: str
     sent_at: datetime | None = None
     evidence_file_ids: list[UUID] = []
+
+
+# ── Adendum saat berjalan (PR3) ──────────────────────────────────────────────────────────────
+class AmendmentReasonIn(BaseModel):
+    reason: str
+
+
+class PlanChangeOut(BaseModel):
+    id: UUID
+    change_type: str
+    status: str
+    reason: str
+    decision_reason: str | None = None
+    created_at: datetime
+    requested_by_name: str | None = None
+    decided_by_name: str | None = None
+    document_id: UUID | None = None

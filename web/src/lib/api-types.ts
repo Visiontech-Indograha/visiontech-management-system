@@ -1029,7 +1029,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * List Changes
+         * @description Riwayat usulan perubahan SK (menutup celah: usulan tidak bisa dibaca ulang, docs/28).
+         */
+        get: operations["list_changes_api_v1_work_plans__plan_id__changes_get"];
         put?: never;
         /**
          * Request Change
@@ -2284,6 +2288,103 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/work-plans/{plan_id}/amendments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Request Amendment
+         * @description Ketua mengajukan adendum saat SK Berjalan (status SK tetap Berjalan).
+         */
+        post: operations["request_amendment_api_v1_work_plans__plan_id__amendments_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-plans/{plan_id}/amendments/{change_id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reject Amendment */
+        post: operations["reject_amendment_api_v1_work_plans__plan_id__amendments__change_id__reject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-plans/{plan_id}/amendments/{change_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Apply Amendment
+         * @description PM menerima usulan dengan mengubah isi SK; dokumen adendum terbit dengan tanda tangan PM.
+         */
+        put: operations["apply_amendment_api_v1_work_plans__plan_id__amendments__change_id__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-plans/{plan_id}/amendments/{change_id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Accept Amendment
+         * @description Ketua menandatangani adendum; versi SK lama Tidak berlaku.
+         */
+        post: operations["accept_amendment_api_v1_work_plans__plan_id__amendments__change_id__accept_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-plans/{plan_id}/completion/html": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Final Report Html
+         * @description Laporan akhir yang disetujui (A4, TTD ketua & PM + QR) — penampil web & HP.
+         */
+        get: operations["final_report_html_api_v1_work_plans__plan_id__completion_html_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2334,6 +2435,11 @@ export interface components {
             locked_until?: string | null;
             /** Temporary Password */
             temporary_password: string;
+        };
+        /** AmendmentReasonIn */
+        AmendmentReasonIn: {
+            /** Reason */
+            reason: string;
         };
         /** AssetAllocationResponse */
         AssetAllocationResponse: {
@@ -3836,6 +3942,10 @@ export interface components {
             returned_condition: string | null;
             /** Return Accepted */
             return_accepted: boolean | null;
+            /** Allocation Id */
+            allocation_id?: string | null;
+            /** Asset Status */
+            asset_status?: string | null;
         };
         /** PlanAssignmentOptions */
         PlanAssignmentOptions: {
@@ -3849,6 +3959,33 @@ export interface components {
             pm_options: components["schemas"]["AssignmentEmployeeOption"][];
             /** Personnel Options */
             personnel_options: components["schemas"]["AssignmentEmployeeOption"][];
+        };
+        /** PlanChangeOut */
+        PlanChangeOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Change Type */
+            change_type: string;
+            /** Status */
+            status: string;
+            /** Reason */
+            reason: string;
+            /** Decision Reason */
+            decision_reason?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Requested By Name */
+            requested_by_name?: string | null;
+            /** Decided By Name */
+            decided_by_name?: string | null;
+            /** Document Id */
+            document_id?: string | null;
         };
         /** PlanDayCreate */
         PlanDayCreate: {
@@ -6444,6 +6581,37 @@ export interface operations {
             };
         };
     };
+    list_changes_api_v1_work_plans__plan_id__changes_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanChangeOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     request_change_api_v1_work_plans__plan_id__changes_post: {
         parameters: {
             query?: never;
@@ -8771,6 +8939,176 @@ export interface operations {
             header?: never;
             path: {
                 week: number;
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/html": string;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    request_amendment_api_v1_work_plans__plan_id__amendments_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AmendmentReasonIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanChangeOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reject_amendment_api_v1_work_plans__plan_id__amendments__change_id__reject_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+                change_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AmendmentReasonIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanChangeOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    apply_amendment_api_v1_work_plans__plan_id__amendments__change_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+                change_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlanDraftRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanDetailOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    accept_amendment_api_v1_work_plans__plan_id__amendments__change_id__accept_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+                change_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanChangeOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    final_report_html_api_v1_work_plans__plan_id__completion_html_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
                 plan_id: string;
             };
             cookie?: never;

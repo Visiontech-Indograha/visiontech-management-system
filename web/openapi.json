@@ -3227,6 +3227,57 @@
       }
      }
     }
+   },
+   "get": {
+    "tags": [
+     "Work Plan Amendments"
+    ],
+    "summary": "List Changes",
+    "description": "Riwayat usulan perubahan SK (menutup celah: usulan tidak bisa dibaca ulang, docs/28).",
+    "operationId": "list_changes_api_v1_work_plans__plan_id__changes_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "plan_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Plan Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/PlanChangeOut"
+         },
+         "title": "Response List Changes Api V1 Work Plans  Plan Id  Changes Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
    }
   },
   "/api/v1/changes/{change_id}/approve": {
@@ -7185,6 +7236,322 @@
      }
     }
    }
+  },
+  "/api/v1/work-plans/{plan_id}/amendments": {
+   "post": {
+    "tags": [
+     "Work Plan Amendments"
+    ],
+    "summary": "Request Amendment",
+    "description": "Ketua mengajukan adendum saat SK Berjalan (status SK tetap Berjalan).",
+    "operationId": "request_amendment_api_v1_work_plans__plan_id__amendments_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "plan_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Plan Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/AmendmentReasonIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/PlanChangeOut"
+         },
+         "title": "Response Request Amendment Api V1 Work Plans  Plan Id  Amendments Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/work-plans/{plan_id}/amendments/{change_id}/reject": {
+   "post": {
+    "tags": [
+     "Work Plan Amendments"
+    ],
+    "summary": "Reject Amendment",
+    "operationId": "reject_amendment_api_v1_work_plans__plan_id__amendments__change_id__reject_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "plan_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Plan Id"
+      }
+     },
+     {
+      "name": "change_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Change Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/AmendmentReasonIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/PlanChangeOut"
+         },
+         "title": "Response Reject Amendment Api V1 Work Plans  Plan Id  Amendments  Change Id  Reject Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/work-plans/{plan_id}/amendments/{change_id}": {
+   "put": {
+    "tags": [
+     "Work Plan Amendments"
+    ],
+    "summary": "Apply Amendment",
+    "description": "PM menerima usulan dengan mengubah isi SK; dokumen adendum terbit dengan tanda tangan PM.",
+    "operationId": "apply_amendment_api_v1_work_plans__plan_id__amendments__change_id__put",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "plan_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Plan Id"
+      }
+     },
+     {
+      "name": "change_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Change Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PlanDraftRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/PlanDetailOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/work-plans/{plan_id}/amendments/{change_id}/accept": {
+   "post": {
+    "tags": [
+     "Work Plan Amendments"
+    ],
+    "summary": "Accept Amendment",
+    "description": "Ketua menandatangani adendum; versi SK lama Tidak berlaku.",
+    "operationId": "accept_amendment_api_v1_work_plans__plan_id__amendments__change_id__accept_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "plan_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Plan Id"
+      }
+     },
+     {
+      "name": "change_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Change Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/PlanChangeOut"
+         },
+         "title": "Response Accept Amendment Api V1 Work Plans  Plan Id  Amendments  Change Id  Accept Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/work-plans/{plan_id}/completion/html": {
+   "get": {
+    "tags": [
+     "Work Plan Amendments"
+    ],
+    "summary": "Final Report Html",
+    "description": "Laporan akhir yang disetujui (A4, TTD ketua & PM + QR) — penampil web & HP.",
+    "operationId": "final_report_html_api_v1_work_plans__plan_id__completion_html_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "plan_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Plan Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "text/html": {
+        "schema": {
+         "type": "string"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
   }
  },
  "components": {
@@ -7360,6 +7727,19 @@
      "temporary_password"
     ],
     "title": "AccountWithPassword"
+   },
+   "AmendmentReasonIn": {
+    "properties": {
+     "reason": {
+      "type": "string",
+      "title": "Reason"
+     }
+    },
+    "type": "object",
+    "required": [
+     "reason"
+    ],
+    "title": "AmendmentReasonIn"
    },
    "AssetAllocationResponse": {
     "properties": {
@@ -11380,6 +11760,29 @@
        }
       ],
       "title": "Return Accepted"
+     },
+     "allocation_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Allocation Id"
+     },
+     "asset_status": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Asset Status"
      }
     },
     "type": "object",
@@ -11449,6 +11852,86 @@
      "personnel_options"
     ],
     "title": "PlanAssignmentOptions"
+   },
+   "PlanChangeOut": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Id"
+     },
+     "change_type": {
+      "type": "string",
+      "title": "Change Type"
+     },
+     "status": {
+      "type": "string",
+      "title": "Status"
+     },
+     "reason": {
+      "type": "string",
+      "title": "Reason"
+     },
+     "decision_reason": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Decision Reason"
+     },
+     "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Created At"
+     },
+     "requested_by_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Requested By Name"
+     },
+     "decided_by_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Decided By Name"
+     },
+     "document_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Document Id"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "change_type",
+     "status",
+     "reason",
+     "created_at"
+    ],
+    "title": "PlanChangeOut"
    },
    "PlanDayCreate": {
     "properties": {

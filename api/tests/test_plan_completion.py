@@ -77,7 +77,8 @@ def test_pm_returns_completion_and_leader_resubmits(client, world: World):
 
 
 def test_open_change_and_unfinished_weeks_block_completion(client, world: World):
-    plan_id, day_ids = run_plan_to_in_progress(client, world, length_days=7)
+    # Laporan mingguan hanya berlaku untuk SK lebih dari 7 hari (alur SK v2).
+    plan_id, day_ids = run_plan_to_in_progress(client, world, length_days=8)
     _approve_days(day_ids)
 
     weekly = _post(client, world, plan_id, "request-completion", "leader", **FINAL)

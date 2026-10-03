@@ -222,9 +222,8 @@ class _WatermarkCameraScreenState extends State<WatermarkCameraScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge).then(
-      (_) => hideSystemNavigation(),
-    );
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge)
+        .then((_) => hideSystemNavigation());
     _clockTimer?.cancel();
     _controller?.dispose();
     super.dispose();

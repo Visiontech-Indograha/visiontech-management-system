@@ -141,6 +141,48 @@ class VmsApi {
   Future<void> submitWeekly(String planId, int week) async =>
       _dio.post('$_p/work-plans/$planId/weekly/$week/submit');
 
+  // --- Adendum saat berjalan, aset, laporan akhir (alur SK v2 PR3) ----------
+  Future<List<Map<String, dynamic>>> planChanges(String planId) async =>
+      _list((await _dio.get('$_p/work-plans/$planId/changes')).data);
+
+  Future<void> requestRunningAmendment(String planId, String reason) async =>
+      _dio.post('$_p/work-plans/$planId/amendments', data: {'reason': reason});
+
+  Future<void> acceptAmendment(String planId, String changeId) async =>
+      _dio.post('$_p/work-plans/$planId/amendments/$changeId/accept');
+
+  Future<List<Map<String, dynamic>>> planAssets(String planId) async =>
+      _list((await _dio.get('$_p/work-plans/$planId/assets')).data);
+
+  Future<void> returnAsset(
+    String allocationId, {
+    String condition = 'Baik',
+  }) async => _dio.post(
+    '$_p/assets/allocations/$allocationId/return',
+    data: {'condition_on_return': condition, 'note': null},
+  );
+
+  Future<Map<String, dynamic>?> finalReport(String planId) async {
+    final data = (await _dio.get('$_p/work-plans/$planId/completion')).data;
+    return data == null ? null : Map<String, dynamic>.from(data as Map);
+  }
+
+  Future<void> requestCompletion(
+    String planId, {
+    required int rowVersion,
+    required String body,
+    required String obstacle,
+    required List<String> evidenceFileIds,
+  }) async => _dio.post(
+    '$_p/work-plans/$planId/request-completion',
+    data: {
+      'row_version': rowVersion,
+      'body': body,
+      'obstacle': obstacle,
+      'evidence_file_ids': evidenceFileIds,
+    },
+  );
+
   // --- Notifikasi dalam aplikasi (alur SK v2) -----------------------------
   Future<({int unread, List<Map<String, dynamic>> items})>
   notifications() async {

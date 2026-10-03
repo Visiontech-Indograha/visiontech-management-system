@@ -88,6 +88,10 @@ function useSetPlan() {
     await qc.invalidateQueries({ queryKey: ["work-plans"] });
     // Terbit/terima menandatangani dokumen di server; muat ulang daftar dokumennya.
     await qc.invalidateQueries({ queryKey: ["plan-documents", plan.id] });
+    // Laporan akhir, tim, aset, isi SK, dan usulan ikut berubah saat transisi (mis. penutupan disetujui).
+    await qc.invalidateQueries({ queryKey: planKey(plan.id) });
+    await qc.invalidateQueries({ queryKey: planDetailKey(plan.id) });
+    await qc.invalidateQueries({ queryKey: ["plan-changes", plan.id] });
   };
 }
 

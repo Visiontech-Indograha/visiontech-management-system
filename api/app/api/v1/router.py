@@ -33,6 +33,7 @@ from app.api.v1.endpoints.work_plan_changes import router as changes_router
 from app.api.v1.endpoints.work_plan_days import router as plan_days_router
 from app.api.v1.endpoints.work_plan_location import router as plan_location_router
 from app.api.v1.endpoints.work_plan_members import router as plan_members_router
+from app.api.v1.endpoints.work_plan_reports import router as plan_reports_router
 from app.api.v1.endpoints.work_plan_transitions import router as transitions_router
 from app.api.v1.endpoints.work_plans import router as plans_router
 
@@ -69,3 +70,4 @@ api_router.include_router(plan_assets_router)
 api_router.include_router(overtime_router)
 api_router.include_router(overtime_recaps_router)
 api_router.include_router(notifications_router)
+api_router.include_router(plan_reports_router)

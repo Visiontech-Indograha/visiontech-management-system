@@ -282,6 +282,7 @@ CREATE TABLE daily_report (
   reviewed_by       uuid REFERENCES employee(id),
   reviewed_at       timestamptz,
   review_note       text,
+  resubmitted       boolean NOT NULL DEFAULT false,   -- "Dikirim ulang" setelah perlu perbaikan (Alembic 0019)
   updated_at        timestamptz NOT NULL DEFAULT now(),
   CHECK (status <> 'SUBMITTED' OR (submitted_by IS NOT NULL AND length(btrim(body)) >= 10))
 );
@@ -290,6 +291,26 @@ CREATE TABLE report_evidence (
   daily_report_id uuid NOT NULL REFERENCES daily_report(id) ON DELETE CASCADE,
   file_id         uuid NOT NULL REFERENCES file_object(id),
   PRIMARY KEY (daily_report_id, file_id)
+);
+
+-- Laporan harian anggota untuk ketua (alur SK v2 PR2, Alembic 0019): ketua menghimpunnya ke daily_report.
+CREATE TABLE member_daily_report (
+  id                uuid PRIMARY KEY DEFAULT new_id(),
+  work_plan_day_id  uuid NOT NULL REFERENCES work_plan_day(id) ON DELETE CASCADE,
+  employee_id       uuid NOT NULL REFERENCES employee(id),
+  status            text NOT NULL DEFAULT 'DRAFT' CHECK (status IN ('DRAFT','SENT')),
+  body              text NOT NULL DEFAULT '',
+  obstacle          text NOT NULL DEFAULT '',
+  sent_at           timestamptz,
+  updated_at        timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (work_plan_day_id, employee_id),
+  CHECK (status <> 'SENT' OR length(btrim(body)) >= 10)
+);
+
+CREATE TABLE member_report_evidence (
+  member_report_id uuid NOT NULL REFERENCES member_daily_report(id) ON DELETE CASCADE,
+  file_id          uuid NOT NULL REFERENCES file_object(id),
+  PRIMARY KEY (member_report_id, file_id)
 );
 
 CREATE TABLE weekly_report (

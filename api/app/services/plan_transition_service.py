@@ -14,6 +14,7 @@ from app.core.enums import PlanStatus
 from app.core.errors import AppError, ConflictError, ForbiddenError, NotFoundError
 from app.core.signing import canonical
 from app.core.time import jakarta_now
+from app.crud.crud_plan_amendment import CRUDPlanAmendment
 from app.crud.crud_plan_member import CRUDPlanMember
 from app.crud.crud_plan_transition import CRUDPlanTransition
 from app.crud.crud_weekly_report import CRUDWeeklyReport
@@ -210,8 +211,13 @@ class PlanTransitionService:
             raise _state("Laporan mingguan belum selesai.")
         if not body.strip() or not obstacle.strip():
             raise _invalid("Laporan penyelesaian dan ringkasan kendala keseluruhan wajib diisi.")
+        # Alur SK v2: alat & kendaraan wajib sudah diajukan kembali sebelum pengajuan penutupan.
+        unreturned = await CRUDPlanAmendment(self.repo.db).unreturned_assets(plan_id)
+        if unreturned:
+            raise _state("Kembalikan alat dan kendaraan terlebih dahulu: " + ", ".join(unreturned) + ".")
         await self.repo.submit_final_report(plan_id, user_id, body.strip(), obstacle.strip(), file_ids)
         await self.repo.set_status(plan_id, PlanStatus.COMPLETION_REVIEW)
+        await NotificationService(self.repo.db).completion_requested(plan_id)
         return await self.repo.get_plan(plan_id)
 
     async def approve_complete(self, plan_id: UUID, org_id: str, user_id: str, row_version: int,
@@ -239,6 +245,9 @@ class PlanTransitionService:
             await signatures.sign_final_report(plan_id, leader, ISSUER, user_id)
         if approver:
             await signatures.sign_final_report(plan_id, approver, APPROVER, user_id)
+        # Alur SK v2: pekerjaan selesai — versi SK yang berlaku tidak berlaku lagi; tim & aset otomatis bebas.
+        await CRUDPlanAmendment(self.repo.db).supersede_effective(plan_id, None)
+        await NotificationService(self.repo.db).completion_decided(plan_id, approved=True, note=None)
         return await self.repo.get_plan(plan_id)
 
     async def return_complete(self, plan_id: UUID, org_id: str, user_id: str, row_version: int,
@@ -249,4 +258,5 @@ class PlanTransitionService:
             raise _invalid("Alasan pengembalian wajib diisi.")
         await self.repo.review_final_report(plan_id, user_id, "CHANGES_REQUESTED", reason.strip())
         await self.repo.set_status(plan_id, PlanStatus.IN_PROGRESS)
+        await NotificationService(self.repo.db).completion_decided(plan_id, approved=False, note=reason.strip())
         return await self.repo.get_plan(plan_id)

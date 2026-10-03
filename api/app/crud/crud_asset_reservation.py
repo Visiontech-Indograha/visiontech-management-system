@@ -65,7 +65,7 @@ class CRUDAssetReservation(CRUDBase):
             """
             SELECT a.id, a.name, a.code, CAST(a.kind AS text) AS kind, a.vehicle_type, dr.full_name AS driver_name,
                    al.allocated_at, al.released_at, r.condition_on_return AS returned_condition,
-                   r.is_accepted AS return_accepted
+                   r.is_accepted AS return_accepted, al.id AS allocation_id, CAST(a.status AS text) AS asset_status
             FROM vms.asset_allocation al
             JOIN vms.asset a ON a.id = al.asset_id
             LEFT JOIN vms.employee dr ON dr.id = al.driver_employee_id

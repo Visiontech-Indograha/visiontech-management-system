@@ -27,6 +27,7 @@ from app.api.v1.endpoints.sites import router as sites_router
 from app.api.v1.endpoints.sync import router as sync_router
 from app.api.v1.endpoints.units import router as units_router
 from app.api.v1.endpoints.weekly_reports import router as weekly_reports_router
+from app.api.v1.endpoints.work_plan_amendments import router as plan_amendments_router
 from app.api.v1.endpoints.work_plan_attachments import router as plan_attachments_router
 from app.api.v1.endpoints.work_plan_changes import plan_router as plan_changes_router
 from app.api.v1.endpoints.work_plan_changes import router as changes_router
@@ -71,3 +72,4 @@ api_router.include_router(overtime_router)
 api_router.include_router(overtime_recaps_router)
 api_router.include_router(notifications_router)
 api_router.include_router(plan_reports_router)
+api_router.include_router(plan_amendments_router)

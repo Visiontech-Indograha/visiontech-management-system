@@ -54,3 +54,22 @@ Ketua Eko di HP nyata, anggota Fajar di emulator, PM Dimas di web. Video: `prese
 | L6 | HP ketua: **Lihat laporan (disetujui PM)** | Dokumen yang sama tampil di HP ✔ |
 | L7 | (Hari 2–7 disetujui lewat API agar minggu 1 lengkap.) HP ketua: Laporan Mingguan 1 → **Susun dari laporan harian** → **Kirim ke PM** | Disusun dari 7 laporan harian; status Dikirim ✔ |
 | L8 | Web PM: setujui mingguan → **Lihat laporan** | Dokumen "LAPORAN MINGGUAN 1", 26 September–2 Oktober 2026, Disetujui ✔ |
+
+## 3. PR3 — Adendum saat Berjalan, pengembalian aset, laporan akhir, penutupan (lokal, 2026-10-03, commit lokal)
+
+SK uji `SK-202610-c02c327e` (3 hari, Berjalan, laporan harian disetujui, alat Fusion Splicer). Video: `presentasi/video/v05–v07`.
+
+| # | Langkah | Hasil |
+|---|---|---|
+| A1 | HP ketua: **Ajukan adendum** "Tambah 1 hari untuk pasang access point di lantai 2" | Status SK tetap **Berjalan**; banner "menunggu keputusan PM" ✔ |
+| A2 | Web PM: panel "Usulan perubahan SK" → **Terima & ubah isi SK** → tambah anggota Gilang → Simpan | Dokumen ADDENDUM terbit dengan TTD PM; "Menunggu tanda tangan ketua di HP" ✔ |
+| A3 | HP ketua: **Terima adendum** → konfirmasi | Adendum Berlaku (TTD ketua), SK versi 1 **Tidak berlaku** ✔ |
+| A4 | HP ketua: Laporan akhir → **Susun dari laporan harian & mingguan** → **Ajukan penutupan** | Ditolak: "Kembalikan alat dan kendaraan terlebih dahulu: Fusion Splicer…" ✔ |
+| A5 | HP ketua: **Kembalikan** alat → ajukan penutupan lagi | Alat "Menunggu pemeriksaan petugas aset"; status **Pengajuan penutupan** ✔ |
+| A6 | Web PM: **Kembalikan (perlu perbaikan)** + catatan | SK kembali Berjalan; HP: "Laporan akhir perlu perbaikan: …" ✔ |
+| A7 | HP ketua: **Perbaiki laporan akhir** → tambah foto → ajukan ulang | Pengajuan penutupan lagi ✔ |
+| A8 | Petugas aset memverifikasi pengembalian (API) → Web PM **Setujui penutupan** → dialog konfirmasi **Ya, setujui** | Status **Selesai**; dokumen SK Tidak berlaku; laporan akhir dikunci dengan TTD ketua & PM + QR ✔ |
+| A9 | Web & HP: **Lihat laporan akhir** | Dokumen A4 laporan akhir (tim termasuk anggota dari adendum) ✔ |
+| A10 | Form Buat SK baru | Ketua & anggota SK selesai muncul lagi sebagai pilihan (uji API) ✔ |
+
+Temuan & perbaikan: setelah penutupan disetujui, panel laporan akhir di web belum menyegar tanpa muat ulang → transisi kini memuat ulang data turunan SK.

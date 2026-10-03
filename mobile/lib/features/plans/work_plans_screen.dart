@@ -12,6 +12,7 @@ import '../../shared/ui/vms_ui.dart';
 import '../notifications/notifications_screen.dart';
 import 'plan_day_screen.dart';
 import 'sk_viewer_screen.dart';
+import 'weekly_report_screen.dart';
 
 final _date = DateFormat('d MMM yyyy', 'id_ID');
 
@@ -205,6 +206,7 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
   bool _accepting = false;
   bool _amending = false;
   Map<String, dynamic>? _detail;
+  List<Map<String, dynamic>> _weeks = [];
   String? _error;
 
   String get _planId => _plan['id'] as String;
@@ -323,10 +325,12 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
     try {
       final fresh = await engine.api.workPlan(_planId);
       final detail = await engine.api.planDetail(_planId);
+      final weeks = await engine.api.weeklyReports(_planId);
       if (mounted) {
         setState(() {
           _plan = fresh;
           _detail = detail;
+          _weeks = weeks;
         });
       }
     } catch (_) {
@@ -633,6 +637,53 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
                       title: 'Belum ada rincian hari',
                     ),
                   for (final (i, d) in _days.indexed) _dayCard(d, i, isLeader),
+                  if (_weeks.isNotEmpty) ...[
+                    const SectionTitle('Laporan mingguan'),
+                    for (final w in _weeks)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: SurfaceCard(
+                          padding: const EdgeInsets.all(14),
+                          onTap: () async {
+                            await Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => WeeklyReportScreen(
+                                  planId: _planId,
+                                  week: w,
+                                  days: _days,
+                                  canEdit: isLeader && _running,
+                                ),
+                              ),
+                            );
+                            await _load();
+                          },
+                          child: Row(
+                            children: [
+                              const IconTile(
+                                icon: Icons.view_week_rounded,
+                                accent: Accent.violet,
+                                size: 40,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  '${w['name']}',
+                                  style: VmsTextStyles.bodySm.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                              StatusPill(
+                                w['status'] == 'SUBMITTED' &&
+                                        w['resubmitted'] == true
+                                    ? 'RESUBMITTED'
+                                    : w['status'] as String?,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
                 ],
               ),
             ),
@@ -709,7 +760,10 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
     final tasks = d['tasks'] as List;
     final done = tasks.where((t) => t['is_done'] == true).length;
     final progress = tasks.isEmpty ? 0.0 : done / tasks.length;
-    final report = (d['report'] as Map?)?['status'] as String?;
+    final rep = d['report'] as Map?;
+    final report = rep?['status'] == 'SUBMITTED' && rep?['resubmitted'] == true
+        ? 'RESUBMITTED'
+        : rep?['status'] as String?;
     final accent = statusStyle(report).accent;
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -724,6 +778,8 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
                   planId: _planId,
                   day: d,
                   canEdit: isLeader && _running,
+                  isLeader: isLeader,
+                  running: _running,
                 ),
               ),
             );

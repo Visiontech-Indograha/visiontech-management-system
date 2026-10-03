@@ -15,6 +15,7 @@ import type { components } from "@/lib/api-types";
 import { errorMessage } from "@/lib/errors";
 import { formatDate } from "@/lib/format";
 import type { WorkPlan } from "./api";
+import { SkPreviewDialog } from "./SkPreviewDialog";
 
 type Week = components["schemas"]["WeeklyReportResponse"];
 type WeeklyReportRequest = components["schemas"]["WeeklyReportRequest"];
@@ -57,7 +58,7 @@ function Panel({ week, children }: { week: Week; children: ReactNode }) {
             {formatDate(week.starts_on)} – {formatDate(week.ends_on)}
           </p>
         </div>
-        <StatusBadge status={week.status} />
+        <StatusBadge status={week.status === "SUBMITTED" && week.resubmitted ? "RESUBMITTED" : week.status} />
       </header>
       {children}
     </article>
@@ -67,9 +68,12 @@ function Panel({ week, children }: { week: Week; children: ReactNode }) {
 function WeekPanel({ plan, week }: { plan: WorkPlan; week: Week }) {
   const { me } = useSession();
   const isPM = !!me?.permissions.includes("create:plan");
+  const isLeader = !!me?.employee_id && me.employee_id === plan.leader_employee_id;
   const active = plan.status === "IN_PROGRESS";
+  const [viewing, setViewing] = useState(false);
 
-  if (EDITABLE.includes(week.status) && active) {
+  // Alur SK v2: laporan mingguan diisi ketua di HP; PM hanya memeriksa.
+  if (EDITABLE.includes(week.status) && active && isLeader) {
     return (
       <Panel week={week}>
         {!week.days_approved ? (
@@ -105,6 +109,14 @@ function WeekPanel({ plan, week }: { plan: WorkPlan; week: Week }) {
         <p className="text-sm text-mist">Belum ada laporan mingguan.</p>
       )}
       {week.status === "SUBMITTED" && isPM && <WeeklyReviewForm plan={plan} week={week} />}
+      {week.status === "APPROVED" && (
+        <Button variant="outline" size="sm" className="mt-3" onClick={() => setViewing(true)}>
+          Lihat laporan
+        </Button>
+      )}
+      {viewing && (
+        <SkPreviewDialog title={week.name} path={`/work-plans/${plan.id}/weekly/${week.week}/report/html`} onClose={() => setViewing(false)} />
+      )}
     </Panel>
   );
 }

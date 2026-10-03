@@ -2189,6 +2189,101 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/work-plans/{plan_id}/days/{day_id}/member-reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Member Reports
+         * @description Laporan anggota satu hari — dibaca ketua untuk disusun, dan PM saat memeriksa.
+         */
+        get: operations["member_reports_api_v1_work_plans__plan_id__days__day_id__member_reports_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-plans/{plan_id}/days/{day_id}/member-report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** My Member Report */
+        get: operations["my_member_report_api_v1_work_plans__plan_id__days__day_id__member_report_get"];
+        /** Save Member Report */
+        put: operations["save_member_report_api_v1_work_plans__plan_id__days__day_id__member_report_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-plans/{plan_id}/days/{day_id}/member-report/send": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send Member Report
+         * @description Anggota mengirim laporannya ke ketua tim (notifikasi ke ketua).
+         */
+        post: operations["send_member_report_api_v1_work_plans__plan_id__days__day_id__member_report_send_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-plans/{plan_id}/days/{day_id}/report/html": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Daily Report Html
+         * @description Dokumen A4 laporan harian (isi ketua + laporan anggota + pemeriksaan PM).
+         */
+        get: operations["daily_report_html_api_v1_work_plans__plan_id__days__day_id__report_html_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-plans/{plan_id}/weekly/{week}/report/html": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Weekly Report Html */
+        get: operations["weekly_report_html_api_v1_work_plans__plan_id__weekly__week__report_html_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2852,6 +2947,11 @@ export interface components {
             reviewed_at: string | null;
             /** Evidence File Ids */
             evidence_file_ids: string[];
+            /**
+             * Resubmitted
+             * @default false
+             */
+            resubmitted: boolean;
         };
         /** DayTaskInput */
         DayTaskInput: {
@@ -3375,6 +3475,51 @@ export interface components {
              */
             platform: string | null;
         };
+        /** MemberReportIn */
+        MemberReportIn: {
+            /** Body */
+            body: string;
+            /**
+             * Obstacle
+             * @default
+             */
+            obstacle: string;
+            /**
+             * Evidence File Ids
+             * @default []
+             */
+            evidence_file_ids: string[];
+        };
+        /** MemberReportOut */
+        MemberReportOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Employee Id
+             * Format: uuid
+             */
+            employee_id: string;
+            /** Full Name */
+            full_name: string;
+            /** Position */
+            position: string;
+            /** Status */
+            status: string;
+            /** Body */
+            body: string;
+            /** Obstacle */
+            obstacle: string;
+            /** Sent At */
+            sent_at?: string | null;
+            /**
+             * Evidence File Ids
+             * @default []
+             */
+            evidence_file_ids: string[];
+        };
         /** MessageResponse */
         MessageResponse: {
             /** Message */
@@ -3739,6 +3884,11 @@ export interface components {
             /** Tasks */
             tasks: components["schemas"]["DayTaskOut"][];
             report: components["schemas"]["DayReportOut"] | null;
+            /**
+             * Member Reports Sent
+             * @default 0
+             */
+            member_reports_sent: number;
         };
         /** PlanDayResponse */
         PlanDayResponse: {
@@ -4272,6 +4422,11 @@ export interface components {
             review_note: string | null;
             /** Days Approved */
             days_approved: boolean;
+            /**
+             * Resubmitted
+             * @default false
+             */
+            resubmitted: boolean;
         };
         /** WeeklyReviewRequest */
         WeeklyReviewRequest: {
@@ -8433,6 +8588,202 @@ export interface operations {
                     "application/json": {
                         [key: string]: number;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    member_reports_api_v1_work_plans__plan_id__days__day_id__member_reports_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                day_id: string;
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemberReportOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    my_member_report_api_v1_work_plans__plan_id__days__day_id__member_report_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                day_id: string;
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemberReportOut"] | null;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    save_member_report_api_v1_work_plans__plan_id__days__day_id__member_report_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                day_id: string;
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MemberReportIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemberReportOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    send_member_report_api_v1_work_plans__plan_id__days__day_id__member_report_send_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                day_id: string;
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemberReportOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    daily_report_html_api_v1_work_plans__plan_id__days__day_id__report_html_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                day_id: string;
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/html": string;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    weekly_report_html_api_v1_work_plans__plan_id__weekly__week__report_html_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                week: number;
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/html": string;
                 };
             };
             /** @description Validation Error */

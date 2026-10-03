@@ -16,6 +16,8 @@
   .sig-box img { width: 28mm; height: 28mm; }
   .hash { font-family: "DejaVu Sans Mono", monospace; font-size: 7.5pt; word-break: break-all; color: #374151; }
   .revoked { color: #b91c1c; font-weight: bold; }
+  .task { margin-bottom: 1.5mm; }
+  .draft { color: #b45309; font-weight: bold; font-size: 9pt; margin-bottom: 1mm; }
   .kop { display: flex; align-items: center; justify-content: space-between;
          padding-bottom: 3mm; margin-bottom: 5mm; border-bottom: 0.8mm solid #232c6f; }
   .kop img { height: 13mm; }
@@ -29,25 +31,41 @@
     <span class="kind">{{ kind_label | upper }}</span>
   </div>
   <h1>{{ doc.title }}</h1>
-  <div class="meta">Nomor {{ doc.number }} · {{ kind_label }} versi {{ doc.version }} · diterbitkan {{ issued_at }}</div>
+  {% if preview %}<div class="draft">PRATINJAU DRAF — nomor SK diberikan saat diterbitkan</div>{% endif %}
+  <div class="meta">Nomor {{ doc.number or "-" }} · {{ kind_label }} versi {{ doc.version }}{% if issued_at %} · diterbitkan {{ issued_at }}{% endif %}{% if status_label %} · status {{ status_label }}{% endif %}</div>
 
   <h2>Pelaksanaan</h2>
   <table>
-    <tr><th>Lokasi</th><td>{{ plan.location_text or "-" }}</td></tr>
-    <tr><th>Periode</th><td>{{ plan.period_start }} s.d. {{ plan.period_end }}</td></tr>
-    {% if plan.description %}<tr><th>Uraian</th><td>{{ plan.description }}</td></tr>{% endif %}
+    {% if plan.category %}<tr><th>Kategori</th><td>{{ categories.get(plan.category, plan.category) }}</td></tr>{% endif %}
+    {% if plan.unit_name %}<tr><th>Tipe</th><td>{{ plan.unit_name }}</td></tr>{% endif %}
+    <tr><th>Lokasi</th><td>{{ plan.location_text or "-" }}{% if plan.site_description %}<br><span class="meta">{{ plan.site_description }}</span>{% endif %}{% if plan.lat is defined and plan.lat is not none and plan.lng is defined and plan.lng is not none %}<br><span class="meta">{{ "%.6f"|format(plan.lat) }}, {{ "%.6f"|format(plan.lng) }}</span>{% endif %}</td></tr>
+    <tr><th>Periode</th><td>{{ plan.period_start | tgl }} s.d. {{ plan.period_end | tgl }}</td></tr>
+    {% if plan.pm_name %}<tr><th>Project Manager</th><td>{{ plan.pm_name }}{% if plan.pm_position %} — {{ plan.pm_position }}{% endif %}</td></tr>{% endif %}
+    {% if plan.description %}<tr><th>Deskripsi pekerjaan</th><td>{{ plan.description }}</td></tr>{% endif %}
   </table>
 
   <h2>Tim</h2>
   <table>
-    <tr><th>Nama</th><th>Peran</th></tr>
-    {% for m in team %}<tr><td>{{ m.full_name }}</td><td>{{ "Ketua" if m.role_in_plan == "LEADER" else "Anggota" }}</td></tr>{% endfor %}
+    <tr><th>Nama</th><th>Jabatan</th><th>Peran</th></tr>
+    {% for m in team %}<tr><td>{{ m.full_name }}</td><td>{{ m.position or "-" }}</td><td>{{ "Ketua tim" if m.role_in_plan == "LEADER" else "Anggota" }}</td></tr>{% endfor %}
   </table>
 
-  <h2>Rincian harian</h2>
+  {% if assets %}
+  <h2>Alat &amp; kendaraan</h2>
   <table>
-    <tr><th>Tanggal</th><th>Kegiatan</th><th>Tugas</th></tr>
-    {% for d in days %}<tr><td>{{ d.work_date }}</td><td>{{ d.title }}</td><td>{{ d.tasks | join(", ") }}</td></tr>{% endfor %}
+    <tr><th>Jenis</th><th>Kode</th><th>Nama</th><th>Driver</th></tr>
+    {% for a in assets %}<tr><td>{{ "Kendaraan" if a.kind == "VEHICLE" else "Alat" }}</td><td>{{ a.code }}</td><td>{{ a.name }}</td><td>{{ a.driver_name or "-" }}</td></tr>{% endfor %}
+  </table>
+  {% endif %}
+
+  <h2>Detail pekerjaan per hari</h2>
+  <table>
+    <tr><th style="width:24mm">Tanggal</th><th>Detail pekerjaan</th></tr>
+    {% for d in days %}<tr><td>{{ d.work_date | tgl }}</td><td>
+      {% for t in d.tasks %}{% if t is string %}<div>{{ t }}</div>{% else %}
+      <div class="task"><strong>{{ t.title }}</strong>{% if t.description %} — {{ t.description }}{% endif %}
+        {% if t.files %}<div class="meta">Lampiran: {{ t.files | join(", ") }}</div>{% endif %}</div>{% endif %}{% endfor %}
+    </td></tr>{% endfor %}
   </table>
 
   {% if attachments %}
@@ -60,7 +78,7 @@
   <div class="sig">
     {% for s in signatures %}
     <div class="sig-box">
-      <div><strong>{{ "Penerbit" if s.signer_role == "ISSUER" else ("Penerima" if s.signer_role == "ACCEPTOR" else s.signer_role) }}</strong></div>
+      <div><strong>{{ "Penerbit (PM)" if s.signer_role == "ISSUER" else ("Penerima (Ketua tim)" if s.signer_role == "ACCEPTOR" else s.signer_role) }}</strong></div>
       <div>{{ s.signer_name }} — {{ s.signer_position }}{% if s.signer_unit %} · {{ s.signer_unit }}{% endif %}</div>
       <div class="meta">No. seri {{ s.serial_number }} · {{ s.signed_at | wib }}</div>
       {% if s.revoked_at %}<div class="revoked">Dicabut: {{ s.revoked_reason }}</div>
@@ -70,7 +88,7 @@
   </div>
   {% else %}<p class="meta">Belum ditandatangani.</p>{% endif %}
 
-  <p class="hash">SHA-256 isi dokumen: {{ sha256 }}<br>
-  Keabsahan diperiksa dengan memindai QR; yang ditandatangani adalah isi dokumen ini (bukan berkas PDF-nya).</p>
+  {% if sha256 %}<p class="hash">SHA-256 isi dokumen: {{ sha256 }}<br>
+  Keabsahan diperiksa dengan memindai QR; yang ditandatangani adalah isi dokumen ini (bukan berkas PDF-nya).</p>{% endif %}
 </body>
 </html>

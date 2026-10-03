@@ -13,11 +13,18 @@ import { errorMessage } from "@/lib/errors";
 import { formatDateTime } from "@/lib/format";
 import { signerRoleLabel } from "@/lib/labels";
 import type { WorkPlan } from "./api";
+import { SkPreviewDialog } from "./SkPreviewDialog";
 
 type PlanDocument = components["schemas"]["PlanDocumentOut"];
 type Signature = components["schemas"]["SignatureOut"];
 
 const PDF_UNAVAILABLE = "Layanan PDF belum tersedia di server ini.";
+const KIND_LABEL: Record<string, string> = {
+  INITIAL_ORDER: "SK",
+  REVISION: "Revisi SK",
+  ADDENDUM: "Adendum",
+  PERSONNEL_ADDENDUM: "Adendum personel",
+};
 
 /** Unduh PDF bertanda tangan (GET /documents/{id}/pdf, blob). */
 async function downloadPdf(doc: PlanDocument) {
@@ -61,6 +68,7 @@ function DocumentCard({ doc }: { doc: PlanDocument }) {
   const canRevoke = !!me?.permissions.includes("create:plan");
   const [busy, setBusy] = useState(false);
   const [revoking, setRevoking] = useState<Signature | null>(null);
+  const [viewing, setViewing] = useState(false);
   const sigs = useQuery({
     queryKey: ["document-signatures", doc.id],
     queryFn: async () => (await api.get<Signature[]>(`/documents/${doc.id}/signatures`)).data,
@@ -74,13 +82,16 @@ function DocumentCard({ doc }: { doc: PlanDocument }) {
             {doc.number} · versi {doc.version}
           </p>
           <p className="text-sm text-mist">
-            {doc.kind} · terbit {formatDateTime(doc.issued_at)}
+            {KIND_LABEL[doc.kind] ?? doc.kind} · terbit {formatDateTime(doc.issued_at)}
             {doc.accepted_at && ` · diterima ${formatDateTime(doc.accepted_at)}`}
           </p>
           {doc.reason && <p className="text-sm text-mist">Alasan: {doc.reason}</p>}
         </div>
         <div className="flex items-center gap-2">
           <StatusBadge status={doc.status} />
+          <Button variant="outline" size="sm" onClick={() => setViewing(true)}>
+            Lihat dokumen
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -95,6 +106,9 @@ function DocumentCard({ doc }: { doc: PlanDocument }) {
           </Button>
         </div>
       </div>
+      {viewing && (
+        <SkPreviewDialog title={`${doc.number} · versi ${doc.version}`} path={`/documents/${doc.id}/html`} onClose={() => setViewing(false)} />
+      )}
       <p className="mb-2 break-all text-xs text-mist">SHA-256: {doc.sha256}</p>
       <QueryState query={sigs} errorText="Tanda tangan tidak dapat dimuat." empty={sigs.data?.length === 0} emptyText="Belum ada tanda tangan.">
         <div className="overflow-x-auto">

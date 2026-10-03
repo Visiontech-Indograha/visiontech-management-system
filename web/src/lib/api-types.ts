@@ -511,6 +511,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/work-plans/form-options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Form Options
+         * @description Pilihan form "Buat SK" alur v2 (SK2-A/B). `plan_id` = draf yang sedang diubah (pilihannya ikut tampil).
+         */
+        get: operations["form_options_api_v1_work_plans_form_options_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-plans/driver-options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Driver Options
+         * @description Calon driver dari ketua + anggota terpilih yang ber-SIM sesuai tipe kendaraan dan tidak terikat SK lain.
+         */
+        get: operations["driver_options_api_v1_work_plans_driver_options_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-plans/full": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Full Plan
+         * @description Buat SK lengkap dalam satu transaksi (alur v2) → status Draf.
+         */
+        post: operations["create_full_plan_api_v1_work_plans_full_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/work-plans": {
         parameters: {
             query?: never;
@@ -521,7 +581,7 @@ export interface paths {
         /**
          * Get Plans
          * @description Hanya SK yang terlihat oleh pengguna (V-07, `domain.js` visiblePlans). `archived=true`: draf
-         *     terarsip — hanya untuk pengelola (V-21).
+         *     terarsip — hanya untuk pengelola (V-21). SK Diterima yang tanggal mulainya tiba dijalankan dulu (alur v2).
          */
         get: operations["get_plans_api_v1_work_plans_get"];
         put?: never;
@@ -549,6 +609,66 @@ export interface paths {
         head?: never;
         /** Update Plan */
         patch: operations["update_plan_api_v1_work_plans__plan_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/work-plans/{plan_id}/detail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Plan Detail
+         * @description Isi lengkap SK: data umum, lokasi, tim, detail pekerjaan per hari, alat & kendaraan.
+         */
+        get: operations["get_plan_detail_api_v1_work_plans__plan_id__detail_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-plans/{plan_id}/full": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Edit Full Plan
+         * @description Ubah isi SK berstatus Draf (termasuk draf revisi setelah adendum diminta) dalam satu transaksi.
+         */
+        put: operations["edit_full_plan_api_v1_work_plans__plan_id__full_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-plans/{plan_id}/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Preview Plan
+         * @description Pratinjau A4 draf SK ("Sunting SK", SK2-C) — format sama dengan dokumen terbit.
+         */
+        get: operations["preview_plan_api_v1_work_plans__plan_id__preview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/work-plans/{plan_id}/days": {
@@ -1403,6 +1523,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/documents/{document_id}/html": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Document Html
+         * @description Isi yang sama persis dengan PDF (templat A4 + TTD + QR) — untuk penampil di web & HP ("Tinjau SK").
+         */
+        get: operations["document_html_api_v1_documents__document_id__html_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/signatures/{signature_id}/revoke": {
         parameters: {
             query?: never;
@@ -1992,6 +2132,57 @@ export interface paths {
         get: operations["overtime_recap_api_v1_recaps_overtime_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Notifications */
+        get: operations["list_notifications_api_v1_notifications_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications/read-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Read All */
+        post: operations["read_all_api_v1_notifications_read_all_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications/{notification_id}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Read One */
+        post: operations["read_one_api_v1_notifications__notification_id__read_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2705,6 +2896,28 @@ export interface components {
             /** Total */
             total: number;
         };
+        /** DraftDayInput */
+        DraftDayInput: {
+            /**
+             * Work Date
+             * Format: date
+             */
+            work_date: string;
+            /** Tasks */
+            tasks: components["schemas"]["DraftTaskInput"][];
+        };
+        /** DraftTaskInput */
+        DraftTaskInput: {
+            /** Title */
+            title: string;
+            /** Description */
+            description: string;
+            /**
+             * File Ids
+             * @default []
+             */
+            file_ids: string[];
+        };
         /** EmployeeAssignmentCreate */
         EmployeeAssignmentCreate: {
             /** Position */
@@ -2999,6 +3212,57 @@ export interface components {
             /** Revoked Reason */
             revoked_reason: string | null;
         };
+        /** FormAsset */
+        FormAsset: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Kind */
+            kind: string;
+            /** Vehicle Type */
+            vehicle_type?: string | null;
+            /** Code */
+            code: string;
+            /** Name */
+            name: string;
+        };
+        /** FormCategory */
+        FormCategory: {
+            /** Code */
+            code: string;
+            /** Label */
+            label: string;
+        };
+        /** FormPerson */
+        FormPerson: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Full Name */
+            full_name: string;
+            /** Position */
+            position: string;
+        };
+        /** FormSite */
+        FormSite: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Description */
+            description?: string | null;
+            /** Lat */
+            lat: number;
+            /** Lng */
+            lng: number;
+        };
         /** GeoPoint */
         GeoPoint: {
             /** Lat */
@@ -3131,6 +3395,47 @@ export interface components {
             needs_review_today: number;
             /** Daily Average */
             daily_average: number;
+        };
+        /** NewSiteInput */
+        NewSiteInput: {
+            /** Name */
+            name: string;
+            /** Description */
+            description?: string | null;
+            /** Lat */
+            lat: number;
+            /** Lng */
+            lng: number;
+        };
+        /** NotificationList */
+        NotificationList: {
+            /** Unread */
+            unread: number;
+            /** Items */
+            items: components["schemas"]["NotificationOut"][];
+        };
+        /** NotificationOut */
+        NotificationOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Kind */
+            kind: string;
+            /** Title */
+            title: string;
+            /** Body */
+            body: string;
+            /** Work Plan Id */
+            work_plan_id?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Read At */
+            read_at?: string | null;
         };
         /**
          * OfflineAttendanceEvent
@@ -3460,6 +3765,25 @@ export interface components {
              */
             work_plan_id: string;
         };
+        /** PlanDetailOut */
+        PlanDetailOut: {
+            /** Plan */
+            plan: {
+                [key: string]: unknown;
+            };
+            /** Team */
+            team: {
+                [key: string]: unknown;
+            }[];
+            /** Days */
+            days: {
+                [key: string]: unknown;
+            }[];
+            /** Assets */
+            assets: {
+                [key: string]: unknown;
+            }[];
+        };
         /** PlanDocumentOut */
         PlanDocumentOut: {
             /** Id */
@@ -3485,6 +3809,68 @@ export interface components {
             sha256: string;
             /** Signature Count */
             signature_count: number;
+        };
+        /** PlanDraftRequest */
+        PlanDraftRequest: {
+            /** Title */
+            title: string;
+            /** Description */
+            description: string;
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "INSTALASI" | "PEMELIHARAAN" | "PERBAIKAN" | "SURVEI" | "LAINNYA";
+            /** Site Id */
+            site_id?: string | null;
+            new_site?: components["schemas"]["NewSiteInput"] | null;
+            /**
+             * Period Start
+             * Format: date
+             */
+            period_start: string;
+            /**
+             * Period End
+             * Format: date
+             */
+            period_end: string;
+            /** Days */
+            days: components["schemas"]["DraftDayInput"][];
+            /**
+             * Leader Employee Id
+             * Format: uuid
+             */
+            leader_employee_id: string;
+            /** Member Employee Ids */
+            member_employee_ids: string[];
+            /**
+             * Tool Ids
+             * @default []
+             */
+            tool_ids: string[];
+            /** Vehicle Id */
+            vehicle_id?: string | null;
+            /** Driver Employee Id */
+            driver_employee_id?: string | null;
+            /** Row Version */
+            row_version?: number | null;
+        };
+        /** PlanFormOptions */
+        PlanFormOptions: {
+            /** Unit Name */
+            unit_name: string | null;
+            /** Categories */
+            categories: components["schemas"]["FormCategory"][];
+            /** Sites */
+            sites: components["schemas"]["FormSite"][];
+            /** Leaders */
+            leaders: components["schemas"]["FormPerson"][];
+            /** Members */
+            members: components["schemas"]["FormPerson"][];
+            /** Tools */
+            tools: components["schemas"]["FormAsset"][];
+            /** Vehicles */
+            vehicles: components["schemas"]["FormAsset"][];
         };
         /** PlanLocationIn */
         PlanLocationIn: {
@@ -3976,6 +4362,8 @@ export interface components {
             cancellation_reason?: string | null;
             /** Appeal Reason */
             appeal_reason?: string | null;
+            /** Category */
+            category?: string | null;
         };
         /** WorkPlanUpdate */
         WorkPlanUpdate: {
@@ -4893,6 +5281,104 @@ export interface operations {
             };
         };
     };
+    form_options_api_v1_work_plans_form_options_get: {
+        parameters: {
+            query?: {
+                plan_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanFormOptions"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    driver_options_api_v1_work_plans_driver_options_get: {
+        parameters: {
+            query: {
+                vehicle_id: string;
+                period_end: string;
+                candidate_ids?: string[];
+                plan_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_full_plan_api_v1_work_plans_full_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlanDraftRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanDetailOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_plans_api_v1_work_plans_get: {
         parameters: {
             query?: {
@@ -5011,6 +5497,103 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorkPlanResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_plan_detail_api_v1_work_plans__plan_id__detail_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanDetailOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    edit_full_plan_api_v1_work_plans__plan_id__full_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlanDraftRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanDetailOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    preview_plan_api_v1_work_plans__plan_id__preview_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/html": string;
                 };
             };
             /** @description Validation Error */
@@ -6673,6 +7256,37 @@ export interface operations {
             };
         };
     };
+    document_html_api_v1_documents__document_id__html_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/html": string;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     revoke_signature_api_v1_signatures__signature_id__revoke_post: {
         parameters: {
             query?: never;
@@ -7732,6 +8346,93 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OvertimeRecapRow"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_notifications_api_v1_notifications_get: {
+        parameters: {
+            query?: {
+                unread_only?: boolean;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_all_api_v1_notifications_read_all_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: number;
+                    };
+                };
+            };
+        };
+    };
+    read_one_api_v1_notifications__notification_id__read_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                notification_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: number;
+                    };
                 };
             };
             /** @description Validation Error */

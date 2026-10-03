@@ -9,17 +9,20 @@ import { Dialog } from "@/components/ui/VmsDialog";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { errorMessage } from "@/lib/errors";
 import { formatDate } from "@/lib/format";
+import { CATEGORY_LABEL } from "@/lib/labels";
 import { employeeName, useActiveEmployees, useTransition, useWorkPlan, type Transition, type WorkPlan } from "./api";
 import { Attachments } from "./Attachments";
 import { CompletionDialog } from "./CompletionDialog";
-import { FinalReportPanel, TeamCard } from "./FinalReport";
+import { FinalReportPanel } from "./FinalReport";
 import { IncidentDialog, IncidentPanel } from "./Incidents";
 import { OvertimeDialog, OvertimePanel } from "./Overtime";
 import { ChangePanel, ExtensionDialog, PersonnelDialog } from "./PlanChanges";
-import { AddDayDialog, EditDraftDialog, ReasonDialog, TeamDialog } from "./PlanForms";
-import { DailyReports, DayPlanList } from "./DailyReports";
+import { PlanDetailCard } from "./PlanDetailCard";
+import { ReasonDialog } from "./PlanForms";
+import { DailyReports } from "./DailyReports";
 import { Documents } from "./Documents";
 import { PlanLocationCard } from "./PlanLocation";
+import { SkPreviewDialog } from "./SkPreviewDialog";
 import { WeeklyReports } from "./WeeklyReports";
 
 const Row = ({ label, children }: { label: string; children: ReactNode }) => (
@@ -33,7 +36,7 @@ const CANCELLABLE = ["PUBLISHED", "APPEALED", "ACCEPTED", "IN_PROGRESS", "COMPLE
 
 type Dialogs =
   | {
-      kind: "edit" | "team" | "day" | "completion" | "extension" | "personnel" | "incident" | "overtime" | "publish";
+      kind: "preview" | "completion" | "extension" | "personnel" | "incident" | "overtime" | "publish";
     }
   | { kind: "reason"; action: Transition; title: string; label: string }
   | null;
@@ -54,28 +57,24 @@ export function WorkPlanDetailPage() {
               <dl className="text-sm">
                 <Row label="Nomor SK">{p.number ?? "Belum terbit"}</Row>
                 <Row label="Revisi">{p.revision}</Row>
+                {p.category && <Row label="Kategori">{CATEGORY_LABEL[p.category] ?? p.category}</Row>}
                 <Row label="Lokasi">{p.location_text}</Row>
                 <Row label="Periode">
                   {formatDate(p.period_start)} – {formatDate(p.period_end)}
                 </Row>
                 <Row label="PM">{employeeName(employees.data, p.pm_employee_id)}</Row>
                 <Row label="Ketua tim">{employeeName(employees.data, p.leader_employee_id)}</Row>
-                {p.description && <Row label="Uraian">{p.description}</Row>}
-                {p.appeal_reason && <Row label="Alasan banding">{p.appeal_reason}</Row>}
+                {p.description && <Row label="Deskripsi pekerjaan">{p.description}</Row>}
+                {p.appeal_reason && <Row label="Alasan adendum">{p.appeal_reason}</Row>}
                 {p.cancellation_reason && <Row label="Alasan pembatalan">{p.cancellation_reason}</Row>}
               </dl>
             </section>
             <PlanActions plan={p} />
           </div>
         )}
-        {p && p.status !== "DRAFT" && <TeamCard plan={p} />}
+        {p && <PlanDetailCard plan={p} />}
         {p && ["IN_PROGRESS", "COMPLETION_REVIEW", "COMPLETED"].includes(p.status) && <FinalReportPanel plan={p} />}
         {p && <PlanLocationCard plan={p} />}
-        {p && ["DRAFT", "PUBLISHED", "APPEALED", "ACCEPTED"].includes(p.status) && (
-          <div className="mt-6">
-            <DayPlanList plan={p} />
-          </div>
-        )}
         {p && <Attachments plan={p} />}
         {p && p.status !== "DRAFT" && <Documents plan={p} />}
         {p && ["IN_PROGRESS", "COMPLETION_REVIEW", "COMPLETED"].includes(p.status) && (
@@ -109,12 +108,14 @@ function PlanActions({ plan }: { plan: WorkPlan }) {
   const [dialog, setDialog] = useState<Dialogs>(null);
   const s = plan.status;
 
-  const run = async (action: Transition, done: string) => {
+  const run = async (action: Transition, done: string): Promise<boolean> => {
     try {
       await transition.mutateAsync({ action, row_version: plan.row_version });
       toast.success(done);
+      return true;
     } catch (err) {
       toast.error(errorMessage(err));
+      return false;
     }
   };
   const reason = (action: Transition, title: string, label: string) => () => setDialog({ kind: "reason", action, title, label });
@@ -125,27 +126,25 @@ function PlanActions({ plan }: { plan: WorkPlan }) {
   if (canManage) {
     if (s === "DRAFT") {
       manager.push(
+        <Button key="preview" variant="outline" onClick={() => setDialog({ kind: "preview" })}>
+          Sunting SK
+        </Button>,
         <Button key="publish" onClick={() => setDialog({ kind: "publish" })} disabled={busy}>
           Terbitkan SK
         </Button>,
-        <Button key="edit" variant="outline" onClick={() => setDialog({ kind: "edit" })}>
-          Sunting draft
-        </Button>,
-        <Button key="team" variant="outline" onClick={() => setDialog({ kind: "team" })}>
-          Atur tim
-        </Button>,
-        <Button key="day" variant="outline" onClick={() => setDialog({ kind: "day" })}>
-          Tambah hari
-        </Button>,
-        <Button key="archive" variant="outline" onClick={reason("archive", "Arsipkan draft", "Alasan pengarsipan")}>
-          Arsipkan draft
-        </Button>,
       );
+      // Draf revisi (pernah terbit) tidak bisa diarsip; pembatalannya lewat "Batalkan pekerjaan".
+      if (plan.revision === 1)
+        manager.push(
+          <Button key="archive" variant="outline" onClick={reason("archive", "Arsipkan draf", "Alasan pengarsipan")}>
+            Arsipkan draf
+          </Button>,
+        );
     }
     if (s === "APPEALED")
       manager.push(
-        <Button key="revise" onClick={() => run("revise", "Draft revisi dibuka.")} disabled={busy}>
-          Buka draft revisi
+        <Button key="revise" onClick={() => run("revise", "Revisi dibuka. Ubah isi SK lalu terbitkan lagi.")} disabled={busy}>
+          Buka revisi
         </Button>,
       );
     if (s === "ACCEPTED" || s === "IN_PROGRESS")
@@ -167,28 +166,14 @@ function PlanActions({ plan }: { plan: WorkPlan }) {
           Kembalikan penyelesaian
         </Button>,
       );
-    if (CANCELLABLE.includes(s))
+    if (CANCELLABLE.includes(s) || (s === "DRAFT" && plan.revision > 1))
       manager.push(
         <Button key="cancel" variant="destructive" onClick={reason("cancel", "Batalkan pekerjaan", "Alasan pembatalan")}>
           Batalkan pekerjaan
         </Button>,
       );
   }
-  if (isLeader && s === "PUBLISHED")
-    leader.push(
-      <Button key="accept" onClick={() => run("accept", "SK diterima.")} disabled={busy}>
-        Terima SK
-      </Button>,
-      <Button key="appeal" variant="outline" onClick={reason("appeal", "Ajukan banding", "Alasan banding")}>
-        Ajukan banding
-      </Button>,
-    );
-  if (isLeader && s === "ACCEPTED")
-    leader.push(
-      <Button key="start" onClick={() => run("start", "Pelaksanaan dimulai.")} disabled={busy}>
-        Mulai pelaksanaan
-      </Button>,
-    );
+  // Alur SK v2: Terima SK / Ajukan adendum dilakukan ketua di aplikasi HP; status Berjalan otomatis.
   if (isLeader && (s === "ACCEPTED" || s === "IN_PROGRESS"))
     leader.push(
       <Button key="extension" variant="outline" onClick={() => setDialog({ kind: "extension" })}>
@@ -230,7 +215,18 @@ function PlanActions({ plan }: { plan: WorkPlan }) {
           <h2 className="mb-3 text-base font-semibold">Tindakan PM</h2>
           {s === "PUBLISHED" && (
             <p className="mb-3 rounded-control bg-warning-bg px-3 py-2 text-sm text-warning">
-              Menunggu ketua tim menerima SK. Minta ketua membuka aplikasi mobile, masuk ke menu <strong>SK Anda</strong>, lalu tekan <strong>Terima SK</strong>.
+              Notifikasi sudah dikirim ke ketua tim dan anggota. Menunggu ketua meninjau SK di aplikasi HP lalu menekan{" "}
+              <strong>Terima SK</strong> atau <strong>Ajukan adendum</strong>.
+            </p>
+          )}
+          {s === "APPEALED" && (
+            <p className="mb-3 rounded-control bg-warning-bg px-3 py-2 text-sm text-warning">
+              Ketua tim meminta adendum{plan.appeal_reason ? `: "${plan.appeal_reason}"` : ""}. Buka revisi, ubah isi SK, lalu terbitkan lagi.
+            </p>
+          )}
+          {s === "ACCEPTED" && (
+            <p className="mb-3 rounded-control bg-canvas px-3 py-2 text-sm text-mist">
+              SK diterima ketua tim. Status otomatis menjadi Berjalan pada {formatDate(plan.period_start)}.
             </p>
           )}
           <div className="flex flex-col gap-2 [&>button]:w-full">{manager}</div>
@@ -254,8 +250,8 @@ function PlanActions({ plan }: { plan: WorkPlan }) {
               </Button>
               <Button
                 onClick={async () => {
-                  await run("publish", "SK diterbitkan. Minta ketua tim membuka aplikasi mobile untuk menerimanya.");
-                  setDialog(null);
+                  // Tetap terbuka bila gagal agar pesan & tombol ulang terlihat (CELAH 6, docs/28).
+                  if (await run("publish", "SK diterbitkan dan ditandatangani. Notifikasi dikirim ke ketua tim dan anggota.")) setDialog(null);
                 }}
                 disabled={busy}
               >
@@ -265,14 +261,20 @@ function PlanActions({ plan }: { plan: WorkPlan }) {
           }
         >
           <p className="text-sm text-mist">
-            SK <strong className="text-ink">{plan.title}</strong> akan diberi nomor dan dikirim ke ketua tim untuk diterima.
-            Setelah terbit, isi SK tidak dapat diubah — perubahan hanya lewat adendum atau revisi.
+            SK <strong className="text-ink">{plan.title}</strong> akan diberi nomor, ditandatangani otomatis atas nama Anda, dan
+            notifikasinya dikirim ke ketua tim serta semua anggota. Setelah terbit, isi SK tidak dapat diubah — perubahan hanya lewat
+            adendum.
           </p>
         </Dialog>
       )}
-      {dialog?.kind === "edit" && <EditDraftDialog plan={plan} onClose={() => setDialog(null)} />}
-      {dialog?.kind === "team" && <TeamDialog plan={plan} onClose={() => setDialog(null)} />}
-      {dialog?.kind === "day" && <AddDayDialog plan={plan} onClose={() => setDialog(null)} />}
+      {dialog?.kind === "preview" && (
+        <SkPreviewDialog
+          title={`Sunting SK — ${plan.title}`}
+          path={`/work-plans/${plan.id}/preview`}
+          editTo={`/work-plans/${plan.id}/edit`}
+          onClose={() => setDialog(null)}
+        />
+      )}
       {dialog?.kind === "completion" && <CompletionDialog plan={plan} onClose={() => setDialog(null)} />}
       {dialog?.kind === "extension" && <ExtensionDialog plan={plan} onClose={() => setDialog(null)} />}
       {dialog?.kind === "personnel" && <PersonnelDialog plan={plan} onClose={() => setDialog(null)} />}

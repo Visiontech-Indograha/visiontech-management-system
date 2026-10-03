@@ -13,6 +13,7 @@ import { errorMessage } from "@/lib/errors";
 import { formatDate } from "@/lib/format";
 import {
   useDriverOptions,
+  useApplyAmendment,
   usePlanDetail,
   usePlanFormOptions,
   useSavePlanDraft,
@@ -103,28 +104,37 @@ function fromDetail(detail: PlanDetail): { values: Values; site: NewSite | null 
 
 /** Halaman "Buat SK" (/work-plans/new) dan "Ubah isi SK" (/work-plans/:id/edit) — flowchart SK2-A/B. */
 export function PlanEditorPage() {
-  const { id } = useParams();
+  const { id, changeId } = useParams();
   const detail = usePlanDetail(id ?? "", Boolean(id));
   if (!id) return <PlanEditor />;
+  const editable = changeId ? detail.data?.plan.status === "IN_PROGRESS" : detail.data?.plan.status === "DRAFT";
   return (
     <>
-      <PageHeader title="Ubah isi SK" />
+      <PageHeader title={changeId ? "Ubah isi SK — adendum" : "Ubah isi SK"} />
+      {changeId && (
+        <p className="mb-4 rounded-control bg-warning-bg px-3 py-2 text-sm text-warning">
+          SK sedang berjalan: hari yang laporannya sudah dikirim/disetujui tidak berubah, ketua tim dan tanggal mulai tetap.
+          Setelah disimpan, dokumen adendum terbit dengan tanda tangan Anda dan menunggu tanda tangan ketua.
+        </p>
+      )}
       <QueryState query={detail} errorText="SK tidak ditemukan atau Anda tidak berwenang mengubahnya.">
         {detail.data &&
-          (detail.data.plan.status === "DRAFT" ? (
-            <PlanEditor planId={id} detail={detail.data} />
+          (editable ? (
+            <PlanEditor planId={id} detail={detail.data} changeId={changeId} />
           ) : (
-            <p className="text-sm text-mist">Isi SK hanya dapat diubah selama berstatus Draf.</p>
+            <p className="text-sm text-mist">Isi SK tidak dapat diubah pada tahap ini.</p>
           ))}
       </QueryState>
     </>
   );
 }
 
-function PlanEditor({ planId, detail }: { planId?: string; detail?: PlanDetail }) {
+function PlanEditor({ planId, detail, changeId }: { planId?: string; detail?: PlanDetail; changeId?: string }) {
   const navigate = useNavigate();
   const options = usePlanFormOptions(planId);
-  const save = useSavePlanDraft(planId);
+  const draftSave = useSavePlanDraft(planId);
+  const amend = useApplyAmendment(planId ?? "", changeId ?? "");
+  const save = changeId ? amend : draftSave;
   const initial = useMemo(() => (detail ? fromDetail(detail) : null), [detail]);
   const [newSite, setNewSite] = useState<NewSite | null>(initial?.site ?? null);
   const [siteDialog, setSiteDialog] = useState(false);
@@ -205,7 +215,7 @@ function PlanEditor({ planId, detail }: { planId?: string; detail?: PlanDetail }
     };
     try {
       const saved = await save.mutateAsync(body);
-      toast.success(planId ? "Isi SK disimpan." : "SK tersimpan sebagai Draf.");
+      toast.success(changeId ? "Adendum terbit dan ditandatangani. Menunggu tanda tangan ketua." : planId ? "Isi SK disimpan." : "SK tersimpan sebagai Draf.");
       navigate(`/work-plans/${String(saved.plan.id)}`);
     } catch (err) {
       setFormError(errorMessage(err));
@@ -274,7 +284,7 @@ function PlanEditor({ planId, detail }: { planId?: string; detail?: PlanDetail }
 
             <Section title="Detail pekerjaan per hari">
               <div className="grid gap-x-3 md:grid-cols-2">
-                <TextField label="Tanggal mulai" type="date" error={errors.period_start?.message} {...register("period_start")} />
+                <TextField label="Tanggal mulai" type="date" readOnly={!!changeId} error={errors.period_start?.message} {...register("period_start")} />
                 <TextField label="Tanggal selesai" type="date" error={errors.period_end?.message} {...register("period_end")} />
               </div>
               {days.fields.length === 0 ? (
@@ -327,6 +337,7 @@ function PlanEditor({ planId, detail }: { planId?: string; detail?: PlanDetail }
             <Section title="Tim">
               <SelectField
                 label="Ketua tim"
+                disabled={!!changeId}
                 error={errors.leader_employee_id?.message}
                 hint="Bukan akun kantor dan tidak terikat work plan yang berjalan atau terjadwal."
                 {...register("leader_employee_id")}

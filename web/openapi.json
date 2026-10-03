@@ -6815,6 +6815,376 @@
      }
     }
    }
+  },
+  "/api/v1/work-plans/{plan_id}/days/{day_id}/member-reports": {
+   "get": {
+    "tags": [
+     "Daily Reports"
+    ],
+    "summary": "Member Reports",
+    "description": "Laporan anggota satu hari — dibaca ketua untuk disusun, dan PM saat memeriksa.",
+    "operationId": "member_reports_api_v1_work_plans__plan_id__days__day_id__member_reports_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "day_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Day Id"
+      }
+     },
+     {
+      "name": "plan_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Plan Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/MemberReportOut"
+         },
+         "title": "Response Member Reports Api V1 Work Plans  Plan Id  Days  Day Id  Member Reports Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/work-plans/{plan_id}/days/{day_id}/member-report": {
+   "get": {
+    "tags": [
+     "Daily Reports"
+    ],
+    "summary": "My Member Report",
+    "operationId": "my_member_report_api_v1_work_plans__plan_id__days__day_id__member_report_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "day_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Day Id"
+      }
+     },
+     {
+      "name": "plan_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Plan Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "anyOf": [
+          {
+           "$ref": "#/components/schemas/MemberReportOut"
+          },
+          {
+           "type": "null"
+          }
+         ],
+         "title": "Response My Member Report Api V1 Work Plans  Plan Id  Days  Day Id  Member Report Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "put": {
+    "tags": [
+     "Daily Reports"
+    ],
+    "summary": "Save Member Report",
+    "operationId": "save_member_report_api_v1_work_plans__plan_id__days__day_id__member_report_put",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "day_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Day Id"
+      }
+     },
+     {
+      "name": "plan_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Plan Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/MemberReportIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/MemberReportOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/work-plans/{plan_id}/days/{day_id}/member-report/send": {
+   "post": {
+    "tags": [
+     "Daily Reports"
+    ],
+    "summary": "Send Member Report",
+    "description": "Anggota mengirim laporannya ke ketua tim (notifikasi ke ketua).",
+    "operationId": "send_member_report_api_v1_work_plans__plan_id__days__day_id__member_report_send_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "day_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Day Id"
+      }
+     },
+     {
+      "name": "plan_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Plan Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/MemberReportOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/work-plans/{plan_id}/days/{day_id}/report/html": {
+   "get": {
+    "tags": [
+     "Daily Reports"
+    ],
+    "summary": "Daily Report Html",
+    "description": "Dokumen A4 laporan harian (isi ketua + laporan anggota + pemeriksaan PM).",
+    "operationId": "daily_report_html_api_v1_work_plans__plan_id__days__day_id__report_html_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "day_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Day Id"
+      }
+     },
+     {
+      "name": "plan_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Plan Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "text/html": {
+        "schema": {
+         "type": "string"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/work-plans/{plan_id}/weekly/{week}/report/html": {
+   "get": {
+    "tags": [
+     "Daily Reports"
+    ],
+    "summary": "Weekly Report Html",
+    "operationId": "weekly_report_html_api_v1_work_plans__plan_id__weekly__week__report_html_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "week",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Week"
+      }
+     },
+     {
+      "name": "plan_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Plan Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "text/html": {
+        "schema": {
+         "type": "string"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
   }
  },
  "components": {
@@ -8644,6 +9014,11 @@
       },
       "type": "array",
       "title": "Evidence File Ids"
+     },
+     "resubmitted": {
+      "type": "boolean",
+      "title": "Resubmitted",
+      "default": false
      }
     },
     "type": "object",
@@ -10124,6 +10499,99 @@
     ],
     "title": "LoginRequest"
    },
+   "MemberReportIn": {
+    "properties": {
+     "body": {
+      "type": "string",
+      "title": "Body"
+     },
+     "obstacle": {
+      "type": "string",
+      "title": "Obstacle",
+      "default": ""
+     },
+     "evidence_file_ids": {
+      "items": {
+       "type": "string",
+       "format": "uuid"
+      },
+      "type": "array",
+      "title": "Evidence File Ids",
+      "default": []
+     }
+    },
+    "type": "object",
+    "required": [
+     "body"
+    ],
+    "title": "MemberReportIn"
+   },
+   "MemberReportOut": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Id"
+     },
+     "employee_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Employee Id"
+     },
+     "full_name": {
+      "type": "string",
+      "title": "Full Name"
+     },
+     "position": {
+      "type": "string",
+      "title": "Position"
+     },
+     "status": {
+      "type": "string",
+      "title": "Status"
+     },
+     "body": {
+      "type": "string",
+      "title": "Body"
+     },
+     "obstacle": {
+      "type": "string",
+      "title": "Obstacle"
+     },
+     "sent_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Sent At"
+     },
+     "evidence_file_ids": {
+      "items": {
+       "type": "string",
+       "format": "uuid"
+      },
+      "type": "array",
+      "title": "Evidence File Ids",
+      "default": []
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "employee_id",
+     "full_name",
+     "position",
+     "status",
+     "body",
+     "obstacle"
+    ],
+    "title": "MemberReportOut"
+   },
    "MessageResponse": {
     "properties": {
      "message": {
@@ -11042,6 +11510,11 @@
         "type": "null"
        }
       ]
+     },
+     "member_reports_sent": {
+      "type": "integer",
+      "title": "Member Reports Sent",
+      "default": 0
      }
     },
     "type": "object",
@@ -12588,6 +13061,11 @@
      "days_approved": {
       "type": "boolean",
       "title": "Days Approved"
+     },
+     "resubmitted": {
+      "type": "boolean",
+      "title": "Resubmitted",
+      "default": false
      }
     },
     "type": "object",

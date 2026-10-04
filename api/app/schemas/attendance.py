@@ -1,3 +1,9 @@
+"""
+app/schemas/attendance.py
+
+Request and response schemas for employee attendance and site locations.
+Handles check-ins, check-outs, offline attendance events, and reviews.
+"""
 from datetime import date, datetime
 from typing import Literal
 from uuid import UUID
@@ -6,51 +12,84 @@ from pydantic import BaseModel, Field
 
 
 class GeoPoint(BaseModel):
+    """
+    Schema for geographic coordinates (latitude and longitude).
+    """
     lat: float = Field(..., ge=-90, le=90)
     lng: float = Field(..., ge=-180, le=180)
 
+
 class SiteCreate(BaseModel):
+    """
+    Schema for creating a new work site.
+    """
     name: str
     address: str | None = None
     location: GeoPoint
     radius_m: int = Field(50, ge=10)
 
+
 class SiteResponse(SiteCreate):
+    """
+    Schema representing a work site in the system.
+    """
     id: UUID
-    unit_id: UUID | None = None  # None = lokasi kantor; terisi = lokasi proyek unit itu (R-33)
-    can_manage: bool = False  # peminta boleh mengelola (menghapus) lokasi ini
-    
+    # None = lokasi kantor; terisi = lokasi proyek unit itu (R-33)
+    unit_id: UUID | None = None
+    # Menandakan apakah peminta boleh mengelola atau menghapus lokasi ini
+    can_manage: bool = False
+
 AttendanceChannel = Literal["MOBILE", "WEB"]
 
 
 class CheckInRequest(BaseModel):
+    """
+    Schema for processing a check-in request.
+    """
     site_id: UUID
     # Aplikasi pengirim. Default MOBILE agar APK lama tetap jalan; server mencocokkannya dengan
     # `employee.attendance_mode` (lapangan → HP, kantor → web) dan menolak bila tidak sesuai.
     channel: AttendanceChannel = "MOBILE"
     location: GeoPoint
-    location_origin: Literal["GPS", "SIMULASI"] = "GPS"  # MESIN hanya dari mesin absen, bukan API
+    # MESIN hanya digunakan untuk absen dari mesin fisik, bukan API
+    location_origin: Literal["GPS", "SIMULASI"] = "GPS"
     # Radius ketidakpastian GPS perangkat (m). Opsional: klien lama / antrean luring tidak ditolak (K-12).
     accuracy_m: float | None = Field(None, ge=0)
     selfie_file_id: UUID | None = None
     face_result: Literal["MATCH", "NO_MATCH", "LOW_QUALITY", "NOT_ENROLLED", "SKIPPED"] | None = None
     face_similarity: float | None = None
-    # R-33: wajib bila di luar radius lokasi atau saat mengajukan ulang absensi yang ditolak (dicek server).
+    # R-33: Wajib diisi bila berada di luar radius lokasi atau saat mengajukan ulang absensi yang ditolak.
     explanation: str | None = Field(None, max_length=1000)
 
+
 class CheckOutRequest(BaseModel):
+    """
+    Schema for processing a check-out request.
+    """
     channel: AttendanceChannel = "MOBILE"
     location: GeoPoint
     location_origin: Literal["GPS", "SIMULASI"] = "GPS"
 
+
 class ExplanationRequest(BaseModel):
+    """
+    Schema for supplying an explanation to an attendance record.
+    """
     explanation: str
 
+
 class ReviewRequest(BaseModel):
+    """
+    Schema for reviewing (approving or rejecting) an attendance event.
+    """
     is_approved: bool
     note: str | None = None
 
+
 class AttendanceResponse(BaseModel):
+    """
+    Schema detailing a single day's attendance record for an employee.
+    """
     id: UUID
     employee_id: UUID
     work_date: date
@@ -65,36 +104,50 @@ class AttendanceResponse(BaseModel):
     explanation: str | None
     reviewed_at: datetime | None
     selfie_file_id: UUID | None = None
-    # Hanya terisi di daftar GET /attendance:
-    review_note: str | None = None  # alasan peninjau bila ditolak
+    # Hanya terisi di daftar GET /attendance
+    # Alasan peninjau bila absensi ditolak
+    review_note: str | None = None
     employee_name: str | None = None
-    can_review: bool = False  # peminta berwenang meninjau baris ini (R-33, dihitung server)
-    # R-34: absen luring — catatan pemeriksaan server & jam pulang yang menunggu persetujuan absen masuk.
+    # Peminta berwenang meninjau baris ini (R-33, dihitung oleh server)
+    can_review: bool = False
+    # R-34: Absen luring — catatan pemeriksaan server & jam pulang yang menunggu persetujuan absen masuk.
     offline: bool = False
     offline_note: str | None = None
     check_out_requested_at: datetime | None = None
 
+
 class AttendanceListResponse(BaseModel):
+    """
+    Schema for paginated responses of attendance records.
+    """
     items: list[AttendanceResponse]
     total: int
     page: int
     size: int
-    # O-10: tanggal hari ini menurut zona waktu organisasi — HP menandai "absensi hari ini" dengan ini,
-    # bukan dengan jam perangkat (server yang memutuskan `work_date`).
+    # O-10: Tanggal hari ini menurut zona waktu organisasi. 
+    # Aplikasi HP menandai "absensi hari ini" menggunakan nilai ini, bukan jam perangkat.
     today: date | None = None
-    # R-34: jangkar waktu bertanda tangan server untuk absen luring (jam server saat ini, berlaku 30 hari).
+    # R-34: Jangkar waktu bertanda tangan server untuk absen luring.
+    # Mewakili jam server saat ini, berlaku selama 30 hari.
     time_anchor: str | None = None
 
 
 class DeviceKeyRequest(BaseModel):
-    """Kunci publik EC P-256 (X.509 SubjectPublicKeyInfo DER, base64) dari Android Keystore."""
+    """
+    Schema for registering a device public key.
+    Kunci publik EC P-256 (X.509 SubjectPublicKeyInfo DER, base64) dari Android Keystore.
+    """
     device_id: str = Field(..., min_length=8, max_length=100)
     public_key: str = Field(..., min_length=40, max_length=1000)
 
 
 class OfflineAttendanceEvent(BaseModel):
-    """Satu absen luring: `payload` = JSON persis seperti yang ditandatangani HP; `signature` = ECDSA SHA-256
-    (DER, base64). Swafoto diunggah lebih dulu; kecocokannya dicek lewat `selfie_sha256` di payload."""
+    """
+    Schema representing a signed offline attendance event.
+    Satu absen luring: `payload` adalah JSON persis seperti yang ditandatangani oleh HP;
+    `signature` adalah tanda tangan ECDSA SHA-256 (DER, base64).
+    Swafoto diunggah lebih dulu; kecocokannya dicek melalui `selfie_sha256` dalam payload.
+    """
     device_id: str = Field(..., min_length=8, max_length=100)
     client_op_id: UUID
     kind: Literal["CHECK_IN", "CHECK_OUT"]
@@ -104,8 +157,12 @@ class OfflineAttendanceEvent(BaseModel):
 
 
 class OfflineAttendanceResult(BaseModel):
+    """
+    Schema detailing the result of processing an offline attendance event.
+    """
     client_op_id: UUID
-    result: str  # status absen masuk (AUTO_VALID/NEEDS_REVIEW) atau CHECKED_OUT / CHECK_OUT_PENDING_REVIEW
+    # Status absen masuk (AUTO_VALID/NEEDS_REVIEW) atau CHECKED_OUT / CHECK_OUT_PENDING_REVIEW
+    result: str
     attendance_id: UUID | None
     duplicate: bool
     event_time: datetime | None = None
@@ -113,13 +170,18 @@ class OfflineAttendanceResult(BaseModel):
     notes: list[str] = []
 
 
-# ── Dipindah dari api/v1/endpoints/attendance_cron.py (R-28 M2b) ──
 class MissingCheckInResponse(BaseModel):
+    """
+    Schema for missing check-in alerts (moved from attendance cron endpoint).
+    """
     alerted: bool
     check_ins_today: int
 
 
 class NeedsReviewResponse(BaseModel):
+    """
+    Schema for review alerts.
+    """
     alerted: bool
     needs_review_today: int
     daily_average: float

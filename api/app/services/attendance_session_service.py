@@ -40,6 +40,7 @@ EXPLANATION_RESUBMIT = "Isi penjelasan untuk mengajukan ulang absensi yang ditol
 
 
 class AttendanceSessionService:
+    """Layanan inti untuk mengelola rekaman absensi masuk/pulang, validasi koordinat GPS, dan verifikasi sesi kerja."""
     def __init__(self, repo: CRUDAttendanceSession, clock: CRUDOrgClock) -> None:
         self.repo = repo
         self.clock = clock
@@ -50,6 +51,7 @@ class AttendanceSessionService:
         row = await self.repo.attendance_mode_of(user_id)
         if row is None:
             raise ValidationError("Akun ini belum tertaut ke data karyawan.")
+        # Validasi kontrol channel untuk memastikan tidak ada kecurangan dari karyawan dengan menukar platform (Web vs Mobile).
         if CHANNEL_OF_MODE.get(row.attendance_mode, "MOBILE") != channel:
             raise AppError("WRONG_ATTENDANCE_CHANNEL", WRONG_CHANNEL[channel], status=403)
         return row
@@ -59,8 +61,12 @@ class AttendanceSessionService:
                        face_similarity: float | None, accuracy_m: float | None = None,
                        channel: str = "MOBILE", explanation: str | None = None,
                        at: Any = None, work_date: Any = None) -> Any:
-        """`at`/`work_date`: absen luring (R-34) — jam & tanggal peristiwa yang sudah diverifikasi server
-        (jangkar waktu + tanda tangan perangkat), bukan jam terima."""
+        """
+        Mencatat absen masuk harian (check-in) dengan mengevaluasi aturan jarak dan akurasi GPS.
+        
+        `at`/`work_date`: absen luring (R-34) — jam & tanggal peristiwa yang sudah diverifikasi server
+        (jangkar waktu + tanda tangan perangkat), bukan jam terima.
+        """
         worker = await self._employee_for_channel(user_id, channel)
         employee_id = worker.employee_id
         # K-12: titik GPS yang terlalu kabur tidak bisa membuktikan kehadiran — tolak dengan alasan.
@@ -119,12 +125,17 @@ class AttendanceSessionService:
             raise
 
     async def check_out(self, user_id: str, channel: str = "MOBILE") -> Any:
-        """Menutup sesi terbuka milik sendiri — tanggal berapa pun, agar sesi yang lupa ditutup tidak
+        """
+        Menutup sesi absensi harian yang sedang terbuka (absen pulang).
+        
+        Menutup sesi terbuka milik sendiri — tanggal berapa pun, agar sesi yang lupa ditutup tidak
         mengunci check-in berikutnya. Status tidak diubah; pulang cepat diputuskan trigger.
-        R-33: hanya sesi yang sudah valid (Valid otomatis / Disetujui) yang boleh absen pulang."""
+        R-33: hanya sesi yang sudah valid (Valid otomatis / Disetujui) yang boleh absen pulang.
+        """
         worker = await self._employee_for_channel(user_id, channel)
         session = await self.repo.open_session(worker.employee_id, valid_only=True)
         if session is None:
+            # Memastikan tidak bisa absen pulang jika absen masuknya ditolak atau masih dalam proses peninjauan.
             if await self.repo.open_session(worker.employee_id) is not None:
                 raise AppError("CHECKOUT_NOT_VALID", CHECKOUT_NOT_VALID, status=409)
             raise AppError("NO_OPEN_SESSION", "Tidak ada sesi absensi terbuka.", status=409)
@@ -133,9 +144,13 @@ class AttendanceSessionService:
     async def list_attendance(self, org_id: str, user_id: str, *, view_all: bool, employee_id: UUID | None,
                               date_from: Any, date_to: Any, status: str | None,
                               page: int, size: int) -> tuple[list[Any], int]:
-        """R-33: Finance & OPS (`view:all_attendance`) melihat semua; PM melihat miliknya + bawahan lapangan
+        """
+        Mendapatkan daftar absensi berdasarkan filter, disesuaikan dengan hak visibilitas pengguna.
+        
+        R-33: Finance & OPS (`view:all_attendance`) melihat semua; PM melihat miliknya + bawahan lapangan
         di unitnya; selain itu hanya milik sendiri. Di luar cakupan → tidak tampil (tidak dibocorkan).
-        Setiap baris membawa `can_review` dari server."""
+        Setiap baris membawa `can_review` dari server.
+        """
         return await self.repo.list_page(org_id, user_id, view_all=view_all, employee_id=employee_id,
                                          date_from=date_from, date_to=date_to, status=status,
                                          limit=size, offset=(page - 1) * size)
@@ -145,8 +160,12 @@ class AttendanceSessionService:
         return (await self.clock.local_now(org_id)).today
 
     async def explain_attendance(self, org_id: str, user_id: str, attendance_id: UUID, explanation: str) -> None:
+        """
+        Memberikan penjelasan tambahan untuk sesi absensi yang memerlukan peninjauan.
+        """
         attendance = await self.repo.get(attendance_id, org_id)
         employee_id = await self.repo.employee_of(user_id)
+        # Memastikan karyawan hanya dapat memberikan alasan pada absensi miliknya sendiri (V-09).
         if attendance is None or attendance.employee_id != employee_id:
             raise NotFoundError("Absensi")  # milik orang lain tidak dibocorkan (V-09)
         if attendance.status != "NEEDS_REVIEW":
@@ -158,12 +177,17 @@ class AttendanceSessionService:
 
     async def review_attendance(self, org_id: str, user_id: str, attendance_id: UUID,
                                 approve: bool, note: str | None) -> str:
-        """R-33: PM → bawahan lapangan di unitnya; Finance → pekerja kantor selain Finance; OPS → Finance.
-        Tidak ada yang meninjau absensinya sendiri (cakupan: CRUD `CAN_REVIEW`)."""
+        """
+        Meninjau (menyetujui atau menolak) sesi absensi yang anomali.
+        
+        R-33: PM → bawahan lapangan di unitnya; Finance → pekerja kantor selain Finance; OPS → Finance.
+        Tidak ada yang meninjau absensinya sendiri (cakupan: CRUD `CAN_REVIEW`).
+        """
         attendance = await self.repo.get(attendance_id, org_id)
         if attendance is None:
             raise NotFoundError("Absensi")
         reviewer = await self.repo.employee_of(user_id)
+        # Aturan empat mata: peninjau tidak boleh menyetujui/menolak absensinya sendiri.
         if attendance.employee_id == reviewer:
             raise ForbiddenError("Anda tidak boleh memverifikasi absensi sendiri.")
         if not await self.repo.can_review(user_id, attendance.employee_id):
@@ -172,6 +196,7 @@ class AttendanceSessionService:
             raise AppError("INVALID_STATE", "Absensi tidak menunggu pemeriksaan.", status=409)
         if not (note or "").strip():
             raise ValidationError("Catatan pemeriksaan wajib diisi.")
+            
         status = "APPROVED" if approve else "REJECTED"
         await self.repo.set_review(attendance_id, status, reviewer, (note or "").strip())
         return status

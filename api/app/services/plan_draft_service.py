@@ -42,12 +42,31 @@ def licence_for(vehicle_type: str | None) -> str:
 
 
 class PlanDraftService:
+    """
+    Layanan untuk mengelola proses penyusunan draf Surat Keputusan (SK).
+    Menangani pengambilan data form, validasi aturan bisnis, serta penyimpanan SK dan komponennya.
+    """
     def __init__(self, db: AsyncSession) -> None:
+        """
+        Inisialisasi PlanDraftService.
+        
+        Args:
+            db (AsyncSession): Sesi database asinkron.
+        """
         self.db = db
         self.repo = CRUDPlanDraft(db)
         self.assets = CRUDAssetReservation(db)
 
     async def _creator(self, user: CurrentUser) -> Any:
+        """
+        Mengambil profil karyawan pembuat SK berdasarkan pengguna yang login.
+        
+        Args:
+            user (CurrentUser): Pengguna yang sedang login.
+            
+        Returns:
+            Any: Data kreator/pembuat SK.
+        """
         creator = await self.repo.creator(user.user_id)
         if creator is None or not creator.unit_id:
             raise ForbiddenError("Akun Anda belum tertaut ke data karyawan aktif pada sebuah unit.")
@@ -55,6 +74,15 @@ class PlanDraftService:
 
     @staticmethod
     def _oversees(user: CurrentUser) -> bool:
+        """
+        Memeriksa apakah pengguna memiliki peran pengawas (ADMIN atau OPS).
+        
+        Args:
+            user (CurrentUser): Pengguna.
+            
+        Returns:
+            bool: True jika ADMIN/OPS, sebaliknya False.
+        """
         return RoleCode.ADMIN in user.roles or RoleCode.OPS in user.roles
 
     # ── Pilihan form ──────────────────────────────────────────────────────────────────────────
@@ -187,39 +215,76 @@ class PlanDraftService:
 
     # ── Simpan ────────────────────────────────────────────────────────────────────────────────
     async def create_plan(self, user: CurrentUser, data: PlanDraftRequest) -> Any:
-        """domain.js CREATE_PLAN versi form lengkap — hasilnya status Draf."""
+        """
+        domain.js CREATE_PLAN versi form lengkap — hasilnya status Draf.
+        
+        Args:
+            user (CurrentUser): Pengguna yang membuat SK.
+            data (PlanDraftRequest): Payload form data SK.
+            
+        Returns:
+            Any: Detail dari SK yang baru dibuat.
+        """
         creator = await self._creator(user)
+        # Memvalidasi seluruh data input secara berurutan
         await self._validate(user, creator.unit_id, data, None)
+        # Menyimpan atau mengambil ID lokasi baru/lama
         site_id, site_name = await self._site(user, creator.unit_id, data)
+        # Menyisipkan record utama SK ke dalam database
         row = await self.repo.insert_plan(
             user.organization_id, creator.unit_id, user.user_id, title=data.title.strip(),
             description=data.description.strip(), category=data.category, site_id=site_id,
             location_text=site_name, period_start=data.period_start, period_end=data.period_end,
             pm_employee_id=creator.employee_id, leader_employee_id=data.leader_employee_id)
+        # Menyisipkan relasi (tugas harian, tim, reservasi aset)
         await self._fill(user, str(row.id), data)
         return await self.detail(row.id)
 
     async def edit_draft(self, user: CurrentUser, plan_id: UUID, data: PlanDraftRequest) -> Any:
-        """domain.js EDIT_DRAFT versi form lengkap — isi draf disusun ulang seluruhnya."""
+        """
+        domain.js EDIT_DRAFT versi form lengkap — isi draf disusun ulang seluruhnya.
+        
+        Args:
+            user (CurrentUser): Pengguna pengubah.
+            plan_id (UUID): ID SK.
+            data (PlanDraftRequest): Data terbaru untuk menimpa draf lama.
+            
+        Returns:
+            Any: Detail dari SK yang sudah diperbarui.
+        """
         plan = await self.repo.lock_draft(plan_id, user.organization_id)
         if plan is None:
             raise NotFoundError("SK")
+        # Validasi status harus DRAFT
         if plan.status != PlanStatus.DRAFT:
             raise AppError("INVALID_STATE", "Isi SK hanya dapat diubah selama berstatus Draf.", status=409)
         if data.row_version is None or plan.row_version != data.row_version:
             raise ConflictError()
         unit_id = str(plan.unit_id)
+        # Validasi kembali seluruh input baru
         await self._validate(user, unit_id, data, plan_id)
+        # Menghapus seluruh relasi lama (tim, aset, pekerjaan harian)
         await self.repo.clear_draft_parts(plan_id)
         site_id, site_name = await self._site(user, unit_id, data)
+        # Memperbarui record utama SK
         await self.repo.update_plan(
             plan_id, title=data.title.strip(), description=data.description.strip(), category=data.category,
             site_id=site_id, location_text=site_name, period_start=data.period_start, period_end=data.period_end,
             leader_employee_id=data.leader_employee_id)
+        # Memasukkan kembali relasi (tugas harian, tim, reservasi aset) dengan data baru
         await self._fill(user, str(plan_id), data)
         return await self.detail(plan_id)
 
     async def detail(self, plan_id: UUID | str) -> dict[str, Any]:
+        """
+        Mengambil representasi lengkap (detail dan seluruh relasinya) untuk satu SK.
+        
+        Args:
+            plan_id (UUID | str): ID SK.
+            
+        Returns:
+            dict[str, Any]: Kamus detail SK beserta relasinya.
+        """
         value = await self.repo.plan_detail(plan_id)
         detail: dict[str, Any] = json.loads(value) if isinstance(value, str) else value
         category = detail["plan"].get("category")

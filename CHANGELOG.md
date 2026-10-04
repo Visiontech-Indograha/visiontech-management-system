@@ -9,6 +9,7 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased] — `development`
 
+- **API (Optimasi Query)**: Penghapusan SELECT * untuk keamanan & kinerja, perbaikan query N+1 pada proses insert menggunakan unnest, penambahan limit paginasi pada query list, serta penambahan indexing untuk foreign key (Alembic 0021).
 - **Alur SK v2 — PR1 (keputusan pemilik 2026-10-03, flowchart SK2 di FigJam):**
   - **DB (Alembic 0018):** `work_plan.category`, `work_plan_task.description` + `work_plan_task_attachment`, `site.description`, tabel `notification`, fungsi `employee_is_bound()`.
   - **API:** `GET /work-plans/form-options`, `/driver-options`; `POST /work-plans/full`, `PUT /work-plans/{id}/full` (satu transaksi — menutup celah "3 simpan terpisah"); `GET /{id}/detail`, `/{id}/preview` (A4); `GET /documents/{id}/html`; `/notifications`. Terbit → notifikasi ketua & anggota; Ajukan adendum (appeal) → dokumen menunggu jadi Tidak berlaku + notifikasi PM; Terima → notifikasi + otomatis Berjalan pada tanggal mulai; draf revisi bisa dibatalkan; `/start` idempoten.

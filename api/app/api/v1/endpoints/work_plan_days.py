@@ -19,6 +19,15 @@ _VIEW_ACCESS = Depends(plan_access(PlanNeed.VIEW))
 
 
 def _out(row: Any) -> PlanDayOut:
+    """
+    Fungsi pembantu untuk memetakan row data hari kerja dari database ke skema PlanDayOut.
+    
+    Args:
+        row (Any): Row data hari kerja.
+        
+    Returns:
+        PlanDayOut: Respons model hari kerja SK.
+    """
     return PlanDayOut(**row._mapping)
 
 

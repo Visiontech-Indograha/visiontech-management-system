@@ -27,6 +27,16 @@ router = APIRouter(prefix="/changes", tags=["Plan Changes / Addendums"])
 
 
 async def _read(service: PlanChangeService, change_id: Any) -> ChangeResponse:
+    """
+    Fungsi pembantu untuk membaca data perubahan SK (amendment/adendum) dan memetakannya ke skema respons.
+    
+    Args:
+        service (PlanChangeService): Instance layanan perubahan SK.
+        change_id (Any): ID perubahan SK.
+        
+    Returns:
+        ChangeResponse: Respons model perubahan SK.
+    """
     return ChangeResponse(**(await service.read(change_id))._mapping)
 
 

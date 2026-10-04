@@ -39,7 +39,7 @@ lewat `adb reverse tcp:8000 tcp:8000`.
 
 **Suite (hanya penyesuaian uji lama yang memeriksa alur lama):** web 145 lulus, Flutter 88 lulus, API — lihat CHANGELOG.
 
-## 2. PR2 — Laporan harian berjenjang & mingguan (lokal, 2026-10-03, commit lokal tanpa push)
+## 2. PR2 — Laporan harian berjenjang & mingguan (lokal, 2026-10-03)
 
 SK uji `SK-202610-5faedca4` (8 hari, mulai 26 Sep → Berjalan; >7 hari sehingga ada laporan mingguan).
 Ketua Eko di HP nyata, anggota Fajar di emulator, PM Dimas di web. Video: `presentasi/video/v01–v04`.
@@ -55,7 +55,7 @@ Ketua Eko di HP nyata, anggota Fajar di emulator, PM Dimas di web. Video: `prese
 | L7 | (Hari 2–7 disetujui lewat API agar minggu 1 lengkap.) HP ketua: Laporan Mingguan 1 → **Susun dari laporan harian** → **Kirim ke PM** | Disusun dari 7 laporan harian; status Dikirim ✔ |
 | L8 | Web PM: setujui mingguan → **Lihat laporan** | Dokumen "LAPORAN MINGGUAN 1", 26 September–2 Oktober 2026, Disetujui ✔ |
 
-## 3. PR3 — Adendum saat Berjalan, pengembalian aset, laporan akhir, penutupan (lokal, 2026-10-03, commit lokal)
+## 3. PR3 — Adendum saat Berjalan, pengembalian aset, laporan akhir, penutupan (lokal, 2026-10-03)
 
 SK uji `SK-202610-c02c327e` (3 hari, Berjalan, laporan harian disetujui, alat Fusion Splicer). Video: `presentasi/video/v05–v07`.
 
@@ -73,3 +73,31 @@ SK uji `SK-202610-c02c327e` (3 hari, Berjalan, laporan harian disetujui, alat Fu
 | A10 | Form Buat SK baru | Ketua & anggota SK selesai muncul lagi sebagai pilihan (uji API) ✔ |
 
 Temuan & perbaikan: setelah penutupan disetujui, panel laporan akhir di web belum menyegar tanpa muat ulang → transisi kini memuat ulang data turunan SK.
+
+## 4. Rilis PR2 + PR3 ke produksi (2026-10-03)
+
+Pull Request #9 `development → prod` (commit `046f0b08`), digabung setelah semua pemeriksaan hijau.
+
+**Perbaikan CI sebelum rilis** (CI `development` sempat merah di langkah pytest API, 781 lulus / 2 gagal):
+
+| Temuan | Perbaikan |
+|---|---|
+| Kolom `weekly_report.resubmitted` ada di Alembic 0019 tetapi terlewat di `db/01_schema.sql`; CI memasang skema dari `db/*.sql`, sehingga uji laporan mingguan gagal | Kolom ditambahkan ke `db/01_schema.sql` |
+| Snapshot OpenAPI belum memuat rute PR2/PR3 | Snapshot dibangkitkan ulang |
+| `test_open_change_and_unfinished_weeks_block_completion` memakai SK 7 hari, padahal laporan mingguan kini hanya untuk SK > 7 hari | Uji memakai SK 8 hari |
+
+**Hasil:** CI `development` hijau (API, Web, Flutter, gitleaks); CI `prod` dan *Production source guard* hijau.
+
+**Verifikasi di server produksi** (hanya baca, tanpa login):
+
+| Pemeriksaan | Hasil |
+|---|---|
+| Kontainer `vms_api` dibangun ulang pukul 16:38 UTC, satu menit setelah merge | ✔ `/ready` → `{"status":"ready","db":"ok"}` |
+| Alembic produksi | ✔ `0020_change_type_amendment (head)` |
+| Rute terdaftar (dari `app.openapi()` di kontainer, 122 rute) | ✔ `amendments` 4, laporan akhir/penutupan 7, `member-report` 3, `weekly` 5, `notifications` 3, pengembalian alat, `form-options`, `full`, `detail`, `preview`, dokumen `html` 4 |
+| Respons tanpa login | ✔ 401 untuk `form-options`, `notifications`, `detail`, `completion`, `weekly`, `member-report`, `changes`; 405 untuk GET `amendments` (hanya POST); 404 hanya untuk rute palsu pembanding |
+
+Dokumentasi OpenAPI publik dimatikan di produksi, jadi daftar rute dibaca dari aplikasi di dalam kontainer.
+
+**Belum diuji di produksi:** alur lengkap SK (buat → terbit → … → selesai) dengan login. Uji ini dijalankan pemilik (aturan: tidak membuat akun/login dengan sandi di produksi).
+

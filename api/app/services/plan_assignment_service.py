@@ -19,7 +19,15 @@ class PlanAssignmentService:
 
     @staticmethod
     def _oversees(user: CurrentUser) -> bool:
-        """Mengecek apakah pengguna adalah admin atau tim OPS yang memiliki akses lintas unit."""
+        """
+        Mengecek apakah pengguna adalah admin atau tim OPS yang memiliki akses pengawasan lintas unit.
+        
+        Args:
+            user (CurrentUser): Informasi pengguna saat ini.
+            
+        Returns:
+            bool: True jika pengguna memiliki role ADMIN atau OPS.
+        """
         return RoleCode.ADMIN in user.roles or RoleCode.OPS in user.roles
 
     async def validate_owner(self, user: CurrentUser, unit_id: UUID, pm_employee_id: UUID) -> None:
@@ -95,6 +103,18 @@ class PlanAssignmentService:
             )
 
     async def options(self, user: CurrentUser, period_start: date, period_end: date) -> dict[str, Any]:
+        """
+        Mendapatkan opsi personel yang tersedia untuk ditugaskan pada SK berdasarkan periode tertentu.
+        Admin dan OPS mendapatkan akses opsi untuk seluruh PM dan personel lintas unit.
+        
+        Args:
+            user (CurrentUser): Pengguna yang meminta opsi penugasan.
+            period_start (date): Tanggal mulai SK.
+            period_end (date): Tanggal selesai SK.
+            
+        Returns:
+            dict[str, Any]: Koleksi opsi yang berisi apakah pengguna boleh memilih PM, opsi PM, dan opsi anggota.
+        """
         if period_end < period_start:
             raise AppError("VALIDATION_ERROR", "Tanggal selesai tidak boleh sebelum tanggal mulai.", status=422)
         creator = await self.repo.employee_of_user(user.user_id)

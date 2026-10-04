@@ -39,6 +39,13 @@ class EmployeeService:
         """
         Memulihkan karyawan yang dihapus (deleted).
         Karyawan yang dipulihkan berstatus nonaktif dan harus diberikan akses baru.
+        
+        Args:
+            employee_id (UUID): ID karyawan.
+            org_id (str): ID organisasi tempat karyawan bernaung.
+            
+        Returns:
+            dict[str, Any]: ID karyawan, status is_active (False), dan pesan pemulihan.
         """
         employee = await self.repo.lock(employee_id, org_id)
         if employee is None:
@@ -65,6 +72,13 @@ class EmployeeService:
     async def assignments(self, employee_id: UUID, org_id: str) -> list[Any]:
         """
         Mendapatkan riwayat penempatan (jabatan dan unit) seorang karyawan.
+        
+        Args:
+            employee_id (UUID): ID karyawan.
+            org_id (str): ID organisasi tempat karyawan bekerja.
+            
+        Returns:
+            list[Any]: Daftar penempatan jabatan historis dan saat ini.
         """
         rows = await self.repo.assignments(employee_id, org_id)
         if rows is None:

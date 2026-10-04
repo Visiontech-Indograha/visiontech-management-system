@@ -29,14 +29,17 @@ OPEN = (ChangeStatus.PENDING_PM, ChangeStatus.AWAITING_LEADER_ACCEPTANCE)
 
 
 def _invalid(message: str) -> AppError:
+    """Mengembalikan error ketika validasi bisnis untuk usulan perubahan gagal."""
     return AppError("VALIDATION_ERROR", message, status=422)
 
 
 def _state(message: str = "Tahap work plan belum sesuai untuk tindakan ini.") -> AppError:
+    """Mengembalikan error ketika state/status SK tidak mengizinkan aksi perubahan."""
     return AppError("INVALID_STATE", message, status=409)
 
 
 def _require_reason(reason: str | None, message: str) -> str:
+    """Memastikan argumen 'reason' ada dan tidak kosong, mengembalikan versi string-nya yang sudah di-strip."""
     if not (reason or "").strip():
         raise _invalid(message)
     return (reason or "").strip()
@@ -54,10 +57,30 @@ class PlanChangeService:
         self.members = CRUDPlanMember(db)
 
     async def _snapshot(self, plan_id: UUID | str) -> Any:
+        """
+        Mengambil snapshot data komprehensif dari suatu rencana kerja untuk disimpan pada addendum.
+        
+        Args:
+            plan_id (UUID | str): ID SK.
+            
+        Returns:
+            Any: Data dict/list snapshot SK.
+        """
         raw = await self.plans.snapshot(plan_id)
         return json.loads(raw) if isinstance(raw, str) else raw
 
     async def _open_plan(self, plan_id: UUID, user: CurrentUser, need: PlanNeed) -> Any:
+        """
+        Memastikan pengguna berhak mengakses, SK dalam kondisi aktif, dan tidak ada perubahan lain yang sedang menunggu.
+        
+        Args:
+            plan_id (UUID): ID SK.
+            user (CurrentUser): Objek user peminta.
+            need (PlanNeed): Kewenangan minimum (PM/Leader/dkk).
+            
+        Returns:
+            Any: Objek akses dan objek rencana kerja (plan).
+        """
         access = await check_plan_access(self.db, plan_id, user, need)
         plan = await self.plans.lock_plan(plan_id, user.organization_id)
         if plan is None:
@@ -69,6 +92,15 @@ class PlanChangeService:
         return access, plan
 
     async def read(self, change_id: UUID | str) -> Any:
+        """
+        Mengambil detail satu usulan perubahan.
+        
+        Args:
+            change_id (UUID | str): ID perubahan.
+            
+        Returns:
+            Any: Objek usulan perubahan.
+        """
         return await self.repo.get_change(change_id)
 
     # ── Pengajuan ────────────────────────────────────────────────────────────────────────────
@@ -131,12 +163,32 @@ class PlanChangeService:
 
     # ── Keputusan ────────────────────────────────────────────────────────────────────────────
     async def _load(self, change_id: UUID, user: CurrentUser) -> Any:
+        """
+        Mengunci dan memuat data usulan perubahan dari database.
+        
+        Args:
+            change_id (UUID): ID usulan perubahan.
+            user (CurrentUser): Objek pengguna.
+            
+        Returns:
+            Any: Baris data usulan perubahan.
+        """
         change = await self.repo.lock_change(change_id, user.organization_id)
         if change is None:
             raise NotFoundError("Usulan perubahan")
         return change
 
     async def _is_incoming_leader(self, change: Any, user: CurrentUser) -> bool:
+        """
+        Memeriksa apakah pengguna saat ini adalah ketua tim yang diusulkan pada adendum personel ini.
+        
+        Args:
+            change (Any): Data perubahan.
+            user (CurrentUser): Objek pengguna saat ini.
+            
+        Returns:
+            bool: True jika pengguna adalah ketua tim yang diusulkan.
+        """
         return bool(change.proposed_leader_id) and change.proposed_leader_id == await self.repo.employee_of(user.user_id)
 
     async def approve_change(self, change_id: UUID, user: CurrentUser) -> Any:

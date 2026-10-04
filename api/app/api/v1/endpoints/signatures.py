@@ -52,20 +52,54 @@ def _rows(rows: list[Any], model: Any) -> list[Any]:
 @plan_documents_router.get("", response_model=list[PlanDocumentOut])
 async def list_plan_documents(access: PlanAccess = _VIEW_ACCESS,
                               signature_service: SignatureService = Depends(get_signature_service)) -> list[PlanDocumentOut]:
-    """Dok 05 §3.3: SK, revisi, dan adendum beserta jumlah tanda tangan yang berlaku."""
+    """
+    Dok 05 §3.3: SK, revisi, dan adendum beserta jumlah tanda tangan yang berlaku (GET).
+    
+    Path Parameters:
+    - plan_id (tersirat via router prefix): ID dari work plan.
+    
+    Returns:
+    - list[PlanDocumentOut]: Daftar dokumen rencana kerja.
+    """
+    # Menggunakan Dependency Injection untuk memeriksa hak akses VIEW pada plan
+    # Menggunakan Dependency Injection untuk instansiasi SignatureService
+    # Memanggil method layer Service untuk mengambil daftar dokumen
     return _rows(await signature_service.list_plan_documents(access.plan.id), PlanDocumentOut)
 
 
 @router.get("/documents/{document_id}/signatures", response_model=list[SignatureOut])
 async def list_signatures(document_id: UUID, current_user: CurrentUser = Depends(get_current_user),
                           signature_service: SignatureService = Depends(get_signature_service)) -> list[SignatureOut]:
+    """
+    Mengambil daftar tanda tangan untuk sebuah dokumen (GET).
+    
+    Path Parameters:
+    - document_id (UUID): ID dari dokumen yang tanda tangannya ingin diambil.
+    
+    Returns:
+    - list[SignatureOut]: Daftar tanda tangan yang terkait dengan dokumen.
+    """
+    # Menggunakan Dependency Injection untuk mendapatkan user saat ini
+    # Menggunakan Dependency Injection untuk mendapatkan SignatureService
+    # Memetakan pemanggilan ke layer Service untuk mengambil daftar tanda tangan
     return _rows(await signature_service.list_signatures(current_user, document_id), SignatureOut)
 
 
 @router.get("/documents/{document_id}/pdf", response_class=Response)
 async def document_pdf(document_id: UUID, current_user: CurrentUser = Depends(get_current_user),
                        signature_service: SignatureService = Depends(get_signature_service)) -> Response:
-    """PDF bertanda tangan + QR verifikasi (dok 05 §3.9). Render berat → threadpool (CLAUDE.md)."""
+    """
+    Mengunduh dokumen dalam format PDF bertanda tangan + QR verifikasi (dok 05 §3.9) (GET).
+    Render berat → threadpool (CLAUDE.md).
+    
+    Path Parameters:
+    - document_id (UUID): ID dokumen.
+    
+    Returns:
+    - Response: File PDF dari dokumen bersangkutan.
+    """
+    # Inject user saat ini dan SignatureService
+    # Memanggil Service untuk mendapatkan data dokumen dan tanda tangannya
     document, signatures = await signature_service.document_with_qr(current_user, document_id)
     html = render_plan_document_html(document, signatures)
     pdf = await run_in_threadpool(html_to_pdf, html)
@@ -77,7 +111,18 @@ async def document_pdf(document_id: UUID, current_user: CurrentUser = Depends(ge
 @router.get("/documents/{document_id}/html", response_class=HTMLResponse)
 async def document_html(document_id: UUID, current_user: CurrentUser = Depends(get_current_user),
                         signature_service: SignatureService = Depends(get_signature_service)) -> HTMLResponse:
-    """Isi yang sama persis dengan PDF (templat A4 + TTD + QR) — untuk penampil di web & HP ("Tinjau SK")."""
+    """
+    Mendapatkan representasi HTML dari dokumen, sama persis dengan PDF (templat A4 + TTD + QR) (GET).
+    Untuk penampil di web & HP ("Tinjau SK").
+    
+    Path Parameters:
+    - document_id (UUID): ID dari dokumen.
+    
+    Returns:
+    - HTMLResponse: Konten HTML dokumen.
+    """
+    # Menggunakan Dependency Injection untuk user dan service
+    # Memanggil SignatureService untuk memperoleh data dokumen beserta QR code
     document, signatures = await signature_service.document_with_qr(current_user, document_id)
     return HTMLResponse(render_plan_document_html(document, signatures))
 
@@ -86,15 +131,40 @@ async def document_html(document_id: UUID, current_user: CurrentUser = Depends(g
 async def revoke_signature(signature_id: UUID, data: RevokeRequest,
                            current_user: CurrentUser = Depends(get_current_user),
                            signature_service: SignatureService = Depends(get_signature_service)) -> dict[str, str]:
-    """P6-6: pencabutan beserta alasan (PM unit/OPS SK tersebut); tercatat di audit."""
+    """
+    Pencabutan tanda tangan beserta alasan (PM unit/OPS SK tersebut) (POST).
+    Tercatat di audit. (P6-6)
+    
+    Path Parameters:
+    - signature_id (UUID): ID dari tanda tangan yang akan dicabut.
+    
+    Request Body:
+    - data (RevokeRequest): Alasan pencabutan.
+    
+    Returns:
+    - dict[str, str]: Pesan sukses.
+    """
+    # Menggunakan Dependency Injection untuk mendapatkan data user saat ini dan SignatureService
+    # Memanggil Service layer untuk proses pencabutan tanda tangan
     await signature_service.revoke_signature(current_user, signature_id, data.reason)
     return {"message": "Tanda tangan dicabut."}
 
 
 @router.get("/verify/{token:path}", response_model=VerifyOut)
 async def verify_signature(token: str, request: Request, public_signature_service: SignatureService = Depends(get_public_signature_service)) -> VerifyOut:
-    """PUBLIK: hasil pemindaian QR — hanya data yang perlu dilihat pemverifikasi (db/04 verify_signature_qr)."""
+    """
+    Memverifikasi tanda tangan berdasarkan token dari hasil pemindaian QR (PUBLIK) (GET).
+    Hanya mengembalikan data yang perlu dilihat pemverifikasi.
+    
+    Path Parameters:
+    - token (str): Token yang diperoleh dari QR code.
+    
+    Returns:
+    - VerifyOut: Data verifikasi tanda tangan publik.
+    """
+    # Menggunakan Dependency Injection (get_public_signature_service) yang digunakan untuk akses publik
     _rate_limit(request.client.host if request.client else "unknown")
+    # Memanggil method Service layer untuk verifikasi publik
     row = await public_signature_service.verify(token)
     data = dict(row._mapping)
     data["state"] = str(data["state"])

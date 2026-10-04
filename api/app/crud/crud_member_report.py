@@ -13,13 +13,39 @@ from .base import CRUDBase
 
 
 class CRUDMemberReport(CRUDBase):
+    """
+    Kelas operasi CRUD untuk menangani Laporan Harian Anggota (berjenjang).
+    Mengelola draf dan pengiriman laporan harian dari anggota ke ketua proyek (PM),
+    beserta dokumen-dokumen yang dilampirkan.
+    """
 
     async def employee_of(self, user_id: UUID | str) -> str | None:
+        """
+        Mendapatkan ID karyawan berdasarkan ID pengguna (user).
+        
+        Args:
+            user_id (UUID | str): ID pengguna.
+            
+        Returns:
+            str | None: ID karyawan dalam bentuk string, atau None.
+        """
+        # Mengambil ID karyawan dari app_user
         value = await self.scalar("SELECT CAST(employee_id AS text) FROM vms.app_user WHERE id = :uid", {"uid": user_id})
         return str(value) if value else None
 
     async def list_for_day(self, day_id: UUID | str) -> list[Any]:
-        """Laporan anggota satu hari (yang sudah dikirim maupun draf) beserta nama & jabatan."""
+        """
+        Mengambil semua laporan harian dari anggota-anggota pada hari kerja (SK) tertentu,
+        baik yang sudah dikirim maupun yang masih berupa draf (untuk dilihat oleh Ketua/PM).
+        
+        Args:
+            day_id (UUID | str): ID hari kerja (work_plan_day).
+            
+        Returns:
+            list[Any]: Daftar laporan beserta detail karyawan dan lampiran berkas.
+        """
+        # Melakukan JOIN dengan tabel employee untuk mendapatkan nama dan jabatan anggota
+        # Menggunakan subquery (ARRAY) untuk mengumpulkan file_id bukti dari tabel member_report_evidence
         return list(await self.fetchall(
             """
             SELECT r.id, CAST(r.employee_id AS text) AS employee_id, e.full_name, e.position, r.status, r.body,
@@ -34,6 +60,17 @@ class CRUDMemberReport(CRUDBase):
         ))
 
     async def mine(self, day_id: UUID | str, employee_id: str) -> Any:
+        """
+        Mengambil satu laporan harian milik karyawan spesifik pada hari tertentu.
+        
+        Args:
+            day_id (UUID | str): ID hari kerja.
+            employee_id (str): ID karyawan (anggota).
+            
+        Returns:
+            Any: Data laporan anggota beserta lampiran buktinya, atau None jika belum ada.
+        """
+        # Mengambil data laporan khusus untuk karyawan tertentu (WHERE employee_id = :emp)
         return await self.fetchone(
             """
             SELECT r.id, CAST(r.employee_id AS text) AS employee_id, e.full_name, e.position, r.status, r.body,
@@ -47,7 +84,22 @@ class CRUDMemberReport(CRUDBase):
         )
 
     async def save(self, day_id: UUID | str, employee_id: str, body: str, obstacle: str) -> Any:
-        """Simpan draf; laporan yang sudah dikirim tidak berubah (→ None)."""
+        """
+        Menyimpan draf laporan harian anggota (insert atau update).
+        Hanya bisa mengupdate jika laporan masih berstatus 'DRAFT'. Jika sudah dikirim ('SENT'),
+        data tidak akan berubah.
+        
+        Args:
+            day_id (UUID | str): ID hari kerja.
+            employee_id (str): ID karyawan.
+            body (str): Isi laporan.
+            obstacle (str): Kendala yang dilaporkan.
+            
+        Returns:
+            Any: ID laporan (Row) yang berhasil disimpan/diubah, atau None.
+        """
+        # Melakukan UPSERT (INSERT ... ON CONFLICT DO UPDATE) untuk data laporan
+        # Pembaruan hanya terjadi (WHERE ... status = 'DRAFT') untuk mencegah perubahan setelah dikirim
         return await self.fetchone(
             """
             INSERT INTO vms.member_daily_report (work_plan_day_id, employee_id, body, obstacle)
@@ -61,9 +113,18 @@ class CRUDMemberReport(CRUDBase):
         )
 
     async def replace_evidence(self, report_id: UUID | str, file_ids: Iterable[UUID]) -> None:
+        """
+        Mengganti seluruh lampiran bukti laporan anggota dengan daftar ID file yang baru.
+        
+        Args:
+            report_id (UUID | str): ID laporan.
+            file_ids (Iterable[UUID]): Daftar ID file lampiran baru.
+        """
+        # Menghapus relasi lampiran bukti (evidence) lama untuk laporan ini
         await self.execute("DELETE FROM vms.member_report_evidence WHERE member_report_id = :rid", {"rid": report_id})
         unique_fids = list(dict.fromkeys(file_ids))
         if unique_fids:
+            # Menyisipkan (bulk insert) ID file yang baru menggunakan fungsi unnest()
             await self.execute(
                 """
                 INSERT INTO vms.member_report_evidence (member_report_id, file_id)
@@ -73,6 +134,19 @@ class CRUDMemberReport(CRUDBase):
             )
 
     async def send(self, day_id: UUID | str, employee_id: str) -> Any:
+        """
+        Mengirim laporan anggota (mengubah status dari DRAFT menjadi SENT).
+        Hanya berlaku jika isi laporan (body) memiliki panjang minimal 10 karakter.
+        
+        Args:
+            day_id (UUID | str): ID hari kerja.
+            employee_id (str): ID karyawan pembuat laporan.
+            
+        Returns:
+            Any: ID laporan yang berhasil dikirim, atau None jika gagal/tidak memenuhi syarat.
+        """
+        # Memperbarui status laporan dan mencatat waktu pengiriman, jika statusnya masih DRAFT dan
+        # panjang teks body valid (>= 10)
         return await self.fetchone(
             """
             UPDATE vms.member_daily_report SET status = 'SENT', sent_at = now(), updated_at = now()
@@ -84,12 +158,34 @@ class CRUDMemberReport(CRUDBase):
         )
 
     async def day_info(self, day_id: UUID | str) -> Any:
+        """
+        Mendapatkan informasi dasar dari hari kerja (SK), seperti tanggal, judul, dan ID rencana (plan).
+        
+        Args:
+            day_id (UUID | str): ID hari kerja.
+            
+        Returns:
+            Any: Informasi hari kerja.
+        """
+        # Mengambil atribut dasar hari kerja
         return await self.fetchone(
             "SELECT d.work_date, d.title, CAST(d.work_plan_id AS text) AS plan_id FROM vms.work_plan_day d WHERE d.id = :day",
             {"day": day_id})
 
     # ── Dokumen laporan (A4) ──────────────────────────────────────────────────────────────────
     async def plan_header(self, plan_id: UUID | str) -> Any:
+        """
+        Mendapatkan metadata kop (header) Surat Kerja (SK) untuk dokumen laporan tercetak/PDF,
+        seperti nomor, judul, lokasi, periode, PM, dan Ketua.
+        
+        Args:
+            plan_id (UUID | str): ID Surat Kerja (plan).
+            
+        Returns:
+            Any: Data header dokumen laporan.
+        """
+        # Melakukan JOIN dengan tabel employee (untuk PM dan Leader) dan unit bisnis
+        # untuk membentuk kop surat yang memuat semua informasi proyek
         return await self.fetchone(
             """
             SELECT wp.number, wp.title, wp.location_text, wp.category, bu.name AS unit_name,
@@ -104,6 +200,19 @@ class CRUDMemberReport(CRUDBase):
             {"plan": plan_id})
 
     async def daily_report_doc(self, day_id: UUID | str) -> Any:
+        """
+        Mengambil keseluruhan isi laporan harian (PM/Ketua) untuk hari tertentu, termasuk detail peninjau,
+        daftar lampiran bukti, serta sub-tugas pada hari tersebut.
+        Data ini digunakan untuk menghasilkan dokumen laporan.
+        
+        Args:
+            day_id (UUID | str): ID hari kerja.
+            
+        Returns:
+            Any: Data laporan harian lengkap beserta array bukti (evidence) dan tugas (tasks).
+        """
+        # Mengambil data daily_report, men-JOIN pengirim dan pemeriksa (reviewer)
+        # Serta menyusun array nama file bukti (evidence) dan daftar tugas (tasks) hari itu
         return await self.fetchone(
             """
             SELECT d.work_date, d.title AS day_title, CAST(r.status AS text) AS status, r.body, r.obstacle,
@@ -123,6 +232,18 @@ class CRUDMemberReport(CRUDBase):
             {"day": day_id})
 
     async def weekly_report_doc(self, plan_id: UUID | str, name: str) -> Any:
+        """
+        Mengambil laporan mingguan dari sebuah Surat Kerja berdasarkan namanya (misal 'Minggu 1'),
+        lengkap dengan rentang periode dan nama peninjau, untuk dirender ke dokumen.
+        
+        Args:
+            plan_id (UUID | str): ID rencana kerja.
+            name (str): Nama laporan mingguan.
+            
+        Returns:
+            Any: Data laporan mingguan lengkap.
+        """
+        # Mengambil detail laporan mingguan dengan mengurai rentang (range) covered_period menjadi start dan end.
         return await self.fetchone(
             """
             SELECT wr.name, lower(wr.covered_period) AS starts_on, upper(wr.covered_period) - 1 AS ends_on,

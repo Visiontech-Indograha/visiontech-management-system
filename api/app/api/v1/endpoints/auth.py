@@ -31,6 +31,15 @@ REFRESH_COOKIE_PATH = "/api/v1/auth"
 
 
 def client_info(request: Request) -> ClientInfo:
+    """
+    Fungsi pembantu untuk mengambil informasi klien (IP dan User-Agent) dari objek request.
+    
+    Args:
+        request (Request): Objek permintaan FastAPI.
+        
+    Returns:
+        ClientInfo: Informasi klien.
+    """
     host = request.client.host if request.client else None
     try:
         ip = str(ipaddress.ip_address(host)) if host else None
@@ -40,6 +49,17 @@ def client_info(request: Request) -> ClientInfo:
 
 
 def _issue(response: Response, tokens: IssuedTokens) -> TokenResponse:
+    """
+    Fungsi pembantu untuk menyematkan refresh token dalam cookie HttpOnly 
+    serta mereturn access token di payload.
+    
+    Args:
+        response (Response): Objek respons FastAPI.
+        tokens (IssuedTokens): Kumpulan token yang diterbitkan.
+        
+    Returns:
+        TokenResponse: Respons payload akses token.
+    """
     response.set_cookie(
         key=REFRESH_COOKIE, value=tokens.refresh_token, httponly=True,
         secure=True, samesite="strict", max_age=REFRESH_COOKIE_MAX_AGE, path=REFRESH_COOKIE_PATH,

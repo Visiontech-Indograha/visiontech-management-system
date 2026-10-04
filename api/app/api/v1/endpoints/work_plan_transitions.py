@@ -108,6 +108,15 @@ async def get_final_report(
 
 
 def _response(row: Any) -> WorkPlanResponse:
+    """
+    Fungsi pembantu untuk memetakan row data SK dari database ke skema WorkPlanResponse.
+    
+    Args:
+        row (Any): Row data Surat Kerja.
+        
+    Returns:
+        WorkPlanResponse: Respons model Surat Kerja.
+    """
     return WorkPlanResponse(**row._mapping)
 
 

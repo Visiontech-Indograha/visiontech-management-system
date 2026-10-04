@@ -46,6 +46,16 @@ def _rate_limit(ip: str) -> None:
 
 
 def _rows(rows: list[Any], model: Any) -> list[Any]:
+    """
+    Fungsi pembantu untuk memetakan kumpulan baris (row) database ke skema tertentu.
+    
+    Args:
+        rows (list[Any]): Daftar row dari database.
+        model (Any): Skema Pydantic tujuan (seperti SignatureOut).
+        
+    Returns:
+        list[Any]: Daftar model yang sudah dipetakan.
+    """
     return [model(**row._mapping) for row in rows]
 
 

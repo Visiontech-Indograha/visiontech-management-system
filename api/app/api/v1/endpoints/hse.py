@@ -83,7 +83,8 @@ async def report_incident(
             category, severity, description
         ) VALUES (
             :org, :plan, :emp, :occ, :cat, :sev, :desc
-        ) RETURNING *
+        ) RETURNING id, work_plan_id, reported_by, occurred_on, category, severity,
+                    description, status, resolved_by, resolved_at, resolution_note, created_at
     """)
     today = (await CRUDOrgClock(db).local_now(current_user.organization_id)).today
     res = await db.execute(ins, {
@@ -95,9 +96,11 @@ async def report_incident(
     
     # Insert evidence
     if data.evidence_file_ids:
-        ins_ev = text("INSERT INTO vms.incident_evidence (incident_id, file_id) VALUES (:inc, :fid)")
-        for fid in data.evidence_file_ids:
-            await db.execute(ins_ev, {"inc": incident.id, "fid": fid})
+        ins_ev = text("""
+            INSERT INTO vms.incident_evidence (incident_id, file_id)
+            SELECT :inc, unnest(CAST(:fids AS uuid[]))
+        """)
+        await db.execute(ins_ev, {"inc": incident.id, "fids": [str(f) for f in data.evidence_file_ids]})
             
     return IncidentResponse(**incident._mapping)
 
@@ -119,7 +122,10 @@ async def resolve_incident(
         UPDATE vms.incident_report
         SET status = 'RESOLVED', resolved_by = :emp, resolved_at = now(), resolution_note = :note
         WHERE id = :id AND organization_id = :org
-        RETURNING *
+        RETURNING id, work_plan_id, reported_by, occurred_on, category, severity,
+                  description, status, resolved_by, resolved_at, resolution_note, created_at,
+                  COALESCE(ARRAY(SELECT ie.file_id FROM vms.incident_evidence ie
+                                 WHERE ie.incident_id = vms.incident_report.id), '{}') AS evidence_file_ids
     """)
     res = await db.execute(upd, {
         "emp": my_emp, "note": data.resolution_note,
@@ -152,7 +158,7 @@ async def upsert_daily_report(
         ON CONFLICT (work_plan_day_id) DO UPDATE
         SET body = EXCLUDED.body, obstacle = EXCLUDED.obstacle, updated_at = now()
         WHERE vms.daily_report.status IN ('DRAFT', 'CHANGES_REQUESTED')
-        RETURNING *
+        RETURNING id, work_plan_day_id, status, body, obstacle, submitted_by, submitted_at, reviewed_at, resubmitted
     """)
     res = await db.execute(ups, {
         "day": day_id, "body": data.body, "obs": data.obstacle
@@ -163,9 +169,11 @@ async def upsert_daily_report(
 
     if data.evidence_file_ids:
         await db.execute(text("DELETE FROM vms.report_evidence WHERE daily_report_id = :rid"), {"rid": report.id})
-        ins_ev = text("INSERT INTO vms.report_evidence (daily_report_id, file_id) VALUES (:rid, :fid)")
-        for fid in data.evidence_file_ids:
-            await db.execute(ins_ev, {"rid": report.id, "fid": fid})
+        ins_ev = text("""
+            INSERT INTO vms.report_evidence (daily_report_id, file_id)
+            SELECT :rid, unnest(CAST(:fids AS uuid[]))
+        """)
+        await db.execute(ins_ev, {"rid": report.id, "fids": [str(f) for f in data.evidence_file_ids]})
             
     return DailyReportResponse(**report._mapping)
 
@@ -187,7 +195,7 @@ async def submit_daily_report(
         SET status = 'SUBMITTED', submitted_by = :emp, submitted_at = now(),
             resubmitted = resubmitted OR status = 'CHANGES_REQUESTED'   -- "Dikirim ulang" (alur SK v2)
         WHERE work_plan_day_id = :day AND status IN ('DRAFT', 'CHANGES_REQUESTED')
-        RETURNING *
+        RETURNING id, work_plan_day_id, status, body, obstacle, submitted_by, submitted_at, reviewed_at, resubmitted
     """)
     try:
         res = await db.execute(sub, {"emp": my_emp, "day": day_id})
@@ -223,7 +231,7 @@ async def review_daily_report(
         SET status = CAST(:status AS vms.report_status), review_note = :note, reviewed_at = now(),
             reviewed_by = (SELECT employee_id FROM vms.app_user WHERE id = :uid)
         WHERE work_plan_day_id = :day AND status = 'SUBMITTED'
-        RETURNING *
+        RETURNING id, work_plan_day_id, status, body, obstacle, submitted_by, submitted_at, reviewed_at, resubmitted
     """)
     report = (await db.execute(upd, {
         "status": "APPROVED" if data.decision == "APPROVE" else "CHANGES_REQUESTED",

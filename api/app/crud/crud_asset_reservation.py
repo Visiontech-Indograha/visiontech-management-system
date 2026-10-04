@@ -17,18 +17,19 @@ class CRUDAssetReservation(CRUDBase):
         """Aset organisasi + alokasi yang sedang berjalan + pengajuan pengembalian yang menunggu (R-19)."""
         return list(await self.fetchall(
             """
-            SELECT a.*, al.id AS allocation_id, al.work_plan_id, wp.number AS plan_number,
+            SELECT a.id, a.organization_id, a.kind, a.vehicle_type, a.code, a.name, a.condition, a.status, al.id AS allocation_id, al.work_plan_id, wp.number AS plan_number,
                    wp.leader_employee_id, r.id AS pending_return_id, r.condition_on_return AS return_condition,
                    r.note AS return_note, re.full_name AS return_requested_by_name
             FROM vms.asset a
             LEFT JOIN vms.asset_allocation al ON al.asset_id = a.id AND al.released_at IS NULL
             LEFT JOIN vms.work_plan wp ON wp.id = al.work_plan_id
-            LEFT JOIN LATERAL (SELECT * FROM vms.asset_return x
+            LEFT JOIN LATERAL (SELECT id, condition_on_return, note, requested_by FROM vms.asset_return x
                                WHERE x.asset_allocation_id = al.id AND x.verified_at IS NULL
                                ORDER BY x.requested_at DESC LIMIT 1) r ON true
             LEFT JOIN vms.employee re ON re.id = r.requested_by
             WHERE a.organization_id = :org AND a.deleted_at IS NULL
             ORDER BY a.name
+            LIMIT 100
             """,
             {"org": org_id}))
 
@@ -117,7 +118,7 @@ class CRUDAssetReservation(CRUDBase):
             """
             INSERT INTO vms.asset_allocation (asset_id, work_plan_id, driver_employee_id, allocated_by)
             VALUES (:asset, :plan, :driver, (SELECT employee_id FROM vms.app_user WHERE id = :uid))
-            RETURNING *
+            RETURNING id, asset_id, work_plan_id, driver_employee_id, allocated_by, allocated_at, released_at
             """,
             {"asset": asset_id, "plan": plan_id, "driver": driver_id, "uid": user_id},
         )

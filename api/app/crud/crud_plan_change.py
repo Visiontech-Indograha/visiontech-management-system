@@ -164,15 +164,14 @@ class CRUDPlanChange(CRUDBase):
                 """,
                 {"plan": plan_id, "day": day, "title": _DAY_TITLES[index % 3], "sort": index},
             )
-            if day_id is not None:
-                if _DAY_TASKS:
-                    await self.execute(
-                        """
-                        INSERT INTO vms.work_plan_task (work_plan_day_id, title, sort_order)
-                        SELECT :day, unnest(CAST(:titles AS text[])), unnest(CAST(:sorts AS int[]))
-                        """,
-                        {"day": day_id, "titles": _DAY_TASKS, "sorts": list(range(len(_DAY_TASKS)))}
-                    )
+            if day_id is not None and _DAY_TASKS:
+                await self.execute(
+                    """
+                    INSERT INTO vms.work_plan_task (work_plan_day_id, title, sort_order)
+                    SELECT :day, unnest(CAST(:titles AS text[])), unnest(CAST(:sorts AS int[]))
+                    """,
+                    {"day": day_id, "titles": _DAY_TASKS, "sorts": list(range(len(_DAY_TASKS)))}
+                )
             day += timedelta(days=1)
             index += 1
 

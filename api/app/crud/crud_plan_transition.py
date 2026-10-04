@@ -16,8 +16,24 @@ from .base import CRUDBase
 
 
 class CRUDPlanTransition(CRUDBase):
+    """
+    CRUD untuk mengelola transisi status SK (rencana kerja).
+    Termasuk pembatalan, pengarsipan, pengajuan adendum, penerbitan, hingga laporan akhir.
+    """
 
     async def lock_plan(self, plan_id: UUID | str, org_id: UUID | str, include_archived: bool = False) -> Any:
+        """
+        Mengunci baris rencana kerja (SK) untuk transaksi yang akan mengubah status.
+        
+        Args:
+            plan_id (UUID | str): ID SK.
+            org_id (UUID | str): ID organisasi.
+            include_archived (bool): Jika True, akan tetap memuat data yang sudah diarsipkan (soft-deleted).
+            
+        Returns:
+            Any: Record SK yang terkunci.
+        """
+        # FOR UPDATE mengamankan baris agar transaksi lain yang mengubah data yang sama harus menunggu.
         return await self.fetchone(
             """
             SELECT id, unit_id, site_id, number, title, location_text, description,
@@ -32,8 +48,15 @@ class CRUDPlanTransition(CRUDBase):
         )
 
     async def cancel(self, plan_id: UUID | str, reason: str) -> None:
-        """domain.js CANCEL_PLAN: SK batal; usulan terbuka & dokumen ditarik; aset yang masih dipesan dilepas.
-        Skema tidak punya status CANCELLED untuk dokumen/usulan → WITHDRAWN (dok 10 Bagian C)."""
+        """
+        Membatalkan SK; usulan perubahan ditarik dan aset yang masih dipesan dilepas.
+        SK yang dibatalkan beralih ke status CANCELLED.
+        
+        Args:
+            plan_id (UUID | str): ID SK yang dibatalkan.
+            reason (str): Alasan pembatalan.
+        """
+        # Memperbarui status SK dan menaikkan row_version.
         await self.execute(
             """
             UPDATE vms.work_plan
@@ -43,6 +66,7 @@ class CRUDPlanTransition(CRUDBase):
             """,
             {"plan": plan_id, "reason": reason, "cancelled": PlanStatus.CANCELLED},
         )
+        # Menarik kembali (WITHDRAWN) usulan perubahan yang masih tertunda.
         await self.execute(
             """
             UPDATE vms.plan_change SET status = CAST(:withdrawn AS vms.change_status)
@@ -50,11 +74,12 @@ class CRUDPlanTransition(CRUDBase):
             """,
             {"plan": plan_id, "withdrawn": ChangeStatus.WITHDRAWN},
         )
+        # Menarik dokumen SK yang belum selesai ditandatangani.
         await self.execute(
             "UPDATE vms.plan_document SET status = CAST(:withdrawn AS vms.document_status) WHERE work_plan_id = :plan",
             {"plan": plan_id, "withdrawn": DocumentStatus.WITHDRAWN},
         )
-        # Aset yang baru dipesan dilepas; yang sedang dipakai tetap wajib dikembalikan (prototipe).
+        # Aset yang baru dipesan (RESERVED) dilepas, namun yang sedang dipakai (IN_USE) tetap wajib dikembalikan.
         await self.execute(
             """
             WITH freed AS (
@@ -70,16 +95,44 @@ class CRUDPlanTransition(CRUDBase):
         )
 
     async def ever_published(self, plan_id: UUID | str) -> bool:
+        """
+        Mengecek apakah SK ini pernah diterbitkan (punya dokumen) atau belum.
+        
+        Args:
+            plan_id (UUID | str): ID SK.
+            
+        Returns:
+            bool: True jika pernah diterbitkan, False jika belum.
+        """
+        # Mengecek keberadaan record dokumen plan_document dari SK ini.
         return bool(await self.scalar(
             "SELECT EXISTS (SELECT 1 FROM vms.plan_document WHERE work_plan_id = :plan)", {"plan": plan_id}))
 
     async def has_active_allocation(self, plan_id: UUID | str) -> bool:
+        """
+        Mengecek apakah SK ini masih memiliki alokasi aset yang sedang aktif (belum dirilis).
+        
+        Args:
+            plan_id (UUID | str): ID SK.
+            
+        Returns:
+            bool: True jika ada alokasi aktif.
+        """
+        # Jika released_at IS NULL, aset masih dialokasikan pada SK ini.
         return bool(await self.scalar(
             "SELECT EXISTS (SELECT 1 FROM vms.asset_allocation WHERE work_plan_id = :plan AND released_at IS NULL)",
             {"plan": plan_id}))
 
     async def archive(self, plan_id: UUID | str, user_id: UUID | str, reason: str) -> None:
-        """domain.js DELETE_PLAN: soft delete — riwayat tetap ada."""
+        """
+        Soft delete rencana kerja — diarsipkan namun riwayat datanya tetap ada.
+        
+        Args:
+            plan_id (UUID | str): ID SK.
+            user_id (UUID | str): ID pengguna (app_user) yang menghapus.
+            reason (str): Alasan pengarsipan.
+        """
+        # Melakukan soft-delete dengan mengatur deleted_at menjadi sekarang (now()).
         await self.execute(
             """
             UPDATE vms.work_plan
@@ -90,13 +143,30 @@ class CRUDPlanTransition(CRUDBase):
         )
 
     async def restore(self, plan_id: UUID | str) -> None:
-        """domain.js RESTORE_PLAN — alasan pengarsipan tetap disimpan sebagai riwayat."""
+        """
+        Mengembalikan rencana kerja dari arsip (undo delete).
+        Alasan pengarsipan sebelumnya tidak diubah sebagai riwayat.
+        
+        Args:
+            plan_id (UUID | str): ID SK.
+        """
+        # Menghapus flag deleted_at dan deleted_by (NULL).
         await self.execute(
             "UPDATE vms.work_plan SET deleted_at = NULL, deleted_by = NULL, row_version = row_version + 1 WHERE id = :plan",
             {"plan": plan_id},
         )
 
     async def get_plan(self, plan_id: UUID | str) -> Any:
+        """
+        Mendapatkan metadata lengkap rencana kerja tanpa JSON snapshot.
+        
+        Args:
+            plan_id (UUID | str): ID SK.
+            
+        Returns:
+            Any: Metadata lengkap dari record SK.
+        """
+        # Membaca data umum work_plan secara utuh tanpa join rumit.
         return await self.fetchone(
             """
             SELECT id, unit_id, site_id, number, title, location_text, description,
@@ -109,7 +179,14 @@ class CRUDPlanTransition(CRUDBase):
         )
 
     async def appeal(self, plan_id: UUID | str, reason: str) -> None:
-        """domain.js APPEAL (alur v2: Ajukan adendum): SK terbit → APPEALED dengan alasan."""
+        """
+        Mengajukan banding/adendum atas SK yang sudah diterbitkan.
+        
+        Args:
+            plan_id (UUID | str): ID SK.
+            reason (str): Alasan banding.
+        """
+        # Memperbarui status menjadi APPEALED dan menyimpan alasan banding.
         await self.execute(
             """
             UPDATE vms.work_plan
@@ -118,7 +195,7 @@ class CRUDPlanTransition(CRUDBase):
             """,
             {"plan": plan_id, "reason": reason, "appealed": PlanStatus.APPEALED},
         )
-        # Alur SK v2: dokumen yang menunggu tanda tangan ketua tidak berlaku lagi (direvisi PM).
+        # Alur SK v2: dokumen yang menunggu tanda tangan ketua tidak berlaku lagi (karena sedang direvisi PM).
         await self.execute(
             "UPDATE vms.plan_document SET status = CAST(:superseded AS vms.document_status) "
             "WHERE work_plan_id = :plan AND status = :awaiting",
@@ -126,7 +203,17 @@ class CRUDPlanTransition(CRUDBase):
         )
 
     async def start_due(self, org_id: UUID | str, today: Any) -> list[str]:
-        """SK Diterima yang tanggal mulainya sudah tiba → Berjalan. Mengembalikan id yang berubah."""
+        """
+        Memulai SK yang sudah Diterima dan tanggal mulainya sudah tiba hari ini (menjadi IN_PROGRESS).
+        
+        Args:
+            org_id (UUID | str): ID organisasi.
+            today (Any): Tanggal batas mulai (hari ini).
+            
+        Returns:
+            list[str]: Daftar ID rencana kerja yang baru saja diaktifkan/dimulai.
+        """
+        # Melakukan UPDATE dan langsung mengembalikan ID record yang berhasil diubah dengan RETURNING.
         rows = await self.fetchall(
             """
             UPDATE vms.work_plan
@@ -140,7 +227,14 @@ class CRUDPlanTransition(CRUDBase):
         return [str(r.id) for r in rows]
 
     async def revise(self, plan_id: UUID | str) -> None:
-        """domain.js REVISE: kembali ke DRAFT, revisi berikutnya; semua dokumen lama digantikan."""
+        """
+        Mengembalikan rencana kerja (SK) ke status DRAFT untuk revisi berikutnya.
+        Dokumen revisi lama yang belum aktif menjadi kadaluarsa (SUPERSEDED).
+        
+        Args:
+            plan_id (UUID | str): ID SK.
+        """
+        # Menaikkan nilai versi revisi dari draft SK.
         await self.execute(
             """
             UPDATE vms.work_plan
@@ -149,13 +243,24 @@ class CRUDPlanTransition(CRUDBase):
             """,
             {"plan": plan_id, "draft": PlanStatus.DRAFT},
         )
+        # Menandai seluruh dokumen rencana kerja yang ada sebagai digantikan (SUPERSEDED).
         await self.execute(
             "UPDATE vms.plan_document SET status = CAST(:superseded AS vms.document_status) WHERE work_plan_id = :plan",
             {"plan": plan_id, "superseded": DocumentStatus.SUPERSEDED},
         )
 
     async def active_team(self, plan_id: UUID | str) -> list[Any]:
-        """Anggota aktif (valid_period terbuka) beserta status karyawannya."""
+        """
+        Mendapatkan tim yang aktif berpartisipasi dalam SK (valid_period terbuka),
+        beserta status keaktifan akun karyawannya.
+        
+        Args:
+            plan_id (UUID | str): ID SK.
+            
+        Returns:
+            list[Any]: Daftar record (employee_id, role_in_plan, employee_active).
+        """
+        # Cek upper_inf(valid_period) untuk memastikan anggotanya masih aktif di dalam proyek ini.
         return list(await self.fetchall(
             """
             SELECT m.employee_id::text AS employee_id, m.role_in_plan::text AS role_in_plan,
@@ -167,7 +272,19 @@ class CRUDPlanTransition(CRUDBase):
         ))
 
     async def day_details_complete(self, plan_id: UUID | str) -> bool:
-        """Setiap tanggal periode punya hari berjudul dengan ≥ 1 tugas berjudul (domain.js PUBLISH)."""
+        """
+        Memastikan setiap hari dalam periode SK sudah terisi dengan detail kerja.
+        Syarat: setiap tanggal harus punya judul hari yang valid dan minimal 1 tugas berjudul.
+        
+        Args:
+            plan_id (UUID | str): ID SK.
+            
+        Returns:
+            bool: True jika lengkap seluruh harinya.
+        """
+        # Menghitung selisih (jumlah hari SK) lalu membandingkannya dengan
+        # jumlah baris vms.work_plan_day yang memenuhi syarat judul terisi
+        # serta memiliki setidaknya satu tugas tanpa judul kosong.
         return bool(await self.scalar(
             """
             SELECT
@@ -184,7 +301,19 @@ class CRUDPlanTransition(CRUDBase):
         ))
 
     async def snapshot(self, plan_id: UUID | str) -> Any:
-        """Isi beku dokumen: SK, tim aktif, hari beserta tugasnya, lampiran (domain.js snapshot)."""
+        """
+        Membekukan isi dokumen secara komprehensif saat pembuatan SK.
+        Data ini disisipkan utuh agar tidak terpengaruh oleh perubahan master ke depan.
+        
+        Args:
+            plan_id (UUID | str): ID SK.
+            
+        Returns:
+            Any: Record JSON dokumen beku.
+        """
+        # Menyatukan data SK dasar, tim anggota aktif, detail hari dan task,
+        # alokasi aset, serta lampiran ke dalam satu hirarki besar berformat JSONB
+        # agar terjamin keutuhannya sebagai snapshot (dokumen tak tergoyahkan).
         return await self.scalar(
             """
             SELECT jsonb_build_object(
@@ -234,13 +363,39 @@ class CRUDPlanTransition(CRUDBase):
         )
 
     async def employee_id_of(self, user_id: UUID | str) -> str | None:
+        """
+        Mendapatkan ID Karyawan yang merujuk pada pengguna sistem.
+        
+        Args:
+            user_id (UUID | str): ID pengguna (app_user).
+            
+        Returns:
+            str | None: ID Karyawan bila ada.
+        """
         value = await self.scalar("SELECT employee_id::text FROM vms.app_user WHERE id = :uid", {"uid": user_id})
         return str(value) if value else None
 
     async def is_leader(self, plan_id: UUID | str, user_id: UUID | str) -> bool:
+        """
+        Memastikan apakah user ini berhak menyetujui sebagai Ketua SK.
+        
+        Args:
+            plan_id (UUID | str): ID SK.
+            user_id (UUID | str): ID pengguna saat ini.
+            
+        Returns:
+            bool: True bila user bertindak sebagai Leader.
+        """
+        # Mengeksekusi function internal vms.is_plan_leader untuk cek otoritas leader.
         return bool(await self.scalar("SELECT vms.is_plan_leader(:plan, :user)", {"plan": plan_id, "user": user_id}))
 
     async def publish(self, plan_id: UUID | str) -> None:
+        """
+        Menerbitkan dokumen SK dan menyematkan format nomor sementara jika SK belum punya nomor.
+        
+        Args:
+            plan_id (UUID | str): ID SK.
+        """
         # Nomor SK sementara; format resmi ditetapkan fase 6 dari contoh dokumen perusahaan (K-14).
         # Pakai 8 karakter TERAKHIR id: awal UUIDv7 adalah cap waktu, sehingga SK yang dibuat
         # berdekatan dulu bernomor sama → terbit gagal duplicate key (temuan uji nyata R-17).
@@ -255,11 +410,22 @@ class CRUDPlanTransition(CRUDBase):
         )
 
     async def insert_document(self, plan_id: UUID | str, revision: int, snapshot: Any, issued_by: str) -> None:
+        """
+        Memasukkan riwayat dokumen SK baru dari hasil snapshot.
+        
+        Args:
+            plan_id (UUID | str): ID SK.
+            revision (int): Versi revisi dokumen ini.
+            snapshot (Any): Payload beku JSON.
+            issued_by (str): ID Karyawan yang menerbitkan (PM).
+        """
+        # Melakukan duplikasi record ke dalam tabel plan_document dan di set ke AWAITING_ACCEPTANCE.
+        # SHA256 snapshot tidak dihitung di sini, karena sudah ada trigger basis data (plan_document_hash).
         await self.execute(
             """
             INSERT INTO vms.plan_document (work_plan_id, kind, version, number, status, snapshot, snapshot_sha256, issued_by)
             SELECT id, CAST(:kind AS vms.document_kind), :version, number, CAST(:status AS vms.document_status),
-                   CAST(:snapshot AS jsonb), ''::bytea, :issued_by   -- hash dihitung trigger plan_document_hash
+                   CAST(:snapshot AS jsonb), ''::bytea, :issued_by
             FROM vms.work_plan WHERE id = :plan
             """,
             {
@@ -270,7 +436,15 @@ class CRUDPlanTransition(CRUDBase):
         )
 
     async def activate_reserved_assets(self, plan_id: UUID | str) -> None:
-        """domain.js START: reservasi SK menjadi IN_USE — alat langsung, kendaraan setelah diperiksa pengemudi."""
+        """
+        Mengaktifkan status aset (alat/kendaraan) yang dipesan untuk SK agar berstatus 'IN_USE'.
+        
+        Args:
+            plan_id (UUID | str): ID SK.
+        """
+        # Alat (TOOL) langsung aktif menjadi 'IN_USE'.
+        # Sedangkan kendaraan (VEHICLE) mensyaratkan driver_checked_at sudah tidak NULL 
+        # (kendaraan telah diperiksa fisiknya oleh pengemudi yang ditunjuk).
         await self.execute(
             """
             UPDATE vms.asset a SET status = 'IN_USE', updated_at = now()
@@ -282,6 +456,16 @@ class CRUDPlanTransition(CRUDBase):
         )
 
     async def has_unchecked_vehicle(self, plan_id: UUID | str) -> bool:
+        """
+        Mengecek apakah SK ini memiliki kendaraan yang masih tertunda verifikasi oleh pengemudinya.
+        
+        Args:
+            plan_id (UUID | str): ID SK.
+            
+        Returns:
+            bool: True jika ada kendaraan (VEHICLE) dengan driver_checked_at yang masih kosong.
+        """
+        # Mengevaluasi keterkaitan alokasi kendaraan yang belum dilakukan checklist.
         return bool(await self.scalar(
             """
             SELECT EXISTS (
@@ -296,12 +480,28 @@ class CRUDPlanTransition(CRUDBase):
         ))
 
     async def set_status(self, plan_id: UUID | str, status: PlanStatus) -> None:
+        """
+        Mengubah status rencana kerja (SK) ke status tertentu.
+        
+        Args:
+            plan_id (UUID | str): ID SK.
+            status (PlanStatus): Status baru.
+        """
+        # Menulis ulang field status SK langsung dan menaikkan row_version.
         await self.execute(
             "UPDATE vms.work_plan SET status = CAST(:status AS vms.plan_status), row_version = row_version + 1 WHERE id = :plan",
             {"plan": plan_id, "status": status},
         )
 
     async def accept_document(self, plan_id: UUID | str, employee_id: str) -> None:
+        """
+        Menyetujui dan mengefektifkan dokumen SK.
+        
+        Args:
+            plan_id (UUID | str): ID SK.
+            employee_id (str): ID karyawan yang menyetujui.
+        """
+        # Memperbarui dokumen yang sedang 'AWAITING_ACCEPTANCE' menjadi 'EFFECTIVE'.
         await self.execute(
             """
             UPDATE vms.plan_document SET status = :effective, accepted_by = :emp, accepted_at = now()
@@ -313,6 +513,16 @@ class CRUDPlanTransition(CRUDBase):
 
     # ── Penyelesaian SK (V-26, domain.js REQUEST/APPROVE/RETURN_COMPLETE) ─────────────────────
     async def has_open_change(self, plan_id: UUID | str) -> bool:
+        """
+        Memeriksa apakah ada usulan adendum/perubahan yang masih terbuka (belum disetujui atau ditolak).
+        
+        Args:
+            plan_id (UUID | str): ID SK.
+            
+        Returns:
+            bool: True jika ada adendum terbuka.
+        """
+        # Mengecek status plan_change 'PENDING_PM' atau 'AWAITING_LEADER_ACCEPTANCE'.
         return bool(await self.scalar(
             """
             SELECT EXISTS (SELECT 1 FROM vms.plan_change
@@ -321,6 +531,16 @@ class CRUDPlanTransition(CRUDBase):
             {"plan": plan_id}))
 
     async def all_days_approved(self, plan_id: UUID | str) -> bool:
+        """
+        Memastikan bahwa seluruh laporan harian untuk SK ini telah disetujui (APPROVED).
+        
+        Args:
+            plan_id (UUID | str): ID SK.
+            
+        Returns:
+            bool: True jika tidak ada laporan yang statusnya selain APPROVED.
+        """
+        # Menggunakan IS DISTINCT FROM 'APPROVED' untuk menangkap status lain atau laporan harian yang belum dibuat (NULL).
         return not await self.scalar(
             """
             SELECT EXISTS (SELECT 1 FROM vms.work_plan_day wpd
@@ -330,7 +550,16 @@ class CRUDPlanTransition(CRUDBase):
             {"plan": plan_id})
 
     async def final_report(self, plan_id: UUID | str) -> Any:
-        """Laporan akhir beserta nama pengaju/pemeriksa dan bukti. None bila belum pernah diajukan."""
+        """
+        Mengambil informasi laporan akhir beserta nama pengaju/pemeriksa dan buktinya.
+        
+        Args:
+            plan_id (UUID | str): ID SK.
+            
+        Returns:
+            Any: Record laporan akhir, atau None bila belum pernah diajukan.
+        """
+        # Menggabungkan final_report dengan array data ID file dari final_report_evidence.
         return await self.fetchone(
             """
             SELECT CAST(fr.status AS text) AS status, fr.body, fr.obstacle,
@@ -347,8 +576,20 @@ class CRUDPlanTransition(CRUDBase):
             {"plan": plan_id})
 
     async def final_report_snapshot(self, plan_id: UUID | str, approver: str | None, note: str | None) -> Any:
-        """Isi laporan akhir yang dibekukan saat disetujui (R-19): SK, tim, laporan, lampiran, insiden,
-        dan persetujuannya."""
+        """
+        Membuat record JSON (snapshot) dari isi laporan akhir yang disetujui (R-19).
+        Meliputi: SK, tim, laporan harian, lampiran, insiden, dan persetujuannya.
+        
+        Args:
+            plan_id (UUID | str): ID SK.
+            approver (str | None): ID karyawan (app_user.id) yang menyetujui.
+            note (str | None): Catatan persetujuan tambahan.
+            
+        Returns:
+            Any: Snapshot laporan akhir.
+        """
+        # Pembangunan JSONB komprehensif agar riwayat penyelesaian tercetak
+        # dengan kondisi data real-time pada saat laporan akhir ini disetujui.
         return await self.scalar(
             """
             SELECT jsonb_build_object(
@@ -379,23 +620,61 @@ class CRUDPlanTransition(CRUDBase):
             {"plan": plan_id, "approver": approver, "note": note})
 
     async def store_final_snapshot(self, plan_id: UUID | str, snapshot: str, sha256: bytes) -> None:
+        """
+        Menyimpan snapshot beku laporan akhir beserta hash SHA-256 nya.
+        
+        Args:
+            plan_id (UUID | str): ID SK.
+            snapshot (str): JSON string dari final_report_snapshot.
+            sha256 (bytes): Nilai hash SHA-256 dari JSON tersebut.
+        """
+        # Mengisi snapshot dan snapshot_sha256 pada tabel final_report.
         await self.execute(
             "UPDATE vms.final_report SET snapshot = CAST(:snap AS jsonb), snapshot_sha256 = :sha "
             "WHERE work_plan_id = :plan",
             {"plan": plan_id, "snap": snapshot, "sha": sha256})
 
     async def final_report_submitter(self, plan_id: UUID | str) -> str | None:
+        """
+        Mengambil ID karyawan pembuat (submitter) laporan akhir.
+        
+        Args:
+            plan_id (UUID | str): ID SK.
+            
+        Returns:
+            str | None: ID karyawan, atau None.
+        """
         value = await self.scalar(
             "SELECT CAST(submitted_by AS text) FROM vms.final_report WHERE work_plan_id = :plan", {"plan": plan_id})
         return str(value) if value else None
 
     async def final_report_status(self, plan_id: UUID | str) -> str | None:
+        """
+        Mendapatkan status saat ini dari laporan akhir.
+        
+        Args:
+            plan_id (UUID | str): ID SK.
+            
+        Returns:
+            str | None: Status laporan akhir.
+        """
         status: str | None = await self.scalar(
             "SELECT CAST(status AS text) FROM vms.final_report WHERE work_plan_id = :plan", {"plan": plan_id})
         return status
 
     async def submit_final_report(self, plan_id: UUID | str, user_id: UUID | str, body: str, obstacle: str,
                                   file_ids: list[UUID]) -> None:
+        """
+        Mengajukan/menyimpan (upsert) laporan akhir.
+        
+        Args:
+            plan_id (UUID | str): ID SK.
+            user_id (UUID | str): ID pengguna (app_user) yang mengajukan.
+            body (str): Isi laporan akhir.
+            obstacle (str): Kendala keseluruhan pelaksanaan SK.
+            file_ids (list[UUID]): Daftar lampiran dokumen bukti.
+        """
+        # Melakukan UPSERT: Jika sudah pernah diajukan, status kembali ke 'SUBMITTED' dan body terbarui.
         await self.execute(
             """
             INSERT INTO vms.final_report (work_plan_id, status, body, obstacle, submitted_by, submitted_at)
@@ -407,6 +686,7 @@ class CRUDPlanTransition(CRUDBase):
             """,
             {"plan": plan_id, "uid": user_id, "body": body, "obstacle": obstacle},
         )
+        # Menghapus dan menulis ulang relasi file untuk tabel final_report_evidence.
         await self.execute("DELETE FROM vms.final_report_evidence WHERE work_plan_id = :plan", {"plan": plan_id})
         if file_ids:
             await self.execute(
@@ -418,6 +698,16 @@ class CRUDPlanTransition(CRUDBase):
 
     async def review_final_report(self, plan_id: UUID | str, user_id: UUID | str, status: str,
                                   note: str | None) -> None:
+        """
+        Menyimpan hasil evaluasi/penilaian atas laporan akhir (Review).
+        
+        Args:
+            plan_id (UUID | str): ID SK.
+            user_id (UUID | str): ID pengguna (app_user) yang mengevaluasi.
+            status (str): Status persetujuan ('APPROVED' atau 'CHANGES_REQUESTED').
+            note (str | None): Catatan review.
+        """
+        # Mengubah status final_report, merekam catatan, dan timestamp reviewed_at.
         await self.execute(
             """
             UPDATE vms.final_report

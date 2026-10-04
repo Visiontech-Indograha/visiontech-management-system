@@ -234,6 +234,20 @@ class PlanTransitionService:
         return await self.repo.get_plan(plan_id)
 
     async def start(self, plan_id: UUID, org_id: str, user_id: str, row_version: int) -> Any:
+        """
+        Memulai pekerjaan (START) secara manual oleh Ketua Tim.
+        Dalam alur SK v2, pekerjaan biasanya otomatis berjalan pada tanggal mulai.
+        Fungsi ini membuatnya idempoten jika dipanggil manual.
+        
+        Args:
+            plan_id (UUID): ID SK.
+            org_id (str): ID Organisasi.
+            user_id (str): ID Ketua Tim.
+            row_version (int): Versi baris.
+            
+        Returns:
+            Any: Data SK dengan status IN_PROGRESS.
+        """
         # Alur SK v2: SK biasanya sudah Berjalan otomatis pada tanggal mulai — "mulai" manual menjadi idempoten.
         current = await self.repo.lock_plan(plan_id, org_id)
         if current is not None and current.status == PlanStatus.IN_PROGRESS:
@@ -257,6 +271,15 @@ class PlanTransitionService:
         return await self.repo.final_report(plan_id)
 
     async def _weeks_approved(self, plan_id: UUID) -> bool:
+        """
+        Memeriksa apakah seluruh laporan mingguan telah disetujui (APPROVED).
+        
+        Args:
+            plan_id (UUID): ID SK.
+            
+        Returns:
+            bool: True jika semuanya berstatus APPROVED atau tidak ada laporan mingguan.
+        """
         weeks = await CRUDWeeklyReport(self.repo.db).list_weeks(plan_id)
         return all(week.status == "APPROVED" for week in weeks)
 

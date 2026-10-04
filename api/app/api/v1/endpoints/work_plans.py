@@ -396,7 +396,11 @@ async def save_day(
     await db.execute(text("UPDATE vms.work_plan_day SET title = :title WHERE id = :day"),
                      {"title": data.title.strip(), "day": day_id})
     await db.execute(text("DELETE FROM vms.work_plan_task WHERE work_plan_day_id = :day"), {"day": day_id})
-    for order, title in enumerate(titles):
-        await db.execute(text("INSERT INTO vms.work_plan_task (work_plan_day_id, title, sort_order) "
-                              "VALUES (:day, :title, :sort)"), {"day": day_id, "title": title, "sort": order})
+    if titles:
+        ins = text("""
+            INSERT INTO vms.work_plan_task (work_plan_day_id, title, sort_order)
+            SELECT :day, u.title, u.sort
+            FROM unnest(CAST(:titles AS text[]), CAST(:sorts AS int[])) AS u(title, sort)
+        """)
+        await db.execute(ins, {"day": day_id, "titles": titles, "sorts": list(range(len(titles)))})
     return {"id": str(day_id), "title": data.title.strip(), "tasks": titles}

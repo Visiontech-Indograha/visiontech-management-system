@@ -165,10 +165,13 @@ class CRUDPlanChange(CRUDBase):
                 {"plan": plan_id, "day": day, "title": _DAY_TITLES[index % 3], "sort": index},
             )
             if day_id is not None:
-                for order, title in enumerate(_DAY_TASKS):
+                if _DAY_TASKS:
                     await self.execute(
-                        "INSERT INTO vms.work_plan_task (work_plan_day_id, title, sort_order) VALUES (:day, :title, :sort)",
-                        {"day": day_id, "title": title, "sort": order},
+                        """
+                        INSERT INTO vms.work_plan_task (work_plan_day_id, title, sort_order)
+                        SELECT :day, unnest(CAST(:titles AS text[])), unnest(CAST(:sorts AS int[]))
+                        """,
+                        {"day": day_id, "titles": _DAY_TASKS, "sorts": list(range(len(_DAY_TASKS)))}
                     )
             day += timedelta(days=1)
             index += 1
@@ -193,19 +196,21 @@ class CRUDPlanChange(CRUDBase):
             """,
             {"plan": plan_id, "emps": [e for e, _ in wanted], "roles": [r for _, r in wanted]},
         )
-        for employee_id, role in wanted:
+        if wanted:
             await self.execute(
                 """
                 INSERT INTO vms.work_plan_member (work_plan_id, employee_id, role_in_plan, valid_period)
-                SELECT wp.id, CAST(:emp AS uuid), CAST(:role AS vms.role_code),
+                SELECT wp.id, CAST(u.emp AS uuid), CAST(u.role AS vms.role_code),
                        daterange(GREATEST(lower(wp.period), (now() AT TIME ZONE o.timezone)::date), NULL, '[)')
-                FROM vms.work_plan wp JOIN vms.organization o ON o.id = wp.organization_id
+                FROM vms.work_plan wp 
+                JOIN vms.organization o ON o.id = wp.organization_id
+                CROSS JOIN unnest(CAST(:emps AS text[]), CAST(:roles AS text[])) AS u(emp, role)
                 WHERE wp.id = :plan AND NOT EXISTS (
                     SELECT 1 FROM vms.work_plan_member m
-                    WHERE m.work_plan_id = wp.id AND m.employee_id = CAST(:emp AS uuid)
-                      AND m.role_in_plan = CAST(:role AS vms.role_code) AND upper_inf(m.valid_period))
+                    WHERE m.work_plan_id = wp.id AND m.employee_id = CAST(u.emp AS uuid)
+                      AND m.role_in_plan = CAST(u.role AS vms.role_code) AND upper_inf(m.valid_period))
                 """,
-                {"plan": plan_id, "emp": employee_id, "role": role},
+                {"plan": plan_id, "emps": [str(e) for e, _ in wanted], "roles": [r for _, r in wanted]}
             )
         await self.execute(
             """

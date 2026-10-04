@@ -55,7 +55,7 @@ class CRUDOvertime(CRUDBase):
                 CAST(:org AS uuid), CAST(:plan AS uuid), CAST(:doc AS uuid),
                 CAST(:emp AS uuid), CAST(:date AS date),
                 CAST(:hours AS numeric), :reason
-            ) RETURNING *
+            ) RETURNING id, work_plan_id, plan_document_id, employee_id, work_date, hours, reason, status, reviewed_by, reviewed_at, review_note, created_at
             """,
             {
                 "org": org_id, "plan": plan_id, "doc": doc_id,
@@ -96,7 +96,7 @@ class CRUDOvertime(CRUDBase):
                    reviewed_at = now(),
                    review_note = :note
              WHERE id = CAST(:ot AS uuid) AND CAST(status AS text) = 'PENDING_PM'
-            RETURNING *
+            RETURNING id, work_plan_id, plan_document_id, employee_id, work_date, hours, reason, status, reviewed_by, reviewed_at, review_note, created_at
             """,
             {"ot": overtime_id, "decision": decision, "emp": reviewer_emp, "note": note},
         )

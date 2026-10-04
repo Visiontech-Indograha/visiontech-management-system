@@ -87,13 +87,14 @@ class CRUDPlanMember(CRUDBase):
         """Ganti seluruh susunan tim SK draft (belum ada dokumen terbit, jadi tidak ada riwayat yang hilang)."""
         await self.execute("DELETE FROM vms.work_plan_member WHERE work_plan_id = :plan", {"plan": plan_id})
         rows = ([(leader_id, "LEADER")] if leader_id else []) + [(m, "MEMBER") for m in member_ids]
-        for employee_id, role in rows:
+        if rows:
             await self.execute(
                 """
                 INSERT INTO vms.work_plan_member (work_plan_id, employee_id, role_in_plan, valid_period)
-                VALUES (:plan, :emp, CAST(:role AS vms.role_code), daterange(CAST(:start AS date), NULL, '[)'))
+                SELECT :plan, CAST(u.emp AS uuid), CAST(u.role AS vms.role_code), daterange(CAST(:start AS date), NULL, '[)')
+                FROM unnest(CAST(:emps AS text[]), CAST(:roles AS text[])) AS u(emp, role)
                 """,
-                {"plan": plan_id, "emp": employee_id, "role": role, "start": start},
+                {"plan": plan_id, "emps": [str(r[0]) for r in rows], "roles": [r[1] for r in rows], "start": start},
             )
 
     async def set_leader(self, plan_id: UUID | str, leader_id: UUID | str | None) -> int:

@@ -49,7 +49,7 @@ async def create_asset(
     ins = text("""
         INSERT INTO vms.asset (organization_id, kind, vehicle_type, code, name, condition)
         VALUES (:org, :kind, :vtype, :code, :name, :cond)
-        RETURNING *
+        RETURNING id, organization_id, kind, vehicle_type, code, name, condition, status
     """)
     try:
         res = await db.execute(ins, {
@@ -171,7 +171,7 @@ async def request_asset_return(
             asset_allocation_id, requested_by, condition_on_return, note
         ) VALUES (
             :alloc, :emp, :cond, :note
-        ) RETURNING *
+        ) RETURNING id, asset_allocation_id, requested_by, requested_at, condition_on_return, note, verified_by, verified_at, is_accepted
     """)
     res = await db.execute(ins, {
         "alloc": alloc_id, "emp": my_emp,
@@ -215,7 +215,7 @@ async def verify_asset_return(
         UPDATE vms.asset_return
         SET verified_by = :emp, verified_at = now(), is_accepted = :acc, note = COALESCE(note, '') || '\n' || :note
         WHERE id = :id
-        RETURNING *
+        RETURNING id, asset_allocation_id, requested_by, requested_at, condition_on_return, note, verified_by, verified_at, is_accepted
     """)
     res = await db.execute(upd, {"emp": my_emp, "acc": data.is_accepted, "note": data.note or "", "id": return_id})
     row = res.one()

@@ -20,7 +20,7 @@ from .base import CRUDBase
 
 # `:plan` NULL → semua SK terlihat (daftar); terisi → satu SK (penjaga). `:status` NULL → semua status.
 _STANDING = """
-    SELECT * FROM (
+    SELECT id, unit_id, site_id, number, title, location_text, description, period_start, period_end, status, pm_employee_id, leader_employee_id, revision, row_version, cancellation_reason, appeal_reason, category, created_at, manages, is_leader, is_member, visible FROM (
         SELECT wp.id, wp.unit_id, wp.site_id, wp.number, wp.title, wp.location_text, wp.description,
                lower(wp.period) AS period_start, upper(wp.period) - 1 AS period_end,
                wp.status, wp.pm_employee_id, wp.leader_employee_id, wp.revision, wp.row_version,
@@ -66,7 +66,7 @@ class CRUDPlanAccess(CRUDBase):
 
     async def visible_plans(self, org_id: UUID | str, user_id: UUID | str, status: str | None,
                             archived: bool = False) -> Sequence[Any]:
-        return await self.fetchall(_STANDING, {"plan": None, "org": org_id, "user": user_id,
+        return await self.fetchall(_STANDING + " LIMIT 100", {"plan": None, "org": org_id, "user": user_id,
                                                "status": status, "archived": archived})
 
     async def plan_of_day(self, day_id: UUID | str) -> Any:

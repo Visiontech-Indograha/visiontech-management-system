@@ -177,7 +177,7 @@ async def update_employee(
     query = text(f"""
         UPDATE vms.employee SET {", ".join(updates)} 
         WHERE id = :id AND organization_id = :org
-        RETURNING *
+        RETURNING id, employee_no, full_name, position, unit_id, email, phone, join_date, birth_date, address, emergency_contact, attendance_mode, is_active, offboarded_at, offboarding_reason
     """)
     res = await db.execute(query, params)
     row = res.fetchone()

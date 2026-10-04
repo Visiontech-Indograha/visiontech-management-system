@@ -62,10 +62,15 @@ class CRUDMemberReport(CRUDBase):
 
     async def replace_evidence(self, report_id: UUID | str, file_ids: Iterable[UUID]) -> None:
         await self.execute("DELETE FROM vms.member_report_evidence WHERE member_report_id = :rid", {"rid": report_id})
-        for file_id in dict.fromkeys(file_ids):
+        unique_fids = list(dict.fromkeys(file_ids))
+        if unique_fids:
             await self.execute(
-                "INSERT INTO vms.member_report_evidence (member_report_id, file_id) VALUES (:rid, :fid)",
-                {"rid": report_id, "fid": file_id})
+                """
+                INSERT INTO vms.member_report_evidence (member_report_id, file_id)
+                SELECT :rid, unnest(CAST(:fids AS uuid[]))
+                """,
+                {"rid": report_id, "fids": [str(f) for f in unique_fids]}
+            )
 
     async def send(self, day_id: UUID | str, employee_id: str) -> Any:
         return await self.fetchone(

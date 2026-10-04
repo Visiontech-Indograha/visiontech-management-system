@@ -25,5 +25,16 @@ def _out(row: Any) -> PlanDayOut:
 @router.get("", response_model=list[PlanDayOut])
 async def list_plan_days(access: PlanAccess = _VIEW_ACCESS,
                          plan_day_service: PlanDayService = Depends(get_plan_day_service)) -> list[PlanDayOut]:
-    """Siapa pun yang melihat SK (V-07); SK tak terlihat / organisasi lain → 404."""
+    """
+    Mengambil daftar hari kerja beserta tugas dan laporan harian dari SK (GET).
+    Siapa pun yang melihat SK (V-07); SK tak terlihat / organisasi lain → 404.
+    
+    Path Parameters:
+    - plan_id (tersirat via router prefix): ID SK bersangkutan.
+    
+    Returns:
+    - list[PlanDayOut]: Daftar detail hari kerja SK.
+    """
+    # Menggunakan Dependency Injection untuk kontrol visibilitas plan (_VIEW_ACCESS)
+    # Memanggil service layer untuk mengambil data hari kerja
     return [_out(row) for row in await plan_day_service.list_days(access)]

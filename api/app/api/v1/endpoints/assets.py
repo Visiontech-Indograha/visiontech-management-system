@@ -46,6 +46,16 @@ async def create_asset(
     current_user: CurrentUser = Depends(require_permission(Permission.MANAGE_ASSETS)),
     db: AsyncSession = Depends(get_db_with_user)
 ) -> AssetResponse:
+    """
+    Membuat aset baru.
+    
+    Body params:
+    - data: Data pembuatan aset baru (AssetCreate)
+    
+    Return: Detail aset yang baru dibuat (AssetResponse)
+    """
+    # Memastikan pengguna memiliki izin MANAGE_ASSETS menggunakan Depends (injeksi dependensi)
+    # Mengambil koneksi database dari injeksi dependensi (get_db_with_user)
     ins = text("""
         INSERT INTO vms.asset (organization_id, kind, vehicle_type, code, name, condition)
         VALUES (:org, :kind, :vtype, :code, :name, :cond)
@@ -66,7 +76,13 @@ async def get_assets(
     current_user: CurrentUser = Depends(get_current_user),
     asset_reservation_service: AssetReservationService = Depends(get_asset_reservation_service)
 ) -> list[AssetListItem]:
-    """Aset organisasi + alokasi berjalan + pengajuan pengembalian yang menunggu (M6/R9 dari layar)."""
+    """
+    Aset organisasi + alokasi berjalan + pengajuan pengembalian yang menunggu (M6/R9 dari layar).
+    
+    Return: Daftar ringkasan aset organisasi (list[AssetListItem])
+    """
+    # Menggunakan injeksi dependensi untuk mendapatkan pengguna saat ini dan AssetReservationService
+    # Memanggil service layer untuk mengambil list aset organisasi terkait
     rows = await asset_reservation_service.list_assets(current_user.organization_id)
     return [AssetListItem(**r._mapping) for r in rows]
 
@@ -76,7 +92,15 @@ async def get_asset_returns(
     current_user: CurrentUser = Depends(get_current_user),
     asset_reservation_service: AssetReservationService = Depends(get_asset_reservation_service)
 ) -> list[AssetReturnHistoryItem]:
-    """Riwayat pengembalian aset (terbaru dulu). Aset organisasi lain → 404."""
+    """
+    Riwayat pengembalian aset (terbaru dulu). Aset organisasi lain → 404.
+    
+    Path params:
+    - asset_id: UUID aset
+    
+    Return: Riwayat pengembalian aset (list[AssetReturnHistoryItem])
+    """
+    # Memanggil method return_history dari service layer yang diinjeksi
     rows = await asset_reservation_service.return_history(current_user.organization_id, asset_id)
     return [AssetReturnHistoryItem(**r._mapping) for r in rows]
 
@@ -87,7 +111,15 @@ async def get_bast_pdf(
     current_user: CurrentUser = Depends(get_current_user),
     asset_reservation_service: AssetReservationService = Depends(get_asset_reservation_service)
 ) -> Response:
-    """Berita acara serah terima (P6-4) untuk pengembalian yang sudah diperiksa. Render → threadpool."""
+    """
+    Berita acara serah terima (P6-4) untuk pengembalian yang sudah diperiksa. Render → threadpool.
+    
+    Path params:
+    - return_id: UUID catatan pengembalian
+    
+    Return: File PDF (Response)
+    """
+    # Memanggil fungsi bast dari service layer yang diinjeksi
     record = await asset_reservation_service.bast(current_user.organization_id, return_id)
     pdf = await run_in_threadpool(html_to_pdf, render_bast_html(record))
     filename = f"BAST-{record.asset_code}-{record.plan_number}.pdf".replace("/", "-")
@@ -103,7 +135,19 @@ async def reserve_asset(
     db: AsyncSession = Depends(get_db_with_user),
     asset_reservation_service: AssetReservationService = Depends(get_asset_reservation_service)
 ) -> AssetAllocationResponse:
-    """domain.js RESERVE_ASSET (V-27): petugas aset atau PM unit/OPS SK memesan aset untuk SK aktif."""
+    """
+    domain.js RESERVE_ASSET (V-27): petugas aset atau PM unit/OPS SK memesan aset untuk SK aktif.
+    
+    Path params:
+    - asset_id: UUID aset yang dipesan
+    
+    Body params:
+    - data: Data reservasi aset (AssetReserveRequest)
+    
+    Return: Detail alokasi aset yang direkam (AssetAllocationResponse)
+    """
+    # Mengambil koneksi database dan instance AssetReservationService menggunakan dependensi injeksi
+    # Melakukan delegasi logika ke service layer
     await ensure_same_org(db, current_user.organization_id, assets=[asset_id],
                           work_plans=[data.work_plan_id], employees=[data.driver_employee_id])
     allocation = await asset_reservation_service.reserve(current_user, asset_id, data.work_plan_id,
@@ -119,7 +163,18 @@ async def release_asset(
     db: AsyncSession = Depends(get_db_with_user),
     asset_reservation_service: AssetReservationService = Depends(get_asset_reservation_service)
 ) -> AssetStatusResponse:
-    """domain.js RELEASE_ASSET (V-27): reservasi yang belum dipakai dilepas."""
+    """
+    domain.js RELEASE_ASSET (V-27): reservasi yang belum dipakai dilepas.
+    
+    Path params:
+    - asset_id: UUID aset yang akan dilepas
+    
+    Body params:
+    - data: Data identifikasi SK (AssetReleaseRequest)
+    
+    Return: Status pelepasan aset
+    """
+    # Menggunakan dependensi db dan asset_reservation_service
     await ensure_same_org(db, current_user.organization_id, assets=[asset_id], work_plans=[data.work_plan_id])
     status_ = await asset_reservation_service.release(current_user, asset_id, data.work_plan_id)
     return AssetStatusResponse(asset_id=asset_id, status=status_)
@@ -133,7 +188,18 @@ async def check_asset(
     db: AsyncSession = Depends(get_db_with_user),
     asset_reservation_service: AssetReservationService = Depends(get_asset_reservation_service)
 ) -> AssetStatusResponse:
-    """domain.js CHECK_ASSET (V-27): pengemudi yang ditunjuk menyatakan kendaraan layak atau banding."""
+    """
+    domain.js CHECK_ASSET (V-27): pengemudi yang ditunjuk menyatakan kendaraan layak atau banding.
+    
+    Path params:
+    - asset_id: UUID aset yang dicek
+    
+    Body params:
+    - data: Data laporan kelayakan (AssetCheckRequest)
+    
+    Return: Status aset pasca-pengecekan
+    """
+    # Melakukan logika checking menggunakan service layer dari Dependensi
     await ensure_same_org(db, current_user.organization_id, assets=[asset_id])
     status_ = await asset_reservation_service.check(current_user, asset_id, data.decision, data.reason)
     return AssetStatusResponse(asset_id=asset_id, status=status_)
@@ -146,7 +212,18 @@ async def request_asset_return(
     access: PlanAccess = _ALLOCATION_LEADER_ACCESS,
     db: AsyncSession = Depends(get_db_with_user)
 ) -> AssetReturnResponse:
-    """P6-3: Formulir BAST pengembalian aset — diajukan ketua tim menurut SK peminjam (V-09)."""
+    """
+    P6-3: Formulir BAST pengembalian aset — diajukan ketua tim menurut SK peminjam (V-09).
+    
+    Path params:
+    - alloc_id: UUID alokasi aset yang dikembalikan
+    
+    Body params:
+    - data: Data pengembalian aset (AssetReturnCreate)
+    
+    Return: Detail pengajuan pengembalian
+    """
+    # Mengekstrak user dari injeksi dependensi PlanAccess (_ALLOCATION_LEADER_ACCESS)
     current_user = access.user
     if RoleCode.ASSET in current_user.roles:  # domain.js RETURN_ASSET
         raise ForbiddenError("Pengajuan pengembalian tidak dapat dilakukan oleh petugas aset. Gunakan ketua tim.")
@@ -187,7 +264,18 @@ async def verify_asset_return(
     current_user: CurrentUser = Depends(require_permission(Permission.MANAGE_ASSETS)),
     db: AsyncSession = Depends(get_db_with_user)
 ) -> AssetReturnResponse:
-    """P6-3: Verifikasi BAST oleh OPS."""
+    """
+    P6-3: Verifikasi BAST oleh OPS.
+    
+    Path params:
+    - return_id: UUID pengembalian aset
+    
+    Body params:
+    - data: Verifikasi kondisi (AssetReturnVerify)
+    
+    Return: Detail pengembalian terverifikasi
+    """
+    # Memastikan pengguna memiliki izin MANAGE_ASSETS melalui injeksi dependensi
     emp_q = text("SELECT employee_id FROM vms.app_user WHERE id = :uid")
     my_emp = (await db.execute(emp_q, {"uid": current_user.user_id})).scalar()
     
@@ -237,6 +325,15 @@ async def get_plan_assets(
     access: PlanAccess = _PLAN_VIEW_ACCESS,
     asset_reservation_service: AssetReservationService = Depends(get_asset_reservation_service)
 ) -> list[PlanAssetItem]:
-    """Aset yang dipakai SK beserta kondisi saat dikembalikan (mode presentasi, M5). SK tak terlihat → 404."""
+    """
+    Aset yang dipakai SK beserta kondisi saat dikembalikan (mode presentasi, M5). SK tak terlihat → 404.
+    
+    Path params:
+    - plan_id: UUID SK (di-routing)
+    
+    Return: Daftar aset SK
+    """
+    # Menerapkan kontrol akses melalui dependensi injeksi access (_PLAN_VIEW_ACCESS)
+    # Memanggil layanan AssetReservationService untuk mengambil list
     return [PlanAssetItem(**r._mapping) for r in await asset_reservation_service.plan_assets(plan_id)]
 

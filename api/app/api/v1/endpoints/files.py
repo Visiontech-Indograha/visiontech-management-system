@@ -34,7 +34,11 @@ async def upload_document(
     Unggah file (maks 10MB).
     Gambar (jpeg/png) akan dikompresi ke WebP 3 ukuran (thumb, view, full) secara asinkron.
     Deduplikasi otomatis berbasis SHA-256 (mencegah double upload untuk org yang sama).
+    
+    Return: ID file yang baru saja diunggah dan pesan sukses
     """
+    # Mengambil objek pengguna saat ini dan koneksi ke database dari injeksi dependensi (Depends)
+    # Melakukan pengecekan hash sebelum mengunggah objek
     # 1. Baca paling banyak batas + 1 bita: berkas raksasa tidak pernah dimuat utuh ke memori (O-12).
     file_bytes = await file.read(MAX_FILE_SIZE + 1)
     byte_size = len(file_bytes)
@@ -119,7 +123,17 @@ async def get_file_url(
     """
     Mendapatkan URL Presigned MinIO untuk mengakses file (valid 5 menit).
     Varian: full, view, thumb. URL dibuat hanya setelah otorisasi per berkas (V-17, dok 13 §7).
+    
+    Path params:
+    - file_id: UUID dari file yang diminta
+    
+    Query params:
+    - variant: variasi kompresi ("full", "view", "thumb")
+    
+    Return: Presigned URL dari MinIO beserta mime_type asli
     """
+    # Mengambil database dan detail user melalui Dependensi injeksi
+    # Memeriksa hak akses pada level aplikasi
     file_obj = await check_file_access(db, file_id, current_user)
 
     is_image = file_obj.mime_type.startswith("image/")

@@ -55,8 +55,20 @@ async def list_attendance(
     current_user: CurrentUser = Depends(get_current_user),
     attendance_session_service: AttendanceSessionService = Depends(get_attendance_session_service)
 ) -> AttendanceListResponse:
-    """Dok 05 §3.5 · R-33: Finance & OPS seluruh organisasi; PM miliknya + bawahan lapangan di unitnya;
-    lainnya hanya milik sendiri. Filter `plan_id` di dok 05 belum didukung (dok 10 Bagian C)."""
+    """
+    Dok 05 §3.5 · R-33: Finance & OPS seluruh organisasi; PM miliknya + bawahan lapangan di unitnya;
+    lainnya hanya milik sendiri. Filter `plan_id` di dok 05 belum didukung (dok 10 Bagian C).
+    
+    Query params:
+    - employee_id: Filter UUID karyawan
+    - from/to: Filter rentang tanggal
+    - status: Filter status absensi
+    - page, size: Pagination
+    
+    Return: Daftar absensi (AttendanceListResponse)
+    """
+    # Mengambil objek AttendanceSessionService dari injeksi dependensi
+    # Melakukan query list absensi melalui service dengan pengecekan VIEW_ALL_ATTENDANCE
     service = attendance_session_service
     rows, total = await service.list_attendance(
         current_user.organization_id, current_user.user_id,
@@ -73,7 +85,15 @@ async def register_device_key(
     current_user: CurrentUser = Depends(get_current_user),
     offline_service: AttendanceOfflineService = Depends(get_attendance_offline_service),
 ) -> dict[str, str]:
-    """R-34: daftarkan kunci publik Android Keystore perangkat ini untuk memverifikasi absen luring."""
+    """
+    R-34: daftarkan kunci publik Android Keystore perangkat ini untuk memverifikasi absen luring.
+    
+    Body params:
+    - data: Payload device id dan public key (DeviceKeyRequest)
+    
+    Return: Pesan sukses
+    """
+    # Injeksi AttendanceOfflineService untuk mengelola kunci offline perangkat
     await offline_service.register_device_key(current_user, data.device_id, data.public_key)
     return {"message": "Kunci perangkat terdaftar."}
 
@@ -84,7 +104,15 @@ async def submit_offline_attendance(
     current_user: CurrentUser = Depends(get_current_user),
     offline_service: AttendanceOfflineService = Depends(get_attendance_offline_service),
 ) -> OfflineAttendanceResult:
-    """R-34: terima satu absen luring yang ditandatangani perangkat (idempoten per client_op_id)."""
+    """
+    R-34: terima satu absen luring yang ditandatangani perangkat (idempoten per client_op_id).
+    
+    Body params:
+    - data: Event absensi luring berserta signature (OfflineAttendanceEvent)
+    
+    Return: Hasil pemrosesan sinkronisasi offline (OfflineAttendanceResult)
+    """
+    # Menggunakan dependensi offline_service
     result = await offline_service.apply(
         current_user, device_id=data.device_id, client_op_id=data.client_op_id, kind=data.kind,
         payload=data.payload, signature=data.signature, selfie_file_id=data.selfie_file_id)
@@ -98,8 +126,17 @@ async def check_in(
     db: AsyncSession = Depends(get_db_with_user),
     attendance_session_service: AttendanceSessionService = Depends(get_attendance_session_service)
 ) -> AttendanceResponse:
-    """P4-2 · domain.js CHECK_IN. Waktu, tanggal, jarak, dan status dari server (aturan inti #3).
-    Pekerja lapangan lewat HP (`channel` MOBILE), pekerja kantor lewat web (`channel` WEB)."""
+    """
+    P4-2 · domain.js CHECK_IN. Waktu, tanggal, jarak, dan status dari server (aturan inti #3).
+    Pekerja lapangan lewat HP (`channel` MOBILE), pekerja kantor lewat web (`channel` WEB).
+    
+    Body params:
+    - data: Data check in termasuk lokasi dan bukti foto (CheckInRequest)
+    
+    Return: Detail absensi check in (AttendanceResponse)
+    """
+    # Mengambil sesi DB dari Depends (get_db_with_user) untuk pengecekan referensi yang aman
+    # Serta dependensi attendance_session_service untuk menjalankan transaksi absensi
     await ensure_same_org(db, current_user.organization_id, sites=[data.site_id], files=[data.selfie_file_id])
     row = await attendance_session_service.check_in(
         current_user.organization_id, current_user.user_id, site_id=data.site_id,
@@ -116,7 +153,15 @@ async def check_out(
     current_user: CurrentUser = Depends(get_current_user),
     attendance_session_service: AttendanceSessionService = Depends(get_attendance_session_service)
 ) -> AttendanceResponse:
-    """domain.js CHECK_OUT — menutup sesi terbuka milik sendiri, dari kanal sesuai jenis pekerja."""
+    """
+    domain.js CHECK_OUT — menutup sesi terbuka milik sendiri, dari kanal sesuai jenis pekerja.
+    
+    Body params:
+    - data: Data check out dengan spesifikasi channel (CheckOutRequest)
+    
+    Return: Detail absensi setelah check out (AttendanceResponse)
+    """
+    # Menggunakan dependensi attendance_session_service
     return _response(await attendance_session_service.check_out(current_user.user_id, data.channel))
 
 
@@ -127,7 +172,18 @@ async def explain_attendance(
     current_user: CurrentUser = Depends(get_current_user),
     attendance_session_service: AttendanceSessionService = Depends(get_attendance_session_service)
 ) -> dict[str, str]:
-    """P4-4 · domain.js EXPLAIN_ATTENDANCE — hanya absensi sendiri yang menunggu pemeriksaan."""
+    """
+    P4-4 · domain.js EXPLAIN_ATTENDANCE — hanya absensi sendiri yang menunggu pemeriksaan.
+    
+    Path params:
+    - att_id: UUID absensi
+    
+    Body params:
+    - data: Catatan penjelasan absensi (ExplanationRequest)
+    
+    Return: Pesan sukses
+    """
+    # Meneruskan fungsi anotasi/penjelasan (explain) ke attendance_session_service dari Depends
     await attendance_session_service.explain_attendance(current_user.organization_id, current_user.user_id, att_id, data.explanation)
     return {"message": "Penjelasan ditambahkan."}
 
@@ -139,8 +195,20 @@ async def review_attendance(
     current_user: CurrentUser = Depends(require_permission(Permission.REVIEW_ATTENDANCE)),
     attendance_session_service: AttendanceSessionService = Depends(get_attendance_session_service)
 ) -> dict[str, str]:
-    """P4-4 · domain.js REVIEW_ATTENDANCE · R-33: PM → bawahan lapangan, Finance → kantor non-Finance,
-    OPS → Finance; tidak pernah absensi sendiri."""
+    """
+    P4-4 · domain.js REVIEW_ATTENDANCE · R-33: PM → bawahan lapangan, Finance → kantor non-Finance,
+    OPS → Finance; tidak pernah absensi sendiri.
+    
+    Path params:
+    - att_id: UUID absensi yang direview
+    
+    Body params:
+    - data: Persetujuan atau penolakan dengan catatan (ReviewRequest)
+    
+    Return: Pesan hasil review
+    """
+    # Diwajibkan memiliki izin REVIEW_ATTENDANCE (via Depends)
+    # Memanggil service layer untuk menetapkan status absensi
     status = await attendance_session_service.review_attendance(
         current_user.organization_id, current_user.user_id, att_id, data.is_approved, data.note)
     return {"message": f"Absensi di-{status.lower()}."}
@@ -153,7 +221,17 @@ async def export_attendance(
     current_user: CurrentUser = Depends(require_permission(Permission.EXPORT_ATTENDANCE)),
     db: AsyncSession = Depends(get_db_with_user)
 ) -> str:
-    """P4-5: Ekspor CSV untuk Finance. Jam dalam zona waktu organisasi (sebelumnya tercetak UTC)."""
+    """
+    P4-5: Ekspor CSV untuk Finance. Jam dalam zona waktu organisasi (sebelumnya tercetak UTC).
+    
+    Query params:
+    - start_date: Tanggal mulai ekspor
+    - end_date: Tanggal akhir ekspor
+    
+    Return: Data mentah format CSV
+    """
+    # Memerlukan izin EXPORT_ATTENDANCE dan sesi db.
+    # Melakukan query raw SQL untuk membuat format CSV
     query = text("""
         SELECT a.work_date, e.employee_no, e.full_name, a.site_label,
                to_char(a.check_in_at AT TIME ZONE o.timezone, 'HH24:MI:SS') AS check_in,

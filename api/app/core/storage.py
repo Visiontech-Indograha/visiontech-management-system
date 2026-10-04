@@ -1,9 +1,10 @@
 """
-Penyimpanan berkas di MinIO (dok 13).
+app/core/storage.py
 
-Tidak ada koneksi saat modul diimpor: bucket diperiksa pada pemakaian pertama dan hasil
-suksesnya diingat. Batas waktu pendek & tanpa percobaan ulang berlapis — bila MinIO mati,
-unggahan gagal cepat dengan jelas dan fitur lain tetap berjalan (prinsip 3).
+File storage utility for MinIO.
+No connection is made during module import: bucket existence is checked on
+first usage and cached on success. Short timeouts are used to fail fast
+if MinIO is down, allowing other features to keep running.
 """
 import io
 import logging
@@ -18,6 +19,7 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
+# Konfigurasi koneksi MinIO dengan urllib3 PoolManager
 minio_client = Minio(
     settings.MINIO_ENDPOINT,
     access_key=settings.MINIO_ACCESS_KEY,
@@ -33,18 +35,26 @@ _bucket_ready = False
 
 
 def bucket_ready() -> bool:
+    """Check if the bucket is ready."""
+    # Mengembalikan status kesiapan bucket
     return _bucket_ready
 
 
 def ensure_bucket() -> bool:
-    """Pastikan bucket ada. True bila siap; kegagalan tidak diingat agar dicoba lagi nanti."""
+    """
+    Ensure the MinIO bucket exists.
+    Returns True if ready. Failures are not cached so retries can happen later.
+    """
     global _bucket_ready
     if _bucket_ready:
+        # Bucket sudah dipastikan ada sebelumnya
         return True
     try:
+        # Membuat bucket bila belum ada di server MinIO
         if not minio_client.bucket_exists(settings.MINIO_BUCKET):
             minio_client.make_bucket(settings.MINIO_BUCKET)
-    except Exception as e:  # noqa: BLE001 — MinIO mati tidak boleh menjatuhkan permintaan
+    except Exception as e:  # noqa: BLE001
+        # MinIO mati tidak boleh menjatuhkan permintaan, biarkan error tercatat
         logger.error(f"MinIO tidak siap (bucket {settings.MINIO_BUCKET}): {e}")
         return False
     _bucket_ready = True
@@ -52,10 +62,15 @@ def ensure_bucket() -> bool:
 
 
 def upload_file(object_name: str, file_data: bytes, content_type: str) -> bool:
-    """Unggah bytes ke MinIO. False bila MinIO tidak siap atau unggahan gagal."""
+    """
+    Upload file bytes to MinIO.
+    Returns False if MinIO is not ready or the upload fails.
+    """
     if not ensure_bucket():
+        # Batalkan unggahan jika bucket tidak siap
         return False
     try:
+        # Mengunggah objek ke MinIO menggunakan io.BytesIO
         minio_client.put_object(
             settings.MINIO_BUCKET,
             object_name,
@@ -65,18 +80,24 @@ def upload_file(object_name: str, file_data: bytes, content_type: str) -> bool:
         )
         return True
     except Exception as e:  # noqa: BLE001
+        # Tangani error unggahan dengan aman
         logger.error(f"Gagal mengunggah ke MinIO {object_name}: {e}")
         return False
 
 
 @lru_cache(maxsize=1)
 def presign_client() -> Minio:
-    """Klien khusus penandatanganan URL untuk asal publik (`MINIO_PUBLIC_URL`). Tanda tangan S3
-    mengikat host, jadi URL harus dibuat untuk host yang dipakai peramban. Region ditetapkan agar
-    penandatanganan murni lokal (tanpa panggilan jaringan ke MinIO)."""
+    """
+    Create a specific MinIO client used for URL presigning with a public origin.
+    S3 signatures are bound to the host, so URLs must be created for the host
+    used by the browser. Region is set to ensure local presigning without network calls.
+    """
     if not settings.MINIO_PUBLIC_URL:
+        # Kembalikan client standar jika URL publik tidak dikonfigurasi
         return minio_client
+    
     public = urlparse(settings.MINIO_PUBLIC_URL)
+    # Buat client MinIO khusus penandatanganan URL
     return Minio(
         public.netloc,
         access_key=settings.MINIO_ACCESS_KEY,
@@ -87,9 +108,13 @@ def presign_client() -> Minio:
 
 
 def get_presigned_url(object_name: str, expires: timedelta = timedelta(minutes=5)) -> str:
-    """URL bertanda tangan, paling lama 5 menit (dok 08, dok 13)."""
+    """
+    Generate a presigned URL valid for a maximum of the specified duration.
+    """
     try:
+        # Membuat URL bertanda tangan untuk diakses sementara
         return presign_client().get_presigned_url("GET", settings.MINIO_BUCKET, object_name, expires=expires)
     except Exception as e:  # noqa: BLE001
+        # Gagal membuat presigned URL
         logger.error(f"Gagal membuat URL bertanda tangan untuk {object_name}: {e}")
         return ""

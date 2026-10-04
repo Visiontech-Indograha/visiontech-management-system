@@ -26,7 +26,11 @@ class CRUDPlanAttachment(CRUDBase):
     async def replace(self, plan_id: UUID | str, file_ids: list[UUID]) -> None:
         """Ganti seluruh lampiran; urutan daftar = sort_order."""
         await self.execute("DELETE FROM vms.work_plan_attachment WHERE work_plan_id = :plan", {"plan": plan_id})
-        for order, file_id in enumerate(file_ids):
+        if file_ids:
             await self.execute(
-                "INSERT INTO vms.work_plan_attachment (work_plan_id, file_id, sort_order) VALUES (:plan, :file, :ord)",
-                {"plan": plan_id, "file": file_id, "ord": order})
+                """
+                INSERT INTO vms.work_plan_attachment (work_plan_id, file_id, sort_order)
+                SELECT :plan, unnest(CAST(:fids AS uuid[])), unnest(CAST(:ords AS int[]))
+                """,
+                {"plan": plan_id, "fids": [str(f) for f in file_ids], "ords": list(range(len(file_ids)))}
+            )

@@ -408,10 +408,13 @@ class CRUDPlanTransition(CRUDBase):
             {"plan": plan_id, "uid": user_id, "body": body, "obstacle": obstacle},
         )
         await self.execute("DELETE FROM vms.final_report_evidence WHERE work_plan_id = :plan", {"plan": plan_id})
-        for file_id in file_ids:
+        if file_ids:
             await self.execute(
-                "INSERT INTO vms.final_report_evidence (work_plan_id, file_id) VALUES (:plan, :file)",
-                {"plan": plan_id, "file": file_id})
+                """
+                INSERT INTO vms.final_report_evidence (work_plan_id, file_id)
+                SELECT :plan, unnest(CAST(:fids AS uuid[]))
+                """,
+                {"plan": plan_id, "fids": [str(f) for f in file_ids]})
 
     async def review_final_report(self, plan_id: UUID | str, user_id: UUID | str, status: str,
                                   note: str | None) -> None:

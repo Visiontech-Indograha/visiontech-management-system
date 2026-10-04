@@ -66,7 +66,7 @@ class CRUDSignature(CRUDBase):
                        key_id: str, signature: bytes, payload: dict[str, Any], issued_by: str) -> Any:
         return await self.fetchone(
             """
-            SELECT * FROM vms.register_document_signature(
+            SELECT signature_id, serial_number, qr_token_id, qr_raw_token FROM vms.register_document_signature(
                 CAST(:org AS uuid), 'plan_document', CAST(:doc AS uuid), :number, :title, :sha,
                 CAST(:signer AS uuid), CAST(:role AS vms.signature_role), CAST(:key AS uuid), :signature,
                 CAST(:payload AS jsonb), CAST(:issued_by AS uuid))
@@ -90,7 +90,7 @@ class CRUDSignature(CRUDBase):
                                     key_id: str, signature: bytes, payload: dict[str, Any], issued_by: str) -> Any:
         return await self.fetchone(
             """
-            SELECT * FROM vms.register_document_signature(
+            SELECT signature_id, serial_number, qr_token_id, qr_raw_token FROM vms.register_document_signature(
                 CAST(:org AS uuid), 'final_report', CAST(:plan AS uuid), :number, :title, :sha,
                 CAST(:signer AS uuid), CAST(:role AS vms.signature_role), CAST(:key AS uuid), :signature,
                 CAST(:payload AS jsonb), CAST(:issued_by AS uuid))
@@ -157,4 +157,4 @@ class CRUDSignature(CRUDBase):
         return raw
 
     async def verify(self, raw_token: str) -> Any:
-        return await self.fetchone("SELECT * FROM vms.verify_signature_qr(:token)", {"token": raw_token})
+        return await self.fetchone("SELECT state, serial_number, signer_name, signer_position, signer_unit, signer_role, document_number, document_title, signed_at, key_id, algorithm, document_sha256_hex, note FROM vms.verify_signature_qr(:token)", {"token": raw_token})

@@ -16,6 +16,16 @@ router = APIRouter(prefix="/sites", tags=["Sites"])
 
 
 def _response(r: Any, can_manage: bool = False) -> SiteResponse:
+    """
+    Fungsi pembantu untuk memetakan row site dari database ke skema SiteResponse.
+    
+    Args:
+        r (Any): Data lokasi dari database.
+        can_manage (bool): Menentukan apakah pengguna memiliki hak untuk mengelola lokasi tersebut.
+        
+    Returns:
+        SiteResponse: Respons model lokasi.
+    """
     return SiteResponse(id=r.id, name=r.name, address=r.address, radius_m=r.radius_m or 50,
                         unit_id=r.unit_id, can_manage=can_manage, location=GeoPoint(lat=r.lat, lng=r.lng))
 

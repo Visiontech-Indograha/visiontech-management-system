@@ -9,6 +9,9 @@ from enum import StrEnum
 
 
 class PlanStatus(StrEnum):
+    """
+    Status dari siklus hidup sebuah Surat Kerja (SK).
+    """
     DRAFT = "DRAFT"
     PUBLISHED = "PUBLISHED"
     ACCEPTED = "ACCEPTED"
@@ -20,6 +23,9 @@ class PlanStatus(StrEnum):
 
 
 class DocumentKind(StrEnum):
+    """
+    Jenis dari dokumen resmi (SK/Adendum).
+    """
     INITIAL_ORDER = "INITIAL_ORDER"
     REVISION = "REVISION"
     ADDENDUM = "ADDENDUM"
@@ -27,6 +33,9 @@ class DocumentKind(StrEnum):
 
 
 class DocumentStatus(StrEnum):
+    """
+    Status persetujuan/keberlakuan dari sebuah dokumen resmi.
+    """
     AWAITING_ACCEPTANCE = "AWAITING_ACCEPTANCE"
     EFFECTIVE = "EFFECTIVE"
     SUPERSEDED = "SUPERSEDED"
@@ -35,12 +44,18 @@ class DocumentStatus(StrEnum):
 
 
 class ChangeType(StrEnum):
+    """
+    Tipe pengajuan perubahan / adendum SK.
+    """
     EXTEND = "EXTEND"
     PERSONNEL = "PERSONNEL"
     AMENDMENT = "AMENDMENT"   # alur SK v2: adendum diajukan ketua saat SK Berjalan
 
 
 class ChangeStatus(StrEnum):
+    """
+    Status dari pengajuan perubahan / adendum SK.
+    """
     PENDING_PM = "PENDING_PM"
     AWAITING_LEADER_ACCEPTANCE = "AWAITING_LEADER_ACCEPTANCE"
     EFFECTIVE = "EFFECTIVE"

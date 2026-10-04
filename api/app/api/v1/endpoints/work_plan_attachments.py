@@ -19,6 +19,15 @@ _PM_UNIT_ACCESS = Depends(plan_access(PlanNeed.PM_UNIT))    # domain.js SAVE_ATT
 
 
 def _out(rows: list[Any]) -> list[AttachmentResponse]:
+    """
+    Fungsi pembantu untuk memetakan daftar baris lampiran dari database ke skema AttachmentResponse.
+    
+    Args:
+        rows (list[Any]): Daftar row data lampiran.
+        
+    Returns:
+        list[AttachmentResponse]: Daftar model lampiran SK.
+    """
     return [AttachmentResponse(**row._mapping) for row in rows]
 
 

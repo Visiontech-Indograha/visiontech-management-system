@@ -104,6 +104,10 @@ def verify_time_anchor(token: str, user_id: str) -> int | None:
 
 # Identitas pengguna yang sedang masuk (dibangun api/deps.py::get_current_user dari token + DB).
 class CurrentUser(BaseModel):
+    """
+    Model konteks pengguna saat ini yang terotentikasi.
+    Diisi dari payload access token (JWT).
+    """
     user_id: str
     organization_id: str
     email: str

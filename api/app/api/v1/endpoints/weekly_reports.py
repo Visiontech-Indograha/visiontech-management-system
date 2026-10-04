@@ -21,6 +21,15 @@ _PM_UNIT_ACCESS = Depends(plan_access(PlanNeed.PM_UNIT))    # domain.js REVIEW_W
 
 
 def _out(row: Any) -> WeeklyReportResponse:
+    """
+    Fungsi pembantu untuk memetakan row laporan mingguan dari database ke skema WeeklyReportResponse.
+    
+    Args:
+        row (Any): Row data laporan mingguan dari database.
+        
+    Returns:
+        WeeklyReportResponse: Respons model laporan mingguan.
+    """
     return WeeklyReportResponse(**row._mapping)
 
 

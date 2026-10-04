@@ -41,6 +41,15 @@ router = APIRouter(prefix="/attendance", tags=["Attendance"])
 
 
 def _response(row: Any) -> AttendanceResponse:
+    """
+    Fungsi pembantu untuk memetakan row hasil query menjadi skema AttendanceResponse.
+    
+    Args:
+        row (Any): Row data dari database.
+        
+    Returns:
+        AttendanceResponse: Skema respons absensi.
+    """
     return AttendanceResponse(**row._mapping)
 
 

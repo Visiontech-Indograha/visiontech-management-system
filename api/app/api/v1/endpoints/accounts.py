@@ -25,6 +25,15 @@ _db = Depends(get_db_with_user)
 
 
 def _out(row: Any) -> AccountOut:
+    """
+    Fungsi pembantu untuk memetakan data row dari database ke skema AccountOut.
+    
+    Args:
+        row (Any): Data akun dari database.
+        
+    Returns:
+        AccountOut: Skema balikan detail akun.
+    """
     if row is None:
         return AccountOut(exists=False)
     return AccountOut(exists=True, user_id=row.id, login=str(row.login), is_active=row.is_active,

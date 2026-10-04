@@ -87,6 +87,16 @@ class PlanDraftService:
 
     # ── Pilihan form ──────────────────────────────────────────────────────────────────────────
     async def form_options(self, user: CurrentUser, plan_id: UUID | None) -> dict[str, Any]:
+        """
+        Mendapatkan seluruh opsi yang diperlukan untuk mengisi form draf SK (unit, lokasi, personel, alat, dsb).
+        
+        Args:
+            user (CurrentUser): Pengguna.
+            plan_id (UUID | None): ID SK (jika sedang mengedit, untuk mengecualikan aset/orang yang sudah terikat SK ini).
+            
+        Returns:
+            dict[str, Any]: Kamus berisi opsi kategori, lokasi, calon ketua, calon anggota, dsb.
+        """
         creator = await self._creator(user)
         unit = creator.unit_id
         assets = await self.repo.free_assets(user.organization_id, plan_id)
@@ -102,7 +112,19 @@ class PlanDraftService:
 
     async def driver_options(self, user: CurrentUser, vehicle_id: UUID, candidate_ids: list[UUID],
                              period_end: date, plan_id: UUID | None) -> list[str]:
-        """Calon driver (dari ketua + anggota terpilih) yang ber-SIM sesuai dan tidak terikat SK lain."""
+        """
+        Calon driver (dari ketua + anggota terpilih) yang ber-SIM sesuai dan tidak terikat SK lain.
+        
+        Args:
+            user (CurrentUser): Pengguna pembuat request.
+            vehicle_id (UUID): ID kendaraan yang diplih.
+            candidate_ids (list[UUID]): Daftar ID personel.
+            period_end (date): Tanggal akhir SK.
+            plan_id (UUID | None): ID SK yang sedang diedit.
+            
+        Returns:
+            list[str]: Daftar ID karyawan yang dapat mengemudikan kendaraan tersebut.
+        """
         vehicle = next((a for a in await self.repo.free_assets(user.organization_id, plan_id)
                         if str(a.id) == str(vehicle_id) and a.kind == "VEHICLE"), None)
         if vehicle is None:
@@ -115,6 +137,16 @@ class PlanDraftService:
     # ── Validasi isi form ─────────────────────────────────────────────────────────────────────
     async def _validate(self, user: CurrentUser, unit_id: str, data: PlanDraftRequest,
                         plan_id: UUID | None) -> None:
+        """
+        Melakukan validasi seluruh komponen isi PlanDraftRequest, mencakup kelengkapan data,
+        konsistensi tanggal harian, status dan unit personel (R-17), serta status aset.
+        
+        Args:
+            user (CurrentUser): Pengguna.
+            unit_id (str): ID Unit pembuat SK.
+            data (PlanDraftRequest): Data payload form.
+            plan_id (UUID | None): ID SK jika ini update.
+        """
         if not data.title.strip():
             raise _invalid("Judul pekerjaan wajib diisi.")
         if not data.description.strip():
@@ -176,6 +208,17 @@ class PlanDraftService:
                 raise _invalid(f"Driver tidak memiliki {needed} yang berlaku sampai tanggal selesai.")
 
     async def _site(self, user: CurrentUser, unit_id: str, data: PlanDraftRequest) -> tuple[str, str]:
+        """
+        Menyimpan data lokasi baru atau mencari nama lokasi lama.
+        
+        Args:
+            user (CurrentUser): Pengguna.
+            unit_id (str): ID Unit pembuat.
+            data (PlanDraftRequest): Data payload form.
+            
+        Returns:
+            tuple[str, str]: Pasangan ID lokasi dan Nama lokasi.
+        """
         if data.new_site is not None:
             try:
                 async with self.db.begin_nested():
@@ -192,6 +235,14 @@ class PlanDraftService:
         return str(data.site_id), name
 
     async def _fill(self, user: CurrentUser, plan_id: str, data: PlanDraftRequest) -> None:
+        """
+        Mengisi relasi plan: hari, task, file, anggota tim, serta reservasi alat & kendaraan.
+        
+        Args:
+            user (CurrentUser): Pengguna pembuat request.
+            plan_id (str): ID SK terkait.
+            data (PlanDraftRequest): Data payload form yang berisi daftar list.
+        """
         for order, day in enumerate(sorted(data.days, key=lambda d: d.work_date)):
             day_id = await self.repo.insert_day(plan_id, day.work_date, day.tasks[0].title.strip(), order)
             for t_order, task in enumerate(day.tasks):

@@ -67,7 +67,18 @@ async def assignment_options(
     current_user: CurrentUser = Depends(require_permission(Permission.CREATE_PLAN)),
     plan_assignment_service: PlanAssignmentService = Depends(get_plan_assignment_service),
 ) -> PlanAssignmentOptions:
-    """Pilihan PM/personel yang sah untuk periode SK baru (R-23)."""
+    """
+    Mengambil pilihan PM/personel yang sah untuk periode SK baru (R-23) (GET).
+    
+    Query Parameters:
+    - period_start (date): Tanggal mulai periode SK.
+    - period_end (date): Tanggal akhir periode SK.
+    
+    Returns:
+    - PlanAssignmentOptions: Pilihan personil yang dapat ditugaskan.
+    """
+    # Menggunakan Dependency Injection untuk memeriksa izin CREATE_PLAN (require_permission)
+    # Memanggil Service layer untuk mendapatkan daftar pilihan assignment
     values = await plan_assignment_service.options(current_user, period_start, period_end)
     return PlanAssignmentOptions(
         can_choose_pm=values["can_choose_pm"],
@@ -83,7 +94,17 @@ async def form_options(
     current_user: CurrentUser = Depends(require_permission(Permission.CREATE_PLAN)),
     plan_draft_service: PlanDraftService = Depends(get_plan_draft_service),
 ) -> PlanFormOptions:
-    """Pilihan form "Buat SK" alur v2 (SK2-A/B). `plan_id` = draf yang sedang diubah (pilihannya ikut tampil)."""
+    """
+    Mengambil pilihan untuk form "Buat SK" pada alur v2 (SK2-A/B) (GET).
+    
+    Query Parameters:
+    - plan_id (UUID | None): ID draf yang sedang diubah (pilihannya ikut tampil).
+    
+    Returns:
+    - PlanFormOptions: Opsi-opsi untuk mengisi form SK.
+    """
+    # Menggunakan Dependency Injection untuk memastikan izin dan memuat PlanDraftService
+    # Memanggil Service layer untuk mengambil seluruh nilai form
     values = await plan_draft_service.form_options(current_user, plan_id)
     return PlanFormOptions(
         unit_name=values["unit_name"], categories=values["categories"],
@@ -104,7 +125,21 @@ async def driver_options(
     current_user: CurrentUser = Depends(require_permission(Permission.CREATE_PLAN)),
     plan_draft_service: PlanDraftService = Depends(get_plan_draft_service),
 ) -> list[str]:
-    """Calon driver dari ketua + anggota terpilih yang ber-SIM sesuai tipe kendaraan dan tidak terikat SK lain."""
+    """
+    Mengambil daftar calon pengemudi (driver) yang valid (GET).
+    Calon driver dari ketua + anggota terpilih yang ber-SIM sesuai tipe kendaraan dan tidak terikat SK lain.
+    
+    Query Parameters:
+    - vehicle_id (UUID): ID kendaraan.
+    - period_end (date): Tanggal akhir periode.
+    - candidate_ids (list[UUID]): Daftar ID kandidat.
+    - plan_id (UUID | None): ID draf SK terkait jika ada.
+    
+    Returns:
+    - list[str]: Daftar ID calon pengemudi yang valid.
+    """
+    # Menggunakan Dependency Injection untuk memeriksa hak akses dan mendapatkan PlanDraftService
+    # Meneruskan data query param ke fungsi driver_options pada layer Service
     return await plan_draft_service.driver_options(current_user, vehicle_id, candidate_ids, period_end, plan_id)
 
 
@@ -114,7 +149,18 @@ async def create_full_plan(
     current_user: CurrentUser = Depends(require_permission(Permission.CREATE_PLAN)),
     plan_draft_service: PlanDraftService = Depends(get_plan_draft_service),
 ) -> PlanDetailOut:
-    """Buat SK lengkap dalam satu transaksi (alur v2) → status Draf."""
+    """
+    Membuat SK lengkap dalam satu transaksi (alur v2) (POST).
+    Status SK akan langsung menjadi Draf.
+    
+    Request Body:
+    - data (PlanDraftRequest): Seluruh rincian SK.
+    
+    Returns:
+    - PlanDetailOut: Detail lengkap SK yang baru dibuat.
+    """
+    # Menggunakan Dependency Injection untuk kontrol hak akses
+    # Memanggil service create_plan untuk memproses semua data pembuatan SK sekaligus
     return PlanDetailOut(**await plan_draft_service.create_plan(current_user, data))
 
 
@@ -126,15 +172,37 @@ async def get_plans(
     db: AsyncSession = Depends(get_db_with_user),
     plan_transition_service: PlanTransitionService = Depends(get_plan_transition_service),
 ) -> list[WorkPlanResponse]:
-    """Hanya SK yang terlihat oleh pengguna (V-07, `domain.js` visiblePlans). `archived=true`: draf
-    terarsip — hanya untuk pengelola (V-21). SK Diterima yang tanggal mulainya tiba dijalankan dulu (alur v2)."""
+    """
+    Mengambil daftar SK yang terlihat oleh pengguna (V-07) (GET).
+    SK Diterima yang tanggal mulainya tiba dijalankan dulu (alur v2).
+    
+    Query Parameters:
+    - status_filter (str | None): Filter berdasarkan status SK.
+    - archived (bool): Menampilkan draf terarsip (hanya untuk pengelola) (V-21).
+    
+    Returns:
+    - list[WorkPlanResponse]: Daftar rencana kerja (SK).
+    """
+    # Menggunakan Dependency Injection untuk mendapatkan session database (get_db_with_user)
+    # serta PlanTransitionService untuk pembaruan status SK otomatis
     await plan_transition_service.start_due_plans(current_user.organization_id)
+    # CRUD layer digunakan untuk memuat data SK sesuai permission yang dimiliki user
     rows = await CRUDPlanAccess(db).visible_plans(current_user.organization_id, current_user.user_id,
                                                   status_filter, archived)
     return [WorkPlanResponse(**row._mapping) for row in rows]
 
 @router.get("/{plan_id}", response_model=WorkPlanResponse)
 async def get_plan(access: PlanAccess = _VIEW_ACCESS) -> WorkPlanResponse:
+    """
+    Mengambil data dasar dari sebuah SK (GET).
+    
+    Path Parameters:
+    - plan_id (UUID): ID dari SK (work plan).
+    
+    Returns:
+    - WorkPlanResponse: Data dasar SK.
+    """
+    # Menggunakan Dependency Injection (_VIEW_ACCESS) untuk mendapatkan data plan yang sudah divalidasi aksesnya
     return WorkPlanResponse(**access.plan._mapping)
 
 
@@ -144,7 +212,16 @@ async def get_plan_detail(
     access: PlanAccess = _VIEW_ACCESS,
     plan_draft_service: PlanDraftService = Depends(get_plan_draft_service),
 ) -> PlanDetailOut:
-    """Isi lengkap SK: data umum, lokasi, tim, detail pekerjaan per hari, alat & kendaraan."""
+    """
+    Mengambil isi lengkap SK: data umum, lokasi, tim, detail pekerjaan per hari, alat & kendaraan (GET).
+    
+    Path Parameters:
+    - plan_id (UUID): ID SK (work plan).
+    
+    Returns:
+    - PlanDetailOut: Detail lengkap dari SK.
+    """
+    # Dependency Injection memastikan hak akses baca (VIEW) dan menyediakan service layer
     return PlanDetailOut(**await plan_draft_service.detail(plan_id))
 
 
@@ -155,7 +232,21 @@ async def edit_full_plan(
     access: PlanAccess = _PM_UNIT_ACCESS,
     plan_draft_service: PlanDraftService = Depends(get_plan_draft_service),
 ) -> PlanDetailOut:
-    """Ubah isi SK berstatus Draf (termasuk draf revisi setelah adendum diminta) dalam satu transaksi."""
+    """
+    Mengubah seluruh isi SK (draf) dalam satu transaksi (PUT).
+    Termasuk draf revisi setelah adendum diminta.
+    
+    Path Parameters:
+    - plan_id (UUID): ID dari SK.
+    
+    Request Body:
+    - data (PlanDraftRequest): Data draft SK yang lengkap.
+    
+    Returns:
+    - PlanDetailOut: Detail lengkap SK yang baru disimpan.
+    """
+    # Memastikan hak akses level PM_UNIT dengan Dependency Injection
+    # Menyampaikan update ke service layer
     return PlanDetailOut(**await plan_draft_service.edit_draft(access.user, plan_id, data))
 
 
@@ -165,7 +256,17 @@ async def preview_plan(
     access: PlanAccess = _VIEW_ACCESS,
     plan_draft_service: PlanDraftService = Depends(get_plan_draft_service),
 ) -> HTMLResponse:
-    """Pratinjau A4 draf SK ("Sunting SK", SK2-C) — format sama dengan dokumen terbit."""
+    """
+    Pratinjau A4 draf SK ("Sunting SK", SK2-C) — format sama dengan dokumen terbit (GET).
+    
+    Path Parameters:
+    - plan_id (UUID): ID dari SK.
+    
+    Returns:
+    - HTMLResponse: Representasi HTML draf SK.
+    """
+    # Menggunakan Dependency Injection untuk hak akses baca dan PlanDraftService
+    # Memanggil service detail untuk di-render menjadi HTML pratinjau
     return HTMLResponse(render_plan_preview_html(await plan_draft_service.detail(plan_id)))
 
 @router.post("", response_model=WorkPlanResponse, status_code=status.HTTP_201_CREATED)
@@ -175,10 +276,22 @@ async def create_plan(
     db: AsyncSession = Depends(get_db_with_user),
     plan_assignment_service: PlanAssignmentService = Depends(get_plan_assignment_service)
 ) -> WorkPlanResponse:
+    """
+    Membuat draf rencana kerja (SK) baru (POST).
+    
+    Request Body:
+    - data (WorkPlanCreate): Data awal pembuatan SK (unit, lokasi, ketua, dll).
+    
+    Returns:
+    - WorkPlanResponse: Data rencana kerja yang baru dibuat.
+    """
+    # Menggunakan Dependency Injection (require_permission) untuk membatasi aksi ini
+    # Inject database session (get_db_with_user)
     await check_unit_manager(db, data.unit_id, current_user)
     await ensure_same_org(db, current_user.organization_id, sites=[data.site_id],
                           employees=[data.pm_employee_id, data.leader_employee_id])
     assignments = plan_assignment_service
+    # Memanggil service layer validasi plan_assignment
     await assignments.validate_owner(current_user, data.unit_id, data.pm_employee_id)
     if data.leader_employee_id:
         await assignments.validate_team_scope(current_user, data.unit_id, [data.leader_employee_id])
@@ -238,6 +351,19 @@ async def update_plan(
     db: AsyncSession = Depends(get_db_with_user),
     plan_assignment_service: PlanAssignmentService = Depends(get_plan_assignment_service)
 ) -> WorkPlanResponse:
+    """
+    Mengubah rincian SK berstatus Draf (PATCH). (EDIT_DRAFT, dok 05)
+    
+    Path Parameters:
+    - plan_id (UUID): ID dari rencana kerja (SK).
+    
+    Request Body:
+    - data (WorkPlanUpdate): Data yang ingin diubah (judul, lokasi, dsb).
+    
+    Returns:
+    - WorkPlanResponse: Data rencana kerja yang telah di-update.
+    """
+    # Menggunakan Dependency Injection untuk memastikan hak akses (_PM_UNIT_ACCESS) dan db session
     current_user = access.user
     await ensure_same_org(db, current_user.organization_id, sites=[data.site_id], employees=[data.leader_employee_id])
     # Optimistic locking
@@ -332,6 +458,19 @@ async def add_day(
     access: PlanAccess = _PM_UNIT_ACCESS,
     db: AsyncSession = Depends(get_db_with_user)
 ) -> PlanDayResponse:
+    """
+    Menambahkan data hari ke dalam rencana kerja berstatus DRAFT (POST).
+    
+    Path Parameters:
+    - plan_id (UUID): ID rencana kerja.
+    
+    Request Body:
+    - data (PlanDayCreate): Rincian hari yang akan ditambahkan.
+    
+    Returns:
+    - PlanDayResponse: Data hari yang berhasil ditambahkan.
+    """
+    # Menggunakan Dependency Injection untuk hak akses _PM_UNIT_ACCESS dan sesi database (get_db_with_user)
     current_user = access.user
     # Verifikasi status DRAFT
     check = text("SELECT status FROM vms.work_plan WHERE id = :id AND organization_id = :org")
@@ -362,6 +501,21 @@ async def add_task(
     access: PlanAccess = _DAY_PM_UNIT_ACCESS,
     db: AsyncSession = Depends(get_db_with_user)
 ) -> PlanTaskResponse:
+    """
+    Menambahkan tugas baru pada hari tertentu di dalam SK (POST).
+    
+    Path Parameters:
+    - plan_id (UUID): ID rencana kerja (SK).
+    - day_id (UUID): ID dari hari bersangkutan.
+    
+    Request Body:
+    - data (PlanTaskCreate): Rincian tugas yang akan ditambahkan.
+    
+    Returns:
+    - PlanTaskResponse: Data tugas yang berhasil dibuat.
+    """
+    # Menggunakan Dependency Injection untuk kontrol izin pada hari bersangkutan (_DAY_PM_UNIT_ACCESS)
+    # Inject database session (get_db_with_user)
     insert_task = text("""
         INSERT INTO vms.work_plan_task (work_plan_day_id, title, sort_order)
         VALUES (:day, :title, :sort)
@@ -386,7 +540,22 @@ async def save_day(
     access: PlanAccess = _DAY_PM_UNIT_ACCESS,
     db: AsyncSession = Depends(get_db_with_user)
 ) -> dict[str, object]:
-    """domain.js SAVE_DAY (V-23): PM menyusun ulang judul & tugas satu hari selagi SK masih draf."""
+    """
+    Menyusun ulang judul & tugas satu hari selagi SK masih draf (PUT).
+    domain.js SAVE_DAY (V-23).
+    
+    Path Parameters:
+    - plan_id (UUID): ID SK.
+    - day_id (UUID): ID hari.
+    
+    Request Body:
+    - data (DayPlanRequest): Data tugas untuk hari tersebut.
+    
+    Returns:
+    - dict[str, object]: Data hari dan daftar tugas yang baru disimpan.
+    """
+    # Dependency Injection untuk akses tingkat hari (_DAY_PM_UNIT_ACCESS) dan db
+    # Validasi di layer Service access untuk memastikan SK status DRAFT
     require_plan_status(access, PlanStatus.DRAFT)
     if not 1 <= len(data.tasks) <= 30:
         raise ValidationError("Isi antara 1 sampai 30 tugas per hari.")

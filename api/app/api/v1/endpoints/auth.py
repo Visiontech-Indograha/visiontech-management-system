@@ -52,6 +52,16 @@ async def login(
     payload: LoginRequest, request: Request, response: Response,
     flow: AuthFlowService = Depends(get_auth_flow_service),
 ) -> TokenResponse:
+    """
+    Memproses login pengguna dengan email dan password.
+    
+    Body params:
+    - payload: Data login berisi email dan password (LoginRequest)
+    
+    Return: Token akses (TokenResponse) dan menset refresh_token di cookie
+    """
+    # Injeksi dependensi AuthFlowService untuk menangani alur login
+    # Meneruskan data login ke service layer untuk divalidasi dan menghasilkan token
     tokens = await flow.login(payload.email, payload.password, client_info(request),
                               platform=payload.platform or "web")
     return _issue(response, tokens)
@@ -62,6 +72,13 @@ async def refresh_token(
     request: Request, response: Response,
     flow: AuthFlowService = Depends(get_auth_flow_service),
 ) -> TokenResponse:
+    """
+    Memperbarui access_token menggunakan refresh_token yang ada di cookie.
+    
+    Return: Token akses baru (TokenResponse) dan memperbarui refresh_token di cookie
+    """
+    # Menggunakan injeksi dependensi untuk mengambil AuthFlowService
+    # Memanggil service layer dengan mengambil refresh token dari cookie
     tokens = await flow.refresh(request.cookies.get(REFRESH_COOKIE), client_info(request))
     return _issue(response, tokens)
 
@@ -71,6 +88,13 @@ async def logout(
     request: Request, response: Response,
     flow: AuthFlowService = Depends(get_auth_flow_service),
 ) -> MessageResponse:
+    """
+    Mengakhiri sesi pengguna saat ini.
+    
+    Return: Pesan sukses (MessageResponse) dan menghapus cookie refresh_token
+    """
+    # Injeksi dependensi untuk service alur autentikasi
+    # Memanggil logout di service layer menggunakan refresh token di cookie
     await flow.logout(request.cookies.get(REFRESH_COOKIE))
     response.delete_cookie(REFRESH_COOKIE, path=REFRESH_COOKIE_PATH, secure=True, httponly=True, samesite="strict")
     return MessageResponse(message="Berhasil keluar.")
@@ -81,6 +105,13 @@ async def get_me(
     current_user: CurrentUser = Depends(get_current_user),
     flow: AuthFlowService = Depends(get_auth_flow_service),
 ) -> UserMeResponse:
+    """
+    Mendapatkan profil dan detail pengguna yang sedang login.
+    
+    Return: Detail pengguna saat ini (UserMeResponse)
+    """
+    # Menggunakan injeksi dependensi untuk mendapatkan pengguna saat ini dan service autentikasi
+    # Mengambil profil dari service layer berdasarkan user_id dari sesi saat ini
     return await flow.me(current_user.user_id, current_user.permissions)
 
 
@@ -89,7 +120,14 @@ async def list_sessions(
     current_user: CurrentUser = Depends(get_current_user),
     flow: AuthFlowService = Depends(get_auth_flow_service),
 ) -> list[SessionOut]:
-    """P1-7: perangkat yang sedang masuk dengan akun ini; yang sedang dipakai ditandai `current`."""
+    """
+    P1-7: Mengambil daftar sesi aktif dari perangkat yang sedang masuk dengan akun ini;
+    yang sedang dipakai ditandai `current`.
+    
+    Return: Daftar sesi aktif (list[SessionOut])
+    """
+    # Injeksi dependensi untuk pengguna aktif dan layanan autentikasi
+    # Meminta layanan untuk melisting sesi pengguna
     return await flow.active_sessions(current_user.user_id, current_user.session_id)
 
 
@@ -98,7 +136,13 @@ async def revoke_other_sessions(
     current_user: CurrentUser = Depends(get_current_user),
     flow: AuthFlowService = Depends(get_auth_flow_service),
 ) -> RevokeOthersResponse:
-    """Keluarkan semua perangkat lain. Token akses mereka habis paling lama 15 menit; refresh langsung ditolak."""
+    """
+    Keluarkan semua perangkat lain. Token akses mereka habis paling lama 15 menit; refresh langsung ditolak.
+    
+    Return: Status revokasi perangkat lain (RevokeOthersResponse)
+    """
+    # Mengambil informasi pengguna dan AuthFlowService lewat injeksi dependensi
+    # Mencabut (revoke) sesi perangkat lain melalui service layer
     revoked = await flow.revoke_other_sessions(current_user.user_id, current_user.session_id)
     return RevokeOthersResponse(revoked=revoked, message="Perangkat lain dikeluarkan (paling lambat 15 menit).")
 
@@ -109,7 +153,16 @@ async def revoke_session(
     current_user: CurrentUser = Depends(get_current_user),
     flow: AuthFlowService = Depends(get_auth_flow_service),
 ) -> MessageResponse:
-    """Keluarkan satu perangkat milik sendiri. Sesi orang lain → 404."""
+    """
+    Keluarkan satu perangkat milik sendiri berdasarkan ID sesinya. Sesi orang lain → 404.
+    
+    Path params:
+    - session_id: UUID dari sesi perangkat
+    
+    Return: Pesan revokasi berhasil (MessageResponse)
+    """
+    # Menggunakan service autentikasi yang diinjeksi via Depends
+    # Memanggil service layer untuk mencabut sesi tertentu
     await flow.revoke_session(current_user.user_id, str(session_id))
     return MessageResponse(message="Perangkat dikeluarkan (paling lambat 15 menit).")
 
@@ -120,6 +173,16 @@ async def change_password(
     current_user: CurrentUser = Depends(get_current_user),
     flow: AuthFlowService = Depends(get_auth_flow_service),
 ) -> TokenResponse:
+    """
+    Mengubah password pengguna saat ini.
+    
+    Body params:
+    - payload: Berisi password lama dan password baru (ChangePasswordRequest)
+    
+    Return: Token akses baru (TokenResponse) dengan cookie yang diperbarui
+    """
+    # Injeksi dependensi AuthFlowService dan current_user
+    # Meneruskan penggantian kata sandi ke service layer
     tokens = await flow.change_password(
         current_user.user_id, payload.current_password, payload.new_password, client_info(request)
     )

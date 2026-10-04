@@ -47,9 +47,19 @@ async def list_incidents(
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_with_user)
 ) -> list[IncidentResponse]:
-    """Insiden satu SK, terbaru dulu — siapa pun yang dapat melihat SK (temuan uji alur: insiden dari
-    lapangan tidak terlihat PM karena belum ada endpoint baca). SK asing/tak terlihat → 404."""
+    """
+    Mendapatkan daftar insiden untuk satu Surat Kerja (SK).
+    Menampilkan insiden terbaru di urutan awal. 
+    SK asing/tak terlihat → 404.
+    
+    Query params:
+    - plan_id: UUID dari Surat Kerja
+    
+    Return: Daftar insiden (list[IncidentResponse])
+    """
+    # Memeriksa hak akses user untuk melihat SK terkait menggunakan dependensi dan fungsi utilitas
     await check_plan_access(db, plan_id, current_user, PlanNeed.VIEW)
+    # Menjalankan query pada database sesi untuk mendapatkan list insiden organisasi
     rows = (await db.execute(text("""
         SELECT ir.id, ir.work_plan_id, ir.reported_by, ir.occurred_on, ir.category, ir.severity,
                ir.description, ir.status, ir.resolved_by, ir.resolved_at, ir.resolution_note, ir.created_at,
@@ -68,6 +78,16 @@ async def report_incident(
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_with_user)
 ) -> IncidentResponse:
+    """
+    Melaporkan insiden baru untuk SK yang sedang berlangsung.
+    (Hanya ketua atau anggota pekerjaan ini, SK harus IN_PROGRESS).
+    
+    Body params:
+    - data: Detail insiden yang dilaporkan (IncidentCreate)
+    
+    Return: Detail insiden yang direkam (IncidentResponse)
+    """
+    # Menggunakan dependensi db dan current_user
     # domain.js REPORT_INCIDENT: hanya ketua atau anggota pekerjaan ini (V-09). SK asing/tak terlihat → 404.
     standing = await check_plan_access(db, data.work_plan_id, current_user, PlanNeed.LEADER_OR_MEMBER)
     require_plan_status(standing, PlanStatus.IN_PROGRESS)  # domain.js REPORT_INCIDENT (V-11)
@@ -111,6 +131,18 @@ async def resolve_incident(
     access: PlanAccess = _INCIDENT_VIEW_ACCESS,
     db: AsyncSession = Depends(get_db_with_user)
 ) -> IncidentResponse:
+    """
+    Menyelesaikan masalah insiden. Hanya PM (unit SK), OPS, atau ASSET yang bisa mengeksekusi.
+    
+    Path params:
+    - inc_id: UUID dari insiden
+    
+    Body params:
+    - data: Catatan resolusi (IncidentResolve)
+    
+    Return: Detail insiden yang telah diselesaikan (IncidentResponse)
+    """
+    # Injeksi dependensi kontrol akses Plan (_INCIDENT_VIEW_ACCESS) dan db sesi
     # domain.js RESOLVE_INCIDENT: PM (unit SK), OPS, ASSET. R2: PM unit lain tidak melihat SK ini → 404.
     current_user = access.user
     if not (access.manages or RoleCode.ASSET in current_user.roles):
@@ -144,6 +176,19 @@ async def upsert_daily_report(
     access: PlanAccess = _DAY_LEADER_ACCESS,
     db: AsyncSession = Depends(get_db_with_user)
 ) -> DailyReportResponse:
+    """
+    Membuat atau memperbarui DRAFT laporan harian pekerjaan (Hanya Ketua Tim, SK IN_PROGRESS).
+    
+    Path params:
+    - plan_id: UUID dari SK (di-routing)
+    - day_id: UUID hari pelaksanaan SK
+    
+    Body params:
+    - data: Data laporan harian (DailyReportCreate)
+    
+    Return: Laporan harian (DailyReportResponse)
+    """
+    # Menggunakan injeksi dependensi access Plan (_DAY_LEADER_ACCESS)
     current_user = access.user
     require_plan_status(access, PlanStatus.IN_PROGRESS)  # domain.js SAVE/SUBMIT_REPORT (V-11)
     await _ensure_day_reached(db, day_id)
@@ -183,6 +228,16 @@ async def submit_daily_report(
     access: PlanAccess = _DAY_LEADER_ACCESS,
     db: AsyncSession = Depends(get_db_with_user)
 ) -> DailyReportResponse:
+    """
+    Menyerahkan (submit) laporan harian yang berstatus DRAFT atau minta revisi ke manajer/PM.
+    
+    Path params:
+    - plan_id: UUID dari SK
+    - day_id: UUID hari pelaksanaan SK
+    
+    Return: Laporan harian dengan status tersubmit (DailyReportResponse)
+    """
+    # Mengambil objek kontrol akses Plan (ketua tim) lewat dependensi
     current_user = access.user
     require_plan_status(access, PlanStatus.IN_PROGRESS)  # domain.js SAVE/SUBMIT_REPORT (V-11)
     await _ensure_day_reached(db, day_id)
@@ -219,7 +274,19 @@ async def review_daily_report(
     access: PlanAccess = _DAY_PM_UNIT_ACCESS,
     db: AsyncSession = Depends(get_db_with_user)
 ) -> DailyReportResponse:
-    """domain.js REVIEW_REPORT (V-24): PM unit/OPS menyetujui atau mengembalikan laporan yang diserahkan."""
+    """
+    domain.js REVIEW_REPORT (V-24): PM unit/OPS menyetujui atau mengembalikan laporan harian yang diserahkan.
+    
+    Path params:
+    - plan_id: UUID dari SK
+    - day_id: UUID hari pelaksanaan SK
+    
+    Body params:
+    - data: Data hasil review laporan (ReportReviewRequest)
+    
+    Return: Detail laporan harian pasca-review (DailyReportResponse)
+    """
+    # Menggunakan injeksi dependensi access PM Unit (_DAY_PM_UNIT_ACCESS)
     require_plan_status(access, PlanStatus.IN_PROGRESS, PlanStatus.COMPLETION_REVIEW)
     if data.decision not in ("APPROVE", "RETURN"):
         raise ValidationError("Keputusan tidak valid.")
@@ -239,6 +306,7 @@ async def review_daily_report(
     })).fetchone()
     if report is None:
         raise AppError("INVALID_STATE", "Laporan belum menunggu pemeriksaan.", status=409)
+    # Memanggil service Notifikasi di layer terpisah
     await NotificationService(db).report_reviewed(access.plan.id, "Laporan harian", data.decision == "APPROVE", note or None)
     return DailyReportResponse(**report._mapping)
 
@@ -250,7 +318,17 @@ async def toggle_task(
     access: PlanAccess = _DAY_LEADER_ACCESS,
     db: AsyncSession = Depends(get_db_with_user)
 ) -> dict[str, object]:
-    """domain.js TOGGLE_TASK (V-23): ketua mencentang tugas selama laporan hari itu belum diserahkan."""
+    """
+    domain.js TOGGLE_TASK (V-23): ketua mencentang/menghapus centang tugas hari tersebut, selama laporan belum diserahkan.
+    
+    Path params:
+    - plan_id: UUID SK (di-routing)
+    - day_id: UUID hari eksekusi
+    - task_id: UUID tugas yang dicentang
+    
+    Return: Status toggle (is_done) dari tugas tersebut
+    """
+    # Injeksi db dan level akses ketua tim
     require_plan_status(access, PlanStatus.IN_PROGRESS)
     await _ensure_day_reached(db, day_id)
     report_status = (await db.execute(text(

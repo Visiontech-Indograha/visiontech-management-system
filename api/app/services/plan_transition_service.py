@@ -27,10 +27,12 @@ CANCELLABLE = {PlanStatus.PUBLISHED, PlanStatus.ACCEPTED, PlanStatus.APPEALED, P
 
 
 def _invalid(message: str) -> AppError:
+    """Error validasi bisnis."""
     return AppError("VALIDATION_ERROR", message, status=422)
 
 
 def _state(message: str) -> AppError:
+    """Error ketika status (state) rencana kerja tidak memungkinkan untuk aksi tertentu."""
     return AppError("INVALID_STATE", message, status=409)
 
 
@@ -93,10 +95,32 @@ class PlanTransitionService:
             raise AppError("PERSONNEL_CONFLICT", f"Jadwal personel bertabrakan dengan {other}.", status=409)
 
     async def _leader_only(self, plan_id: UUID, user_id: str) -> None:
+        """
+        Memastikan tindakan hanya dapat dilakukan oleh ketua tim yang tercantum dalam SK.
+        
+        Args:
+            plan_id (UUID): ID SK.
+            user_id (str): ID pengguna saat ini.
+            
+        Raises:
+            ForbiddenError: Jika pengguna bukan ketua tim.
+        """
         if not await self.repo.is_leader(plan_id, user_id):
             raise ForbiddenError("Hanya ketua tim menurut SK yang berlaku yang dapat melakukan ini.")
 
     async def publish(self, plan_id: UUID, org_id: str, user_id: str, row_version: int) -> Any:
+        """
+        Menerbitkan (PUBLISH) SK yang berstatus Draf. Menghasilkan dokumen resmi awal dan meminta tanda tangan.
+        
+        Args:
+            plan_id (UUID): ID SK.
+            org_id (str): ID Organisasi.
+            user_id (str): ID Pengguna penerbit (PM).
+            row_version (int): Versi baris (concurrency control).
+            
+        Returns:
+            Any: Data SK.
+        """
         plan = await self._load(plan_id, org_id, row_version, PlanStatus.DRAFT)
         await self._check_members(plan)
         if not await self.repo.day_details_complete(plan_id):
@@ -115,6 +139,18 @@ class PlanTransitionService:
         return await self.repo.get_plan(plan_id)
 
     async def accept(self, plan_id: UUID, org_id: str, user_id: str, row_version: int) -> Any:
+        """
+        Menerima (ACCEPT) SK yang telah Diterbitkan. Hanya dapat dilakukan oleh Ketua Tim.
+        
+        Args:
+            plan_id (UUID): ID SK.
+            org_id (str): ID Organisasi.
+            user_id (str): ID Ketua Tim.
+            row_version (int): Versi baris.
+            
+        Returns:
+            Any: Data SK.
+        """
         plan = await self._load(plan_id, org_id, row_version, PlanStatus.PUBLISHED)
         await self._leader_only(plan_id, user_id)
         await self._check_members(plan)

@@ -46,6 +46,15 @@ class DocumentService:
     async def documents_of(self, org_id: str, user_id: str, permissions: list[str], emp_id: Any) -> list[Any]:
         """
         Mendapatkan daftar dokumen pribadi seorang karyawan (jika berhak melihatnya).
+        
+        Args:
+            org_id (str): ID organisasi pengguna saat ini.
+            user_id (str): ID pengguna yang melakukan request.
+            permissions (list[str]): Daftar izin akses yang dimiliki pengguna.
+            emp_id (Any): ID karyawan yang dokumennya akan dilihat.
+            
+        Returns:
+            list[Any]: Daftar dokumen milik karyawan tersebut.
         """
         await self._reachable(org_id, user_id, permissions, emp_id)
         return await self.repo.list_for_employee(emp_id)

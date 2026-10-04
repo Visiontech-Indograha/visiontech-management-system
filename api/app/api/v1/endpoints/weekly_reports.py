@@ -26,22 +26,72 @@ def _out(row: Any) -> WeeklyReportResponse:
 
 @router.get("", response_model=list[WeeklyReportResponse])
 async def list_weeks(access: PlanAccess = _VIEW_ACCESS, weekly_report_service: WeeklyReportService = Depends(get_weekly_report_service)) -> list[WeeklyReportResponse]:
+    """
+    Mengambil daftar laporan mingguan untuk sebuah SK (GET).
+    
+    Path Parameters:
+    - plan_id (tersirat via router prefix): ID dari work plan.
+    
+    Returns:
+    - list[WeeklyReportResponse]: Daftar laporan mingguan.
+    """
+    # Menggunakan Dependency Injection untuk memastikan hak akses (_VIEW_ACCESS) dan service laporan mingguan
+    # Memanggil service layer untuk mengambil data minggu
     return [_out(row) for row in await weekly_report_service.list_weeks(access)]
 
 
 @router.put("/{week}", response_model=WeeklyReportResponse)
 async def save_weekly(week: int, data: WeeklyReportRequest, access: PlanAccess = _LEADER_ACCESS,
                       weekly_report_service: WeeklyReportService = Depends(get_weekly_report_service)) -> WeeklyReportResponse:
+    """
+    Menyimpan draf laporan mingguan (PUT). (domain.js SAVE_WEEKLY)
+    
+    Path Parameters:
+    - week (int): Minggu ke-berapa.
+    
+    Request Body:
+    - data (WeeklyReportRequest): Data isi laporan dan kendala.
+    
+    Returns:
+    - WeeklyReportResponse: Data laporan mingguan yang berhasil disimpan.
+    """
+    # Dependency Injection untuk memastikan hak akses Leader (_LEADER_ACCESS)
+    # Memanggil Service layer untuk operasi penyimpanan data laporan mingguan
     return _out(await weekly_report_service.save_weekly(access, week, data.body, data.obstacle))
 
 
 @router.post("/{week}/submit", response_model=WeeklyReportResponse)
 async def submit_weekly(week: int, access: PlanAccess = _LEADER_ACCESS,
                         weekly_report_service: WeeklyReportService = Depends(get_weekly_report_service)) -> WeeklyReportResponse:
+    """
+    Mengajukan laporan mingguan agar bisa ditinjau (POST). (domain.js SUBMIT_WEEKLY)
+    
+    Path Parameters:
+    - week (int): Minggu ke-berapa.
+    
+    Returns:
+    - WeeklyReportResponse: Status laporan mingguan yang baru.
+    """
+    # Memastikan hak akses sebagai Leader menggunakan Dependency Injection
+    # Melakukan pemanggilan submit di layer Service
     return _out(await weekly_report_service.submit_weekly(access, week))
 
 
 @router.post("/{week}/review", response_model=WeeklyReportResponse)
 async def review_weekly(week: int, data: WeeklyReviewRequest, access: PlanAccess = _PM_UNIT_ACCESS,
                         weekly_report_service: WeeklyReportService = Depends(get_weekly_report_service)) -> WeeklyReportResponse:
+    """
+    Meninjau laporan mingguan (PM Unit) untuk disetujui atau ditolak (POST). (domain.js REVIEW_WEEKLY)
+    
+    Path Parameters:
+    - week (int): Minggu ke-berapa.
+    
+    Request Body:
+    - data (WeeklyReviewRequest): Keputusan (decision) dan catatan.
+    
+    Returns:
+    - WeeklyReportResponse: Status laporan mingguan yang baru.
+    """
+    # Dependency Injection untuk hak akses _PM_UNIT_ACCESS dan WeeklyReportService
+    # Meneruskan data keputusan review (decision dan note) ke Service layer
     return _out(await weekly_report_service.review_weekly(access, week, data.decision, data.note))

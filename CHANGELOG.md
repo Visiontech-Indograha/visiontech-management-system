@@ -16,6 +16,12 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
   - **HP:** Tinjau SK (dokumen A4 + TTD), Ajukan adendum, Terima SK, notifikasi, ringkasan isi SK.
   - **Uji:** E2E nyata web + HP nyata (ketua) + emulator (anggota) — `docs/29-LAPORAN-UJI-E2E-SK.md`. Uji lama yang memeriksa alur lama disesuaikan (web 145 lulus, Flutter 88 lulus).
 
+- **Alur SK v2 — PR2 + PR3 dirilis ke produksi (2026-10-03, PR #9, `046f0b08`):**
+  - **PR2:** laporan harian berjenjang anggota → ketua → PM (Dikirim / Perlu perbaikan / Dikirim ulang / Disetujui), laporan mingguan untuk SK > 7 hari, dokumen laporan A4. Alembic 0019.
+  - **PR3:** adendum saat Berjalan (PM ubah isi SK, TTD ulang, versi lama Tidak berlaku), alat & kendaraan wajib dikembalikan sebelum penutupan, laporan akhir, Pengajuan penutupan → Selesai (tim & aset dilepas). Alembic 0020.
+  - **Perbaikan CI:** kolom `weekly_report.resubmitted` disamakan di `db/01_schema.sql`; snapshot OpenAPI diperbarui; uji blokir mingguan memakai SK 8 hari.
+  - **Verifikasi produksi:** Alembic 0020 (head), `/ready` ok, rute baru terdaftar (401 tanpa login) — `docs/29` §4. Alur lengkap dengan login belum diuji di produksi.
+
 - **CI · laporan Discord:** run yang dibatalkan `concurrency: cancel-in-progress` (ada push lebih baru ke branch yang sama) tidak lagi dilaporkan sebagai "❌ CI GAGAL" — notifikasi dilewati, run pengganti yang melapor (laporan palsu 48f9300f, 2026-10-02).
 
 - **PostgreSQL 18 di server (2026-10-02):** DB uji server `vms_db_test` dipindah ke citra `vms-db:18` (PG 18.6, PostGIS 3.6, pgvector) lewat `pg_dumpall`/restore — hitungan baris semua tabel identik, suite API yang disetujui 334 lolos di server. Kontainer & volume PG16 lama (`vms_db_test16`, `vms_db_test_data`) disimpan untuk rollback. **Produksi** (izin pemilik): `vms_db_prod` → PG18.6 dengan `pg_dumpall`/restore (4 DB, hitungan identik, henti ±2 menit 19.49–19.51); sandi `vms_app` yang masih sama dengan sandi di riwayat Git **dirotasi** (sandi lama ditolak); API `/ready` 200, alembic 0017, backup pasca-pindah ke MinIO berhasil. DB lama `vms_db_prod16` disimpan untuk rollback.

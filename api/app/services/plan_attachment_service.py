@@ -17,13 +17,19 @@ from app.services.access_service import PlanAccess, require_plan_status
 
 
 class PlanAttachmentService:
+    """Layanan pengelolaan lampiran dokumen pada draf SK."""
     def __init__(self, db: AsyncSession) -> None:
         self.repo = CRUDPlanAttachment(db)
 
     async def list_attachments(self, access: PlanAccess) -> list[Any]:
+        """Mendaftar seluruh berkas lampiran yang tertaut ke SK."""
         return await self.repo.list_for_plan(access.plan.id)
 
     async def save_attachments(self, access: PlanAccess, file_ids: list[UUID]) -> list[Any]:
+        """
+        Menyimpan perubahan daftar lampiran, menimpa daftar sebelumnya.
+        Hanya dapat dilakukan selama SK berstatus DRAFT.
+        """
         require_plan_status(access, PlanStatus.DRAFT)
         if len(set(file_ids)) != len(file_ids):
             raise ValidationError("Lampiran tidak valid.")

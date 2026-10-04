@@ -15,10 +15,24 @@ from app.crud.crud_notification import CRUDNotification
 
 
 class NotificationService:
+    """Layanan sentral pengiriman dan pengelolaan notifikasi dalam sistem aplikasi."""
+    
     def __init__(self, db: AsyncSession) -> None:
         self.repo = CRUDNotification(db)
 
     async def _plan(self, plan_id: UUID | str) -> Any:
+        """
+        Mencari data personel yang terhubung dengan suatu Surat Keputusan (SK).
+        
+        Args:
+            plan_id: ID dari SK.
+            
+        Returns:
+            Any: Data detail pihak-pihak terkait dari repo.
+            
+        Raises:
+            NotFoundError: Jika SK tidak ada.
+        """
         people = await self.repo.plan_people(plan_id)
         if people is None:
             raise NotFoundError("SK")
@@ -26,15 +40,32 @@ class NotificationService:
 
     @staticmethod
     def _label(people: Any) -> str:
+        """
+        Membuat teks label untuk keperluan subjek notifikasi.
+        """
         return str(people.number) if people.number else "SK"   # nomor sudah berawalan "SK-"
 
     async def plan_published(self, plan_id: UUID | str) -> None:
+        """
+        Mengirim notifikasi ketika SK diterbitkan (publish).
+        Dikirimkan kepada ketua dan anggota tim.
+        
+        Args:
+            plan_id: ID SK.
+        """
         p = await self._plan(plan_id)
         await self.repo.insert_many(
             p.organization_id, [p.leader, *p.members], "PLAN_PUBLISHED", f"{self._label(p)} terbit",
             f"{p.title} — ketua tim diminta meninjau lalu menerima SK atau mengajukan adendum.", plan_id)
 
     async def amendment_requested(self, plan_id: UUID | str, reason: str) -> None:
+        """
+        Mengirim notifikasi permintaan adendum SK oleh tim di lapangan kepada PM.
+        
+        Args:
+            plan_id: ID SK.
+            reason: Alasan permintaan adendum.
+        """
         p = await self._plan(plan_id)
         await self.repo.insert_many(p.organization_id, [p.pm], "PLAN_AMENDMENT_REQUESTED",
                                     f"Adendum diminta: {self._label(p)}", f"{p.title} — alasan: {reason}", plan_id)

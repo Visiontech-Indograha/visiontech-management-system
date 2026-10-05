@@ -2841,6 +2841,14 @@ export interface components {
             offline_note?: string | null;
             /** Check Out Requested At */
             check_out_requested_at?: string | null;
+            /** Face Result (Masuk) */
+            face_result?: ("MATCH" | "NO_MATCH" | "LOW_QUALITY" | "NOT_ENROLLED" | "SKIPPED") | null;
+            /** Face Similarity (Masuk) */
+            face_similarity?: number | null;
+            /** Face Result (Pulang) */
+            check_out_face_result?: ("MATCH" | "NO_MATCH" | "LOW_QUALITY" | "NOT_ENROLLED" | "SKIPPED") | null;
+            /** Face Similarity (Pulang) */
+            check_out_face_similarity?: number | null;
         };
         /** AuditEventListResponse */
         AuditEventListResponse: {

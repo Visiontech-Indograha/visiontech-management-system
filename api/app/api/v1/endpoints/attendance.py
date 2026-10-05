@@ -124,7 +124,8 @@ async def submit_offline_attendance(
     # Menggunakan dependensi offline_service
     result = await offline_service.apply(
         current_user, device_id=data.device_id, client_op_id=data.client_op_id, kind=data.kind,
-        payload=data.payload, signature=data.signature, selfie_file_id=data.selfie_file_id)
+        payload=data.payload, signature=data.signature, selfie_file_id=data.selfie_file_id,
+        face_probe_id=data.face_probe_id)
     return OfflineAttendanceResult(**result)
 
 
@@ -150,8 +151,9 @@ async def check_in(
     row = await attendance_session_service.check_in(
         current_user.organization_id, current_user.user_id, site_id=data.site_id,
         lng=data.location.lng, lat=data.location.lat, origin=data.location_origin,
-        accuracy_m=data.accuracy_m, selfie_file_id=data.selfie_file_id, face_result=data.face_result, face_similarity=data.face_similarity,
+        accuracy_m=data.accuracy_m, selfie_file_id=data.selfie_file_id,
         channel=data.channel, explanation=data.explanation,
+        face_probe_id=data.face_probe_id,
     )
     return _response(row)
 
@@ -171,7 +173,10 @@ async def check_out(
     Return: Detail absensi setelah check out (AttendanceResponse)
     """
     # Menggunakan dependensi attendance_session_service
-    return _response(await attendance_session_service.check_out(current_user.user_id, data.channel))
+    return _response(await attendance_session_service.check_out(
+        current_user.user_id, data.channel, org_id=current_user.organization_id,
+        face_probe_id=data.face_probe_id,
+    ))
 
 
 @router.post("/{att_id}/explain")

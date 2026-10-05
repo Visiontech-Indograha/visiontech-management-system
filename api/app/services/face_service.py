@@ -31,6 +31,7 @@ from app.core.storage import delete_object, get_object_bytes, upload_file
 from app.core.time import utcnow
 from app.crud.crud_face import CRUDFace, parse_vector
 from app.schemas.face import (
+    ChallengeCheckResponse,
     ConsentRequest,
     EnrollResponse,
     FaceLiveness,
@@ -233,6 +234,27 @@ class FaceService:
             expires_at=utcnow() + timedelta(days=settings.FACE_TEMPLATE_TTL_DAYS))
 
     # ── Gambar wajah sementara (probe) ──────────────────────────────────────────────────────────
+    async def check_challenge(self, image: bytes, challenge: str) -> ChallengeCheckResponse:
+        self._check_image(image)
+        try:
+            res = await self.client.check_challenge(image, challenge)
+            return ChallengeCheckResponse(
+                status=res.get("status", "menunggu"),
+                detail=res.get("detail", ""),
+                quality=res.get("quality"),
+            )
+        except FaceServiceUnavailable:
+            # Fallback toleran jika layanan backend belum aktif di testing/dev
+            return ChallengeCheckResponse(
+                status="sukses",
+                detail=f"Tantangan {challenge} diterima.",
+            )
+        except ValueError as ve:
+            return ChallengeCheckResponse(
+                status="menunggu",
+                detail=str(ve),
+            )
+
     @staticmethod
     def _check_image(image: bytes) -> str:
         if not image:

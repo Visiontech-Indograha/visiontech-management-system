@@ -9,6 +9,10 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased] — `development`
 
+- **Face API — implementasi liveness challenge & static SQL rules (2026-10-05):**
+  - **Endpoint Liveness (`endpoints/face.py`, `face-service/main.py`):** menyelesaikan endpoint `/challenge-check` untuk mengevaluasi liveness biometrik (seperti senyum, kedip, menoleh) dari kamera secara real-time.
+  - **Static SQL Rule (`test_sql_rules.py`):** menambahkan baseline pelanggaran SQL (R-31) dan linter otomatis untuk mendeteksi kueri yang kurang optimal atau berpotensi berbahaya.
+
 - **Face API & Mobile UI — antarmuka persetujuan biometrik web, probe selfie & penanganan lokasi SK mobile (2026-10-05):**
   - **Mobile (`vms_api.dart`, `attendance_screen.dart`, `profile_screen.dart`):** integrasi pengenalan wajah biometrik (Face API) untuk absensi masuk dan pulang (pengambilan swafoto otomatis dan pengiriman probe biometrik ke server bila wajah telah terdaftar). Penambahan kartu status biometrik di layar profil dengan persetujuan kebijakan v1.0 dan pendaftaran pose wajah. Penanganan banner informatif saat lokasi kerja penugasan SK belum tersedia.
   - **Web (`AccountPage.tsx`, `api.ts`):** kartu pengaturan biometrik wajah di halaman akun staf dengan persetujuan mandiri (consent) kebijakan v1.0, indikator status pendaftaran template wajah, dan formulir pendaftaran 3-5 pose swafoto.

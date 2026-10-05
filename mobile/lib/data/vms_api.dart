@@ -230,6 +230,7 @@ class VmsApi {
     required double lng,
     double? accuracyM,
     String? selfieFileId,
+    String? faceProbeId,
     String? explanation,
   }) async {
     final res = await _dio.post(
@@ -242,6 +243,7 @@ class VmsApi {
         'accuracy_m': ?accuracyM,
         'selfie_file_id': ?selfieFileId,
         if (selfieFileId != null) 'face_result': 'SKIPPED',
+        'face_probe_id': ?faceProbeId,
         'explanation': ?explanation,
       },
     );
@@ -251,6 +253,7 @@ class VmsApi {
   Future<Map<String, dynamic>> checkOut({
     required double lat,
     required double lng,
+    String? faceProbeId,
   }) async {
     final res = await _dio.post(
       '$_p/attendance/check-out',
@@ -258,8 +261,54 @@ class VmsApi {
         'channel': 'MOBILE',
         'location': {'lat': lat, 'lng': lng},
         'location_origin': 'GPS',
+        'face_probe_id': ?faceProbeId,
       },
     );
+    return Map<String, dynamic>.from(res.data as Map);
+  }
+
+  // --- Biometrik Wajah (Face API) ------------------------------------------
+  Future<Map<String, dynamic>> faceStatus() async {
+    final res = await _dio.get('$_p/face/status');
+    return Map<String, dynamic>.from(res.data as Map);
+  }
+
+  Future<Map<String, dynamic>> facePolicy() async {
+    final res = await _dio.get('$_p/face/policy');
+    return Map<String, dynamic>.from(res.data as Map);
+  }
+
+  Future<void> setFaceConsent(String state, {required String policyVersion}) async =>
+      _dio.post(
+        '$_p/face/consent',
+        data: {'state': state, 'policy_version': policyVersion},
+      );
+
+  Future<String> createFaceProbe(File photo) async {
+    final form = FormData.fromMap({
+      'file': await MultipartFile.fromFile(
+        photo.path,
+        filename: photo.uri.pathSegments.last,
+      ),
+      'liveness': '{}',
+    });
+    final res = await _dio.post('$_p/face/probe', data: form);
+    return (res.data as Map)['probe_id'] as String;
+  }
+
+  Future<Map<String, dynamic>> enrollFace(List<File> photos) async {
+    final fileParts = <MultipartFile>[];
+    for (final photo in photos) {
+      fileParts.add(await MultipartFile.fromFile(
+        photo.path,
+        filename: photo.uri.pathSegments.last,
+      ));
+    }
+    final form = FormData.fromMap({
+      'files': fileParts,
+      'liveness': '{}',
+    });
+    final res = await _dio.post('$_p/face/enroll', data: form);
     return Map<String, dynamic>.from(res.data as Map);
   }
 

@@ -42,6 +42,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
   bool _loading = true;
   bool _busy = false;
   String? _error;
+  bool _faceEnrolled = false;
 
   static final _day = DateFormat('EEE, d MMM yyyy', 'id_ID');
   static final _time = DateFormat('HH:mm');
@@ -83,6 +84,12 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       }
       final sites = await engine.fetchList('sites', engine.api.sites);
       final plans = await engine.fetchList('work_plans', engine.api.workPlans);
+      try {
+        final fs = await engine.api.faceStatus();
+        _faceEnrolled = fs['enrolled'] == true;
+      } catch (_) {
+        _faceEnrolled = false;
+      }
       // Titik lokasi SK yang sedang berjalan (ditetapkan PM) didahulukan sebagai lokasi absen.
       final runningSites = [
         for (final p in plans.items)
@@ -221,15 +228,17 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
         if (explanation == null) return;
       }
       String? selfieId;
+      String? faceProbeId;
       File? selfieFile;
-      if (outside) {
+      if (outside || _faceEnrolled) {
         if (!mounted) return;
         final (file, err) = await captureWatermarkedPhoto(
           context: context,
-          label: 'Swafoto absen',
+          label: outside ? 'Swafoto di luar radius' : 'Swafoto verifikasi wajah',
           kind: LocalFileKind.selfie,
-          hint:
-              'Anda ${distance.round()} m dari ${site['name']}. Swafoto wajib di luar radius.',
+          hint: outside
+              ? 'Anda ${distance.round()} m dari ${site['name']}. Swafoto wajib di luar radius.'
+              : 'Swafoto untuk verifikasi pengenalan wajah biometrik.',
           preferFrontCamera: true,
         );
         if (file == null) {
@@ -244,6 +253,14 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
               .read(syncEngineProvider)
               .api
               .uploadFile(selfieFile);
+          if (_faceEnrolled) {
+            try {
+              faceProbeId = await ref
+                  .read(syncEngineProvider)
+                  .api
+                  .createFaceProbe(selfieFile);
+            } catch (_) {}
+          }
         }
         await ref
             .read(syncEngineProvider)
@@ -254,6 +271,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
               lng: pos.longitude,
               accuracyM: pos.accuracy,
               selfieFileId: selfieId,
+              faceProbeId: faceProbeId,
               explanation: explanation,
             );
         _snack('Absen masuk tercatat.');
@@ -291,6 +309,27 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     try {
       final pos = await _position();
       if (pos == null) return;
+      String? faceProbeId;
+      if (_faceEnrolled) {
+        if (!mounted) return;
+        final (file, err) = await captureWatermarkedPhoto(
+          context: context,
+          label: 'Swafoto absen pulang',
+          kind: LocalFileKind.selfie,
+          hint: 'Swafoto verifikasi wajah untuk absensi pulang.',
+          preferFrontCamera: true,
+        );
+        if (file == null) {
+          if (err != null) _snack(err);
+          return;
+        }
+        try {
+          faceProbeId = await ref
+              .read(syncEngineProvider)
+              .api
+              .createFaceProbe(file);
+        } catch (_) {}
+      }
       Future<void> recordOffline() => ref
           .read(syncEngineProvider)
           .offlineAttendance
@@ -313,7 +352,11 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
           await ref
               .read(syncEngineProvider)
               .api
-              .checkOut(lat: pos.latitude, lng: pos.longitude);
+              .checkOut(
+                lat: pos.latitude,
+                lng: pos.longitude,
+                faceProbeId: faceProbeId,
+              );
           _snack('Absen pulang tercatat.');
         } on DioException catch (e) {
           if (!isNetworkFailure(e)) rethrow;
@@ -603,20 +646,32 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                               ),
                               const SizedBox(height: 12),
                             ],
-                            VmsSelectField<String>(
-                              label: 'Lokasi kerja',
-                              icon: Icons.place_rounded,
-                              value: _siteId,
-                              options: [
-                                for (final s in _sites)
-                                  VmsOption(
-                                    s['id'] as String,
-                                    s['name'] as String,
-                                  ),
-                              ],
-                              onChanged: (v) => setState(() => _siteId = v),
-                            ),
-                            const SizedBox(height: 14),
+                            if (_sites.isEmpty) ...[
+                              const NoticeBanner(
+                                key: Key('belum-ada-lokasi-sk'),
+                                icon: Icons.location_off_rounded,
+                                accent: Accent.amber,
+                                text:
+                                    'Belum ada lokasi kerja penugasan aktif (SK) untuk akun Anda. '
+                                    'Pastikan SK telah dibuat dan disetujui, atau hubungi Project Manager.',
+                              ),
+                              const SizedBox(height: 12),
+                            ] else ...[
+                              VmsSelectField<String>(
+                                label: 'Lokasi kerja',
+                                icon: Icons.place_rounded,
+                                value: _siteId,
+                                options: [
+                                  for (final s in _sites)
+                                    VmsOption(
+                                      s['id'] as String,
+                                      s['name'] as String,
+                                    ),
+                                ],
+                                onChanged: (v) => setState(() => _siteId = v),
+                              ),
+                              const SizedBox(height: 14),
+                            ],
                             PrimaryAction(
                               label: today == null
                                   ? 'Absen masuk'

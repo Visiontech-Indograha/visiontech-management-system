@@ -9,7 +9,11 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased] — `development`
 
-- **API (Optimasi Query)**: Penghapusan SELECT * untuk keamanan & kinerja, perbaikan query N+1 pada proses insert menggunakan unnest, penambahan limit paginasi pada query list, serta penambahan indexing untuk foreign key (Alembic 0021).
+- **API — optimasi query & dokumentasi kode (Gemini, ditinjau & diperbaiki 2026-10-05):**
+  - **Optimasi:** `SELECT *`/`RETURNING *` diganti daftar kolom eksplisit (dijaga `api/tests/test_no_select_star.py`); insert N+1 diganti satu `INSERT … SELECT unnest(…)`.
+  - **Indeks FK (Alembic `0021_fk_indexes`):** 62 indeks untuk kolom foreign key yang belum terindeks, juga di `db/*.sql`. Versi awal memakai `CREATE INDEX CONCURRENTLY` yang ditolak PostgreSQL di dalam transaksi migrasi dan pada tabel berpartisi, serta menulis nama partisi bulan tetap; kini `CREATE INDEX` biasa pada tabel induk saja (partisi mewarisi), dengan `downgrade`. Diuji naik → turun → naik di PostgreSQL nyata dan pemasangan bersih dari `db/*.sql`.
+  - **Dikembalikan:** `LIMIT 100` pada daftar SK dan daftar aset — memotong daftar secara diam-diam tanpa paginasi di web.
+  - **Dokumentasi:** docstring & komentar Bahasa Indonesia di 101 berkas API (diverifikasi lewat perbandingan AST: tidak ada perubahan perilaku di berkas tersebut).
 - **Alur SK v2 — PR1 (keputusan pemilik 2026-10-03, flowchart SK2 di FigJam):**
   - **DB (Alembic 0018):** `work_plan.category`, `work_plan_task.description` + `work_plan_task_attachment`, `site.description`, tabel `notification`, fungsi `employee_is_bound()`.
   - **API:** `GET /work-plans/form-options`, `/driver-options`; `POST /work-plans/full`, `PUT /work-plans/{id}/full` (satu transaksi — menutup celah "3 simpan terpisah"); `GET /{id}/detail`, `/{id}/preview` (A4); `GET /documents/{id}/html`; `/notifications`. Terbit → notifikasi ketua & anggota; Ajukan adendum (appeal) → dokumen menunggu jadi Tidak berlaku + notifikasi PM; Terima → notifikasi + otomatis Berjalan pada tanggal mulai; draf revisi bisa dibatalkan; `/start` idempoten.

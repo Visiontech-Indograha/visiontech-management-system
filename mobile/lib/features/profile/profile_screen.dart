@@ -1,6 +1,11 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/error_message.dart';
+import '../../core/local_storage.dart';
+import '../../core/photo_capture.dart';
 import '../../core/providers.dart';
 import '../auth/auth_controller.dart';
 import '../auth/auth_state.dart';
@@ -35,12 +40,112 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   int _deadLetterCount = 0;
   bool _biometricSupported = false;
   bool _biometricEnabled = false;
+  bool _faceLoading = false;
+  bool _isEnrolling = false;
+  Map<String, dynamic>? _faceStatus;
+  String? _faceError;
 
   @override
   void initState() {
     super.initState();
     _loadSyncInfo();
     _loadBiometricState();
+    _loadFaceState();
+  }
+
+  Future<void> _loadFaceState() async {
+    setState(() => _faceLoading = true);
+    try {
+      final res = await ref.read(syncEngineProvider).api.faceStatus();
+      if (mounted) {
+        setState(() {
+          _faceStatus = res;
+          _faceError = null;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _faceError = apiErrorMessage(e));
+    } finally {
+      if (mounted) setState(() => _faceLoading = false);
+    }
+  }
+
+  Future<void> _toggleFaceConsent(bool grant) async {
+    setState(() => _faceLoading = true);
+    try {
+      await ref.read(syncEngineProvider).api.setFaceConsent(
+            grant ? 'GRANTED' : 'WITHDRAWN',
+            policyVersion: '1.0',
+          );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(grant
+                ? 'Persetujuan biometrik wajah diberikan.'
+                : 'Persetujuan biometrik wajah dicabut.'),
+          ),
+        );
+      }
+      await _loadFaceState();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(apiErrorMessage(e))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _faceLoading = false);
+    }
+  }
+
+  Future<void> _enrollFaceFlow() async {
+    final list = <File>[];
+    const poses = [
+      'Foto 1/3: Posisikan wajah tegak lurus menghadap kamera.',
+      'Foto 2/3: Tersenyum menghadap kamera.',
+      'Foto 3/3: Miringkan sedikit kepala / sudut berbeda.',
+    ];
+
+    for (int i = 0; i < poses.length; i++) {
+      if (!mounted) return;
+      final (file, err) = await captureWatermarkedPhoto(
+        context: context,
+        label: 'Daftar Wajah (${i + 1}/${poses.length})',
+        kind: LocalFileKind.selfie,
+        hint: poses[i],
+        preferFrontCamera: true,
+      );
+      if (file == null) {
+        if (err != null && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
+        }
+        return;
+      }
+      list.add(file);
+    }
+
+    setState(() => _isEnrolling = true);
+    try {
+      final res = await ref.read(syncEngineProvider).api.enrollFace(list);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Wajah berhasil didaftarkan! (${res['poses_enrolled'] ?? list.length} pose tersimpan).',
+            ),
+          ),
+        );
+      }
+      await _loadFaceState();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(apiErrorMessage(e))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isEnrolling = false);
+    }
   }
 
   Future<void> _loadBiometricState() async {
@@ -316,6 +421,107 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           icon: const Icon(Icons.list_alt_rounded),
                           label: const Text('Lihat antrean sinkronisasi'),
                         ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SectionTitle('Biometrik Wajah (Face API)'),
+                FadeSlideIn(
+                  index: 1,
+                  child: SurfaceCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Row(
+                          children: [
+                            const IconTile(
+                              icon: Icons.face_rounded,
+                              accent: Accent.teal,
+                              size: 40,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Pengenalan Wajah',
+                                    style: VmsTextStyles.bodySm.copyWith(
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  Text(
+                                    _faceLoading
+                                        ? 'Memeriksa status...'
+                                        : (_faceStatus?['enrolled'] == true
+                                            ? 'Wajah Terdaftar (Aktif)'
+                                            : (_faceStatus?['consent'] == 'GRANTED'
+                                                ? 'Izin Diberikan — Belum Ada Wajah'
+                                                : 'Persetujuan Belum Diberikan')),
+                                    style: VmsTextStyles.caption.copyWith(
+                                      color: _faceStatus?['enrolled'] == true
+                                          ? Accent.emerald.strong
+                                          : VmsColors.neutral500,
+                                      fontWeight: _faceStatus?['enrolled'] == true
+                                          ? FontWeight.w600
+                                          : FontWeight.normal,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.refresh_rounded, size: 20),
+                              onPressed: _faceLoading ? null : _loadFaceState,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Pencocokan biometrik wajah dilakukan di server secara aman untuk memverifikasi absensi masuk dan pulang.',
+                          style: VmsTextStyles.bodySm.copyWith(
+                            color: VmsColors.neutral500,
+                          ),
+                        ),
+                        if (_faceError != null) ...[
+                          const SizedBox(height: 10),
+                          NoticeBanner(
+                            icon: Icons.info_outline_rounded,
+                            text: _faceError!,
+                            accent: Accent.amber,
+                          ),
+                        ],
+                        const SizedBox(height: 12),
+                        if (_faceStatus?['consent'] != 'GRANTED') ...[
+                          OutlinedButton.icon(
+                            onPressed: _isEnrolling || _faceLoading
+                                ? null
+                                : () => _toggleFaceConsent(true),
+                            icon: const Icon(Icons.check_circle_outline_rounded),
+                            label: const Text('Beri Persetujuan Biometrik (v1.0)'),
+                          ),
+                        ] else ...[
+                          PrimaryAction(
+                            label: _faceStatus?['enrolled'] == true
+                                ? 'Daftar Ulang Wajah'
+                                : 'Daftarkan Wajah (3-5 Foto)',
+                            icon: Icons.camera_alt_rounded,
+                            busy: _isEnrolling,
+                            onTap: _isEnrolling || _faceLoading ? null : _enrollFaceFlow,
+                          ),
+                          const SizedBox(height: 6),
+                          Center(
+                            child: TextButton(
+                              onPressed: _isEnrolling || _faceLoading
+                                  ? null
+                                  : () => _toggleFaceConsent(false),
+                              child: Text(
+                                'Cabut Izin Biometrik',
+                                style: TextStyle(color: Accent.rose.strong, fontSize: 13),
+                              ),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),

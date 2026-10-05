@@ -47,6 +47,17 @@ DOCUMENT_STATUS_LABEL = {"AWAITING_ACCEPTANCE": "Menunggu tanda tangan", "EFFECT
 
 
 def render_plan_document_html(document: Any, signatures: list[dict[str, Any]]) -> str:
+    """
+    Menghasilkan HTML dari sebuah dokumen SK yang sudah ada di sistem.
+    Digunakan untuk mencetak PDF yang menjadi sumber kebenaran (source of truth).
+    
+    Args:
+        document: Baris data dokumen SK dari database.
+        signatures: Daftar tanda tangan yang relevan dengan dokumen ini.
+        
+    Returns:
+        str: String HTML dokumen.
+    """
     snapshot = document.snapshot if isinstance(document.snapshot, dict) else json.loads(document.snapshot)
     status = getattr(document, "status", None)
     return _ENV.get_template("plan_document.html").render(
@@ -91,6 +102,18 @@ def render_bast_html(record: Any) -> str:
 
 
 def html_to_pdf(html: str) -> bytes:
+    """
+    Mengubah konten HTML menjadi file biner PDF menggunakan pustaka WeasyPrint.
+    
+    Args:
+        html: Teks HTML mentah.
+        
+    Returns:
+        bytes: Data biner file PDF.
+        
+    Raises:
+        AppError: Jika dependensi sistem WeasyPrint tidak ditemukan.
+    """
     try:
         from weasyprint import HTML
     except (ImportError, OSError):

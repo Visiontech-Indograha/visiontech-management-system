@@ -13,9 +13,21 @@ from .base import CRUDBase
 
 
 class CRUDOrgClock(CRUDBase):
+    """
+    Kelas CRUD untuk operasi yang berkaitan dengan waktu dan zona waktu organisasi.
+    """
 
     async def local_now(self, org_id: UUID | str) -> Any:
-        """Baris `(local_now, today)` untuk organisasi."""
+        """Baris `(local_now, today)` untuk organisasi.
+        
+        Args:
+            org_id (UUID | str): ID organisasi.
+            
+        Returns:
+            Any: Baris data yang menyimpan nilai waktu (timestamp) dan tanggal (date) lokal organisasi.
+        """
+        # Mengekstrak waktu server (now()) dan mentransformasikannya secara real-time
+        # ke zona waktu spesifik organisasi (o.timezone) melalui fitur AT TIME ZONE PostgreSQL.
         return await self.fetchone(
             """
             SELECT (now() AT TIME ZONE o.timezone) AS local_now,
@@ -26,7 +38,17 @@ class CRUDOrgClock(CRUDBase):
         )
 
     async def day_reached(self, day_id: UUID | str) -> Any:
-        """Apakah tanggal hari kerja sudah tiba menurut zona waktu organisasi SK-nya. None = hari tidak ada."""
+        """Apakah tanggal hari kerja sudah tiba menurut zona waktu organisasi SK-nya. None = hari tidak ada.
+        
+        Args:
+            day_id (UUID | str): ID dari entri hari kerja (work_plan_day).
+            
+        Returns:
+            Any: Boolean evaluasi waktu, atau None.
+        """
+        # Melakukan JOIN bertingkat dari tabel hari (work_plan_day) ke work_plan lalu ke organization.
+        # Membandingkan kolom work_date dengan tanggal lokal terkini dari zona waktu organisasi tersebut
+        # untuk menentukan apakah suatu hari kerja SK sudah tiba atau belum.
         return await self.scalar(
             """
             SELECT d.work_date <= (now() AT TIME ZONE o.timezone)::date
@@ -37,3 +59,4 @@ class CRUDOrgClock(CRUDBase):
             """,
             {"day": day_id},
         )
+

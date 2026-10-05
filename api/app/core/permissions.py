@@ -10,6 +10,10 @@ from enum import Enum, StrEnum
 
 
 class RoleCode(StrEnum):
+    """
+    Kode peran pengguna di seluruh sistem (global roles).
+    Daftar ini sejalan dengan tipe enum PostgreSQL `vms.role_code`.
+    """
     PM = "PM"
     LEADER = "LEADER"
     MEMBER = "MEMBER"
@@ -25,6 +29,9 @@ NO_GLOBAL_ROLE = "field"
 
 
 class Permission(str, Enum):
+    """
+    Daftar izin (permissions) yang digunakan dalam aplikasi.
+    """
     # Pengguna & direktori karyawan
     MANAGE_USERS = "manage:users"
     VIEW_USERS = "view:users"

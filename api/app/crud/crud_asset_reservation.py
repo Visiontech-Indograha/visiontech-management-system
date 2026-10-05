@@ -43,7 +43,6 @@ class CRUDAssetReservation(CRUDBase):
             LEFT JOIN vms.employee re ON re.id = r.requested_by
             WHERE a.organization_id = :org AND a.deleted_at IS NULL
             ORDER BY a.name
-            LIMIT 100
             """,
             {"org": org_id}))
 

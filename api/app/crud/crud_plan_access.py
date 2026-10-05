@@ -95,7 +95,7 @@ class CRUDPlanAccess(CRUDBase):
         """
         # Mengeksekusi kueri _STANDING yang sama tanpa memfilter ID SK tertentu,
         # sehingga mengembalikan seluruh SK yang 'visible' bagi pengguna.
-        return await self.fetchall(_STANDING + " LIMIT 100", {"plan": None, "org": org_id, "user": user_id,
+        return await self.fetchall(_STANDING, {"plan": None, "org": org_id, "user": user_id,
                                                "status": status, "archived": archived})
 
     async def plan_of_day(self, day_id: UUID | str) -> Any:

@@ -402,3 +402,10 @@ CREATE POLICY signing_key_visibility ON signing_key
 GRANT SELECT, INSERT, UPDATE ON document_signature, user_session, login_attempt,
       signing_key, signature_serial_counter TO vms_app;
 GRANT SELECT ON v_signature_public TO vms_readonly;
+
+-- Indeks kolom foreign key (Alembic 0021_fk_indexes). Tabel berpartisi cukup diindeks di induknya.
+CREATE INDEX IF NOT EXISTS ix_user_session_rotated_to ON user_session (rotated_to);
+CREATE INDEX IF NOT EXISTS ix_user_session_organization_id ON user_session (organization_id);
+CREATE INDEX IF NOT EXISTS ix_document_signature_revoked_by ON document_signature (revoked_by);
+CREATE INDEX IF NOT EXISTS ix_document_signature_signing_key_id ON document_signature (signing_key_id);
+CREATE INDEX IF NOT EXISTS ix_document_signature_plan_document_id ON document_signature (plan_document_id);

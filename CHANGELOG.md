@@ -9,12 +9,33 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased] — `development`
 
+- **Face API — implementasi backend pengenalan wajah & integrasi absensi (2026-10-05):**
+  - **Endpoint & Routing (`api/v1/endpoints/face.py`, `router.py`, `deps.py`):** menambahkan router `/face` (`GET /policy`, `GET /status`, `POST /consent`, `POST /enroll`, `GET /template`, `POST /probe`) khusus untuk pekerja lapangan (`FIELD`), terhubung ke `FaceService` dan `FaceEmbedClient`.
+  - **Integrasi Absensi Masuk, Pulang & Luring (`attendance.py`, `attendance_session_service.py`, `attendance_offline_service.py`):** pencocokan biometrik wajah dihitung dan diverifikasi sepenuhnya di sisi server (`face_probe_id`). Hasil `NO_MATCH` atau `LOW_QUALITY` otomatis menaikkan status menjadi `NEEDS_REVIEW` tanpa menolak absensi secara sepihak (Aturan Inti #3). Pada absensi luring, blok wajah dan hash gambar diverifikasi terhadap tanda tangan kriptografis perangkat.
+  - **Penjadwal Pemeliharaan (`attendance_cron.py`):** menambahkan endpoint `POST /reverify-faces` (rekonsiliasi probe tertunda bila face-service pulih) dan `POST /purge-face-probes` (retensi pembersihan gambar sementara sesuai kebijakan organisasi) dengan izin `Permission.RUN_SYSTEM_JOBS`.
+  - **Database & Alembic (`0022_face_attendance.py`, `db/05_face.sql`):** penyelarasan fungsi `purge_face_probes()` untuk membersihkan probe kadaluarsa dan relasi MinIO object storage.
+  - **Web Review UI (`AttendancePage.tsx`, `api-types.ts`):** visualisasi status dan tingkat kemiripan pencocokan wajah server pada daftar kehadiran dan dialog tinjauan absensi.
+  - **Pengujian Unit (`test_face_unit.py`):** suite pengujian terisolasi untuk kebijakan versi, validasi consent, liveness challenge, parsing pgvector, dan ambang batas foto enrollment (25/25 uji arsitektur & unit lulus).
+
+- **Mobile — APK rilis memakai kunci tanda tangan rilis (2026-10-05):** `build.gradle.kts` membaca `android/key.properties` (tidak masuk Git; contoh `key.properties.example`). Build rilis tanpa kunci **gagal** dengan pesan jelas (kecuali `-PallowDebugSigning=true` untuk uji lokal), sehingga APK bertanda kunci debug tidak terdistribusi. Diuji: tanpa kunci → gagal; dengan kunci uji sementara → APK 70,2 MB bertanda `CN=UJI SEMENTARA` (v2 lolos `apksigner`), berbeda dari kunci debug. Alamat produksi: `https://portal.visiontechindo.com` (Cloudflare Tunnel, satu domain untuk web/API/berkas) — HP tidak lagi butuh Tailscale.
+
+- **API — optimasi query & dokumentasi kode (Gemini, ditinjau & diperbaiki 2026-10-05):**
+  - **Optimasi:** `SELECT *`/`RETURNING *` diganti daftar kolom eksplisit (dijaga `api/tests/test_no_select_star.py`); insert N+1 diganti satu `INSERT … SELECT unnest(…)`.
+  - **Indeks FK (Alembic `0021_fk_indexes`):** 62 indeks untuk kolom foreign key yang belum terindeks, juga di `db/*.sql`. Versi awal memakai `CREATE INDEX CONCURRENTLY` yang ditolak PostgreSQL di dalam transaksi migrasi dan pada tabel berpartisi, serta menulis nama partisi bulan tetap; kini `CREATE INDEX` biasa pada tabel induk saja (partisi mewarisi), dengan `downgrade`. Diuji naik → turun → naik di PostgreSQL nyata dan pemasangan bersih dari `db/*.sql`.
+  - **Dikembalikan:** `LIMIT 100` pada daftar SK dan daftar aset — memotong daftar secara diam-diam tanpa paginasi di web.
+  - **Dokumentasi:** docstring & komentar Bahasa Indonesia di 101 berkas API (diverifikasi lewat perbandingan AST: tidak ada perubahan perilaku di berkas tersebut).
 - **Alur SK v2 — PR1 (keputusan pemilik 2026-10-03, flowchart SK2 di FigJam):**
   - **DB (Alembic 0018):** `work_plan.category`, `work_plan_task.description` + `work_plan_task_attachment`, `site.description`, tabel `notification`, fungsi `employee_is_bound()`.
   - **API:** `GET /work-plans/form-options`, `/driver-options`; `POST /work-plans/full`, `PUT /work-plans/{id}/full` (satu transaksi — menutup celah "3 simpan terpisah"); `GET /{id}/detail`, `/{id}/preview` (A4); `GET /documents/{id}/html`; `/notifications`. Terbit → notifikasi ketua & anggota; Ajukan adendum (appeal) → dokumen menunggu jadi Tidak berlaku + notifikasi PM; Terima → notifikasi + otomatis Berjalan pada tanggal mulai; draf revisi bisa dibatalkan; `/start` idempoten.
   - **Web PM:** halaman Buat/Ubah isi SK, modal Lokasi baru berpeta, "Sunting SK" (pratinjau A4, Cetak, Ubah isi), "Lihat dokumen", isi SK lengkap di detail, lonceng notifikasi; tombol ketua dipindah ke HP.
   - **HP:** Tinjau SK (dokumen A4 + TTD), Ajukan adendum, Terima SK, notifikasi, ringkasan isi SK.
   - **Uji:** E2E nyata web + HP nyata (ketua) + emulator (anggota) — `docs/29-LAPORAN-UJI-E2E-SK.md`. Uji lama yang memeriksa alur lama disesuaikan (web 145 lulus, Flutter 88 lulus).
+
+- **Alur SK v2 — PR2 + PR3 dirilis ke produksi (2026-10-03, PR #9, `046f0b08`):**
+  - **PR2:** laporan harian berjenjang anggota → ketua → PM (Dikirim / Perlu perbaikan / Dikirim ulang / Disetujui), laporan mingguan untuk SK > 7 hari, dokumen laporan A4. Alembic 0019.
+  - **PR3:** adendum saat Berjalan (PM ubah isi SK, TTD ulang, versi lama Tidak berlaku), alat & kendaraan wajib dikembalikan sebelum penutupan, laporan akhir, Pengajuan penutupan → Selesai (tim & aset dilepas). Alembic 0020.
+  - **Perbaikan CI:** kolom `weekly_report.resubmitted` disamakan di `db/01_schema.sql`; snapshot OpenAPI diperbarui; uji blokir mingguan memakai SK 8 hari.
+  - **Verifikasi produksi:** Alembic 0020 (head), `/ready` ok, rute baru terdaftar (401 tanpa login) — `docs/29` §4. Alur lengkap dengan login belum diuji di produksi.
 
 - **CI · laporan Discord:** run yang dibatalkan `concurrency: cancel-in-progress` (ada push lebih baru ke branch yang sama) tidak lagi dilaporkan sebagai "❌ CI GAGAL" — notifikasi dilewati, run pengganti yang melapor (laporan palsu 48f9300f, 2026-10-02).
 

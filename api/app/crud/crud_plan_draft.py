@@ -24,9 +24,23 @@ _FIELD_STAFF = """
 
 
 class CRUDPlanDraft(CRUDBase):
+    """
+    CRUD untuk mengelola pembuatan dan pengubahan draf rencana kerja (SK).
+    Menangani data karyawan, unit, site, aset, dan validasi prasyarat (SIM, staf lapangan).
+    """
 
     async def creator(self, user_id: UUID | str) -> Any:
-        """Karyawan pembuat SK beserta unit dan nama unitnya (tipe SK)."""
+        """
+        Karyawan pembuat SK beserta unit dan nama unitnya (tipe SK).
+        
+        Args:
+            user_id (UUID | str): ID pengguna (app_user).
+            
+        Returns:
+            Any: Record karyawan pembuat SK (employee_id, unit_id, unit_name).
+        """
+        # Bergabung (JOIN) dengan tabel employee dan business_unit
+        # untuk memastikan akun masih aktif dan mengambil informasi unit.
         return await self.fetchone(
             """
             SELECT e.id::text AS employee_id, e.unit_id::text AS unit_id, bu.name AS unit_name
@@ -39,13 +53,35 @@ class CRUDPlanDraft(CRUDBase):
         )
 
     async def unit_name(self, unit_id: UUID | str) -> str | None:
+        """
+        Mengambil nama dari unit bisnis.
+        
+        Args:
+            unit_id (UUID | str): ID unit bisnis.
+            
+        Returns:
+            str | None: Nama unit bisnis jika ada, atau None.
+        """
+        # Melakukan scalar query secara langsung ke vms.business_unit.
         value = await self.scalar("SELECT name FROM vms.business_unit WHERE id = CAST(:u AS uuid)",
                                   {"u": str(unit_id)})
         return str(value) if value else None
 
     async def field_staff(self, org_id: UUID | str, unit_id: UUID | str | None,
                           exclude_plan: UUID | str | None) -> list[Any]:
-        """Staf lapangan yang tidak terikat SK aktif mana pun. `unit_id` terisi = hanya bawahan unit itu."""
+        """
+        Staf lapangan yang tidak terikat SK aktif mana pun.
+        
+        Args:
+            org_id (UUID | str): ID organisasi.
+            unit_id (UUID | str | None): Filter unit spesifik.
+            exclude_plan (UUID | str | None): Mengecualikan ikatan dengan SK tertentu (biasanya SK yang sedang diubah).
+            
+        Returns:
+            list[Any]: Daftar karyawan staf lapangan.
+        """
+        # Memastikan karyawan tergolong _FIELD_STAFF (tidak memiliki role manajerial/kantor),
+        # berada dalam unit_id (jika diberikan), dan tidak terikat SK lain melalui vms.employee_is_bound().
         return list(await self.fetchall(
             f"""
             SELECT e.id, e.full_name, e.position, e.unit_id
@@ -60,7 +96,18 @@ class CRUDPlanDraft(CRUDBase):
         ))
 
     async def free_assets(self, org_id: UUID | str, plan_id: UUID | str | None) -> list[Any]:
-        """Aset siap pakai yang tidak teralokasi/dipinjam — ditambah aset yang sudah dipesan draf ini."""
+        """
+        Aset siap pakai yang tidak teralokasi/dipinjam — ditambah aset yang sudah dipesan draf ini.
+        
+        Args:
+            org_id (UUID | str): ID organisasi.
+            plan_id (UUID | str | None): ID SK yang sedang diubah.
+            
+        Returns:
+            list[Any]: Daftar aset (kendaraan atau alat) yang bebas atau dipinjam draf ini.
+        """
+        # Menggunakan EXISTS untuk mengecek relasi di asset_allocation yang aktif.
+        # Menampilkan aset berstatus 'AVAILABLE' DAN tak punya alokasi aktif, ATAU aset dialokasikan khusus untuk plan ini.
         return list(await self.fetchall(
             """
             SELECT a.id, CAST(a.kind AS text) AS kind, a.vehicle_type, a.code, a.name
@@ -78,6 +125,19 @@ class CRUDPlanDraft(CRUDBase):
         ))
 
     async def sites(self, org_id: UUID | str, unit_id: UUID | str | None) -> list[Any]:
+        """
+        Mendaftar titik lokasi (site) yang relevan untuk unit kerja ini.
+        
+        Args:
+            org_id (UUID | str): ID organisasi.
+            unit_id (UUID | str | None): ID unit yang memfilter site.
+            
+        Returns:
+            list[Any]: Daftar lokasi (site) yang terlihat oleh unit tersebut.
+        """
+        # Mengembalikan titik ST_Y(lat) dan ST_X(lng).
+        # Site kantor pusat (unit_id IS NULL) selalu ditampilkan sebagai opsi,
+        # selain site eksklusif unit tersebut.
         return list(await self.fetchall(
             """
             SELECT s.id, s.name, s.address, s.description,
@@ -91,10 +151,22 @@ class CRUDPlanDraft(CRUDBase):
         ))
 
     async def licensed(self, employee_ids: Iterable[UUID | str], licence: str, until: date) -> set[str]:
-        """Karyawan dengan SIM `licence` yang berlaku sampai `until` (aturan trigger tg_vehicle_driver_licence)."""
+        """
+        Karyawan dengan SIM `licence` yang berlaku sampai `until` (aturan trigger tg_vehicle_driver_licence).
+        
+        Args:
+            employee_ids (Iterable[UUID | str]): Kumpulan ID karyawan calon pengemudi.
+            licence (str): Tipe SIM yang diminta (misal: 'SIM_A').
+            until (date): Batas waktu berlaku minimal (seusai periode SK).
+            
+        Returns:
+            set[str]: Kumpulan (set) ID karyawan berlisensi valid.
+        """
         ids = [str(v) for v in employee_ids]
         if not ids:
             return set()
+        # Mencari dokumen ber-lifecycle 'CURRENT' yang tipenya persis sama dengan licence
+        # dan memastikan expiry_date tidak null dan tidak mendahului 'until'.
         rows = await self.fetchall(
             """
             SELECT CAST(employee_id AS text) AS employee_id FROM vms.employee_document
@@ -106,9 +178,20 @@ class CRUDPlanDraft(CRUDBase):
         return {str(r.employee_id) for r in rows}
 
     async def employees_bound(self, employee_ids: Iterable[UUID | str], exclude_plan: UUID | str | None) -> set[str]:
+        """
+        Memeriksa apakah ada karyawan dari kumpulan ID tersebut yang terikat SK aktif lain.
+        
+        Args:
+            employee_ids (Iterable[UUID | str]): Kumpulan ID karyawan.
+            exclude_plan (UUID | str | None): Abaikan ikatan pada ID rencana kerja ini.
+            
+        Returns:
+            set[str]: Set ID karyawan yang sedang sibuk/terikat SK.
+        """
         ids = [str(v) for v in employee_ids]
         if not ids:
             return set()
+        # Melakukan unnest array UUID lalu menggunakan fungsi bantu vms.employee_is_bound().
         rows = await self.fetchall(
             """
             SELECT CAST(x AS text) AS employee_id FROM unnest(CAST(:ids AS uuid[])) AS x
@@ -119,10 +202,20 @@ class CRUDPlanDraft(CRUDBase):
         return {str(r.employee_id) for r in rows}
 
     async def field_staff_ids(self, employee_ids: Iterable[UUID | str], org_id: UUID | str) -> dict[str, str | None]:
-        """id → unit_id untuk karyawan yang memenuhi syarat staf lapangan."""
+        """
+        Memfilter dan mengembalikan id → unit_id untuk karyawan yang tergolong staf lapangan.
+        
+        Args:
+            employee_ids (Iterable[UUID | str]): Kumpulan ID karyawan.
+            org_id (UUID | str): ID organisasi.
+            
+        Returns:
+            dict[str, str | None]: Dictionary mapping ID karyawan ke ID unit.
+        """
         ids = [str(v) for v in employee_ids]
         if not ids:
             return {}
+        # Memastikan hanya karyawan yang sesuai dengan definisi _FIELD_STAFF yang masuk
         rows = await self.fetchall(
             f"""
             SELECT CAST(e.id AS text) AS employee_id, CAST(e.unit_id AS text) AS unit_id
@@ -134,6 +227,18 @@ class CRUDPlanDraft(CRUDBase):
         return {str(r.employee_id): r.unit_id for r in rows}
 
     async def lock_draft(self, plan_id: UUID | str, org_id: UUID | str) -> Any:
+        """
+        Mengunci baris rencana kerja (SK) untuk diubah, menghindari kondisi balapan (race condition).
+        
+        Args:
+            plan_id (UUID | str): ID rencana kerja.
+            org_id (UUID | str): ID organisasi.
+            
+        Returns:
+            Any: Record rencana kerja (ID, unit, status, dll).
+        """
+        # FOR UPDATE akan memblokir transaksi lain yang mencoba membaca atau mengubah
+        # rencana kerja ini sampai transaksi saat ini selesai.
         return await self.fetchone(
             """
             SELECT id, unit_id, status, row_version, pm_employee_id
@@ -146,6 +251,21 @@ class CRUDPlanDraft(CRUDBase):
 
     async def insert_site(self, org_id: UUID | str, unit_id: UUID | str | None, name: str,
                           description: str | None, lat: float, lng: float) -> Any:
+        """
+        Membuat record site sementara/baru untuk rencana kerja.
+        
+        Args:
+            org_id (UUID | str): ID organisasi.
+            unit_id (UUID | str | None): ID unit yang memilikinya.
+            name (str): Nama site.
+            description (str | None): Penjelasan site.
+            lat (float): Garis lintang (latitude).
+            lng (float): Garis bujur (longitude).
+            
+        Returns:
+            Any: Record site baru yang terbuat.
+        """
+        # Site dibuat dengan fungsi koordinat PostGIS ST_MakePoint.
         return await self.fetchone(
             """
             INSERT INTO vms.site (organization_id, name, address, description, location, radius_m, unit_id)
@@ -158,6 +278,17 @@ class CRUDPlanDraft(CRUDBase):
         )
 
     async def site_name(self, site_id: UUID | str, org_id: UUID | str) -> str | None:
+        """
+        Mendapatkan nama dari site tertentu.
+        
+        Args:
+            site_id (UUID | str): ID site.
+            org_id (UUID | str): ID organisasi.
+            
+        Returns:
+            str | None: Nama site, atau None.
+        """
+        # Pengecekan site name dari vms.site dan memastikan tidak dalam keadaan dihapus.
         value = await self.scalar(
             "SELECT name FROM vms.site WHERE id = CAST(:id AS uuid) AND organization_id = CAST(:org AS uuid) "
             "AND deleted_at IS NULL",
@@ -168,6 +299,16 @@ class CRUDPlanDraft(CRUDBase):
                           title: str, description: str, category: str, site_id: UUID | str,
                           location_text: str, period_start: date, period_end: date,
                           pm_employee_id: UUID | str, leader_employee_id: UUID | str) -> Any:
+        """
+        Memasukkan draf rencana kerja (SK) ke dalam database untuk pertama kali.
+        
+        Args:
+            (Beragam Parameter detail SK)
+            
+        Returns:
+            Any: Menyertakan ID yang dihasilkan.
+        """
+        # Periode menggunakan daterange PostgreSQL, inklusif (tanda kurung '[]') dari awal hingga akhir.
         return await self.fetchone(
             """
             INSERT INTO vms.work_plan (organization_id, unit_id, site_id, title, location_text, description,
@@ -186,6 +327,13 @@ class CRUDPlanDraft(CRUDBase):
     async def update_plan(self, plan_id: UUID | str, *, title: str, description: str, category: str,
                           site_id: UUID | str, location_text: str, period_start: date, period_end: date,
                           leader_employee_id: UUID | str) -> None:
+        """
+        Memperbarui header/informasi umum rencana kerja (SK) saat pengeditan draf.
+        
+        Args:
+            (Beragam parameter terkait)
+        """
+        # Menulis ulang properti draf SK dan menaikkan row_version sebagai antisipasi concurrency.
         await self.execute(
             """
             UPDATE vms.work_plan
@@ -199,9 +347,18 @@ class CRUDPlanDraft(CRUDBase):
         )
 
     async def clear_draft_parts(self, plan_id: UUID | str) -> None:
-        """Draf disusun ulang seluruhnya: hari (beserta tugas & lampirannya), tim, dan reservasi aset."""
+        """
+        Membersihkan ulang semua komponen draf (hari, tugas, anggota, alokasi aset)
+        sebelum menyisipkan data draf yang baru dari formulir klien.
+        
+        Args:
+            plan_id (UUID | str): ID rencana kerja.
+        """
+        # Karena ini pembaruan utuh (replace-all) dari aplikasi web, hapus semua
+        # record harian dan keanggotaan.
         await self.execute("DELETE FROM vms.work_plan_day WHERE work_plan_id = :plan", {"plan": plan_id})
         await self.execute("DELETE FROM vms.work_plan_member WHERE work_plan_id = :plan", {"plan": plan_id})
+        # Aset dilepas dan statusnya dikembalikan ke 'AVAILABLE'.
         await self.execute(
             """
             WITH freed AS (
@@ -215,6 +372,8 @@ class CRUDPlanDraft(CRUDBase):
         )
 
     async def insert_day(self, plan_id: UUID | str, work_date: date, title: str, sort_order: int) -> Any:
+        """Menyisipkan hari kerja baru dalam draf."""
+        # Menambah hari berdasarkan tanggal di work_date dan mereturn id hari.
         return await self.scalar(
             "INSERT INTO vms.work_plan_day (work_plan_id, work_date, title, sort_order) "
             "VALUES (:plan, :date, :title, :sort) RETURNING id",
@@ -222,6 +381,8 @@ class CRUDPlanDraft(CRUDBase):
         )
 
     async def insert_task(self, day_id: UUID | str, title: str, description: str, sort_order: int) -> Any:
+        """Menyisipkan rincian tugas untuk suatu hari kerja dalam draf."""
+        # Menambahkan data task.
         return await self.scalar(
             "INSERT INTO vms.work_plan_task (work_plan_day_id, title, description, sort_order) "
             "VALUES (:day, :title, :desc, :sort) RETURNING id",
@@ -229,6 +390,8 @@ class CRUDPlanDraft(CRUDBase):
         )
 
     async def insert_task_file(self, task_id: UUID | str, file_id: UUID | str, sort_order: int) -> None:
+        """Menyisipkan referensi dokumen (lampiran) ke sebuah tugas."""
+        # Mereferensikan file dari file_object ke task ini.
         await self.execute(
             "INSERT INTO vms.work_plan_task_attachment (task_id, file_id, sort_order) VALUES (:task, :file, :sort)",
             {"task": task_id, "file": str(file_id), "sort": sort_order},
@@ -236,6 +399,16 @@ class CRUDPlanDraft(CRUDBase):
 
     async def insert_member(self, plan_id: UUID | str, employee_id: UUID | str, role: str,
                             period_start: date) -> None:
+        """
+        Menambahkan anggota (karyawan lapangan) ke dalam tim SK.
+        
+        Args:
+            plan_id (UUID | str): ID rencana kerja.
+            employee_id (UUID | str): ID karyawan lapangan.
+            role (str): Perannya dalam SK.
+            period_start (date): Mulai aktif.
+        """
+        # Menyisipkan rentang waktu (valid_period) dengan daterange '[)'.
         await self.execute(
             """
             INSERT INTO vms.work_plan_member (work_plan_id, employee_id, role_in_plan, valid_period)
@@ -245,9 +418,20 @@ class CRUDPlanDraft(CRUDBase):
         )
 
     async def org_files(self, file_ids: Iterable[UUID | str], org_id: UUID | str) -> set[str]:
+        """
+        Memvalidasi kepemilikan file yang dilampirkan oleh suatu organisasi.
+        
+        Args:
+            file_ids (Iterable[UUID | str]): ID daftar file yang dicek.
+            org_id (UUID | str): ID organisasi terkait.
+            
+        Returns:
+            set[str]: ID file yang ada dan valid milik organisasi tersebut.
+        """
         ids = [str(v) for v in file_ids]
         if not ids:
             return set()
+        # Query list pencarian file melalui relasi array ANY()
         rows = await self.fetchall(
             "SELECT CAST(id AS text) AS id FROM vms.file_object "
             "WHERE id = ANY(CAST(:ids AS uuid[])) AND organization_id = CAST(:org AS uuid)",
@@ -255,7 +439,18 @@ class CRUDPlanDraft(CRUDBase):
         return {str(r.id) for r in rows}
 
     async def plan_detail(self, plan_id: UUID | str) -> Any:
-        """Isi lengkap SK untuk form "Ubah isi", pratinjau A4, dan ringkasan HP."""
+        """
+        Isi lengkap SK untuk form "Ubah isi", pratinjau A4, dan ringkasan HP.
+        
+        Args:
+            plan_id (UUID | str): ID rencana kerja (SK).
+            
+        Returns:
+            Any: Record/objek JSONB besar berisi struktur komplit (SK, hari, anggota, aset).
+        """
+        # Melakukan pembuatan sub-dokumen JSON (jsonb_build_object dan jsonb_agg) secara
+        # komprehensif di level database. Data diambil dalam format hirarkis:
+        # plan_detail -> hari -> tugas -> lampiran.
         return await self.scalar(
             """
             SELECT jsonb_build_object(

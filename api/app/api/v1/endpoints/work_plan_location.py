@@ -24,13 +24,35 @@ _PM_UNIT = Depends(plan_access(PlanNeed.PM_UNIT))
 @router.get("/geo/search", response_model=list[GeoResult])
 async def geo_search(q: str = Query(min_length=1, max_length=120),
                      _: CurrentUser = Depends(require_permission(Permission.CREATE_PLAN))) -> list[GeoResult]:
-    """Cari kota/tempat di Indonesia (Nominatim, di-cache). Hanya pengelola SK."""
+    """
+    Pencarian kota/tempat di Indonesia berdasarkan kueri (Nominatim, di-cache) (GET).
+    Hanya untuk pengelola SK.
+    
+    Query Parameters:
+    - q (str): Kata kunci lokasi yang dicari.
+    
+    Returns:
+    - list[GeoResult]: Daftar hasil pencarian lokasi (koordinat dan nama wilayah).
+    """
+    # Memastikan hak akses CREATE_PLAN melalui Dependency Injection
+    # Meneruskan kueri pencarian ke layanan GeocodeService
     return [GeoResult(**r) for r in await GeocodeService().search(q)]
 
 
 @router.get("/work-plans/{plan_id}/location", response_model=PlanLocationOut | None)
 async def get_plan_location(access: PlanAccess = _VIEW,
                             plan_location_service: PlanLocationService = Depends(get_plan_location_service)) -> PlanLocationOut | None:
+    """
+    Mengambil lokasi titik absensi untuk sebuah rencana kerja (SK) (GET).
+    
+    Path Parameters:
+    - plan_id (UUID): ID dari rencana kerja (SK).
+    
+    Returns:
+    - PlanLocationOut | None: Koordinat titik absensi atau null bila belum disetel.
+    """
+    # Memeriksa akses baca (VIEW) menggunakan Dependency Injection
+    # Mengambil data lokasi melalui layer Service
     row = await plan_location_service.location(access)
     return None if row is None else PlanLocationOut(**row)
 
@@ -39,7 +61,21 @@ async def get_plan_location(access: PlanAccess = _VIEW,
 async def set_plan_location(data: PlanLocationIn,
                             access: PlanAccess = _PM_UNIT,
                             plan_location_service: PlanLocationService = Depends(get_plan_location_service)) -> PlanLocationOut:
-    """SK draf maupun berjalan; teks lokasi dokumen tetap, hanya titik absensi yang berubah."""
+    """
+    Menyetel titik absensi (lokasi) untuk rencana kerja (PUT).
+    SK draf maupun berjalan; teks lokasi dokumen tetap, hanya titik absensi yang berubah.
+    
+    Path Parameters:
+    - plan_id (UUID): ID dari rencana kerja.
+    
+    Request Body:
+    - data (PlanLocationIn): Data nama lokasi, alamat, latitude, longitude, dan radius absensi.
+    
+    Returns:
+    - PlanLocationOut: Data lokasi terbaru.
+    """
+    # Dependency Injection untuk memastikan pengguna bertindak sebagai PM_UNIT
+    # Memanggil method layer Service untuk menyimpan pengaturan lokasi
     row = await plan_location_service.set_location(
         access, name=data.name, address=data.address, lat=data.lat, lng=data.lng, radius_m=data.radius_m)
     return PlanLocationOut(**row)

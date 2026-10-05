@@ -1,6 +1,8 @@
 """
 app/schemas/overtime.py
-Skema permintaan & respons lembur (V-28) — domain.js REPORT_OVERTIME, REVIEW_OVERTIME.
+
+Request and response schemas for overtime reporting and reviewing (V-28).
+Corresponding to domain transactions: REPORT_OVERTIME and REVIEW_OVERTIME.
 """
 from datetime import date, datetime
 from uuid import UUID
@@ -9,20 +11,33 @@ from pydantic import BaseModel
 
 
 class OvertimeCreate(BaseModel):
-    """domain.js REPORT_OVERTIME. Aturan (jam 0–12, alasan wajib) diperiksa di OvertimeService
-    agar urutan & pesannya sama dengan prototipe."""
+    """
+    Schema for reporting overtime (domain.js REPORT_OVERTIME).
+    
+    Aturan validasi seperti jam 0–12 dan alasan yang wajib diisi akan 
+    diperiksa secara terpusat di OvertimeService. Hal ini dilakukan 
+    agar urutan dan pesan kesalahan yang muncul sama persis dengan prototipe.
+    """
     work_plan_id: UUID
     hours: float
     reason: str
 
 
 class OvertimeReview(BaseModel):
-    """domain.js REVIEW_OVERTIME: decision APPROVED | REJECTED (diperiksa di service)."""
+    """
+    Schema for reviewing an overtime request (domain.js REVIEW_OVERTIME).
+    
+    Status keputusan (decision) berupa APPROVED atau REJECTED, dan akan 
+    diperiksa serta diproses di dalam service.
+    """
     decision: str
     note: str | None = None
 
 
 class OvertimeResponse(BaseModel):
+    """
+    Schema for a detailed overtime record response.
+    """
     id: UUID
     work_plan_id: UUID
     plan_document_id: UUID | None
@@ -38,7 +53,11 @@ class OvertimeResponse(BaseModel):
 
 
 class OvertimeRecapRow(BaseModel):
-    """Satu baris rekap dari v_overtime_recap (per karyawan per bulan)."""
+    """
+    Schema for a summarized overtime record from the recap view.
+    Satu baris rekap yang diambil dari `v_overtime_recap` 
+    (direkapitulasi per karyawan per bulan).
+    """
     employee_id: UUID
     employee_name: str
     period_month: date

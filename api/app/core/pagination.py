@@ -18,6 +18,9 @@ T = TypeVar("T")
 
 
 class PageResult(BaseModel, Generic[T]):
+    """
+    Skema standar untuk mengembalikan data berhalaman menggunakan kursor (cursor-based pagination).
+    """
     items: list[T]
     next_cursor: str | None = None
     has_more: bool = False

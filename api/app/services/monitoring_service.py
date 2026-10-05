@@ -24,7 +24,19 @@ REPORTED = ("APPROVED", "SUBMITTED", "CHANGES_REQUESTED")
 
 
 def _day_state(work_date: date, report_status: str | None, today: date) -> str:
-    """operations.js dayState."""
+    """
+    Menentukan status hari (day state) berdasarkan tanggal eksekusi dan pelaporan.
+    
+    Status ini meniru logika prototipe `operations.js dayState()`.
+    
+    Args:
+        work_date: Tanggal pelaksanaan jadwal.
+        report_status: Status laporan di sistem jika ada.
+        today: Tanggal acuan saat ini.
+        
+    Returns:
+        str: String status (misal: "LATE", "TODAY", "UPCOMING", dll).
+    """
     if report_status in REPORTED:
         return str(report_status)
     if work_date < today:
@@ -33,6 +45,19 @@ def _day_state(work_date: date, report_status: str | None, today: date) -> str:
 
 
 def _month_range(month: str | None, today: date) -> tuple[str, date, date]:
+    """
+    Menghasilkan rentang tanggal untuk sebulan penuh.
+    
+    Args:
+        month: String bulan berformat 'YYYY-MM'. Jika None, gunakan bulan ini.
+        today: Tanggal acuan hari ini.
+        
+    Returns:
+        tuple[str, date, date]: Berisi label bulan (YYYY-MM), tanggal awal bulan, dan tanggal awal bulan berikutnya.
+        
+    Raises:
+        ValidationError: Jika format bulan tidak sesuai.
+    """
     try:
         first = date.fromisoformat(f"{month}-01") if month else today.replace(day=1)
     except ValueError:
@@ -42,15 +67,41 @@ def _month_range(month: str | None, today: date) -> tuple[str, date, date]:
 
 
 class MonitoringService:
+    """Layanan untuk fungsi pemantauan operasi (OPS) seperti lini masa SK dan rekap absensi."""
+    
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
         self.repo = CRUDMonitoring(db)
 
     async def _today(self, org_id: str) -> date:
+        """
+        Mengambil tanggal hari ini berdasarkan zona waktu organisasi.
+        
+        Args:
+            org_id: ID organisasi.
+            
+        Returns:
+            date: Objek tanggal hari ini.
+        """
         today: date = (await CRUDOrgClock(self.db).local_now(org_id)).today
         return today
 
     async def timeline(self, user: CurrentUser, date_from: date | None, date_to: date | None) -> list[dict[str, Any]]:
+        """
+        Membangun lini masa (timeline) dari seluruh SK yang visibel bagi pengguna.
+        
+        Mencakup jadwal harian dan status tiap hari, dengan menyaring SK yang dibatalkan
+        atau sudah selesai sesuai filter periode.
+        
+        Args:
+            user: Informasi pengguna yang sedang mengakses.
+            date_from: Filter tanggal mulai (opsional).
+            date_to: Filter tanggal selesai (opsional).
+            
+        Returns:
+            list[dict[str, Any]]: Daftar pekerjaan (SK) dengan data jadwal hariannya.
+        """
+        # Ambil SK yang boleh dilihat pengguna sesuai hak aksesnya (V-07)
         plans = [
             p for p in await CRUDPlanAccess(self.db).visible_plans(user.organization_id, user.user_id, None)
             if p.status not in HIDDEN
@@ -83,7 +134,18 @@ class MonitoringService:
         return groups
 
     async def attendance_recap(self, user: CurrentUser, month: str | None) -> dict[str, Any]:
+        """
+        Menyusun rekap absensi karyawan dalam waktu sebulan.
+        
+        Args:
+            user: Informasi pengguna saat ini.
+            month: String bulan ('YYYY-MM') atau None untuk bulan berjalan.
+            
+        Returns:
+            dict[str, Any]: Data rekapitulasi daftar karyawan beserta catatan absensinya.
+        """
         label, starts, ends = _month_range(month, await self._today(user.organization_id))
+        # Logika aksesibilitas rekap absensi berdasarkan peran pengguna:
         # R-33: Finance & OPS semua; PM hanya bawahan lapangan di unitnya; selain itu milik sendiri.
         if Permission.VIEW_ALL_ATTENDANCE.value in user.permissions:
             scope = "all"

@@ -28,17 +28,29 @@ APPROVER = "APPROVER"
 
 
 def verify_url(raw_token: str) -> str:
+    """Membangun URL verifikasi publik yang lengkap berdasarkan raw token."""
     return f"{settings.PUBLIC_VERIFY_URL.rstrip('/')}/{quote(raw_token, safe='')}"
 
 
 def qr_png_data_uri(text: str) -> str:
+    """Menghasilkan Data URI gambar QR Code format PNG untuk teks/URL yang diberikan."""
     buffer = io.BytesIO()
     qrcode.make(text, box_size=6, border=2).save(buffer, format="PNG")
     return "data:image/png;base64," + base64.b64encode(buffer.getvalue()).decode("ascii")
 
 
 class SignatureService:
+    """
+    Layanan untuk mengelola tanda tangan elektronik pada dokumen SK dan laporan akhir.
+    Menggunakan mekanisme payload JSON kanonik dan public key cryptography untuk menghasilkan tanda tangan.
+    """
     def __init__(self, db: AsyncSession) -> None:
+        """
+        Inisialisasi SignatureService.
+        
+        Args:
+            db (AsyncSession): Sesi database asinkron.
+        """
         self.db = db
         self.repo = CRUDSignature(db)
 
@@ -50,6 +62,18 @@ class SignatureService:
 
     async def sign_plan_document(self, document_id: UUID | str, signer_employee_id: str, role: str,
                                  issued_by_user: str) -> Any:
+        """
+        Menandatangani dokumen SK secara elektronik (menghasilkan hash dari payload kanonik).
+        
+        Args:
+            document_id (UUID | str): ID dari dokumen yang akan ditandatangani.
+            signer_employee_id (str): ID Karyawan yang menandatangani.
+            role (str): Peran penandatangan (contoh: ISSUER, ACCEPTOR).
+            issued_by_user (str): ID pengguna yang melakukan proses ini.
+            
+        Returns:
+            Any: Data tanda tangan yang tersimpan.
+        """
         document = await self.repo.plan_document(document_id)
         if document is None:
             raise NotFoundError("Dokumen")
@@ -61,18 +85,41 @@ class SignatureService:
             "signer_employee_id": str(signer_employee_id), "signer_role": role,
             "organization_id": str(document.organization_id),
         }
+        # Menghasilkan signature kriptografi dari payload kanonik JSON
         signature = signer.sign(canonical(payload))
         return await self.repo.register(document.organization_id, document, signer_employee_id, role, key_id,
                                         signature, payload, issued_by_user)
 
     async def sign_latest_plan_document(self, plan_id: UUID | str, signer_employee_id: str, role: str,
                                         issued_by_user: str) -> Any:
+        """
+        Menemukan dokumen terbaru dari suatu SK dan menandatanganinya.
+        
+        Args:
+            plan_id (UUID | str): ID SK.
+            signer_employee_id (str): ID Karyawan penandatangan.
+            role (str): Peran (ISSUER/ACCEPTOR).
+            issued_by_user (str): ID pengguna.
+            
+        Returns:
+            Any: Data tanda tangan yang tersimpan.
+        """
         document_id = await self.repo.latest_document_id(plan_id)
         if document_id is None:
             raise NotFoundError("Dokumen")
         return await self.sign_plan_document(document_id, signer_employee_id, role, issued_by_user)
 
     async def _document_for(self, user: CurrentUser, document_id: UUID) -> Any:
+        """
+        Mengambil data dokumen berdasarkan ID dengan memverifikasi akses VIEW terhadap SK terkait.
+        
+        Args:
+            user (CurrentUser): Pengguna.
+            document_id (UUID): ID dokumen.
+            
+        Returns:
+            Any: Data dokumen.
+        """
         document = await self.repo.plan_document(document_id)
         if document is None or str(document.organization_id) != str(user.organization_id):
             raise NotFoundError("Dokumen")
@@ -114,9 +161,28 @@ class SignatureService:
         return plan, signed
 
     async def list_plan_documents(self, plan_id: UUID) -> list[Any]:
+        """
+        Daftar dokumen SK terkait.
+        
+        Args:
+            plan_id (UUID): ID SK.
+            
+        Returns:
+            list[Any]: Daftar dokumen.
+        """
         return await self.repo.plan_documents(plan_id)
 
     async def list_signatures(self, user: CurrentUser, document_id: UUID) -> list[Any]:
+        """
+        Daftar tanda tangan yang tersemat pada suatu dokumen.
+        
+        Args:
+            user (CurrentUser): Pengguna pembuat request.
+            document_id (UUID): ID Dokumen.
+            
+        Returns:
+            list[Any]: Daftar tanda tangan.
+        """
         await self._document_for(user, document_id)
         return await self.repo.signatures_of_document(document_id)
 
@@ -145,4 +211,13 @@ class SignatureService:
         await self.repo.revoke(signature_id, reason.strip(), await self.repo.employee_of(user.user_id))
 
     async def verify(self, raw_token: str) -> Any:
+        """
+        Memverifikasi tanda tangan berdasarkan token unik dari QR Code.
+        
+        Args:
+            raw_token (str): Token yang didapat dari scan QR code.
+            
+        Returns:
+            Any: Data tanda tangan jika valid, atau None/raise Error.
+        """
         return await self.repo.verify(raw_token)

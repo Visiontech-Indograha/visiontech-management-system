@@ -14,6 +14,7 @@ from app.api.v1.endpoints.auth import router as auth_router
 from app.api.v1.endpoints.documents import router as documents_router
 from app.api.v1.endpoints.employees import router as employees_router
 from app.api.v1.endpoints.expiry import router as expiry_router
+from app.api.v1.endpoints.face import router as face_router
 from app.api.v1.endpoints.files import router as files_router
 from app.api.v1.endpoints.hse import days_router as daily_report_router
 from app.api.v1.endpoints.hse import router as hse_router
@@ -63,6 +64,7 @@ api_router.include_router(plan_days_router)
 api_router.include_router(plan_documents_router)
 api_router.include_router(signatures_router)
 api_router.include_router(attendance_router)
+api_router.include_router(face_router)
 api_router.include_router(attendance_cron_router)
 api_router.include_router(hse_router)
 api_router.include_router(daily_report_router)

@@ -27,9 +27,23 @@ FAILED_LOGINS_SQL = f"""
 
 
 class CRUDSession(CRUDBase):
+    """
+    CRUD untuk mengelola sesi otentikasi pengguna, termasuk login,
+    pembuatan sesi, rotasi token, dan pencabutan sesi aktif.
+    """
 
     async def failed_logins(self, login: str) -> Any:
-        """(failures, locked_until, retry_after_seconds) — dihitung dengan jam basis data."""
+        """
+        Menghitung jumlah kegagalan login dan waktu penguncian akun (locked_until).
+        
+        Args:
+            login (str): Identifier login (email/username).
+            
+        Returns:
+            Any: Record berisi (failures, locked_until, retry_after_seconds).
+        """
+        # Mengambil informasi jumlah kegagalan login dari query yang sudah disiapkan.
+        # Menghitung sisa waktu kunci (retry_after_seconds) menggunakan EPOCH time basis data.
         return await self.fetchone(
             f"""
             SELECT f.failures, f.locked_until,
@@ -42,6 +56,17 @@ class CRUDSession(CRUDBase):
     async def record_login_attempt(
         self, login: str, ip: str | None, successful: bool, reason: str | None = None
     ) -> None:
+        """
+        Mencatat setiap percobaan login ke dalam riwayat login_attempt.
+        
+        Args:
+            login (str): Identifier login (email/username).
+            ip (str | None): Alamat IP pengguna.
+            successful (bool): Status keberhasilan login.
+            reason (str | None, optional): Alasan kegagalan (jika ada).
+        """
+        # Menyisipkan log percobaan login ke tabel login_attempt untuk keperluan audit
+        # dan perlindungan brute-force.
         await self.execute(
             """
             INSERT INTO vms.login_attempt (login, ip_address, successful, reason)
@@ -59,7 +84,22 @@ class CRUDSession(CRUDBase):
         ip: str | None,
         user_agent: str,
     ) -> Any:
-        """Kembalikan (session_id, family_id, refresh_token, expires_at)."""
+        """
+        Menerbitkan sesi baru dengan memanggil fungsi basis data `issue_session`.
+        
+        Args:
+            org_id (UUID | str): ID organisasi.
+            user_id (UUID | str): ID pengguna.
+            device_label (str): Label perangkat.
+            fingerprint (str | None): Sidik jari perangkat.
+            ip (str | None): Alamat IP.
+            user_agent (str): User agent dari browser/perangkat.
+            
+        Returns:
+            Any: (session_id, family_id, refresh_token, expires_at).
+        """
+        # Memanggil fungsi tersimpan `issue_session` yang akan menangani
+        # pembuatan token dan penyimpanan sesi baru secara aman.
         return await self.fetchone(
             """
             SELECT session_id, family_id, refresh_token, expires_at
@@ -73,10 +113,18 @@ class CRUDSession(CRUDBase):
 
     async def rotate(self, raw_refresh_token: str, ip: str | None, user_agent: str) -> Any:
         """
-        Kembalikan (session_id, user_id, refresh_token, expires_at, reused).
-        Token tak dikenal → session_id NULL. Token lama dipakai ulang → reused = true dan
-        seluruh rantai perangkat sudah dicabut oleh fungsi basis data.
+        Merotasi refresh token menggunakan fungsi basis data `rotate_session`.
+        
+        Args:
+            raw_refresh_token (str): Token refresh mentah yang digunakan.
+            ip (str | None): Alamat IP asal rotasi.
+            user_agent (str): User agent asal rotasi.
+            
+        Returns:
+            Any: (session_id, user_id, refresh_token, expires_at, reused).
         """
+        # Memanggil fungsi tersimpan `rotate_session`. 
+        # Jika token dicuri dan digunakan ulang, `reused` akan bernilai true.
         return await self.fetchone(
             """
             SELECT session_id, user_id, refresh_token, expires_at, reused
@@ -86,6 +134,15 @@ class CRUDSession(CRUDBase):
         )
 
     async def revoke_by_refresh_token(self, raw_refresh_token: str, reason: str) -> None:
+        """
+        Mencabut sesi berdasarkan refresh token yang diberikan.
+        
+        Args:
+            raw_refresh_token (str): Token refresh yang akan dicabut.
+            reason (str): Alasan pencabutan.
+        """
+        # Mengubah status sesi menjadi 'REVOKED' dan mencatat waktu serta alasannya.
+        # Token dicocokkan menggunakan hash SHA-256 (digest) untuk keamanan.
         await self.execute(
             """
             UPDATE vms.user_session
@@ -96,8 +153,17 @@ class CRUDSession(CRUDBase):
         )
 
     async def list_active(self, user_id: UUID | str) -> list[Any]:
-        """Satu baris per perangkat (rantai rotasi): sesi AKTIF belum kedaluwarsa; `issued_at` = masuk
-        pertama kali di perangkat itu, bukan rotasi terakhir."""
+        """
+        Mengambil daftar seluruh sesi aktif yang dimiliki pengguna.
+        
+        Args:
+            user_id (UUID | str): ID pengguna.
+            
+        Returns:
+            list[Any]: Daftar sesi aktif pengguna.
+        """
+        # Mengambil sesi yang berstatus 'ACTIVE' dan belum melewati 'expires_at'.
+        # Menghitung 'issued_at' asli dari keluarga sesi (family_id) yang sama.
         return list(await self.fetchall(
             """
             SELECT CAST(s.id AS text) AS id, s.device_label, CAST(host(s.ip_address) AS text) AS ip_address,
@@ -110,7 +176,19 @@ class CRUDSession(CRUDBase):
             {"uid": user_id}))
 
     async def revoke_session(self, user_id: UUID | str, session_id: UUID | str, reason: str) -> bool:
-        """Cabut satu perangkat milik pengguna ini. False bila bukan miliknya / sudah tidak aktif."""
+        """
+        Mencabut satu rantai sesi (perangkat) spesifik milik pengguna.
+        
+        Args:
+            user_id (UUID | str): ID pengguna.
+            session_id (UUID | str): ID sesi yang akan dicabut.
+            reason (str): Alasan pencabutan.
+            
+        Returns:
+            bool: True jika berhasil dicabut, False jika sesi tidak ditemukan/sudah tidak aktif.
+        """
+        # Menggunakan CTE (target) untuk menemukan family_id dari sesi yang diberikan,
+        # lalu mencabut semua sesi dalam rantai tersebut yang masih aktif.
         revoked = await self.scalar(
             """
             WITH target AS (SELECT family_id FROM vms.user_session
@@ -123,7 +201,19 @@ class CRUDSession(CRUDBase):
         return bool(revoked)
 
     async def revoke_other_sessions(self, user_id: UUID | str, keep_session_id: UUID | str, reason: str) -> int:
-        """Cabut semua perangkat lain; rantai sesi yang sedang dipakai tetap."""
+        """
+        Mencabut semua sesi aktif selain sesi perangkat saat ini.
+        
+        Args:
+            user_id (UUID | str): ID pengguna.
+            keep_session_id (UUID | str): ID sesi yang ingin dipertahankan.
+            reason (str): Alasan pencabutan.
+            
+        Returns:
+            int: Jumlah sesi yang dicabut.
+        """
+        # Mencabut semua sesi aktif pengguna yang family_id-nya berbeda
+        # dari family_id sesi yang ingin dipertahankan (keep_session_id).
         rows = await self.fetchall(
             """
             UPDATE vms.user_session SET state = 'REVOKED', revoked_at = now(), revoked_reason = :reason
@@ -135,6 +225,17 @@ class CRUDSession(CRUDBase):
         return len(rows)
 
     async def revoke_all_for_user(self, user_id: UUID | str, reason: str) -> int:
+        """
+        Mencabut semua sesi aktif milik pengguna.
+        
+        Args:
+            user_id (UUID | str): ID pengguna.
+            reason (str): Alasan pencabutan.
+            
+        Returns:
+            int: Jumlah sesi yang berhasil dicabut.
+        """
+        # Memanggil fungsi basis data vms.revoke_sessions untuk mencabut semua sesi.
         return int(await self.scalar(
             "SELECT vms.revoke_sessions(:uid, :reason)", {"uid": user_id, "reason": reason}
         ) or 0)

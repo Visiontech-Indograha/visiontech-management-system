@@ -12,6 +12,9 @@ from .base import CRUDBase
 
 
 class CRUDOrgRef(CRUDBase):
+    """
+    Kelas CRUD untuk verifikasi kepemilikan entitas (referensi silang) terhadap sebuah organisasi.
+    """
 
     async def owned_counts(
         self,
@@ -24,7 +27,24 @@ class CRUDOrgRef(CRUDBase):
         employees: Sequence[str],
         units: Sequence[str],
     ) -> Any:
-        """Jumlah id per jenis yang benar-benar milik organisasi (dan belum dihapus)."""
+        """Jumlah id per jenis yang benar-benar milik organisasi (dan belum dihapus).
+        
+        Args:
+            org_id (str): ID dari organisasi.
+            work_plans (Sequence[str]): Daftar ID Work Plan.
+            sites (Sequence[str]): Daftar ID Site.
+            assets (Sequence[str]): Daftar ID Asset.
+            files (Sequence[str]): Daftar ID File Object.
+            employees (Sequence[str]): Daftar ID Employee.
+            units (Sequence[str]): Daftar ID Business Unit.
+            
+        Returns:
+            Any: Baris data yang menyimpan penghitungan dari ID valid per masing-masing jenis.
+        """
+        # Mengeksekusi beberapa subkueri `SELECT count(*)` secara independen dalam sebuah pernyataan SELECT
+        # untuk memverifikasi jumlah kemunculan id (yang ada di dalam array argument parameter) 
+        # yang match dengan organization_id dan dipastikan belum di-soft-delete (deleted_at IS NULL).
+        # Cara ini sangat efisien untuk menghitung kevalidan referensi dalam satu buah panggilan query ke database.
         return await self.fetchone(
             """
             SELECT
@@ -44,3 +64,4 @@ class CRUDOrgRef(CRUDBase):
             {"org": org_id, "work_plans": list(work_plans), "sites": list(sites), "assets": list(assets),
              "files": list(files), "employees": list(employees), "units": list(units)},
         )
+

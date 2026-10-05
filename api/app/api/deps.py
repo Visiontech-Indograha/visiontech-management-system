@@ -1,3 +1,9 @@
+"""
+Modul dependensi (dependencies) FastAPI untuk VMS.
+
+Berisi fungsi-fungsi dependency injection (DI) untuk mendapatkan sesi database,
+pengguna saat ini (current user), otorisasi peran/akses, dan pembuatan service.
+"""
 import logging
 from collections.abc import AsyncIterator, Awaitable, Callable, Coroutine
 from typing import Any, Literal
@@ -18,6 +24,7 @@ from app.crud.crud_attendance_offline import CRUDAttendanceOffline
 from app.crud.crud_attendance_session import CRUDAttendanceSession
 from app.crud.crud_document import CRUDDocument
 from app.crud.crud_employee import CRUDEmployee
+from app.crud.crud_face import CRUDFace
 from app.crud.crud_org_clock import CRUDOrgClock
 from app.crud.crud_plan_access import CRUDPlanAccess
 from app.crud.crud_plan_assignment import CRUDPlanAssignment
@@ -37,6 +44,8 @@ from app.services.attendance_session_service import AttendanceSessionService
 from app.services.auth_flow import AuthFlowService
 from app.services.document_service import DocumentService
 from app.services.employee_service import EmployeeService
+from app.services.face_embed_client import FaceEmbedClient
+from app.services.face_service import FaceService
 from app.services.member_report_service import MemberReportService
 from app.services.monitoring_service import MonitoringService
 from app.services.notification_service import NotificationService
@@ -57,6 +66,7 @@ from app.services.unit_service import UnitService
 from app.services.weekly_report_service import WeeklyReportService
 
 logger = logging.getLogger(__name__)
+# Keamanan dengan skema Bearer token
 security = HTTPBearer(auto_error=False)  # token hilang → 401 UNAUTHENTICATED kita sendiri
 
 # "function": commit/rollback terjadi SEBELUM respons dikirim, jadi commit yang gagal
@@ -65,14 +75,16 @@ DB_SCOPE: Literal["function", "request"] = "function"
 
 
 async def get_db() -> AsyncIterator[AsyncSession]:
-    """Satu permintaan = satu transaksi: commit bila handler sukses, rollback bila galat (T-02)."""
+    """
+    Menyediakan sesi database asinkron (AsyncSession) untuk satu siklus permintaan.
+    Satu permintaan = satu transaksi: commit bila handler sukses, rollback bila galat (T-02).
+    """
     async with AsyncSessionLocal() as session, unit_of_work(session):
         yield session
 
 
-
-
 def _unauthenticated() -> AppError:
+    """Mengembalikan objek AppError standar untuk otentikasi gagal (401)."""
     return AppError("UNAUTHENTICATED", "Sesi berakhir. Silakan masuk kembali.", status=401)
 
 
@@ -81,6 +93,7 @@ async def get_current_user(
     db: AsyncSession = Depends(get_db, scope=DB_SCOPE),
 ) -> CurrentUser:
     """
+    Mendapatkan pengguna saat ini yang sedang login berdasarkan token JWT.
     Token hanya membawa identitas (`sub`, `org`, `jti`). Status akun dan peran dibaca dari
     basis data pada setiap permintaan (dok 05 §4): mencabut peran atau menonaktifkan akun
     berlaku pada permintaan berikutnya.
@@ -91,10 +104,12 @@ async def get_current_user(
         payload = verify_jwt_token(credentials.credentials)
     except jwt.PyJWTError:
         raise _unauthenticated() from None
+    
     user_id, session_id = payload.get("sub"), payload.get("jti")
     if not user_id or not session_id:
         raise _unauthenticated()
 
+    # Memuat identitas dan peran terbaru dari database
     identity = await CRUDUser(db).find_identity(user_id)
     if not identity or not identity.is_active:
         raise _unauthenticated()
@@ -114,6 +129,10 @@ async def get_current_user(
 def require_permission(
     required_permission: Permission,
 ) -> Callable[[CurrentUser], Coroutine[Any, Any, CurrentUser]]:
+    """
+    Memastikan pengguna saat ini memiliki izin (Permission) tertentu.
+    Jika tidak, akan memunculkan galat 403 Forbidden.
+    """
     async def permission_checker(current_user: CurrentUser = Depends(get_current_user)) -> CurrentUser:
         if required_permission.value not in current_user.permissions:
             raise AppError("FORBIDDEN", "Anda tidak memiliki akses untuk tindakan ini.", status=403)
@@ -125,6 +144,10 @@ async def get_db_with_user(
     db: AsyncSession = Depends(get_db, scope=DB_SCOPE),
     current_user: CurrentUser = Depends(get_current_user),
 ) -> AsyncSession:
+    """
+    Menyediakan sesi database asinkron dengan konteks pengguna untuk RLS (Row-Level Security).
+    Konteks mencakup ID pengguna, organisasi, dan email untuk keperluan audit.
+    """
     # Konteks RLS & audit untuk transaksi permintaan ini (app/db/session.py).
     try:
         await set_request_context(
@@ -216,8 +239,12 @@ def get_attendance_monitor_service(db: AsyncSession = Depends(get_db_with_user))
     return AttendanceMonitorService(CRUDAttendanceMonitor(db))
 
 
+def get_face_service(db: AsyncSession = Depends(get_db_with_user)) -> FaceService:
+    return FaceService(CRUDFace(db), FaceEmbedClient())
+
+
 def get_attendance_session_service(db: AsyncSession = Depends(get_db_with_user)) -> AttendanceSessionService:
-    return AttendanceSessionService(CRUDAttendanceSession(db), CRUDOrgClock(db))
+    return AttendanceSessionService(CRUDAttendanceSession(db), CRUDOrgClock(db), FaceService(CRUDFace(db), FaceEmbedClient()))
 
 
 def get_site_service(db: AsyncSession = Depends(get_db_with_user)) -> SiteService:
@@ -225,8 +252,9 @@ def get_site_service(db: AsyncSession = Depends(get_db_with_user)) -> SiteServic
 
 
 def get_attendance_offline_service(db: AsyncSession = Depends(get_db_with_user)) -> AttendanceOfflineService:
+    faces = FaceService(CRUDFace(db), FaceEmbedClient())
     return AttendanceOfflineService(CRUDAttendanceOffline(db),
-                                    AttendanceSessionService(CRUDAttendanceSession(db), CRUDOrgClock(db)))
+                                    AttendanceSessionService(CRUDAttendanceSession(db), CRUDOrgClock(db), faces))
 
 
 def get_document_service(db: AsyncSession = Depends(get_db_with_user)) -> DocumentService:

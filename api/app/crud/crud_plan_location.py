@@ -13,8 +13,23 @@ from .base import CRUDBase
 
 
 class CRUDPlanLocation(CRUDBase):
+    """
+    CRUD untuk mengelola titik lokasi (site) dari sebuah rencana kerja (SK).
+    Memungkinkan pembuatan site baru untuk mempertahankan riwayat absensi.
+    """
 
     async def site(self, site_id: UUID | str, org_id: UUID | str) -> Any:
+        """
+        Mengambil informasi detail sebuah site/lokasi.
+        
+        Args:
+            site_id (UUID | str): ID site.
+            org_id (UUID | str): ID organisasi.
+            
+        Returns:
+            Any: Record berisi detail site beserta latitude (lat) dan longitude (lng).
+        """
+        # Ekstrak titik koordinat (ST_Y untuk lat, ST_X untuk lng) dari kolom geometry postgis
         return await self.fetchone(
             """
             SELECT id, name, address, radius_m,
@@ -25,7 +40,18 @@ class CRUDPlanLocation(CRUDBase):
             {"id": site_id, "org": org_id})
 
     async def names_like(self, org_id: UUID | str, name: str) -> set[str]:
-        """Nama lokasi organisasi yang diawali `name` — nama `site` unik per organisasi."""
+        """
+        Mencari nama-nama lokasi (site) yang diawali dengan string tertentu.
+        Digunakan untuk memastikan nama site unik per organisasi.
+        
+        Args:
+            org_id (UUID | str): ID organisasi.
+            name (str): Prefix nama yang dicari.
+            
+        Returns:
+            set[str]: Himpunan nama-nama lokasi yang cocok.
+        """
+        # Mencari nama site yang bagian awalnya (left) sama dengan parameter name
         rows = await self.fetchall(
             """
             SELECT name FROM vms.site
@@ -36,7 +62,23 @@ class CRUDPlanLocation(CRUDBase):
 
     async def same_site(self, org_id: UUID | str, label: str, lat: float, lng: float,
                         radius_m: int) -> Any:
-        """Site organisasi bernama `label` (atau "label (n)") di titik ≤ 5 m dengan radius sama."""
+        """
+        Mencari site yang memiliki label, titik koordinat (dalam radius 5 meter),
+        dan radius yang sama untuk menghindari duplikasi site.
+        
+        Args:
+            org_id (UUID | str): ID organisasi.
+            label (str): Nama dasar site.
+            lat (float): Garis lintang (latitude).
+            lng (float): Garis bujur (longitude).
+            radius_m (int): Radius absensi dalam meter.
+            
+        Returns:
+            Any: Record ID site yang sama (jika ada).
+        """
+        # Cek apakah ada site dengan radius sama, nama mirip (label atau label (n)),
+        # dan lokasinya berada dalam jarak 5 meter dari koordinat yang diberikan
+        # (menggunakan ST_DWithin dari postgis).
         return await self.fetchone(
             """
             SELECT id FROM vms.site
@@ -50,6 +92,22 @@ class CRUDPlanLocation(CRUDBase):
 
     async def create_site(self, org_id: UUID | str, name: str, address: str | None,
                           lat: float, lng: float, radius_m: int) -> Any:
+        """
+        Membuat record site/lokasi baru.
+        
+        Args:
+            org_id (UUID | str): ID organisasi.
+            name (str): Nama site.
+            address (str | None): Alamat lengkap site.
+            lat (float): Garis lintang (latitude).
+            lng (float): Garis bujur (longitude).
+            radius_m (int): Radius (meter).
+            
+        Returns:
+            Any: Record ID dari site yang baru dibuat.
+        """
+        # Menyisipkan site baru dan membentuk tipe geography POINT (SRID 4326)
+        # dari latitude dan longitude yang diberikan.
         return await self.fetchone(
             """
             INSERT INTO vms.site (organization_id, name, address, radius_m, location)
@@ -60,6 +118,14 @@ class CRUDPlanLocation(CRUDBase):
             {"org": org_id, "name": name, "address": address, "radius": radius_m, "lat": lat, "lng": lng})
 
     async def set_plan_site(self, plan_id: UUID | str, site_id: UUID | str) -> None:
+        """
+        Menetapkan atau memperbarui site yang digunakan oleh sebuah rencana kerja (SK).
+        
+        Args:
+            plan_id (UUID | str): ID rencana kerja.
+            site_id (UUID | str): ID lokasi (site).
+        """
+        # Memperbarui site_id pada tabel work_plan untuk menghubungkan SK dengan lokasi baru.
         await self.execute(
             """
             UPDATE vms.work_plan SET site_id = CAST(:site AS uuid)

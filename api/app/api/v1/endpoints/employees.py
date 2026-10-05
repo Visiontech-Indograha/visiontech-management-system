@@ -45,6 +45,20 @@ async def get_employees(
     db: AsyncSession = Depends(get_db_with_user),
     employee_service: EmployeeService = Depends(get_employee_service)
 ) -> EmployeeListResponse:
+    """
+    Mendapatkan daftar karyawan di organisasi pengguna. 
+    Mendukung paginasi dan pencarian (berdasarkan nama atau nomor karyawan).
+    
+    Query params:
+    - page: Halaman (default 1)
+    - size: Jumlah per halaman (default 20, max 100)
+    - is_active: Filter karyawan aktif/nonaktif
+    - q: Kata kunci pencarian nama / NIK
+    
+    Return: Daftar karyawan (EmployeeListResponse)
+    """
+    # Injeksi dependensi sesi DB dengan row level security (get_db_with_user)
+    # serta EmployeeService untuk memanggil aturan bisnis terkait privasi data
     offset = (page - 1) * size
     where_clauses = ["organization_id = :org", "deleted_at IS NULL"]  # karyawan terhapus disembunyikan (V-29)
     params = {"org": current_user.organization_id, "limit": size, "offset": offset}
@@ -73,6 +87,7 @@ async def get_employees(
     """)
     rows = (await db.execute(query, params)).fetchall()
     
+    # Memanggil service layer untuk menentukan cakupan privasi viewer saat ini
     scope = await employee_service.private_viewer(current_user.user_id, current_user.permissions)
     items = []
     for row in rows:
@@ -95,7 +110,15 @@ async def get_employee(
     db: AsyncSession = Depends(get_db_with_user),
     employee_service: EmployeeService = Depends(get_employee_service)
 ) -> EmployeeResponse:
-    """Satu karyawan (tautan langsung /directory/{id}); karyawan organisasi lain/terhapus → 404."""
+    """
+    Satu karyawan (tautan langsung /directory/{id}); karyawan organisasi lain/terhapus → 404.
+    
+    Path params:
+    - emp_id: UUID karyawan yang ingin dilihat detailnya
+    
+    Return: Detail karyawan (EmployeeResponse)
+    """
+    # Menggunakan dependensi sesi DB yang aman (RLS) dan EmployeeService 
     row = (await db.execute(text("""
         SELECT id, employee_no, full_name, position, unit_id, email, phone,
                join_date, birth_date, address, emergency_contact, attendance_mode,
@@ -105,6 +128,7 @@ async def get_employee(
     """), {"id": emp_id, "org": current_user.organization_id})).fetchone()
     if row is None:
         raise AppError("NOT_FOUND", "Karyawan tidak ditemukan.", status=404)
+    # Memanggil pengecekan privasi melalui service layer
     scope = await employee_service.private_viewer(current_user.user_id, current_user.permissions)
     return _shown(EmployeeResponse(**row._mapping), scope)
 
@@ -114,6 +138,16 @@ async def create_employee(
     current_user: CurrentUser = Depends(require_permission(Permission.MANAGE_USERS)),
     db: AsyncSession = Depends(get_db_with_user)
 ) -> EmployeeResponse:
+    """
+    Menambahkan data karyawan baru ke dalam organisasi.
+    
+    Body params:
+    - data: Data karyawan baru (EmployeeCreate)
+    
+    Return: Detail karyawan yang baru dibuat (EmployeeResponse)
+    """
+    # Menggunakan injeksi dependensi untuk mendapatkan koneksi DB yang aman (get_db_with_user)
+    # Memastikan unit terkait berada dalam satu organisasi melalui access_service
     await ensure_same_org(db, current_user.organization_id, units=[data.unit_id])
     query = text("""
         INSERT INTO vms.employee (
@@ -161,6 +195,18 @@ async def update_employee(
     current_user: CurrentUser = Depends(require_permission(Permission.MANAGE_USERS)),
     db: AsyncSession = Depends(get_db_with_user)
 ) -> EmployeeResponse:
+    """
+    Mengubah data pribadi karyawan. (Jabatan/unit diubah melalui endpoint /assignments).
+    
+    Path params:
+    - emp_id: UUID dari karyawan
+    
+    Body params:
+    - data: Data yang ingin diubah (EmployeeUpdate)
+    
+    Return: Detail karyawan yang diperbarui (EmployeeResponse)
+    """
+    # Memerlukan izin MANAGE_USERS dan mendapatkan sesi database
     # Hanya update info pribadi, jabatan diubah via assignment
     updates = []
     params = {"id": emp_id, "org": current_user.organization_id}
@@ -177,7 +223,7 @@ async def update_employee(
     query = text(f"""
         UPDATE vms.employee SET {", ".join(updates)} 
         WHERE id = :id AND organization_id = :org
-        RETURNING *
+        RETURNING id, employee_no, full_name, position, unit_id, email, phone, join_date, birth_date, address, emergency_contact, attendance_mode, is_active, offboarded_at, offboarding_reason
     """)
     res = await db.execute(query, params)
     row = res.fetchone()
@@ -201,7 +247,16 @@ async def list_assignments(
     current_user: CurrentUser = Depends(require_permission(Permission.VIEW_USERS)),
     employee_service: EmployeeService = Depends(get_employee_service)
 ) -> list[EmployeeAssignmentResponse]:
-    """Riwayat jabatan/penempatan (M2), terbaru dulu. Karyawan organisasi lain → 404."""
+    """
+    Riwayat jabatan/penempatan (M2), terbaru dulu. Karyawan organisasi lain → 404.
+    
+    Path params:
+    - emp_id: UUID dari karyawan
+    
+    Return: Daftar mutasi jabatan (list[EmployeeAssignmentResponse])
+    """
+    # Menggunakan injeksi dependensi EmployeeService untuk mengambil data penugasan
+    # Memanggil layer service (employee_service)
     rows = await employee_service.assignments(emp_id, current_user.organization_id)
     return [EmployeeAssignmentResponse(**r._mapping) for r in rows]
 
@@ -214,7 +269,19 @@ async def add_assignment(
     db: AsyncSession = Depends(get_db_with_user),
     employee_service: EmployeeService = Depends(get_employee_service)
 ) -> EmployeeAssignmentResponse:
-    """domain.js PROMOTE — mutasi/promosi; aturan di EmployeeService.promote."""
+    """
+    domain.js PROMOTE — mutasi/promosi; aturan di EmployeeService.promote.
+    
+    Path params:
+    - emp_id: UUID dari karyawan
+    
+    Body params:
+    - data: Data mutasi/promosi baru (EmployeeAssignmentCreate)
+    
+    Return: Riwayat jabatan baru (EmployeeAssignmentResponse)
+    """
+    # Injeksi database (db) untuk pengecekan referensi organisasi dan employee_service untuk eksekusi
+    # Memanggil service layer dengan meneruskan data jabatan yang baru
     await ensure_same_org(db, current_user.organization_id, units=[data.unit_id])
     row = await employee_service.promote(emp_id, current_user.organization_id, data.position, data.unit_id,
                                             data.valid_from)
@@ -227,7 +294,19 @@ async def offboard_employee(
     current_user: CurrentUser = Depends(require_permission(Permission.MANAGE_USERS)),
     employee_service: EmployeeService = Depends(get_employee_service)
 ) -> dict[str, Any]:
-    """domain.js OFFBOARD: HR mengakhiri masa kerja (tidak boleh saat masih di SK berjalan)."""
+    """
+    domain.js OFFBOARD: HR mengakhiri masa kerja (tidak boleh saat masih di SK berjalan).
+    
+    Path params:
+    - emp_id: UUID dari karyawan
+    
+    Body params:
+    - data: Data offboard termasuk alasan (EmployeeOffboard)
+    
+    Return: Detail hasil proses offboard
+    """
+    # Memerlukan izin MANAGE_USERS dan dependensi employee_service
+    # Meneruskan perintah offboard ke layer service
     return await employee_service.offboard(emp_id, current_user.organization_id, data.reason)
 
 
@@ -237,7 +316,16 @@ async def archive_employee(
     current_user: CurrentUser = Depends(require_permission(Permission.MANAGE_USERS)),
     employee_service: EmployeeService = Depends(get_employee_service),
 ) -> dict[str, Any]:
-    """Hapus karyawan (V-29, keputusan pemilik): hanya yang sudah di-offboard; dibalik lewat /restore."""
+    """
+    Hapus karyawan (V-29, keputusan pemilik): hanya yang sudah di-offboard; dibalik lewat /restore.
+    
+    Path params:
+    - emp_id: UUID dari karyawan
+    
+    Return: Detail hasil pengarsipan
+    """
+    # Mengambil instance EmployeeService dari Depends
+    # Melakukan pengarsipan (penghapusan lunak) pada data karyawan melalui service layer
     return await employee_service.archive_employee(emp_id, current_user.organization_id)
 
 
@@ -247,7 +335,16 @@ async def restore_employee(
     current_user: CurrentUser = Depends(require_permission(Permission.MANAGE_USERS)),
     employee_service: EmployeeService = Depends(get_employee_service),
 ) -> dict[str, Any]:
-    """domain.js RESTORE_EMPLOYEE (V-29): HR memulihkan karyawan terhapus sebagai nonaktif."""
+    """
+    domain.js RESTORE_EMPLOYEE (V-29): HR memulihkan karyawan terhapus sebagai nonaktif.
+    
+    Path params:
+    - emp_id: UUID dari karyawan
+    
+    Return: Detail hasil pemulihan
+    """
+    # Menggunakan injeksi dependensi EmployeeService
+    # Meneruskan perintah pemulihan (restore) ke service layer
     return await employee_service.restore_employee(emp_id, current_user.organization_id)
 
 @router.get("/{emp_id}/conflicts")

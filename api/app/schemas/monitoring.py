@@ -1,4 +1,8 @@
-"""Skema permintaan & respons: monitoring (dipindah dari api/v1/endpoints/monitoring.py, R-28 M2b)."""
+"""
+app/schemas/monitoring.py
+
+Request and response schemas for monitoring timelines and attendance recaps.
+"""
 from datetime import date, datetime
 from uuid import UUID
 
@@ -6,18 +10,28 @@ from pydantic import BaseModel
 
 
 class TimelineLeader(BaseModel):
+    """
+    Schema for the leader information within a timeline.
+    """
     employee_id: str
     full_name: str | None
 
 
 class TimelineDay(BaseModel):
+    """
+    Schema for a specific day in a timeline.
+    """
     id: str
     work_date: date
     title: str
-    state: str          # APPROVED | SUBMITTED | CHANGES_REQUESTED | LATE | TODAY | UPCOMING
+    # Status dari hari tersebut: APPROVED | SUBMITTED | CHANGES_REQUESTED | LATE | TODAY | UPCOMING
+    state: str
 
 
 class TimelineGroup(BaseModel):
+    """
+    Schema for a grouped timeline representation (e.g., project timeline).
+    """
     id: str
     number: str | None
     title: str
@@ -34,6 +48,9 @@ class TimelineGroup(BaseModel):
 
 
 class AttendanceRecapRow(BaseModel):
+    """
+    Schema for a single employee's attendance summary in a recap report.
+    """
     employee_id: str
     full_name: str
     days_present: int
@@ -44,7 +61,10 @@ class AttendanceRecapRow(BaseModel):
 
 
 class AttendanceRecapRecord(BaseModel):
-    """Satu absensi dalam riwayat rekap — jam masuk & keluar (R-33)."""
+    """
+    Schema for a single attendance record within a recap history (R-33).
+    Satu absensi dalam riwayat rekap — mencakup informasi jam masuk & keluar.
+    """
     id: str
     employee_id: str
     full_name: str
@@ -58,6 +78,9 @@ class AttendanceRecapRecord(BaseModel):
 
 
 class AttendanceRecap(BaseModel):
+    """
+    Schema for the overall monthly attendance recap report.
+    """
     month: str
     employees: list[AttendanceRecapRow]
     records: list[AttendanceRecapRecord] = []

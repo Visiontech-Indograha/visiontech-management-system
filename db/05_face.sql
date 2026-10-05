@@ -307,34 +307,42 @@ CREATE TRIGGER attendance_post_geofence_face_flag BEFORE INSERT ON attendance
 -- -----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION purge_face_probes() RETURNS integer
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = vms, public AS $$
-DECLARE v_count integer := 0; v_probe integer := 0;
+DECLARE v_files uuid[]; v_checks integer := 0; v_probes integer := 0;
 BEGIN
   -- Hanya HR/ADMIN (penjadwal memakai token ADMIN) yang boleh membersihkan.
   IF NOT (has_role('ADMIN') OR has_role('HR')) THEN
     RAISE EXCEPTION 'Pembersihan data wajah hanya untuk HR/ADMIN.' USING ERRCODE = '42501';
   END IF;
+  -- Gambar yang sudah lewat masa simpan (objek MinIO-nya dihapus aplikasi lebih dulu).
+  SELECT COALESCE(array_agg(e.file_id), '{}') INTO v_files FROM expired_face_probe_files() e;
+
+  -- Gambar yang sama dirujuk face_probe dan face_check: lepaskan rujukan face_check dulu.
   WITH cleaned AS (
     UPDATE face_check fc
        SET probe_embedding = NULL, probe_file_id = NULL
       FROM organization o
      WHERE o.id = fc.organization_id
        AND (fc.probe_embedding IS NOT NULL OR fc.probe_file_id IS NOT NULL)
-       AND fc.checked_at < now() - make_interval(days => o.face_probe_retention_days)
+       AND (fc.checked_at < now() - make_interval(days => o.face_probe_retention_days)
+            OR fc.probe_file_id = ANY (v_files))
     RETURNING 1
   )
-  SELECT count(*) INTO v_count FROM cleaned;
+  SELECT count(*) INTO v_checks FROM cleaned;
 
   WITH gone AS (
     DELETE FROM face_probe fp
      USING organization o
      WHERE o.id = fp.organization_id
        AND fp.created_at < now() - make_interval(days => o.face_probe_retention_days)
-    RETURNING fp.file_id
-  ), files AS (
-    DELETE FROM file_object fo USING gone WHERE fo.id = gone.file_id RETURNING 1
+    RETURNING 1
   )
-  SELECT count(*) INTO v_probe FROM gone;
-  RETURN v_count + v_probe;
+  SELECT count(*) INTO v_probes FROM gone;
+
+  DELETE FROM file_object fo
+   WHERE fo.id = ANY (v_files)
+     AND NOT EXISTS (SELECT 1 FROM face_probe fp WHERE fp.file_id = fo.id)
+     AND NOT EXISTS (SELECT 1 FROM face_check fc WHERE fc.probe_file_id = fo.id);
+  RETURN v_checks + v_probes;
 END $$;
 
 -- Kunci objek MinIO untuk gambar wajah yang sudah lewat masa simpan: dihapus aplikasi SEBELUM purge_face_probes().

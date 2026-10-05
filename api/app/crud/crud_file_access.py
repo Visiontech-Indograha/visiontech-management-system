@@ -13,10 +13,31 @@ from .base import CRUDBase
 
 
 class CRUDFileAccess(CRUDBase):
+    """
+    Kelas operasi CRUD untuk menangani hak akses dan izin berkas (file).
+    Memeriksa keterkaitan berkas (sebagai dokumen pribadi, swafoto absensi, atau bukti pekerjaan)
+    guna memastikan izin pengunduhan/tontonan sesuai R-17.
+    """
 
     async def links(self, file_id: UUID | str, org_id: UUID | str, user_id: UUID | str,
                     view_all_attendance: bool = False) -> Any:
-        """None bila berkas tidak ada atau milik organisasi lain."""
+        """
+        Mendapatkan metadata tautan dan peran (role) dari suatu berkas berdasarkan ID-nya,
+        untuk memvalidasi apakah pengguna memiliki hak akses terhadap file tersebut.
+        Mengembalikan None jika berkas tidak ditemukan atau milik organisasi lain.
+        
+        Args:
+            file_id (UUID | str): ID file.
+            org_id (UUID | str): ID organisasi dari pengguna yang merequest.
+            user_id (UUID | str): ID pengguna yang meminta akses.
+            view_all_attendance (bool): Flag apakah pengguna berhak melihat semua data absensi. Defaults to False.
+            
+        Returns:
+            Any: Baris data (Row) yang berisi metadata file dan bendera (flags) hak akses.
+        """
+        # Melakukan sub-kueri (EXISTS) secara paralel terhadap tabel-tabel terkait:
+        # dokumen (employee_document), absensi (attendance), dan bukti laporan (report_evidence, dll).
+        # Hasilnya adalah serangkaian nilai boolean dan array ID rencana (plan_ids) untuk validasi di lapisan atas.
         return await self.fetchone(
             """
             SELECT f.storage_key, f.mime_type,

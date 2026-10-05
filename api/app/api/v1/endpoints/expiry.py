@@ -27,7 +27,13 @@ async def get_expiring_documents(
     """
     Mengambil daftar dokumen yang akan kedaluwarsa atau sudah kedaluwarsa.
     Memerlukan izin VERIFY_DOCUMENTS (biasanya HR).
+    
+    Query params:
+    - urgency: Opsi pemfilteran berdasarkan tingkat urgensi
+    
+    Return: Daftar dokumen yang memasuki masa kedaluwarsa (ExpiringDocumentList)
     """
+    # Menggunakan injeksi dependensi untuk memastikan akses pada database dengan level organisasi
     where_clauses = ["organization_id = :org"]
     params = {"org": current_user.organization_id}
     
@@ -61,7 +67,13 @@ async def get_pending_documents(
     current_user: CurrentUser = Depends(require_permission(Permission.VERIFY_DOCUMENTS)),
     document_service: DocumentService = Depends(get_document_service),
 ) -> PendingDocumentList:
-    """Antrean verifikasi HR (P2-5): dokumen pribadi berstatus PENDING di organisasi ini, terlama dulu."""
+    """
+    Antrean verifikasi HR (P2-5): dokumen pribadi berstatus PENDING di organisasi ini, terlama dulu.
+    
+    Return: Daftar dokumen yang perlu diverifikasi (PendingDocumentList)
+    """
+    # Memerlukan DocumentService lewat injeksi dependensi
+    # Melakukan pemanggilan service queue pending
     rows = await document_service.pending_queue(current_user.organization_id,
                                                                 current_user.user_id)
     return PendingDocumentList(items=[PendingDocument(**r._mapping) for r in rows])
@@ -76,7 +88,11 @@ async def cron_expire_documents(
     Dipanggil berkala oleh penjadwal: dokumen 'CURRENT' yang lewat masa berlaku → 'EXPIRED'.
     Hanya ADMIN (`run:system_jobs`, sama dengan cron absensi) dan hanya untuk organisasinya (V-09);
     "hari ini" menurut zona waktu organisasi, bukan jam server DB.
+    
+    Return: Jumlah dokumen yang diubah (dict)
     """
+    # Mengambil koneksi AsyncSession dari dependensi 
+    # Melakukan eksekusi query pembaruan masa berlaku secara langsung
     query = text("""
         UPDATE vms.employee_document d
         SET lifecycle = 'EXPIRED'

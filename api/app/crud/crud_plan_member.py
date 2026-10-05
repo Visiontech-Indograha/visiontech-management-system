@@ -16,9 +16,24 @@ from .base import CRUDBase
 
 
 class CRUDPlanMember(CRUDBase):
+    """
+    CRUD untuk mengelola susunan anggota tim (personel) dalam sebuah rencana kerja (SK).
+    Mengatur validasi periode aktif (valid_period), penguncian SK, dan manajemen konflik jadwal.
+    """
 
     async def lock_plan(self, plan_id: UUID | str, org_id: UUID | str) -> Any:
-        """SK milik organisasi ini, dikunci untuk diubah. None bila tidak ada / milik organisasi lain."""
+        """
+        Mengunci SK (FOR UPDATE) agar aman diubah tanpa race condition.
+        
+        Args:
+            plan_id (UUID | str): ID rencana kerja (SK).
+            org_id (UUID | str): ID organisasi.
+            
+        Returns:
+            Any: Record SK yang terkunci (id, unit_id, status, row_version, dll), atau None jika tidak ditemukan.
+        """
+        # Mengunci baris (FOR UPDATE) SK yang akan diubah susunan timnya,
+        # untuk mencegah modifikasi konkuren dari proses lain.
         return await self.fetchone(
             """
             SELECT id, unit_id, status, row_version, pm_employee_id, lower(period) AS period_start
@@ -30,7 +45,17 @@ class CRUDPlanMember(CRUDBase):
         )
 
     async def active_team(self, plan_id: UUID | str) -> list[Any]:
-        """Tim aktif SK (valid_period terbuka): ketua dulu, lalu anggota menurut nama."""
+        """
+        Mengambil tim aktif dari sebuah SK. Ketua (LEADER) akan muncul paling atas.
+        
+        Args:
+            plan_id (UUID | str): ID rencana kerja.
+            
+        Returns:
+            list[Any]: Daftar anggota tim aktif beserta role (ketua/anggota).
+        """
+        # Mengambil anggota tim yang masih aktif (valid_period ujung atasnya masih infinity).
+        # Menggunakan boolean casting (role_in_plan = 'LEADER') DESC agar ketua diurutkan di baris pertama.
         return list(await self.fetchall(
             """
             SELECT CAST(m.employee_id AS text) AS employee_id, CAST(m.role_in_plan AS text) AS role_in_plan,
@@ -43,6 +68,17 @@ class CRUDPlanMember(CRUDBase):
         ))
 
     async def active_employees(self, employee_ids: Iterable[UUID | str], org_id: UUID | str) -> set[str]:
+        """
+        Memvalidasi bahwa kumpulan ID karyawan yang diberikan adalah karyawan aktif di organisasi tersebut.
+        
+        Args:
+            employee_ids (Iterable[UUID | str]): Kumpulan ID karyawan.
+            org_id (UUID | str): ID organisasi.
+            
+        Returns:
+            set[str]: Himpunan ID karyawan yang valid dan aktif.
+        """
+        # Query untuk mengecek eksistensi dan status aktif karyawan.
         ids = [str(e) for e in employee_ids]
         rows = await self.fetchall(
             """
@@ -54,7 +90,19 @@ class CRUDPlanMember(CRUDBase):
         return {r[0] for r in rows}
 
     async def schedule_conflicts(self, employee_ids: Iterable[UUID | str], plan_id: UUID | str) -> Sequence[Any]:
-        """Pekerjaan terbit lain yang periodenya beririsan (vms.personnel_conflict)."""
+        """
+        Mengecek bentrok jadwal: apakah ada karyawan yang sudah terikat di SK terbit lain
+        pada periode yang sama.
+        
+        Args:
+            employee_ids (Iterable[UUID | str]): Kumpulan ID karyawan.
+            plan_id (UUID | str): ID rencana kerja saat ini.
+            
+        Returns:
+            Sequence[Any]: Daftar konflik yang mencakup employee_id, work_plan_id, number, dan title.
+        """
+        # Menggunakan CROSS JOIN LATERAL untuk memanggil fungsi vms.personnel_conflict bagi
+        # setiap employee_id dalam list, membandingkan dengan periode SK saat ini.
         return await self.fetchall(
             """
             SELECT e.employee_id::text AS employee_id, c.work_plan_id::text AS work_plan_id, c.number, c.title
@@ -67,8 +115,19 @@ class CRUDPlanMember(CRUDBase):
 
     async def schedule_conflicts_until(self, employee_ids: Iterable[UUID | str], plan_id: UUID | str,
                                        new_end: date) -> Sequence[Any]:
-        """Seperti schedule_conflicts, tetapi untuk periode yang diperpanjang sampai `new_end`
-        (domain.js checkSchedule(plan, newEnd) saat menyetujui perpanjangan)."""
+        """
+        Mengecek bentrok jadwal untuk periode perpanjangan SK hingga tanggal `new_end`.
+        
+        Args:
+            employee_ids (Iterable[UUID | str]): Kumpulan ID karyawan.
+            plan_id (UUID | str): ID rencana kerja.
+            new_end (date): Tanggal akhir baru perpanjangan.
+            
+        Returns:
+            Sequence[Any]: Daftar konflik (employee_id, work_plan_id, number, title).
+        """
+        # Membuat daterange baru dari awal periode eksisting hingga `new_end` + 1 hari (interval eksklusif)
+        # dan memanggil vms.personnel_conflict untuk mengecek bentrokan pada range tersebut.
         return await self.fetchall(
             """
             SELECT e.employee_id::text AS employee_id, c.work_plan_id::text AS work_plan_id, c.number, c.title
@@ -84,20 +143,42 @@ class CRUDPlanMember(CRUDBase):
     async def replace_team(
         self, plan_id: UUID | str, start: date, leader_id: UUID | str | None, member_ids: Sequence[UUID | str]
     ) -> None:
-        """Ganti seluruh susunan tim SK draft (belum ada dokumen terbit, jadi tidak ada riwayat yang hilang)."""
+        """
+        Mengganti seluruh susunan tim pada draf SK. Hanya boleh dipakai ketika SK masih draf,
+        karena menghapus record (DELETE) alih-alih menutup `valid_period`.
+        
+        Args:
+            plan_id (UUID | str): ID rencana kerja.
+            start (date): Tanggal mulai anggota.
+            leader_id (UUID | str | None): ID ketua (jika ada).
+            member_ids (Sequence[UUID | str]): Daftar ID anggota.
+        """
+        # Menghapus seluruh baris work_plan_member lama, lalu
+        # menyisipkan anggota tim yang baru menggunakan bulk insert dari array gabungan.
         await self.execute("DELETE FROM vms.work_plan_member WHERE work_plan_id = :plan", {"plan": plan_id})
         rows = ([(leader_id, "LEADER")] if leader_id else []) + [(m, "MEMBER") for m in member_ids]
-        for employee_id, role in rows:
+        if rows:
             await self.execute(
                 """
                 INSERT INTO vms.work_plan_member (work_plan_id, employee_id, role_in_plan, valid_period)
-                VALUES (:plan, :emp, CAST(:role AS vms.role_code), daterange(CAST(:start AS date), NULL, '[)'))
+                SELECT :plan, CAST(u.emp AS uuid), CAST(u.role AS vms.role_code), daterange(CAST(:start AS date), NULL, '[)')
+                FROM unnest(CAST(:emps AS text[]), CAST(:roles AS text[])) AS u(emp, role)
                 """,
-                {"plan": plan_id, "emp": employee_id, "role": role, "start": start},
+                {"plan": plan_id, "emps": [str(r[0]) for r in rows], "roles": [r[1] for r in rows], "start": start},
             )
 
     async def set_leader(self, plan_id: UUID | str, leader_id: UUID | str | None) -> int:
-        """Setel ketua di SK dan naikkan row_version. Kembalikan row_version baru."""
+        """
+        Menetapkan ketua pada master SK dan menaikkan versinya (row_version).
+        
+        Args:
+            plan_id (UUID | str): ID rencana kerja.
+            leader_id (UUID | str | None): ID ketua baru.
+            
+        Returns:
+            int: Versi row terbaru (row_version).
+        """
+        # Memperbarui ketua pada work_plan dan mencegah edit konkuren dengan menaikkan row_version.
         return int(await self.scalar(
             """
             UPDATE vms.work_plan SET leader_employee_id = :leader, row_version = row_version + 1

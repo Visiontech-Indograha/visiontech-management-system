@@ -20,11 +20,33 @@ _DAY_TASKS = ("Briefing keselamatan dan pemeriksaan area", "Pelaksanaan pekerjaa
 
 
 class CRUDPlanChange(CRUDBase):
+    """
+    Kelas CRUD untuk memproses usulan perubahan (adendum) pada Work Plan (SK), baik
+    berupa perpanjangan waktu maupun pergantian personel.
+    """
 
     async def employee_of(self, user_id: UUID | str) -> Any:
+        """Mengambil ID Karyawan (employee_id) dari seorang pengguna.
+        
+        Args:
+            user_id (UUID | str): ID dari pengguna (app_user).
+            
+        Returns:
+            Any: ID Karyawan dalam bentuk string.
+        """
+        # Melakukan scalar query pada tabel vms.app_user
         return await self.scalar("SELECT employee_id::text FROM vms.app_user WHERE id = :uid", {"uid": user_id})
 
     async def get_change(self, change_id: UUID | str) -> Any:
+        """Mengambil rincian data usulan perubahan (plan_change).
+        
+        Args:
+            change_id (UUID | str): ID usulan perubahan.
+            
+        Returns:
+            Any: Baris data usulan perubahan.
+        """
+        # Mengeksekusi SELECT tunggal ke tabel vms.plan_change
         return await self.fetchone(
             """
             SELECT id, work_plan_id, CAST(change_type AS text) AS change_type, CAST(status AS text) AS status,
@@ -35,6 +57,15 @@ class CRUDPlanChange(CRUDBase):
         )
 
     async def open_change(self, plan_id: UUID | str) -> Any:
+        """Memeriksa apakah ada usulan perubahan yang masih terbuka (belum final) pada suatu SK.
+        
+        Args:
+            plan_id (UUID | str): ID Work Plan.
+            
+        Returns:
+            Any: ID perubahan jika ada yang berstatus PENDING_PM atau AWAITING_LEADER_ACCEPTANCE.
+        """
+        # Memastikan tidak ada overlapping usulan perubahan
         return await self.scalar(
             """
             SELECT id FROM vms.plan_change
@@ -44,7 +75,17 @@ class CRUDPlanChange(CRUDBase):
         )
 
     async def lock_change(self, change_id: UUID | str, org_id: UUID | str) -> Any:
-        """Usulan + SK-nya (dikunci). None bila tidak ada / organisasi lain."""
+        """Usulan + SK-nya (dikunci). None bila tidak ada / organisasi lain.
+        
+        Args:
+            change_id (UUID | str): ID usulan perubahan.
+            org_id (UUID | str): ID organisasi untuk validasi.
+            
+        Returns:
+            Any: Baris data perubahan beserta SK-nya, dalam keadaan terkunci (locked).
+        """
+        # Menggunakan FOR UPDATE OF c, wp untuk melakukan row-level locking
+        # agar konkurensi (race condition) bisa dicegah selama proses persetujuan.
         return await self.fetchone(
             """
             SELECT c.id, c.work_plan_id, c.change_type, c.status, c.reason, c.base_revision, c.proposed_revision,
@@ -59,6 +100,16 @@ class CRUDPlanChange(CRUDBase):
         )
 
     async def next_document_version(self, plan_id: UUID | str) -> int:
+        """Menghitung versi dokumen adendum berikutnya untuk sebuah SK.
+        
+        Args:
+            plan_id (UUID | str): ID Work Plan.
+            
+        Returns:
+            int: Nomor versi dokumen berikutnya.
+        """
+        # Mengkalkulasi nilai GREATEST antara revisi SK (wp.revision) 
+        # dengan versi tertinggi dari dokumen SK yang sudah ada sebelumnya (max(d.version)).
         return int(await self.scalar(
             """
             SELECT GREATEST(wp.revision, COALESCE(max(d.version), 0)) + 1
@@ -72,6 +123,25 @@ class CRUDPlanChange(CRUDBase):
                             reason: str, base_revision: int, proposed_revision: int, requested_by: str,
                             old_end: date | None = None, new_end: date | None = None,
                             leader_id: str | None = None, member_ids: list[str] | None = None) -> Any:
+        """Memasukkan usulan perubahan baru (plan_change) ke dalam database.
+        
+        Args:
+            plan_id (UUID | str): ID Work Plan.
+            change_type (ChangeType): Tipe perubahan (waktu atau personel).
+            status (ChangeStatus): Status persetujuan perubahan.
+            reason (str): Alasan perubahan.
+            base_revision (int): Versi revisi sebelum diubah.
+            proposed_revision (int): Versi revisi yang diusulkan.
+            requested_by (str): ID Karyawan yang mengusulkan.
+            old_end (date | None): Tanggal selesai sebelumnya.
+            new_end (date | None): Tanggal selesai baru yang diusulkan.
+            leader_id (str | None): ID Ketua yang diusulkan.
+            member_ids (list[str] | None): Daftar ID Anggota yang diusulkan.
+            
+        Returns:
+            Any: ID dari baris perubahan yang baru dimasukkan.
+        """
+        # Melakukan penyisipan ke tabel vms.plan_change dan memformat tanggal (daterange).
         return await self.scalar(
             """
             INSERT INTO vms.plan_change (
@@ -93,8 +163,23 @@ class CRUDPlanChange(CRUDBase):
 
     async def issue_addendum(self, change_id: UUID | str, plan_id: UUID | str, kind: DocumentKind, version: int,
                              snapshot: dict[str, Any], issued_by: str, reason: str) -> None:
-        """Dokumen adendum menunggu penerimaan; nomor = nomor SK + /ADD-n (domain.js)."""
+        """Dokumen adendum menunggu penerimaan; nomor = nomor SK + /ADD-n (domain.js).
+        
+        Args:
+            change_id (UUID | str): ID usulan perubahan (plan_change).
+            plan_id (UUID | str): ID Work Plan.
+            kind (DocumentKind): Jenis dokumen.
+            version (int): Versi dokumen.
+            snapshot (dict[str, Any]): Rekaman data SK saat itu (JSON).
+            issued_by (str): Penerbit dokumen.
+            reason (str): Alasan penerbitan dokumen.
+            
+        Returns:
+            None
+        """
         suffix = "ADD-SDM" if kind == DocumentKind.PERSONNEL_ADDENDUM else "ADD"
+        # Memasukkan record ke vms.plan_document dan mengaitkannya ke vms.plan_change.
+        # Menghasilkan nomor surat dengan memanipulasi string menggunakan suffix dan version.
         document_id = await self.scalar(
             """
             INSERT INTO vms.plan_document (work_plan_id, kind, version, number, status, snapshot, snapshot_sha256,
@@ -113,6 +198,16 @@ class CRUDPlanChange(CRUDBase):
 
     async def set_change(self, change_id: UUID | str, status: ChangeStatus, decided_by: str | None = None,
                          decision_reason: str | None = None) -> None:
+        """Menetapkan status keputusan (disetujui/ditolak) pada suatu usulan perubahan.
+        
+        Args:
+            change_id (UUID | str): ID perubahan.
+            status (ChangeStatus): Status baru.
+            decided_by (str | None): ID Karyawan yang memutuskan.
+            decision_reason (str | None): Alasan atas keputusan.
+        """
+        # Melakukan UPDATE pada tabel vms.plan_change.
+        # Fungsi COALESCE memastikan nilai yang ada tidak tertimpa NULL apabila parameter bernilai None.
         await self.execute(
             """
             UPDATE vms.plan_change
@@ -126,8 +221,17 @@ class CRUDPlanChange(CRUDBase):
 
     async def set_document(self, document_id: UUID | str | None, status: DocumentStatus,
                            accepted_by: str | None = None) -> None:
+        """Membaharui status dari sebuah dokumen (misal: telah disetujui).
+        
+        Args:
+            document_id (UUID | str | None): ID Dokumen.
+            status (DocumentStatus): Status baru dari dokumen.
+            accepted_by (str | None): ID pegawai yang menerima/menyetujui.
+        """
         if document_id is None:
             return
+        # Melakukan UPDATE status dokumen di tabel vms.plan_document.
+        # Merekam kolom accepted_by dan waktu penerimaan accepted_at.
         await self.execute(
             """
             UPDATE vms.plan_document
@@ -140,7 +244,16 @@ class CRUDPlanChange(CRUDBase):
         )
 
     async def apply_extension(self, plan_id: UUID | str, old_end: date, new_end: date, revision: int) -> None:
-        """Periode diperpanjang, revisi naik, hari baru dibuat (domain.js ACCEPT_CHANGE + makeDay)."""
+        """Periode diperpanjang, revisi naik, hari baru dibuat (domain.js ACCEPT_CHANGE + makeDay).
+        
+        Args:
+            plan_id (UUID | str): ID Work Plan.
+            old_end (date): Tanggal selesai sebelumnya.
+            new_end (date): Tanggal selesai yang baru.
+            revision (int): Nomor revisi.
+        """
+        # Melakukan pembaruan batas akhir periode pada Work Plan.
+        # Kolom period di-set menggunakan daterange yang terbuka kanan '[)' pada batas atasnya.
         await self.execute(
             """
             UPDATE vms.work_plan
@@ -155,6 +268,7 @@ class CRUDPlanChange(CRUDBase):
         day = old_end + timedelta(days=1)
         index = existing
         while day <= new_end:
+            # Memasukkan iterasi hari kerja baru (work_plan_day) dan tugas dasarnya (work_plan_task).
             day_id = await self.scalar(
                 """
                 INSERT INTO vms.work_plan_day (work_plan_id, work_date, title, sort_order)
@@ -164,20 +278,31 @@ class CRUDPlanChange(CRUDBase):
                 """,
                 {"plan": plan_id, "day": day, "title": _DAY_TITLES[index % 3], "sort": index},
             )
-            if day_id is not None:
-                for order, title in enumerate(_DAY_TASKS):
-                    await self.execute(
-                        "INSERT INTO vms.work_plan_task (work_plan_day_id, title, sort_order) VALUES (:day, :title, :sort)",
-                        {"day": day_id, "title": title, "sort": order},
-                    )
+            if day_id is not None and _DAY_TASKS:
+                await self.execute(
+                    """
+                    INSERT INTO vms.work_plan_task (work_plan_day_id, title, sort_order)
+                    SELECT :day, unnest(CAST(:titles AS text[])), unnest(CAST(:sorts AS int[]))
+                    """,
+                    {"day": day_id, "titles": _DAY_TASKS, "sorts": list(range(len(_DAY_TASKS)))}
+                )
             day += timedelta(days=1)
             index += 1
 
     async def apply_personnel(self, plan_id: UUID | str, leader_id: str, member_ids: list[str],
                               revision: int) -> None:
         """Susunan baru berlaku mulai hari ini menurut zona waktu organisasi: baris yang tidak lagi
-        sesuai ditutup (bukan dihapus — riwayat tetap), baris baru dibuka, ketua di SK diganti."""
+        sesuai ditutup (bukan dihapus — riwayat tetap), baris baru dibuka, ketua di SK diganti.
+        
+        Args:
+            plan_id (UUID | str): ID Work Plan.
+            leader_id (str): ID Karyawan yang menjadi ketua baru.
+            member_ids (list[str]): Daftar anggota.
+            revision (int): Nomor revisi.
+        """
         wanted = [(leader_id, "LEADER")] + [(m, "MEMBER") for m in member_ids]
+        # Mengakhiri penugasan bagi anggota lama yang sudah tidak berada di daftar baru (wanted).
+        # Penetapan batas akhir menggunakan waktu lokal (timezone) yang berjalan pada hari ini.
         await self.execute(
             """
             WITH effective AS (
@@ -193,20 +318,26 @@ class CRUDPlanChange(CRUDBase):
             """,
             {"plan": plan_id, "emps": [e for e, _ in wanted], "roles": [r for _, r in wanted]},
         )
-        for employee_id, role in wanted:
+        if wanted:
+            # Memasukkan baris (record) anggota-anggota baru yang belum ada di dalam database
+            # dan men-set awal masa berlaku (valid_period) ke waktu lokal hari ini (timezone dependent).
             await self.execute(
                 """
                 INSERT INTO vms.work_plan_member (work_plan_id, employee_id, role_in_plan, valid_period)
-                SELECT wp.id, CAST(:emp AS uuid), CAST(:role AS vms.role_code),
+                SELECT wp.id, CAST(u.emp AS uuid), CAST(u.role AS vms.role_code),
                        daterange(GREATEST(lower(wp.period), (now() AT TIME ZONE o.timezone)::date), NULL, '[)')
-                FROM vms.work_plan wp JOIN vms.organization o ON o.id = wp.organization_id
+                FROM vms.work_plan wp 
+                JOIN vms.organization o ON o.id = wp.organization_id
+                CROSS JOIN unnest(CAST(:emps AS text[]), CAST(:roles AS text[])) AS u(emp, role)
                 WHERE wp.id = :plan AND NOT EXISTS (
                     SELECT 1 FROM vms.work_plan_member m
-                    WHERE m.work_plan_id = wp.id AND m.employee_id = CAST(:emp AS uuid)
-                      AND m.role_in_plan = CAST(:role AS vms.role_code) AND upper_inf(m.valid_period))
+                    WHERE m.work_plan_id = wp.id AND m.employee_id = CAST(u.emp AS uuid)
+                      AND m.role_in_plan = CAST(u.role AS vms.role_code) AND upper_inf(m.valid_period))
                 """,
-                {"plan": plan_id, "emp": employee_id, "role": role},
+                {"plan": plan_id, "emps": [str(e) for e, _ in wanted], "roles": [r for _, r in wanted]}
             )
+        # Menetapkan siapa ID ketua tim yang baru pada kolom leader_employee_id, 
+        # serta memperbarui status revisi dari Work Plan.
         await self.execute(
             """
             UPDATE vms.work_plan SET leader_employee_id = CAST(:leader AS uuid), revision = :revision,

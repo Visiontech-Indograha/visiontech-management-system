@@ -48,11 +48,13 @@ class AppError(Exception):
 
 # ── Kode error standar ─────────────────────────────────────────────────────────
 class NotFoundError(AppError):
+    """Galat jika sumber daya/data tidak ditemukan (HTTP 404)."""
     def __init__(self, resource: str = "Data") -> None:
         super().__init__("NOT_FOUND", f"{resource} tidak ditemukan.", status=404)
 
 
 class ForbiddenError(AppError):
+    """Galat jika pengguna tidak memiliki hak akses (HTTP 403)."""
     def __init__(self, reason: str = "Anda tidak memiliki akses.") -> None:
         super().__init__("FORBIDDEN", reason, status=403)
 
@@ -70,11 +72,13 @@ class InvalidStateError(AppError):
 
 
 class ValidationError(AppError):
+    """Galat validasi aturan bisnis atau payload masukan (HTTP 422)."""
     def __init__(self, message: str) -> None:
         super().__init__("VALIDATION_ERROR", message, status=422)
 
 
 class StorageError(AppError):
+    """Galat ketika berinteraksi dengan penyimpanan (S3/minio) (HTTP 500)."""
     def __init__(self, detail: str = "Gagal menyimpan berkas.") -> None:
         super().__init__("STORAGE_ERROR", detail, status=500)
 

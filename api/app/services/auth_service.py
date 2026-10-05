@@ -44,10 +44,12 @@ class Profile:
 
 
 def _inactive() -> AppError:
+    """Mengembalikan error ketika akun tidak aktif."""
     return AppError("INACTIVE", "Akun dinonaktifkan", status=403)
 
 
 def _revoked() -> AppError:
+    """Mengembalikan error ketika token/sesi telah dicabut atau invalid."""
     return AppError("SESSION_REVOKED", "Sesi tidak valid atau telah dicabut", status=401, persist=True)
 
 
@@ -55,6 +57,11 @@ _DUMMY_HASH: str | None = None
 
 
 def _dummy_hash() -> str:
+    """
+    Menghasilkan (atau mengambil) hash sandi dummy secara lazy untuk mencegah timing attack.
+    Jika login menggunakan email yang salah, proses verifikasi argon2 tetap dijalankan
+    sehingga durasi proses tetap sama dan tidak memberi petunjuk apakah email ada atau tidak (dok 08).
+    """
     global _DUMMY_HASH
     if _DUMMY_HASH is None:
         _DUMMY_HASH = hash_password("vms-login-tiruan")
@@ -62,6 +69,13 @@ def _dummy_hash() -> str:
 
 
 def _locked(state: Any, *, persist: bool = False) -> AppError:
+    """
+    Mengembalikan error ketika sesi login terkunci akibat terlalu banyak kegagalan.
+    
+    Args:
+        state (Any): State login yang berisi locked_until dan retry_after_seconds.
+        persist (bool): Jika True, pesan akan bertahan di UI (persist).
+    """
     minutes = max(1, -(-state.retry_after_seconds // 60))
     return AppError(
         "LOCKED", f"Terlalu banyak kegagalan login. Coba lagi dalam {minutes} menit.", status=403,
@@ -71,11 +85,16 @@ def _locked(state: Any, *, persist: bool = False) -> AppError:
 
 
 class AuthService:
+    """Layanan aturan bisnis untuk autentikasi dan manajemen sesi pengguna."""
     def __init__(self, users: CRUDUser, sessions: CRUDSession) -> None:
         self.users = users
         self.sessions = sessions
 
     async def login(self, login: str, password: str, client: ClientInfo, platform: str = "web") -> IssuedTokens:
+        """
+        Memvalidasi kredensial pengguna dan membuat sesi login jika berhasil.
+        Menerapkan pembatasan (rate limiting) berdasarkan kegagalan login untuk mencegah brute-force.
+        """
         state = await self.sessions.failed_logins(login)
         if state.locked_until:
             await send_security_alert(
@@ -85,6 +104,7 @@ class AuthService:
 
         user = await self.users.find_by_login(login)
         # Selalu hitung argon2 — tanpa ini login tak terdaftar jauh lebih cepat & bisa ditebak (dok 08).
+        # Melakukan hashing buatan (dummy_hash) jika akun tidak ditemukan agar waktu respons seragam.
         stored_hash = user.password_hash if user and user.password_hash else _dummy_hash()
         if not verify_password(password, stored_hash) or not user or not user.password_hash:
             await self.sessions.record_login_attempt(login, client.ip, False, "Invalid credentials")
@@ -113,10 +133,15 @@ class AuthService:
         return await self._start_session(user, client)
 
     async def refresh(self, raw_refresh_token: str | None, client: ClientInfo) -> IssuedTokens:
+        """
+        Melakukan rotasi (perpanjangan) akses menggunakan refresh token.
+        Akan mencabut akses jika terdeteksi penggunaan ulang (reuse) token lama (mencegah pencurian sesi).
+        """
         if not raw_refresh_token:
             raise AppError("NO_TOKEN", "Sesi tidak ditemukan. Silakan masuk kembali.", status=401)
 
         rotated = await self.sessions.rotate(raw_refresh_token, client.ip, client.user_agent)
+        # Mendeteksi dan menangani jika refresh token yang sudah terpakai dicoba lagi (potensi pencurian/hijack).
         if rotated.reused:
             await send_security_alert(
                 "Pencurian Sesi (Reuse Detected)",
@@ -138,6 +163,9 @@ class AuthService:
         )
 
     async def logout(self, raw_refresh_token: str | None) -> None:
+        """
+        Keluar dari sistem dengan mencabut (revoke) refresh token saat ini.
+        """
         if raw_refresh_token:
             await self.sessions.revoke_by_refresh_token(raw_refresh_token, "User logged out")
 
@@ -146,13 +174,22 @@ class AuthService:
         return await self.sessions.list_active(user_id)
 
     async def revoke_session(self, user_id: str, session_id: str) -> None:
+        """
+        Mencabut sesi tunggal secara spesifik (digunakan untuk mengeluarkan perangkat lain).
+        """
         if not await self.sessions.revoke_session(user_id, session_id, "Dikeluarkan dari perangkat lain"):
             raise NotFoundError("Sesi")
 
     async def revoke_other_sessions(self, user_id: str, current_session_id: str) -> int:
+        """
+        Mencabut semua sesi aktif selain sesi saat ini.
+        """
         return await self.sessions.revoke_other_sessions(user_id, current_session_id, "Keluarkan perangkat lain")
 
     async def me(self, user_id: str, permissions: list[str]) -> Profile:
+        """
+        Mengambil data profil pengguna (ME endpoint).
+        """
         user = await self.users.find_by_id(user_id)
         if not user:
             raise NotFoundError("Pengguna")
@@ -168,6 +205,9 @@ class AuthService:
     async def change_password(
         self, user_id: str, current_password: str, new_password: str, client: ClientInfo
     ) -> IssuedTokens:
+        """
+        Mengubah kata sandi pengguna, mencabut semua sesi lainnya, lalu mengeluarkan sesi baru.
+        """
         user = await self.users.find_by_id(user_id)
         if not user:
             raise NotFoundError("Pengguna")
@@ -185,6 +225,7 @@ class AuthService:
         return await self._start_session(user, client)
 
     async def _start_session(self, user: Any, client: ClientInfo) -> IssuedTokens:
+        """Membuat sesi baru dalam database dan mengeluarkan sepasang access/refresh token."""
         session = await self.sessions.issue(
             user.organization_id, user.id, client.device_label, client.fingerprint,
             client.ip, client.user_agent,
@@ -196,7 +237,10 @@ class AuthService:
 
     @staticmethod
     def _access_token(user: Any, session_id: Any) -> str:
-        # Hanya identitas (dok 05 §4); peran & status akun dibaca dari DB tiap permintaan.
+        """
+        Menghasilkan JWT akses.
+        Hanya identitas (dok 05 §4); peran & status akun dibaca dari DB tiap permintaan.
+        """
         return create_jwt_token(
             {"sub": str(user.id), "org": str(user.organization_id), "jti": str(session_id)},
             ACCESS_TOKEN_TTL,

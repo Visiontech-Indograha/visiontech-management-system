@@ -34,17 +34,29 @@ class NeedsReviewResult:
 
 
 class AttendanceMonitorService:
+    """Layanan untuk memantau dan menghasilkan notifikasi terkait kedisiplinan dan janggalan absensi harian."""
     def __init__(self, repo: CRUDAttendanceMonitor) -> None:
         self.repo = repo
 
     async def check_missing_check_ins(self, org_id: UUID | str) -> MissingCheckInResult:
+        """
+        Memeriksa apakah tidak ada yang absen masuk hingga tenggat waktu yang ditentukan, lalu mengirimkan peringatan jika diperlukan.
+        
+        Args:
+            org_id: ID organisasi.
+            
+        Returns:
+            Hasil pemeriksaan berupa boolean peringatan terkirim dan jumlah check-in hari ini.
+        """
         now = jakarta_now()
         today = now.date()
         # Hari kerja Senin–Jumat mulai 09.00 WIB (K-11: jam kerja 08.00–17.00).
+        # Logika pembatasan waktu bisnis: Jangan periksa pada akhir pekan atau sebelum batas toleransi check-in.
         if now.weekday() >= 5 or now.time() < CHECK_IN_DEADLINE:
             return MissingCheckInResult(alerted=False, check_ins_today=0)
 
         count = await self.repo.check_in_count(org_id, today)
+        # Jika ada yang absen masuk, atau tidak ada karyawan aktif yang perlu diabsen, maka abaikan.
         if count or not await self.repo.active_employee_count(org_id):
             return MissingCheckInResult(alerted=False, check_ins_today=count)
 
@@ -57,10 +69,20 @@ class AttendanceMonitorService:
         return MissingCheckInResult(alerted=True, check_ins_today=0)
 
     async def check_needs_review_spike(self, org_id: UUID | str) -> NeedsReviewResult:
+        """
+        Memantau lonjakan abnormal pada status absensi "Perlu Review" untuk mengidentifikasi potensi gangguan lokasi/GPS.
+        
+        Args:
+            org_id: ID organisasi.
+            
+        Returns:
+            Hasil evaluasi lonjakan.
+        """
         today = jakarta_now().date()
         count = await self.repo.needs_review_count(org_id, today)
         average = await self.repo.needs_review_daily_average(org_id, today, REVIEW_WINDOW_DAYS)
 
+        # Memicu peringatan jika jumlah yang butuh ditinjau secara abnormal lebih tinggi dari hari-hari biasa.
         alerted = count >= REVIEW_SPIKE_MINIMUM and count > REVIEW_SPIKE_FACTOR * average
         if alerted:
             await send_business_alert(

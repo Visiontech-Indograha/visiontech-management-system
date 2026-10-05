@@ -55,7 +55,11 @@ class CheckInRequest(BaseModel):
     location_origin: Literal["GPS", "SIMULASI"] = "GPS"
     # Radius ketidakpastian GPS perangkat (m). Opsional: klien lama / antrean luring tidak ditolak (K-12).
     accuracy_m: float | None = Field(None, ge=0)
+    # Foto bukti: hanya diwajibkan di luar radius (trigger DB).
     selfie_file_id: UUID | None = None
+    # Pengenalan wajah: id gambar wajah sementara dari POST /face/probe. Hasil dihitung SERVER (aturan inti #3).
+    face_probe_id: UUID | None = None
+    # DEPRECATED & DIABAIKAN: klien tidak lagi dipercaya soal hasil wajah. Dipertahankan agar APK lama tidak ditolak.
     face_result: Literal["MATCH", "NO_MATCH", "LOW_QUALITY", "NOT_ENROLLED", "SKIPPED"] | None = None
     face_similarity: float | None = None
     # R-33: Wajib diisi bila berada di luar radius lokasi atau saat mengajukan ulang absensi yang ditolak.
@@ -69,6 +73,8 @@ class CheckOutRequest(BaseModel):
     channel: AttendanceChannel = "MOBILE"
     location: GeoPoint
     location_origin: Literal["GPS", "SIMULASI"] = "GPS"
+    # Pengenalan wajah saat pulang (tanpa foto bukti): id gambar wajah sementara dari POST /face/probe.
+    face_probe_id: UUID | None = None
 
 
 class ExplanationRequest(BaseModel):
@@ -104,6 +110,11 @@ class AttendanceResponse(BaseModel):
     explanation: str | None
     reviewed_at: datetime | None
     selfie_file_id: UUID | None = None
+    # Pengenalan wajah hasil hitung server (MATCH/NO_MATCH/LOW_QUALITY/NOT_ENROLLED/SKIPPED); None = tidak diperiksa.
+    face_result: str | None = None
+    face_similarity: float | None = None
+    check_out_face_result: str | None = None
+    check_out_face_similarity: float | None = None
     # Hanya terisi di daftar GET /attendance
     # Alasan peninjau bila absensi ditolak
     review_note: str | None = None
@@ -154,6 +165,8 @@ class OfflineAttendanceEvent(BaseModel):
     payload: str = Field(..., max_length=10000)
     signature: str = Field(..., max_length=500)
     selfie_file_id: UUID | None = None
+    # Gambar wajah sementara (POST /face/probe); kecocokannya dicek lewat `face.probe_sha256` dalam payload.
+    face_probe_id: UUID | None = None
 
 
 class OfflineAttendanceResult(BaseModel):

@@ -1136,6 +1136,28 @@
       ],
       "title": "Check Out At"
      },
+     "check_out_face_result": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Check Out Face Result"
+     },
+     "check_out_face_similarity": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Check Out Face Similarity"
+     },
      "check_out_requested_at": {
       "anyOf": [
        {
@@ -1178,6 +1200,28 @@
        }
       ],
       "title": "Explanation"
+     },
+     "face_result": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Face Result"
+     },
+     "face_similarity": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Face Similarity"
      },
      "id": {
       "format": "uuid",
@@ -1390,6 +1434,47 @@
     "title": "AuditEventResponse",
     "type": "object"
    },
+   "Body_create_face_probe_api_v1_face_probe_post": {
+    "properties": {
+     "file": {
+      "contentMediaType": "application/octet-stream",
+      "title": "File",
+      "type": "string"
+     },
+     "liveness": {
+      "default": "{}",
+      "title": "Liveness",
+      "type": "string"
+     }
+    },
+    "required": [
+     "file"
+    ],
+    "title": "Body_create_face_probe_api_v1_face_probe_post",
+    "type": "object"
+   },
+   "Body_enroll_face_api_v1_face_enroll_post": {
+    "properties": {
+     "files": {
+      "items": {
+       "contentMediaType": "application/octet-stream",
+       "type": "string"
+      },
+      "title": "Files",
+      "type": "array"
+     },
+     "liveness": {
+      "default": "{}",
+      "title": "Liveness",
+      "type": "string"
+     }
+    },
+    "required": [
+     "files"
+    ],
+    "title": "Body_enroll_face_api_v1_face_enroll_post",
+    "type": "object"
+   },
    "Body_upload_document_api_v1_files_upload_post": {
     "properties": {
      "file": {
@@ -1561,6 +1646,18 @@
       ],
       "title": "Explanation"
      },
+     "face_probe_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Face Probe Id"
+     },
      "face_result": {
       "anyOf": [
        {
@@ -1639,6 +1736,18 @@
       "title": "Channel",
       "type": "string"
      },
+     "face_probe_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Face Probe Id"
+     },
      "location": {
       "$ref": "#/components/schemas/GeoPoint"
      },
@@ -1688,6 +1797,30 @@
      "obstacle"
     ],
     "title": "CompletionRequest",
+    "type": "object"
+   },
+   "ConsentRequest": {
+    "properties": {
+     "policy_version": {
+      "maxLength": 40,
+      "minLength": 1,
+      "title": "Policy Version",
+      "type": "string"
+     },
+     "state": {
+      "enum": [
+       "GRANTED",
+       "WITHDRAWN"
+      ],
+      "title": "State",
+      "type": "string"
+     }
+    },
+    "required": [
+     "state",
+     "policy_version"
+    ],
+    "title": "ConsentRequest",
     "type": "object"
    },
    "DailyReportCreate": {
@@ -2716,6 +2849,34 @@
     "title": "EmployeeUpdate",
     "type": "object"
    },
+   "EnrollResponse": {
+    "properties": {
+     "enrolled": {
+      "title": "Enrolled",
+      "type": "integer"
+     },
+     "enrollment_version": {
+      "title": "Enrollment Version",
+      "type": "string"
+     },
+     "model_name": {
+      "title": "Model Name",
+      "type": "string"
+     },
+     "model_version": {
+      "title": "Model Version",
+      "type": "string"
+     }
+    },
+    "required": [
+     "enrolled",
+     "enrollment_version",
+     "model_name",
+     "model_version"
+    ],
+    "title": "EnrollResponse",
+    "type": "object"
+   },
    "ExpiringDocumentList": {
     "description": "Schema for a list of expiring documents.",
     "properties": {
@@ -2792,6 +2953,116 @@
      "explanation"
     ],
     "title": "ExplanationRequest",
+    "type": "object"
+   },
+   "FacePolicy": {
+    "description": "Teks persetujuan biometrik milik server (klien tidak bisa mengubah kalimat yang disetujui).",
+    "properties": {
+     "text": {
+      "title": "Text",
+      "type": "string"
+     },
+     "version": {
+      "title": "Version",
+      "type": "string"
+     }
+    },
+    "required": [
+     "version",
+     "text"
+    ],
+    "title": "FacePolicy",
+    "type": "object"
+   },
+   "FaceStatus": {
+    "properties": {
+     "consent": {
+      "anyOf": [
+       {
+        "enum": [
+         "GRANTED",
+         "WITHDRAWN"
+        ],
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Consent"
+     },
+     "consent_policy_version": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Consent Policy Version"
+     },
+     "employee_linked": {
+      "title": "Employee Linked",
+      "type": "boolean"
+     },
+     "enrolled": {
+      "default": false,
+      "title": "Enrolled",
+      "type": "boolean"
+     },
+     "enrollment_version": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Enrollment Version"
+     },
+     "liveness_required": {
+      "default": true,
+      "title": "Liveness Required",
+      "type": "boolean"
+     },
+     "model_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Model Name"
+     },
+     "model_version": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Model Version"
+     },
+     "policy": {
+      "$ref": "#/components/schemas/FacePolicy"
+     },
+     "template_ttl_days": {
+      "title": "Template Ttl Days",
+      "type": "integer"
+     }
+    },
+    "required": [
+     "employee_linked",
+     "template_ttl_days",
+     "policy"
+    ],
+    "title": "FaceStatus",
     "type": "object"
    },
    "FinalReportOut": {
@@ -3675,6 +3946,18 @@
       "minLength": 8,
       "title": "Device Id",
       "type": "string"
+     },
+     "face_probe_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Face Probe Id"
      },
      "kind": {
       "enum": [
@@ -5045,6 +5328,42 @@
     "title": "PlanTaskResponse",
     "type": "object"
    },
+   "ProbeResponse": {
+    "properties": {
+     "expires_at": {
+      "format": "date-time",
+      "title": "Expires At",
+      "type": "string"
+     },
+     "pending": {
+      "default": false,
+      "title": "Pending",
+      "type": "boolean"
+     },
+     "probe_id": {
+      "format": "uuid",
+      "title": "Probe Id",
+      "type": "string"
+     },
+     "quality": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Quality"
+     }
+    },
+    "required": [
+     "probe_id",
+     "expires_at"
+    ],
+    "title": "ProbeResponse",
+    "type": "object"
+   },
    "ReportReviewRequest": {
     "description": "Schema for reviewing a submitted daily report.",
     "properties": {
@@ -5547,6 +5866,47 @@
      "row_version"
     ],
     "title": "TeamResponse",
+    "type": "object"
+   },
+   "TemplateResponse": {
+    "description": "Embedding MILIK SENDIRI untuk dicocokkan di HP saat luring. Disimpan terenkripsi (Keystore); berlaku terbatas.",
+    "properties": {
+     "embeddings": {
+      "items": {
+       "items": {
+        "type": "number"
+       },
+       "type": "array"
+      },
+      "title": "Embeddings",
+      "type": "array"
+     },
+     "enrollment_version": {
+      "title": "Enrollment Version",
+      "type": "string"
+     },
+     "expires_at": {
+      "format": "date-time",
+      "title": "Expires At",
+      "type": "string"
+     },
+     "model_name": {
+      "title": "Model Name",
+      "type": "string"
+     },
+     "model_version": {
+      "title": "Model Version",
+      "type": "string"
+     }
+    },
+    "required": [
+     "model_name",
+     "model_version",
+     "enrollment_version",
+     "embeddings",
+     "expires_at"
+    ],
+    "title": "TemplateResponse",
     "type": "object"
    },
    "TimelineDay": {
@@ -8071,6 +8431,90 @@
     ]
    }
   },
+  "/api/v1/cron/attendance/purge-face-probes": {
+   "post": {
+    "description": "Penjadwal: hapus berkas gambar wajah (probe) yang telah melewati masa retensi (P8-6).",
+    "operationId": "purge_expired_face_probes_api_v1_cron_attendance_purge_face_probes_post",
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": {
+          "type": "integer"
+         },
+         "title": "Response Purge Expired Face Probes Api V1 Cron Attendance Purge Face Probes Post",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Purge Expired Face Probes",
+    "tags": [
+     "Attendance Cron"
+    ]
+   }
+  },
+  "/api/v1/cron/attendance/reverify-faces": {
+   "post": {
+    "description": "Penjadwal: hitung dan cocokkan ulang wajah yang tertunda saat face-service sempat mati.",
+    "operationId": "reverify_pending_faces_api_v1_cron_attendance_reverify_faces_post",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "limit",
+      "required": false,
+      "schema": {
+       "default": 50,
+       "title": "Limit",
+       "type": "integer"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": {
+          "type": "integer"
+         },
+         "title": "Response Reverify Pending Faces Api V1 Cron Attendance Reverify Faces Post",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Reverify Pending Faces",
+    "tags": [
+     "Attendance Cron"
+    ]
+   }
+  },
   "/api/v1/documents/cron/expire-documents": {
    "post": {
     "description": "Dipanggil berkala oleh penjadwal: dokumen 'CURRENT' yang lewat masa berlaku → 'EXPIRED'.\nHanya ADMIN (`run:system_jobs`, sama dengan cron absensi) dan hanya untuk organisasinya (V-09);\n\"hari ini\" menurut zona waktu organisasi, bukan jam server DB.\n\nReturn: Jumlah dokumen yang diubah (dict)",
@@ -9357,6 +9801,232 @@
     "summary": "Restore Employee",
     "tags": [
      "Employees"
+    ]
+   }
+  },
+  "/api/v1/face/consent": {
+   "post": {
+    "description": "Menyetujui atau menarik persetujuan pemakaian data biometrik wajah.\nMenarik persetujuan otomatis menonaktifkan seluruh embedding wajah aktif seketika di database.",
+    "operationId": "set_face_consent_api_v1_face_consent_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ConsentRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": {
+          "type": "string"
+         },
+         "title": "Response Set Face Consent Api V1 Face Consent Post",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Set Face Consent",
+    "tags": [
+     "Face"
+    ]
+   }
+  },
+  "/api/v1/face/enroll": {
+   "post": {
+    "description": "Mendaftarkan 3-5 foto pose wajah karyawan.\nValidasi deteksi tunggal, kualitas, konsistensi antar pose, dan pengecekan anti-duplikat dengan karyawan lain.",
+    "operationId": "enroll_face_api_v1_face_enroll_post",
+    "requestBody": {
+     "content": {
+      "multipart/form-data": {
+       "schema": {
+        "$ref": "#/components/schemas/Body_enroll_face_api_v1_face_enroll_post"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/EnrollResponse"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Enroll Face",
+    "tags": [
+     "Face"
+    ]
+   }
+  },
+  "/api/v1/face/policy": {
+   "get": {
+    "description": "Mengambil versi dan teks kebijakan persetujuan biometrik server saat ini.",
+    "operationId": "get_face_policy_api_v1_face_policy_get",
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/FacePolicy"
+        }
+       }
+      },
+      "description": "Successful Response"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Get Face Policy",
+    "tags": [
+     "Face"
+    ]
+   }
+  },
+  "/api/v1/face/probe": {
+   "post": {
+    "description": "Mengunggah gambar wajah sementara untuk diverifikasi saat check-in atau check-out.\nMengembalikan probe_id yang diteruskan pada permintaan absensi.",
+    "operationId": "create_face_probe_api_v1_face_probe_post",
+    "requestBody": {
+     "content": {
+      "multipart/form-data": {
+       "schema": {
+        "$ref": "#/components/schemas/Body_create_face_probe_api_v1_face_probe_post"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ProbeResponse"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Create Face Probe",
+    "tags": [
+     "Face"
+    ]
+   }
+  },
+  "/api/v1/face/status": {
+   "get": {
+    "description": "Status pengenalan wajah pengguna saat ini: persetujuan biometrik, status pendaftaran,\nversi template, dan kebijakan aktif.",
+    "operationId": "get_face_status_api_v1_face_status_get",
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/FaceStatus"
+        }
+       }
+      },
+      "description": "Successful Response"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Get Face Status",
+    "tags": [
+     "Face"
+    ]
+   }
+  },
+  "/api/v1/face/template": {
+   "get": {
+    "description": "Mengunduh embedding wajah milik sendiri untuk disimpan terenkripsi di HP (absen luring).\nDibatasi rate-limit (10 unduhan/jam) dan hanya untuk pengguna dengan persetujuan aktif.",
+    "operationId": "get_face_template_api_v1_face_template_get",
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/TemplateResponse"
+        }
+       }
+      },
+      "description": "Successful Response"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Get Face Template",
+    "tags": [
+     "Face"
     ]
    }
   },

@@ -9,6 +9,14 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased] — `development`
 
+- **Face API — implementasi backend pengenalan wajah & integrasi absensi (2026-10-05):**
+  - **Endpoint & Routing (`api/v1/endpoints/face.py`, `router.py`, `deps.py`):** menambahkan router `/face` (`GET /policy`, `GET /status`, `POST /consent`, `POST /enroll`, `GET /template`, `POST /probe`) khusus untuk pekerja lapangan (`FIELD`), terhubung ke `FaceService` dan `FaceEmbedClient`.
+  - **Integrasi Absensi Masuk, Pulang & Luring (`attendance.py`, `attendance_session_service.py`, `attendance_offline_service.py`):** pencocokan biometrik wajah dihitung dan diverifikasi sepenuhnya di sisi server (`face_probe_id`). Hasil `NO_MATCH` atau `LOW_QUALITY` otomatis menaikkan status menjadi `NEEDS_REVIEW` tanpa menolak absensi secara sepihak (Aturan Inti #3). Pada absensi luring, blok wajah dan hash gambar diverifikasi terhadap tanda tangan kriptografis perangkat.
+  - **Penjadwal Pemeliharaan (`attendance_cron.py`):** menambahkan endpoint `POST /reverify-faces` (rekonsiliasi probe tertunda bila face-service pulih) dan `POST /purge-face-probes` (retensi pembersihan gambar sementara sesuai kebijakan organisasi) dengan izin `Permission.RUN_SYSTEM_JOBS`.
+  - **Database & Alembic (`0022_face_attendance.py`, `db/05_face.sql`):** penyelarasan fungsi `purge_face_probes()` untuk membersihkan probe kadaluarsa dan relasi MinIO object storage.
+  - **Web Review UI (`AttendancePage.tsx`, `api-types.ts`):** visualisasi status dan tingkat kemiripan pencocokan wajah server pada daftar kehadiran dan dialog tinjauan absensi.
+  - **Pengujian Unit (`test_face_unit.py`):** suite pengujian terisolasi untuk kebijakan versi, validasi consent, liveness challenge, parsing pgvector, dan ambang batas foto enrollment (25/25 uji arsitektur & unit lulus).
+
 - **Mobile — APK rilis memakai kunci tanda tangan rilis (2026-10-05):** `build.gradle.kts` membaca `android/key.properties` (tidak masuk Git; contoh `key.properties.example`). Build rilis tanpa kunci **gagal** dengan pesan jelas (kecuali `-PallowDebugSigning=true` untuk uji lokal), sehingga APK bertanda kunci debug tidak terdistribusi. Diuji: tanpa kunci → gagal; dengan kunci uji sementara → APK 70,2 MB bertanda `CN=UJI SEMENTARA` (v2 lolos `apksigner`), berbeda dari kunci debug. Alamat produksi: `https://portal.visiontechindo.com` (Cloudflare Tunnel, satu domain untuk web/API/berkas) — HP tidak lagi butuh Tailscale.
 
 - **API — optimasi query & dokumentasi kode (Gemini, ditinjau & diperbaiki 2026-10-05):**

@@ -128,6 +128,20 @@ export function AttendancePage() {
                     {a.offline ? " · absen luring" : ""}
                   </dd>
                 </div>
+                {(a.face_result || a.check_out_face_result) && (
+                  <div>
+                    <dt className="inline text-mist">Wajah: </dt>
+                    <dd className="inline">
+                      {a.face_result
+                        ? `Masuk: ${a.face_result}${a.face_similarity !== null && a.face_similarity !== undefined ? ` (${Math.round(a.face_similarity * 100)}%)` : ""}`
+                        : ""}
+                      {a.face_result && a.check_out_face_result ? " · " : ""}
+                      {a.check_out_face_result
+                        ? `Pulang: ${a.check_out_face_result}${a.check_out_face_similarity !== null && a.check_out_face_similarity !== undefined ? ` (${Math.round(a.check_out_face_similarity * 100)}%)` : ""}`
+                        : ""}
+                    </dd>
+                  </div>
+                )}
                 {a.explanation && (
                   <div>
                     <dt className="inline text-mist">Penjelasan: </dt>
@@ -275,6 +289,27 @@ function ReviewDialog({ item, onClose }: { item: Attendance; onClose: () => void
         </div>
       ) : (
         <p className="mb-3 text-sm text-mist">Tanpa swafoto.</p>
+      )}
+      {(item.face_result || item.check_out_face_result) && (
+        <div role="status" className="mb-3 rounded-control border border-line bg-surface p-3 text-sm">
+          <p className="font-medium">Verifikasi Wajah (Server)</p>
+          {item.face_result && (
+            <p className="text-mist">
+              Masuk: <span className="font-medium text-foreground">{item.face_result}</span>
+              {item.face_similarity !== null && item.face_similarity !== undefined
+                ? ` · Kemiripan: ${(item.face_similarity * 100).toFixed(1)}%`
+                : ""}
+            </p>
+          )}
+          {item.check_out_face_result && (
+            <p className="text-mist">
+              Pulang: <span className="font-medium text-foreground">{item.check_out_face_result}</span>
+              {item.check_out_face_similarity !== null && item.check_out_face_similarity !== undefined
+                ? ` · Kemiripan: ${(item.check_out_face_similarity * 100).toFixed(1)}%`
+                : ""}
+            </p>
+          )}
+        </div>
       )}
       <p className="mb-3 text-sm">Penjelasan karyawan: {item.explanation ?? "belum diisi"}</p>
       <SelectField label="Keputusan" {...register("decision")}>

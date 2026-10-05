@@ -161,4 +161,36 @@ void main() {
       });
     });
   });
+
+  group('biometrik wajah (Face API)', () {
+    test('status, policy, dan consent', () async {
+      backend.routes['/face/status'] = (_) => {'consent_given': true, 'has_template': true};
+      backend.routes['/face/policy'] = (_) => {'version': '1.0'};
+      backend.routes['/face/consent'] = (_) => {'message': 'Persetujuan biometrik dicatat.'};
+
+      final status = await api.faceStatus();
+      expect(status['consent_given'], isTrue);
+      expect(last().path, '/api/v1/face/status');
+
+      final pol = await api.facePolicy();
+      expect(pol['version'], '1.0');
+      expect(last().path, '/api/v1/face/policy');
+
+      await api.setFaceConsent('GRANTED', policyVersion: '1.0');
+      expect(last().path, '/api/v1/face/consent');
+      expect(last().data, {'state': 'GRANTED', 'policy_version': '1.0'});
+    });
+
+    test('kirim face probe mengembalikan probe_id', () async {
+      final dir = await Directory.systemTemp.createTemp('vms-face-test');
+      final file = File('${dir.path}/probe.jpg')..writeAsStringSync('dummy-image');
+      backend.routes['/face/probe'] = (_) => {'probe_id': 'probe-123'};
+
+      final probeId = await api.createFaceProbe(file);
+      expect(probeId, 'probe-123');
+      expect(last().path, '/api/v1/face/probe');
+      expect(last().data, isA<FormData>());
+      await dir.delete(recursive: true);
+    });
+  });
 }

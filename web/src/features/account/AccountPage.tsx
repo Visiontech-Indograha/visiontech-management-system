@@ -1,13 +1,24 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { useSession } from "@/app/session";
+import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Skeleton } from "@/components/ui/skeleton";
 import { errorMessage } from "@/lib/errors";
 import { formatDateTime } from "@/lib/format";
 import { ROLE_LABEL } from "@/lib/types";
-import { useRevokeOtherSessions, useRevokeSession, useSessions, type ActiveSession } from "./api";
+import {
+  useEnrollFace,
+  useFaceStatus,
+  useRevokeOtherSessions,
+  useRevokeSession,
+  useSessions,
+  useSetFaceConsent,
+  type ActiveSession,
+} from "./api";
 
 /** Nama perangkat yang bisa dikenali orang awam dari user-agent. */
 function deviceName(s: ActiveSession): string {
@@ -18,6 +29,207 @@ function deviceName(s: ActiveSession): string {
     : /Firefox\//.test(ua) ? "Firefox" : /Safari\//.test(ua) ? "Safari" : null;
   const label = [app, os].filter(Boolean).join(" · ");
   return label || s.device_label || ua || "Perangkat tidak dikenal";
+}
+
+function FaceSection() {
+  const faceStatus = useFaceStatus();
+  const setConsent = useSetFaceConsent();
+  const enroll = useEnrollFace();
+
+  const [agreed, setAgreed] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [isReEnrolling, setIsReEnrolling] = useState(false);
+
+  if (faceStatus.isPending) {
+    return (
+      <section aria-label="Biometrik Wajah" className="mb-6 max-w-xl rounded-panel border border-line bg-surface shadow-card px-5 py-4">
+        <Skeleton className="mb-2 h-6 w-48" />
+        <Skeleton className="h-16 w-full" />
+      </section>
+    );
+  }
+
+  if (faceStatus.isError) {
+    return null;
+  }
+
+  const data = faceStatus.data;
+  if (!data?.employee_linked) {
+    return (
+      <section aria-label="Biometrik Wajah" className="mb-6 max-w-xl rounded-panel border border-line bg-surface shadow-card px-5 py-4">
+        <h2 className="text-base font-semibold">Biometrik Wajah</h2>
+        <p className="mt-2 text-sm text-mist">
+          Fitur pendaftaran biometrik wajah hanya tersedia untuk akun yang terhubung dengan data karyawan.
+        </p>
+      </section>
+    );
+  }
+
+  const isConsentGiven = data.consent === "GRANTED";
+
+  const handleToggleConsent = async (grant: boolean) => {
+    try {
+      await setConsent.mutateAsync({
+        state: grant ? "GRANTED" : "WITHDRAWN",
+        policy_version: data.policy.version,
+      });
+      toast.success(grant ? "Persetujuan biometrik berhasil dicatat." : "Persetujuan biometrik berhasil ditarik.");
+      if (!grant) {
+        setIsReEnrolling(false);
+      }
+    } catch (err) {
+      toast.error(errorMessage(err));
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const files = Array.from(e.target.files);
+      setSelectedFiles(files);
+    }
+  };
+
+  const handleEnroll = async () => {
+    if (selectedFiles.length < 3 || selectedFiles.length > 5) {
+      toast.error("Wajib memilih 3 sampai 5 foto wajah.");
+      return;
+    }
+    try {
+      await enroll.mutateAsync(selectedFiles);
+      toast.success("Foto wajah berhasil didaftarkan.");
+      setSelectedFiles([]);
+      setIsReEnrolling(false);
+    } catch (err) {
+      toast.error(errorMessage(err));
+    }
+  };
+
+  return (
+    <section aria-label="Biometrik Wajah" className="mb-6 max-w-xl rounded-panel border border-line bg-surface shadow-card px-5 py-4">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h2 className="text-base font-semibold">Biometrik Wajah (Face Recognition)</h2>
+          <p className="text-xs text-mist">Verifikasi kehadiran server-side berbasis pencocokan fitur wajah.</p>
+        </div>
+        {data.enrolled ? (
+          <Badge tone="success">Wajah Terdaftar</Badge>
+        ) : isConsentGiven ? (
+          <Badge tone="warning">Belum Terdaftar</Badge>
+        ) : (
+          <Badge tone="neutral">Belum Persetujuan</Badge>
+        )}
+      </div>
+
+      {/* Box Persetujuan Kebijakan */}
+      <div className="mb-4 rounded-lg border border-line/60 bg-muted/20 p-3.5 text-sm">
+        <div className="mb-2 flex items-center justify-between">
+          <span className="font-medium text-foreground">Persetujuan Pemrosesan Biometrik</span>
+          {isConsentGiven ? (
+            <Badge tone="success">{`Disetujui (v${data.consent_policy_version ?? data.policy.version})`}</Badge>
+          ) : (
+            <Badge tone="danger">Belum Disetujui</Badge>
+          )}
+        </div>
+
+        {!isConsentGiven ? (
+          <div className="mt-2 space-y-3">
+            <p className="rounded border border-line bg-surface p-2.5 text-xs leading-relaxed text-mist">
+              {data.policy.text}
+            </p>
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="consent-agree"
+                checked={agreed}
+                onCheckedChange={(c) => setAgreed(!!c)}
+              />
+              <label htmlFor="consent-agree" className="cursor-pointer text-xs text-foreground">
+                Saya menyetujui pemrosesan data biometrik wajah untuk verifikasi kehadiran.
+              </label>
+            </div>
+            <Button
+              size="sm"
+              disabled={!agreed || setConsent.isPending}
+              onClick={() => handleToggleConsent(true)}
+            >
+              {setConsent.isPending ? "Menyimpan..." : "Beri Persetujuan Biometrik"}
+            </Button>
+          </div>
+        ) : (
+          <div className="mt-2 flex items-center justify-between text-xs text-mist">
+            <span>Persetujuan aktif. Template biometrik disimpan aman di server.</span>
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-danger hover:text-danger"
+              disabled={setConsent.isPending}
+              onClick={() => handleToggleConsent(false)}
+            >
+              Tarik Persetujuan
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* Box Pendaftaran Wajah (Enrollment) */}
+      {isConsentGiven && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-medium">Pendaftaran Wajah</h3>
+            {data.enrolled && !isReEnrolling && (
+              <Button size="sm" variant="outline" onClick={() => setIsReEnrolling(true)}>
+                Daftar Ulang Wajah
+              </Button>
+            )}
+          </div>
+
+          {data.enrolled && !isReEnrolling ? (
+            <div className="space-y-1 rounded-lg border border-line bg-surface p-3 text-xs text-mist">
+              <p>Model Biometrik: <span className="font-mono text-foreground">{data.model_name ?? "InsightFace buffalo_s"}</span></p>
+              <p>Masa Berlaku Template: <span className="text-foreground">{`${data.template_ttl_days} hari`}</span></p>
+            </div>
+          ) : (
+            <div className="space-y-3 rounded-lg border border-line bg-surface p-3.5">
+              <p className="text-xs text-mist">
+                Pilih <strong>3 sampai 5 foto wajah</strong> dengan pose sedikit bervariasi (lurus, sedikit serong ke kiri, sedikit serong ke kanan) dan pencahayaan baik.
+              </p>
+
+              <div>
+                <input
+                  type="file"
+                  id="face-enroll-files"
+                  accept="image/jpeg,image/png,image/webp"
+                  multiple
+                  className="text-xs file:mr-3 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-primary-foreground hover:file:opacity-90"
+                  onChange={handleFileChange}
+                />
+                {selectedFiles.length > 0 && (
+                  <p className="mt-2 text-xs font-medium text-foreground">
+                    {`${selectedFiles.length} foto dipilih `}
+                    {selectedFiles.length < 3 || selectedFiles.length > 5 ? "(minimal 3, maksimal 5 foto)" : "✓ Siap didaftarkan"}
+                  </p>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2 pt-1">
+                <Button
+                  size="sm"
+                  disabled={selectedFiles.length < 3 || selectedFiles.length > 5 || enroll.isPending}
+                  onClick={handleEnroll}
+                >
+                  {enroll.isPending ? "Mendaftarkan Wajah..." : "Daftarkan Wajah"}
+                </Button>
+                {isReEnrolling && (
+                  <Button size="sm" variant="ghost" onClick={() => { setIsReEnrolling(false); setSelectedFiles([]); }}>
+                    Batal
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </section>
+  );
 }
 
 /**
@@ -50,6 +262,8 @@ export function AccountPage() {
           <Link to="/change-password">Ganti password</Link>
         </Button>
       </section>
+
+      <FaceSection />
 
       <section aria-label="Perangkat yang masuk" className="max-w-xl">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">

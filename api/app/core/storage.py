@@ -85,6 +85,35 @@ def upload_file(object_name: str, file_data: bytes, content_type: str) -> bool:
         return False
 
 
+def get_object_bytes(object_name: str) -> bytes | None:
+    """Unduh isi objek dari MinIO. None bila objek tidak ada atau MinIO tidak tersedia."""
+    if not ensure_bucket():
+        return None
+    response = None
+    try:
+        response = minio_client.get_object(settings.MINIO_BUCKET, object_name)
+        return response.read()
+    except Exception as e:  # noqa: BLE001
+        logger.error(f"Gagal membaca dari MinIO {object_name}: {e}")
+        return None
+    finally:
+        if response is not None:
+            response.close()
+            response.release_conn()
+
+
+def delete_object(object_name: str) -> bool:
+    """Hapus objek dari MinIO (idempoten: objek yang sudah tidak ada dianggap berhasil)."""
+    if not ensure_bucket():
+        return False
+    try:
+        minio_client.remove_object(settings.MINIO_BUCKET, object_name)
+        return True
+    except Exception as e:  # noqa: BLE001
+        logger.error(f"Gagal menghapus dari MinIO {object_name}: {e}")
+        return False
+
+
 @lru_cache(maxsize=1)
 def presign_client() -> Minio:
     """

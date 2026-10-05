@@ -130,12 +130,35 @@ CREATE TABLE face_check (
   probe_embedding vector(512),                -- dihapus setelah masa simpan berakhir
   probe_file_id   uuid REFERENCES file_object(id),
   attendance_id   uuid,                       -- diisi bila absensi berhasil dibuat
+  attendance_event text NOT NULL DEFAULT 'CHECK_IN' CHECK (attendance_event IN ('CHECK_IN','CHECK_OUT')),
   device_label    text,
   PRIMARY KEY (id, checked_at)
 ) PARTITION BY RANGE (checked_at);
 CREATE TABLE face_check_default PARTITION OF face_check DEFAULT;
 CREATE INDEX face_check_employee_idx ON face_check (claimed_employee_id, checked_at DESC);
 CREATE INDEX face_check_result_idx ON face_check (organization_id, result, checked_at DESC);
+
+-- -----------------------------------------------------------------------------
+-- Gambar wajah sementara + embedding yang dikirim HP saat absen (BUKAN foto absensi).
+-- Dihapus sesuai organization.face_probe_retention_days oleh purge_face_probes().
+-- -----------------------------------------------------------------------------
+CREATE TABLE face_probe (
+  id              uuid PRIMARY KEY DEFAULT new_id(),
+  organization_id uuid NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
+  employee_id     uuid NOT NULL REFERENCES employee(id) ON DELETE CASCADE,
+  created_at      timestamptz NOT NULL DEFAULT now(),
+  embedding       vector(512),                       -- NULL = face-service sedang mati; diperiksa ulang kemudian
+  model_name      text,
+  model_version   text,
+  quality_score   numeric(4,3) CHECK (quality_score BETWEEN 0 AND 1),
+  liveness        jsonb NOT NULL DEFAULT '{}'::jsonb, -- tantangan & hasil dari aplikasi
+  file_id         uuid REFERENCES file_object(id),   -- gambar wajah sementara; dihapus setelah masa simpan
+  sha256          bytea NOT NULL,                    -- hash byte asli yang diterima server (dicocokkan dengan payload luring)
+  consumed_at     timestamptz,
+  consumed_event  text CHECK (consumed_event IN ('CHECK_IN', 'CHECK_OUT')),
+  attendance_id   uuid
+);
+CREATE INDEX face_probe_employee_idx ON face_probe (employee_id, created_at DESC);
 
 -- Ambang batas disimpan sebagai data agar bisa dikalibrasi tanpa rilis ulang.
 ALTER TABLE organization
@@ -167,6 +190,18 @@ LANGUAGE sql STABLE AS $$
   LIMIT p_limit
 $$;
 
+-- Kemiripan tertinggi dengan karyawan LAIN (tanpa menyebut siapa): untuk menolak pendaftaran wajah yang sudah dipakai.
+CREATE OR REPLACE FUNCTION face_best_other_similarity(p_org uuid, p_employee uuid, p_embedding vector(512))
+RETURNS numeric
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = vms, public AS $$
+  SELECT max(round((1 - (f.embedding <=> p_embedding))::numeric, 4))
+    FROM face_enrollment f
+    JOIN employee e ON e.id = f.employee_id
+   WHERE f.organization_id = p_org AND f.is_active AND e.is_active AND e.deleted_at IS NULL
+     AND f.employee_id <> p_employee
+     AND p_org = current_org_id()
+$$;
+
 -- Verifikasi 1:1 saat absensi: "apakah wajah ini benar-benar orang yang mengaku?"
 -- Dipakai aplikasi sebelum membuat baris attendance.
 CREATE OR REPLACE FUNCTION verify_face_for_attendance(
@@ -175,16 +210,31 @@ CREATE OR REPLACE FUNCTION verify_face_for_attendance(
   p_embedding vector(512),
   p_liveness numeric DEFAULT NULL,
   p_probe_file uuid DEFAULT NULL,
-  p_device text DEFAULT NULL
-) RETURNS TABLE (result face_check_result, similarity numeric, threshold numeric, matched_employee uuid, note text)
-LANGUAGE plpgsql AS $$
+  p_device text DEFAULT NULL,
+  p_event text DEFAULT 'CHECK_IN'
+) RETURNS TABLE (result face_check_result, similarity numeric, threshold numeric, matched_employee uuid, note text,
+                 check_id uuid)
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = vms, public AS $$
 DECLARE
   v_org organization%ROWTYPE;
   v_best record;
   v_self record;
   v_result face_check_result;
   v_note text;
+  v_check uuid;
 BEGIN
+  -- DEFINER melewati RLS: pastikan pemanggil hanya memeriksa dirinya sendiri (HR/ADMIN boleh untuk pemeriksaan ulang).
+  IF p_org IS DISTINCT FROM current_org_id() THEN
+    RAISE EXCEPTION 'Organisasi tidak sesuai.' USING ERRCODE = '42501';
+  END IF;
+  IF p_claimed_employee IS DISTINCT FROM (SELECT employee_id FROM app_user WHERE id = current_user_id())
+     AND NOT (has_role('ADMIN') OR has_role('HR')) THEN
+    RAISE EXCEPTION 'Pencocokan wajah hanya untuk diri sendiri.' USING ERRCODE = '42501';
+  END IF;
+  IF p_event NOT IN ('CHECK_IN', 'CHECK_OUT') THEN
+    RAISE EXCEPTION 'Jenis absensi tidak dikenal.' USING ERRCODE = '22023';
+  END IF;
+
   SELECT * INTO v_org FROM organization WHERE id = p_org;
 
   IF NOT has_biometric_consent(p_claimed_employee) THEN
@@ -215,11 +265,14 @@ BEGIN
   END IF;
 
   INSERT INTO face_check (organization_id, claimed_employee_id, matched_employee_id, matched_enrollment_id,
-                          similarity, threshold_used, result, liveness_score, probe_embedding, probe_file_id, device_label)
+                          similarity, threshold_used, result, liveness_score, probe_embedding, probe_file_id,
+                          device_label, attendance_event)
   VALUES (p_org, p_claimed_employee, v_self.employee_id, v_self.enrollment_id,
-          v_self.similarity, v_org.face_match_threshold, v_result, p_liveness, p_embedding, p_probe_file, p_device);
+          v_self.similarity, v_org.face_match_threshold, v_result, p_liveness, p_embedding, p_probe_file,
+          p_device, p_event)
+  RETURNING id INTO v_check;
 
-  RETURN QUERY SELECT v_result, v_self.similarity, v_org.face_match_threshold, v_self.employee_id, v_note;
+  RETURN QUERY SELECT v_result, v_self.similarity, v_org.face_match_threshold, v_self.employee_id, v_note, v_check;
 END $$;
 
 -- Absensi yang gagal cocok wajah tidak ditolak diam-diam, melainkan masuk antrean
@@ -228,6 +281,12 @@ ALTER TABLE attendance
   ADD COLUMN face_check_id uuid,
   ADD COLUMN face_similarity numeric(5,4),
   ADD COLUMN face_result face_check_result;
+
+-- Pengenalan wajah saat absen pulang (tanpa foto bukti pulang).
+ALTER TABLE attendance
+  ADD COLUMN check_out_face_check_id uuid,
+  ADD COLUMN check_out_face_result face_check_result,
+  ADD COLUMN check_out_face_similarity numeric(5,4);
 
 CREATE OR REPLACE FUNCTION tg_attendance_face_flag() RETURNS trigger
 LANGUAGE plpgsql AS $$
@@ -247,20 +306,63 @@ CREATE TRIGGER attendance_post_geofence_face_flag BEFORE INSERT ON attendance
 -- Jalankan harian (pg_cron). Hasil pencocokan tetap tersimpan sebagai bukti audit.
 -- -----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION purge_face_probes() RETURNS integer
-LANGUAGE plpgsql AS $$
-DECLARE v_count integer := 0;
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = vms, public AS $$
+DECLARE v_files uuid[]; v_checks integer := 0; v_probes integer := 0;
 BEGIN
+  -- Hanya HR/ADMIN (penjadwal memakai token ADMIN) yang boleh membersihkan.
+  IF NOT (has_role('ADMIN') OR has_role('HR')) THEN
+    RAISE EXCEPTION 'Pembersihan data wajah hanya untuk HR/ADMIN.' USING ERRCODE = '42501';
+  END IF;
+  -- Gambar yang sudah lewat masa simpan (objek MinIO-nya dihapus aplikasi lebih dulu).
+  SELECT COALESCE(array_agg(e.file_id), '{}') INTO v_files FROM expired_face_probe_files() e;
+
+  -- Gambar yang sama dirujuk face_probe dan face_check: lepaskan rujukan face_check dulu.
   WITH cleaned AS (
     UPDATE face_check fc
        SET probe_embedding = NULL, probe_file_id = NULL
       FROM organization o
      WHERE o.id = fc.organization_id
-       AND fc.probe_embedding IS NOT NULL
-       AND fc.checked_at < now() - make_interval(days => o.face_probe_retention_days)
+       AND (fc.probe_embedding IS NOT NULL OR fc.probe_file_id IS NOT NULL)
+       AND (fc.checked_at < now() - make_interval(days => o.face_probe_retention_days)
+            OR fc.probe_file_id = ANY (v_files))
     RETURNING 1
   )
-  SELECT count(*) INTO v_count FROM cleaned;
-  RETURN v_count;
+  SELECT count(*) INTO v_checks FROM cleaned;
+
+  WITH gone AS (
+    DELETE FROM face_probe fp
+     USING organization o
+     WHERE o.id = fp.organization_id
+       AND fp.created_at < now() - make_interval(days => o.face_probe_retention_days)
+    RETURNING 1
+  )
+  SELECT count(*) INTO v_probes FROM gone;
+
+  DELETE FROM file_object fo
+   WHERE fo.id = ANY (v_files)
+     AND NOT EXISTS (SELECT 1 FROM face_probe fp WHERE fp.file_id = fo.id)
+     AND NOT EXISTS (SELECT 1 FROM face_check fc WHERE fc.probe_file_id = fo.id);
+  RETURN v_checks + v_probes;
+END $$;
+
+-- Kunci objek MinIO untuk gambar wajah yang sudah lewat masa simpan: dihapus aplikasi SEBELUM purge_face_probes().
+CREATE OR REPLACE FUNCTION expired_face_probe_files() RETURNS TABLE (file_id uuid, storage_key text)
+LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = vms, public AS $$
+BEGIN
+  IF NOT (has_role('ADMIN') OR has_role('HR')) THEN
+    RAISE EXCEPTION 'Hanya HR/ADMIN.' USING ERRCODE = '42501';
+  END IF;
+  RETURN QUERY
+    SELECT fo.id, fo.storage_key
+      FROM file_object fo
+     WHERE fo.id IN (
+             SELECT fp.file_id FROM face_probe fp JOIN organization o ON o.id = fp.organization_id
+              WHERE fp.file_id IS NOT NULL
+                AND fp.created_at < now() - make_interval(days => o.face_probe_retention_days)
+             UNION
+             SELECT fc.probe_file_id FROM face_check fc JOIN organization o ON o.id = fc.organization_id
+              WHERE fc.probe_file_id IS NOT NULL
+                AND fc.checked_at < now() - make_interval(days => o.face_probe_retention_days));
 END $$;
 
 -- -----------------------------------------------------------------------------
@@ -270,6 +372,7 @@ END $$;
 ALTER TABLE face_enrollment   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE face_check        ENABLE ROW LEVEL SECURITY;
 ALTER TABLE biometric_consent ENABLE ROW LEVEL SECURITY;
+ALTER TABLE face_probe        ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY face_enrollment_visibility ON face_enrollment
 USING (
@@ -291,8 +394,16 @@ USING (
   OR employee_id = (SELECT employee_id FROM app_user WHERE id = current_user_id())
 );
 
-GRANT SELECT, INSERT, UPDATE ON face_enrollment, face_check, biometric_consent TO vms_app;
-REVOKE ALL ON face_enrollment, face_check, biometric_consent FROM vms_readonly;
+CREATE POLICY face_probe_visibility ON face_probe
+USING (
+  organization_id = current_org_id() AND (
+    has_role('HR') OR has_role('ADMIN')
+    OR employee_id = (SELECT employee_id FROM app_user WHERE id = current_user_id())
+  )
+);
+
+GRANT SELECT, INSERT, UPDATE ON face_enrollment, face_check, biometric_consent, face_probe TO vms_app;
+REVOKE ALL ON face_enrollment, face_check, biometric_consent, face_probe FROM vms_readonly;
 
 -- Indeks kolom foreign key (Alembic 0021_fk_indexes). Tabel berpartisi cukup diindeks di induknya.
 CREATE INDEX IF NOT EXISTS ix_biometric_consent_recorded_by ON biometric_consent (recorded_by);
@@ -302,3 +413,5 @@ CREATE INDEX IF NOT EXISTS ix_face_enrollment_source_file_id ON face_enrollment 
 CREATE INDEX IF NOT EXISTS ix_face_enrollment_enrolled_by ON face_enrollment (enrolled_by);
 CREATE INDEX IF NOT EXISTS ix_face_enrollment_organization_id ON face_enrollment (organization_id);
 CREATE INDEX IF NOT EXISTS ix_face_check_probe_file_id ON face_check (probe_file_id);
+CREATE INDEX IF NOT EXISTS ix_face_probe_organization_id ON face_probe (organization_id);
+CREATE INDEX IF NOT EXISTS ix_face_probe_file_id ON face_probe (file_id);

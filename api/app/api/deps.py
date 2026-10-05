@@ -24,6 +24,7 @@ from app.crud.crud_attendance_offline import CRUDAttendanceOffline
 from app.crud.crud_attendance_session import CRUDAttendanceSession
 from app.crud.crud_document import CRUDDocument
 from app.crud.crud_employee import CRUDEmployee
+from app.crud.crud_face import CRUDFace
 from app.crud.crud_org_clock import CRUDOrgClock
 from app.crud.crud_plan_access import CRUDPlanAccess
 from app.crud.crud_plan_assignment import CRUDPlanAssignment
@@ -43,6 +44,8 @@ from app.services.attendance_session_service import AttendanceSessionService
 from app.services.auth_flow import AuthFlowService
 from app.services.document_service import DocumentService
 from app.services.employee_service import EmployeeService
+from app.services.face_embed_client import FaceEmbedClient
+from app.services.face_service import FaceService
 from app.services.member_report_service import MemberReportService
 from app.services.monitoring_service import MonitoringService
 from app.services.notification_service import NotificationService
@@ -236,8 +239,12 @@ def get_attendance_monitor_service(db: AsyncSession = Depends(get_db_with_user))
     return AttendanceMonitorService(CRUDAttendanceMonitor(db))
 
 
+def get_face_service(db: AsyncSession = Depends(get_db_with_user)) -> FaceService:
+    return FaceService(CRUDFace(db), FaceEmbedClient())
+
+
 def get_attendance_session_service(db: AsyncSession = Depends(get_db_with_user)) -> AttendanceSessionService:
-    return AttendanceSessionService(CRUDAttendanceSession(db), CRUDOrgClock(db))
+    return AttendanceSessionService(CRUDAttendanceSession(db), CRUDOrgClock(db), FaceService(CRUDFace(db), FaceEmbedClient()))
 
 
 def get_site_service(db: AsyncSession = Depends(get_db_with_user)) -> SiteService:
@@ -245,8 +252,9 @@ def get_site_service(db: AsyncSession = Depends(get_db_with_user)) -> SiteServic
 
 
 def get_attendance_offline_service(db: AsyncSession = Depends(get_db_with_user)) -> AttendanceOfflineService:
+    faces = FaceService(CRUDFace(db), FaceEmbedClient())
     return AttendanceOfflineService(CRUDAttendanceOffline(db),
-                                    AttendanceSessionService(CRUDAttendanceSession(db), CRUDOrgClock(db)))
+                                    AttendanceSessionService(CRUDAttendanceSession(db), CRUDOrgClock(db), faces))
 
 
 def get_document_service(db: AsyncSession = Depends(get_db_with_user)) -> DocumentService:

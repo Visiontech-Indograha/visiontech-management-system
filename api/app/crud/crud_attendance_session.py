@@ -77,7 +77,8 @@ class CRUDAttendanceSession(CRUDBase):
         return await self.fetchone(
             """
             SELECT id, employee_id, work_date, site_id, site_label, check_in_at, check_out_at,
-                   distance_m, is_late, is_early_leave, status, explanation, reviewed_at, selfie_file_id
+                   distance_m, is_late, is_early_leave, status, explanation, reviewed_at, selfie_file_id,
+                      face_result, face_similarity, check_out_face_result, check_out_face_similarity
             FROM vms.attendance
             WHERE employee_id = :emp AND check_out_at IS NULL AND status <> 'REJECTED'
               AND (NOT CAST(:valid AS boolean) OR status IN ('AUTO_VALID', 'APPROVED'))
@@ -195,7 +196,8 @@ class CRUDAttendanceSession(CRUDBase):
                 ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography, :origin, 0, :selfie, :face, :sim, :exp
             )
             RETURNING id, employee_id, work_date, site_id, site_label, check_in_at, check_out_at,
-                      distance_m, is_late, is_early_leave, status, explanation, reviewed_at, selfie_file_id
+                      distance_m, is_late, is_early_leave, status, explanation, reviewed_at, selfie_file_id,
+                      face_result, face_similarity, check_out_face_result, check_out_face_similarity
             """,
             {"org": org_id, "emp": employee_id, "day": work_date, "site": site_id, "label": site_label,
              "lng": lng, "lat": lat, "origin": origin, "selfie": selfie_file_id,
@@ -217,9 +219,32 @@ class CRUDAttendanceSession(CRUDBase):
             """
             UPDATE vms.attendance SET check_out_at = now() WHERE id = :id
             RETURNING id, employee_id, work_date, site_id, site_label, check_in_at, check_out_at,
-                      distance_m, is_late, is_early_leave, status, explanation, reviewed_at, selfie_file_id
+                      distance_m, is_late, is_early_leave, status, explanation, reviewed_at, selfie_file_id,
+                      face_result, face_similarity, check_out_face_result, check_out_face_similarity
             """,
             {"id": attendance_id},
+        )
+
+    async def set_face(self, attendance_id: UUID | str, event: str, *, check_id: UUID | str | None, result: str,
+                       similarity: float | None, flag_review: bool) -> Any:
+        """
+        Menyimpan hasil pengenalan wajah (hitungan server) pada absen masuk atau pulang.
+        `flag_review`: hasil bermasalah (NO_MATCH/LOW_QUALITY) menaikkan absensi ke antrean periksa —
+        wajah tidak pernah menolak diam-diam, tetapi tidak juga lolos otomatis (docs/08 §6).
+        """
+        cols = ("face_check_id = :cid, face_result = CAST(:res AS vms.face_check_result), face_similarity = :sim"
+                if event == "CHECK_IN" else
+                "check_out_face_check_id = :cid, check_out_face_result = CAST(:res AS vms.face_check_result), "
+                "check_out_face_similarity = :sim")
+        review = ", status = CASE WHEN status = 'AUTO_VALID' THEN 'NEEDS_REVIEW'::vms.attendance_status ELSE status END"             if flag_review else ""
+        return await self.fetchone(
+            f"""
+            UPDATE vms.attendance SET {cols}{review} WHERE id = :id
+            RETURNING id, employee_id, work_date, site_id, site_label, check_in_at, check_out_at,
+                      distance_m, is_late, is_early_leave, status, explanation, reviewed_at, selfie_file_id,
+                      face_result, face_similarity, check_out_face_result, check_out_face_similarity
+            """,
+            {"id": attendance_id, "cid": check_id, "res": result, "sim": similarity},
         )
 
     async def get(self, attendance_id: UUID | str, org_id: UUID | str) -> Any:
@@ -239,7 +264,8 @@ class CRUDAttendanceSession(CRUDBase):
         return await self.fetchone(
             """
             SELECT id, employee_id, work_date, site_id, site_label, check_in_at, check_out_at,
-                   distance_m, is_late, is_early_leave, status, explanation, reviewed_at, selfie_file_id
+                   distance_m, is_late, is_early_leave, status, explanation, reviewed_at, selfie_file_id,
+                      face_result, face_similarity, check_out_face_result, check_out_face_similarity
             FROM vms.attendance WHERE id = :id AND organization_id = :org
             FOR UPDATE
             """,
@@ -296,6 +322,7 @@ class CRUDAttendanceSession(CRUDBase):
             SELECT a.id, a.employee_id, a.work_date, a.site_id, a.site_label, a.check_in_at, a.check_out_at,
                    a.distance_m, a.is_late, a.is_early_leave, a.status, a.explanation, a.reviewed_at,
                    a.selfie_file_id, a.review_note, e.full_name AS employee_name,
+                   a.face_result, a.face_similarity, a.check_out_face_result, a.check_out_face_similarity,
                    a.offline, a.offline_note, a.check_out_requested_at,
                    vms.attendance_can_review(CAST(:viewer AS uuid), a.employee_id) AS can_review
             FROM vms.attendance a JOIN vms.employee e ON e.id = a.employee_id

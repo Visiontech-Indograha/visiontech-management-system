@@ -9,6 +9,10 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased] — `development`
 
+- **Face API & Mobile UI — antarmuka persetujuan biometrik web, probe selfie & penanganan lokasi SK mobile (2026-10-05):**
+  - **Mobile (`vms_api.dart`, `attendance_screen.dart`, `profile_screen.dart`):** integrasi pengenalan wajah biometrik (Face API) untuk absensi masuk dan pulang (pengambilan swafoto otomatis dan pengiriman probe biometrik ke server bila wajah telah terdaftar). Penambahan kartu status biometrik di layar profil dengan persetujuan kebijakan v1.0 dan pendaftaran pose wajah. Penanganan banner informatif saat lokasi kerja penugasan SK belum tersedia.
+  - **Web (`AccountPage.tsx`, `api.ts`):** kartu pengaturan biometrik wajah di halaman akun staf dengan persetujuan mandiri (consent) kebijakan v1.0, indikator status pendaftaran template wajah, dan formulir pendaftaran 3-5 pose swafoto.
+
 - **Face API — implementasi backend pengenalan wajah & integrasi absensi (2026-10-05):**
   - **Endpoint & Routing (`api/v1/endpoints/face.py`, `router.py`, `deps.py`):** menambahkan router `/face` (`GET /policy`, `GET /status`, `POST /consent`, `POST /enroll`, `GET /template`, `POST /probe`) khusus untuk pekerja lapangan (`FIELD`), terhubung ke `FaceService` dan `FaceEmbedClient`.
   - **Integrasi Absensi Masuk, Pulang & Luring (`attendance.py`, `attendance_session_service.py`, `attendance_offline_service.py`):** pencocokan biometrik wajah dihitung dan diverifikasi sepenuhnya di sisi server (`face_probe_id`). Hasil `NO_MATCH` atau `LOW_QUALITY` otomatis menaikkan status menjadi `NEEDS_REVIEW` tanpa menolak absensi secara sepihak (Aturan Inti #3). Pada absensi luring, blok wajah dan hash gambar diverifikasi terhadap tanda tangan kriptografis perangkat.

@@ -26,3 +26,52 @@ export function useRevokeOtherSessions() {
     onSuccess: () => qc.invalidateQueries({ queryKey: key }),
   });
 }
+
+export interface FaceStatus {
+  employee_linked: boolean;
+  consent: "GRANTED" | "WITHDRAWN" | null;
+  consent_policy_version?: string | null;
+  enrolled: boolean;
+  enrollment_version?: string | null;
+  model_name?: string | null;
+  model_version?: string | null;
+  liveness_required: boolean;
+  template_ttl_days: number;
+  policy: {
+    version: string;
+    text: string;
+  };
+}
+
+export function useFaceStatus() {
+  return useQuery({
+    queryKey: ["face", "status"],
+    queryFn: async () => (await api.get<FaceStatus>("/face/status")).data,
+  });
+}
+
+export function useSetFaceConsent() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ state, policy_version }: { state: "GRANTED" | "WITHDRAWN"; policy_version: string }) =>
+      (await api.post<{ message: string }>("/face/consent", { state, policy_version })).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["face", "status"] }),
+  });
+}
+
+export function useEnrollFace() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (files: File[]) => {
+      const form = new FormData();
+      for (const f of files) {
+        form.append("files", f);
+      }
+      form.append("liveness", "{}");
+      return (await api.post("/face/enroll", form, {
+        headers: { "Content-Type": "multipart/form-data" },
+      })).data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["face", "status"] }),
+  });
+}

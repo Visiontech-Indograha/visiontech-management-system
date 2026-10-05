@@ -15,10 +15,24 @@ from app.crud.crud_notification import CRUDNotification
 
 
 class NotificationService:
+    """Layanan sentral pengiriman dan pengelolaan notifikasi dalam sistem aplikasi."""
+    
     def __init__(self, db: AsyncSession) -> None:
         self.repo = CRUDNotification(db)
 
     async def _plan(self, plan_id: UUID | str) -> Any:
+        """
+        Mencari data personel yang terhubung dengan suatu Surat Keputusan (SK).
+        
+        Args:
+            plan_id: ID dari SK.
+            
+        Returns:
+            Any: Data detail pihak-pihak terkait dari repo.
+            
+        Raises:
+            NotFoundError: Jika SK tidak ada.
+        """
         people = await self.repo.plan_people(plan_id)
         if people is None:
             raise NotFoundError("SK")
@@ -26,37 +40,96 @@ class NotificationService:
 
     @staticmethod
     def _label(people: Any) -> str:
+        """
+        Membuat teks label untuk keperluan subjek notifikasi.
+        """
         return str(people.number) if people.number else "SK"   # nomor sudah berawalan "SK-"
 
     async def plan_published(self, plan_id: UUID | str) -> None:
+        """
+        Mengirim notifikasi ketika SK diterbitkan (publish).
+        Dikirimkan kepada ketua dan anggota tim.
+        
+        Args:
+            plan_id: ID SK.
+        """
         p = await self._plan(plan_id)
         await self.repo.insert_many(
             p.organization_id, [p.leader, *p.members], "PLAN_PUBLISHED", f"{self._label(p)} terbit",
             f"{p.title} — ketua tim diminta meninjau lalu menerima SK atau mengajukan adendum.", plan_id)
 
     async def amendment_requested(self, plan_id: UUID | str, reason: str) -> None:
+        """
+        Mengirim notifikasi permintaan adendum SK oleh tim di lapangan kepada PM.
+        
+        Args:
+            plan_id: ID SK.
+            reason: Alasan permintaan adendum.
+        """
         p = await self._plan(plan_id)
         await self.repo.insert_many(p.organization_id, [p.pm], "PLAN_AMENDMENT_REQUESTED",
                                     f"Adendum diminta: {self._label(p)}", f"{p.title} — alasan: {reason}", plan_id)
 
     async def plan_accepted(self, plan_id: UUID | str) -> None:
+        """
+        Mengirim notifikasi ketika SK telah diterima oleh ketua tim.
+        
+        Args:
+            plan_id (UUID | str): ID SK terkait.
+        """
         p = await self._plan(plan_id)
         await self.repo.insert_many(p.organization_id, [p.pm, *p.members], "PLAN_ACCEPTED",
                                     f"{self._label(p)} diterima ketua tim",
                                     f"{p.title} — berjalan otomatis pada tanggal mulai.", plan_id)
 
     async def plan_started(self, plan_id: UUID | str) -> None:
+        """
+        Mengirim notifikasi ketika SK mulai berjalan.
+        
+        Args:
+            plan_id (UUID | str): ID SK terkait.
+        """
         p = await self._plan(plan_id)
         await self.repo.insert_many(p.organization_id, [p.pm, p.leader, *p.members], "PLAN_STARTED",
                                     f"{self._label(p)} mulai berjalan", p.title, plan_id)
 
     async def list_for(self, user_id: str, unread_only: bool = False, limit: int = 50) -> list[Any]:
+        """
+        Mengambil daftar notifikasi untuk pengguna tertentu.
+        
+        Args:
+            user_id (str): ID pengguna.
+            unread_only (bool): Jika True, hanya ambil notifikasi yang belum dibaca.
+            limit (int): Batas jumlah notifikasi (default 50).
+            
+        Returns:
+            list[Any]: Daftar objek notifikasi.
+        """
         return await self.repo.list_for(user_id, unread_only, min(max(limit, 1), 100))
 
     async def unread_count(self, user_id: str) -> int:
+        """
+        Menghitung jumlah notifikasi yang belum dibaca oleh pengguna.
+        
+        Args:
+            user_id (str): ID pengguna.
+            
+        Returns:
+            int: Jumlah notifikasi belum dibaca.
+        """
         return await self.repo.unread_count(user_id)
 
     async def mark_read(self, user_id: str, notification_id: UUID | None) -> int:
+        """
+        Menandai notifikasi sebagai telah dibaca.
+        
+        Args:
+            user_id (str): ID pengguna.
+            notification_id (UUID | None): ID notifikasi tunggal (atau None untuk semua).
+            
+        Returns:
+            int: Jumlah baris yang diperbarui.
+        """
         return await self.repo.mark_read(user_id, notification_id)
 
     # ── Laporan berjenjang (PR2) ─────────────────────────────────────────────────────────────

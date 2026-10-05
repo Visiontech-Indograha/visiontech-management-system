@@ -20,7 +20,7 @@ from .base import CRUDBase
 
 # `:plan` NULL → semua SK terlihat (daftar); terisi → satu SK (penjaga). `:status` NULL → semua status.
 _STANDING = """
-    SELECT * FROM (
+    SELECT id, unit_id, site_id, number, title, location_text, description, period_start, period_end, status, pm_employee_id, leader_employee_id, revision, row_version, cancellation_reason, appeal_reason, category, created_at, manages, is_leader, is_member, visible FROM (
         SELECT wp.id, wp.unit_id, wp.site_id, wp.number, wp.title, wp.location_text, wp.description,
                lower(wp.period) AS period_start, upper(wp.period) - 1 AS period_end,
                wp.status, wp.pm_employee_id, wp.leader_employee_id, wp.revision, wp.row_version,
@@ -56,33 +56,102 @@ _STANDING = """
 
 
 class CRUDPlanAccess(CRUDBase):
+    """
+    Kelas CRUD untuk mengelola dan memverifikasi akses pengguna terhadap Work Plan (SK).
+    """
 
     async def standing(self, plan_id: UUID | str, org_id: UUID | str, user_id: UUID | str,
                        archived: bool | None = False) -> Any:
         """Baris SK + kedudukan pengguna; None bila SK tidak ada, milik organisasi lain, atau tak terlihat.
-        `archived`: False = aktif saja, True = terarsip saja, None = keduanya (pemulihan)."""
+        `archived`: False = aktif saja, True = terarsip saja, None = keduanya (pemulihan).
+        
+        Args:
+            plan_id (UUID | str): ID Work Plan.
+            org_id (UUID | str): ID organisasi pengguna.
+            user_id (UUID | str): ID pengguna.
+            archived (bool | None, optional): Filter untuk status arsip. Default: False.
+            
+        Returns:
+            Any: Baris data berisi detail SK dan hak akses pengguna (manages, is_leader, is_member, visible).
+        """
+        # Menjalankan kueri _STANDING yang menggunakan CROSS JOIN LATERAL untuk mengevaluasi
+        # peran pengguna terhadap SK tersebut (ADMIN, OPS, PM, ASSET, LEADER, MEMBER)
+        # dan menentukan visibilitas berdasarkan status SK (draft/aktif) serta deleted_at.
         return await self.fetchone(_STANDING, {"plan": str(plan_id), "org": org_id, "user": user_id,
                                                "status": None, "archived": archived})
 
     async def visible_plans(self, org_id: UUID | str, user_id: UUID | str, status: str | None,
                             archived: bool = False) -> Sequence[Any]:
+        """Daftar semua SK yang dapat dilihat oleh pengguna di organisasinya.
+        
+        Args:
+            org_id (UUID | str): ID organisasi.
+            user_id (UUID | str): ID pengguna.
+            status (str | None): Filter status SK.
+            archived (bool, optional): Jika True, hanya ambil SK yang diarsipkan. Default: False.
+            
+        Returns:
+            Sequence[Any]: Daftar SK yang dapat diakses pengguna.
+        """
+        # Mengeksekusi kueri _STANDING yang sama tanpa memfilter ID SK tertentu,
+        # sehingga mengembalikan seluruh SK yang 'visible' bagi pengguna.
         return await self.fetchall(_STANDING, {"plan": None, "org": org_id, "user": user_id,
                                                "status": status, "archived": archived})
 
     async def plan_of_day(self, day_id: UUID | str) -> Any:
+        """Mendapatkan ID Work Plan berdasarkan ID harinya.
+        
+        Args:
+            day_id (UUID | str): ID dari work_plan_day.
+            
+        Returns:
+            Any: ID dari work_plan terkait.
+        """
+        # Melakukan seleksi sederhana pada tabel vms.work_plan_day.
         return await self.scalar("SELECT work_plan_id FROM vms.work_plan_day WHERE id = :day", {"day": day_id})
 
     async def plan_of_allocation(self, allocation_id: UUID | str) -> Any:
+        """Mendapatkan ID Work Plan berdasarkan ID alokasi aset.
+        
+        Args:
+            allocation_id (UUID | str): ID dari asset_allocation.
+            
+        Returns:
+            Any: ID dari work_plan terkait.
+        """
+        # Melakukan seleksi sederhana pada tabel vms.asset_allocation.
         return await self.scalar(
             "SELECT work_plan_id FROM vms.asset_allocation WHERE id = :alloc", {"alloc": allocation_id})
 
     async def plan_of_incident(self, incident_id: UUID | str, org_id: UUID | str) -> Any:
+        """Mendapatkan ID Work Plan berdasarkan ID laporan insiden.
+        
+        Args:
+            incident_id (UUID | str): ID dari incident_report.
+            org_id (UUID | str): ID organisasi untuk validasi kepemilikan.
+            
+        Returns:
+            Any: ID dari work_plan terkait.
+        """
+        # Mengambil work_plan_id dari tabel vms.incident_report sambil
+        # memvalidasi agar tidak salah akses data antar organisasi (tenant isolation).
         return await self.scalar(
             "SELECT work_plan_id FROM vms.incident_report WHERE id = :inc AND organization_id = CAST(:org AS uuid)",
             {"inc": incident_id, "org": org_id})
 
     async def unit_standing(self, unit_id: UUID | str, org_id: UUID | str, user_id: UUID | str) -> Any:
-        """(ada di organisasi ini?, boleh dikelola pengguna?) — untuk membuat SK di sebuah unit."""
+        """(ada di organisasi ini?, boleh dikelola pengguna?) — untuk membuat SK di sebuah unit.
+        
+        Args:
+            unit_id (UUID | str): ID unit bisnis target.
+            org_id (UUID | str): ID organisasi pengguna.
+            user_id (UUID | str): ID pengguna (app_user).
+            
+        Returns:
+            Any: Baris dengan field 'manages' (Boolean) jika pengguna berhak mengelola unit.
+        """
+        # Memeriksa peran pengguna (vms.user_role) apakah ia adalah ADMIN/OPS,
+        # atau PM pada unit bisnis tersebut. Jika ya, subquery EXISTS bernilai TRUE (manages).
         return await self.fetchone(
             """
             SELECT EXISTS (

@@ -293,3 +293,12 @@ USING (
 
 GRANT SELECT, INSERT, UPDATE ON face_enrollment, face_check, biometric_consent TO vms_app;
 REVOKE ALL ON face_enrollment, face_check, biometric_consent FROM vms_readonly;
+
+-- Indeks kolom foreign key (Alembic 0021_fk_indexes). Tabel berpartisi cukup diindeks di induknya.
+CREATE INDEX IF NOT EXISTS ix_biometric_consent_recorded_by ON biometric_consent (recorded_by);
+CREATE INDEX IF NOT EXISTS ix_face_check_matched_employee_id ON face_check (matched_employee_id);
+CREATE INDEX IF NOT EXISTS ix_face_check_matched_enrollment_id ON face_check (matched_enrollment_id);
+CREATE INDEX IF NOT EXISTS ix_face_enrollment_source_file_id ON face_enrollment (source_file_id);
+CREATE INDEX IF NOT EXISTS ix_face_enrollment_enrolled_by ON face_enrollment (enrolled_by);
+CREATE INDEX IF NOT EXISTS ix_face_enrollment_organization_id ON face_enrollment (organization_id);
+CREATE INDEX IF NOT EXISTS ix_face_check_probe_file_id ON face_check (probe_file_id);

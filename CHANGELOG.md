@@ -9,6 +9,8 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased] — `development`
 
+- **Mobile — APK rilis memakai kunci tanda tangan rilis (2026-10-05):** `build.gradle.kts` membaca `android/key.properties` (tidak masuk Git; contoh `key.properties.example`). Build rilis tanpa kunci **gagal** dengan pesan jelas (kecuali `-PallowDebugSigning=true` untuk uji lokal), sehingga APK bertanda kunci debug tidak terdistribusi. Diuji: tanpa kunci → gagal; dengan kunci uji sementara → APK 70,2 MB bertanda `CN=UJI SEMENTARA` (v2 lolos `apksigner`), berbeda dari kunci debug. Alamat produksi: `https://portal.visiontechindo.com` (Cloudflare Tunnel, satu domain untuk web/API/berkas) — HP tidak lagi butuh Tailscale.
+
 - **API — optimasi query & dokumentasi kode (Gemini, ditinjau & diperbaiki 2026-10-05):**
   - **Optimasi:** `SELECT *`/`RETURNING *` diganti daftar kolom eksplisit (dijaga `api/tests/test_no_select_star.py`); insert N+1 diganti satu `INSERT … SELECT unnest(…)`.
   - **Indeks FK (Alembic `0021_fk_indexes`):** 62 indeks untuk kolom foreign key yang belum terindeks, juga di `db/*.sql`. Versi awal memakai `CREATE INDEX CONCURRENTLY` yang ditolak PostgreSQL di dalam transaksi migrasi dan pada tabel berpartisi, serta menulis nama partisi bulan tetap; kini `CREATE INDEX` biasa pada tabel induk saja (partisi mewarisi), dengan `downgrade`. Diuji naik → turun → naik di PostgreSQL nyata dan pemasangan bersih dari `db/*.sql`.

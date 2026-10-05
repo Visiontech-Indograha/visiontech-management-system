@@ -14,6 +14,7 @@ from sqlalchemy.exc import IntegrityError
 from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationError, trigger_rule_message
 from app.crud.crud_attendance_session import CRUDAttendanceSession
 from app.crud.crud_org_clock import CRUDOrgClock
+from app.services.face_service import FaceOutcome, FaceService
 
 OPEN_SESSION = "Masih ada sesi absensi terbuka."
 VALID_STATUSES = ("AUTO_VALID", "APPROVED")
@@ -40,9 +41,11 @@ EXPLANATION_RESUBMIT = "Isi penjelasan untuk mengajukan ulang absensi yang ditol
 
 
 class AttendanceSessionService:
-    def __init__(self, repo: CRUDAttendanceSession, clock: CRUDOrgClock) -> None:
+    """Layanan inti untuk mengelola rekaman absensi masuk/pulang, validasi koordinat GPS, dan verifikasi sesi kerja."""
+    def __init__(self, repo: CRUDAttendanceSession, clock: CRUDOrgClock, faces: FaceService | None = None) -> None:
         self.repo = repo
         self.clock = clock
+        self.faces = faces
 
     async def _employee_for_channel(self, user_id: str, channel: str) -> Any:
         """Karyawan milik akun (employee_id, attendance_mode, unit_id), dengan syarat kanal absen sesuai
@@ -50,17 +53,25 @@ class AttendanceSessionService:
         row = await self.repo.attendance_mode_of(user_id)
         if row is None:
             raise ValidationError("Akun ini belum tertaut ke data karyawan.")
+        # Validasi kontrol channel untuk memastikan tidak ada kecurangan dari karyawan dengan menukar platform (Web vs Mobile).
         if CHANNEL_OF_MODE.get(row.attendance_mode, "MOBILE") != channel:
             raise AppError("WRONG_ATTENDANCE_CHANNEL", WRONG_CHANNEL[channel], status=403)
         return row
 
     async def check_in(self, org_id: str, user_id: str, *, site_id: UUID, lng: float, lat: float,
-                       origin: str, selfie_file_id: UUID | None, face_result: str | None,
-                       face_similarity: float | None, accuracy_m: float | None = None,
+                       origin: str, selfie_file_id: UUID | None, accuracy_m: float | None = None,
                        channel: str = "MOBILE", explanation: str | None = None,
-                       at: Any = None, work_date: Any = None) -> Any:
-        """`at`/`work_date`: absen luring (R-34) — jam & tanggal peristiwa yang sudah diverifikasi server
-        (jangkar waktu + tanda tangan perangkat), bukan jam terima."""
+                       at: Any = None, work_date: Any = None, face_probe_id: UUID | None = None,
+                       online: bool = True, expected_face_sha256: str | None = None) -> Any:
+        """
+        Mencatat absen masuk harian (check-in) dengan mengevaluasi aturan jarak dan akurasi GPS.
+        
+        `at`/`work_date`: absen luring (R-34) — jam & tanggal peristiwa yang sudah diverifikasi server
+        (jangkar waktu + tanda tangan perangkat), bukan jam terima.
+
+        Pengenalan wajah: `face_probe_id` = gambar wajah sementara (POST /face/probe). Hasil cocok/tidak dihitung
+        SERVER setelah absen tercatat; klien tidak lagi dipercaya (aturan inti #3).
+        """
         worker = await self._employee_for_channel(user_id, channel)
         employee_id = worker.employee_id
         # K-12: titik GPS yang terlalu kabur tidak bisa membuktikan kehadiran — tolak dengan alasan.
@@ -103,12 +114,14 @@ class AttendanceSessionService:
         if note is None and rejected >= 1:
             raise AppError("EXPLANATION_REQUIRED", EXPLANATION_RESUBMIT, status=422)
         try:
-            return await self.repo.insert(
+            row = await self.repo.insert(
                 org_id=org_id, employee_id=employee_id, work_date=today, site_id=site_id, site_label=site.name,
                 lng=lng, lat=lat, origin=origin, selfie_file_id=selfie_file_id,
-                face_result=face_result, face_similarity=face_similarity, source=channel, explanation=note,
+                face_result=None, face_similarity=None, source=channel, explanation=note,
                 at=at,
             )
+            return await self.apply_face(org_id, user_id, row, "CHECK_IN", face_probe_id, online=online,
+                                         expected_sha256=expected_face_sha256, device=channel)
         except IntegrityError as exc:
             # Aturan dari trigger (mis. di luar radius tanpa swafoto) → 422 dengan pesannya.
             rule = trigger_rule_message(exc)
@@ -118,24 +131,68 @@ class AttendanceSessionService:
                 raise AppError("ALREADY_CHECKED_IN", ALREADY_TODAY, status=409) from None
             raise
 
-    async def check_out(self, user_id: str, channel: str = "MOBILE") -> Any:
-        """Menutup sesi terbuka milik sendiri — tanggal berapa pun, agar sesi yang lupa ditutup tidak
+    async def apply_face(self, org_id: str, user_id: str, row: Any, event: str, face_probe_id: UUID | None, *,
+                         online: bool = True, expected_sha256: str | None = None, device: str | None = None) -> Any:
+        """
+        Mencocokkan wajah untuk absen `row` (masuk/pulang) dan menyimpan hasilnya. Tanpa `face_probe_id` (APK lama /
+        karyawan tanpa pengenalan wajah) baris dikembalikan apa adanya. Hasil bermasalah menaikkan absensi ke
+        antrean periksa; tidak pernah menolak.
+        """
+        if face_probe_id is None or self.faces is None:
+            return row
+        outcome: FaceOutcome = await self.faces.verify_for_attendance(
+            org_id, user_id, probe_id=face_probe_id, event=event, attendance_id=row.id, device=device,
+            online=online, expected_sha256=expected_sha256)
+        return await self.repo.set_face(row.id, event, check_id=outcome.check_id, result=outcome.result,
+                                        similarity=outcome.similarity, flag_review=outcome.flag_review)
+
+    async def reverify_faces(self, limit: int = 50) -> tuple[int, int]:
+        """Penjadwal: hitung & cocokkan ulang wajah yang tertunda (face-service mati saat absen). → (selesai, tersisa)."""
+        if self.faces is None:
+            return 0, 0
+        done, left = await self.faces.recompute_pending(limit)
+        for attendance_id, event, outcome in done:
+            await self.repo.set_face(attendance_id, event, check_id=outcome.check_id, result=outcome.result,
+                                     similarity=outcome.similarity, flag_review=outcome.flag_review)
+        return len(done), left
+
+    async def purge_faces(self) -> int:
+        """Penjadwal: hapus gambar wajah yang lewat masa simpan."""
+        return await self.faces.purge_expired() if self.faces is not None else 0
+
+    async def check_out(self, user_id: str, channel: str = "MOBILE", *, org_id: str | None = None,
+                        face_probe_id: UUID | None = None, online: bool = True,
+                        expected_face_sha256: str | None = None) -> Any:
+        """
+        Menutup sesi absensi harian yang sedang terbuka (absen pulang).
+        
+        Menutup sesi terbuka milik sendiri — tanggal berapa pun, agar sesi yang lupa ditutup tidak
         mengunci check-in berikutnya. Status tidak diubah; pulang cepat diputuskan trigger.
-        R-33: hanya sesi yang sudah valid (Valid otomatis / Disetujui) yang boleh absen pulang."""
+        R-33: hanya sesi yang sudah valid (Valid otomatis / Disetujui) yang boleh absen pulang.
+        """
         worker = await self._employee_for_channel(user_id, channel)
         session = await self.repo.open_session(worker.employee_id, valid_only=True)
         if session is None:
+            # Memastikan tidak bisa absen pulang jika absen masuknya ditolak atau masih dalam proses peninjauan.
             if await self.repo.open_session(worker.employee_id) is not None:
                 raise AppError("CHECKOUT_NOT_VALID", CHECKOUT_NOT_VALID, status=409)
             raise AppError("NO_OPEN_SESSION", "Tidak ada sesi absensi terbuka.", status=409)
-        return await self.repo.close(session.id)
+        row = await self.repo.close(session.id)
+        if face_probe_id is not None and org_id is not None:
+            row = await self.apply_face(org_id, user_id, row, "CHECK_OUT", face_probe_id, online=online,
+                                        expected_sha256=expected_face_sha256, device=channel)
+        return row
 
     async def list_attendance(self, org_id: str, user_id: str, *, view_all: bool, employee_id: UUID | None,
                               date_from: Any, date_to: Any, status: str | None,
                               page: int, size: int) -> tuple[list[Any], int]:
-        """R-33: Finance & OPS (`view:all_attendance`) melihat semua; PM melihat miliknya + bawahan lapangan
+        """
+        Mendapatkan daftar absensi berdasarkan filter, disesuaikan dengan hak visibilitas pengguna.
+        
+        R-33: Finance & OPS (`view:all_attendance`) melihat semua; PM melihat miliknya + bawahan lapangan
         di unitnya; selain itu hanya milik sendiri. Di luar cakupan → tidak tampil (tidak dibocorkan).
-        Setiap baris membawa `can_review` dari server."""
+        Setiap baris membawa `can_review` dari server.
+        """
         return await self.repo.list_page(org_id, user_id, view_all=view_all, employee_id=employee_id,
                                          date_from=date_from, date_to=date_to, status=status,
                                          limit=size, offset=(page - 1) * size)
@@ -145,8 +202,12 @@ class AttendanceSessionService:
         return (await self.clock.local_now(org_id)).today
 
     async def explain_attendance(self, org_id: str, user_id: str, attendance_id: UUID, explanation: str) -> None:
+        """
+        Memberikan penjelasan tambahan untuk sesi absensi yang memerlukan peninjauan.
+        """
         attendance = await self.repo.get(attendance_id, org_id)
         employee_id = await self.repo.employee_of(user_id)
+        # Memastikan karyawan hanya dapat memberikan alasan pada absensi miliknya sendiri (V-09).
         if attendance is None or attendance.employee_id != employee_id:
             raise NotFoundError("Absensi")  # milik orang lain tidak dibocorkan (V-09)
         if attendance.status != "NEEDS_REVIEW":
@@ -158,12 +219,17 @@ class AttendanceSessionService:
 
     async def review_attendance(self, org_id: str, user_id: str, attendance_id: UUID,
                                 approve: bool, note: str | None) -> str:
-        """R-33: PM → bawahan lapangan di unitnya; Finance → pekerja kantor selain Finance; OPS → Finance.
-        Tidak ada yang meninjau absensinya sendiri (cakupan: CRUD `CAN_REVIEW`)."""
+        """
+        Meninjau (menyetujui atau menolak) sesi absensi yang anomali.
+        
+        R-33: PM → bawahan lapangan di unitnya; Finance → pekerja kantor selain Finance; OPS → Finance.
+        Tidak ada yang meninjau absensinya sendiri (cakupan: CRUD `CAN_REVIEW`).
+        """
         attendance = await self.repo.get(attendance_id, org_id)
         if attendance is None:
             raise NotFoundError("Absensi")
         reviewer = await self.repo.employee_of(user_id)
+        # Aturan empat mata: peninjau tidak boleh menyetujui/menolak absensinya sendiri.
         if attendance.employee_id == reviewer:
             raise ForbiddenError("Anda tidak boleh memverifikasi absensi sendiri.")
         if not await self.repo.can_review(user_id, attendance.employee_id):
@@ -172,6 +238,7 @@ class AttendanceSessionService:
             raise AppError("INVALID_STATE", "Absensi tidak menunggu pemeriksaan.", status=409)
         if not (note or "").strip():
             raise ValidationError("Catatan pemeriksaan wajib diisi.")
+            
         status = "APPROVED" if approve else "REJECTED"
         await self.repo.set_review(attendance_id, status, reviewer, (note or "").strip())
         return status

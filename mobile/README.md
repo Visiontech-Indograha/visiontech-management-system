@@ -57,13 +57,24 @@ flutter test
 
 ## Build APK
 
+APK rilis ditandatangani dengan **kunci rilis milik pemilik** (bukan kunci debug). Kunci dan sandinya
+disimpan pemilik di luar repositori; kalau kunci hilang atau berganti, semua pengguna harus mencopot
+dan memasang ulang APK (data luring yang belum terkirim ikut hilang).
+
+1. Salin `android/key.properties.example` menjadi `android/key.properties` (diabaikan Git), isi path
+   keystore (garis miring biasa) dan sandinya.
+2. Build dengan alamat produksi (satu domain untuk web, API, dan berkas):
+
 ```bash
-flutter build apk --release --dart-define=API_BASE_URL=https://api.vms-produksi.anda
+flutter build apk --release --dart-define=API_BASE_URL=https://portal.visiontechindo.com
 ```
 
 APK hasil build ada di `build/app/outputs/flutter-apk/app-release.apk` --
-untuk distribusi internal awal, sideload langsung ke HP teknisi (belum
-perlu Play Store).
+untuk distribusi internal, sideload langsung ke HP teknisi (belum perlu Play Store).
+
+Tanpa `key.properties`, build rilis **gagal** dengan pesan yang jelas, supaya APK bertanda kunci debug
+tidak sampai ke pengguna. Untuk uji lokal saja: tambahkan `-PallowDebugSigning=true` (jangan dibagikan).
+Periksa penanda APK: `apksigner verify --print-certs app-release.apk`.
 
 ## Keterbatasan yang diketahui
 

@@ -1,6 +1,9 @@
 """
-Koneksi & sesi database (docs/12 §1): engine & sesi, batas transaksi, dan konteks RLS permintaan.
-Gabungan `app/db/{session,transaction,context}.py` lama (R-28 M1); letaknya di `app/db/` sesuai contoh pemilik (R-30).
+app/db/session.py
+
+Database connections and sessions.
+Configures async engine, session makers, transaction boundaries, and request
+context (Row Level Security - RLS).
 """
 from __future__ import annotations
 
@@ -20,13 +23,17 @@ from sqlalchemy.ext.asyncio import (
 from app.core.config import settings
 from app.core.errors import AppError
 
-# ── Engine & sesi ────────────────────────────────────────────────────────────
-# Fungsi & trigger di db/*.sql menyebut tabel tanpa awalan skema (ditulis dengan
-# `SET search_path = vms, public`), jadi setiap koneksi aplikasi wajib memakai path yang sama.
+# ── Engine & sessions ────────────────────────────────────────────────────────────
+# Fungsi & trigger di db/*.sql menyebut tabel tanpa awalan skema, 
+# jadi setiap koneksi aplikasi wajib memakai path yang sama.
 SEARCH_PATH = "vms, public"
 
 
 def make_engine(**kwargs: Any) -> AsyncEngine:
+    """
+    Create and configure the SQLAlchemy AsyncEngine.
+    """
+    # Membuat engine async dengan path pencarian yang tepat
     return create_async_engine(
         settings.DATABASE_URL,
         echo=False,
@@ -40,42 +47,45 @@ AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False)
 
 
 async def get_db_session() -> AsyncIterator[AsyncSession]:
+    """
+    Yield an async database session for the dependency injection system.
+    """
+    # Memberikan sesi database async
     async with AsyncSessionLocal() as session:
         yield session
 
 
-# ── Batas transaksi ──────────────────────────────────────────────────────────
-# Dok 12 §2: satu permintaan / satu kasus pakai = satu transaksi.
-# Dipakai dependency sesi (app/api/deps.py::get_db) dan services/auth_flow.py.
+# ── Transaction boundaries ───────────────────────────────────────────────────
+# Satu permintaan atau kasus pakai dibatasi dalam satu transaksi.
 @asynccontextmanager
 async def unit_of_work(db: AsyncSession) -> AsyncIterator[None]:
     """
-    Commit bila kasus pakai selesai; rollback bila gagal.
-    AppError dengan `persist=True` tetap di-commit sebelum galatnya diteruskan ke klien.
+    Manage the transaction boundary for a unit of work.
+    Commits if the block completes successfully, rolls back on exceptions.
+    Handles AppError with `persist=True` by committing before re-raising.
     """
     try:
+        # Menjalankan blok operasi dalam unit transaksi
         yield
     except AppError as exc:
+        # Jika persist=True, simpan perubahan sebelum membuang galat
         if exc.persist:
             await db.commit()
         else:
             await db.rollback()
         raise
     except BaseException:
+        # Kembalikan perubahan jika terjadi kesalahan lain
         await db.rollback()
         raise
     else:
+        # Simpan perubahan jika tidak ada kesalahan
         await db.commit()
 
 
-# ── Konteks permintaan (RLS & audit) ─────────────────────────────────────────
-# `app.user_id`, `app.organization_id`, `app.actor_label` — dibaca `current_user_id()`,
-# `current_org_id()`, `tg_audit_row()`.
-#
-# `set_config(..., true)` = SET LOCAL: berlaku sampai transaksi selesai, jadi tidak bocor ke
-# permintaan lain yang memakai koneksi yang sama (R-08). Satu `SELECT` dengan parameter bind —
-# `SET LOCAL x = $1` tidak bisa dipakai karena SET tidak menerima parameter, dan asyncpg menolak
-# beberapa perintah dalam satu prepared statement.
+# ── Request context (RLS & audit) ────────────────────────────────────────────
+# Menetapkan variabel lingkungan PostgreSQL untuk RLS dan pelacakan audit.
+# Menggunakan SET LOCAL agar efeknya terbatas pada sesi transaksi saat ini.
 _SET_CONTEXT = text(
     """
     SELECT set_config('app.user_id', :user_id, true),
@@ -92,6 +102,11 @@ async def set_request_context(
     organization_id: str,
     actor_label: str,
 ) -> None:
+    """
+    Set context variables (user_id, organization_id, actor_label) in the 
+    PostgreSQL session to support Row Level Security (RLS) and audit triggers.
+    """
+    # Mengeksekusi penyiapan variabel RLS secara lokal
     await db.execute(
         _SET_CONTEXT,
         {"user_id": user_id, "organization_id": organization_id, "actor_label": actor_label},

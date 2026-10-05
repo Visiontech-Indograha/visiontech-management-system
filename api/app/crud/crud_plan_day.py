@@ -11,8 +11,24 @@ from .base import CRUDBase
 
 
 class CRUDPlanDay(CRUDBase):
+    """
+    Kelas CRUD untuk pengambilan data terkait hari kerja SK beserta laporannya secara hierarki.
+    """
 
     async def days_with_tasks_and_reports(self, plan_id: UUID | str) -> list[Any]:
+        """Mendapatkan data hari kerja Work Plan beserta tasks (tugas harian) dan report-nya.
+        
+        Args:
+            plan_id (UUID | str): ID Work Plan.
+            
+        Returns:
+            list[Any]: Daftar hari kerja beserta tasks (JSON array) dan report (JSON object).
+        """
+        # Melakukan kueri komprehensif dalam satu kali hit (tanpa N+1 query).
+        # LEFT JOIN dilakukan ke vms.daily_report untuk memuat data laporannya.
+        # Penggunaan JSONB_AGG untuk merangkum seluruh vms.work_plan_task milik setiap hari ke dalam bentuk array.
+        # Fungsi JSONB_BUILD_OBJECT digunakan untuk menstruktur objek JSON kolom 'report' secara rapi.
+        # Subkueri skalar count(*) digunakan untuk menghitung status pengiriman member_daily_report.
         return list(await self.fetchall(
             """
             SELECT d.id, d.work_date, d.title, d.sort_order,

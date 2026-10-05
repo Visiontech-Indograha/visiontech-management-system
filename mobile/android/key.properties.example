@@ -1,0 +1,6 @@
+# Salin menjadi `key.properties` (berkas itu diabaikan Git) lalu isi. JANGAN commit key.properties maupun *.jks.
+# Pakai garis miring biasa (/) pada path, juga di Windows.
+storeFile=C:/Users/NAMA/vms-keys/vms-release.jks
+storePassword=ISI_SANDI_KEYSTORE
+keyAlias=vms
+keyPassword=ISI_SANDI_KUNCI

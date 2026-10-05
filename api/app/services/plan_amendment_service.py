@@ -35,6 +35,10 @@ def _state(message: str) -> AppError:
 
 
 class PlanAmendmentService:
+    """
+    Layanan yang mengelola proses perubahan atau adendum terhadap SK yang sedang berjalan.
+    Proses ini mencakup usulan perubahan, persetujuan PM, penerbitan dokumen adendum, dan penerimaan ketua tim.
+    """
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
         self.repo = CRUDPlanAmendment(db)
@@ -62,10 +66,20 @@ class PlanAmendmentService:
         return change
 
     async def request_amendment(self, access: PlanAccess, reason: str) -> Any:
-        """Ketua menurut SK (dijaga router) mengajukan adendum; status SK tetap Berjalan."""
+        """
+        Ketua menurut SK (dijaga router) mengajukan adendum; status SK tetap Berjalan.
+        
+        Args:
+            access: Obyek PlanAccess yang memvalidasi hak pengguna terhadap SK.
+            reason: Alasan mengapa adendum ini diperlukan.
+            
+        Returns:
+            Any: ID dari objek perubahan yang baru dibuat.
+        """
         require_plan_status(access, PlanStatus.IN_PROGRESS)
         if not reason.strip():
             raise ValidationError("Alasan adendum wajib diisi.")
+        # Validasi: Tidak boleh ada lebih dari satu usulan perubahan yang terbuka sekaligus
         if await self.changes.open_change(access.plan.id) is not None:
             raise _state("Masih ada usulan perubahan yang menunggu penyelesaian.")
         requester = await self._employee(access.user.user_id)
@@ -86,16 +100,32 @@ class PlanAmendmentService:
         await self.notify.amendment_decided(access.plan.id, accepted=False, note=reason.strip())
 
     async def apply_amendment(self, access: PlanAccess, change_id: UUID, data: PlanDraftRequest) -> Any:
-        """PM menerima usulan dengan mengubah isi SK yang sedang berjalan, lalu menandatangani dokumen adendum."""
+        """
+        PM menerima usulan dengan mengubah isi SK yang sedang berjalan, lalu menandatangani dokumen adendum.
+        
+        Args:
+            access: Akses pengguna (harus PM unit SK tersebut).
+            change_id: ID perubahan yang sedang diproses.
+            data: Data draft SK terbaru (hasil amandemen).
+            
+        Returns:
+            Any: Data detail SK pasca pembaruan.
+            
+        Raises:
+            ValidationError: Jika ada aturan bisnis yang dilanggar, seperti menghapus hari berlaporan.
+        """
         require_plan_status(access, PlanStatus.IN_PROGRESS)
         change = await self._change(access, change_id, ChangeStatus.PENDING_PM)
         plan = access.plan
+        
+        # Validasi bisnis: Ketua dan tanggal mulai tidak bisa diubah lewat adendum jenis ini.
         if str(data.leader_employee_id) != str(plan.leader_employee_id):
             raise ValidationError("Ketua tim tidak dapat diganti lewat adendum ini.")
         if data.period_start != plan.period_start:
             raise ValidationError("Tanggal mulai SK yang sedang berjalan tidak dapat diubah.")
         await PlanDraftService(self.db)._validate(access.user, str(plan.unit_id), data, plan.id)
 
+        # Mencegah penghapusan hari yang sudah memiliki data laporan harian
         days = {str(d.work_date): d for d in await self.repo.days_with_report_state(plan.id)}
         wanted = {str(d.work_date): d for d in data.days}
         for work_date, day in days.items():

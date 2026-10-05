@@ -1,3 +1,10 @@
+"""
+Modul peringatan (alerts) sistem VMS.
+
+Modul ini bertanggung jawab untuk mengirimkan peringatan keamanan
+maupun bisnis ke kanal eksternal, seperti Discord, untuk keperluan
+pemantauan (monitoring) secara real-time.
+"""
 import logging
 
 from app.core.config import settings
@@ -12,11 +19,16 @@ async def send_security_alert(title: str, description: str, details: dict[str, o
     Pesan disaring `sanitize_for_discord`; `send_discord_alert` menelan galat kirim sendiri,
     jadi peringatan tidak pernah menggagalkan permintaan pengguna.
     """
+    # Memformat pesan dengan judul dan deskripsi
     message = f"**[SECURITY ALERT] {title}**\n{description}"
     if details:
+        # Menyisipkan detail tambahan dalam format JSON
         message += "\n```json\n" + str(details) + "\n```"
 
+    # Mencatat peringatan di log lokal
     logger.warning(f"SECURITY ALERT: {title} - {description} - {details}")
+    
+    # Mengirim ke Discord tanpa memblokir alur utama
     await send_discord_alert(settings.DISCORD_WEBHOOK_ALERTS, message, level="warning")
 
 

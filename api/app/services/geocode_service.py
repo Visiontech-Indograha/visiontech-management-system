@@ -24,7 +24,15 @@ UNAVAILABLE = "Pencarian lokasi sedang tidak tersedia. Tetapkan titik langsung d
 
 
 async def _fetch(query: str) -> list[dict[str, Any]]:
-    """Satu panggilan ke Nominatim (dipisah agar mudah diganti di uji)."""
+    """
+    Satu panggilan jaringan ke API eksternal Nominatim (dipisahkan agar mudah diganti di uji tiruan/mock).
+    
+    Args:
+        query: Teks kata kunci.
+        
+    Returns:
+        Daftar dictionary JSON hasil balasan dari Nominatim.
+    """
     async with httpx.AsyncClient(timeout=8.0, headers={"User-Agent": settings.GEOCODER_USER_AGENT}) as client:
         res = await client.get(settings.GEOCODER_URL, params={
             "q": query, "format": "jsonv2", "limit": 8, "countrycodes": "id", "accept-language": "id",
@@ -34,9 +42,25 @@ async def _fetch(query: str) -> list[dict[str, Any]]:
 
 
 class GeocodeService:
+    """Layanan geocoding untuk mengubah teks alamat atau tempat menjadi koordinat peta."""
 
     async def search(self, query: str) -> list[dict[str, Any]]:
+        """
+        Mencari koordinat lokasi berdasarkan teks kata kunci menggunakan Nominatim/OpenStreetMap.
+        Hasil pencarian akan disimpan di dalam cache untuk mengurangi panggilan ke server eksternal.
+
+        Args:
+            query: Teks pencarian lokasi.
+
+        Returns:
+            Daftar dictionary berisi nama, latitude, longitude, dan tipe lokasi.
+
+        Raises:
+            ValidationError: Jika teks pencarian kurang dari 3 karakter.
+            AppError: Jika layanan geocoding sedang tidak dapat diakses.
+        """
         global _last_call
+        # Membersihkan spasi yang berlebihan pada kata kunci pencarian
         q = " ".join(query.split())
         if len(q) < 3:
             raise ValidationError("Ketik minimal 3 huruf untuk mencari lokasi.")

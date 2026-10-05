@@ -19,12 +19,32 @@ _PM_UNIT_ACCESS = Depends(plan_access(PlanNeed.PM_UNIT))    # domain.js SAVE_ATT
 
 
 def _out(rows: list[Any]) -> list[AttachmentResponse]:
+    """
+    Fungsi pembantu untuk memetakan daftar baris lampiran dari database ke skema AttachmentResponse.
+    
+    Args:
+        rows (list[Any]): Daftar row data lampiran.
+        
+    Returns:
+        list[AttachmentResponse]: Daftar model lampiran SK.
+    """
     return [AttachmentResponse(**row._mapping) for row in rows]
 
 
 @router.get("", response_model=list[AttachmentResponse])
 async def list_attachments(access: PlanAccess = _VIEW_ACCESS,
                            plan_attachment_service: PlanAttachmentService = Depends(get_plan_attachment_service)) -> list[AttachmentResponse]:
+    """
+    Mengambil daftar lampiran dari sebuah SK (GET).
+    
+    Path Parameters:
+    - plan_id (tersirat via router prefix): ID dari SK.
+    
+    Returns:
+    - list[AttachmentResponse]: Daftar lampiran SK.
+    """
+    # Memastikan hak akses pengguna (_VIEW_ACCESS) via Dependency Injection
+    # Memanggil PlanAttachmentService untuk mendapatkan daftar lampiran dari layer Service
     return _out(await plan_attachment_service.list_attachments(access))
 
 
@@ -32,5 +52,21 @@ async def list_attachments(access: PlanAccess = _VIEW_ACCESS,
 async def save_attachments(data: AttachmentsRequest, access: PlanAccess = _PM_UNIT_ACCESS,
                            db: AsyncSession = Depends(get_db_with_user),
                            plan_attachment_service: PlanAttachmentService = Depends(get_plan_attachment_service)) -> list[AttachmentResponse]:
+    """
+    Menyimpan atau memperbarui lampiran untuk SK (PUT).
+    (domain.js SAVE_ATTACHMENTS)
+    
+    Path Parameters:
+    - plan_id (tersirat via router prefix): ID SK bersangkutan.
+    
+    Request Body:
+    - data (AttachmentsRequest): Daftar ID file lampiran.
+    
+    Returns:
+    - list[AttachmentResponse]: Daftar lampiran yang berhasil disimpan.
+    """
+    # Dependency Injection untuk hak akses _PM_UNIT_ACCESS dan session database (get_db_with_user)
+    # Memastikan file berada pada organisasi yang sama menggunakan helper ensure_same_org
     await ensure_same_org(db, access.user.organization_id, files=data.file_ids)
+    # Memanggil Service layer untuk proses penyimpanan data lampiran
     return _out(await plan_attachment_service.save_attachments(access, data.file_ids))

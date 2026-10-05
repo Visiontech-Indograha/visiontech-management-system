@@ -27,6 +27,7 @@ router = APIRouter(prefix="/face", tags=["Face"])
 
 @router.get("/policy", response_model=FacePolicy)
 def get_face_policy(
+    current_user: CurrentUser = Depends(get_current_user),
     face_service: FaceService = Depends(get_face_service),
 ) -> FacePolicy:
     """Mengambil versi dan teks kebijakan persetujuan biometrik server saat ini."""

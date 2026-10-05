@@ -21,6 +21,14 @@ async def alert_missing_checkin(
     current_user: CurrentUser = Depends(require_permission(Permission.RUN_SYSTEM_JOBS)),
     attendance_monitor_service: AttendanceMonitorService = Depends(get_attendance_monitor_service),
 ) -> MissingCheckInResponse:
+    """
+    Pemicu cron untuk memeriksa absensi check-in yang belum dilakukan pada hari berjalan, 
+    kemudian mengirim peringatan jika ditemukan.
+    
+    Return: Detail peringatan (MissingCheckInResponse)
+    """
+    # Mengambil dependensi penjadwal dengan hak akses (RUN_SYSTEM_JOBS)
+    # Memanggil attendance_monitor_service untuk melakukan evaluasi dan alert ke user
     result = await attendance_monitor_service.check_missing_check_ins(
         current_user.organization_id
     )
@@ -32,6 +40,14 @@ async def alert_needs_review_spike(
     current_user: CurrentUser = Depends(require_permission(Permission.RUN_SYSTEM_JOBS)),
     attendance_monitor_service: AttendanceMonitorService = Depends(get_attendance_monitor_service),
 ) -> NeedsReviewResponse:
+    """
+    Pemicu cron untuk mendeteksi lonjakan absensi yang memerlukan review (P4-9, dok 17 §5.3)
+    dan memperingatkan manajer terkait.
+    
+    Return: Ringkasan hasil pemeriksaan dan jumlah review (NeedsReviewResponse)
+    """
+    # Injeksi dependensi untuk mendapatkan AttendanceMonitorService
+    # Meneruskan operasi pengecekan lonjakan review ke service layer
     result = await attendance_monitor_service.check_needs_review_spike(
         current_user.organization_id
     )

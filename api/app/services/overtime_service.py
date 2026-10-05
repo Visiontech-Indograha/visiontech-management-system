@@ -24,10 +24,12 @@ from app.services.access_service import PlanNeed, check_plan_access
 
 
 def _state(msg: str) -> AppError:
+    """Helper untuk melempar AppError status 409 (Conflict)."""
     return AppError("INVALID_STATE", msg, status=409)
 
 
 class OvertimeService:
+    """Layanan pengelolaan pengajuan dan persetujuan lembur."""
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
         self.repo = CRUDOvertime(db)
@@ -36,7 +38,19 @@ class OvertimeService:
     # domain.js REPORT_OVERTIME (baris 607–614)
     # ------------------------------------------------------------------
     async def report(self, user: CurrentUser, plan_id: UUID, hours: float, reason: str) -> Any:
-        """Ketua atau anggota mengajukan lembur pada SK IN_PROGRESS. Urutan & pesan = domain.js."""
+        """
+        Mengajukan lembur pada suatu SK yang sedang berjalan (IN_PROGRESS).
+        Diakses oleh ketua tim atau anggota. Sesuai alur pada domain.js baris 607-614.
+        
+        Args:
+            user: Informasi pengguna.
+            plan_id: ID SK pekerjaan.
+            hours: Jumlah jam lembur (maksimal 12 jam).
+            reason: Alasan pelaksanaan lembur.
+            
+        Returns:
+            Any: Data pengajuan lembur yang baru dibuat.
+        """
         # SK tidak terlihat / organisasi lain → 404 (V-07/V-08).
         access = await check_plan_access(self.db, plan_id, user, PlanNeed.VIEW)
         if access.plan.status != PlanStatus.IN_PROGRESS:
@@ -46,6 +60,7 @@ class OvertimeService:
         reason = reason.strip()
         if not reason:
             raise ValidationError("Alasan lembur wajib diisi.")
+        # Hanya pihak yang terlibat langsung yang dapat mengajukan lembur
         if not (access.is_leader or access.is_member):
             raise ForbiddenError("Hanya ketua atau anggota pekerjaan ini yang dapat mengajukan lembur.")
 
@@ -83,7 +98,19 @@ class OvertimeService:
     async def review(
         self, user: CurrentUser, overtime_id: UUID, decision: str, note: str | None
     ) -> Any:
-        """PM unit/OPS menyetujui atau menolak lembur yang masih PENDING_PM."""
+        """
+        PM unit atau tim OPS memberikan persetujuan atau penolakan atas pengajuan lembur.
+        Lembur harus dalam status 'PENDING_PM'. Sesuai alur pada domain.js baris 616-627.
+        
+        Args:
+            user: Pengguna yang melakukan review.
+            overtime_id: ID pengajuan lembur.
+            decision: Keputusan (APPROVED atau REJECTED).
+            note: Catatan tambahan opsional.
+            
+        Returns:
+            Any: Data lembur setelah status diubah.
+        """
         ot = await self.repo.get_for_review(overtime_id, user.organization_id)
         if ot is None:
             raise NotFoundError("Lembur")

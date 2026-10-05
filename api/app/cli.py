@@ -1,3 +1,9 @@
+"""
+Modul CLI (Command Line Interface) untuk operasi administratif VMS.
+
+Modul ini menyediakan perintah untuk membuat admin, mengisi data awal (seed),
+serta membersihkan data yatim (orphan) pada database.
+"""
 import argparse
 import asyncio
 import getpass
@@ -9,6 +15,7 @@ from app.core.permissions import RoleCode
 from app.core.security import hash_password
 from app.db.session import make_engine
 
+# Panjang minimal kata sandi untuk admin
 ADMIN_PASSWORD_MIN_LENGTH = 12
 
 
@@ -65,19 +72,24 @@ async def create_admin(email: str, password: str, organization_id: str | None = 
 
 
 async def seed() -> None:
+    """
+    Mengisi database dengan data sampel awal (seed).
+    Membuat data organisasi, unit bisnis, dan karyawan contoh jika belum ada.
+    """
+    # Membuat engine untuk koneksi database
     engine = make_engine()
     async with engine.begin() as conn:
-        # Check org
+        # Periksa apakah data organisasi sudah ada, jika belum buat baru
         org_id = (await conn.execute(text("SELECT id FROM vms.organization LIMIT 1"))).scalar()
         if not org_id:
             org_id = (await conn.execute(text("INSERT INTO vms.organization (name) VALUES ('VisionTech') RETURNING id"))).scalar()
             
-        # Business Unit
+        # Periksa data unit bisnis (Business Unit), buat jika belum ada
         unit_id = (await conn.execute(text("SELECT id FROM vms.business_unit WHERE code = 'IT'"))).scalar()
         if not unit_id:
             unit_id = (await conn.execute(text("INSERT INTO vms.business_unit (organization_id, code, name) VALUES (:org, 'IT', 'Information Technology') RETURNING id"), {"org": org_id})).scalar()
             
-        # Employee
+        # Periksa data karyawan (Employee), buat jika belum ada
         emp_id = (await conn.execute(text("SELECT id FROM vms.employee WHERE employee_no = 'EMP001'"))).scalar()
         if not emp_id:
             emp_id = (await conn.execute(text("""
@@ -89,6 +101,10 @@ async def seed() -> None:
     await engine.dispose()
 
 async def cleanup_orphans() -> None:
+    """
+    Membersihkan sesi pengguna yang yatim (orphan) atau sudah kedaluwarsa.
+    """
+    # Membuat koneksi database untuk proses pembersihan
     engine = make_engine()
     async with engine.begin() as conn:
         # Hapus session kedaluwarsa atau ter-revoke yang lebih dari 30 hari

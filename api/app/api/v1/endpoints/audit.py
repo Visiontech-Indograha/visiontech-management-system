@@ -1,3 +1,7 @@
+"""
+Modul endpoint untuk fitur Audit.
+Menangani pencatatan dan pengambilan riwayat kejadian (audit events) dalam sistem.
+"""
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,8 +21,21 @@ async def get_audit_events(
     current_user: CurrentUser = Depends(require_permission(Permission.VIEW_AUDIT)),
     db: AsyncSession = Depends(get_db_with_user)
 ) -> AuditEventListResponse:
-    """Kejadian audit organisasi pengguna (VIEW_AUDIT). Disaring `organization_id` secara eksplisit —
-    tidak hanya mengandalkan RLS, yang terlewati bila aplikasi terhubung sebagai pemilik tabel (T-12)."""
+    """
+    Mendapatkan daftar kejadian audit organisasi pengguna (VIEW_AUDIT).
+    Disaring `organization_id` secara eksplisit — tidak hanya mengandalkan RLS, 
+    yang terlewati bila aplikasi terhubung sebagai pemilik tabel (T-12).
+    
+    Query params:
+    - page: Nomor halaman (default 1)
+    - size: Jumlah item per halaman (default 20, max 100)
+    - entity_type: Filter opsional berdasarkan jenis entitas (contoh: "User", "Asset")
+    
+    Return: Daftar riwayat audit beserta pagination (AuditEventListResponse)
+    """
+    # Menggunakan injeksi dependensi untuk mendapatkan koneksi database dengan konteks user saat ini
+    # Mendapatkan detail user saat ini dengan memeriksa izin VIEW_AUDIT
+    # Melakukan query langsung ke database untuk mengambil data audit yang difilter sesuai dengan organisasi user
     params = {"org": current_user.organization_id, "entity_type": entity_type,
               "limit": size, "offset": (page - 1) * size}
     total = (await db.execute(text("""

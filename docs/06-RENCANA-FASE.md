@@ -212,6 +212,14 @@ terbaca tanpa perlu dijelaskan.
 menonaktifkan embedding pada saat itu juga; face-service mati → absensi tetap bisa dilakukan;
 tidak ada satu pun foto wajah tersimpan di luar ketentuan.
 
+> **Status (2026-10-06):** P8-1…P8-4, P8-6 selesai di kode dan sudah di `prod` (migrasi 0023). Keputusan pemilik yang
+> berlaku: pendaftaran oleh **karyawan sendiri** lewat kamera (HP, atau webcam di web) dengan 2 tantangan acak yang
+> diperiksa **server** (kiri/kanan/atas/bawah/buka mulut; kedip dihapus); foto bukti hanya di luar radius; gambar wajah
+> absen = `face_probe` sementara; pekerja lapangan (HP, boleh luring) **dan** kantor (web, hanya online); karyawan
+> terdaftar yang absen tanpa data wajah → Perlu review. `FACE_ENROLLMENT_REQUIRED` mewajibkan pendaftaran setelah login
+> (bawaan mati). **Belum:** pencocokan wajah di HP saat luring (model ONNX + template), kalibrasi P8-5, pemasangan
+> face-service di server. Laporan spike dan daftar kerja operasional: `docs/30-LAPORAN-SPIKE-WAJAH.md`.
+
 > **Butuh dari Anda:** persetujuan tertulis dari karyawan yang ikut kalibrasi, dan kesepakatan
 > bahwa wajah tidak akan dipakai untuk hal lain selain absensi.
 

@@ -47,4 +47,57 @@ describe("Akun & keamanan", () => {
     await screen.findByText("Perangkat ini");
     expect(screen.queryByRole("button", { name: "Keluarkan perangkat lain" })).toBeNull();
   });
+
+  describe("Biometrik wajah", () => {
+    const faceStatus = (over: Record<string, unknown> = {}) => ({
+      employee_linked: true, consent: null, consent_policy_version: null, enrolled: false, enrollment_version: null,
+      model_name: null, model_version: null, liveness_required: true, template_ttl_days: 7,
+      policy: { version: "2026-10-05", text: "Saya menyetujui pemakaian data wajah HANYA untuk absensi." }, ...over,
+    });
+    const setup = (status: Record<string, unknown>) =>
+      mockApi((c) => {
+        if (c.url === "/auth/sessions") return { data: [] };
+        if (c.url === "/face/status") return { data: status };
+        if (c.url === "/face/consent") return { data: { message: "ok" } };
+      });
+
+    it("persetujuan memakai versi dari server dan butuh centang", async () => {
+      const calls = setup(faceStatus());
+      renderRoute("/account", { role: "field" });
+      expect(await screen.findByText(/HANYA untuk absensi/)).toBeInTheDocument();
+      const button = screen.getByRole("button", { name: "Beri Persetujuan Biometrik" });
+      expect(button).toBeDisabled(); // belum dicentang
+      fireEvent.click(screen.getByRole("checkbox"));
+      fireEvent.click(button);
+      await waitFor(() => expect(calls.some((c) => c.url === "/face/consent")).toBe(true));
+      expect(calls.find((c) => c.url === "/face/consent")!.data).toEqual({ state: "GRANTED", policy_version: "2026-10-05" });
+    });
+
+    it("pendaftaran wajah tidak lagi lewat berkas di web: diarahkan ke aplikasi HP", async () => {
+      setup(faceStatus({ consent: "GRANTED", consent_policy_version: "2026-10-05" }));
+      renderRoute("/account", { role: "field" });
+      const info = await screen.findByTestId("face-enroll-info");
+      expect(within(info).getByText(/aplikasi HP Visiontech/)).toBeInTheDocument();
+      expect(document.querySelector('input[type="file"]')).toBeNull(); // foto orang lain tak bisa didaftarkan
+      expect(screen.queryByRole("button", { name: "Daftarkan Wajah" })).toBeNull();
+    });
+
+    it("sudah terdaftar: menampilkan masa berlaku template dan cara daftar ulang di HP", async () => {
+      setup(faceStatus({ consent: "GRANTED", enrolled: true, model_name: "w600k_mbf", enrollment_version: "3-1" }));
+      renderRoute("/account", { role: "field" });
+      const info = await screen.findByTestId("face-enroll-info");
+      expect(within(info).getByText("w600k_mbf")).toBeInTheDocument();
+      expect(within(info).getByText("7 hari")).toBeInTheDocument();
+      expect(within(info).getByText(/Profil → Daftarkan Wajah/)).toBeInTheDocument();
+    });
+
+    it("menarik persetujuan mengirim WITHDRAWN dengan versi kebijakan server", async () => {
+      const calls = setup(faceStatus({ consent: "GRANTED", enrolled: true, model_name: "w600k_mbf" }));
+      renderRoute("/account", { role: "field" });
+      fireEvent.click(await screen.findByRole("button", { name: "Tarik Persetujuan" }));
+      await waitFor(() => expect(calls.some((c) => c.url === "/face/consent")).toBe(true));
+      expect(calls.find((c) => c.url === "/face/consent")!.data).toEqual({ state: "WITHDRAWN", policy_version: "2026-10-05" });
+    });
+  });
 });
+

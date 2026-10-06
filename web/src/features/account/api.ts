@@ -58,20 +58,3 @@ export function useSetFaceConsent() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["face", "status"] }),
   });
 }
-
-export function useEnrollFace() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (files: File[]) => {
-      const form = new FormData();
-      for (const f of files) {
-        form.append("files", f);
-      }
-      form.append("liveness", "{}");
-      return (await api.post("/face/enroll", form, {
-        headers: { "Content-Type": "multipart/form-data" },
-      })).data;
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["face", "status"] }),
-  });
-}

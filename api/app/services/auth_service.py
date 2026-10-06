@@ -120,9 +120,10 @@ class AuthService:
             raise _inactive()
 
         # R-33: aplikasi HP hanya untuk staf lapangan, web hanya untuk akun kantor (attendance_mode).
-        # Kredensial sudah benar, jadi penolakan ini tidak dihitung sebagai gagal login.
+        # Akun TANPA karyawan (mode None, mis. administrator pemilik sistem) boleh masuk dari web DAN HP
+        # (keputusan pemilik 2026-10-06). Kredensial sudah benar, jadi penolakan tidak dihitung sebagai gagal login.
         mode = await self.users.get_attendance_mode(user.id)
-        if platform == "mobile" and mode != "FIELD":
+        if platform == "mobile" and mode not in ("FIELD", None):
             raise AppError("NOT_FIELD_STAFF", "Akun Anda tidak termasuk kategori staf lapangan. "
                            "Silakan masuk lewat web.", status=403)
         if platform != "mobile" and mode == "FIELD":

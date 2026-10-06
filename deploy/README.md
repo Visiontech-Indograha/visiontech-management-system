@@ -63,3 +63,11 @@ cd ~/deploy/vms-mvp && cp autodeploy.sh autodeploy.sh.bak-$(date +%Y%m%d) && cp 
 
 - Log: `~/deploy/vms-mvp/logs/deploy-*.log`, `logs/cron.log`.
 - Memaksa deploy ulang versi yang sama: `rm ~/deploy/vms-mvp/.last-deployed` (deploy berikutnya ≤ 1 menit).
+
+## Layanan wajah (face-service)
+Dipasang sekali dengan `deploy/pasang-face-service.sh` (idempoten): menambah service `face` ke `compose.yml` (jaringan internal,
+tanpa port, `mem_limit` 1200m), membuat `face.env` (token acak), mengisi `FACE_SERVICE_URL`/`FACE_SERVICE_TOKEN` di `api.env`, dan
+mengubah `autodeploy.sh` agar menyalin `src/face-service` → `face` (pembaruan berikutnya otomatis). Jalankan dari komputer pemilik:
+`ssh ageng@192.168.88.160 "bash -s" < deploy\pasang-face-service.sh`; tambah `WAJIB_DAFTAR=ya` untuk mewajibkan pendaftaran wajah setelah login.
+Lisensi model InsightFace non-komersial: putuskan lisensi komersial sebelum dipakai penuh.
+

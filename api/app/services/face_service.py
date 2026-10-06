@@ -127,7 +127,7 @@ class FaceService:
             raise ValidationError("Akun ini belum tertaut ke data karyawan.")
         return row
 
-    async def status(self, org_id: str, user_id: str) -> FaceStatus:
+    async def status(self, org_id: str, user_id: str, *, exempt_from_required: bool = False) -> FaceStatus:
         org = await self.repo.org_settings(org_id)
         liveness_required = bool(org.face_liveness_required) if org else True
         employee = await self.repo.employee_of_user(user_id)
@@ -150,7 +150,8 @@ class FaceService:
             model_name=rows[0].model_name if rows else None,
             model_version=rows[0].model_version if rows else None,
             liveness_required=liveness_required,
-            enrollment_required=settings.FACE_ENROLLMENT_REQUIRED and not rows,
+            # Administrator tidak pernah dikunci gerbang pendaftaran (jalur darurat bila layanan wajah bermasalah).
+            enrollment_required=settings.FACE_ENROLLMENT_REQUIRED and not rows and not exempt_from_required,
             template_ttl_days=settings.FACE_TEMPLATE_TTL_DAYS,
             policy=self.policy(),
         )

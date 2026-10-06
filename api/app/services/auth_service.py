@@ -120,15 +120,17 @@ class AuthService:
             raise _inactive()
 
         # R-33: aplikasi HP hanya untuk staf lapangan, web hanya untuk akun kantor (attendance_mode).
-        # Akun TANPA karyawan (mode None, mis. administrator pemilik sistem) boleh masuk dari web DAN HP
-        # (keputusan pemilik 2026-10-06). Kredensial sudah benar, jadi penolakan tidak dihitung sebagai gagal login.
+        # Pengecualian (keputusan pemilik 2026-10-06): ADMINISTRATOR boleh masuk dari web DAN HP, baik tanpa karyawan
+        # maupun yang tertaut ke data karyawan (jenis absennya tidak membatasi login). Akun tanpa karyawan (mode None)
+        # juga boleh keduanya. Kredensial sudah benar, jadi penolakan tidak dihitung sebagai gagal login.
         mode = await self.users.get_attendance_mode(user.id)
-        if platform == "mobile" and mode not in ("FIELD", None):
-            raise AppError("NOT_FIELD_STAFF", "Akun Anda tidak termasuk kategori staf lapangan. "
-                           "Silakan masuk lewat web.", status=403)
-        if platform != "mobile" and mode == "FIELD":
-            raise AppError("NOT_OFFICE_ACCOUNT", "Akun Anda bukan kategori akun kantor. "
-                           "Silakan gunakan aplikasi HP Visiontech.", status=403)
+        if (user.role or "") != "ADMIN":
+            if platform == "mobile" and mode not in ("FIELD", None):
+                raise AppError("NOT_FIELD_STAFF", "Akun Anda tidak termasuk kategori staf lapangan. "
+                               "Silakan masuk lewat web.", status=403)
+            if platform != "mobile" and mode == "FIELD":
+                raise AppError("NOT_OFFICE_ACCOUNT", "Akun Anda bukan kategori akun kantor. "
+                               "Silakan gunakan aplikasi HP Visiontech.", status=403)
 
         await self.sessions.record_login_attempt(login, client.ip, True)
         return await self._start_session(user, client)

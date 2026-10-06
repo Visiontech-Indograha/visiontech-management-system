@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Depends, Query
 
-from app.api.deps import get_plan_location_service, plan_access, require_permission
+from app.api.deps import get_plan_location_service, plan_access, require_any_permission
 from app.core.permissions import Permission
 from app.core.security import CurrentUser
 from app.schemas.plan_location import GeoResult, PlanLocationIn, PlanLocationOut
@@ -13,6 +13,7 @@ from app.services.plan_location_service import PlanLocationService
 router = APIRouter(tags=["Plan Location"])
 _VIEW = Depends(plan_access(PlanNeed.VIEW))
 _PM_UNIT = Depends(plan_access(PlanNeed.PM_UNIT))
+_GEO_SEARCH = require_any_permission(Permission.CREATE_PLAN, Permission.MANAGE_SITES)
 
 
 
@@ -23,10 +24,10 @@ _PM_UNIT = Depends(plan_access(PlanNeed.PM_UNIT))
 
 @router.get("/geo/search", response_model=list[GeoResult])
 async def geo_search(q: str = Query(min_length=1, max_length=120),
-                     _: CurrentUser = Depends(require_permission(Permission.CREATE_PLAN))) -> list[GeoResult]:
+                     _: CurrentUser = Depends(_GEO_SEARCH)) -> list[GeoResult]:
     """
     Pencarian kota/tempat di Indonesia berdasarkan kueri (Nominatim, di-cache) (GET).
-    Hanya untuk pengelola SK.
+    Untuk pengelola SK dan pengelola lokasi kerja (pencarian alamat saat menambah lokasi).
     
     Query Parameters:
     - q (str): Kata kunci lokasi yang dicari.

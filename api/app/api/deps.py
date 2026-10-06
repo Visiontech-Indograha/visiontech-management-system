@@ -140,6 +140,17 @@ def require_permission(
     return permission_checker
 
 
+def require_any_permission(
+    *required: Permission,
+) -> Callable[[CurrentUser], Coroutine[Any, Any, CurrentUser]]:
+    """Lolos bila pengguna punya SALAH SATU izin yang disebut (mis. cari alamat: pengelola SK atau pengelola lokasi)."""
+    async def permission_checker(current_user: CurrentUser = Depends(get_current_user)) -> CurrentUser:
+        if not any(p.value in current_user.permissions for p in required):
+            raise AppError("FORBIDDEN", "Anda tidak memiliki akses untuk tindakan ini.", status=403)
+        return current_user
+    return permission_checker
+
+
 async def get_db_with_user(
     db: AsyncSession = Depends(get_db, scope=DB_SCOPE),
     current_user: CurrentUser = Depends(get_current_user),

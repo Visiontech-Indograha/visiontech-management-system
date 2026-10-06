@@ -1,4 +1,3 @@
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,7 +9,6 @@ import '../auth/auth_state.dart';
 import '../sync/sync_queue_screen.dart';
 import '../../core/theme/theme.dart';
 import '../../shared/ui/vms_ui.dart';
-import '../face/face_capture_screen.dart';
 import '../face/face_flow.dart';
 
 const _roleLabel = {
@@ -113,54 +111,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   Future<void> _enrollFaceFlow() async {
     if (!mounted) return;
-    // Dua tantangan acak (bukti bertanda tangan server) lalu beberapa pose, semua lewat kamera langsung.
-    final result = await Navigator.of(context).push<FaceCaptureResult>(
-      MaterialPageRoute(
-        fullscreenDialog: true,
-        builder: (_) => const FaceCaptureScreen(mode: FaceCaptureMode.enroll),
-      ),
-    );
-    if (result == null || result.photos.isEmpty) return;
-    void say(String m) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
-      }
-    }
-
-    Future<void> cleanup() async {
-      for (final f in result.photos) {
-        try {
-          await f.delete();
-        } on FileSystemException {
-          // Berkas sementara kamera; tidak kritis.
-        }
-      }
-    }
-
-    if (!result.passed) {
-      await cleanup();
-      say(
-        result.stopReason == 'offline'
-            ? 'Tidak ada sinyal. Pendaftaran wajah butuh internet; coba lagi saat online.'
-            : 'Tantangan keaslian wajah belum lolos. Ulangi pendaftaran.',
-      );
-      return;
-    }
-
     setState(() => _isEnrolling = true);
     try {
-      final res = await ref
-          .read(syncEngineProvider)
-          .api
-          .enrollFace(result.photos, liveness: result.liveness);
-      say(
-        'Wajah berhasil didaftarkan! (${res['enrolled'] ?? result.photos.length} pose tersimpan).',
-      );
-      await _loadFaceState();
-    } catch (e) {
-      say(apiErrorMessage(e));
+      final out = await runFaceEnrollment(context, ref);
+      if (!mounted) return;
+      if (out.message != null) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(out.message!)));
+      }
+      if (out.ok) await _loadFaceState();
     } finally {
-      await cleanup();
       if (mounted) setState(() => _isEnrolling = false);
     }
   }

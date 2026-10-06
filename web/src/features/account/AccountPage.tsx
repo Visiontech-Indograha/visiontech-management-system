@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Skeleton } from "@/components/ui/skeleton";
+import { FaceEnrollCapture } from "@/features/face/FaceEnrollCapture";
 import { errorMessage } from "@/lib/errors";
 import { formatDateTime } from "@/lib/format";
 import { ROLE_LABEL } from "@/lib/types";
@@ -35,6 +36,7 @@ function FaceSection() {
   const setConsent = useSetFaceConsent();
 
   const [agreed, setAgreed] = useState(false);
+  const [enrolling, setEnrolling] = useState(false);
 
   if (faceStatus.isPending) {
     return (
@@ -141,22 +143,32 @@ function FaceSection() {
         )}
       </div>
 
-      {/* Pendaftaran wajah hanya di aplikasi HP: kamera langsung + tantangan acak yang diperiksa server. Pilih berkas
-          dari disk dihapus karena foto orang lain bisa didaftarkan ke akun sendiri. */}
+      {/* Pendaftaran lewat webcam: dua gerakan acak diperiksa server (bukan pilih berkas dari disk). */}
       {isConsentGiven && (
-        <div className="space-y-2" data-testid="face-enroll-info">
-          <h3 className="text-sm font-medium">Pendaftaran Wajah</h3>
-          {data.enrolled ? (
+        <div className="space-y-3" data-testid="face-enroll-info">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-medium">Pendaftaran Wajah</h3>
+            {data.enrolled && !enrolling && (
+              <Button size="sm" variant="outline" onClick={() => setEnrolling(true)}>
+                Daftar Ulang Wajah
+              </Button>
+            )}
+          </div>
+          {data.enrolled && !enrolling ? (
             <div className="space-y-1 rounded-lg border border-line bg-surface p-3 text-xs text-mist">
               <p>Model Biometrik: <span className="font-mono text-foreground">{data.model_name ?? "InsightFace buffalo_s"}</span></p>
               <p>Masa Berlaku Template: <span className="text-foreground">{`${data.template_ttl_days} hari`}</span></p>
-              <p>Untuk mendaftar ulang, buka aplikasi HP: <strong>Profil → Daftarkan Wajah</strong>.</p>
             </div>
           ) : (
-            <p className="rounded-lg border border-line bg-surface p-3 text-xs text-mist">
-              Pendaftaran wajah dilakukan di <strong>aplikasi HP Visiontech</strong> (menu <strong>Profil → Daftarkan Wajah</strong>) dengan
-              kamera langsung dan dua gerakan acak, supaya foto orang lain tidak bisa didaftarkan ke akun Anda.
-            </p>
+            <div className="rounded-lg border border-line bg-surface p-3.5">
+              <FaceEnrollCapture
+                onEnrolled={() => {
+                  setEnrolling(false);
+                  void faceStatus.refetch();
+                  toast.success("Wajah berhasil didaftarkan.");
+                }}
+              />
+            </div>
           )}
         </div>
       )}

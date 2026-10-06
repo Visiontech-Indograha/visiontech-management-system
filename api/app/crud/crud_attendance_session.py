@@ -225,6 +225,26 @@ class CRUDAttendanceSession(CRUDBase):
             {"id": attendance_id},
         )
 
+    async def flag_missing_face(self, attendance_id: UUID | str, event: str, note: str) -> Any:
+        """
+        Karyawan yang sudah mendaftar wajah absen TANPA data wajah: tidak ditolak, tetapi tidak lolos otomatis —
+        naik ke antrean periksa dengan catatan server (tampil sebagai "Catatan server" di web).
+        """
+        col = "face_result" if event == "CHECK_IN" else "check_out_face_result"
+        return await self.fetchone(
+            f"""
+            UPDATE vms.attendance
+               SET {col} = 'SKIPPED'::vms.face_check_result,
+                   offline_note = NULLIF(concat_ws('; ', offline_note, CAST(:note AS text)), ''),
+                   status = CASE WHEN status = 'AUTO_VALID' THEN 'NEEDS_REVIEW'::vms.attendance_status ELSE status END
+             WHERE id = :id
+            RETURNING id, employee_id, work_date, site_id, site_label, check_in_at, check_out_at,
+                      distance_m, is_late, is_early_leave, status, explanation, reviewed_at, selfie_file_id,
+                      face_result, face_similarity, check_out_face_result, check_out_face_similarity
+            """,
+            {"id": attendance_id, "note": note},
+        )
+
     async def set_face(self, attendance_id: UUID | str, event: str, *, check_id: UUID | str | None, result: str,
                        similarity: float | None, flag_review: bool) -> Any:
         """

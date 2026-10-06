@@ -187,6 +187,13 @@ class FaceService:
             challenges, nonces = [c for c, _ in kept], [n for _, n in kept]
         return len(challenges) >= LIVENESS_PROOFS_REQUIRED, challenges, nonces
 
+    async def face_expected(self, user_id: str) -> bool:
+        """Pekerja lapangan yang sudah menyetujui & mendaftar wajah: absennya WAJIB membawa data wajah."""
+        employee = await self.repo.employee_of_user(user_id)
+        if employee is None or employee.attendance_mode != "FIELD":
+            return False
+        return await self.repo.face_expected(employee.employee_id)
+
     async def _require_consent(self, employee_id: Any) -> None:
         consent = await self.repo.latest_consent(employee_id)
         if consent is None or consent.state != "GRANTED":

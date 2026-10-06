@@ -10275,7 +10275,7 @@
   },
   "/api/v1/geo/search": {
    "get": {
-    "description": "Pencarian kota/tempat di Indonesia berdasarkan kueri (Nominatim, di-cache) (GET).\nHanya untuk pengelola SK.\n\nQuery Parameters:\n- q (str): Kata kunci lokasi yang dicari.\n\nReturns:\n- list[GeoResult]: Daftar hasil pencarian lokasi (koordinat dan nama wilayah).",
+    "description": "Pencarian kota/tempat di Indonesia berdasarkan kueri (Nominatim, di-cache) (GET).\nUntuk pengelola SK dan pengelola lokasi kerja (pencarian alamat saat menambah lokasi).\n\nQuery Parameters:\n- q (str): Kata kunci lokasi yang dicari.\n\nReturns:\n- list[GeoResult]: Daftar hasil pencarian lokasi (koordinat dan nama wilayah).",
     "operationId": "geo_search_api_v1_geo_search_get",
     "parameters": [
      {

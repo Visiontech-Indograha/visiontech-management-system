@@ -176,7 +176,7 @@ class CRUDAttendanceOffline(CRUDBase):
         return await self.fetchone(
             """
             UPDATE vms.attendance
-            SET offline = true, offline_note = :note,
+            SET offline = true, offline_note = NULLIF(concat_ws('; ', offline_note, CAST(:note AS text)), ''),
                 status = CASE WHEN :force AND status = 'AUTO_VALID'
                               THEN CAST('NEEDS_REVIEW' AS vms.attendance_status) ELSE status END
             WHERE id = CAST(:id AS uuid)

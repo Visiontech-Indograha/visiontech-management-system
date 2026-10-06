@@ -104,7 +104,7 @@ class PlanDraftService:
             "unit_name": creator.unit_name,
             "categories": [{"code": k, "label": v} for k, v in CATEGORIES.items()],
             "sites": await self.repo.sites(user.organization_id, None if self._oversees(user) else unit),
-            "leaders": await self.repo.field_staff(user.organization_id, None, plan_id),
+            "leaders": await self.repo.field_staff(user.organization_id, unit, plan_id),
             "members": await self.repo.field_staff(user.organization_id, unit, plan_id),
             "tools": [a for a in assets if a.kind == "TOOL"],
             "vehicles": [a for a in assets if a.kind == "VEHICLE"],
@@ -185,8 +185,9 @@ class PlanDraftService:
             raise AppError("PERSONNEL_NOT_FIELD_STAFF",
                            "Ketua dan anggota tim hanya dapat dipilih dari staf lapangan (bukan akun kantor).",
                            status=422)
-        if any(staff[m] != unit_id for m in members):
-            raise AppError("PERSONNEL_OUTSIDE_PM_UNIT", "Anggota tim harus bawahan PM (unit yang sama).", status=422)
+        # Keputusan pemilik 2026-10-06: ketua juga harus bawahan PM (unit yang sama), seperti anggota.
+        if any(staff[m] != unit_id for m in (leader, *members)):
+            raise AppError("PERSONNEL_OUTSIDE_PM_UNIT", "Ketua dan anggota tim harus bawahan PM (unit yang sama).", status=422)
         if await self.repo.employees_bound([leader, *members], plan_id):
             raise AppError("PERSONNEL_BOUND", "Ada ketua/anggota yang masih terikat work plan lain.", status=409)
 

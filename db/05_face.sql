@@ -217,8 +217,10 @@ CREATE OR REPLACE FUNCTION verify_face_for_attendance(
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = vms, public AS $$
 DECLARE
   v_org organization%ROWTYPE;
-  v_best record;
-  v_self record;
+  v_best_emp uuid;
+  v_emp uuid;
+  v_enr uuid;
+  v_sim numeric;
   v_result face_check_result;
   v_note text;
   v_check uuid;
@@ -248,14 +250,15 @@ BEGIN
     v_note := 'Pemeriksaan keaslian wajah (anti-foto) tidak lolos. Coba ulangi di tempat yang lebih terang.';
   ELSE
     -- kemiripan terhadap orang yang mengaku
-    SELECT * INTO v_self FROM match_face(p_org, p_embedding, 50) WHERE employee_id = p_claimed_employee LIMIT 1;
+    SELECT mf.employee_id, mf.enrollment_id, mf.similarity INTO v_emp, v_enr, v_sim
+      FROM match_face(p_org, p_embedding, 50) mf WHERE mf.employee_id = p_claimed_employee LIMIT 1;
     -- kandidat terbaik secara keseluruhan, untuk mendeteksi orang lain yang lebih mirip
-    SELECT * INTO v_best FROM match_face(p_org, p_embedding, 1);
+    SELECT mf.employee_id INTO v_best_emp FROM match_face(p_org, p_embedding, 1) mf;
 
-    IF v_self.similarity IS NULL OR v_self.similarity < v_org.face_match_threshold THEN
+    IF v_sim IS NULL OR v_sim < v_org.face_match_threshold THEN
       v_result := 'NO_MATCH';
       v_note := 'Wajah tidak cocok dengan data karyawan tersebut. Absensi ditandai untuk diperiksa.';
-    ELSIF v_best.employee_id IS DISTINCT FROM p_claimed_employee THEN
+    ELSIF v_best_emp IS DISTINCT FROM p_claimed_employee THEN
       v_result := 'NO_MATCH';
       v_note := 'Wajah lebih menyerupai karyawan lain. Absensi ditandai untuk diperiksa.';
     ELSE
@@ -267,12 +270,12 @@ BEGIN
   INSERT INTO face_check (organization_id, claimed_employee_id, matched_employee_id, matched_enrollment_id,
                           similarity, threshold_used, result, liveness_score, probe_embedding, probe_file_id,
                           device_label, attendance_event)
-  VALUES (p_org, p_claimed_employee, v_self.employee_id, v_self.enrollment_id,
-          v_self.similarity, v_org.face_match_threshold, v_result, p_liveness, p_embedding, p_probe_file,
+  VALUES (p_org, p_claimed_employee, v_emp, v_enr,
+          v_sim, v_org.face_match_threshold, v_result, p_liveness, p_embedding, p_probe_file,
           p_device, p_event)
   RETURNING id INTO v_check;
 
-  RETURN QUERY SELECT v_result, v_self.similarity, v_org.face_match_threshold, v_self.employee_id, v_note, v_check;
+  RETURN QUERY SELECT v_result, v_sim, v_org.face_match_threshold, v_emp, v_note, v_check;
 END $$;
 
 -- Absensi yang gagal cocok wajah tidak ditolak diam-diam, melainkan masuk antrean

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
+from typing import Any
 
 import httpx
 
@@ -58,3 +59,24 @@ class FaceEmbedClient:
         return EmbedResult(faces=int(body["faces"]), embedding=body.get("embedding"), quality=body.get("quality"),
                            detection_score=body.get("detection_score"), model_name=body["model_name"],
                            model_version=body["model_version"])
+
+    async def check_challenge(self, image: bytes, challenge: str, filename: str = "frame.jpg") -> dict[str, Any]:
+        if not self.base_url or not self.token:
+            raise FaceServiceUnavailable("face-service belum dikonfigurasi")
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout_s) as client:
+                response = await client.post(
+                    f"{self.base_url}/challenge-check",
+                    files={"file": (filename, image)},
+                    data={"challenge": challenge},
+                    headers={"X-Face-Token": self.token},
+                )
+        except httpx.HTTPError as exc:
+            logger.warning("face-service tidak terjangkau: %s", type(exc).__name__)
+            raise FaceServiceUnavailable(type(exc).__name__) from None
+        if response.status_code in (401, 403, 502, 503, 504) or response.status_code >= 500:
+            logger.warning("face-service menjawab %s", response.status_code)
+            raise FaceServiceUnavailable(f"HTTP {response.status_code}")
+        if response.status_code != 200:
+            raise ValueError(f"face-service menolak gambar (HTTP {response.status_code})")
+        return dict(response.json())

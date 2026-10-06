@@ -62,7 +62,7 @@ class Phone:
 
     def record(self, kind: str, *, at=INSIDE, after_ms: int = 2_000, boot: tuple[int, int] = (7, 7),
                gps_shift_ms: int = 0, mocked: bool = False, explanation: str | None = None,
-               selfie_sha: str | None = None, anchor: str | None = None) -> dict:
+               selfie_sha: str | None = None, anchor: str | None = None, extra: dict | None = None) -> dict:
         """Absen luring yang direkam `after_ms` setelah jangkar. Jam HP sengaja dimajukan 3 jam."""
         anchor_token = anchor if anchor is not None else self.anchor
         anchor_ms = security.verify_time_anchor(anchor_token or "", self._user_id()) or int(time.time() * 1000)
@@ -74,14 +74,15 @@ class Phone:
             "event_elapsed_ms": ANCHOR_ELAPSED + after_ms, "event_boot_count": boot[1],
             "gps_time_ms": anchor_ms + after_ms + gps_shift_ms,
             "device_time_ms": anchor_ms + after_ms + 3 * 3600 * 1000,
-            "explanation": explanation, "selfie_sha256": selfie_sha,
+            "explanation": explanation, "selfie_sha256": selfie_sha, **(extra or {}),
         }, separators=(",", ":"))
         signature = base64.b64encode(self.key.sign(payload.encode(), ec.ECDSA(hashes.SHA256()))).decode()
         return {"device_id": self.device_id, "client_op_id": op, "kind": kind, "payload": payload,
                 "signature": signature}
 
-    def send(self, event: dict, selfie_file_id: str | None = None):
-        body = {**event, **({"selfie_file_id": selfie_file_id} if selfie_file_id else {})}
+    def send(self, event: dict, selfie_file_id: str | None = None, face_probe_id: str | None = None):
+        body = {**event, **({"selfie_file_id": selfie_file_id} if selfie_file_id else {}),
+                **({"face_probe_id": face_probe_id} if face_probe_id else {})}
         return self.client.post("/attendance/offline", headers=self.headers, json=body)
 
     def _user_id(self) -> str:

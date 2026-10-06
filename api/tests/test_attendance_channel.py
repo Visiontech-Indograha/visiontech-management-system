@@ -121,3 +121,21 @@ def test_me_and_employee_expose_attendance_mode_and_hr_can_change_it(client, wor
                       json={"attendance_mode": None, "phone": "0812"})
     assert kept.status_code == 200, kept.text
     assert kept.json()["attendance_mode"] == "OFFICE"
+
+
+def test_admin_without_employee_can_login_on_web_and_mobile(client, seeded_user):
+    """Keputusan pemilik 2026-10-06: akun administrator (tanpa karyawan) masuk dari web DAN HP."""
+    for platform in ("web", "mobile"):
+        got = client.post("/auth/login", json={"email": seeded_user.login, "password": seeded_user.password,
+                                               "platform": platform})
+        assert got.status_code == 200, (platform, got.text)
+
+
+def test_login_platform_rules_still_hold_for_employees(client, world):
+    from tests.conftest import WORLD_PASSWORD
+    member = {"email": world.logins["member"], "password": WORLD_PASSWORD}
+    assert client.post("/auth/login", json={**member, "platform": "web"}).status_code == 403      # lapangan di web
+    assert client.post("/auth/login", json={**member, "platform": "mobile"}).status_code == 200
+    sync_query("UPDATE vms.employee SET attendance_mode = 'OFFICE' WHERE id = %s", (world.employees["member"],))
+    assert client.post("/auth/login", json={**member, "platform": "mobile"}).status_code == 403   # kantor di HP
+    assert client.post("/auth/login", json={**member, "platform": "web"}).status_code == 200

@@ -188,6 +188,15 @@ def test_enrollment_required_flag_follows_server_setting(client, world, face, mo
     assert client.get("/face/status", headers=headers).json()["enrollment_required"] is True
 
 
+def test_admin_is_never_locked_by_required_enrollment(client, world, face, monkeypatch):
+    from app.core.config import settings
+    monkeypatch.setattr(settings, "FACE_ENROLLMENT_REQUIRED", True)
+    admin = client.get("/face/status", headers=world.headers(client, "admin")).json()
+    member = client.get("/face/status", headers=world.headers(client, "member")).json()
+    assert admin["employee_linked"] and admin["enrollment_required"] is False    # jalur darurat administrator
+    assert member["enrollment_required"] is True
+
+
 def test_enroll_validates_consent_liveness_and_images(client, world, face):
     assert enroll(client, world).json()["error"]["code"] == "CONSENT_REQUIRED"
     assert consent(client, world).status_code == 200

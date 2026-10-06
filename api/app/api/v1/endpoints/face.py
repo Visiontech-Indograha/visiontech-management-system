@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, File, Form, UploadFile
 
 from app.api.deps import get_current_user, get_face_service
 from app.core.errors import AppError, ValidationError
+from app.core.permissions import RoleCode
 from app.core.security import CurrentUser
 from app.schemas.face import (
     ChallengeCheckResponse,
@@ -62,7 +63,8 @@ async def get_face_status(
     Status pengenalan wajah pengguna saat ini: persetujuan biometrik, status pendaftaran,
     versi template, dan kebijakan aktif.
     """
-    return await face_service.status(current_user.organization_id, current_user.user_id)
+    return await face_service.status(current_user.organization_id, current_user.user_id,
+                                     exempt_from_required=RoleCode.ADMIN in current_user.roles)
 
 
 @router.post("/consent")

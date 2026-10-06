@@ -1,7 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { MapPin } from "lucide-react";
-import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useMemo, useState } from "react";
+import { useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog } from "@/components/ui/VmsDialog";
 import { ApiError } from "@/lib/api";
 import { useCreateSite, useDeleteSite, useSites, type Site } from "./api";
+import type { LatLng } from "@/features/work-plans/PlanLocation";
+import { SiteMapPicker } from "./SiteMapPicker";
 
 /** Master lokasi kerja (geofence absensi): GET/POST/DELETE /sites, izin manage:sites (R-33).
  * PM → lokasi proyek untuk bawahannya (unit ditetapkan server); Finance → lokasi kantor. */
@@ -99,11 +101,24 @@ function SiteDialog({ onClose }: { onClose: () => void }) {
   const {
     register,
     handleSubmit,
+    control,
+    setValue,
+    getValues,
     formState: { errors, isSubmitting },
   } = useForm<SiteValues>({
     resolver: zodResolver(siteSchema),
     defaultValues: { name: "", address: "", lat: "", lng: "", radius_m: "50" },
   });
+
+  // Titik dari isian (manual) ATAU peta: keduanya satu sumber, jadi penanda dan angka selalu sama.
+  const latText = useWatch({ control, name: "lat" });
+  const lngText = useWatch({ control, name: "lng" });
+  const radiusText = useWatch({ control, name: "radius_m" });
+  const a = Number(latText);
+  const b = Number(lngText);
+  const valid = latText.trim() !== "" && lngText.trim() !== "" && Number.isFinite(a) && Number.isFinite(b) && Math.abs(a) <= 90 && Math.abs(b) <= 180;
+  const point = useMemo<LatLng | null>(() => (valid ? [a, b] : null), [valid, a, b]);
+  const radius = Number.isFinite(Number(radiusText)) && Number(radiusText) > 0 ? Number(radiusText) : null;
 
   const onSubmit = handleSubmit(async (v) => {
     setFormError(null);
@@ -143,6 +158,18 @@ function SiteDialog({ onClose }: { onClose: () => void }) {
             {formError}
           </p>
         )}
+        <SiteMapPicker
+          point={point}
+          radius={radius}
+          onPick={(p, label) => {
+            setValue("lat", p[0].toFixed(6), { shouldValidate: true });
+            setValue("lng", p[1].toFixed(6), { shouldValidate: true });
+            if (label) {
+              setValue("address", label);
+              if (!getValues("name").trim()) setValue("name", label.split(",")[0]!.trim(), { shouldValidate: true });
+            }
+          }}
+        />
         <TextField label="Nama lokasi" error={errors.name?.message} {...register("name")} />
         <TextField label="Alamat" error={errors.address?.message} {...register("address")} />
         <div className="grid gap-x-3 md:grid-cols-2">

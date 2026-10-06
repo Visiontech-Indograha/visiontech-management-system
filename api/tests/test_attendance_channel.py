@@ -148,3 +148,17 @@ def test_admin_linked_to_an_employee_still_logs_in_on_both_platforms(client, wor
     creds = {"email": world.logins["admin"], "password": WORLD_PASSWORD}
     assert client.post("/auth/login", json={**creds, "platform": "mobile"}).status_code == 200
     assert client.post("/auth/login", json={**creds, "platform": "web"}).status_code == 200
+
+
+def test_admin_can_attend_from_mobile_and_web_regardless_of_mode(client, world):
+    """Pemilik sistem (ADMIN) yang tertaut ke karyawan kantor boleh absen dari HP, sedangkan kantor biasa tidak."""
+    office = _set_mode(world, "admin", "OFFICE")
+    mobile = _check_in(client, world, "admin", "MOBILE", site_id=office)
+    assert mobile.status_code == 200, mobile.text
+    assert mobile.json()["status"] == "AUTO_VALID"
+    assert sync_query("SELECT source::text FROM vms.attendance WHERE id = %s", (mobile.json()["id"],))[0][0] == "MOBILE"
+
+    # Kontrol: pekerja kantor biasa tetap ditolak di HP.
+    sync_query("UPDATE vms.employee SET attendance_mode = 'OFFICE' WHERE id = %s RETURNING id", (world.employees["member"],))
+    denied = _check_in(client, world, "member", "MOBILE", site_id=office)
+    assert denied.status_code == 403 and denied.json()["error"]["code"] == "WRONG_ATTENDANCE_CHANNEL"

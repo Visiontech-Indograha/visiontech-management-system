@@ -54,7 +54,8 @@ class AttendanceSessionService:
         if row is None:
             raise ValidationError("Akun ini belum tertaut ke data karyawan.")
         # Validasi kontrol channel untuk memastikan tidak ada kecurangan dari karyawan dengan menukar platform (Web vs Mobile).
-        if CHANNEL_OF_MODE.get(row.attendance_mode, "MOBILE") != channel:
+        # Administrator (pemilik sistem) boleh absen dari web DAN HP, apa pun jenis absen karyawannya (2026-10-06).
+        if CHANNEL_OF_MODE.get(row.attendance_mode, "MOBILE") != channel and not row.is_admin:
             raise AppError("WRONG_ATTENDANCE_CHANNEL", WRONG_CHANNEL[channel], status=403)
         return row
 

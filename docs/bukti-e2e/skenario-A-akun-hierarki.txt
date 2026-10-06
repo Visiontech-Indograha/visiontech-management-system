@@ -1,0 +1,13 @@
+# Skenario A — akun, peran, hierarki (API lokal, DB vms_e2e = salinan prod terbersih) — 2026-10-06 20:43
+A1 LULUS - Admin login web role=ADMIN employee=None
+A1 LULUS - Admin login mobile role=ADMIN employee=None
+A1 LULUS - Admin tidak kena gerbang wajah status={'employee_linked': False, 'enrollment_required': False}
+A2 LULUS - ramadani@visiontech.id role=PM personel yang bisa ditugaskan 17: AKMAL YUSUF, ARIS SETYAWAN, AZMAN, Asrul Mulya, HERU PRAYOGA, MARTAFERI MB, MHD PINTO NURHADI, MUHAMMAD FAUJI RAHMAN, MUKHAIDIR, RAIMON ALBERT, ROUZI DEWANTORO, RUSYIDI HALOMOAN SEREGA
+A2 LULUS - ramadani@visiontech.id form-options unit=CCTV & ACS ketua=19 anggota=16
+A2 LULUS - handoko@visiontech.id role=PM personel yang bisa ditugaskan 2: AHMADI, SHOFAN RIZKI SETIAWAN
+A2 LULUS - handoko@visiontech.id form-options unit=Wall Display ketua=19 anggota=2
+A2 LULUS - Azman tanpa izin PM role=field mode=OFFICE
+A3 LULUS - Akun lapangan login lewat WEB ditolak HTTP 403
+A3 LULUS - Akun kantor login lewat HP ditolak HTTP 403
+A3 LULUS - Akun lapangan login lewat HP diterima HTTP 200
+A3 LULUS - Akun kantor login lewat WEB diterima HTTP 200

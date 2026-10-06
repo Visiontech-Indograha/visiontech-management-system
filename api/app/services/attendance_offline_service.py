@@ -228,9 +228,10 @@ class AttendanceOfflineService:
         else:
             await self.repo.request_checkout(target.id, event)
             result = "CHECK_OUT_PENDING_REVIEW"
+        row = await self.sessions.apply_face(
+            user.organization_id, user.user_id, target, "CHECK_OUT", face_probe_id if face is not None else None,
+            online=False, expected_sha256=str(face.get("probe_sha256") or "") if face is not None else None,
+            device="MOBILE")
         if face is not None:
-            row = await self.sessions.apply_face(
-                user.organization_id, user.user_id, target, "CHECK_OUT", face_probe_id, online=False,
-                expected_sha256=str(face.get("probe_sha256") or ""), device="MOBILE")
             self._face_notes(face, getattr(row, "check_out_face_result", None), notes)
         return result, target.id

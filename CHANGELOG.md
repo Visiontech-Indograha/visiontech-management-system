@@ -9,6 +9,8 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased] — `development`
 
+- **Web — Lokasi kerja: peta dinamis + cari alamat (2026-10-06, temuan uji pemilik):** dialog "Tambah lokasi kerja" tadinya hanya isian lintang/bujur (tanpa peta/penanda/pencarian). Kini `SiteMapPicker`: cari alamat/tempat seluruh Indonesia (Nominatim lewat `/geo/search`), klik peta, geser penanda, lingkaran radius; **lintang/bujur tetap bisa diketik manual** dan penanda/peta mengikuti (satu sumber titik). API: `/geo/search` kini juga untuk pemegang `manage:sites` (Finance/kantor), bukan hanya `create:plan` (`require_any_permission`). Uji web (peta, hasil cari mengisi lat/lng/alamat, ketik manual) dan API (Finance boleh cari).
+
 - **Wajah — wajib daftar setelah login, wajah untuk pekerja kantor, tantangan diperbaiki (2026-10-06, hasil uji Realme):**
   - **Wajib daftar wajah:** `FACE_ENROLLMENT_REQUIRED` (bawaan **false**; nyalakan hanya setelah face-service berjalan di server) → `/face/status.enrollment_required`; web (`RequireAuth`) dan HP (`FaceEnrollGate`) menutup menu lain sampai wajah terdaftar. Galat jaringan tidak memblokir.
   - **Pekerja kantor juga memakai wajah** (web, hanya online): pembatasan FIELD dihapus di API; web memverifikasi wajah sebelum absen masuk/pulang (`FaceProbeDialog`); pendaftaran lewat webcam (`FaceCamera`, 2 tantangan dicek server). Karyawan terdaftar yang absen tanpa data wajah → Perlu review (juga web).

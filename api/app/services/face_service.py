@@ -66,7 +66,8 @@ POSE_PAIR_MIN = 0.30
 MAX_IMAGE_BYTES = 5 * 1024 * 1024
 TEMPLATE_RATE = (10, 3600.0)     # maksimal 10 unduhan template per jam per pengguna
 CHALLENGE_RATE = (1200, 600.0)   # ±2 bingkai/detik selama 10 menit (HP mengirim tiap 0,3–0,45 dtk); menahan penyalahgunaan CPU face-service
-CHALLENGES = ("depan", "kiri", "kanan", "atas", "buka_mulut", "kedip")
+CHALLENGES = ("depan", "kiri", "kanan", "atas", "bawah", "buka_mulut")
+NO_PROOF_CHALLENGES = ("depan",)   # hanya panduan meluruskan wajah; TIDAK menerbitkan bukti liveness
 LIVENESS_PROOFS_REQUIRED = 2     # tantangan BERBEDA yang harus dibuktikan server untuk absen online & pendaftaran
 _template_hits: dict[str, deque[float]] = defaultdict(deque)
 _challenge_hits: dict[str, deque[float]] = defaultdict(deque)
@@ -119,13 +120,11 @@ class FaceService:
         return FacePolicy(version=POLICY_VERSION, text=POLICY_TEXT)
 
     async def _employee(self, user_id: str, *, field_only: bool = False) -> Any:
+        """Karyawan milik akun. Pengenalan wajah berlaku untuk SEMUA karyawan: lapangan lewat HP (boleh luring),
+        kantor lewat web (hanya online). `field_only` dipertahankan agar pemanggil lama tetap valid."""
         row = await self.repo.employee_of_user(user_id)
         if row is None:
             raise ValidationError("Akun ini belum tertaut ke data karyawan.")
-        if field_only and row.attendance_mode != "FIELD":
-            # Absen wajah hanya di aplikasi HP (pekerja lapangan); pekerja kantor absen lewat web tanpa wajah.
-            raise AppError("WRONG_ATTENDANCE_CHANNEL",
-                           "Pengenalan wajah hanya untuk pekerja lapangan (absen lewat aplikasi HP).", status=403)
         return row
 
     async def status(self, org_id: str, user_id: str) -> FaceStatus:
@@ -189,9 +188,9 @@ class FaceService:
         return len(challenges) >= LIVENESS_PROOFS_REQUIRED, challenges, nonces
 
     async def face_expected(self, user_id: str) -> bool:
-        """Pekerja lapangan yang sudah menyetujui & mendaftar wajah: absennya WAJIB membawa data wajah."""
+        """Karyawan (lapangan maupun kantor) yang sudah menyetujui & mendaftar wajah: absennya WAJIB membawa data wajah."""
         employee = await self.repo.employee_of_user(user_id)
-        if employee is None or employee.attendance_mode != "FIELD":
+        if employee is None:
             return False
         return await self.repo.face_expected(employee.employee_id)
 
@@ -296,7 +295,8 @@ class FaceService:
         passed = res.get("status") == "sukses"
         return ChallengeCheckResponse(status="sukses" if passed else "menunggu", detail=str(res.get("detail", "")),
                                       quality=res.get("quality"),
-                                      proof=create_face_challenge_proof(user_id, challenge) if passed else None,
+                                      proof=(create_face_challenge_proof(user_id, challenge)
+                                     if passed and challenge not in NO_PROOF_CHALLENGES else None),
                                       metrics=res.get("metrics") if settings.APP_ENV == "development" else None)
 
     @staticmethod

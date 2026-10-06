@@ -190,7 +190,7 @@ void main() {
       final probeId = await api.createFaceProbe(
         file,
         liveness: {
-          'challenges': ['kedip', 'kiri'],
+          'challenges': ['bawah', 'kiri'],
           'passed': true,
           'proofs': ['p1', 'p2'],
         },
@@ -212,11 +212,11 @@ void main() {
         'detail': 'ok',
         'proof': 'bukti-1',
       };
-      final res = await api.faceChallengeCheck(Uint8List.fromList([1, 2, 3]), 'kedip');
+      final res = await api.faceChallengeCheck(Uint8List.fromList([1, 2, 3]), 'bawah');
       expect(res['proof'], 'bukti-1');
       expect(last().path, '/api/v1/face/challenge-check');
       final form = last().data as FormData;
-      expect(form.fields.firstWhere((f) => f.key == 'challenge').value, 'kedip');
+      expect(form.fields.firstWhere((f) => f.key == 'challenge').value, 'bawah');
       expect(form.files.single.key, 'file');
     });
 
@@ -228,7 +228,7 @@ void main() {
       backend.routes['/face/enroll'] = (_) => {'enrolled': 3};
       final res = await api.enrollFace(
         files,
-        liveness: {'challenges': ['kedip', 'kiri'], 'passed': true, 'proofs': ['a', 'b']},
+        liveness: {'challenges': ['bawah', 'kiri'], 'passed': true, 'proofs': ['a', 'b']},
       );
       expect(res['enrolled'], 3);
       final form = last().data as FormData;

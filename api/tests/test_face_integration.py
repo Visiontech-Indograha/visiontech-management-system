@@ -31,8 +31,8 @@ from tests.test_attendance_offline import INSIDE, Phone
 
 pytestmark = requires_db
 
-PASSED = {"challenges": ["kedip", "kiri"], "passed": True}   # klaim HP: hanya dipercaya untuk absen LURING
-FAILED = {"challenges": ["kedip", "kiri"], "passed": False}
+PASSED = {"challenges": ["bawah", "kiri"], "passed": True}   # klaim HP: hanya dipercaya untuk absen LURING
+FAILED = {"challenges": ["bawah", "kiri"], "passed": False}
 ME, OTHER, STRANGER = 10, 20, 30   # identitas tiruan: R pada piksel (0,0) gambar uji
 
 
@@ -99,7 +99,7 @@ def consent(client, world: World, who: str = "member", state: str = "GRANTED"):
     return client.post("/face/consent", headers=headers, json={"state": state, "policy_version": version})
 
 
-def proven(client, world: World, who: str = "member", challenges=("kedip", "kiri")) -> dict:
+def proven(client, world: World, who: str = "member", challenges=("bawah", "kiri")) -> dict:
     """Liveness yang dipercaya server: bukti bertanda tangan dari /face/challenge-check, satu per tantangan lolos."""
     proofs = []
     for challenge in challenges:
@@ -268,14 +268,40 @@ def test_template_is_own_only_and_rate_limited(client, world, face):
     assert client.get("/face/template", headers=world.headers(client, "member")).status_code == 429
 
 
-def test_face_collection_is_for_field_workers_only(client, world, face):
+def test_face_collection_also_works_for_office_workers_on_web(client, world, face):
+    """Pekerja kantor (absen lewat web) memakai wajah yang sama; yang dibatasi hanya jalur luring (milik HP)."""
     sync_query("UPDATE vms.employee SET attendance_mode = 'OFFICE' WHERE id = %s", (world.employees["finance"],))
+    office = str(sync_query(
+        "INSERT INTO vms.site (organization_id, name, location, radius_m) "
+        "VALUES (%s, 'Kantor uji', ST_GeogFromText('POINT(106.8 -6.2)'), 100) RETURNING id", (world.org_id,))[0][0])
     headers = world.headers(client, "finance")
-    assert client.get("/face/status", headers=headers).status_code == 200                  # hak baca & tarik tetap ada
-    assert consent(client, world, "finance").status_code == 200
-    assert enroll(client, world, "finance").json()["error"]["code"] == "WRONG_ATTENDANCE_CHANNEL"
-    assert client.get("/face/template", headers=headers).status_code == 403
-    assert probe(client, world, "finance").status_code == 403
+    enrolled(client, world, "finance")
+    assert client.get("/face/template", headers=headers).status_code == 200
+    assert client.get("/face/status", headers=headers).json()["enrolled"] is True
+
+    def web_in(**extra):
+        return client.post("/attendance/check-in", headers=headers, json={
+            "channel": "WEB", "site_id": office, "location": {"lat": -6.2, "lng": 106.8}, "accuracy_m": 30, **extra})
+
+    ok = web_in(face_probe_id=probe_id(client, world, "finance"))
+    assert ok.status_code == 200, ok.text
+    assert ok.json()["status"] == "AUTO_VALID" and ok.json()["face_result"] == "MATCH"
+    out = client.post("/attendance/check-out", headers=headers, json={
+        "channel": "WEB", "location": {"lat": -6.2, "lng": 106.8}})
+    assert out.status_code == 200, out.text
+    assert out.json()["status"] == "NEEDS_REVIEW"                                      # pulang tanpa wajah → periksa
+    sync_query("DELETE FROM vms.attendance WHERE employee_id = %s", (world.employees["finance"],))
+
+    missing = web_in()                                                                 # sudah terdaftar tapi tanpa wajah
+    assert missing.status_code == 200, missing.text
+    assert missing.json()["status"] == "NEEDS_REVIEW" and missing.json()["face_result"] == "SKIPPED"
+
+
+def test_depan_is_guidance_only_and_never_issues_a_proof(client, world, face):
+    got = client.post("/face/challenge-check", headers=world.headers(client, "member"), data={"challenge": "depan"},
+                      files={"file": ("f.png", png(ME), "image/png")})
+    assert got.status_code == 200 and got.json()["status"] == "sukses"
+    assert got.json()["proof"] is None                       # foto diam lolos "lurus"; tidak boleh jadi bukti liveness
 
 
 # ── gambar wajah sementara (probe) & tantangan ──────────────────────────────
@@ -314,14 +340,14 @@ def test_challenge_check_never_passes_without_face_service(client, world, face):
         return client.post("/face/challenge-check", headers=headers, data={"challenge": challenge},
                            files={"file": ("f.png", png(ME), "image/png")})
 
-    ok = frame("kedip")
+    ok = frame("bawah")
     assert ok.status_code == 200 and ok.json()["status"] == "sukses"
     face.challenge = {"status": "menunggu", "detail": "Mulut kurang terbuka!"}
     waiting = frame("buka_mulut").json()
     assert waiting["status"] == "menunggu" and "Mulut" in waiting["detail"]
     assert frame("terbang").status_code == 422                                              # tantangan tak dikenal
     face.down = True
-    down = frame("kedip")
+    down = frame("bawah")
     assert down.status_code == 503 and down.json()["error"]["code"] == "FACE_SERVICE_UNAVAILABLE"   # BUKAN sukses
 
 
@@ -386,7 +412,7 @@ def test_challenge_proofs_are_single_use_user_bound_and_short_lived(client, worl
     stolen = probe(client, world, "leader", OTHER, live=proven(client, world, "member"))   # bukti milik orang lain
     assert verified_flag(stolen.json()["probe_id"]) == "false"
 
-    one_kind = proven(client, world, "member", challenges=("kedip", "kedip"))              # dua bukti, tantangan sama
+    one_kind = proven(client, world, "member", challenges=("bawah", "bawah"))              # dua bukti, tantangan sama
     assert verified_flag(probe_id(client, world, shot=5, live=one_kind)) == "false"
 
     monkeypatch.setattr(security, "FACE_CHALLENGE_TTL", security.timedelta(seconds=-1))   # bukti lahir sudah kedaluwarsa
@@ -519,7 +545,7 @@ def test_face_service_down_keeps_attendance_working_then_reverifies(client, worl
 # ── absen luring ber-wajah ──────────────────────────────────────────────────
 def face_block(image: bytes, local: str = "MATCH") -> dict:
     return {"face": {"probe_sha256": hashlib.sha256(image).hexdigest(), "local_result": local, "local_similarity": 0.8,
-                     "challenges": ["kedip", "kiri"], "passed": True, "template_version": "t1"}}
+                     "challenges": ["bawah", "kiri"], "passed": True, "template_version": "t1"}}
 
 
 def test_offline_check_in_and_out_with_face_are_recomputed_by_the_server(client, world, face):

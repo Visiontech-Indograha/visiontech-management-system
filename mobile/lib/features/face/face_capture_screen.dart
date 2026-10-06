@@ -66,13 +66,14 @@ class _FaceCaptureScreenState extends ConsumerState<FaceCaptureScreen> {
   String _hint = 'Menyiapkan kamera...';
   String? _error;
   final _challenges = pickLivenessChallenges(Random.secure());
+  // Tantangan acak, lalu langkah meluruskan wajah (tanpa bukti) sebelum gambar diambil.
+  late final _steps = [..._challenges, straightenStep];
   final _proofs = <String>[];
   int _step = 0;
   bool _busy = false;
   DateTime _lastSent = DateTime.fromMillisecondsSinceEpoch(0);
   DateTime _deadline = DateTime.now();
   Timer? _ticker;
-  String? _metrics; // hanya terisi bila API berjalan di mode pengembangan (kalibrasi)
 
   @override
   void initState() {
@@ -113,7 +114,7 @@ class _FaceCaptureScreenState extends ConsumerState<FaceCaptureScreen> {
       _deadline = DateTime.now().add(_timeout);
       setState(() {
         _phase = _Phase.challenge;
-        _hint = _challenges.first.instruction;
+        _hint = _steps.first.instruction;
       });
       await ctrl.startImageStream(_onFrame);
       _ticker = Timer.periodic(const Duration(seconds: 1), (_) => _tick());
@@ -138,14 +139,15 @@ class _FaceCaptureScreenState extends ConsumerState<FaceCaptureScreen> {
 
   void _tick() {
     if (_phase == _Phase.challenge && DateTime.now().isAfter(_deadline)) {
-      _beginStills(reason: 'timeout');
+      // Waktu habis saat meluruskan wajah (semua tantangan sudah lolos) tetap dianggap lolos.
+      _beginStills(reason: _step >= _challenges.length ? null : 'timeout');
     }
   }
 
   void _onFrame(CameraImage image) {
     if (_phase != _Phase.challenge || _busy) return;
     final now = DateTime.now();
-    if (now.difference(_lastSent) < _challenges[_step].interval) return;
+    if (now.difference(_lastSent) < _steps[_step].interval) return;
     if (image.planes.length != 1) {
       // Hanya NV21 (satu bidang) yang didukung konversi; format lain berarti fallback gambar tanpa bukti.
       _beginStills(reason: 'unavailable');
@@ -166,7 +168,7 @@ class _FaceCaptureScreenState extends ConsumerState<FaceCaptureScreen> {
 
   Future<void> _check(FrameData frame) async {
     final step = _step;
-    final challenge = _challenges[step];
+    final challenge = _steps[step];
     try {
       final jpeg = await compute(encodeFrame, frame);
       final res = await ref
@@ -174,22 +176,23 @@ class _FaceCaptureScreenState extends ConsumerState<FaceCaptureScreen> {
           .api
           .faceChallengeCheck(jpeg, challenge.id);
       if (!mounted || _phase != _Phase.challenge || step != _step) return;
-      final m = res['metrics'];
-      if (m is Map && mounted) {
-        setState(
-          () => _metrics = m.entries.map((e) => '${e.key} ${e.value}').join('  '),
-        );
+      if (challenge.id == 'depan') {
+        // Panduan meluruskan: server tidak menerbitkan bukti; cukup lurus lalu ambil gambar.
+        if (res['status'] == 'sukses') {
+          await _beginStills();
+        } else if (mounted) {
+          setState(() => _hint = friendlyChallengeHint('${res['detail'] ?? challenge.instruction}'));
+        }
+        return;
       }
       final proof = res['proof'];
       if (res['status'] == 'sukses' && proof is String) {
         _proofs.add(proof);
         await HapticFeedback.mediumImpact();
-        if (_proofs.length >= _challenges.length) {
-          await _beginStills();
-        } else if (mounted) {
+        if (mounted) {
           setState(() {
             _step++;
-            _hint = _challenges[_step].instruction;
+            _hint = _steps[_step].instruction;
           });
         }
       } else if (mounted) {
@@ -313,10 +316,14 @@ class _FaceCaptureScreenState extends ConsumerState<FaceCaptureScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          if (_phase == _Phase.challenge)
+            Icon(_steps[_step].icon, size: 44, color: Colors.white),
           if (!failed && _phase != _Phase.starting)
             Text(
               _phase == _Phase.challenge
-                  ? 'Tantangan ${_step + 1} dari ${_challenges.length}'
+                  ? (_step < _challenges.length
+                        ? 'Tantangan ${_step + 1} dari ${_challenges.length}'
+                        : 'Luruskan wajah')
                   : 'Mengambil gambar wajah',
               style: theme.textTheme.labelMedium?.copyWith(color: Colors.white70),
             ),
@@ -327,13 +334,6 @@ class _FaceCaptureScreenState extends ConsumerState<FaceCaptureScreen> {
             textAlign: TextAlign.center,
             style: theme.textTheme.titleMedium?.copyWith(color: Colors.white),
           ),
-          if (_metrics != null && !failed)
-            Text(
-              _metrics!,
-              key: const Key('face-metrics'),
-              textAlign: TextAlign.center,
-              style: theme.textTheme.labelSmall?.copyWith(color: Colors.amber),
-            ),
           if (!failed) ...[
             const SizedBox(height: 12),
             LinearProgressIndicator(

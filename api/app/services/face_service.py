@@ -58,10 +58,16 @@ WITHDRAW_TEXT = "Persetujuan biometrik ditarik oleh karyawan."
 ENROLL_MIN, ENROLL_MAX = 3, 5
 MIN_ENROLL_QUALITY = 0.30        # skor kualitas face-service (deteksi x ukuran x ketajaman); dikalibrasi di P8-5
 MIN_PROBE_QUALITY = 0.15         # di bawah ini diminta ulang; di atasnya dinilai server (LOW_QUALITY/NO_MATCH)
-POSE_CONSISTENCY_MIN = 0.35      # kosinus tiap pose terhadap rata-rata: pose beda orang akan jauh di bawah ini
+# Kemiripan TERKECIL antar dua pose. Bukan "pose terhadap rata-rata": untuk wajah berbeda yang saling tegak lurus nilai
+# itu tetap ±0,58 (3 pose) / ±0,45 (5 pose) sehingga pemeriksaannya tak pernah menolak. Orang sama beda pose ≥ ±0,5;
+# orang berbeda ≈ 0-0,2. Titik awal; dikalibrasi di P8-5 dengan data nyata.
+POSE_PAIR_MIN = 0.30
 MAX_IMAGE_BYTES = 5 * 1024 * 1024
 TEMPLATE_RATE = (10, 3600.0)     # maksimal 10 unduhan template per jam per pengguna
+CHALLENGE_RATE = (600, 600.0)    # ±1 bingkai/detik selama 10 menit; menahan penyalahgunaan CPU face-service
+CHALLENGES = ("depan", "kiri", "kanan", "atas", "buka_mulut", "kedip")
 _template_hits: dict[str, deque[float]] = defaultdict(deque)
+_challenge_hits: dict[str, deque[float]] = defaultdict(deque)
 
 NEEDS_REVIEW_RESULTS = ("NO_MATCH", "LOW_QUALITY")
 
@@ -110,10 +116,14 @@ class FaceService:
     def policy(self) -> FacePolicy:
         return FacePolicy(version=POLICY_VERSION, text=POLICY_TEXT)
 
-    async def _employee(self, user_id: str) -> Any:
+    async def _employee(self, user_id: str, *, field_only: bool = False) -> Any:
         row = await self.repo.employee_of_user(user_id)
         if row is None:
             raise ValidationError("Akun ini belum tertaut ke data karyawan.")
+        if field_only and row.attendance_mode != "FIELD":
+            # Absen wajah hanya di aplikasi HP (pekerja lapangan); pekerja kantor absen lewat web tanpa wajah.
+            raise AppError("WRONG_ATTENDANCE_CHANNEL",
+                           "Pengenalan wajah hanya untuk pekerja lapangan (absen lewat aplikasi HP).", status=403)
         return row
 
     async def status(self, org_id: str, user_id: str) -> FaceStatus:
@@ -170,7 +180,7 @@ class FaceService:
             raise ValidationError("Gambar wajah tidak valid.") from None
 
     async def enroll(self, org_id: str, user_id: str, images: list[bytes], liveness: FaceLiveness) -> EnrollResponse:
-        employee = await self._employee(user_id)
+        employee = await self._employee(user_id, field_only=True)
         await self._require_consent(employee.employee_id)
         if not ENROLL_MIN <= len(images) <= ENROLL_MAX:
             raise ValidationError(f"Pendaftaran wajah butuh {ENROLL_MIN} sampai {ENROLL_MAX} foto berpose berbeda.")
@@ -192,7 +202,7 @@ class FaceService:
 
         vectors = [_normalize(r.embedding or []) for r in results]
         mean = _normalize([sum(col) / len(vectors) for col in zip(*vectors, strict=True)])
-        if any(_cosine(v, mean) < POSE_CONSISTENCY_MIN for v in vectors):
+        if min(_cosine(a, b) for i, a in enumerate(vectors) for b in vectors[i + 1:]) < POSE_PAIR_MIN:
             raise ValidationError("Foto-foto tampak bukan wajah yang sama. Ulangi dengan wajah Anda sendiri.")
         other = await self.repo.best_other_similarity(org_id, employee.employee_id, mean)
         if other is not None and other >= float(org.face_match_threshold):
@@ -208,19 +218,23 @@ class FaceService:
                               model_name=results[0].model_name, model_version=results[0].model_version)
 
     # ── Template untuk HP (pencocokan luring) ───────────────────────────────────────────────────
-    def _rate_limit(self, user_id: str) -> None:
-        limit, window = TEMPLATE_RATE
+    @staticmethod
+    def _throttle(bucket: dict[str, deque[float]], rate: tuple[int, float], key: str, message: str) -> None:
+        limit, window = rate
         now = monotonic()
-        hits = _template_hits[user_id]
+        hits = bucket[key]
         while hits and now - hits[0] > window:
             hits.popleft()
         if len(hits) >= limit:
-            raise AppError("TOO_MANY_REQUESTS", "Terlalu sering mengunduh template wajah. Coba lagi nanti.",
-                           status=429)
+            raise AppError("TOO_MANY_REQUESTS", message, status=429)
         hits.append(now)
 
+    def _rate_limit(self, user_id: str) -> None:
+        self._throttle(_template_hits, TEMPLATE_RATE, user_id,
+                       "Terlalu sering mengunduh template wajah. Coba lagi nanti.")
+
     async def template(self, user_id: str) -> TemplateResponse:
-        employee = await self._employee(user_id)
+        employee = await self._employee(user_id, field_only=True)
         await self._require_consent(employee.employee_id)
         rows = list(await self.repo.active_enrollments(employee.employee_id))
         if not rows:
@@ -234,26 +248,23 @@ class FaceService:
             expires_at=utcnow() + timedelta(days=settings.FACE_TEMPLATE_TTL_DAYS))
 
     # ── Gambar wajah sementara (probe) ──────────────────────────────────────────────────────────
-    async def check_challenge(self, image: bytes, challenge: str) -> ChallengeCheckResponse:
+    async def check_challenge(self, user_id: str, image: bytes, challenge: str) -> ChallengeCheckResponse:
+        """Memeriksa satu bingkai kamera terhadap tantangan liveness (online). Layanan mati → 503, TIDAK pernah
+        'sukses' otomatis: tantangan yang lolos tanpa pemeriksaan sama dengan tanpa liveness."""
+        if challenge not in CHALLENGES:
+            raise ValidationError("Tantangan tidak dikenal.")
         self._check_image(image)
+        self._throttle(_challenge_hits, CHALLENGE_RATE, user_id,
+                       "Terlalu banyak pemeriksaan tantangan. Tunggu sebentar lalu ulangi.")
         try:
             res = await self.client.check_challenge(image, challenge)
-            return ChallengeCheckResponse(
-                status=res.get("status", "menunggu"),
-                detail=res.get("detail", ""),
-                quality=res.get("quality"),
-            )
         except FaceServiceUnavailable:
-            # Fallback toleran jika layanan backend belum aktif di testing/dev
-            return ChallengeCheckResponse(
-                status="sukses",
-                detail=f"Tantangan {challenge} diterima.",
-            )
+            raise _unavailable() from None
         except ValueError as ve:
-            return ChallengeCheckResponse(
-                status="menunggu",
-                detail=str(ve),
-            )
+            return ChallengeCheckResponse(status="menunggu", detail=str(ve))
+        status = res.get("status")
+        return ChallengeCheckResponse(status="sukses" if status == "sukses" else "menunggu",
+                                      detail=str(res.get("detail", "")), quality=res.get("quality"))
 
     @staticmethod
     def _check_image(image: bytes) -> str:
@@ -267,7 +278,7 @@ class FaceService:
         return str(kind.extension)
 
     async def create_probe(self, org_id: str, user_id: str, image: bytes, liveness: FaceLiveness) -> ProbeResponse:
-        employee = await self._employee(user_id)
+        employee = await self._employee(user_id, field_only=True)
         await self._require_consent(employee.employee_id)
         ext = self._check_image(image)
         embedding: EmbedResult | None

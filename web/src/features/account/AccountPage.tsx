@@ -11,7 +11,6 @@ import { errorMessage } from "@/lib/errors";
 import { formatDateTime } from "@/lib/format";
 import { ROLE_LABEL } from "@/lib/types";
 import {
-  useEnrollFace,
   useFaceStatus,
   useRevokeOtherSessions,
   useRevokeSession,
@@ -34,11 +33,8 @@ function deviceName(s: ActiveSession): string {
 function FaceSection() {
   const faceStatus = useFaceStatus();
   const setConsent = useSetFaceConsent();
-  const enroll = useEnrollFace();
 
   const [agreed, setAgreed] = useState(false);
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [isReEnrolling, setIsReEnrolling] = useState(false);
 
   if (faceStatus.isPending) {
     return (
@@ -74,31 +70,6 @@ function FaceSection() {
         policy_version: data.policy.version,
       });
       toast.success(grant ? "Persetujuan biometrik berhasil dicatat." : "Persetujuan biometrik berhasil ditarik.");
-      if (!grant) {
-        setIsReEnrolling(false);
-      }
-    } catch (err) {
-      toast.error(errorMessage(err));
-    }
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const files = Array.from(e.target.files);
-      setSelectedFiles(files);
-    }
-  };
-
-  const handleEnroll = async () => {
-    if (selectedFiles.length < 3 || selectedFiles.length > 5) {
-      toast.error("Wajib memilih 3 sampai 5 foto wajah.");
-      return;
-    }
-    try {
-      await enroll.mutateAsync(selectedFiles);
-      toast.success("Foto wajah berhasil didaftarkan.");
-      setSelectedFiles([]);
-      setIsReEnrolling(false);
     } catch (err) {
       toast.error(errorMessage(err));
     }
@@ -170,61 +141,22 @@ function FaceSection() {
         )}
       </div>
 
-      {/* Box Pendaftaran Wajah (Enrollment) */}
+      {/* Pendaftaran wajah hanya di aplikasi HP: kamera langsung + tantangan acak yang diperiksa server. Pilih berkas
+          dari disk dihapus karena foto orang lain bisa didaftarkan ke akun sendiri. */}
       {isConsentGiven && (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-medium">Pendaftaran Wajah</h3>
-            {data.enrolled && !isReEnrolling && (
-              <Button size="sm" variant="outline" onClick={() => setIsReEnrolling(true)}>
-                Daftar Ulang Wajah
-              </Button>
-            )}
-          </div>
-
-          {data.enrolled && !isReEnrolling ? (
+        <div className="space-y-2" data-testid="face-enroll-info">
+          <h3 className="text-sm font-medium">Pendaftaran Wajah</h3>
+          {data.enrolled ? (
             <div className="space-y-1 rounded-lg border border-line bg-surface p-3 text-xs text-mist">
               <p>Model Biometrik: <span className="font-mono text-foreground">{data.model_name ?? "InsightFace buffalo_s"}</span></p>
               <p>Masa Berlaku Template: <span className="text-foreground">{`${data.template_ttl_days} hari`}</span></p>
+              <p>Untuk mendaftar ulang, buka aplikasi HP: <strong>Profil → Daftarkan Wajah</strong>.</p>
             </div>
           ) : (
-            <div className="space-y-3 rounded-lg border border-line bg-surface p-3.5">
-              <p className="text-xs text-mist">
-                Pilih <strong>3 sampai 5 foto wajah</strong> dengan pose sedikit bervariasi (lurus, sedikit serong ke kiri, sedikit serong ke kanan) dan pencahayaan baik.
-              </p>
-
-              <div>
-                <input
-                  type="file"
-                  id="face-enroll-files"
-                  accept="image/jpeg,image/png,image/webp"
-                  multiple
-                  className="text-xs file:mr-3 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-primary-foreground hover:file:opacity-90"
-                  onChange={handleFileChange}
-                />
-                {selectedFiles.length > 0 && (
-                  <p className="mt-2 text-xs font-medium text-foreground">
-                    {`${selectedFiles.length} foto dipilih `}
-                    {selectedFiles.length < 3 || selectedFiles.length > 5 ? "(minimal 3, maksimal 5 foto)" : "✓ Siap didaftarkan"}
-                  </p>
-                )}
-              </div>
-
-              <div className="flex items-center gap-2 pt-1">
-                <Button
-                  size="sm"
-                  disabled={selectedFiles.length < 3 || selectedFiles.length > 5 || enroll.isPending}
-                  onClick={handleEnroll}
-                >
-                  {enroll.isPending ? "Mendaftarkan Wajah..." : "Daftarkan Wajah"}
-                </Button>
-                {isReEnrolling && (
-                  <Button size="sm" variant="ghost" onClick={() => { setIsReEnrolling(false); setSelectedFiles([]); }}>
-                    Batal
-                  </Button>
-                )}
-              </div>
-            </div>
+            <p className="rounded-lg border border-line bg-surface p-3 text-xs text-mist">
+              Pendaftaran wajah dilakukan di <strong>aplikasi HP Visiontech</strong> (menu <strong>Profil → Daftarkan Wajah</strong>) dengan
+              kamera langsung dan dua gerakan acak, supaya foto orang lain tidak bisa didaftarkan ke akun Anda.
+            </p>
           )}
         </div>
       )}

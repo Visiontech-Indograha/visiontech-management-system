@@ -9,6 +9,12 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased] — `development`
 
+- **HP & web — absensi wajah memakai kamera dan tantangan acak (2026-10-06):**
+  - **HP:** `FaceCaptureScreen` (kamera depan, 2 tantangan acak dari kiri/kanan/atas/buka mulut/kedip); bingkai dikirim ke `/face/challenge-check` dan **bukti bertanda tangan server** dikirim di `liveness.proofs`. Gambar wajah akhir **mentah tanpa watermark** (probe), dihapus dari HP setelah unggah. **Foto bukti hanya di luar radius**; absen pulang hanya wajah, tanpa foto bukti. Persetujuan memakai **teks & versi kebijakan dari server** (sebelumnya `'1.0'` tertulis mati → selalu 409 `POLICY_OUTDATED`, dan teks tidak ditampilkan). Pendaftaran terpandu lewat kamera; membaca `enrolled` (bukan `poses_enrolled`).
+  - **Web:** pendaftaran wajah dengan memilih berkas dari disk **dihapus** (foto orang lain bisa didaftarkan ke akun sendiri); kartu wajah tinggal status, persetujuan, tarik persetujuan, dan petunjuk mendaftar di aplikasi HP.
+  - Uji: Flutter (tantangan, konversi bingkai NV21→JPEG termasuk arah putaran, dialog persetujuan, kontrak API) dan web (persetujuan versi server, tanpa input berkas, tarik persetujuan).
+  - **Belum:** pencocokan wajah di HP saat luring (model/template/ML Kit) — absen luring ber-wajah saat ini ditandai Perlu review di server.
+
 - **Face API — perbaikan hasil tinjauan & uji berbasis DB (2026-10-06):**
   - **Dua bug nyata di kode yang sudah live, ditemukan oleh uji integrasi baru (`api/tests/test_face_integration.py`, 22 uji, PostgreSQL nyata + role `vms_app`):**
     1. `verify_face_for_attendance` melempar galat (`record "v_self" is not assigned yet`) pada hasil SKIPPED/NOT_ENROLLED/LOW_QUALITY → absen berwajah 500, bukan "Perlu review". Diperbaiki lewat **Alembic 0023** (revisi 0022 sudah diterapkan di produksi, tidak diubah) dan `db/05_face.sql`.

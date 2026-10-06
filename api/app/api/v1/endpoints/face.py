@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, File, Form, UploadFile
 from app.api.deps import get_current_user, get_face_service
 from app.core.security import CurrentUser
 from app.schemas.face import (
+    ChallengeCheckResponse,
     ConsentRequest,
     EnrollResponse,
     FaceLiveness,
@@ -115,3 +116,17 @@ async def create_face_probe(
         live_data = {}
     liveness_obj = FaceLiveness(**live_data)
     return await face_service.create_probe(current_user.organization_id, current_user.user_id, image, liveness_obj)
+
+
+@router.post("/challenge-check", response_model=ChallengeCheckResponse)
+async def check_face_challenge(
+    file: UploadFile = File(...),
+    challenge: str = Form(...),
+    current_user: CurrentUser = Depends(get_current_user),
+    face_service: FaceService = Depends(get_face_service),
+) -> ChallengeCheckResponse:
+    """
+    Memeriksa gambar langsung dari kamera HP untuk memvalidasi tantangan liveness.
+    """
+    image = await file.read()
+    return await face_service.check_challenge(image, challenge)

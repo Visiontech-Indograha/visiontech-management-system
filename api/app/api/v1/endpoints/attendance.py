@@ -59,6 +59,7 @@ async def list_attendance(
     date_from: date | None = Query(None, alias="from"),
     date_to: date | None = Query(None, alias="to"),
     status: str | None = None,
+    scope: str = Query("all", pattern="^(all|mine|team)$"),
     page: int = Query(1, ge=1),
     size: int = Query(50, ge=1, le=200),
     current_user: CurrentUser = Depends(get_current_user),
@@ -72,6 +73,7 @@ async def list_attendance(
     - employee_id: Filter UUID karyawan
     - from/to: Filter rentang tanggal
     - status: Filter status absensi
+    - scope: `all` (bawaan), `mine` = absensi pribadi, `team` = absensi anggota/umum (selain milik sendiri)
     - page, size: Pagination
     
     Return: Daftar absensi (AttendanceListResponse)
@@ -82,7 +84,8 @@ async def list_attendance(
     rows, total = await service.list_attendance(
         current_user.organization_id, current_user.user_id,
         view_all=Permission.VIEW_ALL_ATTENDANCE.value in current_user.permissions,
-        employee_id=employee_id, date_from=date_from, date_to=date_to, status=status, page=page, size=size)
+        employee_id=employee_id, date_from=date_from, date_to=date_to, status=status, scope=scope,
+        page=page, size=size)
     return AttendanceListResponse(items=[_response(r) for r in rows], total=total, page=page, size=size,
                                   today=await service.today(current_user.organization_id),
                                   time_anchor=create_time_anchor(current_user.user_id))

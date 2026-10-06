@@ -7374,7 +7374,7 @@
   },
   "/api/v1/attendance": {
    "get": {
-    "description": "Dok 05 §3.5 · R-33: Finance & OPS seluruh organisasi; PM miliknya + bawahan lapangan di unitnya;\nlainnya hanya milik sendiri. Filter `plan_id` di dok 05 belum didukung (dok 10 Bagian C).\n\nQuery params:\n- employee_id: Filter UUID karyawan\n- from/to: Filter rentang tanggal\n- status: Filter status absensi\n- page, size: Pagination\n\nReturn: Daftar absensi (AttendanceListResponse)",
+    "description": "Dok 05 §3.5 · R-33: Finance & OPS seluruh organisasi; PM miliknya + bawahan lapangan di unitnya;\nlainnya hanya milik sendiri. Filter `plan_id` di dok 05 belum didukung (dok 10 Bagian C).\n\nQuery params:\n- employee_id: Filter UUID karyawan\n- from/to: Filter rentang tanggal\n- status: Filter status absensi\n- scope: `all` (bawaan), `mine` = absensi pribadi, `team` = absensi anggota/umum (selain milik sendiri)\n- page, size: Pagination\n\nReturn: Daftar absensi (AttendanceListResponse)",
     "operationId": "list_attendance_api_v1_attendance_get",
     "parameters": [
      {
@@ -7442,6 +7442,17 @@
         }
        ],
        "title": "Status"
+      }
+     },
+     {
+      "in": "query",
+      "name": "scope",
+      "required": false,
+      "schema": {
+       "default": "all",
+       "pattern": "^(all|mine|team)$",
+       "title": "Scope",
+       "type": "string"
       }
      },
      {

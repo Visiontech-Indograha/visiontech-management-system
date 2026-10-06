@@ -17,6 +17,9 @@ class FaceLiveness(BaseModel):
     """Hasil tantangan keaslian wajah (anti foto layar) dari HP: dua tantangan acak."""
     challenges: list[str] = Field(default_factory=list, max_length=6)
     passed: bool = False
+    # Bukti dari POST /face/challenge-check (satu per tantangan lolos). Hanya ini yang dipercaya untuk absen ONLINE;
+    # `passed` adalah klaim HP dan hanya berlaku untuk absen luring (tidak ada server saat itu).
+    proofs: list[str] = Field(default_factory=list, max_length=6)
 
 
 class FacePolicy(BaseModel):
@@ -72,3 +75,5 @@ class ChallengeCheckResponse(BaseModel):
     status: Literal["sukses", "menunggu"]
     detail: str
     quality: float | None = None
+    # Bukti bertanda tangan server; hanya ada bila status "sukses". Kirim kembali di `liveness.proofs`.
+    proof: str | None = None

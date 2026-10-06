@@ -31,7 +31,7 @@ from tests.test_attendance_offline import INSIDE, Phone
 
 pytestmark = requires_db
 
-PASSED = {"challenges": ["kedip", "kiri"], "passed": True}
+PASSED = {"challenges": ["kedip", "kiri"], "passed": True}   # klaim HP: hanya dipercaya untuk absen LURING
 FAILED = {"challenges": ["kedip", "kiri"], "passed": False}
 ME, OTHER, STRANGER = 10, 20, 30   # identitas tiruan: R pada piksel (0,0) gambar uji
 
@@ -99,7 +99,19 @@ def consent(client, world: World, who: str = "member", state: str = "GRANTED"):
     return client.post("/face/consent", headers=headers, json={"state": state, "policy_version": version})
 
 
-def enroll(client, world: World, who: str = "member", person: int = ME, shots=(1, 2, 3), live=PASSED):
+def proven(client, world: World, who: str = "member", challenges=("kedip", "kiri")) -> dict:
+    """Liveness yang dipercaya server: bukti bertanda tangan dari /face/challenge-check, satu per tantangan lolos."""
+    proofs = []
+    for challenge in challenges:
+        got = client.post("/face/challenge-check", headers=world.headers(client, who), data={"challenge": challenge},
+                          files={"file": ("f.png", png(ME), "image/png")})
+        assert got.status_code == 200 and got.json()["status"] == "sukses", got.text
+        proofs.append(got.json()["proof"])
+    return {"challenges": list(challenges), "passed": True, "proofs": proofs}
+
+
+def enroll(client, world: World, who: str = "member", person: int = ME, shots=(1, 2, 3), live=None):
+    live = live if live is not None else proven(client, world, who)
     files = [("files", (f"pose{i}.png", png(person, s), "image/png")) for i, s in enumerate(shots)]
     return client.post("/face/enroll", headers=world.headers(client, who), files=files,
                        data={"liveness": json.dumps(live)})
@@ -111,13 +123,14 @@ def enrolled(client, world: World, who: str = "member", person: int = ME) -> Non
     assert done.status_code == 200, done.text
 
 
-def probe(client, world: World, who: str = "member", person: int = ME, shot: int = 9, live=PASSED, data: bytes | None = None):
+def probe(client, world: World, who: str = "member", person: int = ME, shot: int = 9, live=None, data: bytes | None = None):
+    live = live if live is not None else proven(client, world, who)
     return client.post("/face/probe", headers=world.headers(client, who),
                        files={"file": ("wajah.png", data if data is not None else png(person, shot), "image/png")},
                        data={"liveness": json.dumps(live)})
 
 
-def probe_id(client, world: World, who: str = "member", person: int = ME, shot: int = 9, live=PASSED) -> str:
+def probe_id(client, world: World, who: str = "member", person: int = ME, shot: int = 9, live=None) -> str:
     made = probe(client, world, who, person, shot, live)
     assert made.status_code == 200, made.text
     return made.json()["probe_id"]
@@ -170,6 +183,8 @@ def test_enroll_validates_consent_liveness_and_images(client, world, face):
     assert too_many.status_code == 422                                                    # lebih dari 5 foto
     no_live = enroll(client, world, live=FAILED)
     assert no_live.status_code == 422 and "tantangan" in no_live.json()["error"]["message"].lower()
+    claim_only = enroll(client, world, live=PASSED)                                       # klaim HP tanpa bukti server
+    assert claim_only.status_code == 422 and "tantangan" in claim_only.json()["error"]["message"].lower()
 
     face.faces = 0
     assert "tidak terdeteksi" in enroll(client, world).json()["error"]["message"]
@@ -180,7 +195,8 @@ def test_enroll_validates_consent_liveness_and_images(client, world, face):
     assert "terlalu buram" in enroll(client, world).json()["error"]["message"]
     face.quality = 0.9
 
-    mixed = client.post("/face/enroll", headers=world.headers(client, "member"), data={"liveness": json.dumps(PASSED)},
+    mixed = client.post("/face/enroll", headers=world.headers(client, "member"),
+                        data={"liveness": json.dumps(proven(client, world))},
                         files=[("files", ("a.png", png(ME, 1), "image/png")),
                                ("files", ("b.png", png(OTHER, 2), "image/png")),
                                ("files", ("c.png", png(STRANGER, 3), "image/png"))])
@@ -332,6 +348,38 @@ def test_failed_liveness_is_flagged_even_with_the_right_face(client, world, face
     assert done.json()["face_result"] == "LOW_QUALITY" and done.json()["status"] == "NEEDS_REVIEW"
 
 
+def test_online_liveness_needs_server_proofs_not_the_phone_claim(client, world, face):
+    enrolled(client, world)
+    forged = check_in(client, world, pid=probe_id(client, world, live=PASSED))             # HP mengaku lolos, tanpa bukti
+    assert forged.status_code == 200
+    assert forged.json()["face_result"] == "LOW_QUALITY" and forged.json()["status"] == "NEEDS_REVIEW"
+
+
+def verified_flag(pid: str) -> str:
+    return sync_query("SELECT liveness->>'server_verified' FROM vms.face_probe WHERE id = %s", (pid,))[0][0]
+
+
+def test_challenge_proofs_are_single_use_user_bound_and_short_lived(client, world, face, monkeypatch):
+    from app.core import security
+
+    enrolled(client, world, "member", ME)
+    enrolled(client, world, "leader", OTHER)
+    live = proven(client, world, "member")
+    first = probe_id(client, world, live=live)
+    replay = probe_id(client, world, shot=3, live=live)                                    # bukti yang sama dipakai lagi
+    assert (verified_flag(first), verified_flag(replay)) == ("true", "false")
+
+    stolen = probe(client, world, "leader", OTHER, live=proven(client, world, "member"))   # bukti milik orang lain
+    assert verified_flag(stolen.json()["probe_id"]) == "false"
+
+    one_kind = proven(client, world, "member", challenges=("kedip", "kedip"))              # dua bukti, tantangan sama
+    assert verified_flag(probe_id(client, world, shot=5, live=one_kind)) == "false"
+
+    monkeypatch.setattr(security, "FACE_CHALLENGE_TTL", security.timedelta(seconds=-1))   # bukti lahir sudah kedaluwarsa
+    old = probe_id(client, world, shot=6, live=proven(client, world, "member"))
+    assert verified_flag(old) == "false"
+
+
 def test_probe_must_belong_to_caller_and_be_fresh(client, world, face):
     enrolled(client, world, "member", ME)
     enrolled(client, world, "leader", OTHER)
@@ -375,8 +423,9 @@ def test_old_apk_without_probe_still_works_and_client_face_claims_are_ignored(cl
 
 def test_face_service_down_keeps_attendance_working_then_reverifies(client, world, face):
     enrolled(client, world)
+    live = proven(client, world)          # bukti diambil saat layanan hidup (berlaku 5 menit)
     face.down = True
-    made = probe(client, world, shot=5)
+    made = probe(client, world, shot=5, live=live)
     assert made.status_code == 200 and made.json()["pending"] is True                      # disimpan, dihitung nanti
     pid = made.json()["probe_id"]
     done = check_in(client, world, pid=pid)
@@ -420,7 +469,8 @@ def test_offline_check_in_and_out_with_face_are_recomputed_by_the_server(client,
 
 
 def probe_id_for(client, world: World, image: bytes, who: str = "member") -> str:
-    made = probe(client, world, who, data=image)
+    """Probe untuk absen LURING: tidak ada server saat HP merekam, jadi liveness = klaim HP (PASSED)."""
+    made = probe(client, world, who, data=image, live=PASSED)
     assert made.status_code == 200, made.text
     return made.json()["probe_id"]
 

@@ -1514,6 +1514,17 @@
       "title": "Detail",
       "type": "string"
      },
+     "proof": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Proof"
+     },
      "quality": {
       "anyOf": [
        {

@@ -27,6 +27,7 @@ import filetype
 
 from app.core.config import settings
 from app.core.errors import AppError, NotFoundError, ValidationError
+from app.core.security import create_face_challenge_proof, verify_face_challenge_proof
 from app.core.storage import delete_object, get_object_bytes, upload_file
 from app.core.time import utcnow
 from app.crud.crud_face import CRUDFace, parse_vector
@@ -66,6 +67,7 @@ MAX_IMAGE_BYTES = 5 * 1024 * 1024
 TEMPLATE_RATE = (10, 3600.0)     # maksimal 10 unduhan template per jam per pengguna
 CHALLENGE_RATE = (600, 600.0)    # ±1 bingkai/detik selama 10 menit; menahan penyalahgunaan CPU face-service
 CHALLENGES = ("depan", "kiri", "kanan", "atas", "buka_mulut", "kedip")
+LIVENESS_PROOFS_REQUIRED = 2     # tantangan BERBEDA yang harus dibuktikan server untuk absen online & pendaftaran
 _template_hits: dict[str, deque[float]] = defaultdict(deque)
 _challenge_hits: dict[str, deque[float]] = defaultdict(deque)
 
@@ -165,6 +167,26 @@ class FaceService:
             await self.repo.record_consent(employee.employee_id, "WITHDRAWN", WITHDRAW_TEXT, POLICY_VERSION,
                                            user_id)
 
+    async def _verified_liveness(self, employee_id: Any, user_id: str, liveness: FaceLiveness) -> tuple[bool, list[str], list[str]]:
+        """
+        Liveness yang DIPERCAYA server: bukti tantangan bertanda tangan (sah, milik pengguna ini, belum kedaluwarsa,
+        belum pernah dipakai, tantangan berbeda). → (lolos, tantangan terbukti, nonce). Klaim `passed` dari HP tidak
+        dihitung di sini; ia hanya berlaku untuk absen luring.
+        """
+        challenges: list[str] = []
+        nonces: list[str] = []
+        for token in liveness.proofs:
+            proof = verify_face_challenge_proof(token, user_id)
+            if proof is None or proof[0] in challenges or proof[1] in nonces:
+                continue
+            challenges.append(proof[0])
+            nonces.append(proof[1])
+        if nonces:
+            reused = await self.repo.used_proof_nonces(employee_id, nonces)
+            kept = [(c, n) for c, n in zip(challenges, nonces, strict=True) if n not in reused]
+            challenges, nonces = [c for c, _ in kept], [n for _, n in kept]
+        return len(challenges) >= LIVENESS_PROOFS_REQUIRED, challenges, nonces
+
     async def _require_consent(self, employee_id: Any) -> None:
         consent = await self.repo.latest_consent(employee_id)
         if consent is None or consent.state != "GRANTED":
@@ -185,7 +207,8 @@ class FaceService:
         if not ENROLL_MIN <= len(images) <= ENROLL_MAX:
             raise ValidationError(f"Pendaftaran wajah butuh {ENROLL_MIN} sampai {ENROLL_MAX} foto berpose berbeda.")
         org = await self.repo.org_settings(org_id)
-        if org.face_liveness_required and not liveness.passed:
+        verified, _, _ = await self._verified_liveness(employee.employee_id, user_id, liveness)
+        if org.face_liveness_required and not verified:
             raise ValidationError("Tantangan keaslian wajah belum lolos. Ulangi pendaftaran.")
 
         results: list[EmbedResult] = []
@@ -262,9 +285,10 @@ class FaceService:
             raise _unavailable() from None
         except ValueError as ve:
             return ChallengeCheckResponse(status="menunggu", detail=str(ve))
-        status = res.get("status")
-        return ChallengeCheckResponse(status="sukses" if status == "sukses" else "menunggu",
-                                      detail=str(res.get("detail", "")), quality=res.get("quality"))
+        passed = res.get("status") == "sukses"
+        return ChallengeCheckResponse(status="sukses" if passed else "menunggu", detail=str(res.get("detail", "")),
+                                      quality=res.get("quality"),
+                                      proof=create_face_challenge_proof(user_id, challenge) if passed else None)
 
     @staticmethod
     def _check_image(image: bytes) -> str:
@@ -296,6 +320,7 @@ class FaceService:
             if (embedding.quality or 0) < MIN_PROBE_QUALITY:
                 raise ValidationError("Gambar terlalu buram atau gelap, atau wajah terlalu jauh. Ulangi.")
 
+        verified, verified_challenges, nonces = await self._verified_liveness(employee.employee_id, user_id, liveness)
         file_id = uuid.uuid4()
         probe_id = uuid.uuid4()
         digest = hashlib.sha256(image).digest()          # byte ASLI (tanpa kompresi): dicocokkan dengan payload luring
@@ -309,7 +334,10 @@ class FaceService:
             model_name=embedding.model_name if embedding else None,
             model_version=embedding.model_version if embedding else None,
             quality=embedding.quality if embedding else None,
-            liveness=liveness.model_dump(), file_id=file_id, sha256=digest)
+            liveness={"challenges": liveness.challenges, "passed": liveness.passed,   # klaim HP (hanya absen luring)
+                      "server_verified": verified, "verified_challenges": verified_challenges,
+                      "proof_nonces": nonces},
+            file_id=file_id, sha256=digest)
         loop = asyncio.get_running_loop()
         if not await loop.run_in_executor(None, upload_file, key, image, mime):
             raise AppError("STORAGE_UNAVAILABLE",
@@ -340,15 +368,18 @@ class FaceService:
         if expected_sha256 is not None and bytes(probe.sha256).hex() != expected_sha256.lower():
             raise AppError("OFFLINE_TAMPERED", "Gambar wajah tidak sama dengan yang direkam di HP.", status=422)
 
-        await self.repo.consume_probe(probe_id, event, attendance_id)
+        # Online: hanya liveness yang dibuktikan server. Luring: klaim HP diterima (tidak ada server saat itu); sidik
+        # hash gambar terikat payload bertanda tangan dan hasilnya tetap dihitung ulang server.
+        stored = probe.liveness or {}
+        liveness_ok = bool(stored.get("server_verified")) or (not online and bool(stored.get("passed")))
+        await self.repo.consume_probe(probe_id, event, attendance_id, liveness_ok)
         embedding = parse_vector(probe.embedding)
         if embedding is None:
             return FaceOutcome("SKIPPED", None, None,
                                "Layanan pengenalan wajah sedang tidak tersedia; wajah diperiksa ulang nanti.",
                                flag_review=False, pending=True)
-        passed = bool((probe.liveness or {}).get("passed"))
         verdict = await self.repo.verify(org_id=org_id, employee_id=employee.employee_id, embedding=embedding,
-                                         liveness=1.0 if passed else 0.0, probe_file_id=probe.file_id,
+                                         liveness=1.0 if liveness_ok else 0.0, probe_file_id=probe.file_id,
                                          device=device, event=event)
         await self.repo.link_check(verdict.check_id, attendance_id)
         return FaceOutcome(str(verdict.result), None if verdict.similarity is None else float(verdict.similarity),
@@ -377,7 +408,7 @@ class FaceService:
                 continue
             await self.repo.set_probe_embedding(probe.id, result.embedding, result.model_name, result.model_version,
                                                 result.quality)
-            passed = bool((probe.liveness or {}).get("passed"))
+            passed = bool((probe.liveness or {}).get("effective_passed"))   # putusan terkunci saat absen dicatat
             verdict = await self.repo.verify(org_id=probe.organization_id, employee_id=probe.employee_id,
                                              embedding=result.embedding, liveness=1.0 if passed else 0.0,
                                              probe_file_id=probe.file_id, device="reverify",

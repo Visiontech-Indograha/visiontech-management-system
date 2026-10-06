@@ -8,6 +8,7 @@ Verifikasi hanya menerima EdDSA dengan `kid` yang dikenal: token HS256, `alg: no
 kebingungan algoritma ditolak.
 """
 import logging
+import uuid
 from datetime import timedelta
 from typing import Any
 
@@ -100,6 +101,35 @@ def verify_time_anchor(token: str, user_id: str) -> int | None:
     if claims.get("sub") != user_id:
         return None
     return int(claims["iat"]) * 1000
+
+
+# ── Bukti tantangan liveness wajah (online) ───────────────────────────────────
+# Diterbitkan server HANYA bila /face/challenge-check benar-benar melihat gerakan di bingkai kamera. Probe wajib
+# membawa bukti untuk beberapa tantangan berbeda; HP tidak bisa memalsukannya. Terikat pengguna, singkat, dan
+# `jti` dipakai sekali. Audience terpisah: tidak pernah diterima sebagai token akses.
+FACE_CHALLENGE_AUDIENCE = "vms-face-challenge"
+FACE_CHALLENGE_TTL = timedelta(minutes=5)
+
+
+def create_face_challenge_proof(user_id: str, challenge: str) -> str:
+    now = utcnow()
+    claims = {"sub": user_id, "iat": now, "exp": now + FACE_CHALLENGE_TTL, "aud": FACE_CHALLENGE_AUDIENCE,
+              "iss": ACCESS_ISSUER, "chl": challenge, "jti": uuid.uuid4().hex}
+    return jwt.encode(claims, _private_key, algorithm=_ALGORITHM, headers={"kid": settings.JWT_KID})
+
+
+def verify_face_challenge_proof(token: str, user_id: str) -> tuple[str, str] | None:
+    """(tantangan, nonce) bila bukti sah, belum kedaluwarsa, dan milik pengguna ini; selain itu None."""
+    try:
+        if jwt.get_unverified_header(token).get("kid") != settings.JWT_KID:
+            return None
+        claims = jwt.decode(token, _public_key, algorithms=[_ALGORITHM], audience=FACE_CHALLENGE_AUDIENCE,
+                            issuer=ACCESS_ISSUER, options={"require": ["exp", "iat", "sub", "chl", "jti"]})
+    except jwt.PyJWTError:
+        return None
+    if claims.get("sub") != user_id:
+        return None
+    return str(claims["chl"]), str(claims["jti"])
 
 
 # Identitas pengguna yang sedang masuk (dibangun api/deps.py::get_current_user dari token + DB).

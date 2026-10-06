@@ -4,14 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/error_message.dart';
-import '../../core/local_storage.dart';
-import '../../core/photo_capture.dart';
 import '../../core/providers.dart';
 import '../auth/auth_controller.dart';
 import '../auth/auth_state.dart';
 import '../sync/sync_queue_screen.dart';
 import '../../core/theme/theme.dart';
 import '../../shared/ui/vms_ui.dart';
+import '../face/face_capture_screen.dart';
+import '../face/face_flow.dart';
 
 const _roleLabel = {
   'ADMIN': 'Admin',
@@ -73,10 +73,23 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Future<void> _toggleFaceConsent(bool grant) async {
     setState(() => _faceLoading = true);
     try {
-      await ref.read(syncEngineProvider).api.setFaceConsent(
-            grant ? 'GRANTED' : 'WITHDRAWN',
-            policyVersion: '1.0',
-          );
+      final api = ref.read(syncEngineProvider).api;
+      // Teks & versi persetujuan MILIK SERVER: pengguna harus melihat kalimat yang benar-benar disetujui.
+      final policy = await api.facePolicy();
+      final version = '${policy['version']}';
+      if (grant) {
+        if (!mounted) return;
+        final ok = await showFaceConsentDialog(
+          context,
+          text: '${policy['text']}',
+          version: version,
+        );
+        if (!ok) return;
+      }
+      await api.setFaceConsent(
+        grant ? 'GRANTED' : 'WITHDRAWN',
+        policyVersion: version,
+      );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -99,51 +112,55 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   Future<void> _enrollFaceFlow() async {
-    final list = <File>[];
-    const poses = [
-      'Foto 1/3: Posisikan wajah tegak lurus menghadap kamera.',
-      'Foto 2/3: Tersenyum menghadap kamera.',
-      'Foto 3/3: Miringkan sedikit kepala / sudut berbeda.',
-    ];
-
-    for (int i = 0; i < poses.length; i++) {
-      if (!mounted) return;
-      final (file, err) = await captureWatermarkedPhoto(
-        context: context,
-        label: 'Daftar Wajah (${i + 1}/${poses.length})',
-        kind: LocalFileKind.selfie,
-        hint: poses[i],
-        preferFrontCamera: true,
-      );
-      if (file == null) {
-        if (err != null && mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
-        }
-        return;
+    if (!mounted) return;
+    // Dua tantangan acak (bukti bertanda tangan server) lalu beberapa pose, semua lewat kamera langsung.
+    final result = await Navigator.of(context).push<FaceCaptureResult>(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => const FaceCaptureScreen(mode: FaceCaptureMode.enroll),
+      ),
+    );
+    if (result == null || result.photos.isEmpty) return;
+    void say(String m) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
       }
-      list.add(file);
+    }
+
+    Future<void> cleanup() async {
+      for (final f in result.photos) {
+        try {
+          await f.delete();
+        } on FileSystemException {
+          // Berkas sementara kamera; tidak kritis.
+        }
+      }
+    }
+
+    if (!result.passed) {
+      await cleanup();
+      say(
+        result.stopReason == 'offline'
+            ? 'Tidak ada sinyal. Pendaftaran wajah butuh internet; coba lagi saat online.'
+            : 'Tantangan keaslian wajah belum lolos. Ulangi pendaftaran.',
+      );
+      return;
     }
 
     setState(() => _isEnrolling = true);
     try {
-      final res = await ref.read(syncEngineProvider).api.enrollFace(list);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Wajah berhasil didaftarkan! (${res['poses_enrolled'] ?? list.length} pose tersimpan).',
-            ),
-          ),
-        );
-      }
+      final res = await ref
+          .read(syncEngineProvider)
+          .api
+          .enrollFace(result.photos, liveness: result.liveness);
+      say(
+        'Wajah berhasil didaftarkan! (${res['enrolled'] ?? result.photos.length} pose tersimpan).',
+      );
       await _loadFaceState();
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(apiErrorMessage(e))),
-        );
-      }
+      say(apiErrorMessage(e));
     } finally {
+      await cleanup();
       if (mounted) setState(() => _isEnrolling = false);
     }
   }

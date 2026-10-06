@@ -312,7 +312,7 @@ class CRUDAttendanceSession(CRUDBase):
 
     async def list_page(self, org_id: str, viewer_user_id: str, *, view_all: bool, employee_id: Any,
                         date_from: Any, date_to: Any, status: str | None,
-                        limit: int, offset: int) -> tuple[list[Any], int]:
+                        limit: int, offset: int, scope: str = "all") -> tuple[list[Any], int]:
         """
         Mengambil daftar absensi dengan pembagian halaman (pagination) berdasarkan izin pengguna.
         Hanya mengembalikan absensi yang boleh dilihat oleh pengguna (R-33).
@@ -325,6 +325,8 @@ class CRUDAttendanceSession(CRUDBase):
             date_from (Any): Filter dari tanggal (awal).
             date_to (Any): Filter sampai tanggal (akhir).
             status (str | None): Filter berdasarkan status absensi (misal 'NEEDS_REVIEW').
+            scope (str): `all` (semua yang boleh dilihat), `mine` (absensi pribadi), `team` (selain milik sendiri:
+                anggota/umum). Memisahkan absensi pribadi dari absensi orang lain untuk PM/Finance/OPS.
             limit (int): Jumlah maksimum hasil (pagination).
             offset (int): Titik mulai (offset) untuk pagination.
             
@@ -332,7 +334,7 @@ class CRUDAttendanceSession(CRUDBase):
             tuple[list[Any], int]: Tuple yang berisi daftar baris (rows) absensi dan jumlah total data (total count).
         """
         params = {"org": org_id, "viewer": viewer_user_id, "view_all": view_all, "emp": employee_id,
-                  "date_from": date_from, "date_to": date_to, "status": status,
+                  "date_from": date_from, "date_to": date_to, "status": status, "scope": scope,
                   "limit": limit, "offset": offset}
         # Mengambil baris absensi. Join dengan employee untuk mendapat nama.
         # Menggunakan vms.attendance_viewable di WHERE agar hanya menampilkan yang memiliki hak akses.
@@ -349,6 +351,11 @@ class CRUDAttendanceSession(CRUDBase):
             WHERE a.organization_id = CAST(:org AS uuid)
               AND vms.attendance_viewable(CAST(:viewer AS uuid), CAST(:view_all AS boolean), a.employee_id)
               AND (CAST(:emp AS uuid) IS NULL OR a.employee_id = CAST(:emp AS uuid))
+              AND (CAST(:scope AS text) = 'all'
+                   OR (CAST(:scope AS text) = 'mine' AND a.employee_id IS NOT DISTINCT FROM
+                       (SELECT u.employee_id FROM vms.app_user u WHERE u.id = CAST(:viewer AS uuid)))
+                   OR (CAST(:scope AS text) = 'team' AND a.employee_id IS DISTINCT FROM
+                       (SELECT u.employee_id FROM vms.app_user u WHERE u.id = CAST(:viewer AS uuid))))
               AND (CAST(:date_from AS date) IS NULL OR a.work_date >= CAST(:date_from AS date))
               AND (CAST(:date_to AS date) IS NULL OR a.work_date <= CAST(:date_to AS date))
               AND (CAST(:status AS text) IS NULL OR CAST(a.status AS text) = CAST(:status AS text))
@@ -364,6 +371,11 @@ class CRUDAttendanceSession(CRUDBase):
             WHERE a.organization_id = CAST(:org AS uuid)
               AND vms.attendance_viewable(CAST(:viewer AS uuid), CAST(:view_all AS boolean), a.employee_id)
               AND (CAST(:emp AS uuid) IS NULL OR a.employee_id = CAST(:emp AS uuid))
+              AND (CAST(:scope AS text) = 'all'
+                   OR (CAST(:scope AS text) = 'mine' AND a.employee_id IS NOT DISTINCT FROM
+                       (SELECT u.employee_id FROM vms.app_user u WHERE u.id = CAST(:viewer AS uuid)))
+                   OR (CAST(:scope AS text) = 'team' AND a.employee_id IS DISTINCT FROM
+                       (SELECT u.employee_id FROM vms.app_user u WHERE u.id = CAST(:viewer AS uuid))))
               AND (CAST(:date_from AS date) IS NULL OR a.work_date >= CAST(:date_from AS date))
               AND (CAST(:date_to AS date) IS NULL OR a.work_date <= CAST(:date_to AS date))
               AND (CAST(:status AS text) IS NULL OR CAST(a.status AS text) = CAST(:status AS text))

@@ -30,6 +30,8 @@ interface Filters {
   from: string;
   to: string;
   page: number;
+  /** mine = absensi pribadi, team = absensi anggota/umum, kosong = bawaan lama (tanpa pemisahan). */
+  scope: "mine" | "team" | "";
 }
 
 function useAttendance(f: Filters) {
@@ -41,6 +43,7 @@ function useAttendance(f: Filters) {
           params: {
             page: f.page,
             size: PAGE_SIZE,
+            ...(f.scope ? { scope: f.scope } : {}),
             ...(f.status ? { status: f.status } : {}),
             ...(f.from ? { from: f.from } : {}),
             ...(f.to ? { to: f.to } : {}),
@@ -71,7 +74,13 @@ function useAttendanceAction<V>(fn: (v: V) => Promise<unknown>) {
 export function AttendancePage() {
   const { me } = useSession();
   const canReview = !!me?.permissions.includes("review:attendance");
-  const [f, setF] = useState<Filters>({ status: canReview ? "NEEDS_REVIEW" : "", from: "", to: "", page: 1 });
+  // Pemegang wewenang lihat/tinjau absensi orang lain: pisahkan absensi pribadi dari absensi anggota (PM) / umum (Finance, OPS).
+  const sees = !!me?.permissions.includes("view:all_attendance");
+  const hasTeam = canReview || sees;
+  const teamLabel = sees ? "Absensi umum" : "Absensi anggota";
+  const [f, setF] = useState<Filters>({
+    status: canReview ? "NEEDS_REVIEW" : "", from: "", to: "", page: 1, scope: hasTeam ? "team" : "",
+  });
   const list = useAttendance(f);
   const [open, setOpen] = useState<{ kind: "review" | "explain"; item: Attendance } | null>(null);
   const data = list.data;
@@ -82,6 +91,22 @@ export function AttendancePage() {
     <>
       <PageHeader title="Absensi" />
       <OfficeCheckInCard />
+      {hasTeam && (
+        <div role="tablist" aria-label="Jenis absensi" className="mb-4 inline-flex rounded-control border border-line bg-surface p-1">
+          {([["mine", "Absensi saya"], ["team", teamLabel]] as const).map(([key, label]) => (
+            <button
+              key={key}
+              role="tab"
+              type="button"
+              aria-selected={f.scope === key}
+              className={`min-h-10 rounded-control px-4 text-sm font-medium ${f.scope === key ? "bg-primary text-primary-foreground" : "text-mist hover:bg-muted"}`}
+              onClick={() => setF((old) => ({ ...old, scope: key, status: key === "team" && canReview ? "NEEDS_REVIEW" : "", page: 1 }))}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="mb-4 grid gap-x-3 md:grid-cols-3">
         <div className="mb-4 space-y-1.5">
           <label htmlFor="att-status" className="text-sm font-medium">

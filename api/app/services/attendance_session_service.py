@@ -191,7 +191,7 @@ class AttendanceSessionService:
 
     async def list_attendance(self, org_id: str, user_id: str, *, view_all: bool, employee_id: UUID | None,
                               date_from: Any, date_to: Any, status: str | None,
-                              page: int, size: int) -> tuple[list[Any], int]:
+                              page: int, size: int, scope: str = "all") -> tuple[list[Any], int]:
         """
         Mendapatkan daftar absensi berdasarkan filter, disesuaikan dengan hak visibilitas pengguna.
         
@@ -200,7 +200,7 @@ class AttendanceSessionService:
         Setiap baris membawa `can_review` dari server.
         """
         return await self.repo.list_page(org_id, user_id, view_all=view_all, employee_id=employee_id,
-                                         date_from=date_from, date_to=date_to, status=status,
+                                         date_from=date_from, date_to=date_to, status=status, scope=scope,
                                          limit=size, offset=(page - 1) * size)
 
     async def today(self, org_id: str) -> Any:

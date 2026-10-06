@@ -234,3 +234,27 @@ def test_ops_may_patch_a_cross_unit_field_leader(client, world: World):
     assert response.status_code == 200, response.text
     assert sync_query("SELECT leader_employee_id::text FROM vms.work_plan WHERE id = %s",
                       (plan["id"],)) == [(outsider,)]
+
+
+def test_v2_draft_leader_must_be_in_pm_unit_like_members(client, world: World):
+    """Keputusan pemilik 2026-10-06: ketua juga bawahan PM (temuan uji E2E T1); daftar calon ketua dibatasi unit PM."""
+    start = jakarta_now().date() + timedelta(days=40)
+    other_unit = world.add_unit("OTHER_T1")
+    outsider = world.add_person("outsider_t1", None, unit_id=other_unit)
+    headers = world.headers(client, "pm")
+
+    options = client.get("/work-plans/form-options", headers=headers).json()
+    assert str(outsider) not in {p["id"] for p in options["leaders"]}            # tidak tampil sebagai calon ketua
+
+    def draft(leader: str):
+        return client.post("/work-plans/full", headers=headers, json={
+            "title": "Ketua unit lain", "description": "uji", "category": "INSTALASI",
+            "new_site": {"name": f"Lokasi {leader[:6]}", "lat": -6.2, "lng": 106.8},
+            "period_start": start.isoformat(), "period_end": start.isoformat(),
+            "days": [{"work_date": start.isoformat(), "tasks": [{"title": "t", "description": "d"}]}],
+            "leader_employee_id": leader, "member_employee_ids": [world.employees["member"]],
+        })
+
+    denied = draft(str(outsider))
+    assert denied.status_code == 422, denied.text
+    assert denied.json()["error"]["code"] == "PERSONNEL_OUTSIDE_PM_UNIT"

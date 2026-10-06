@@ -2,6 +2,7 @@ import { Suspense, type ReactNode } from "react";
 import type { RouteObject } from "react-router-dom";
 import { AppShell } from "@/components/layout/AppShell";
 import { RequireAccess, RequireAuth } from "@/components/layout/guards";
+import { TitleLayout } from "@/components/layout/TitleLayout";
 import { LoginPage } from "@/pages/auth/LoginPage";
 import { ComingSoonPage, ForbiddenPage, HomePage, NotFoundPage } from "@/pages/Placeholders";
 import { NAV_ITEMS } from "./navigation";
@@ -26,6 +27,9 @@ const PAGES: Record<string, ReactNode> = {
 
 /** Route dibangun dari NAV_ITEMS agar menu dan guard selalu sejalan. */
 export const routes: RouteObject[] = [
+  {
+    element: <TitleLayout />,
+    children: [
   { path: "/login", element: <LoginPage /> },
   { path: "/admin-login", element: <LoginPage admin /> }, // sengaja tidak ditautkan dari menu/halaman lain
   // PUBLIK: tujuan pemindaian QR tanda tangan; tanpa login dan di luar AppShell. Token boleh memuat "/".
@@ -72,5 +76,6 @@ export const routes: RouteObject[] = [
       },
     ],
   },
+    ],
+  },
 ];
-

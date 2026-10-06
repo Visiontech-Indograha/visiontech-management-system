@@ -21,6 +21,7 @@ import '../auth/auth_state.dart';
 import '../../core/theme/theme.dart';
 import '../../shared/ui/vms_select_field.dart';
 import '../../shared/ui/vms_ui.dart';
+import '../face/face_flow.dart';
 
 /// Absensi (M5, dok 05 §3.5). Wajib daring: waktu & geofence ditentukan server.
 /// Di luar radius lokasi, server mewajibkan swafoto — aplikasi memintanya lebih dulu.
@@ -230,15 +231,24 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       String? selfieId;
       String? faceProbeId;
       File? selfieFile;
-      if (outside || _faceEnrolled) {
+      // Pengenalan wajah (karyawan yang sudah mendaftar): dua tantangan acak + gambar wajah sementara. Ini BUKAN
+      // foto absensi. Server menghitung cocok/tidak; jaringan putus → lanjut luring (server menandai bila perlu).
+      if (_faceEnrolled) {
+        if (!mounted) return;
+        final face = await captureFaceProbe(context, ref);
+        if (face.cancelled) return;
+        if (face.error != null) return _snack(face.error!);
+        faceProbeId = face.probeId;
+      }
+      // Foto bukti (swafoto berwatermark) HANYA di luar radius.
+      if (outside) {
         if (!mounted) return;
         final (file, err) = await captureWatermarkedPhoto(
           context: context,
-          label: outside ? 'Swafoto di luar radius' : 'Swafoto verifikasi wajah',
+          label: 'Swafoto di luar radius',
           kind: LocalFileKind.selfie,
-          hint: outside
-              ? 'Anda ${distance.round()} m dari ${site['name']}. Swafoto wajib di luar radius.'
-              : 'Swafoto untuk verifikasi pengenalan wajah biometrik.',
+          hint:
+              'Anda ${distance.round()} m dari ${site['name']}. Swafoto wajib di luar radius.',
           preferFrontCamera: true,
         );
         if (file == null) {
@@ -253,14 +263,6 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
               .read(syncEngineProvider)
               .api
               .uploadFile(selfieFile);
-          if (_faceEnrolled) {
-            try {
-              faceProbeId = await ref
-                  .read(syncEngineProvider)
-                  .api
-                  .createFaceProbe(selfieFile);
-            } catch (_) {}
-          }
         }
         await ref
             .read(syncEngineProvider)
@@ -310,25 +312,13 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       final pos = await _position();
       if (pos == null) return;
       String? faceProbeId;
+      // Pulang: hanya pengenalan wajah, TANPA foto bukti.
       if (_faceEnrolled) {
         if (!mounted) return;
-        final (file, err) = await captureWatermarkedPhoto(
-          context: context,
-          label: 'Swafoto absen pulang',
-          kind: LocalFileKind.selfie,
-          hint: 'Swafoto verifikasi wajah untuk absensi pulang.',
-          preferFrontCamera: true,
-        );
-        if (file == null) {
-          if (err != null) _snack(err);
-          return;
-        }
-        try {
-          faceProbeId = await ref
-              .read(syncEngineProvider)
-              .api
-              .createFaceProbe(file);
-        } catch (_) {}
+        final face = await captureFaceProbe(context, ref);
+        if (face.cancelled) return;
+        if (face.error != null) return _snack(face.error!);
+        faceProbeId = face.probeId;
       }
       Future<void> recordOffline() => ref
           .read(syncEngineProvider)

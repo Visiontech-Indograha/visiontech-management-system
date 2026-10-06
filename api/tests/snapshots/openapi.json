@@ -1434,6 +1434,25 @@
     "title": "AuditEventResponse",
     "type": "object"
    },
+   "Body_check_face_challenge_api_v1_face_challenge_check_post": {
+    "properties": {
+     "challenge": {
+      "title": "Challenge",
+      "type": "string"
+     },
+     "file": {
+      "contentMediaType": "application/octet-stream",
+      "title": "File",
+      "type": "string"
+     }
+    },
+    "required": [
+     "file",
+     "challenge"
+    ],
+    "title": "Body_check_face_challenge_api_v1_face_challenge_check_post",
+    "type": "object"
+   },
    "Body_create_face_probe_api_v1_face_probe_post": {
     "properties": {
      "file": {
@@ -1487,6 +1506,39 @@
      "file"
     ],
     "title": "Body_upload_document_api_v1_files_upload_post",
+    "type": "object"
+   },
+   "ChallengeCheckResponse": {
+    "properties": {
+     "detail": {
+      "title": "Detail",
+      "type": "string"
+     },
+     "quality": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Quality"
+     },
+     "status": {
+      "enum": [
+       "sukses",
+       "menunggu"
+      ],
+      "title": "Status",
+      "type": "string"
+     }
+    },
+    "required": [
+     "status",
+     "detail"
+    ],
+    "title": "ChallengeCheckResponse",
     "type": "object"
    },
    "ChangePasswordRequest": {
@@ -9801,6 +9853,53 @@
     "summary": "Restore Employee",
     "tags": [
      "Employees"
+    ]
+   }
+  },
+  "/api/v1/face/challenge-check": {
+   "post": {
+    "description": "Memeriksa gambar langsung dari kamera HP untuk memvalidasi tantangan liveness.",
+    "operationId": "check_face_challenge_api_v1_face_challenge_check_post",
+    "requestBody": {
+     "content": {
+      "multipart/form-data": {
+       "schema": {
+        "$ref": "#/components/schemas/Body_check_face_challenge_api_v1_face_challenge_check_post"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ChallengeCheckResponse"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Check Face Challenge",
+    "tags": [
+     "Face"
     ]
    }
   },

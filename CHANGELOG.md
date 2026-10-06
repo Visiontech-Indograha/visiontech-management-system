@@ -9,6 +9,14 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased] — `development`
 
+- **Face API — perbaikan hasil tinjauan & uji berbasis DB (2026-10-06):**
+  - **Dua bug nyata di kode yang sudah live, ditemukan oleh uji integrasi baru (`api/tests/test_face_integration.py`, 22 uji, PostgreSQL nyata + role `vms_app`):**
+    1. `verify_face_for_attendance` melempar galat (`record "v_self" is not assigned yet`) pada hasil SKIPPED/NOT_ENROLLED/LOW_QUALITY → absen berwajah 500, bukan "Perlu review". Diperbaiki lewat **Alembic 0023** (revisi 0022 sudah diterapkan di produksi, tidak diubah) dan `db/05_face.sql`.
+    2. Pemeriksaan konsistensi pose di pendaftaran **tidak pernah menolak** (kosinus pose terhadap rata-rata ±0,58 untuk wajah berbeda, selalu di atas ambang 0,35) → tiga foto dari tiga orang diterima. Kini memakai kemiripan antar-pose terkecil (`POSE_PAIR_MIN`).
+  - **Keamanan:** `/face/challenge-check` tidak lagi mengembalikan "sukses" otomatis saat face-service mati/belum dikonfigurasi (kini 503) dan dibatasi laju per pengguna; pendaftaran/template/probe hanya untuk pekerja lapangan (FIELD); unggahan dibaca dengan batas 5 MB dan jumlah berkas dibatasi sebelum dibaca; data tantangan tidak valid → 422 (sebelumnya 500).
+  - **Uji RLS:** pencocokan dijalankan sebagai `vms_app` (bukan superuser); uji gagal bila fungsi bukan `SECURITY DEFINER` (diverifikasi dengan mengubahnya sementara).
+  - `get_face_embed_client` menjadi dependency tersendiri agar uji dapat memalsukan face-service.
+
 - **Face API — pengecekan tantangan liveness di server (2026-10-05):**
   - **Endpoint Liveness (`endpoints/face.py`, `face-service/main.py`):** menyelesaikan endpoint `/challenge-check` untuk mengevaluasi liveness biometrik (seperti senyum, kedip, menoleh) dari kamera secara real-time.
 

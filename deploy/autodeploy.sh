@@ -109,7 +109,7 @@ $CHANGES
 
 (
   step "Checkout $SHORT"
-  git -C src checkout -q --force "$NEW" && rm -rf api web && cp -a src/api src/web . || exit 11
+  git -C src checkout -q --force "$NEW" && rm -rf api web face && cp -a src/api src/web . && cp -a src/face-service face || exit 11
   rm -f api/.env web/.env
   step "Build image (docker compose build)"
   docker compose --progress=plain build 2>&1 || exit 12

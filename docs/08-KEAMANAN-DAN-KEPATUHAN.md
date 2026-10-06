@@ -114,6 +114,12 @@ VMS memproses data pribadi karyawan, jadi UU PDP berlaku. Yang sudah dirancang:
 | Bukan penentu tunggal | Tidak cocok → `NEEDS_REVIEW`, bukan penolakan |
 | Tidak untuk pencarian 1:N bebas | Tidak ada endpoint "wajah siapa ini?" |
 
+**Model kepercayaan liveness (2026-10-06):** absen/pendaftaran **online** hanya menerima bukti tantangan bertanda tangan
+server (`/face/challenge-check` → JWT EdDSA, audience `vms-face-challenge`, terikat pengguna, 5 menit, sekali pakai,
+2 tantangan berbeda); klaim `passed` dari HP hanya dipercaya untuk absen **luring** yang kemudian dihitung ulang server.
+Langkah "depan" (meluruskan wajah) hanya panduan dan tidak menerbitkan bukti. Lisensi: model pralatih InsightFace
+**non-komersial** — pemilik wajib memutuskan lisensi komersial sebelum produksi penuh.
+
 **Dua hal yang paling sering salah pada sistem seperti ini, dan cara kita menghindarinya:**
 
 - **Ambang batas ditebak.** Nilai 0,65 di skema hanyalah titik awal. Sebelum dipakai, ukur

@@ -99,3 +99,5 @@ def test_geo_search_uses_cache_and_requires_manager(client, world: World, monkey
     assert calls == ["Dumai"]                                           # kedua dari cache
     member = client.get("/geo/search", params={"q": "Dumai"}, headers=world.headers(client, "member"))
     assert member.status_code == 403
+    finance = client.get("/geo/search", params={"q": "Dumai"}, headers=world.headers(client, "finance"))
+    assert finance.status_code == 200, finance.text                     # pengelola lokasi kantor juga boleh cari alamat

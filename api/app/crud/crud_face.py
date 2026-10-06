@@ -40,6 +40,16 @@ class CRUDFace(CRUDBase):
             {"uid": user_id},
         )
 
+    async def face_expected(self, employee_id: UUID | str) -> bool:
+        """Karyawan ini sudah menyetujui pemakaian wajah DAN punya pendaftaran aktif: absennya wajib membawa wajah."""
+        return bool(await self.scalar(
+            """
+            SELECT vms.has_biometric_consent(CAST(:emp AS uuid))
+               AND EXISTS (SELECT 1 FROM vms.face_enrollment WHERE employee_id = CAST(:emp AS uuid) AND is_active)
+            """,
+            {"emp": employee_id},
+        ))
+
     async def org_settings(self, org_id: UUID | str) -> Any:
         """Ambang & kebijakan wajah organisasi (dapat dikalibrasi tanpa rilis ulang)."""
         return await self.fetchone(

@@ -414,11 +414,69 @@ def test_check_out_with_other_face_flags_review(client, world, face):
     assert out.json()["status"] == "NEEDS_REVIEW"          # pulang tetap tercatat, hanya ditandai untuk diperiksa
 
 
-def test_old_apk_without_probe_still_works_and_client_face_claims_are_ignored(client, world, face):
+def note_of(world: World, who: str = "member") -> str | None:
+    return sync_query("SELECT offline_note FROM vms.attendance WHERE employee_id = %s ORDER BY check_in_at DESC LIMIT 1",
+                      (world.employees[who],))[0][0]
+
+
+def test_enrolled_worker_without_face_data_goes_to_review_and_client_claims_are_ignored(client, world, face):
     enrolled(client, world)
-    done = check_in(client, world, face_result="MATCH", face_similarity=0.99)              # klaim HP lama
-    assert done.status_code == 200
-    assert done.json()["face_result"] is None and att(world)[1] is None                    # tidak dipercaya
+    done = check_in(client, world, face_result="MATCH", face_similarity=0.99)              # klaim HP lama, tanpa probe
+    assert done.status_code == 200                                                         # tidak ditolak
+    assert done.json()["face_result"] == "SKIPPED" and done.json()["status"] == "NEEDS_REVIEW"
+    assert "wajah tidak diperiksa" in (note_of(world) or "")                               # alasan tampil bagi peninjau
+
+
+def test_worker_without_face_enrollment_is_not_affected(client, world, face):
+    assert check_in(client, world).status_code == 200                                      # belum mendaftar wajah
+    assert att(world)[0] == "AUTO_VALID" and att(world)[1] is None and note_of(world) is None
+    assert check_out(client, world).json()["status"] == "AUTO_VALID"
+
+
+def test_withdrawn_consent_means_face_is_no_longer_expected(client, world, face):
+    enrolled(client, world)
+    assert consent(client, world, state="WITHDRAWN").status_code == 200
+    assert check_in(client, world).status_code == 200
+    assert att(world)[0] == "AUTO_VALID" and att(world)[1] is None
+
+
+def test_check_out_without_face_data_goes_to_review_for_enrolled_worker(client, world, face):
+    enrolled(client, world)
+    assert check_in(client, world, pid=probe_id(client, world)).status_code == 200
+    out = check_out(client, world)                                                         # pulang tanpa wajah
+    assert out.status_code == 200 and out.json()["check_out_face_result"] == "SKIPPED"
+    assert out.json()["status"] == "NEEDS_REVIEW" and "wajah tidak diperiksa" in (note_of(world) or "")
+
+
+def test_offline_attendance_without_face_block_is_flagged_for_enrolled_worker(client, world, face):
+    enrolled(client, world)
+    phone = Phone(client, world, "member")
+    phone.go_online()
+    got = phone.send(phone.record("CHECK_IN"))                                             # luring TANPA blok wajah
+    assert got.status_code == 200, got.text
+    assert att(world)[0] == "NEEDS_REVIEW" and att(world)[1] == "SKIPPED"
+    assert "wajah tidak diperiksa" in (note_of(world) or "")
+
+    # Catatan jam & catatan wajah digabung, bukan saling menimpa.
+    other = Phone(client, world, "leader")
+    enrolled(client, world, "leader", OTHER)
+    other.go_online()
+    shifted = other.send(other.record("CHECK_IN", mocked=True))
+    assert shifted.status_code == 200, shifted.text
+    merged = note_of(world, "leader") or ""
+    assert "wajah tidak diperiksa" in merged and "lokasi palsu" in merged
+
+
+def test_offline_check_out_without_face_block_is_flagged_for_enrolled_worker(client, world, face):
+    enrolled(client, world)
+    phone = Phone(client, world, "member")
+    phone.go_online()
+    image = png(ME, 7)
+    pid = probe_id_for(client, world, image)
+    assert phone.send(phone.record("CHECK_IN", extra=face_block(image)), face_probe_id=pid).status_code == 200
+    out = phone.send(phone.record("CHECK_OUT", after_ms=60_000))                           # pulang luring tanpa wajah
+    assert out.status_code == 200, out.text
+    assert att(world)[3] == "SKIPPED" and "wajah tidak diperiksa" in (note_of(world) or "")
 
 
 def test_face_service_down_keeps_attendance_working_then_reverifies(client, world, face):

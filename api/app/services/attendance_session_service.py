@@ -134,11 +134,17 @@ class AttendanceSessionService:
     async def apply_face(self, org_id: str, user_id: str, row: Any, event: str, face_probe_id: UUID | None, *,
                          online: bool = True, expected_sha256: str | None = None, device: str | None = None) -> Any:
         """
-        Mencocokkan wajah untuk absen `row` (masuk/pulang) dan menyimpan hasilnya. Tanpa `face_probe_id` (APK lama /
-        karyawan tanpa pengenalan wajah) baris dikembalikan apa adanya. Hasil bermasalah menaikkan absensi ke
-        antrean periksa; tidak pernah menolak.
+        Mencocokkan wajah untuk absen `row` (masuk/pulang) dan menyimpan hasilnya. Hasil bermasalah menaikkan absensi
+        ke antrean periksa; tidak pernah menolak. Tanpa `face_probe_id`: karyawan tanpa pendaftaran wajah tidak
+        terpengaruh; pekerja lapangan yang SUDAH mendaftar tetapi absen tanpa data wajah (APK lama, kamera ditolak,
+        luring tanpa blok wajah) ditandai Perlu review dengan catatan — wajah tidak boleh dilewati diam-diam.
         """
-        if face_probe_id is None or self.faces is None:
+        if self.faces is None:
+            return row
+        if face_probe_id is None:
+            if device == "MOBILE" and await self.faces.face_expected(user_id):
+                return await self.repo.flag_missing_face(
+                    row.id, event, "wajah tidak diperiksa: karyawan sudah mendaftar wajah tetapi absen tanpa data wajah")
             return row
         outcome: FaceOutcome = await self.faces.verify_for_attendance(
             org_id, user_id, probe_id=face_probe_id, event=event, attendance_id=row.id, device=device,
@@ -178,7 +184,7 @@ class AttendanceSessionService:
                 raise AppError("CHECKOUT_NOT_VALID", CHECKOUT_NOT_VALID, status=409)
             raise AppError("NO_OPEN_SESSION", "Tidak ada sesi absensi terbuka.", status=409)
         row = await self.repo.close(session.id)
-        if face_probe_id is not None and org_id is not None:
+        if org_id is not None:
             row = await self.apply_face(org_id, user_id, row, "CHECK_OUT", face_probe_id, online=online,
                                         expected_sha256=expected_face_sha256, device=channel)
         return row

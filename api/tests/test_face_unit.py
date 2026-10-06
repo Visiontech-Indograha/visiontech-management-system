@@ -88,7 +88,7 @@ def test_face_embed_client_attributes():
 @pytest.mark.anyio
 async def test_face_service_enroll_count_validation():
     repo = MagicMock()
-    repo.employee_of_user = AsyncMock(return_value=MagicMock(employee_id=uuid4(), attendance_mode="MOBILE"))
+    repo.employee_of_user = AsyncMock(return_value=MagicMock(employee_id=uuid4(), attendance_mode="FIELD"))
     repo.latest_consent = AsyncMock(return_value=MagicMock(state="GRANTED"))
     service = FaceService(repo=repo, client=None)  # type: ignore
     # Kurang dari ENROLL_MIN (3)

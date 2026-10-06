@@ -69,6 +69,26 @@ def test_pm_sees_attendance_of_their_unit_but_not_other_organisations(client, wo
     assert [a["id"] for a in by_leader["items"]] == [day["leader"]]
 
 
+@pytest.mark.parametrize("who", ["pm", "finance", "ops"])
+def test_scope_separates_personal_from_team_or_general(client, world, day, who):
+    """Absensi pribadi dipisah dari absensi anggota/umum untuk pemegang wewenang lihat (PM, Finance, OPS)."""
+    own = day.get(who)
+    mine = {a["id"] for a in _list(client, world, who, scope="mine")["items"]}
+    team = {a["id"] for a in _list(client, world, who, scope="team")["items"]}
+    everything = {a["id"] for a in _list(client, world, who)["items"]}
+
+    assert mine == ({own} if own else set())                       # hanya milik sendiri
+    assert not (mine & team)                                       # tidak tercampur
+    assert mine | team == everything                               # bersama = daftar lengkap lama (kompatibel)
+    assert day["foreign"] not in mine | team                       # organisasi lain tetap tak terlihat
+
+
+def test_scope_mine_for_account_without_employee_is_empty_and_rejects_bad_value(client, world, day):
+    assert _list(client, world, "admin", scope="mine")["items"] == []
+    bad = client.get("/attendance", headers=world.headers(client, "pm"), params={"scope": "semua"})
+    assert bad.status_code == 422
+
+
 @pytest.mark.parametrize("who", ["member", "leader", "asset", "hr", "admin"])
 def test_everyone_else_sees_only_their_own(client, world, day, who):
     listed = _list(client, world, who, employee_id=world.employees["leader"])   # upaya melihat milik orang lain

@@ -295,7 +295,8 @@ class FaceService:
         passed = res.get("status") == "sukses"
         return ChallengeCheckResponse(status="sukses" if passed else "menunggu", detail=str(res.get("detail", "")),
                                       quality=res.get("quality"),
-                                      proof=create_face_challenge_proof(user_id, challenge) if passed else None)
+                                      proof=create_face_challenge_proof(user_id, challenge) if passed else None,
+                                      metrics=res.get("metrics") if settings.APP_ENV == "development" else None)
 
     @staticmethod
     def _check_image(image: bytes) -> str:

@@ -53,20 +53,24 @@ void main() {
       expect(seen, livenessChallenges.map((c) => c.id).toSet());
     });
 
-    test('depan tidak pernah menjadi tantangan; id sama dengan face-service', () {
+    test('depan hanya panduan meluruskan, bukan tantangan; kedip dihapus; id sama dengan face-service', () {
+      expect(straightenStep.id, 'depan');
+      expect(livenessChallenges.map((c) => c.id), isNot(contains('depan')));
+      expect(livenessChallenges.map((c) => c.id), isNot(contains('kedip')));
+      expect(livenessChallenges.map((c) => c.icon).toSet(), hasLength(livenessChallenges.length)); // ikon beda tiap arah
       expect(
         livenessChallenges.map((c) => c.id),
-        unorderedEquals(['kiri', 'kanan', 'atas', 'buka_mulut', 'kedip']),
+        unorderedEquals(['kiri', 'kanan', 'atas', 'bawah', 'buka_mulut']),
       );
     });
 
     test('lolos hanya bila jumlah bukti cukup', () {
       expect(
-        livenessPayload(challenges: ['kedip', 'kiri'], proofs: ['a'])['passed'],
+        livenessPayload(challenges: ['bawah', 'kiri'], proofs: ['a'])['passed'],
         isFalse,
       );
       final ok = livenessPayload(
-        challenges: ['kedip', 'kiri'],
+        challenges: ['bawah', 'kiri'],
         proofs: ['a', 'b'],
       );
       expect(ok['passed'], isTrue);

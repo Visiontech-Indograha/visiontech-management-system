@@ -101,11 +101,12 @@ async def embed(file: UploadFile = File(...), x_face_token: str | None = Header(
 # Tanda yaw/pitch disesuaikan dengan hasil uji nyata di Realme (2026-10-06): bingkai kamera depan TIDAK dicerminkan,
 # sehingga menoleh ke kiri pengguna = yaw positif dan menengadah = pitch positif pada keluaran InsightFace.
 YAW_MIN = float(os.getenv("FACE_YAW_MIN", "12"))          # derajat menoleh kiri/kanan
-PITCH_UP = float(os.getenv("FACE_PITCH_UP", "8"))         # pitch >= nilai ini = menengadah
+PITCH_UP = float(os.getenv("FACE_PITCH_UP", "8"))         # pitch >= nilai ini = menengadah; pitch <= -nilai = menunduk
+FRONT_MAX = float(os.getenv("FACE_FRONT_MAX", "12"))      # |yaw| dan |pitch| maksimum agar dianggap menghadap lurus
+WRONG_WAY = 5.0                                           # sudah menoleh sejauh ini ke arah SALAH -> beri tahu salah arah
 FACE_MIN_W = float(os.getenv("FACE_MIN_WIDTH", "0.25"))   # lebar wajah / lebar bingkai; di bawahnya = terlalu jauh
 FACE_MAX_W = float(os.getenv("FACE_MAX_WIDTH", "0.80"))   # di atasnya = terlalu dekat
 MOUTH_MIN = float(os.getenv("FACE_MOUTH_MIN", "0.35"))    # tinggi bukaan mulut / lebar mulut
-EAR_MAX = float(os.getenv("FACE_EAR_MAX", "0.25"))        # rasio buka mata; <= nilai ini = terpejam
 
 
 def _metrics(face: Any, shape: tuple[int, ...] | None = None) -> dict[str, float]:
@@ -124,40 +125,48 @@ def _metrics(face: Any, shape: tuple[int, ...] | None = None) -> dict[str, float
     if lmks is not None:
         width = abs(lmks[52][0] - lmks[61][0])
         m["mouth_ratio"] = round(float(abs(lmks[60][1] - lmks[62][1]) / width) if width > 0 else 0.0, 3)
-        m["ear_left"] = round(float((abs(lmks[37][1] - lmks[41][1]) + abs(lmks[38][1] - lmks[40][1]))
-                                    / (2 * abs(lmks[35][0] - lmks[39][0]) + 1e-6)), 3)
-        m["ear_right"] = round(float((abs(lmks[87][1] - lmks[95][1]) + abs(lmks[88][1] - lmks[94][1]))
-                                     / (2 * abs(lmks[89][0] - lmks[93][0]) + 1e-6)), 3)
     return m
 
 
 def _evaluate_challenge(m: dict[str, float], challenge: str) -> None:
+    """Melempar ValueError berisi petunjuk untuk pengguna bila gerakan belum terpenuhi. Arah memakai sudut pandang
+    PENGGUNA (kiri = sisi kiri tubuhnya). yaw > 0 = menoleh ke kiri; pitch > 0 = menengadah."""
     if not challenge:
         return
-    need_pose = challenge in {"depan", "kanan", "kiri", "atas"}
-    if need_pose and "yaw" not in m:
+    if challenge in {"depan", "kanan", "kiri", "atas", "bawah"} and "yaw" not in m:
         raise ValueError("Gagal mendeteksi pose wajah.")
-    if not need_pose and challenge in {"buka_mulut", "kedip"} and "mouth_ratio" not in m:
+    if challenge == "buka_mulut" and "mouth_ratio" not in m:
         raise ValueError("Gagal mendeteksi titik wajah (landmark).")
 
     if challenge == "depan":
-        if abs(m["yaw"]) > 15 or abs(m["pitch"]) > 15:
-            raise ValueError("Tantangan Gagal: Harap menghadap lurus ke depan!")
+        yaw, pitch = m["yaw"], m["pitch"]
+        if yaw > FRONT_MAX:
+            raise ValueError("Kepala terlalu menoleh ke kiri. Putar sedikit ke KANAN untuk meluruskan.")
+        if yaw < -FRONT_MAX:
+            raise ValueError("Kepala terlalu menoleh ke kanan. Putar sedikit ke KIRI untuk meluruskan.")
+        if pitch > FRONT_MAX:
+            raise ValueError("Kepala terlalu menengadah. Turunkan sedikit untuk meluruskan.")
+        if pitch < -FRONT_MAX:
+            raise ValueError("Kepala terlalu menunduk. Angkat sedikit untuk meluruskan.")
     elif challenge == "buka_mulut":
         if m["mouth_ratio"] < MOUTH_MIN:
             raise ValueError("Buka mulut lebih lebar.")
-    elif challenge == "kedip":
-        if m["ear_left"] > EAR_MAX or m["ear_right"] > EAR_MAX:
-            raise ValueError("Pejamkan mata sebentar (kedip).")
-    elif challenge == "kanan":
-        if m["yaw"] > -YAW_MIN:
-            raise ValueError("Tengok lagi ke KANAN sedikit.")
     elif challenge == "kiri":
         if m["yaw"] < YAW_MIN:
-            raise ValueError("Tengok lagi ke KIRI sedikit.")
+            raise ValueError("Salah arah. Tengok ke KIRI Anda, bukan kanan." if m["yaw"] <= -WRONG_WAY
+                             else "Tengok lagi ke KIRI sedikit.")
+    elif challenge == "kanan":
+        if m["yaw"] > -YAW_MIN:
+            raise ValueError("Salah arah. Tengok ke KANAN Anda, bukan kiri." if m["yaw"] >= WRONG_WAY
+                             else "Tengok lagi ke KANAN sedikit.")
     elif challenge == "atas":
         if m["pitch"] < PITCH_UP:
-            raise ValueError("Dongakkan lagi kepala ke ATAS sedikit.")
+            raise ValueError("Salah arah. Dongakkan kepala ke ATAS, bukan menunduk." if m["pitch"] <= -WRONG_WAY
+                             else "Dongakkan lagi kepala ke ATAS sedikit.")
+    elif challenge == "bawah":
+        if m["pitch"] > -PITCH_UP:
+            raise ValueError("Salah arah. Tundukkan kepala ke BAWAH, bukan menengadah." if m["pitch"] >= WRONG_WAY
+                             else "Tundukkan lagi kepala ke BAWAH sedikit.")
     else:
         raise ValueError(f"Tantangan '{challenge}' tidak dikenal.")
 

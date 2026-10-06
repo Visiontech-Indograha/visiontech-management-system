@@ -142,7 +142,7 @@ class AttendanceSessionService:
         if self.faces is None:
             return row
         if face_probe_id is None:
-            if device == "MOBILE" and await self.faces.face_expected(user_id):
+            if await self.faces.face_expected(user_id):
                 return await self.repo.flag_missing_face(
                     row.id, event, "wajah tidak diperiksa: karyawan sudah mendaftar wajah tetapi absen tanpa data wajah")
             return row

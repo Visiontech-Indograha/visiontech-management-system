@@ -1,0 +1,2 @@
+# Skrip shell dijalankan di Linux (server): selalu LF.
+*.sh text eol=lf

@@ -66,3 +66,9 @@ class ProbeResponse(BaseModel):
     # True = face-service sedang tidak tersedia; gambar disimpan dan diperiksa ulang nanti (absen tetap bisa).
     pending: bool = False
     expires_at: datetime
+
+
+class ChallengeCheckResponse(BaseModel):
+    status: Literal["sukses", "menunggu"]
+    detail: str
+    quality: float | None = None

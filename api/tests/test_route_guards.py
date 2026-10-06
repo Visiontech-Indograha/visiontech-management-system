@@ -57,6 +57,7 @@ SELF_SERVICE = {
     ("POST", "/face/enroll"): "pendaftaran template wajah milik sendiri (FIELD)",
     ("GET", "/face/template"): "unduh template embedding milik sendiri untuk absen luring",
     ("POST", "/face/probe"): "unggah probe foto wajah milik sendiri untuk absensi",
+    ("POST", "/face/challenge-check"): "pemeriksaan tantangan liveness bingkai kamera milik sendiri (menerbitkan bukti)",
 }
 # Kewenangan bergantung pada isi permintaan (SK di badan) atau tautan berkas → dijaga di handler.
 GUARDED_IN_HANDLER = {

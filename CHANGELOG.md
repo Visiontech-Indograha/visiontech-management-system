@@ -9,6 +9,8 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased] — `development`
 
+- **SK v2 — ketua juga harus bawahan PM (2026-10-06, temuan uji E2E T1, keputusan pemilik):** sebelumnya hanya anggota yang dibatasi unit PM; PM bisa menunjuk ketua dari unit lain dan daftar calon ketua memuat semua unit. Kini `PlanDraftService._validate` memeriksa ketua + anggota (`PERSONNEL_OUTSIDE_PM_UNIT`) dan `form-options.leaders` dibatasi unit PM (OPS/ADMIN tetap lintas unit di jalur lama). Uji baru di `test_plan_assignment_scope.py`.
+
 - **Auth — administrator (tanpa karyawan) bisa login dari web dan HP (2026-10-06, temuan uji E2E A1):** `AuthService.login` menolak platform `mobile` bagi akun tanpa karyawan (mode `None`), sehingga administrator pemilik tidak bisa masuk di HP. Kini akun tanpa karyawan boleh web dan HP; aturan R-33 tetap: lapangan hanya HP, kantor hanya web. Uji di `test_attendance_channel.py`.
 - **Web — Lokasi kerja: peta dinamis + cari alamat (2026-10-06, temuan uji pemilik):** dialog "Tambah lokasi kerja" tadinya hanya isian lintang/bujur (tanpa peta/penanda/pencarian). Kini `SiteMapPicker`: cari alamat/tempat seluruh Indonesia (Nominatim lewat `/geo/search`), klik peta, geser penanda, lingkaran radius; **lintang/bujur tetap bisa diketik manual** dan penanda/peta mengikuti (satu sumber titik). API: `/geo/search` kini juga untuk pemegang `manage:sites` (Finance/kantor), bukan hanya `create:plan` (`require_any_permission`). Uji web (peta, hasil cari mengisi lat/lng/alamat, ketik manual) dan API (Finance boleh cari).
 

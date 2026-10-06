@@ -9,6 +9,8 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased] — `development`
 
+- **Absensi — pribadi dipisah dari anggota/umum (2026-10-06, permintaan pemilik):** untuk PM (miliknya + bawahan), Finance dan OPS (semua) daftar absensi tercampur dengan absensi pribadi. `GET /attendance?scope=` baru: `mine` (pribadi), `team` (selain milik sendiri: anggota/umum), `all` (bawaan, kompatibel). Web: tab **Absensi saya** dan **Absensi anggota** (PM) / **Absensi umum** (Finance, OPS); pekerja biasa tanpa tab; kartu absen masuk/pulang tetap di atas. Uji API (`mine ∪ team = all`, tidak beririsan, organisasi lain tak terlihat) dan web.
+
 - **SK v2 — ketua juga harus bawahan PM (2026-10-06, temuan uji E2E T1, keputusan pemilik):** sebelumnya hanya anggota yang dibatasi unit PM; PM bisa menunjuk ketua dari unit lain dan daftar calon ketua memuat semua unit. Kini `PlanDraftService._validate` memeriksa ketua + anggota (`PERSONNEL_OUTSIDE_PM_UNIT`) dan `form-options.leaders` dibatasi unit PM (OPS/ADMIN tetap lintas unit di jalur lama). Uji baru di `test_plan_assignment_scope.py`.
 
 - **Auth — administrator (tanpa karyawan) bisa login dari web dan HP (2026-10-06, temuan uji E2E A1):** `AuthService.login` menolak platform `mobile` bagi akun tanpa karyawan (mode `None`), sehingga administrator pemilik tidak bisa masuk di HP. Kini akun tanpa karyawan boleh web dan HP; aturan R-33 tetap: lapangan hanya HP, kantor hanya web. Uji di `test_attendance_channel.py`.

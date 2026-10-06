@@ -239,20 +239,28 @@ def get_attendance_monitor_service(db: AsyncSession = Depends(get_db_with_user))
     return AttendanceMonitorService(CRUDAttendanceMonitor(db))
 
 
-def get_face_service(db: AsyncSession = Depends(get_db_with_user)) -> FaceService:
-    return FaceService(CRUDFace(db), FaceEmbedClient())
+def get_face_embed_client() -> FaceEmbedClient:
+    """Klien face-service. Dependency tersendiri agar uji dapat menggantinya dengan tiruan."""
+    return FaceEmbedClient()
 
 
-def get_attendance_session_service(db: AsyncSession = Depends(get_db_with_user)) -> AttendanceSessionService:
-    return AttendanceSessionService(CRUDAttendanceSession(db), CRUDOrgClock(db), FaceService(CRUDFace(db), FaceEmbedClient()))
+def get_face_service(db: AsyncSession = Depends(get_db_with_user),
+                     client: FaceEmbedClient = Depends(get_face_embed_client)) -> FaceService:
+    return FaceService(CRUDFace(db), client)
+
+
+def get_attendance_session_service(db: AsyncSession = Depends(get_db_with_user),
+                                   client: FaceEmbedClient = Depends(get_face_embed_client)) -> AttendanceSessionService:
+    return AttendanceSessionService(CRUDAttendanceSession(db), CRUDOrgClock(db), FaceService(CRUDFace(db), client))
 
 
 def get_site_service(db: AsyncSession = Depends(get_db_with_user)) -> SiteService:
     return SiteService(CRUDSite(db))
 
 
-def get_attendance_offline_service(db: AsyncSession = Depends(get_db_with_user)) -> AttendanceOfflineService:
-    faces = FaceService(CRUDFace(db), FaceEmbedClient())
+def get_attendance_offline_service(db: AsyncSession = Depends(get_db_with_user),
+                                   client: FaceEmbedClient = Depends(get_face_embed_client)) -> AttendanceOfflineService:
+    faces = FaceService(CRUDFace(db), client)
     return AttendanceOfflineService(CRUDAttendanceOffline(db),
                                     AttendanceSessionService(CRUDAttendanceSession(db), CRUDOrgClock(db), faces))
 

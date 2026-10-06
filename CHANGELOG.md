@@ -9,6 +9,31 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased] — `development`
 
+- **Wajah — wajib daftar setelah login, wajah untuk pekerja kantor, tantangan diperbaiki (2026-10-06, hasil uji Realme):**
+  - **Wajib daftar wajah:** `FACE_ENROLLMENT_REQUIRED` (bawaan **false**; nyalakan hanya setelah face-service berjalan di server) → `/face/status.enrollment_required`; web (`RequireAuth`) dan HP (`FaceEnrollGate`) menutup menu lain sampai wajah terdaftar. Galat jaringan tidak memblokir.
+  - **Pekerja kantor juga memakai wajah** (web, hanya online): pembatasan FIELD dihapus di API; web memverifikasi wajah sebelum absen masuk/pulang (`FaceProbeDialog`); pendaftaran lewat webcam (`FaceCamera`, 2 tantangan dicek server). Karyawan terdaftar yang absen tanpa data wajah → Perlu review (juga web).
+  - **Tantangan:** kedip dihapus (tidak andal); ditambah **bawah**; tanda yaw/pitch dibalik sesuai uji nyata; ambang dapat diatur lewat env (`FACE_YAW_MIN`, `FACE_PITCH_UP`, `FACE_MOUTH_MIN`, `FACE_FRONT_MAX`, `FACE_MIN_WIDTH`, `FACE_MAX_WIDTH`); panduan terlalu jauh/dekat/di tengah, pesan "salah arah", langkah "Luruskan wajah" (`depan`, **tanpa bukti**), ikon panah per arah. `metrics` mentah hanya dikirim saat `APP_ENV=development`; teks kuning di HP dihapus.
+  - Laju `/face/challenge-check` dinaikkan ke 1200 per 10 menit.
+
+- **HP & web — absensi wajah memakai kamera dan tantangan acak (2026-10-06):**
+  - **HP:** `FaceCaptureScreen` (kamera depan, 2 tantangan acak dari kiri/kanan/atas/buka mulut/kedip); bingkai dikirim ke `/face/challenge-check` dan **bukti bertanda tangan server** dikirim di `liveness.proofs`. Gambar wajah akhir **mentah tanpa watermark** (probe), dihapus dari HP setelah unggah. **Foto bukti hanya di luar radius**; absen pulang hanya wajah, tanpa foto bukti. Persetujuan memakai **teks & versi kebijakan dari server** (sebelumnya `'1.0'` tertulis mati → selalu 409 `POLICY_OUTDATED`, dan teks tidak ditampilkan). Pendaftaran terpandu lewat kamera; membaca `enrolled` (bukan `poses_enrolled`).
+  - **Web:** pendaftaran wajah dengan memilih berkas dari disk **dihapus** (foto orang lain bisa didaftarkan ke akun sendiri); kartu wajah tinggal status, persetujuan, tarik persetujuan, dan petunjuk mendaftar di aplikasi HP.
+  - Uji: Flutter (tantangan, konversi bingkai NV21→JPEG termasuk arah putaran, dialog persetujuan, kontrak API) dan web (persetujuan versi server, tanpa input berkas, tarik persetujuan).
+  - **Belum:** pencocokan wajah di HP saat luring (model/template/ML Kit) — absen luring ber-wajah saat ini ditandai Perlu review di server.
+
+- **Face API — perbaikan hasil tinjauan & uji berbasis DB (2026-10-06):**
+  - **Dua bug nyata di kode yang sudah live, ditemukan oleh uji integrasi baru (`api/tests/test_face_integration.py`, 22 uji, PostgreSQL nyata + role `vms_app`):**
+    1. `verify_face_for_attendance` melempar galat (`record "v_self" is not assigned yet`) pada hasil SKIPPED/NOT_ENROLLED/LOW_QUALITY → absen berwajah 500, bukan "Perlu review". Diperbaiki lewat **Alembic 0023** (revisi 0022 sudah diterapkan di produksi, tidak diubah) dan `db/05_face.sql`.
+    2. Pemeriksaan konsistensi pose di pendaftaran **tidak pernah menolak** (kosinus pose terhadap rata-rata ±0,58 untuk wajah berbeda, selalu di atas ambang 0,35) → tiga foto dari tiga orang diterima. Kini memakai kemiripan antar-pose terkecil (`POSE_PAIR_MIN`).
+  - **Keamanan:** `/face/challenge-check` tidak lagi mengembalikan "sukses" otomatis saat face-service mati/belum dikonfigurasi (kini 503) dan dibatasi laju per pengguna; pendaftaran/template/probe hanya untuk pekerja lapangan (FIELD); unggahan dibaca dengan batas 5 MB dan jumlah berkas dibatasi sebelum dibaca; data tantangan tidak valid → 422 (sebelumnya 500).
+  - **Liveness yang dipercaya server (keputusan pemilik 2026-10-06):** `/face/challenge-check` menerbitkan **bukti bertanda tangan** (JWT EdDSA, audience `vms-face-challenge`, terikat pengguna, 5 menit, nonce sekali pakai) hanya bila gerakan benar-benar terlihat di bingkai. Pendaftaran dan absen **online** hanya memercayai bukti untuk 2 tantangan berbeda (`liveness.proofs`); klaim `passed` dari HP tidak lagi dipercaya online (hasilnya LOW_QUALITY → Perlu review) dan hanya berlaku untuk absen luring yang terikat payload bertanda tangan.
+  - **Absen tanpa data wajah (keputusan pemilik 2026-10-06):** pekerja lapangan yang SUDAH menyetujui & mendaftar wajah tetapi absen tanpa data wajah (APK lama, kamera ditolak, **absen luring tanpa blok `face`** — sebelumnya diterima valid, sehingga absen luring bisa memakai wajah siapa pun) kini ditandai **Perlu review** dengan catatan server "wajah tidak diperiksa"; tidak ditolak. Berlaku untuk masuk dan pulang, online dan luring. `offline_note` kini menggabungkan catatan (jam, lokasi palsu, wajah), tidak saling menimpa. Karyawan yang belum mendaftar / sudah menarik persetujuan tidak terpengaruh.
+  - **Uji RLS:** pencocokan dijalankan sebagai `vms_app` (bukan superuser); uji gagal bila fungsi bukan `SECURITY DEFINER` (diverifikasi dengan mengubahnya sementara).
+  - `get_face_embed_client` menjadi dependency tersendiri agar uji dapat memalsukan face-service.
+
+- **Face API — pengecekan tantangan liveness di server (2026-10-05):**
+  - **Endpoint Liveness (`endpoints/face.py`, `face-service/main.py`):** menyelesaikan endpoint `/challenge-check` untuk mengevaluasi liveness biometrik (seperti senyum, kedip, menoleh) dari kamera secara real-time.
+
 - **Face API & Mobile UI — antarmuka persetujuan biometrik web, probe selfie & penanganan lokasi SK mobile (2026-10-05):**
   - **Mobile (`vms_api.dart`, `attendance_screen.dart`, `profile_screen.dart`):** integrasi pengenalan wajah biometrik (Face API) untuk absensi masuk dan pulang (pengambilan swafoto otomatis dan pengiriman probe biometrik ke server bila wajah telah terdaftar). Penambahan kartu status biometrik di layar profil dengan persetujuan kebijakan v1.0 dan pendaftaran pose wajah. Penanganan banner informatif saat lokasi kerja penugasan SK belum tersedia.
   - **Web (`AccountPage.tsx`, `api.ts`):** kartu pengaturan biometrik wajah di halaman akun staf dengan persetujuan mandiri (consent) kebijakan v1.0, indikator status pendaftaran template wajah, dan formulir pendaftaran 3-5 pose swafoto.

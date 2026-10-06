@@ -36,6 +36,7 @@ export interface FaceStatus {
   model_name?: string | null;
   model_version?: string | null;
   liveness_required: boolean;
+  enrollment_required?: boolean;
   template_ttl_days: number;
   policy: {
     version: string;
@@ -55,23 +56,6 @@ export function useSetFaceConsent() {
   return useMutation({
     mutationFn: async ({ state, policy_version }: { state: "GRANTED" | "WITHDRAWN"; policy_version: string }) =>
       (await api.post<{ message: string }>("/face/consent", { state, policy_version })).data,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["face", "status"] }),
-  });
-}
-
-export function useEnrollFace() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (files: File[]) => {
-      const form = new FormData();
-      for (const f of files) {
-        form.append("files", f);
-      }
-      form.append("liveness", "{}");
-      return (await api.post("/face/enroll", form, {
-        headers: { "Content-Type": "multipart/form-data" },
-      })).data;
-    },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["face", "status"] }),
   });
 }

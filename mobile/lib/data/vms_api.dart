@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 
@@ -284,19 +286,40 @@ class VmsApi {
         data: {'state': state, 'policy_version': policyVersion},
       );
 
-  Future<String> createFaceProbe(File photo) async {
+  /// Memeriksa satu bingkai kamera terhadap tantangan liveness (online). Bila gerakan terlihat, server
+  /// mengembalikan `proof` bertanda tangan yang nanti dikirim kembali di `liveness.proofs`.
+  Future<Map<String, dynamic>> faceChallengeCheck(
+    Uint8List jpeg,
+    String challenge,
+  ) async {
+    final form = FormData.fromMap({
+      'file': MultipartFile.fromBytes(jpeg, filename: 'frame.jpg'),
+      'challenge': challenge,
+    });
+    final res = await _dio.post('$_p/face/challenge-check', data: form);
+    return Map<String, dynamic>.from(res.data as Map);
+  }
+
+  /// Unggah gambar wajah sementara (bukan foto absensi) beserta hasil tantangan; → `probe_id` untuk absen.
+  Future<String> createFaceProbe(
+    File photo, {
+    required Map<String, dynamic> liveness,
+  }) async {
     final form = FormData.fromMap({
       'file': await MultipartFile.fromFile(
         photo.path,
         filename: photo.uri.pathSegments.last,
       ),
-      'liveness': '{}',
+      'liveness': jsonEncode(liveness),
     });
     final res = await _dio.post('$_p/face/probe', data: form);
     return (res.data as Map)['probe_id'] as String;
   }
 
-  Future<Map<String, dynamic>> enrollFace(List<File> photos) async {
+  Future<Map<String, dynamic>> enrollFace(
+    List<File> photos, {
+    required Map<String, dynamic> liveness,
+  }) async {
     final fileParts = <MultipartFile>[];
     for (final photo in photos) {
       fileParts.add(await MultipartFile.fromFile(
@@ -306,7 +329,7 @@ class VmsApi {
     }
     final form = FormData.fromMap({
       'files': fileParts,
-      'liveness': '{}',
+      'liveness': jsonEncode(liveness),
     });
     final res = await _dio.post('$_p/face/enroll', data: form);
     return Map<String, dynamic>.from(res.data as Map);

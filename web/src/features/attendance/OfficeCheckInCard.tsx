@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { useSession } from "@/app/session";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
@@ -11,6 +11,8 @@ import { TextAreaField } from "@/components/ui/Field";
 import { errorMessage } from "@/lib/errors";
 import { formatDateTime } from "@/lib/format";
 import { useAttendanceSites } from "@/features/sites/api";
+import { useFaceStatus } from "@/features/account/api";
+import { FaceProbeDialog } from "@/features/face/FaceProbeDialog";
 import { SelfieCaptureDialog } from "./SelfieCaptureDialog";
 
 type AttendanceList = components["schemas"]["AttendanceListResponse"];
@@ -121,6 +123,11 @@ function OfficeCheckInForm({ employeeId }: { employeeId: string }) {
   // R-33: penjelasan wajib bila di luar radius atau mengajukan ulang absensi yang ditolak (juga dicek server).
   const [explanation, setExplanation] = useState("");
   const [askExplanation, setAskExplanation] = useState(false);
+  // Wajah (web = hanya online): karyawan yang sudah mendaftar wajah memverifikasi dulu; hasilnya dipakai satu absen.
+  const face = useFaceStatus();
+  const needFace = !!(face.data?.employee_linked && face.data.consent === "GRANTED" && face.data.enrolled);
+  const [faceFor, setFaceFor] = useState<"in" | "out" | null>(null);
+  const probeRef = useRef<string | null>(null);
   const [selfieFor, setSelfieFor] = useState<{ pos: BrowserPosition; siteName: string; info: string } | null>(null);
   // Bawaan: lokasi yang namanya memuat "kantor", selain itu lokasi pertama; pilihan pengguna didahulukan.
   const siteId = picked || (sites.data?.find((s) => /kantor/i.test(s.name)) ?? sites.data?.[0])?.id || "";
@@ -168,11 +175,13 @@ function OfficeCheckInForm({ employeeId }: { employeeId: string }) {
           accuracy_m: pos.accuracy,
           explanation: explanation.trim() || null,
           selfie_file_id: vars?.selfieFileId ?? null,
+          face_probe_id: probeRef.current,
         })
       ).data;
     },
     onSuccess: async (a) => {
       if (!a) return; // menunggu swafoto
+      probeRef.current = null;
       setError(null);
       setExplanation("");
       setAskExplanation(false);
@@ -197,10 +206,12 @@ function OfficeCheckInForm({ employeeId }: { employeeId: string }) {
           channel: "WEB",
           location: { lat: pos.lat, lng: pos.lng },
           location_origin: "GPS",
+          face_probe_id: probeRef.current,
         })
       ).data;
     },
     onSuccess: async () => {
+      probeRef.current = null;
       setError(null);
       toast.success("Absen pulang tercatat.");
       await refresh();
@@ -280,7 +291,7 @@ function OfficeCheckInForm({ employeeId }: { employeeId: string }) {
                 ))}
               </select>
             </div>
-            <Button className="h-11" disabled={!siteId || busy} onClick={() => checkIn.mutate(undefined)}>
+            <Button className="h-11" disabled={!siteId || busy} onClick={() => (needFace ? setFaceFor("in") : checkIn.mutate(undefined))}>
               {checkIn.isPending ? "Membaca lokasi…" : rejected.length > 0 ? "Ajukan absen ulang" : "Absen masuk"}
             </Button>
           </div>
@@ -308,13 +319,26 @@ function OfficeCheckInForm({ employeeId }: { employeeId: string }) {
               Absen masuk menunggu pemeriksaan. Absen pulang bisa dilakukan setelah absen masuk disetujui.
             </p>
           ) : !rec.check_out_at ? (
-            <Button className="h-11 w-full md:w-auto" disabled={busy} onClick={() => checkOut.mutate()}>
+            <Button className="h-11 w-full md:w-auto" disabled={busy} onClick={() => (needFace ? setFaceFor("out") : checkOut.mutate())}>
               {checkOut.isPending ? "Membaca lokasi…" : "Absen pulang"}
             </Button>
           ) : (
             <p className="text-sm text-success">Absensi hari ini selesai. Terima kasih!</p>
           )}
         </div>
+      )}
+      {faceFor && (
+        <FaceProbeDialog
+          title={faceFor === "in" ? "Verifikasi wajah — absen masuk" : "Verifikasi wajah — absen pulang"}
+          onCancel={() => setFaceFor(null)}
+          onDone={(probeId) => {
+            const which = faceFor;
+            probeRef.current = probeId;
+            setFaceFor(null);
+            if (which === "in") checkIn.mutate(undefined);
+            else checkOut.mutate();
+          }}
+        />
       )}
       {selfieFor && (
         <SelfieCaptureDialog

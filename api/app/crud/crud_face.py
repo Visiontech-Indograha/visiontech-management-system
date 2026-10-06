@@ -40,6 +40,16 @@ class CRUDFace(CRUDBase):
             {"uid": user_id},
         )
 
+    async def face_expected(self, employee_id: UUID | str) -> bool:
+        """Karyawan ini sudah menyetujui pemakaian wajah DAN punya pendaftaran aktif: absennya wajib membawa wajah."""
+        return bool(await self.scalar(
+            """
+            SELECT vms.has_biometric_consent(CAST(:emp AS uuid))
+               AND EXISTS (SELECT 1 FROM vms.face_enrollment WHERE employee_id = CAST(:emp AS uuid) AND is_active)
+            """,
+            {"emp": employee_id},
+        ))
+
     async def org_settings(self, org_id: UUID | str) -> Any:
         """Ambang & kebijakan wajah organisasi (dapat dikalibrasi tanpa rilis ulang)."""
         return await self.fetchone(
@@ -154,14 +164,30 @@ class CRUDFace(CRUDBase):
             {"id": probe_id},
         )
 
-    async def consume_probe(self, probe_id: UUID | str, event: str, attendance_id: UUID | str) -> None:
+    async def consume_probe(self, probe_id: UUID | str, event: str, attendance_id: UUID | str,
+                            liveness_ok: bool) -> None:
+        """Menandai probe terpakai dan mengunci putusan liveness-nya (dipakai juga oleh pemeriksaan ulang)."""
         await self.execute(
             """
-            UPDATE vms.face_probe SET consumed_at = now(), consumed_event = :ev, attendance_id = :att
-            WHERE id = :id
+            UPDATE vms.face_probe
+               SET consumed_at = now(), consumed_event = :ev, attendance_id = :att,
+                   liveness = liveness || jsonb_build_object('effective_passed', CAST(:ok AS boolean))
+             WHERE id = :id
             """,
-            {"id": probe_id, "ev": event, "att": attendance_id},
+            {"id": probe_id, "ev": event, "att": attendance_id, "ok": liveness_ok},
         )
+
+    async def used_proof_nonces(self, employee_id: UUID | str, nonces: Sequence[str]) -> set[str]:
+        """Nonce bukti tantangan yang sudah pernah dipakai probe milik karyawan ini (bukti sekali pakai)."""
+        rows = await self.fetchall(
+            """
+            SELECT n FROM unnest(CAST(:nonces AS text[])) AS n
+            WHERE EXISTS (SELECT 1 FROM vms.face_probe fp
+                          WHERE fp.employee_id = :emp AND jsonb_exists(fp.liveness -> 'proof_nonces', n))
+            """,
+            {"emp": employee_id, "nonces": list(nonces)},
+        )
+        return {str(r[0]) for r in rows}
 
     async def verify(self, *, org_id: UUID | str, employee_id: UUID | str, embedding: Sequence[float],
                      liveness: float, probe_file_id: UUID | str | None, device: str | None, event: str) -> Any:

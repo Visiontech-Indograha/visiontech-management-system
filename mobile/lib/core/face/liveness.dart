@@ -6,7 +6,7 @@ class LivenessChallenge {
   const LivenessChallenge(
     this.id,
     this.instruction, {
-    this.interval = const Duration(milliseconds: 700),
+    this.interval = const Duration(milliseconds: 450),
   });
 
   final String id;
@@ -24,7 +24,7 @@ const livenessChallenges = <LivenessChallenge>[
   LivenessChallenge(
     'kedip',
     'KEDIPKAN mata Anda',
-    interval: Duration(milliseconds: 400),
+    interval: Duration(milliseconds: 300),
   ),
 ];
 

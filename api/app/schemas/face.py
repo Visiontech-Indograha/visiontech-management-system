@@ -37,6 +37,7 @@ class FaceStatus(BaseModel):
     model_name: str | None = None
     model_version: str | None = None
     liveness_required: bool = True
+    enrollment_required: bool = False            # True = klien harus memaksa pendaftaran wajah sebelum menu lain
     template_ttl_days: int
     policy: FacePolicy
 

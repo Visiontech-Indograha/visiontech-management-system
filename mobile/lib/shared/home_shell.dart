@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../core/providers.dart';
 import '../features/auth/auth_controller.dart';
+import '../features/face/face_enroll_gate.dart';
 import 'sync_status_banner.dart';
 import 'ui/floating_nav.dart';
 
@@ -130,6 +131,10 @@ class _HomeShellState extends ConsumerState<HomeShell>
 
   @override
   Widget build(BuildContext context) {
+    return FaceEnrollGate(child: _shell(context));
+  }
+
+  Widget _shell(BuildContext context) {
     return Scaffold(
       body: Column(
         children: [

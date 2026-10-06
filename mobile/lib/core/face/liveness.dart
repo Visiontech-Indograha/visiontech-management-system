@@ -1,32 +1,44 @@
 import 'dart:math';
 
+import 'package:flutter/material.dart' show IconData, Icons;
+
 /// Satu tantangan keaslian wajah (anti foto layar). `id` HARUS sama dengan yang dikenali face-service
-/// (`/face/challenge-check`): kiri, kanan, atas, buka_mulut, kedip. "depan" tidak dipakai sebagai tantangan.
+/// (`/face/challenge-check`): kiri, kanan, atas, bawah, buka_mulut. Kedip sengaja tidak dipakai (sulit dideteksi
+/// andal). "depan" hanya panduan meluruskan wajah, bukan bukti liveness.
 class LivenessChallenge {
   const LivenessChallenge(
     this.id,
-    this.instruction, {
+    this.instruction,
+    this.icon, {
     this.interval = const Duration(milliseconds: 450),
   });
 
   final String id;
   final String instruction;
 
-  /// Jeda antar bingkai yang dikirim ke server. Kedip singkat sehingga butuh bingkai lebih rapat.
+  /// Ikon besar di layar kamera supaya arah tantangan langsung terbedakan (panah ke sisi pengguna).
+  final IconData icon;
+
+  /// Jeda antar bingkai yang dikirim ke server.
   final Duration interval;
 }
 
 const livenessChallenges = <LivenessChallenge>[
-  LivenessChallenge('kiri', 'Tengokkan kepala sedikit ke KIRI'),
-  LivenessChallenge('kanan', 'Tengokkan kepala sedikit ke KANAN'),
-  LivenessChallenge('atas', 'Dongakkan kepala sedikit ke ATAS'),
-  LivenessChallenge('buka_mulut', 'BUKA MULUT Anda'),
-  LivenessChallenge(
-    'kedip',
-    'KEDIPKAN mata Anda',
-    interval: Duration(milliseconds: 300),
-  ),
+  LivenessChallenge('kiri', 'Tengokkan kepala ke KIRI', Icons.arrow_back_rounded),
+  LivenessChallenge('kanan', 'Tengokkan kepala ke KANAN', Icons.arrow_forward_rounded),
+  LivenessChallenge('atas', 'Dongakkan kepala ke ATAS', Icons.arrow_upward_rounded),
+  LivenessChallenge('bawah', 'Tundukkan kepala ke BAWAH', Icons.arrow_downward_rounded),
+  LivenessChallenge('buka_mulut', 'BUKA MULUT Anda', Icons.sentiment_satisfied_alt_rounded),
 ];
+
+/// Langkah penutup setelah semua tantangan lolos: arahkan pengguna meluruskan wajah sebelum gambar diambil.
+/// TIDAK menghasilkan bukti (server tidak menerbitkannya untuk "depan").
+const straightenStep = LivenessChallenge(
+  'depan',
+  'Hadap lurus ke kamera',
+  Icons.face_rounded,
+  interval: Duration(milliseconds: 350),
+);
 
 /// Jumlah tantangan BERBEDA yang harus lolos (server mensyaratkan jumlah yang sama).
 const livenessChallengeCount = 2;

@@ -1,8 +1,8 @@
 """
 app/api/v1/endpoints/face.py
-Endpoint pengenalan wajah untuk absensi HP (docs/06 fase 8, docs/08 §6).
-Pendaftaran, template, dan gambar wajah hanya untuk pekerja lapangan (FIELD) pada akun sendiri (ditegakkan di
-service); status, kebijakan, dan persetujuan/penarikan terbuka bagi semua akun karyawan.
+Endpoint pengenalan wajah untuk absensi (docs/06 fase 8, docs/08 §6).
+Berlaku untuk semua akun karyawan pada data sendiri: pekerja lapangan lewat HP (boleh luring), pekerja kantor lewat
+web (hanya online; web tidak punya jalur luring).
 """
 from __future__ import annotations
 

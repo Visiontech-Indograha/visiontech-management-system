@@ -139,3 +139,12 @@ def test_login_platform_rules_still_hold_for_employees(client, world):
     sync_query("UPDATE vms.employee SET attendance_mode = 'OFFICE' WHERE id = %s", (world.employees["member"],))
     assert client.post("/auth/login", json={**member, "platform": "mobile"}).status_code == 403   # kantor di HP
     assert client.post("/auth/login", json={**member, "platform": "web"}).status_code == 200
+
+
+def test_admin_linked_to_an_employee_still_logs_in_on_both_platforms(client, world):
+    """Admin yang akunnya ditautkan ke data karyawan (mis. kantor) tetap boleh login di web DAN HP."""
+    from tests.conftest import WORLD_PASSWORD
+    sync_query("UPDATE vms.employee SET attendance_mode = 'OFFICE' WHERE id = %s", (world.employees["admin"],))
+    creds = {"email": world.logins["admin"], "password": WORLD_PASSWORD}
+    assert client.post("/auth/login", json={**creds, "platform": "mobile"}).status_code == 200
+    assert client.post("/auth/login", json={**creds, "platform": "web"}).status_code == 200

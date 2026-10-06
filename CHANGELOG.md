@@ -9,6 +9,12 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased] — `development`
 
+- **Wajah — wajib daftar setelah login, wajah untuk pekerja kantor, tantangan diperbaiki (2026-10-06, hasil uji Realme):**
+  - **Wajib daftar wajah:** `FACE_ENROLLMENT_REQUIRED` (bawaan **false**; nyalakan hanya setelah face-service berjalan di server) → `/face/status.enrollment_required`; web (`RequireAuth`) dan HP (`FaceEnrollGate`) menutup menu lain sampai wajah terdaftar. Galat jaringan tidak memblokir.
+  - **Pekerja kantor juga memakai wajah** (web, hanya online): pembatasan FIELD dihapus di API; web memverifikasi wajah sebelum absen masuk/pulang (`FaceProbeDialog`); pendaftaran lewat webcam (`FaceCamera`, 2 tantangan dicek server). Karyawan terdaftar yang absen tanpa data wajah → Perlu review (juga web).
+  - **Tantangan:** kedip dihapus (tidak andal); ditambah **bawah**; tanda yaw/pitch dibalik sesuai uji nyata; ambang dapat diatur lewat env (`FACE_YAW_MIN`, `FACE_PITCH_UP`, `FACE_MOUTH_MIN`, `FACE_FRONT_MAX`, `FACE_MIN_WIDTH`, `FACE_MAX_WIDTH`); panduan terlalu jauh/dekat/di tengah, pesan "salah arah", langkah "Luruskan wajah" (`depan`, **tanpa bukti**), ikon panah per arah. `metrics` mentah hanya dikirim saat `APP_ENV=development`; teks kuning di HP dihapus.
+  - Laju `/face/challenge-check` dinaikkan ke 1200 per 10 menit.
+
 - **HP & web — absensi wajah memakai kamera dan tantangan acak (2026-10-06):**
   - **HP:** `FaceCaptureScreen` (kamera depan, 2 tantangan acak dari kiri/kanan/atas/buka mulut/kedip); bingkai dikirim ke `/face/challenge-check` dan **bukti bertanda tangan server** dikirim di `liveness.proofs`. Gambar wajah akhir **mentah tanpa watermark** (probe), dihapus dari HP setelah unggah. **Foto bukti hanya di luar radius**; absen pulang hanya wajah, tanpa foto bukti. Persetujuan memakai **teks & versi kebijakan dari server** (sebelumnya `'1.0'` tertulis mati → selalu 409 `POLICY_OUTDATED`, dan teks tidak ditampilkan). Pendaftaran terpandu lewat kamera; membaca `enrolled` (bukan `poses_enrolled`).
   - **Web:** pendaftaran wajah dengan memilih berkas dari disk **dihapus** (foto orang lain bisa didaftarkan ke akun sendiri); kartu wajah tinggal status, persetujuan, tarik persetujuan, dan petunjuk mendaftar di aplikasi HP.

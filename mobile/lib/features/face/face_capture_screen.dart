@@ -72,6 +72,7 @@ class _FaceCaptureScreenState extends ConsumerState<FaceCaptureScreen> {
   DateTime _lastSent = DateTime.fromMillisecondsSinceEpoch(0);
   DateTime _deadline = DateTime.now();
   Timer? _ticker;
+  String? _metrics; // hanya terisi bila API berjalan di mode pengembangan (kalibrasi)
 
   @override
   void initState() {
@@ -173,6 +174,12 @@ class _FaceCaptureScreenState extends ConsumerState<FaceCaptureScreen> {
           .api
           .faceChallengeCheck(jpeg, challenge.id);
       if (!mounted || _phase != _Phase.challenge || step != _step) return;
+      final m = res['metrics'];
+      if (m is Map && mounted) {
+        setState(
+          () => _metrics = m.entries.map((e) => '${e.key} ${e.value}').join('  '),
+        );
+      }
       final proof = res['proof'];
       if (res['status'] == 'sukses' && proof is String) {
         _proofs.add(proof);
@@ -320,6 +327,13 @@ class _FaceCaptureScreenState extends ConsumerState<FaceCaptureScreen> {
             textAlign: TextAlign.center,
             style: theme.textTheme.titleMedium?.copyWith(color: Colors.white),
           ),
+          if (_metrics != null && !failed)
+            Text(
+              _metrics!,
+              key: const Key('face-metrics'),
+              textAlign: TextAlign.center,
+              style: theme.textTheme.labelSmall?.copyWith(color: Colors.amber),
+            ),
           if (!failed) ...[
             const SizedBox(height: 12),
             LinearProgressIndicator(

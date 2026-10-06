@@ -14,7 +14,7 @@ from typing import Any
 
 import cv2
 import numpy as np
-from fastapi import FastAPI, File, Header, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile
 from fastapi.concurrency import run_in_threadpool
 from insightface.app import FaceAnalysis
 from pydantic import BaseModel
@@ -32,7 +32,7 @@ async def lifespan(_: FastAPI):
     if not TOKEN:
         raise RuntimeError("FACE_SERVICE_TOKEN wajib diisi (rahasia bersama dengan API VMS).")
     analyzer = FaceAnalysis(name=MODEL_PACK, root=os.getenv("INSIGHTFACE_ROOT", "~/.insightface"),
-                            allowed_modules=["detection", "recognition"], providers=["CPUExecutionProvider"])
+                            allowed_modules=["detection", "recognition", "landmark_2d_106", "landmark_3d_68"], providers=["CPUExecutionProvider"])
     analyzer.prepare(ctx_id=-1, det_size=(640, 640))
     _state["analyzer"] = analyzer
     yield
@@ -95,3 +95,121 @@ async def embed(file: UploadFile = File(...), x_face_token: str | None = Header(
         raise HTTPException(status_code=413, detail="Gambar melebihi 5 MB.")
     async with _gate:
         return await run_in_threadpool(_embed, data)
+
+
+# Ambang tantangan (dapat dikalibrasi per perangkat tanpa ubah kode).
+# Tanda yaw/pitch disesuaikan dengan hasil uji nyata di Realme (2026-10-06): bingkai kamera depan TIDAK dicerminkan,
+# sehingga menoleh ke kiri pengguna = yaw positif dan menengadah = pitch positif pada keluaran InsightFace.
+YAW_MIN = float(os.getenv("FACE_YAW_MIN", "12"))          # derajat menoleh kiri/kanan
+PITCH_UP = float(os.getenv("FACE_PITCH_UP", "8"))         # pitch >= nilai ini = menengadah; pitch <= -nilai = menunduk
+FRONT_MAX = float(os.getenv("FACE_FRONT_MAX", "12"))      # |yaw| dan |pitch| maksimum agar dianggap menghadap lurus
+WRONG_WAY = 5.0                                           # sudah menoleh sejauh ini ke arah SALAH -> beri tahu salah arah
+FACE_MIN_W = float(os.getenv("FACE_MIN_WIDTH", "0.25"))   # lebar wajah / lebar bingkai; di bawahnya = terlalu jauh
+FACE_MAX_W = float(os.getenv("FACE_MAX_WIDTH", "0.80"))   # di atasnya = terlalu dekat
+MOUTH_MIN = float(os.getenv("FACE_MOUTH_MIN", "0.35"))    # tinggi bukaan mulut / lebar mulut
+
+
+def _metrics(face: Any, shape: tuple[int, ...] | None = None) -> dict[str, float]:
+    """Ukuran mentah yang dipakai tantangan; juga dikirim ke HP pada mode pengembangan untuk kalibrasi."""
+    m: dict[str, float] = {}
+    if shape is not None:
+        h, w = shape[0], shape[1]
+        x1, y1, x2, y2 = (float(v) for v in face.bbox)
+        m["face_w"] = round((x2 - x1) / w, 2)
+        m["off_x"] = round(((x1 + x2) / 2 - w / 2) / w, 2)    # >0 = wajah di kanan bingkai
+        m["off_y"] = round(((y1 + y2) / 2 - h / 2) / h, 2)    # >0 = wajah di bawah bingkai
+    pose = getattr(face, "pose", None)
+    if pose is not None:
+        m["pitch"], m["yaw"] = round(float(pose[0]), 1), round(float(pose[1]), 1)
+    lmks = getattr(face, "landmark_2d_106", None)
+    if lmks is not None:
+        width = abs(lmks[52][0] - lmks[61][0])
+        m["mouth_ratio"] = round(float(abs(lmks[60][1] - lmks[62][1]) / width) if width > 0 else 0.0, 3)
+    return m
+
+
+def _evaluate_challenge(m: dict[str, float], challenge: str) -> None:
+    """Melempar ValueError berisi petunjuk untuk pengguna bila gerakan belum terpenuhi. Arah memakai sudut pandang
+    PENGGUNA (kiri = sisi kiri tubuhnya). yaw > 0 = menoleh ke kiri; pitch > 0 = menengadah."""
+    if not challenge:
+        return
+    if challenge in {"depan", "kanan", "kiri", "atas", "bawah"} and "yaw" not in m:
+        raise ValueError("Gagal mendeteksi pose wajah.")
+    if challenge == "buka_mulut" and "mouth_ratio" not in m:
+        raise ValueError("Gagal mendeteksi titik wajah (landmark).")
+
+    if challenge == "depan":
+        yaw, pitch = m["yaw"], m["pitch"]
+        if yaw > FRONT_MAX:
+            raise ValueError("Kepala terlalu menoleh ke kiri. Putar sedikit ke KANAN untuk meluruskan.")
+        if yaw < -FRONT_MAX:
+            raise ValueError("Kepala terlalu menoleh ke kanan. Putar sedikit ke KIRI untuk meluruskan.")
+        if pitch > FRONT_MAX:
+            raise ValueError("Kepala terlalu menengadah. Turunkan sedikit untuk meluruskan.")
+        if pitch < -FRONT_MAX:
+            raise ValueError("Kepala terlalu menunduk. Angkat sedikit untuk meluruskan.")
+    elif challenge == "buka_mulut":
+        if m["mouth_ratio"] < MOUTH_MIN:
+            raise ValueError("Buka mulut lebih lebar.")
+    elif challenge == "kiri":
+        if m["yaw"] < YAW_MIN:
+            raise ValueError("Salah arah. Tengok ke KIRI Anda, bukan kanan." if m["yaw"] <= -WRONG_WAY
+                             else "Tengok lagi ke KIRI sedikit.")
+    elif challenge == "kanan":
+        if m["yaw"] > -YAW_MIN:
+            raise ValueError("Salah arah. Tengok ke KANAN Anda, bukan kiri." if m["yaw"] >= WRONG_WAY
+                             else "Tengok lagi ke KANAN sedikit.")
+    elif challenge == "atas":
+        if m["pitch"] < PITCH_UP:
+            raise ValueError("Salah arah. Dongakkan kepala ke ATAS, bukan menunduk." if m["pitch"] <= -WRONG_WAY
+                             else "Dongakkan lagi kepala ke ATAS sedikit.")
+    elif challenge == "bawah":
+        if m["pitch"] > -PITCH_UP:
+            raise ValueError("Salah arah. Tundukkan kepala ke BAWAH, bukan menengadah." if m["pitch"] >= WRONG_WAY
+                             else "Tundukkan lagi kepala ke BAWAH sedikit.")
+    else:
+        raise ValueError(f"Tantangan '{challenge}' tidak dikenal.")
+
+
+def _check_challenge(data: bytes, challenge: str) -> dict[str, Any]:
+    img = cv2.imdecode(np.frombuffer(data, np.uint8), cv2.IMREAD_COLOR)
+    if img is None:
+        raise HTTPException(status_code=400, detail="Format gambar tidak valid.")
+    faces = _state["analyzer"].get(img)
+    if len(faces) == 0:
+        return {"status": "menunggu",
+                "detail": "Wajah tidak terdeteksi. Hadapkan wajah ke kamera di dalam oval, pastikan cahaya cukup, "
+                          "dan jarak sekitar sejengkal hingga satu lengan."}
+    if len(faces) > 1:
+        return {"status": "menunggu", "detail": "Terdeteksi lebih dari satu wajah! Pastikan hanya Anda di kamera."}
+
+    face = faces[0]
+    m = _metrics(face, img.shape)
+    if m["face_w"] < FACE_MIN_W:
+        return {"status": "menunggu", "detail": "Wajah terlalu jauh. Dekatkan HP ke wajah.", "metrics": m}
+    if m["face_w"] > FACE_MAX_W:
+        return {"status": "menunggu", "detail": "Wajah terlalu dekat. Jauhkan HP sedikit.", "metrics": m}
+    try:
+        _evaluate_challenge(m, challenge)
+        return {"status": "sukses", "detail": "Tantangan berhasil!", "quality": _quality(img, face), "metrics": m}
+    except ValueError as ve:
+        detail = str(ve)
+        if abs(m["off_x"]) > 0.2 or abs(m["off_y"]) > 0.25:
+            detail += " Posisikan wajah di tengah oval."
+        return {"status": "menunggu", "detail": detail, "metrics": m}
+
+
+@app.post("/challenge-check")
+async def challenge_check(
+    file: UploadFile = File(...),
+    challenge: str = Form(...),
+    x_face_token: str | None = Header(default=None),
+) -> dict[str, Any]:
+    _check_token(x_face_token)
+    data = await file.read(MAX_BYTES + 1)
+    if not data:
+        raise HTTPException(status_code=400, detail="Gambar kosong.")
+    if len(data) > MAX_BYTES:
+        raise HTTPException(status_code=413, detail="Gambar melebihi 5 MB.")
+    async with _gate:
+        return await run_in_threadpool(_check_challenge, data, challenge)

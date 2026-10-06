@@ -130,4 +130,17 @@ describe("Absen kantor lewat web (R-33)", () => {
     await waitFor(() => expect(calls.some((c) => c.url === "/attendance/check-out")).toBe(true));
     expect(calls.find((c) => c.url === "/attendance/check-out")!.data).toMatchObject({ channel: "WEB", location: OFFICE });
   });
+
+  it("sudah mendaftarkan wajah: absen masuk membuka verifikasi wajah dulu (web tanpa jalur luring)", async () => {
+    const calls = setup([], (url) =>
+      url === "/face/status"
+        ? { data: { employee_linked: true, consent: "GRANTED", enrolled: true, liveness_required: true,
+            template_ttl_days: 7, policy: { version: "v1", text: "t" } } }
+        : undefined);
+    renderRoute("/attendance", { me: officeMe() });
+    fireEvent.click(await within(await card()).findByRole("button", { name: "Absen masuk" }));
+    expect(await screen.findByText("Verifikasi wajah — absen masuk")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Mulai Verifikasi Wajah" })).toBeInTheDocument();
+    expect(calls.some((c) => c.url === "/attendance/check-in")).toBe(false); // belum terkirim sebelum wajah diverifikasi
+  });
 });

@@ -27,10 +27,12 @@ import filetype
 
 from app.core.config import settings
 from app.core.errors import AppError, NotFoundError, ValidationError
+from app.core.security import create_face_challenge_proof, verify_face_challenge_proof
 from app.core.storage import delete_object, get_object_bytes, upload_file
 from app.core.time import utcnow
 from app.crud.crud_face import CRUDFace, parse_vector
 from app.schemas.face import (
+    ChallengeCheckResponse,
     ConsentRequest,
     EnrollResponse,
     FaceLiveness,
@@ -57,10 +59,18 @@ WITHDRAW_TEXT = "Persetujuan biometrik ditarik oleh karyawan."
 ENROLL_MIN, ENROLL_MAX = 3, 5
 MIN_ENROLL_QUALITY = 0.30        # skor kualitas face-service (deteksi x ukuran x ketajaman); dikalibrasi di P8-5
 MIN_PROBE_QUALITY = 0.15         # di bawah ini diminta ulang; di atasnya dinilai server (LOW_QUALITY/NO_MATCH)
-POSE_CONSISTENCY_MIN = 0.35      # kosinus tiap pose terhadap rata-rata: pose beda orang akan jauh di bawah ini
+# Kemiripan TERKECIL antar dua pose. Bukan "pose terhadap rata-rata": untuk wajah berbeda yang saling tegak lurus nilai
+# itu tetap ±0,58 (3 pose) / ±0,45 (5 pose) sehingga pemeriksaannya tak pernah menolak. Orang sama beda pose ≥ ±0,5;
+# orang berbeda ≈ 0-0,2. Titik awal; dikalibrasi di P8-5 dengan data nyata.
+POSE_PAIR_MIN = 0.30
 MAX_IMAGE_BYTES = 5 * 1024 * 1024
 TEMPLATE_RATE = (10, 3600.0)     # maksimal 10 unduhan template per jam per pengguna
+CHALLENGE_RATE = (1200, 600.0)   # ±2 bingkai/detik selama 10 menit (HP mengirim tiap 0,3–0,45 dtk); menahan penyalahgunaan CPU face-service
+CHALLENGES = ("depan", "kiri", "kanan", "atas", "bawah", "buka_mulut")
+NO_PROOF_CHALLENGES = ("depan",)   # hanya panduan meluruskan wajah; TIDAK menerbitkan bukti liveness
+LIVENESS_PROOFS_REQUIRED = 2     # tantangan BERBEDA yang harus dibuktikan server untuk absen online & pendaftaran
 _template_hits: dict[str, deque[float]] = defaultdict(deque)
+_challenge_hits: dict[str, deque[float]] = defaultdict(deque)
 
 NEEDS_REVIEW_RESULTS = ("NO_MATCH", "LOW_QUALITY")
 
@@ -109,7 +119,9 @@ class FaceService:
     def policy(self) -> FacePolicy:
         return FacePolicy(version=POLICY_VERSION, text=POLICY_TEXT)
 
-    async def _employee(self, user_id: str) -> Any:
+    async def _employee(self, user_id: str, *, field_only: bool = False) -> Any:
+        """Karyawan milik akun. Pengenalan wajah berlaku untuk SEMUA karyawan: lapangan lewat HP (boleh luring),
+        kantor lewat web (hanya online). `field_only` dipertahankan agar pemanggil lama tetap valid."""
         row = await self.repo.employee_of_user(user_id)
         if row is None:
             raise ValidationError("Akun ini belum tertaut ke data karyawan.")
@@ -138,6 +150,7 @@ class FaceService:
             model_name=rows[0].model_name if rows else None,
             model_version=rows[0].model_version if rows else None,
             liveness_required=liveness_required,
+            enrollment_required=settings.FACE_ENROLLMENT_REQUIRED and not rows,
             template_ttl_days=settings.FACE_TEMPLATE_TTL_DAYS,
             policy=self.policy(),
         )
@@ -154,6 +167,33 @@ class FaceService:
             await self.repo.record_consent(employee.employee_id, "WITHDRAWN", WITHDRAW_TEXT, POLICY_VERSION,
                                            user_id)
 
+    async def _verified_liveness(self, employee_id: Any, user_id: str, liveness: FaceLiveness) -> tuple[bool, list[str], list[str]]:
+        """
+        Liveness yang DIPERCAYA server: bukti tantangan bertanda tangan (sah, milik pengguna ini, belum kedaluwarsa,
+        belum pernah dipakai, tantangan berbeda). → (lolos, tantangan terbukti, nonce). Klaim `passed` dari HP tidak
+        dihitung di sini; ia hanya berlaku untuk absen luring.
+        """
+        challenges: list[str] = []
+        nonces: list[str] = []
+        for token in liveness.proofs:
+            proof = verify_face_challenge_proof(token, user_id)
+            if proof is None or proof[0] in challenges or proof[1] in nonces:
+                continue
+            challenges.append(proof[0])
+            nonces.append(proof[1])
+        if nonces:
+            reused = await self.repo.used_proof_nonces(employee_id, nonces)
+            kept = [(c, n) for c, n in zip(challenges, nonces, strict=True) if n not in reused]
+            challenges, nonces = [c for c, _ in kept], [n for _, n in kept]
+        return len(challenges) >= LIVENESS_PROOFS_REQUIRED, challenges, nonces
+
+    async def face_expected(self, user_id: str) -> bool:
+        """Karyawan (lapangan maupun kantor) yang sudah menyetujui & mendaftar wajah: absennya WAJIB membawa data wajah."""
+        employee = await self.repo.employee_of_user(user_id)
+        if employee is None:
+            return False
+        return await self.repo.face_expected(employee.employee_id)
+
     async def _require_consent(self, employee_id: Any) -> None:
         consent = await self.repo.latest_consent(employee_id)
         if consent is None or consent.state != "GRANTED":
@@ -169,12 +209,13 @@ class FaceService:
             raise ValidationError("Gambar wajah tidak valid.") from None
 
     async def enroll(self, org_id: str, user_id: str, images: list[bytes], liveness: FaceLiveness) -> EnrollResponse:
-        employee = await self._employee(user_id)
+        employee = await self._employee(user_id, field_only=True)
         await self._require_consent(employee.employee_id)
         if not ENROLL_MIN <= len(images) <= ENROLL_MAX:
             raise ValidationError(f"Pendaftaran wajah butuh {ENROLL_MIN} sampai {ENROLL_MAX} foto berpose berbeda.")
         org = await self.repo.org_settings(org_id)
-        if org.face_liveness_required and not liveness.passed:
+        verified, _, _ = await self._verified_liveness(employee.employee_id, user_id, liveness)
+        if org.face_liveness_required and not verified:
             raise ValidationError("Tantangan keaslian wajah belum lolos. Ulangi pendaftaran.")
 
         results: list[EmbedResult] = []
@@ -191,7 +232,7 @@ class FaceService:
 
         vectors = [_normalize(r.embedding or []) for r in results]
         mean = _normalize([sum(col) / len(vectors) for col in zip(*vectors, strict=True)])
-        if any(_cosine(v, mean) < POSE_CONSISTENCY_MIN for v in vectors):
+        if min(_cosine(a, b) for i, a in enumerate(vectors) for b in vectors[i + 1:]) < POSE_PAIR_MIN:
             raise ValidationError("Foto-foto tampak bukan wajah yang sama. Ulangi dengan wajah Anda sendiri.")
         other = await self.repo.best_other_similarity(org_id, employee.employee_id, mean)
         if other is not None and other >= float(org.face_match_threshold):
@@ -207,19 +248,23 @@ class FaceService:
                               model_name=results[0].model_name, model_version=results[0].model_version)
 
     # ── Template untuk HP (pencocokan luring) ───────────────────────────────────────────────────
-    def _rate_limit(self, user_id: str) -> None:
-        limit, window = TEMPLATE_RATE
+    @staticmethod
+    def _throttle(bucket: dict[str, deque[float]], rate: tuple[int, float], key: str, message: str) -> None:
+        limit, window = rate
         now = monotonic()
-        hits = _template_hits[user_id]
+        hits = bucket[key]
         while hits and now - hits[0] > window:
             hits.popleft()
         if len(hits) >= limit:
-            raise AppError("TOO_MANY_REQUESTS", "Terlalu sering mengunduh template wajah. Coba lagi nanti.",
-                           status=429)
+            raise AppError("TOO_MANY_REQUESTS", message, status=429)
         hits.append(now)
 
+    def _rate_limit(self, user_id: str) -> None:
+        self._throttle(_template_hits, TEMPLATE_RATE, user_id,
+                       "Terlalu sering mengunduh template wajah. Coba lagi nanti.")
+
     async def template(self, user_id: str) -> TemplateResponse:
-        employee = await self._employee(user_id)
+        employee = await self._employee(user_id, field_only=True)
         await self._require_consent(employee.employee_id)
         rows = list(await self.repo.active_enrollments(employee.employee_id))
         if not rows:
@@ -233,6 +278,27 @@ class FaceService:
             expires_at=utcnow() + timedelta(days=settings.FACE_TEMPLATE_TTL_DAYS))
 
     # ── Gambar wajah sementara (probe) ──────────────────────────────────────────────────────────
+    async def check_challenge(self, user_id: str, image: bytes, challenge: str) -> ChallengeCheckResponse:
+        """Memeriksa satu bingkai kamera terhadap tantangan liveness (online). Layanan mati → 503, TIDAK pernah
+        'sukses' otomatis: tantangan yang lolos tanpa pemeriksaan sama dengan tanpa liveness."""
+        if challenge not in CHALLENGES:
+            raise ValidationError("Tantangan tidak dikenal.")
+        self._check_image(image)
+        self._throttle(_challenge_hits, CHALLENGE_RATE, user_id,
+                       "Terlalu banyak pemeriksaan tantangan. Tunggu sebentar lalu ulangi.")
+        try:
+            res = await self.client.check_challenge(image, challenge)
+        except FaceServiceUnavailable:
+            raise _unavailable() from None
+        except ValueError as ve:
+            return ChallengeCheckResponse(status="menunggu", detail=str(ve))
+        passed = res.get("status") == "sukses"
+        return ChallengeCheckResponse(status="sukses" if passed else "menunggu", detail=str(res.get("detail", "")),
+                                      quality=res.get("quality"),
+                                      proof=(create_face_challenge_proof(user_id, challenge)
+                                     if passed and challenge not in NO_PROOF_CHALLENGES else None),
+                                      metrics=res.get("metrics") if settings.APP_ENV == "development" else None)
+
     @staticmethod
     def _check_image(image: bytes) -> str:
         if not image:
@@ -245,7 +311,7 @@ class FaceService:
         return str(kind.extension)
 
     async def create_probe(self, org_id: str, user_id: str, image: bytes, liveness: FaceLiveness) -> ProbeResponse:
-        employee = await self._employee(user_id)
+        employee = await self._employee(user_id, field_only=True)
         await self._require_consent(employee.employee_id)
         ext = self._check_image(image)
         embedding: EmbedResult | None
@@ -263,6 +329,7 @@ class FaceService:
             if (embedding.quality or 0) < MIN_PROBE_QUALITY:
                 raise ValidationError("Gambar terlalu buram atau gelap, atau wajah terlalu jauh. Ulangi.")
 
+        verified, verified_challenges, nonces = await self._verified_liveness(employee.employee_id, user_id, liveness)
         file_id = uuid.uuid4()
         probe_id = uuid.uuid4()
         digest = hashlib.sha256(image).digest()          # byte ASLI (tanpa kompresi): dicocokkan dengan payload luring
@@ -276,7 +343,10 @@ class FaceService:
             model_name=embedding.model_name if embedding else None,
             model_version=embedding.model_version if embedding else None,
             quality=embedding.quality if embedding else None,
-            liveness=liveness.model_dump(), file_id=file_id, sha256=digest)
+            liveness={"challenges": liveness.challenges, "passed": liveness.passed,   # klaim HP (hanya absen luring)
+                      "server_verified": verified, "verified_challenges": verified_challenges,
+                      "proof_nonces": nonces},
+            file_id=file_id, sha256=digest)
         loop = asyncio.get_running_loop()
         if not await loop.run_in_executor(None, upload_file, key, image, mime):
             raise AppError("STORAGE_UNAVAILABLE",
@@ -307,15 +377,18 @@ class FaceService:
         if expected_sha256 is not None and bytes(probe.sha256).hex() != expected_sha256.lower():
             raise AppError("OFFLINE_TAMPERED", "Gambar wajah tidak sama dengan yang direkam di HP.", status=422)
 
-        await self.repo.consume_probe(probe_id, event, attendance_id)
+        # Online: hanya liveness yang dibuktikan server. Luring: klaim HP diterima (tidak ada server saat itu); sidik
+        # hash gambar terikat payload bertanda tangan dan hasilnya tetap dihitung ulang server.
+        stored = probe.liveness or {}
+        liveness_ok = bool(stored.get("server_verified")) or (not online and bool(stored.get("passed")))
+        await self.repo.consume_probe(probe_id, event, attendance_id, liveness_ok)
         embedding = parse_vector(probe.embedding)
         if embedding is None:
             return FaceOutcome("SKIPPED", None, None,
                                "Layanan pengenalan wajah sedang tidak tersedia; wajah diperiksa ulang nanti.",
                                flag_review=False, pending=True)
-        passed = bool((probe.liveness or {}).get("passed"))
         verdict = await self.repo.verify(org_id=org_id, employee_id=employee.employee_id, embedding=embedding,
-                                         liveness=1.0 if passed else 0.0, probe_file_id=probe.file_id,
+                                         liveness=1.0 if liveness_ok else 0.0, probe_file_id=probe.file_id,
                                          device=device, event=event)
         await self.repo.link_check(verdict.check_id, attendance_id)
         return FaceOutcome(str(verdict.result), None if verdict.similarity is None else float(verdict.similarity),
@@ -344,7 +417,7 @@ class FaceService:
                 continue
             await self.repo.set_probe_embedding(probe.id, result.embedding, result.model_name, result.model_version,
                                                 result.quality)
-            passed = bool((probe.liveness or {}).get("passed"))
+            passed = bool((probe.liveness or {}).get("effective_passed"))   # putusan terkunci saat absen dicatat
             verdict = await self.repo.verify(org_id=probe.organization_id, employee_id=probe.employee_id,
                                              embedding=result.embedding, liveness=1.0 if passed else 0.0,
                                              probe_file_id=probe.file_id, device="reverify",

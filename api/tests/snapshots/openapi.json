@@ -1514,6 +1514,20 @@
       "title": "Detail",
       "type": "string"
      },
+     "metrics": {
+      "anyOf": [
+       {
+        "additionalProperties": {
+         "type": "number"
+        },
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Metrics"
+     },
      "proof": {
       "anyOf": [
        {

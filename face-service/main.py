@@ -97,54 +97,56 @@ async def embed(file: UploadFile = File(...), x_face_token: str | None = Header(
         return await run_in_threadpool(_embed, data)
 
 
-def _evaluate_challenge(face: Any, challenge: str) -> None:
+# Ambang tantangan (dapat dikalibrasi per perangkat tanpa ubah kode).
+YAW_MIN = float(os.getenv("FACE_YAW_MIN", "15"))          # derajat menoleh kiri/kanan
+PITCH_UP = float(os.getenv("FACE_PITCH_UP", "-10"))       # pitch <= nilai ini = menengadah
+MOUTH_MIN = float(os.getenv("FACE_MOUTH_MIN", "0.35"))    # tinggi bukaan mulut / lebar mulut
+EAR_MAX = float(os.getenv("FACE_EAR_MAX", "0.25"))        # rasio buka mata; <= nilai ini = terpejam
+
+
+def _metrics(face: Any) -> dict[str, float]:
+    """Ukuran mentah yang dipakai tantangan; juga dikirim ke HP pada mode pengembangan untuk kalibrasi."""
+    m: dict[str, float] = {}
+    pose = getattr(face, "pose", None)
+    if pose is not None:
+        m["pitch"], m["yaw"] = round(float(pose[0]), 1), round(float(pose[1]), 1)
+    lmks = getattr(face, "landmark_2d_106", None)
+    if lmks is not None:
+        width = abs(lmks[52][0] - lmks[61][0])
+        m["mouth_ratio"] = round(float(abs(lmks[60][1] - lmks[62][1]) / width) if width > 0 else 0.0, 3)
+        m["ear_left"] = round(float((abs(lmks[37][1] - lmks[41][1]) + abs(lmks[38][1] - lmks[40][1]))
+                                    / (2 * abs(lmks[35][0] - lmks[39][0]) + 1e-6)), 3)
+        m["ear_right"] = round(float((abs(lmks[87][1] - lmks[95][1]) + abs(lmks[88][1] - lmks[94][1]))
+                                     / (2 * abs(lmks[89][0] - lmks[93][0]) + 1e-6)), 3)
+    return m
+
+
+def _evaluate_challenge(m: dict[str, float], challenge: str) -> None:
     if not challenge:
         return
-    lmks = getattr(face, "landmark_2d_106", None)
-    pose = getattr(face, "pose", None)
+    need_pose = challenge in {"depan", "kanan", "kiri", "atas"}
+    if need_pose and "yaw" not in m:
+        raise ValueError("Gagal mendeteksi pose wajah.")
+    if not need_pose and challenge in {"buka_mulut", "kedip"} and "mouth_ratio" not in m:
+        raise ValueError("Gagal mendeteksi titik wajah (landmark).")
 
     if challenge == "depan":
-        if pose is None:
-            raise ValueError("Gagal mendeteksi pose wajah.")
-        pitch, yaw, _ = pose[0], pose[1], pose[2]
-        if abs(yaw) > 15 or abs(pitch) > 15:
+        if abs(m["yaw"]) > 15 or abs(m["pitch"]) > 15:
             raise ValueError("Tantangan Gagal: Harap menghadap lurus ke depan!")
     elif challenge == "buka_mulut":
-        if lmks is None:
-            raise ValueError("Gagal mendeteksi titik wajah (landmark).")
-        inner_h = abs(lmks[60][1] - lmks[62][1])
-        width = abs(lmks[52][0] - lmks[61][0])
-        mouth_ratio = inner_h / width if width > 0 else 0
-        if mouth_ratio < 0.35:
+        if m["mouth_ratio"] < MOUTH_MIN:
             raise ValueError("Tantangan Gagal: Mulut kurang terbuka!")
     elif challenge == "kedip":
-        if lmks is None:
-            raise ValueError("Gagal mendeteksi titik wajah (landmark).")
-        ear_left = (abs(lmks[37][1] - lmks[41][1]) + abs(lmks[38][1] - lmks[40][1])) / (
-            2 * abs(lmks[35][0] - lmks[39][0]) + 1e-6
-        )
-        ear_right = (abs(lmks[87][1] - lmks[95][1]) + abs(lmks[88][1] - lmks[94][1])) / (
-            2 * abs(lmks[89][0] - lmks[93][0]) + 1e-6
-        )
-        if ear_left > 0.25 or ear_right > 0.25:
+        if m["ear_left"] > EAR_MAX or m["ear_right"] > EAR_MAX:
             raise ValueError("Tantangan Gagal: Mata belum berkedip / tertutup!")
     elif challenge == "kanan":
-        if pose is None:
-            raise ValueError("Gagal mendeteksi pose wajah.")
-        yaw = pose[1]
-        if yaw < 15:
+        if m["yaw"] < YAW_MIN:
             raise ValueError("Tantangan Gagal: Kurang menghadap ke kanan!")
     elif challenge == "kiri":
-        if pose is None:
-            raise ValueError("Gagal mendeteksi pose wajah.")
-        yaw = pose[1]
-        if yaw > -15:
+        if m["yaw"] > -YAW_MIN:
             raise ValueError("Tantangan Gagal: Kurang menghadap ke kiri!")
     elif challenge == "atas":
-        if pose is None:
-            raise ValueError("Gagal mendeteksi pose wajah.")
-        pitch = pose[0]
-        if pitch > -10:
+        if m["pitch"] > PITCH_UP:
             raise ValueError("Tantangan Gagal: Kurang menghadap ke atas / menengadah!")
     else:
         raise ValueError(f"Tantangan '{challenge}' tidak dikenal.")
@@ -161,11 +163,12 @@ def _check_challenge(data: bytes, challenge: str) -> dict[str, Any]:
         return {"status": "menunggu", "detail": "Terdeteksi lebih dari satu wajah! Pastikan hanya Anda di kamera."}
 
     face = faces[0]
+    m = _metrics(face)
     try:
-        _evaluate_challenge(face, challenge)
-        return {"status": "sukses", "detail": "Tantangan berhasil!", "quality": _quality(img, face)}
+        _evaluate_challenge(m, challenge)
+        return {"status": "sukses", "detail": "Tantangan berhasil!", "quality": _quality(img, face), "metrics": m}
     except ValueError as ve:
-        return {"status": "menunggu", "detail": str(ve)}
+        return {"status": "menunggu", "detail": str(ve), "metrics": m}
 
 
 @app.post("/challenge-check")

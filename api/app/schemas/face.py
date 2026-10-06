@@ -77,3 +77,5 @@ class ChallengeCheckResponse(BaseModel):
     quality: float | None = None
     # Bukti bertanda tangan server; hanya ada bila status "sukses". Kirim kembali di `liveness.proofs`.
     proof: str | None = None
+    # Ukuran mentah (yaw/pitch/mulut/mata) untuk kalibrasi; HANYA terisi di APP_ENV=development.
+    metrics: dict[str, float] | None = None

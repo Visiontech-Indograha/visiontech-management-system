@@ -56,6 +56,9 @@ class Settings(BaseSettings):
     FACE_PROBE_MAX_AGE_MIN: int = 15
     # Masa berlaku template di HP; sama dengan batas absen luring (7 hari) agar penarikan persetujuan tetap berlaku.
     FACE_TEMPLATE_TTL_DAYS: int = 7
+    # True = akun yang terhubung ke karyawan WAJIB mendaftarkan wajah sebelum membuka menu lain (web dan HP).
+    # Bawaan False: nyalakan hanya setelah face-service berjalan di server, kalau tidak semua orang terkunci.
+    FACE_ENROLLMENT_REQUIRED: bool = False
 
     # "production" menyalakan penjaga di bawah; nilai lain (development/test) memakai bawaan lokal.
     APP_ENV: str = "development"

@@ -174,6 +174,20 @@ def test_policy_status_and_consent_rules(client, world, face):
     assert stored == policy["text"]
 
 
+def test_enrollment_required_flag_follows_server_setting(client, world, face, monkeypatch):
+    from app.core.config import settings
+    headers = world.headers(client, "member")
+    monkeypatch.setattr(settings, "FACE_ENROLLMENT_REQUIRED", False)
+    assert client.get("/face/status", headers=headers).json()["enrollment_required"] is False   # bawaan aman untuk produksi
+
+    monkeypatch.setattr(settings, "FACE_ENROLLMENT_REQUIRED", True)
+    assert client.get("/face/status", headers=headers).json()["enrollment_required"] is True    # belum setuju & belum daftar
+    enrolled(client, world)
+    assert client.get("/face/status", headers=headers).json()["enrollment_required"] is False
+    assert consent(client, world, state="WITHDRAWN").status_code == 200                          # tarik persetujuan → wajib lagi
+    assert client.get("/face/status", headers=headers).json()["enrollment_required"] is True
+
+
 def test_enroll_validates_consent_liveness_and_images(client, world, face):
     assert enroll(client, world).json()["error"]["code"] == "CONSENT_REQUIRED"
     assert consent(client, world).status_code == 200

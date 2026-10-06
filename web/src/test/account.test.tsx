@@ -73,22 +73,22 @@ describe("Akun & keamanan", () => {
       expect(calls.find((c) => c.url === "/face/consent")!.data).toEqual({ state: "GRANTED", policy_version: "2026-10-05" });
     });
 
-    it("pendaftaran wajah tidak lagi lewat berkas di web: diarahkan ke aplikasi HP", async () => {
+    it("pendaftaran wajah di web lewat kamera langsung, bukan pilih berkas", async () => {
       setup(faceStatus({ consent: "GRANTED", consent_policy_version: "2026-10-05" }));
       renderRoute("/account", { role: "field" });
       const info = await screen.findByTestId("face-enroll-info");
-      expect(within(info).getByText(/aplikasi HP Visiontech/)).toBeInTheDocument();
+      expect(within(info).getByTestId("face-capture")).toBeInTheDocument();
+      expect(within(info).getByRole("button", { name: "Mulai Pendaftaran Wajah" })).toBeInTheDocument();
       expect(document.querySelector('input[type="file"]')).toBeNull(); // foto orang lain tak bisa didaftarkan
-      expect(screen.queryByRole("button", { name: "Daftarkan Wajah" })).toBeNull();
     });
 
-    it("sudah terdaftar: menampilkan masa berlaku template dan cara daftar ulang di HP", async () => {
+    it("sudah terdaftar: menampilkan masa berlaku template dan tombol daftar ulang", async () => {
       setup(faceStatus({ consent: "GRANTED", enrolled: true, model_name: "w600k_mbf", enrollment_version: "3-1" }));
       renderRoute("/account", { role: "field" });
       const info = await screen.findByTestId("face-enroll-info");
       expect(within(info).getByText("w600k_mbf")).toBeInTheDocument();
       expect(within(info).getByText("7 hari")).toBeInTheDocument();
-      expect(within(info).getByText(/Profil → Daftarkan Wajah/)).toBeInTheDocument();
+      expect(within(info).getByRole("button", { name: "Daftar Ulang Wajah" })).toBeInTheDocument();
     });
 
     it("menarik persetujuan mengirim WITHDRAWN dengan versi kebijakan server", async () => {
@@ -101,3 +101,44 @@ describe("Akun & keamanan", () => {
   });
 });
 
+describe("Wajib daftar wajah setelah login", () => {
+  const status = (over: Record<string, unknown> = {}) => ({
+    employee_linked: true, consent: null, consent_policy_version: null, enrolled: false, enrollment_version: null,
+    model_name: null, model_version: null, liveness_required: true, enrollment_required: true, template_ttl_days: 7,
+    policy: { version: "2026-10-05", text: "Saya menyetujui pemakaian data wajah HANYA untuk absensi." }, ...over,
+  });
+
+  it("belum terdaftar: menu lain tertutup, muncul persetujuan lebih dulu", async () => {
+    const calls = mockApi((c) => {
+      if (c.url === "/face/status") return { data: status() };
+      if (c.url === "/face/consent") return { data: { message: "ok" } };
+    });
+    renderRoute("/work-plans", { role: "field" });
+    expect(await screen.findByTestId("face-gate")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Akun & keamanan" })).toBeNull(); // menu tidak tampil
+    const agree = screen.getByRole("button", { name: "Setuju dan Lanjut" });
+    expect(agree).toBeDisabled();
+    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(agree);
+    await waitFor(() => expect(calls.find((c) => c.url === "/face/consent")?.data).toEqual({
+      state: "GRANTED", policy_version: "2026-10-05",
+    }));
+  });
+
+  it("sudah setuju: langsung kamera pendaftaran", async () => {
+    mockApi((c) => (c.url === "/face/status" ? { data: status({ consent: "GRANTED" }) } : undefined));
+    renderRoute("/work-plans", { role: "field" });
+    const gate = await screen.findByTestId("face-gate");
+    expect(within(gate).getByTestId("face-capture")).toBeInTheDocument();
+  });
+
+  it("tidak diwajibkan server (atau sudah terdaftar): halaman terbuka normal", async () => {
+    mockApi((c) => {
+      if (c.url === "/auth/sessions") return { data: [] };
+      if (c.url === "/face/status") return { data: status({ enrollment_required: false, consent: "GRANTED", enrolled: true }) };
+    });
+    renderRoute("/account", { role: "field" });
+    expect(await screen.findByRole("link", { name: "Ganti password" })).toBeInTheDocument();
+    expect(screen.queryByTestId("face-gate")).toBeNull();
+  });
+});

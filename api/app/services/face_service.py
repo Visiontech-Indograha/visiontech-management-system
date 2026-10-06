@@ -65,7 +65,7 @@ MIN_PROBE_QUALITY = 0.15         # di bawah ini diminta ulang; di atasnya dinila
 POSE_PAIR_MIN = 0.30
 MAX_IMAGE_BYTES = 5 * 1024 * 1024
 TEMPLATE_RATE = (10, 3600.0)     # maksimal 10 unduhan template per jam per pengguna
-CHALLENGE_RATE = (600, 600.0)    # ±1 bingkai/detik selama 10 menit; menahan penyalahgunaan CPU face-service
+CHALLENGE_RATE = (1200, 600.0)   # ±2 bingkai/detik selama 10 menit (HP mengirim tiap 0,3–0,45 dtk); menahan penyalahgunaan CPU face-service
 CHALLENGES = ("depan", "kiri", "kanan", "atas", "buka_mulut", "kedip")
 LIVENESS_PROOFS_REQUIRED = 2     # tantangan BERBEDA yang harus dibuktikan server untuk absen online & pendaftaran
 _template_hits: dict[str, deque[float]] = defaultdict(deque)
@@ -151,6 +151,7 @@ class FaceService:
             model_name=rows[0].model_name if rows else None,
             model_version=rows[0].model_version if rows else None,
             liveness_required=liveness_required,
+            enrollment_required=settings.FACE_ENROLLMENT_REQUIRED and not rows,
             template_ttl_days=settings.FACE_TEMPLATE_TTL_DAYS,
             policy=self.policy(),
         )

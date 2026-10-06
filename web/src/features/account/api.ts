@@ -36,6 +36,7 @@ export interface FaceStatus {
   model_name?: string | null;
   model_version?: string | null;
   liveness_required: boolean;
+  enrollment_required?: boolean;
   template_ttl_days: number;
   policy: {
     version: string;

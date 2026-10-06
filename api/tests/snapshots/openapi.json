@@ -3088,6 +3088,11 @@
       "title": "Enrolled",
       "type": "boolean"
      },
+     "enrollment_required": {
+      "default": false,
+      "title": "Enrollment Required",
+      "type": "boolean"
+     },
      "enrollment_version": {
       "anyOf": [
        {

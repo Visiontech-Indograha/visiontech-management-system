@@ -9,6 +9,51 @@ import '../../core/error_message.dart';
 import '../../core/providers.dart';
 import 'face_capture_screen.dart';
 
+/// Hasil satu putaran pendaftaran wajah: `message` untuk ditampilkan ke pengguna; `cancelled` = kamera ditutup.
+class FaceEnrollOutcome {
+  const FaceEnrollOutcome({required this.ok, this.message, this.cancelled = false});
+
+  final bool ok;
+  final String? message;
+  final bool cancelled;
+}
+
+/// Kamera wajah mode daftar (dua tantangan acak + beberapa pose) lalu unggah ke /face/enroll. Dipakai Profil dan
+/// layar wajib-daftar setelah login. Gambar mentah selalu dihapus dari HP.
+Future<FaceEnrollOutcome> runFaceEnrollment(BuildContext context, WidgetRef ref) async {
+  final result = await Navigator.of(context).push<FaceCaptureResult>(
+    MaterialPageRoute(
+      fullscreenDialog: true,
+      builder: (_) => const FaceCaptureScreen(mode: FaceCaptureMode.enroll),
+    ),
+  );
+  if (result == null || result.photos.isEmpty) {
+    return const FaceEnrollOutcome(ok: false, cancelled: true);
+  }
+  try {
+    if (!result.passed) {
+      return FaceEnrollOutcome(
+        ok: false,
+        message: result.stopReason == 'offline'
+            ? 'Tidak ada sinyal. Pendaftaran wajah butuh internet; coba lagi saat online.'
+            : 'Tantangan keaslian wajah belum lolos. Ulangi pendaftaran.',
+      );
+    }
+    final res = await ref
+        .read(syncEngineProvider)
+        .api
+        .enrollFace(result.photos, liveness: result.liveness);
+    return FaceEnrollOutcome(
+      ok: true,
+      message: 'Wajah berhasil didaftarkan! (${res['enrolled'] ?? result.photos.length} pose tersimpan).',
+    );
+  } on DioException catch (e) {
+    return FaceEnrollOutcome(ok: false, message: apiErrorMessage(e));
+  } finally {
+    await _deleteAll(result.photos);
+  }
+}
+
 /// Hasil pengambilan gambar wajah untuk satu absen.
 class FaceProbeOutcome {
   const FaceProbeOutcome({

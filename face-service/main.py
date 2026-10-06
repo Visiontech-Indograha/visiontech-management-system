@@ -98,15 +98,25 @@ async def embed(file: UploadFile = File(...), x_face_token: str | None = Header(
 
 
 # Ambang tantangan (dapat dikalibrasi per perangkat tanpa ubah kode).
-YAW_MIN = float(os.getenv("FACE_YAW_MIN", "15"))          # derajat menoleh kiri/kanan
-PITCH_UP = float(os.getenv("FACE_PITCH_UP", "-10"))       # pitch <= nilai ini = menengadah
+# Tanda yaw/pitch disesuaikan dengan hasil uji nyata di Realme (2026-10-06): bingkai kamera depan TIDAK dicerminkan,
+# sehingga menoleh ke kiri pengguna = yaw positif dan menengadah = pitch positif pada keluaran InsightFace.
+YAW_MIN = float(os.getenv("FACE_YAW_MIN", "12"))          # derajat menoleh kiri/kanan
+PITCH_UP = float(os.getenv("FACE_PITCH_UP", "8"))         # pitch >= nilai ini = menengadah
+FACE_MIN_W = float(os.getenv("FACE_MIN_WIDTH", "0.25"))   # lebar wajah / lebar bingkai; di bawahnya = terlalu jauh
+FACE_MAX_W = float(os.getenv("FACE_MAX_WIDTH", "0.80"))   # di atasnya = terlalu dekat
 MOUTH_MIN = float(os.getenv("FACE_MOUTH_MIN", "0.35"))    # tinggi bukaan mulut / lebar mulut
 EAR_MAX = float(os.getenv("FACE_EAR_MAX", "0.25"))        # rasio buka mata; <= nilai ini = terpejam
 
 
-def _metrics(face: Any) -> dict[str, float]:
+def _metrics(face: Any, shape: tuple[int, ...] | None = None) -> dict[str, float]:
     """Ukuran mentah yang dipakai tantangan; juga dikirim ke HP pada mode pengembangan untuk kalibrasi."""
     m: dict[str, float] = {}
+    if shape is not None:
+        h, w = shape[0], shape[1]
+        x1, y1, x2, y2 = (float(v) for v in face.bbox)
+        m["face_w"] = round((x2 - x1) / w, 2)
+        m["off_x"] = round(((x1 + x2) / 2 - w / 2) / w, 2)    # >0 = wajah di kanan bingkai
+        m["off_y"] = round(((y1 + y2) / 2 - h / 2) / h, 2)    # >0 = wajah di bawah bingkai
     pose = getattr(face, "pose", None)
     if pose is not None:
         m["pitch"], m["yaw"] = round(float(pose[0]), 1), round(float(pose[1]), 1)
@@ -135,19 +145,19 @@ def _evaluate_challenge(m: dict[str, float], challenge: str) -> None:
             raise ValueError("Tantangan Gagal: Harap menghadap lurus ke depan!")
     elif challenge == "buka_mulut":
         if m["mouth_ratio"] < MOUTH_MIN:
-            raise ValueError("Tantangan Gagal: Mulut kurang terbuka!")
+            raise ValueError("Buka mulut lebih lebar.")
     elif challenge == "kedip":
         if m["ear_left"] > EAR_MAX or m["ear_right"] > EAR_MAX:
-            raise ValueError("Tantangan Gagal: Mata belum berkedip / tertutup!")
+            raise ValueError("Pejamkan mata sebentar (kedip).")
     elif challenge == "kanan":
-        if m["yaw"] < YAW_MIN:
-            raise ValueError("Tantangan Gagal: Kurang menghadap ke kanan!")
-    elif challenge == "kiri":
         if m["yaw"] > -YAW_MIN:
-            raise ValueError("Tantangan Gagal: Kurang menghadap ke kiri!")
+            raise ValueError("Tengok lagi ke KANAN sedikit.")
+    elif challenge == "kiri":
+        if m["yaw"] < YAW_MIN:
+            raise ValueError("Tengok lagi ke KIRI sedikit.")
     elif challenge == "atas":
-        if m["pitch"] > PITCH_UP:
-            raise ValueError("Tantangan Gagal: Kurang menghadap ke atas / menengadah!")
+        if m["pitch"] < PITCH_UP:
+            raise ValueError("Dongakkan lagi kepala ke ATAS sedikit.")
     else:
         raise ValueError(f"Tantangan '{challenge}' tidak dikenal.")
 
@@ -158,17 +168,26 @@ def _check_challenge(data: bytes, challenge: str) -> dict[str, Any]:
         raise HTTPException(status_code=400, detail="Format gambar tidak valid.")
     faces = _state["analyzer"].get(img)
     if len(faces) == 0:
-        return {"status": "menunggu", "detail": "Tidak ada wajah terdeteksi di kamera."}
+        return {"status": "menunggu",
+                "detail": "Wajah tidak terdeteksi. Hadapkan wajah ke kamera di dalam oval, pastikan cahaya cukup, "
+                          "dan jarak sekitar sejengkal hingga satu lengan."}
     if len(faces) > 1:
         return {"status": "menunggu", "detail": "Terdeteksi lebih dari satu wajah! Pastikan hanya Anda di kamera."}
 
     face = faces[0]
-    m = _metrics(face)
+    m = _metrics(face, img.shape)
+    if m["face_w"] < FACE_MIN_W:
+        return {"status": "menunggu", "detail": "Wajah terlalu jauh. Dekatkan HP ke wajah.", "metrics": m}
+    if m["face_w"] > FACE_MAX_W:
+        return {"status": "menunggu", "detail": "Wajah terlalu dekat. Jauhkan HP sedikit.", "metrics": m}
     try:
         _evaluate_challenge(m, challenge)
         return {"status": "sukses", "detail": "Tantangan berhasil!", "quality": _quality(img, face), "metrics": m}
     except ValueError as ve:
-        return {"status": "menunggu", "detail": str(ve), "metrics": m}
+        detail = str(ve)
+        if abs(m["off_x"]) > 0.2 or abs(m["off_y"]) > 0.25:
+            detail += " Posisikan wajah di tengah oval."
+        return {"status": "menunggu", "detail": detail, "metrics": m}
 
 
 @app.post("/challenge-check")

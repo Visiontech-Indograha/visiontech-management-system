@@ -40,7 +40,7 @@ class CRUDAttendanceSession(CRUDBase):
 
     async def attendance_mode_of(self, user_id: UUID | str) -> Any:
         """
-        Mengambil informasi (employee_id, attendance_mode, unit_id) yang terkait dengan sebuah akun pengguna.
+        Mengambil informasi (employee_id, attendance_mode, unit_id, is_admin) yang terkait dengan sebuah akun pengguna.
         Mengembalikan None jika akun tidak ditautkan ke profil karyawan mana pun.
         
         Args:
@@ -52,7 +52,8 @@ class CRUDAttendanceSession(CRUDBase):
         # Melakukan JOIN antara app_user dan employee untuk mengambil mode absensi dan unit
         return await self.fetchone(
             """
-            SELECT e.id AS employee_id, e.attendance_mode, e.unit_id
+            SELECT e.id AS employee_id, e.attendance_mode, e.unit_id,
+                   EXISTS (SELECT 1 FROM vms.user_role r WHERE r.user_id = u.id AND r.role = 'ADMIN') AS is_admin
             FROM vms.app_user u JOIN vms.employee e ON e.id = u.employee_id
             WHERE u.id = :uid
             """,

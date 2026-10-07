@@ -339,9 +339,9 @@ async def create_plan(
         rule = trigger_rule_error(e)
         if rule:
             raise rule from None
-        raise HTTPException(status_code=400, detail={"code": "DB_ERROR", "message": str(e)})
+        raise HTTPException(status_code=400, detail={"code": "DB_ERROR", "message": str(e)}) from e
     except Exception as e:
-        raise HTTPException(status_code=400, detail={"code": "DB_ERROR", "message": str(e)})
+        raise HTTPException(status_code=400, detail={"code": "DB_ERROR", "message": str(e)}) from e
 
 @router.patch("/{plan_id}", response_model=WorkPlanResponse)  # EDIT_DRAFT (dok 05)
 async def update_plan(
@@ -491,7 +491,7 @@ async def add_day(
         day_id = res.scalar_one()
         return PlanDayResponse(id=day_id, work_plan_id=plan_id, **data.model_dump())
     except Exception:
-        raise HTTPException(status_code=400, detail={"code": "DB_ERROR", "message": "Gagal menambahkan hari (mungkin tanggal bentrok)."})
+        raise HTTPException(status_code=400, detail={"code": "DB_ERROR", "message": "Gagal menambahkan hari (mungkin tanggal bentrok)."}) from None
 
 @router.post("/{plan_id}/days/{day_id}/tasks", response_model=PlanTaskResponse)
 async def add_task(

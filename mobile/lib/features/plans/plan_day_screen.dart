@@ -1,16 +1,14 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-
-import '../../core/local_storage.dart';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/error_message.dart';
+import '../../core/local_storage.dart';
 import '../../core/photo_capture.dart';
 import '../../core/providers.dart';
-import '../../data/sync_engine.dart';
 import '../../core/theme/theme.dart';
+import '../../data/sync_engine.dart';
 import '../../shared/ui/vms_select_field.dart';
 import '../../shared/ui/vms_ui.dart';
 import 'sk_viewer_screen.dart';
@@ -597,7 +595,7 @@ class _IncidentFormScreenState extends State<IncidentFormScreen> {
       body: ListView(
         padding: safeListPadding(context),
         children: [
-          HeroHeader(
+          const HeroHeader(
             eyebrow: 'K3 & aset',
             title: 'Lapor insiden',
             subtitle: 'Foto berwatermark GPS & waktu, tersimpan di HP bila tanpa sinyal.',

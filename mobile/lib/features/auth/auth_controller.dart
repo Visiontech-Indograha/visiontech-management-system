@@ -210,7 +210,7 @@ class AuthController extends Notifier<AuthState> {
         options: Options(headers: {'X-Device-Id': clientId}),
       );
 
-      final accessToken = loginResponse.data['access_token'] as String;
+      final accessToken = (loginResponse.data as Map)['access_token'] as String;
       final refreshToken = refreshTokenFromResponse(loginResponse.headers);
       await tokenStorage.saveTokens(
         accessToken: accessToken,

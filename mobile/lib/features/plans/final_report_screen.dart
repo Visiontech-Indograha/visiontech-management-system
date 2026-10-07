@@ -147,7 +147,6 @@ class _FinalReportScreenState extends ConsumerState<FinalReportScreen> {
                 const NoticeBanner(
                   icon: Icons.inventory_2_outlined,
                   text: 'Pastikan semua alat & kendaraan sudah dikembalikan sebelum mengajukan penutupan.',
-                  accent: Accent.amber,
                 ),
                 OutlinedButton.icon(
                   key: const Key('compile-final'),

@@ -7025,41 +7025,7 @@
   "/api/v1/app/android/files/{name}": {
    "get": {
     "description": "Berkas APK berversi. Nama tidak pernah dipakai ulang, jadi aman di-cache selamanya (Cloudflare).",
-    "operationId": "download_android_release_api_v1_app_android_files__name__head",
-    "parameters": [
-     {
-      "in": "path",
-      "name": "name",
-      "required": true,
-      "schema": {
-       "title": "Name",
-       "type": "string"
-      }
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "Successful Response"
-     },
-     "422": {
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      },
-      "description": "Validation Error"
-     }
-    },
-    "summary": "Download Android Release",
-    "tags": [
-     "App"
-    ]
-   },
-   "head": {
-    "description": "Berkas APK berversi. Nama tidak pernah dipakai ulang, jadi aman di-cache selamanya (Cloudflare).",
-    "operationId": "download_android_release_api_v1_app_android_files__name__head",
+    "operationId": "download_android_release_api_v1_app_android_files__name__get",
     "parameters": [
      {
       "in": "path",

@@ -26,8 +26,10 @@ async def check_android_update(
     return release_service.check_update(build, abi)
 
 
-# HEAD ikut dilayani: skrip rilis memeriksa ukuran APK di portal tanpa mengunduh (FastAPI tidak menambahkannya).
-@router.api_route("/files/{name}", methods=["GET", "HEAD"], response_class=FileResponse)
+@router.get("/files/{name}", response_class=FileResponse)
+# HEAD: skrip rilis memeriksa ukuran APK di portal tanpa mengunduh (FastAPI tidak menambahkannya otomatis).
+# Rute terpisah di luar OpenAPI agar nama operasi stabil (api_route GET+HEAD menghasilkan nama acak).
+@router.head("/files/{name}", response_class=FileResponse, include_in_schema=False)
 async def download_android_release(
     name: str, release_service: AppReleaseService = Depends(get_app_release_service),
 ) -> FileResponse:

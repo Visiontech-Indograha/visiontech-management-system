@@ -125,7 +125,7 @@ def test_amendment_cannot_remove_a_day_that_already_has_reports(client, world):
     assert _request(client, world, plan_id).status_code == 200
     change = _open_change(plan_id)
 
-    start, end = _period(plan_id)
+    start, _ = _period(plan_id)
     later = _amended(world, plan_id, extra_days=0)
     later["days"] = later["days"][1:]                       # buang hari pertama yang sudah berlaporan
     later["period_start"] = start.isoformat()

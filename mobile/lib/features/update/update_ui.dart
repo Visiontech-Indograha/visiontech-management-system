@@ -51,18 +51,6 @@ class _AppUpdateGateState extends ConsumerState<AppUpdateGate>
     final required = ref.watch(
       appUpdateControllerProvider.select((s) => s.isRequired),
     );
-    // Pesan sekali setelah pembaruan berhasil. Didengar di sini (bukan di HomeShell) karena gerbang sudah
-    // terpasang sebelum pemeriksaan pertama selesai; ScaffoldMessenger ada di atasnya (vmsAppFrame).
-    ref.listen(appUpdateControllerProvider.select((s) => s.justUpdatedTo), (
-      _,
-      label,
-    ) {
-      if (label == null) return;
-      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-        SnackBar(content: Text('Aplikasi sudah diperbarui ke versi $label.')),
-      );
-      ref.read(appUpdateControllerProvider.notifier).consumeJustUpdated();
-    });
     return required ? const UpdateRequiredScreen() : widget.child;
   }
 }
@@ -287,6 +275,18 @@ class UpdateAvailableBanner extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final s = ref.watch(appUpdateControllerProvider);
+    // Pesan sekali setelah pembaruan berhasil, ditampilkan saat menu utama sudah terlihat (bukan saat layar
+    // pembuka — pesan yang dikirim di sana hilang ketika rute berganti; ditemukan saat uji emulator).
+    if (s.justUpdatedTo != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final label = ref.read(appUpdateControllerProvider).justUpdatedTo;
+        if (label == null || !context.mounted) return;
+        ref.read(appUpdateControllerProvider.notifier).consumeJustUpdated();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Aplikasi sudah diperbarui ke versi $label.')),
+        );
+      });
+    }
     if (!s.showBanner) return const SizedBox.shrink();
     final downloading = s.phase == UpdatePhase.downloading;
     return Material(

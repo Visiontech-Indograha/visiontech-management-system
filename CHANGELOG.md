@@ -9,6 +9,8 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased] — `development`
 
+- **Web — halaman Akun & keamanan dinamis di desktop (2026-10-07, permintaan pemilik):** semua kartu dibatasi `max-w-xl` sehingga di layar lebar hanya satu kolom sempit. Kini grid dua kolom di desktop (`lg`): Akun + Perangkat yang masuk di kiri, Biometrik Wajah (pendaftaran webcam) di kanan; ponsel satu kolom berurutan Akun → Wajah → Perangkat. Diukur di peramban: 1440 px → dua kolom 537 px, 390 px → satu kolom 358 px tanpa gulir horizontal. Web 160 uji lulus.
+
 - **Administrator boleh absen dari HP dan web (2026-10-07, permintaan pemilik):** server tidak lagi menolak kanal absen yang "salah" bagi ADMIN yang tertaut ke karyawan (`attendance_mode_of` memuat `is_admin`; `WRONG_ATTENDANCE_CHANNEL` tetap berlaku untuk karyawan lain). Aplikasi HP: `AuthUser.absensiLewatWeb` tidak lagi mengarahkan admin berjenis OFFICE ke web saja → **perlu APK baru**. Absen luring tetap hanya pekerja lapangan. Uji API (admin HP lulus, kantor biasa tetap ditolak) dan Flutter.
 - **Web — kamera diblokir di semua halaman (bug, 2026-10-07):** header `Permissions-Policy: camera=()` di `web/Caddyfile` melarang kamera untuk seluruh situs, sehingga di HP tidak ada permintaan izin dan swafoto absen, verifikasi wajah, serta pendaftaran wajah (webcam) tidak bisa membuka kamera. Diubah menjadi `camera=(self)` (mikrofon tetap diblokir). Pesan galat kamera diperjelas (izin ditolak: langkah membukanya; bukan HTTPS; kamera tak ada/dipakai aplikasi lain). Uji regresi `caddy-headers.test.ts`; konfigurasi Caddy divalidasi (`caddy validate`).
 

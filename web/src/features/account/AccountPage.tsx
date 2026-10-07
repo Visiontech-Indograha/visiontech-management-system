@@ -40,7 +40,7 @@ function FaceSection() {
 
   if (faceStatus.isPending) {
     return (
-      <section aria-label="Biometrik Wajah" className="mb-6 max-w-xl rounded-panel border border-line bg-surface shadow-card px-5 py-4">
+      <section aria-label="Biometrik Wajah" className="rounded-panel border border-line bg-surface px-5 py-4 shadow-card">
         <Skeleton className="mb-2 h-6 w-48" />
         <Skeleton className="h-16 w-full" />
       </section>
@@ -54,7 +54,7 @@ function FaceSection() {
   const data = faceStatus.data;
   if (!data?.employee_linked) {
     return (
-      <section aria-label="Biometrik Wajah" className="mb-6 max-w-xl rounded-panel border border-line bg-surface shadow-card px-5 py-4">
+      <section aria-label="Biometrik Wajah" className="rounded-panel border border-line bg-surface px-5 py-4 shadow-card">
         <h2 className="text-base font-semibold">Biometrik Wajah</h2>
         <p className="mt-2 text-sm text-mist">
           Fitur pendaftaran biometrik wajah hanya tersedia untuk akun yang terhubung dengan data karyawan.
@@ -78,7 +78,7 @@ function FaceSection() {
   };
 
   return (
-    <section aria-label="Biometrik Wajah" className="mb-6 max-w-xl rounded-panel border border-line bg-surface shadow-card px-5 py-4">
+    <section aria-label="Biometrik Wajah" className="rounded-panel border border-line bg-surface px-5 py-4 shadow-card">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div>
           <h2 className="text-base font-semibold">Biometrik Wajah (Face Recognition)</h2>
@@ -199,65 +199,70 @@ export function AccountPage() {
   return (
     <>
       <PageHeader title="Akun & keamanan" />
-      <section aria-label="Akun" className="mb-6 max-w-xl rounded-panel border border-line bg-surface shadow-card px-5 py-4">
-        <p className="font-medium">{me?.email}</p>
-        <p className="mb-4 text-sm text-mist">{me ? (ROLE_LABEL[me.role] ?? me.role) : ""}</p>
-        <Button asChild variant="outline">
-          <Link to="/change-password">Ganti password</Link>
-        </Button>
-      </section>
+      {/* Desktop: dua kolom (akun + perangkat | biometrik wajah di kanan). Ponsel: satu kolom berurutan akun, wajah, perangkat. */}
+      <div className="grid items-start gap-6 lg:grid-cols-2 2xl:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)]">
+        <section aria-label="Akun" className="rounded-panel border border-line bg-surface px-5 py-4 shadow-card">
+          <p className="font-medium">{me?.email}</p>
+          <p className="mb-4 text-sm text-mist">{me ? (ROLE_LABEL[me.role] ?? me.role) : ""}</p>
+          <Button asChild variant="outline">
+            <Link to="/change-password">Ganti password</Link>
+          </Button>
+        </section>
 
-      <FaceSection />
+        <div className="lg:col-start-2 lg:row-span-2 lg:row-start-1">
+          <FaceSection />
+        </div>
 
-      <section aria-label="Perangkat yang masuk" className="max-w-xl">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-base font-semibold">Perangkat yang masuk</h2>
-          {others > 0 && (
-            <Button
-              variant="outline"
-              disabled={revokeOthers.isPending}
-              onClick={() => run(() => revokeOthers.mutateAsync(), "Perangkat lain dikeluarkan (paling lambat 15 menit).")}
-            >
-              Keluarkan perangkat lain
-            </Button>
-          )}
-        </div>
-        <div className="rounded-panel border border-line bg-surface shadow-card">
-          {sessions.isPending && <Skeleton className="m-4 h-10" />}
-          {sessions.isError && <p className="px-5 py-4 text-sm text-danger">Daftar perangkat tidak dapat dimuat.</p>}
-          <ul className="divide-y divide-line">
-            {sessions.data?.map((s) => (
-              <li key={s.id} className="flex flex-col gap-2 px-5 py-3 text-sm md:flex-row md:items-center md:justify-between">
-                <div>
-                  <p className="font-medium">
-                    {deviceName(s)}
-                    {s.current && <span className="ml-2 rounded-full bg-success-bg px-2 py-0.5 text-xs text-success">Perangkat ini</span>}
-                  </p>
-                  <p className="text-mist">
-                    Masuk {s.issued_at ? formatDateTime(s.issued_at) : "-"}
-                    {s.last_used_at && ` · terakhir aktif ${formatDateTime(s.last_used_at)}`}
-                    {s.ip_address && ` · ${s.ip_address}`}
-                  </p>
-                </div>
-                {!s.current && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    aria-label={`Keluarkan ${deviceName(s)}`}
-                    disabled={revoke.isPending}
-                    onClick={() => run(() => revoke.mutateAsync(s.id), "Perangkat dikeluarkan (paling lambat 15 menit).")}
-                  >
-                    Keluarkan
-                  </Button>
-                )}
-              </li>
-            ))}
-          </ul>
-        </div>
-        <p className="mt-2 text-body-sm text-mist">
-          Perangkat yang dikeluarkan harus masuk lagi; akses yang sedang berjalan berakhir paling lama 15 menit.
-        </p>
-      </section>
+        <section aria-label="Perangkat yang masuk">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-base font-semibold">Perangkat yang masuk</h2>
+            {others > 0 && (
+              <Button
+                variant="outline"
+                disabled={revokeOthers.isPending}
+                onClick={() => run(() => revokeOthers.mutateAsync(), "Perangkat lain dikeluarkan (paling lambat 15 menit).")}
+              >
+                Keluarkan perangkat lain
+              </Button>
+            )}
+          </div>
+          <div className="rounded-panel border border-line bg-surface shadow-card">
+            {sessions.isPending && <Skeleton className="m-4 h-10" />}
+            {sessions.isError && <p className="px-5 py-4 text-sm text-danger">Daftar perangkat tidak dapat dimuat.</p>}
+            <ul className="divide-y divide-line">
+              {sessions.data?.map((s) => (
+                <li key={s.id} className="flex flex-col gap-2 px-5 py-3 text-sm md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <p className="font-medium">
+                      {deviceName(s)}
+                      {s.current && <span className="ml-2 rounded-full bg-success-bg px-2 py-0.5 text-xs text-success">Perangkat ini</span>}
+                    </p>
+                    <p className="text-mist">
+                      Masuk {s.issued_at ? formatDateTime(s.issued_at) : "-"}
+                      {s.last_used_at && ` · terakhir aktif ${formatDateTime(s.last_used_at)}`}
+                      {s.ip_address && ` · ${s.ip_address}`}
+                    </p>
+                  </div>
+                  {!s.current && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      aria-label={`Keluarkan ${deviceName(s)}`}
+                      disabled={revoke.isPending}
+                      onClick={() => run(() => revoke.mutateAsync(s.id), "Perangkat dikeluarkan (paling lambat 15 menit).")}
+                    >
+                      Keluarkan
+                    </Button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <p className="mt-2 text-body-sm text-mist">
+            Perangkat yang dikeluarkan harus masuk lagi; akses yang sedang berjalan berakhir paling lama 15 menit.
+          </p>
+        </section>
+      </div>
     </>
   );
 }

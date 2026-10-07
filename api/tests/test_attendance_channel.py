@@ -179,3 +179,18 @@ def test_field_worker_without_sk_can_check_in_at_head_office_and_sees_it(client,
     res = _check_in(client, world, "member", "MOBILE", site_id=office)
     assert res.status_code == 200, res.text
     assert res.json()["status"] == "AUTO_VALID"
+
+
+def test_field_worker_can_choose_between_several_offices(client, world):
+    """Kantor Visiontech ada beberapa: semuanya tampil di daftar absen dan pekerja memilih sendiri."""
+    offices = [str(sync_query(
+        "INSERT INTO vms.site (organization_id, name, location, radius_m) "
+        "VALUES (%s, %s, ST_GeogFromText(%s), 100) RETURNING id",
+        (world.org_id, name, point))[0][0])
+        for name, point in (("Kantor A uji", "POINT(106.8 -6.2)"), ("Kantor B uji", "POINT(101.4 0.5)"))]
+    listed = {s["id"] for s in client.get("/sites", headers=world.headers(client, "member"),
+                                          params={"for_attendance": "true"}).json()}
+    assert set(offices) <= listed and world.site_id in listed      # kantor + lokasi proyek unitnya
+    res = _check_in(client, world, "member", "MOBILE", site_id=offices[1], location={"lat": 0.5, "lng": 101.4})
+    assert res.status_code == 200, res.text
+    assert sync_query("SELECT site_id::text FROM vms.attendance WHERE id = %s", (res.json()["id"],))[0][0] == offices[1]

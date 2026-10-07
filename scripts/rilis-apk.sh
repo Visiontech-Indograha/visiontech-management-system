@@ -107,7 +107,7 @@ cmd_bangun() {
     [ "$digest" = "$expected" ] || die "$abi: APK tidak bertanda kunci rilis Visiontech ($digest) — cek android/key.properties"
     dest="vms-$name-$build-$abi.apk"
     cp "$apk" "$out/$dest"
-    sha=$(sha256sum "$out/$dest" | cut -d' ' -f1); size=$(stat -c %s "$out/$dest")
+    sha=$(sha256sum < "$out/$dest" | cut -d' ' -f1); size=$(stat -c %s "$out/$dest")   # stdin: tanpa awalan "\" pada jalur ber-backslash
     files_json+="$sep    {\"abi\": \"$abi\", \"name\": \"$dest\", \"sha256\": \"$sha\", \"size\": $size}"; sep=$',\n'
     echo "   $dest  $(( size / 1048576 )) MB  sha256 ${sha:0:12}…  tanda tangan OK"
   done

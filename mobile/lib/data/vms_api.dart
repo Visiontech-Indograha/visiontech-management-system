@@ -203,7 +203,7 @@ class VmsApi {
 
   // --- Lokasi & absensi ---------------------------------------------------
   Future<List<Map<String, dynamic>>> sites() async =>
-      _list((await _dio.get('$_p/sites')).data);
+      _list((await _dio.get('$_p/sites', queryParameters: {'for_attendance': true})).data);
 
   /// Absensi milik sendiri (server membatasi ke pengguna ini bila bukan HR/Finance).
   /// `today` = tanggal hari ini menurut zona waktu organisasi (O-10), bukan jam HP.

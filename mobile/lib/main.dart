@@ -8,6 +8,7 @@ import 'package:shadcn_ui/shadcn_ui.dart';
 
 import 'core/connectivity_sync.dart';
 import 'core/theme/theme.dart';
+import 'features/update/update_ui.dart';
 import 'shared/app_frame.dart';
 import 'shared/router.dart';
 
@@ -41,7 +42,9 @@ class VmsMobileApp extends ConsumerWidget {
         materialThemeBuilder: (context, _) => VmsTheme.light,
         routerConfig: router,
         // ScaffoldMessenger (SnackBar) + safe zone kiri/kanan — lihat shared/app_frame.dart.
-        builder: vmsAppFrame,
+        // Gerbang pembaruan wajib (docs/32) di atas Navigator: berlaku juga untuk layar login.
+        builder: (context, child) =>
+            vmsAppFrame(context, AppUpdateGate(child: child ?? const SizedBox.shrink())),
       ),
     );
   }

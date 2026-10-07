@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../core/providers.dart';
 import '../features/auth/auth_controller.dart';
 import '../features/face/face_enroll_gate.dart';
+import '../features/update/update_ui.dart';
 import 'sync_status_banner.dart';
 import 'ui/floating_nav.dart';
 
@@ -142,6 +143,7 @@ class _HomeShellState extends ConsumerState<HomeShell>
           // dan tidak menggeser AppBar tiap layar.
           Expanded(child: widget.navigationShell),
           const SyncStatusBanner(),
+          const UpdateAvailableBanner(),
         ],
       ),
       bottomNavigationBar: FloatingNavBar(

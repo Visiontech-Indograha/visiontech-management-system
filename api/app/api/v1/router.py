@@ -5,6 +5,7 @@ Urutan include disalin apa adanya dari `main.py` lama (R-28 M2) — urutan memen
 from fastapi import APIRouter
 
 from app.api.v1.endpoints.accounts import router as accounts_router
+from app.api.v1.endpoints.app_releases import router as app_releases_router
 from app.api.v1.endpoints.assets import plan_assets_router
 from app.api.v1.endpoints.assets import router as assets_router
 from app.api.v1.endpoints.attendance import router as attendance_router
@@ -75,3 +76,4 @@ api_router.include_router(overtime_recaps_router)
 api_router.include_router(notifications_router)
 api_router.include_router(plan_reports_router)
 api_router.include_router(plan_amendments_router)
+api_router.include_router(app_releases_router)

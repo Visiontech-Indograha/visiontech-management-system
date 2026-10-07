@@ -19,10 +19,10 @@ class CRUDOrgClock(CRUDBase):
 
     async def local_now(self, org_id: UUID | str) -> Any:
         """Baris `(local_now, today)` untuk organisasi.
-        
+
         Args:
             org_id (UUID | str): ID organisasi.
-            
+
         Returns:
             Any: Baris data yang menyimpan nilai waktu (timestamp) dan tanggal (date) lokal organisasi.
         """
@@ -39,10 +39,10 @@ class CRUDOrgClock(CRUDBase):
 
     async def day_reached(self, day_id: UUID | str) -> Any:
         """Apakah tanggal hari kerja sudah tiba menurut zona waktu organisasi SK-nya. None = hari tidak ada.
-        
+
         Args:
             day_id (UUID | str): ID dari entri hari kerja (work_plan_day).
-            
+
         Returns:
             Any: Boolean evaluasi waktu, atau None.
         """

@@ -16,20 +16,20 @@ from app.crud.crud_notification import CRUDNotification
 
 class NotificationService:
     """Layanan sentral pengiriman dan pengelolaan notifikasi dalam sistem aplikasi."""
-    
+
     def __init__(self, db: AsyncSession) -> None:
         self.repo = CRUDNotification(db)
 
     async def _plan(self, plan_id: UUID | str) -> Any:
         """
         Mencari data personel yang terhubung dengan suatu Surat Keputusan (SK).
-        
+
         Args:
             plan_id: ID dari SK.
-            
+
         Returns:
             Any: Data detail pihak-pihak terkait dari repo.
-            
+
         Raises:
             NotFoundError: Jika SK tidak ada.
         """
@@ -49,7 +49,7 @@ class NotificationService:
         """
         Mengirim notifikasi ketika SK diterbitkan (publish).
         Dikirimkan kepada ketua dan anggota tim.
-        
+
         Args:
             plan_id: ID SK.
         """
@@ -61,7 +61,7 @@ class NotificationService:
     async def amendment_requested(self, plan_id: UUID | str, reason: str) -> None:
         """
         Mengirim notifikasi permintaan adendum SK oleh tim di lapangan kepada PM.
-        
+
         Args:
             plan_id: ID SK.
             reason: Alasan permintaan adendum.
@@ -73,7 +73,7 @@ class NotificationService:
     async def plan_accepted(self, plan_id: UUID | str) -> None:
         """
         Mengirim notifikasi ketika SK telah diterima oleh ketua tim.
-        
+
         Args:
             plan_id (UUID | str): ID SK terkait.
         """
@@ -85,7 +85,7 @@ class NotificationService:
     async def plan_started(self, plan_id: UUID | str) -> None:
         """
         Mengirim notifikasi ketika SK mulai berjalan.
-        
+
         Args:
             plan_id (UUID | str): ID SK terkait.
         """
@@ -96,12 +96,12 @@ class NotificationService:
     async def list_for(self, user_id: str, unread_only: bool = False, limit: int = 50) -> list[Any]:
         """
         Mengambil daftar notifikasi untuk pengguna tertentu.
-        
+
         Args:
             user_id (str): ID pengguna.
             unread_only (bool): Jika True, hanya ambil notifikasi yang belum dibaca.
             limit (int): Batas jumlah notifikasi (default 50).
-            
+
         Returns:
             list[Any]: Daftar objek notifikasi.
         """
@@ -110,10 +110,10 @@ class NotificationService:
     async def unread_count(self, user_id: str) -> int:
         """
         Menghitung jumlah notifikasi yang belum dibaca oleh pengguna.
-        
+
         Args:
             user_id (str): ID pengguna.
-            
+
         Returns:
             int: Jumlah notifikasi belum dibaca.
         """
@@ -122,11 +122,11 @@ class NotificationService:
     async def mark_read(self, user_id: str, notification_id: UUID | None) -> int:
         """
         Menandai notifikasi sebagai telah dibaca.
-        
+
         Args:
             user_id (str): ID pengguna.
             notification_id (UUID | None): ID notifikasi tunggal (atau None untuk semua).
-            
+
         Returns:
             int: Jumlah baris yang diperbarui.
         """

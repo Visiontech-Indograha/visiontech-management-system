@@ -101,7 +101,7 @@ class PlanMemberService:
         if set(people) - known:
             raise NotFoundError("Karyawan")
         current = [m.employee_id for m in await self.repo.active_team(plan_id)]
-        
+
         # Validasi bahwa anggota tim berada dalam unit/otoritas PM yang membuat SK
         await PlanAssignmentService(CRUDPlanAssignment(self.repo.db)).validate_team_scope(
             user, plan.unit_id, people, current_team=current)

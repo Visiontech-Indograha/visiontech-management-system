@@ -24,7 +24,7 @@ from app.core.config import settings
 from app.core.errors import AppError
 
 # ── Engine & sessions ────────────────────────────────────────────────────────────
-# Fungsi & trigger di db/*.sql menyebut tabel tanpa awalan skema, 
+# Fungsi & trigger di db/*.sql menyebut tabel tanpa awalan skema,
 # jadi setiap koneksi aplikasi wajib memakai path yang sama.
 SEARCH_PATH = "vms, public"
 
@@ -103,7 +103,7 @@ async def set_request_context(
     actor_label: str,
 ) -> None:
     """
-    Set context variables (user_id, organization_id, actor_label) in the 
+    Set context variables (user_id, organization_id, actor_label) in the
     PostgreSQL session to support Row Level Security (RLS) and audit triggers.
     """
     # Mengeksekusi penyiapan variabel RLS secara lokal

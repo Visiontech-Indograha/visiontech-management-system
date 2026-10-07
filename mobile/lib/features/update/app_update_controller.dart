@@ -177,7 +177,7 @@ class AppUpdateController extends Notifier<AppUpdateState> {
       installed: app,
       snoozedBuild: snoozeActive ? snoozedBuild : null,
       justUpdatedTo: lastBuild != null && lastBuild < app.versionCode
-          ? app.versionName
+          ? app.label
           : null,
     );
     if (lastBuild != app.versionCode) {

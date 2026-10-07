@@ -57,7 +57,7 @@ class EmployeeResponse(EmployeeBase):
     is_active: bool
     offboarded_at: datetime | None = None
     offboarding_reason: str | None = None
-    
+
 
 class EmployeeListResponse(BaseModel):
     """

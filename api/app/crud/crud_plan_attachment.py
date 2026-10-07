@@ -17,14 +17,14 @@ class CRUDPlanAttachment(CRUDBase):
 
     async def list_for_plan(self, plan_id: UUID | str) -> list[Any]:
         """Mendapatkan daftar lampiran dari sebuah Work Plan (SK).
-        
+
         Args:
             plan_id (UUID | str): ID Work Plan.
-            
+
         Returns:
             list[Any]: Daftar lampiran (file info) beserta urutan pengurutannya (sort_order).
         """
-        # Melakukan INNER JOIN antara vms.work_plan_attachment (a) dan tabel induk file 
+        # Melakukan INNER JOIN antara vms.work_plan_attachment (a) dan tabel induk file
         # yaitu vms.file_object (f). Hasil kueri akan selalu diurutkan (ORDER BY a.sort_order).
         return list(await self.fetchall(
             """
@@ -38,7 +38,7 @@ class CRUDPlanAttachment(CRUDBase):
 
     async def replace(self, plan_id: UUID | str, file_ids: list[UUID]) -> None:
         """Ganti seluruh lampiran; urutan daftar = sort_order.
-        
+
         Args:
             plan_id (UUID | str): ID Work Plan.
             file_ids (list[UUID]): Daftar ID file lampiran (berurut).

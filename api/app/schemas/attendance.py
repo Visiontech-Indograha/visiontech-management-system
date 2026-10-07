@@ -135,7 +135,7 @@ class AttendanceListResponse(BaseModel):
     total: int
     page: int
     size: int
-    # O-10: Tanggal hari ini menurut zona waktu organisasi. 
+    # O-10: Tanggal hari ini menurut zona waktu organisasi.
     # Aplikasi HP menandai "absensi hari ini" menggunakan nilai ini, bukan jam perangkat.
     today: date | None = None
     # R-34: Jangkar waktu bertanda tangan server untuk absen luring.

@@ -4,7 +4,7 @@ from app.core.discord import sanitize_for_discord
 def test_sanitize_for_discord():
     text = "Error user with NIK 3201012345678901 and email test@example.com failed login."
     sanitized = sanitize_for_discord(text)
-    
+
     assert "3201012345678901" not in sanitized
     assert "[NIK_MASKED]" in sanitized
     assert "test@example.com" not in sanitized

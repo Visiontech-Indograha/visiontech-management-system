@@ -27,10 +27,10 @@ class CRUDPlanChange(CRUDBase):
 
     async def employee_of(self, user_id: UUID | str) -> Any:
         """Mengambil ID Karyawan (employee_id) dari seorang pengguna.
-        
+
         Args:
             user_id (UUID | str): ID dari pengguna (app_user).
-            
+
         Returns:
             Any: ID Karyawan dalam bentuk string.
         """
@@ -39,10 +39,10 @@ class CRUDPlanChange(CRUDBase):
 
     async def get_change(self, change_id: UUID | str) -> Any:
         """Mengambil rincian data usulan perubahan (plan_change).
-        
+
         Args:
             change_id (UUID | str): ID usulan perubahan.
-            
+
         Returns:
             Any: Baris data usulan perubahan.
         """
@@ -58,10 +58,10 @@ class CRUDPlanChange(CRUDBase):
 
     async def open_change(self, plan_id: UUID | str) -> Any:
         """Memeriksa apakah ada usulan perubahan yang masih terbuka (belum final) pada suatu SK.
-        
+
         Args:
             plan_id (UUID | str): ID Work Plan.
-            
+
         Returns:
             Any: ID perubahan jika ada yang berstatus PENDING_PM atau AWAITING_LEADER_ACCEPTANCE.
         """
@@ -76,11 +76,11 @@ class CRUDPlanChange(CRUDBase):
 
     async def lock_change(self, change_id: UUID | str, org_id: UUID | str) -> Any:
         """Usulan + SK-nya (dikunci). None bila tidak ada / organisasi lain.
-        
+
         Args:
             change_id (UUID | str): ID usulan perubahan.
             org_id (UUID | str): ID organisasi untuk validasi.
-            
+
         Returns:
             Any: Baris data perubahan beserta SK-nya, dalam keadaan terkunci (locked).
         """
@@ -101,14 +101,14 @@ class CRUDPlanChange(CRUDBase):
 
     async def next_document_version(self, plan_id: UUID | str) -> int:
         """Menghitung versi dokumen adendum berikutnya untuk sebuah SK.
-        
+
         Args:
             plan_id (UUID | str): ID Work Plan.
-            
+
         Returns:
             int: Nomor versi dokumen berikutnya.
         """
-        # Mengkalkulasi nilai GREATEST antara revisi SK (wp.revision) 
+        # Mengkalkulasi nilai GREATEST antara revisi SK (wp.revision)
         # dengan versi tertinggi dari dokumen SK yang sudah ada sebelumnya (max(d.version)).
         return int(await self.scalar(
             """
@@ -124,7 +124,7 @@ class CRUDPlanChange(CRUDBase):
                             old_end: date | None = None, new_end: date | None = None,
                             leader_id: str | None = None, member_ids: list[str] | None = None) -> Any:
         """Memasukkan usulan perubahan baru (plan_change) ke dalam database.
-        
+
         Args:
             plan_id (UUID | str): ID Work Plan.
             change_type (ChangeType): Tipe perubahan (waktu atau personel).
@@ -137,7 +137,7 @@ class CRUDPlanChange(CRUDBase):
             new_end (date | None): Tanggal selesai baru yang diusulkan.
             leader_id (str | None): ID Ketua yang diusulkan.
             member_ids (list[str] | None): Daftar ID Anggota yang diusulkan.
-            
+
         Returns:
             Any: ID dari baris perubahan yang baru dimasukkan.
         """
@@ -164,7 +164,7 @@ class CRUDPlanChange(CRUDBase):
     async def issue_addendum(self, change_id: UUID | str, plan_id: UUID | str, kind: DocumentKind, version: int,
                              snapshot: dict[str, Any], issued_by: str, reason: str) -> None:
         """Dokumen adendum menunggu penerimaan; nomor = nomor SK + /ADD-n (domain.js).
-        
+
         Args:
             change_id (UUID | str): ID usulan perubahan (plan_change).
             plan_id (UUID | str): ID Work Plan.
@@ -173,7 +173,7 @@ class CRUDPlanChange(CRUDBase):
             snapshot (dict[str, Any]): Rekaman data SK saat itu (JSON).
             issued_by (str): Penerbit dokumen.
             reason (str): Alasan penerbitan dokumen.
-            
+
         Returns:
             None
         """
@@ -199,7 +199,7 @@ class CRUDPlanChange(CRUDBase):
     async def set_change(self, change_id: UUID | str, status: ChangeStatus, decided_by: str | None = None,
                          decision_reason: str | None = None) -> None:
         """Menetapkan status keputusan (disetujui/ditolak) pada suatu usulan perubahan.
-        
+
         Args:
             change_id (UUID | str): ID perubahan.
             status (ChangeStatus): Status baru.
@@ -222,7 +222,7 @@ class CRUDPlanChange(CRUDBase):
     async def set_document(self, document_id: UUID | str | None, status: DocumentStatus,
                            accepted_by: str | None = None) -> None:
         """Membaharui status dari sebuah dokumen (misal: telah disetujui).
-        
+
         Args:
             document_id (UUID | str | None): ID Dokumen.
             status (DocumentStatus): Status baru dari dokumen.
@@ -245,7 +245,7 @@ class CRUDPlanChange(CRUDBase):
 
     async def apply_extension(self, plan_id: UUID | str, old_end: date, new_end: date, revision: int) -> None:
         """Periode diperpanjang, revisi naik, hari baru dibuat (domain.js ACCEPT_CHANGE + makeDay).
-        
+
         Args:
             plan_id (UUID | str): ID Work Plan.
             old_end (date): Tanggal selesai sebelumnya.
@@ -293,7 +293,7 @@ class CRUDPlanChange(CRUDBase):
                               revision: int) -> None:
         """Susunan baru berlaku mulai hari ini menurut zona waktu organisasi: baris yang tidak lagi
         sesuai ditutup (bukan dihapus — riwayat tetap), baris baru dibuka, ketua di SK diganti.
-        
+
         Args:
             plan_id (UUID | str): ID Work Plan.
             leader_id (str): ID Karyawan yang menjadi ketua baru.
@@ -326,7 +326,7 @@ class CRUDPlanChange(CRUDBase):
                 INSERT INTO vms.work_plan_member (work_plan_id, employee_id, role_in_plan, valid_period)
                 SELECT wp.id, CAST(u.emp AS uuid), CAST(u.role AS vms.role_code),
                        daterange(GREATEST(lower(wp.period), (now() AT TIME ZONE o.timezone)::date), NULL, '[)')
-                FROM vms.work_plan wp 
+                FROM vms.work_plan wp
                 JOIN vms.organization o ON o.id = wp.organization_id
                 CROSS JOIN unnest(CAST(:emps AS text[]), CAST(:roles AS text[])) AS u(emp, role)
                 WHERE wp.id = :plan AND NOT EXISTS (
@@ -336,7 +336,7 @@ class CRUDPlanChange(CRUDBase):
                 """,
                 {"plan": plan_id, "emps": [str(e) for e, _ in wanted], "roles": [r for _, r in wanted]}
             )
-        # Menetapkan siapa ID ketua tim yang baru pada kolom leader_employee_id, 
+        # Menetapkan siapa ID ketua tim yang baru pada kolom leader_employee_id,
         # serta memperbarui status revisi dari Work Plan.
         await self.execute(
             """

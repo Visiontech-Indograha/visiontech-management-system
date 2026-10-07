@@ -18,7 +18,7 @@ RUN pip install -r requirements.txt
 # Unduh paket model (lisensi riset non-komersial InsightFace; lihat README) saat build, bukan saat jalan.
 RUN python -c "from insightface.app import FaceAnalysis; FaceAnalysis(name='buffalo_s', root='/models', allowed_modules=['detection','recognition'], providers=['CPUExecutionProvider'])"
 
-COPY main.py .
+COPY main.py rules.py .
 
 RUN useradd --system --no-create-home face && chown -R face /models
 USER face

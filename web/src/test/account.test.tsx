@@ -141,4 +141,47 @@ describe("Wajib daftar wajah setelah login", () => {
     expect(await screen.findByRole("link", { name: "Ganti password" })).toBeInTheDocument();
     expect(screen.queryByTestId("face-gate")).toBeNull();
   });
+
+  it("ganti password tetap bisa dibuka walau wajib daftar wajah (tidak ikut terkunci)", async () => {
+    mockApi((c) => (c.url === "/face/status" ? { data: status() } : undefined));
+    renderRoute("/change-password", { role: "field" });
+    await waitFor(() => expect(screen.queryByTestId("face-gate")).toBeNull());
+    expect(await screen.findByRole("heading", { name: /ganti password/i })).toBeInTheDocument();
+  });
+
+  it("akun tanpa karyawan (admin murni): tidak pernah dikunci gerbang walau server mewajibkan", async () => {
+    mockApi((c) => {
+      if (c.url === "/auth/sessions") return { data: [] };
+      if (c.url === "/face/status") return { data: status({ employee_linked: false, enrollment_required: false }) };
+    });
+    renderRoute("/account", { role: "ADMIN" });
+    expect(await screen.findByRole("link", { name: "Ganti password" })).toBeInTheDocument();
+    expect(screen.queryByTestId("face-gate")).toBeNull();
+  });
+});
+
+describe("Tata letak halaman Akun & keamanan", () => {
+  it("responsif: dua kolom di desktop (lg), urutan ponsel Akun → Biometrik → Perangkat", async () => {
+    mockApi((c) => {
+      if (c.url === "/auth/sessions") return { data: [] };
+      if (c.url === "/face/status") {
+        return { data: { employee_linked: true, consent: "GRANTED", consent_policy_version: "v1", enrolled: false,
+          liveness_required: true, template_ttl_days: 7, policy: { version: "v1", text: "t" } } };
+      }
+    });
+    renderRoute("/account", { role: "field" });
+    const akun = await screen.findByRole("region", { name: "Akun" });
+    const wajah = await screen.findByRole("region", { name: "Biometrik Wajah" });
+    const perangkat = await screen.findByRole("region", { name: "Perangkat yang masuk" });
+
+    const order = [akun, wajah, perangkat].map((e) => e.compareDocumentPosition(perangkat));
+    expect(order[0]! & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();   // Akun mendahului Perangkat
+    expect(akun.compareDocumentPosition(wajah) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(wajah.compareDocumentPosition(perangkat) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    const grid = akun.parentElement!;
+    expect(grid.className).toContain("lg:grid-cols-2");
+    expect(grid.className).toContain("grid");
+    for (const card of [akun, wajah]) expect(card.className).not.toContain("max-w-xl"); // tak lagi dibatasi sempit
+  });
 });

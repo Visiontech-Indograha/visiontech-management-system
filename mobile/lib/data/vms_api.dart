@@ -202,8 +202,12 @@ class VmsApi {
       _dio.post('$_p/notifications/read-all');
 
   // --- Lokasi & absensi ---------------------------------------------------
-  Future<List<Map<String, dynamic>>> sites() async =>
-      _list((await _dio.get('$_p/sites')).data);
+  Future<List<Map<String, dynamic>>> sites() async => _list(
+    (await _dio.get(
+      '$_p/sites',
+      queryParameters: {'for_attendance': true},
+    )).data,
+  );
 
   /// Absensi milik sendiri (server membatasi ke pengguna ini bila bukan HR/Finance).
   /// `today` = tanggal hari ini menurut zona waktu organisasi (O-10), bukan jam HP.
@@ -280,11 +284,13 @@ class VmsApi {
     return Map<String, dynamic>.from(res.data as Map);
   }
 
-  Future<void> setFaceConsent(String state, {required String policyVersion}) async =>
-      _dio.post(
-        '$_p/face/consent',
-        data: {'state': state, 'policy_version': policyVersion},
-      );
+  Future<void> setFaceConsent(
+    String state, {
+    required String policyVersion,
+  }) async => _dio.post(
+    '$_p/face/consent',
+    data: {'state': state, 'policy_version': policyVersion},
+  );
 
   /// Memeriksa satu bingkai kamera terhadap tantangan liveness (online). Bila gerakan terlihat, server
   /// mengembalikan `proof` bertanda tangan yang nanti dikirim kembali di `liveness.proofs`.
@@ -322,10 +328,12 @@ class VmsApi {
   }) async {
     final fileParts = <MultipartFile>[];
     for (final photo in photos) {
-      fileParts.add(await MultipartFile.fromFile(
-        photo.path,
-        filename: photo.uri.pathSegments.last,
-      ));
+      fileParts.add(
+        await MultipartFile.fromFile(
+          photo.path,
+          filename: photo.uri.pathSegments.last,
+        ),
+      );
     }
     final form = FormData.fromMap({
       'files': fileParts,

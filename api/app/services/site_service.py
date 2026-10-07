@@ -35,7 +35,7 @@ class SiteService:
     async def list_sites(self, user: CurrentUser, *, for_attendance: bool = False) -> list[Any]:
         """
         Menampilkan daftar lokasi yang dapat dilihat oleh pengguna.
-        `for_attendance`: jika True, hanya lokasi yang sah untuk absen (kantor untuk staf kantor, lokasi unit untuk staf lapangan).
+        `for_attendance`: jika True, hanya lokasi yang sah untuk absen (kantor untuk staf kantor; lokasi unit + kantor pusat untuk staf lapangan).
         
         Args:
             user (CurrentUser): Pengguna yang meminta daftar lokasi.
@@ -49,18 +49,18 @@ class SiteService:
         if for_attendance:
             field = mode == "FIELD"
             unit = viewer.employee_unit_id if viewer and field else None
-            # Jika pekerja lapangan, kembalikan lokasi unitnya. Jika staf kantor, lokasi kantor.
-            return await self.repo.list_visible(user.organization_id, all_sites=False, office=not field,
+            # Staf kantor: lokasi kantor. Pekerja lapangan: lokasi unitnya + kantor pusat (tanpa SK tetap bisa absen).
+            return await self.repo.list_visible(user.organization_id, all_sites=False, office=True,
                                                 unit_id=unit)
         # OPS dapat melihat semua lokasi
         if "OPS" in user.roles:
             return await self.repo.list_visible(user.organization_id, all_sites=True, office=True, unit_id=None)
         
-        # PM melihat lokasi kantor + unitnya. Staf lapangan melihat lokasi unitnya.
+        # PM melihat lokasi kantor + unitnya. Staf lapangan: lokasi unitnya + kantor (APK lama memakai daftar ini untuk absen).
         unit = viewer.pm_unit_id if viewer and viewer.pm_unit_id else (
             viewer.employee_unit_id if viewer and mode == "FIELD" else None)
         return await self.repo.list_visible(user.organization_id, all_sites=False,
-                                            office=mode != "FIELD", unit_id=unit)
+                                            office=True, unit_id=unit)
 
     async def manageable(self, user: CurrentUser) -> tuple[bool, UUID | None]:
         """

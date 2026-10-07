@@ -132,6 +132,10 @@ export function FaceCamera({
     setStep(0);
     setPhase("starting");
     setHint("Menyiapkan kamera...");
+    if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
+      fail("Kamera hanya bisa dibuka lewat alamat HTTPS (https://portal.visiontechindo.com) dan peramban yang mendukungnya.");
+      return;
+    }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
@@ -141,8 +145,15 @@ export function FaceCamera({
       const v = videoRef.current!;
       v.srcObject = stream;
       await v.play();
-    } catch {
-      fail("Kamera tidak dapat dibuka. Izinkan akses kamera pada peramban, lalu coba lagi.");
+    } catch (e) {
+      const name = e instanceof DOMException ? e.name : "";
+      fail(
+        name === "NotAllowedError" || name === "SecurityError"
+          ? "Akses kamera ditolak. Ketuk ikon gembok di kolom alamat → Izin → Kamera → Izinkan, lalu coba lagi."
+          : name === "NotFoundError" || name === "OverconstrainedError"
+            ? "Kamera tidak ditemukan pada perangkat ini."
+            : "Kamera tidak dapat dibuka (mungkin sedang dipakai aplikasi lain). Tutup aplikasi kamera lain, lalu coba lagi.",
+      );
       return;
     }
 

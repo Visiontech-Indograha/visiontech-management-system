@@ -162,3 +162,20 @@ def test_admin_can_attend_from_mobile_and_web_regardless_of_mode(client, world):
     sync_query("UPDATE vms.employee SET attendance_mode = 'OFFICE' WHERE id = %s RETURNING id", (world.employees["member"],))
     denied = _check_in(client, world, "member", "MOBILE", site_id=office)
     assert denied.status_code == 403 and denied.json()["error"]["code"] == "WRONG_ATTENDANCE_CHANNEL"
+
+
+def test_field_worker_without_sk_can_check_in_at_head_office_and_sees_it(client, world):
+    """Pekerja lapangan tanpa SK/lokasi proyek tetap bisa absen di kantor pusat (2026-10-07)."""
+    office = str(sync_query(
+        "INSERT INTO vms.site (organization_id, name, location, radius_m) "
+        "VALUES (%s, 'Kantor Pusat uji', ST_GeogFromText('POINT(106.8 -6.2)'), 100) RETURNING id",
+        (world.org_id,))[0][0])
+    sites = client.get("/sites", headers=world.headers(client, "member"), params={"for_attendance": "true"})
+    assert sites.status_code == 200, sites.text
+    assert office in {s["id"] for s in sites.json()}
+    # APK lama memanggil /sites tanpa for_attendance — kantor pusat juga harus ada.
+    old_apk = client.get("/sites", headers=world.headers(client, "member")).json()
+    assert office in {s["id"] for s in old_apk}
+    res = _check_in(client, world, "member", "MOBILE", site_id=office)
+    assert res.status_code == 200, res.text
+    assert res.json()["status"] == "AUTO_VALID"

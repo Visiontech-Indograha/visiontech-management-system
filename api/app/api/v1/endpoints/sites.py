@@ -38,7 +38,7 @@ async def get_sites(
 ) -> list[SiteResponse]:
     """
     Mengambil daftar lokasi kerja (GET).
-    R-33: lapangan → lokasi unitnya; kantor → lokasi kantor; PM → kantor + unitnya; OPS → semua.
+    R-33: lapangan → lokasi unitnya (+ kantor pusat untuk absen); kantor → lokasi kantor; PM → kantor + unitnya; OPS → semua.
     
     Query Parameters:
     - for_attendance (bool): Hanya lokasi yang sah untuk absen peminta.

@@ -59,10 +59,10 @@ class PlanChangeService:
     async def _snapshot(self, plan_id: UUID | str) -> Any:
         """
         Mengambil snapshot data komprehensif dari suatu rencana kerja untuk disimpan pada addendum.
-        
+
         Args:
             plan_id (UUID | str): ID SK.
-            
+
         Returns:
             Any: Data dict/list snapshot SK.
         """
@@ -72,12 +72,12 @@ class PlanChangeService:
     async def _open_plan(self, plan_id: UUID, user: CurrentUser, need: PlanNeed) -> Any:
         """
         Memastikan pengguna berhak mengakses, SK dalam kondisi aktif, dan tidak ada perubahan lain yang sedang menunggu.
-        
+
         Args:
             plan_id (UUID): ID SK.
             user (CurrentUser): Objek user peminta.
             need (PlanNeed): Kewenangan minimum (PM/Leader/dkk).
-            
+
         Returns:
             Any: Objek akses dan objek rencana kerja (plan).
         """
@@ -94,10 +94,10 @@ class PlanChangeService:
     async def read(self, change_id: UUID | str) -> Any:
         """
         Mengambil detail satu usulan perubahan.
-        
+
         Args:
             change_id (UUID | str): ID perubahan.
-            
+
         Returns:
             Any: Objek usulan perubahan.
         """
@@ -165,11 +165,11 @@ class PlanChangeService:
     async def _load(self, change_id: UUID, user: CurrentUser) -> Any:
         """
         Mengunci dan memuat data usulan perubahan dari database.
-        
+
         Args:
             change_id (UUID): ID usulan perubahan.
             user (CurrentUser): Objek pengguna.
-            
+
         Returns:
             Any: Baris data usulan perubahan.
         """
@@ -181,11 +181,11 @@ class PlanChangeService:
     async def _is_incoming_leader(self, change: Any, user: CurrentUser) -> bool:
         """
         Memeriksa apakah pengguna saat ini adalah ketua tim yang diusulkan pada adendum personel ini.
-        
+
         Args:
             change (Any): Data perubahan.
             user (CurrentUser): Objek pengguna saat ini.
-            
+
         Returns:
             bool: True jika pengguna adalah ketua tim yang diusulkan.
         """

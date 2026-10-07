@@ -22,10 +22,10 @@ class CRUDMemberReport(CRUDBase):
     async def employee_of(self, user_id: UUID | str) -> str | None:
         """
         Mendapatkan ID karyawan berdasarkan ID pengguna (user).
-        
+
         Args:
             user_id (UUID | str): ID pengguna.
-            
+
         Returns:
             str | None: ID karyawan dalam bentuk string, atau None.
         """
@@ -37,10 +37,10 @@ class CRUDMemberReport(CRUDBase):
         """
         Mengambil semua laporan harian dari anggota-anggota pada hari kerja (SK) tertentu,
         baik yang sudah dikirim maupun yang masih berupa draf (untuk dilihat oleh Ketua/PM).
-        
+
         Args:
             day_id (UUID | str): ID hari kerja (work_plan_day).
-            
+
         Returns:
             list[Any]: Daftar laporan beserta detail karyawan dan lampiran berkas.
         """
@@ -62,11 +62,11 @@ class CRUDMemberReport(CRUDBase):
     async def mine(self, day_id: UUID | str, employee_id: str) -> Any:
         """
         Mengambil satu laporan harian milik karyawan spesifik pada hari tertentu.
-        
+
         Args:
             day_id (UUID | str): ID hari kerja.
             employee_id (str): ID karyawan (anggota).
-            
+
         Returns:
             Any: Data laporan anggota beserta lampiran buktinya, atau None jika belum ada.
         """
@@ -88,13 +88,13 @@ class CRUDMemberReport(CRUDBase):
         Menyimpan draf laporan harian anggota (insert atau update).
         Hanya bisa mengupdate jika laporan masih berstatus 'DRAFT'. Jika sudah dikirim ('SENT'),
         data tidak akan berubah.
-        
+
         Args:
             day_id (UUID | str): ID hari kerja.
             employee_id (str): ID karyawan.
             body (str): Isi laporan.
             obstacle (str): Kendala yang dilaporkan.
-            
+
         Returns:
             Any: ID laporan (Row) yang berhasil disimpan/diubah, atau None.
         """
@@ -115,7 +115,7 @@ class CRUDMemberReport(CRUDBase):
     async def replace_evidence(self, report_id: UUID | str, file_ids: Iterable[UUID]) -> None:
         """
         Mengganti seluruh lampiran bukti laporan anggota dengan daftar ID file yang baru.
-        
+
         Args:
             report_id (UUID | str): ID laporan.
             file_ids (Iterable[UUID]): Daftar ID file lampiran baru.
@@ -137,11 +137,11 @@ class CRUDMemberReport(CRUDBase):
         """
         Mengirim laporan anggota (mengubah status dari DRAFT menjadi SENT).
         Hanya berlaku jika isi laporan (body) memiliki panjang minimal 10 karakter.
-        
+
         Args:
             day_id (UUID | str): ID hari kerja.
             employee_id (str): ID karyawan pembuat laporan.
-            
+
         Returns:
             Any: ID laporan yang berhasil dikirim, atau None jika gagal/tidak memenuhi syarat.
         """
@@ -160,10 +160,10 @@ class CRUDMemberReport(CRUDBase):
     async def day_info(self, day_id: UUID | str) -> Any:
         """
         Mendapatkan informasi dasar dari hari kerja (SK), seperti tanggal, judul, dan ID rencana (plan).
-        
+
         Args:
             day_id (UUID | str): ID hari kerja.
-            
+
         Returns:
             Any: Informasi hari kerja.
         """
@@ -177,10 +177,10 @@ class CRUDMemberReport(CRUDBase):
         """
         Mendapatkan metadata kop (header) Surat Kerja (SK) untuk dokumen laporan tercetak/PDF,
         seperti nomor, judul, lokasi, periode, PM, dan Ketua.
-        
+
         Args:
             plan_id (UUID | str): ID Surat Kerja (plan).
-            
+
         Returns:
             Any: Data header dokumen laporan.
         """
@@ -204,10 +204,10 @@ class CRUDMemberReport(CRUDBase):
         Mengambil keseluruhan isi laporan harian (PM/Ketua) untuk hari tertentu, termasuk detail peninjau,
         daftar lampiran bukti, serta sub-tugas pada hari tersebut.
         Data ini digunakan untuk menghasilkan dokumen laporan.
-        
+
         Args:
             day_id (UUID | str): ID hari kerja.
-            
+
         Returns:
             Any: Data laporan harian lengkap beserta array bukti (evidence) dan tugas (tasks).
         """
@@ -235,11 +235,11 @@ class CRUDMemberReport(CRUDBase):
         """
         Mengambil laporan mingguan dari sebuah Surat Kerja berdasarkan namanya (misal 'Minggu 1'),
         lengkap dengan rentang periode dan nama peninjau, untuk dirender ke dokumen.
-        
+
         Args:
             plan_id (UUID | str): ID rencana kerja.
             name (str): Nama laporan mingguan.
-            
+
         Returns:
             Any: Data laporan mingguan lengkap.
         """

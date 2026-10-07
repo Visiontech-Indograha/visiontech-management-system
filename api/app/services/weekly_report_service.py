@@ -121,7 +121,7 @@ class WeeklyReportService:
         # Validasi: harus mengisi kolom kendala, minimal menyatakan "Tidak ada"
         if not row.obstacle:
             raise ValidationError('Ringkasan kendala mingguan wajib diisi (isi "Tidak ada" jika lancar).')
-        
+
         # Mengeksekusi perubahan status menjadi submitted di database
         await self.repo.submit(access.plan.id, row.name, access.user.user_id)
         # Memicu notifikasi setelah laporan diserahkan
@@ -151,13 +151,13 @@ class WeeklyReportService:
         # Jika direturn (ditolak), wajib memberi catatan alasan penolakan
         if decision == "RETURN" and not clean_note:
             raise ValidationError("Catatan revisi wajib diisi.")
-            
+
         row = await self._week(access, week)
         status = "APPROVED" if decision == "APPROVE" else "CHANGES_REQUESTED"
         # Memastikan statusnya benar menunggu review di database
         if await self.repo.review(access.plan.id, row.name, status, clean_note or None, access.user.user_id) is None:
             raise _state("Laporan mingguan belum menunggu pemeriksaan.")
-            
+
         # Mengirim notifikasi terkait hasil review kepada tim
         await NotificationService(self.repo.db).report_reviewed(access.plan.id, row.name, decision == "APPROVE",
                                                                 clean_note or None)

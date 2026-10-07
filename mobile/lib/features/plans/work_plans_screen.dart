@@ -4,15 +4,15 @@ import 'package:intl/intl.dart';
 
 import '../../core/error_message.dart';
 import '../../core/providers.dart';
+import '../../core/theme/theme.dart';
 import '../../data/sync_engine.dart';
+import '../../shared/ui/vms_ui.dart';
 import '../auth/auth_controller.dart';
 import '../auth/auth_state.dart';
-import '../../core/theme/theme.dart';
-import '../../shared/ui/vms_ui.dart';
 import '../notifications/notifications_screen.dart';
+import 'final_report_screen.dart';
 import 'plan_day_screen.dart';
 import 'sk_viewer_screen.dart';
-import 'final_report_screen.dart';
 import 'weekly_report_screen.dart';
 
 final _date = DateFormat('d MMM yyyy', 'id_ID');
@@ -646,7 +646,6 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
                         icon: Icons.edit_note_rounded,
                         text:
                             'Adendum diminta${p['appeal_reason'] != null ? ': ${p['appeal_reason']}' : ''}. Menunggu PM merevisi dan menerbitkan ulang SK.',
-                        accent: Accent.amber,
                       ),
                     ),
                   if (p['status'] == 'ACCEPTED')
@@ -661,10 +660,9 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
                     ),
                   if (isLeader && p['status'] == 'PUBLISHED') ...[
                     const SectionTitle('Penerimaan SK'),
-                    NoticeBanner(
+                    const NoticeBanner(
                       icon: Icons.verified_user_outlined,
                       text: 'Tinjau SK lebih dulu. Terima SK = menandatangani secara digital (perlu internet). Bila ada yang perlu diubah, ajukan adendum ke PM.',
-                      accent: Accent.amber,
                     ),
                     const SizedBox(height: 10),
                     OutlinedButton.icon(
@@ -811,7 +809,6 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
             text: pending['status'] == 'PENDING_PM'
                 ? 'Adendum "${pending['reason']}" menunggu keputusan PM.'
                 : 'PM sudah mengubah isi SK. Tinjau SK lalu terima adendum.',
-            accent: Accent.amber,
           ),
         ),
       if (isLeader && pending?['status'] == 'AWAITING_LEADER_ACCEPTANCE')
@@ -923,7 +920,6 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
           child: NoticeBanner(
             icon: Icons.hourglass_top_rounded,
             text: 'Pengajuan penutupan menunggu persetujuan PM.',
-            accent: Accent.amber,
           ),
         ),
       if (status == 'COMPLETED') ...[
@@ -1018,7 +1014,7 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
   Widget _dayCard(Map<String, dynamic> d, int i, bool isLeader) {
     final date = DateTime.parse(d['work_date'] as String);
     final tasks = d['tasks'] as List;
-    final done = tasks.where((t) => t['is_done'] == true).length;
+    final done = tasks.where((t) => (t as Map)['is_done'] == true).length;
     final progress = tasks.isEmpty ? 0.0 : done / tasks.length;
     final rep = d['report'] as Map?;
     final report = rep?['status'] == 'SUBMITTED' && rep?['resubmitted'] == true

@@ -126,7 +126,7 @@ class SyncService:
                     status, error = "REJECTED", NOT_OFFLINE
                 else:
                     try:
-                        # Jalankan aplikasi operasi di dalam nested transaction (SAVEPOINT) 
+                        # Jalankan aplikasi operasi di dalam nested transaction (SAVEPOINT)
                         # agar jika satu operasi gagal, operasi lainnya tetap bisa dilanjutkan.
                         async with self.db.begin_nested():
                             await self._apply(user, op.op_type, op.payload)

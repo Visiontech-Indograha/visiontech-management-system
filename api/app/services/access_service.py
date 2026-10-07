@@ -59,11 +59,11 @@ STAGE_MISMATCH = "Tahap work plan belum sesuai untuk tindakan ini."  # domain.js
 def require_plan_status(access: PlanAccess, *allowed: str) -> None:
     """
     Memeriksa apakah status work plan saat ini sesuai dengan tahap yang diizinkan (V-11).
-    
+
     Args:
         access: Objek hak akses work plan pengguna.
         allowed: Daftar status yang diizinkan.
-        
+
     Raises:
         AppError: Jika status work plan tidak ada di dalam daftar `allowed` (status 409).
     """
@@ -75,13 +75,13 @@ def require_plan_status(access: PlanAccess, *allowed: str) -> None:
 def satisfies(need: PlanNeed, *, manages: bool, is_leader: bool, is_member: bool) -> bool:
     """
     Mengevaluasi apakah peran/kedudukan pengguna memenuhi tingkat akses yang dibutuhkan.
-    
+
     Args:
         need: Tingkat akses yang dipersyaratkan.
         manages: True jika pengguna adalah manajer/PM unit.
         is_leader: True jika pengguna adalah ketua tim.
         is_member: True jika pengguna adalah anggota tim.
-        
+
     Returns:
         bool: True jika kedudukan pengguna memenuhi kebutuhan akses.
     """
@@ -100,17 +100,17 @@ async def check_plan_access(
 ) -> PlanAccess:
     """
     Memverifikasi hak akses pengguna terhadap work plan tertentu berdasarkan kebutuhan akses.
-    
+
     Args:
         db: Sesi koneksi basis data asinkron.
         plan_id: ID work plan.
         user: Objek pengguna yang melakukan permintaan.
         need: Persyaratan tingkat akses.
         archived: Bendera untuk menyertakan data arsip.
-        
+
     Returns:
         PlanAccess: Rincian kedudukan pengguna pada work plan ini.
-        
+
     Raises:
         NotFoundError: Jika work plan tidak ditemukan atau bukan milik organisasi pengguna (menghindari kebocoran data).
         ForbiddenError: Jika pengguna tidak memiliki tingkat akses yang dipersyaratkan.
@@ -119,23 +119,23 @@ async def check_plan_access(
     row = await CRUDPlanAccess(db).standing(plan_id, user.organization_id, user.user_id, archived)
     if row is None:
         raise NotFoundError("SK")
-        
+
     # Memeriksa apakah kedudukan dari database memenuhi aturan akses bisnis.
     if not satisfies(need, manages=row.manages, is_leader=row.is_leader, is_member=row.is_member):
         raise ForbiddenError(_REFUSAL[need])
-        
+
     return PlanAccess(plan=row, user=user, manages=row.manages, is_leader=row.is_leader, is_member=row.is_member)
 
 
 async def check_unit_manager(db: AsyncSession, unit_id: UUID | str, user: CurrentUser) -> None:
     """
     Memeriksa apakah pengguna berhak menjadi manajer (PM) pada suatu unit organisasi.
-    
+
     Args:
         db: Sesi basis data asinkron.
         unit_id: ID unit bisnis.
         user: Objek pengguna saat ini.
-        
+
     Raises:
         NotFoundError: Jika unit tidak ditemukan (atau dari organisasi lain).
         ForbiddenError: Jika pengguna tidak memiliki peran manajerial di unit ini.
@@ -144,7 +144,7 @@ async def check_unit_manager(db: AsyncSession, unit_id: UUID | str, user: Curren
     row = await CRUDPlanAccess(db).unit_standing(unit_id, user.organization_id, user.user_id)
     if row is None:
         raise NotFoundError("Unit bisnis")
-        
+
     # Hanya pengguna dengan peran manajerial yang berwenang.
     if not row.manages:
         raise ForbiddenError("Hanya PM unit ini yang dapat membuat SK untuk unit tersebut.")

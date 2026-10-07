@@ -25,13 +25,13 @@ class CRUDFileAccess(CRUDBase):
         Mendapatkan metadata tautan dan peran (role) dari suatu berkas berdasarkan ID-nya,
         untuk memvalidasi apakah pengguna memiliki hak akses terhadap file tersebut.
         Mengembalikan None jika berkas tidak ditemukan atau milik organisasi lain.
-        
+
         Args:
             file_id (UUID | str): ID file.
             org_id (UUID | str): ID organisasi dari pengguna yang merequest.
             user_id (UUID | str): ID pengguna yang meminta akses.
             view_all_attendance (bool): Flag apakah pengguna berhak melihat semua data absensi. Defaults to False.
-            
+
         Returns:
             Any: Baris data (Row) yang berisi metadata file dan bendera (flags) hak akses.
         """

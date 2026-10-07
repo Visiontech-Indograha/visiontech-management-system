@@ -83,12 +83,12 @@ async def seed() -> None:
         org_id = (await conn.execute(text("SELECT id FROM vms.organization LIMIT 1"))).scalar()
         if not org_id:
             org_id = (await conn.execute(text("INSERT INTO vms.organization (name) VALUES ('VisionTech') RETURNING id"))).scalar()
-            
+
         # Periksa data unit bisnis (Business Unit), buat jika belum ada
         unit_id = (await conn.execute(text("SELECT id FROM vms.business_unit WHERE code = 'IT'"))).scalar()
         if not unit_id:
             unit_id = (await conn.execute(text("INSERT INTO vms.business_unit (organization_id, code, name) VALUES (:org, 'IT', 'Information Technology') RETURNING id"), {"org": org_id})).scalar()
-            
+
         # Periksa data karyawan (Employee), buat jika belum ada
         emp_id = (await conn.execute(text("SELECT id FROM vms.employee WHERE employee_no = 'EMP001'"))).scalar()
         if not emp_id:
@@ -96,7 +96,7 @@ async def seed() -> None:
                 INSERT INTO vms.employee (organization_id, employee_no, full_name, position, unit_id, join_date)
                 VALUES (:org, 'EMP001', 'John Doe', 'Engineer', :unit, '2026-01-01') RETURNING id
             """), {"org": org_id, "unit": unit_id})).scalar()
-            
+
         print("Database seeded with sample data.")
     await engine.dispose()
 
@@ -109,7 +109,7 @@ async def cleanup_orphans() -> None:
     async with engine.begin() as conn:
         # Hapus session kedaluwarsa atau ter-revoke yang lebih dari 30 hari
         res = await conn.execute(text("""
-            DELETE FROM vms.user_session 
+            DELETE FROM vms.user_session
             WHERE (state = 'REVOKED' OR state = 'ROTATED' OR expires_at < now())
             AND last_used_at < now() - interval '30 days'
         """))
@@ -119,7 +119,7 @@ async def cleanup_orphans() -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="VMS CLI")
     subparsers = parser.add_subparsers(dest="command")
-    
+
     admin_parser = subparsers.add_parser("create-admin", help="Buat pengguna ADMIN")
     admin_parser.add_argument("email", help="Login admin (email)")
     admin_parser.add_argument("--organization-id", help="Wajib bila ada lebih dari satu organisasi")

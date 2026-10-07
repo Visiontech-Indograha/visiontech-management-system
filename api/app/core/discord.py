@@ -22,20 +22,20 @@ def sanitize_for_discord(text: str) -> str:
     """
     if not isinstance(text, str):
         return text
-    
+
     # Sembunyikan NIK (16 digit angka)
     text = re.sub(r'\b\d{16}\b', '[NIK_MASKED]', text)
-    
+
     # Sembunyikan alamat Email
     text = re.sub(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,7}\b', '[EMAIL_MASKED]', text)
-    
+
     # Sembunyikan nomor telepon (pola sederhana +62 atau awalan 08)
     text = re.sub(r'\+62\d{9,13}', '[PHONE_MASKED]', text)
     text = re.sub(r'\b08\d{8,11}\b', '[PHONE_MASKED]', text)
-    
+
     # Sembunyikan token/JWT
     text = re.sub(r'eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}', '[JWT_MASKED]', text)
-    
+
     return text
 
 async def send_discord_alert(webhook_url: str, message: str, level: str = "error") -> None:
@@ -49,15 +49,15 @@ async def send_discord_alert(webhook_url: str, message: str, level: str = "error
 
     # Saring pesan untuk menghindari kebocoran data
     sanitized_message = sanitize_for_discord(message)
-    
+
     # Tentukan ikon awalan berdasarkan tingkat keparahan
     prefix = "🔴" if level == "error" else "⚠️" if level == "warning" else "ℹ️"
-    
+
     # Format payload sesuai spesifikasi Discord
     payload = {
         "content": f"{prefix} **System Alert**\n```\n{sanitized_message}\n```"
     }
-    
+
     async with httpx.AsyncClient() as client:
         try:
             # Kirim request POST ke webhook

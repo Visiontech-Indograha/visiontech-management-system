@@ -48,11 +48,11 @@ class AccountService:
     async def account(self, employee_id: Any, org_id: str) -> Any:
         """
         Mengambil detail akun dari karyawan.
-        
+
         Args:
             employee_id: ID karyawan.
             org_id: ID organisasi (untuk pengecekan izin).
-            
+
         Returns:
             Data akun karyawan terkait jika ada.
         """
@@ -62,12 +62,12 @@ class AccountService:
     async def create(self, employee_id: Any, org_id: str, login: str) -> tuple[Any, str]:
         """
         Membuat akun login baru untuk karyawan yang ada.
-        
+
         Args:
             employee_id: ID karyawan.
             org_id: ID organisasi.
             login: Alamat email login.
-            
+
         Returns:
             Tuple dari (Data akun, password sementara).
         """
@@ -77,11 +77,11 @@ class AccountService:
             raise AppError("EMPLOYEE_INACTIVE", "Karyawan sudah nonaktif; akun tidak dapat dibuat.", status=409)
         if await self.users.account_of_employee(employee_id) is not None:
             raise AppError("ACCOUNT_EXISTS", "Karyawan ini sudah punya akun.", status=409)
-            
+
         # Pengecekan keunikan email secara global untuk mencegah tabrakan kredensial.
         if await self.users.login_taken(org_id, login):
             raise AppError("LOGIN_TAKEN", "Email login sudah dipakai akun lain.", status=409)
-            
+
         password = temporary_password()
         row = await self.users.create_for_employee(org_id, employee_id, login, hash_password(password))
         return row, password
@@ -89,11 +89,11 @@ class AccountService:
     async def reset_password(self, employee_id: Any, org_id: str) -> tuple[Any, str]:
         """
         Mereset password akun menjadi password sementara dan mencabut semua sesi aktif.
-        
+
         Args:
             employee_id: ID karyawan.
             org_id: ID organisasi.
-            
+
         Returns:
             Tuple dari (Data akun, password sementara yang baru).
         """
@@ -107,12 +107,12 @@ class AccountService:
     async def set_active(self, employee_id: Any, org_id: str, active: bool) -> Any:
         """
         Mengaktifkan atau menonaktifkan akun login karyawan.
-        
+
         Args:
             employee_id: ID karyawan.
             org_id: ID organisasi.
             active: Flag True/False status.
-            
+
         Returns:
             Data akun setelah diperbarui.
         """

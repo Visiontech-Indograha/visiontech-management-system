@@ -71,7 +71,7 @@ def _dummy_hash() -> str:
 def _locked(state: Any, *, persist: bool = False) -> AppError:
     """
     Mengembalikan error ketika sesi login terkunci akibat terlalu banyak kegagalan.
-    
+
     Args:
         state (Any): State login yang berisi locked_until dan retry_after_seconds.
         persist (bool): Jika True, pesan akan bertahan di UI (persist).

@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 
 class ChangeRequest(BaseModel):
     """Permintaan perubahan (Change Request) pada Rencana Kerja.
-    
+
     Menangani perubahan jenis ekstensi waktu (EXTEND) atau penyesuaian personel lapangan (PERSONNEL).
     """
     type: Literal["EXTEND", "PERSONNEL"]  # Tipe perubahan: perpanjangan waktu atau pengubahan personel

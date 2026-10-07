@@ -17,10 +17,10 @@ class CRUDPlanDay(CRUDBase):
 
     async def days_with_tasks_and_reports(self, plan_id: UUID | str) -> list[Any]:
         """Mendapatkan data hari kerja Work Plan beserta tasks (tugas harian) dan report-nya.
-        
+
         Args:
             plan_id (UUID | str): ID Work Plan.
-            
+
         Returns:
             list[Any]: Daftar hari kerja beserta tasks (JSON array) dan report (JSON object).
         """

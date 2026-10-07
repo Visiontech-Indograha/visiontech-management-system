@@ -27,10 +27,10 @@ _db = Depends(get_db_with_user)
 def _out(row: Any) -> AccountOut:
     """
     Fungsi pembantu untuk memetakan data row dari database ke skema AccountOut.
-    
+
     Args:
         row (Any): Data akun dari database.
-        
+
     Returns:
         AccountOut: Skema balikan detail akun.
     """
@@ -45,10 +45,10 @@ def _out(row: Any) -> AccountOut:
 async def get_account(emp_id: UUID, current_user: CurrentUser = _manager, account_service: AccountService = Depends(get_account_service)) -> AccountOut:
     """
     Mendapatkan detail akun berdasarkan ID karyawan.
-    
+
     Path params:
     - emp_id: UUID dari karyawan
-    
+
     Return: Detail akun (AccountOut)
     """
     # Menggunakan injeksi dependensi untuk mendapatkan AccountService
@@ -61,13 +61,13 @@ async def create_account(emp_id: UUID, data: AccountCreate, current_user: Curren
                          account_service: AccountService = Depends(get_account_service)) -> AccountWithPassword:
     """
     Membuat akun baru untuk karyawan. Password sementara dikembalikan SEKALI — sampaikan ke karyawan, minta diganti setelah masuk.
-    
+
     Path params:
     - emp_id: UUID dari karyawan
-    
+
     Body params:
     - data: Data akun baru yang akan dibuat
-    
+
     Return: Akun yang dibuat beserta password sementara (AccountWithPassword)
     """
     # Menggunakan AccountService yang di-inject via Depends
@@ -81,10 +81,10 @@ async def reset_password(emp_id: UUID, current_user: CurrentUser = _manager,
                          account_service: AccountService = Depends(get_account_service)) -> AccountWithPassword:
     """
     Mereset password akun. Password sementara baru; semua sesi akun itu dicabut.
-    
+
     Path params:
     - emp_id: UUID dari karyawan
-    
+
     Return: Detail akun beserta password sementara yang baru (AccountWithPassword)
     """
     # Injeksi AccountService untuk operasi reset password
@@ -97,10 +97,10 @@ async def reset_password(emp_id: UUID, current_user: CurrentUser = _manager,
 async def deactivate(emp_id: UUID, current_user: CurrentUser = _manager, account_service: AccountService = Depends(get_account_service)) -> AccountOut:
     """
     Menonaktifkan akun karyawan.
-    
+
     Path params:
     - emp_id: UUID dari karyawan
-    
+
     Return: Detail akun yang baru saja dinonaktifkan (AccountOut)
     """
     # Mengambil instance AccountService melalui injeksi dependensi
@@ -112,10 +112,10 @@ async def deactivate(emp_id: UUID, current_user: CurrentUser = _manager, account
 async def activate(emp_id: UUID, current_user: CurrentUser = _manager, account_service: AccountService = Depends(get_account_service)) -> AccountOut:
     """
     Mengaktifkan kembali akun karyawan.
-    
+
     Path params:
     - emp_id: UUID dari karyawan
-    
+
     Return: Detail akun yang baru saja diaktifkan (AccountOut)
     """
     # Menggunakan dependensi service untuk menangani pengaturan status akun

@@ -27,10 +27,10 @@ class CRUDUser(CRUDBase):
     async def find_by_login(self, login: str) -> Any:
         """
         Mencari data pengguna beserta peran globalnya berdasarkan login (username/email).
-        
+
         Args:
             login (str): Identifier login pengguna.
-            
+
         Returns:
             Any: Record pengguna jika ditemukan, None jika tidak.
         """
@@ -41,10 +41,10 @@ class CRUDUser(CRUDBase):
     async def find_by_id(self, user_id: UUID | str) -> Any:
         """
         Mencari data pengguna berdasarkan ID.
-        
+
         Args:
             user_id (UUID | str): ID pengguna.
-            
+
         Returns:
             Any: Record pengguna.
         """
@@ -55,10 +55,10 @@ class CRUDUser(CRUDBase):
         """
         Mengambil status aktif akun dan seluruh peran global dalam bentuk list (array).
         Digunakan di setiap request untuk authorisasi token.
-        
+
         Args:
             user_id (UUID | str): ID pengguna.
-            
+
         Returns:
             Any: Record berisi status aktif dan list peran.
         """
@@ -80,7 +80,7 @@ class CRUDUser(CRUDBase):
     async def update_password_hash(self, user_id: UUID | str, password_hash: str) -> None:
         """
         Memperbarui hash password pengguna.
-        
+
         Args:
             user_id (UUID | str): ID pengguna.
             password_hash (str): Hash password baru.
@@ -94,10 +94,10 @@ class CRUDUser(CRUDBase):
     async def get_employee_id(self, user_id: UUID | str) -> UUID | None:
         """
         Mendapatkan ID Karyawan (employee_id) yang tertaut ke akun pengguna ini.
-        
+
         Args:
             user_id (UUID | str): ID pengguna aplikasi.
-            
+
         Returns:
             UUID | None: ID karyawan jika tertaut, atau None.
         """
@@ -111,10 +111,10 @@ class CRUDUser(CRUDBase):
     async def get_attendance_mode(self, user_id: UUID | str) -> str | None:
         """
         Mendapatkan mode absensi yang diberlakukan kepada karyawan terkait.
-        
+
         Args:
             user_id (UUID | str): ID pengguna.
-            
+
         Returns:
             str | None: Mode absensi (misal: 'FIELD', 'OFFICE').
         """
@@ -133,10 +133,10 @@ class CRUDUser(CRUDBase):
         """
         Mengambil profil akun dari karyawan tertentu.
         Mencakup histori login gagal dan kapan status lock berakhir.
-        
+
         Args:
             employee_id (UUID | str): ID karyawan.
-            
+
         Returns:
             Any: Record akun dengan metrik kegagalan login.
         """
@@ -154,11 +154,11 @@ class CRUDUser(CRUDBase):
     async def login_taken(self, org_id: UUID | str, login: str) -> bool:
         """
         Mengecek apakah nama login tertentu sudah dipakai di organisasi.
-        
+
         Args:
             org_id (UUID | str): ID organisasi.
             login (str): Nama login (username/email) yang akan dicek.
-            
+
         Returns:
             bool: True jika sudah dipakai, False jika tersedia.
         """
@@ -171,13 +171,13 @@ class CRUDUser(CRUDBase):
                                   password_hash: str) -> Any:
         """
         Membuat akun pengguna baru untuk seorang karyawan.
-        
+
         Args:
             org_id (UUID | str): ID organisasi.
             employee_id (UUID | str): ID karyawan yang akan dikaitkan.
             login (str): Nama login.
             password_hash (str): Hash kata sandi.
-            
+
         Returns:
             Any: Detail singkat akun yang baru dibuat.
         """
@@ -193,7 +193,7 @@ class CRUDUser(CRUDBase):
     async def set_active(self, user_id: UUID | str, active: bool) -> None:
         """
         Mengubah status aktif/non-aktif akun.
-        
+
         Args:
             user_id (UUID | str): ID pengguna.
             active (bool): Status aktif yang baru.

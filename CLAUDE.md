@@ -55,6 +55,9 @@ docs/           seluruh rencana dan standar
 | Yang dikerjakan | Baca dulu |
 |---|---|
 | Endpoint / servis | `docs/12-STANDAR-BACKEND.md`, `docs/05-KONTRAK-API.md` |
+| Skema Pydantic, modul API baru | `docs/12` §10 (gaya skema `<Entitas>In/Out`) dan §11 (templat lapisan) |
+| Kode Flutter | `mobile/analysis_options.yaml`, `docs/11` bagian Mobile |
+| Sebelum commit / PR | `docs/CHECKLIST-PR.md` |
 | Komponen / halaman | `docs/11-STANDAR-FRONTEND.md` |
 | Unggahan berkas | `docs/13-PENGELOLAAN-BERKAS-DAN-KOMPRESI.md` |
 | Auth, izin, biometrik | `docs/08-KEAMANAN-DAN-KEPATUHAN.md` |
@@ -81,6 +84,8 @@ docs/           seluruh rencana dan standar
 - Kerja berat (kompresi gambar, render PDF) → `run_in_threadpool`.
 - Waktu hanya lewat `core/time.py`. Rahasia hanya lewat `core/config.py`.
 - Galat: `AppError(code, message)` dengan **message Bahasa Indonesia untuk pengguna**.
+- Lint `ruff` memakai set aturan di `api/ruff.toml` (baris ≤ 120); garis dasar per berkas hanya boleh menyusut.
+- Skema baru: `<Entitas>In` / `<Entitas>Out` (`docs/12` §10). Nama kelas skema lama tidak diganti.
 - Berkas yang tidak berwenang → **404**, bukan 403.
 
 ## Aturan frontend
@@ -127,7 +132,8 @@ docs/           seluruh rencana dan standar
 5. Kerjakan.
 6. Lint + tipe + uji hijau.
 7. Regresi wajib masih hijau.
-8. Ambiguitas yang diputuskan sendiri → catat di `docs/10-...md` Bagian C.
+8. **Ragu atau ambigu → tanyakan pemilik dulu, jangan menebak** (beri pilihan + rekomendasi);
+   jawabannya dicatat di `docs/10-...md` Bagian C (`docs/12` §12).
 9. Tandai selesai hanya bila DoD fase terpenuhi.
 10. Perbarui `CHANGELOG.md`, lalu **commit** (satu task = satu commit).
 11. Periksa rahasia pada commit yang belum di-push, lalu **push** ke `origin` di branch yang
@@ -143,7 +149,8 @@ Satu task per iterasi.
 - Mengompresi PDF atau berkas Office. Hanya foto yang dikompresi.
 - Menyimpan rahasia di Git.
 - Menyalin data karyawan asli ke staging atau ke komputer developer.
-- Menebak saat spesifikasi ambigu — catat di `docs/10-...md` Bagian C.
+- Menebak atau memutuskan sendiri saat spesifikasi ambigu, atau saat keputusan menyangkut keamanan,
+  privasi, data produksi, biaya, atau lisensi — **tanyakan pemilik dulu** (`docs/12` §12).
 - Mengirim data pribadi, koordinat, atau jejak tumpukan ke Discord (`docs/17`).
 - Membuka port 22 ke internet.
 - Menambah fitur di luar MVP. Daftar lanjutan ada di `docs/10-...md` Bagian F.

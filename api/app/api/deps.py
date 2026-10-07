@@ -104,7 +104,7 @@ async def get_current_user(
         payload = verify_jwt_token(credentials.credentials)
     except jwt.PyJWTError:
         raise _unauthenticated() from None
-    
+
     user_id, session_id = payload.get("sub"), payload.get("jti")
     if not user_id or not session_id:
         raise _unauthenticated()

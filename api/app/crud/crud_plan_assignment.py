@@ -13,17 +13,17 @@ class CRUDPlanAssignment(CRUDBase):
     """
     Kelas CRUD untuk mengelola data pembuat SK dan penugasan/pencarian personel per unit kerja.
     """
-    
+
     async def employee_of_user(self, user_id: UUID | str) -> Any:
         """Mengambil data ID pegawai dan ID unit bisnis dari pengguna.
-        
+
         Args:
             user_id (UUID | str): ID pengguna aplikasi.
-            
+
         Returns:
             Any: Baris data berisi employee_id dan unit_id.
         """
-        # Melakukan JOIN antara vms.app_user dan vms.employee 
+        # Melakukan JOIN antara vms.app_user dan vms.employee
         # dengan klausa WHERE memastikan employee dan user masih aktif (belum di-soft delete).
         return await self.fetchone(
             """
@@ -37,11 +37,11 @@ class CRUDPlanAssignment(CRUDBase):
 
     async def employee_units(self, employee_ids: Iterable[UUID | str], org_id: UUID | str) -> dict[str, str | None]:
         """Mengambil pemetaan ID unit untuk sejumlah pegawai dalam satu organisasi.
-        
+
         Args:
             employee_ids (Iterable[UUID | str]): Kumpulan ID pegawai.
             org_id (UUID | str): ID organisasi.
-            
+
         Returns:
             dict[str, str | None]: Dictionary yang memetakan employee_id ke unit_id.
         """
@@ -61,14 +61,14 @@ class CRUDPlanAssignment(CRUDBase):
 
     async def active_project_managers(self, org_id: UUID | str) -> list[Any]:
         """Mengambil daftar Project Manager (PM) yang aktif di suatu organisasi.
-        
+
         Args:
             org_id (UUID | str): ID organisasi.
-            
+
         Returns:
             list[Any]: Daftar entri data Project Manager.
         """
-        # Melakukan JOIN dari employee -> app_user -> user_role 
+        # Melakukan JOIN dari employee -> app_user -> user_role
         # dengan kondisi role = 'PM' untuk mendapatkan manajer proyek.
         # DISTINCT digunakan berjaga-jaga apabila ada duplikasi role yang belum tertangani.
         return list(await self.fetchall(
@@ -91,13 +91,13 @@ class CRUDPlanAssignment(CRUDBase):
         unit_id: UUID | str | None,
     ) -> list[Any]:
         """Mengambil data pegawai lapangan yang tersedia (tidak bentrok jadwal) untuk ditugaskan.
-        
+
         Args:
             org_id (UUID | str): ID organisasi.
             period_start (date): Tanggal mulai periode SK.
             period_end (date): Tanggal akhir periode SK.
             unit_id (UUID | str | None): Filter opsional untuk spesifik ID unit bisnis.
-            
+
         Returns:
             list[Any]: Daftar pegawai lapangan yang memenuhi kriteria.
         """
@@ -139,11 +139,11 @@ class CRUDPlanAssignment(CRUDBase):
         org_id: UUID | str,
     ) -> set[str]:
         """Menyaring kumpulan ID pegawai, mengembalikan hanya yang berstatus pegawai lapangan.
-        
+
         Args:
             employee_ids (Iterable[UUID | str]): Kumpulan ID pegawai yang akan dicek.
             org_id (UUID | str): ID organisasi.
-            
+
         Returns:
             set[str]: Himpunan ID pegawai lapangan yang lolos validasi.
         """

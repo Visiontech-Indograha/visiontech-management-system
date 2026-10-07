@@ -4,12 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/error_message.dart';
 import '../../core/providers.dart';
-import '../auth/auth_controller.dart';
-import '../auth/auth_state.dart';
-import '../sync/sync_queue_screen.dart';
 import '../../core/theme/theme.dart';
 import '../../shared/ui/vms_ui.dart';
+import '../auth/auth_controller.dart';
+import '../auth/auth_state.dart';
 import '../face/face_flow.dart';
+import '../sync/sync_queue_screen.dart';
 
 const _roleLabel = {
   'ADMIN': 'Admin',
@@ -286,7 +286,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           width: 44,
           height: 44,
           alignment: Alignment.center,
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             color: VmsColors.gold,
             shape: BoxShape.circle,
           ),
@@ -464,7 +464,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           NoticeBanner(
                             icon: Icons.info_outline_rounded,
                             text: _faceError!,
-                            accent: Accent.amber,
                           ),
                         ],
                         const SizedBox(height: 12),

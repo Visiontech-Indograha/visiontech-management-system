@@ -24,12 +24,12 @@ class CRUDPlanTransition(CRUDBase):
     async def lock_plan(self, plan_id: UUID | str, org_id: UUID | str, include_archived: bool = False) -> Any:
         """
         Mengunci baris rencana kerja (SK) untuk transaksi yang akan mengubah status.
-        
+
         Args:
             plan_id (UUID | str): ID SK.
             org_id (UUID | str): ID organisasi.
             include_archived (bool): Jika True, akan tetap memuat data yang sudah diarsipkan (soft-deleted).
-            
+
         Returns:
             Any: Record SK yang terkunci.
         """
@@ -51,7 +51,7 @@ class CRUDPlanTransition(CRUDBase):
         """
         Membatalkan SK; usulan perubahan ditarik dan aset yang masih dipesan dilepas.
         SK yang dibatalkan beralih ke status CANCELLED.
-        
+
         Args:
             plan_id (UUID | str): ID SK yang dibatalkan.
             reason (str): Alasan pembatalan.
@@ -97,10 +97,10 @@ class CRUDPlanTransition(CRUDBase):
     async def ever_published(self, plan_id: UUID | str) -> bool:
         """
         Mengecek apakah SK ini pernah diterbitkan (punya dokumen) atau belum.
-        
+
         Args:
             plan_id (UUID | str): ID SK.
-            
+
         Returns:
             bool: True jika pernah diterbitkan, False jika belum.
         """
@@ -111,10 +111,10 @@ class CRUDPlanTransition(CRUDBase):
     async def has_active_allocation(self, plan_id: UUID | str) -> bool:
         """
         Mengecek apakah SK ini masih memiliki alokasi aset yang sedang aktif (belum dirilis).
-        
+
         Args:
             plan_id (UUID | str): ID SK.
-            
+
         Returns:
             bool: True jika ada alokasi aktif.
         """
@@ -126,7 +126,7 @@ class CRUDPlanTransition(CRUDBase):
     async def archive(self, plan_id: UUID | str, user_id: UUID | str, reason: str) -> None:
         """
         Soft delete rencana kerja — diarsipkan namun riwayat datanya tetap ada.
-        
+
         Args:
             plan_id (UUID | str): ID SK.
             user_id (UUID | str): ID pengguna (app_user) yang menghapus.
@@ -146,7 +146,7 @@ class CRUDPlanTransition(CRUDBase):
         """
         Mengembalikan rencana kerja dari arsip (undo delete).
         Alasan pengarsipan sebelumnya tidak diubah sebagai riwayat.
-        
+
         Args:
             plan_id (UUID | str): ID SK.
         """
@@ -159,10 +159,10 @@ class CRUDPlanTransition(CRUDBase):
     async def get_plan(self, plan_id: UUID | str) -> Any:
         """
         Mendapatkan metadata lengkap rencana kerja tanpa JSON snapshot.
-        
+
         Args:
             plan_id (UUID | str): ID SK.
-            
+
         Returns:
             Any: Metadata lengkap dari record SK.
         """
@@ -181,7 +181,7 @@ class CRUDPlanTransition(CRUDBase):
     async def appeal(self, plan_id: UUID | str, reason: str) -> None:
         """
         Mengajukan banding/adendum atas SK yang sudah diterbitkan.
-        
+
         Args:
             plan_id (UUID | str): ID SK.
             reason (str): Alasan banding.
@@ -205,11 +205,11 @@ class CRUDPlanTransition(CRUDBase):
     async def start_due(self, org_id: UUID | str, today: Any) -> list[str]:
         """
         Memulai SK yang sudah Diterima dan tanggal mulainya sudah tiba hari ini (menjadi IN_PROGRESS).
-        
+
         Args:
             org_id (UUID | str): ID organisasi.
             today (Any): Tanggal batas mulai (hari ini).
-            
+
         Returns:
             list[str]: Daftar ID rencana kerja yang baru saja diaktifkan/dimulai.
         """
@@ -230,7 +230,7 @@ class CRUDPlanTransition(CRUDBase):
         """
         Mengembalikan rencana kerja (SK) ke status DRAFT untuk revisi berikutnya.
         Dokumen revisi lama yang belum aktif menjadi kadaluarsa (SUPERSEDED).
-        
+
         Args:
             plan_id (UUID | str): ID SK.
         """
@@ -253,10 +253,10 @@ class CRUDPlanTransition(CRUDBase):
         """
         Mendapatkan tim yang aktif berpartisipasi dalam SK (valid_period terbuka),
         beserta status keaktifan akun karyawannya.
-        
+
         Args:
             plan_id (UUID | str): ID SK.
-            
+
         Returns:
             list[Any]: Daftar record (employee_id, role_in_plan, employee_active).
         """
@@ -275,10 +275,10 @@ class CRUDPlanTransition(CRUDBase):
         """
         Memastikan setiap hari dalam periode SK sudah terisi dengan detail kerja.
         Syarat: setiap tanggal harus punya judul hari yang valid dan minimal 1 tugas berjudul.
-        
+
         Args:
             plan_id (UUID | str): ID SK.
-            
+
         Returns:
             bool: True jika lengkap seluruh harinya.
         """
@@ -304,10 +304,10 @@ class CRUDPlanTransition(CRUDBase):
         """
         Membekukan isi dokumen secara komprehensif saat pembuatan SK.
         Data ini disisipkan utuh agar tidak terpengaruh oleh perubahan master ke depan.
-        
+
         Args:
             plan_id (UUID | str): ID SK.
-            
+
         Returns:
             Any: Record JSON dokumen beku.
         """
@@ -365,10 +365,10 @@ class CRUDPlanTransition(CRUDBase):
     async def employee_id_of(self, user_id: UUID | str) -> str | None:
         """
         Mendapatkan ID Karyawan yang merujuk pada pengguna sistem.
-        
+
         Args:
             user_id (UUID | str): ID pengguna (app_user).
-            
+
         Returns:
             str | None: ID Karyawan bila ada.
         """
@@ -378,11 +378,11 @@ class CRUDPlanTransition(CRUDBase):
     async def is_leader(self, plan_id: UUID | str, user_id: UUID | str) -> bool:
         """
         Memastikan apakah user ini berhak menyetujui sebagai Ketua SK.
-        
+
         Args:
             plan_id (UUID | str): ID SK.
             user_id (UUID | str): ID pengguna saat ini.
-            
+
         Returns:
             bool: True bila user bertindak sebagai Leader.
         """
@@ -392,7 +392,7 @@ class CRUDPlanTransition(CRUDBase):
     async def publish(self, plan_id: UUID | str) -> None:
         """
         Menerbitkan dokumen SK dan menyematkan format nomor sementara jika SK belum punya nomor.
-        
+
         Args:
             plan_id (UUID | str): ID SK.
         """
@@ -412,7 +412,7 @@ class CRUDPlanTransition(CRUDBase):
     async def insert_document(self, plan_id: UUID | str, revision: int, snapshot: Any, issued_by: str) -> None:
         """
         Memasukkan riwayat dokumen SK baru dari hasil snapshot.
-        
+
         Args:
             plan_id (UUID | str): ID SK.
             revision (int): Versi revisi dokumen ini.
@@ -438,12 +438,12 @@ class CRUDPlanTransition(CRUDBase):
     async def activate_reserved_assets(self, plan_id: UUID | str) -> None:
         """
         Mengaktifkan status aset (alat/kendaraan) yang dipesan untuk SK agar berstatus 'IN_USE'.
-        
+
         Args:
             plan_id (UUID | str): ID SK.
         """
         # Alat (TOOL) langsung aktif menjadi 'IN_USE'.
-        # Sedangkan kendaraan (VEHICLE) mensyaratkan driver_checked_at sudah tidak NULL 
+        # Sedangkan kendaraan (VEHICLE) mensyaratkan driver_checked_at sudah tidak NULL
         # (kendaraan telah diperiksa fisiknya oleh pengemudi yang ditunjuk).
         await self.execute(
             """
@@ -458,10 +458,10 @@ class CRUDPlanTransition(CRUDBase):
     async def has_unchecked_vehicle(self, plan_id: UUID | str) -> bool:
         """
         Mengecek apakah SK ini memiliki kendaraan yang masih tertunda verifikasi oleh pengemudinya.
-        
+
         Args:
             plan_id (UUID | str): ID SK.
-            
+
         Returns:
             bool: True jika ada kendaraan (VEHICLE) dengan driver_checked_at yang masih kosong.
         """
@@ -482,7 +482,7 @@ class CRUDPlanTransition(CRUDBase):
     async def set_status(self, plan_id: UUID | str, status: PlanStatus) -> None:
         """
         Mengubah status rencana kerja (SK) ke status tertentu.
-        
+
         Args:
             plan_id (UUID | str): ID SK.
             status (PlanStatus): Status baru.
@@ -496,7 +496,7 @@ class CRUDPlanTransition(CRUDBase):
     async def accept_document(self, plan_id: UUID | str, employee_id: str) -> None:
         """
         Menyetujui dan mengefektifkan dokumen SK.
-        
+
         Args:
             plan_id (UUID | str): ID SK.
             employee_id (str): ID karyawan yang menyetujui.
@@ -515,10 +515,10 @@ class CRUDPlanTransition(CRUDBase):
     async def has_open_change(self, plan_id: UUID | str) -> bool:
         """
         Memeriksa apakah ada usulan adendum/perubahan yang masih terbuka (belum disetujui atau ditolak).
-        
+
         Args:
             plan_id (UUID | str): ID SK.
-            
+
         Returns:
             bool: True jika ada adendum terbuka.
         """
@@ -533,10 +533,10 @@ class CRUDPlanTransition(CRUDBase):
     async def all_days_approved(self, plan_id: UUID | str) -> bool:
         """
         Memastikan bahwa seluruh laporan harian untuk SK ini telah disetujui (APPROVED).
-        
+
         Args:
             plan_id (UUID | str): ID SK.
-            
+
         Returns:
             bool: True jika tidak ada laporan yang statusnya selain APPROVED.
         """
@@ -552,10 +552,10 @@ class CRUDPlanTransition(CRUDBase):
     async def final_report(self, plan_id: UUID | str) -> Any:
         """
         Mengambil informasi laporan akhir beserta nama pengaju/pemeriksa dan buktinya.
-        
+
         Args:
             plan_id (UUID | str): ID SK.
-            
+
         Returns:
             Any: Record laporan akhir, atau None bila belum pernah diajukan.
         """
@@ -579,12 +579,12 @@ class CRUDPlanTransition(CRUDBase):
         """
         Membuat record JSON (snapshot) dari isi laporan akhir yang disetujui (R-19).
         Meliputi: SK, tim, laporan harian, lampiran, insiden, dan persetujuannya.
-        
+
         Args:
             plan_id (UUID | str): ID SK.
             approver (str | None): ID karyawan (app_user.id) yang menyetujui.
             note (str | None): Catatan persetujuan tambahan.
-            
+
         Returns:
             Any: Snapshot laporan akhir.
         """
@@ -622,7 +622,7 @@ class CRUDPlanTransition(CRUDBase):
     async def store_final_snapshot(self, plan_id: UUID | str, snapshot: str, sha256: bytes) -> None:
         """
         Menyimpan snapshot beku laporan akhir beserta hash SHA-256 nya.
-        
+
         Args:
             plan_id (UUID | str): ID SK.
             snapshot (str): JSON string dari final_report_snapshot.
@@ -637,10 +637,10 @@ class CRUDPlanTransition(CRUDBase):
     async def final_report_submitter(self, plan_id: UUID | str) -> str | None:
         """
         Mengambil ID karyawan pembuat (submitter) laporan akhir.
-        
+
         Args:
             plan_id (UUID | str): ID SK.
-            
+
         Returns:
             str | None: ID karyawan, atau None.
         """
@@ -651,10 +651,10 @@ class CRUDPlanTransition(CRUDBase):
     async def final_report_status(self, plan_id: UUID | str) -> str | None:
         """
         Mendapatkan status saat ini dari laporan akhir.
-        
+
         Args:
             plan_id (UUID | str): ID SK.
-            
+
         Returns:
             str | None: Status laporan akhir.
         """
@@ -666,7 +666,7 @@ class CRUDPlanTransition(CRUDBase):
                                   file_ids: list[UUID]) -> None:
         """
         Mengajukan/menyimpan (upsert) laporan akhir.
-        
+
         Args:
             plan_id (UUID | str): ID SK.
             user_id (UUID | str): ID pengguna (app_user) yang mengajukan.
@@ -700,7 +700,7 @@ class CRUDPlanTransition(CRUDBase):
                                   note: str | None) -> None:
         """
         Menyimpan hasil evaluasi/penilaian atas laporan akhir (Review).
-        
+
         Args:
             plan_id (UUID | str): ID SK.
             user_id (UUID | str): ID pengguna (app_user) yang mengevaluasi.

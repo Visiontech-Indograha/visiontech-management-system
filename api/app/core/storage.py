@@ -124,7 +124,7 @@ def presign_client() -> Minio:
     if not settings.MINIO_PUBLIC_URL:
         # Kembalikan client standar jika URL publik tidak dikonfigurasi
         return minio_client
-    
+
     public = urlparse(settings.MINIO_PUBLIC_URL)
     # Buat client MinIO khusus penandatanganan URL
     return Minio(

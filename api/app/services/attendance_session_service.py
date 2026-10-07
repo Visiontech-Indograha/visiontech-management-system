@@ -66,7 +66,7 @@ class AttendanceSessionService:
                        online: bool = True, expected_face_sha256: str | None = None) -> Any:
         """
         Mencatat absen masuk harian (check-in) dengan mengevaluasi aturan jarak dan akurasi GPS.
-        
+
         `at`/`work_date`: absen luring (R-34) — jam & tanggal peristiwa yang sudah diverifikasi server
         (jangkar waktu + tanda tangan perangkat), bukan jam terima.
 
@@ -173,7 +173,7 @@ class AttendanceSessionService:
                         expected_face_sha256: str | None = None) -> Any:
         """
         Menutup sesi absensi harian yang sedang terbuka (absen pulang).
-        
+
         Menutup sesi terbuka milik sendiri — tanggal berapa pun, agar sesi yang lupa ditutup tidak
         mengunci check-in berikutnya. Status tidak diubah; pulang cepat diputuskan trigger.
         R-33: hanya sesi yang sudah valid (Valid otomatis / Disetujui) yang boleh absen pulang.
@@ -196,7 +196,7 @@ class AttendanceSessionService:
                               page: int, size: int, scope: str = "all") -> tuple[list[Any], int]:
         """
         Mendapatkan daftar absensi berdasarkan filter, disesuaikan dengan hak visibilitas pengguna.
-        
+
         R-33: Finance & OPS (`view:all_attendance`) melihat semua; PM melihat miliknya + bawahan lapangan
         di unitnya; selain itu hanya milik sendiri. Di luar cakupan → tidak tampil (tidak dibocorkan).
         Setiap baris membawa `can_review` dari server.
@@ -229,7 +229,7 @@ class AttendanceSessionService:
                                 approve: bool, note: str | None) -> str:
         """
         Meninjau (menyetujui atau menolak) sesi absensi yang anomali.
-        
+
         R-33: PM → bawahan lapangan di unitnya; Finance → pekerja kantor selain Finance; OPS → Finance.
         Tidak ada yang meninjau absensinya sendiri (cakupan: CRUD `CAN_REVIEW`).
         """
@@ -246,7 +246,7 @@ class AttendanceSessionService:
             raise AppError("INVALID_STATE", "Absensi tidak menunggu pemeriksaan.", status=409)
         if not (note or "").strip():
             raise ValidationError("Catatan pemeriksaan wajib diisi.")
-            
+
         status = "APPROVED" if approve else "REJECTED"
         await self.repo.set_review(attendance_id, status, reviewer, (note or "").strip())
         return status

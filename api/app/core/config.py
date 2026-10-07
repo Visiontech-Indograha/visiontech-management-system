@@ -60,6 +60,10 @@ class Settings(BaseSettings):
     # Bawaan False: nyalakan hanya setelah face-service berjalan di server, kalau tidak semua orang terkunci.
     FACE_ENROLLMENT_REQUIRED: bool = False
 
+    # Folder rilis aplikasi HP (docs/32): berisi `android/latest.json` + APK berversi, di-mount read-only.
+    # Kosong = belum ada rilis; pemeriksaan pembaruan selalu menjawab UP_TO_DATE.
+    APP_RELEASE_DIR: str = ""
+
     # "production" menyalakan penjaga di bawah; nilai lain (development/test) memakai bawaan lokal.
     APP_ENV: str = "development"
 

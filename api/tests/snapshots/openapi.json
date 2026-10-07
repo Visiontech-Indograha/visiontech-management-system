@@ -10978,7 +10978,7 @@
   },
   "/api/v1/sites": {
    "get": {
-    "description": "Mengambil daftar lokasi kerja (GET).\nR-33: lapangan → lokasi unitnya; kantor → lokasi kantor; PM → kantor + unitnya; OPS → semua.\n\nQuery Parameters:\n- for_attendance (bool): Hanya lokasi yang sah untuk absen peminta.\n\nReturns:\n- list[SiteResponse]: Daftar lokasi kerja beserta atribut `can_manage`.",
+    "description": "Mengambil daftar lokasi kerja (GET).\nR-33: lapangan → lokasi unitnya (+ kantor pusat untuk absen); kantor → lokasi kantor; PM → kantor + unitnya; OPS → semua.\n\nQuery Parameters:\n- for_attendance (bool): Hanya lokasi yang sah untuk absen peminta.\n\nReturns:\n- list[SiteResponse]: Daftar lokasi kerja beserta atribut `can_manage`.",
     "operationId": "get_sites_api_v1_sites_get",
     "parameters": [
      {

@@ -39,6 +39,8 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
   String? _serverToday;
   List<Map<String, dynamic>> _sites = [];
   String? _siteId;
+  // Lokasi SK yang sedang berjalan untuk akun ini (dasar peringatan bila memilih lokasi lain).
+  List<String> _runningSites = [];
   DateTime? _cachedAt;
   bool _loading = true;
   bool _busy = false;
@@ -53,6 +55,10 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     super.initState();
     _load();
   }
+
+  String _siteName(String id) =>
+      (_sites.where((s) => s['id'] == id).firstOrNull?['name'] as String?) ??
+      'penugasan';
 
   String get _employeeId {
     final auth = ref.read(authControllerProvider);
@@ -100,6 +106,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       if (!mounted) return;
       setState(() {
         _records = att.items;
+        _runningSites = runningSites;
         _sites = [
           ...sites.items.where((s) => runningSites.contains(s['id'])),
           ...sites.items.where((s) => !runningSites.contains(s['id'])),
@@ -642,8 +649,8 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                                 icon: Icons.location_off_rounded,
                                 accent: Accent.amber,
                                 text:
-                                    'Belum ada lokasi kerja penugasan aktif (SK) untuk akun Anda. '
-                                    'Pastikan SK telah dibuat dan disetujui, atau hubungi Project Manager.',
+                                    'Belum ada lokasi kerja untuk akun Anda (lokasi SK maupun kantor). '
+                                    'Hubungi Project Manager atau admin untuk menambahkan lokasi kerja.',
                               ),
                               const SizedBox(height: 12),
                             ] else ...[
@@ -661,6 +668,22 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                                 onChanged: (v) => setState(() => _siteId = v),
                               ),
                               const SizedBox(height: 14),
+                              // Terikat SK berjalan tetapi memilih lokasi lain (mis. kantor): hanya peringatan,
+                              // absen tetap boleh (keputusan pemilik 2026-10-07).
+                              if (_runningSites.isNotEmpty &&
+                                  _siteId != null &&
+                                  !_runningSites.contains(_siteId)) ...[
+                                NoticeBanner(
+                                  key: const Key('peringatan-bukan-lokasi-sk'),
+                                  icon: Icons.warning_amber_rounded,
+                                  accent: Accent.amber,
+                                  text:
+                                      'Anda sedang bertugas di SK dengan lokasi '
+                                      '${_siteName(_runningSites.first)}. Lokasi yang dipilih bukan lokasi SK; '
+                                      'absen tetap bisa dikirim, tetapi pastikan memang bekerja di sini hari ini.',
+                                ),
+                                const SizedBox(height: 14),
+                              ],
                             ],
                             PrimaryAction(
                               label: today == null

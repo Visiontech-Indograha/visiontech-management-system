@@ -22,10 +22,10 @@ class CRUDMonitoring(CRUDBase):
         """
         Mengambil daftar hari kerja (work plan days) beserta status laporan hariannya
         untuk sekumpulan Surat Kerja (SK). Hasil diurutkan berdasarkan tanggal.
-        
+
         Args:
             plan_ids (list[str]): Daftar ID rencana kerja (Surat Kerja).
-            
+
         Returns:
             list[Any]: Daftar hari kerja beserta status laporan harian.
         """
@@ -45,10 +45,10 @@ class CRUDMonitoring(CRUDBase):
     async def names(self, employee_ids: list[str]) -> dict[str, str]:
         """
         Mendapatkan pemetaan (mapping) antara ID karyawan dan nama lengkapnya.
-        
+
         Args:
             employee_ids (list[str]): Daftar ID karyawan.
-            
+
         Returns:
             dict[str, str]: Dictionary dengan format {employee_id: full_name}.
         """
@@ -62,16 +62,16 @@ class CRUDMonitoring(CRUDBase):
                                scope: str) -> list[Any]:
         """
         Menghitung rekapitulasi jumlah hari absensi per karyawan dalam rentang tanggal tertentu [starts, ends).
-        Memiliki pembatasan cakupan hak akses (R-33): 'all' (Finance/OPS), 
+        Memiliki pembatasan cakupan hak akses (R-33): 'all' (Finance/OPS),
         'subordinates' (PM - pekerja lapangan di bawahnya), 'own' (milik sendiri).
-        
+
         Args:
             org_id (UUID | str): ID organisasi.
             starts (date): Tanggal mulai (inklusif).
             ends (date): Tanggal akhir (eksklusif).
             viewer_user_id (str): ID pengguna yang melihat laporan.
             scope (str): Cakupan izin melihat data ('all', 'subordinates', 'own').
-            
+
         Returns:
             list[Any]: Daftar karyawan beserta jumlah hari kehadiran, validasi otomatis, butuh peninjauan, dsb.
         """
@@ -105,14 +105,14 @@ class CRUDMonitoring(CRUDBase):
         """
         Mengambil rincian riwayat data absensi (jam masuk, jam keluar, status, dsb) untuk rentang waktu tertentu.
         Cakupan hak akses (scope) sama dengan fungsi rekapitulasi (R-33).
-        
+
         Args:
             org_id (UUID | str): ID organisasi.
             starts (date): Tanggal mulai (inklusif).
             ends (date): Tanggal akhir (eksklusif).
             viewer_user_id (str): ID pengguna yang melihat laporan.
             scope (str): Cakupan izin melihat data ('all', 'subordinates', 'own').
-            
+
         Returns:
             list[Any]: Daftar rincian kehadiran karyawan.
         """

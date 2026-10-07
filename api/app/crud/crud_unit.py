@@ -19,10 +19,10 @@ class CRUDUnit(CRUDBase):
     async def list_for_org(self, org_id: UUID | str) -> list[Any]:
         """
         Mengambil daftar seluruh unit bisnis dalam satu organisasi.
-        
+
         Args:
             org_id (UUID | str): ID organisasi.
-            
+
         Returns:
             list[Any]: Daftar record unit bisnis berisi id, kode, dan nama unit.
         """

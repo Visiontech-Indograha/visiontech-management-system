@@ -35,7 +35,6 @@ class VmsMobileApp extends ConsumerWidget {
       // shadcn_ui (R-14) + tema Material VMS untuk layar yang belum dimigrasi. Mode gelap di luar MVP (K-23).
       child: ShadApp.router(
         title: 'Visiontech',
-        debugShowCheckedModeBanner: false,
         theme: VmsShadTheme.light,
         darkTheme: VmsShadTheme.light,
         themeMode: ThemeMode.light,

@@ -69,11 +69,11 @@ async def assignment_options(
 ) -> PlanAssignmentOptions:
     """
     Mengambil pilihan PM/personel yang sah untuk periode SK baru (R-23) (GET).
-    
+
     Query Parameters:
     - period_start (date): Tanggal mulai periode SK.
     - period_end (date): Tanggal akhir periode SK.
-    
+
     Returns:
     - PlanAssignmentOptions: Pilihan personil yang dapat ditugaskan.
     """
@@ -96,10 +96,10 @@ async def form_options(
 ) -> PlanFormOptions:
     """
     Mengambil pilihan untuk form "Buat SK" pada alur v2 (SK2-A/B) (GET).
-    
+
     Query Parameters:
     - plan_id (UUID | None): ID draf yang sedang diubah (pilihannya ikut tampil).
-    
+
     Returns:
     - PlanFormOptions: Opsi-opsi untuk mengisi form SK.
     """
@@ -128,13 +128,13 @@ async def driver_options(
     """
     Mengambil daftar calon pengemudi (driver) yang valid (GET).
     Calon driver dari ketua + anggota terpilih yang ber-SIM sesuai tipe kendaraan dan tidak terikat SK lain.
-    
+
     Query Parameters:
     - vehicle_id (UUID): ID kendaraan.
     - period_end (date): Tanggal akhir periode.
     - candidate_ids (list[UUID]): Daftar ID kandidat.
     - plan_id (UUID | None): ID draf SK terkait jika ada.
-    
+
     Returns:
     - list[str]: Daftar ID calon pengemudi yang valid.
     """
@@ -152,10 +152,10 @@ async def create_full_plan(
     """
     Membuat SK lengkap dalam satu transaksi (alur v2) (POST).
     Status SK akan langsung menjadi Draf.
-    
+
     Request Body:
     - data (PlanDraftRequest): Seluruh rincian SK.
-    
+
     Returns:
     - PlanDetailOut: Detail lengkap SK yang baru dibuat.
     """
@@ -175,11 +175,11 @@ async def get_plans(
     """
     Mengambil daftar SK yang terlihat oleh pengguna (V-07) (GET).
     SK Diterima yang tanggal mulainya tiba dijalankan dulu (alur v2).
-    
+
     Query Parameters:
     - status_filter (str | None): Filter berdasarkan status SK.
     - archived (bool): Menampilkan draf terarsip (hanya untuk pengelola) (V-21).
-    
+
     Returns:
     - list[WorkPlanResponse]: Daftar rencana kerja (SK).
     """
@@ -195,10 +195,10 @@ async def get_plans(
 async def get_plan(access: PlanAccess = _VIEW_ACCESS) -> WorkPlanResponse:
     """
     Mengambil data dasar dari sebuah SK (GET).
-    
+
     Path Parameters:
     - plan_id (UUID): ID dari SK (work plan).
-    
+
     Returns:
     - WorkPlanResponse: Data dasar SK.
     """
@@ -214,10 +214,10 @@ async def get_plan_detail(
 ) -> PlanDetailOut:
     """
     Mengambil isi lengkap SK: data umum, lokasi, tim, detail pekerjaan per hari, alat & kendaraan (GET).
-    
+
     Path Parameters:
     - plan_id (UUID): ID SK (work plan).
-    
+
     Returns:
     - PlanDetailOut: Detail lengkap dari SK.
     """
@@ -235,13 +235,13 @@ async def edit_full_plan(
     """
     Mengubah seluruh isi SK (draf) dalam satu transaksi (PUT).
     Termasuk draf revisi setelah adendum diminta.
-    
+
     Path Parameters:
     - plan_id (UUID): ID dari SK.
-    
+
     Request Body:
     - data (PlanDraftRequest): Data draft SK yang lengkap.
-    
+
     Returns:
     - PlanDetailOut: Detail lengkap SK yang baru disimpan.
     """
@@ -258,10 +258,10 @@ async def preview_plan(
 ) -> HTMLResponse:
     """
     Pratinjau A4 draf SK ("Sunting SK", SK2-C) — format sama dengan dokumen terbit (GET).
-    
+
     Path Parameters:
     - plan_id (UUID): ID dari SK.
-    
+
     Returns:
     - HTMLResponse: Representasi HTML draf SK.
     """
@@ -278,10 +278,10 @@ async def create_plan(
 ) -> WorkPlanResponse:
     """
     Membuat draf rencana kerja (SK) baru (POST).
-    
+
     Request Body:
     - data (WorkPlanCreate): Data awal pembuatan SK (unit, lokasi, ketua, dll).
-    
+
     Returns:
     - WorkPlanResponse: Data rencana kerja yang baru dibuat.
     """
@@ -300,7 +300,7 @@ async def create_plan(
             organization_id, unit_id, site_id, title, location_text, description,
             period, pm_employee_id, leader_employee_id, status
         ) VALUES (
-            :org, :unit, :site, :title, :loc, :desc, 
+            :org, :unit, :site, :title, :loc, :desc,
             daterange(:start, :end, '[]'), :pm, :leader, 'DRAFT'
         ) RETURNING id, number, status, revision, row_version, cancellation_reason
     """)
@@ -327,7 +327,7 @@ async def create_plan(
                 "plan": row.id, "emp": data.leader_employee_id,
                 "start": data.period_start, "end": data.period_end
             })
-            
+
         return WorkPlanResponse(
             **data.model_dump(),
             id=row.id, number=row.number, status=row.status,
@@ -339,9 +339,9 @@ async def create_plan(
         rule = trigger_rule_error(e)
         if rule:
             raise rule from None
-        raise HTTPException(status_code=400, detail={"code": "DB_ERROR", "message": str(e)})
+        raise HTTPException(status_code=400, detail={"code": "DB_ERROR", "message": str(e)}) from e
     except Exception as e:
-        raise HTTPException(status_code=400, detail={"code": "DB_ERROR", "message": str(e)})
+        raise HTTPException(status_code=400, detail={"code": "DB_ERROR", "message": str(e)}) from e
 
 @router.patch("/{plan_id}", response_model=WorkPlanResponse)  # EDIT_DRAFT (dok 05)
 async def update_plan(
@@ -353,13 +353,13 @@ async def update_plan(
 ) -> WorkPlanResponse:
     """
     Mengubah rincian SK berstatus Draf (PATCH). (EDIT_DRAFT, dok 05)
-    
+
     Path Parameters:
     - plan_id (UUID): ID dari rencana kerja (SK).
-    
+
     Request Body:
     - data (WorkPlanUpdate): Data yang ingin diubah (judul, lokasi, dsb).
-    
+
     Returns:
     - WorkPlanResponse: Data rencana kerja yang telah di-update.
     """
@@ -369,20 +369,20 @@ async def update_plan(
     # Optimistic locking
     check = text("SELECT status, row_version, pm_employee_id, leader_employee_id, lower(period) as period_start, upper(period) - integer '1' as period_end, unit_id FROM vms.work_plan WHERE id = :id AND organization_id = :org")
     row = (await db.execute(check, {"id": plan_id, "org": current_user.organization_id})).fetchone()
-    
+
     if not row:
         raise HTTPException(status_code=404, detail="SK tidak ditemukan.")
-        
+
     if row.status != 'DRAFT':
         raise HTTPException(status_code=400, detail={"code": "NOT_DRAFT", "message": "Hanya SK berstatus DRAFT yang dapat diubah."})
-        
+
     if row.row_version != data.row_version:
         raise HTTPException(status_code=409, detail={"code": "CONFLICT", "message": "Dokumen ini telah diubah oleh orang lain. Silakan muat ulang halaman."})
-        
+
     # Update
     updates = []
     params = {"id": plan_id, "org": current_user.organization_id, "version": data.row_version}
-    
+
     if data.title is not None:
         updates.append("title = :title")
         params["title"] = data.title
@@ -395,16 +395,16 @@ async def update_plan(
     if data.description is not None:
         updates.append("description = :desc")
         params["desc"] = data.description
-    
+
     if data.period_start and data.period_end:
         updates.append("period = daterange(:start, :end, '[]')")
         params["start"] = data.period_start
         params["end"] = data.period_end
-        
+
     if data.leader_employee_id is not None:
         updates.append("leader_employee_id = :leader")
         params["leader"] = data.leader_employee_id
-        
+
         if data.leader_employee_id != row.leader_employee_id:
             # R-26: ketua baru melewati aturan yang sama dengan buat SK / simpan tim (staf lapangan, unit PM).
             await plan_assignment_service.validate_team_scope(
@@ -429,14 +429,14 @@ async def update_plan(
             except IntegrityError as exc:
                 # Bentrok jadwal ketua (trigger) → 409 berpesan jelas; sebelumnya 500.
                 raise trigger_rule_error(exc) or exc from None
-            
+
     updates.append("row_version = row_version + 1")
-    
+
     if not updates:
         raise HTTPException(status_code=400, detail="Tidak ada perubahan.")
-        
+
     query = text(f"""
-        UPDATE vms.work_plan SET {", ".join(updates)} 
+        UPDATE vms.work_plan SET {", ".join(updates)}
         WHERE id = :id AND organization_id = :org AND row_version = :version
         RETURNING id, unit_id, site_id, number, title, location_text, description,
                   lower(period) as period_start, upper(period) - integer '1' as period_end,
@@ -445,10 +445,10 @@ async def update_plan(
     """)
     res = await db.execute(query, params)
     updated = res.fetchone()
-    
+
     if not updated:
         raise HTTPException(status_code=409, detail={"code": "CONFLICT", "message": "Gagal update, kemungkinan data diubah secara bersamaan."})
-        
+
     return WorkPlanResponse(**updated._mapping)
 
 @router.post("/{plan_id}/days", response_model=PlanDayResponse)
@@ -460,13 +460,13 @@ async def add_day(
 ) -> PlanDayResponse:
     """
     Menambahkan data hari ke dalam rencana kerja berstatus DRAFT (POST).
-    
+
     Path Parameters:
     - plan_id (UUID): ID rencana kerja.
-    
+
     Request Body:
     - data (PlanDayCreate): Rincian hari yang akan ditambahkan.
-    
+
     Returns:
     - PlanDayResponse: Data hari yang berhasil ditambahkan.
     """
@@ -477,7 +477,7 @@ async def add_day(
     status_val = (await db.execute(check, {"id": plan_id, "org": current_user.organization_id})).scalar()
     if not status_val or status_val != 'DRAFT':
         raise HTTPException(status_code=400, detail="Tidak dapat menambah hari. Status SK bukan DRAFT.")
-        
+
     insert_day = text("""
         INSERT INTO vms.work_plan_day (work_plan_id, work_date, title, sort_order)
         VALUES (:plan, :date, :title, :sort)
@@ -491,7 +491,7 @@ async def add_day(
         day_id = res.scalar_one()
         return PlanDayResponse(id=day_id, work_plan_id=plan_id, **data.model_dump())
     except Exception:
-        raise HTTPException(status_code=400, detail={"code": "DB_ERROR", "message": "Gagal menambahkan hari (mungkin tanggal bentrok)."})
+        raise HTTPException(status_code=400, detail={"code": "DB_ERROR", "message": "Gagal menambahkan hari (mungkin tanggal bentrok)."}) from None
 
 @router.post("/{plan_id}/days/{day_id}/tasks", response_model=PlanTaskResponse)
 async def add_task(
@@ -503,14 +503,14 @@ async def add_task(
 ) -> PlanTaskResponse:
     """
     Menambahkan tugas baru pada hari tertentu di dalam SK (POST).
-    
+
     Path Parameters:
     - plan_id (UUID): ID rencana kerja (SK).
     - day_id (UUID): ID dari hari bersangkutan.
-    
+
     Request Body:
     - data (PlanTaskCreate): Rincian tugas yang akan ditambahkan.
-    
+
     Returns:
     - PlanTaskResponse: Data tugas yang berhasil dibuat.
     """
@@ -543,14 +543,14 @@ async def save_day(
     """
     Menyusun ulang judul & tugas satu hari selagi SK masih draf (PUT).
     domain.js SAVE_DAY (V-23).
-    
+
     Path Parameters:
     - plan_id (UUID): ID SK.
     - day_id (UUID): ID hari.
-    
+
     Request Body:
     - data (DayPlanRequest): Data tugas untuk hari tersebut.
-    
+
     Returns:
     - dict[str, object]: Data hari dan daftar tugas yang baru disimpan.
     """

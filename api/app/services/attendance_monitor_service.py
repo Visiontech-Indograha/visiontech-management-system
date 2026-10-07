@@ -41,10 +41,10 @@ class AttendanceMonitorService:
     async def check_missing_check_ins(self, org_id: UUID | str) -> MissingCheckInResult:
         """
         Memeriksa apakah tidak ada yang absen masuk hingga tenggat waktu yang ditentukan, lalu mengirimkan peringatan jika diperlukan.
-        
+
         Args:
             org_id: ID organisasi.
-            
+
         Returns:
             Hasil pemeriksaan berupa boolean peringatan terkirim dan jumlah check-in hari ini.
         """
@@ -71,10 +71,10 @@ class AttendanceMonitorService:
     async def check_needs_review_spike(self, org_id: UUID | str) -> NeedsReviewResult:
         """
         Memantau lonjakan abnormal pada status absensi "Perlu Review" untuk mengidentifikasi potensi gangguan lokasi/GPS.
-        
+
         Args:
             org_id: ID organisasi.
-            
+
         Returns:
             Hasil evaluasi lonjakan.
         """

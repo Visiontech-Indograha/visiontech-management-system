@@ -24,11 +24,11 @@ class CRUDPlanMember(CRUDBase):
     async def lock_plan(self, plan_id: UUID | str, org_id: UUID | str) -> Any:
         """
         Mengunci SK (FOR UPDATE) agar aman diubah tanpa race condition.
-        
+
         Args:
             plan_id (UUID | str): ID rencana kerja (SK).
             org_id (UUID | str): ID organisasi.
-            
+
         Returns:
             Any: Record SK yang terkunci (id, unit_id, status, row_version, dll), atau None jika tidak ditemukan.
         """
@@ -47,10 +47,10 @@ class CRUDPlanMember(CRUDBase):
     async def active_team(self, plan_id: UUID | str) -> list[Any]:
         """
         Mengambil tim aktif dari sebuah SK. Ketua (LEADER) akan muncul paling atas.
-        
+
         Args:
             plan_id (UUID | str): ID rencana kerja.
-            
+
         Returns:
             list[Any]: Daftar anggota tim aktif beserta role (ketua/anggota).
         """
@@ -70,11 +70,11 @@ class CRUDPlanMember(CRUDBase):
     async def active_employees(self, employee_ids: Iterable[UUID | str], org_id: UUID | str) -> set[str]:
         """
         Memvalidasi bahwa kumpulan ID karyawan yang diberikan adalah karyawan aktif di organisasi tersebut.
-        
+
         Args:
             employee_ids (Iterable[UUID | str]): Kumpulan ID karyawan.
             org_id (UUID | str): ID organisasi.
-            
+
         Returns:
             set[str]: Himpunan ID karyawan yang valid dan aktif.
         """
@@ -93,11 +93,11 @@ class CRUDPlanMember(CRUDBase):
         """
         Mengecek bentrok jadwal: apakah ada karyawan yang sudah terikat di SK terbit lain
         pada periode yang sama.
-        
+
         Args:
             employee_ids (Iterable[UUID | str]): Kumpulan ID karyawan.
             plan_id (UUID | str): ID rencana kerja saat ini.
-            
+
         Returns:
             Sequence[Any]: Daftar konflik yang mencakup employee_id, work_plan_id, number, dan title.
         """
@@ -117,12 +117,12 @@ class CRUDPlanMember(CRUDBase):
                                        new_end: date) -> Sequence[Any]:
         """
         Mengecek bentrok jadwal untuk periode perpanjangan SK hingga tanggal `new_end`.
-        
+
         Args:
             employee_ids (Iterable[UUID | str]): Kumpulan ID karyawan.
             plan_id (UUID | str): ID rencana kerja.
             new_end (date): Tanggal akhir baru perpanjangan.
-            
+
         Returns:
             Sequence[Any]: Daftar konflik (employee_id, work_plan_id, number, title).
         """
@@ -146,7 +146,7 @@ class CRUDPlanMember(CRUDBase):
         """
         Mengganti seluruh susunan tim pada draf SK. Hanya boleh dipakai ketika SK masih draf,
         karena menghapus record (DELETE) alih-alih menutup `valid_period`.
-        
+
         Args:
             plan_id (UUID | str): ID rencana kerja.
             start (date): Tanggal mulai anggota.
@@ -170,11 +170,11 @@ class CRUDPlanMember(CRUDBase):
     async def set_leader(self, plan_id: UUID | str, leader_id: UUID | str | None) -> int:
         """
         Menetapkan ketua pada master SK dan menaikkan versinya (row_version).
-        
+
         Args:
             plan_id (UUID | str): ID rencana kerja.
             leader_id (UUID | str | None): ID ketua baru.
-            
+
         Returns:
             int: Versi row terbaru (row_version).
         """

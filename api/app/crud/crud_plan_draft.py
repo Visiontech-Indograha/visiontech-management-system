@@ -32,10 +32,10 @@ class CRUDPlanDraft(CRUDBase):
     async def creator(self, user_id: UUID | str) -> Any:
         """
         Karyawan pembuat SK beserta unit dan nama unitnya (tipe SK).
-        
+
         Args:
             user_id (UUID | str): ID pengguna (app_user).
-            
+
         Returns:
             Any: Record karyawan pembuat SK (employee_id, unit_id, unit_name).
         """
@@ -55,10 +55,10 @@ class CRUDPlanDraft(CRUDBase):
     async def unit_name(self, unit_id: UUID | str) -> str | None:
         """
         Mengambil nama dari unit bisnis.
-        
+
         Args:
             unit_id (UUID | str): ID unit bisnis.
-            
+
         Returns:
             str | None: Nama unit bisnis jika ada, atau None.
         """
@@ -71,12 +71,12 @@ class CRUDPlanDraft(CRUDBase):
                           exclude_plan: UUID | str | None) -> list[Any]:
         """
         Staf lapangan yang tidak terikat SK aktif mana pun.
-        
+
         Args:
             org_id (UUID | str): ID organisasi.
             unit_id (UUID | str | None): Filter unit spesifik.
             exclude_plan (UUID | str | None): Mengecualikan ikatan dengan SK tertentu (biasanya SK yang sedang diubah).
-            
+
         Returns:
             list[Any]: Daftar karyawan staf lapangan.
         """
@@ -98,11 +98,11 @@ class CRUDPlanDraft(CRUDBase):
     async def free_assets(self, org_id: UUID | str, plan_id: UUID | str | None) -> list[Any]:
         """
         Aset siap pakai yang tidak teralokasi/dipinjam — ditambah aset yang sudah dipesan draf ini.
-        
+
         Args:
             org_id (UUID | str): ID organisasi.
             plan_id (UUID | str | None): ID SK yang sedang diubah.
-            
+
         Returns:
             list[Any]: Daftar aset (kendaraan atau alat) yang bebas atau dipinjam draf ini.
         """
@@ -127,11 +127,11 @@ class CRUDPlanDraft(CRUDBase):
     async def sites(self, org_id: UUID | str, unit_id: UUID | str | None) -> list[Any]:
         """
         Mendaftar titik lokasi (site) yang relevan untuk unit kerja ini.
-        
+
         Args:
             org_id (UUID | str): ID organisasi.
             unit_id (UUID | str | None): ID unit yang memfilter site.
-            
+
         Returns:
             list[Any]: Daftar lokasi (site) yang terlihat oleh unit tersebut.
         """
@@ -153,12 +153,12 @@ class CRUDPlanDraft(CRUDBase):
     async def licensed(self, employee_ids: Iterable[UUID | str], licence: str, until: date) -> set[str]:
         """
         Karyawan dengan SIM `licence` yang berlaku sampai `until` (aturan trigger tg_vehicle_driver_licence).
-        
+
         Args:
             employee_ids (Iterable[UUID | str]): Kumpulan ID karyawan calon pengemudi.
             licence (str): Tipe SIM yang diminta (misal: 'SIM_A').
             until (date): Batas waktu berlaku minimal (seusai periode SK).
-            
+
         Returns:
             set[str]: Kumpulan (set) ID karyawan berlisensi valid.
         """
@@ -180,11 +180,11 @@ class CRUDPlanDraft(CRUDBase):
     async def employees_bound(self, employee_ids: Iterable[UUID | str], exclude_plan: UUID | str | None) -> set[str]:
         """
         Memeriksa apakah ada karyawan dari kumpulan ID tersebut yang terikat SK aktif lain.
-        
+
         Args:
             employee_ids (Iterable[UUID | str]): Kumpulan ID karyawan.
             exclude_plan (UUID | str | None): Abaikan ikatan pada ID rencana kerja ini.
-            
+
         Returns:
             set[str]: Set ID karyawan yang sedang sibuk/terikat SK.
         """
@@ -204,11 +204,11 @@ class CRUDPlanDraft(CRUDBase):
     async def field_staff_ids(self, employee_ids: Iterable[UUID | str], org_id: UUID | str) -> dict[str, str | None]:
         """
         Memfilter dan mengembalikan id → unit_id untuk karyawan yang tergolong staf lapangan.
-        
+
         Args:
             employee_ids (Iterable[UUID | str]): Kumpulan ID karyawan.
             org_id (UUID | str): ID organisasi.
-            
+
         Returns:
             dict[str, str | None]: Dictionary mapping ID karyawan ke ID unit.
         """
@@ -229,11 +229,11 @@ class CRUDPlanDraft(CRUDBase):
     async def lock_draft(self, plan_id: UUID | str, org_id: UUID | str) -> Any:
         """
         Mengunci baris rencana kerja (SK) untuk diubah, menghindari kondisi balapan (race condition).
-        
+
         Args:
             plan_id (UUID | str): ID rencana kerja.
             org_id (UUID | str): ID organisasi.
-            
+
         Returns:
             Any: Record rencana kerja (ID, unit, status, dll).
         """
@@ -253,7 +253,7 @@ class CRUDPlanDraft(CRUDBase):
                           description: str | None, lat: float, lng: float) -> Any:
         """
         Membuat record site sementara/baru untuk rencana kerja.
-        
+
         Args:
             org_id (UUID | str): ID organisasi.
             unit_id (UUID | str | None): ID unit yang memilikinya.
@@ -261,7 +261,7 @@ class CRUDPlanDraft(CRUDBase):
             description (str | None): Penjelasan site.
             lat (float): Garis lintang (latitude).
             lng (float): Garis bujur (longitude).
-            
+
         Returns:
             Any: Record site baru yang terbuat.
         """
@@ -280,11 +280,11 @@ class CRUDPlanDraft(CRUDBase):
     async def site_name(self, site_id: UUID | str, org_id: UUID | str) -> str | None:
         """
         Mendapatkan nama dari site tertentu.
-        
+
         Args:
             site_id (UUID | str): ID site.
             org_id (UUID | str): ID organisasi.
-            
+
         Returns:
             str | None: Nama site, atau None.
         """
@@ -301,10 +301,10 @@ class CRUDPlanDraft(CRUDBase):
                           pm_employee_id: UUID | str, leader_employee_id: UUID | str) -> Any:
         """
         Memasukkan draf rencana kerja (SK) ke dalam database untuk pertama kali.
-        
+
         Args:
             (Beragam Parameter detail SK)
-            
+
         Returns:
             Any: Menyertakan ID yang dihasilkan.
         """
@@ -329,7 +329,7 @@ class CRUDPlanDraft(CRUDBase):
                           leader_employee_id: UUID | str) -> None:
         """
         Memperbarui header/informasi umum rencana kerja (SK) saat pengeditan draf.
-        
+
         Args:
             (Beragam parameter terkait)
         """
@@ -350,7 +350,7 @@ class CRUDPlanDraft(CRUDBase):
         """
         Membersihkan ulang semua komponen draf (hari, tugas, anggota, alokasi aset)
         sebelum menyisipkan data draf yang baru dari formulir klien.
-        
+
         Args:
             plan_id (UUID | str): ID rencana kerja.
         """
@@ -401,7 +401,7 @@ class CRUDPlanDraft(CRUDBase):
                             period_start: date) -> None:
         """
         Menambahkan anggota (karyawan lapangan) ke dalam tim SK.
-        
+
         Args:
             plan_id (UUID | str): ID rencana kerja.
             employee_id (UUID | str): ID karyawan lapangan.
@@ -420,11 +420,11 @@ class CRUDPlanDraft(CRUDBase):
     async def org_files(self, file_ids: Iterable[UUID | str], org_id: UUID | str) -> set[str]:
         """
         Memvalidasi kepemilikan file yang dilampirkan oleh suatu organisasi.
-        
+
         Args:
             file_ids (Iterable[UUID | str]): ID daftar file yang dicek.
             org_id (UUID | str): ID organisasi terkait.
-            
+
         Returns:
             set[str]: ID file yang ada dan valid milik organisasi tersebut.
         """
@@ -441,10 +441,10 @@ class CRUDPlanDraft(CRUDBase):
     async def plan_detail(self, plan_id: UUID | str) -> Any:
         """
         Isi lengkap SK untuk form "Ubah isi", pratinjau A4, dan ringkasan HP.
-        
+
         Args:
             plan_id (UUID | str): ID rencana kerja (SK).
-            
+
         Returns:
             Any: Record/objek JSONB besar berisi struktur komplit (SK, hari, anggota, aset).
         """

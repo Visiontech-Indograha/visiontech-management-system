@@ -130,7 +130,7 @@ class ApiClient {
         '/api/v1/auth/refresh',
         options: Options(headers: refreshCookieHeader(refreshToken)),
       );
-      final newAccessToken = response.data['access_token'] as String;
+      final newAccessToken = (response.data as Map)['access_token'] as String;
       // Server merotasi refresh token di setiap refresh (cookie baru).
       await _tokenStorage.saveTokens(
         accessToken: newAccessToken,

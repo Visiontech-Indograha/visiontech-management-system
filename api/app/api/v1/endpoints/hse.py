@@ -49,12 +49,12 @@ async def list_incidents(
 ) -> list[IncidentResponse]:
     """
     Mendapatkan daftar insiden untuk satu Surat Kerja (SK).
-    Menampilkan insiden terbaru di urutan awal. 
+    Menampilkan insiden terbaru di urutan awal.
     SK asing/tak terlihat → 404.
-    
+
     Query params:
     - plan_id: UUID dari Surat Kerja
-    
+
     Return: Daftar insiden (list[IncidentResponse])
     """
     # Memeriksa hak akses user untuk melihat SK terkait menggunakan dependensi dan fungsi utilitas
@@ -81,10 +81,10 @@ async def report_incident(
     """
     Melaporkan insiden baru untuk SK yang sedang berlangsung.
     (Hanya ketua atau anggota pekerjaan ini, SK harus IN_PROGRESS).
-    
+
     Body params:
     - data: Detail insiden yang dilaporkan (IncidentCreate)
-    
+
     Return: Detail insiden yang direkam (IncidentResponse)
     """
     # Menggunakan dependensi db dan current_user
@@ -113,7 +113,7 @@ async def report_incident(
         "sev": data.severity, "desc": data.description
     })
     incident = res.one()
-    
+
     # Insert evidence
     if data.evidence_file_ids:
         ins_ev = text("""
@@ -121,7 +121,7 @@ async def report_incident(
             SELECT :inc, unnest(CAST(:fids AS uuid[]))
         """)
         await db.execute(ins_ev, {"inc": incident.id, "fids": [str(f) for f in data.evidence_file_ids]})
-            
+
     return IncidentResponse(**incident._mapping)
 
 @router.post("/incidents/{inc_id}/resolve", response_model=IncidentResponse)
@@ -133,13 +133,13 @@ async def resolve_incident(
 ) -> IncidentResponse:
     """
     Menyelesaikan masalah insiden. Hanya PM (unit SK), OPS, atau ASSET yang bisa mengeksekusi.
-    
+
     Path params:
     - inc_id: UUID dari insiden
-    
+
     Body params:
     - data: Catatan resolusi (IncidentResolve)
-    
+
     Return: Detail insiden yang telah diselesaikan (IncidentResponse)
     """
     # Injeksi dependensi kontrol akses Plan (_INCIDENT_VIEW_ACCESS) dan db sesi
@@ -149,7 +149,7 @@ async def resolve_incident(
         raise ForbiddenError("Hanya PM unit pekerjaan ini atau petugas aset yang dapat menyelesaikan insiden.")
     emp_q = text("SELECT employee_id FROM vms.app_user WHERE id = :uid")
     my_emp = (await db.execute(emp_q, {"uid": current_user.user_id})).scalar()
-    
+
     upd = text("""
         UPDATE vms.incident_report
         SET status = 'RESOLVED', resolved_by = :emp, resolved_at = now(), resolution_note = :note
@@ -166,7 +166,7 @@ async def resolve_incident(
     row = res.fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Insiden tidak ditemukan.")
-        
+
     return IncidentResponse(**row._mapping)
 
 @days_router.put("/{day_id}", response_model=DailyReportResponse)
@@ -178,14 +178,14 @@ async def upsert_daily_report(
 ) -> DailyReportResponse:
     """
     Membuat atau memperbarui DRAFT laporan harian pekerjaan (Hanya Ketua Tim, SK IN_PROGRESS).
-    
+
     Path params:
     - plan_id: UUID dari SK (di-routing)
     - day_id: UUID hari pelaksanaan SK
-    
+
     Body params:
     - data: Data laporan harian (DailyReportCreate)
-    
+
     Return: Laporan harian (DailyReportResponse)
     """
     # Menggunakan injeksi dependensi access Plan (_DAY_LEADER_ACCESS)
@@ -195,7 +195,7 @@ async def upsert_daily_report(
     await ensure_same_org(db, current_user.organization_id, files=data.evidence_file_ids)
     emp_q = text("SELECT employee_id FROM vms.app_user WHERE id = :uid")
     my_emp = (await db.execute(emp_q, {"uid": current_user.user_id})).scalar()
-    
+
     # Upsert — hanya selagi DRAFT / CHANGES_REQUESTED (domain.js SAVE_REPORT, V-24)
     ups = text("""
         INSERT INTO vms.daily_report (work_plan_day_id, body, obstacle)
@@ -219,7 +219,7 @@ async def upsert_daily_report(
             SELECT :rid, unnest(CAST(:fids AS uuid[]))
         """)
         await db.execute(ins_ev, {"rid": report.id, "fids": [str(f) for f in data.evidence_file_ids]})
-            
+
     return DailyReportResponse(**report._mapping)
 
 @days_router.post("/{day_id}/submit", response_model=DailyReportResponse)
@@ -230,11 +230,11 @@ async def submit_daily_report(
 ) -> DailyReportResponse:
     """
     Menyerahkan (submit) laporan harian yang berstatus DRAFT atau minta revisi ke manajer/PM.
-    
+
     Path params:
     - plan_id: UUID dari SK
     - day_id: UUID hari pelaksanaan SK
-    
+
     Return: Laporan harian dengan status tersubmit (DailyReportResponse)
     """
     # Mengambil objek kontrol akses Plan (ketua tim) lewat dependensi
@@ -243,7 +243,7 @@ async def submit_daily_report(
     await _ensure_day_reached(db, day_id)
     emp_q = text("SELECT employee_id FROM vms.app_user WHERE id = :uid")
     my_emp = (await db.execute(emp_q, {"uid": current_user.user_id})).scalar()
-    
+
     # Ajukan dari DRAFT atau setelah dikembalikan PM (domain.js SUBMIT_REPORT, V-24)
     sub = text("""
         UPDATE vms.daily_report
@@ -256,8 +256,8 @@ async def submit_daily_report(
         res = await db.execute(sub, {"emp": my_emp, "day": day_id})
     except Exception as e:
         if "check" in str(e).lower():
-            raise HTTPException(status_code=400, detail="Laporan terlalu singkat (minimal 10 karakter).")
-        raise HTTPException(status_code=400, detail={"code": "DB_ERROR", "message": str(e)})
+            raise HTTPException(status_code=400, detail="Laporan terlalu singkat (minimal 10 karakter).") from e
+        raise HTTPException(status_code=400, detail={"code": "DB_ERROR", "message": str(e)}) from e
     report = res.fetchone()
     if not report:
         raise AppError("INVALID_STATE", "Laporan sudah diserahkan atau belum dibuat.", status=409)
@@ -276,14 +276,14 @@ async def review_daily_report(
 ) -> DailyReportResponse:
     """
     domain.js REVIEW_REPORT (V-24): PM unit/OPS menyetujui atau mengembalikan laporan harian yang diserahkan.
-    
+
     Path params:
     - plan_id: UUID dari SK
     - day_id: UUID hari pelaksanaan SK
-    
+
     Body params:
     - data: Data hasil review laporan (ReportReviewRequest)
-    
+
     Return: Detail laporan harian pasca-review (DailyReportResponse)
     """
     # Menggunakan injeksi dependensi access PM Unit (_DAY_PM_UNIT_ACCESS)
@@ -320,12 +320,12 @@ async def toggle_task(
 ) -> dict[str, object]:
     """
     domain.js TOGGLE_TASK (V-23): ketua mencentang/menghapus centang tugas hari tersebut, selama laporan belum diserahkan.
-    
+
     Path params:
     - plan_id: UUID SK (di-routing)
     - day_id: UUID hari eksekusi
     - task_id: UUID tugas yang dicentang
-    
+
     Return: Status toggle (is_done) dari tugas tersebut
     """
     # Injeksi db dan level akses ketua tim

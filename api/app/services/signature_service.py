@@ -47,7 +47,7 @@ class SignatureService:
     def __init__(self, db: AsyncSession) -> None:
         """
         Inisialisasi SignatureService.
-        
+
         Args:
             db (AsyncSession): Sesi database asinkron.
         """
@@ -64,13 +64,13 @@ class SignatureService:
                                  issued_by_user: str) -> Any:
         """
         Menandatangani dokumen SK secara elektronik (menghasilkan hash dari payload kanonik).
-        
+
         Args:
             document_id (UUID | str): ID dari dokumen yang akan ditandatangani.
             signer_employee_id (str): ID Karyawan yang menandatangani.
             role (str): Peran penandatangan (contoh: ISSUER, ACCEPTOR).
             issued_by_user (str): ID pengguna yang melakukan proses ini.
-            
+
         Returns:
             Any: Data tanda tangan yang tersimpan.
         """
@@ -94,13 +94,13 @@ class SignatureService:
                                         issued_by_user: str) -> Any:
         """
         Menemukan dokumen terbaru dari suatu SK dan menandatanganinya.
-        
+
         Args:
             plan_id (UUID | str): ID SK.
             signer_employee_id (str): ID Karyawan penandatangan.
             role (str): Peran (ISSUER/ACCEPTOR).
             issued_by_user (str): ID pengguna.
-            
+
         Returns:
             Any: Data tanda tangan yang tersimpan.
         """
@@ -112,11 +112,11 @@ class SignatureService:
     async def _document_for(self, user: CurrentUser, document_id: UUID) -> Any:
         """
         Mengambil data dokumen berdasarkan ID dengan memverifikasi akses VIEW terhadap SK terkait.
-        
+
         Args:
             user (CurrentUser): Pengguna.
             document_id (UUID): ID dokumen.
-            
+
         Returns:
             Any: Data dokumen.
         """
@@ -163,10 +163,10 @@ class SignatureService:
     async def list_plan_documents(self, plan_id: UUID) -> list[Any]:
         """
         Daftar dokumen SK terkait.
-        
+
         Args:
             plan_id (UUID): ID SK.
-            
+
         Returns:
             list[Any]: Daftar dokumen.
         """
@@ -175,11 +175,11 @@ class SignatureService:
     async def list_signatures(self, user: CurrentUser, document_id: UUID) -> list[Any]:
         """
         Daftar tanda tangan yang tersemat pada suatu dokumen.
-        
+
         Args:
             user (CurrentUser): Pengguna pembuat request.
             document_id (UUID): ID Dokumen.
-            
+
         Returns:
             list[Any]: Daftar tanda tangan.
         """
@@ -213,10 +213,10 @@ class SignatureService:
     async def verify(self, raw_token: str) -> Any:
         """
         Memverifikasi tanda tangan berdasarkan token unik dari QR Code.
-        
+
         Args:
             raw_token (str): Token yang didapat dari scan QR code.
-            
+
         Returns:
             Any: Data tanda tangan jika valid, atau None/raise Error.
         """

@@ -131,7 +131,6 @@ class _WeeklyReportScreenState extends ConsumerState<WeeklyReportScreen> {
                   const NoticeBanner(
                     icon: Icons.hourglass_empty_rounded,
                     text: 'Semua laporan harian minggu ini harus disetujui PM sebelum laporan mingguan dibuat.',
-                    accent: Accent.amber,
                   ),
                 if (w['review_note'] != null)
                   NoticeBanner(

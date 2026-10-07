@@ -21,7 +21,7 @@ from app.services.pdf_service import render_report_html
 
 class MemberReportService:
     """Layanan untuk mengelola laporan harian anggota tim di lapangan."""
-    
+
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
         self.repo = CRUDMemberReport(db)
@@ -69,10 +69,10 @@ class MemberReportService:
     async def list_for_day(self, day_id: UUID) -> list[Any]:
         """
         Mengambil daftar seluruh laporan anggota pada suatu hari tertentu.
-        
+
         Args:
             day_id: ID hari dari jadwal pekerjaan.
-            
+
         Returns:
             list[Any]: Daftar laporan.
         """
@@ -81,11 +81,11 @@ class MemberReportService:
     async def mine(self, access: PlanAccess, day_id: UUID) -> Any:
         """
         Mengambil draf laporan milik pengguna sendiri pada suatu hari.
-        
+
         Args:
             access: Akses pengguna saat ini.
             day_id: ID hari laporan.
-            
+
         Returns:
             Any: Baris data laporan pengguna.
         """
@@ -94,17 +94,17 @@ class MemberReportService:
     async def save(self, access: PlanAccess, day_id: UUID, body: str, obstacle: str, file_ids: list[UUID]) -> Any:
         """
         Anggota menyimpan draf laporannya (selama belum dikirim ke ketua).
-        
+
         Args:
             access: Akses pengguna.
             day_id: ID hari laporan.
             body: Isi uraian laporan.
             obstacle: Catatan kendala (jika ada).
             file_ids: Daftar ID berkas bukti pendukung.
-            
+
         Returns:
             Any: Data laporan yang telah diperbarui.
-            
+
         Raises:
             AppError: Jika laporan sudah terkirim (tidak bisa diedit).
         """
@@ -120,14 +120,14 @@ class MemberReportService:
     async def send(self, access: PlanAccess, day_id: UUID) -> Any:
         """
         Anggota mengirim laporannya ke ketua tim; ketua mendapat notifikasi.
-        
+
         Args:
             access: Akses pengguna.
             day_id: ID hari.
-            
+
         Returns:
             Any: Data laporan terbaru dengan status terkirim.
-            
+
         Raises:
             AppError: Jika laporan belum disimpan atau sudah pernah dikirim.
             ValidationError: Jika isi laporan terlalu singkat.
@@ -149,14 +149,14 @@ class MemberReportService:
     async def daily_report_html(self, access: PlanAccess, day_id: UUID) -> str:
         """
         Menghasilkan representasi HTML dari dokumen laporan harian tim.
-        
+
         Args:
             access: Akses pengguna.
             day_id: ID hari laporan.
-            
+
         Returns:
             str: String HTML untuk dirender di web, HP, atau dicetak PDF.
-            
+
         Raises:
             NotFoundError: Jika laporan hari tersebut belum ada.
         """
@@ -171,14 +171,14 @@ class MemberReportService:
     async def weekly_report_html(self, access: PlanAccess, name: str) -> str:
         """
         Menghasilkan representasi HTML dari dokumen laporan mingguan.
-        
+
         Args:
             access: Akses pengguna.
             name: Nama dokumen laporan mingguan.
-            
+
         Returns:
             str: String HTML laporan mingguan.
-            
+
         Raises:
             NotFoundError: Jika laporan mingguan tidak ditemukan.
         """

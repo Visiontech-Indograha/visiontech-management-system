@@ -71,6 +71,10 @@ class UpdateInfo {
   final ReleaseDownload? download;
 
   bool get hasUpdate => status != UpdateStatus.upToDate && download != null;
+
+  /// Mis. `1.2.0 (build 5)` — nomor build ikut ditampilkan agar rilis bernama sama tetap bisa dibedakan.
+  String get latestLabel =>
+      '${latestVersion ?? '-'} (build ${latestBuild ?? '-'})';
 }
 
 /// Unduhan tidak cocok dengan manifest (rusak/terpotong/dipalsukan) — berkas sudah dihapus.

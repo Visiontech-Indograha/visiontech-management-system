@@ -1,26 +1,23 @@
 import 'dart:io';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-
-import '../../core/local_storage.dart';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
 
-import 'package:dio/dio.dart';
-
 import '../../core/api_client.dart';
 import '../../core/error_message.dart';
+import '../../core/local_storage.dart';
 import '../../core/location_helper.dart';
 import '../../core/photo_capture.dart';
 import '../../core/providers.dart';
-import '../../data/sync_engine.dart';
-import '../auth/auth_controller.dart';
-import '../auth/auth_state.dart';
 import '../../core/theme/theme.dart';
+import '../../data/sync_engine.dart';
 import '../../shared/ui/vms_select_field.dart';
 import '../../shared/ui/vms_ui.dart';
+import '../auth/auth_controller.dart';
+import '../auth/auth_state.dart';
 import '../face/face_flow.dart';
 
 /// Absensi (M5, dok 05 §3.5). Wajib daring: waktu & geofence ditentukan server.
@@ -647,7 +644,6 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                               const NoticeBanner(
                                 key: Key('belum-ada-lokasi-sk'),
                                 icon: Icons.location_off_rounded,
-                                accent: Accent.amber,
                                 text:
                                     'Belum ada lokasi kerja untuk akun Anda (lokasi SK maupun kantor). '
                                     'Hubungi Project Manager atau admin untuk menambahkan lokasi kerja.',
@@ -676,7 +672,6 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                                 NoticeBanner(
                                   key: const Key('peringatan-bukan-lokasi-sk'),
                                   icon: Icons.warning_amber_rounded,
-                                  accent: Accent.amber,
                                   text:
                                       'Anda sedang bertugas di SK dengan lokasi '
                                       '${_siteName(_runningSites.first)}. Lokasi yang dipilih bukan lokasi SK; '
@@ -723,7 +718,6 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                             const NoticeBanner(
                               key: Key('pulang-menunggu-review'),
                               icon: Icons.hourglass_top_rounded,
-                              accent: Accent.amber,
                               text:
                                   'Absen masuk menunggu pemeriksaan. Absen pulang '
                                   'bisa dilakukan setelah absen masuk disetujui.',

@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+# Pemeriksaan cepat sebelum commit (keputusan pemilik 2026-10-07). Hanya berkas yang di-stage.
+# Pasang sekali per klon: `bash scripts/pasang-hook.sh` (git config core.hooksPath .githooks).
+# Darurat saja: `git commit --no-verify` — CI tetap memeriksa semuanya.
+set -uo pipefail
+ROOT=$(git rev-parse --show-toplevel)
+cd "$ROOT" || exit 1
+mapfile -t STAGED < <(git diff --cached --name-only --diff-filter=ACMR)
+[ ${#STAGED[@]} -eq 0 ] && exit 0
+fail=0
+say() { printf '  %s\n' "$*"; }
+
+# 1. Berkas rahasia tidak pernah masuk Git.
+for f in "${STAGED[@]}"; do
+  case "$f" in
+    *.example) ;;                                   # contoh tanpa isi rahasia boleh
+    *.env|.env.*|*/.env.*|*key.properties|*.jks|*.keystore|*.pem|*.p12|.local_tests/*)
+      say "✗ berkas rahasia di-stage: $f (keluarkan: git restore --staged \"$f\")"; fail=1 ;;
+  esac
+done
+
+# 2. API: ruff pada berkas .py yang di-stage (konfigurasi api/ruff.toml).
+mapfile -t PY < <(printf '%s\n' "${STAGED[@]}" | grep -E '^api/.*\.py$' || true)
+if [ ${#PY[@]} -gt 0 ]; then
+  RUFF=""
+  for c in api/.venv/Scripts/ruff.exe api/.venv/bin/ruff; do [ -x "$c" ] && RUFF="$ROOT/$c" && break; done
+  [ -z "$RUFF" ] && command -v ruff >/dev/null && RUFF=ruff
+  if [ -n "$RUFF" ]; then
+    rel=(); for f in "${PY[@]}"; do rel+=("${f#api/}"); done
+    (cd api && "$RUFF" check --quiet "${rel[@]}") || { say "✗ ruff gagal — perbaiki, atau 'cd api && ruff check --fix <berkas>'"; fail=1; }
+  else
+    say "! ruff tidak ditemukan (api/.venv); pemeriksaan API dilewati — CI tetap memeriksa"
+  fi
+fi
+
+# 3. Mobile: dart analyze pada berkas .dart yang di-stage.
+mapfile -t DART < <(printf '%s\n' "${STAGED[@]}" | grep -E '^mobile/.*\.dart$' | grep -v '\.g\.dart$' || true)
+if [ ${#DART[@]} -gt 0 ]; then
+  DARTBIN=$(command -v dart || true)
+  [ -z "$DARTBIN" ] && [ -f "$HOME/flutter/bin/dart.bat" ] && DARTBIN="$HOME/flutter/bin/dart.bat"
+  if [ -n "$DARTBIN" ]; then
+    rel=(); for f in "${DART[@]}"; do rel+=("${f#mobile/}"); done
+    (cd mobile && "$DARTBIN" analyze --fatal-infos "${rel[@]}" >/tmp/vms-dart-analyze.log 2>&1) \
+      || { cat /tmp/vms-dart-analyze.log; say "✗ dart analyze gagal"; fail=1; }
+  else
+    say "! dart tidak ditemukan; pemeriksaan mobile dilewati — CI tetap memeriksa"
+  fi
+fi
+
+# 4. Web: eslint pada berkas .ts/.tsx yang di-stage.
+mapfile -t TS < <(printf '%s\n' "${STAGED[@]}" | grep -E '^web/src/.*\.(ts|tsx)$' || true)
+if [ ${#TS[@]} -gt 0 ]; then
+  if [ -x web/node_modules/.bin/eslint ] || [ -f web/node_modules/.bin/eslint.cmd ]; then
+    rel=(); for f in "${TS[@]}"; do rel+=("${f#web/}"); done
+    (cd web && npx --no-install eslint --max-warnings 0 "${rel[@]}") || { say "✗ eslint gagal"; fail=1; }
+  else
+    say "! web/node_modules belum ada; eslint dilewati — CI tetap memeriksa"
+  fi
+fi
+
+[ "$fail" -eq 0 ] || { echo "pre-commit: commit dibatalkan (lihat di atas)."; exit 1; }
+exit 0

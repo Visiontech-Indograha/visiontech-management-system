@@ -78,6 +78,9 @@ jobs:
       - name: Uji — pytest
         run: python -m pytest -q -p no:warnings
 
+      - name: Uji — face-service (aturan tantangan liveness, tanpa model)
+        run: python -m pytest -q -p no:warnings ../face-service/tests
+
   web:
     name: Web · lint · typecheck · test · build
     runs-on: ubuntu-latest

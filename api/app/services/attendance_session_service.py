@@ -100,11 +100,12 @@ class AttendanceSessionService:
         site = await self.repo.site_for_check_in(site_id, org_id, lng, lat)
         if site is None:
             raise NotFoundError("Lokasi")
-        # R-33: pekerja lapangan hanya di lokasi proyek unitnya, pekerja kantor hanya di lokasi kantor.
+        # R-33: pekerja kantor hanya di lokasi kantor. Pekerja lapangan di lokasi proyek unitnya DAN di kantor pusat
+        # (unit_id NULL): tanpa SK aktif mereka tetap harus bisa absen di kantor (2026-10-07, permintaan pemilik).
         if worker.attendance_mode == "OFFICE":
             allowed = site.unit_id is None
         else:
-            allowed = site.unit_id is not None and site.unit_id == worker.unit_id
+            allowed = site.unit_id is None or site.unit_id == worker.unit_id
         if not allowed:
             raise AppError("SITE_NOT_ALLOWED", "Lokasi ini tidak berlaku untuk Anda. Pilih lokasi kerja Anda.",
                            status=403)

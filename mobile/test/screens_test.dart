@@ -258,6 +258,49 @@ void main() {
       },
     );
 
+    testWidgets(
+      'terikat SK tetapi memilih kantor: peringatan tampil, absen tetap terkirim ke kantor',
+      (tester) async {
+        online();
+        const project = {
+          'id': 's2',
+          'name': 'Proyek CCTV Rumbai',
+          'radius_m': 100,
+          'location': {'lat': 1.6650, 'lng': 101.4478},
+        };
+        backend.routes['/sites'] = (_) => [site, project];
+        backend.routes['/work-plans'] = (_) => [
+          {'id': 'wp1', 'status': 'IN_PROGRESS', 'site_id': 's2'},
+        ];
+        GeolocatorPlatform.instance = _FakeGps(
+          _at(1.6650, 101.4478, accuracy: 8),
+        );
+        await show(tester, const AttendanceScreen());
+        // Lokasi SK dipilih otomatis → tanpa peringatan.
+        expect(find.text('Proyek CCTV Rumbai'), findsWidgets);
+        expect(
+          find.byKey(const Key('peringatan-bukan-lokasi-sk')),
+          findsNothing,
+        );
+
+        await tester.tap(find.text('Proyek CCTV Rumbai').first);
+        await settle(tester);
+        await tester.tap(find.text('Kantor Visiontech Dumai').last);
+        await settle(tester);
+        expect(
+          find.byKey(const Key('peringatan-bukan-lokasi-sk')),
+          findsOneWidget,
+        );
+        expect(find.textContaining('Proyek CCTV Rumbai'), findsWidgets);
+
+        await tapCheckIn(tester);
+        final sent = backend.requests
+            .where((r) => r.path.endsWith('/check-in'))
+            .single;
+        expect((sent.data as Map)['site_id'], 's1');
+      },
+    );
+
     Map<String, Object?> record(String workDate, {String? out}) => {
       'id': 'a-$workDate',
       'work_date': workDate,

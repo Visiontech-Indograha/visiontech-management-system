@@ -94,7 +94,7 @@ cmd_bangun() {
      --dart-define=API_BASE_URL="$api")
 
   local expected out files_json="" sep=""
-  expected=$(grep -E '^[0-9a-f]{64}$' "$CERT_FILE" | head -1)
+  expected=$(tr -d '\r' < "$CERT_FILE" | grep -E '^[0-9a-f]{64}$' | head -1)
   out="$outroot/$build"; rm -rf "$out"; mkdir -p "$out"
   for apk in "$MOBILE"/build/app/outputs/flutter-apk/app-*-release.apk; do
     local abi badging digest dest sha size

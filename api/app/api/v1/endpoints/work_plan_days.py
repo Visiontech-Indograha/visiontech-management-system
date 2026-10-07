@@ -21,10 +21,10 @@ _VIEW_ACCESS = Depends(plan_access(PlanNeed.VIEW))
 def _out(row: Any) -> PlanDayOut:
     """
     Fungsi pembantu untuk memetakan row data hari kerja dari database ke skema PlanDayOut.
-    
+
     Args:
         row (Any): Row data hari kerja.
-        
+
     Returns:
         PlanDayOut: Respons model hari kerja SK.
     """
@@ -37,10 +37,10 @@ async def list_plan_days(access: PlanAccess = _VIEW_ACCESS,
     """
     Mengambil daftar hari kerja beserta tugas dan laporan harian dari SK (GET).
     Siapa pun yang melihat SK (V-07); SK tak terlihat / organisasi lain → 404.
-    
+
     Path Parameters:
     - plan_id (tersirat via router prefix): ID SK bersangkutan.
-    
+
     Returns:
     - list[PlanDayOut]: Daftar detail hari kerja SK.
     """

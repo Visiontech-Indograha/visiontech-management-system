@@ -33,10 +33,10 @@ REFRESH_COOKIE_PATH = "/api/v1/auth"
 def client_info(request: Request) -> ClientInfo:
     """
     Fungsi pembantu untuk mengambil informasi klien (IP dan User-Agent) dari objek request.
-    
+
     Args:
         request (Request): Objek permintaan FastAPI.
-        
+
     Returns:
         ClientInfo: Informasi klien.
     """
@@ -50,13 +50,13 @@ def client_info(request: Request) -> ClientInfo:
 
 def _issue(response: Response, tokens: IssuedTokens) -> TokenResponse:
     """
-    Fungsi pembantu untuk menyematkan refresh token dalam cookie HttpOnly 
+    Fungsi pembantu untuk menyematkan refresh token dalam cookie HttpOnly
     serta mereturn access token di payload.
-    
+
     Args:
         response (Response): Objek respons FastAPI.
         tokens (IssuedTokens): Kumpulan token yang diterbitkan.
-        
+
     Returns:
         TokenResponse: Respons payload akses token.
     """
@@ -74,10 +74,10 @@ async def login(
 ) -> TokenResponse:
     """
     Memproses login pengguna dengan email dan password.
-    
+
     Body params:
     - payload: Data login berisi email dan password (LoginRequest)
-    
+
     Return: Token akses (TokenResponse) dan menset refresh_token di cookie
     """
     # Injeksi dependensi AuthFlowService untuk menangani alur login
@@ -94,7 +94,7 @@ async def refresh_token(
 ) -> TokenResponse:
     """
     Memperbarui access_token menggunakan refresh_token yang ada di cookie.
-    
+
     Return: Token akses baru (TokenResponse) dan memperbarui refresh_token di cookie
     """
     # Menggunakan injeksi dependensi untuk mengambil AuthFlowService
@@ -110,7 +110,7 @@ async def logout(
 ) -> MessageResponse:
     """
     Mengakhiri sesi pengguna saat ini.
-    
+
     Return: Pesan sukses (MessageResponse) dan menghapus cookie refresh_token
     """
     # Injeksi dependensi untuk service alur autentikasi
@@ -127,7 +127,7 @@ async def get_me(
 ) -> UserMeResponse:
     """
     Mendapatkan profil dan detail pengguna yang sedang login.
-    
+
     Return: Detail pengguna saat ini (UserMeResponse)
     """
     # Menggunakan injeksi dependensi untuk mendapatkan pengguna saat ini dan service autentikasi
@@ -143,7 +143,7 @@ async def list_sessions(
     """
     P1-7: Mengambil daftar sesi aktif dari perangkat yang sedang masuk dengan akun ini;
     yang sedang dipakai ditandai `current`.
-    
+
     Return: Daftar sesi aktif (list[SessionOut])
     """
     # Injeksi dependensi untuk pengguna aktif dan layanan autentikasi
@@ -158,7 +158,7 @@ async def revoke_other_sessions(
 ) -> RevokeOthersResponse:
     """
     Keluarkan semua perangkat lain. Token akses mereka habis paling lama 15 menit; refresh langsung ditolak.
-    
+
     Return: Status revokasi perangkat lain (RevokeOthersResponse)
     """
     # Mengambil informasi pengguna dan AuthFlowService lewat injeksi dependensi
@@ -175,10 +175,10 @@ async def revoke_session(
 ) -> MessageResponse:
     """
     Keluarkan satu perangkat milik sendiri berdasarkan ID sesinya. Sesi orang lain → 404.
-    
+
     Path params:
     - session_id: UUID dari sesi perangkat
-    
+
     Return: Pesan revokasi berhasil (MessageResponse)
     """
     # Menggunakan service autentikasi yang diinjeksi via Depends
@@ -195,10 +195,10 @@ async def change_password(
 ) -> TokenResponse:
     """
     Mengubah password pengguna saat ini.
-    
+
     Body params:
     - payload: Berisi password lama dan password baru (ChangePasswordRequest)
-    
+
     Return: Token akses baru (TokenResponse) dengan cookie yang diperbarui
     """
     # Injeksi dependensi AuthFlowService dan current_user

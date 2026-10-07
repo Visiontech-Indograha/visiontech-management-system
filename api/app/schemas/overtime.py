@@ -13,9 +13,9 @@ from pydantic import BaseModel
 class OvertimeCreate(BaseModel):
     """
     Schema for reporting overtime (domain.js REPORT_OVERTIME).
-    
-    Aturan validasi seperti jam 0–12 dan alasan yang wajib diisi akan 
-    diperiksa secara terpusat di OvertimeService. Hal ini dilakukan 
+
+    Aturan validasi seperti jam 0–12 dan alasan yang wajib diisi akan
+    diperiksa secara terpusat di OvertimeService. Hal ini dilakukan
     agar urutan dan pesan kesalahan yang muncul sama persis dengan prototipe.
     """
     work_plan_id: UUID
@@ -26,8 +26,8 @@ class OvertimeCreate(BaseModel):
 class OvertimeReview(BaseModel):
     """
     Schema for reviewing an overtime request (domain.js REVIEW_OVERTIME).
-    
-    Status keputusan (decision) berupa APPROVED atau REJECTED, dan akan 
+
+    Status keputusan (decision) berupa APPROVED atau REJECTED, dan akan
     diperiksa serta diproses di dalam service.
     """
     decision: str
@@ -55,7 +55,7 @@ class OvertimeResponse(BaseModel):
 class OvertimeRecapRow(BaseModel):
     """
     Schema for a summarized overtime record from the recap view.
-    Satu baris rekap yang diambil dari `v_overtime_recap` 
+    Satu baris rekap yang diambil dari `v_overtime_recap`
     (direkapitulasi per karyawan per bulan).
     """
     employee_id: UUID

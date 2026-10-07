@@ -24,10 +24,10 @@ class PlanAttachmentService:
     async def list_attachments(self, access: PlanAccess) -> list[Any]:
         """
         Mendaftar seluruh berkas lampiran yang tertaut ke SK.
-        
+
         Args:
             access (PlanAccess): Objek akses rencana kerja saat ini.
-            
+
         Returns:
             list[Any]: Daftar lampiran SK.
         """
@@ -37,11 +37,11 @@ class PlanAttachmentService:
         """
         Menyimpan perubahan daftar lampiran, menimpa daftar sebelumnya.
         Hanya dapat dilakukan selama SK berstatus DRAFT.
-        
+
         Args:
             access (PlanAccess): Objek akses rencana kerja.
             file_ids (list[UUID]): Daftar ID file lampiran baru.
-            
+
         Returns:
             list[Any]: Daftar lampiran SK yang telah diperbarui.
         """

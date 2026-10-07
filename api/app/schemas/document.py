@@ -17,12 +17,12 @@ _UPPER = {"KTP", "KK", "NPWP", "MCU", "BPJS"}
 def normalise_doc_type(value: str) -> str:
     """
     Normalize document types, specifically for driver's licenses (SIM) and identity cards.
-    
-    Rapikan jenis dokumen: atasi spasi ganda, ubah menjadi huruf kapital untuk 
+
+    Rapikan jenis dokumen: atasi spasi ganda, ubah menjadi huruf kapital untuk
     SIM/KTP/MCU, dan standarisasi penamaan seperti "SIM B1" menjadi "SIM B I".
-    
-    Aturan SIM pengemudi dalam trigger `tg_vehicle_driver_licence` akan 
-    mencocokkan teks secara persis ('SIM A' / 'SIM C'), oleh karena itu teks 
+
+    Aturan SIM pengemudi dalam trigger `tg_vehicle_driver_licence` akan
+    mencocokkan teks secara persis ('SIM A' / 'SIM C'), oleh karena itu teks
     bebas yang diketik harus diseragamkan di fungsi ini.
     """
     # Menggabungkan spasi ganda menjadi tunggal
@@ -88,7 +88,7 @@ class EmployeeDocumentResponse(BaseModel):
     verified_at: datetime | None = None
     review_note: str | None = None
     created_at: datetime
-    
+
 
 class DocumentListResponse(BaseModel):
     """

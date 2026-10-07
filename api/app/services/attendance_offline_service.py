@@ -50,7 +50,7 @@ class AttendanceOfflineService:
     async def register_device_key(self, user: CurrentUser, device_id: str, public_key: str) -> None:
         """
         Mendaftarkan kunci publik (public key) perangkat keras (Android Keystore) untuk validasi tanda tangan kriptografis.
-        
+
         Args:
             user: Pengguna yang melakukan pendaftaran.
             device_id: ID unik perangkat.
@@ -89,9 +89,9 @@ class AttendanceOfflineService:
 
     def _event_time(self, user: CurrentUser, p: dict[str, Any]) -> tuple[datetime, bool, list[str]]:
         """
-        Menghitung dan memvalidasi waktu absensi (jam peristiwa) menggunakan mekanisme jangkar waktu (time anchor) 
+        Menghitung dan memvalidasi waktu absensi (jam peristiwa) menggunakan mekanisme jangkar waktu (time anchor)
         untuk melawan manipulasi jam perangkat lokal.
-        
+
         Returns:
             Tuple dari (jam peristiwa, terverifikasi (boolean), daftar alasan perlu review).
         """
@@ -129,7 +129,7 @@ class AttendanceOfflineService:
                     face_probe_id: UUID | None = None) -> dict[str, Any]:
         """
         Memproses sinkronisasi data absensi (masuk/pulang) yang dikumpulkan saat perangkat luring.
-        
+
         Args:
             user: Pengguna yang melakukan absensi.
             device_id: ID perangkat.
@@ -138,7 +138,7 @@ class AttendanceOfflineService:
             payload: Data absensi asli dalam format JSON string.
             signature: Tanda tangan digital atas payload.
             selfie_file_id: ID file foto swafoto jika ada.
-            
+
         Returns:
             Status penerapan data absensi luring.
         """
@@ -152,7 +152,7 @@ class AttendanceOfflineService:
         p = await self._verified_payload(user, device_id, payload, signature)
         if p.get("client_op_id") != str(client_op_id) or p.get("kind") != kind:
             raise _reject("OFFLINE_TAMPERED", "Data absen luring tidak cocok dengan kirimannya.")
-            
+
         # Mengekstrak dan memverifikasi waktu absensi secara ketat melawan manipulasi jam perangkat.
         event, trusted, notes = self._event_time(user, p)
         # Pengenalan wajah: blok `face` ikut ditandatangani HP (termasuk hash gambar wajah sementara).
@@ -164,7 +164,7 @@ class AttendanceOfflineService:
             result, attendance_id = await self._check_in(user, p, event, notes, selfie_file_id, face_probe_id, face)
         else:
             result, attendance_id = await self._check_out(user, event, notes, face_probe_id, face)
-            
+
         await self.repo.record_event(client_op_id=client_op_id, org_id=user.organization_id, user_id=user.user_id,
                                      kind=kind, attendance_id=attendance_id, event_time=event,
                                      time_trusted=trusted, result=result)

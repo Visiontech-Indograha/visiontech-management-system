@@ -34,13 +34,13 @@ async def get_employee_documents(
     """
     Mendapatkan daftar dokumen pribadi karyawan.
     Dokumen milik sendiri, atau milik siapa pun di organisasi bagi pengelola dokumen (HR). Lainnya 404.
-    
+
     Path params:
     - emp_id: UUID dari karyawan
-    
+
     Return: Daftar dokumen karyawan (DocumentListResponse)
     """
-    # Injeksi dependensi DocumentService dan current_user (_viewer) 
+    # Injeksi dependensi DocumentService dan current_user (_viewer)
     # Meneruskan query ke service layer untuk mengambil daftar dokumen
     rows = await document_service.documents_of(current_user.organization_id, current_user.user_id,
                                            current_user.permissions, emp_id)
@@ -55,13 +55,13 @@ async def upload_document(
 ) -> EmployeeDocumentResponse:
     """
     Mengunggah (menambahkan) dokumen baru untuk karyawan.
-    
+
     Path params:
     - emp_id: UUID dari karyawan
-    
+
     Body params:
     - data: Data dokumen yang akan dibuat, termasuk referensi file (EmployeeDocumentCreate)
-    
+
     Return: Detail dokumen yang baru saja ditambahkan (EmployeeDocumentResponse)
     """
     # Menggunakan injeksi dependensi sesi DB (_db) dan DocumentService
@@ -80,14 +80,14 @@ async def verify_document(
 ) -> EmployeeDocumentResponse:
     """
     Memverifikasi (menyetujui atau menolak) dokumen karyawan.
-    
+
     Path params:
     - emp_id: UUID dari karyawan
     - doc_id: UUID dari dokumen
-    
+
     Body params:
     - data: Hasil verifikasi dokumen (EmployeeDocumentVerify)
-    
+
     Return: Detail dokumen yang telah diverifikasi (EmployeeDocumentResponse)
     """
     # Mengambil instance DocumentService via Depends dan pengguna saat ini (_verifier)

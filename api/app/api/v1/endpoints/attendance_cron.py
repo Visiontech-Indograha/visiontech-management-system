@@ -23,9 +23,9 @@ async def alert_missing_checkin(
     attendance_monitor_service: AttendanceMonitorService = Depends(get_attendance_monitor_service),
 ) -> MissingCheckInResponse:
     """
-    Pemicu cron untuk memeriksa absensi check-in yang belum dilakukan pada hari berjalan, 
+    Pemicu cron untuk memeriksa absensi check-in yang belum dilakukan pada hari berjalan,
     kemudian mengirim peringatan jika ditemukan.
-    
+
     Return: Detail peringatan (MissingCheckInResponse)
     """
     # Mengambil dependensi penjadwal dengan hak akses (RUN_SYSTEM_JOBS)
@@ -44,7 +44,7 @@ async def alert_needs_review_spike(
     """
     Pemicu cron untuk mendeteksi lonjakan absensi yang memerlukan review (P4-9, dok 17 §5.3)
     dan memperingatkan manajer terkait.
-    
+
     Return: Ringkasan hasil pemeriksaan dan jumlah review (NeedsReviewResponse)
     """
     # Injeksi dependensi untuk mendapatkan AttendanceMonitorService

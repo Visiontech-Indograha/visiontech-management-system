@@ -21,10 +21,10 @@ class PlanAssignmentService:
     def _oversees(user: CurrentUser) -> bool:
         """
         Mengecek apakah pengguna adalah admin atau tim OPS yang memiliki akses pengawasan lintas unit.
-        
+
         Args:
             user (CurrentUser): Informasi pengguna saat ini.
-            
+
         Returns:
             bool: True jika pengguna memiliki role ADMIN atau OPS.
         """
@@ -34,12 +34,12 @@ class PlanAssignmentService:
         """
         Memastikan PM yang ditunjuk valid dan sesuai dengan kewenangan pembuat SK.
         PM membuat untuk dirinya/unitnya; OPS (OM) dan ADMIN boleh memilih PM.
-        
+
         Args:
             user: Informasi pengguna pembuat SK.
             unit_id: ID unit pelaksanaan SK.
             pm_employee_id: ID karyawan yang akan menjadi PM.
-            
+
         Raises:
             ForbiddenError: Jika pembuat bukan karyawan aktif.
             AppError: Jika PM tidak berada pada unit yang dipilih, atau mencoba membuat untuk PM lain tanpa akses OPS/ADMIN.
@@ -73,13 +73,13 @@ class PlanAssignmentService:
         Seluruh tim wajib staf lapangan (R-26). OPS/ADMIN bebas lintas unit; PM hanya dapat
         MENAMBAHKAN karyawan unit SK-nya: anggota yang sudah ada di tim (`current_team`, mis. pilihan
         OPS lintas unit) tidak diperiksa ulang cakupan unitnya (docs/10 Bagian C, R-26).
-        
+
         Args:
             user: Pengguna yang melakukan validasi.
             plan_unit_id: ID unit pelaksana SK.
             employee_ids: Kumpulan ID karyawan anggota/ketua.
             current_team: Kumpulan ID anggota saat ini, untuk mengizinkan perubahan campuran lintas unit.
-            
+
         Raises:
             AppError: Jika personel bukan staf lapangan atau di luar kewenangan unit PM.
         """
@@ -106,12 +106,12 @@ class PlanAssignmentService:
         """
         Mendapatkan opsi personel yang tersedia untuk ditugaskan pada SK berdasarkan periode tertentu.
         Admin dan OPS mendapatkan akses opsi untuk seluruh PM dan personel lintas unit.
-        
+
         Args:
             user (CurrentUser): Pengguna yang meminta opsi penugasan.
             period_start (date): Tanggal mulai SK.
             period_end (date): Tanggal selesai SK.
-            
+
         Returns:
             dict[str, Any]: Koleksi opsi yang berisi apakah pengguna boleh memilih PM, opsi PM, dan opsi anggota.
         """

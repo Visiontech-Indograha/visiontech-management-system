@@ -27,10 +27,10 @@ async def list_changes(plan_id: UUID, access: PlanAccess = _VIEW,
     """
     Melihat riwayat usulan perubahan SK (GET).
     Mencegah celah di mana usulan tidak bisa dibaca ulang (docs/28).
-    
+
     Path Parameters:
     - plan_id (UUID): ID rencana kerja.
-    
+
     Returns:
     - list[PlanChangeOut]: Daftar usulan perubahan yang terkait.
     """
@@ -46,13 +46,13 @@ async def request_amendment(plan_id: UUID, data: AmendmentReasonIn, access: Plan
     """
     Ketua mengajukan adendum saat SK Berjalan (POST).
     Status SK tetap Berjalan.
-    
+
     Path Parameters:
     - plan_id (UUID): ID SK terkait.
-    
+
     Request Body:
     - data (AmendmentReasonIn): Alasan pengajuan adendum.
-    
+
     Returns:
     - list[PlanChangeOut]: Riwayat usulan perubahan SK yang terbaru.
     """
@@ -68,14 +68,14 @@ async def reject_amendment(plan_id: UUID, change_id: UUID, data: AmendmentReason
                            ) -> list[PlanChangeOut]:
     """
     PM menolak usulan adendum SK yang diajukan oleh ketua (POST).
-    
+
     Path Parameters:
     - plan_id (UUID): ID dari SK.
     - change_id (UUID): ID dari usulan perubahan.
-    
+
     Request Body:
     - data (AmendmentReasonIn): Alasan penolakan adendum.
-    
+
     Returns:
     - list[PlanChangeOut]: Riwayat usulan perubahan SK yang diperbarui.
     """
@@ -92,14 +92,14 @@ async def apply_amendment(plan_id: UUID, change_id: UUID, data: PlanDraftRequest
     """
     PM menerima usulan dengan mengubah isi SK (PUT).
     Dokumen adendum terbit dengan tanda tangan PM.
-    
+
     Path Parameters:
     - plan_id (UUID): ID dari SK bersangkutan.
     - change_id (UUID): ID perubahan adendum.
-    
+
     Request Body:
     - data (PlanDraftRequest): Detail draft yang baru (perubahan dari adendum).
-    
+
     Returns:
     - PlanDetailOut: Detail rencana kerja hasil perubahan.
     """
@@ -115,11 +115,11 @@ async def accept_amendment(plan_id: UUID, change_id: UUID, access: PlanAccess = 
     """
     Ketua menandatangani adendum (POST).
     Versi SK lama menjadi tidak berlaku.
-    
+
     Path Parameters:
     - plan_id (UUID): ID dari SK.
     - change_id (UUID): ID usulan perubahan.
-    
+
     Returns:
     - list[PlanChangeOut]: Riwayat usulan perubahan SK yang diperbarui.
     """
@@ -135,10 +135,10 @@ async def final_report_html(plan_id: UUID, access: PlanAccess = _VIEW,
     """
     Mendapatkan laporan akhir yang disetujui (A4, TTD ketua & PM + QR) (GET).
     Ditujukan untuk penampil web & HP.
-    
+
     Path Parameters:
     - plan_id (UUID): ID dari SK.
-    
+
     Returns:
     - HTMLResponse: Dokumen laporan akhir dalam bentuk HTML.
     """

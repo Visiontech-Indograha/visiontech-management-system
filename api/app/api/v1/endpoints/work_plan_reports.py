@@ -25,10 +25,10 @@ async def member_reports(day_id: UUID, access: PlanAccess = _DAY_VIEW,
     """
     Mendapatkan daftar laporan anggota untuk satu hari tertentu (GET).
     Laporan anggota satu hari — dibaca ketua untuk disusun, dan PM saat memeriksa.
-    
+
     Path Parameters:
     - day_id (UUID): ID dari hari bersangkutan.
-    
+
     Returns:
     - list[MemberReportOut]: Daftar laporan anggota di hari tersebut.
     """
@@ -43,10 +43,10 @@ async def my_member_report(day_id: UUID, access: PlanAccess = _DAY_MEMBER,
                            ) -> MemberReportOut | None:
     """
     Mengambil draf laporan harian milik anggota itu sendiri (GET).
-    
+
     Path Parameters:
     - day_id (UUID): ID dari hari bersangkutan.
-    
+
     Returns:
     - MemberReportOut | None: Detail laporan atau null jika belum ada.
     """
@@ -62,13 +62,13 @@ async def save_member_report(day_id: UUID, data: MemberReportIn, access: PlanAcc
                              ) -> MemberReportOut:
     """
     Menyimpan draf laporan harian dari seorang anggota (PUT).
-    
+
     Path Parameters:
     - day_id (UUID): ID hari.
-    
+
     Request Body:
     - data (MemberReportIn): Isi laporan, kendala, dan file bukti.
-    
+
     Returns:
     - MemberReportOut: Data laporan yang berhasil disimpan.
     """
@@ -85,10 +85,10 @@ async def send_member_report(day_id: UUID, access: PlanAccess = _DAY_MEMBER,
     """
     Anggota mengirim laporannya ke ketua tim (POST).
     (Notifikasi ke ketua).
-    
+
     Path Parameters:
     - day_id (UUID): ID dari hari bersangkutan.
-    
+
     Returns:
     - MemberReportOut: Laporan yang dikirim dengan status terbaru.
     """
@@ -105,10 +105,10 @@ async def daily_report_html(day_id: UUID, access: PlanAccess = _DAY_VIEW,
     """
     Mendapatkan dokumen A4 laporan harian dalam format HTML (GET).
     Isi: ketua + laporan anggota + pemeriksaan PM.
-    
+
     Path Parameters:
     - day_id (UUID): ID hari kerja.
-    
+
     Returns:
     - HTMLResponse: Dokumen laporan harian.
     """
@@ -123,10 +123,10 @@ async def weekly_report_html(week: int, access: PlanAccess = _VIEW,
                              ) -> HTMLResponse:
     """
     Mendapatkan dokumen laporan mingguan dalam format HTML (GET).
-    
+
     Path Parameters:
     - week (int): Minggu ke-berapa.
-    
+
     Returns:
     - HTMLResponse: Laporan mingguan.
     """

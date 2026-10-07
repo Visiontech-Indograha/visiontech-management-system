@@ -27,35 +27,35 @@ async def get_expiring_documents(
     """
     Mengambil daftar dokumen yang akan kedaluwarsa atau sudah kedaluwarsa.
     Memerlukan izin VERIFY_DOCUMENTS (biasanya HR).
-    
+
     Query params:
     - urgency: Opsi pemfilteran berdasarkan tingkat urgensi
-    
+
     Return: Daftar dokumen yang memasuki masa kedaluwarsa (ExpiringDocumentList)
     """
     # Menggunakan injeksi dependensi untuk memastikan akses pada database dengan level organisasi
     where_clauses = ["organization_id = :org"]
     params = {"org": current_user.organization_id}
-    
+
     if urgency:
         where_clauses.append("urgency = :urgency")
         params["urgency"] = urgency
-        
+
     where_str = " AND ".join(where_clauses)
-    
+
     query = text(f"""
         SELECT id, employee_id, full_name, doc_type, expiry_date, days_left, urgency
         FROM vms.v_document_expiry
         WHERE {where_str}
         ORDER BY days_left ASC
     """)
-    
+
     rows = (await db.execute(query, params)).fetchall()
-    
+
     items = []
     for row in rows:
         items.append(ExpiringDocumentResponse(**row._mapping))
-        
+
     return ExpiringDocumentList(items=items)
 
 
@@ -69,7 +69,7 @@ async def get_pending_documents(
 ) -> PendingDocumentList:
     """
     Antrean verifikasi HR (P2-5): dokumen pribadi berstatus PENDING di organisasi ini, terlama dulu.
-    
+
     Return: Daftar dokumen yang perlu diverifikasi (PendingDocumentList)
     """
     # Memerlukan DocumentService lewat injeksi dependensi
@@ -88,10 +88,10 @@ async def cron_expire_documents(
     Dipanggil berkala oleh penjadwal: dokumen 'CURRENT' yang lewat masa berlaku → 'EXPIRED'.
     Hanya ADMIN (`run:system_jobs`, sama dengan cron absensi) dan hanya untuk organisasinya (V-09);
     "hari ini" menurut zona waktu organisasi, bukan jam server DB.
-    
+
     Return: Jumlah dokumen yang diubah (dict)
     """
-    # Mengambil koneksi AsyncSession dari dependensi 
+    # Mengambil koneksi AsyncSession dari dependensi
     # Melakukan eksekusi query pembaruan masa berlaku secara langsung
     query = text("""
         UPDATE vms.employee_document d

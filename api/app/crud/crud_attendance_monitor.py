@@ -18,10 +18,10 @@ class CRUDAttendanceMonitor(CRUDBase):
     async def active_employee_count(self, org_id: UUID | str) -> int:
         """
         Menghitung jumlah total karyawan aktif dalam sebuah organisasi.
-        
+
         Args:
             org_id (UUID | str): ID organisasi.
-            
+
         Returns:
             int: Jumlah karyawan aktif.
         """
@@ -37,11 +37,11 @@ class CRUDAttendanceMonitor(CRUDBase):
     async def check_in_count(self, org_id: UUID | str, work_date: date) -> int:
         """
         Menghitung jumlah absensi (check-in) pada suatu tanggal kerja untuk sebuah organisasi.
-        
+
         Args:
             org_id (UUID | str): ID organisasi.
             work_date (date): Tanggal kerja.
-            
+
         Returns:
             int: Jumlah absen masuk.
         """
@@ -54,10 +54,10 @@ class CRUDAttendanceMonitor(CRUDBase):
     async def last_check_in_at(self, org_id: UUID | str) -> datetime | None:
         """
         Mendapatkan waktu check-in terakhir (paling baru) di seluruh organisasi.
-        
+
         Args:
             org_id (UUID | str): ID organisasi.
-            
+
         Returns:
             datetime | None: Waktu check-in terakhir, atau None jika belum ada absensi.
         """
@@ -70,13 +70,13 @@ class CRUDAttendanceMonitor(CRUDBase):
 
     async def needs_review_count(self, org_id: UUID | str, work_date: date) -> int:
         """
-        Menghitung jumlah absensi yang berstatus 'NEEDS_REVIEW' (perlu ditinjau) 
+        Menghitung jumlah absensi yang berstatus 'NEEDS_REVIEW' (perlu ditinjau)
         pada tanggal tertentu.
-        
+
         Args:
             org_id (UUID | str): ID organisasi.
             work_date (date): Tanggal kerja.
-            
+
         Returns:
             int: Jumlah absensi yang perlu ditinjau.
         """
@@ -93,12 +93,12 @@ class CRUDAttendanceMonitor(CRUDBase):
         """
         Menghitung rata-rata harian absensi berstatus 'NEEDS_REVIEW' selama periode hari tertentu
         sebelum tanggal yang ditentukan (hari tanpa data dianggap 0).
-        
+
         Args:
             org_id (UUID | str): ID organisasi.
             before (date): Batas tanggal akhir (eksklusif).
             days (int): Jumlah hari ke belakang.
-            
+
         Returns:
             float: Rata-rata harian.
         """

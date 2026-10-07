@@ -48,11 +48,11 @@ def _rate_limit(ip: str) -> None:
 def _rows(rows: list[Any], model: Any) -> list[Any]:
     """
     Fungsi pembantu untuk memetakan kumpulan baris (row) database ke skema tertentu.
-    
+
     Args:
         rows (list[Any]): Daftar row dari database.
         model (Any): Skema Pydantic tujuan (seperti SignatureOut).
-        
+
     Returns:
         list[Any]: Daftar model yang sudah dipetakan.
     """
@@ -64,10 +64,10 @@ async def list_plan_documents(access: PlanAccess = _VIEW_ACCESS,
                               signature_service: SignatureService = Depends(get_signature_service)) -> list[PlanDocumentOut]:
     """
     Dok 05 §3.3: SK, revisi, dan adendum beserta jumlah tanda tangan yang berlaku (GET).
-    
+
     Path Parameters:
     - plan_id (tersirat via router prefix): ID dari work plan.
-    
+
     Returns:
     - list[PlanDocumentOut]: Daftar dokumen rencana kerja.
     """
@@ -82,10 +82,10 @@ async def list_signatures(document_id: UUID, current_user: CurrentUser = Depends
                           signature_service: SignatureService = Depends(get_signature_service)) -> list[SignatureOut]:
     """
     Mengambil daftar tanda tangan untuk sebuah dokumen (GET).
-    
+
     Path Parameters:
     - document_id (UUID): ID dari dokumen yang tanda tangannya ingin diambil.
-    
+
     Returns:
     - list[SignatureOut]: Daftar tanda tangan yang terkait dengan dokumen.
     """
@@ -101,10 +101,10 @@ async def document_pdf(document_id: UUID, current_user: CurrentUser = Depends(ge
     """
     Mengunduh dokumen dalam format PDF bertanda tangan + QR verifikasi (dok 05 §3.9) (GET).
     Render berat → threadpool (CLAUDE.md).
-    
+
     Path Parameters:
     - document_id (UUID): ID dokumen.
-    
+
     Returns:
     - Response: File PDF dari dokumen bersangkutan.
     """
@@ -124,10 +124,10 @@ async def document_html(document_id: UUID, current_user: CurrentUser = Depends(g
     """
     Mendapatkan representasi HTML dari dokumen, sama persis dengan PDF (templat A4 + TTD + QR) (GET).
     Untuk penampil di web & HP ("Tinjau SK").
-    
+
     Path Parameters:
     - document_id (UUID): ID dari dokumen.
-    
+
     Returns:
     - HTMLResponse: Konten HTML dokumen.
     """
@@ -144,13 +144,13 @@ async def revoke_signature(signature_id: UUID, data: RevokeRequest,
     """
     Pencabutan tanda tangan beserta alasan (PM unit/OPS SK tersebut) (POST).
     Tercatat di audit. (P6-6)
-    
+
     Path Parameters:
     - signature_id (UUID): ID dari tanda tangan yang akan dicabut.
-    
+
     Request Body:
     - data (RevokeRequest): Alasan pencabutan.
-    
+
     Returns:
     - dict[str, str]: Pesan sukses.
     """
@@ -165,10 +165,10 @@ async def verify_signature(token: str, request: Request, public_signature_servic
     """
     Memverifikasi tanda tangan berdasarkan token dari hasil pemindaian QR (PUBLIK) (GET).
     Hanya mengembalikan data yang perlu dilihat pemverifikasi.
-    
+
     Path Parameters:
     - token (str): Token yang diperoleh dari QR code.
-    
+
     Returns:
     - VerifyOut: Data verifikasi tanda tangan publik.
     """

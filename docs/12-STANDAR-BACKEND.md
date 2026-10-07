@@ -38,7 +38,8 @@ api/
 ├── tests/                    pytest: conftest.py, test_<fitur>.py
 ├── .env                      variabel lingkungan lokal (tidak di-commit)
 ├── Dockerfile
-└── pyproject.toml            dependensi + konfigurasi ruff/mypy/pytest
+├── requirements*.txt        dependensi (versi dikunci)
+└── ruff.toml · mypy.ini      konfigurasi lint & tipe (§5)
 ```
 
 Tambahan proyek yang dipertahankan (tidak ada di contoh, dibutuhkan produk): `app/core/` berisi juga
@@ -66,65 +67,63 @@ Tambahan proyek yang dipertahankan (tidak ada di contoh, dibutuhkan produk): `ap
 
 ## 2. Tanggung jawab tiap lapisan
 
-### Router — `api/v1/routes/`
-Tipis. Hanya: jalur, metode, status, model respons, dependency. **Tidak ada `if` aturan
-bisnis dan tidak pernah menyentuh basis data.**
+Alur satu permintaan: **endpoint → service → crud**. Tidak ada lapisan lain (`routes/`, `controllers/`,
+`repositories/` tidak ada — versi lama dokumen ini menyebutnya; dikoreksi 2026-10-07).
+
+### Endpoint — `api/v1/endpoints/<modul>.py`
+Tipis. Hanya: jalur, metode, status, `response_model`, dependency, lalu memanggil **service** dan
+membentuk **schema** respons. Tidak ada aturan bisnis dan tidak menyentuh basis data
+(dijaga `tests/test_router_layering.py`).
 
 ```python
-@router.post("/{plan_id}/publish", response_model=WorkPlanRead, status_code=200)
-async def publish_work_plan(
-    plan_id: UUID,
-    payload: PublishRequest,
-    ctx: RequestContext = Depends(get_context),
-    controller: WorkPlanController = Depends(get_work_plan_controller),
-):
-    return await controller.publish(plan_id, payload, ctx)
+router = APIRouter(prefix="/units", tags=["Units"])
+
+@router.get("", response_model=list[UnitOut])
+async def list_units(
+    current_user: CurrentUser = Depends(get_current_user),
+    unit_service: UnitService = Depends(get_unit_service),
+) -> list[UnitOut]:
+    """Unit milik organisasi pengguna saja (V-09)."""
+    return [UnitOut(**r._mapping) for r in await unit_service.list_units(current_user.organization_id)]
 ```
 
-### Controller — `controllers/`
-Satu kasus pakai. Membuka transaksi, memanggil satu atau beberapa servis, mengubah hasil
-menjadi skema respons. Di sinilah beberapa langkah digabung: mis. "terbitkan SK" =
-terbitkan dokumen + tanda tangani + catat audit + kirim notifikasi.
-
-### Service — `services/`
-**Tempat aturan bisnis berada.** Padanan langsung `transition()` di prototipe.
+### Perakitan — `api/deps.py`
+Satu fungsi `get_<nama>_service` per service: membuka sesi ber-RLS (`get_db_with_user`) dan menyuntikkan crud.
 
 ```python
-class WorkPlanService:
-    async def publish(self, plan: WorkPlan, actor: Actor) -> WorkPlan:
+def get_unit_service(db: AsyncSession = Depends(get_db_with_user)) -> UnitService:
+    return UnitService(CRUDUnit(db))
+```
+
+### Service — `services/<entitas>_service.py`
+**Tempat aturan bisnis.** Nama metode = transaksi di `prototype/js/domain.js` (`publish`, `accept`, …).
+Tidak menulis SQL, tidak tahu HTTP/JSON, melempar `AppError` berpesan Indonesia.
+
+```python
+class PlanTransitionService:
+    async def publish(self, plan_id: UUID, actor: CurrentUser) -> Any:
+        plan = await self.repo.get(plan_id)
         if plan.status != PlanStatus.DRAFT:
-            raise AppError("PLAN_NOT_DRAFT",
-                           "Pekerjaan ini sudah terbit, jadi tidak bisa diterbitkan lagi.")
-        if not plan.leader_employee_id:
-            raise AppError("PLAN_NO_LEADER",
-                           "Tentukan ketua tim sebelum menerbitkan SK.")
+            raise InvalidStateError("SK ini sudah terbit, jadi tidak bisa diterbitkan lagi.")
         ...
 ```
 
-Aturan: servis **tidak** menulis SQL, **tidak** tahu HTTP, dan **tidak** tahu bentuk JSON.
-Servis menerima dan mengembalikan objek domain.
-
-### Repository — `repositories/`
-Satu-satunya tempat kueri ditulis. Semua pemuatan relasi eksplisit (`selectinload`), karena
-lazy loading tidak bekerja di async.
+### CRUD — `crud/crud_<entitas>.py`
+**Satu-satunya tempat SQL.** Kelas `CRUD<Entitas>(CRUDBase)` dengan helper `execute`/`fetchone`/`fetchall`
+dari `crud/base.py`; SQL mentah berparameter (`:nama`), tanpa `SELECT *` (dijaga `test_no_select_star.py`).
 
 ```python
-async def get_with_members(self, plan_id: UUID) -> WorkPlan | None:
-    stmt = (select(WorkPlan)
-            .where(WorkPlan.id == plan_id)
-            .options(selectinload(WorkPlan.members),
-                     selectinload(WorkPlan.days)))
-    return (await self.session.exec(stmt)).first()
+class CRUDUnit(CRUDBase):
+    async def list_for_org(self, org_id: UUID | str) -> list[Any]:
+        return list(await self.fetchall(
+            "SELECT id, code, name FROM vms.business_unit WHERE organization_id = :org ORDER BY name",
+            {"org": org_id},
+        ))
 ```
 
-### Model vs Schema
-- **Model** (`models/`) = bentuk tabel, `table=True`, tidak pernah dikembalikan langsung ke
-  klien.
-- **Schema** (`schemas/`) = bentuk permintaan & respons.
-
-**Model tidak pernah menjadi respons API.** Ini penting dan mudah dilanggar karena SQLModel
-membuatnya tampak praktis: mengembalikan model berarti kolom baru — termasuk yang sensitif
-seperti `password_hash` atau `embedding` — otomatis ikut terkirim begitu ditambahkan.
+### Schema — `schemas/<entitas>.py`
+Bentuk permintaan & respons (Pydantic). Aturan lengkap: §10. Baris DB / model **tidak pernah** menjadi
+respons langsung — kolom baru (mis. `password_hash`, `embedding`) akan ikut terkirim tanpa disadari.
 
 ---
 
@@ -218,15 +217,18 @@ Handler global mengubahnya menjadi bentuk baku di dokumen 05. Aturan:
 
 | Hal | Aturan |
 |---|---|
-| Format & lint | `ruff` (format + lint), `mypy` mode strict |
-| Penamaan berkas | `snake_case`, akhiran jelas: `_service`, `_repo`, `_controller` |
+| Lint | `ruff check app tests` — set aturan di `api/ruff.toml` (`E,W,F,I,UP,B,RUF,DTZ,BLE,ASYNC,SIM,C4,PIE`), baris ≤ **120**. Mengubah set aturan = keputusan pemilik |
+| Utang lint lama | `[lint.per-file-ignores]` di `ruff.toml` **hanya boleh menyusut**. Berkas baru tidak boleh masuk daftar; menyentuh berkas lama → rapikan baris panjangnya lalu hapus `E501`-nya |
+| Tipe | `mypy` strict untuk seluruh `app/`; tidak ada `Any` tanpa alasan tertulis |
+| Penamaan berkas | endpoint `<modul jamak>.py`, service `<entitas>_service.py`, crud `crud_<entitas>.py`, schema `<entitas>.py` |
 | Penamaan fungsi servis | Sama dengan transaksi prototipe: `publish`, `accept`, `request_personnel_change` |
-| Tipe | Anotasi penuh; tidak ada `Any` tanpa alasan tertulis |
-| Impor | Absolut (`app.services.x`), bukan relatif berantai |
+| Impor | Absolut (`app.services.x`); di dalam `crud/` boleh `from .base import CRUDBase` |
 | Async | Semua I/O `async`; kerja CPU berat (kompresi gambar, render PDF) → `run_in_threadpool` |
 | Rahasia | Hanya lewat `core/config.py`; tidak ada `os.getenv` tersebar |
-| Waktu | Hanya lewat `core/time.py` |
-| Komentar | Menjelaskan **kenapa**, bukan **apa** |
+| Waktu | Hanya lewat `core/time.py` (`utcnow`, `jakarta_now`) |
+| Galat | `AppError` / turunan di `core/errors.py`; `raise … from e` di dalam `except` |
+| Docstring & komentar | Bahasa Indonesia; menjelaskan **kenapa**, bukan **apa** |
+| Ragu / ambigu | **Tanyakan pemilik dulu, jangan menebak** (§12) |
 
 **Kerja berat tidak boleh memblokir event loop.** Kompresi gambar dan render PDF berjalan di
 thread pool. Ini mudah terlewat dan akibatnya seluruh server tersendat saat satu orang
@@ -240,11 +242,13 @@ mengunggah foto besar.
 
 | Hal | Di mana |
 |---|---|
-| CRUD dasar | `repositories/base.py` generik |
+| Helper SQL dasar | `crud/base.py` (`CRUDBase`) |
 | Pagination, penyaringan, pengurutan | `core/pagination.py` |
-| Pemeriksaan izin | `core/permissions.py` — **tidak pernah** ditulis ulang di router |
+| Pemeriksaan izin | `core/permissions.py` + `require_permission` di `api/deps.py` — **tidak pernah** ditulis ulang di endpoint |
+| Penjaga akses SK | `core/plan_auth.py` + `plan_access(...)` di `api/deps.py` |
 | Pemetaan galat | `core/errors.py` |
-| Kompresi gambar | `storage/image_compressor.py` |
+| Kompresi gambar | `core/image.py` |
+| Penyimpanan berkas | `core/storage.py` |
 | Snapshot & hash dokumen | `services/document_service.py` |
 | Waktu | `core/time.py` |
 
@@ -272,16 +276,16 @@ yang berani ubah.
 
 | Jenis | Isi | Alat |
 |---|---|---|
-| Unit | Servis, dengan repository tiruan | pytest |
-| Integrasi | Repository, trigger, RLS, constraint | pytest + PostgreSQL nyata |
-| API | Endpoint + matriks RBAC | httpx AsyncClient |
+| Unit | Servis, dengan crud tiruan | pytest |
+| Integrasi | CRUD, trigger, RLS, constraint | pytest + PostgreSQL nyata |
+| API | Endpoint + matriks RBAC | `fastapi.testclient.TestClient` (`tests/conftest.py`) |
 
 - **PostgreSQL sungguhan**, bukan SQLite: separuh aturan sistem ini hidup di trigger, RLS,
   dan exclusion constraint yang tidak dimiliki SQLite.
 - Setiap uji berjalan dalam transaksi yang di-*rollback*, atau memakai basis data sekali
   pakai (`pytest-postgresql` / container).
 - Waktu dibekukan lewat `core/time.py`.
-- **Matriks RBAC dibangkitkan**: setiap endpoint × 7 peran. Endpoint baru tanpa baris di
+- **Matriks RBAC dibangkitkan**: setiap endpoint × 8 peran. Endpoint baru tanpa baris di
   matriks → CI gagal.
 - Target: 100% cabang pada `services/`; endpoint minimal jalur berhasil + jalur ditolak.
 
@@ -296,3 +300,109 @@ yang berani ubah.
 5. Berkas yang tidak berwenang → **404**, bukan 403.
 6. Pembatasan laju di `/auth/login`, `/verify/{token}`, `/files`.
 7. Peran dan izin selalu dibaca dari basis data, bukan dari klaim token.
+
+---
+
+## 10. Skema (Pydantic) — gaya wajib untuk kode baru
+
+Kelas skema lama **tidak diganti namanya**: nama kelas menjadi nama komponen OpenAPI dan tipe TypeScript web
+(`web/src/lib/api-types.ts`). Aturan di bawah berlaku untuk skema **baru** (keputusan pemilik 2026-10-07).
+
+### Letak & penamaan
+
+| Hal | Aturan | Contoh |
+|---|---|---|
+| Berkas | `app/schemas/<entitas>.py`, satu entitas/modul per berkas; docstring modul 1 baris | `schemas/app_release.py` |
+| Masukan | `<Entitas>In` (buat), `<Entitas>Update` (ubah sebagian), `<Aksi>In` untuk aksi | `MemberReportIn`, `AmendmentReasonIn` |
+| Keluaran | `<Entitas>Out`; daftar berhalaman `<Entitas>ListOut` (`items`, `total`, …) | `NotificationOut` |
+| Bagian bersarang | kata benda tanpa akhiran In/Out bila dipakai dua arah | `GeoPoint`, `DayTaskOut` |
+| Pilihan tetap | `Literal[...]` bernama di atas berkas, atau `StrEnum` di `core/enums.py` bila dipakai lintas modul | `PlanCategory = Literal[...]` |
+| Nama field | `snake_case` Inggris singkat, sama dengan kolom DB/OpenAPI; jangan menerjemahkan | `work_date`, `row_version` |
+
+### Isi kelas
+
+```python
+"""Skema rilis aplikasi Android (pembaruan otomatis, docs/32)."""
+from __future__ import annotations
+
+from datetime import datetime
+from typing import Literal
+from uuid import UUID
+
+from pydantic import BaseModel, Field
+
+UpdateStatus = Literal["UP_TO_DATE", "OPTIONAL", "REQUIRED"]
+
+
+class ReleaseFileOut(BaseModel):
+    """Satu berkas APK untuk satu arsitektur."""
+
+    abi: str
+    url: str                                   # jalur relatif ke API — klien tidak menerima host lain
+    sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    size: int = Field(gt=0)                    # bita
+
+
+class AppUpdateOut(BaseModel):
+    """Jawaban pemeriksaan pembaruan untuk satu HP."""
+
+    status: UpdateStatus
+    current_build: int
+    latest_build: int | None = None
+    notes: list[str] = []
+    download: ReleaseFileOut | None = None
+```
+
+- Satu baris docstring Indonesia per kelas (apa artinya bagi pengguna/klien, bukan "Schema for …").
+- Komentar per field **hanya** bila ada yang tidak jelas dari nama/tipe (satuan, rujukan aturan) — bukan
+  mengulang nama field.
+- Tipe tepat: `UUID`, `date`, `datetime` (ber-zona, dari `core/time.py`), `int | None`. Tidak ada `Any`,
+  tidak ada `dict` bebas di respons kecuali `details` galat.
+- Nilai opsional diberi bawaan eksplisit (`= None`, `= []`); field wajib tanpa bawaan.
+- **Batas bentuk di skema** (`Field(min_length, max_length, ge, le, pattern)`), **aturan bisnis di service**
+  dengan `AppError` berpesan Indonesia (urutan & kalimat galat harus sama dengan prototipe). Pesan Pydantic
+  berbahasa Inggris tidak pernah sampai ke pengguna: `validation_error_handler` menggantinya dengan pesan
+  baku + `details.fields`.
+- Teks bebas dari pengguna: batasi `max_length`; pemangkasan spasi dilakukan service (agar terlihat di uji).
+- Respons tulis mengembalikan data **sesudah** disimpan (dibaca ulang), bukan salinan masukan.
+- Tidak ada logika di skema selain `field_validator` untuk normalisasi bentuk (mis. huruf besar kode);
+  validator tidak memanggil DB.
+- Koordinat keluar sebagai `lat`/`lng` angka, tidak pernah geometri mentah (§3).
+- Kolom sensitif (`password_hash`, `embedding`, token) tidak pernah ada di skema keluaran.
+
+### Perubahan skema = perubahan API
+Setiap perubahan skema mengubah OpenAPI: jalankan `UPDATE_OPENAPI_SNAPSHOT=1 pytest tests/test_openapi_snapshot.py`,
+tinjau diff-nya, lalu `npm run gen:api:export && npm run gen:api` di `web/` bila web memakai skema itu.
+
+---
+
+## 11. Templat fitur backend (salin untuk modul baru)
+
+Urutan berkas untuk modul `<modul>` (entitas `<entitas>`):
+
+1. `app/schemas/<entitas>.py` — `<Entitas>In` / `<Entitas>Out` (§10).
+2. `app/crud/crud_<entitas>.py` — `class CRUD<Entitas>(CRUDBase)`, SQL berparameter, kolom disebut satu per satu.
+3. `app/services/<entitas>_service.py` — `class <Entitas>Service`, konstruktor menerima crud, nama metode = transaksi
+   `domain.js`, galat `AppError`.
+4. `app/api/deps.py` — `def get_<entitas>_service(db = Depends(get_db_with_user)) -> <Entitas>Service`.
+5. `app/api/v1/endpoints/<modul>.py` — `router = APIRouter(prefix="/<modul>", tags=["<Modul>"])`, tiap rute memakai
+   `require_permission(...)`, penjaga SK, atau terdaftar di `SELF_SERVICE`/`PUBLIC_ROUTES` beserta alasannya.
+6. `app/api/v1/router.py` — `api_router.include_router(...)` (urutan memengaruhi OpenAPI; tambahkan di akhir).
+7. Uji: `tests/test_<fitur>.py` — jalur berhasil (tulis → baca ulang), jalur ditolak, peran lain; snapshot OpenAPI.
+8. Skema DB berubah → migrasi Alembic baru **dan** `db/*.sql` disamakan di commit yang sama; migrasi yang sudah
+   di produksi tidak pernah diubah.
+
+Contoh lengkap yang kecil dan bersih untuk ditiru: `units` (`endpoints/units.py`, `services/unit_service.py`,
+`crud/crud_unit.py`, `schemas/unit.py`).
+
+---
+
+## 12. Bila ragu: tanyakan, jangan menebak
+
+Aturan untuk developer **dan** agen AI (keputusan pemilik 2026-10-07):
+
+- Spesifikasi ambigu, dua pilihan sama masuk akal, atau keputusan menyangkut keamanan, privasi, data produksi,
+  biaya, lisensi, atau perilaku yang terlihat pengguna → **tanyakan pemilik dulu** dengan pilihan + rekomendasi.
+- Jangan mengisi celah dengan asumsi diam-diam. Jawaban pemilik dicatat di `docs/10-...md` Bagian C.
+- Yang boleh diputuskan sendiri hanya hal teknis kecil yang punya satu jawaban jelas dari kode/standar ini
+  (mis. mengikuti pola berkas tetangga) — sebutkan keputusannya di laporan.

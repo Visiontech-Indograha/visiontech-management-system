@@ -36,7 +36,7 @@ def test_inventory_is_not_empty():
 
 
 def test_public_routes_exist():
-    assert PUBLIC_ROUTES <= set(ROUTES)
+    assert set(ROUTES) >= PUBLIC_ROUTES
 
 
 @requires_db

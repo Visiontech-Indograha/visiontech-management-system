@@ -186,7 +186,7 @@ async def create_employee(
             offboarding_reason=row.offboarding_reason
         )
     except Exception as e:
-        raise HTTPException(status_code=400, detail={"code": "DB_ERROR", "message": str(e)})
+        raise HTTPException(status_code=400, detail={"code": "DB_ERROR", "message": str(e)}) from e
 
 @router.put("/{emp_id}", response_model=EmployeeResponse)
 async def update_employee(

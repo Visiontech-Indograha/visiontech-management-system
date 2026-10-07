@@ -28,6 +28,19 @@ ketua menerima → **Berjalan** → anggota melihat lokasi SK dan absen di titik
 penjelasan ditolak; PM Handoko tidak melihat SK unit Ramadani (404); teknisi tidak bisa membuat SK dan tidak bisa memakai pencarian alamat;
 Finance (izin `manage:sites`) boleh mencari alamat.
 
+## K. Absen di kantor tanpa/terikat SK (2026-10-07, emulator + web lokal, DB salinan prod)
+
+Kode branch `fix/absen-kp-tanpa-sk` (PR #37), API lokal :8000, emulator Pixel (APK debug). Dua kantor: Kantor Visiontech Pekanbaru (r 500 m) dan Kantor Dumai (uji, hanya lokal).
+
+| No | Langkah | Hasil | Status | Bukti |
+|---|---|---|---|---|
+| K1 | Heru (lapangan CCTV_ACS) membuka Absensi | Pilihan: lokasi SK + kedua kantor; pilih kantor → peringatan "bukan lokasi SK", tombol tetap aktif | Lulus | `bukti-e2e/K1-hp-peringatan-bukan-lokasi-sk.jpg` |
+| K1b | Heru absen masuk di kantor (0 m) | Valid otomatis, tanpa tinjauan | Lulus | `bukti-e2e/K1b-hp-heru-absen-kantor-valid.jpg` |
+| K2 | Yulfi absen di kantor 799 m (di luar radius) + penjelasan + swafoto | Perlu review; PM Ramadani melihatnya di web "Absensi anggota" | Lulus | `K2-hp-yulfi-perlu-review.jpg`, `K2-web-pm-tinjau.jpg` |
+| K3 | PM menyetujui di web | Web: Disetujui; HP Yulfi: Disetujui, absen pulang terbuka | Lulus | `K3-web-pm-disetujui.jpg`, `K3-hp-yulfi-disetujui.jpg` |
+| K4 | Heru absen pulang luring (mode pesawat + koneksi diputus) | "Absen pulang tersimpan luring" | Lulus | `K4-hp-luring-tersimpan.jpg` |
+| K5 | Sinyal kembali | Sinkron otomatis (`POST /attendance/offline` 200), DB: pulang 11:49, AUTO_VALID, tanpa ganda | Lulus | `K5-hp-luring-tersinkron.jpg` |
+
 ## Temuan
 | # | Temuan | Status |
 |---|---|---|

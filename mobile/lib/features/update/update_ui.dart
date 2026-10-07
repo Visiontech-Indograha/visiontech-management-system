@@ -112,8 +112,8 @@ class _UpdateRequiredScreenState extends ConsumerState<UpdateRequiredScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Versi aplikasi ini (${state.installed?.versionName ?? '-'}) sudah tidak didukung. '
-              'Perbarui ke versi ${info.latestVersion} untuk melanjutkan.',
+              'Versi aplikasi ini (${state.installed?.label ?? '-'}) sudah tidak didukung. '
+              'Perbarui ke versi ${info.latestLabel} untuk melanjutkan.',
               textAlign: TextAlign.center,
               style: VmsTextStyles.body.copyWith(color: VmsColors.neutral600),
             ),
@@ -177,7 +177,7 @@ class _UpdateDetailsState extends State<UpdateDetails> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Versi ${info.latestVersion} · ${download.sizeLabel}',
+                'Versi ${info.latestLabel} · ${download.sizeLabel}',
                 style: VmsTextStyles.subheading.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
@@ -306,7 +306,7 @@ class UpdateAvailableBanner extends ConsumerWidget {
                 child: Text(
                   downloading
                       ? 'Mengunduh pembaruan… ${(s.progress * 100).round()}%'
-                      : 'Versi baru ${s.info!.latestVersion} tersedia — ketuk untuk memperbarui',
+                      : 'Versi baru ${s.info!.latestLabel} tersedia — ketuk untuk memperbarui',
                   style: VmsTextStyles.bodySm.copyWith(
                     color: VmsColors.brand700,
                     fontWeight: FontWeight.w600,

@@ -256,8 +256,8 @@ async def submit_daily_report(
         res = await db.execute(sub, {"emp": my_emp, "day": day_id})
     except Exception as e:
         if "check" in str(e).lower():
-            raise HTTPException(status_code=400, detail="Laporan terlalu singkat (minimal 10 karakter).")
-        raise HTTPException(status_code=400, detail={"code": "DB_ERROR", "message": str(e)})
+            raise HTTPException(status_code=400, detail="Laporan terlalu singkat (minimal 10 karakter).") from e
+        raise HTTPException(status_code=400, detail={"code": "DB_ERROR", "message": str(e)}) from e
     report = res.fetchone()
     if not report:
         raise AppError("INVALID_STATE", "Laporan sudah diserahkan atau belum dibuat.", status=409)

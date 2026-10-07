@@ -69,7 +69,7 @@ async def create_asset(
         })
         return AssetResponse(**res.one()._mapping)
     except Exception as e:
-        raise HTTPException(status_code=400, detail={"code": "DB_ERROR", "message": str(e)})
+        raise HTTPException(status_code=400, detail={"code": "DB_ERROR", "message": str(e)}) from e
 
 @router.get("", response_model=list[AssetListItem])
 async def get_assets(

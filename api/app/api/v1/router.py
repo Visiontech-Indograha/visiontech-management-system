@@ -14,6 +14,7 @@ from app.api.v1.endpoints.audit import router as audit_router
 from app.api.v1.endpoints.auth import router as auth_router
 from app.api.v1.endpoints.documents import router as documents_router
 from app.api.v1.endpoints.employees import router as employees_router
+from app.api.v1.endpoints.events import router as events_router
 from app.api.v1.endpoints.expiry import router as expiry_router
 from app.api.v1.endpoints.face import router as face_router
 from app.api.v1.endpoints.files import router as files_router
@@ -78,4 +79,5 @@ api_router.include_router(notifications_router)
 api_router.include_router(plan_reports_router)
 api_router.include_router(plan_amendments_router)
 api_router.include_router(plan_revisions_router)
+api_router.include_router(events_router)
 api_router.include_router(app_releases_router)

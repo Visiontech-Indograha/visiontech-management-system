@@ -15,10 +15,12 @@ from sqlalchemy.exc import IntegrityError
 
 from app.core.config import settings
 from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationError, trigger_rule_message
+from app.core.events import queue_event
 from app.crud.crud_attendance_session import CRUDAttendanceSession
 from app.crud.crud_org_clock import CRUDOrgClock
 from app.services.access_service import ensure_same_org
 from app.services.face_service import FaceOutcome, FaceService
+from app.services.notification_service import NotificationService
 
 OPEN_SESSION = "Anda belum absen pulang dari absen masuk sebelumnya."
 VALID_STATUSES = ("AUTO_VALID", "APPROVED")
@@ -93,6 +95,18 @@ class AttendanceSessionService:
         if not await self.faces.face_expected(user_id):
             raise AppError("FACE_NOT_ENROLLED", FACE_NOT_ENROLLED, status=409)
 
+    async def _flag_for_review(self, org_id: str, row: Any, template: str) -> None:
+        """T8: absen yang menjadi Perlu review → beri tahu peninjau berwenang (notifikasi + peristiwa realtime)."""
+        if str(row.status) != "NEEDS_REVIEW":
+            return
+        reviewers = await self.repo.reviewer_employee_ids(org_id, row.employee_id)
+        if not reviewers:
+            return
+        name = await self.repo.employee_name(row.employee_id)
+        await NotificationService(self.repo.db).attendance_flagged(org_id, reviewers, template.format(name=name))
+        users = await self.repo.user_ids_of(reviewers)
+        queue_event(self.repo.db, users, "attendance", {"attendance_id": str(row.id)})
+
     async def check_in(self, org_id: str, user_id: str, *, site_id: UUID, lng: float, lat: float,
                        origin: str, selfie_file_id: UUID | None, accuracy_m: float | None = None,
                        channel: str = "MOBILE", explanation: str | None = None,
@@ -157,8 +171,10 @@ class AttendanceSessionService:
                 face_result=None, face_similarity=None, source=channel, explanation=note,
                 at=at,
             )
-            return await self.apply_face(org_id, user_id, row, "CHECK_IN", face_probe_id, online=online,
-                                         expected_sha256=expected_face_sha256, device=channel)
+            row = await self.apply_face(org_id, user_id, row, "CHECK_IN", face_probe_id, online=online,
+                                        expected_sha256=expected_face_sha256, device=channel)
+            await self._flag_for_review(org_id, row, "Absen masuk {name} perlu diperiksa")
+            return row
         except IntegrityError as exc:
             # Aturan dari trigger (mis. di luar radius tanpa swafoto) → 422 dengan pesannya.
             rule = trigger_rule_message(exc)
@@ -241,6 +257,11 @@ class AttendanceSessionService:
         if org_id is not None:
             row = await self.apply_face(org_id, user_id, row, "CHECK_OUT", face_probe_id, online=online,
                                         expected_sha256=expected_face_sha256, device=channel)
+            if getattr(row, "check_out_outside", False):
+                await self._flag_for_review(
+                    org_id, row, "Absen pulang {name} di luar radius (" + f"{round(row.check_out_distance_m)} m)")
+            else:
+                await self._flag_for_review(org_id, row, "Absen pulang {name} perlu diperiksa")
         return row
 
     async def list_attendance(self, org_id: str, user_id: str, *, view_all: bool, employee_id: UUID | None,
@@ -301,4 +322,8 @@ class AttendanceSessionService:
 
         status = "APPROVED" if approve else "REJECTED"
         await self.repo.set_review(attendance_id, status, reviewer, (note or "").strip())
+        await NotificationService(self.repo.db).attendance_decided(
+            org_id, str(attendance.employee_id), approve, (note or "").strip())
+        queue_event(self.repo.db, await self.repo.user_ids_of([str(attendance.employee_id)]), "attendance",
+                    {"attendance_id": str(attendance_id)})
         return status

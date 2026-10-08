@@ -8,6 +8,7 @@ import '../../core/error_message.dart';
 import '../../core/providers.dart';
 import '../../core/theme/theme.dart';
 import '../../shared/ui/vms_ui.dart';
+import '../plans/revision_history_screen.dart';
 import '../plans/work_plans_screen.dart';
 
 final _time = DateFormat('d MMM yyyy, HH.mm', 'id_ID');
@@ -130,7 +131,12 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     try {
       if (n['read_at'] == null) await api.readNotification(n['id'] as String);
       final planId = n['work_plan_id'] as String?;
-      if (planId != null) {
+      if (planId != null && n['kind'] == 'PLAN_REVISED') {
+        if (!mounted) return;
+        await Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => RevisionHistoryScreen(planId: planId)),
+        );
+      } else if (planId != null) {
         final plan = await api.workPlan(planId);
         if (!mounted) return;
         await Navigator.of(

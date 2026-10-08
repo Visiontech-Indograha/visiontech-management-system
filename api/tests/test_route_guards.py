@@ -38,6 +38,8 @@ SELF_SERVICE = {
     ("POST", "/notifications/read-all"): "menandai notifikasi milik sendiri",
     ("POST", "/notifications/{notification_id}/read"): "hanya notifikasi milik sendiri; milik orang lain tidak berubah",
     ("GET", "/sites"): "daftar lokasi organisasi untuk check-in",
+    ("GET", "/events"): "aliran peristiwa milik sendiri; token JWT divalidasi sekali saat menyambung (T8)",
+    ("GET", "/work-types"): "daftar jenis pekerjaan organisasi sendiri; yang nonaktif hanya untuk pengelola (T9)",
     ("GET", "/units"): "daftar unit organisasi sendiri (pilihan mutasi/promosi, R-19)",
     ("GET", "/assets/{asset_id}/returns"): "riwayat pengembalian aset organisasi sendiri; asing → 404 (diuji)",
     ("GET", "/assets/returns/{return_id}/pdf"): "BAST pengembalian organisasi sendiri; asing → 404 (diuji)",

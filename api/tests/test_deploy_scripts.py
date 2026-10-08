@@ -68,3 +68,29 @@ def test_face_service_image_ships_every_module_it_imports():
     assert "COPY main.py rules.py" in dockerfile      # tanpa rules.py kontainer gagal start
     for lib in ("libxcb1", "libgl1"):
         assert lib in dockerfile                      # pustaka sistem yang dibutuhkan OpenCV (build pernah gagal)
+
+
+RELEASE_INSTALLER = DEPLOY / "pasang-rilis-apk.sh"
+
+
+def test_release_installer_mounts_read_only_without_touching_compose_or_env():
+    text = read(RELEASE_INSTALLER)
+    assert "set -euo pipefail" in text
+    assert "./rilis:/srv/rilis:ro" in text                    # API hanya membaca folder rilis
+    assert "APP_RELEASE_DIR: /srv/rilis" in text
+    for forbidden in ("> compose.yml", ">> api.env", "sed -i"):  # override saja; compose.yml & api.env tidak diubah
+        assert forbidden not in text
+    assert "bukan buatan skrip ini" in text                   # override asing tidak pernah ditimpa
+    assert 'grep -q "read_only: true"' in text                # mount read-only diverifikasi lewat compose config
+
+
+def test_release_script_verifies_signature_and_publishes_atomically():
+    text = read(ROOT / "scripts" / "rilis-apk.sh")
+    assert "set -euo pipefail" in text
+    assert "--print-certs" in text and "android-release-cert.sha256" in text   # hanya kunci rilis Visiontech
+    assert "versionCode='$build'" in text and "name='$PACKAGE'" in text
+    assert text.index('"$out"/*.apk "$SERVER:$REMOTE_DIR/"') < text.index("latest.json.tmp")   # APK dulu
+    assert "mv $REMOTE_DIR/latest.json.tmp $REMOTE_DIR/latest.json" in text    # manifest diganti atomik
+    assert 'sha256sum < "$out/$dest"' in text                 # stdin: tanpa awalan "\" pada jalur Windows
+    cert = read(DEPLOY / "android-release-cert.sha256")
+    assert any(len(line) == 64 for line in cert.splitlines())

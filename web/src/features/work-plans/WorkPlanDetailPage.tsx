@@ -16,6 +16,7 @@ import { FinalReportPanel } from "./FinalReport";
 import { IncidentDialog, IncidentPanel } from "./Incidents";
 import { OvertimeDialog, OvertimePanel } from "./Overtime";
 import { AmendmentPanel } from "./AmendmentPanel";
+import { RevisionHistory } from "./RevisionHistory";
 import { PlanDetailCard } from "./PlanDetailCard";
 import { ReasonDialog } from "./PlanForms";
 import { DailyReports } from "./DailyReports";
@@ -160,6 +161,12 @@ function PlanActions({ plan }: { plan: WorkPlan }) {
           Kembalikan (perlu perbaikan)
         </Button>,
       );
+    if (["PUBLISHED", "APPEALED", "ACCEPTED", "IN_PROGRESS"].includes(s))
+      manager.push(
+        <Button key="revise-plan" asChild>
+          <Link to={`/work-plans/${plan.id}/revise`}>Revisi rencana kerja</Link>
+        </Button>,
+      );
     if (CANCELLABLE.includes(s) || (s === "DRAFT" && plan.revision > 1))
       manager.push(
         <Button key="cancel" variant="destructive" onClick={reason("cancel", "Batalkan pekerjaan", "Alasan pembatalan")}>
@@ -190,6 +197,7 @@ function PlanActions({ plan }: { plan: WorkPlan }) {
         </Button>
       )}
       <AmendmentPanel plan={plan} />
+      <RevisionHistory planId={plan.id} />
       <IncidentPanel plan={plan} />
       <OvertimePanel plan={plan} />
       {manager.length > 0 && (

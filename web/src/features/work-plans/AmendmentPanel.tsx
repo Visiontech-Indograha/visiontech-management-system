@@ -59,10 +59,10 @@ export function AmendmentPanel({ plan }: { plan: WorkPlan }) {
             {c.status === "AWAITING_LEADER_ACCEPTANCE" && (
               <p className="mt-1 text-warning">Rencana Kerja sudah diubah dan ditandatangani PM. Menunggu tanda tangan ketua di HP.</p>
             )}
-            {canManage && c.change_type === "AMENDMENT" && c.status === "PENDING_PM" && plan.status === "IN_PROGRESS" && (
+            {canManage && c.change_type === "AMENDMENT" && c.status === "PENDING_PM" && ["ACCEPTED", "IN_PROGRESS"].includes(plan.status) && (
               <div className="mt-2 flex flex-col gap-2">
                 <Button asChild>
-                  <Link to={`/work-plans/${plan.id}/amend/${c.id}`}>Revisi rencana kerja</Link>
+                  <Link to={`/work-plans/${plan.id}/revise?change=${c.id}`}>Revisi rencana kerja</Link>
                 </Button>
                 <Button variant="outline" onClick={() => (setRejecting(c), setNote(""), setError(null))}>
                   Tolak permintaan

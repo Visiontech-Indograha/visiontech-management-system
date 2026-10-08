@@ -2,7 +2,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Paperclip, Plus, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useFieldArray, useForm, useWatch, type Control, type FieldErrors, type UseFormRegister, type UseFormSetValue } from "react-hook-form";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { z } from "zod";
 import { QueryState } from "@/components/molecules/QueryState";
@@ -13,7 +13,7 @@ import { errorMessage } from "@/lib/errors";
 import { formatDate } from "@/lib/format";
 import {
   useDriverOptions,
-  useApplyAmendment,
+  useRevisePlan,
   usePlanDetail,
   usePlanFormOptions,
   useSavePlanDraft,
@@ -108,23 +108,33 @@ function fromDetail(detail: PlanDetail): { values: Values; site: NewSite | null 
 
 /** Halaman "Buat SK" (/work-plans/new) dan "Ubah isi SK" (/work-plans/:id/edit) — flowchart SK2-A/B. */
 export function PlanEditorPage() {
-  const { id, changeId } = useParams();
+  const params = useParams();
+  const [search] = useSearchParams();
+  const revise = useLocation().pathname.endsWith("/revise") || Boolean(params.changeId);
+  const changeId = params.changeId ?? search.get("change") ?? undefined;
+  const id = params.id;
   const detail = usePlanDetail(id ?? "", Boolean(id));
   if (!id) return <PlanEditor />;
-  const editable = changeId ? detail.data?.plan.status === "IN_PROGRESS" : detail.data?.plan.status === "DRAFT";
+  const status = detail.data?.plan.status;
+  const editable = revise ? ["PUBLISHED", "APPEALED", "ACCEPTED", "IN_PROGRESS"].includes(String(status)) : status === "DRAFT";
   return (
     <>
-      <PageHeader title={changeId ? "Ubah isi rencana kerja — revisi" : "Ubah isi rencana kerja"} />
-      {changeId && (
+      <PageHeader title={revise ? "Revisi rencana kerja" : "Ubah isi rencana kerja"} />
+      {revise && (
         <p className="mb-4 rounded-control bg-warning-bg px-3 py-2 text-sm text-warning">
-          Rencana Kerja sedang berjalan: hari yang laporannya sudah dikirim/disetujui tidak berubah, ketua tim dan tanggal mulai tetap.
-          Setelah disimpan, dokumen revisi terbit dengan tanda tangan Anda dan menunggu tanda tangan ketua.
+          {status === "IN_PROGRESS"
+            ? "Rencana kerja sedang berjalan: hari yang laporannya sudah dikirim/disetujui tidak berubah dan tanggal mulai tetap. "
+            : ""}
+          Setelah disimpan, dokumen versi baru terbit dengan tanda tangan Anda.{" "}
+          {status === "PUBLISHED" || status === "APPEALED"
+            ? "Ketua tim masih perlu menerimanya sekali."
+            : "Versi baru langsung berlaku; ketua dan anggota mendapat pemberitahuan."}
         </p>
       )}
       <QueryState query={detail} errorText="Rencana Kerja tidak ditemukan atau Anda tidak berwenang mengubahnya.">
         {detail.data &&
           (editable ? (
-            <PlanEditor planId={id} detail={detail.data} changeId={changeId} />
+            <PlanEditor planId={id} detail={detail.data} revise={revise} changeId={changeId} />
           ) : (
             <p className="text-sm text-mist">Isi rencana kerja tidak dapat diubah pada tahap ini.</p>
           ))}
@@ -133,12 +143,13 @@ export function PlanEditorPage() {
   );
 }
 
-function PlanEditor({ planId, detail, changeId }: { planId?: string; detail?: PlanDetail; changeId?: string }) {
+function PlanEditor({ planId, detail, revise = false, changeId }: { planId?: string; detail?: PlanDetail; revise?: boolean; changeId?: string }) {
   const navigate = useNavigate();
   const options = usePlanFormOptions(planId);
   const draftSave = useSavePlanDraft(planId);
-  const amend = useApplyAmendment(planId ?? "", changeId ?? "");
-  const save = changeId ? amend : draftSave;
+  const revisePlan = useRevisePlan(planId ?? "");
+  const [reviseReason, setReviseReason] = useState("");
+  const save = revise ? { mutateAsync: (body: PlanDraftRequest) => revisePlan.mutateAsync({ ...body, reason: reviseReason.trim(), change_id: changeId ?? null }), isPending: revisePlan.isPending } : draftSave;
   const initial = useMemo(() => (detail ? fromDetail(detail) : null), [detail]);
   const [newSite, setNewSite] = useState<NewSite | null>(initial?.site ?? null);
   const [siteDialog, setSiteDialog] = useState(false);
@@ -205,6 +216,7 @@ function PlanEditor({ planId, detail, changeId }: { planId?: string; detail?: Pl
   const onSubmit = handleSubmit(async (v) => {
     setFormError(null);
     if (!v.site_id && !newSite) return setFormError("Pilih lokasi kerja atau tambahkan lokasi baru.");
+    if (revise && !reviseReason.trim()) return setFormError("Alasan revisi wajib diisi.");
     const body: PlanDraftRequest = {
       title: v.title,
       description: v.description,
@@ -227,7 +239,7 @@ function PlanEditor({ planId, detail, changeId }: { planId?: string; detail?: Pl
     };
     try {
       const saved = await save.mutateAsync(body);
-      toast.success(changeId ? "Revisi terbit dan ditandatangani. Menunggu tanda tangan ketua." : planId ? "Isi rencana kerja disimpan." : "Rencana Kerja tersimpan sebagai Draf.");
+      toast.success(revise ? "Revisi disimpan dan ditandatangani." : planId ? "Isi rencana kerja disimpan." : "Rencana Kerja tersimpan sebagai Draf.");
       navigate(`/work-plans/${String(saved.plan.id)}`);
     } catch (err) {
       setFormError(errorMessage(err));
@@ -246,6 +258,11 @@ function PlanEditor({ planId, detail, changeId }: { planId?: string; detail?: Pl
               <p role="alert" className="rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
                 {formError}
               </p>
+            )}
+            {revise && (
+              <Section title="Alasan revisi">
+                <TextAreaField label="Alasan revisi (wajib)" value={reviseReason} onChange={(e) => setReviseReason(e.target.value)} />
+              </Section>
             )}
             <Section title="Data pekerjaan">
               <TextField label="Judul pekerjaan" error={errors.title?.message} {...register("title")} />
@@ -296,7 +313,7 @@ function PlanEditor({ planId, detail, changeId }: { planId?: string; detail?: Pl
 
             <Section title="Detail pekerjaan per hari">
               <div className="grid gap-x-3 md:grid-cols-2">
-                <TextField label="Tanggal mulai" type="date" readOnly={!!changeId} error={errors.period_start?.message} {...register("period_start")} />
+                <TextField label="Tanggal mulai" type="date" readOnly={revise && detail?.plan.status === "IN_PROGRESS"} error={errors.period_start?.message} {...register("period_start")} />
                 {!oneDay && <TextField label="Tanggal selesai" type="date" error={errors.period_end?.message} {...register("period_end")} />}
               </div>
               <label className="mb-2 flex min-h-11 items-center gap-2 text-sm">
@@ -357,7 +374,6 @@ function PlanEditor({ planId, detail, changeId }: { planId?: string; detail?: Pl
             <Section title="Tim">
               <SelectField
                 label="Ketua tim"
-                disabled={!!changeId}
                 error={errors.leader_employee_id?.message}
                 hint="Bukan akun kantor dan tidak terikat work plan yang berjalan atau terjadwal."
                 {...register("leader_employee_id")}

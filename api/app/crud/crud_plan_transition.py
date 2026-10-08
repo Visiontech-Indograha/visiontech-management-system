@@ -331,7 +331,7 @@ class CRUDPlanTransition(CRUDBase):
                   WHERE wp.id = :plan) p),
               'team', COALESCE((SELECT jsonb_agg(jsonb_build_object('employee_id', m.employee_id,
                                         'full_name', e.full_name, 'position', e.position,
-                                        'role_in_plan', m.role_in_plan)
+                                        'role_in_plan', m.role_in_plan, 'since', lower(m.valid_period))
                                         ORDER BY m.role_in_plan, e.full_name)
                                 FROM vms.work_plan_member m JOIN vms.employee e ON e.id = m.employee_id
                                 WHERE m.work_plan_id = :plan AND upper_inf(m.valid_period)), '[]'),

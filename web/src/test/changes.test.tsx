@@ -26,9 +26,9 @@ describe("Revisi saat rencana kerja Berjalan", () => {
   it("PM melihat usulan ketua dan dapat menerimanya dengan mengubah isi rencana kerja", async () => {
     setup("PENDING_PM");
     renderRoute("/work-plans/p1", { role: "PM" });
-    const panel = await screen.findByRole("region", { name: "Permintaan revisi" });
+    const panel = await screen.findByRole("region", { name: "Permintaan revisi menunggu keputusan" });
     expect(within(panel).getByText("Tambah 1 hari kerja")).toBeInTheDocument();
-    expect(within(panel).getByRole("link", { name: "Revisi rencana kerja" })).toHaveAttribute("href", "/work-plans/p1/revise?change=c1");
+    expect(within(panel).getByRole("link", { name: /Revisi rencana kerja/ })).toHaveAttribute("href", "/work-plans/p1/revise?change=c1");
   });
 
   it("PM menolak revisi dengan catatan", async () => {

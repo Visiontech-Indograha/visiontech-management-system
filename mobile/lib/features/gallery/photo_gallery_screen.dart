@@ -3,7 +3,9 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/gallery_save.dart';
 import '../../core/local_storage.dart';
+import '../../core/photo_capture.dart';
 import '../../shared/ui/vms_ui.dart';
 
 final _stamp = DateFormat('d MMM yyyy, HH.mm', 'id_ID');
@@ -12,8 +14,11 @@ final _stamp = DateFormat('d MMM yyyy, HH.mm', 'id_ID');
 /// Ketuk = pratinjau. Dalam mode pilih ([selectMode]) ketukan mengembalikan jalur berkas untuk dilampirkan.
 /// Swafoto absen tidak pernah tampil di sini (folder terpisah dan privat).
 class PhotoGalleryScreen extends StatefulWidget {
-  const PhotoGalleryScreen({super.key, this.selectMode = false});
+  const PhotoGalleryScreen({super.key, this.selectMode = false, this.asTab = false});
   final bool selectMode;
+
+  /// Tab di navbar: tanpa tombol kembali.
+  final bool asTab;
 
   @override
   State<PhotoGalleryScreen> createState() => _PhotoGalleryScreenState();
@@ -51,6 +56,52 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
     }
   }
 
+  /// Ambil foto baru lewat kamera aplikasi (bertanda air); tersimpan di galeri ini dan album "Visiontech".
+  Future<void> _capture() async {
+    final (file, err) = await captureWatermarkedPhoto(
+      context: context,
+      label: 'Foto baru',
+      kind: LocalFileKind.dailyReport,
+      hint: 'Foto hasil pekerjaan',
+    );
+    if (file == null) {
+      if (err != null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
+      }
+      return;
+    }
+    await saveToPhoneGallery(file.path);
+    await _load();
+  }
+
+  Future<void> _delete(File file) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Hapus foto ini?'),
+        content: const Text('Foto dihapus dari galeri aplikasi dan album Visiontech di HP. Foto yang sudah diunggah ke laporan tidak terpengaruh.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+          TextButton(
+            key: const Key('gallery-delete-confirm'),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await deleteFromPhoneGallery(file.path);
+      await file.delete();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Foto tidak dapat dihapus: $e')));
+      }
+    }
+    await _load();
+  }
+
   Future<void> _open(File file) async {
     if (widget.selectMode) {
       Navigator.of(context).pop(file.path);
@@ -67,7 +118,21 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
               padding: const EdgeInsets.all(8),
               child: Text(_stamp.format(file.lastModifiedSync())),
             ),
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Tutup')),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Tutup')),
+                TextButton.icon(
+                  key: const Key('gallery-delete'),
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    _delete(file);
+                  },
+                  icon: const Icon(Icons.delete_outline_rounded),
+                  label: const Text('Hapus'),
+                ),
+              ],
+            ),
           ],
         ),
       ),
@@ -76,8 +141,16 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
+    floatingActionButton: widget.selectMode
+        ? null
+        : FloatingActionButton.extended(
+            key: const Key('gallery-capture'),
+            onPressed: _capture,
+            icon: const Icon(Icons.add_a_photo_rounded),
+            label: const Text('Ambil foto'),
+          ),
     appBar: VmsTopBar(
-      onBack: () => Navigator.of(context).maybePop(),
+      onBack: widget.asTab ? null : () => Navigator.of(context).maybePop(),
       trailing: HeaderAction(icon: Icons.refresh_rounded, tooltip: 'Muat ulang', onTap: _load),
     ),
     body: _loading
@@ -88,10 +161,10 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
         ? const EmptyState(
             icon: Icons.photo_library_outlined,
             title: 'Belum ada foto laporan',
-            message: 'Foto laporan yang diambil lewat kamera aplikasi tersimpan di sini.',
+            message: 'Ketuk "Ambil foto" atau foto lewat kamera aplikasi; hasilnya tersimpan di sini.',
           )
         : GridView.builder(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 88),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 3,
               mainAxisSpacing: 8,

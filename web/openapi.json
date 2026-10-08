@@ -16042,6 +16042,18 @@
       "type": "boolean",
       "title": "Required",
       "default": false
+     },
+     "example_file_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Example File Id"
      }
     },
     "type": "object",
@@ -16081,6 +16093,18 @@
       "type": "boolean",
       "title": "Required",
       "default": false
+     },
+     "example_file_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Example File Id"
      }
     },
     "type": "object",

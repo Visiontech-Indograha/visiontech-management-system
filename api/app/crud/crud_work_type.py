@@ -12,7 +12,8 @@ from .base import CRUDBase
 _SELECT = """
     SELECT wt.id, wt.name, wt.is_active,
            COALESCE((SELECT jsonb_agg(jsonb_build_object('id', p.id, 'sort_order', p.sort_order, 'label', p.label,
-                                                         'hint', p.hint, 'required', p.required)
+                                                         'hint', p.hint, 'required', p.required,
+                                                         'example_file_id', p.example_file_id)
                                       ORDER BY p.sort_order)
                      FROM vms.work_type_photo p WHERE p.work_type_id = wt.id), '[]'::jsonb) AS photos
     FROM vms.work_type wt
@@ -59,10 +60,12 @@ class CRUDWorkType(CRUDBase):
                            {"id": str(type_id)})
         for order, photo in enumerate(photos):
             await self.execute(
-                "INSERT INTO vms.work_type_photo (organization_id, work_type_id, sort_order, label, hint, required) "
-                "VALUES (CAST(:org AS uuid), CAST(:id AS uuid), :ord, :label, :hint, :req)",
+                "INSERT INTO vms.work_type_photo (organization_id, work_type_id, sort_order, label, hint, required, "
+                "example_file_id) "
+                "VALUES (CAST(:org AS uuid), CAST(:id AS uuid), :ord, :label, :hint, :req, CAST(:ex AS uuid))",
                 {"org": str(org_id), "id": str(type_id), "ord": order, "label": photo["label"],
-                 "hint": photo.get("hint"), "req": bool(photo.get("required"))})
+                 "hint": photo.get("hint"), "req": bool(photo.get("required")),
+                 "ex": str(photo["example_file_id"]) if photo.get("example_file_id") else None})
 
     async def type_is_usable(self, org_id: UUID | str, type_id: UUID | str) -> bool:
         """Jenis ada di organisasi ini dan aktif?"""
@@ -79,7 +82,8 @@ class CRUDWorkType(CRUDBase):
     async def template_of_plan(self, plan_id: UUID | str) -> list[Any]:
         """Slot template rencana kerja (kosong bila tanpa jenis)."""
         return list(await self.fetchall(
-            "SELECT p.id, p.sort_order, p.label, p.hint, p.required FROM vms.work_plan wp "
+            "SELECT p.id, p.sort_order, p.label, p.hint, p.required, p.example_file_id "
+            "FROM vms.work_plan wp "
             "JOIN vms.work_type_photo p ON p.work_type_id = wp.work_type_id "
             "WHERE wp.id = CAST(:plan AS uuid) ORDER BY p.sort_order", {"plan": str(plan_id)}))
 

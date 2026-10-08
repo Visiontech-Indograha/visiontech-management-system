@@ -124,6 +124,11 @@ class CRUDHse(CRUDBase):
             """,
             {"status": status, "note": note, "uid": user_id, "day": day_id})
 
+    async def daily_report_body(self, day_id: UUID | str) -> str | None:
+        """Isi uraian laporan harian hari itu (None bila belum ada laporan)."""
+        value = await self.scalar("SELECT body FROM vms.daily_report WHERE work_plan_day_id = :day", {"day": day_id})
+        return None if value is None else str(value)
+
     async def daily_report_status(self, day_id: UUID | str) -> Any:
         """Status laporan harian hari itu, atau None bila belum ada."""
         row = await self.fetchone("SELECT status FROM vms.daily_report WHERE work_plan_day_id = :day",

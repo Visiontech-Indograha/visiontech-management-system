@@ -47,6 +47,6 @@ class PlanAttachmentService:
         """
         require_plan_status(access, PlanStatus.DRAFT)
         if len(set(file_ids)) != len(file_ids):
-            raise ValidationError("Lampiran tidak valid.")
+            raise ValidationError("Ada lampiran yang dipilih lebih dari sekali.")
         await self.repo.replace(access.plan.id, file_ids)
         return await self.repo.list_for_plan(access.plan.id)

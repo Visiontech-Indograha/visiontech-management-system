@@ -22,7 +22,7 @@ def test_employee_on_a_running_plan_cannot_be_offboarded(client, world: World):
     blocked = _offboard(client, world, world.employees["member"])
 
     assert blocked.status_code == 409, blocked.text
-    assert blocked.json()["error"]["message"] == "Selesaikan atau serahterimakan penugasan aktif sebelum offboarding."
+    assert blocked.json()["error"]["message"] == "Selesaikan atau serahterimakan penugasan aktif sebelum mengakhiri masa kerja."
     assert sync_query("SELECT is_active FROM vms.employee WHERE id = %s", (world.employees["member"],)) == [(True,)]
 
 

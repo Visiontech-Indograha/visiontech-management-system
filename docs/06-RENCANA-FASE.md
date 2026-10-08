@@ -264,6 +264,17 @@ baris di matriks RBAC; tidak ada teks Inggris mentah di layar pengguna.
 >   di server yang sama — rusak disk = data & cadangan hilang bersamaan. Keduanya butuh keputusan pemilik (lokasi
 >   salinan di luar server, biaya).
 
+> - **P9-4 (2026-10-08):** 309 pesan galat API ditinjau; 32 diperbaiki agar dipahami orang lapangan — istilah
+>   Inggris/teknis diganti ("work plan" → "SK", "draft" → "draf", "direview" → "diperiksa", "offboarding" →
+>   "pengakhiran masa kerja", "Token tidak valid"/"EC P-256 dari Android Keystore" → petunjuk langkah), dan galat
+>   umum kini menyebut langkah berikutnya ("Terjadi gangguan pada sistem. Coba lagi …; bila berulang, hubungi admin").
+>   Uji pagar `test_error_messages_avoid_technical_jargon` menjaga agar istilah itu tidak kembali.
+>
+> **Hutang teknis (dicatat, belum dikerjakan):**
+> - Pesan trigger DB `Embedding wajah tidak dapat diubah. Nonaktifkan lalu daftarkan ulang.` (db/05,
+>   `tg_face_enrollment_immutable`) masih memakai istilah teknis. Jalur ini hampir tidak pernah tersentuh pengguna
+>   (hanya bila kode mencoba mengubah data wajah); memperbaikinya butuh migrasi. Kerjakan bersama migrasi wajah berikutnya.
+
 ---
 
 ## Fase 10 — UAT dan rilis *(minggu 22–24)*

@@ -9,6 +9,8 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased] — `development`
 
+- **P9-4 · Pesan galat untuk orang lapangan (2026-10-08):** 309 pesan ditinjau, 32 diperbaiki (tanpa "work plan", "draft", "review", "offboarding", "token", "server", "EC P-256"; galat umum menyebut langkah berikutnya). Web ikut (pesan PDF, validasi pengakhiran masa kerja). Uji pagar baru `test_error_messages_avoid_technical_jargon`. Hutang: pesan trigger `Embedding wajah …` (butuh migrasi) dicatat di docs/06.
+
 - **P9-5 lulus di prod (2026-10-08):** `uji-pulih-cadangan.sh` — salinan MinIO (SHA-256 cocok) pulih ke Postgres kosong dalam 1 detik tanpa galat; 48 tabel / 28.114 baris, alembic 0025, RLS, fungsi, dan partisi sama dengan prod. Perbaikan skrip: menunggu Postgres sementara benar-benar siap (sebelumnya gagal di langkah 3).
 
 - **Pratinjau "Berkas saya" lewat domain publik (2026-10-08, temuan pemilik):** berkas terverifikasi tidak tampil di luar Tailscale — URL presigned memakai host `MINIO_PUBLIC_URL` dari api.env (jalur Caddy `/vms-files/*` di portal terbukti berfungsi: tanpa tanda tangan 403). `deploy/setel-url-verifikasi.sh` kini menyetel `MINIO_PUBLIC_URL=https://portal.visiontechindo.com` sekaligus `PUBLIC_VERIFY_URL`. Alur unggah → verifikasi admin → daftar & URL berkas pemilik diuji ulang sebagai `vms_api`: berjalan (bukan regresi RLS).

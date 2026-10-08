@@ -100,7 +100,7 @@ def test_report_hours_validation(client, world: World):
     for bad_hours in (0, -1, 12.1, 13, 100):
         resp = _report(client, world, plan_id, "leader", hours=bad_hours)
         assert resp.status_code == 422, f"Diharapkan 422 untuk jam={bad_hours}"
-        assert resp.json()["error"]["message"] == "Jam lembur tidak valid."
+        assert resp.json()["error"]["message"] == "Jam lembur harus lebih dari 0 dan paling banyak 12 jam."
 
     # Batas tepat: 12.0 harus diterima
     resp = _report(client, world, plan_id, "member", hours=12.0)
@@ -208,7 +208,7 @@ def test_review_only_pending_pm(client, world: World):
     # Coba review lagi
     resp = _review(client, world, ot_id, "pm", decision="REJECTED")
     assert resp.status_code == 409
-    assert resp.json()["error"]["message"] == "Lembur tidak tersedia untuk direview."
+    assert resp.json()["error"]["message"] == "Pengajuan lembur ini sudah diperiksa atau tidak dapat diperiksa lagi."
 
 
 def test_review_invalid_decision(client, world: World):

@@ -82,11 +82,11 @@ describe("Laporan harian", () => {
 
   it("toggle ditolak API → pesan galat tampil", async () => {
     setup([day()], (url) =>
-      url.endsWith("/toggle") ? apiError(409, "INVALID_STATE", "Checklist tidak dapat diubah setelah laporan diserahkan.") : undefined,
+      url.endsWith("/toggle") ? apiError(409, "INVALID_STATE", "Daftar tugas tidak dapat diubah setelah laporan diserahkan.") : undefined,
     );
     renderRoute("/work-plans/p1", { role: "field" });
     fireEvent.click(within(await panel()).getAllByRole("checkbox")[0]);
-    expect(await screen.findByText("Checklist tidak dapat diubah setelah laporan diserahkan.")).toBeInTheDocument();
+    expect(await screen.findByText("Daftar tugas tidak dapat diubah setelah laporan diserahkan.")).toBeInTheDocument();
   });
 
   it("ketua menyimpan lalu mengirim (PUT lalu POST submit)", async () => {

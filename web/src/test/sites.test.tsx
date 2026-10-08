@@ -73,7 +73,7 @@ describe("Lokasi kerja (/sites)", () => {
   });
 
   it("galat memuat menampilkan Coba lagi", async () => {
-    mockApi(() => apiError(500, "INTERNAL_ERROR", "Terjadi kesalahan internal pada server."));
+    mockApi(() => apiError(500, "INTERNAL_ERROR", "Terjadi gangguan pada sistem. Coba lagi beberapa saat; bila berulang, hubungi admin."));
     renderRoute("/sites", { role: "PM" });
     expect(await screen.findByRole("button", { name: "Coba lagi" })).toBeInTheDocument();
   });

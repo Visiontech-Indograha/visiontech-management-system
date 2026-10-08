@@ -51,6 +51,8 @@ class WorkPlanResponse(WorkPlanBase):
     is_out_of_town: bool = False  # Rencana kerja luar kota
     work_type_id: UUID | None = None  # Jenis pekerjaan (T9)
     pending_request: bool = False  # T2: ada permintaan revisi dari ketua yang menunggu PM
+    today_site_id: UUID | None = None  # Lokasi kerja hari ini; None = tidak ada hari kerja hari ini
+    today_included: bool | None = None  # Pengguna bertugas hari ini? None = tidak ada hari kerja hari ini
 
 
 class AssignmentEmployeeOption(BaseModel):

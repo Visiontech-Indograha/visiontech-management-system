@@ -96,10 +96,10 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
         _faceEnrolled = false;
       }
       // Titik lokasi SK yang sedang berjalan (ditetapkan PM) didahulukan sebagai lokasi absen.
+      // Lokasi absen hari ini mengikuti hari kerja rencana (lokasi khusus hari itu atau lokasi rencana).
       final runningSites = [
         for (final p in plans.items)
-          if (p['status'] == 'IN_PROGRESS' && p['site_id'] != null)
-            p['site_id'] as String,
+          if (todaySiteOf(p) != null) todaySiteOf(p)!,
       ];
       if (!mounted) return;
       setState(() {
@@ -905,4 +905,14 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       ),
     );
   }
+}
+
+/// Lokasi kerja hari ini sebuah rencana yang berjalan: lokasi khusus hari itu atau lokasi rencana. Null bila bukan
+/// rencana berjalan, tidak ada hari kerja hari ini (libur), atau pengguna tidak bertugas hari ini. Data tersimpan
+/// lama (tanpa kolom hari ini) memakai lokasi rencana.
+String? todaySiteOf(Map<String, dynamic> plan) {
+  if (plan['status'] != 'IN_PROGRESS') return null;
+  if (!plan.containsKey('today_site_id')) return plan['site_id'] as String?;
+  if (plan['today_included'] == false) return null;
+  return plan['today_site_id'] as String?;
 }

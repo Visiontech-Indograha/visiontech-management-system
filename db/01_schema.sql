@@ -247,6 +247,7 @@ CREATE TABLE work_plan_day (
   work_date     date NOT NULL,
   title         text NOT NULL,
   sort_order    integer NOT NULL DEFAULT 0,
+  site_id       uuid,                        -- lokasi khusus hari itu; NULL = ikut rencana (Alembic 0031; FK di akhir berkas)
   UNIQUE (work_plan_id, work_date)
 );
 
@@ -814,4 +815,16 @@ CREATE TABLE IF NOT EXISTS work_type_photo (
 CREATE INDEX IF NOT EXISTS ix_work_type_photo_work_type_id ON work_type_photo (work_type_id);
 CREATE INDEX IF NOT EXISTS ix_work_type_photo_organization_id ON work_type_photo (organization_id);
 ALTER TABLE work_plan ADD CONSTRAINT work_plan_work_type_fk FOREIGN KEY (work_type_id) REFERENCES work_type(id);
+-- Lokasi & anggota per hari kerja (Alembic 0031_plan_day_site_members); RLS & hak di 05_face.sql.
+ALTER TABLE work_plan_day ADD CONSTRAINT work_plan_day_site_fk FOREIGN KEY (site_id) REFERENCES site(id);
+CREATE INDEX IF NOT EXISTS ix_work_plan_day_site_id ON work_plan_day (site_id);
+CREATE TABLE IF NOT EXISTS work_plan_day_member (
+  id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id  uuid NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
+  work_plan_day_id uuid NOT NULL REFERENCES work_plan_day(id) ON DELETE CASCADE,
+  employee_id      uuid NOT NULL REFERENCES employee(id),
+  UNIQUE (work_plan_day_id, employee_id)
+);
+CREATE INDEX IF NOT EXISTS ix_work_plan_day_member_employee_id ON work_plan_day_member (employee_id);
+CREATE INDEX IF NOT EXISTS ix_work_plan_day_member_organization_id ON work_plan_day_member (organization_id);
 CREATE INDEX IF NOT EXISTS ix_work_plan_work_type_id ON work_plan (work_type_id);

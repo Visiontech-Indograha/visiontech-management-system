@@ -32,6 +32,15 @@ class CRUDMemberReport(CRUDBase):
         value = await self.scalar("SELECT CAST(employee_id AS text) FROM vms.app_user WHERE id = :uid", {"uid": user_id})
         return str(value) if value else None
 
+    async def on_duty(self, day_id: UUID | str, employee_id: UUID | str) -> bool:
+        """Karyawan bertugas pada hari itu? Tanpa daftar anggota khusus hari itu = seluruh tim bertugas."""
+        return bool(await self.scalar(
+            """
+            SELECT NOT EXISTS (SELECT 1 FROM vms.work_plan_day_member WHERE work_plan_day_id = CAST(:day AS uuid))
+                OR EXISTS (SELECT 1 FROM vms.work_plan_day_member
+                           WHERE work_plan_day_id = CAST(:day AS uuid) AND employee_id = CAST(:emp AS uuid))
+            """, {"day": str(day_id), "emp": str(employee_id)}))
+
     async def list_for_day(self, day_id: UUID | str) -> list[Any]:
         """
         Mengambil semua laporan harian dari anggota-anggota pada hari kerja (SK) tertentu,

@@ -26,6 +26,7 @@ from app.core.security import CurrentUser
 from app.crud.crud_asset_reservation import CRUDAssetReservation
 from app.crud.crud_plan_draft import CRUDPlanDraft
 from app.schemas.plan_draft import PlanDraftRequest
+from app.services.work_type_service import WorkTypeService
 
 CATEGORIES = {"INSTALASI": "Instalasi", "PEMELIHARAAN": "Pemeliharaan", "PERBAIKAN": "Perbaikan",
               "SURVEI": "Survei", "LAINNYA": "Lainnya"}
@@ -155,6 +156,7 @@ class PlanDraftService:
             raise _invalid("Tanggal selesai tidak boleh sebelum tanggal mulai.")
         if data.site_id is None and data.new_site is None:
             raise _invalid("Pilih lokasi kerja atau tambahkan lokasi baru.")
+        await WorkTypeService(self.db).ensure_plan_type(user.organization_id, plan_id, data.work_type_id)
         if data.new_site is not None and not data.new_site.name.strip():
             raise _invalid("Nama lokasi wajib diisi.")
 
@@ -286,7 +288,7 @@ class PlanDraftService:
             description=data.description.strip(), category=data.category, site_id=site_id,
             location_text=site_name, period_start=data.period_start, period_end=data.period_end,
             pm_employee_id=creator.employee_id, leader_employee_id=data.leader_employee_id,
-            is_out_of_town=data.is_out_of_town)
+            is_out_of_town=data.is_out_of_town, work_type_id=data.work_type_id)
         # Menyisipkan relasi (tugas harian, tim, reservasi aset)
         await self._fill(user, str(row.id), data)
         return await self.detail(row.id)
@@ -321,7 +323,8 @@ class PlanDraftService:
         await self.repo.update_plan(
             plan_id, title=data.title.strip(), description=data.description.strip(), category=data.category,
             site_id=site_id, location_text=site_name, period_start=data.period_start, period_end=data.period_end,
-            leader_employee_id=data.leader_employee_id, is_out_of_town=data.is_out_of_town)
+            leader_employee_id=data.leader_employee_id, is_out_of_town=data.is_out_of_town,
+            work_type_id=data.work_type_id)
         # Memasukkan kembali relasi (tugas harian, tim, reservasi aset) dengan data baru
         await self._fill(user, str(plan_id), data)
         return await self.detail(plan_id)

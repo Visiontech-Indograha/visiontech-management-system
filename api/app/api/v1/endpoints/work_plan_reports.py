@@ -74,7 +74,8 @@ async def save_member_report(day_id: UUID, data: MemberReportIn, access: PlanAcc
     """
     # Memastikan hak akses anggota (_DAY_MEMBER) via Dependency Injection
     # Mengirim data laporan ke Service layer
-    row = await member_report_service.save(access, day_id, data.body, data.obstacle, data.evidence_file_ids)
+    row = await member_report_service.save(access, day_id, data.body, data.obstacle, data.evidence_file_ids,
+                                                data.evidence)
     return MemberReportOut(**row._mapping)
 
 

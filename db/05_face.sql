@@ -505,3 +505,10 @@ CREATE POLICY signature_serial_counter_isolation ON vms.signature_serial_counter
 REVOKE UPDATE ON vms.plan_revision FROM vms_api;
 ALTER TABLE vms.plan_revision ENABLE ROW LEVEL SECURITY;
 CREATE POLICY plan_revision_isolation ON vms.plan_revision USING (organization_id = vms.current_org_id());
+
+-- Jenis pekerjaan + template foto (Alembic 0029_work_type_photo): hak penuh + RLS tenant.
+GRANT DELETE ON vms.work_type, vms.work_type_photo TO vms_api;
+ALTER TABLE vms.work_type ENABLE ROW LEVEL SECURITY;
+CREATE POLICY work_type_isolation ON vms.work_type USING (organization_id = vms.current_org_id());
+ALTER TABLE vms.work_type_photo ENABLE ROW LEVEL SECURITY;
+CREATE POLICY work_type_photo_isolation ON vms.work_type_photo USING (organization_id = vms.current_org_id());

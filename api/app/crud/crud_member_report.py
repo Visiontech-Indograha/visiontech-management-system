@@ -5,7 +5,6 @@ laporan harian/mingguan yang sudah disetujui PM.
 """
 from __future__ import annotations
 
-from collections.abc import Iterable
 from typing import Any
 from uuid import UUID
 
@@ -51,7 +50,11 @@ class CRUDMemberReport(CRUDBase):
             SELECT r.id, CAST(r.employee_id AS text) AS employee_id, e.full_name, e.position, r.status, r.body,
                    r.obstacle, r.sent_at,
                    COALESCE(ARRAY(SELECT CAST(ev.file_id AS text) FROM vms.member_report_evidence ev
-                                  WHERE ev.member_report_id = r.id ORDER BY ev.file_id), '{}') AS evidence_file_ids
+                                  WHERE ev.member_report_id = r.id ORDER BY ev.file_id), '{}') AS evidence_file_ids,
+                   COALESCE((SELECT jsonb_agg(jsonb_build_object('file_id', ev.file_id, 'slot_label', ev.slot_label,
+                                                                 'source', ev.source) ORDER BY ev.file_id)
+                             FROM vms.member_report_evidence ev WHERE ev.member_report_id = r.id),
+                            '[]'::jsonb) AS evidence
             FROM vms.member_daily_report r JOIN vms.employee e ON e.id = r.employee_id
             WHERE r.work_plan_day_id = :day
             ORDER BY r.sent_at NULLS LAST, e.full_name
@@ -76,7 +79,11 @@ class CRUDMemberReport(CRUDBase):
             SELECT r.id, CAST(r.employee_id AS text) AS employee_id, e.full_name, e.position, r.status, r.body,
                    r.obstacle, r.sent_at,
                    COALESCE(ARRAY(SELECT CAST(ev.file_id AS text) FROM vms.member_report_evidence ev
-                                  WHERE ev.member_report_id = r.id ORDER BY ev.file_id), '{}') AS evidence_file_ids
+                                  WHERE ev.member_report_id = r.id ORDER BY ev.file_id), '{}') AS evidence_file_ids,
+                   COALESCE((SELECT jsonb_agg(jsonb_build_object('file_id', ev.file_id, 'slot_label', ev.slot_label,
+                                                                 'source', ev.source) ORDER BY ev.file_id)
+                             FROM vms.member_report_evidence ev WHERE ev.member_report_id = r.id),
+                            '[]'::jsonb) AS evidence
             FROM vms.member_daily_report r JOIN vms.employee e ON e.id = r.employee_id
             WHERE r.work_plan_day_id = :day AND r.employee_id = CAST(:emp AS uuid)
             """,
@@ -112,7 +119,7 @@ class CRUDMemberReport(CRUDBase):
             {"day": day_id, "emp": employee_id, "body": body, "obstacle": obstacle},
         )
 
-    async def replace_evidence(self, report_id: UUID | str, file_ids: Iterable[UUID]) -> None:
+    async def replace_evidence(self, report_id: UUID | str, items: list[tuple[str, str | None, str]]) -> None:
         """
         Mengganti seluruh lampiran bukti laporan anggota dengan daftar ID file yang baru.
 
@@ -122,15 +129,16 @@ class CRUDMemberReport(CRUDBase):
         """
         # Menghapus relasi lampiran bukti (evidence) lama untuk laporan ini
         await self.execute("DELETE FROM vms.member_report_evidence WHERE member_report_id = :rid", {"rid": report_id})
-        unique_fids = list(dict.fromkeys(file_ids))
-        if unique_fids:
-            # Menyisipkan (bulk insert) ID file yang baru menggunakan fungsi unnest()
+        if items:
+            # Menyisipkan (bulk insert) berkas bukti beserta slot template dan sumbernya (unnest paralel)
             await self.execute(
                 """
-                INSERT INTO vms.member_report_evidence (member_report_id, file_id)
-                SELECT :rid, unnest(CAST(:fids AS uuid[]))
+                INSERT INTO vms.member_report_evidence (member_report_id, file_id, slot_label, source)
+                SELECT :rid, CAST(f AS uuid), NULLIF(s, ''), src
+                FROM unnest(CAST(:fids AS text[]), CAST(:slots AS text[]), CAST(:srcs AS text[])) AS t(f, s, src)
                 """,
-                {"rid": report_id, "fids": [str(f) for f in unique_fids]}
+                {"rid": report_id, "fids": [i[0] for i in items], "slots": [i[1] or "" for i in items],
+                 "srcs": [i[2] for i in items]},
             )
 
     async def send(self, day_id: UUID | str, employee_id: str) -> Any:

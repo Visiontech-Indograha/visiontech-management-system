@@ -41,6 +41,7 @@ from app.api.v1.endpoints.work_plan_reports import router as plan_reports_router
 from app.api.v1.endpoints.work_plan_revisions import router as plan_revisions_router
 from app.api.v1.endpoints.work_plan_transitions import router as transitions_router
 from app.api.v1.endpoints.work_plans import router as plans_router
+from app.api.v1.endpoints.work_types import router as work_types_router
 
 api_router = APIRouter()
 
@@ -80,4 +81,5 @@ api_router.include_router(plan_reports_router)
 api_router.include_router(plan_amendments_router)
 api_router.include_router(plan_revisions_router)
 api_router.include_router(events_router)
+api_router.include_router(work_types_router)
 api_router.include_router(app_releases_router)

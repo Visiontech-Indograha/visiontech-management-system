@@ -298,7 +298,7 @@ class CRUDPlanDraft(CRUDBase):
                           title: str, description: str, category: str, site_id: UUID | str,
                           location_text: str, period_start: date, period_end: date,
                           pm_employee_id: UUID | str, leader_employee_id: UUID | str,
-                          is_out_of_town: bool = False) -> Any:
+                          is_out_of_town: bool = False, work_type_id: UUID | str | None = None) -> Any:
         """
         Memasukkan draf rencana kerja (SK) ke dalam database untuk pertama kali.
 
@@ -313,21 +313,23 @@ class CRUDPlanDraft(CRUDBase):
             """
             INSERT INTO vms.work_plan (organization_id, unit_id, site_id, title, location_text, description,
                                        category, period, pm_employee_id, leader_employee_id, status, created_by,
-                                       is_out_of_town)
+                                       is_out_of_town, work_type_id)
             VALUES (CAST(:org AS uuid), CAST(:unit AS uuid), CAST(:site AS uuid), :title, :loc, :desc,
                     :category, daterange(:start, :end, '[]'), CAST(:pm AS uuid), CAST(:leader AS uuid),
-                    'DRAFT', CAST(:by AS uuid), :oot)
+                    'DRAFT', CAST(:by AS uuid), :oot, CAST(:wt AS uuid))
             RETURNING id
             """,
             {"org": str(org_id), "unit": str(unit_id), "site": str(site_id), "title": title,
              "loc": location_text, "desc": description, "category": category, "start": period_start,
              "end": period_end, "pm": str(pm_employee_id), "leader": str(leader_employee_id),
-             "by": str(created_by), "oot": is_out_of_town},
+             "by": str(created_by), "oot": is_out_of_town,
+             "wt": str(work_type_id) if work_type_id else None},
         )
 
     async def update_plan(self, plan_id: UUID | str, *, title: str, description: str, category: str,
                           site_id: UUID | str, location_text: str, period_start: date, period_end: date,
-                          leader_employee_id: UUID | str, is_out_of_town: bool = False) -> None:
+                          leader_employee_id: UUID | str, is_out_of_town: bool = False,
+                          work_type_id: UUID | str | None = None) -> None:
         """
         Memperbarui header/informasi umum rencana kerja (SK) saat pengeditan draf.
 
@@ -340,12 +342,13 @@ class CRUDPlanDraft(CRUDBase):
             UPDATE vms.work_plan
                SET title = :title, description = :desc, category = :category, site_id = CAST(:site AS uuid),
                    location_text = :loc, period = daterange(:start, :end, '[]'),
-                   leader_employee_id = CAST(:leader AS uuid), is_out_of_town = :oot, row_version = row_version + 1
+                   leader_employee_id = CAST(:leader AS uuid), is_out_of_town = :oot,
+                   work_type_id = CAST(:wt AS uuid), row_version = row_version + 1
              WHERE id = :plan
             """,
             {"plan": plan_id, "title": title, "desc": description, "category": category, "site": str(site_id),
              "loc": location_text, "start": period_start, "end": period_end, "leader": str(leader_employee_id),
-             "oot": is_out_of_town},
+             "oot": is_out_of_town, "wt": str(work_type_id) if work_type_id else None},
         )
 
     async def clear_draft_parts(self, plan_id: UUID | str) -> None:
@@ -465,7 +468,7 @@ class CRUDPlanDraft(CRUDBase):
                     'period_start', lower(wp.period), 'period_end', upper(wp.period) - 1,
                     'pm_employee_id', wp.pm_employee_id, 'pm_name', pm.full_name, 'pm_position', pm.position,
                     'leader_employee_id', wp.leader_employee_id, 'appeal_reason', wp.appeal_reason,
-                    'is_out_of_town', wp.is_out_of_town)
+                    'is_out_of_town', wp.is_out_of_town, 'work_type_id', wp.work_type_id)
                   FROM vms.work_plan wp
                   LEFT JOIN vms.business_unit bu ON bu.id = wp.unit_id
                   LEFT JOIN vms.site s ON s.id = wp.site_id

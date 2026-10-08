@@ -81,12 +81,17 @@ class CRUDHse(CRUDBase):
             """,
             {"day": day_id, "body": body, "obs": obstacle})
 
-    async def replace_report_evidence(self, report_id: UUID | str, file_ids: list[str]) -> None:
-        """Ganti seluruh berkas bukti laporan harian."""
+    async def replace_report_evidence(self, report_id: UUID | str,
+                                      items: list[tuple[str, str | None, str]]) -> None:
+        """Ganti seluruh berkas bukti laporan harian: (file_id, slot_label, source)."""
         await self.execute("DELETE FROM vms.report_evidence WHERE daily_report_id = :rid", {"rid": report_id})
-        await self.execute(
-            "INSERT INTO vms.report_evidence (daily_report_id, file_id) SELECT :rid, unnest(CAST(:fids AS uuid[]))",
-            {"rid": report_id, "fids": file_ids})
+        if items:
+            await self.execute(
+                "INSERT INTO vms.report_evidence (daily_report_id, file_id, slot_label, source) "
+                "SELECT :rid, CAST(f AS uuid), NULLIF(s, ''), src FROM unnest(CAST(:fids AS text[]), "
+                "CAST(:slots AS text[]), CAST(:srcs AS text[])) AS t(f, s, src)",
+                {"rid": report_id, "fids": [i[0] for i in items], "slots": [i[1] or "" for i in items],
+                 "srcs": [i[2] for i in items]})
 
     async def submit_daily_report(self, day_id: UUID | str, employee_id: Any) -> Any:
         """Ajukan dari DRAFT atau setelah dikembalikan PM (V-24). → baris atau None."""

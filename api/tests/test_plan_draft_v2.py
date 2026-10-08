@@ -88,7 +88,7 @@ def test_every_date_needs_one_to_thirty_complete_tasks(client, world):
     for data in (missing_day, duplicate):
         response = client.post("/work-plans/full", headers=world.headers(client, "pm"), json=data)
         assert response.status_code == 422
-        assert response.json()["error"]["message"] == "Setiap tanggal dalam rentang work plan wajib punya detail pekerjaan."
+        assert response.json()["error"]["message"] == "Setiap tanggal dalam rentang SK wajib punya detail pekerjaan."
 
     no_tasks = {**body, "days": [{**body["days"][0], "tasks": []}, body["days"][1]]}
     assert "1 sampai 30" in client.post("/work-plans/full", headers=world.headers(client, "pm"),

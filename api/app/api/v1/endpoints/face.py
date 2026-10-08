@@ -42,7 +42,7 @@ def _liveness(raw: str) -> FaceLiveness:
     try:
         return FaceLiveness(**(json.loads(raw) if raw else {}))
     except (ValueError, TypeError):
-        raise ValidationError("Data tantangan keaslian wajah tidak valid.") from None
+        raise ValidationError("Pemeriksaan keaslian wajah tidak terbaca. Ulangi pengenalan wajah.") from None
 
 
 @router.get("/policy", response_model=FacePolicy)

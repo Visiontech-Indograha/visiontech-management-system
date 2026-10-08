@@ -117,7 +117,8 @@ def html_to_pdf(html: str) -> bytes:
     try:
         from weasyprint import HTML
     except (ImportError, OSError):
-        raise AppError("PDF_UNAVAILABLE", "Layanan PDF belum tersedia di server ini.", status=503) from None
+        raise AppError("PDF_UNAVAILABLE", "Pembuatan PDF sedang tidak tersedia. Coba lagi nanti atau hubungi admin.",
+                       status=503) from None
     pdf: bytes = HTML(string=html).write_pdf()
     return pdf
 

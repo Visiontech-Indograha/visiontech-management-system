@@ -46,12 +46,12 @@ class Profile:
 
 def _inactive() -> AppError:
     """Mengembalikan error ketika akun tidak aktif."""
-    return AppError("INACTIVE", "Akun dinonaktifkan", status=403)
+    return AppError("INACTIVE", "Akun Anda dinonaktifkan. Hubungi HR atau admin.", status=403)
 
 
 def _revoked() -> AppError:
     """Mengembalikan error ketika token/sesi telah dicabut atau invalid."""
-    return AppError("SESSION_REVOKED", "Sesi tidak valid atau telah dicabut", status=401, persist=True)
+    return AppError("SESSION_REVOKED", "Sesi berakhir atau dicabut. Silakan masuk kembali.", status=401, persist=True)
 
 
 _DUMMY_HASH: str | None = None
@@ -168,13 +168,13 @@ class AuthService:
             )
             raise _revoked()
         if not rotated.session_id:
-            raise AppError("INVALID_TOKEN", "Token tidak valid", status=401)
+            raise AppError("INVALID_TOKEN", "Sesi tidak dikenali. Silakan masuk kembali.", status=401)
 
         user = await self.users.find_by_id(rotated.user_id)
         if not user or not user.is_active:
             # Akun dinonaktifkan: seluruh sesinya berakhir pada permintaan ini juga (DoD fase 1).
             await self.sessions.revoke_all_for_user(rotated.user_id, "Akun dinonaktifkan")
-            raise AppError("INACTIVE", "Akun dinonaktifkan", status=403, persist=True)
+            raise AppError("INACTIVE", "Akun Anda dinonaktifkan. Hubungi HR atau admin.", status=403, persist=True)
 
         return IssuedTokens(
             access_token=self._access_token(user, rotated.session_id),
@@ -232,9 +232,9 @@ class AuthService:
         if not user.password_hash or not verify_password(current_password, user.password_hash):
             raise AppError(
                 "VALIDATION_ERROR",
-                "Data yang dikirim tidak valid.",
+                "Kata sandi saat ini salah.",
                 status=422,
-                details={"fields": {"current_password": "Password saat ini salah."}},
+                details={"fields": {"current_password": "Kata sandi saat ini salah."}},
             )
 
         await self.users.update_password_hash(user_id, hash_password(new_password))

@@ -168,7 +168,7 @@ class PlanAmendmentService:
                     await self.assets.insert_allocation(tool, plan.id, None, access.user.user_id)
                     await self.assets.set_asset_status(tool, "IN_USE")
         except IntegrityError as exc:
-            raise (trigger_rule_error(exc) or _state("Data bentrok dengan work plan lain.")) from None
+            raise (trigger_rule_error(exc) or _state("Jadwal bentrok dengan SK lain.")) from None
 
         version = await self.changes.next_document_version(plan.id)
         raw = await self.plans.snapshot(plan.id)

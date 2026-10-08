@@ -133,5 +133,5 @@ def test_amendment_cannot_remove_a_day_that_already_has_reports(client, world):
     assert response.status_code == 422
     assert response.json()["error"]["message"] in (
         f"Hari {start.isoformat()} sudah berlaporan dan tidak dapat dihapus.",
-        "Setiap tanggal dalam rentang work plan wajib punya detail pekerjaan.")
+        "Setiap tanggal dalam rentang SK wajib punya detail pekerjaan.")
     assert _change_status(change) == "PENDING_PM"                                    # tidak ada yang berubah

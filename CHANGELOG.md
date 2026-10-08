@@ -9,6 +9,8 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased] — `development`
 
+- **Pratinjau "Berkas saya" lewat domain publik (2026-10-08, temuan pemilik):** berkas terverifikasi tidak tampil di luar Tailscale — URL presigned memakai host `MINIO_PUBLIC_URL` dari api.env (jalur Caddy `/vms-files/*` di portal terbukti berfungsi: tanpa tanda tangan 403). `deploy/setel-url-verifikasi.sh` kini menyetel `MINIO_PUBLIC_URL=https://portal.visiontechindo.com` sekaligus `PUBLIC_VERIFY_URL`. Alur unggah → verifikasi admin → daftar & URL berkas pemilik diuji ulang sebagai `vms_api`: berjalan (bukan regresi RLS).
+
 - **P9-5 · Uji pulih cadangan (2026-10-08):** `deploy/uji-pulih-cadangan.sh` — cadangan baru lewat `backup.sh`, salinan MinIO diunduh & SHA-256 dicocokkan, dipulihkan ke Postgres sementara (citra sama, `--network none`, selalu dihapus), lalu jumlah baris per tabel, versi alembic, tabel ber-RLS, fungsi SECURITY DEFINER, dan partisi dibandingkan dengan prod; prod hanya dibaca. Diuji lokal: 48 tabel / 67.919 baris pulih dalam 3 detik, semua cocok. Celah dicatat: berkas MinIO tidak dicadangkan; cadangan hanya di server yang sama.
 
 - **P9-2 lanjutan · RLS untuk tabel tersisa (2026-10-08):** migrasi `0025_rls_remaining_tables` — `site`, `file_object`, `notification`, `attendance_device_key`, `attendance_offline_event`, `signature_serial_counter` diberi kebijakan batas tenant; `app_user` sengaja tanpa RLS (login mencari akun sebelum konteks ada). Uji RLS kini memakai peran runtime `vms_api`. Suite 933 lulus sebagai `vms_api`; jalur 0024 → 0025 → downgrade → upgrade diuji.

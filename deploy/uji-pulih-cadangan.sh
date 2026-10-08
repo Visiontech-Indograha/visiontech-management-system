@@ -52,14 +52,23 @@ MINIO_SHA=$(sha256sum "$WORK/minio.dump" | cut -d' ' -f1)
 echo "   cocok ($LOCAL_SHA)"
 
 echo "== 3/6 Postgres sementara ($IMAGE, tanpa jaringan)"
-docker run -d --rm --name "$TMP_CT" --network none -e POSTGRES_USER="$OWNER" \
-  -e POSTGRES_PASSWORD="$(openssl rand -hex 16)" "$IMAGE" >/dev/null
-for _ in $(seq 1 60); do
-  docker exec "$TMP_CT" pg_isready -U "$OWNER" -q 2>/dev/null && break
+TMP_PW=$(openssl rand -hex 16)   # sandi kontainer sementara; tidak pernah dicetak
+docker run -d --name "$TMP_CT" --network none -e POSTGRES_USER="$OWNER" -e POSTGRES_PASSWORD="$TMP_PW" "$IMAGE" >/dev/null
+# Selama inisialisasi citra resmi menyalakan server sementara (hanya soket), lalu menyalakan ulang. TCP lokal baru
+# menerima koneksi setelah server sungguhan siap — itu yang ditunggu (maks. 180 detik).
+READY=0
+for _ in $(seq 1 180); do
+  if docker exec -e PGPASSWORD="$TMP_PW" "$TMP_CT" psql -h 127.0.0.1 -U "$OWNER" -d postgres -qAtXc 'SELECT 1' >/dev/null 2>&1; then
+    READY=1; break
+  fi
+  [ "$(docker inspect -f '{{.State.Running}}' "$TMP_CT" 2>/dev/null)" = true ] || break
   sleep 1
 done
-sleep 2   # citra resmi menyalakan ulang server setelah init
-docker exec "$TMP_CT" pg_isready -U "$OWNER" -q || { echo "GAGAL: Postgres sementara tidak siap"; exit 1; }
+if [ "$READY" != 1 ]; then
+  echo "GAGAL: Postgres sementara tidak siap. Log terakhir:"
+  docker logs --tail 15 "$TMP_CT" 2>&1 | cut -c1-200 | sed 's/^/   /'
+  exit 1
+fi
 docker exec "$TMP_CT" createdb -U "$OWNER" "$DB"
 # Peran yang disebut GRANT di cadangan; tanpa sandi & tanpa login (peran berlaku per klaster, tidak ikut pg_dump).
 for r in $(echo "SELECT rolname FROM pg_roles WHERE rolname LIKE 'vms\_%' AND rolname <> '$OWNER';" | psql_prod); do

@@ -82,7 +82,7 @@ export function DayPlanList({ plan }: { plan: WorkPlan }) {
         query={days}
         errorText="Rincian harian tidak dapat dimuat."
         empty={days.data?.length === 0}
-        emptyText="Belum ada hari kerja. Setiap tanggal dalam periode wajib diisi sebelum SK diterbitkan."
+        emptyText="Belum ada hari kerja. Setiap tanggal dalam periode wajib diisi sebelum rencana kerja diterbitkan."
       >
         <ol className="space-y-3">
           {days.data?.map((d) => (

@@ -28,7 +28,7 @@ export function WorkPlansPage() {
 
   return (
     <>
-      <PageHeader title="Work plan" action={canManage && <Button onClick={create}>Buat SK</Button>} />
+      <PageHeader title="Rencana Kerja" action={canManage && <Button onClick={create}>Buat rencana kerja</Button>} />
       <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center">
         <select aria-label="Filter status" className={selectCls} value={status} onChange={(e) => setStatus(e.target.value)}>
           <option value="">Semua status</option>
@@ -51,7 +51,7 @@ export function WorkPlansPage() {
         errorText="Daftar work plan tidak dapat dimuat."
         empty={plans.data?.length === 0}
         emptyText={archived ? "Tidak ada draf terarsip." : "Belum ada work plan yang dapat Anda lihat."}
-        emptyAction={canManage && !archived && <Button onClick={create}>Buat SK</Button>}
+        emptyAction={canManage && !archived && <Button onClick={create}>Buat rencana kerja</Button>}
       >
         <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {plans.data?.map((p) => (
@@ -73,7 +73,7 @@ export function WorkPlansPage() {
                     Perlu tindakan: ada permintaan revisi dari ketua
                   </p>
                 )}
-                <p className="text-sm text-mist">{p.number ?? "Nomor terbit saat SK diterbitkan"}</p>
+                <p className="text-sm text-mist">{p.number ?? "Nomor terbit saat rencana kerja diterbitkan"}</p>
                 <p className="text-sm text-mist">{p.location_text}</p>
                 <p className="text-sm text-mist">
                   {formatDate(p.period_start)} – {formatDate(p.period_end)}
@@ -82,7 +82,7 @@ export function WorkPlansPage() {
               {canManage && p.status === "DRAFT" && (
                 <div className="border-t border-line p-3">
                   <Button variant="outline" className="w-full" onClick={() => setPreview(p)}>
-                    Sunting SK
+                    Sunting rencana kerja
                   </Button>
                 </div>
               )}
@@ -95,7 +95,7 @@ export function WorkPlansPage() {
 
       {preview && (
         <SkPreviewDialog
-          title={`Sunting SK — ${preview.title}`}
+          title={`Sunting rencana kerja — ${preview.title}`}
           path={`/work-plans/${preview.id}/preview`}
           editTo={`/work-plans/${preview.id}/edit`}
           onClose={() => setPreview(null)}

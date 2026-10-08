@@ -155,7 +155,7 @@ export function CreatePlanDialog({ onClose }: { onClose: () => void }) {
         vehicle_id: v.vehicle_id || undefined,
         driver_employee_id: v.driver_employee_id || undefined,
       });
-      toast.success("Draft SK dan tim berhasil dibuat.");
+      toast.success("Draft rencana kerja dan tim berhasil dibuat.");
       onClose();
       navigate(`/work-plans/${plan.id}`);
     } catch (err) {
@@ -164,7 +164,7 @@ export function CreatePlanDialog({ onClose }: { onClose: () => void }) {
   });
 
   return (
-    <FormDialog title="Buat SK" formId="create-plan" submitting={isSubmitting} formError={formError} onClose={onClose} onSubmit={onSubmit}>
+    <FormDialog title="Buat rencana kerja" formId="create-plan" submitting={isSubmitting} formError={formError} onClose={onClose} onSubmit={onSubmit}>
       <TextField label="Judul pekerjaan" error={errors.title?.message} {...register("title")} />
       <SelectField label="Lokasi pekerjaan" error={errors.site_id?.message} {...register("site_id")}>
         <option value="">Pilih lokasi</option>
@@ -211,7 +211,7 @@ export function CreatePlanDialog({ onClose }: { onClose: () => void }) {
       </fieldset>
       <SelectField
         label="Kendaraan (opsional)"
-        hint={vehicles.isError ? "Daftar kendaraan tidak dapat dimuat." : "Hanya kendaraan berstatus tersedia dan belum terikat SK."}
+        hint={vehicles.isError ? "Daftar kendaraan tidak dapat dimuat." : "Hanya kendaraan berstatus tersedia dan belum terikat rencana kerja."}
         {...register("vehicle_id")}
       >
         <option value="">Tanpa kendaraan</option>

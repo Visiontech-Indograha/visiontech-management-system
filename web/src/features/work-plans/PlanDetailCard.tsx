@@ -16,7 +16,7 @@ export function PlanDetailCard({ plan }: { plan: WorkPlan }) {
   const days = (d?.days ?? []) as Day[];
   return (
     <div className="mt-6 space-y-6">
-      <QueryState query={detail} errorText="Isi SK tidak dapat dimuat.">
+      <QueryState query={detail} errorText="Isi rencana kerja tidak dapat dimuat.">
         <div className="grid gap-6 md:grid-cols-2">
           <section aria-label="Tim" className="rounded-panel border border-line bg-surface p-4 shadow-card">
             <h2 className="mb-3 text-base font-semibold">Tim</h2>

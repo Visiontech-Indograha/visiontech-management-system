@@ -205,7 +205,8 @@ class CRUDAttendanceSession(CRUDBase):
              "face": face_result, "sim": face_similarity, "source": source, "exp": explanation, "at": at},
         )
 
-    async def close(self, attendance_id: UUID | str) -> Any:
+    async def close(self, attendance_id: UUID | str, *, lat: float | None = None, lng: float | None = None,
+                    selfie_file_id: UUID | None = None, explanation: str | None = None) -> Any:
         """
         Menutup sesi absensi dengan menetapkan waktu check-out ke saat ini (now()).
 
@@ -218,12 +219,19 @@ class CRUDAttendanceSession(CRUDBase):
         # Memperbarui kolom check_out_at dan mengembalikan seluruh data absensi (RETURNING)
         return await self.fetchone(
             """
-            UPDATE vms.attendance SET check_out_at = now() WHERE id = :id
+            UPDATE vms.attendance
+               SET check_out_at = now(),
+                   check_out_location = CASE WHEN CAST(:lat AS float8) IS NULL THEN NULL
+                       ELSE ST_SetSRID(ST_MakePoint(CAST(:lng AS float8), CAST(:lat AS float8)), 4326)::geography END,
+                   check_out_selfie_file_id = CAST(:selfie AS uuid), check_out_explanation = :exp
+             WHERE id = :id
             RETURNING id, employee_id, work_date, site_id, site_label, check_in_at, check_out_at,
                       distance_m, is_late, is_early_leave, status, explanation, reviewed_at, selfie_file_id,
-                      face_result, face_similarity, check_out_face_result, check_out_face_similarity
+                      face_result, face_similarity, check_out_face_result, check_out_face_similarity,
+                      check_out_distance_m, check_out_outside, check_out_selfie_file_id, check_out_explanation
             """,
-            {"id": attendance_id},
+            {"id": attendance_id, "lat": lat, "lng": lng, "selfie": str(selfie_file_id) if selfie_file_id else None,
+             "exp": explanation.strip() if explanation else None},
         )
 
     async def flag_missing_face(self, attendance_id: UUID | str, event: str, note: str) -> Any:
@@ -347,6 +355,8 @@ class CRUDAttendanceSession(CRUDBase):
                    a.selfie_file_id, a.review_note, e.full_name AS employee_name,
                    a.face_result, a.face_similarity, a.check_out_face_result, a.check_out_face_similarity,
                    a.offline, a.offline_note, a.check_out_requested_at,
+                   a.check_out_distance_m, a.check_out_outside, a.check_out_selfie_file_id, a.check_out_explanation,
+                   vms.attendance_city_category(a.employee_id, a.work_date) AS city_category,
                    vms.attendance_can_review(CAST(:viewer AS uuid), a.employee_id) AS can_review
             FROM vms.attendance a JOIN vms.employee e ON e.id = a.employee_id
             WHERE a.organization_id = CAST(:org AS uuid)
@@ -431,7 +441,8 @@ class CRUDAttendanceSession(CRUDBase):
             SELECT a.work_date, e.employee_no, e.full_name, a.site_label,
                    to_char(a.check_in_at AT TIME ZONE o.timezone, 'HH24:MI:SS') AS check_in,
                    to_char(a.check_out_at AT TIME ZONE o.timezone, 'HH24:MI:SS') AS check_out,
-                   a.status, a.is_late, a.is_early_leave
+                   a.status, a.is_late, a.is_early_leave, a.check_out_distance_m, a.check_out_outside,
+                   vms.attendance_city_category(a.employee_id, a.work_date) AS city_category
               FROM vms.attendance a
               JOIN vms.employee e ON a.employee_id = e.id
               JOIN vms.organization o ON o.id = a.organization_id

@@ -1105,6 +1105,17 @@
       ],
       "title": "Check Out At"
      },
+     "city_category": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "City Category"
+     },
      "employee_id": {
       "title": "Employee Id",
       "type": "string"
@@ -1223,6 +1234,28 @@
       ],
       "title": "Check Out At"
      },
+     "check_out_distance_m": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Check Out Distance M"
+     },
+     "check_out_explanation": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Check Out Explanation"
+     },
      "check_out_face_result": {
       "anyOf": [
        {
@@ -1245,6 +1278,11 @@
       ],
       "title": "Check Out Face Similarity"
      },
+     "check_out_outside": {
+      "default": false,
+      "title": "Check Out Outside",
+      "type": "boolean"
+     },
      "check_out_requested_at": {
       "anyOf": [
        {
@@ -1256,6 +1294,29 @@
        }
       ],
       "title": "Check Out Requested At"
+     },
+     "check_out_selfie_file_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Check Out Selfie File Id"
+     },
+     "city_category": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "City Category"
      },
      "distance_m": {
       "title": "Distance M",
@@ -1891,6 +1952,18 @@
    "CheckOutRequest": {
     "description": "Schema for processing a check-out request.",
     "properties": {
+     "accuracy_m": {
+      "anyOf": [
+       {
+        "minimum": 0.0,
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Accuracy M"
+     },
      "channel": {
       "default": "MOBILE",
       "enum": [
@@ -1899,6 +1972,18 @@
       ],
       "title": "Channel",
       "type": "string"
+     },
+     "explanation": {
+      "anyOf": [
+       {
+        "maxLength": 1000,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Explanation"
      },
      "face_probe_id": {
       "anyOf": [
@@ -1923,6 +2008,18 @@
       ],
       "title": "Location Origin",
       "type": "string"
+     },
+     "selfie_file_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Selfie File Id"
      }
     },
     "required": [

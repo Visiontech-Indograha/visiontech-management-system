@@ -3641,6 +3641,125 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Events
+         * @description Aliran `text/event-stream` peristiwa untuk pengguna yang sedang masuk (GET).
+         *
+         *     Format: `event: <topic>` + `data: <json>`; topik `notification`, `plan`, `attendance`. Komentar `: ping` tiap
+         *     25 detik menjaga sambungan tetap hidup di balik proksi.
+         */
+        get: operations["events_api_v1_events_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-types": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Work Types
+         * @description Daftar jenis pekerjaan beserta template foto (GET). Semua yang masuk melihat yang aktif;
+         *     `?all=true` (termasuk yang nonaktif) hanya untuk pengelola rencana kerja.
+         *
+         *     Query Parameters:
+         *     - all (bool): sertakan yang nonaktif (butuh izin create:plan).
+         *
+         *     Returns:
+         *     - list[WorkTypeOut]: jenis pekerjaan.
+         */
+        get: operations["list_work_types_api_v1_work_types_get"];
+        put?: never;
+        /**
+         * Create Work Type
+         * @description Membuat jenis pekerjaan + template foto (POST) — PM/OPS.
+         *
+         *     Request Body:
+         *     - data (WorkTypeIn): nama dan daftar slot foto.
+         *
+         *     Returns:
+         *     - WorkTypeOut: jenis yang dibuat.
+         */
+        post: operations["create_work_type_api_v1_work_types_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-types/{type_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Update Work Type
+         * @description Mengubah nama dan mengganti seluruh daftar slot foto (PUT) — PM/OPS. Mengaktifkan kembali jenis nonaktif.
+         *
+         *     Path Parameters:
+         *     - type_id (UUID): ID jenis pekerjaan.
+         *
+         *     Returns:
+         *     - WorkTypeOut: jenis setelah diubah.
+         */
+        put: operations["update_work_type_api_v1_work_types__type_id__put"];
+        post?: never;
+        /**
+         * Deactivate Work Type
+         * @description Menonaktifkan jenis pekerjaan (DELETE) — PM/OPS. Tidak dihapus: rencana kerja lama tetap utuh.
+         *
+         *     Path Parameters:
+         *     - type_id (UUID): ID jenis pekerjaan.
+         */
+        delete: operations["deactivate_work_type_api_v1_work_types__type_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-plans/{plan_id}/photo-template": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Plan Photo Template
+         * @description Template foto laporan rencana kerja (GET) — kosong bila rencana kerja tanpa jenis pekerjaan.
+         *
+         *     Path Parameters:
+         *     - plan_id (UUID): ID rencana kerja.
+         *
+         *     Returns:
+         *     - list[WorkTypePhotoOut]: slot foto berurutan.
+         */
+        get: operations["plan_photo_template_api_v1_work_plans__plan_id__photo_template_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/app/android/update": {
         parameters: {
             query?: never;
@@ -4533,6 +4652,11 @@ export interface components {
              * @default []
              */
             evidence_file_ids: string[];
+            /**
+             * Evidence
+             * @default []
+             */
+            evidence: components["schemas"]["EvidenceIn"][];
         };
         /**
          * DailyReportResponse
@@ -4591,6 +4715,11 @@ export interface components {
             reviewed_at: string | null;
             /** Evidence File Ids */
             evidence_file_ids: string[];
+            /**
+             * Evidence
+             * @default []
+             */
+            evidence: components["schemas"]["EvidenceOut"][];
             /**
              * Resubmitted
              * @default false
@@ -4928,6 +5057,44 @@ export interface components {
             model_name: string;
             /** Model Version */
             model_version: string;
+        };
+        /**
+         * EvidenceIn
+         * @description Foto bukti laporan: file + slot template yang dipenuhi + sumbernya.
+         */
+        EvidenceIn: {
+            /**
+             * File Id
+             * Format: uuid
+             */
+            file_id: string;
+            /** Slot Label */
+            slot_label?: string | null;
+            /**
+             * Source
+             * @default CAMERA
+             * @enum {string}
+             */
+            source: "CAMERA" | "GALLERY";
+        };
+        /**
+         * EvidenceOut
+         * @description Foto bukti laporan (keluaran).
+         */
+        EvidenceOut: {
+            /**
+             * File Id
+             * Format: uuid
+             */
+            file_id: string;
+            /** Slot Label */
+            slot_label?: string | null;
+            /**
+             * Source
+             * @default CAMERA
+             * @enum {string}
+             */
+            source: "CAMERA" | "GALLERY";
         };
         /**
          * ExpiringDocumentList
@@ -5278,6 +5445,11 @@ export interface components {
              * @default []
              */
             evidence_file_ids: string[];
+            /**
+             * Evidence
+             * @default []
+             */
+            evidence: components["schemas"]["EvidenceIn"][];
         };
         /**
          * MemberReportOut
@@ -5311,6 +5483,11 @@ export interface components {
              * @default []
              */
             evidence_file_ids: string[];
+            /**
+             * Evidence
+             * @default []
+             */
+            evidence: components["schemas"]["EvidenceOut"][];
         };
         /**
          * MessageResponse
@@ -5892,6 +6069,8 @@ export interface components {
              * @default false
              */
             is_out_of_town: boolean;
+            /** Work Type Id */
+            work_type_id?: string | null;
             /**
              * Tool Ids
              * @default []
@@ -6008,6 +6187,8 @@ export interface components {
              * @default false
              */
             is_out_of_town: boolean;
+            /** Work Type Id */
+            work_type_id?: string | null;
             /**
              * Tool Ids
              * @default []
@@ -6625,6 +6806,8 @@ export interface components {
              * @default false
              */
             is_out_of_town: boolean;
+            /** Work Type Id */
+            work_type_id?: string | null;
             /**
              * Pending Request
              * @default false
@@ -6652,6 +6835,79 @@ export interface components {
             leader_employee_id?: string | null;
             /** Row Version */
             row_version: number;
+        };
+        /**
+         * WorkTypeIn
+         * @description Membuat/mengubah jenis pekerjaan; `photos` mengganti seluruh daftar slot.
+         */
+        WorkTypeIn: {
+            /** Name */
+            name: string;
+            /**
+             * Photos
+             * @default []
+             */
+            photos: components["schemas"]["WorkTypePhotoIn"][];
+        };
+        /**
+         * WorkTypeOut
+         * @description Jenis pekerjaan beserta template fotonya.
+         */
+        WorkTypeOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /**
+             * Is Active
+             * @default true
+             */
+            is_active: boolean;
+            /**
+             * Photos
+             * @default []
+             */
+            photos: components["schemas"]["WorkTypePhotoOut"][];
+        };
+        /**
+         * WorkTypePhotoIn
+         * @description Satu slot foto pada template: label, petunjuk, wajib/tidak.
+         */
+        WorkTypePhotoIn: {
+            /** Label */
+            label: string;
+            /** Hint */
+            hint?: string | null;
+            /**
+             * Required
+             * @default false
+             */
+            required: boolean;
+        };
+        /**
+         * WorkTypePhotoOut
+         * @description Slot foto pada template (keluaran).
+         */
+        WorkTypePhotoOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Sort Order */
+            sort_order: number;
+            /** Label */
+            label: string;
+            /** Hint */
+            hint?: string | null;
+            /**
+             * Required
+             * @default false
+             */
+            required: boolean;
         };
     };
     responses: never;
@@ -11415,6 +11671,185 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PlanDetailOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    events_api_v1_events_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    list_work_types_api_v1_work_types_get: {
+        parameters: {
+            query?: {
+                all?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkTypeOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_work_type_api_v1_work_types_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkTypeIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkTypeOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_work_type_api_v1_work_types__type_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                type_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkTypeIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkTypeOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    deactivate_work_type_api_v1_work_types__type_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                type_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    plan_photo_template_api_v1_work_plans__plan_id__photo_template_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkTypePhotoOut"][];
                 };
             };
             /** @description Validation Error */

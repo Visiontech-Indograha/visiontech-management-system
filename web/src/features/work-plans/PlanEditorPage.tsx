@@ -20,6 +20,7 @@ import {
   type PlanDetail,
   type PlanDraftRequest,
 } from "./api";
+import { useWorkTypes } from "@/features/work-types/api";
 import { NewSiteDialog, type NewSite } from "./NewSiteDialog";
 import { oversize, uploadFiles } from "./uploads";
 
@@ -45,6 +46,7 @@ const schema = z
     member_employee_ids: z.array(z.string()),
     driver_employee_id: z.string(),
     is_out_of_town: z.boolean(),
+    work_type_id: z.string(),
     one_day: z.boolean(),
   })
   .refine((v) => v.period_end >= v.period_start, {
@@ -101,6 +103,7 @@ function fromDetail(detail: PlanDetail): { values: Values; site: NewSite | null 
       member_employee_ids: team.filter((m) => m.role_in_plan === "MEMBER").map((m) => m.employee_id),
       driver_employee_id: vehicle?.driver_employee_id ?? "",
       is_out_of_town: p.is_out_of_town === true,
+      work_type_id: String(p.work_type_id ?? ""),
       one_day: !!p.period_start && p.period_start === p.period_end,
     },
   };
@@ -177,9 +180,11 @@ function PlanEditor({ planId, detail, revise = false, changeId }: { planId?: str
       member_employee_ids: [],
       driver_employee_id: "",
       is_out_of_town: false,
+      work_type_id: "",
       one_day: false,
     },
   });
+  const workTypes = useWorkTypes();
   const days = useFieldArray({ control, name: "days" });
   const oneDay = useWatch({ control, name: "one_day" });
   const startDate = useWatch({ control, name: "period_start" });
@@ -232,6 +237,7 @@ function PlanEditor({ planId, detail, revise = false, changeId }: { planId?: str
       leader_employee_id: v.leader_employee_id,
       member_employee_ids: v.member_employee_ids,
       is_out_of_town: v.is_out_of_town,
+      work_type_id: v.work_type_id || null,
       tool_ids: v.tool_ids,
       vehicle_id: v.vehicle_id || null,
       driver_employee_id: v.vehicle_id ? v.driver_employee_id : null,
@@ -278,6 +284,14 @@ function PlanEditor({ planId, detail, revise = false, changeId }: { planId?: str
                 </SelectField>
                 <TextField label="Tipe" value={o.unit_name ?? "-"} readOnly disabled hint="Otomatis mengikuti unit PM." />
               </div>
+              <SelectField label="Jenis pekerjaan (opsional)" hint="Menentukan template foto laporan." {...register("work_type_id")}>
+                <option value="">Tanpa jenis</option>
+                {workTypes.data?.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </SelectField>
             </Section>
 
             <Section title="Lokasi kerja">

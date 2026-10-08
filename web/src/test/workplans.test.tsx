@@ -153,6 +153,7 @@ describe("Work plan — daftar", () => {
       leader_employee_id: "e-lead",
       member_employee_ids: ["e-member"],
       is_out_of_town: false,
+      work_type_id: null,
       tool_ids: ["t1"],
       vehicle_id: "v1",
       driver_employee_id: "e-member",

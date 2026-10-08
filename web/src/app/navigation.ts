@@ -7,6 +7,7 @@ import {
   FolderOpen,
   Hourglass,
   House,
+  ListChecks,
   MapPin,
   Truck,
   ScrollText,
@@ -35,6 +36,7 @@ export const NAV_ITEMS: NavItem[] = [
   { path: "/my-documents", label: "Berkas saya", icon: FolderOpen, requires: ["view:documents"] },
   { path: "/directory", label: "Direktori", icon: BookUser, requires: ["view:users"] },
   { path: "/sites", label: "Lokasi kerja", icon: MapPin, requires: ["manage:sites"] },
+  { path: "/work-types", label: "Jenis pekerjaan", icon: ListChecks, requires: ["create:plan"] },
   { path: "/audit-logs", label: "Audit log", icon: ScrollText, requires: ["view:audit"] },
 ];
 

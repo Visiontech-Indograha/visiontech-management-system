@@ -181,7 +181,7 @@ async def get_db_with_user(
         await send_security_alert(
             "Konteks RLS Gagal Disetel", f"Gagal menetapkan konteks RLS ({type(exc).__name__})."
         )
-        raise AppError("INTERNAL_ERROR", "Terjadi kesalahan internal pada server.", status=500) from None
+        raise AppError("INTERNAL_ERROR", "Terjadi gangguan pada sistem. Coba lagi beberapa saat; bila berulang, hubungi admin.", status=500) from None
     return db
 
 

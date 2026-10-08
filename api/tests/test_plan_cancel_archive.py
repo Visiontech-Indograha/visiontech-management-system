@@ -101,7 +101,8 @@ def test_archive_rules(client, world):
     missing = _do(client, world, plan_id, "archive", reason="")
     assert missing.status_code == 422 and missing.json()["error"]["message"] == "Alasan pengarsipan wajib diisi."
     not_archived = _do(client, world, plan_id, "restore", reason=None)
-    assert not_archived.status_code == 409 and not_archived.json()["error"]["message"] == "Draft tidak berada di arsip."
+    assert not_archived.status_code == 409
+    assert not_archived.json()["error"]["message"] == "SK draf ini tidak sedang diarsipkan."
 
     officer = world.headers(client, "asset")
     asset_id = client.post("/assets", headers=officer, json={
@@ -110,7 +111,7 @@ def test_archive_rules(client, world):
                        json={"work_plan_id": plan_id}).status_code == 200
     with_asset = _do(client, world, plan_id, "archive")
     assert with_asset.status_code == 409 and with_asset.json()["error"]["message"] == \
-        "Lepaskan reservasi aset sebelum mengarsipkan draft."
+        "Lepaskan pemesanan aset dulu sebelum mengarsipkan draf SK."
 
 
 def test_a_plan_that_once_had_an_sk_cannot_be_archived(client, world):

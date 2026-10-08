@@ -59,9 +59,9 @@ class AttendanceOfflineService:
         try:
             key = load_der_public_key(base64.b64decode(public_key))
         except ValueError as exc:
-            raise _reject("DEVICE_KEY_INVALID", "Kunci perangkat tidak valid.") from exc
+            raise _reject("DEVICE_KEY_INVALID", "Pendaftaran perangkat untuk absen luring gagal. Perbarui aplikasi, lalu coba lagi saat online.") from exc
         if not isinstance(key, ec.EllipticCurvePublicKey) or key.curve.name != "secp256r1":
-            raise _reject("DEVICE_KEY_INVALID", "Kunci perangkat harus EC P-256 dari Android Keystore.")
+            raise _reject("DEVICE_KEY_INVALID", "Perangkat ini belum dapat dipakai untuk absen luring. Perbarui aplikasi, lalu buka saat online.")
         await self.repo.register_device_key(user.organization_id, user.user_id, device_id, public_key)
 
     async def _verified_payload(self, user: CurrentUser, device_id: str, payload: str,
@@ -146,7 +146,7 @@ class AttendanceOfflineService:
         done = await self.repo.event(client_op_id)
         if done is not None:
             if str(done.user_id) != user.user_id:
-                raise _reject("OFFLINE_TAMPERED", "Peristiwa luring tidak dikenal.", status=404)
+                raise _reject("OFFLINE_TAMPERED", "Data absen luring tidak dikenali. Perbarui aplikasi, lalu kirim ulang.", status=404)
             return {"client_op_id": client_op_id, "result": done.result, "attendance_id": done.attendance_id,
                     "duplicate": True}
         p = await self._verified_payload(user, device_id, payload, signature)

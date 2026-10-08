@@ -198,7 +198,7 @@ class PlanTransitionService:
         # Draf hasil revisi (pernah terbit) tidak bisa diarsip, jadi harus bisa dibatalkan (CELAH 8, docs/28).
         revised_draft = plan.status == PlanStatus.DRAFT and await self.repo.ever_published(plan_id)
         if plan.status not in CANCELLABLE and not revised_draft:
-            raise AppError("INVALID_STATE", "Tahap work plan belum sesuai untuk tindakan ini.", status=409)
+            raise AppError("INVALID_STATE", "Status SK belum sesuai untuk tindakan ini. Muat ulang halaman.", status=409)
         if plan.row_version != row_version:
             raise ConflictError()
         if not reason.strip():
@@ -212,7 +212,7 @@ class PlanTransitionService:
         if not reason.strip():
             raise _invalid("Alasan pengarsipan wajib diisi.")
         if await self.repo.has_active_allocation(plan_id):
-            raise AppError("INVALID_STATE", "Lepaskan reservasi aset sebelum mengarsipkan draft.", status=409)
+            raise AppError("INVALID_STATE", "Lepaskan pemesanan aset dulu sebelum mengarsipkan draf SK.", status=409)
         if await self.repo.ever_published(plan_id):
             raise AppError("INVALID_STATE",
                            "Pekerjaan yang pernah memiliki SK tidak dapat diarsipkan. Gunakan opsi pembatalan.",
@@ -226,7 +226,7 @@ class PlanTransitionService:
         if plan is None:
             raise NotFoundError("SK")
         if not plan.archived:
-            raise AppError("INVALID_STATE", "Draft tidak berada di arsip.", status=409)
+            raise AppError("INVALID_STATE", "SK draf ini tidak sedang diarsipkan.", status=409)
         if plan.row_version != row_version:
             raise ConflictError()
         await self._check_members(plan)
@@ -345,7 +345,7 @@ class PlanTransitionService:
         if await self.repo.final_report_status(plan_id) != "SUBMITTED":
             raise _state("Laporan akhir belum diserahkan.")
         if await self.repo.has_active_allocation(plan_id):
-            raise _state("Masih ada aset yang belum dikembalikan atau diverifikasi (Asset).")
+            raise _state("Masih ada aset yang belum dikembalikan atau belum diperiksa petugas aset.")
 
         # R-19 (P6-4): laporan akhir dibekukan (frozen) & ditandatangani — ketua (penerbit) dan pemeriksa (APPROVER).
         approver = await self.repo.employee_id_of(user_id)

@@ -66,6 +66,7 @@ from app.services.plan_draft_service import PlanDraftService
 from app.services.plan_edit_service import PlanEditService
 from app.services.plan_location_service import PlanLocationService
 from app.services.plan_member_service import PlanMemberService
+from app.services.plan_revision_service import PlanRevisionService
 from app.services.plan_transition_service import PlanTransitionService
 from app.services.signature_service import SignatureService
 from app.services.site_service import SiteService
@@ -330,6 +331,10 @@ def get_plan_day_service(db: AsyncSession = Depends(get_db_with_user)) -> PlanDa
 
 def get_plan_amendment_service(db: AsyncSession = Depends(get_db_with_user)) -> PlanAmendmentService:
     return PlanAmendmentService(db)
+
+
+def get_plan_revision_service(db: AsyncSession = Depends(get_db_with_user)) -> PlanRevisionService:
+    return PlanRevisionService(db)
 
 
 def get_plan_draft_service(db: AsyncSession = Depends(get_db_with_user)) -> PlanDraftService:

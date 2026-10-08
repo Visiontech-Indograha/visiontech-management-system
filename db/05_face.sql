@@ -500,3 +500,8 @@ ALTER TABLE vms.attendance_offline_event ENABLE ROW LEVEL SECURITY;
 CREATE POLICY attendance_offline_event_isolation ON vms.attendance_offline_event USING (organization_id = vms.current_org_id());
 ALTER TABLE vms.signature_serial_counter ENABLE ROW LEVEL SECURITY;
 CREATE POLICY signature_serial_counter_isolation ON vms.signature_serial_counter USING (organization_id = vms.current_org_id());
+
+-- Riwayat revisi rencana kerja (Alembic 0027_plan_revision): insert-only untuk vms_api.
+REVOKE UPDATE ON vms.plan_revision FROM vms_api;
+ALTER TABLE vms.plan_revision ENABLE ROW LEVEL SECURITY;
+CREATE POLICY plan_revision_isolation ON vms.plan_revision USING (organization_id = vms.current_org_id());

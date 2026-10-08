@@ -49,6 +49,7 @@ class WorkPlanResponse(WorkPlanBase):
     appeal_reason: str | None = None  # Alasan banding (jika ada sanggahan penolakan)
     category: str | None = None   # alur SK v2 - Kategori pekerjaan
     is_out_of_town: bool = False  # Rencana kerja luar kota
+    work_type_id: UUID | None = None  # Jenis pekerjaan (T9)
     pending_request: bool = False  # T2: ada permintaan revisi dari ketua yang menunggu PM
 
 

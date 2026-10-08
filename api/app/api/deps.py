@@ -73,6 +73,7 @@ from app.services.site_service import SiteService
 from app.services.sync_service import SyncService
 from app.services.unit_service import UnitService
 from app.services.weekly_report_service import WeeklyReportService
+from app.services.work_type_service import WorkTypeService
 
 logger = logging.getLogger(__name__)
 # Keamanan dengan skema Bearer token
@@ -331,6 +332,10 @@ def get_plan_day_service(db: AsyncSession = Depends(get_db_with_user)) -> PlanDa
 
 def get_plan_amendment_service(db: AsyncSession = Depends(get_db_with_user)) -> PlanAmendmentService:
     return PlanAmendmentService(db)
+
+
+def get_work_type_service(db: AsyncSession = Depends(get_db_with_user)) -> WorkTypeService:
+    return WorkTypeService(db)
 
 
 def get_plan_revision_service(db: AsyncSession = Depends(get_db_with_user)) -> PlanRevisionService:

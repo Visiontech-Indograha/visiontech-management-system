@@ -44,7 +44,7 @@ class CRUDPlanAmendment(CRUDBase):
 
     async def update_header(self, plan_id: UUID | str, *, title: str, description: str, category: str,
                             site_id: str, location_text: str, period_start: date, period_end: date,
-                            is_out_of_town: bool = False) -> None:
+                            is_out_of_town: bool = False, work_type_id: UUID | str | None = None) -> None:
         """Memperbarui informasi header/dasar dari SK.
 
         Args:
@@ -68,11 +68,12 @@ class CRUDPlanAmendment(CRUDBase):
             UPDATE vms.work_plan
                SET title = :title, description = :desc, category = :category, site_id = CAST(:site AS uuid),
                    location_text = :loc, period = daterange(:start, :end, '[]'), is_out_of_town = :oot,
-                   row_version = row_version + 1
+                   work_type_id = CAST(:wt AS uuid), row_version = row_version + 1
              WHERE id = :plan
             """,
             {"plan": plan_id, "title": title, "desc": description, "category": category, "site": site_id,
-             "loc": location_text, "start": period_start, "end": period_end, "oot": is_out_of_town},
+             "loc": location_text, "start": period_start, "end": period_end, "oot": is_out_of_town,
+             "wt": str(work_type_id) if work_type_id else None},
         )
 
     async def days_with_report_state(self, plan_id: UUID | str) -> list[Any]:

@@ -42,7 +42,11 @@ class CRUDPlanDay(CRUDBase):
                        'resubmitted', r.resubmitted,
                        'evidence_file_ids', COALESCE((SELECT jsonb_agg(e.file_id)
                                                       FROM vms.report_evidence e WHERE e.daily_report_id = r.id),
-                                                     '[]')) END AS report,
+                                                     '[]'),
+                       'evidence', COALESCE((SELECT jsonb_agg(jsonb_build_object(
+                                                'file_id', e.file_id, 'slot_label', e.slot_label, 'source', e.source))
+                                             FROM vms.report_evidence e WHERE e.daily_report_id = r.id),
+                                            '[]')) END AS report,
                    (SELECT count(*) FROM vms.member_daily_report m
                      WHERE m.work_plan_day_id = d.id AND m.status = 'SENT') AS member_reports_sent
             FROM vms.work_plan_day d

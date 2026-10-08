@@ -215,6 +215,7 @@ CREATE TABLE work_plan (
   cancellation_reason text,
   appeal_reason   text,                        -- alasan banding ketua (domain.js APPEAL, V-20)
   is_out_of_town  boolean NOT NULL DEFAULT false, -- rencana kerja luar kota (Alembic 0026)
+  work_type_id    uuid,                        -- jenis pekerjaan (Alembic 0029; FK ke work_type di akhir berkas)
   deleted_at      timestamptz,                 -- arsip draft (soft delete)
   deleted_by      uuid REFERENCES app_user(id), -- pengarsip (domain.js DELETE_PLAN, V-21)
   deletion_reason text,                        -- alasan pengarsipan (V-21)
@@ -291,6 +292,8 @@ CREATE TABLE daily_report (
 CREATE TABLE report_evidence (
   daily_report_id uuid NOT NULL REFERENCES daily_report(id) ON DELETE CASCADE,
   file_id         uuid NOT NULL REFERENCES file_object(id),
+  slot_label      text,                         -- slot template foto yang dipenuhi (Alembic 0029)
+  source          text NOT NULL DEFAULT 'CAMERA' CHECK (source IN ('CAMERA','GALLERY')),
   PRIMARY KEY (daily_report_id, file_id)
 );
 
@@ -311,6 +314,8 @@ CREATE TABLE member_daily_report (
 CREATE TABLE member_report_evidence (
   member_report_id uuid NOT NULL REFERENCES member_daily_report(id) ON DELETE CASCADE,
   file_id          uuid NOT NULL REFERENCES file_object(id),
+  slot_label       text,
+  source           text NOT NULL DEFAULT 'CAMERA' CHECK (source IN ('CAMERA','GALLERY')),
   PRIMARY KEY (member_report_id, file_id)
 );
 
@@ -786,3 +791,26 @@ CREATE TABLE IF NOT EXISTS plan_revision (
 CREATE INDEX IF NOT EXISTS ix_plan_revision_organization_id ON plan_revision (organization_id);
 CREATE INDEX IF NOT EXISTS ix_plan_revision_revised_by ON plan_revision (revised_by);
 CREATE INDEX IF NOT EXISTS ix_plan_revision_resolved_change_id ON plan_revision (resolved_change_id);
+
+-- Jenis pekerjaan + template foto laporan (Alembic 0029_work_type_photo); RLS & hak di 05_face.sql.
+CREATE TABLE IF NOT EXISTS work_type (
+  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id uuid NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
+  name            text NOT NULL,
+  is_active       boolean NOT NULL DEFAULT true,
+  created_at      timestamptz NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS work_type_name_uidx ON work_type (organization_id, lower(name));
+CREATE TABLE IF NOT EXISTS work_type_photo (
+  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id uuid NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
+  work_type_id    uuid NOT NULL REFERENCES work_type(id) ON DELETE CASCADE,
+  sort_order      integer NOT NULL,
+  label           text NOT NULL,
+  hint            text,
+  required        boolean NOT NULL DEFAULT false
+);
+CREATE INDEX IF NOT EXISTS ix_work_type_photo_work_type_id ON work_type_photo (work_type_id);
+CREATE INDEX IF NOT EXISTS ix_work_type_photo_organization_id ON work_type_photo (organization_id);
+ALTER TABLE work_plan ADD CONSTRAINT work_plan_work_type_fk FOREIGN KEY (work_type_id) REFERENCES work_type(id);
+CREATE INDEX IF NOT EXISTS ix_work_plan_work_type_id ON work_plan (work_type_id);

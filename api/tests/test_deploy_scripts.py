@@ -94,3 +94,15 @@ def test_release_script_verifies_signature_and_publishes_atomically():
     assert 'sha256sum < "$out/$dest"' in text                 # stdin: tanpa awalan "\" pada jalur Windows
     cert = read(DEPLOY / "android-release-cert.sha256")
     assert any(len(line) == 64 for line in cert.splitlines())
+
+
+def test_runtime_role_switch_backs_up_never_prints_secret_and_rolls_back():
+    text = read(DEPLOY / "pakai-peran-runtime.sh")
+    assert "set -euo pipefail" in text
+    assert "api.env.sebelum-vms_api." in text and "chmod 600" in text      # salinan rollback, tidak terbaca umum
+    assert "openssl rand -hex 24" in text and "unset PW" in text             # sandi acak di server
+    assert 'echo "$PW' not in text and "echo $PW" not in text                # sandi tidak pernah dicetak
+    assert "MIGRATION_DATABASE_URL=" in text                                 # alembic tetap memakai pemilik
+    assert '"vms_api False False"' in text                                    # API benar-benar bukan superuser
+    assert text.count("restore_latest") >= 3                                  # /ready gagal / peran salah → rollback
+    assert "kembalikan" in text

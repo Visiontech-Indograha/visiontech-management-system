@@ -30,7 +30,10 @@ if _UNSAFE:
     # A-00 (docs/24): lebih baik suite berhenti daripada menulis data uji ke produksi.
     raise pytest.UsageError(_UNSAFE)
 
-_DB = urlparse(settings.DATABASE_URL.replace("+asyncpg", ""))
+# Persiapan & pemeriksaan data uji (`sync_query`) memakai URL ini; aplikasi tetap memakai DATABASE_URL. Isi dengan
+# superuser bila DATABASE_URL memakai peran aplikasi yang tunduk RLS (uji RLS penuh, P9-2).
+_SETUP_URL = os.environ.get("TEST_SETUP_DATABASE_URL") or settings.DATABASE_URL
+_DB = urlparse(_SETUP_URL.replace("+asyncpg", ""))
 
 
 def _db_reachable() -> bool:

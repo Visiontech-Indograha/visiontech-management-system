@@ -6,6 +6,7 @@ import { visibleNav } from "@/app/navigation";
 import { useSession } from "@/app/session";
 import logo from "@/assets/brand/logo-visiontech.png";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useLiveEvents } from "@/lib/live-events";
 import { ROLE_LABEL } from "@/lib/types";
 import { NotificationBell } from "./NotificationBell";
 
@@ -27,6 +28,7 @@ function PageFallback() {
 /** Rail kiri 232 px (ciut 64 px); di < 768 px menjadi laci. */
 export function AppShell() {
   const { me, logout } = useSession();
+  useLiveEvents(!!me);
   const { pathname } = useLocation();
   const [collapsed, setCollapsed] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);

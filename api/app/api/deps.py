@@ -63,6 +63,7 @@ from app.services.plan_attachment_service import PlanAttachmentService
 from app.services.plan_change_service import PlanChangeService
 from app.services.plan_day_service import PlanDayService
 from app.services.plan_draft_service import PlanDraftService
+from app.services.plan_edit_service import PlanEditService
 from app.services.plan_location_service import PlanLocationService
 from app.services.plan_member_service import PlanMemberService
 from app.services.plan_transition_service import PlanTransitionService
@@ -341,6 +342,10 @@ def get_member_report_service(db: AsyncSession = Depends(get_db_with_user)) -> M
 
 def get_notification_service(db: AsyncSession = Depends(get_db_with_user)) -> NotificationService:
     return NotificationService(db)
+
+
+def get_plan_edit_service(db: AsyncSession = Depends(get_db_with_user)) -> PlanEditService:
+    return PlanEditService(db, PlanAssignmentService(CRUDPlanAssignment(db)))
 
 
 def get_plan_location_service(db: AsyncSession = Depends(get_db_with_user)) -> PlanLocationService:

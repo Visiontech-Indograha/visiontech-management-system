@@ -165,13 +165,12 @@ class CRUDPlanDraft(CRUDBase):
         ids = [str(v) for v in employee_ids]
         if not ids:
             return set()
-        # Mencari dokumen ber-lifecycle 'CURRENT' yang tipenya persis sama dengan licence
-        # dan memastikan expiry_date tidak null dan tidak mendahului 'until'.
+        # Dokumen ber-lifecycle 'CURRENT' bertipe persis `licence` yang berlaku sampai `until`. Lewat fungsi DB:
+        # baris dokumen pribadi tertutup RLS bagi PM/OPS, yang keluar hanya id karyawan yang lolos.
         rows = await self.fetchall(
             """
-            SELECT CAST(employee_id AS text) AS employee_id FROM vms.employee_document
-            WHERE employee_id = ANY(CAST(:ids AS uuid[])) AND doc_type = :licence AND lifecycle = 'CURRENT'
-              AND (expiry_date IS NULL OR expiry_date >= :until)
+            SELECT CAST(employee_id AS text) AS employee_id
+              FROM vms.employees_with_valid_licence(CAST(:ids AS uuid[]), :licence, :until) AS employee_id
             """,
             {"ids": ids, "licence": licence, "until": until},
         )

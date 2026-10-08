@@ -29,13 +29,13 @@ from app.core.errors import AppError
 SEARCH_PATH = "vms, public"
 
 
-def make_engine(**kwargs: Any) -> AsyncEngine:
+def make_engine(url: str | None = None, **kwargs: Any) -> AsyncEngine:
     """
-    Create and configure the SQLAlchemy AsyncEngine.
+    Create and configure the SQLAlchemy AsyncEngine. `url` kosong → DATABASE_URL (koneksi API).
     """
     # Membuat engine async dengan path pencarian yang tepat
     return create_async_engine(
-        settings.DATABASE_URL,
+        url or settings.DATABASE_URL,
         echo=False,
         connect_args={"server_settings": {"search_path": SEARCH_PATH}},
         **kwargs,

@@ -7375,6 +7375,29 @@
       "title": "Title",
       "type": "string"
      },
+     "today_included": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Today Included"
+     },
+     "today_site_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Today Site Id"
+     },
      "unit_id": {
       "format": "uuid",
       "title": "Unit Id",

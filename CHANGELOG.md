@@ -9,6 +9,8 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased] — `development`
 
+- **CI hemat menit (2026-10-08, keputusan pemilik — opsi A):** kuota GitHub Free 2.000 menit/bulan habis tanggal 8 Oktober (132 run CI, tiap commit berjalan dua kali push + PR, uji API 8 menit ikut jalan untuk perubahan HP/dokumen). `ci.yml` kini hanya dipicu `pull_request` (+ manual), dan job `api`/`web`/`mobile` hanya berjalan bila `api|db|face-service|deploy|scripts/`, `web/`, atau `mobile/` berubah (deteksi di job gitleaks, tanpa job tambahan). Sampai kuota terisi 1 November, pemeriksaan dijalankan lokal sebelum merge. docs/17 §3 diperbarui.
+
 - **Uji pembaruan otomatis di HP nyata (2026-10-08):** Realme RMX3933, build 2 → 3 dari dalam aplikasi lulus (unduh terverifikasi → Play Protect "Pindai aplikasi" → terpasang, tetap login, data lokal utuh); hasil dicatat di docs/32 §5. Pita yang tidak tampil setelah "Nanti" adalah penundaan 24 jam sesuai rancangan, bukan bug.
 
 - **Rilis HP 1.1.1+3 (2026-10-08):** kenaikan versi saja, untuk uji pembaruan otomatis build 2 → 3 di HP nyata (Realme) dari dalam aplikasi; build 2 sudah terbit di prod dan terpasang di Realme dengan data & tanda tangan rilis yang sama.

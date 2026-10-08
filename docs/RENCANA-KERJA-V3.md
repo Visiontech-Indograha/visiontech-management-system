@@ -77,7 +77,7 @@ Catat jawabannya di `docs/10-KEPUTUSAN-TERKUNCI-DAN-RISIKO.md` Bagian C, lalu ik
 
 | # | Tugas | Status |
 |---|---|---|
-| T0 | Persiapan & pertanyaan pemilik | ☐ |
+| T0 | Persiapan & pertanyaan pemilik | ☑ |
 | T1 | APK beta (lebih dulu, supaya pemilik bisa menguji HP sejak awal) | ☐ |
 | T2 | Bug: permintaan revisi dari ketua tidak terlihat oleh PM | ☐ |
 | T3 | Bug: absen tanpa wajah terdaftar | ☐ |

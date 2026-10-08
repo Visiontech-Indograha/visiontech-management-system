@@ -18,7 +18,7 @@ import { SkPreviewDialog } from "./SkPreviewDialog";
 type PlanDocument = components["schemas"]["PlanDocumentOut"];
 type Signature = components["schemas"]["SignatureOut"];
 
-const PDF_UNAVAILABLE = "Layanan PDF belum tersedia di server ini.";
+const PDF_UNAVAILABLE = "Pembuatan PDF sedang tidak tersedia. Coba lagi nanti atau hubungi admin.";
 const KIND_LABEL: Record<string, string> = {
   INITIAL_ORDER: "SK",
   REVISION: "Revisi SK",

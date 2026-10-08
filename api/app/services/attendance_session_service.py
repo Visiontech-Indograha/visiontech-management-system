@@ -19,7 +19,7 @@ from app.crud.crud_org_clock import CRUDOrgClock
 from app.services.access_service import ensure_same_org
 from app.services.face_service import FaceOutcome, FaceService
 
-OPEN_SESSION = "Masih ada sesi absensi terbuka."
+OPEN_SESSION = "Anda belum absen pulang dari absen masuk sebelumnya."
 VALID_STATUSES = ("AUTO_VALID", "APPROVED")
 # R-33 (keputusan pemilik 2026-10-02): absen pulang hanya untuk absen masuk yang sudah valid.
 CHECKOUT_NOT_VALID = ("Absen pulang hanya bisa dilakukan setelah absen masuk valid. "

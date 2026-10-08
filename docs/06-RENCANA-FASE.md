@@ -264,6 +264,28 @@ baris di matriks RBAC; tidak ada teks Inggris mentah di layar pengguna.
 >   di server yang sama — rusak disk = data & cadangan hilang bersamaan. Keduanya butuh keputusan pemilik (lokasi
 >   salinan di luar server, biaya).
 
+> - **P9-4 (2026-10-08):** 309 pesan galat API ditinjau; 32 diperbaiki agar dipahami orang lapangan — istilah
+>   Inggris/teknis diganti ("work plan" → "SK", "draft" → "draf", "direview" → "diperiksa", "offboarding" →
+>   "pengakhiran masa kerja", "Token tidak valid"/"EC P-256 dari Android Keystore" → petunjuk langkah), dan galat
+>   umum kini menyebut langkah berikutnya ("Terjadi gangguan pada sistem. Coba lagi …; bila berulang, hubungi admin").
+>   Uji pagar `test_error_messages_avoid_technical_jargon` menjaga agar istilah itu tidak kembali.
+>
+> - **P9-1 (2026-10-08):** uji beban k6 `api/tests/beban/` (data sintetis `seed_beban.py`, skenario `beban.js`) —
+>   jam sibuk pagi: 60 pekerja lapangan bersamaan (login HP → beranda → ±30% unggah swafoto di luar radius → absen
+>   masuk → jelajah 5 menit, jeda 5–15 dtk → absen pulang) + 1 PM meninjau. Laptop developer, API satu proses
+>   uvicorn (sama dengan prod) sebagai `vms_api`: **p95 20 ms** (login 137 ms, absen 85 ms, unggah+kompresi
+>   1,25 dtk), 9.200 permintaan, 60/60 absen tercatat; galat 0,30% = `dial timeout` jaringan Docker Desktop (pemantau
+>   di luar Docker 420/420 OK, log API 0 galat). Temuan yang diperbaiki: unggahan bersamaan berkas yang sama → 500
+>   (balapan deduplikasi; kini `ON CONFLICT`). Belum diuji di perangkat server (berbagi CPU dengan prod) — opsional.
+
+> **Hutang teknis (dicatat, belum dikerjakan):**
+> - Kompresi swafoto ±1 dtk per foto 1600×1200 di laptop (threadpool, tidak memblokir API). Bila banyak pekerja
+>   absen di luar radius dalam menit yang sama di server yang lebih lambat, antrean kompresi bisa memanjang —
+>   pantau p95 unggahan (ambang docs/13: 3 dtk).
+> - Pesan trigger DB `Embedding wajah tidak dapat diubah. Nonaktifkan lalu daftarkan ulang.` (db/05,
+>   `tg_face_enrollment_immutable`) masih memakai istilah teknis. Jalur ini hampir tidak pernah tersentuh pengguna
+>   (hanya bila kode mencoba mengubah data wajah); memperbaikinya butuh migrasi. Kerjakan bersama migrasi wajah berikutnya.
+
 ---
 
 ## Fase 10 — UAT dan rilis *(minggu 22–24)*

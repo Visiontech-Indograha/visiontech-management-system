@@ -99,7 +99,7 @@ class HseService:
         """domain.js REVIEW_REPORT (V-24): PM unit/OPS menyetujui atau mengembalikan (wajib catatan)."""
         require_plan_status(access, PlanStatus.IN_PROGRESS, PlanStatus.COMPLETION_REVIEW)
         if decision not in ("APPROVE", "RETURN"):
-            raise ValidationError("Keputusan tidak valid.")
+            raise ValidationError("Pilihan keputusan tidak dikenali. Muat ulang, lalu pilih lagi.")
         note = (note or "").strip()
         if decision == "RETURN" and not note:
             raise ValidationError("Catatan revisi wajib diisi.")
@@ -115,7 +115,7 @@ class HseService:
         require_plan_status(access, PlanStatus.IN_PROGRESS)
         await self._ensure_day_reached(day_id)
         if await self.repo.daily_report_status(day_id) in ("SUBMITTED", "APPROVED"):
-            raise AppError("INVALID_STATE", "Checklist tidak dapat diubah setelah laporan diserahkan.", status=409)
+            raise AppError("INVALID_STATE", "Daftar tugas tidak dapat diubah setelah laporan diserahkan.", status=409)
         row = await self.repo.toggle_task(task_id, day_id, access.user.user_id)
         if row is None:
             raise NotFoundError("Tugas")

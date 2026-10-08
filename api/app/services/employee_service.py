@@ -98,7 +98,7 @@ class EmployeeService:
         if employee.deleted:
             raise AppError("INVALID_STATE", "Karyawan sudah dihapus.", status=409)
         if employee.is_active:
-            raise AppError("INVALID_STATE", "Nonaktifkan (offboard) karyawan terlebih dahulu.", status=409)
+            raise AppError("INVALID_STATE", "Akhiri masa kerja karyawan ini terlebih dahulu.", status=409)
         await self.repo.archive(employee_id)
         return {"id": str(employee_id), "message": ARCHIVED}
 
@@ -157,11 +157,11 @@ class EmployeeService:
         if employee.deleted or not employee.is_active:
             raise AppError("INVALID_STATE", "Karyawan sudah nonaktif atau tidak ditemukan.", status=409)
         if not reason.strip():
-            raise ValidationError("Alasan offboarding wajib diisi.")
+            raise ValidationError("Alasan pengakhiran masa kerja wajib diisi.")
 
         # Aturan bisnis: Karyawan yang masih tergabung dalam pekerjaan berjalan (SK aktif) tidak bisa diberhentikan.
         if await self.repo.on_running_plan(employee_id):
-            raise AppError("INVALID_STATE", "Selesaikan atau serahterimakan penugasan aktif sebelum offboarding.",
+            raise AppError("INVALID_STATE", "Selesaikan atau serahterimakan penugasan aktif sebelum mengakhiri masa kerja.",
                            status=409)
 
         today = (await CRUDOrgClock(self.db).local_now(org_id)).today

@@ -28,6 +28,14 @@ class DocumentService:
     def __init__(self, repo: CRUDDocument) -> None:
         self.repo = repo
 
+    async def expiring(self, org_id: str, urgency: str | None) -> list[Any]:
+        """Dokumen yang memasuki masa kedaluwarsa di organisasi ini (VERIFY_DOCUMENTS)."""
+        return await self.repo.expiring_for_org(org_id, urgency)
+
+    async def expire_overdue(self, org_id: str) -> int:
+        """Pekerjaan berkala: tandai dokumen kedaluwarsa. → jumlah dokumen yang diubah."""
+        return await self.repo.expire_overdue(org_id)
+
     async def pending_queue(self, org_id: str, user_id: str) -> list[Any]:
         """Dokumen menunggu verifikasi. `uploaded_by_me` → harus diperiksa petugas lain (empat mata)."""
         return await self.repo.pending_for_org(org_id, user_id)

@@ -22,6 +22,10 @@ PUBLIC_ROUTES = {
     ("POST", "/auth/refresh"),
     ("POST", "/auth/logout"),
     ("GET", "/verify/{token}"),   # fase 6: verifikasi QR publik, dibatasi 30/menit per IP
+    # Pembaruan APK (docs/32, keputusan pemilik 2026-10-07): wajib bisa diunduh sebelum login.
+    ("GET", "/app/android/update"),
+    ("GET", "/app/android/files/{name}"),
+    ("GET", "/app/android/latest.apk"),
 }
 
 ROUTES = [(method, path.removeprefix(API_PREFIX)) for method, path in all_routes() if path.startswith(API_PREFIX)]

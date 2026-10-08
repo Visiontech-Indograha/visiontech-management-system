@@ -116,12 +116,19 @@ def _routes() -> dict[tuple[str, str], list[str]]:
     return found
 
 
+def _head_of_public_get(key: tuple[str, str]) -> bool:
+    """HEAD hanya mengembalikan header dari GET yang sama: boleh tanpa penjaga bila GET-nya publik (docs/32)."""
+    method, path = key
+    return method == "HEAD" and ("GET", path) in PUBLIC_ROUTES
+
+
 def test_every_route_has_a_permission_or_guard():
     routes = _routes()
     assert len(routes) > 20
     unguarded = sorted(
         key for key, deps in routes.items()
         if key not in PUBLIC_ROUTES and key not in SELF_SERVICE and key not in GUARDED_IN_HANDLER
+        and not _head_of_public_get(key)
         and not any(guard in name for name in deps for guard in _GUARDS)
     )
     assert unguarded == [], f"Rute tanpa izin/penjaga: {unguarded}"

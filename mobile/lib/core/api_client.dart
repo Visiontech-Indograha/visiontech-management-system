@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:dio/dio.dart';
 
+import 'app_update_channel.dart';
 import 'constants.dart';
 import 'token_storage.dart';
 
@@ -33,6 +34,8 @@ class ApiClient {
     dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
+          final agent = await appUserAgent();
+          if (agent != null) options.headers['User-Agent'] = agent;
           final token = await _tokenStorage.readAccessToken();
           if (token != null) {
             options.headers['Authorization'] = 'Bearer $token';

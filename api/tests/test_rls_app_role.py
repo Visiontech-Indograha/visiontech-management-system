@@ -1,0 +1,113 @@
+"""
+P9-2 (docs/06 Fase 9) · RLS sebagai penjaga terakhir — diuji dengan peran aplikasi `vms_app`, bukan superuser.
+
+Uji lain tersambung sebagai `postgres` (superuser melewati RLS), jadi kebijakan di db/03_policies.sql tidak pernah
+benar-benar teruji. Di sini kueri SENGAJA tidak memfilter organisasi ("servis lupa memfilter"): RLS harus tetap
+menyembunyikan baris organisasi lain, dan tanpa konteks permintaan tidak ada baris yang terlihat sama sekali.
+
+`NO_RLS_TENANT_TABLES` mencatat tabel ber-`organization_id` yang belum dilindungi RLS — daftar hanya boleh
+MENYUSUT: tabel tenant baru tanpa RLS langsung merah.
+"""
+from __future__ import annotations
+
+from collections.abc import Iterator
+from contextlib import contextmanager
+
+from tests.conftest import _sync_conn, sync_query
+
+# Tabel ber-organization_id tanpa RLS (temuan P9-2, 2026-10-08). Pemisahan tenant di sini sepenuhnya bergantung
+# pada filter di crud. Hapus barisnya setelah kebijakan RLS ditambahkan lewat migrasi.
+NO_RLS_TENANT_TABLES = {
+    "app_user": "login mencari akun sebelum konteks organisasi ada",
+    "attendance_device_key": "P9-2 temuan",
+    "attendance_offline_event": "P9-2 temuan",
+    "file_object": "P9-2 temuan",
+    "notification": "P9-2 temuan",
+    "signature_serial_counter": "P9-2 temuan",
+    "site": "P9-2 temuan",
+}
+
+_TENANT_TABLES_SQL = """
+SELECT c.relname, c.relrowsecurity
+  FROM pg_class c
+  JOIN pg_namespace n ON n.oid = c.relnamespace
+ WHERE n.nspname = 'vms' AND c.relkind IN ('r', 'p') AND NOT c.relispartition
+   AND EXISTS (SELECT 1 FROM information_schema.columns k
+                WHERE k.table_schema = 'vms' AND k.table_name = c.relname AND k.column_name = 'organization_id')
+"""
+
+
+@contextmanager
+def _as_app(user_id: str | None, org_id: str | None) -> Iterator:
+    """Kursor dengan peran `vms_app` dan konteks permintaan (SET LOCAL seperti app/db/session.py)."""
+    conn = _sync_conn()
+    try:
+        cur = conn.cursor()
+        if user_id and org_id:
+            cur.execute("SELECT set_config('app.user_id', %s, true), set_config('app.organization_id', %s, true)",
+                        (user_id, org_id))
+        cur.execute("SET LOCAL ROLE vms_app")
+        yield cur
+    finally:
+        conn.rollback()
+        conn.close()
+
+
+def _user_id(world, who: str) -> str:
+    return str(sync_query("SELECT id FROM vms.app_user WHERE login = %s", (world.logins[who],))[0][0])
+
+
+def _rls_tables() -> list[str]:
+    return sorted(name for name, rls in sync_query(_TENANT_TABLES_SQL) if rls)
+
+
+def test_app_role_is_not_allowed_to_bypass_rls():
+    (row,) = sync_query("SELECT rolsuper, rolbypassrls FROM pg_roles WHERE rolname = 'vms_app'")
+    assert row == (False, False)
+
+
+def test_no_new_tenant_table_without_rls():
+    without = {name for name, rls in sync_query(_TENANT_TABLES_SQL) if not rls}
+    new = without - set(NO_RLS_TENANT_TABLES)
+    assert not new, f"tabel tenant baru tanpa RLS: {sorted(new)}"
+    stale = set(NO_RLS_TENANT_TABLES) - without
+    assert not stale, f"sudah ber-RLS, hapus dari NO_RLS_TENANT_TABLES: {sorted(stale)}"
+
+
+def test_admin_never_sees_another_organisation_even_without_a_filter(world, other_world):
+    tables = _rls_tables()
+    assert {"employee", "business_unit", "work_plan", "attendance", "audit_event"} <= set(tables)
+    with _as_app(_user_id(world, "admin"), world.org_id) as cur:
+        # Tidak vakum: data organisasi sendiri memang terlihat.
+        cur.execute("SELECT count(*) FROM vms.employee")
+        assert cur.fetchone()[0] == len(world.employees)
+        cur.execute("SELECT count(*) FROM vms.organization")
+        assert cur.fetchone()[0] == 1
+        for table in tables:
+            cur.execute(f"SELECT count(*) FROM vms.{table} WHERE organization_id = %s", (other_world.org_id,))
+            assert cur.fetchone()[0] == 0, f"{table}: baris organisasi lain terlihat"
+
+
+def test_rows_of_another_organisation_cannot_be_changed(world, other_world):
+    with _as_app(_user_id(world, "admin"), world.org_id) as cur:
+        cur.execute("UPDATE vms.employee SET position = 'diubah' WHERE organization_id = %s", (other_world.org_id,))
+        assert cur.rowcount == 0
+        cur.execute("UPDATE vms.business_unit SET name = 'diubah' WHERE organization_id = %s", (other_world.org_id,))
+        assert cur.rowcount == 0
+    assert sync_query("SELECT count(*) FROM vms.employee WHERE organization_id = %s AND position = 'diubah'",
+                      (other_world.org_id,))[0][0] == 0
+
+
+def test_without_request_context_nothing_is_visible(world):
+    with _as_app(None, None) as cur:
+        for table in ("employee", "business_unit", "organization", "work_plan"):
+            cur.execute(f"SELECT count(*) FROM vms.{table}")
+            assert cur.fetchone()[0] == 0, f"{table}: terlihat tanpa konteks permintaan"
+
+
+def test_regular_member_does_not_see_other_peoples_sessions(client, world):
+    for who in ("member", "leader"):
+        world.headers(client, who)   # login → sesi nyata untuk keduanya
+    with _as_app(_user_id(world, "member"), world.org_id) as cur:
+        cur.execute("SELECT DISTINCT user_id::text FROM vms.user_session")
+        assert {r[0] for r in cur.fetchall()} == {_user_id(world, "member")}

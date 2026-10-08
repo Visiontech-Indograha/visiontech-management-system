@@ -111,3 +111,38 @@ def test_regular_member_does_not_see_other_peoples_sessions(client, world):
     with _as_app(_user_id(world, "member"), world.org_id) as cur:
         cur.execute("SELECT DISTINCT user_id::text FROM vms.user_session")
         assert {r[0] for r in cur.fetchall()} == {_user_id(world, "member")}
+
+
+# ── Peran runtime API `vms_api` (0024_runtime_role) ────────────────────────────
+def test_runtime_role_is_not_superuser_owner_or_bypassing_rls():
+    (row,) = sync_query("SELECT rolsuper, rolbypassrls FROM pg_roles WHERE rolname = 'vms_api'")
+    assert row == (False, False)
+    owners = {r[0] for r in sync_query(
+        "SELECT DISTINCT pg_get_userbyid(c.relowner) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace "
+        "WHERE n.nspname = 'vms' AND c.relkind IN ('r', 'p')")}
+    assert "vms_api" not in owners   # pemilik tabel melewati RLS
+
+
+def test_runtime_role_can_use_every_table_but_no_partition_directly():
+    rows = sync_query(
+        "SELECT c.relname, c.relispartition, has_table_privilege('vms_api', c.oid, 'SELECT') "
+        "FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace "
+        "WHERE n.nspname = 'vms' AND c.relkind IN ('r', 'p')")
+    missing = sorted(name for name, part, ok in rows if not part and not ok)
+    assert not missing, f"tabel baru tanpa GRANT ke vms_api (tambahkan di migrasinya): {missing}"
+    direct = sorted(name for name, part, ok in rows if part and ok)
+    assert not direct, f"partisi bisa dibaca langsung (RLS hanya di tabel induk): {direct}"
+    assert sync_query("SELECT has_table_privilege('vms_api', 'vms.audit_event', 'UPDATE')") == [(False,)]
+
+
+def test_database_functions_run_as_owner_except_pure_context_readers():
+    """Aturan di trigger/fungsi DB harus melihat seluruh data organisasi (bentrok personel lintas unit, SIM, QR
+    publik); dijalankan sebagai pemanggil `vms_api` aturan itu diam-diam meloloskan data yang tak terlihat."""
+    rows = sync_query(
+        "SELECT p.proname, p.prosecdef, array_to_string(p.proconfig, ',') FROM pg_proc p "
+        "JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname = 'vms' AND p.prokind = 'f'")
+    invoker = {"current_org_id", "current_user_id", "new_id"}
+    not_definer = sorted(name for name, definer, _ in rows if not definer and name not in invoker)
+    assert not not_definer, f"fungsi baru wajib SECURITY DEFINER SET search_path = vms, public: {not_definer}"
+    loose_path = sorted(name for name, definer, cfg in rows if definer and "search_path=vms, public" not in (cfg or ""))
+    assert not loose_path, f"SECURITY DEFINER tanpa search_path tetap: {loose_path}"

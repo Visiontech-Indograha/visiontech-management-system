@@ -127,6 +127,12 @@ class CRUDMemberReport(CRUDBase):
             report_id (UUID | str): ID laporan.
             file_ids (Iterable[UUID]): Daftar ID file lampiran baru.
         """
+        # Berkas yang sudah punya label/sumber dan kembali tanpa metadata mempertahankan metadata lamanya.
+        old = {str(r.file_id): (r.slot_label, r.source) for r in await self.fetchall(
+            "SELECT file_id, slot_label, source FROM vms.member_report_evidence WHERE member_report_id = :rid",
+            {"rid": report_id})}
+        items = [(f, old[f][0], old[f][1]) if (s is None and src == "CAMERA" and f in old) else (f, s, src)
+                 for f, s, src in items]
         # Menghapus relasi lampiran bukti (evidence) lama untuk laporan ini
         await self.execute("DELETE FROM vms.member_report_evidence WHERE member_report_id = :rid", {"rid": report_id})
         if items:

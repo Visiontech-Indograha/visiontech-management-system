@@ -7,6 +7,7 @@ export const AuditLogPage = lazy(() => import("@/features/audit/AuditLogPage").t
 export const DirectoryPage = lazy(() => import("@/features/directory/DirectoryPage").then((m) => ({ default: m.DirectoryPage })));
 export const EmployeeDetailPage = lazy(() => import("@/features/directory/EmployeeDetailPage").then((m) => ({ default: m.EmployeeDetailPage })));
 export const MyDocumentsPage = lazy(() => import("@/features/directory/MyDocuments").then((m) => ({ default: m.MyDocumentsPage })));
+export const WorkTypesPage = lazy(() => import("@/features/work-types/WorkTypesPage").then((m) => ({ default: m.WorkTypesPage })));
 export const SitesPage = lazy(() => import("@/features/sites/SitesPage").then((m) => ({ default: m.SitesPage })));
 export const WorkPlanDetailPage = lazy(() => import("@/features/work-plans/WorkPlanDetailPage").then((m) => ({ default: m.WorkPlanDetailPage })));
 export const PlanEditorPage = lazy(() => import("@/features/work-plans/PlanEditorPage").then((m) => ({ default: m.PlanEditorPage })));

@@ -22,7 +22,7 @@ import { oversize, uploadFiles } from "./uploads";
 type S = components["schemas"];
 type Day = S["PlanDayOut"];
 type Task = S["DayTaskOut"];
-type ReportIn = S["DailyReportCreate"];
+type ReportIn = Omit<S["DailyReportCreate"], "evidence"> & { evidence?: S["DailyReportCreate"]["evidence"] };
 type ReviewIn = S["ReportReviewRequest"];
 type MemberReport = S["MemberReportOut"];
 
@@ -47,6 +47,19 @@ function useDayMutation<V>(planId: string, fn: (v: V) => Promise<unknown>) {
  * Laporan harian SK (GET /work-plans/{id}/days) — checklist tugas (toggle), isi & kirim laporan (ketua),
  * review PM. Tindakan ketua ditampilkan kepada semua; API menolak dengan pesan jelas bila bukan ketua.
  */
+type Evidence = { file_id: string; slot_label?: string | null; source?: string };
+
+/** Foto bukti dikelompokkan per slot template ("Foto lain" untuk yang tanpa slot); data lama hanya punya id. */
+function evidenceBySlot(evidence: Evidence[] | undefined, ids: string[]): [string, Evidence[]][] {
+  const list: Evidence[] = evidence && evidence.length > 0 ? evidence : ids.map((file_id) => ({ file_id }));
+  const groups = new Map<string, Evidence[]>();
+  for (const e of list) {
+    const key = e.slot_label || "Foto lain";
+    groups.set(key, [...(groups.get(key) ?? []), e]);
+  }
+  return [...groups.entries()];
+}
+
 export function DailyReports({ plan }: { plan: WorkPlan }) {
   const days = useQuery({
     queryKey: daysKey(plan.id),
@@ -240,10 +253,24 @@ function ReportView({ day }: { day: Day }) {
       {r.evidence_file_ids.length > 0 && (
         <div>
           <dt className="text-mist">Bukti ({r.evidence_file_ids.length} foto)</dt>
-          {/* PM menilai laporan dari foto bukti — tampilkan pratinjau, bukan sekadar jumlah (temuan uji nyata R-17). */}
-          <dd className="mt-1 flex flex-wrap gap-2">
-            {r.evidence_file_ids.map((id, i) => (
-              <FilePreview key={id} fileId={id} fileName={`Bukti ${i + 1}`} />
+          {/* PM menilai laporan dari foto bukti — tampilkan pratinjau per slot template (T9), bukan sekadar jumlah. */}
+          <dd className="mt-1 space-y-2">
+            {evidenceBySlot(r.evidence, r.evidence_file_ids).map(([slot, items]) => (
+              <div key={slot}>
+                <p className="text-xs font-medium text-mist">{slot}</p>
+                <div className="flex flex-wrap gap-2">
+                  {items.map((e, i) => (
+                    <div key={e.file_id} className="relative">
+                      <FilePreview fileId={e.file_id} fileName={`${slot} ${i + 1}`} />
+                      {e.source === "GALLERY" && (
+                        <span className="absolute left-1 top-1 rounded-control bg-surface/90 px-1.5 py-0.5 text-[11px] font-medium text-ink shadow-card">
+                          Dari galeri
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
             ))}
           </dd>
         </div>

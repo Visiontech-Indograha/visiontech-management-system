@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import asyncio
 import json
-import time
 from collections.abc import AsyncIterator
 
 import jwt
@@ -20,6 +19,7 @@ from fastapi.security import HTTPAuthorizationCredentials
 from app.api.deps import _unauthenticated, security
 from app.core.events import broker
 from app.core.security import verify_jwt_token
+from app.core.time import utcnow
 
 router = APIRouter(tags=["Events"])
 PING_SECONDS = 25
@@ -41,18 +41,18 @@ async def events(request: Request,
     except jwt.PyJWTError:
         raise _unauthenticated() from None
     user_id, expires = payload.get("sub"), float(payload.get("exp") or 0)
-    if not user_id or expires <= time.time():
+    if not user_id or expires <= utcnow().timestamp():
         raise _unauthenticated()
 
     async def stream() -> AsyncIterator[str]:
         queue = broker.subscribe(str(user_id))
         try:
             yield ": connected\n\n"
-            while time.time() < expires:
+            while utcnow().timestamp() < expires:
                 if await request.is_disconnected():
                     break
                 try:
-                    wait = max(0.1, min(PING_SECONDS, expires - time.time()))
+                    wait = max(0.1, min(PING_SECONDS, expires - utcnow().timestamp()))
                     event = await asyncio.wait_for(queue.get(), timeout=wait)
                 except TimeoutError:
                     yield ": ping\n\n"

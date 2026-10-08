@@ -13,3 +13,6 @@ FAILED tests/test_plan_status_rules.py::test_asset_is_not_allocated_to_a_finishe
 FAILED tests/test_plan_status_rules.py::test_asset_is_not_allocated_to_a_finished_plan[CANCELLED]
 13 failed, 923 passed, 1 warning in 1007.88s (0:16:47)
 tests/test_plan_draft_v2.py::test_full_create_rejects_incomplete_forms[override4-Pilih minimal satu anggota tim.]  (T5: anggota kini opsional; hapus kasus ini)
+tests/test_plan_cancel_archive.py::test_restore_rechecks_the_team  (T5: anggota opsional)
+tests/test_plan_transitions.py::test_publish_requires_at_least_one_member  (T5: anggota opsional)
+web: src/test/auth.test.tsx '/auth/me dengan hanya empat field' — flaky (lulus saat dijalankan ulang), bukan akibat perubahan v3

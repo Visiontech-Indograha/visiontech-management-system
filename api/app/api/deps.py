@@ -27,6 +27,7 @@ from app.crud.crud_audit import CRUDAudit
 from app.crud.crud_document import CRUDDocument
 from app.crud.crud_employee import CRUDEmployee
 from app.crud.crud_face import CRUDFace
+from app.crud.crud_file import CRUDFile
 from app.crud.crud_org_clock import CRUDOrgClock
 from app.crud.crud_plan_access import CRUDPlanAccess
 from app.crud.crud_plan_assignment import CRUDPlanAssignment
@@ -50,6 +51,7 @@ from app.services.document_service import DocumentService
 from app.services.employee_service import EmployeeService
 from app.services.face_embed_client import FaceEmbedClient
 from app.services.face_service import FaceService
+from app.services.file_service import FileService
 from app.services.member_report_service import MemberReportService
 from app.services.monitoring_service import MonitoringService
 from app.services.notification_service import NotificationService
@@ -290,6 +292,10 @@ def get_document_service(db: AsyncSession = Depends(get_db_with_user)) -> Docume
 
 def get_employee_service(db: AsyncSession = Depends(get_db_with_user)) -> EmployeeService:
     return EmployeeService(db)
+
+
+def get_file_service(db: AsyncSession = Depends(get_db_with_user)) -> FileService:
+    return FileService(CRUDFile(db))
 
 
 def get_monitoring_service(db: AsyncSession = Depends(get_db_with_user)) -> MonitoringService:

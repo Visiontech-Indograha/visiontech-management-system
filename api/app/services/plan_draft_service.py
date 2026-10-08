@@ -176,8 +176,6 @@ class PlanDraftService:
 
         leader = str(data.leader_employee_id)
         members = [str(m) for m in data.member_employee_ids]
-        if not members:
-            raise _invalid("Pilih minimal satu anggota tim.")
         if leader in members or len(set(members)) != len(members):
             raise _invalid("Ketua tim tidak boleh dipilih lagi sebagai anggota.")
         staff = await self.repo.field_staff_ids([leader, *members], user.organization_id)
@@ -287,7 +285,8 @@ class PlanDraftService:
             user.organization_id, creator.unit_id, user.user_id, title=data.title.strip(),
             description=data.description.strip(), category=data.category, site_id=site_id,
             location_text=site_name, period_start=data.period_start, period_end=data.period_end,
-            pm_employee_id=creator.employee_id, leader_employee_id=data.leader_employee_id)
+            pm_employee_id=creator.employee_id, leader_employee_id=data.leader_employee_id,
+            is_out_of_town=data.is_out_of_town)
         # Menyisipkan relasi (tugas harian, tim, reservasi aset)
         await self._fill(user, str(row.id), data)
         return await self.detail(row.id)
@@ -322,7 +321,7 @@ class PlanDraftService:
         await self.repo.update_plan(
             plan_id, title=data.title.strip(), description=data.description.strip(), category=data.category,
             site_id=site_id, location_text=site_name, period_start=data.period_start, period_end=data.period_end,
-            leader_employee_id=data.leader_employee_id)
+            leader_employee_id=data.leader_employee_id, is_out_of_town=data.is_out_of_town)
         # Memasukkan kembali relasi (tugas harian, tim, reservasi aset) dengan data baru
         await self._fill(user, str(plan_id), data)
         return await self.detail(plan_id)

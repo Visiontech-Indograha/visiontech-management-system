@@ -42,8 +42,10 @@ const schema = z
     tool_ids: z.array(z.string()),
     vehicle_id: z.string(),
     leader_employee_id: required("Pilih ketua tim."),
-    member_employee_ids: z.array(z.string()).min(1, "Pilih minimal satu anggota tim."),
+    member_employee_ids: z.array(z.string()),
     driver_employee_id: z.string(),
+    is_out_of_town: z.boolean(),
+    one_day: z.boolean(),
   })
   .refine((v) => v.period_end >= v.period_start, {
     path: ["period_end"],
@@ -98,6 +100,8 @@ function fromDetail(detail: PlanDetail): { values: Values; site: NewSite | null 
       leader_employee_id: team.find((m) => m.role_in_plan === "LEADER")?.employee_id ?? "",
       member_employee_ids: team.filter((m) => m.role_in_plan === "MEMBER").map((m) => m.employee_id),
       driver_employee_id: vehicle?.driver_employee_id ?? "",
+      is_out_of_town: p.is_out_of_town === true,
+      one_day: !!p.period_start && p.period_start === p.period_end,
     },
   };
 }
@@ -161,9 +165,16 @@ function PlanEditor({ planId, detail, changeId }: { planId?: string; detail?: Pl
       leader_employee_id: "",
       member_employee_ids: [],
       driver_employee_id: "",
+      is_out_of_town: false,
+      one_day: false,
     },
   });
   const days = useFieldArray({ control, name: "days" });
+  const oneDay = useWatch({ control, name: "one_day" });
+  const startDate = useWatch({ control, name: "period_start" });
+  useEffect(() => {
+    if (oneDay && startDate) setValue("period_end", startDate);
+  }, [oneDay, startDate, setValue]);
   const [start, end, leader, members, vehicle, siteId] = useWatch({
     control,
     name: ["period_start", "period_end", "leader_employee_id", "member_employee_ids", "vehicle_id", "site_id"],
@@ -208,6 +219,7 @@ function PlanEditor({ planId, detail, changeId }: { planId?: string; detail?: Pl
       })),
       leader_employee_id: v.leader_employee_id,
       member_employee_ids: v.member_employee_ids,
+      is_out_of_town: v.is_out_of_town,
       tool_ids: v.tool_ids,
       vehicle_id: v.vehicle_id || null,
       driver_employee_id: v.vehicle_id ? v.driver_employee_id : null,
@@ -285,8 +297,16 @@ function PlanEditor({ planId, detail, changeId }: { planId?: string; detail?: Pl
             <Section title="Detail pekerjaan per hari">
               <div className="grid gap-x-3 md:grid-cols-2">
                 <TextField label="Tanggal mulai" type="date" readOnly={!!changeId} error={errors.period_start?.message} {...register("period_start")} />
-                <TextField label="Tanggal selesai" type="date" error={errors.period_end?.message} {...register("period_end")} />
+                {!oneDay && <TextField label="Tanggal selesai" type="date" error={errors.period_end?.message} {...register("period_end")} />}
               </div>
+              <label className="mb-2 flex min-h-11 items-center gap-2 text-sm">
+                <input type="checkbox" className="size-5" {...register("one_day")} />
+                Rencana kerja 1 hari
+              </label>
+              <label className="mb-2 flex min-h-11 items-center gap-2 text-sm">
+                <input type="checkbox" className="size-5" {...register("is_out_of_town")} />
+                Luar kota (uang absen luar kota)
+              </label>
               {days.fields.length === 0 ? (
                 <p className="text-sm text-mist">Pilih rentang tanggal; daftar hari kerja akan muncul untuk diisi.</p>
               ) : (
@@ -296,7 +316,7 @@ function PlanEditor({ planId, detail, changeId }: { planId?: string; detail?: Pl
                   ))}
                 </ol>
               )}
-              {end && (
+              {end && !oneDay && (
                 <Button type="button" variant="outline" className="mt-3 w-full" onClick={() => setValue("period_end", nextDay(end))}>
                   <Plus className="size-4" /> Tambah hari kerja
                 </Button>

@@ -176,6 +176,13 @@ class _WorkPlansScreenState extends ConsumerState<WorkPlansScreen> {
                                     '${_date.format(DateTime.parse(p['period_start'] as String))} – '
                                     '${_date.format(DateTime.parse(p['period_end'] as String))}',
                               ),
+                              if (p['is_out_of_town'] == true) ...[
+                                const SizedBox(height: 4),
+                                const InfoRow(
+                                  icon: Icons.directions_car_rounded,
+                                  text: 'Luar kota',
+                                ),
+                              ],
                             ],
                           ),
                         ),

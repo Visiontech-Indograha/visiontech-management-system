@@ -20,11 +20,11 @@ from .base import CRUDBase
 
 # `:plan` NULL → semua SK terlihat (daftar); terisi → satu SK (penjaga). `:status` NULL → semua status.
 _STANDING = """
-    SELECT id, unit_id, site_id, number, title, location_text, description, period_start, period_end, status, pm_employee_id, leader_employee_id, revision, row_version, cancellation_reason, appeal_reason, category, pending_request, created_at, manages, is_leader, is_member, visible FROM (
+    SELECT id, unit_id, site_id, number, title, location_text, description, period_start, period_end, status, pm_employee_id, leader_employee_id, revision, row_version, cancellation_reason, appeal_reason, category, is_out_of_town, pending_request, created_at, manages, is_leader, is_member, visible FROM (
         SELECT wp.id, wp.unit_id, wp.site_id, wp.number, wp.title, wp.location_text, wp.description,
                lower(wp.period) AS period_start, upper(wp.period) - 1 AS period_end,
                wp.status, wp.pm_employee_id, wp.leader_employee_id, wp.revision, wp.row_version,
-               wp.cancellation_reason, wp.appeal_reason, wp.category, wp.created_at,
+               wp.cancellation_reason, wp.appeal_reason, wp.category, wp.is_out_of_town, wp.created_at,
                -- T2: ada permintaan revisi dari ketua yang menunggu PM.
                (wp.status = 'APPEALED' OR EXISTS (SELECT 1 FROM vms.plan_change pc
                   WHERE pc.work_plan_id = wp.id AND pc.status = 'PENDING_PM')) AS pending_request,

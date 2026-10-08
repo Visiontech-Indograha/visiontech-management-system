@@ -13323,7 +13323,13 @@
        "format": "uuid"
       },
       "type": "array",
-      "title": "Member Employee Ids"
+      "title": "Member Employee Ids",
+      "default": []
+     },
+     "is_out_of_town": {
+      "type": "boolean",
+      "title": "Is Out Of Town",
+      "default": false
      },
      "tool_ids": {
       "items": {
@@ -13378,8 +13384,7 @@
      "period_start",
      "period_end",
      "days",
-     "leader_employee_id",
-     "member_employee_ids"
+     "leader_employee_id"
     ],
     "title": "PlanDraftRequest",
     "description": "Permintaan pembuatan atau penyimpanan draf Rencana Kerja (SK v2)."
@@ -15007,6 +15012,11 @@
        }
       ],
       "title": "Category"
+     },
+     "is_out_of_town": {
+      "type": "boolean",
+      "title": "Is Out Of Town",
+      "default": false
      },
      "pending_request": {
       "type": "boolean",

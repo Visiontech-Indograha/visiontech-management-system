@@ -121,7 +121,7 @@ export function ExtensionDialog({ plan, onClose }: { plan: WorkPlan; onClose: ()
 
 const personnelSchema = z.object({
   leader_employee_id: z.string().min(1, "Pilih ketua tim."),
-  member_employee_ids: z.array(z.string()).min(1, "Pilih minimal satu anggota tim."),
+  member_employee_ids: z.array(z.string()),
   reason: z.string().trim().min(1, "Alasan revisi wajib diisi."),
 });
 type PersonnelValues = z.infer<typeof personnelSchema>;

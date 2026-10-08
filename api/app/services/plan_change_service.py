@@ -135,8 +135,6 @@ class PlanChangeService:
             raise _invalid("Ketua tim tidak perlu didaftarkan lagi sebagai anggota.")
         if plan.pm_employee_id and leader == str(plan.pm_employee_id):
             raise _invalid("PM penerbit tidak boleh menerima rencana kerja sebagai ketua tim sendiri.")
-        if not members:
-            raise _invalid("Pilih minimal satu anggota tim.")
         current = {m.employee_id for m in await self.plans.active_team(plan_id)}
         if {leader, *members} == current and leader == str(plan.leader_employee_id):
             raise _invalid("Tidak ada perubahan personel yang diusulkan.")

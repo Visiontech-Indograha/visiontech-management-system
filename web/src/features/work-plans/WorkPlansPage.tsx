@@ -68,6 +68,9 @@ export function WorkPlansPage() {
                   <span className="font-medium text-lens">{p.title}</span>
                   <StatusBadge status={p.status} />
                 </div>
+                {p.is_out_of_town && (
+                  <p className="mb-1 mr-1 inline-block rounded-control bg-accent px-2 py-0.5 text-sm font-medium text-lens">Luar kota</p>
+                )}
                 {p.pending_request && canManage && (
                   <p className="mb-1 inline-block rounded-control bg-warning-bg px-2 py-0.5 text-sm font-medium text-warning">
                     Perlu tindakan: ada permintaan revisi dari ketua

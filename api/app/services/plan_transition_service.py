@@ -85,8 +85,6 @@ class PlanTransitionService:
             raise _invalid("Ketua tim harus karyawan aktif.")
         if plan.pm_employee_id and leaders[0].employee_id == str(plan.pm_employee_id):
             raise _invalid("PM penerbit tidak boleh menerima rencana kerja sebagai ketua tim sendiri.")
-        if not members:
-            raise _invalid("Pilih minimal satu anggota tim.")
         if any(not m.employee_active for m in members):
             raise _invalid("Semua anggota tim harus karyawan aktif.")
         conflicts = await self.members.schedule_conflicts([m.employee_id for m in team], plan.id)

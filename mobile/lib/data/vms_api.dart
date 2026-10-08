@@ -144,6 +144,20 @@ class VmsApi {
       _dio.post('$_p/work-plans/$planId/weekly/$week/submit');
 
   // --- Adendum saat berjalan, aset, laporan akhir (alur SK v2 PR3) ----------
+  /// Aliran peristiwa waktu nyata (SSE, T8). Tanpa batas waktu baca: sambungan sengaja berumur panjang.
+  Future<ResponseBody> openEvents(CancelToken cancel) async {
+    final res = await _dio.get<ResponseBody>(
+      '$_p/events',
+      options: Options(
+        responseType: ResponseType.stream,
+        headers: {'Accept': 'text/event-stream'},
+        receiveTimeout: Duration.zero,
+      ),
+      cancelToken: cancel,
+    );
+    return res.data!;
+  }
+
   /// Riwayat revisi rencana kerja oleh PM (T6), terbaru dulu.
   Future<List<Map<String, dynamic>>> planRevisions(String planId) async =>
       _list((await _dio.get('$_p/work-plans/$planId/revisions')).data);

@@ -49,7 +49,12 @@ class _NotificationBellState extends ConsumerState<NotificationBell> {
   }
 
   @override
-  Widget build(BuildContext context) => Stack(
+  Widget build(BuildContext context) {
+    ref.listen(liveEventTickProvider, (_, _) => _refresh());
+    return _bell();
+  }
+
+  Widget _bell() => Stack(
     clipBehavior: Clip.none,
     children: [
       HeaderAction(
@@ -154,6 +159,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(liveEventTickProvider, (_, _) => _load());   // T8: peristiwa waktu nyata
     final unread = _items.where((n) => n['read_at'] == null).length;
     return Scaffold(
       appBar: VmsTopBar(

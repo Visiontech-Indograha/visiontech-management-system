@@ -4,6 +4,8 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
+from app.schemas.work_type import EvidenceOut
+
 
 class DayTaskOut(BaseModel):
     """Skema respons untuk tugas harian."""
@@ -23,6 +25,7 @@ class DayReportOut(BaseModel):
     submitted_at: datetime | None  # Waktu pengiriman laporan
     reviewed_at: datetime | None  # Waktu saat laporan ditelaah/direview
     evidence_file_ids: list[UUID]  # Daftar ID file lampiran bukti penyelesaian
+    evidence: list[EvidenceOut] = []  # Bukti berlabel slot template + sumber (T9)
     resubmitted: bool = False   # "Dikirim ulang" (alur SK v2) - Indikator laporan dikirim ulang
 
 

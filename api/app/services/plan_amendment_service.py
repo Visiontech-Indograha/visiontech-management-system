@@ -113,7 +113,7 @@ class PlanAmendmentService:
         await self.repo.update_header(
             plan.id, title=data.title.strip(), description=data.description.strip(), category=data.category,
             site_id=site_id, location_text=site_name, period_start=data.period_start, period_end=data.period_end,
-            is_out_of_town=data.is_out_of_town)
+            is_out_of_town=data.is_out_of_town, work_type_id=data.work_type_id)
         for order, new_day in enumerate(sorted(data.days, key=lambda d: d.work_date)):
             key = str(new_day.work_date)
             current = days.get(key)

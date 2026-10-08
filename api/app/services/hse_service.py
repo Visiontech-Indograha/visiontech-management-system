@@ -17,8 +17,10 @@ from app.core.permissions import RoleCode
 from app.core.security import CurrentUser
 from app.crud.crud_hse import CRUDHse
 from app.crud.crud_org_clock import CRUDOrgClock
+from app.schemas.work_type import EvidenceIn, merge_evidence
 from app.services.access_service import PlanAccess, PlanNeed, check_plan_access, ensure_same_org, require_plan_status
 from app.services.notification_service import NotificationService
+from app.services.work_type_service import WorkTypeService
 
 
 class HseService:
@@ -67,16 +69,17 @@ class HseService:
         return row
 
     async def save_daily_report(self, access: PlanAccess, day_id: UUID, body: str | None, obstacle: str | None,
-                                evidence_file_ids: list[UUID]) -> Any:
+                                evidence_file_ids: list[UUID], evidence: list[EvidenceIn] | None = None) -> Any:
         """domain.js SAVE_REPORT (V-11, V-24): ketua, SK berjalan, hari sudah tiba, laporan belum diserahkan."""
         require_plan_status(access, PlanStatus.IN_PROGRESS)
         await self._ensure_day_reached(day_id)
-        await ensure_same_org(self.db, access.user.organization_id, files=evidence_file_ids)
+        items = merge_evidence(evidence_file_ids, evidence or [])
+        await ensure_same_org(self.db, access.user.organization_id, files=[UUID(i[0]) for i in items])
         report = await self.repo.upsert_daily_report(day_id, body, obstacle)
         if report is None:
             raise AppError("INVALID_STATE", "Laporan yang sudah diserahkan tidak dapat diubah.", status=409)
-        if evidence_file_ids:
-            await self.repo.replace_report_evidence(report.id, [str(f) for f in evidence_file_ids])
+        if items:
+            await self.repo.replace_report_evidence(report.id, items)
         return report
 
     async def submit_daily_report(self, access: PlanAccess, day_id: UUID) -> Any:
@@ -84,6 +87,7 @@ class HseService:
         require_plan_status(access, PlanStatus.IN_PROGRESS)
         await self._ensure_day_reached(day_id)
         employee_id = await self.repo.employee_of_user(access.user.user_id)
+        await WorkTypeService(self.db).ensure_daily_complete(access.plan.id, day_id)   # T9: slot foto wajib
         try:
             report = await self.repo.submit_daily_report(day_id, employee_id)
         except Exception as e:

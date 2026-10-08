@@ -5,6 +5,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
+from app.schemas.work_type import EvidenceIn, EvidenceOut
+
 PlanCategory = Literal["INSTALASI", "PEMELIHARAAN", "PERBAIKAN", "SURVEI", "LAINNYA"]
 
 
@@ -84,6 +86,7 @@ class PlanDraftRequest(BaseModel):
     leader_employee_id: UUID  # ID pegawai yang ditunjuk sebagai ketua
     member_employee_ids: list[UUID] = []  # Daftar ID pegawai yang jadi anggota (opsional; ketua tetap wajib)
     is_out_of_town: bool = False  # Rencana kerja luar kota (uang absen luar kota)
+    work_type_id: UUID | None = None  # Jenis pekerjaan (template foto laporan); opsional
     tool_ids: list[UUID] = []  # Daftar ID alat yang akan digunakan
     vehicle_id: UUID | None = None  # ID kendaraan operasional (opsional)
     driver_employee_id: UUID | None = None  # ID pegawai yang menjadi pengemudi (opsional)
@@ -126,7 +129,8 @@ class MemberReportIn(BaseModel):
     """Masukan laporan harian yang disusun oleh anggota tim."""
     body: str  # Isi laporan kinerja
     obstacle: str = ""  # Rintangan atau kendala (opsional)
-    evidence_file_ids: list[UUID] = []  # Daftar ID file bukti pelaporan
+    evidence_file_ids: list[UUID] = []  # Daftar ID file bukti pelaporan (APK lama)
+    evidence: list[EvidenceIn] = []  # Foto bukti berlabel slot + sumber (T9)
 
 
 class MemberReportOut(BaseModel):
@@ -140,6 +144,7 @@ class MemberReportOut(BaseModel):
     obstacle: str  # Isi teks kendala
     sent_at: datetime | None = None  # Waktu laporan dikirim
     evidence_file_ids: list[UUID] = []  # Daftar file bukti
+    evidence: list[EvidenceOut] = []  # Bukti berlabel slot + sumber (T9)
 
 
 # ── Adendum saat berjalan (PR3) ──────────────────────────────────────────────────────────────

@@ -227,3 +227,29 @@ class CRUDDocument(CRUDBase):
                       uploaded_by, verified_by, verified_at, review_note, created_at
             """,
             {"id": doc_id, "status": status, "lifecycle": lifecycle, "uid": user_id, "note": note})
+
+    async def expiring_for_org(self, org_id: UUID | str, urgency: str | None) -> list[Any]:
+        """Dokumen yang akan/sudah kedaluwarsa (`v_document_expiry`), paling mendesak dulu."""
+        return list(await self.fetchall(
+            """
+            SELECT id, employee_id, full_name, doc_type, expiry_date, days_left, urgency
+              FROM vms.v_document_expiry
+             WHERE organization_id = :org AND (CAST(:urgency AS text) IS NULL OR urgency::text = CAST(:urgency AS text))
+             ORDER BY days_left ASC
+            """,
+            {"org": org_id, "urgency": urgency}))
+
+    async def expire_overdue(self, org_id: UUID | str) -> int:
+        """Dokumen 'CURRENT' yang lewat masa berlaku → 'EXPIRED'; "hari ini" menurut zona waktu organisasi."""
+        rows = await self.fetchall(
+            """
+            UPDATE vms.employee_document d
+               SET lifecycle = 'EXPIRED'
+              FROM vms.employee e
+              JOIN vms.organization o ON o.id = e.organization_id
+             WHERE d.employee_id = e.id AND e.organization_id = CAST(:org AS uuid)
+               AND d.lifecycle = 'CURRENT' AND d.expiry_date < (now() AT TIME ZONE o.timezone)::date
+            RETURNING d.id
+            """,
+            {"org": org_id})
+        return len(rows)

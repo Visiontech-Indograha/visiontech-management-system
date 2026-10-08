@@ -20,6 +20,7 @@ from app.crud.crud_plan_access import CRUDPlanAccess
 from app.crud.crud_sync import CRUDSync
 from app.schemas.hse import DailyReportCreate, IncidentCreate
 from app.services.access_service import PlanAccess, PlanNeed, check_plan_access, ensure_same_org
+from app.services.hse_service import HseService
 from app.services.overtime_service import OvertimeService
 
 OFFLINE_ALLOWED = ("DAILY_REPORT_SAVE", "DAILY_REPORT_SUBMIT", "TASK_TOGGLE", "INCIDENT_REPORT", "OVERTIME_REPORT")
@@ -78,23 +79,22 @@ class SyncService:
             op_type (str): Tipe operasi (mis. DAILY_REPORT_SAVE).
             p (dict[str, Any]): Payload / data dari operasi.
         """
-        # Sementara: logika laporan harian & insiden masih di endpoint hse (SQL di endpoint, R-25b).
-        # Impor di dalam fungsi agar tidak melingkar dengan api/deps.py; dibereskan di docs/26 M6 modul hse.
-        from app.api.v1.endpoints import hse
-
+        hse = HseService(self.db)
         if op_type in ("DAILY_REPORT_SAVE", "DAILY_REPORT_SUBMIT", "TASK_TOGGLE"):
             plan_id, day_id = UUID(str(p["plan_id"])), UUID(str(p["day_id"]))
             access = await self._day_access(user, plan_id, day_id)
             if op_type == "DAILY_REPORT_SAVE":
                 data = DailyReportCreate(body=p["body"], obstacle=p["obstacle"],
                                          evidence_file_ids=p.get("evidence_file_ids", []))
-                await hse.upsert_daily_report(day_id, data, access=access, db=self.db)
+                await hse.save_daily_report(access, day_id, data.body, data.obstacle, data.evidence_file_ids)
             elif op_type == "DAILY_REPORT_SUBMIT":
-                await hse.submit_daily_report(day_id, access=access, db=self.db)
+                await hse.submit_daily_report(access, day_id)
             else:
-                await hse.toggle_task(day_id, UUID(str(p["task_id"])), access=access, db=self.db)
+                await hse.toggle_task(access, day_id, UUID(str(p["task_id"])))
         elif op_type == "INCIDENT_REPORT":
-            await hse.report_incident(IncidentCreate(**p), current_user=user, db=self.db)
+            incident = IncidentCreate(**p)
+            await hse.report_incident(user, incident.work_plan_id, incident.category, incident.severity,
+                                      incident.description, incident.evidence_file_ids)
         elif op_type == "OVERTIME_REPORT":
             plan_id = UUID(str(p["work_plan_id"]))
             # Memastikan pengguna dan SK berada dalam organisasi yang sama

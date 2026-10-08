@@ -2,22 +2,17 @@
 Absensi lapangan. Tipis (dok 12 §2): aturan di services/attendance_session_service.py (V-12),
 SQL di crud/crud_attendance_session.py; jarak/status/terlambat/pulang cepat diputuskan trigger.
 """
-import csv
-import io
 from datetime import date
 from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import PlainTextResponse
-from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import (
     get_attendance_offline_service,
     get_attendance_session_service,
     get_current_user,
-    get_db_with_user,
     require_permission,
 )
 from app.core.permissions import Permission
@@ -33,7 +28,6 @@ from app.schemas.attendance import (
     OfflineAttendanceResult,
     ReviewRequest,
 )
-from app.services.access_service import ensure_same_org
 from app.services.attendance_offline_service import AttendanceOfflineService
 from app.services.attendance_session_service import AttendanceSessionService
 
@@ -136,7 +130,6 @@ async def submit_offline_attendance(
 async def check_in(
     data: CheckInRequest,
     current_user: CurrentUser = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db_with_user),
     attendance_session_service: AttendanceSessionService = Depends(get_attendance_session_service)
 ) -> AttendanceResponse:
     """
@@ -150,7 +143,8 @@ async def check_in(
     """
     # Mengambil sesi DB dari Depends (get_db_with_user) untuk pengecekan referensi yang aman
     # Serta dependensi attendance_session_service untuk menjalankan transaksi absensi
-    await ensure_same_org(db, current_user.organization_id, sites=[data.site_id], files=[data.selfie_file_id])
+    await attendance_session_service.ensure_check_in_refs(current_user.organization_id, data.site_id,
+                                                         data.selfie_file_id)
     row = await attendance_session_service.check_in(
         current_user.organization_id, current_user.user_id, site_id=data.site_id,
         lng=data.location.lng, lat=data.location.lat, origin=data.location_origin,
@@ -236,7 +230,7 @@ async def export_attendance(
     start_date: date,
     end_date: date,
     current_user: CurrentUser = Depends(require_permission(Permission.EXPORT_ATTENDANCE)),
-    db: AsyncSession = Depends(get_db_with_user)
+    attendance_session_service: AttendanceSessionService = Depends(get_attendance_session_service),
 ) -> str:
     """
     P4-5: Ekspor CSV untuk Finance. Jam dalam zona waktu organisasi (sebelumnya tercetak UTC).
@@ -247,33 +241,4 @@ async def export_attendance(
 
     Return: Data mentah format CSV
     """
-    # Memerlukan izin EXPORT_ATTENDANCE dan sesi db.
-    # Melakukan query raw SQL untuk membuat format CSV
-    query = text("""
-        SELECT a.work_date, e.employee_no, e.full_name, a.site_label,
-               to_char(a.check_in_at AT TIME ZONE o.timezone, 'HH24:MI:SS') AS check_in,
-               to_char(a.check_out_at AT TIME ZONE o.timezone, 'HH24:MI:SS') AS check_out,
-               a.status, a.is_late, a.is_early_leave
-        FROM vms.attendance a
-        JOIN vms.employee e ON a.employee_id = e.id
-        JOIN vms.organization o ON o.id = a.organization_id
-        WHERE a.organization_id = :org
-          AND a.work_date BETWEEN :start AND :end
-        ORDER BY a.work_date ASC, e.full_name ASC
-    """)
-    rows = (await db.execute(query, {
-        "org": current_user.organization_id, "start": start_date, "end": end_date
-    })).fetchall()
-
-    output = io.StringIO()
-    writer = csv.writer(output)
-    writer.writerow(["Tanggal", "NIK", "Nama", "Lokasi", "Check In", "Check Out", "Terlambat", "Pulang Cepat", "Status"])
-
-    for r in rows:
-        writer.writerow([
-            r.work_date.isoformat(), r.employee_no, r.full_name, r.site_label,
-            r.check_in or "", r.check_out or "", "Ya" if r.is_late else "Tidak",
-            "Ya" if r.is_early_leave else "Tidak", r.status
-        ])
-
-    return output.getvalue()
+    return await attendance_session_service.export_csv(current_user.organization_id, start_date, end_date)

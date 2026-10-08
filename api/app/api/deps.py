@@ -23,9 +23,11 @@ from app.core.security import CurrentUser, verify_jwt_token
 from app.crud.crud_attendance_monitor import CRUDAttendanceMonitor
 from app.crud.crud_attendance_offline import CRUDAttendanceOffline
 from app.crud.crud_attendance_session import CRUDAttendanceSession
+from app.crud.crud_audit import CRUDAudit
 from app.crud.crud_document import CRUDDocument
 from app.crud.crud_employee import CRUDEmployee
 from app.crud.crud_face import CRUDFace
+from app.crud.crud_file import CRUDFile
 from app.crud.crud_org_clock import CRUDOrgClock
 from app.crud.crud_plan_access import CRUDPlanAccess
 from app.crud.crud_plan_assignment import CRUDPlanAssignment
@@ -43,11 +45,14 @@ from app.services.asset_reservation_service import AssetReservationService
 from app.services.attendance_monitor_service import AttendanceMonitorService
 from app.services.attendance_offline_service import AttendanceOfflineService
 from app.services.attendance_session_service import AttendanceSessionService
+from app.services.audit_service import AuditService
 from app.services.auth_flow import AuthFlowService
 from app.services.document_service import DocumentService
 from app.services.employee_service import EmployeeService
 from app.services.face_embed_client import FaceEmbedClient
 from app.services.face_service import FaceService
+from app.services.file_service import FileService
+from app.services.hse_service import HseService
 from app.services.member_report_service import MemberReportService
 from app.services.monitoring_service import MonitoringService
 from app.services.notification_service import NotificationService
@@ -58,6 +63,7 @@ from app.services.plan_attachment_service import PlanAttachmentService
 from app.services.plan_change_service import PlanChangeService
 from app.services.plan_day_service import PlanDayService
 from app.services.plan_draft_service import PlanDraftService
+from app.services.plan_edit_service import PlanEditService
 from app.services.plan_location_service import PlanLocationService
 from app.services.plan_member_service import PlanMemberService
 from app.services.plan_transition_service import PlanTransitionService
@@ -244,6 +250,10 @@ def get_account_service(db: AsyncSession = Depends(get_db_with_user)) -> Account
     return AccountService(CRUDUser(db), CRUDEmployee(db), CRUDSession(db))
 
 
+def get_audit_service(db: AsyncSession = Depends(get_db_with_user)) -> AuditService:
+    return AuditService(CRUDAudit(db))
+
+
 def get_asset_reservation_service(db: AsyncSession = Depends(get_db_with_user)) -> AssetReservationService:
     return AssetReservationService(db)
 
@@ -286,6 +296,14 @@ def get_employee_service(db: AsyncSession = Depends(get_db_with_user)) -> Employ
     return EmployeeService(db)
 
 
+def get_file_service(db: AsyncSession = Depends(get_db_with_user)) -> FileService:
+    return FileService(CRUDFile(db))
+
+
+def get_hse_service(db: AsyncSession = Depends(get_db_with_user)) -> HseService:
+    return HseService(db)
+
+
 def get_monitoring_service(db: AsyncSession = Depends(get_db_with_user)) -> MonitoringService:
     return MonitoringService(db)
 
@@ -324,6 +342,10 @@ def get_member_report_service(db: AsyncSession = Depends(get_db_with_user)) -> M
 
 def get_notification_service(db: AsyncSession = Depends(get_db_with_user)) -> NotificationService:
     return NotificationService(db)
+
+
+def get_plan_edit_service(db: AsyncSession = Depends(get_db_with_user)) -> PlanEditService:
+    return PlanEditService(db, PlanAssignmentService(CRUDPlanAssignment(db)))
 
 
 def get_plan_location_service(db: AsyncSession = Depends(get_db_with_user)) -> PlanLocationService:

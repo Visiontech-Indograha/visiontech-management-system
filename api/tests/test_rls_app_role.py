@@ -1,5 +1,5 @@
 """
-P9-2 (docs/06 Fase 9) · RLS sebagai penjaga terakhir — diuji dengan peran aplikasi `vms_app`, bukan superuser.
+P9-2 (docs/06 Fase 9) · RLS sebagai penjaga terakhir — diuji dengan peran runtime `vms_api` (0024), bukan superuser.
 
 Uji lain tersambung sebagai `postgres` (superuser melewati RLS), jadi kebijakan di db/03_policies.sql tidak pernah
 benar-benar teruji. Di sini kueri SENGAJA tidak memfilter organisasi ("servis lupa memfilter"): RLS harus tetap
@@ -15,16 +15,10 @@ from contextlib import contextmanager
 
 from tests.conftest import _sync_conn, sync_query
 
-# Tabel ber-organization_id tanpa RLS (temuan P9-2, 2026-10-08). Pemisahan tenant di sini sepenuhnya bergantung
-# pada filter di crud. Hapus barisnya setelah kebijakan RLS ditambahkan lewat migrasi.
+# Tabel ber-organization_id tanpa RLS (diperkecil 0025_rls_remaining_tables). Pemisahan tenant di sini sepenuhnya
+# bergantung pada filter di crud. Daftar ini hanya boleh menyusut.
 NO_RLS_TENANT_TABLES = {
-    "app_user": "login mencari akun sebelum konteks organisasi ada",
-    "attendance_device_key": "P9-2 temuan",
-    "attendance_offline_event": "P9-2 temuan",
-    "file_object": "P9-2 temuan",
-    "notification": "P9-2 temuan",
-    "signature_serial_counter": "P9-2 temuan",
-    "site": "P9-2 temuan",
+    "app_user": "login & rotasi token mencari akun sebelum konteks organisasi ada",
 }
 
 _TENANT_TABLES_SQL = """
@@ -39,14 +33,14 @@ SELECT c.relname, c.relrowsecurity
 
 @contextmanager
 def _as_app(user_id: str | None, org_id: str | None) -> Iterator:
-    """Kursor dengan peran `vms_app` dan konteks permintaan (SET LOCAL seperti app/db/session.py)."""
+    """Kursor dengan peran `vms_api` dan konteks permintaan (SET LOCAL seperti app/db/session.py)."""
     conn = _sync_conn()
     try:
         cur = conn.cursor()
         if user_id and org_id:
             cur.execute("SELECT set_config('app.user_id', %s, true), set_config('app.organization_id', %s, true)",
                         (user_id, org_id))
-        cur.execute("SET LOCAL ROLE vms_app")
+        cur.execute("SET LOCAL ROLE vms_api")   # peran runtime API sejak 0024 (prod: vms_app = superuser + pemilik)
         yield cur
     finally:
         conn.rollback()
@@ -59,11 +53,6 @@ def _user_id(world, who: str) -> str:
 
 def _rls_tables() -> list[str]:
     return sorted(name for name, rls in sync_query(_TENANT_TABLES_SQL) if rls)
-
-
-def test_app_role_is_not_allowed_to_bypass_rls():
-    (row,) = sync_query("SELECT rolsuper, rolbypassrls FROM pg_roles WHERE rolname = 'vms_app'")
-    assert row == (False, False)
 
 
 def test_no_new_tenant_table_without_rls():

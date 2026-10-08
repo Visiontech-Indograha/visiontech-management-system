@@ -6849,6 +6849,11 @@
       ],
       "title": "Number"
      },
+     "pending_request": {
+      "default": false,
+      "title": "Pending Request",
+      "type": "boolean"
+     },
      "period_end": {
       "format": "date",
       "title": "Period End",

@@ -89,7 +89,7 @@ class _WorkPlansScreenState extends ConsumerState<WorkPlansScreen> {
           padding: safeListPadding(context),
           children: [
             HeroHeader(
-              eyebrow: 'Surat Kerja',
+              eyebrow: 'Rencana Kerja',
               title: 'Rencana Kerja Anda',
               subtitle: _loading
                   ? 'Memuat…'
@@ -572,7 +572,7 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
           padding: safeListPadding(context),
           children: [
             HeroHeader(
-              eyebrow: '${p['number'] ?? 'Surat Kerja'}',
+              eyebrow: '${p['number'] ?? 'Rencana Kerja'}',
               title: '${p['title']}',
               subtitle: '${p['location_text']}',
               bottom: Wrap(

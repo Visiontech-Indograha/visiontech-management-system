@@ -329,18 +329,23 @@ class PlanDraftService:
         await self._fill(user, str(plan_id), data)
         return await self.detail(plan_id)
 
-    async def detail(self, plan_id: UUID | str) -> dict[str, Any]:
+    async def detail(self, plan_id: UUID | str, include_drafts: bool = False) -> dict[str, Any]:
         """
         Mengambil representasi lengkap (detail dan seluruh relasinya) untuk satu SK.
 
         Args:
             plan_id (UUID | str): ID SK.
+            include_drafts (bool): Hanya ketua yang boleh melihat laporan harian berstatus Draf; PM/anggota tidak.
 
         Returns:
             dict[str, Any]: Kamus detail SK beserta relasinya.
         """
         value = await self.repo.plan_detail(plan_id)
         detail: dict[str, Any] = json.loads(value) if isinstance(value, str) else value
+        if not include_drafts:   # Draf belum dikirim: tidak boleh terlihat PM seolah-olah sudah terkirim
+            for day in detail.get("days", []):
+                if (day.get("report") or {}).get("status") == "DRAFT":
+                    day["report"] = None
         category = detail["plan"].get("category")
         detail["plan"]["category_label"] = CATEGORIES.get(category, category) if category else None
         return detail

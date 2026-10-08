@@ -229,6 +229,10 @@ class _PlanDayScreenState extends ConsumerState<PlanDayScreen> {
     if (_body.text.trim().isEmpty) {
       return _snack('Isi uraian pekerjaan hari ini.');
     }
+    if (submit && _body.text.trim().length < 10) {
+      // Draf boleh pendek, tetapi laporan yang dikirim ke PM minimal 10 karakter (server menolak yang lebih pendek).
+      return _snack('Uraian pekerjaan minimal 10 karakter sebelum dikirim.');
+    }
     final missing = PhotoSlots.missingRequired(_template, _evidenceOf(_report), _pending);
     if (submit && missing.isNotEmpty) {
       return _snack('Foto wajib belum lengkap: ${missing.join(', ')}.');

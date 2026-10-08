@@ -164,6 +164,8 @@ async def check_file_access(db: AsyncSession, file_id: UUID, user: CurrentUser) 
         raise NotFoundError("Berkas")
     if row.is_uploader:
         return row
+    if row.work_type_example:   # foto contoh template: petunjuk kerja, terbuka untuk seluruh organisasi
+        return row
     if row.personal_document:
         if row.own_document or Permission.MANAGE_EMPLOYEE_DOCUMENTS.value in user.permissions:
             return row

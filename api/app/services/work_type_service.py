@@ -12,12 +12,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.errors import AppError, NotFoundError, ValidationError
 from app.crud.crud_work_type import CRUDWorkType
 from app.schemas.work_type import WorkTypeIn
+from app.services.access_service import ensure_same_org
 
 
 class WorkTypeService:
     """Aturan jenis pekerjaan: nama unik per organisasi, label slot tidak boleh kembar, hapus = nonaktifkan."""
 
     def __init__(self, db: AsyncSession) -> None:
+        self.db = db
         self.repo = CRUDWorkType(db)
 
     async def list_types(self, org_id: str, include_inactive: bool) -> list[Any]:
@@ -34,8 +36,8 @@ class WorkTypeService:
         name = data.name.strip()
         if not name:
             raise ValidationError("Nama jenis pekerjaan wajib diisi.")
-        photos = [{"label": p.label.strip(), "hint": (p.hint or "").strip() or None, "required": p.required}
-                  for p in data.photos]
+        photos = [{"label": p.label.strip(), "hint": (p.hint or "").strip() or None, "required": p.required,
+                   "example_file_id": p.example_file_id} for p in data.photos]
         labels = [str(p["label"]).lower() for p in photos]
         if any(not label for label in labels):
             raise ValidationError("Label slot foto wajib diisi.")
@@ -43,10 +45,15 @@ class WorkTypeService:
             raise ValidationError("Label slot foto tidak boleh kembar.")
         return name, photos
 
+    async def _check_examples(self, org_id: str, photos: list[dict[str, Any]]) -> None:
+        """Foto contoh harus berkas milik organisasi ini (V-08)."""
+        await ensure_same_org(self.db, org_id, files=[p["example_file_id"] for p in photos])
+
     async def create(self, org_id: str, data: WorkTypeIn) -> Any:
         name, photos = self._clean(data)
         if await self.repo.name_taken(org_id, name, None):
             raise AppError("DUPLICATE", "Jenis pekerjaan dengan nama itu sudah ada.", status=409)
+        await self._check_examples(org_id, photos)
         type_id = await self.repo.insert_type(org_id, name)
         await self.repo.replace_photos(org_id, type_id, photos)
         return await self.get(org_id, UUID(type_id))
@@ -56,6 +63,7 @@ class WorkTypeService:
         name, photos = self._clean(data)
         if await self.repo.name_taken(org_id, name, type_id):
             raise AppError("DUPLICATE", "Jenis pekerjaan dengan nama itu sudah ada.", status=409)
+        await self._check_examples(org_id, photos)
         await self.repo.update_type(type_id, name, True)
         await self.repo.replace_photos(org_id, type_id, photos)
         return await self.get(org_id, type_id)

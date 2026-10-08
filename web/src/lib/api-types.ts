@@ -6121,6 +6121,8 @@ export interface components {
              * @default 100
              */
             radius_m: number;
+            /** Reason */
+            reason?: string | null;
         };
         /**
          * PlanLocationOut
@@ -6886,6 +6888,8 @@ export interface components {
              * @default false
              */
             required: boolean;
+            /** Example File Id */
+            example_file_id?: string | null;
         };
         /**
          * WorkTypePhotoOut
@@ -6908,6 +6912,8 @@ export interface components {
              * @default false
              */
             required: boolean;
+            /** Example File Id */
+            example_file_id?: string | null;
         };
     };
     responses: never;

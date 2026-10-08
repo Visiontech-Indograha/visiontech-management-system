@@ -12,6 +12,7 @@ ditandatangani PM otomatis → ketua dan anggota (lama dan baru) diberi tahu bes
 from __future__ import annotations
 
 import json
+from datetime import date
 from typing import Any
 from uuid import UUID
 
@@ -20,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.enums import ChangeStatus, DocumentStatus, PlanStatus
 from app.core.errors import AppError, NotFoundError, ValidationError, trigger_rule_error
+from app.core.time import jakarta_now
 from app.crud.crud_plan_change import CRUDPlanChange
 from app.crud.crud_plan_revision import CRUDPlanRevision
 from app.crud.crud_plan_transition import CRUDPlanTransition
@@ -46,29 +48,61 @@ def _days(snapshot: dict[str, Any]) -> dict[str, list[str]]:
             for d in snapshot.get("days", [])}
 
 
-def build_diff(before: dict[str, Any], after: dict[str, Any]) -> list[dict[str, Any]]:
+_MONTHS = ("Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des")
+
+
+def _fmt(d: date) -> str:
+    return f"{d.day} {_MONTHS[d.month - 1]}"
+
+
+def _work_days(snapshot: dict[str, Any], start: date, end_exclusive: date | None) -> int:
+    """Jumlah hari kerja rencana (tanggal pada daftar hari) pada rentang [start, end_exclusive)."""
+    return sum(1 for d in snapshot.get("days", [])
+               if date.fromisoformat(str(d["work_date"])) >= start
+               and (end_exclusive is None or date.fromisoformat(str(d["work_date"])) < end_exclusive))
+
+
+def _joined(after: dict[str, Any], name: str, today: date) -> str:
+    """Anggota baru berlaku mulai hari ini (atau awal rencana): "Andi (mulai 10 Okt, 3 hari kerja)"."""
+    start = max(today, date.fromisoformat(str(after.get("plan", {}).get("period_start"))))
+    return f"{name} (mulai {_fmt(start)}, {_work_days(after, start, None)} hari kerja)"
+
+
+def _left(before: dict[str, Any], employee_id: str, name: str, today: date) -> str:
+    """Hari kerja sejak anggota masuk sampai hari ini (tidak termasuk hari ini): "Budi (bekerja 2 hari kerja, ...)"."""
+    since = next((date.fromisoformat(str(m["since"])) for m in before.get("team", [])
+                  if str(m["employee_id"]) == employee_id and m.get("since")), None)
+    if since is None:
+        return name
+    last = max(since, today)
+    return f"{name} (bekerja {_work_days(before, since, today)} hari kerja, mulai {_fmt(since)}, keluar {_fmt(last)})"
+
+
+def build_diff(before: dict[str, Any], after: dict[str, Any], today: date | None = None) -> list[dict[str, Any]]:
     """Daftar perubahan sebelum → sesudah; hanya yang berbeda. Anggota: added/removed; hari: added/removed/changed."""
     diff: list[dict[str, Any]] = []
+    today = today or jakarta_now().date()
     b, a = before.get("plan", {}), after.get("plan", {})
     for key, label in _FIELDS:
         if b.get(key) != a.get(key):
             diff.append({"field": key, "label": label, "before": b.get(key), "after": a.get(key)})
     b_lead, a_lead = _names(before, "LEADER"), _names(after, "LEADER")
     if set(b_lead) != set(a_lead):
-        diff.append({"field": "leader", "label": "Ketua tim", "before": ", ".join(b_lead.values()) or None,
-                     "after": ", ".join(a_lead.values()) or None})
+        diff.append({"field": "leader", "label": "Ketua tim",
+                     "before": ", ".join(_left(before, i, n, today) for i, n in b_lead.items()) or None,
+                     "after": ", ".join(_joined(after, n, today) for n in a_lead.values()) or None})
     b_mem, a_mem = _names(before, "MEMBER"), _names(after, "MEMBER")
     if set(b_mem) != set(a_mem):
         diff.append({"field": "members", "label": "Anggota",
-                     "added": [a_mem[i] for i in a_mem if i not in b_mem],
-                     "removed": [b_mem[i] for i in b_mem if i not in a_mem]})
+                     "added": [_joined(after, a_mem[i], today) for i in a_mem if i not in b_mem],
+                     "removed": [_left(before, i, b_mem[i], today) for i in b_mem if i not in a_mem]})
     b_days, a_days = _days(before), _days(after)
     if b_days != a_days:
         diff.append({"field": "days", "label": "Hari kerja",
                      "added": sorted(set(a_days) - set(b_days)), "removed": sorted(set(b_days) - set(a_days)),
                      "changed": sorted(d for d in set(a_days) & set(b_days) if a_days[d] != b_days[d])})
-    b_assets = {str(x["asset_id"]): str(x["name"]) for x in before.get("assets", [])}
-    a_assets = {str(x["asset_id"]): str(x["name"]) for x in after.get("assets", [])}
+    b_assets = {str(x["code"]): str(x["name"]) for x in before.get("assets", [])}
+    a_assets = {str(x["code"]): str(x["name"]) for x in after.get("assets", [])}
     if set(b_assets) != set(a_assets):
         diff.append({"field": "assets", "label": "Alat & kendaraan",
                      "added": [a_assets[i] for i in a_assets if i not in b_assets],
@@ -129,6 +163,12 @@ class PlanRevisionService:
         except IntegrityError as exc:
             raise (trigger_rule_error(exc) or AppError(
                 "INVALID_STATE", "Jadwal bentrok dengan rencana kerja lain.", status=409)) from None
+        return await self._finish(access, plan, issuer, version, before, reason, change)
+
+    async def _finish(self, access: PlanAccess, plan: Any, issuer: str, version: int, before: dict[str, Any],
+                      reason: str, change: Any) -> Any:
+        """Bagian bersama revisi PM dan perubahan lokasi: dokumen versi baru bertanda tangan PM, riwayat (diff),
+        persetujuan otomatis permintaan ketua yang menunggu, dan pemberitahuan."""
         after = await self._snapshot(plan.id)
         diff = build_diff(before, after)
         if not diff:
@@ -145,12 +185,27 @@ class PlanRevisionService:
         if plan.status == PlanStatus.APPEALED:
             await self.plans.set_status(plan.id, PlanStatus.PUBLISHED)
             await self.repo.clear_appeal(plan.id)
-        if change is not None:
-            await self.changes.set_change(change.id, ChangeStatus.EFFECTIVE, issuer, "Diterapkan lewat revisi PM")
-        await self.repo.insert_revision(access.user.organization_id, plan.id, version, issuer, reason, diff,
-                                        change.id if change is not None else None)
+        # Revisi PM = persetujuan: seluruh permintaan revisi ketua yang masih menunggu otomatis disetujui.
+        pending = await self.changes.pending_amendment_ids(plan.id)
+        for change_id in pending:
+            await self.changes.set_change(change_id, ChangeStatus.EFFECTIVE, issuer, "Disetujui lewat revisi PM")
+        if change is not None and str(change.id) not in pending:
+            await self.changes.set_change(change.id, ChangeStatus.EFFECTIVE, issuer, "Disetujui lewat revisi PM")
+        linked = str(change.id) if change is not None else (pending[0] if pending else None)
+        await self.repo.insert_revision(access.user.organization_id, plan.id, version, issuer, reason, diff, linked)
 
         people = {str(m["employee_id"]) for m in [*before.get("team", []), *after.get("team", [])]}
         actor = await self.repo.employee_name(issuer) or "PM"
         await self.notify.plan_revised(plan.id, actor, reason, diff, people - {issuer})
         return await PlanDraftService(self.db).detail(plan.id)
+
+    async def snapshot_of(self, plan_id: UUID | str) -> dict[str, Any]:
+        """Isi dokumen saat ini (dipakai pemanggil sebelum mengubah sesuatu, lalu diteruskan ke `after_change`)."""
+        return await self._snapshot(plan_id)
+
+    async def after_change(self, access: PlanAccess, before: dict[str, Any], reason: str) -> None:
+        """Perubahan di luar editor revisi (mis. lokasi) pada rencana yang sudah terbit → dokumen versi baru."""
+        plan = access.plan
+        issuer = await self.amend._employee(access.user.user_id)
+        version = await self.changes.next_document_version(plan.id)
+        await self._finish(access, plan, issuer, version, before, reason, None)

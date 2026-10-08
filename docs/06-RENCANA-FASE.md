@@ -258,8 +258,9 @@ baris di matriks RBAC; tidak ada teks Inggris mentah di layar pengguna.
 
 > - **P9-5 (2026-10-08):** `deploy/uji-pulih-cadangan.sh` menguji pemulihan sungguhan — cadangan baru → salinan
 >   MinIO (SHA-256 cocok) → Postgres kosong sementara → bandingkan jumlah baris, versi alembic, RLS, fungsi dengan prod.
->   Diuji lokal terhadap DB uji (48 tabel, 67.919 baris, 3 detik, semua cocok); **menunggu dijalankan pemilik di
->   server.** Celah yang ditemukan: (1) berkas MinIO (foto, dokumen, PDF) tidak dicadangkan; (2) cadangan DB hanya
+>   **Lulus di prod 2026-10-08 14:15:** cadangan 1,7 MB dari salinan MinIO pulih ke basis data kosong dalam 1 detik,
+>   galat 0; 48 tabel / 28.114 baris sama persis dengan prod; alembic `0025`, 26 tabel ber-RLS, 44 fungsi
+>   SECURITY DEFINER, 45 partisi cocok. Ulangi tiap bulan & setelah perubahan skema besar. Celah yang ditemukan: (1) berkas MinIO (foto, dokumen, PDF) tidak dicadangkan; (2) cadangan DB hanya
 >   di server yang sama — rusak disk = data & cadangan hilang bersamaan. Keduanya butuh keputusan pemilik (lokasi
 >   salinan di luar server, biaya).
 

@@ -32,7 +32,7 @@ describe("Audit log", () => {
   });
 
   it("galat menampilkan tombol Coba lagi", async () => {
-    mockApi(() => apiError(500, "INTERNAL_ERROR", "Terjadi kesalahan internal pada server."));
+    mockApi(() => apiError(500, "INTERNAL_ERROR", "Terjadi gangguan pada sistem. Coba lagi beberapa saat; bila berulang, hubungi admin."));
     renderRoute("/audit-logs", { role: "ADMIN" });
     expect(await screen.findByRole("button", { name: "Coba lagi" })).toBeInTheDocument();
   });

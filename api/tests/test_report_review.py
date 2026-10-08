@@ -4,7 +4,8 @@ V-24 · Tinjauan laporan harian (`domain.js` REVIEW_REPORT, SAVE_REPORT, SUBMIT_
 Jalur (dok 05 §3.6): POST /work-plans/{id}/days/{day_id}/review  {"decision": "APPROVE"|"RETURN", "note"}
 - Hanya PM unit / OPS / ADMIN; SK IN_PROGRESS atau COMPLETION_REVIEW.
 - Hanya laporan SUBMITTED, selain itu → 409 INVALID_STATE "Laporan belum menunggu pemeriksaan.".
-- RETURN wajib catatan → 422 "Catatan revisi wajib diisi.". Keputusan lain → 422 "Keputusan tidak valid.".
+- RETURN wajib catatan → 422 "Catatan revisi wajib diisi.". Keputusan lain → 422
+  "Pilihan keputusan tidak dikenali. Muat ulang, lalu pilih lagi.".
 - APPROVE → APPROVED; RETURN → CHANGES_REQUESTED; reviewed_by, reviewed_at, review_note tersimpan.
 - Laporan CHANGES_REQUESTED boleh disunting & diajukan ulang oleh ketua; SUBMITTED/APPROVED tidak boleh
   disunting → 409 "Laporan yang sudah diserahkan tidak dapat diubah.".
@@ -72,7 +73,8 @@ def test_review_rules(client, world):
     assert _review(client, world, plan_id, day_id, who="leader", decision="APPROVE").status_code == 403
     assert _review(client, world, plan_id, day_id, who="member", decision="APPROVE").status_code == 403
     invalid = _review(client, world, plan_id, day_id, decision="MAYBE")
-    assert invalid.status_code == 422 and invalid.json()["error"]["message"] == "Keputusan tidak valid."
+    assert invalid.status_code == 422
+    assert invalid.json()["error"]["message"] == "Pilihan keputusan tidak dikenali. Muat ulang, lalu pilih lagi."
     assert _review(client, world, plan_id, day_id, who="ops", decision="APPROVE").status_code == 200
     again = _review(client, world, plan_id, day_id, decision="APPROVE")
     assert again.status_code == 409 and again.json()["error"]["message"] == "Laporan belum menunggu pemeriksaan."

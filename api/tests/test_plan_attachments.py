@@ -68,7 +68,7 @@ def test_attachment_rules(client, world, other_world, fake_storage):
     mine, foreign = _upload(client, world, (1, 2, 3)), _upload(client, other_world, (4, 5, 6))
 
     duplicate = _save(client, world, plan_id, [mine, mine])
-    assert duplicate.status_code == 422 and duplicate.json()["error"]["message"] == "Lampiran tidak valid."
+    assert duplicate.status_code == 422 and duplicate.json()["error"]["message"] == "Ada lampiran yang dipilih lebih dari sekali."
     assert _save(client, world, plan_id, [foreign]).status_code == 404
     assert _save(client, world, plan_id, [mine], who="member").status_code == 404   # draf tak terlihat anggota
     assert _stored(plan_id) == []

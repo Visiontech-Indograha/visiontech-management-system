@@ -146,7 +146,7 @@ class WeeklyReportService:
         # Status SK harus IN_PROGRESS atau sedang direview untuk penutupan
         require_plan_status(access, PlanStatus.IN_PROGRESS, PlanStatus.COMPLETION_REVIEW)
         if decision not in ("APPROVE", "RETURN"):
-            raise ValidationError("Keputusan tidak valid.")
+            raise ValidationError("Pilihan keputusan tidak dikenali. Muat ulang, lalu pilih lagi.")
         clean_note = (note or "").strip()
         # Jika direturn (ditolak), wajib memberi catatan alasan penolakan
         if decision == "RETURN" and not clean_note:

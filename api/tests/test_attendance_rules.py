@@ -65,7 +65,7 @@ def test_open_session_blocks_check_in_until_it_is_checked_out(client, world):
 
     blocked = _check_in(client, world)
     assert blocked.status_code == 409, blocked.text
-    assert blocked.json()["error"]["message"] == "Masih ada sesi absensi terbuka."
+    assert blocked.json()["error"]["message"] == "Anda belum absen pulang dari absen masuk sebelumnya."
 
     closed = _check_out(client, world)
     assert closed.status_code == 200, closed.text

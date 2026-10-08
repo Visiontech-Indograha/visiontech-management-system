@@ -51,7 +51,7 @@ async function downloadFinalReportPdf(plan: WorkPlan) {
     URL.revokeObjectURL(url);
   } catch (err) {
     // Badan galat berbentuk Blob; 503 = layanan PDF tidak terpasang di server ini.
-    toast.error(err instanceof ApiError && err.status === 503 ? "Layanan PDF belum tersedia di server ini." : errorMessage(err));
+    toast.error(err instanceof ApiError && err.status === 503 ? "Pembuatan PDF sedang tidak tersedia. Coba lagi nanti atau hubungi admin." : errorMessage(err));
   }
 }
 

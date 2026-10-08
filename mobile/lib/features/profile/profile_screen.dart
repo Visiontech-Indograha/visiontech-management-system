@@ -10,6 +10,7 @@ import '../auth/auth_controller.dart';
 import '../auth/auth_state.dart';
 import '../face/face_flow.dart';
 import '../sync/sync_queue_screen.dart';
+import '../update/update_ui.dart';
 
 const _roleLabel = {
   'ADMIN': 'Admin',
@@ -541,9 +542,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     ),
                   ),
                 ],
+                const SectionTitle('Tentang aplikasi'),
+                const FadeSlideIn(index: 2, child: AboutAppCard()),
                 const SizedBox(height: 20),
                 FadeSlideIn(
-                  index: 2,
+                  index: 3,
                   child: SurfaceCard(
                     onTap: _logout,
                     padding: const EdgeInsets.all(14),

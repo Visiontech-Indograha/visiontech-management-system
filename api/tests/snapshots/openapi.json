@@ -190,6 +190,93 @@
     "title": "AmendmentReasonIn",
     "type": "object"
    },
+   "AppUpdateOut": {
+    "description": "Jawaban pemeriksaan pembaruan untuk satu HP.",
+    "properties": {
+     "current_build": {
+      "title": "Current Build",
+      "type": "integer"
+     },
+     "download": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/ReleaseFileOut"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "latest_build": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Latest Build"
+     },
+     "latest_version": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Latest Version"
+     },
+     "min_build": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Min Build"
+     },
+     "notes": {
+      "default": [],
+      "items": {
+       "type": "string"
+      },
+      "title": "Notes",
+      "type": "array"
+     },
+     "released_at": {
+      "anyOf": [
+       {
+        "format": "date-time",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Released At"
+     },
+     "status": {
+      "enum": [
+       "UP_TO_DATE",
+       "OPTIONAL",
+       "REQUIRED"
+      ],
+      "title": "Status",
+      "type": "string"
+     }
+    },
+    "required": [
+     "status",
+     "current_build"
+    ],
+    "title": "AppUpdateOut",
+    "type": "object"
+   },
    "AssetAllocationResponse": {
     "description": "Schema detailing a specific asset allocation to a work plan.",
     "properties": {
@@ -5446,6 +5533,35 @@
     "title": "ProbeResponse",
     "type": "object"
    },
+   "ReleaseFileOut": {
+    "description": "Berkas yang cocok untuk HP penanya.",
+    "properties": {
+     "abi": {
+      "title": "Abi",
+      "type": "string"
+     },
+     "sha256": {
+      "title": "Sha256",
+      "type": "string"
+     },
+     "size": {
+      "title": "Size",
+      "type": "integer"
+     },
+     "url": {
+      "title": "Url",
+      "type": "string"
+     }
+    },
+    "required": [
+     "abi",
+     "url",
+     "sha256",
+     "size"
+    ],
+    "title": "ReleaseFileOut",
+    "type": "object"
+   },
    "ReportReviewRequest": {
     "description": "Schema for reviewing a submitted daily report.",
     "properties": {
@@ -6906,6 +7022,148 @@
  },
  "openapi": "3.1.0",
  "paths": {
+  "/api/v1/app/android/files/{name}": {
+   "get": {
+    "description": "Berkas APK berversi. Nama tidak pernah dipakai ulang, jadi aman di-cache selamanya (Cloudflare).",
+    "operationId": "download_android_release_api_v1_app_android_files__name__get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "name",
+      "required": true,
+      "schema": {
+       "title": "Name",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Download Android Release",
+    "tags": [
+     "App"
+    ]
+   }
+  },
+  "/api/v1/app/android/latest.apk": {
+   "get": {
+    "description": "Tautan tetap untuk pemasangan pertama (QR di halaman login): diarahkan ke APK terbaru.",
+    "operationId": "latest_android_release_api_v1_app_android_latest_apk_get",
+    "parameters": [
+     {
+      "description": "mis. armeabi-v7a untuk HP 32-bit; bawaan arm64-v8a",
+      "in": "query",
+      "name": "abi",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "mis. armeabi-v7a untuk HP 32-bit; bawaan arm64-v8a",
+       "title": "Abi"
+      }
+     }
+    ],
+    "responses": {
+     "302": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Latest Android Release",
+    "tags": [
+     "App"
+    ]
+   }
+  },
+  "/api/v1/app/android/update": {
+   "get": {
+    "description": "Apakah HP ini perlu memperbarui aplikasi: UP_TO_DATE, OPTIONAL, atau REQUIRED + berkas unduhannya.",
+    "operationId": "check_android_update_api_v1_app_android_update_get",
+    "parameters": [
+     {
+      "description": "versionCode aplikasi yang terpasang",
+      "in": "query",
+      "name": "build",
+      "required": true,
+      "schema": {
+       "description": "versionCode aplikasi yang terpasang",
+       "minimum": 0,
+       "title": "Build",
+       "type": "integer"
+      }
+     },
+     {
+      "description": "ABI HP berurutan prioritas (Build.SUPPORTED_ABIS)",
+      "in": "query",
+      "name": "abi",
+      "required": false,
+      "schema": {
+       "default": [],
+       "description": "ABI HP berurutan prioritas (Build.SUPPORTED_ABIS)",
+       "items": {
+        "type": "string"
+       },
+       "title": "Abi",
+       "type": "array"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AppUpdateOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Check Android Update",
+    "tags": [
+     "App"
+    ]
+   }
+  },
   "/api/v1/assets": {
    "get": {
     "description": "Aset organisasi + alokasi berjalan + pengajuan pengembalian yang menunggu (M6/R9 dari layar).\n\nReturn: Daftar ringkasan aset organisasi (list[AssetListItem])",

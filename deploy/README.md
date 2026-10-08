@@ -71,3 +71,11 @@ mengubah `autodeploy.sh` agar menyalin `src/face-service` → `face` (pembaruan 
 `ssh ageng@192.168.88.160 "bash -s" < deploy\pasang-face-service.sh`; tambah `WAJIB_DAFTAR=ya` untuk mewajibkan pendaftaran wajah setelah login.
 Lisensi model InsightFace non-komersial: putuskan lisensi komersial sebelum dipakai penuh.
 
+
+## Rilis aplikasi HP (pembaruan otomatis, docs/32)
+Dipasang sekali dengan `deploy/pasang-rilis-apk.sh` (idempoten), **setelah** rilis API yang memuat `/api/v1/app/android/*`
+ter-deploy: membuat `~/deploy/vms-mvp/rilis/android/` dan `compose.override.yml` yang me-mount folder itu **read-only**
+ke `vms_api` (`/srv/rilis`, `APP_RELEASE_DIR`). `compose.yml` dan `api.env` tidak disentuh; autodeploy membaca override
+secara otomatis. Jalankan dari komputer pemilik: `ssh ageng@192.168.88.160 "bash -s" < deploy\pasang-rilis-apk.sh`.
+APK + `latest.json` dikirim dari laptop dengan `scripts\rilis-apk.bat kirim` (keystore tidak pernah ke server).
+Mematikan fitur: hapus `compose.override.yml` lalu `docker compose up -d --force-recreate api` (API menjawab UP_TO_DATE).

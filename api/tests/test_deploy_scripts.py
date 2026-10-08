@@ -111,10 +111,11 @@ def test_runtime_role_switch_backs_up_never_prints_secret_and_rolls_back():
 def test_verify_url_script_sets_public_domain_and_keeps_rollback_copies_in_sync():
     text = read(DEPLOY / "setel-url-verifikasi.sh")
     assert "set -euo pipefail" in text
-    assert "https://portal.visiontechindo.com/verify" in text                # QR harus terbuka tanpa Tailscale
+    assert "https://portal.visiontechindo.com" in text and "$DOMAIN/verify" in text  # QR terbuka tanpa Tailscale
+    assert "MINIO_PUBLIC_URL=$DOMAIN" in text                                 # pratinjau berkas lewat domain portal
     assert "api.env.sebelum-url-verifikasi." in text and "chmod 600" in text
     assert "api.env.sebelum-vms_api.*" in text                                # `kembalikan` tak membawa IP lama
-    assert "settings.PUBLIC_VERIFY_URL" in text                               # nilai yang benar-benar dibaca API
+    assert "s.PUBLIC_VERIFY_URL" in text and "s.MINIO_PUBLIC_URL" in text     # nilai yang benar-benar dibaca API
 
 
 def test_restore_drill_uses_the_real_backup_path_and_never_touches_prod():

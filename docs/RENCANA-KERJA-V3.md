@@ -87,7 +87,7 @@ Catat jawabannya di `docs/10-KEPUTUSAN-TERKUNCI-DAN-RISIKO.md` Bagian C, lalu ik
 | T7 | Absen pulang di luar radius + kategori dalam/luar kota (migrasi 0028) | ☑ (API terbukti via uji sementara; UI web/HP belum dicoba manual) |
 | T8 | Realtime SSE web + HP + notifikasi deskriptif | ☑ (siaran + toast diuji lewat uji sementara; E2E langsung di HP/web belum; Caddy prod butuh flush_interval -1) |
 | T9 | Jenis pekerjaan + template foto + kamera/galeri (migrasi 0029) | ☑ (alur API terbukti via uji sementara; UI web/HP belum dicoba manual) |
-| T10 | Album "Visiontech" di galeri HP + galeri dalam aplikasi | ☐ |
+| T10 | Album "Visiontech" di galeri HP + galeri dalam aplikasi | ☑ (build + peluncuran di emulator OK; simpan ke galeri/UI belum dicoba manual) |
 | T11 | Verifikasi akhir, CHANGELOG, laporan ke pemilik | ☐ |
 
 Kalau waktu habis, T9 dan T10 yang digeser. Laporkan ke pemilik **lebih awal**, jangan diam-diam.

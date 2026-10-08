@@ -92,9 +92,18 @@ Rollback manual: `ssh ageng@192.168.88.160 "bash -s -- kembalikan" < deploy/paka
 Tabel baru di migrasi berikutnya wajib `GRANT` ke `vms_api` dan fungsi baru wajib `SECURITY DEFINER SET search_path`
 (dijaga `api/tests/test_rls_app_role.py`).
 
-## Alamat QR tanda tangan (`PUBLIC_VERIFY_URL`)
-QR pada SK dan laporan akhir berisi `<PUBLIC_VERIFY_URL>/<token>`. Nilainya di `api.env` harus domain publik
-`https://portal.visiontechindo.com/verify`, bukan alamat Tailscale, agar bisa di-scan dari HP mana pun. Setel dengan
+## Alamat publik QR & berkas (`PUBLIC_VERIFY_URL`, `MINIO_PUBLIC_URL`)
+QR pada SK/laporan berisi `<PUBLIC_VERIFY_URL>/<token>`; pratinjau & unduhan berkas memakai URL presigned dengan host
+`MINIO_PUBLIC_URL` (Caddy meneruskan `/vms-files/*` ke MinIO). Keduanya harus domain publik — `https://portal.visiontechindo.com/verify`
+dan `https://portal.visiontechindo.com` — bukan alamat Tailscale, agar terbuka dari HP/browser mana pun. Setel dengan
 `ssh ageng@192.168.88.160 "bash -s" < deploy/setel-url-verifikasi.sh` (salinan api.env dibuat; salinan rollback
-`api.env.sebelum-vms_api.*` ikut disamakan). QR dibuat ulang setiap dokumen dibuka/diunduh.
+`api.env.sebelum-vms_api.*` ikut disamakan). Keduanya dibuat ulang setiap dokumen dibuka.
+
+## Uji pulih cadangan (P9-5)
+`ssh ageng@192.168.88.160 "bash -s" < deploy/uji-pulih-cadangan.sh` — membuat cadangan baru lewat `backup.sh`,
+mengunduh salinan MinIO-nya (SHA-256 harus sama), memulihkannya ke Postgres SEMENTARA (citra sama, tanpa jaringan),
+lalu membandingkan jumlah baris per tabel, versi alembic, tabel ber-RLS, dan fungsi dengan prod. Prod hanya dibaca;
+kontainer sementara selalu dihapus; keluaran hanya nama tabel & angka. Jalankan tiap bulan dan setelah perubahan
+besar skema. Catatan: berkas di MinIO (foto/dokumen/PDF) belum ikut dicadangkan, dan cadangan DB masih di server
+yang sama (lihat docs/06 P9-5).
 

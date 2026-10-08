@@ -9,6 +9,8 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased] — `development`
 
+- **P9-1 · Uji beban (2026-10-08):** k6 `api/tests/beban/` — 60 pekerja lapangan bersamaan + 1 PM, data sintetis. Hasil lokal (API satu proses seperti prod, sebagai `vms_api`): p95 20 ms, absen p95 85 ms, unggah+kompresi p95 1,25 dtk, 60/60 absen tercatat. **Perbaikan dari temuan:** dua unggahan bersamaan berisi berkas yang sama (mis. tombol tertekan dua kali) dulu berakhir 500 — pencatatan `file_object` kini `ON CONFLICT` dan memakai berkas yang tercatat lebih dulu (`test_file_upload_race.py`).
+
 - **P9-4 · Pesan galat untuk orang lapangan (2026-10-08):** 309 pesan ditinjau, 32 diperbaiki (tanpa "work plan", "draft", "review", "offboarding", "token", "server", "EC P-256"; galat umum menyebut langkah berikutnya). Web ikut (pesan PDF, validasi pengakhiran masa kerja). Uji pagar baru `test_error_messages_avoid_technical_jargon`. Hutang: pesan trigger `Embedding wajah …` (butuh migrasi) dicatat di docs/06.
 
 - **P9-5 lulus di prod (2026-10-08):** `uji-pulih-cadangan.sh` — salinan MinIO (SHA-256 cocok) pulih ke Postgres kosong dalam 1 detik tanpa galat; 48 tabel / 28.114 baris, alembic 0025, RLS, fungsi, dan partisi sama dengan prod. Perbaikan skrip: menunggu Postgres sementara benar-benar siap (sebelumnya gagal di langkah 3).

@@ -20,13 +20,20 @@ class CRUDFile(CRUDBase):
             {"org": org_id, "hash": sha256})
 
     async def insert(self, *, file_id: str, org_id: UUID | str, storage_key: str, file_name: str | None,
-                     mime_type: str, byte_size: int, sha256: bytes, user_id: UUID | str) -> None:
-        """Catat berkas baru (sebelum objek diunggah; gagal unggah → transaksi permintaan di-rollback)."""
-        await self.execute(
+                     mime_type: str, byte_size: int, sha256: bytes, user_id: UUID | str) -> str:
+        """Catat berkas baru (sebelum objek diunggah; gagal unggah → transaksi permintaan di-rollback) → id berkas
+        yang tersimpan. Bila unggahan bersamaan berisi berkas yang sama tercatat lebih dulu, id berkas itu
+        (ON CONFLICT menunggu transaksi tersebut selesai, jadi objeknya sudah tersimpan)."""
+        inserted = await self.scalar(
             """
             INSERT INTO vms.file_object (id, organization_id, storage_key, file_name, mime_type, byte_size, sha256,
                                          uploaded_by)
             VALUES (:id, :org, :key, :name, :mime, :size, :hash, :uid)
+            ON CONFLICT (organization_id, sha256) DO NOTHING
+            RETURNING id
             """,
             {"id": file_id, "org": org_id, "key": storage_key, "name": file_name, "mime": mime_type,
              "size": byte_size, "hash": sha256, "uid": user_id})
+        if inserted is not None:
+            return str(inserted)
+        return str((await self.find_by_hash(org_id, sha256)).id)

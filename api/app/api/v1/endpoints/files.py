@@ -66,8 +66,11 @@ async def upload_document(
     ext = kind.extension if kind else (file.filename or "bin").rsplit(".", 1)[-1]
     storage_key = f"{current_user.organization_id}/{file_id}.{ext}"
 
-    await files.register(current_user, file_id=file_id, storage_key=storage_key, file_name=file.filename,
-                         mime_type=mime_type, byte_size=byte_size, sha256=file_hash)
+    stored_id = await files.register(current_user, file_id=file_id, storage_key=storage_key, file_name=file.filename,
+                                     mime_type=mime_type, byte_size=byte_size, sha256=file_hash)
+    if stored_id != file_id:
+        # Unggahan bersamaan berisi berkas yang sama tercatat lebih dulu (uji beban P9-1): pakai berkas itu.
+        return {"file_id": stored_id, "message": "File sudah ada (deduplikasi)."}
 
     # 5. Proses penyimpanan
     is_image = mime_type.startswith("image/")

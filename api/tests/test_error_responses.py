@@ -141,6 +141,58 @@ def test_no_english_error_messages_in_source():
     assert offenders == []
 
 
+
+_ERROR_CALLS = {"AppError": 1, "NotFoundError": 0, "ConflictError": 0, "ValidationError": 0, "ForbiddenError": 0,
+                "_reject": 1, "_state": 0, "_invalid": 0}
+# P9-4: istilah teknis / Inggris yang tidak dipahami orang lapangan. Pakai "SK", "draf", "diperiksa", "masa kerja".
+_JARGON = (r"\b(work plan|draft|offboard\w*|review\w*|checklist|token|server|keystore|payload|endpoint|uuid|"
+           r"embedding|internal|request|database)\b")
+
+
+def _user_facing_messages() -> list[tuple[str, str]]:
+    """Teks pesan galat yang sampai ke pengguna: argumen pesan konstruktor galat, termasuk konstanta modul."""
+    import ast
+    from pathlib import Path
+
+    def text(node: ast.AST | None, consts: dict[str, str]) -> str | None:
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            return node.value
+        if isinstance(node, ast.JoinedStr):
+            return "".join(v.value for v in node.values if isinstance(v, ast.Constant) and isinstance(v.value, str))
+        if isinstance(node, ast.Name):
+            return consts.get(node.id)
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == "format":
+            return text(node.func.value, consts)
+        return None
+
+    found = []
+    for path in Path("app").rglob("*.py"):
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        consts = {t.id: v for n in ast.walk(tree) if isinstance(n, ast.Assign)
+                  for t in n.targets if isinstance(t, ast.Name) and (v := text(n.value, {}))}
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            name = getattr(node.func, "id", None) or getattr(node.func, "attr", None)
+            if name not in _ERROR_CALLS:
+                continue
+            i = _ERROR_CALLS[name]
+            arg = node.args[i] if len(node.args) > i else next(
+                (k.value for k in node.keywords if k.arg == "message"), None)
+            if (msg := text(arg, consts)):
+                found.append((f"{path.as_posix()}:{node.lineno}", msg))
+    return found
+
+
+def test_error_messages_avoid_technical_jargon():
+    """P9-4 · pesan galat harus bisa dipahami orang lapangan: tanpa istilah teknis/Inggris."""
+    import re
+
+    messages = _user_facing_messages()
+    assert len(messages) > 150   # ekstraksi benar-benar menemukan pesan
+    offenders = [f"{loc}: {msg}" for loc, msg in messages if re.search(_JARGON, msg, re.IGNORECASE)]
+    assert offenders == []
+
 def test_real_app_unknown_path_and_missing_token():
     with TestClient(real_app) as client:
         unknown = client.get("/rute-yang-tidak-ada")

@@ -14,7 +14,7 @@ from tests.test_flow_plans import create_draft_plan, run_plan_to_accepted, run_p
 
 pytestmark = requires_db
 
-STAGE = "Tahap work plan belum sesuai untuk tindakan ini."
+STAGE = "Status SK belum sesuai untuk tindakan ini. Muat ulang halaman."
 
 
 def _error(response) -> dict:
@@ -78,7 +78,7 @@ def test_asset_is_not_allocated_to_a_finished_plan(client, world, status):
     response = _allocate(client, world, asset_id, plan_id)
 
     assert response.status_code == 409, response.text
-    assert _error(response) == {"code": "INVALID_STATE", "message": "Pilih work plan yang masih aktif.", "details": {}}
+    assert _error(response) == {"code": "INVALID_STATE", "message": "Pilih SK yang masih aktif.", "details": {}}
     assert _allocations(asset_id) == 0
 
 

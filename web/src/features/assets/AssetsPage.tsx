@@ -387,7 +387,7 @@ async function downloadBast(asset: Asset, item: AssetReturnItem) {
     link.click();
     URL.revokeObjectURL(url);
   } catch (err) {
-    toast.error(err instanceof ApiError && err.status === 503 ? "Layanan PDF belum tersedia di server ini." : errorMessage(err));
+    toast.error(err instanceof ApiError && err.status === 503 ? "Pembuatan PDF sedang tidak tersedia. Coba lagi nanti atau hubungi admin." : errorMessage(err));
   }
 }
 

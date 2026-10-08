@@ -54,7 +54,7 @@ def test_hr_archives_an_offboarded_employee_and_can_restore_it(client, world):
     employee_id = world.employees["member"]
     active = _archive(client, world, employee_id)
     assert active.status_code == 409
-    assert active.json()["error"]["message"] == "Nonaktifkan (offboard) karyawan terlebih dahulu."
+    assert active.json()["error"]["message"] == "Akhiri masa kerja karyawan ini terlebih dahulu."
 
     offboarded = client.post(f"/employees/{employee_id}/offboard", headers=world.headers(client, "hr"),
                              json={"reason": "Kontrak selesai"})

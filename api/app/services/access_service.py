@@ -53,7 +53,7 @@ class PlanAccess:
     is_member: bool
 
 
-STAGE_MISMATCH = "Tahap work plan belum sesuai untuk tindakan ini."  # domain.js requireStatus
+STAGE_MISMATCH = "Status SK belum sesuai untuk tindakan ini. Muat ulang halaman."  # domain.js requireStatus
 
 
 def require_plan_status(access: PlanAccess, *allowed: str) -> None:

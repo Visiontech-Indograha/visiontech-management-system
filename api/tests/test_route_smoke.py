@@ -28,6 +28,9 @@ PUBLIC_ROUTES = {
     ("GET", "/app/android/latest.apk"),
 }
 
+# Aliran SSE tak berujung (T8): tanpa token tetap diuji 401 di bawah; dengan token diuji manual (E2E T8).
+STREAMING_ROUTES = {("GET", "/events")}
+
 ROUTES = [(method, path.removeprefix(API_PREFIX)) for method, path in all_routes() if path.startswith(API_PREFIX)]
 
 
@@ -54,6 +57,8 @@ def test_route_requires_login(client, method: str, path: str):
 @requires_db
 @pytest.mark.parametrize(("method", "path"), ROUTES)
 def test_route_never_crashes_for_admin(client, make_user, method: str, path: str):
+    if (method, path) in STREAMING_ROUTES:
+        pytest.skip("aliran SSE tak berujung; diuji manual (E2E T8)")
     headers = login_headers(client, make_user("ADMIN"))
 
     response = client.request(method, _concrete(path), json={}, headers=headers)

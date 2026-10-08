@@ -234,6 +234,31 @@ class CRUDAttendanceSession(CRUDBase):
              "exp": explanation.strip() if explanation else None},
         )
 
+    async def reviewer_employee_ids(self, org_id: UUID | str, employee_id: UUID | str) -> list[str]:
+        """Karyawan yang berwenang meninjau absensi `employee_id` (aturan satu sumber: vms.attendance_can_review)."""
+        rows = await self.fetchall(
+            """
+            SELECT DISTINCT CAST(u.employee_id AS text) AS employee_id, CAST(u.id AS text) AS user_id
+            FROM vms.app_user u
+            WHERE u.organization_id = CAST(:org AS uuid) AND u.employee_id IS NOT NULL
+              AND u.employee_id <> CAST(:emp AS uuid) AND vms.attendance_can_review(u.id, CAST(:emp AS uuid))
+            """,
+            {"org": str(org_id), "emp": str(employee_id)},
+        )
+        return [r.employee_id for r in rows]
+
+    async def user_ids_of(self, employee_ids: list[str]) -> list[str]:
+        """Akun pengguna milik para karyawan (alamat peristiwa realtime)."""
+        rows = await self.fetchall("SELECT CAST(id AS text) AS id FROM vms.app_user "
+                                   "WHERE employee_id = ANY(CAST(:ids AS uuid[]))", {"ids": employee_ids})
+        return [r.id for r in rows]
+
+    async def employee_name(self, employee_id: UUID | str) -> str:
+        """Nama lengkap karyawan (teks notifikasi)."""
+        name = await self.scalar("SELECT full_name FROM vms.employee WHERE id = CAST(:id AS uuid)",
+                                 {"id": str(employee_id)})
+        return str(name) if name else "Karyawan"
+
     async def flag_missing_face(self, attendance_id: UUID | str, event: str, note: str) -> Any:
         """
         Karyawan yang sudah mendaftar wajah absen TANPA data wajah: tidak ditolak, tetapi tidak lolos otomatis —

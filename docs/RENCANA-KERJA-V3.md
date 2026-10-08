@@ -80,7 +80,7 @@ Catat jawabannya di `docs/10-KEPUTUSAN-TERKUNCI-DAN-RISIKO.md` Bagian C, lalu ik
 | T0 | Persiapan & pertanyaan pemilik | ☑ |
 | T1 | APK beta (lebih dulu, supaya pemilik bisa menguji HP sejak awal) | ☑ (build & paket terverifikasi; uji pasang+login di HP menunggu perangkat) |
 | T2 | Bug: permintaan revisi dari ketua tidak terlihat oleh PM | ☑ (H1 tidak terbukti; H2+H4 diperbaiki; E2E login belum diuji) |
-| T3 | Bug: absen tanpa wajah terdaftar | ☐ |
+| T3 | Bug: absen tanpa wajah terdaftar | ☑ (bawaan true + saklar scripts/saklar-wajah.sh; prod perlu off sampai face-service terpasang) |
 | T4 | Istilah SK → Rencana Kerja, Adendum → Revisi (teks UI saja) | ☐ |
 | T5 | Aturan rencana kerja: anggota opsional, 1 hari, luar kota (migrasi 0026) | ☐ |
 | T6 | Revisi oleh PM kapan saja + riwayat/diff (migrasi 0027) | ☐ |

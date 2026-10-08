@@ -13,6 +13,7 @@ from uuid import UUID
 
 from sqlalchemy.exc import IntegrityError
 
+from app.core.config import settings
 from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationError, trigger_rule_message
 from app.crud.crud_attendance_session import CRUDAttendanceSession
 from app.crud.crud_org_clock import CRUDOrgClock
@@ -24,6 +25,7 @@ VALID_STATUSES = ("AUTO_VALID", "APPROVED")
 # R-33 (keputusan pemilik 2026-10-02): absen pulang hanya untuk absen masuk yang sudah valid.
 CHECKOUT_NOT_VALID = ("Absen pulang hanya bisa dilakukan setelah absen masuk valid. "
                       "Absen masuk Anda masih menunggu pemeriksaan.")
+FACE_NOT_ENROLLED = "Daftarkan wajah Anda dulu di menu Profil sebelum absen."
 ALREADY_TODAY = "Absensi untuk hari ini sudah tercatat (hanya dapat mengajukan ulang jika absensi sebelumnya ditolak)."
 # Keputusan pemilik 2026-10-02: ditolak → boleh mengajukan ulang SEKALI; ditolak lagi → hari itu terkunci (tercatat ditolak).
 MAX_ATTEMPTS_PER_DAY = 2
@@ -80,6 +82,15 @@ class AttendanceSessionService:
             ])
         return out.getvalue()
 
+    async def _require_enrolled(self, user_id: str, worker: Any, channel: str, online: bool) -> None:
+        """T3: absen HP (online) ditolak bila wajah belum terdaftar dan saklar FACE_ENROLLMENT_REQUIRED menyala.
+        Administrator dikecualikan (sama seperti gerbang pendaftaran). Absen luring tidak ditolak (sudah terjadi)."""
+        if (self.faces is None or not settings.FACE_ENROLLMENT_REQUIRED or channel != "MOBILE" or not online
+                or worker.is_admin):
+            return
+        if not await self.faces.face_expected(user_id):
+            raise AppError("FACE_NOT_ENROLLED", FACE_NOT_ENROLLED, status=409)
+
     async def check_in(self, org_id: str, user_id: str, *, site_id: UUID, lng: float, lat: float,
                        origin: str, selfie_file_id: UUID | None, accuracy_m: float | None = None,
                        channel: str = "MOBILE", explanation: str | None = None,
@@ -95,6 +106,7 @@ class AttendanceSessionService:
         SERVER setelah absen tercatat; klien tidak lagi dipercaya (aturan inti #3).
         """
         worker = await self._employee_for_channel(user_id, channel)
+        await self._require_enrolled(user_id, worker, channel, online)
         employee_id = worker.employee_id
         # K-12: titik GPS yang terlalu kabur tidak bisa membuktikan kehadiran — tolak dengan alasan.
         if channel == "WEB":
@@ -168,6 +180,8 @@ class AttendanceSessionService:
             if await self.faces.face_expected(user_id):
                 return await self.repo.flag_missing_face(
                     row.id, event, "wajah tidak diperiksa: karyawan sudah mendaftar wajah tetapi absen tanpa data wajah")
+            if not online and settings.FACE_ENROLLMENT_REQUIRED:   # T3: absen luring tanpa wajah terdaftar
+                return await self.repo.flag_missing_face(row.id, event, "belum mendaftar wajah")
             return row
         outcome: FaceOutcome = await self.faces.verify_for_attendance(
             org_id, user_id, probe_id=face_probe_id, event=event, attendance_id=row.id, device=device,
@@ -200,6 +214,7 @@ class AttendanceSessionService:
         R-33: hanya sesi yang sudah valid (Valid otomatis / Disetujui) yang boleh absen pulang.
         """
         worker = await self._employee_for_channel(user_id, channel)
+        await self._require_enrolled(user_id, worker, channel, online)
         session = await self.repo.open_session(worker.employee_id, valid_only=True)
         if session is None:
             # Memastikan tidak bisa absen pulang jika absen masuknya ditolak atau masih dalam proses peninjauan.

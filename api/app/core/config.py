@@ -60,8 +60,9 @@ class Settings(BaseSettings):
     # Masa berlaku template di HP; sama dengan batas absen luring (7 hari) agar penarikan persetujuan tetap berlaku.
     FACE_TEMPLATE_TTL_DAYS: int = 7
     # True = akun yang terhubung ke karyawan WAJIB mendaftarkan wajah sebelum membuka menu lain (web dan HP).
-    # Bawaan False: nyalakan hanya setelah face-service berjalan di server, kalau tidak semua orang terkunci.
-    FACE_ENROLLMENT_REQUIRED: bool = False
+    # Bawaan True (keputusan pemilik 2026-10-08): absen HP ditolak tanpa wajah terdaftar. Lingkungan yang belum punya
+    # face-service harus mematikannya LEWAT SKRIP `scripts/saklar-wajah.sh off`, kalau tidak semua pekerja terkunci.
+    FACE_ENROLLMENT_REQUIRED: bool = True
 
     # Folder rilis aplikasi HP (docs/32): berisi `android/latest.json` + APK berversi, di-mount read-only.
     # Kosong = belum ada rilis; pemeriksaan pembaruan selalu menjawab UP_TO_DATE.

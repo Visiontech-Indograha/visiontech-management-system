@@ -11,10 +11,11 @@ from .base import CRUDBase
 
 _SELECT = """
     SELECT wt.id, wt.name, wt.is_active,
-           COALESCE(jsonb_agg(jsonb_build_object('id', p.id, 'sort_order', p.sort_order, 'label', p.label,
-                                                 'hint', p.hint, 'required', p.required) ORDER BY p.sort_order)
-                    FILTER (WHERE p.id IS NOT NULL), '[]'::jsonb) AS photos
-    FROM vms.work_type wt LEFT JOIN vms.work_type_photo p ON p.work_type_id = wt.id
+           COALESCE((SELECT jsonb_agg(jsonb_build_object('id', p.id, 'sort_order', p.sort_order, 'label', p.label,
+                                                         'hint', p.hint, 'required', p.required)
+                                      ORDER BY p.sort_order)
+                     FROM vms.work_type_photo p WHERE p.work_type_id = wt.id), '[]'::jsonb) AS photos
+    FROM vms.work_type wt
     WHERE wt.organization_id = CAST(:org AS uuid)
 """
 
@@ -25,12 +26,12 @@ class CRUDWorkType(CRUDBase):
     async def list_types(self, org_id: UUID | str, include_inactive: bool) -> list[Any]:
         """Daftar jenis pekerjaan beserta slot fotonya, urut nama."""
         return list(await self.fetchall(
-            _SELECT + " AND (wt.is_active OR CAST(:all AS boolean)) GROUP BY wt.id ORDER BY lower(wt.name)",
+            _SELECT + " AND (wt.is_active OR CAST(:all AS boolean)) ORDER BY lower(wt.name)",
             {"org": str(org_id), "all": include_inactive}))
 
     async def get_type(self, org_id: UUID | str, type_id: UUID | str) -> Any:
         """Satu jenis pekerjaan (None bila bukan milik organisasi)."""
-        return await self.fetchone(_SELECT + " AND wt.id = CAST(:id AS uuid) GROUP BY wt.id",
+        return await self.fetchone(_SELECT + " AND wt.id = CAST(:id AS uuid)",
                                    {"org": str(org_id), "id": str(type_id)})
 
     async def name_taken(self, org_id: UUID | str, name: str, except_id: UUID | str | None) -> bool:

@@ -157,6 +157,7 @@ Tidak ada pustaka kompresi PDF atau Office: dokumen disimpan apa adanya (A-20, d
 | `geolocator` | Lokasi |
 | `permission_handler` | Izin |
 | `flutter_image_compress` | Kompresi sebelum unggah |
+| `image_picker` | Memilih foto laporan dari galeri HP (paket resmi Flutter; T9, 2026-10-08) |
 | `flutter_local_notifications` | Notifikasi sistem saat peristiwa SSE masuk; tanpa FCM, tanpa layanan pihak ketiga (T8, 2026-10-08). Butuh core library desugaring di Android |
 | `connectivity_plus` | Status jaringan |
 | `device_info_plus`, `package_info_plus` | Identitas perangkat & versi aplikasi |

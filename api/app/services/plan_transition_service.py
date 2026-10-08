@@ -69,9 +69,9 @@ class PlanTransitionService:
         """
         plan = await self.repo.lock_plan(plan_id, org_id)
         if plan is None:
-            raise NotFoundError("SK")
+            raise NotFoundError("Rencana Kerja")
         if plan.status != allowed:
-            raise AppError("INVALID_STATE", f"Tindakan ini hanya untuk SK berstatus {allowed.value}.", status=409)
+            raise AppError("INVALID_STATE", f"Tindakan ini hanya untuk rencana kerja berstatus {allowed.value}.", status=409)
         if plan.row_version != row_version:
             raise ConflictError()
         return plan
@@ -84,7 +84,7 @@ class PlanTransitionService:
         if len(leaders) != 1 or not leaders[0].employee_active:
             raise _invalid("Ketua tim harus karyawan aktif.")
         if plan.pm_employee_id and leaders[0].employee_id == str(plan.pm_employee_id):
-            raise _invalid("PM penerbit tidak boleh menerima SK sebagai ketua tim sendiri.")
+            raise _invalid("PM penerbit tidak boleh menerima rencana kerja sebagai ketua tim sendiri.")
         if not members:
             raise _invalid("Pilih minimal satu anggota tim.")
         if any(not m.employee_active for m in members):
@@ -106,7 +106,7 @@ class PlanTransitionService:
             ForbiddenError: Jika pengguna bukan ketua tim.
         """
         if not await self.repo.is_leader(plan_id, user_id):
-            raise ForbiddenError("Hanya ketua tim menurut SK yang berlaku yang dapat melakukan ini.")
+            raise ForbiddenError("Hanya ketua tim menurut rencana kerja yang berlaku yang dapat melakukan ini.")
 
     async def publish(self, plan_id: UUID, org_id: str, user_id: str, row_version: int) -> Any:
         """
@@ -127,7 +127,7 @@ class PlanTransitionService:
             raise _invalid("Rincian harian belum lengkap.")
         issuer = await self.repo.employee_id_of(user_id)
         if issuer is None:
-            raise ForbiddenError("Akun Anda belum tertaut ke data karyawan, jadi tidak dapat menerbitkan SK.")
+            raise ForbiddenError("Akun Anda belum tertaut ke data karyawan, jadi tidak dapat menerbitkan rencana kerja.")
 
         await self.repo.publish(plan_id)
         snapshot = await self.repo.snapshot(plan_id)
@@ -169,7 +169,7 @@ class PlanTransitionService:
         await self._load(plan_id, org_id, row_version, PlanStatus.PUBLISHED)
         await self._leader_only(plan_id, user_id)
         if not reason.strip():
-            raise AppError("VALIDATION_ERROR", "Alasan adendum wajib diisi.", status=422)
+            raise AppError("VALIDATION_ERROR", "Alasan revisi wajib diisi.", status=422)
         await self.repo.appeal(plan_id, reason.strip())
         await NotificationService(self.repo.db).amendment_requested(plan_id, reason.strip())
         return await self.repo.get_plan(plan_id)
@@ -194,11 +194,11 @@ class PlanTransitionService:
         """domain.js CANCEL_PLAN — PM unit/OPS (dijaga router); draf diarsipkan, bukan dibatalkan."""
         plan = await self.repo.lock_plan(plan_id, org_id)
         if plan is None:
-            raise NotFoundError("SK")
+            raise NotFoundError("Rencana Kerja")
         # Draf hasil revisi (pernah terbit) tidak bisa diarsip, jadi harus bisa dibatalkan (CELAH 8, docs/28).
         revised_draft = plan.status == PlanStatus.DRAFT and await self.repo.ever_published(plan_id)
         if plan.status not in CANCELLABLE and not revised_draft:
-            raise AppError("INVALID_STATE", "Status SK belum sesuai untuk tindakan ini. Muat ulang halaman.", status=409)
+            raise AppError("INVALID_STATE", "Status rencana kerja belum sesuai untuk tindakan ini. Muat ulang halaman.", status=409)
         if plan.row_version != row_version:
             raise ConflictError()
         if not reason.strip():
@@ -212,10 +212,10 @@ class PlanTransitionService:
         if not reason.strip():
             raise _invalid("Alasan pengarsipan wajib diisi.")
         if await self.repo.has_active_allocation(plan_id):
-            raise AppError("INVALID_STATE", "Lepaskan pemesanan aset dulu sebelum mengarsipkan draf SK.", status=409)
+            raise AppError("INVALID_STATE", "Lepaskan pemesanan aset dulu sebelum mengarsipkan draf rencana kerja.", status=409)
         if await self.repo.ever_published(plan_id):
             raise AppError("INVALID_STATE",
-                           "Pekerjaan yang pernah memiliki SK tidak dapat diarsipkan. Gunakan opsi pembatalan.",
+                           "Pekerjaan yang pernah memiliki rencana kerja tidak dapat diarsipkan. Gunakan opsi pembatalan.",
                            status=409)
         await self.repo.archive(plan_id, user_id, reason.strip())
         return await self.repo.get_plan(plan_id)
@@ -224,9 +224,9 @@ class PlanTransitionService:
         """domain.js RESTORE_PLAN — hanya draf terarsip; tim diperiksa ulang (checkMembers)."""
         plan = await self.repo.lock_plan(plan_id, org_id, include_archived=True)
         if plan is None:
-            raise NotFoundError("SK")
+            raise NotFoundError("Rencana Kerja")
         if not plan.archived:
-            raise AppError("INVALID_STATE", "SK draf ini tidak sedang diarsipkan.", status=409)
+            raise AppError("INVALID_STATE", "Rencana kerja draf ini tidak sedang diarsipkan.", status=409)
         if plan.row_version != row_version:
             raise ConflictError()
         await self._check_members(plan)

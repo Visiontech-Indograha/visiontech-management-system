@@ -35,7 +35,7 @@ class NotificationService:
         """
         people = await self.repo.plan_people(plan_id)
         if people is None:
-            raise NotFoundError("SK")
+            raise NotFoundError("Rencana Kerja")
         return people
 
     @staticmethod
@@ -43,7 +43,7 @@ class NotificationService:
         """
         Membuat teks label untuk keperluan subjek notifikasi.
         """
-        return str(people.number) if people.number else "SK"   # nomor sudah berawalan "SK-"
+        return str(people.number) if people.number else "Rencana Kerja"   # nomor sudah berawalan "SK-"
 
     async def plan_published(self, plan_id: UUID | str) -> None:
         """
@@ -56,7 +56,7 @@ class NotificationService:
         p = await self._plan(plan_id)
         await self.repo.insert_many(
             p.organization_id, [p.leader, *p.members], "PLAN_PUBLISHED", f"{self._label(p)} terbit",
-            f"{p.title} — ketua tim diminta meninjau lalu menerima SK atau mengajukan adendum.", plan_id)
+            f"{p.title} — ketua tim diminta meninjau lalu menerima rencana kerja atau mengajukan revisi.", plan_id)
 
     async def amendment_requested(self, plan_id: UUID | str, reason: str) -> None:
         """
@@ -68,7 +68,7 @@ class NotificationService:
         """
         p = await self._plan(plan_id)
         await self.repo.insert_many(p.organization_id, [p.pm], "PLAN_AMENDMENT_REQUESTED",
-                                    f"Adendum diminta: {self._label(p)}", f"{p.title} — alasan: {reason}", plan_id)
+                                    f"Revisi diminta: {self._label(p)}", f"{p.title} — alasan: {reason}", plan_id)
 
     async def plan_accepted(self, plan_id: UUID | str) -> None:
         """
@@ -155,15 +155,15 @@ class NotificationService:
     async def amendment_decided(self, plan_id: UUID | str, *, accepted: bool, note: str | None) -> None:
         p = await self._plan(plan_id)
         if accepted:
-            title, body = f"Adendum {self._label(p)} siap ditandatangani", "PM sudah mengubah isi SK. Tinjau lalu terima adendum."
+            title, body = f"Revisi {self._label(p)} siap ditandatangani", "PM sudah mengubah isi rencana kerja. Tinjau lalu terima revisi."
         else:
-            title, body = f"Adendum {self._label(p)} ditolak", note or p.title
+            title, body = f"Revisi {self._label(p)} ditolak", note or p.title
         await self.repo.insert_many(p.organization_id, [p.leader], "AMENDMENT_DECIDED", title, body, plan_id)
 
     async def amendment_accepted(self, plan_id: UUID | str) -> None:
         p = await self._plan(plan_id)
         await self.repo.insert_many(p.organization_id, [p.pm, *p.members], "AMENDMENT_ACCEPTED",
-                                    f"Adendum {self._label(p)} berlaku", "Versi SK sebelumnya tidak berlaku lagi.", plan_id)
+                                    f"Revisi {self._label(p)} berlaku", "Versi rencana kerja sebelumnya tidak berlaku lagi.", plan_id)
 
     async def completion_requested(self, plan_id: UUID | str) -> None:
         p = await self._plan(plan_id)

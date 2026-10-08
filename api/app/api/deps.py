@@ -23,6 +23,7 @@ from app.core.security import CurrentUser, verify_jwt_token
 from app.crud.crud_attendance_monitor import CRUDAttendanceMonitor
 from app.crud.crud_attendance_offline import CRUDAttendanceOffline
 from app.crud.crud_attendance_session import CRUDAttendanceSession
+from app.crud.crud_audit import CRUDAudit
 from app.crud.crud_document import CRUDDocument
 from app.crud.crud_employee import CRUDEmployee
 from app.crud.crud_face import CRUDFace
@@ -43,6 +44,7 @@ from app.services.asset_reservation_service import AssetReservationService
 from app.services.attendance_monitor_service import AttendanceMonitorService
 from app.services.attendance_offline_service import AttendanceOfflineService
 from app.services.attendance_session_service import AttendanceSessionService
+from app.services.audit_service import AuditService
 from app.services.auth_flow import AuthFlowService
 from app.services.document_service import DocumentService
 from app.services.employee_service import EmployeeService
@@ -242,6 +244,10 @@ def plan_day_access(need: PlanNeed) -> Callable[..., Awaitable[PlanAccess]]:
 
 def get_account_service(db: AsyncSession = Depends(get_db_with_user)) -> AccountService:
     return AccountService(CRUDUser(db), CRUDEmployee(db), CRUDSession(db))
+
+
+def get_audit_service(db: AsyncSession = Depends(get_db_with_user)) -> AuditService:
+    return AuditService(CRUDAudit(db))
 
 
 def get_asset_reservation_service(db: AsyncSession = Depends(get_db_with_user)) -> AssetReservationService:

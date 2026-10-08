@@ -24,7 +24,6 @@ SESSION_CALLS = {"execute", "scalar", "scalars", "get", "add", "flush", "commit"
 LEGACY: dict[str, str] = {
     "assets.py": "R-25b",
     "attendance.py": "R-25b",
-    "audit.py": "R-25b",
     "employees.py": "R-25b",
     "expiry.py": "R-25b",
     "files.py": "R-25b",

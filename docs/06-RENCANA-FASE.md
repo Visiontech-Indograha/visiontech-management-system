@@ -240,6 +240,19 @@ tidak ada satu pun foto wajah tersimpan di luar ketentuan.
 **DoD:** pemulihan dari cadangan berhasil pada basis data kosong; tidak ada endpoint tanpa
 baris di matriks RBAC; tidak ada teks Inggris mentah di layar pengguna.
 
+> **Status (2026-10-08):**
+> - **P9-7 selesai untuk router:** kedelapan router lama (R-25b: audit, kedaluwarsa dokumen, berkas, absensi,
+>   karyawan, aset, HSE, SK) tidak lagi menyentuh basis data. SQL pindah ke `crud/`, aturan ke `services/`.
+>   Sinkronisasi luring kini memanggil `HseService`, bukan fungsi router. `LEGACY` di
+>   `test_router_layering.py` sudah kosong.
+> - **P9-2 sebagian:** RLS kini diuji dengan peran `vms_app` (`test_rls_app_role.py`), bukan superuser
+>   yang melewati RLS.
+> - **Temuan P9-2 yang masih terbuka:**
+>   - 7 tabel tenant belum ber-RLS: `site`, `file_object`, `notification`, `attendance_device_key`,
+>     `attendance_offline_event`, `signature_serial_counter`, `app_user`.
+>   - Partisi `attendance_*` bisa dibaca langsung oleh `vms_app`.
+>   - Keduanya butuh migrasi dan menunggu keputusan pemilik.
+
 ---
 
 ## Fase 10 — UAT dan rilis *(minggu 22–24)*
@@ -252,7 +265,7 @@ baris di matriks RBAC; tidak ada teks Inggris mentah di layar pengguna.
 | P10-4 | Panduan singkat per peran (1 halaman, bergambar) + video pendek |
 | P10-5 | Pelatihan: PM, HR, Finance, Aset, OPS, dan ketua tim |
 | P10-6 | Rilis produksi bertahap: satu unit bisnis dulu, lalu seluruhnya |
-| P10-7 | Distribusi APK + pemeriksaan versi minimum di server |
+| P10-7 | Distribusi APK + pemeriksaan versi minimum di server — **selesai 2026-10-08** (pembaruan otomatis tanpa Play, docs/32; diuji di Realme) |
 | P10-8 | **CD produksi**: GitHub Environment dengan persetujuan manual, cadangan sebelum deploy, migrasi terpisah, uji asap, rollback otomatis, laporan ke `#vms-deploy`; jendela deploy di luar 07.00–19.00 WIB |
 | P10-9 | **Kunci tanda tangan dipindah ke KMS** (K-05) sebelum produksi menyimpan dokumen sungguhan |
 

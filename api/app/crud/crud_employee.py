@@ -1,6 +1,6 @@
 """
 app/crud/crud_employee.py
-Kueri karyawan untuk servis baru (V-29). Rute lama di api/employees.py belum dipindah ke sini.
+Kueri karyawan (daftar, detail, tambah, ubah, bentrok jadwal, V-29). Satu-satunya tempat SQL karyawan.
 """
 from __future__ import annotations
 
@@ -207,3 +207,73 @@ class CRUDEmployee(CRUDBase):
             {"id": employee_id, "today": today})
         # Menonaktifkan akses akun karyawan di tabel app_user
         await self.execute("UPDATE vms.app_user SET is_active = false WHERE employee_id = :id", {"id": employee_id})
+
+    _COLUMNS = """id, employee_no, full_name, position, unit_id, email, phone, join_date, birth_date, address,
+                  emergency_contact, attendance_mode, is_active, offboarded_at, offboarding_reason"""
+
+    @staticmethod
+    def _list_filter(is_active: bool | None, q: str | None) -> tuple[str, dict[str, Any]]:
+        # Karyawan terhapus disembunyikan (V-29).
+        where = ["organization_id = :org", "deleted_at IS NULL"]
+        params: dict[str, Any] = {}
+        if is_active is not None:
+            where.append("is_active = :is_active")
+            params["is_active"] = is_active
+        if q:
+            where.append("(full_name ILIKE :q OR employee_no ILIKE :q)")
+            params["q"] = f"%{q}%"
+        return " AND ".join(where), params
+
+    async def count_in_org(self, org_id: UUID | str, is_active: bool | None, q: str | None) -> int:
+        """Jumlah karyawan (belum terhapus) sesuai filter."""
+        where, params = self._list_filter(is_active, q)
+        row = await self.fetchone(f"SELECT COUNT(*) AS n FROM vms.employee WHERE {where}", {"org": org_id, **params})
+        return int(row.n) if row else 0
+
+    async def page_in_org(self, org_id: UUID | str, is_active: bool | None, q: str | None,
+                          limit: int, offset: int) -> list[Any]:
+        """Satu halaman karyawan, urut nama."""
+        where, params = self._list_filter(is_active, q)
+        return list(await self.fetchall(
+            f"SELECT {self._COLUMNS} FROM vms.employee WHERE {where} ORDER BY full_name ASC LIMIT :limit OFFSET :offset",
+            {"org": org_id, "limit": limit, "offset": offset, **params}))
+
+    async def get_in_org(self, employee_id: UUID | str, org_id: UUID | str) -> Any:
+        """Satu karyawan organisasi ini yang belum terhapus, atau None."""
+        return await self.fetchone(
+            f"SELECT {self._COLUMNS} FROM vms.employee WHERE id = :id AND organization_id = :org AND deleted_at IS NULL",
+            {"id": employee_id, "org": org_id})
+
+    async def insert(self, org_id: UUID | str, data: dict[str, Any]) -> Any:
+        """Karyawan baru + penempatan perdana. → (id, is_active, offboarded_at, offboarding_reason)."""
+        row = await self.fetchone(
+            """
+            INSERT INTO vms.employee (organization_id, employee_no, full_name, position, unit_id, email, phone,
+                                      join_date, birth_date, address, emergency_contact)
+            VALUES (:org, :employee_no, :full_name, :position, :unit_id, :email, :phone, :join_date, :birth_date,
+                    :address, :emergency_contact)
+            RETURNING id, is_active, offboarded_at, offboarding_reason
+            """,
+            {"org": org_id, **data})
+        await self.execute(
+            """
+            INSERT INTO vms.employee_assignment (employee_id, position, unit_id, valid_from)
+            VALUES (:emp_id, :position, :unit_id, :join_date)
+            """,
+            {"emp_id": row.id, "position": data["position"], "unit_id": data["unit_id"],
+             "join_date": data["join_date"]})
+        return row
+
+    async def update_fields(self, employee_id: UUID | str, org_id: UUID | str, fields: dict[str, Any]) -> Any:
+        """Ubah kolom data pribadi (nama kolom dari skema EmployeeUpdate, bukan dari klien). → baris atau None."""
+        assignments = ", ".join(f"{name} = :{name}" for name in fields)
+        return await self.fetchone(
+            f"UPDATE vms.employee SET {assignments} WHERE id = :id AND organization_id = :org "
+            f"RETURNING {self._COLUMNS}",
+            {"id": employee_id, "org": org_id, **fields})
+
+    async def conflicts(self, employee_id: UUID | str, start: Any, end: Any, exclude_plan: UUID | str | None) -> list[Any]:
+        """SK lain yang bentrok jadwal dengan rentang ini (P3-6, fungsi `personnel_conflict`)."""
+        return list(await self.fetchall(
+            "SELECT work_plan_id, number, title FROM vms.personnel_conflict(:emp, daterange(:start, :end, '[]'), :exclude)",
+            {"emp": employee_id, "start": start, "end": end, "exclude": exclude_plan}))

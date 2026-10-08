@@ -9358,6 +9358,17 @@
      "is_early_leave": {
       "type": "boolean",
       "title": "Is Early Leave"
+     },
+     "city_category": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "City Category"
      }
     },
     "type": "object",
@@ -9619,6 +9630,56 @@
        }
       ],
       "title": "Check Out Requested At"
+     },
+     "check_out_distance_m": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Check Out Distance M"
+     },
+     "check_out_outside": {
+      "type": "boolean",
+      "title": "Check Out Outside",
+      "default": false
+     },
+     "check_out_selfie_file_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Check Out Selfie File Id"
+     },
+     "check_out_explanation": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Check Out Explanation"
+     },
+     "city_category": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "City Category"
      }
     },
     "type": "object",
@@ -10144,6 +10205,42 @@
        }
       ],
       "title": "Face Probe Id"
+     },
+     "selfie_file_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Selfie File Id"
+     },
+     "explanation": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 1000
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Explanation"
+     },
+     "accuracy_m": {
+      "anyOf": [
+       {
+        "type": "number",
+        "minimum": 0.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Accuracy M"
      }
     },
     "type": "object",

@@ -4172,6 +4172,8 @@ export interface components {
             is_late: boolean;
             /** Is Early Leave */
             is_early_leave: boolean;
+            /** City Category */
+            city_category?: string | null;
         };
         /**
          * AttendanceRecapRow
@@ -4264,6 +4266,19 @@ export interface components {
             offline_note?: string | null;
             /** Check Out Requested At */
             check_out_requested_at?: string | null;
+            /** Check Out Distance M */
+            check_out_distance_m?: number | null;
+            /**
+             * Check Out Outside
+             * @default false
+             */
+            check_out_outside: boolean;
+            /** Check Out Selfie File Id */
+            check_out_selfie_file_id?: string | null;
+            /** Check Out Explanation */
+            check_out_explanation?: string | null;
+            /** City Category */
+            city_category?: string | null;
         };
         /**
          * AuditEventListResponse
@@ -4473,6 +4488,12 @@ export interface components {
             location_origin: "GPS" | "SIMULASI";
             /** Face Probe Id */
             face_probe_id?: string | null;
+            /** Selfie File Id */
+            selfie_file_id?: string | null;
+            /** Explanation */
+            explanation?: string | null;
+            /** Accuracy M */
+            accuracy_m?: number | null;
         };
         /** CompletionRequest */
         CompletionRequest: {

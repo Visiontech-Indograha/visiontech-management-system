@@ -98,7 +98,7 @@ export function CreateEmployeeDialog({ onClose }: { onClose: () => void }) {
   );
 }
 
-const offboardSchema = z.object({ reason: z.string().trim().min(1, "Alasan offboarding wajib diisi.") });
+const offboardSchema = z.object({ reason: z.string().trim().min(1, "Alasan pengakhiran masa kerja wajib diisi.") });
 
 /**
  * M2-02 · HR mengakhiri masa kerja (domain.js OFFBOARD): alasan wajib, akses login dicabut, data historis

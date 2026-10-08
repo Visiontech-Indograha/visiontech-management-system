@@ -33,7 +33,7 @@ def _invalid(message: str) -> AppError:
     return AppError("VALIDATION_ERROR", message, status=422)
 
 
-def _state(message: str = "Tahap work plan belum sesuai untuk tindakan ini.") -> AppError:
+def _state(message: str = "Status SK belum sesuai untuk tindakan ini. Muat ulang halaman.") -> AppError:
     """Mengembalikan error ketika state/status SK tidak mengizinkan aksi perubahan."""
     return AppError("INVALID_STATE", message, status=409)
 
@@ -203,7 +203,7 @@ class PlanChangeService:
         if change.status != ChangeStatus.PENDING_PM:
             raise _state("Tidak ada perubahan menunggu persetujuan PM.")
         if change.base_revision != change.plan_revision:
-            raise _state("Revisi dasar sudah berubah. Ajukan perubahan baru.")
+            raise _state("SK sudah berubah sejak usulan ini dibuat. Muat ulang, lalu ajukan perubahan baru.")
         team = [m.employee_id for m in await self.plans.active_team(change.work_plan_id)]
         conflicts = await self.members.schedule_conflicts_until(team, change.work_plan_id, change.new_period_end)
         if conflicts:
@@ -234,7 +234,7 @@ class PlanChangeService:
         if change.status != ChangeStatus.AWAITING_LEADER_ACCEPTANCE:
             raise _state("Adendum belum siap diterima.")
         if change.base_revision != change.plan_revision:
-            raise _state("Revisi dasar telah berubah.")
+            raise _state("SK sudah berubah sejak usulan ini dibuat. Muat ulang halaman.")
         acceptor = await self.repo.employee_of(user.user_id)
         if change.change_type == ChangeType.PERSONNEL:
             await self.repo.apply_personnel(change.work_plan_id, change.proposed_leader_id,

@@ -360,7 +360,7 @@ describe("siklus karyawan oleh HR (M2-02, M2-03)", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Offboarding" }));
     const dialog = screen.getByRole("dialog", { name: "Offboarding Test User" });
     fireEvent.click(within(dialog).getByRole("button", { name: "Akhiri masa kerja" }));
-    expect(await within(dialog).findByText("Alasan offboarding wajib diisi.")).toBeInTheDocument();
+    expect(await within(dialog).findByText("Alasan pengakhiran masa kerja wajib diisi.")).toBeInTheDocument();
     fireEvent.change(within(dialog).getByLabelText("Alasan"), { target: { value: "Kontrak selesai" } });
     fireEvent.click(within(dialog).getByRole("button", { name: "Akhiri masa kerja" }));
     await waitFor(() => expect(calls.some((c) => c.url === "/employees/e1/offboard")).toBe(true));

@@ -658,6 +658,16 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
                         accent: Accent.emerald,
                       ),
                     ),
+                  if (isLeader && p['status'] == 'ACCEPTED')
+                    Padding(
+                      padding: const EdgeInsets.only(top: 10),
+                      child: OutlinedButton.icon(
+                        key: const Key('accepted-amendment'),
+                        onPressed: _runningAmendment,
+                        icon: const Icon(Icons.edit_note_rounded),
+                        label: const Text('Ajukan adendum'),
+                      ),
+                    ),
                   if (isLeader && p['status'] == 'PUBLISHED') ...[
                     const SectionTitle('Penerimaan SK'),
                     const NoticeBanner(

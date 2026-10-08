@@ -156,8 +156,9 @@ export function HomePage() {
 
   const list = plans.data ?? [];
   const running = list.filter((p) => p.status === "IN_PROGRESS");
-  const waiting = list.filter((p) => WAITING.includes(p.status));
-  const active = [...running, ...waiting].slice(0, 6);
+  const waiting = list.filter((p) => WAITING.includes(p.status) || p.pending_request);
+  const requests = list.filter((p) => p.pending_request);
+  const active = [...new Set([...requests, ...running, ...waiting])].slice(0, 6);
   const today = new Intl.DateTimeFormat("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Jakarta" }).format(new Date());
 
   return (
@@ -173,6 +174,9 @@ export function HomePage() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Stat label="SK berjalan" value={running.length} loading={plans.isPending} icon={<CalendarClock size={20} />} to="/work-plans" />
         <Stat label="SK menunggu tindakan" value={waiting.length} loading={plans.isPending} icon={<FileClock size={20} />} to="/work-plans" />
+        {perms.includes("create:plan") && (
+          <Stat label="Permintaan revisi dari ketua" value={requests.length} loading={plans.isPending} icon={<FileClock size={20} />} to="/work-plans" />
+        )}
         {canReview && (
           <Stat label="Absensi perlu diperiksa" value={toReview.data} loading={toReview.isPending} icon={<ClipboardCheck size={20} />} to="/attendance" />
         )}

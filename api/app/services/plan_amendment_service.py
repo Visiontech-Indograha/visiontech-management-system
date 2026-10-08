@@ -67,7 +67,7 @@ class PlanAmendmentService:
 
     async def request_amendment(self, access: PlanAccess, reason: str) -> Any:
         """
-        Ketua menurut SK (dijaga router) mengajukan adendum; status SK tetap Berjalan.
+        Ketua menurut SK (dijaga router) mengajukan adendum saat Diterima atau Berjalan; status SK tidak berubah.
 
         Args:
             access: Obyek PlanAccess yang memvalidasi hak pengguna terhadap SK.
@@ -76,7 +76,7 @@ class PlanAmendmentService:
         Returns:
             Any: ID dari objek perubahan yang baru dibuat.
         """
-        require_plan_status(access, PlanStatus.IN_PROGRESS)
+        require_plan_status(access, PlanStatus.ACCEPTED, PlanStatus.IN_PROGRESS)
         if not reason.strip():
             raise ValidationError("Alasan adendum wajib diisi.")
         # Validasi: Tidak boleh ada lebih dari satu usulan perubahan yang terbuka sekaligus

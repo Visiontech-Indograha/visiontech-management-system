@@ -68,6 +68,7 @@ export const routes: RouteObject[] = [
           { path: "/work-plans/new", element: <RequireAccess item={NAV_ITEMS.find((i) => i.path === "/work-plans")!}><PlanEditorPage /></RequireAccess> },
           { path: "/work-plans/:id/edit", element: <PlanEditorPage /> },
           { path: "/work-plans/:id/amend/:changeId", element: <PlanEditorPage /> },
+          { path: "/work-plans/:id/revise", element: <PlanEditorPage /> },
           { path: "/work-plans/:id", element: <WorkPlanDetailPage /> },
           { path: "/account", element: <AccountPage /> },
           { path: "/forbidden", element: <ForbiddenPage /> },

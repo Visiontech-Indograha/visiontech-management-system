@@ -7968,6 +7968,116 @@
     }
    }
   },
+  "/api/v1/work-plans/{plan_id}/revisions": {
+   "post": {
+    "tags": [
+     "Work Plan Revisions"
+    ],
+    "summary": "Revise Plan",
+    "description": "PM unit/OPS merevisi rencana kerja berstatus Terbit, Revisi diminta, Diterima, atau Berjalan (POST).\nVersi dokumen baru ditandatangani PM; ketua dan anggota mendapat notifikasi beserta diff.\n\nPath Parameters:\n- plan_id (UUID): ID rencana kerja.\n\nRequest Body:\n- data (PlanRevisionIn): isi rencana kerja yang baru + `reason` + `change_id` (permintaan ketua, opsional).\n\nReturns:\n- PlanDetailOut: detail rencana kerja pasca revisi.",
+    "operationId": "revise_plan_api_v1_work_plans__plan_id__revisions_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "plan_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Plan Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PlanRevisionIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/PlanDetailOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "get": {
+    "tags": [
+     "Work Plan Revisions"
+    ],
+    "summary": "List Revisions",
+    "description": "Riwayat revisi rencana kerja, terbaru dulu (GET); siapa pun yang berhak melihat rencana kerja.\n\nPath Parameters:\n- plan_id (UUID): ID rencana kerja.\n\nReturns:\n- list[PlanRevisionOut]: revisi beserta diff sebelum/sesudah.",
+    "operationId": "list_revisions_api_v1_work_plans__plan_id__revisions_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "plan_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Plan Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/PlanRevisionOut"
+         },
+         "title": "Response List Revisions Api V1 Work Plans  Plan Id  Revisions Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/v1/app/android/update": {
    "get": {
     "tags": [
@@ -13558,6 +13668,211 @@
     ],
     "title": "PlanLocationOut",
     "description": "Respons informasi lokasi suatu Rencana Kerja."
+   },
+   "PlanRevisionIn": {
+    "properties": {
+     "title": {
+      "type": "string",
+      "title": "Title"
+     },
+     "description": {
+      "type": "string",
+      "title": "Description"
+     },
+     "category": {
+      "type": "string",
+      "enum": [
+       "INSTALASI",
+       "PEMELIHARAAN",
+       "PERBAIKAN",
+       "SURVEI",
+       "LAINNYA"
+      ],
+      "title": "Category"
+     },
+     "site_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Id"
+     },
+     "new_site": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/NewSiteInput"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "period_start": {
+      "type": "string",
+      "format": "date",
+      "title": "Period Start"
+     },
+     "period_end": {
+      "type": "string",
+      "format": "date",
+      "title": "Period End"
+     },
+     "days": {
+      "items": {
+       "$ref": "#/components/schemas/DraftDayInput"
+      },
+      "type": "array",
+      "title": "Days"
+     },
+     "leader_employee_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Leader Employee Id"
+     },
+     "member_employee_ids": {
+      "items": {
+       "type": "string",
+       "format": "uuid"
+      },
+      "type": "array",
+      "title": "Member Employee Ids",
+      "default": []
+     },
+     "is_out_of_town": {
+      "type": "boolean",
+      "title": "Is Out Of Town",
+      "default": false
+     },
+     "tool_ids": {
+      "items": {
+       "type": "string",
+       "format": "uuid"
+      },
+      "type": "array",
+      "title": "Tool Ids",
+      "default": []
+     },
+     "vehicle_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Vehicle Id"
+     },
+     "driver_employee_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Driver Employee Id"
+     },
+     "row_version": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Row Version"
+     },
+     "reason": {
+      "type": "string",
+      "title": "Reason"
+     },
+     "change_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Change Id"
+     }
+    },
+    "type": "object",
+    "required": [
+     "title",
+     "description",
+     "category",
+     "period_start",
+     "period_end",
+     "days",
+     "leader_employee_id",
+     "reason"
+    ],
+    "title": "PlanRevisionIn",
+    "description": "Isi rencana kerja yang baru ditambah alasan revisi; `change_id` = permintaan ketua yang diselesaikan."
+   },
+   "PlanRevisionOut": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Id"
+     },
+     "revision": {
+      "type": "integer",
+      "title": "Revision"
+     },
+     "revised_by_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Revised By Name"
+     },
+     "reason": {
+      "type": "string",
+      "title": "Reason"
+     },
+     "diff": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Diff"
+     },
+     "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Created At"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "revision",
+     "reason",
+     "diff",
+     "created_at"
+    ],
+    "title": "PlanRevisionOut",
+    "description": "Satu baris riwayat revisi: siapa, kapan, mengapa, dan apa yang berubah."
    },
    "PlanTaskCreate": {
     "properties": {

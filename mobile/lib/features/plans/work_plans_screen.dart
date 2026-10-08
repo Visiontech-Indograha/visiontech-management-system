@@ -12,6 +12,7 @@ import '../auth/auth_state.dart';
 import '../notifications/notifications_screen.dart';
 import 'final_report_screen.dart';
 import 'plan_day_screen.dart';
+import 'revision_history_screen.dart';
 import 'sk_viewer_screen.dart';
 import 'weekly_report_screen.dart';
 
@@ -855,6 +856,20 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
             onPressed: _runningAmendment,
             icon: const Icon(Icons.edit_note_rounded),
             label: const Text('Ajukan revisi'),
+          ),
+        ),
+      if (((_plan['revision'] as num?) ?? 1) > 1)
+        Padding(
+          padding: const EdgeInsets.only(top: 10),
+          child: OutlinedButton.icon(
+            key: const Key('revision-history'),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => RevisionHistoryScreen(planId: _planId),
+              ),
+            ),
+            icon: const Icon(Icons.history_rounded),
+            label: const Text('Riwayat revisi'),
           ),
         ),
       if (_assets.isNotEmpty) ...[

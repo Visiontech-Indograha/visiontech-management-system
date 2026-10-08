@@ -88,10 +88,10 @@ class _WorkPlansScreenState extends ConsumerState<WorkPlansScreen> {
           children: [
             HeroHeader(
               eyebrow: 'Surat Kerja',
-              title: 'SK Anda',
+              title: 'Rencana Kerja Anda',
               subtitle: _loading
                   ? 'Memuat…'
-                  : '${_plans.length} SK · $running sedang berjalan',
+                  : '${_plans.length} rencana kerja · $running sedang berjalan',
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
@@ -117,8 +117,8 @@ class _WorkPlansScreenState extends ConsumerState<WorkPlansScreen> {
                   if (!_loading && _plans.isEmpty && _error == null)
                     const EmptyState(
                       icon: Icons.assignment_rounded,
-                      title: 'Belum ada SK untuk Anda',
-                      message: 'SK yang diterbitkan PM untuk Anda akan tampil di sini.',
+                      title: 'Belum ada rencana kerja untuk Anda',
+                      message: 'Rencana Kerja yang diterbitkan PM untuk Anda akan tampil di sini.',
                     ),
                   for (final (i, p) in _plans.indexed)
                     Padding(
@@ -229,7 +229,7 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
       builder: (ctx) => AlertDialog(
         title: const Text('Terima surat kerja ini?'),
         content: const Text(
-          'Penerimaan akan dicatat dan ditandatangani secara digital. Pastikan rincian SK sudah benar.',
+          'Penerimaan akan dicatat dan ditandatangani secara digital. Pastikan rincian rencana kerja sudah benar.',
         ),
         actions: [
           TextButton(
@@ -252,7 +252,7 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
           .acceptPlan(_planId, rowVersion: _plan['row_version'] as int);
       if (!mounted) return;
       setState(() => _plan = accepted);
-      _snack('SK berhasil diterima dan ditandatangani.');
+      _snack('Rencana Kerja berhasil diterima dan ditandatangani.');
       await _load();
     } catch (e) {
       if (mounted) _snack(apiErrorMessage(e));
@@ -266,13 +266,13 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Ajukan adendum'),
+        title: const Text('Ajukan revisi'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'SK akan dikembalikan ke PM untuk direvisi. Tuliskan apa yang perlu diubah.',
+              'Rencana Kerja akan dikembalikan ke PM untuk direvisi. Tuliskan apa yang perlu diubah.',
             ),
             const SizedBox(height: 12),
             TextField(
@@ -281,7 +281,7 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
               maxLines: 4,
               textCapitalization: TextCapitalization.sentences,
               decoration: const InputDecoration(
-                labelText: 'Alasan adendum',
+                labelText: 'Alasan revisi',
                 hintText: 'mis. Meminta penambahan hari kerja',
               ),
             ),
@@ -301,7 +301,7 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
     );
     if (ok != true || _amending) return;
     if (reason.text.trim().isEmpty) {
-      return _snack('Alasan adendum wajib diisi.');
+      return _snack('Alasan revisi wajib diisi.');
     }
     setState(() => _amending = true);
     try {
@@ -315,7 +315,7 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
           );
       if (!mounted) return;
       setState(() => _plan = updated);
-      _snack('Adendum dikirim ke PM.');
+      _snack('Revisi dikirim ke PM.');
     } catch (e) {
       if (mounted) _snack(apiErrorMessage(e));
     } finally {
@@ -328,7 +328,7 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Ajukan adendum'),
+        title: const Text('Ajukan revisi'),
         content: TextField(
           controller: reason,
           autofocus: true,
@@ -352,14 +352,14 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
     );
     if (ok != true) return;
     if (reason.text.trim().isEmpty) {
-      return _snack('Isi pengajuan adendum wajib diisi.');
+      return _snack('Isi pengajuan revisi wajib diisi.');
     }
     try {
       await ref
           .read(syncEngineProvider)
           .api
           .requestRunningAmendment(_planId, reason.text.trim());
-      _snack('Adendum dikirim ke PM. Status SK tetap Berjalan.');
+      _snack('Revisi dikirim ke PM. Status rencana kerja tetap Berjalan.');
       await _load();
     } catch (e) {
       _snack(apiErrorMessage(e));
@@ -370,9 +370,9 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Terima adendum?'),
+        title: const Text('Terima revisi?'),
         content: const Text(
-          'Adendum akan ditandatangani secara digital. Versi SK sebelumnya menjadi tidak berlaku.',
+          'Revisi akan ditandatangani secara digital. Versi rencana kerja sebelumnya menjadi tidak berlaku.',
         ),
         actions: [
           TextButton(
@@ -389,7 +389,7 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
     if (ok != true) return;
     try {
       await ref.read(syncEngineProvider).api.acceptAmendment(_planId, changeId);
-      _snack('Adendum diterima dan ditandatangani.');
+      _snack('Revisi diterima dan ditandatangani.');
       await _load();
     } catch (e) {
       _snack(apiErrorMessage(e));
@@ -636,7 +636,7 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
                         ),
                       ),
                       icon: const Icon(Icons.description_outlined),
-                      label: const Text('Tinjau SK'),
+                      label: const Text('Tinjau rencana kerja'),
                     ),
                   ],
                   if (p['status'] == 'APPEALED')
@@ -645,7 +645,7 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
                       child: NoticeBanner(
                         icon: Icons.edit_note_rounded,
                         text:
-                            'Adendum diminta${p['appeal_reason'] != null ? ': ${p['appeal_reason']}' : ''}. Menunggu PM merevisi dan menerbitkan ulang SK.',
+                            'Revisi diminta${p['appeal_reason'] != null ? ': ${p['appeal_reason']}' : ''}. Menunggu PM merevisi dan menerbitkan ulang rencana kerja.',
                       ),
                     ),
                   if (p['status'] == 'ACCEPTED')
@@ -654,7 +654,7 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
                       child: NoticeBanner(
                         icon: Icons.event_available_rounded,
                         text:
-                            'SK diterima. Status otomatis menjadi Berjalan pada ${_date.format(DateTime.parse(p['period_start'] as String))}.',
+                            'Rencana Kerja diterima. Status otomatis menjadi Berjalan pada ${_date.format(DateTime.parse(p['period_start'] as String))}.',
                         accent: Accent.emerald,
                       ),
                     ),
@@ -665,14 +665,14 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
                         key: const Key('accepted-amendment'),
                         onPressed: _runningAmendment,
                         icon: const Icon(Icons.edit_note_rounded),
-                        label: const Text('Ajukan adendum'),
+                        label: const Text('Ajukan revisi'),
                       ),
                     ),
                   if (isLeader && p['status'] == 'PUBLISHED') ...[
-                    const SectionTitle('Penerimaan SK'),
+                    const SectionTitle('Penerimaan rencana kerja'),
                     const NoticeBanner(
                       icon: Icons.verified_user_outlined,
-                      text: 'Tinjau SK lebih dulu. Terima SK = menandatangani secara digital (perlu internet). Bila ada yang perlu diubah, ajukan adendum ke PM.',
+                      text: 'Tinjau rencana kerja lebih dulu. Terima rencana kerja = menandatangani secara digital (perlu internet). Bila ada yang perlu diubah, ajukan revisi ke PM.',
                     ),
                     const SizedBox(height: 10),
                     OutlinedButton.icon(
@@ -681,7 +681,7 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
                           ? null
                           : _requestAmendment,
                       icon: const Icon(Icons.edit_note_rounded),
-                      label: Text(_amending ? 'Mengirim...' : 'Ajukan adendum'),
+                      label: Text(_amending ? 'Mengirim...' : 'Ajukan revisi'),
                     ),
                     const SizedBox(height: 8),
                     FilledButton.icon(
@@ -693,7 +693,7 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Icon(Icons.check_circle_outline_rounded),
-                      label: Text(_accepting ? 'Menerima...' : 'Terima SK'),
+                      label: Text(_accepting ? 'Menerima...' : 'Terima rencana kerja'),
                     ),
                   ],
                   if (_running) ...[
@@ -817,8 +817,8 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
           child: NoticeBanner(
             icon: Icons.edit_note_rounded,
             text: pending['status'] == 'PENDING_PM'
-                ? 'Adendum "${pending['reason']}" menunggu keputusan PM.'
-                : 'PM sudah mengubah isi SK. Tinjau SK lalu terima adendum.',
+                ? 'Revisi "${pending['reason']}" menunggu keputusan PM.'
+                : 'PM sudah mengubah isi rencana kerja. Tinjau rencana kerja lalu terima revisi.',
           ),
         ),
       if (isLeader && pending?['status'] == 'AWAITING_LEADER_ACCEPTANCE')
@@ -828,7 +828,7 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
             key: const Key('accept-amendment'),
             onPressed: () => _acceptAmendment('${pending!['id']}'),
             icon: const Icon(Icons.verified_rounded),
-            label: const Text('Terima adendum'),
+            label: const Text('Terima revisi'),
           ),
         ),
       for (final c in _changes.where((c) => c['status'] == 'REJECTED').take(1))
@@ -836,7 +836,7 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
           padding: const EdgeInsets.only(top: 12),
           child: NoticeBanner(
             icon: Icons.block_rounded,
-            text: 'Adendum ditolak PM: ${c['decision_reason'] ?? '-'}',
+            text: 'Revisi ditolak PM: ${c['decision_reason'] ?? '-'}',
             accent: Accent.rose,
           ),
         ),
@@ -847,7 +847,7 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
             key: const Key('running-amendment'),
             onPressed: _runningAmendment,
             icon: const Icon(Icons.edit_note_rounded),
-            label: const Text('Ajukan adendum'),
+            label: const Text('Ajukan revisi'),
           ),
         ),
       if (_assets.isNotEmpty) ...[

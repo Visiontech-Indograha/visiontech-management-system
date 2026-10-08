@@ -416,7 +416,7 @@ class _PlanDayScreenState extends ConsumerState<PlanDayScreen> {
                   const NoticeBanner(
                     icon: Icons.info_outline_rounded,
                     text:
-                        'Hanya ketua SK yang mengisi laporan saat SK berjalan.',
+                        'Hanya ketua rencana kerja yang mengisi laporan saat rencana kerja berjalan.',
                     accent: Accent.blue,
                   ),
               ],

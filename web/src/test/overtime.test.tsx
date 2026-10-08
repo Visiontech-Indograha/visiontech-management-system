@@ -13,7 +13,7 @@ const plan = {
   period_end: "2026-10-20",
   pm_employee_id: "e-pm",
   leader_employee_id: "e-lead",
-  number: "SK/001",
+  number: "Rencana Kerja/001",
   status: "IN_PROGRESS",
   revision: 0,
   row_version: 7,
@@ -90,7 +90,7 @@ describe("Lembur", () => {
     });
   });
 
-  it("PM meninjau lembur PENDING_PM dari panel SK", async () => {
+  it("PM meninjau lembur PENDING_PM dari panel rencana kerja", async () => {
     const calls = setup([ot()], (url) => (url === "/overtime/o1/review" ? { data: ot({ status: "APPROVED" }) } : undefined));
     renderRoute("/work-plans/p1", { role: "PM" });
     const panel = await screen.findByRole("region", { name: "Rekap Lembur" });
@@ -104,7 +104,7 @@ describe("Lembur", () => {
     expect(calls.find((c) => c.url === "/overtime/o1/review")!.data).toEqual({ decision: "REJECTED", note: "Tidak mendesak" });
   });
 
-  it("Finance melihat lembur SK tetapi tidak dapat meninjau (hanya PM unit/OPS)", async () => {
+  it("Finance melihat lembur rencana kerja tetapi tidak dapat meninjau (hanya PM unit/OPS)", async () => {
     setup([ot()]);
     renderRoute("/work-plans/p1", { role: "FINANCE" });
     const panel = await screen.findByRole("region", { name: "Rekap Lembur" });

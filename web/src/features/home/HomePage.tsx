@@ -172,8 +172,8 @@ export function HomePage() {
       </header>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <Stat label="SK berjalan" value={running.length} loading={plans.isPending} icon={<CalendarClock size={20} />} to="/work-plans" />
-        <Stat label="SK menunggu tindakan" value={waiting.length} loading={plans.isPending} icon={<FileClock size={20} />} to="/work-plans" />
+        <Stat label="Rencana Kerja berjalan" value={running.length} loading={plans.isPending} icon={<CalendarClock size={20} />} to="/work-plans" />
+        <Stat label="Rencana Kerja menunggu tindakan" value={waiting.length} loading={plans.isPending} icon={<FileClock size={20} />} to="/work-plans" />
         {perms.includes("create:plan") && (
           <Stat label="Permintaan revisi dari ketua" value={requests.length} loading={plans.isPending} icon={<FileClock size={20} />} to="/work-plans" />
         )}
@@ -194,12 +194,12 @@ export function HomePage() {
       <Card className="gap-4">
         <CardHeader>
           <CardTitle className="text-heading">Pekerjaan aktif</CardTitle>
-          <CardDescription>SK berjalan dan yang menunggu tindakan.</CardDescription>
+          <CardDescription>Rencana Kerja berjalan dan yang menunggu tindakan.</CardDescription>
         </CardHeader>
         <CardContent className="px-3 md:px-4">
           {plans.isPending && <Skeleton className="mx-3 h-14" />}
-          {plans.isError && <p className="px-3 text-danger">Daftar SK tidak dapat dimuat.</p>}
-          {plans.isSuccess && active.length === 0 && <p className="px-3 text-mist">Belum ada SK aktif.</p>}
+          {plans.isError && <p className="px-3 text-danger">Daftar rencana kerja tidak dapat dimuat.</p>}
+          {plans.isSuccess && active.length === 0 && <p className="px-3 text-mist">Belum ada rencana kerja aktif.</p>}
           <ul className="divide-y divide-line">
             {active.map((p) => (
               <li key={p.id}>

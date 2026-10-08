@@ -122,7 +122,7 @@ export function ExtensionDialog({ plan, onClose }: { plan: WorkPlan; onClose: ()
 const personnelSchema = z.object({
   leader_employee_id: z.string().min(1, "Pilih ketua tim."),
   member_employee_ids: z.array(z.string()).min(1, "Pilih minimal satu anggota tim."),
-  reason: z.string().trim().min(1, "Alasan adendum wajib diisi."),
+  reason: z.string().trim().min(1, "Alasan revisi wajib diisi."),
 });
 type PersonnelValues = z.infer<typeof personnelSchema>;
 
@@ -150,14 +150,14 @@ export function PersonnelDialog({ plan, onClose }: { plan: WorkPlan; onClose: ()
         leader_employee_id: v.leader_employee_id,
         member_employee_ids: v.member_employee_ids.filter((id) => id !== v.leader_employee_id),
       });
-      toast.success("Adendum personel diajukan.");
+      toast.success("Revisi personel diajukan.");
       onClose();
     } catch (err) {
       setFormError(errorMessage(err));
     }
   });
   return (
-    <FormShell title="Adendum personel" submitLabel="Ajukan adendum" submitting={isSubmitting} formError={formError} onClose={onClose} onSubmit={onSubmit}>
+    <FormShell title="Revisi personel" submitLabel="Ajukan revisi" submitting={isSubmitting} formError={formError} onClose={onClose} onSubmit={onSubmit}>
       <SelectField label="Ketua tim" error={errors.leader_employee_id?.message} {...register("leader_employee_id")}>
         <option value="">{employees.isPending ? "Memuat..." : "Pilih ketua"}</option>
         {employees.data?.map((e) => (
@@ -189,7 +189,7 @@ export function PersonnelDialog({ plan, onClose }: { plan: WorkPlan; onClose: ()
   );
 }
 
-const TYPE_LABEL: Record<string, string> = { EXTEND: "Perpanjangan", PERSONNEL: "Adendum personel" };
+const TYPE_LABEL: Record<string, string> = { EXTEND: "Perpanjangan", PERSONNEL: "Revisi personel" };
 const OPEN = ["PENDING_PM", "AWAITING_LEADER_ACCEPTANCE"];
 
 /** Keputusan atas usulan terakhir: approve/reject (PM), accept/reject (ketua), withdraw (PM, personel). */
@@ -225,17 +225,17 @@ export function ChangePanel({ plan }: { plan: WorkPlan }) {
     );
   if (change.status === "AWAITING_LEADER_ACCEPTANCE") {
     buttons.push(
-      <Button key="accept" onClick={() => run("accept", "Adendum diterima.")} disabled={decide.isPending}>
-        Terima adendum
+      <Button key="accept" onClick={() => run("accept", "Revisi diterima.")} disabled={decide.isPending}>
+        Terima revisi
       </Button>,
-      <Button key="reject-leader" variant="outline" onClick={() => setAsking({ action: "reject", title: "Tolak adendum" })}>
-        Tolak adendum
+      <Button key="reject-leader" variant="outline" onClick={() => setAsking({ action: "reject", title: "Tolak permintaan" })}>
+        Tolak permintaan
       </Button>,
     );
     if (canManage && change.change_type === "PERSONNEL")
       buttons.push(
-        <Button key="withdraw" variant="outline" onClick={() => setAsking({ action: "withdraw", title: "Tarik adendum personel" })}>
-          Tarik adendum personel
+        <Button key="withdraw" variant="outline" onClick={() => setAsking({ action: "withdraw", title: "Tarik revisi personel" })}>
+          Tarik revisi personel
         </Button>,
       );
   }

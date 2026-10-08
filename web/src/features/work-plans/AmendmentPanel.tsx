@@ -16,7 +16,7 @@ import type { WorkPlan } from "./api";
 type Change = components["schemas"]["PlanChangeOut"];
 const changesKey = (planId: string) => ["plan-changes", planId] as const;
 
-const TYPE_LABEL: Record<string, string> = { AMENDMENT: "Adendum", EXTEND: "Perpanjangan", PERSONNEL: "Adendum personel" };
+const TYPE_LABEL: Record<string, string> = { AMENDMENT: "Revisi", EXTEND: "Perpanjangan", PERSONNEL: "Revisi personel" };
 
 /**
  * Usulan perubahan SK (alur SK v2 PR3, flowchart SK2-E): adendum yang diajukan ketua saat SK Berjalan.
@@ -42,8 +42,8 @@ export function AmendmentPanel({ plan }: { plan: WorkPlan }) {
   if (list.length === 0) return null;
 
   return (
-    <section aria-label="Usulan perubahan SK" className="rounded-panel border border-line bg-surface p-4 shadow-card">
-      <h2 className="mb-3 text-base font-semibold">Usulan perubahan SK</h2>
+    <section aria-label="Permintaan revisi" className="rounded-panel border border-line bg-surface p-4 shadow-card">
+      <h2 className="mb-3 text-base font-semibold">Permintaan revisi</h2>
       <ul className="space-y-3">
         {list.map((c) => (
           <li key={c.id} className="rounded-control border border-line p-3 text-sm">
@@ -57,15 +57,15 @@ export function AmendmentPanel({ plan }: { plan: WorkPlan }) {
             </p>
             {c.decision_reason && <p className="mt-1 text-mist">Catatan PM: {c.decision_reason}</p>}
             {c.status === "AWAITING_LEADER_ACCEPTANCE" && (
-              <p className="mt-1 text-warning">SK sudah diubah dan ditandatangani PM. Menunggu tanda tangan ketua di HP.</p>
+              <p className="mt-1 text-warning">Rencana Kerja sudah diubah dan ditandatangani PM. Menunggu tanda tangan ketua di HP.</p>
             )}
             {canManage && c.change_type === "AMENDMENT" && c.status === "PENDING_PM" && plan.status === "IN_PROGRESS" && (
               <div className="mt-2 flex flex-col gap-2">
                 <Button asChild>
-                  <Link to={`/work-plans/${plan.id}/amend/${c.id}`}>Terima & ubah isi SK</Link>
+                  <Link to={`/work-plans/${plan.id}/amend/${c.id}`}>Revisi rencana kerja</Link>
                 </Button>
                 <Button variant="outline" onClick={() => (setRejecting(c), setNote(""), setError(null))}>
-                  Tolak adendum
+                  Tolak permintaan
                 </Button>
               </div>
             )}
@@ -75,7 +75,7 @@ export function AmendmentPanel({ plan }: { plan: WorkPlan }) {
       {rejecting && (
         <Dialog
           open
-          title="Tolak adendum"
+          title="Tolak permintaan"
           onClose={() => setRejecting(null)}
           footer={
             <>
@@ -89,7 +89,7 @@ export function AmendmentPanel({ plan }: { plan: WorkPlan }) {
                   if (!note.trim()) return setError("Catatan penolakan wajib diisi.");
                   try {
                     await reject.mutateAsync({ id: rejecting.id, reason: note.trim() });
-                    toast.success("Adendum ditolak. Catatan dikirim ke ketua tim.");
+                    toast.success("Revisi ditolak. Catatan dikirim ke ketua tim.");
                     setRejecting(null);
                   } catch (err) {
                     setError(errorMessage(err));

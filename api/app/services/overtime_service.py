@@ -56,7 +56,7 @@ class OvertimeService:
         if access.plan.status != PlanStatus.IN_PROGRESS:
             raise _state("Hanya pekerjaan aktif yang bisa diajukan lembur.")
         if not 0 < hours <= 12:
-            raise ValidationError("Jam lembur tidak valid.")
+            raise ValidationError("Jam lembur harus lebih dari 0 dan paling banyak 12 jam.")
         reason = reason.strip()
         if not reason:
             raise ValidationError("Alasan lembur wajib diisi.")
@@ -117,7 +117,7 @@ class OvertimeService:
 
         # domain.js baris 618: hanya yang masih PENDING_PM.
         if ot.status != "PENDING_PM":
-            raise _state("Lembur tidak tersedia untuk direview.")
+            raise _state("Pengajuan lembur ini sudah diperiksa atau tidak dapat diperiksa lagi.")
 
         # domain.js baris 620: can(actor, 'REVIEW_OVERTIME', unit) = PM unit SK, OPS, ADMIN.
         # Realisasi: cek plan.manages (PM unit / OPS / ADMIN) dari CRUDPlanAccess.
@@ -139,7 +139,7 @@ class OvertimeService:
             raise ValidationError("Keputusan harus disetujui atau ditolak.")
         row = await self.repo.review(overtime_id, reviewer_emp, decision, (note or "").strip() or None)
         if row is None:
-            raise _state("Lembur tidak tersedia untuk direview.")
+            raise _state("Pengajuan lembur ini sudah diperiksa atau tidak dapat diperiksa lagi.")
         return row
 
     # ------------------------------------------------------------------

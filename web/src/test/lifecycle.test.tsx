@@ -74,11 +74,11 @@ describe("Hapus & pulihkan karyawan (HR)", () => {
 
   it("penolakan API ditampilkan", async () => {
     await openDetail(employee(), (url) =>
-      url === "/employees/e1/archive" ? apiError(409, "INVALID_STATE", "Nonaktifkan (offboard) karyawan terlebih dahulu.") : undefined,
+      url === "/employees/e1/archive" ? apiError(409, "INVALID_STATE", "Akhiri masa kerja karyawan ini terlebih dahulu.") : undefined,
     );
     fireEvent.click(await screen.findByRole("button", { name: "Hapus karyawan" }));
     fireEvent.click(await screen.findByRole("button", { name: "Ya, hapus" }));
-    expect(await screen.findByText("Nonaktifkan (offboard) karyawan terlebih dahulu.")).toBeInTheDocument();
+    expect(await screen.findByText("Akhiri masa kerja karyawan ini terlebih dahulu.")).toBeInTheDocument();
   });
 });
 

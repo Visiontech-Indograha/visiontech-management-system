@@ -135,10 +135,10 @@ _STATUS_DEFAULTS: dict[int, tuple[str, str]] = {
     405: ("METHOD_NOT_ALLOWED", "Metode tidak didukung untuk alamat ini."),
     409: ("CONFLICT", "Data ini baru saja diubah. Muat ulang lalu coba lagi."),
     413: ("PAYLOAD_TOO_LARGE", "Ukuran data terlalu besar."),
-    422: ("VALIDATION_ERROR", "Data yang dikirim tidak valid."),
+    422: ("VALIDATION_ERROR", "Ada isian yang belum benar. Periksa kembali."),
     429: ("TOO_MANY_REQUESTS", "Terlalu banyak permintaan. Coba lagi beberapa saat lagi."),
 }
-_INTERNAL = ("INTERNAL_ERROR", "Terjadi kesalahan internal pada server.")
+_INTERNAL = ("INTERNAL_ERROR", "Terjadi gangguan pada sistem. Coba lagi beberapa saat; bila berulang, hubungi admin.")
 _DB_ERROR_MESSAGE = "Data tidak dapat disimpan karena bertentangan dengan data lain. Periksa isian lalu coba lagi."
 
 

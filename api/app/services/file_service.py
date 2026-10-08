@@ -23,9 +23,10 @@ class FileService:
         return await self.repo.find_by_hash(org_id, sha256)
 
     async def register(self, user: CurrentUser, *, file_id: str, storage_key: str, file_name: str | None,
-                       mime_type: str, byte_size: int, sha256: bytes) -> None:
-        """Catat berkas baru milik organisasi pengguna."""
-        await self.repo.insert(file_id=file_id, org_id=user.organization_id, storage_key=storage_key,
+                       mime_type: str, byte_size: int, sha256: bytes) -> str:
+        """Catat berkas baru milik organisasi pengguna → id berkas tersimpan (berbeda dari `file_id` bila berkas
+        yang sama baru saja dicatat unggahan lain)."""
+        return await self.repo.insert(file_id=file_id, org_id=user.organization_id, storage_key=storage_key,
                                file_name=file_name, mime_type=mime_type, byte_size=byte_size, sha256=sha256,
                                user_id=user.user_id)
 

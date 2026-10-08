@@ -423,3 +423,20 @@ class CRUDAttendanceSession(CRUDBase):
             """,
             {"status": status, "emp": reviewer, "note": note, "id": attendance_id},
         )
+
+    async def export_rows(self, org_id: UUID | str, start: Any, end: Any) -> list[Any]:
+        """Baris ekspor Finance (P4-5): jam dalam zona waktu organisasi, urut tanggal lalu nama."""
+        return list(await self.fetchall(
+            """
+            SELECT a.work_date, e.employee_no, e.full_name, a.site_label,
+                   to_char(a.check_in_at AT TIME ZONE o.timezone, 'HH24:MI:SS') AS check_in,
+                   to_char(a.check_out_at AT TIME ZONE o.timezone, 'HH24:MI:SS') AS check_out,
+                   a.status, a.is_late, a.is_early_leave
+              FROM vms.attendance a
+              JOIN vms.employee e ON a.employee_id = e.id
+              JOIN vms.organization o ON o.id = a.organization_id
+             WHERE a.organization_id = :org
+               AND a.work_date BETWEEN :start AND :end
+             ORDER BY a.work_date ASC, e.full_name ASC
+            """,
+            {"org": org_id, "start": start, "end": end}))

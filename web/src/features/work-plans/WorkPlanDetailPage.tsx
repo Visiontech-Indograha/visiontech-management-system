@@ -56,6 +56,7 @@ export function WorkPlanDetailPage() {
               <dl className="text-sm">
                 <Row label="Nomor rencana kerja">{p.number ?? "Belum terbit"}</Row>
                 <Row label="Revisi">{p.revision}</Row>
+                {p.is_out_of_town && <Row label="Jenis">Luar kota</Row>}
                 {p.category && <Row label="Kategori">{CATEGORY_LABEL[p.category] ?? p.category}</Row>}
                 <Row label="Lokasi">{p.location_text}</Row>
                 <Row label="Periode">

@@ -82,7 +82,8 @@ class PlanDraftRequest(BaseModel):
     period_end: date  # Tanggal berakhir
     days: list[DraftDayInput]  # Rincian aktivitas harian
     leader_employee_id: UUID  # ID pegawai yang ditunjuk sebagai ketua
-    member_employee_ids: list[UUID]  # Daftar ID pegawai yang jadi anggota
+    member_employee_ids: list[UUID] = []  # Daftar ID pegawai yang jadi anggota (opsional; ketua tetap wajib)
+    is_out_of_town: bool = False  # Rencana kerja luar kota (uang absen luar kota)
     tool_ids: list[UUID] = []  # Daftar ID alat yang akan digunakan
     vehicle_id: UUID | None = None  # ID kendaraan operasional (opsional)
     driver_employee_id: UUID | None = None  # ID pegawai yang menjadi pengemudi (opsional)

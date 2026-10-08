@@ -5177,12 +5177,18 @@
       ],
       "title": "Driver Employee Id"
      },
+     "is_out_of_town": {
+      "default": false,
+      "title": "Is Out Of Town",
+      "type": "boolean"
+     },
      "leader_employee_id": {
       "format": "uuid",
       "title": "Leader Employee Id",
       "type": "string"
      },
      "member_employee_ids": {
+      "default": [],
       "items": {
        "format": "uuid",
        "type": "string"
@@ -5266,8 +5272,7 @@
      "period_start",
      "period_end",
      "days",
-     "leader_employee_id",
-     "member_employee_ids"
+     "leader_employee_id"
     ],
     "title": "PlanDraftRequest",
     "type": "object"
@@ -6821,6 +6826,11 @@
       "format": "uuid",
       "title": "Id",
       "type": "string"
+     },
+     "is_out_of_town": {
+      "default": false,
+      "title": "Is Out Of Town",
+      "type": "boolean"
      },
      "leader_employee_id": {
       "anyOf": [

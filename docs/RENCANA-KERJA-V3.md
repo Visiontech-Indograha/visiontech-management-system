@@ -82,7 +82,7 @@ Catat jawabannya di `docs/10-KEPUTUSAN-TERKUNCI-DAN-RISIKO.md` Bagian C, lalu ik
 | T2 | Bug: permintaan revisi dari ketua tidak terlihat oleh PM | ☑ (H1 tidak terbukti; H2+H4 diperbaiki; E2E login belum diuji) |
 | T3 | Bug: absen tanpa wajah terdaftar | ☑ (bawaan true + saklar scripts/saklar-wajah.sh; prod perlu off sampai face-service terpasang) |
 | T4 | Istilah SK → Rencana Kerja, Adendum → Revisi (teks UI saja) | ☑ (12 uji API mencocokkan teks lama: lihat docs/_t4-uji-api-teks-lama.txt, diperbaiki di T11) |
-| T5 | Aturan rencana kerja: anggota opsional, 1 hari, luar kota (migrasi 0026) | ☐ |
+| T5 | Aturan rencana kerja: anggota opsional, 1 hari, luar kota (migrasi 0026) | ☑ (nomor RK- dibuat di aplikasi, bukan fungsi SQL) |
 | T6 | Revisi oleh PM kapan saja + riwayat/diff (migrasi 0027) | ☐ |
 | T7 | Absen pulang di luar radius + kategori dalam/luar kota (migrasi 0028) | ☐ |
 | T8 | Realtime SSE web + HP + notifikasi deskriptif | ☐ |

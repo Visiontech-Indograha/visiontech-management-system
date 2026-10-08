@@ -8,6 +8,8 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <!-- Login sidik jari (plan Keputusan 7) - dibaca package local_auth. -->
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
+    <!-- Notifikasi sistem saat peristiwa waktu nyata (SSE) masuk, Android 13+ meminta izin saat runtime (T8). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Pembaruan aplikasi tanpa Play Store (docs/32): membuka installer untuk APK yang sudah diverifikasi.
          Hapus izin ini bila suatu saat aplikasi didistribusikan lewat Google Play (kebijakan Play). -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />

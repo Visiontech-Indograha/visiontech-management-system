@@ -808,7 +808,8 @@ CREATE TABLE IF NOT EXISTS work_type_photo (
   sort_order      integer NOT NULL,
   label           text NOT NULL,
   hint            text,
-  required        boolean NOT NULL DEFAULT false
+  required        boolean NOT NULL DEFAULT false,
+  example_file_id uuid REFERENCES file_object(id) ON DELETE SET NULL  -- foto contoh dari PM (Alembic 0030)
 );
 CREATE INDEX IF NOT EXISTS ix_work_type_photo_work_type_id ON work_type_photo (work_type_id);
 CREATE INDEX IF NOT EXISTS ix_work_type_photo_organization_id ON work_type_photo (organization_id);

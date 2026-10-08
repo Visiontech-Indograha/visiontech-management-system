@@ -5595,6 +5595,18 @@
       "default": 100,
       "title": "Radius M",
       "type": "integer"
+     },
+     "reason": {
+      "anyOf": [
+       {
+        "maxLength": 500,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Reason"
      }
     },
     "required": [
@@ -7524,6 +7536,18 @@
    "WorkTypePhotoIn": {
     "description": "Satu slot foto pada template: label, petunjuk, wajib/tidak.",
     "properties": {
+     "example_file_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Example File Id"
+     },
      "hint": {
       "anyOf": [
        {
@@ -7557,6 +7581,18 @@
    "WorkTypePhotoOut": {
     "description": "Slot foto pada template (keluaran).",
     "properties": {
+     "example_file_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Example File Id"
+     },
      "hint": {
       "anyOf": [
        {

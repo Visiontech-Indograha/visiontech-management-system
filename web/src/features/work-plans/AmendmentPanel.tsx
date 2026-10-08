@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
@@ -8,15 +8,32 @@ import { Button } from "@/components/ui/button";
 import { TextAreaField } from "@/components/ui/Field";
 import { Dialog } from "@/components/ui/VmsDialog";
 import { api } from "@/lib/api";
-import type { components } from "@/lib/api-types";
 import { errorMessage } from "@/lib/errors";
 import { formatDateTime } from "@/lib/format";
 import type { WorkPlan } from "./api";
+import { changesKey, usePlanChanges, type Change } from "./plan-changes";
 
-type Change = components["schemas"]["PlanChangeOut"];
-const changesKey = (planId: string) => ["plan-changes", planId] as const;
 
 const TYPE_LABEL: Record<string, string> = { AMENDMENT: "Revisi", EXTEND: "Perpanjangan", PERSONNEL: "Revisi personel" };
+
+/** Kartu mencolok: permintaan revisi ketua yang belum diputuskan PM. Tetap tampil sampai disetujui/ditolak. */
+export function PendingRequestCard({ c, children }: { c: Change; children?: React.ReactNode }) {
+  return (
+    <div role="alert" className="rounded-panel border-2 border-warning bg-warning-bg p-4 shadow-card">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <h3 className="text-base font-semibold text-ink">Ketua tim meminta revisi</h3>
+        <StatusBadge status={c.status} />
+      </div>
+      <blockquote className="mb-2 whitespace-pre-line rounded-control border-l-4 border-warning bg-surface px-3 py-2 text-sm text-ink">
+        {c.reason}
+      </blockquote>
+      <p className="text-xs text-ink">
+        Diajukan oleh <strong>{c.requested_by_name ?? "-"}</strong> · {formatDateTime(c.created_at)}
+      </p>
+      {children}
+    </div>
+  );
+}
 
 /**
  * Usulan perubahan SK (alur SK v2 PR3, flowchart SK2-E): adendum yang diajukan ketua saat SK Berjalan.
@@ -26,10 +43,7 @@ export function AmendmentPanel({ plan }: { plan: WorkPlan }) {
   const { me } = useSession();
   const canManage = !!me?.permissions.includes("create:plan");
   const qc = useQueryClient();
-  const changes = useQuery({
-    queryKey: changesKey(plan.id),
-    queryFn: async () => (await api.get<Change[]>(`/work-plans/${plan.id}/changes`)).data,
-  });
+  const changes = usePlanChanges(plan.id);
   const [rejecting, setRejecting] = useState<Change | null>(null);
   const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -38,12 +52,40 @@ export function AmendmentPanel({ plan }: { plan: WorkPlan }) {
       (await api.post(`/work-plans/${plan.id}/amendments/${id}/reject`, { reason })).data,
     onSuccess: () => qc.invalidateQueries({ queryKey: changesKey(plan.id) }),
   });
-  const list = changes.data ?? [];
-  if (list.length === 0) return null;
+  const all = changes.data ?? [];
+  const isPending = (c: Change) => c.change_type === "AMENDMENT" && c.status === "PENDING_PM";
+  const pending = all.filter(isPending);
+  const list = all.filter((c) => !isPending(c));
+  const canAct = ["ACCEPTED", "IN_PROGRESS"].includes(plan.status);
+  if (all.length === 0) return null;
 
   return (
+    <>
+      {pending.length > 0 && (
+        <section aria-label="Permintaan revisi menunggu keputusan" className="space-y-3">
+          {pending.map((c) => (
+            <PendingRequestCard key={c.id} c={c}>
+              {canManage ? (
+                canAct && (
+                  <div className="mt-3 flex flex-col gap-2">
+                    <Button asChild>
+                      <Link to={`/work-plans/${plan.id}/revise?change=${c.id}`}>Revisi rencana kerja (otomatis menyetujui)</Link>
+                    </Button>
+                    <Button variant="outline" onClick={() => (setRejecting(c), setNote(""), setError(null))}>
+                      Tolak permintaan
+                    </Button>
+                  </div>
+                )
+              ) : (
+                <p className="mt-2 text-sm font-medium text-ink">Menunggu keputusan PM.</p>
+              )}
+            </PendingRequestCard>
+          ))}
+        </section>
+      )}
+      {list.length > 0 && (
     <section aria-label="Permintaan revisi" className="rounded-panel border border-line bg-surface p-4 shadow-card">
-      <h2 className="mb-3 text-base font-semibold">Permintaan revisi</h2>
+      <h2 className="mb-3 text-base font-semibold">Riwayat permintaan revisi</h2>
       <ul className="space-y-3">
         {list.map((c) => (
           <li key={c.id} className="rounded-control border border-line p-3 text-sm">
@@ -59,19 +101,11 @@ export function AmendmentPanel({ plan }: { plan: WorkPlan }) {
             {c.status === "AWAITING_LEADER_ACCEPTANCE" && (
               <p className="mt-1 text-warning">Rencana Kerja sudah diubah dan ditandatangani PM. Menunggu tanda tangan ketua di HP.</p>
             )}
-            {canManage && c.change_type === "AMENDMENT" && c.status === "PENDING_PM" && ["ACCEPTED", "IN_PROGRESS"].includes(plan.status) && (
-              <div className="mt-2 flex flex-col gap-2">
-                <Button asChild>
-                  <Link to={`/work-plans/${plan.id}/revise?change=${c.id}`}>Revisi rencana kerja</Link>
-                </Button>
-                <Button variant="outline" onClick={() => (setRejecting(c), setNote(""), setError(null))}>
-                  Tolak permintaan
-                </Button>
-              </div>
-            )}
           </li>
         ))}
       </ul>
+    </section>
+      )}
       {rejecting && (
         <Dialog
           open
@@ -104,6 +138,6 @@ export function AmendmentPanel({ plan }: { plan: WorkPlan }) {
           <TextAreaField label="Catatan untuk ketua tim" value={note} onChange={(e) => setNote(e.target.value)} error={error ?? undefined} />
         </Dialog>
       )}
-    </section>
+    </>
   );
 }

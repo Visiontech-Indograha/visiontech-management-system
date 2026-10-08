@@ -9,7 +9,6 @@ import '../../shared/ui/vms_ui.dart';
 import '../auth/auth_controller.dart';
 import '../auth/auth_state.dart';
 import '../face/face_flow.dart';
-import '../gallery/photo_gallery_screen.dart';
 import '../sync/sync_queue_screen.dart';
 import '../update/update_ui.dart';
 
@@ -543,27 +542,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     ),
                   ),
                 ],
-                const SectionTitle('Foto'),
-                FadeSlideIn(
-                  index: 1,
-                  child: SurfaceCard(
-                    key: const Key('open-gallery'),
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const PhotoGalleryScreen()),
-                    ),
-                    padding: const EdgeInsets.all(14),
-                    child: Row(
-                      children: [
-                        const IconTile(icon: Icons.collections_rounded, accent: Accent.teal, size: 40),
-                        const SizedBox(width: 12),
-                        Text(
-                          'Galeri foto saya',
-                          style: VmsTextStyles.bodySm.copyWith(fontWeight: FontWeight.w700),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
                 const SectionTitle('Tentang aplikasi'),
                 const FadeSlideIn(index: 2, child: AboutAppCard()),
                 const SizedBox(height: 20),

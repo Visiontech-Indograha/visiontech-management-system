@@ -2,11 +2,13 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../core/gallery_save.dart';
 import '../../core/local_storage.dart';
 import '../../core/photo_capture.dart';
+import '../../core/providers.dart';
 import '../../core/theme/theme.dart';
 import '../../shared/ui/vms_ui.dart';
 import '../gallery/photo_gallery_screen.dart';
@@ -128,6 +130,7 @@ class PhotoSlots extends StatelessWidget {
                   ),
                   if (slot != null && _hint(slot) != null)
                     Text(_hint(slot)!, style: VmsTextStyles.caption),
+                  if (slot != null && _example(slot) != null) ExampleThumb(fileId: _example(slot)!, label: slot),
                   const SizedBox(height: 6),
                   Text('${_count(slot)} foto', style: VmsTextStyles.caption),
                   for (final p in pending.where((p) => p.slot == slot))
@@ -178,10 +181,78 @@ class PhotoSlots extends StatelessWidget {
     );
   }
 
+  String? _example(String slot) {
+    final id = template.where((s) => s['label'] == slot).firstOrNull?['example_file_id'];
+    return id == null || '$id'.isEmpty ? null : '$id';
+  }
+
   bool _isRequired(String slot) => template.any((s) => s['label'] == slot && s['required'] == true);
 
   String? _hint(String slot) {
     final h = template.where((s) => s['label'] == slot).firstOrNull?['hint'];
     return h == null || '$h'.isEmpty ? null : '$h';
   }
+}
+
+/// Foto contoh dari PM untuk satu slot: thumbnail kecil; ketuk = pratinjau besar yang bisa di-zoom.
+class ExampleThumb extends ConsumerStatefulWidget {
+  const ExampleThumb({super.key, required this.fileId, required this.label});
+  final String fileId;
+  final String label;
+
+  @override
+  ConsumerState<ExampleThumb> createState() => _ExampleThumbState();
+}
+
+class _ExampleThumbState extends ConsumerState<ExampleThumb> {
+  late final Future<String> _url = ref.read(syncEngineProvider).api.fileUrl(widget.fileId);
+
+  void _preview(String url) => showDialog<void>(
+    context: context,
+    builder: (ctx) => Dialog(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Text('Contoh: ${widget.label}', style: VmsTextStyles.bodySm.copyWith(fontWeight: FontWeight.w700)),
+          ),
+          Flexible(child: InteractiveViewer(child: Image.network(url, fit: BoxFit.contain))),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Tutup')),
+        ],
+      ),
+    ),
+  );
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(top: 6),
+    child: FutureBuilder<String>(
+      future: _url,
+      builder: (context, snap) {
+        if (snap.connectionState != ConnectionState.done) {
+          return const SizedBox(height: 72, child: Center(child: CircularProgressIndicator(strokeWidth: 2)));
+        }
+        if (snap.hasError || snap.data == null) {
+          return Text('Foto contoh tidak dapat dimuat.', style: VmsTextStyles.caption);
+        }
+        final url = snap.data!;
+        return Row(
+          children: [
+            InkWell(
+              key: Key('example-${widget.fileId}'),
+              onTap: () => _preview(url),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.network(url, width: 72, height: 72, fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) => const SizedBox(width: 72, height: 72, child: Icon(Icons.broken_image_outlined))),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(child: Text('Contoh foto dari PM. Ketuk untuk memperbesar.', style: VmsTextStyles.caption)),
+          ],
+        );
+      },
+    ),
+  );
 }

@@ -24,10 +24,34 @@ class GallerySave(private val context: Context) : MethodChannel.MethodCallHandle
                     saveImage(File(call.argument<String>("path")!!))
                     result.success(null)
                 }
+                "deleteImage" -> {
+                    deleteImage(File(call.argument<String>("path")!!))
+                    result.success(null)
+                }
                 else -> result.notImplemented()
             }
         } catch (e: Exception) {
             result.error("GALLERY_SAVE_ERROR", e.message, null)
+        }
+    }
+
+    /** Hapus salinan di album Visiontech (nama berkas sama). API 29+: baris MediaStore milik aplikasi ini. */
+    private fun deleteImage(source: File) {
+        if (Build.VERSION.SDK_INT >= 29) {
+            context.contentResolver.delete(
+                MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                "${MediaStore.Images.Media.DISPLAY_NAME} = ? AND ${MediaStore.Images.Media.RELATIVE_PATH} LIKE ?",
+                arrayOf(source.name, "Pictures/Visiontech%"),
+            )
+        } else {
+            @Suppress("DEPRECATION")
+            val target = File(
+                File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), "Visiontech"),
+                source.name,
+            )
+            if (target.delete()) {
+                MediaScannerConnection.scanFile(context, arrayOf(target.absolutePath), arrayOf("image/jpeg"), null)
+            }
         }
     }
 

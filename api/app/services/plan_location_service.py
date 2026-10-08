@@ -13,8 +13,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.errors import AppError, ValidationError
 from app.crud.crud_plan_location import CRUDPlanLocation
 from app.services.access_service import PlanAccess
+from app.services.plan_revision_service import PlanRevisionService
 
 CLOSED = ("COMPLETED", "CANCELLED")
+ISSUED = ("PUBLISHED", "APPEALED", "ACCEPTED", "IN_PROGRESS")   # dokumen sudah terbit → perubahan = revisi
 CLOSED_MESSAGE = "Titik lokasi tidak dapat diubah pada rencana kerja yang sudah selesai atau dibatalkan."
 MIN_RADIUS, MAX_RADIUS = 10, 5000
 
@@ -32,6 +34,7 @@ class PlanLocationService:
             db (AsyncSession): Sesi database asinkron.
         """
         self.repo = CRUDPlanLocation(db)
+        self.revisions = PlanRevisionService(db)
 
     async def location(self, access: PlanAccess) -> dict[str, Any] | None:
         """
@@ -51,7 +54,8 @@ class PlanLocationService:
         return None if row is None else dict(row._mapping)
 
     async def set_location(self, access: PlanAccess, *, name: str, address: str | None,
-                           lat: float, lng: float, radius_m: int) -> dict[str, Any]:
+                           lat: float, lng: float, radius_m: int,
+                           reason: str | None = None) -> dict[str, Any]:
         """
         Menetapkan atau memperbarui titik koordinat dan radius absensi untuk SK.
         Aturan bisnis memastikan dokumen fisik (teks lokasi) tidak berubah, hanya geofence yang diperbarui.
@@ -74,6 +78,11 @@ class PlanLocationService:
         # Validasi batas nilai radius absensi
         if not MIN_RADIUS <= radius_m <= MAX_RADIUS:
             raise ValidationError(f"Radius absensi harus {MIN_RADIUS}–{MAX_RADIUS} meter.")
+        issued = plan.status in ISSUED
+        reason = (reason or "").strip()
+        if issued and not reason:
+            raise ValidationError("Alasan perubahan lokasi wajib diisi karena rencana kerja sudah terbit.")
+        before = await self.revisions.snapshot_of(plan.id) if issued else None
         label = (" ".join(name.split()) or str(plan.location_text))[:190]
         org_id = access.user.organization_id
         # Titik yang sama disimpan lagi (nama + titik ≤ 5 m + radius sama) → pakai site yang ada,
@@ -92,5 +101,7 @@ class PlanLocationService:
             site_id = (await self.repo.create_site(org_id, unique, address, lat, lng, radius_m)).id
         # Menautkan SK dengan site_id yang sudah divalidasi/dibuat
         await self.repo.set_plan_site(plan.id, site_id)
+        if before is not None:   # dokumen versi baru bertanda tangan PM + riwayat revisi + pemberitahuan
+            await self.revisions.after_change(access, before, reason)
         row = await self.repo.site(site_id, org_id)
         return dict(row._mapping)

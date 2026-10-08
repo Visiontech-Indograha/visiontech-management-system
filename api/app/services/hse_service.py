@@ -87,6 +87,9 @@ class HseService:
         require_plan_status(access, PlanStatus.IN_PROGRESS)
         await self._ensure_day_reached(day_id)
         employee_id = await self.repo.employee_of_user(access.user.user_id)
+        body = await self.repo.daily_report_body(day_id)
+        if body is not None and len(body.strip()) < 10:
+            raise ValidationError("Uraian pekerjaan minimal 10 karakter sebelum laporan dikirim.")
         await WorkTypeService(self.db).ensure_daily_complete(access.plan.id, day_id)   # T9: slot foto wajib
         try:
             report = await self.repo.submit_daily_report(day_id, employee_id)

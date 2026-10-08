@@ -150,6 +150,12 @@ class VmsApi {
   Future<List<Map<String, dynamic>>> photoTemplate(String planId) async =>
       _list((await _dio.get('$_p/work-plans/$planId/photo-template')).data);
 
+  /// URL sementara (presigned) sebuah berkas gambar, mis. foto contoh template. `variant`: thumb | view | full.
+  Future<String> fileUrl(String fileId, {String variant = 'view'}) async {
+    final res = await _dio.get('$_p/files/$fileId/url', queryParameters: {'variant': variant});
+    return (res.data as Map)['url'] as String;
+  }
+
   /// Aliran peristiwa waktu nyata (SSE, T8). Tanpa batas waktu baca: sambungan sengaja berumur panjang.
   Future<ResponseBody> openEvents(CancelToken cancel) async {
     final res = await _dio.get<ResponseBody>(

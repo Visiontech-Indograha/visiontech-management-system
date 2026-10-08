@@ -21,6 +21,8 @@ import {
   type PlanDraftRequest,
 } from "./api";
 import { useWorkTypes } from "@/features/work-types/api";
+import { PendingRequestCard } from "./AmendmentPanel";
+import { usePlanChanges } from "./plan-changes";
 import { NewSiteDialog, type NewSite } from "./NewSiteDialog";
 import { oversize, uploadFiles } from "./uploads";
 
@@ -134,6 +136,7 @@ export function PlanEditorPage() {
             : "Versi baru langsung berlaku; ketua dan anggota mendapat pemberitahuan."}
         </p>
       )}
+      {revise && <PendingRequests planId={id} />}
       <QueryState query={detail} errorText="Rencana Kerja tidak ditemukan atau Anda tidak berwenang mengubahnya.">
         {detail.data &&
           (editable ? (
@@ -143,6 +146,22 @@ export function PlanEditorPage() {
           ))}
       </QueryState>
     </>
+  );
+}
+
+/** Permintaan revisi ketua yang masih menunggu: tampil di atas editor agar PM menjawabnya; menyimpan revisi = menyetujui. */
+function PendingRequests({ planId }: { planId: string }) {
+  const changes = usePlanChanges(planId);
+  const pending = (changes.data ?? []).filter((c) => c.change_type === "AMENDMENT" && c.status === "PENDING_PM");
+  if (pending.length === 0) return null;
+  return (
+    <div className="mb-4 space-y-3">
+      {pending.map((c) => (
+        <PendingRequestCard key={c.id} c={c}>
+          <p className="mt-2 text-sm font-medium text-ink">Menyimpan revisi ini otomatis menyetujui permintaan di atas.</p>
+        </PendingRequestCard>
+      ))}
+    </div>
   );
 }
 
@@ -267,7 +286,15 @@ function PlanEditor({ planId, detail, revise = false, changeId }: { planId?: str
             )}
             {revise && (
               <Section title="Alasan revisi">
-                <TextAreaField label="Alasan revisi (wajib)" value={reviseReason} onChange={(e) => setReviseReason(e.target.value)} />
+                <p className="mb-2 text-sm text-mist">
+                  Alasan ini dikirim ke ketua dan anggota, dan tercatat di riwayat revisi. Jelaskan apa yang diubah dan mengapa.
+                </p>
+                <TextAreaField
+                  label="Alasan revisi (wajib)"
+                  placeholder="Contoh: Jadwal hari ke-2 dimajukan karena material tiba lebih awal."
+                  value={reviseReason}
+                  onChange={(e) => setReviseReason(e.target.value)}
+                />
               </Section>
             )}
             <Section title="Data pekerjaan">

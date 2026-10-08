@@ -21,9 +21,8 @@ QUERY_BUILDERS = {"text", "select", "insert", "update", "delete"}
 SESSION_CALLS = {"execute", "scalar", "scalars", "get", "add", "flush", "commit", "refresh", "merge"}
 
 # berkas → alasan masih ada; hanya boleh menyusut (dikosongkan oleh R-25b per modul).
-LEGACY: dict[str, str] = {
-    "work_plans.py": "R-25b",
-}
+# Kosong sejak 2026-10-08 (P9-7): tidak ada router yang menyentuh DB.
+LEGACY: dict[str, str] = {}
 
 
 def _violations(path: Path) -> list[str]:

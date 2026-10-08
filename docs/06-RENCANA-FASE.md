@@ -252,10 +252,9 @@ baris di matriks RBAC; tidak ada teks Inggris mentah di layar pengguna.
 >   ditemukan: fungsi DB → SECURITY DEFINER (aturan bentrok personel/SIM/QR publik sempat diam-diam lolos, rekursi
 >   kebijakan SK), batas RLS SK/absensi/lembur/insiden/token QR = tenant (docs/10 Bagian C), konteks pengguna
 >   disetel saat login. Pengalihan prod: `deploy/pakai-peran-runtime.sh` (dijalankan pemilik; rollback `kembalikan`).
-> - **Temuan P9-2 yang masih terbuka:**
->   - 7 tabel tenant belum ber-RLS: `site`, `file_object`, `notification`, `attendance_device_key`,
->     `attendance_offline_event`, `signature_serial_counter`, `app_user`.
->   - Menunggu keputusan pemilik (butuh migrasi + kebijakan per tabel).
+> - **P9-2 lanjutan (0025):** enam tabel tenant yang tersisa (`site`, `file_object`, `notification`,
+>   `attendance_device_key`, `attendance_offline_event`, `signature_serial_counter`) kini ber-RLS batas tenant.
+>   `app_user` sengaja tanpa RLS: login & rotasi token mencari akun sebelum identitas/organisasi diketahui.
 
 ---
 

@@ -18,6 +18,7 @@ import '../../shared/ui/vms_select_field.dart';
 import '../../shared/ui/vms_ui.dart';
 import '../auth/auth_controller.dart';
 import '../auth/auth_state.dart';
+import '../face/face_enroll_gate.dart';
 import '../face/face_flow.dart';
 
 /// Absensi (M5, dok 05 §3.5). Wajib daring: waktu & geofence ditentukan server.
@@ -304,7 +305,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       }
       await _load();
     } catch (e) {
-      _snack(apiErrorMessage(e));
+      if (!await _handleFaceNotEnrolled(e)) _snack(apiErrorMessage(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -362,10 +363,30 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       }
       await _load();
     } catch (e) {
-      _snack(apiErrorMessage(e));
+      if (!await _handleFaceNotEnrolled(e)) _snack(apiErrorMessage(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  /// T3: server menolak absen karena wajah belum terdaftar → jelaskan, lalu buka gerbang pendaftaran wajah.
+  Future<bool> _handleFaceNotEnrolled(Object e) async {
+    if (apiErrorCode(e) != 'FACE_NOT_ENROLLED' || !mounted) return false;
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Wajah belum terdaftar'),
+        content: Text(apiErrorMessage(e)),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Daftarkan wajah'),
+          ),
+        ],
+      ),
+    );
+    ref.invalidate(faceGateProvider);
+    return true;
   }
 
   /// Dialog penjelasan wajib: Kirim dengan isian kosong menampilkan pesan, bukan menutup diam-diam.

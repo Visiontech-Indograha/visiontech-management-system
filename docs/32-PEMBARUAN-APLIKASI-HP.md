@@ -75,7 +75,7 @@ Skrip ini membuat `rilis/android/` dan `compose.override.yml`, yang me-mount fol
 |---|---|
 | "Install unknown apps" (sekali) | Pilih **Always allow** / Izinkan dari sumber ini, lalu kembali ke aplikasi. Installer muncul sendiri. |
 | "Update this app?" | Tekan **Update**. Data dan login tetap ada. |
-| **Google Play Protect — "App scan recommended"** (setiap APK baru, saat online) | Muncul karena APK tidak berasal dari Play. Pilihannya "Scan app" (APK dikirim ke Google untuk dipindai) atau "More details → Install without scanning". **Keputusan pemilik: §6.** |
+| **Google Play Protect — "App scan recommended"** (setiap APK baru, saat online) | Muncul karena APK tidak berasal dari Play. **Panduan karyawan (keputusan pemilik 2026-10-08): tekan "Scan app"**, tunggu pemindaian selesai (beberapa detik), lalu pasang. APK memang publik dan tidak berisi rahasia. Alternatif "More details → Install without scanning" tidak dipakai di panduan. |
 | "App not installed" / paket bentrok | APK ditandatangani kunci lain (mis. APK debug). Pakai APK dari portal; jangan bagikan APK dari build lokal. |
 | Unduhan gagal / "Berkas pembaruan rusak" | Sinyal putus atau berkas tidak lengkap. Tekan "Coba lagi"; berkas yang rusak sudah dihapus otomatis. |
 
@@ -85,6 +85,7 @@ Hasil uji di emulator (Android 16): langkah-langkah di atas lulus, dengan rincia
 - Installer dibatalkan → "Pasang pembaruan" tanpa unduh ulang.
 - Antrean absen luring selamat melewati pembaruan dan tersinkron setelah online (`AUTO_VALID`).
 
-## 6. Keputusan terbuka
+## 6. Keputusan pemilik
 
-- Panduan untuk karyawan saat muncul Google Play Protect: "Scan app" atau "Install without scanning".
+- 2026-10-07: opsional + wajib per rilis; unduhan publik; build & tanda tangan di laptop.
+- 2026-10-08: panduan Play Protect = **Scan app**; alur disetujui sampai prod; uji di Realme setelah prod.

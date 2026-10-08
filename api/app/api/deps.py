@@ -52,6 +52,7 @@ from app.services.employee_service import EmployeeService
 from app.services.face_embed_client import FaceEmbedClient
 from app.services.face_service import FaceService
 from app.services.file_service import FileService
+from app.services.hse_service import HseService
 from app.services.member_report_service import MemberReportService
 from app.services.monitoring_service import MonitoringService
 from app.services.notification_service import NotificationService
@@ -296,6 +297,10 @@ def get_employee_service(db: AsyncSession = Depends(get_db_with_user)) -> Employ
 
 def get_file_service(db: AsyncSession = Depends(get_db_with_user)) -> FileService:
     return FileService(CRUDFile(db))
+
+
+def get_hse_service(db: AsyncSession = Depends(get_db_with_user)) -> HseService:
+    return HseService(db)
 
 
 def get_monitoring_service(db: AsyncSession = Depends(get_db_with_user)) -> MonitoringService:

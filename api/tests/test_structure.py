@@ -38,11 +38,8 @@ EXEMPT_FILES = {"api/deps.py"}
 
 # "berkas -> lapisan terlarang yang diimpor"; hanya boleh menyusut.
 # endpoint -> crud: SQL/crud keluar dari endpoint per modul (docs/26 M6).
-# services/sync_service.py -> api: logika hse masih di endpoint (M6 modul hse).
 KNOWN_VIOLATIONS: set[str] = {
-    "api/v1/endpoints/hse.py -> crud",
     "api/v1/endpoints/work_plans.py -> crud",
-    "services/sync_service.py -> api",
 }
 
 

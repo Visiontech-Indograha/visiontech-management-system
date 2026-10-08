@@ -13,10 +13,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.enums import PlanStatus
 from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationError, trigger_rule_error
-from app.core.permissions import Permission
+from app.core.permissions import Permission, RoleCode
 from app.core.security import CurrentUser
 from app.crud.crud_asset_reservation import CRUDAssetReservation
-from app.services.access_service import PlanNeed, check_plan_access
+from app.services.access_service import PlanNeed, check_plan_access, ensure_same_org
 
 RUNNING = (PlanStatus.IN_PROGRESS, PlanStatus.COMPLETION_REVIEW)
 
@@ -30,6 +30,51 @@ class AssetReservationService:
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
         self.repo = CRUDAssetReservation(db)
+
+    async def ensure_refs(self, org_id: str, **refs: list[Any]) -> None:
+        """Aset / SK yang dirujuk harus milik organisasi ini (404/422 bila bukan)."""
+        await ensure_same_org(self.db, org_id, **refs)
+
+    async def create_asset(self, org_id: str, *, kind: str, vehicle_type: str | None, code: str, name: str,
+                           condition: str) -> Any:
+        """Aset baru milik organisasi."""
+        return await self.repo.insert_asset(org_id, kind=kind, vehicle_type=vehicle_type, code=code, name=name,
+                                            condition=condition)
+
+    async def request_return(self, user: CurrentUser, allocation_id: UUID, condition: str, note: str | None) -> Any:
+        """domain.js RETURN_ASSET (P6-3, R9): ketua tim mengajukan BAST pengembalian aset yang sedang dipinjam —
+        bukan petugas aset; satu pengajuan terbuka per aset."""
+        if RoleCode.ASSET in user.roles:
+            raise ForbiddenError("Pengajuan pengembalian tidak dapat dilakukan oleh petugas aset. Gunakan ketua tim.")
+        employee_id = await self.repo.employee_of_user(user.user_id)
+        state = await self.repo.allocation_state_for_update(allocation_id)
+        if state is None:
+            raise NotFoundError("Peminjaman aset")
+        if not (state.active and state.asset_status in ("IN_USE", "RESERVED")):
+            raise AppError("INVALID_STATE", "Aset belum dipinjam atau sudah menunggu verifikasi.", status=409)
+        row = await self.repo.insert_return(allocation_id, employee_id, condition, note)
+        await self.repo.set_asset_status(state.asset_id, "RETURN_PENDING")
+        return row
+
+    async def verify_return(self, user: CurrentUser, return_id: UUID, accepted: bool, note: str | None) -> Any:
+        """domain.js VERIFY_RETURN (P6-3, R9): hanya pengajuan yang masih menunggu, tidak oleh pengajunya.
+        Diterima → peminjaman selesai & aset tersedia; ditolak → aset kembali ke tim peminjam (bukan buntu)."""
+        employee_id = await self.repo.employee_of_user(user.user_id)
+        info = await self.repo.return_for_update(return_id, user.organization_id)
+        if not info:
+            raise NotFoundError("Pengembalian aset")
+        if info.verified_at is not None or info.asset_status != "RETURN_PENDING":
+            raise AppError("INVALID_STATE", "Aset belum menunggu verifikasi pengembalian.", status=409)
+        if info.requested_by == employee_id:
+            raise ForbiddenError(
+                "Pengembalian tidak dapat diperiksa oleh pengaju yang sama. Gunakan ketua tim untuk serah terima.")
+        row = await self.repo.verify_return(return_id, employee_id, accepted, note or "")
+        if accepted:
+            await self.repo.release_allocation(info.alloc_id)
+            await self.repo.set_asset_status(info.asset_id, "AVAILABLE")
+        else:
+            await self.repo.set_asset_status(info.asset_id, "IN_USE")
+        return row
 
     async def list_assets(self, org_id: str) -> list[Any]:
         """

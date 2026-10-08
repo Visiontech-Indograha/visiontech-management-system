@@ -15,6 +15,7 @@ from app.core.errors import AppError, NotFoundError, ValidationError
 from app.core.permissions import Permission
 from app.crud.crud_employee import CRUDEmployee
 from app.crud.crud_org_clock import CRUDOrgClock
+from app.services.access_service import ensure_same_org
 
 RESTORED = "Data dipulihkan sebagai nonaktif. Akses lama tetap dicabut."
 ARCHIVED = "Karyawan dihapus. Data historis tetap tersimpan."
@@ -26,6 +27,38 @@ class EmployeeService:
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
         self.repo = CRUDEmployee(db)
+
+    async def ensure_units(self, org_id: str, *unit_ids: UUID | None) -> None:
+        """Unit tujuan harus milik organisasi ini (422 bila bukan)."""
+        await ensure_same_org(self.db, org_id, units=list(unit_ids))
+
+    async def list_page(self, org_id: str, is_active: bool | None, q: str | None,
+                        page: int, size: int) -> tuple[int, list[Any]]:
+        """(jumlah total, baris halaman `page`) karyawan organisasi ini."""
+        total = await self.repo.count_in_org(org_id, is_active, q)
+        return total, await self.repo.page_in_org(org_id, is_active, q, size, (page - 1) * size)
+
+    async def get(self, employee_id: UUID, org_id: str) -> Any:
+        """Satu karyawan; organisasi lain / terhapus → 404."""
+        row = await self.repo.get_in_org(employee_id, org_id)
+        if row is None:
+            raise AppError("NOT_FOUND", "Karyawan tidak ditemukan.", status=404)
+        return row
+
+    async def create(self, org_id: str, data: dict[str, Any]) -> Any:
+        """Karyawan baru beserta penempatan perdananya."""
+        await self.ensure_units(org_id, data["unit_id"])
+        return await self.repo.insert(org_id, data)
+
+    async def update(self, employee_id: UUID, org_id: str, fields: dict[str, Any]) -> Any:
+        """Ubah data pribadi (jabatan/unit lewat /assignments). Organisasi lain → None."""
+        return await self.repo.update_fields(employee_id, org_id, fields)
+
+    async def conflicts(self, employee_id: UUID, org_id: str, start: date, end: date,
+                        exclude_plan: UUID | None) -> list[Any]:
+        """Bentrok jadwal untuk penyusun SK (V-09); karyawan/SK organisasi lain → 404."""
+        await ensure_same_org(self.db, org_id, employees=[employee_id], work_plans=[exclude_plan])
+        return await self.repo.conflicts(employee_id, start, end, exclude_plan)
 
     async def private_viewer(self, user_id: str, permissions: list[str]) -> tuple[bool, str | None]:
         """Prototipe `privateAccess`: data kontak pribadi hanya untuk HR (dan admin) serta pemiliknya.

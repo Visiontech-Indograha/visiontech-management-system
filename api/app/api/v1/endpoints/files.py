@@ -4,15 +4,13 @@ import uuid
 
 import filetype
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
-from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user, get_db_with_user
+from app.api.deps import get_current_user, get_file_service
 from app.core.errors import AppError
 from app.core.image import compress_image
 from app.core.security import CurrentUser
 from app.core.storage import get_presigned_url, upload_file
-from app.services.access_service import check_file_access
+from app.services.file_service import FileService
 
 router = APIRouter(prefix="/files", tags=["Files"])
 
@@ -28,7 +26,7 @@ ALLOWED_MIMES = [
 async def upload_document(
     file: UploadFile = File(...),
     current_user: CurrentUser = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db_with_user)
+    files: FileService = Depends(get_file_service),
 ) -> dict[str, str]:
     """
     Unggah file (maks 10MB).
@@ -58,9 +56,7 @@ async def upload_document(
     file_hash = hashlib.sha256(file_bytes).digest()
 
     # Cek deduplikasi di DB (Tingkat Organisasi)
-    query = text("SELECT id, storage_key FROM vms.file_object WHERE organization_id = :org AND sha256 = :hash")
-    existing = await db.execute(query, {"org": current_user.organization_id, "hash": file_hash})
-    existing_file = existing.fetchone()
+    existing_file = await files.duplicate_of(current_user.organization_id, file_hash)
 
     if existing_file:
         return {"file_id": str(existing_file.id), "message": "File sudah ada (deduplikasi)."}
@@ -70,20 +66,8 @@ async def upload_document(
     ext = kind.extension if kind else (file.filename or "bin").rsplit(".", 1)[-1]
     storage_key = f"{current_user.organization_id}/{file_id}.{ext}"
 
-    insert_query = text("""
-        INSERT INTO vms.file_object (id, organization_id, storage_key, file_name, mime_type, byte_size, sha256, uploaded_by)
-        VALUES (:id, :org, :key, :name, :mime, :size, :hash, :uid)
-    """)
-    await db.execute(insert_query, {
-        "id": file_id,
-        "org": current_user.organization_id,
-        "key": storage_key,
-        "name": file.filename,
-        "mime": mime_type,
-        "size": byte_size,
-        "hash": file_hash,
-        "uid": current_user.user_id
-    })
+    await files.register(current_user, file_id=file_id, storage_key=storage_key, file_name=file.filename,
+                         mime_type=mime_type, byte_size=byte_size, sha256=file_hash)
 
     # 5. Proses penyimpanan
     is_image = mime_type.startswith("image/")
@@ -118,7 +102,7 @@ async def get_file_url(
     file_id: uuid.UUID,
     variant: str = "full",
     current_user: CurrentUser = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db_with_user)
+    files: FileService = Depends(get_file_service),
 ) -> dict[str, str]:
     """
     Mendapatkan URL Presigned MinIO untuk mengakses file (valid 5 menit).
@@ -134,7 +118,7 @@ async def get_file_url(
     """
     # Mengambil database dan detail user melalui Dependensi injeksi
     # Memeriksa hak akses pada level aplikasi
-    file_obj = await check_file_access(db, file_id, current_user)
+    file_obj = await files.authorize(file_id, current_user)
 
     is_image = file_obj.mime_type.startswith("image/")
 

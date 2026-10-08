@@ -5821,8 +5821,16 @@ export interface components {
              * Format: uuid
              */
             leader_employee_id: string;
-            /** Member Employee Ids */
+            /**
+             * Member Employee Ids
+             * @default []
+             */
             member_employee_ids: string[];
+            /**
+             * Is Out Of Town
+             * @default false
+             */
+            is_out_of_town: boolean;
             /**
              * Tool Ids
              * @default []
@@ -6465,6 +6473,11 @@ export interface components {
             appeal_reason?: string | null;
             /** Category */
             category?: string | null;
+            /**
+             * Is Out Of Town
+             * @default false
+             */
+            is_out_of_town: boolean;
             /**
              * Pending Request
              * @default false

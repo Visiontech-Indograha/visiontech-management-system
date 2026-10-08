@@ -214,6 +214,7 @@ CREATE TABLE work_plan (
   row_version     integer NOT NULL DEFAULT 1,  -- penguncian optimistis antar-tab
   cancellation_reason text,
   appeal_reason   text,                        -- alasan banding ketua (domain.js APPEAL, V-20)
+  is_out_of_town  boolean NOT NULL DEFAULT false, -- rencana kerja luar kota (Alembic 0026)
   deleted_at      timestamptz,                 -- arsip draft (soft delete)
   deleted_by      uuid REFERENCES app_user(id), -- pengarsip (domain.js DELETE_PLAN, V-21)
   deletion_reason text,                        -- alasan pengarsipan (V-21)

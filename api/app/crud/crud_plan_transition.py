@@ -403,7 +403,7 @@ class CRUDPlanTransition(CRUDBase):
             """
             UPDATE vms.work_plan
                SET status = :published, row_version = row_version + 1,
-                   number = COALESCE(number, 'SK-' || to_char(CURRENT_DATE, 'YYYYMM') || '-' || right(id::text, 8))
+                   number = COALESCE(number, 'RK-' || to_char(CURRENT_DATE, 'YYYYMM') || '-' || right(id::text, 8))
              WHERE id = :plan
             """,
             {"plan": plan_id, "published": PlanStatus.PUBLISHED},

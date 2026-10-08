@@ -81,7 +81,7 @@ const createSchema = z
     period_end: required("Tanggal selesai wajib diisi."),
     pm_employee_id: z.string(),
     leader_employee_id: required("Pilih ketua tim."),
-    member_employee_ids: z.array(z.string()).min(1, "Pilih minimal satu anggota tim."),
+    member_employee_ids: z.array(z.string()),
     site_id: required("Pilih lokasi pekerjaan."),
     vehicle_id: z.string(),
     driver_employee_id: z.string(),
@@ -285,7 +285,7 @@ export function EditDraftDialog({ plan, onClose }: { plan: WorkPlan; onClose: ()
 
 const teamSchema = z.object({
   leader_employee_id: required("Pilih ketua tim."),
-  member_employee_ids: z.array(z.string()).min(1, "Pilih minimal satu anggota tim."),
+  member_employee_ids: z.array(z.string()),
 });
 type TeamValues = z.infer<typeof teamSchema>;
 

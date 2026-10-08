@@ -71,6 +71,8 @@ class DraftDayInput(BaseModel):
     """Masukan aktivitas harian untuk draf Rencana Kerja."""
     work_date: date  # Tanggal aktivitas
     tasks: list[DraftTaskInput]  # Daftar tugas di hari tersebut
+    site_id: UUID | None = None  # Lokasi khusus hari itu (kosong = ikut lokasi rencana)
+    member_employee_ids: list[UUID] | None = None  # Anggota yang bertugas hari itu (kosong/None = seluruh tim)
 
 
 class PlanDraftRequest(BaseModel):

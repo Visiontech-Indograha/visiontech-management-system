@@ -24,7 +24,7 @@ from app.crud.crud_plan_transition import CRUDPlanTransition
 from app.schemas.plan_draft import PlanDraftRequest
 from app.services.access_service import PlanAccess, require_plan_status
 from app.services.notification_service import NotificationService
-from app.services.plan_draft_service import PlanDraftService
+from app.services.plan_draft_service import PlanDraftService, _day_roster
 from app.services.signature_service import ACCEPTOR, ISSUER, SignatureService
 
 LOCKED_REPORTS = ("SUBMITTED", "APPROVED")
@@ -120,10 +120,13 @@ class PlanAmendmentService:
             if current is not None and current.report_status in LOCKED_REPORTS:
                 continue   # isi hari yang laporannya sudah dikirim/disetujui tidak diubah
             if current is None:
-                day_id = await self.drafts.insert_day(plan.id, new_day.work_date, new_day.tasks[0].title.strip(), order)
+                day_id = await self.drafts.insert_day(plan.id, new_day.work_date, new_day.tasks[0].title.strip(), order,
+                                                      new_day.site_id)
             else:
                 day_id = current.id
                 await self.repo.clear_tasks(day_id, new_day.tasks[0].title.strip())
+                await self.drafts.set_day_site(day_id, new_day.site_id)
+            await self.drafts.set_day_members(user.organization_id, day_id, _day_roster(data, new_day))
             for t_order, task in enumerate(new_day.tasks):
                 task_id = await self.drafts.insert_task(day_id, task.title.strip(), task.description.strip(), t_order)
                 for f_order, file_id in enumerate(dict.fromkeys(task.file_ids)):

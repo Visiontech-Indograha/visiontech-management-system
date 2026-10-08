@@ -2424,6 +2424,33 @@
    "DraftDayInput": {
     "description": "Masukan aktivitas harian untuk draf Rencana Kerja.",
     "properties": {
+     "member_employee_ids": {
+      "anyOf": [
+       {
+        "items": {
+         "format": "uuid",
+         "type": "string"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Member Employee Ids"
+     },
+     "site_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Id"
+     },
      "tasks": {
       "items": {
        "$ref": "#/components/schemas/DraftTaskInput"

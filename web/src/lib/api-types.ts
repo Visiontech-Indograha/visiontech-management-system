@@ -4794,6 +4794,10 @@ export interface components {
             work_date: string;
             /** Tasks */
             tasks: components["schemas"]["DraftTaskInput"][];
+            /** Site Id */
+            site_id?: string | null;
+            /** Member Employee Ids */
+            member_employee_ids?: string[] | null;
         };
         /**
          * DraftTaskInput
@@ -6815,6 +6819,10 @@ export interface components {
              * @default false
              */
             pending_request: boolean;
+            /** Today Site Id */
+            today_site_id?: string | null;
+            /** Today Included */
+            today_included?: boolean | null;
         };
         /**
          * WorkPlanUpdate

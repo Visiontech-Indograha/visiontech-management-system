@@ -11,6 +11,8 @@ import '../../core/theme/theme.dart';
 import '../../data/sync_engine.dart';
 import '../../shared/ui/vms_select_field.dart';
 import '../../shared/ui/vms_ui.dart';
+import '../auth/auth_controller.dart';
+import '../auth/auth_state.dart';
 import 'photo_slots.dart';
 import 'sk_viewer_screen.dart';
 
@@ -180,6 +182,14 @@ class _PlanDayScreenState extends ConsumerState<PlanDayScreen> {
   void _snack(String m) =>
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
 
+  /// Daftar anggota khusus hari ini (termasuk ketua); null = seluruh tim bertugas.
+  bool get _offDuty {
+    final ids = widget.day['member_employee_ids'];
+    if (widget.isLeader || ids is! List) return false;
+    final auth = ref.read(authControllerProvider);
+    return auth is AuthAuthenticated && !ids.contains(auth.user.employeeId);
+  }
+
   Future<bool> _send(
     String op,
     Map<String, dynamic> payload, {
@@ -296,6 +306,33 @@ class _PlanDayScreenState extends ConsumerState<PlanDayScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                if (widget.day['site_name'] != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: SurfaceCard(
+                      key: const Key('day-site'),
+                      padding: const EdgeInsets.all(12),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.place_outlined),
+                          const SizedBox(width: 8),
+                          Expanded(child: Text('Lokasi hari ini: ${widget.day['site_name']}')),
+                        ],
+                      ),
+                    ),
+                  ),
+                if (_offDuty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: SurfaceCard(
+                      key: const Key('day-off-duty'),
+                      padding: const EdgeInsets.all(12),
+                      child: Text(
+                        'Anda tidak ditugaskan pada hari ini. Tidak perlu absen dan membuat laporan; Anda tetap tercatat sebagai anggota rencana kerja.',
+                        style: VmsTextStyles.bodySm,
+                      ),
+                    ),
+                  ),
                 const SectionTitle('Tugas'),
                 if (_tasks.isEmpty)
                   const EmptyState(
@@ -359,7 +396,7 @@ class _PlanDayScreenState extends ConsumerState<PlanDayScreen> {
                       ),
                     ),
                   ),
-                if (!widget.isLeader && widget.running) ..._memberSection(),
+                if (!widget.isLeader && widget.running && !_offDuty) ..._memberSection(),
                 if (widget.isLeader && _memberReports.isNotEmpty)
                   ..._leaderMembersSection(),
                 const SectionTitle('Laporan harian'),

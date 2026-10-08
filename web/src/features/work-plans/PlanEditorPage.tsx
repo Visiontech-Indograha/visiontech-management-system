@@ -41,7 +41,16 @@ const schema = z
     site_id: z.string(),
     period_start: required("Tanggal mulai wajib diisi."),
     period_end: required("Tanggal selesai wajib diisi."),
-    days: z.array(z.object({ work_date: z.string(), tasks: z.array(taskSchema).min(1, "Isi minimal satu detail pekerjaan.") })),
+    days: z.array(
+      z.object({
+        work_date: z.string(),
+        tasks: z.array(taskSchema).min(1, "Isi minimal satu detail pekerjaan."),
+        site_id: z.string(), // "" = ikut lokasi rencana
+        member_mode: z.enum(["all", "custom"]), // all = seluruh tim; custom = hanya yang dipilih (ketua selalu ikut)
+        member_ids: z.array(z.string()),
+      }),
+    ),
+    holidays: z.array(z.string()), // tanggal dalam rentang yang diliburkan (dikeluarkan dari rencana)
     tool_ids: z.array(z.string()),
     vehicle_id: z.string(),
     leader_employee_id: required("Pilih ketua tim."),
@@ -60,6 +69,22 @@ type Values = z.infer<typeof schema>;
 type TaskValue = Values["days"][number]["tasks"][number];
 
 const emptyTask = (): TaskValue => ({ title: "", description: "", files: [] });
+type DayValue = Values["days"][number];
+const newDay = (work_date: string, tasks: TaskValue[] = [emptyTask()]): DayValue => ({
+  work_date,
+  tasks,
+  site_id: "",
+  member_mode: "all",
+  member_ids: [],
+});
+/** Hari baru meniru isi hari pertama (judul + deskripsi); foto/berkas sengaja dikosongkan. Lokasi/anggota ikut rencana. */
+const cloneFirstDay = (first: DayValue | undefined, work_date: string): DayValue =>
+  newDay(
+    work_date,
+    first && first.tasks.some((t) => t.title.trim())
+      ? first.tasks.map((t) => ({ title: t.title, description: t.description, files: [] }))
+      : [emptyTask()],
+  );
 
 /** Tanggal ISO (YYYY-MM-DD) dari awal sampai akhir, inklusif; dibatasi 366 hari agar aman. */
 function datesBetween(start: string, end: string): string[] {
@@ -95,10 +120,23 @@ function fromDetail(detail: PlanDetail): { values: Values; site: NewSite | null 
       site_id: String(p.site_id ?? ""),
       period_start: String(p.period_start ?? ""),
       period_end: String(p.period_end ?? ""),
-      days: (detail.days as { work_date: string; tasks: { title: string; description: string; files: TaskValue["files"] }[] }[]).map((d) => ({
+      days: (
+        detail.days as {
+          work_date: string;
+          site_id?: string | null;
+          member_employee_ids?: string[] | null;
+          tasks: { title: string; description: string; files: TaskValue["files"] }[];
+        }[]
+      ).map((d) => ({
         work_date: d.work_date,
         tasks: d.tasks.map((t) => ({ title: t.title, description: t.description, files: t.files ?? [] })),
+        site_id: d.site_id ? String(d.site_id) : "",
+        member_mode: d.member_employee_ids ? "custom" : "all",
+        member_ids: (d.member_employee_ids ?? []).filter((m) => m !== team.find((x) => x.role_in_plan === "LEADER")?.employee_id),
       })),
+      holidays: datesBetween(String(p.period_start ?? ""), String(p.period_end ?? "")).filter(
+        (iso) => !(detail.days as { work_date: string }[]).some((d) => d.work_date === iso),
+      ),
       tool_ids: assets.filter((a) => a.kind === "TOOL").map((a) => a.asset_id),
       vehicle_id: vehicle?.asset_id ?? "",
       leader_employee_id: team.find((m) => m.role_in_plan === "LEADER")?.employee_id ?? "",
@@ -193,6 +231,7 @@ function PlanEditor({ planId, detail, revise = false, changeId }: { planId?: str
       period_start: "",
       period_end: "",
       days: [],
+      holidays: [],
       tool_ids: [],
       vehicle_id: "",
       leader_employee_id: "",
@@ -210,19 +249,36 @@ function PlanEditor({ planId, detail, revise = false, changeId }: { planId?: str
   useEffect(() => {
     if (oneDay && startDate) setValue("period_end", startDate);
   }, [oneDay, startDate, setValue]);
-  const [start, end, leader, members, vehicle, siteId] = useWatch({
+  const [start, end, leader, members, vehicle, siteId, holidays] = useWatch({
     control,
-    name: ["period_start", "period_end", "leader_employee_id", "member_employee_ids", "vehicle_id", "site_id"],
+    name: ["period_start", "period_end", "leader_employee_id", "member_employee_ids", "vehicle_id", "site_id", "holidays"],
   });
 
-  // Rentang tanggal → daftar hari; hari yang sudah diisi tetap dipertahankan.
+  // Rentang tanggal (dikurangi hari libur) → daftar hari; hari yang sudah diisi tetap dipertahankan, hari baru
+  // meniru isi hari pertama (tanpa foto/berkas).
   useEffect(() => {
-    const wanted = datesBetween(start, end);
+    const inRange = new Set(datesBetween(start, end));
+    const off = holidays.filter((h) => inRange.has(h) && h !== start && h !== end);
+    if (off.length !== holidays.length) setValue("holidays", off);
+    const wanted = datesBetween(start, end).filter((d) => !off.includes(d));
     const current = getValues("days");
     if (wanted.length === current.length && wanted.every((d, i) => current[i]?.work_date === d)) return;
     const byDate = new Map(current.map((d) => [d.work_date, d]));
-    days.replace(wanted.map((d) => byDate.get(d) ?? { work_date: d, tasks: [emptyTask()] }));
-  }, [start, end]); // eslint-disable-line react-hooks/exhaustive-deps -- `days`/`getValues` stabil
+    const first = current[0];
+    days.replace(wanted.map((d) => byDate.get(d) ?? cloneFirstDay(first, d)));
+  }, [start, end, holidays]); // eslint-disable-line react-hooks/exhaustive-deps -- `days`/`getValues` stabil
+
+  const markHoliday = (iso: string) => setValue("holidays", [...getValues("holidays"), iso].sort());
+  const revokeHoliday = (iso: string) => setValue("holidays", getValues("holidays").filter((h) => h !== iso));
+  /** Samakan judul + deskripsi semua hari dengan hari pertama (foto/berkas, lokasi, dan anggota hari lain tidak diubah). */
+  const copyFirstToAll = () => {
+    const first = getValues("days")[0];
+    if (!first) return;
+    getValues("days").forEach((_, i) => {
+      if (i > 0) setValue(`days.${i}.tasks`, first.tasks.map((t) => ({ title: t.title, description: t.description, files: [] })));
+    });
+    toast.success("Judul dan deskripsi hari lain disamakan dengan hari pertama.");
+  };
 
   // Ketua tidak boleh sekaligus anggota.
   useEffect(() => {
@@ -252,6 +308,8 @@ function PlanEditor({ planId, detail, revise = false, changeId }: { planId?: str
       days: v.days.map((d) => ({
         work_date: d.work_date,
         tasks: d.tasks.map((t) => ({ title: t.title, description: t.description, file_ids: t.files.map((f) => f.file_id) })),
+        site_id: d.site_id || null,
+        member_employee_ids: d.member_mode === "custom" ? d.member_ids.filter((m) => v.member_employee_ids.includes(m)) : null,
       })),
       leader_employee_id: v.leader_employee_id,
       member_employee_ids: v.member_employee_ids,
@@ -298,6 +356,14 @@ function PlanEditor({ planId, detail, revise = false, changeId }: { planId?: str
               </Section>
             )}
             <Section title="Data pekerjaan">
+              <SelectField label="Jenis pekerjaan" hint="Pilih lebih dulu: menentukan template foto laporan (foto contoh dari PM)." {...register("work_type_id")}>
+                <option value="">Tanpa jenis</option>
+                {workTypes.data?.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </SelectField>
               <TextField label="Judul pekerjaan" error={errors.title?.message} {...register("title")} />
               <TextAreaField label="Deskripsi pekerjaan keseluruhan" error={errors.description?.message} {...register("description")} />
               <div className="grid gap-x-3 md:grid-cols-2">
@@ -311,14 +377,6 @@ function PlanEditor({ planId, detail, revise = false, changeId }: { planId?: str
                 </SelectField>
                 <TextField label="Tipe" value={o.unit_name ?? "-"} readOnly disabled hint="Otomatis mengikuti unit PM." />
               </div>
-              <SelectField label="Jenis pekerjaan (opsional)" hint="Menentukan template foto laporan." {...register("work_type_id")}>
-                <option value="">Tanpa jenis</option>
-                {workTypes.data?.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
-                  </option>
-                ))}
-              </SelectField>
             </Section>
 
             <Section title="Lokasi kerja">
@@ -370,9 +428,42 @@ function PlanEditor({ planId, detail, revise = false, changeId }: { planId?: str
               ) : (
                 <ol className="space-y-4">
                   {days.fields.map((day, i) => (
-                    <DayCard key={day.id} index={i} workDate={day.work_date} control={control} register={register} setValue={setValue} errors={errors} />
+                    <DayCard
+                      key={day.id}
+                      index={i}
+                      workDate={day.work_date}
+                      control={control}
+                      register={register}
+                      setValue={setValue}
+                      errors={errors}
+                      sites={o.sites}
+                      team={members.map((m) => ({ id: m, name: people.get(m) ?? m }))}
+                      canHoliday={i > 0 && i < days.fields.length - 1}
+                      onHoliday={() => markHoliday(day.work_date)}
+                    />
                   ))}
                 </ol>
+              )}
+              {days.fields.length > 1 && (
+                <Button type="button" variant="outline" className="mt-3 w-full" onClick={copyFirstToAll}>
+                  Samakan judul &amp; deskripsi semua hari dengan hari pertama
+                </Button>
+              )}
+              {holidays.length > 0 && (
+                <div className="mt-3 rounded-control border border-line p-3" aria-label="Hari libur">
+                  <p className="mb-2 text-sm font-medium">Hari libur ({holidays.length})</p>
+                  <ul className="space-y-1">
+                    {holidays.map((h) => (
+                      <li key={h} className="flex items-center justify-between gap-2 text-sm">
+                        <span>{formatDate(h)}</span>
+                        <Button type="button" variant="outline" size="sm" onClick={() => revokeHoliday(h)}>
+                          Jadikan hari kerja
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="mt-2 text-xs text-mist">Hari libur tidak wajib absen dan laporan. Hari yang sudah berlaporan tidak dapat diliburkan.</p>
+                </div>
               )}
               {end && !oneDay && (
                 <Button type="button" variant="outline" className="mt-3 w-full" onClick={() => setValue("period_end", nextDay(end))}>
@@ -514,6 +605,10 @@ function DayCard({
   register,
   setValue,
   errors,
+  sites,
+  team,
+  canHoliday,
+  onHoliday,
 }: {
   index: number;
   workDate: string;
@@ -521,8 +616,14 @@ function DayCard({
   register: UseFormRegister<Values>;
   setValue: UseFormSetValue<Values>;
   errors: FieldErrors<Values>;
+  sites: { id: string; name: string }[];
+  team: { id: string; name: string }[];
+  canHoliday: boolean;
+  onHoliday: () => void;
 }) {
   const tasks = useFieldArray({ control, name: `days.${index}.tasks` });
+  const memberMode = useWatch({ control, name: `days.${index}.member_mode` });
+  const memberIds = useWatch({ control, name: `days.${index}.member_ids` });
   const live = useWatch({ control, name: `days.${index}.tasks` });
   const [uploading, setUploading] = useState<number | null>(null);
   const dayErr = errors.days?.[index];
@@ -546,9 +647,53 @@ function DayCard({
 
   return (
     <li className="rounded-control border border-line p-3">
-      <p className="mb-3 text-sm font-semibold">
-        Hari {index + 1} · {formatDate(workDate)}
-      </p>
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <p className="text-sm font-semibold">
+          Hari {index + 1} · {formatDate(workDate)}
+        </p>
+        <Button type="button" variant="outline" size="sm" disabled={!canHoliday} onClick={onHoliday} title={canHoliday ? undefined : "Hari pertama dan terakhir tidak bisa diliburkan; ubah tanggal mulai/selesai."}>
+          Tandai libur
+        </Button>
+      </div>
+      <details className="mb-3 rounded-control border border-line p-3">
+        <summary className="min-h-11 cursor-pointer text-sm font-medium">Lokasi &amp; anggota hari ini</summary>
+        <SelectField label="Lokasi hari ini" hint="Absensi hari ini mengikuti lokasi ini." {...register(`days.${index}.site_id`)}>
+          <option value="">Ikut lokasi rencana</option>
+          {sites.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.name}
+            </option>
+          ))}
+        </SelectField>
+        <fieldset>
+          <legend className="mb-1 text-sm font-medium">Anggota yang bertugas</legend>
+          <label className="flex min-h-11 items-center gap-2 text-sm">
+            <input type="radio" className="size-5" value="all" {...register(`days.${index}.member_mode`)} /> Seluruh tim
+          </label>
+          <label className="flex min-h-11 items-center gap-2 text-sm">
+            <input type="radio" className="size-5" value="custom" {...register(`days.${index}.member_mode`)} /> Hanya yang dipilih (ketua selalu ikut)
+          </label>
+          {memberMode === "custom" && (
+            <div className="ml-2 space-y-1">
+              {team.length === 0 && <p className="text-sm text-mist">Belum ada anggota tim.</p>}
+              {team.map((m) => (
+                <label key={m.id} className="flex min-h-11 items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    className="size-5"
+                    checked={memberIds.includes(m.id)}
+                    onChange={(e) =>
+                      setValue(`days.${index}.member_ids`, e.target.checked ? [...memberIds, m.id] : memberIds.filter((x) => x !== m.id), { shouldDirty: true })
+                    }
+                  />
+                  {m.name}
+                </label>
+              ))}
+            </div>
+          )}
+          <p className="mt-1 text-xs text-mist">Anggota yang tidak bertugas hari ini tetap tercatat di rencana, tetapi tidak wajib absen dan lapor.</p>
+        </fieldset>
+      </details>
       <div className="space-y-3">
         {tasks.fields.map((task, t) => (
           <div key={task.id} className="rounded-control bg-canvas p-3">

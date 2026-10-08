@@ -66,7 +66,12 @@ class MemberReportService:
         # Validasi batas waktu: mencegah pengisian laporan untuk tanggal di masa depan
         if not await CRUDOrgClock(self.db).day_reached(day_id):
             raise ValidationError("Laporan hanya dapat diisi pada atau setelah tanggal pelaksanaan.")
-        return await self._me(access)
+        employee_id = await self._me(access)
+        # Anggota hanya melapor pada hari ia ditugaskan (daftar anggota per hari; tanpa daftar = seluruh tim).
+        if not await self.repo.on_duty(day_id, employee_id):
+            raise AppError("NOT_ON_DUTY", "Anda tidak ditugaskan pada hari ini, jadi tidak perlu membuat laporan.",
+                           status=409)
+        return employee_id
 
     async def list_for_day(self, day_id: UUID) -> list[Any]:
         """

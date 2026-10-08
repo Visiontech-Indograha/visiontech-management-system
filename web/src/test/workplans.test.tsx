@@ -147,8 +147,8 @@ describe("Work plan — daftar", () => {
       period_start: "2026-10-01",
       period_end: "2026-10-02",
       days: [
-        { work_date: "2026-10-01", tasks: [{ title: "Pasang CCTV 1", description: "Area A", file_ids: [] }] },
-        { work_date: "2026-10-02", tasks: [{ title: "Uji kamera", description: "Semua", file_ids: [] }] },
+        { work_date: "2026-10-01", tasks: [{ title: "Pasang CCTV 1", description: "Area A", file_ids: [] }], site_id: null, member_employee_ids: null },
+        { work_date: "2026-10-02", tasks: [{ title: "Uji kamera", description: "Semua", file_ids: [] }], site_id: null, member_employee_ids: null },
       ],
       leader_employee_id: "e-lead",
       member_employee_ids: ["e-member"],

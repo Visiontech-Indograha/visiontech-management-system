@@ -3,10 +3,8 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_db_with_user, get_employee_service, require_permission
+from app.api.deps import get_employee_service, require_permission
 from app.core.errors import AppError
 from app.core.permissions import Permission
 from app.core.security import CurrentUser
@@ -19,7 +17,6 @@ from app.schemas.employee import (
     EmployeeResponse,
     EmployeeUpdate,
 )
-from app.services.access_service import ensure_same_org
 from app.services.employee_service import EmployeeService
 
 PRIVATE_FIELDS = ("email", "phone", "address", "birth_date", "emergency_contact")
@@ -42,7 +39,6 @@ async def get_employees(
     is_active: bool | None = None,
     q: str | None = None,
     current_user: CurrentUser = Depends(require_permission(Permission.VIEW_USERS)),
-    db: AsyncSession = Depends(get_db_with_user),
     employee_service: EmployeeService = Depends(get_employee_service)
 ) -> EmployeeListResponse:
     """
@@ -57,57 +53,15 @@ async def get_employees(
 
     Return: Daftar karyawan (EmployeeListResponse)
     """
-    # Injeksi dependensi sesi DB dengan row level security (get_db_with_user)
-    # serta EmployeeService untuk memanggil aturan bisnis terkait privasi data
-    offset = (page - 1) * size
-    where_clauses = ["organization_id = :org", "deleted_at IS NULL"]  # karyawan terhapus disembunyikan (V-29)
-    params = {"org": current_user.organization_id, "limit": size, "offset": offset}
-
-    if is_active is not None:
-        where_clauses.append("is_active = :is_active")
-        params["is_active"] = is_active
-
-    if q:
-        where_clauses.append("(full_name ILIKE :q OR employee_no ILIKE :q)")
-        params["q"] = f"%{q}%"
-
-    where_str = " AND ".join(where_clauses)
-
-    count_query = text(f"SELECT COUNT(*) FROM vms.employee WHERE {where_str}")
-    total = (await db.execute(count_query, params)).scalar() or 0
-
-    query = text(f"""
-        SELECT id, employee_no, full_name, position, unit_id, email, phone,
-               join_date, birth_date, address, emergency_contact, attendance_mode,
-               is_active, offboarded_at, offboarding_reason
-        FROM vms.employee
-        WHERE {where_str}
-        ORDER BY full_name ASC
-        LIMIT :limit OFFSET :offset
-    """)
-    rows = (await db.execute(query, params)).fetchall()
-
-    # Memanggil service layer untuk menentukan cakupan privasi viewer saat ini
+    total, rows = await employee_service.list_page(current_user.organization_id, is_active, q, page, size)
     scope = await employee_service.private_viewer(current_user.user_id, current_user.permissions)
-    items = []
-    for row in rows:
-        items.append(_shown(EmployeeResponse(
-            id=row.id, employee_no=row.employee_no, full_name=row.full_name,
-            position=row.position, unit_id=row.unit_id, email=row.email,
-            phone=row.phone, join_date=row.join_date, birth_date=row.birth_date,
-            address=row.address, emergency_contact=row.emergency_contact,
-            attendance_mode=row.attendance_mode,
-            is_active=row.is_active, offboarded_at=row.offboarded_at,
-            offboarding_reason=row.offboarding_reason
-        ), scope))
-
+    items = [_shown(EmployeeResponse(**row._mapping), scope) for row in rows]
     return EmployeeListResponse(items=items, total=total, page=page, size=size)
 
 @router.get("/{emp_id}", response_model=EmployeeResponse)
 async def get_employee(
     emp_id: UUID,
     current_user: CurrentUser = Depends(require_permission(Permission.VIEW_USERS)),
-    db: AsyncSession = Depends(get_db_with_user),
     employee_service: EmployeeService = Depends(get_employee_service)
 ) -> EmployeeResponse:
     """
@@ -118,17 +72,7 @@ async def get_employee(
 
     Return: Detail karyawan (EmployeeResponse)
     """
-    # Menggunakan dependensi sesi DB yang aman (RLS) dan EmployeeService
-    row = (await db.execute(text("""
-        SELECT id, employee_no, full_name, position, unit_id, email, phone,
-               join_date, birth_date, address, emergency_contact, attendance_mode,
-               is_active, offboarded_at, offboarding_reason
-        FROM vms.employee
-        WHERE id = :id AND organization_id = :org AND deleted_at IS NULL
-    """), {"id": emp_id, "org": current_user.organization_id})).fetchone()
-    if row is None:
-        raise AppError("NOT_FOUND", "Karyawan tidak ditemukan.", status=404)
-    # Memanggil pengecekan privasi melalui service layer
+    row = await employee_service.get(emp_id, current_user.organization_id)
     scope = await employee_service.private_viewer(current_user.user_id, current_user.permissions)
     return _shown(EmployeeResponse(**row._mapping), scope)
 
@@ -136,7 +80,7 @@ async def get_employee(
 async def create_employee(
     data: EmployeeCreate,
     current_user: CurrentUser = Depends(require_permission(Permission.MANAGE_USERS)),
-    db: AsyncSession = Depends(get_db_with_user)
+    employee_service: EmployeeService = Depends(get_employee_service)
 ) -> EmployeeResponse:
     """
     Menambahkan data karyawan baru ke dalam organisasi.
@@ -146,54 +90,22 @@ async def create_employee(
 
     Return: Detail karyawan yang baru dibuat (EmployeeResponse)
     """
-    # Menggunakan injeksi dependensi untuk mendapatkan koneksi DB yang aman (get_db_with_user)
-    # Memastikan unit terkait berada dalam satu organisasi melalui access_service
-    await ensure_same_org(db, current_user.organization_id, units=[data.unit_id])
-    query = text("""
-        INSERT INTO vms.employee (
-            organization_id, employee_no, full_name, position, unit_id,
-            email, phone, join_date, birth_date, address, emergency_contact
-        ) VALUES (
-            :org, :eno, :fname, :pos, :unit, :email, :phone, :jdate, :bdate, :addr, :emerg
-        ) RETURNING id, is_active, offboarded_at, offboarding_reason
-    """)
     try:
-        res = await db.execute(query, {
-            "org": current_user.organization_id,
-            "eno": data.employee_no, "fname": data.full_name, "pos": data.position,
-            "unit": data.unit_id, "email": data.email, "phone": data.phone,
-            "jdate": data.join_date, "bdate": data.birth_date, "addr": data.address,
-            "emerg": data.emergency_contact
-        })
-        row = res.one()
-
-        # Tambahkan ke employee_assignment perdana
-        assign = text("""
-            INSERT INTO vms.employee_assignment (employee_id, position, unit_id, valid_from)
-            VALUES (:emp_id, :pos, :unit, :jdate)
-        """)
-        await db.execute(assign, {
-            "emp_id": row.id, "pos": data.position,
-            "unit": data.unit_id, "jdate": data.join_date
-        })
-
-        return EmployeeResponse(
-            id=row.id, employee_no=data.employee_no, full_name=data.full_name,
-            position=data.position, unit_id=data.unit_id, email=data.email,
-            phone=data.phone, join_date=data.join_date, birth_date=data.birth_date,
-            address=data.address, emergency_contact=data.emergency_contact,
-            is_active=row.is_active, offboarded_at=row.offboarded_at,
-            offboarding_reason=row.offboarding_reason
-        )
+        row = await employee_service.create(current_user.organization_id, data.model_dump())
+    except AppError:
+        raise
     except Exception as e:
+        # Pesan DB_ERROR diganti teks umum oleh handler galat; isi aslinya hanya ke log (T-06).
         raise HTTPException(status_code=400, detail={"code": "DB_ERROR", "message": str(e)}) from e
+    return EmployeeResponse(**data.model_dump(), id=row.id, is_active=row.is_active,
+                            offboarded_at=row.offboarded_at, offboarding_reason=row.offboarding_reason)
 
 @router.put("/{emp_id}", response_model=EmployeeResponse)
 async def update_employee(
     emp_id: UUID,
     data: EmployeeUpdate,
     current_user: CurrentUser = Depends(require_permission(Permission.MANAGE_USERS)),
-    db: AsyncSession = Depends(get_db_with_user)
+    employee_service: EmployeeService = Depends(get_employee_service)
 ) -> EmployeeResponse:
     """
     Mengubah data pribadi karyawan. (Jabatan/unit diubah melalui endpoint /assignments).
@@ -206,40 +118,15 @@ async def update_employee(
 
     Return: Detail karyawan yang diperbarui (EmployeeResponse)
     """
-    # Memerlukan izin MANAGE_USERS dan mendapatkan sesi database
-    # Hanya update info pribadi, jabatan diubah via assignment
-    updates = []
-    params = {"id": emp_id, "org": current_user.organization_id}
-
-    for field, value in data.model_dump(exclude_unset=True).items():
-        if field == "attendance_mode" and value is None:
-            continue  # kolom wajib; null berarti "tidak diubah"
-        updates.append(f"{field} = :{field}")
-        params[field] = value
-
-    if not updates:
+    # Hanya data pribadi; jabatan diubah via assignment. attendance_mode wajib: null berarti "tidak diubah".
+    fields = {k: v for k, v in data.model_dump(exclude_unset=True).items()
+              if not (k == "attendance_mode" and v is None)}
+    if not fields:
         raise HTTPException(status_code=400, detail={"code": "NO_UPDATE", "message": "Tidak ada data untuk diubah."})
-
-    query = text(f"""
-        UPDATE vms.employee SET {", ".join(updates)}
-        WHERE id = :id AND organization_id = :org
-        RETURNING id, employee_no, full_name, position, unit_id, email, phone, join_date, birth_date, address, emergency_contact, attendance_mode, is_active, offboarded_at, offboarding_reason
-    """)
-    res = await db.execute(query, params)
-    row = res.fetchone()
-
+    row = await employee_service.update(emp_id, current_user.organization_id, fields)
     if not row:
         raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Karyawan tidak ditemukan."})
-
-    return EmployeeResponse(
-        id=row.id, employee_no=row.employee_no, full_name=row.full_name,
-        position=row.position, unit_id=row.unit_id, email=row.email,
-        phone=row.phone, join_date=row.join_date, birth_date=row.birth_date,
-        address=row.address, emergency_contact=row.emergency_contact,
-        attendance_mode=row.attendance_mode,
-        is_active=row.is_active, offboarded_at=row.offboarded_at,
-        offboarding_reason=row.offboarding_reason
-    )
+    return EmployeeResponse(**row._mapping)
 
 @router.get("/{emp_id}/assignments", response_model=list[EmployeeAssignmentResponse])
 async def list_assignments(
@@ -266,7 +153,6 @@ async def add_assignment(
     emp_id: UUID,
     data: EmployeeAssignmentCreate,
     current_user: CurrentUser = Depends(require_permission(Permission.MANAGE_USERS)),
-    db: AsyncSession = Depends(get_db_with_user),
     employee_service: EmployeeService = Depends(get_employee_service)
 ) -> EmployeeAssignmentResponse:
     """
@@ -282,7 +168,7 @@ async def add_assignment(
     """
     # Injeksi database (db) untuk pengecekan referensi organisasi dan employee_service untuk eksekusi
     # Memanggil service layer dengan meneruskan data jabatan yang baru
-    await ensure_same_org(db, current_user.organization_id, units=[data.unit_id])
+    await employee_service.ensure_units(current_user.organization_id, data.unit_id)
     row = await employee_service.promote(emp_id, current_user.organization_id, data.position, data.unit_id,
                                             data.valid_from)
     return EmployeeAssignmentResponse(**row._mapping)
@@ -354,17 +240,9 @@ async def check_conflicts(
     end_date: date,
     exclude_plan: UUID | None = None,
     current_user: CurrentUser = Depends(require_permission(Permission.CREATE_PLAN)),
-    db: AsyncSession = Depends(get_db_with_user)
+    employee_service: EmployeeService = Depends(get_employee_service)
 ) -> dict[str, Any]:
     """Mengecek bentrok jadwal (P3-6) — untuk penyusun SK (V-09). Karyawan/SK asing → 404."""
-    await ensure_same_org(db, current_user.organization_id, employees=[emp_id], work_plans=[exclude_plan])
-    query = text("""
-        SELECT work_plan_id, number, title
-        FROM vms.personnel_conflict(:emp, daterange(:start, :end, '[]'), :exclude)
-    """)
-    rows = (await db.execute(query, {
-        "emp": emp_id, "start": start_date, "end": end_date, "exclude": exclude_plan
-    })).fetchall()
-
+    rows = await employee_service.conflicts(emp_id, current_user.organization_id, start_date, end_date, exclude_plan)
     conflicts = [{"id": r.work_plan_id, "number": r.number, "title": r.title} for r in rows]
     return {"conflicts": conflicts, "has_conflict": len(conflicts) > 0}

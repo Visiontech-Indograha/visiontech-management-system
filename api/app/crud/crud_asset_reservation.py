@@ -279,3 +279,73 @@ class CRUDAssetReservation(CRUDBase):
             "SELECT CAST(employee_id AS text) FROM vms.app_user WHERE id = :uid", {"uid": user_id})
         return employee
 
+    _RETURN_COLUMNS = """id, asset_allocation_id, requested_by, requested_at, condition_on_return, note, verified_by,
+                         verified_at, is_accepted"""
+
+    async def insert_asset(self, org_id: UUID | str, *, kind: str, vehicle_type: str | None, code: str, name: str,
+                           condition: str) -> Any:
+        """Aset baru milik organisasi."""
+        return await self.fetchone(
+            """
+            INSERT INTO vms.asset (organization_id, kind, vehicle_type, code, name, condition)
+            VALUES (:org, :kind, :vtype, :code, :name, :cond)
+            RETURNING id, organization_id, kind, vehicle_type, code, name, condition, status
+            """,
+            {"org": org_id, "kind": kind, "vtype": vehicle_type, "code": code, "name": name, "cond": condition})
+
+    async def employee_of_user(self, user_id: UUID | str) -> Any:
+        """employee_id milik akun, atau None."""
+        row = await self.fetchone("SELECT employee_id FROM vms.app_user WHERE id = :uid", {"uid": user_id})
+        return row.employee_id if row else None
+
+    async def allocation_state_for_update(self, allocation_id: UUID | str) -> Any:
+        """Status peminjaman & aset (aset dikunci) untuk pengajuan pengembalian, atau None."""
+        return await self.fetchone(
+            """
+            SELECT a.released_at IS NULL AS active, s.status AS asset_status, s.id AS asset_id
+              FROM vms.asset_allocation a JOIN vms.asset s ON s.id = a.asset_id
+             WHERE a.id = :alloc
+               FOR UPDATE OF s
+            """,
+            {"alloc": allocation_id})
+
+    async def insert_return(self, allocation_id: UUID | str, employee_id: Any, condition: str,
+                            note: str | None) -> Any:
+        """Pengajuan pengembalian (BAST) baru."""
+        return await self.fetchone(
+            f"""
+            INSERT INTO vms.asset_return (asset_allocation_id, requested_by, condition_on_return, note)
+            VALUES (:alloc, :emp, :cond, :note)
+            RETURNING {self._RETURN_COLUMNS}
+            """,
+            {"alloc": allocation_id, "emp": employee_id, "cond": condition, "note": note})
+
+    async def return_for_update(self, return_id: UUID | str, org_id: UUID | str) -> Any:
+        """Pengembalian milik organisasi ini (aset dikunci) untuk diverifikasi, atau None."""
+        return await self.fetchone(
+            """
+            SELECT r.requested_by, r.verified_at, a.asset_id, a.id AS alloc_id, s.status AS asset_status
+              FROM vms.asset_return r
+              JOIN vms.asset_allocation a ON a.id = r.asset_allocation_id
+              JOIN vms.asset s ON s.id = a.asset_id
+             WHERE r.id = :id AND s.organization_id = :org
+               FOR UPDATE OF s
+            """,
+            {"id": return_id, "org": org_id})
+
+    async def verify_return(self, return_id: UUID | str, employee_id: Any, accepted: bool, note: str) -> Any:
+        """Catat hasil pemeriksaan pengembalian."""
+        return await self.fetchone(
+            f"""
+            UPDATE vms.asset_return
+               SET verified_by = :emp, verified_at = now(), is_accepted = :acc,
+                   note = COALESCE(note, '') || E'\n' || :note
+             WHERE id = :id
+            RETURNING {self._RETURN_COLUMNS}
+            """,
+            {"emp": employee_id, "acc": accepted, "note": note, "id": return_id})
+
+    async def release_allocation(self, allocation_id: UUID | str) -> None:
+        """Akhiri peminjaman (aset kembali)."""
+        await self.execute("UPDATE vms.asset_allocation SET released_at = now() WHERE id = :id", {"id": allocation_id})
+

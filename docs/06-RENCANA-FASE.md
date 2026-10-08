@@ -240,6 +240,23 @@ tidak ada satu pun foto wajah tersimpan di luar ketentuan.
 **DoD:** pemulihan dari cadangan berhasil pada basis data kosong; tidak ada endpoint tanpa
 baris di matriks RBAC; tidak ada teks Inggris mentah di layar pengguna.
 
+> **Status (2026-10-08):**
+> - **P9-7 selesai untuk router:** kedelapan router lama (R-25b: audit, kedaluwarsa dokumen, berkas, absensi,
+>   karyawan, aset, HSE, SK) tidak lagi menyentuh basis data. SQL pindah ke `crud/`, aturan ke `services/`.
+>   Sinkronisasi luring kini memanggil `HseService`, bukan fungsi router. `LEGACY` di
+>   `test_router_layering.py` sudah kosong.
+> - **P9-2 — RLS kini benar-benar berlaku (temuan 2026-10-08):** di produksi API tersambung sebagai `vms_app` yang
+>   superuser **dan** pemilik tabel, jadi seluruh kebijakan RLS terlewati. Migrasi `0024_runtime_role` membuat peran
+>   runtime `vms_api` (bukan superuser/pemilik, tanpa BYPASSRLS); alembic & CLI tetap memakai pemilik
+>   (`MIGRATION_DATABASE_URL`). Seluruh suite (±930 uji) lulus dengan API sebagai `vms_api`. Penyesuaian yang
+>   ditemukan: fungsi DB → SECURITY DEFINER (aturan bentrok personel/SIM/QR publik sempat diam-diam lolos, rekursi
+>   kebijakan SK), batas RLS SK/absensi/lembur/insiden/token QR = tenant (docs/10 Bagian C), konteks pengguna
+>   disetel saat login. Pengalihan prod: `deploy/pakai-peran-runtime.sh` (dijalankan pemilik; rollback `kembalikan`).
+> - **Temuan P9-2 yang masih terbuka:**
+>   - 7 tabel tenant belum ber-RLS: `site`, `file_object`, `notification`, `attendance_device_key`,
+>     `attendance_offline_event`, `signature_serial_counter`, `app_user`.
+>   - Menunggu keputusan pemilik (butuh migrasi + kebijakan per tabel).
+
 ---
 
 ## Fase 10 — UAT dan rilis *(minggu 22–24)*
@@ -252,7 +269,7 @@ baris di matriks RBAC; tidak ada teks Inggris mentah di layar pengguna.
 | P10-4 | Panduan singkat per peran (1 halaman, bergambar) + video pendek |
 | P10-5 | Pelatihan: PM, HR, Finance, Aset, OPS, dan ketua tim |
 | P10-6 | Rilis produksi bertahap: satu unit bisnis dulu, lalu seluruhnya |
-| P10-7 | Distribusi APK + pemeriksaan versi minimum di server |
+| P10-7 | Distribusi APK + pemeriksaan versi minimum di server — **selesai 2026-10-08** (pembaruan otomatis tanpa Play, docs/32; diuji di Realme) |
 | P10-8 | **CD produksi**: GitHub Environment dengan persetujuan manual, cadangan sebelum deploy, migrasi terpisah, uji asap, rollback otomatis, laporan ke `#vms-deploy`; jendela deploy di luar 07.00–19.00 WIB |
 | P10-9 | **Kunci tanda tangan dipindah ke KMS** (K-05) sebelum produksi menyimpan dokumen sungguhan |
 

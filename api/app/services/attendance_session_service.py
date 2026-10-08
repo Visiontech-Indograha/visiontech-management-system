@@ -6,6 +6,8 @@ diputuskan trigger basis data, dan hasil simpanan itulah yang dikembalikan ke kl
 """
 from __future__ import annotations
 
+import csv
+import io
 from typing import Any
 from uuid import UUID
 
@@ -14,6 +16,7 @@ from sqlalchemy.exc import IntegrityError
 from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationError, trigger_rule_message
 from app.crud.crud_attendance_session import CRUDAttendanceSession
 from app.crud.crud_org_clock import CRUDOrgClock
+from app.services.access_service import ensure_same_org
 from app.services.face_service import FaceOutcome, FaceService
 
 OPEN_SESSION = "Masih ada sesi absensi terbuka."
@@ -58,6 +61,24 @@ class AttendanceSessionService:
         if CHANNEL_OF_MODE.get(row.attendance_mode, "MOBILE") != channel and not row.is_admin:
             raise AppError("WRONG_ATTENDANCE_CHANNEL", WRONG_CHANNEL[channel], status=403)
         return row
+
+    async def ensure_check_in_refs(self, org_id: str, site_id: UUID, selfie_file_id: UUID | None) -> None:
+        """Lokasi & swafoto absen masuk harus milik organisasi pengguna (galat 422 bila bukan)."""
+        await ensure_same_org(self.repo.db, org_id, sites=[site_id], files=[selfie_file_id])
+
+    async def export_csv(self, org_id: str, start: Any, end: Any) -> str:
+        """P4-5 · CSV absensi untuk Finance; jam dalam zona waktu organisasi."""
+        out = io.StringIO()
+        writer = csv.writer(out)
+        writer.writerow(["Tanggal", "NIK", "Nama", "Lokasi", "Check In", "Check Out", "Terlambat", "Pulang Cepat",
+                         "Status"])
+        for r in await self.repo.export_rows(org_id, start, end):
+            writer.writerow([
+                r.work_date.isoformat(), r.employee_no, r.full_name, r.site_label,
+                r.check_in or "", r.check_out or "", "Ya" if r.is_late else "Tidak",
+                "Ya" if r.is_early_leave else "Tidak", r.status,
+            ])
+        return out.getvalue()
 
     async def check_in(self, org_id: str, user_id: str, *, site_id: UUID, lng: float, lat: float,
                        origin: str, selfie_file_id: UUID | None, accuracy_m: float | None = None,

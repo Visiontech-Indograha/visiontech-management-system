@@ -11,9 +11,17 @@ import sys
 
 from sqlalchemy import text
 
+from app.core.config import settings
 from app.core.permissions import RoleCode
 from app.core.security import hash_password
 from app.db.session import make_engine
+
+
+def _operator_url() -> str:
+    """CLI adalah alat operator di server: memakai peran pemilik (sama dengan migrasi), bukan peran runtime
+    `vms_api` yang tunduk RLS — membuat organisasi & admin pertama terjadi sebelum ada konteks pengguna."""
+    return settings.MIGRATION_DATABASE_URL or settings.DATABASE_URL
+
 
 # Panjang minimal kata sandi untuk admin
 ADMIN_PASSWORD_MIN_LENGTH = 12
@@ -32,7 +40,7 @@ async def create_admin(email: str, password: str, organization_id: str | None = 
     if len(password) < ADMIN_PASSWORD_MIN_LENGTH:
         raise CliError(f"Kata sandi admin minimal {ADMIN_PASSWORD_MIN_LENGTH} karakter.")
 
-    engine = make_engine()
+    engine = make_engine(_operator_url())
     try:
         async with engine.begin() as conn:
             if organization_id:
@@ -77,7 +85,7 @@ async def seed() -> None:
     Membuat data organisasi, unit bisnis, dan karyawan contoh jika belum ada.
     """
     # Membuat engine untuk koneksi database
-    engine = make_engine()
+    engine = make_engine(_operator_url())
     async with engine.begin() as conn:
         # Periksa apakah data organisasi sudah ada, jika belum buat baru
         org_id = (await conn.execute(text("SELECT id FROM vms.organization LIMIT 1"))).scalar()
@@ -105,7 +113,7 @@ async def cleanup_orphans() -> None:
     Membersihkan sesi pengguna yang yatim (orphan) atau sudah kedaluwarsa.
     """
     # Membuat koneksi database untuk proses pembersihan
-    engine = make_engine()
+    engine = make_engine(_operator_url())
     async with engine.begin() as conn:
         # Hapus session kedaluwarsa atau ter-revoke yang lebih dari 30 hari
         res = await conn.execute(text("""

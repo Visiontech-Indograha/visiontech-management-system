@@ -14,6 +14,7 @@ from app.core.errors import AppError, NotFoundError
 from app.core.security import create_jwt_token, hash_password, verify_password
 from app.crud.crud_session import MAX_LOGIN_FAILURES, CRUDSession
 from app.crud.crud_user import CRUDUser
+from app.db.session import set_request_context
 
 ACCESS_TOKEN_TTL = timedelta(minutes=15)
 DEFAULT_ROLE = "field"
@@ -90,6 +91,20 @@ class AuthService:
         self.users = users
         self.sessions = sessions
 
+    async def _act_as(self, user: Any) -> None:
+        """Konteks RLS & audit transaksi ini = pengguna ini, setelah identitasnya pasti (sandi benar / token sah).
+        Tanpa ini kueri tabel ber-RLS (mis. `employee`) diam-diam kosong di bawah peran runtime `vms_api` (P9-2)."""
+        await set_request_context(self.users.db, user_id=str(user.id), organization_id=str(user.organization_id),
+                                  actor_label=str(user.login))
+
+    async def _user(self, user_id: str) -> Any:
+        """Akun pengguna yang sudah terautentikasi + konteks RLS-nya; tidak ada → 404."""
+        user = await self.users.find_by_id(user_id)
+        if not user:
+            raise NotFoundError("Pengguna")
+        await self._act_as(user)
+        return user
+
     async def login(self, login: str, password: str, client: ClientInfo, platform: str = "web") -> IssuedTokens:
         """
         Memvalidasi kredensial pengguna dan membuat sesi login jika berhasil.
@@ -118,6 +133,7 @@ class AuthService:
 
         if not user.is_active:
             raise _inactive()
+        await self._act_as(user)
 
         # R-33: aplikasi HP hanya untuk staf lapangan, web hanya untuk akun kantor (attendance_mode).
         # Pengecualian (keputusan pemilik 2026-10-06): ADMINISTRATOR boleh masuk dari web DAN HP, baik tanpa karyawan
@@ -174,12 +190,14 @@ class AuthService:
 
     async def active_sessions(self, user_id: str) -> list[Any]:
         """P1-7: perangkat yang sedang masuk dengan akun ini."""
+        await self._user(user_id)
         return await self.sessions.list_active(user_id)
 
     async def revoke_session(self, user_id: str, session_id: str) -> None:
         """
         Mencabut sesi tunggal secara spesifik (digunakan untuk mengeluarkan perangkat lain).
         """
+        await self._user(user_id)
         if not await self.sessions.revoke_session(user_id, session_id, "Dikeluarkan dari perangkat lain"):
             raise NotFoundError("Sesi")
 
@@ -187,15 +205,14 @@ class AuthService:
         """
         Mencabut semua sesi aktif selain sesi saat ini.
         """
+        await self._user(user_id)
         return await self.sessions.revoke_other_sessions(user_id, current_session_id, "Keluarkan perangkat lain")
 
     async def me(self, user_id: str, permissions: list[str]) -> Profile:
         """
         Mengambil data profil pengguna (ME endpoint).
         """
-        user = await self.users.find_by_id(user_id)
-        if not user:
-            raise NotFoundError("Pengguna")
+        user = await self._user(user_id)
         return Profile(
             user_id=user_id,
             email=user.login,
@@ -211,9 +228,7 @@ class AuthService:
         """
         Mengubah kata sandi pengguna, mencabut semua sesi lainnya, lalu mengeluarkan sesi baru.
         """
-        user = await self.users.find_by_id(user_id)
-        if not user:
-            raise NotFoundError("Pengguna")
+        user = await self._user(user_id)
         if not user.password_hash or not verify_password(current_password, user.password_hash):
             raise AppError(
                 "VALIDATION_ERROR",

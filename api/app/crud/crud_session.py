@@ -141,16 +141,10 @@ class CRUDSession(CRUDBase):
             raw_refresh_token (str): Token refresh yang akan dicabut.
             reason (str): Alasan pencabutan.
         """
-        # Mengubah status sesi menjadi 'REVOKED' dan mencatat waktu serta alasannya.
-        # Token dicocokkan menggunakan hash SHA-256 (digest) untuk keamanan.
-        await self.execute(
-            """
-            UPDATE vms.user_session
-               SET state = 'REVOKED', revoked_at = now(), revoked_reason = :reason
-             WHERE refresh_sha256 = digest(:rt, 'sha256') AND state = 'ACTIVE'
-            """,
-            {"rt": raw_refresh_token, "reason": reason},
-        )
+        # Token dicocokkan lewat SHA-256. Logout terjadi tanpa konteks pengguna → fungsi SECURITY DEFINER (0024),
+        # bukan UPDATE langsung di bawah RLS.
+        await self.execute("SELECT vms.revoke_session_by_token(:rt, :reason)",
+                           {"rt": raw_refresh_token, "reason": reason})
 
     async def list_active(self, user_id: UUID | str) -> list[Any]:
         """

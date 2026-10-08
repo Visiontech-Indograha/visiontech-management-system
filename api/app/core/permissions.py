@@ -6,7 +6,7 @@ Peran global dan peta izin (dok 03 §1, dok 08; OPS mengikuti prototipe — dok 
 kewenangan ketua/anggota berasal dari SK yang berlaku (`is_plan_leader`/`is_plan_member`).
 """
 from collections.abc import Iterable
-from enum import Enum, StrEnum
+from enum import StrEnum
 
 
 class RoleCode(StrEnum):
@@ -28,7 +28,7 @@ class RoleCode(StrEnum):
 NO_GLOBAL_ROLE = "field"
 
 
-class Permission(str, Enum):
+class Permission(StrEnum):
     """
     Daftar izin (permissions) yang digunakan dalam aplikasi.
     """

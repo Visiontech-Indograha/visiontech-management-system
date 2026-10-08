@@ -23,14 +23,14 @@ async def get_audit_events(
 ) -> AuditEventListResponse:
     """
     Mendapatkan daftar kejadian audit organisasi pengguna (VIEW_AUDIT).
-    Disaring `organization_id` secara eksplisit — tidak hanya mengandalkan RLS, 
+    Disaring `organization_id` secara eksplisit — tidak hanya mengandalkan RLS,
     yang terlewati bila aplikasi terhubung sebagai pemilik tabel (T-12).
-    
+
     Query params:
     - page: Nomor halaman (default 1)
     - size: Jumlah item per halaman (default 20, max 100)
     - entity_type: Filter opsional berdasarkan jenis entitas (contoh: "User", "Asset")
-    
+
     Return: Daftar riwayat audit beserta pagination (AuditEventListResponse)
     """
     # Menggunakan injeksi dependensi untuk mendapatkan koneksi database dengan konteks user saat ini
@@ -64,7 +64,7 @@ async def get_audit_events(
             detail=row.detail,
             changes=row.changes
         ))
-        
+
     return AuditEventListResponse(
         items=items,
         total=total,

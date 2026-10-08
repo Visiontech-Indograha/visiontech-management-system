@@ -99,7 +99,7 @@ void main() {
     test(
         'auth_time null dianggap MASIH berlaku — sesi lama sebelum fitur ini '
         'tidak boleh melempar user yang sedang bekerja ke layar login', () {
-      expect(SessionPolicy.isExpired(null, now: DateTime(2030, 1, 1)), isFalse);
+      expect(SessionPolicy.isExpired(null, now: DateTime(2030)), isFalse);
     });
   });
 }

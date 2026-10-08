@@ -18,10 +18,10 @@ class CRUDNotification(CRUDBase):
 
     async def plan_people(self, plan_id: UUID | str) -> Any:
         """PM, ketua, dan anggota aktif sebuah SK — penerima notifikasi tahap SK.
-        
+
         Args:
             plan_id (UUID | str): ID dari Work Plan (SK).
-            
+
         Returns:
             Any: Baris data berisi info SK beserta daftar array anggota yang aktif.
         """
@@ -44,7 +44,7 @@ class CRUDNotification(CRUDBase):
     async def insert_many(self, org_id: UUID | str, recipients: Iterable[str], kind: str, title: str, body: str,
                           plan_id: UUID | str | None) -> None:
         """Menambahkan banyak notifikasi sekaligus ke database.
-        
+
         Args:
             org_id (UUID | str): ID organisasi.
             recipients (Iterable[str]): Kumpulan ID karyawan yang akan menerima notifikasi.
@@ -52,7 +52,7 @@ class CRUDNotification(CRUDBase):
             title (str): Judul notifikasi.
             body (str): Isi pesan notifikasi.
             plan_id (UUID | str | None): ID Work Plan (SK) terkait jika ada.
-            
+
         Returns:
             None
         """
@@ -74,16 +74,16 @@ class CRUDNotification(CRUDBase):
 
     async def list_for(self, user_id: UUID | str, unread_only: bool, limit: int) -> list[Any]:
         """Mengambil daftar notifikasi untuk pengguna tertentu.
-        
+
         Args:
             user_id (UUID | str): ID pengguna (app_user).
             unread_only (bool): Flag untuk hanya mengambil notifikasi yang belum dibaca.
             limit (int): Batas maksimal notifikasi yang diambil.
-            
+
         Returns:
             list[Any]: Daftar baris notifikasi yang sesuai.
         """
-        # Melakukan JOIN antara vms.notification (n) dan vms.app_user (u) 
+        # Melakukan JOIN antara vms.notification (n) dan vms.app_user (u)
         # untuk memfilter berdasarkan user_id. Klausa (NOT :unread OR read_at IS NULL)
         # menangani fungsionalitas filter hanya-yang-belum-dibaca secara opsional.
         return list(await self.fetchall(
@@ -100,10 +100,10 @@ class CRUDNotification(CRUDBase):
 
     async def unread_count(self, user_id: UUID | str) -> int:
         """Menghitung jumlah notifikasi yang belum dibaca (read_at IS NULL) untuk pengguna.
-        
+
         Args:
             user_id (UUID | str): ID pengguna.
-            
+
         Returns:
             int: Jumlah notifikasi yang belum dibaca.
         """
@@ -120,17 +120,17 @@ class CRUDNotification(CRUDBase):
 
     async def mark_read(self, user_id: UUID | str, notification_id: UUID | str | None) -> int:
         """Tandai satu (atau semua bila `notification_id` None) notifikasi milik pengguna sebagai dibaca.
-        
+
         Args:
             user_id (UUID | str): ID pengguna.
             notification_id (UUID | str | None): ID notifikasi tunggal (opsional).
-            
+
         Returns:
             int: Jumlah notifikasi yang diperbarui.
         """
         # Memperbarui baris-baris pada vms.notification di mana read_at diatur ke waktu sekarang (now()).
         # Menggunakan klausa FROM tambahan ke tabel vms.app_user untuk membatasi pembaruan
-        # hanya pada notifikasi yang dimiliki oleh employee_id terkait. 
+        # hanya pada notifikasi yang dimiliki oleh employee_id terkait.
         # Jika :id NULL, maka kondisi id diabaikan, menandai semua yang belum dibaca.
         result = await self.execute(
             """

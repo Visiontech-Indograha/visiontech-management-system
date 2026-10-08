@@ -29,11 +29,11 @@ router = APIRouter(prefix="/changes", tags=["Plan Changes / Addendums"])
 async def _read(service: PlanChangeService, change_id: Any) -> ChangeResponse:
     """
     Fungsi pembantu untuk membaca data perubahan SK (amendment/adendum) dan memetakannya ke skema respons.
-    
+
     Args:
         service (PlanChangeService): Instance layanan perubahan SK.
         change_id (Any): ID perubahan SK.
-        
+
     Returns:
         ChangeResponse: Respons model perubahan SK.
     """
@@ -50,13 +50,13 @@ async def request_change(
     """
     Mengajukan adendum perubahan pada SK (POST).
     REQUEST_CHANGE (ketua, perpanjangan) · REQUEST_PERSONNEL_CHANGE (PM unit/OPS, personel).
-    
+
     Path Parameters:
     - plan_id (UUID): ID dari SK.
-    
+
     Request Body:
     - data (ChangeRequest): Data usulan perubahan (jenis perubahan, periode baru, dsb).
-    
+
     Returns:
     - ChangeResponse: Data respons dari perubahan yang diusulkan.
     """
@@ -81,13 +81,13 @@ async def approve_change(
     """
     Menyetujui adendum perpanjangan SK (POST).
     APPROVE_CHANGE — PM unit/OPS menandatangani perpanjangan.
-    
+
     Path Parameters:
     - change_id (UUID): ID perubahan adendum.
-    
+
     Request Body:
     - data (DecisionRequest): Persetujuan atau keputusan.
-    
+
     Returns:
     - ChangeResponse: Status terbaru adendum setelah disetujui.
     """
@@ -106,13 +106,13 @@ async def accept_change(
     """
     Menerima dan mengaktifkan adendum (POST).
     ACCEPT_CHANGE — ketua (perpanjangan) / ketua baru (personel) mengaktifkan adendum.
-    
+
     Path Parameters:
     - change_id (UUID): ID usulan adendum.
-    
+
     Request Body:
     - data (DecisionRequest): Konfirmasi penerimaan.
-    
+
     Returns:
     - ChangeResponse: Status adendum terbaru.
     """
@@ -131,13 +131,13 @@ async def reject_change(
     """
     Menolak adendum (POST).
     REJECT_CHANGE — alasan wajib disertakan.
-    
+
     Path Parameters:
     - change_id (UUID): ID adendum.
-    
+
     Request Body:
     - data (DecisionRequest): Alasan penolakan.
-    
+
     Returns:
     - ChangeResponse: Status adendum yang ditolak.
     """
@@ -156,13 +156,13 @@ async def withdraw_change(
     """
     Menarik kembali usulan adendum personel (POST).
     WITHDRAW_CHANGE — PM menarik adendum personel.
-    
+
     Path Parameters:
     - change_id (UUID): ID usulan adendum.
-    
+
     Request Body:
     - data (DecisionRequest): Alasan pembatalan.
-    
+
     Returns:
     - ChangeResponse: Status adendum yang ditarik.
     """

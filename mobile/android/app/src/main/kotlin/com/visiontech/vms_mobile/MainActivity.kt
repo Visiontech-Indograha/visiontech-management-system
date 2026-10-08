@@ -27,6 +27,9 @@ class MainActivity : FlutterFragmentActivity() {
         // R-34: kunci Keystore, tanda tangan, & jam internal untuk absen luring.
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "vms/attendance_attest")
             .setMethodCallHandler(AttendanceAttest(applicationContext))
+        // docs/32: pembaruan aplikasi tanpa Play Store (versi terpasang, izin pasang, installer).
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "vms/app_update")
+            .setMethodCallHandler(AppUpdate(applicationContext))
     }
 
     override fun onResume() {

@@ -27,10 +27,10 @@ async def get_plan_team(
     """
     Mengambil daftar tim aktif pada rencana kerja (GET).
     Tim aktif SK (ketua dulu). SK tak terlihat / organisasi lain → 404 (penjaga VIEW).
-    
+
     Path Parameters:
     - plan_id (tersirat via router prefix): ID SK bersangkutan.
-    
+
     Returns:
     - list[TeamMemberOut]: Daftar anggota tim (ketua dan anggota).
     """
@@ -53,13 +53,13 @@ async def set_plan_team(
 ) -> TeamResponse:
     """
     Menyetel (memperbarui) daftar tim SK (ketua dan anggota) (PUT).
-    
+
     Path Parameters:
     - plan_id (UUID): ID dari SK.
-    
+
     Request Body:
     - payload (TeamRequest): Data ID ketua dan daftar ID anggota, beserta versi row.
-    
+
     Returns:
     - TeamResponse: Data susunan tim yang baru.
     """

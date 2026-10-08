@@ -12,17 +12,17 @@ from .base import CRUDBase
 
 class CRUDEmployee(CRUDBase):
     """
-    Kelas operasi CRUD untuk data karyawan (seperti manajemen status aktif, 
+    Kelas operasi CRUD untuk data karyawan (seperti manajemen status aktif,
     riwayat penempatan/mutasi, dan pemutusan hubungan kerja/offboarding).
     """
 
     async def employee_of_user(self, user_id: UUID | str) -> Any:
         """
         Mendapatkan ID karyawan yang dikaitkan dengan sebuah akun pengguna.
-        
+
         Args:
             user_id (UUID | str): ID pengguna (app_user).
-            
+
         Returns:
             Any: ID karyawan (UUID) jika ada.
         """
@@ -32,11 +32,11 @@ class CRUDEmployee(CRUDBase):
     async def lock(self, employee_id: UUID | str, org_id: UUID | str) -> Any:
         """
         Mengunci baris karyawan tertentu untuk keperluan pembaruan data secara aman (FOR UPDATE).
-        
+
         Args:
             employee_id (UUID | str): ID karyawan.
             org_id (UUID | str): ID organisasi karyawan tersebut.
-            
+
         Returns:
             Any: Status karyawan (apakah dihapus, aktif, dan unitnya).
         """
@@ -55,7 +55,7 @@ class CRUDEmployee(CRUDBase):
         Memulihkan (restore) karyawan yang sebelumnya dihapus secara lunak (soft deleted).
         Karyawan akan kembali dengan status NONAKTIF, dan akunnya tetap dinonaktifkan (dicabut).
         Ini mewakili operasi domain.js RESTORE_EMPLOYEE.
-        
+
         Args:
             employee_id (UUID | str): ID karyawan.
         """
@@ -67,9 +67,9 @@ class CRUDEmployee(CRUDBase):
 
     async def archive(self, employee_id: UUID | str) -> None:
         """
-        Melakukan hapus lunak (soft delete) terhadap karyawan. 
+        Melakukan hapus lunak (soft delete) terhadap karyawan.
         Data akan tersembunyi dari daftar, namun data historis (seperti SK, absensi, dokumen) tetap terjaga.
-        
+
         Args:
             employee_id (UUID | str): ID karyawan.
         """
@@ -83,11 +83,11 @@ class CRUDEmployee(CRUDBase):
         """
         Mendapatkan riwayat penempatan (jabatan/unit) karyawan, diurutkan dari yang terbaru.
         Mengembalikan None bila karyawan bukan milik organisasi ini.
-        
+
         Args:
             employee_id (UUID | str): ID karyawan.
             org_id (UUID | str): ID organisasi.
-            
+
         Returns:
             list[Any] | None: Daftar riwayat penempatan karyawan.
         """
@@ -108,10 +108,10 @@ class CRUDEmployee(CRUDBase):
     async def last_assignment_start(self, employee_id: UUID | str) -> Any:
         """
         Mendapatkan tanggal mulai dari penempatan (assignment) yang paling terakhir (terbaru).
-        
+
         Args:
             employee_id (UUID | str): ID karyawan.
-            
+
         Returns:
             Any: Tanggal (date) mulai penempatan terakhir.
         """
@@ -124,13 +124,13 @@ class CRUDEmployee(CRUDBase):
         Mempromosikan atau memutasi karyawan ke jabatan/unit baru.
         Tindakan ini akan menutup riwayat penempatan lama dan membuka riwayat baru mulai tanggal yang ditentukan,
         serta memperbarui data induk karyawan secara sinkron.
-        
+
         Args:
             employee_id (UUID | str): ID karyawan.
             position (str): Jabatan baru.
             unit_id (str | None): ID unit bisnis baru.
             valid_from (Any): Tanggal mulai berlaku penempatan baru.
-            
+
         Returns:
             Any: Baris data penempatan yang baru dibuat.
         """
@@ -157,10 +157,10 @@ class CRUDEmployee(CRUDBase):
         Mengecek apakah karyawan saat ini masih terlibat dalam Surat Kerja (SK) yang sedang berjalan
         (bukan berstatus DRAFT, COMPLETED, atau CANCELLED).
         Ini krusial sebelum melakukan pemberhentian kerja (offboard).
-        
+
         Args:
             employee_id (UUID | str): ID karyawan.
-            
+
         Returns:
             bool: True jika masih terkait dengan SK berjalan, False jika tidak.
         """
@@ -184,7 +184,7 @@ class CRUDEmployee(CRUDBase):
         Mengakhiri masa kerja karyawan (offboarding).
         Status karyawan akan dinonaktifkan, jabatan terbukanya ditutup per hari ini, dan
         akun aplikasinya akan dicabut/dinonaktifkan.
-        
+
         Args:
             employee_id (UUID | str): ID karyawan.
             reason (str): Alasan pemberhentian.

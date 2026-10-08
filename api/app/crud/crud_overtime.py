@@ -20,10 +20,10 @@ class CRUDOvertime(CRUDBase):
 
     async def employee_of(self, user_id: UUID | str) -> str | None:
         """UUID karyawan yang terhubung ke akun pengguna.
-        
+
         Args:
             user_id (UUID | str): ID pengguna aplikasi (app_user).
-            
+
         Returns:
             str | None: ID karyawan (employee_id) jika ada.
         """
@@ -36,10 +36,10 @@ class CRUDOvertime(CRUDBase):
 
     async def effective_document_id(self, plan_id: UUID | str) -> str | None:
         """SK aktif yang berlaku saat ini (domain.js baris 612: filter status EFFECTIVE).
-        
+
         Args:
             plan_id (UUID | str): ID Work Plan.
-            
+
         Returns:
             str | None: ID dokumen SK yang saat ini aktif/berlaku.
         """
@@ -66,7 +66,7 @@ class CRUDOvertime(CRUDBase):
         reason: str,
     ) -> Any:
         """Sisipkan baris lembur baru; unique index mencegah duplikat non-REJECTED.
-        
+
         Args:
             org_id (str): ID organisasi.
             plan_id (UUID | str): ID Work Plan.
@@ -75,7 +75,7 @@ class CRUDOvertime(CRUDBase):
             work_date (Any): Tanggal kerja/lembur.
             hours (float): Jumlah jam lembur.
             reason (str): Alasan lembur.
-            
+
         Returns:
             Any: Baris log lembur yang berhasil disisipkan.
         """
@@ -102,15 +102,15 @@ class CRUDOvertime(CRUDBase):
 
     async def get_for_review(self, overtime_id: UUID | str, org_id: str) -> Any:
         """Ambil baris lembur + unit SK untuk pemeriksaan kewenangan PM (domain.js baris 619–620).
-        
+
         Args:
             overtime_id (UUID | str): ID log lembur.
             org_id (str): ID organisasi.
-            
+
         Returns:
             Any: Baris data lembur beserta field 'unit_id' dari Work Plan-nya.
         """
-        # Mengambil data lembur beserta unit_id dengan men-join vms.overtime_log (o) 
+        # Mengambil data lembur beserta unit_id dengan men-join vms.overtime_log (o)
         # dengan vms.work_plan (wp). Hal ini dibutuhkan oleh logika domain.js untuk
         # memverifikasi apakah PM peninjau berhak meninjau SK di unit bisnis tersebut.
         return await self.fetchone(
@@ -135,17 +135,17 @@ class CRUDOvertime(CRUDBase):
         note: str | None,
     ) -> Any:
         """Setujui atau tolak pengajuan lembur yang masih PENDING_PM.
-        
+
         Args:
             overtime_id (UUID | str): ID log lembur.
             reviewer_emp (str): ID PM yang melakukan peninjauan.
             decision (str): Status keputusan ('APPROVED' atau 'REJECTED').
             note (str | None): Catatan opsional dari peninjau.
-            
+
         Returns:
             Any: Baris log lembur yang berhasil diperbarui.
         """
-        # Melakukan UPDATE status persetujuan, siapa yang mereview (reviewed_by), 
+        # Melakukan UPDATE status persetujuan, siapa yang mereview (reviewed_by),
         # serta waktu review. Hanya akan ter-update jika status saat ini 'PENDING_PM'.
         # Klausa RETURNING mengembalikan data terbaru secara langsung.
         return await self.fetchone(
@@ -163,11 +163,11 @@ class CRUDOvertime(CRUDBase):
 
     async def list_by_plan(self, plan_id: UUID | str, org_id: str) -> Sequence[Any]:
         """Semua lembur SK (terurut terbaru dahulu) — untuk tampilan per SK.
-        
+
         Args:
             plan_id (UUID | str): ID Work Plan (SK).
             org_id (str): ID organisasi.
-            
+
         Returns:
             Sequence[Any]: Daftar riwayat log lembur SK tersebut, diurutkan terbaru.
         """
@@ -189,12 +189,12 @@ class CRUDOvertime(CRUDBase):
     async def recap(self, org_id: str, month: date | None, pm_user_id: str | None) -> Sequence[Any]:
         """Rekap per karyawan per bulan (padanan v_overtime_recap). `month` = tanggal 1 bulan itu atau None.
         `pm_user_id`: hanya lembur pada SK di unit yang dipegang PM itu (keputusan pemilik, dok 10 V-28).
-        
+
         Args:
             org_id (str): ID organisasi.
             month (date | None): Objek date (biasanya hari pertama di bulan) atau None (semua bulan).
             pm_user_id (str | None): ID PM (opsional) untuk filter unit.
-            
+
         Returns:
             Sequence[Any]: Daftar agregat lembur (termasuk total entri, total jam lembur yang disetujui).
         """

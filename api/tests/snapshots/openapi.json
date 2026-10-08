@@ -190,6 +190,93 @@
     "title": "AmendmentReasonIn",
     "type": "object"
    },
+   "AppUpdateOut": {
+    "description": "Jawaban pemeriksaan pembaruan untuk satu HP.",
+    "properties": {
+     "current_build": {
+      "title": "Current Build",
+      "type": "integer"
+     },
+     "download": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/ReleaseFileOut"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "latest_build": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Latest Build"
+     },
+     "latest_version": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Latest Version"
+     },
+     "min_build": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Min Build"
+     },
+     "notes": {
+      "default": [],
+      "items": {
+       "type": "string"
+      },
+      "title": "Notes",
+      "type": "array"
+     },
+     "released_at": {
+      "anyOf": [
+       {
+        "format": "date-time",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Released At"
+     },
+     "status": {
+      "enum": [
+       "UP_TO_DATE",
+       "OPTIONAL",
+       "REQUIRED"
+      ],
+      "title": "Status",
+      "type": "string"
+     }
+    },
+    "required": [
+     "status",
+     "current_build"
+    ],
+    "title": "AppUpdateOut",
+    "type": "object"
+   },
    "AssetAllocationResponse": {
     "description": "Schema detailing a specific asset allocation to a work plan.",
     "properties": {
@@ -4273,7 +4360,7 @@
     "type": "object"
    },
    "OvertimeCreate": {
-    "description": "Schema for reporting overtime (domain.js REPORT_OVERTIME).\n\nAturan validasi seperti jam 0–12 dan alasan yang wajib diisi akan \ndiperiksa secara terpusat di OvertimeService. Hal ini dilakukan \nagar urutan dan pesan kesalahan yang muncul sama persis dengan prototipe.",
+    "description": "Schema for reporting overtime (domain.js REPORT_OVERTIME).\n\nAturan validasi seperti jam 0–12 dan alasan yang wajib diisi akan\ndiperiksa secara terpusat di OvertimeService. Hal ini dilakukan\nagar urutan dan pesan kesalahan yang muncul sama persis dengan prototipe.",
     "properties": {
      "hours": {
       "title": "Hours",
@@ -4298,7 +4385,7 @@
     "type": "object"
    },
    "OvertimeRecapRow": {
-    "description": "Schema for a summarized overtime record from the recap view.\nSatu baris rekap yang diambil dari `v_overtime_recap` \n(direkapitulasi per karyawan per bulan).",
+    "description": "Schema for a summarized overtime record from the recap view.\nSatu baris rekap yang diambil dari `v_overtime_recap`\n(direkapitulasi per karyawan per bulan).",
     "properties": {
      "approved_entries": {
       "title": "Approved Entries",
@@ -4444,7 +4531,7 @@
     "type": "object"
    },
    "OvertimeReview": {
-    "description": "Schema for reviewing an overtime request (domain.js REVIEW_OVERTIME).\n\nStatus keputusan (decision) berupa APPROVED atau REJECTED, dan akan \ndiperiksa serta diproses di dalam service.",
+    "description": "Schema for reviewing an overtime request (domain.js REVIEW_OVERTIME).\n\nStatus keputusan (decision) berupa APPROVED atau REJECTED, dan akan\ndiperiksa serta diproses di dalam service.",
     "properties": {
      "decision": {
       "title": "Decision",
@@ -5444,6 +5531,35 @@
      "expires_at"
     ],
     "title": "ProbeResponse",
+    "type": "object"
+   },
+   "ReleaseFileOut": {
+    "description": "Berkas yang cocok untuk HP penanya.",
+    "properties": {
+     "abi": {
+      "title": "Abi",
+      "type": "string"
+     },
+     "sha256": {
+      "title": "Sha256",
+      "type": "string"
+     },
+     "size": {
+      "title": "Size",
+      "type": "integer"
+     },
+     "url": {
+      "title": "Url",
+      "type": "string"
+     }
+    },
+    "required": [
+     "abi",
+     "url",
+     "sha256",
+     "size"
+    ],
+    "title": "ReleaseFileOut",
     "type": "object"
    },
    "ReportReviewRequest": {
@@ -6906,6 +7022,148 @@
  },
  "openapi": "3.1.0",
  "paths": {
+  "/api/v1/app/android/files/{name}": {
+   "get": {
+    "description": "Berkas APK berversi. Nama tidak pernah dipakai ulang, jadi aman di-cache selamanya (Cloudflare).",
+    "operationId": "download_android_release_api_v1_app_android_files__name__get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "name",
+      "required": true,
+      "schema": {
+       "title": "Name",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Download Android Release",
+    "tags": [
+     "App"
+    ]
+   }
+  },
+  "/api/v1/app/android/latest.apk": {
+   "get": {
+    "description": "Tautan tetap untuk pemasangan pertama (QR di halaman login): diarahkan ke APK terbaru.",
+    "operationId": "latest_android_release_api_v1_app_android_latest_apk_get",
+    "parameters": [
+     {
+      "description": "mis. armeabi-v7a untuk HP 32-bit; bawaan arm64-v8a",
+      "in": "query",
+      "name": "abi",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "mis. armeabi-v7a untuk HP 32-bit; bawaan arm64-v8a",
+       "title": "Abi"
+      }
+     }
+    ],
+    "responses": {
+     "302": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Latest Android Release",
+    "tags": [
+     "App"
+    ]
+   }
+  },
+  "/api/v1/app/android/update": {
+   "get": {
+    "description": "Apakah HP ini perlu memperbarui aplikasi: UP_TO_DATE, OPTIONAL, atau REQUIRED + berkas unduhannya.",
+    "operationId": "check_android_update_api_v1_app_android_update_get",
+    "parameters": [
+     {
+      "description": "versionCode aplikasi yang terpasang",
+      "in": "query",
+      "name": "build",
+      "required": true,
+      "schema": {
+       "description": "versionCode aplikasi yang terpasang",
+       "minimum": 0,
+       "title": "Build",
+       "type": "integer"
+      }
+     },
+     {
+      "description": "ABI HP berurutan prioritas (Build.SUPPORTED_ABIS)",
+      "in": "query",
+      "name": "abi",
+      "required": false,
+      "schema": {
+       "default": [],
+       "description": "ABI HP berurutan prioritas (Build.SUPPORTED_ABIS)",
+       "items": {
+        "type": "string"
+       },
+       "title": "Abi",
+       "type": "array"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AppUpdateOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Check Android Update",
+    "tags": [
+     "App"
+    ]
+   }
+  },
   "/api/v1/assets": {
    "get": {
     "description": "Aset organisasi + alokasi berjalan + pengajuan pengembalian yang menunggu (M6/R9 dari layar).\n\nReturn: Daftar ringkasan aset organisasi (list[AssetListItem])",
@@ -7891,7 +8149,7 @@
   },
   "/api/v1/audit-events": {
    "get": {
-    "description": "Mendapatkan daftar kejadian audit organisasi pengguna (VIEW_AUDIT).\nDisaring `organization_id` secara eksplisit — tidak hanya mengandalkan RLS, \nyang terlewati bila aplikasi terhubung sebagai pemilik tabel (T-12).\n\nQuery params:\n- page: Nomor halaman (default 1)\n- size: Jumlah item per halaman (default 20, max 100)\n- entity_type: Filter opsional berdasarkan jenis entitas (contoh: \"User\", \"Asset\")\n\nReturn: Daftar riwayat audit beserta pagination (AuditEventListResponse)",
+    "description": "Mendapatkan daftar kejadian audit organisasi pengguna (VIEW_AUDIT).\nDisaring `organization_id` secara eksplisit — tidak hanya mengandalkan RLS,\nyang terlewati bila aplikasi terhubung sebagai pemilik tabel (T-12).\n\nQuery params:\n- page: Nomor halaman (default 1)\n- size: Jumlah item per halaman (default 20, max 100)\n- entity_type: Filter opsional berdasarkan jenis entitas (contoh: \"User\", \"Asset\")\n\nReturn: Daftar riwayat audit beserta pagination (AuditEventListResponse)",
     "operationId": "get_audit_events_api_v1_audit_events_get",
     "parameters": [
      {
@@ -8472,7 +8730,7 @@
   },
   "/api/v1/cron/attendance/alert-missing": {
    "post": {
-    "description": "Pemicu cron untuk memeriksa absensi check-in yang belum dilakukan pada hari berjalan, \nkemudian mengirim peringatan jika ditemukan.\n\nReturn: Detail peringatan (MissingCheckInResponse)",
+    "description": "Pemicu cron untuk memeriksa absensi check-in yang belum dilakukan pada hari berjalan,\nkemudian mengirim peringatan jika ditemukan.\n\nReturn: Detail peringatan (MissingCheckInResponse)",
     "operationId": "alert_missing_checkin_api_v1_cron_attendance_alert_missing_post",
     "responses": {
      "200": {
@@ -8865,7 +9123,7 @@
   },
   "/api/v1/employees": {
    "get": {
-    "description": "Mendapatkan daftar karyawan di organisasi pengguna. \nMendukung paginasi dan pencarian (berdasarkan nama atau nomor karyawan).\n\nQuery params:\n- page: Halaman (default 1)\n- size: Jumlah per halaman (default 20, max 100)\n- is_active: Filter karyawan aktif/nonaktif\n- q: Kata kunci pencarian nama / NIK\n\nReturn: Daftar karyawan (EmployeeListResponse)",
+    "description": "Mendapatkan daftar karyawan di organisasi pengguna.\nMendukung paginasi dan pencarian (berdasarkan nama atau nomor karyawan).\n\nQuery params:\n- page: Halaman (default 1)\n- size: Jumlah per halaman (default 20, max 100)\n- is_active: Filter karyawan aktif/nonaktif\n- q: Kata kunci pencarian nama / NIK\n\nReturn: Daftar karyawan (EmployeeListResponse)",
     "operationId": "get_employees_api_v1_employees_get",
     "parameters": [
      {
@@ -10340,7 +10598,7 @@
   },
   "/api/v1/hse/incidents": {
    "get": {
-    "description": "Mendapatkan daftar insiden untuk satu Surat Kerja (SK).\nMenampilkan insiden terbaru di urutan awal. \nSK asing/tak terlihat → 404.\n\nQuery params:\n- plan_id: UUID dari Surat Kerja\n\nReturn: Daftar insiden (list[IncidentResponse])",
+    "description": "Mendapatkan daftar insiden untuk satu Surat Kerja (SK).\nMenampilkan insiden terbaru di urutan awal.\nSK asing/tak terlihat → 404.\n\nQuery params:\n- plan_id: UUID dari Surat Kerja\n\nReturn: Daftar insiden (list[IncidentResponse])",
     "operationId": "list_incidents_api_v1_hse_incidents_get",
     "parameters": [
      {
@@ -14854,7 +15112,7 @@
   },
   "/ready": {
    "get": {
-    "description": "Endpoint kesiapan (readiness probe). \nMemastikan basis data benar-benar bisa dihubungi sebelum melayani request.",
+    "description": "Endpoint kesiapan (readiness probe).\nMemastikan basis data benar-benar bisa dihubungi sebelum melayani request.",
     "operationId": "readiness_check_ready_get",
     "responses": {
      "200": {

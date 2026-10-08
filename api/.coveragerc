@@ -1,0 +1,10 @@
+# Pengukuran cakupan uji API: `python -m coverage run -m pytest tests` lalu `python -m coverage report`.
+# SQLAlchemy async berpindah lewat greenlet; tanpa `greenlet` baris setelah `await` ke DB tercatat
+# "tidak teruji" (angka cakupan layanan jadi jauh lebih rendah dari kenyataan, temuan 2026-10-07).
+[run]
+source = app
+concurrency = thread,greenlet
+
+[report]
+skip_empty = true
+show_missing = true

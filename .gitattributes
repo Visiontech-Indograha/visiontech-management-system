@@ -1,2 +1,5 @@
 # Skrip shell dijalankan di Linux (server): selalu LF.
 *.sh text eol=lf
+# Hook git dijalankan bash (juga Git Bash di Windows): selalu LF.
+.githooks/* text eol=lf
+*.bat text eol=crlf

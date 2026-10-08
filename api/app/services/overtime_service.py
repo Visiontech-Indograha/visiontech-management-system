@@ -41,13 +41,13 @@ class OvertimeService:
         """
         Mengajukan lembur pada suatu SK yang sedang berjalan (IN_PROGRESS).
         Diakses oleh ketua tim atau anggota. Sesuai alur pada domain.js baris 607-614.
-        
+
         Args:
             user: Informasi pengguna.
             plan_id: ID SK pekerjaan.
             hours: Jumlah jam lembur (maksimal 12 jam).
             reason: Alasan pelaksanaan lembur.
-            
+
         Returns:
             Any: Data pengajuan lembur yang baru dibuat.
         """
@@ -101,13 +101,13 @@ class OvertimeService:
         """
         PM unit atau tim OPS memberikan persetujuan atau penolakan atas pengajuan lembur.
         Lembur harus dalam status 'PENDING_PM'. Sesuai alur pada domain.js baris 616-627.
-        
+
         Args:
             user: Pengguna yang melakukan review.
             overtime_id: ID pengajuan lembur.
             decision: Keputusan (APPROVED atau REJECTED).
             note: Catatan tambahan opsional.
-            
+
         Returns:
             Any: Data lembur setelah status diubah.
         """

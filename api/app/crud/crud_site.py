@@ -20,10 +20,10 @@ class CRUDSite(CRUDBase):
     async def viewer(self, user_id: UUID | str) -> Any:
         """
         Mengambil profil pekerja, unit asal, dan unit yang dipimpin (jika user adalah Project Manager).
-        
+
         Args:
             user_id (UUID | str): ID pengguna.
-            
+
         Returns:
             Any: Record (attendance_mode, employee_unit_id, pm_unit_id).
         """
@@ -45,13 +45,13 @@ class CRUDSite(CRUDBase):
                            unit_id: UUID | str | None) -> list[Any]:
         """
         Mengambil daftar site yang bisa dilihat sesuai dengan role dan unit yang diberikan.
-        
+
         Args:
             org_id (UUID | str): ID organisasi.
             all_sites (bool): Tampilkan semua site organisasi.
             office (bool): Tampilkan site kantor (unit_id IS NULL).
             unit_id (UUID | str | None): Filter site berdasarkan kepemilikan unit (proyek).
-            
+
         Returns:
             list[Any]: Daftar site beserta koordinat lat/lng.
         """
@@ -77,7 +77,7 @@ class CRUDSite(CRUDBase):
                      lat: float, lng: float, unit_id: UUID | str | None) -> Any:
         """
         Membuat site lokasi kerja baru.
-        
+
         Args:
             org_id (UUID | str): ID organisasi.
             name (str): Nama site.
@@ -86,11 +86,11 @@ class CRUDSite(CRUDBase):
             lat (float): Garis lintang (latitude).
             lng (float): Garis bujur (longitude).
             unit_id (UUID | str | None): ID unit yang ditugaskan (None jika site adalah kantor).
-            
+
         Returns:
             Any: Record site yang baru dibuat.
         """
-        # Menyisipkan record baru ke vms.site, memformat lat dan lng 
+        # Menyisipkan record baru ke vms.site, memformat lat dan lng
         # menggunakan fungsi ST_SetSRID dan ST_MakePoint milik PostGIS.
         return await self.fetchone(
             """
@@ -106,11 +106,11 @@ class CRUDSite(CRUDBase):
     async def get(self, site_id: UUID | str, org_id: UUID | str) -> Any:
         """
         Mengambil detail lengkap dari satu site.
-        
+
         Args:
             site_id (UUID | str): ID site yang diambil.
             org_id (UUID | str): ID organisasi pemilik site.
-            
+
         Returns:
             Any: Detail record site.
         """
@@ -128,7 +128,7 @@ class CRUDSite(CRUDBase):
     async def archive(self, site_id: UUID | str) -> None:
         """
         Melakukan soft-delete (arsip) terhadap site.
-        
+
         Args:
             site_id (UUID | str): ID site yang diarsipkan.
         """

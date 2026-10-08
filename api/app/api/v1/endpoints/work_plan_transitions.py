@@ -43,10 +43,10 @@ async def get_final_report_signatures(
     """
     Mengambil daftar tanda tangan laporan akhir (GET).
     Tanda tangan laporan akhir (ketua = ISSUER, pemeriksa = APPROVER), R-19.
-    
+
     Path Parameters:
     - plan_id (UUID): ID rencana kerja.
-    
+
     Returns:
     - list[FinalReportSignatureOut]: Daftar tanda tangan.
     """
@@ -66,10 +66,10 @@ async def get_final_report_pdf(
     Mengunduh PDF laporan akhir ber-QR (GET).
     P6-4, UAT langkah 10. Hanya setelah disetujui (409).
     Render HTML ke PDF berjalan di background threadpool.
-    
+
     Path Parameters:
     - plan_id (UUID): ID rencana kerja.
-    
+
     Returns:
     - Response: File PDF biner.
     """
@@ -92,10 +92,10 @@ async def get_final_report(
     Mengambil data laporan akhir SK (GET).
     Laporan akhir SK — dibaca PM sebelum menyetujui/mengembalikan, dan untuk mode presentasi.
     null bila belum pernah diajukan; SK tak terlihat → 404 (penjaga VIEW).
-    
+
     Path Parameters:
     - plan_id (UUID): ID dari SK terkait.
-    
+
     Returns:
     - FinalReportOut | None: Detail final report jika ada.
     """
@@ -110,10 +110,10 @@ async def get_final_report(
 def _response(row: Any) -> WorkPlanResponse:
     """
     Fungsi pembantu untuk memetakan row data SK dari database ke skema WorkPlanResponse.
-    
+
     Args:
         row (Any): Row data Surat Kerja.
-        
+
     Returns:
         WorkPlanResponse: Respons model Surat Kerja.
     """
@@ -130,13 +130,13 @@ async def publish_plan(
     """
     PM menerbitkan SK (POST).
     Status SK berubah menjadi PUBLISHED.
-    
+
     Path Parameters:
     - plan_id (UUID): ID SK.
-    
+
     Request Body:
     - data (TransitionRequest): Versi baris dan data transisi lainnya.
-    
+
     Returns:
     - WorkPlanResponse: Rencana kerja terbaru.
     """
@@ -156,13 +156,13 @@ async def accept_plan(
     """
     Ketua menerima SK yang diterbitkan PM (POST).
     Status SK berubah menjadi ACCEPTED.
-    
+
     Path Parameters:
     - plan_id (UUID): ID rencana kerja.
-    
+
     Request Body:
     - data (TransitionRequest): Versi baris (row version).
-    
+
     Returns:
     - WorkPlanResponse: Rencana kerja terbaru.
     """
@@ -183,13 +183,13 @@ async def appeal_plan(
     Ketua mengajukan banding atas SK yang terbit (POST).
     (domain.js APPEAL, V-20).
     Status SK berubah menjadi APPEALED.
-    
+
     Path Parameters:
     - plan_id (UUID): ID SK.
-    
+
     Request Body:
     - data (TransitionRequest): Data banding beserta alasannya.
-    
+
     Returns:
     - WorkPlanResponse: Rencana kerja dengan status banding.
     """
@@ -211,13 +211,13 @@ async def revise_plan(
     PM membuka revisi draf dari SK yang dibanding (POST).
     (domain.js REVISE, V-20).
     Status SK kembali menjadi DRAFT_REV.
-    
+
     Path Parameters:
     - plan_id (UUID): ID dari SK yang akan direvisi.
-    
+
     Request Body:
     - data (TransitionRequest): Data permintaan transisi (row version).
-    
+
     Returns:
     - WorkPlanResponse: Rencana kerja dengan status DRAFT_REV.
     """
@@ -238,13 +238,13 @@ async def cancel_plan(
     Membatalkan rencana kerja (POST).
     (domain.js CANCEL_PLAN, V-21).
     Status SK menjadi CANCELLED.
-    
+
     Path Parameters:
     - plan_id (UUID): ID dari SK.
-    
+
     Request Body:
     - data (TransitionRequest): Data dan alasan pembatalan.
-    
+
     Returns:
     - WorkPlanResponse: Rencana kerja yang dibatalkan.
     """
@@ -264,13 +264,13 @@ async def archive_plan(
     """
     Mengarsipkan (menghapus secara logis) draf SK (POST).
     (domain.js DELETE_PLAN, V-21): arsip draf — soft delete, riwayat tetap ada.
-    
+
     Path Parameters:
     - plan_id (UUID): ID SK.
-    
+
     Request Body:
     - data (TransitionRequest): Alasan pengarsipan.
-    
+
     Returns:
     - WorkPlanResponse: Rencana kerja yang diarsipkan.
     """
@@ -290,13 +290,13 @@ async def restore_plan(
     """
     Memulihkan draf SK terarsip (POST).
     (domain.js RESTORE_PLAN, V-21).
-    
+
     Path Parameters:
     - plan_id (UUID): ID dari SK yang akan dipulihkan.
-    
+
     Request Body:
     - data (TransitionRequest): Data baris transisi.
-    
+
     Returns:
     - WorkPlanResponse: Rencana kerja yang berhasil dipulihkan.
     """
@@ -315,13 +315,13 @@ async def start_plan(
     """
     Ketua memulai pekerjaan berdasarkan SK yang telah diterima (POST).
     Status SK berubah menjadi IN_PROGRESS.
-    
+
     Path Parameters:
     - plan_id (UUID): ID SK.
-    
+
     Request Body:
     - data (TransitionRequest): Versi data row.
-    
+
     Returns:
     - WorkPlanResponse: Rencana kerja dengan status berjalan.
     """
@@ -344,13 +344,13 @@ async def request_completion(
     """
     Ketua menyerahkan laporan akhir (POST).
     (domain.js REQUEST_COMPLETE, V-26): status menjadi COMPLETION_REVIEW.
-    
+
     Path Parameters:
     - plan_id (UUID): ID dari rencana kerja.
-    
+
     Request Body:
     - data (CompletionRequest): Isi laporan akhir, kendala, dan file bukti (evidence).
-    
+
     Returns:
     - WorkPlanResponse: Rencana kerja yang sedang di-review.
     """
@@ -373,13 +373,13 @@ async def approve_completion(
     """
     PM unit/OPS menutup SK setelah menyetujui laporan akhir (POST).
     (domain.js APPROVE_COMPLETE, V-26): status menjadi COMPLETED.
-    
+
     Path Parameters:
     - plan_id (UUID): ID dari SK.
-    
+
     Request Body:
     - data (TransitionRequest): Data persetujuan.
-    
+
     Returns:
     - WorkPlanResponse: SK yang berstatus COMPLETED.
     """
@@ -399,13 +399,13 @@ async def return_completion(
     """
     PM unit/OPS mengembalikan laporan akhir ke ketua (POST).
     (domain.js RETURN_COMPLETE, V-26): status menjadi IN_PROGRESS kembali.
-    
+
     Path Parameters:
     - plan_id (UUID): ID SK terkait.
-    
+
     Request Body:
     - data (TransitionRequest): Data alasan pengembalian laporan.
-    
+
     Returns:
     - WorkPlanResponse: Rencana kerja dikembalikan ke berjalan.
     """

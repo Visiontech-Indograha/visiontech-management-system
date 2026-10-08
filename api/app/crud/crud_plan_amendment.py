@@ -19,14 +19,14 @@ class CRUDPlanAmendment(CRUDBase):
 
     async def list_changes(self, plan_id: UUID | str) -> list[Any]:
         """Mengambil daftar usulan perubahan (amendments) pada SK.
-        
+
         Args:
             plan_id (UUID | str): ID Work Plan.
-            
+
         Returns:
             list[Any]: Daftar baris riwayat perubahan pada SK tersebut.
         """
-        # Melakukan JOIN pada tabel vms.plan_change dengan vms.employee untuk 
+        # Melakukan JOIN pada tabel vms.plan_change dengan vms.employee untuk
         # mendapatkan nama lengkap perequest (requested_by) dan pemutus (decided_by).
         return list(await self.fetchall(
             """
@@ -45,7 +45,7 @@ class CRUDPlanAmendment(CRUDBase):
     async def update_header(self, plan_id: UUID | str, *, title: str, description: str, category: str,
                             site_id: str, location_text: str, period_start: date, period_end: date) -> None:
         """Memperbarui informasi header/dasar dari SK.
-        
+
         Args:
             plan_id (UUID | str): ID Work Plan.
             title (str): Judul baru.
@@ -55,7 +55,7 @@ class CRUDPlanAmendment(CRUDBase):
             location_text (str): Teks lokasi baru.
             period_start (date): Tanggal mulai baru.
             period_end (date): Tanggal selesai baru.
-            
+
         Returns:
             None
         """
@@ -75,10 +75,10 @@ class CRUDPlanAmendment(CRUDBase):
 
     async def days_with_report_state(self, plan_id: UUID | str) -> list[Any]:
         """Hari SK beserta status laporannya — hari yang laporannya sudah dikirim/disetujui terkunci.
-        
+
         Args:
             plan_id (UUID | str): ID Work Plan.
-            
+
         Returns:
             list[Any]: Daftar hari kerja beserta status daily report (jika ada).
         """
@@ -97,7 +97,7 @@ class CRUDPlanAmendment(CRUDBase):
 
     async def delete_day(self, day_id: UUID | str) -> None:
         """Menghapus hari kerja dari Work Plan (SK).
-        
+
         Args:
             day_id (UUID | str): ID dari hari kerja (work_plan_day).
         """
@@ -106,26 +106,26 @@ class CRUDPlanAmendment(CRUDBase):
 
     async def clear_tasks(self, day_id: UUID | str, title: str) -> None:
         """Menghapus semua tugas (tasks) pada suatu hari kerja dan memperbarui judul hari tersebut.
-        
+
         Args:
             day_id (UUID | str): ID dari hari kerja.
             title (str): Judul baru untuk hari kerja.
         """
-        # Menghapus semua tugas terkait terlebih dahulu (DELETE) 
+        # Menghapus semua tugas terkait terlebih dahulu (DELETE)
         # kemudian meng-update judul hari (UPDATE) pada vms.work_plan_day.
         await self.execute("DELETE FROM vms.work_plan_task WHERE work_plan_day_id = :day", {"day": day_id})
         await self.execute("UPDATE vms.work_plan_day SET title = :title WHERE id = :day", {"day": day_id, "title": title})
 
     async def open_members(self, plan_id: UUID | str) -> list[Any]:
         """Mengambil anggota Work Plan yang aktif (valid_period belum tertutup).
-        
+
         Args:
             plan_id (UUID | str): ID Work Plan.
-            
+
         Returns:
             list[Any]: Daftar anggota dengan peran masing-masing.
         """
-        # Fungsi upper_inf() digunakan pada PostgreSQL untuk mengecek 
+        # Fungsi upper_inf() digunakan pada PostgreSQL untuk mengecek
         # apakah range batas atas (upper bound) pada kolom valid_period bernilai tak terhingga (infinity).
         # Mengembalikan anggota yang masih aktif (belum dikeluarkan).
         return list(await self.fetchall(
@@ -138,7 +138,7 @@ class CRUDPlanAmendment(CRUDBase):
 
     async def close_member(self, plan_id: UUID | str, employee_id: str, on: date) -> None:
         """Anggota dikeluarkan lewat adendum: baris lama ditutup (riwayat tetap), bukan dihapus.
-        
+
         Args:
             plan_id (UUID | str): ID Work Plan.
             employee_id (str): ID Karyawan.
@@ -159,10 +159,10 @@ class CRUDPlanAmendment(CRUDBase):
 
     async def allocated_asset_ids(self, plan_id: UUID | str) -> set[str]:
         """Mendapatkan daftar ID aset yang sedang dialokasikan dan belum dikembalikan.
-        
+
         Args:
             plan_id (UUID | str): ID Work Plan.
-            
+
         Returns:
             set[str]: Himpunan ID aset.
         """
@@ -176,7 +176,7 @@ class CRUDPlanAmendment(CRUDBase):
 
     async def supersede_effective(self, plan_id: UUID | str, keep_document_id: UUID | str | None) -> None:
         """Versi SK yang lama menjadi Tidak berlaku (adendum diterima / pekerjaan selesai).
-        
+
         Args:
             plan_id (UUID | str): ID Work Plan.
             keep_document_id (UUID | str | None): ID dokumen SK yang ingin dipertahankan status EFFECTIVE-nya, jika ada.
@@ -195,7 +195,7 @@ class CRUDPlanAmendment(CRUDBase):
 
     async def set_revision(self, plan_id: UUID | str, revision: int) -> None:
         """Memperbarui nomor revisi dari Work Plan (SK) beserta row_version.
-        
+
         Args:
             plan_id (UUID | str): ID Work Plan.
             revision (int): Nomor revisi terbaru.
@@ -206,10 +206,10 @@ class CRUDPlanAmendment(CRUDBase):
 
     async def unreturned_assets(self, plan_id: UUID | str) -> list[str]:
         """Aset SK yang belum diajukan pengembaliannya (masih dipesan/dipakai).
-        
+
         Args:
             plan_id (UUID | str): ID Work Plan.
-            
+
         Returns:
             list[str]: Daftar nama-nama aset yang belum dikembalikan.
         """

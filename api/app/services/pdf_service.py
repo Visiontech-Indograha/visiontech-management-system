@@ -50,11 +50,11 @@ def render_plan_document_html(document: Any, signatures: list[dict[str, Any]]) -
     """
     Menghasilkan HTML dari sebuah dokumen SK yang sudah ada di sistem.
     Digunakan untuk mencetak PDF yang menjadi sumber kebenaran (source of truth).
-    
+
     Args:
         document: Baris data dokumen SK dari database.
         signatures: Daftar tanda tangan yang relevan dengan dokumen ini.
-        
+
     Returns:
         str: String HTML dokumen.
     """
@@ -65,7 +65,7 @@ def render_plan_document_html(document: Any, signatures: list[dict[str, Any]]) -
         issued_at=wib_text(document.issued_at), plan=snapshot.get("plan", {}),
         team=snapshot.get("team", []), days=snapshot.get("days", []), assets=snapshot.get("assets", []),
         attachments=snapshot.get("attachments", []), signatures=signatures, categories=CATEGORY_LABEL,
-        status_label=DOCUMENT_STATUS_LABEL.get(str(status), None) if status else None,
+        status_label=DOCUMENT_STATUS_LABEL.get(str(status)) if status else None,
         sha256=bytes(document.snapshot_sha256).hex(), preview=False)
 
 
@@ -104,13 +104,13 @@ def render_bast_html(record: Any) -> str:
 def html_to_pdf(html: str) -> bytes:
     """
     Mengubah konten HTML menjadi file biner PDF menggunakan pustaka WeasyPrint.
-    
+
     Args:
         html: Teks HTML mentah.
-        
+
     Returns:
         bytes: Data biner file PDF.
-        
+
     Raises:
         AppError: Jika dependensi sistem WeasyPrint tidak ditemukan.
     """

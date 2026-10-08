@@ -151,8 +151,17 @@ export function AttendancePage() {
                     {Math.round(a.distance_m)} m{a.is_late ? " · terlambat" : ""}
                     {a.is_early_leave ? " · pulang cepat" : ""}
                     {a.offline ? " · absen luring" : ""}
+                    {a.city_category === "LUAR_KOTA" ? " · luar kota" : " · dalam kota"}
                   </dd>
                 </div>
+                {a.check_out_distance_m != null && (
+                  <div>
+                    <dt className="inline text-mist">Jarak pulang: </dt>
+                    <dd className="inline">
+                      {Math.round(a.check_out_distance_m)} m{a.check_out_outside ? " · Pulang di luar radius" : ""}
+                    </dd>
+                  </div>
+                )}
                 {(a.face_result || a.check_out_face_result) && (
                   <div>
                     <dt className="inline text-mist">Wajah: </dt>
@@ -304,6 +313,19 @@ function ReviewDialog({ item, onClose }: { item: Attendance; onClose: () => void
             <p>
               Absen pulang {formatDateTime(item.check_out_requested_at)} berlaku bila absensi ini disetujui.
             </p>
+          )}
+        </div>
+      )}
+      {item.check_out_outside && (
+        <div role="status" className="mb-3 rounded-control border border-warning-border bg-warning-bg px-3 py-2 text-sm text-warning">
+          <p className="font-medium">
+            Pulang di luar radius ({Math.round(item.check_out_distance_m ?? 0)} m dari lokasi)
+          </p>
+          {item.check_out_explanation && <p>Penjelasan: {item.check_out_explanation}</p>}
+          {item.check_out_selfie_file_id && (
+            <div className="mt-2">
+              <FilePreview fileId={item.check_out_selfie_file_id} fileName="Swafoto pulang" />
+            </div>
           )}
         </div>
       )}

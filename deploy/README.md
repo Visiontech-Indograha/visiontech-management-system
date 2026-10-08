@@ -79,3 +79,15 @@ ke `vms_api` (`/srv/rilis`, `APP_RELEASE_DIR`). `compose.yml` dan `api.env` tida
 secara otomatis. Jalankan dari komputer pemilik: `ssh ageng@192.168.88.160 "bash -s" < deploy\pasang-rilis-apk.sh`.
 APK + `latest.json` dikirim dari laptop dengan `scripts\rilis-apk.bat kirim` (keystore tidak pernah ke server).
 Mematikan fitur: hapus `compose.override.yml` lalu `docker compose up -d --force-recreate api` (API menjawab UP_TO_DATE).
+
+## Peran runtime API `vms_api` (RLS, P9-2)
+Sebelum 2026-10-08 API tersambung sebagai `vms_app` = superuser + pemilik tabel, sehingga RLS terlewati. Migrasi
+`0024_runtime_role` (jalan otomatis saat autodeploy, tanpa perubahan perilaku) membuat peran `vms_api`. Setelah rilis
+itu ter-deploy, pemilik menjalankan dari komputernya (bash UCRT64, di folder repo):
+`ssh ageng@192.168.88.160 "bash -s" < deploy/pakai-peran-runtime.sh`. Skrip memeriksa peran & revisi alembic,
+menyalin `api.env` ke `api.env.sebelum-vms_api.<waktu>`, menyetel sandi acak `vms_api` (tidak pernah dicetak),
+menulis `DATABASE_URL` = `vms_api` dan `MIGRATION_DATABASE_URL` = URL lama (alembic & CLI tetap pemilik), membuat ulang
+`api`, lalu memastikan `/ready` 200 dan API tersambung sebagai `vms_api` — gagal → rollback otomatis.
+Rollback manual: `ssh ageng@192.168.88.160 "bash -s -- kembalikan" < deploy/pakai-peran-runtime.sh`.
+Tabel baru di migrasi berikutnya wajib `GRANT` ke `vms_api` dan fungsi baru wajib `SECURITY DEFINER SET search_path`
+(dijaga `api/tests/test_rls_app_role.py`).

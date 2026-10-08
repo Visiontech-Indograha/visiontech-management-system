@@ -3601,6 +3601,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/work-plans/{plan_id}/revisions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Revisions
+         * @description Riwayat revisi rencana kerja, terbaru dulu (GET); siapa pun yang berhak melihat rencana kerja.
+         *
+         *     Path Parameters:
+         *     - plan_id (UUID): ID rencana kerja.
+         *
+         *     Returns:
+         *     - list[PlanRevisionOut]: revisi beserta diff sebelum/sesudah.
+         */
+        get: operations["list_revisions_api_v1_work_plans__plan_id__revisions_get"];
+        put?: never;
+        /**
+         * Revise Plan
+         * @description PM unit/OPS merevisi rencana kerja berstatus Terbit, Revisi diminta, Diterima, atau Berjalan (POST).
+         *     Versi dokumen baru ditandatangani PM; ketua dan anggota mendapat notifikasi beserta diff.
+         *
+         *     Path Parameters:
+         *     - plan_id (UUID): ID rencana kerja.
+         *
+         *     Request Body:
+         *     - data (PlanRevisionIn): isi rencana kerja yang baru + `reason` + `change_id` (permintaan ketua, opsional).
+         *
+         *     Returns:
+         *     - PlanDetailOut: detail rencana kerja pasca revisi.
+         */
+        post: operations["revise_plan_api_v1_work_plans__plan_id__revisions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/app/android/update": {
         parameters: {
             query?: never;
@@ -5902,6 +5942,92 @@ export interface components {
             lng: number;
             /** Radius M */
             radius_m: number | null;
+        };
+        /**
+         * PlanRevisionIn
+         * @description Isi rencana kerja yang baru ditambah alasan revisi; `change_id` = permintaan ketua yang diselesaikan.
+         */
+        PlanRevisionIn: {
+            /** Title */
+            title: string;
+            /** Description */
+            description: string;
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "INSTALASI" | "PEMELIHARAAN" | "PERBAIKAN" | "SURVEI" | "LAINNYA";
+            /** Site Id */
+            site_id?: string | null;
+            new_site?: components["schemas"]["NewSiteInput"] | null;
+            /**
+             * Period Start
+             * Format: date
+             */
+            period_start: string;
+            /**
+             * Period End
+             * Format: date
+             */
+            period_end: string;
+            /** Days */
+            days: components["schemas"]["DraftDayInput"][];
+            /**
+             * Leader Employee Id
+             * Format: uuid
+             */
+            leader_employee_id: string;
+            /**
+             * Member Employee Ids
+             * @default []
+             */
+            member_employee_ids: string[];
+            /**
+             * Is Out Of Town
+             * @default false
+             */
+            is_out_of_town: boolean;
+            /**
+             * Tool Ids
+             * @default []
+             */
+            tool_ids: string[];
+            /** Vehicle Id */
+            vehicle_id?: string | null;
+            /** Driver Employee Id */
+            driver_employee_id?: string | null;
+            /** Row Version */
+            row_version?: number | null;
+            /** Reason */
+            reason: string;
+            /** Change Id */
+            change_id?: string | null;
+        };
+        /**
+         * PlanRevisionOut
+         * @description Satu baris riwayat revisi: siapa, kapan, mengapa, dan apa yang berubah.
+         */
+        PlanRevisionOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Revision */
+            revision: number;
+            /** Revised By Name */
+            revised_by_name?: string | null;
+            /** Reason */
+            reason: string;
+            /** Diff */
+            diff: {
+                [key: string]: unknown;
+            }[];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
         };
         /**
          * PlanTaskCreate
@@ -11202,6 +11328,72 @@ export interface operations {
                 };
                 content: {
                     "text/html": string;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_revisions_api_v1_work_plans__plan_id__revisions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanRevisionOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revise_plan_api_v1_work_plans__plan_id__revisions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlanRevisionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanDetailOut"];
                 };
             };
             /** @description Validation Error */

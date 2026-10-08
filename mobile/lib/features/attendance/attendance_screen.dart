@@ -316,6 +316,49 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     try {
       final pos = await _position();
       if (pos == null) return;
+      // T7: pulang di luar radius lokasi absen masuk → konfirmasi, penjelasan, dan swafoto (tidak masuk galeri).
+      // Jarak resmi dihitung ulang server; ini hanya untuk meminta bukti lebih dulu.
+      final site = _sites.where((s) => s['id'] == _today?['site_id']).firstOrNull;
+      var outside = false;
+      var distance = 0.0;
+      num radius = 50;
+      if (site != null && site['location'] is Map) {
+        final loc = site['location'] as Map;
+        distance = Geolocator.distanceBetween(
+          pos.latitude,
+          pos.longitude,
+          (loc['lat'] as num).toDouble(),
+          (loc['lng'] as num).toDouble(),
+        );
+        radius = (site['radius_m'] as num?) ?? 50;
+        outside = distance > radius;
+      }
+      String? explanation;
+      File? selfieFile;
+      if (outside && _today?['status'] != 'OFFLINE') {
+        if (!mounted) return;
+        explanation = await _askExplanation(
+          title: 'Pulang di luar zona',
+          info:
+              'Anda ${distance.round()} m dari ${site!['name']} (radius ${radius.round()} m). '
+              'Jelaskan mengapa pulang di luar zona.',
+        );
+        if (explanation == null) return;
+        if (!mounted) return;
+        final (file, err) = await captureWatermarkedPhoto(
+          context: context,
+          label: 'Swafoto pulang di luar radius',
+          kind: LocalFileKind.selfie,
+          hint:
+              'Anda ${distance.round()} m dari ${site['name']}. Swafoto wajib di luar radius.',
+          preferFrontCamera: true,
+        );
+        if (file == null) {
+          if (err != null) _snack(err);
+          return;
+        }
+        selfieFile = file;
+      }
       String? faceProbeId;
       // Pulang: hanya pengenalan wajah, TANPA foto bukti.
       if (_faceEnrolled) {
@@ -344,13 +387,19 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
         );
       } else {
         try {
+          final selfieId = selfieFile == null
+              ? null
+              : await ref.read(syncEngineProvider).api.uploadFile(selfieFile);
           await ref
               .read(syncEngineProvider)
               .api
               .checkOut(
                 lat: pos.latitude,
                 lng: pos.longitude,
+                accuracyM: pos.accuracy,
                 faceProbeId: faceProbeId,
+                selfieFileId: selfieId,
+                explanation: explanation,
               );
           _snack('Absen pulang tercatat.');
         } on DioException catch (e) {
@@ -601,7 +650,8 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                                     Text(
                                       today == null
                                           ? 'Belum absen masuk'
-                                          : '${today['site_label']}',
+                                          : '${today['site_label']} · '
+                                                '${today['city_category'] == 'LUAR_KOTA' ? 'Luar kota' : 'Dalam kota'}',
                                       style: VmsTextStyles.bodySm.copyWith(
                                         color: Colors.white.withValues(
                                           alpha: 0.75,

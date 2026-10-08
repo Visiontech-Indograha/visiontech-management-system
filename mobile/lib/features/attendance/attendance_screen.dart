@@ -666,7 +666,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                                 key: Key('belum-ada-lokasi-sk'),
                                 icon: Icons.location_off_rounded,
                                 text:
-                                    'Belum ada lokasi kerja untuk akun Anda (lokasi SK maupun kantor). '
+                                    'Belum ada lokasi kerja untuk akun Anda (lokasi rencana kerja maupun kantor). '
                                     'Hubungi Project Manager atau admin untuk menambahkan lokasi kerja.',
                               ),
                               const SizedBox(height: 12),
@@ -694,8 +694,8 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                                   key: const Key('peringatan-bukan-lokasi-sk'),
                                   icon: Icons.warning_amber_rounded,
                                   text:
-                                      'Anda sedang bertugas di SK dengan lokasi '
-                                      '${_siteName(_runningSites.first)}. Lokasi yang dipilih bukan lokasi SK; '
+                                      'Anda sedang bertugas di rencana kerja dengan lokasi '
+                                      '${_siteName(_runningSites.first)}. Lokasi yang dipilih bukan lokasi rencana kerja; '
                                       'absen tetap bisa dikirim, tetapi pastikan memang bekerja di sini hari ini.',
                                 ),
                                 const SizedBox(height: 14),

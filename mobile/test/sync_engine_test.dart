@@ -226,7 +226,7 @@ void main() {
       final summary = await engine.syncAll();
 
       expect(summary.pushErrors, isEmpty);
-      expect(summary.pullErrors, ['SK: DB mati']);
+      expect(summary.pullErrors, ['Rencana Kerja: DB mati']);
     });
 
     test('luring total: dua-duanya melapor tidak ada koneksi', () async {

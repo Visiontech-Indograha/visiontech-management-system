@@ -244,12 +244,37 @@ CREATE TRIGGER attendance_geofence BEFORE INSERT ON attendance
   FOR EACH ROW EXECUTE FUNCTION tg_attendance_geofence();
 
 CREATE OR REPLACE FUNCTION tg_attendance_checkout() RETURNS trigger
-LANGUAGE plpgsql AS $$
-DECLARE v_org organization%ROWTYPE;
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = vms, public AS $$
+DECLARE
+  v_org  organization%ROWTYPE;
+  v_site site%ROWTYPE;
 BEGIN
   IF NEW.check_out_at IS NOT NULL AND OLD.check_out_at IS NULL THEN
     SELECT * INTO v_org FROM organization WHERE id = NEW.organization_id;
     NEW.is_early_leave := (NEW.check_out_at AT TIME ZONE v_org.timezone)::time < v_org.shift_end;
+    IF NEW.check_out_location IS NOT NULL THEN
+      SELECT * INTO v_site FROM site WHERE id = NEW.site_id AND organization_id = NEW.organization_id;
+      IF v_site.id IS NOT NULL THEN
+        -- Jarak dihitung ulang dari koordinat; nilai kiriman perangkat diabaikan.
+        NEW.check_out_distance_m := round(ST_Distance(NEW.check_out_location, v_site.location)::numeric, 1);
+        NEW.check_out_outside := NEW.check_out_distance_m > NEW.radius_m;
+      END IF;
+      IF NEW.check_out_outside THEN
+        IF COALESCE(current_setting('app.relax_checkout', true), '') <> 'on' AND NEW.source IN ('MOBILE','WEB') THEN
+          IF NEW.check_out_selfie_file_id IS NULL THEN
+            RAISE EXCEPTION 'Pulang di luar radius toleransi (% m > % m): swafoto wajib dilampirkan.',
+              NEW.check_out_distance_m, NEW.radius_m USING ERRCODE = '23514';
+          END IF;
+          IF NEW.check_out_explanation IS NULL OR btrim(NEW.check_out_explanation) = '' THEN
+            RAISE EXCEPTION 'Pulang di luar radius toleransi (% m > % m): isi penjelasan.',
+              NEW.check_out_distance_m, NEW.radius_m USING ERRCODE = '23514';
+          END IF;
+        END IF;
+        IF NEW.status = 'AUTO_VALID' THEN
+          NEW.status := 'NEEDS_REVIEW';
+        END IF;
+      END IF;
+    END IF;
   END IF;
   RETURN NEW;
 END $$;
@@ -516,3 +541,18 @@ BEGIN
                    to_char(v_start, 'YYYY"m"MM'), v_start, v_end);
   END LOOP;
 END $$;
+
+-- Kategori dalam/luar kota dihitung saat dibaca (Alembic 0028_attendance_checkout_city).
+CREATE OR REPLACE FUNCTION attendance_city_category(p_employee uuid, p_date date) RETURNS text
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = vms, public AS $$
+  SELECT CASE WHEN EXISTS (
+    SELECT 1
+    FROM work_plan wp
+    JOIN work_plan_member m ON m.work_plan_id = wp.id AND m.employee_id = p_employee
+    WHERE wp.organization_id = current_org_id()
+      AND wp.is_out_of_town
+      AND wp.status IN ('ACCEPTED','IN_PROGRESS','COMPLETION_REVIEW','COMPLETED')
+      AND wp.period @> p_date
+      AND m.valid_period @> p_date
+  ) THEN 'LUAR_KOTA' ELSE 'DALAM_KOTA' END
+$$;

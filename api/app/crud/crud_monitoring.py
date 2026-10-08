@@ -122,7 +122,8 @@ class CRUDMonitoring(CRUDBase):
             """
             SELECT CAST(a.id AS text) AS id, CAST(e.id AS text) AS employee_id, e.full_name, a.work_date,
                    a.site_label, a.check_in_at, a.check_out_at, CAST(a.status AS text) AS status,
-                   a.is_late, a.is_early_leave
+                   a.is_late, a.is_early_leave,
+                   vms.attendance_city_category(a.employee_id, a.work_date) AS city_category
             FROM vms.attendance a
             JOIN vms.employee e ON e.id = a.employee_id
             WHERE a.organization_id = :org AND a.work_date >= :starts AND a.work_date < :ends

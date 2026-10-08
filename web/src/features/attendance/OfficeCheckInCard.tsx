@@ -198,25 +198,47 @@ function OfficeCheckInForm({ employeeId }: { employeeId: string }) {
     },
   });
 
+  // T7: di luar radius, server mewajibkan swafoto + penjelasan saat pulang. Dicoba dulu tanpa; bila ditolak karena itu,
+  // minta penjelasan lalu swafoto dan kirim ulang dengan lokasi yang sama.
+  const [outPos, setOutPos] = useState<BrowserPosition | null>(null);
+  const [selfieOut, setSelfieOut] = useState(false);
   const checkOut = useMutation({
-    mutationFn: async () => {
-      const pos = await currentPosition();
+    mutationFn: async (vars?: { selfieFileId: string }) => {
+      const pos = outPos && vars ? outPos : await currentPosition();
+      setOutPos(pos);
       return (
         await api.post<Attendance>("/attendance/check-out", {
           channel: "WEB",
           location: { lat: pos.lat, lng: pos.lng },
           location_origin: "GPS",
+          accuracy_m: pos.accuracy,
+          explanation: explanation.trim() || null,
+          selfie_file_id: vars?.selfieFileId ?? null,
           face_probe_id: probeRef.current,
         })
       ).data;
     },
-    onSuccess: async () => {
+    onSuccess: async (a) => {
       probeRef.current = null;
+      setOutPos(null);
       setError(null);
-      toast.success("Absen pulang tercatat.");
+      setExplanation("");
+      setAskExplanation(false);
+      toast.success(a.check_out_outside ? "Absen pulang tercatat di luar radius — menunggu pemeriksaan." : "Absen pulang tercatat.");
       await refresh();
     },
-    onError: (err) => setError(failMessage(err)),
+    onError: (err) => {
+      if (err instanceof ApiError && /swafoto wajib/i.test(err.message)) {
+        setAskExplanation(true);
+        if (!explanation.trim()) {
+          setError(`${err.message} Isi penjelasan, lalu tekan Absen pulang lagi untuk mengambil swafoto.`);
+          return;
+        }
+        setSelfieOut(true);
+        return;
+      }
+      setError(failMessage(err));
+    },
   });
 
   const busy = checkIn.isPending || checkOut.isPending;
@@ -319,7 +341,7 @@ function OfficeCheckInForm({ employeeId }: { employeeId: string }) {
               Absen masuk menunggu pemeriksaan. Absen pulang bisa dilakukan setelah absen masuk disetujui.
             </p>
           ) : !rec.check_out_at ? (
-            <Button className="h-11 w-full md:w-auto" disabled={busy} onClick={() => (needFace ? setFaceFor("out") : checkOut.mutate())}>
+            <Button className="h-11 w-full md:w-auto" disabled={busy} onClick={() => (needFace ? setFaceFor("out") : checkOut.mutate(undefined))}>
               {checkOut.isPending ? "Membaca lokasi…" : "Absen pulang"}
             </Button>
           ) : (
@@ -336,7 +358,19 @@ function OfficeCheckInForm({ employeeId }: { employeeId: string }) {
             probeRef.current = probeId;
             setFaceFor(null);
             if (which === "in") checkIn.mutate(undefined);
-            else checkOut.mutate();
+            else checkOut.mutate(undefined);
+          }}
+        />
+      )}
+      {selfieOut && outPos && (
+        <SelfieCaptureDialog
+          info="Anda berada di luar radius lokasi. Swafoto wajib saat pulang di luar zona."
+          position={outPos}
+          siteName="lokasi kerja"
+          onCancel={() => setSelfieOut(false)}
+          onCaptured={(fileId) => {
+            setSelfieOut(false);
+            checkOut.mutate({ selfieFileId: fileId });
           }}
         />
       )}

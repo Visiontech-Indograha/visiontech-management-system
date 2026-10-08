@@ -22,7 +22,6 @@ SESSION_CALLS = {"execute", "scalar", "scalars", "get", "add", "flush", "commit"
 
 # berkas → alasan masih ada; hanya boleh menyusut (dikosongkan oleh R-25b per modul).
 LEGACY: dict[str, str] = {
-    "assets.py": "R-25b",
     "hse.py": "R-25b",
     "work_plans.py": "R-25b",
 }

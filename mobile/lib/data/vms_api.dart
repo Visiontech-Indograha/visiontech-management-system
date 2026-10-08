@@ -144,6 +144,10 @@ class VmsApi {
       _dio.post('$_p/work-plans/$planId/weekly/$week/submit');
 
   // --- Adendum saat berjalan, aset, laporan akhir (alur SK v2 PR3) ----------
+  /// Riwayat revisi rencana kerja oleh PM (T6), terbaru dulu.
+  Future<List<Map<String, dynamic>>> planRevisions(String planId) async =>
+      _list((await _dio.get('$_p/work-plans/$planId/revisions')).data);
+
   Future<List<Map<String, dynamic>>> planChanges(String planId) async =>
       _list((await _dio.get('$_p/work-plans/$planId/changes')).data);
 

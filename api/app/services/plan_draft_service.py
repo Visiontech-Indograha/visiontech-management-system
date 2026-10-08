@@ -26,11 +26,19 @@ from app.core.security import CurrentUser
 from app.crud.crud_asset_reservation import CRUDAssetReservation
 from app.crud.crud_plan_draft import CRUDPlanDraft
 from app.schemas.plan_draft import PlanDraftRequest
+from app.services.access_service import ensure_same_org
 from app.services.work_type_service import WorkTypeService
 
 CATEGORIES = {"INSTALASI": "Instalasi", "PEMELIHARAAN": "Pemeliharaan", "PERBAIKAN": "Perbaikan",
               "SURVEI": "Survei", "LAINNYA": "Lainnya"}
 MAX_TASKS_PER_DAY = 30
+
+
+def _day_roster(data: PlanDraftRequest, day: Any) -> list[UUID] | None:
+    """Daftar orang yang bertugas pada satu hari: None = seluruh tim; bila ada daftar khusus, ketua selalu ikut."""
+    if day.member_employee_ids is None:
+        return None
+    return [data.leader_employee_id, *[m for m in day.member_employee_ids if m != data.leader_employee_id]]
 
 
 def _invalid(message: str) -> AppError:
@@ -163,8 +171,11 @@ class PlanDraftService:
         expected = {data.period_start + timedelta(days=i)
                     for i in range((data.period_end - data.period_start).days + 1)}
         given = [d.work_date for d in data.days]
-        if len(given) != len(set(given)) or set(given) != expected:
-            raise _invalid("Setiap tanggal dalam rentang rencana kerja wajib punya detail pekerjaan.")
+        # Tanggal yang tidak ada di daftar = hari libur (dikeluarkan dari rencana, 2026-10-09).
+        if not given or len(given) != len(set(given)) or not set(given) <= expected:
+            raise _invalid("Hari kerja harus berada dalam rentang rencana kerja dan tidak boleh kembar.")
+        if min(given) != data.period_start or max(given) != data.period_end:
+            raise _invalid("Tanggal mulai dan selesai harus hari kerja (bukan hari libur).")
         files: list[UUID] = []
         for day in data.days:
             if not 1 <= len(day.tasks) <= MAX_TASKS_PER_DAY:
@@ -178,6 +189,13 @@ class PlanDraftService:
 
         leader = str(data.leader_employee_id)
         members = [str(m) for m in data.member_employee_ids]
+        team = {leader, *members}
+        for day in data.days:
+            if day.member_employee_ids is not None and not {str(m) for m in day.member_employee_ids} <= team:
+                raise _invalid(f"Anggota hari {day.work_date:%d-%m-%Y} harus termasuk tim rencana kerja.")
+        day_sites = {d.site_id for d in data.days if d.site_id is not None}
+        if day_sites:
+            await ensure_same_org(self.db, user.organization_id, sites=day_sites)
         if leader in members or len(set(members)) != len(members):
             raise _invalid("Ketua tim tidak boleh dipilih lagi sebagai anggota.")
         staff = await self.repo.field_staff_ids([leader, *members], user.organization_id)
@@ -245,7 +263,8 @@ class PlanDraftService:
             data (PlanDraftRequest): Data payload form yang berisi daftar list.
         """
         for order, day in enumerate(sorted(data.days, key=lambda d: d.work_date)):
-            day_id = await self.repo.insert_day(plan_id, day.work_date, day.tasks[0].title.strip(), order)
+            day_id = await self.repo.insert_day(plan_id, day.work_date, day.tasks[0].title.strip(), order, day.site_id)
+            await self.repo.set_day_members(user.organization_id, day_id, _day_roster(data, day))
             for t_order, task in enumerate(day.tasks):
                 task_id = await self.repo.insert_task(day_id, task.title.strip(), task.description.strip(), t_order)
                 for f_order, file_id in enumerate(dict.fromkeys(task.file_ids)):

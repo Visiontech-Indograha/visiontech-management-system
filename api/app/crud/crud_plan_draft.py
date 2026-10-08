@@ -376,14 +376,32 @@ class CRUDPlanDraft(CRUDBase):
             {"plan": plan_id},
         )
 
-    async def insert_day(self, plan_id: UUID | str, work_date: date, title: str, sort_order: int) -> Any:
-        """Menyisipkan hari kerja baru dalam draf."""
+    async def insert_day(self, plan_id: UUID | str, work_date: date, title: str, sort_order: int,
+                         site_id: UUID | str | None = None) -> Any:
+        """Menyisipkan hari kerja baru dalam draf (opsional dengan lokasi khusus hari itu)."""
         # Menambah hari berdasarkan tanggal di work_date dan mereturn id hari.
         return await self.scalar(
-            "INSERT INTO vms.work_plan_day (work_plan_id, work_date, title, sort_order) "
-            "VALUES (:plan, :date, :title, :sort) RETURNING id",
-            {"plan": plan_id, "date": work_date, "title": title, "sort": sort_order},
+            "INSERT INTO vms.work_plan_day (work_plan_id, work_date, title, sort_order, site_id) "
+            "VALUES (:plan, :date, :title, :sort, CAST(:site AS uuid)) RETURNING id",
+            {"plan": plan_id, "date": work_date, "title": title, "sort": sort_order,
+             "site": str(site_id) if site_id else None},
         )
+
+    async def set_day_site(self, day_id: UUID | str, site_id: UUID | str | None) -> None:
+        """Lokasi khusus satu hari (None = ikut lokasi rencana)."""
+        await self.execute("UPDATE vms.work_plan_day SET site_id = CAST(:site AS uuid) WHERE id = CAST(:day AS uuid)",
+                           {"day": str(day_id), "site": str(site_id) if site_id else None})
+
+    async def set_day_members(self, org_id: UUID | str, day_id: UUID | str,
+                              employee_ids: list[UUID] | list[str] | None) -> None:
+        """Anggota yang bertugas pada satu hari. None/kosong = seluruh tim (tanpa baris)."""
+        await self.execute("DELETE FROM vms.work_plan_day_member WHERE work_plan_day_id = CAST(:day AS uuid)",
+                           {"day": str(day_id)})
+        for employee_id in dict.fromkeys(str(e) for e in employee_ids or []):
+            await self.execute(
+                "INSERT INTO vms.work_plan_day_member (organization_id, work_plan_day_id, employee_id) "
+                "VALUES (CAST(:org AS uuid), CAST(:day AS uuid), CAST(:emp AS uuid))",
+                {"org": str(org_id), "day": str(day_id), "emp": employee_id})
 
     async def insert_task(self, day_id: UUID | str, title: str, description: str, sort_order: int) -> Any:
         """Menyisipkan rincian tugas untuk suatu hari kerja dalam draf."""
@@ -480,7 +498,11 @@ class CRUDPlanDraft(CRUDBase):
                         FROM vms.work_plan_member m JOIN vms.employee e ON e.id = m.employee_id
                         WHERE m.work_plan_id = :plan AND upper_inf(m.valid_period)), '[]'::jsonb),
               'days', COALESCE((SELECT jsonb_agg(jsonb_build_object('id', d.id, 'work_date', d.work_date,
-                            'title', d.title,
+                            'title', d.title, 'site_id', d.site_id,
+                            'site_name', (SELECT s2.name FROM vms.site s2 WHERE s2.id = d.site_id),
+                            'member_employee_ids', (SELECT jsonb_agg(dm.employee_id)
+                                                    FROM vms.work_plan_day_member dm
+                                                    WHERE dm.work_plan_day_id = d.id),
                             'tasks', (SELECT COALESCE(jsonb_agg(jsonb_build_object('id', t.id, 'title', t.title,
                                         'description', t.description,
                                         'files', (SELECT COALESCE(jsonb_agg(jsonb_build_object(

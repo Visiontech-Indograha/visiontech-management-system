@@ -3,7 +3,7 @@ import { formatDate } from "@/lib/format";
 import { usePlanDetail, type WorkPlan } from "./api";
 
 type Task = { title: string; description: string; files: { file_id: string; file_name: string }[] };
-type Day = { work_date: string; tasks: Task[] };
+type Day = { work_date: string; tasks: Task[]; site_name?: string | null; member_employee_ids?: string[] | null };
 type Member = { employee_id: string; full_name: string; position: string; role_in_plan: string };
 type Asset = { asset_id: string; kind: string; code: string; name: string; driver_name: string | null };
 
@@ -14,6 +14,13 @@ export function PlanDetailCard({ plan }: { plan: WorkPlan }) {
   const team = (d?.team ?? []) as Member[];
   const assets = (d?.assets ?? []) as Asset[];
   const days = (d?.days ?? []) as Day[];
+  const names = new Map(team.map((m) => [m.employee_id, m.full_name]));
+  // Tanggal dalam rentang yang tidak punya hari kerja = hari libur.
+  const holidays: string[] = [];
+  for (let t = new Date(`${plan.period_start}T00:00:00Z`); t.toISOString().slice(0, 10) <= plan.period_end && holidays.length < 366; t.setUTCDate(t.getUTCDate() + 1)) {
+    const iso = t.toISOString().slice(0, 10);
+    if (!days.some((x) => x.work_date === iso)) holidays.push(iso);
+  }
   return (
     <div className="mt-6 space-y-6">
       <QueryState query={detail} errorText="Isi rencana kerja tidak dapat dimuat.">
@@ -62,6 +69,12 @@ export function PlanDetailCard({ plan }: { plan: WorkPlan }) {
                   <p className="mb-2 text-sm font-semibold">
                     Hari {i + 1} · {formatDate(day.work_date)}
                   </p>
+                  {day.site_name && <p className="mb-1 text-xs text-mist">Lokasi hari ini: {day.site_name}</p>}
+                  {day.member_employee_ids && (
+                    <p className="mb-1 text-xs text-mist">
+                      Bertugas hari ini: {day.member_employee_ids.map((id) => names.get(id) ?? id).join(", ")}
+                    </p>
+                  )}
                   <ul className="space-y-2 text-sm">
                     {day.tasks.map((t, j) => (
                       <li key={j}>
@@ -74,6 +87,11 @@ export function PlanDetailCard({ plan }: { plan: WorkPlan }) {
                 </li>
               ))}
             </ol>
+          )}
+          {holidays.length > 0 && (
+            <p className="mt-3 text-sm text-mist" aria-label="Hari libur">
+              Hari libur (tidak wajib absen dan laporan): {holidays.map((h) => formatDate(h)).join(", ")}
+            </p>
           )}
         </div>
       </QueryState>

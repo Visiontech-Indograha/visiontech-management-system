@@ -336,6 +336,11 @@ class CRUDPlanTransition(CRUDBase):
                                 FROM vms.work_plan_member m JOIN vms.employee e ON e.id = m.employee_id
                                 WHERE m.work_plan_id = :plan AND upper_inf(m.valid_period)), '[]'),
               'days', COALESCE((SELECT jsonb_agg(jsonb_build_object('work_date', d.work_date, 'title', d.title,
+                                        'site_name', (SELECT s2.name FROM vms.site s2 WHERE s2.id = d.site_id),
+                                        'members', (SELECT jsonb_agg(de2.full_name ORDER BY de2.full_name)
+                                                    FROM vms.work_plan_day_member dm
+                                                    JOIN vms.employee de2 ON de2.id = dm.employee_id
+                                                    WHERE dm.work_plan_day_id = d.id),
                                         'tasks', (SELECT COALESCE(jsonb_agg(jsonb_build_object(
                                                     'title', t.title, 'description', t.description,
                                                     'files', (SELECT COALESCE(jsonb_agg(f.file_name

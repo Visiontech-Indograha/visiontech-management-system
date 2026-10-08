@@ -245,13 +245,17 @@ baris di matriks RBAC; tidak ada teks Inggris mentah di layar pengguna.
 >   karyawan, aset, HSE, SK) tidak lagi menyentuh basis data. SQL pindah ke `crud/`, aturan ke `services/`.
 >   Sinkronisasi luring kini memanggil `HseService`, bukan fungsi router. `LEGACY` di
 >   `test_router_layering.py` sudah kosong.
-> - **P9-2 sebagian:** RLS kini diuji dengan peran `vms_app` (`test_rls_app_role.py`), bukan superuser
->   yang melewati RLS.
+> - **P9-2 — RLS kini benar-benar berlaku (temuan 2026-10-08):** di produksi API tersambung sebagai `vms_app` yang
+>   superuser **dan** pemilik tabel, jadi seluruh kebijakan RLS terlewati. Migrasi `0024_runtime_role` membuat peran
+>   runtime `vms_api` (bukan superuser/pemilik, tanpa BYPASSRLS); alembic & CLI tetap memakai pemilik
+>   (`MIGRATION_DATABASE_URL`). Seluruh suite (±930 uji) lulus dengan API sebagai `vms_api`. Penyesuaian yang
+>   ditemukan: fungsi DB → SECURITY DEFINER (aturan bentrok personel/SIM/QR publik sempat diam-diam lolos, rekursi
+>   kebijakan SK), batas RLS SK/absensi/lembur/insiden/token QR = tenant (docs/10 Bagian C), konteks pengguna
+>   disetel saat login. Pengalihan prod: `deploy/pakai-peran-runtime.sh` (dijalankan pemilik; rollback `kembalikan`).
 > - **Temuan P9-2 yang masih terbuka:**
 >   - 7 tabel tenant belum ber-RLS: `site`, `file_object`, `notification`, `attendance_device_key`,
 >     `attendance_offline_event`, `signature_serial_counter`, `app_user`.
->   - Partisi `attendance_*` bisa dibaca langsung oleh `vms_app`.
->   - Keduanya butuh migrasi dan menunggu keputusan pemilik.
+>   - Menunggu keputusan pemilik (butuh migrasi + kebijakan per tabel).
 
 ---
 

@@ -37,7 +37,14 @@ _ENV.filters["tgl"] = _tgl
 # Logo kop SK sebagai data URI: WeasyPrint tidak perlu mengambil berkas/URL dari luar.
 _LOGO = "data:image/png;base64," + base64.b64encode(
     (_TEMPLATES / "assets" / "logo-visiontech.png").read_bytes()).decode("ascii")
-KIND_LABEL = {"INITIAL_ORDER": "SK", "REVISION": "Revisi SK", "ADDENDUM": "Adendum"}
+KIND_LABEL = {"INITIAL_ORDER": "Rencana Kerja", "REVISION": "Revisi", "ADDENDUM": "Revisi",
+              "PERSONNEL_ADDENDUM": "Revisi"}
+
+
+def kind_label_of(kind: str, version: int) -> str:
+    """"Rencana Kerja" untuk versi awal; revisi diberi nomor urut ("Revisi ke-N", N = versi - 1)."""
+    base = KIND_LABEL.get(kind, kind)
+    return base if kind == "INITIAL_ORDER" else f"{base} ke-{max(int(version) - 1, 1)}"
 
 
 CATEGORY_LABEL = {"INSTALASI": "Instalasi", "PEMELIHARAAN": "Pemeliharaan", "PERBAIKAN": "Perbaikan",
@@ -61,7 +68,7 @@ def render_plan_document_html(document: Any, signatures: list[dict[str, Any]]) -
     snapshot = document.snapshot if isinstance(document.snapshot, dict) else json.loads(document.snapshot)
     status = getattr(document, "status", None)
     return _ENV.get_template("plan_document.html").render(
-        doc=document, logo=_LOGO, kind_label=KIND_LABEL.get(document.kind, document.kind),
+        doc=document, logo=_LOGO, kind_label=kind_label_of(document.kind, document.version),
         issued_at=wib_text(document.issued_at), plan=snapshot.get("plan", {}),
         team=snapshot.get("team", []), days=snapshot.get("days", []), assets=snapshot.get("assets", []),
         attachments=snapshot.get("attachments", []), signatures=signatures, categories=CATEGORY_LABEL,
@@ -74,7 +81,7 @@ def render_plan_preview_html(snapshot: dict[str, Any]) -> str:
     plan = snapshot.get("plan", {})
     doc = {"number": plan.get("number"), "title": plan.get("title"), "version": plan.get("revision", 1)}
     return _ENV.get_template("plan_document.html").render(
-        doc=doc, logo=_LOGO, kind_label="SK", issued_at=None, plan=plan, team=snapshot.get("team", []),
+        doc=doc, logo=_LOGO, kind_label="Rencana Kerja", issued_at=None, plan=plan, team=snapshot.get("team", []),
         days=snapshot.get("days", []), assets=snapshot.get("assets", []),
         attachments=snapshot.get("attachments", []), signatures=[], categories=CATEGORY_LABEL,
         status_label="Draf", sha256=None, preview=True)

@@ -31,7 +31,7 @@
     <span class="kind">{{ kind_label | upper }}</span>
   </div>
   <h1>{{ doc.title }}</h1>
-  {% if preview %}<div class="draft">PRATINJAU DRAF — nomor SK diberikan saat diterbitkan</div>{% endif %}
+  {% if preview %}<div class="draft">PRATINJAU DRAF — nomor rencana kerja diberikan saat diterbitkan</div>{% endif %}
   <div class="meta">Nomor {{ doc.number or "-" }} · {{ kind_label }} versi {{ doc.version }}{% if issued_at %} · diterbitkan {{ issued_at }}{% endif %}{% if status_label %} · status {{ status_label }}{% endif %}</div>
 
   <h2>Pelaksanaan</h2>

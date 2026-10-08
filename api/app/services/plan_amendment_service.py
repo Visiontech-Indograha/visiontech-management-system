@@ -60,9 +60,9 @@ class PlanAmendmentService:
     async def _change(self, access: PlanAccess, change_id: UUID, status: ChangeStatus) -> Any:
         change = await self.changes.lock_change(change_id, access.user.organization_id)
         if change is None or str(change.work_plan_id) != str(access.plan.id) or change.change_type != ChangeType.AMENDMENT:
-            raise NotFoundError("Usulan adendum")
+            raise NotFoundError("Permintaan revisi")
         if change.status != status:
-            raise _state("Usulan adendum tidak dalam tahap ini.")
+            raise _state("Permintaan revisi tidak dalam tahap ini.")
         return change
 
     async def request_amendment(self, access: PlanAccess, reason: str) -> Any:
@@ -78,7 +78,7 @@ class PlanAmendmentService:
         """
         require_plan_status(access, PlanStatus.ACCEPTED, PlanStatus.IN_PROGRESS)
         if not reason.strip():
-            raise ValidationError("Alasan adendum wajib diisi.")
+            raise ValidationError("Alasan revisi wajib diisi.")
         # Validasi: Tidak boleh ada lebih dari satu usulan perubahan yang terbuka sekaligus
         if await self.changes.open_change(access.plan.id) is not None:
             raise _state("Masih ada usulan perubahan yang menunggu penyelesaian.")
@@ -120,9 +120,9 @@ class PlanAmendmentService:
 
         # Validasi bisnis: Ketua dan tanggal mulai tidak bisa diubah lewat adendum jenis ini.
         if str(data.leader_employee_id) != str(plan.leader_employee_id):
-            raise ValidationError("Ketua tim tidak dapat diganti lewat adendum ini.")
+            raise ValidationError("Ketua tim tidak dapat diganti lewat revisi ini.")
         if data.period_start != plan.period_start:
-            raise ValidationError("Tanggal mulai SK yang sedang berjalan tidak dapat diubah.")
+            raise ValidationError("Tanggal mulai rencana kerja yang sedang berjalan tidak dapat diubah.")
         await PlanDraftService(self.db)._validate(access.user, str(plan.unit_id), data, plan.id)
 
         # Mencegah penghapusan hari yang sudah memiliki data laporan harian
@@ -168,7 +168,7 @@ class PlanAmendmentService:
                     await self.assets.insert_allocation(tool, plan.id, None, access.user.user_id)
                     await self.assets.set_asset_status(tool, "IN_USE")
         except IntegrityError as exc:
-            raise (trigger_rule_error(exc) or _state("Jadwal bentrok dengan SK lain.")) from None
+            raise (trigger_rule_error(exc) or _state("Jadwal bentrok dengan rencana kerja lain.")) from None
 
         version = await self.changes.next_document_version(plan.id)
         raw = await self.plans.snapshot(plan.id)

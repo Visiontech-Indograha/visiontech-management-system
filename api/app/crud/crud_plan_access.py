@@ -25,7 +25,7 @@ _STANDING = """
                lower(wp.period) AS period_start, upper(wp.period) - 1 AS period_end,
                wp.status, wp.pm_employee_id, wp.leader_employee_id, wp.revision, wp.row_version,
                wp.cancellation_reason, wp.appeal_reason, wp.category, wp.created_at,
-               -- T2: ada permintaan revisi/adendum dari ketua yang menunggu PM.
+               -- T2: ada permintaan revisi dari ketua yang menunggu PM.
                (wp.status = 'APPEALED' OR EXISTS (SELECT 1 FROM vms.plan_change pc
                   WHERE pc.work_plan_id = wp.id AND pc.status = 'PENDING_PM')) AS pending_request,
                s.oversees OR s.pm_of_unit AS manages,

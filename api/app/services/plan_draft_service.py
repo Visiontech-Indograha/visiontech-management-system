@@ -162,7 +162,7 @@ class PlanDraftService:
                     for i in range((data.period_end - data.period_start).days + 1)}
         given = [d.work_date for d in data.days]
         if len(given) != len(set(given)) or set(given) != expected:
-            raise _invalid("Setiap tanggal dalam rentang SK wajib punya detail pekerjaan.")
+            raise _invalid("Setiap tanggal dalam rentang rencana kerja wajib punya detail pekerjaan.")
         files: list[UUID] = []
         for day in data.days:
             if not 1 <= len(day.tasks) <= MAX_TASKS_PER_DAY:
@@ -189,7 +189,7 @@ class PlanDraftService:
         if any(staff[m] != unit_id for m in (leader, *members)):
             raise AppError("PERSONNEL_OUTSIDE_PM_UNIT", "Ketua dan anggota tim harus bawahan PM (unit yang sama).", status=422)
         if await self.repo.employees_bound([leader, *members], plan_id):
-            raise AppError("PERSONNEL_BOUND", "Ada ketua/anggota yang masih terikat SK lain.", status=409)
+            raise AppError("PERSONNEL_BOUND", "Ada ketua/anggota yang masih terikat rencana kerja lain.", status=409)
 
         free = {str(a.id): a for a in await self.repo.free_assets(user.organization_id, plan_id)}
         for tool in data.tool_ids:
@@ -262,7 +262,7 @@ class PlanDraftService:
                 await self.assets.set_asset_status(data.vehicle_id, "RESERVED")
         except IntegrityError as exc:
             rule = trigger_rule_error(exc)
-            raise (rule or AppError("CONFLICT", "Jadwal bentrok dengan SK lain. Muat ulang pilihan.",
+            raise (rule or AppError("CONFLICT", "Jadwal bentrok dengan rencana kerja lain. Muat ulang pilihan.",
                                     status=409)) from None
 
     # ── Simpan ────────────────────────────────────────────────────────────────────────────────
@@ -306,10 +306,10 @@ class PlanDraftService:
         """
         plan = await self.repo.lock_draft(plan_id, user.organization_id)
         if plan is None:
-            raise NotFoundError("SK")
+            raise NotFoundError("Rencana Kerja")
         # Validasi status harus DRAFT
         if plan.status != PlanStatus.DRAFT:
-            raise AppError("INVALID_STATE", "Isi SK hanya dapat diubah selama berstatus Draf.", status=409)
+            raise AppError("INVALID_STATE", "Isi rencana kerja hanya dapat diubah selama berstatus Draf.", status=409)
         if data.row_version is None or plan.row_version != data.row_version:
             raise ConflictError()
         unit_id = str(plan.unit_id)

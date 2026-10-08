@@ -15,7 +15,7 @@ from app.crud.crud_plan_location import CRUDPlanLocation
 from app.services.access_service import PlanAccess
 
 CLOSED = ("COMPLETED", "CANCELLED")
-CLOSED_MESSAGE = "Titik lokasi tidak dapat diubah pada SK yang sudah selesai atau dibatalkan."
+CLOSED_MESSAGE = "Titik lokasi tidak dapat diubah pada rencana kerja yang sudah selesai atau dibatalkan."
 MIN_RADIUS, MAX_RADIUS = 10, 5000
 
 

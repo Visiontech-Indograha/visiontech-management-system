@@ -99,6 +99,41 @@ class PlanAmendmentService:
                                       reason.strip())
         await self.notify.amendment_decided(access.plan.id, accepted=False, note=reason.strip())
 
+    async def rewrite_days(self, plan: Any, data: PlanDraftRequest, user: Any) -> None:
+        """Menulis ulang header, hari, dan tugas rencana kerja yang sudah terbit (dipakai adendum dan revisi PM).
+        Hari yang sudah berlaporan tidak boleh dihapus; isi hari yang laporannya terkirim/disetujui tidak diubah."""
+        # Mencegah penghapusan hari yang sudah memiliki data laporan harian
+        days = {str(d.work_date): d for d in await self.repo.days_with_report_state(plan.id)}
+        wanted = {str(d.work_date): d for d in data.days}
+        for work_date, day in days.items():
+            if work_date not in wanted and (day.report_status or day.has_member_reports):
+                raise ValidationError(f"Hari {work_date} sudah berlaporan dan tidak dapat dihapus.")
+
+        site_id, site_name = await PlanDraftService(self.db)._site(user, str(plan.unit_id), data)
+        await self.repo.update_header(
+            plan.id, title=data.title.strip(), description=data.description.strip(), category=data.category,
+            site_id=site_id, location_text=site_name, period_start=data.period_start, period_end=data.period_end,
+            is_out_of_town=data.is_out_of_town)
+        for order, new_day in enumerate(sorted(data.days, key=lambda d: d.work_date)):
+            key = str(new_day.work_date)
+            current = days.get(key)
+            if current is not None and current.report_status in LOCKED_REPORTS:
+                continue   # isi hari yang laporannya sudah dikirim/disetujui tidak diubah
+            if current is None:
+                day_id = await self.drafts.insert_day(plan.id, new_day.work_date, new_day.tasks[0].title.strip(), order)
+            else:
+                day_id = current.id
+                await self.repo.clear_tasks(day_id, new_day.tasks[0].title.strip())
+            for t_order, task in enumerate(new_day.tasks):
+                task_id = await self.drafts.insert_task(day_id, task.title.strip(), task.description.strip(), t_order)
+                for f_order, file_id in enumerate(dict.fromkeys(task.file_ids)):
+                    await self.drafts.insert_task_file(task_id, file_id, f_order)
+        for work_date, day in days.items():
+            if work_date not in wanted:
+                await self.repo.delete_day(day.id)
+
+
+
     async def apply_amendment(self, access: PlanAccess, change_id: UUID, data: PlanDraftRequest) -> Any:
         """
         PM menerima usulan dengan mengubah isi SK yang sedang berjalan, lalu menandatangani dokumen adendum.
@@ -125,35 +160,7 @@ class PlanAmendmentService:
             raise ValidationError("Tanggal mulai rencana kerja yang sedang berjalan tidak dapat diubah.")
         await PlanDraftService(self.db)._validate(access.user, str(plan.unit_id), data, plan.id)
 
-        # Mencegah penghapusan hari yang sudah memiliki data laporan harian
-        days = {str(d.work_date): d for d in await self.repo.days_with_report_state(plan.id)}
-        wanted = {str(d.work_date): d for d in data.days}
-        for work_date, day in days.items():
-            if work_date not in wanted and (day.report_status or day.has_member_reports):
-                raise ValidationError(f"Hari {work_date} sudah berlaporan dan tidak dapat dihapus.")
-
-        site_id, site_name = await PlanDraftService(self.db)._site(access.user, str(plan.unit_id), data)
-        await self.repo.update_header(
-            plan.id, title=data.title.strip(), description=data.description.strip(), category=data.category,
-            site_id=site_id, location_text=site_name, period_start=data.period_start, period_end=data.period_end)
-        for order, new_day in enumerate(sorted(data.days, key=lambda d: d.work_date)):
-            key = str(new_day.work_date)
-            current = days.get(key)
-            if current is not None and current.report_status in LOCKED_REPORTS:
-                continue   # isi hari yang laporannya sudah dikirim/disetujui tidak diubah
-            if current is None:
-                day_id = await self.drafts.insert_day(plan.id, new_day.work_date, new_day.tasks[0].title.strip(), order)
-            else:
-                day_id = current.id
-                await self.repo.clear_tasks(day_id, new_day.tasks[0].title.strip())
-            for t_order, task in enumerate(new_day.tasks):
-                task_id = await self.drafts.insert_task(day_id, task.title.strip(), task.description.strip(), t_order)
-                for f_order, file_id in enumerate(dict.fromkeys(task.file_ids)):
-                    await self.drafts.insert_task_file(task_id, file_id, f_order)
-        for work_date, day in days.items():
-            if work_date not in wanted:
-                await self.repo.delete_day(day.id)
-
+        await self.rewrite_days(plan, data, access.user)
         today = jakarta_now().date()
         current_members = {m.employee_id for m in await self.repo.open_members(plan.id) if m.role_in_plan == "MEMBER"}
         wanted_members = {str(m) for m in data.member_employee_ids}

@@ -763,3 +763,20 @@ CREATE INDEX IF NOT EXISTS ix_qr_token_site_id ON qr_token (site_id);
 CREATE INDEX IF NOT EXISTS ix_incident_report_resolved_by ON incident_report (resolved_by);
 CREATE INDEX IF NOT EXISTS ix_daily_report_reviewed_by ON daily_report (reviewed_by);
 CREATE INDEX IF NOT EXISTS ix_attendance_reviewed_by ON attendance (reviewed_by);
+
+-- Riwayat revisi rencana kerja oleh PM (Alembic 0027_plan_revision): insert-only, RLS di 05_face.sql.
+CREATE TABLE IF NOT EXISTS plan_revision (
+  id                 uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id    uuid NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
+  work_plan_id       uuid NOT NULL REFERENCES work_plan(id) ON DELETE CASCADE,
+  revision           integer NOT NULL,
+  revised_by         uuid REFERENCES employee(id),
+  reason             text NOT NULL,
+  diff               jsonb NOT NULL,
+  resolved_change_id uuid REFERENCES plan_change(id),
+  created_at         timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (work_plan_id, revision)
+);
+CREATE INDEX IF NOT EXISTS ix_plan_revision_organization_id ON plan_revision (organization_id);
+CREATE INDEX IF NOT EXISTS ix_plan_revision_revised_by ON plan_revision (revised_by);
+CREATE INDEX IF NOT EXISTS ix_plan_revision_resolved_change_id ON plan_revision (resolved_change_id);

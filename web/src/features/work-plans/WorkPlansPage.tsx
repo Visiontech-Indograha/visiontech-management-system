@@ -68,6 +68,11 @@ export function WorkPlansPage() {
                   <span className="font-medium text-lens">{p.title}</span>
                   <StatusBadge status={p.status} />
                 </div>
+                {p.pending_request && canManage && (
+                  <p className="mb-1 inline-block rounded-control bg-warning-bg px-2 py-0.5 text-sm font-medium text-warning">
+                    Perlu tindakan: ada permintaan revisi dari ketua
+                  </p>
+                )}
                 <p className="text-sm text-mist">{p.number ?? "Nomor terbit saat SK diterbitkan"}</p>
                 <p className="text-sm text-mist">{p.location_text}</p>
                 <p className="text-sm text-mist">

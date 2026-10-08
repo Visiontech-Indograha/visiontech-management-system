@@ -25,7 +25,6 @@ LEGACY: dict[str, str] = {
     "assets.py": "R-25b",
     "attendance.py": "R-25b",
     "employees.py": "R-25b",
-    "files.py": "R-25b",
     "hse.py": "R-25b",
     "work_plans.py": "R-25b",
 }

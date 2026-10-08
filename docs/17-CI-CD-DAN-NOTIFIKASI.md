@@ -58,10 +58,26 @@ sensitif, dan uji yang memastikan penyaringnya bekerja.
 
 ---
 
-## 3. Alur CI (setiap push dan pull request)
+## 3. Alur CI (setiap pull request)
+
+> **Hemat menit (keputusan pemilik 2026-10-08).** Organisasi memakai paket GitHub Free: 2.000 menit
+> Actions per bulan untuk repo privat. Kuota Oktober habis pada tanggal 8, dan setelah itu semua job
+> diblokir dengan pesan "recent account payments have failed…". Dua penyebabnya: setiap commit
+> berjalan dua kali (push + PR), dan uji API (8 menit) ikut jalan untuk perubahan HP atau dokumen saja.
+> Aturan sekarang (`.github/workflows/ci.yml`):
+> - **Pemicu:** hanya `pull_request` ke `development`/`prod`, ditambah tombol manual (`workflow_dispatch`).
+>   Merge tidak memicu ulang, karena kodenya sudah diuji di PR.
+> - **Job sesuai bagian yang berubah:**
+>   - `api`: `api/`, `db/`, `face-service/`, `deploy/`, `scripts/`
+>   - `web`: `web/`
+>   - `mobile`: `mobile/`
+>   - Perubahan `ci.yml` menjalankan semuanya.
+>   - Gitleaks selalu jalan.
+> - **Saat kuota habis:** pemeriksaan dijalankan di laptop sebelum merge, dan hasilnya dilaporkan di PR.
+>   Kuota terisi lagi setiap tanggal 1.
 
 ```
-push / PR
+pull request (job sesuai bagian yang berubah)
    ├── api      ruff check · ruff format --check · mypy · pytest (PostgreSQL nyata) · coverage
    ├── web      eslint · tsc --noEmit · vitest · build · cek ukuran bundel · cek kontrak OpenAPI
    ├── mobile   flutter analyze · flutter test

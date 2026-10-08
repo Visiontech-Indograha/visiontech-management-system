@@ -256,6 +256,13 @@ baris di matriks RBAC; tidak ada teks Inggris mentah di layar pengguna.
 >   `attendance_device_key`, `attendance_offline_event`, `signature_serial_counter`) kini ber-RLS batas tenant.
 >   `app_user` sengaja tanpa RLS: login & rotasi token mencari akun sebelum identitas/organisasi diketahui.
 
+> - **P9-5 (2026-10-08):** `deploy/uji-pulih-cadangan.sh` menguji pemulihan sungguhan — cadangan baru → salinan
+>   MinIO (SHA-256 cocok) → Postgres kosong sementara → bandingkan jumlah baris, versi alembic, RLS, fungsi dengan prod.
+>   Diuji lokal terhadap DB uji (48 tabel, 67.919 baris, 3 detik, semua cocok); **menunggu dijalankan pemilik di
+>   server.** Celah yang ditemukan: (1) berkas MinIO (foto, dokumen, PDF) tidak dicadangkan; (2) cadangan DB hanya
+>   di server yang sama — rusak disk = data & cadangan hilang bersamaan. Keduanya butuh keputusan pemilik (lokasi
+>   salinan di luar server, biaya).
+
 ---
 
 ## Fase 10 — UAT dan rilis *(minggu 22–24)*

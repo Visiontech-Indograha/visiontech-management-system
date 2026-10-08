@@ -43,10 +43,10 @@ class CRUDWeeklyReport(CRUDBase):
     async def list_weeks(self, plan_id: UUID | str) -> list[Any]:
         """
         Mengambil daftar lengkap laporan per minggu untuk suatu SK.
-        
+
         Args:
             plan_id (UUID | str): ID rencana kerja (SK).
-            
+
         Returns:
             list[Any]: Daftar record tiap minggu beserta status pelaporan.
         """
@@ -57,11 +57,11 @@ class CRUDWeeklyReport(CRUDBase):
     async def get_week(self, plan_id: UUID | str, week: int) -> Any:
         """
         Mengambil data spesifik untuk satu minggu laporan.
-        
+
         Args:
             plan_id (UUID | str): ID rencana kerja.
             week (int): Nomor urut minggu.
-            
+
         Returns:
             Any: Record laporan untuk minggu yang diminta.
         """
@@ -71,13 +71,13 @@ class CRUDWeeklyReport(CRUDBase):
     async def save(self, plan_id: UUID | str, week: Any, body: str, obstacle: str) -> Any:
         """
         Menyimpan draf laporan mingguan. Laporan yang sudah diajukan tidak akan terpengaruh.
-        
+
         Args:
             plan_id (UUID | str): ID rencana kerja.
             week (Any): Record minggu yang akan disimpan.
             body (str): Isi laporan utama.
             obstacle (str): Kendala yang dihadapi.
-            
+
         Returns:
             Any: Record yang menyimpan ID laporan mingguan (jika berhasil).
         """
@@ -99,12 +99,12 @@ class CRUDWeeklyReport(CRUDBase):
     async def submit(self, plan_id: UUID | str, name: str, user_id: UUID | str) -> Any:
         """
         Mengajukan draf laporan mingguan agar bisa di-review oleh Project Manager.
-        
+
         Args:
             plan_id (UUID | str): ID rencana kerja.
             name (str): Nama laporan mingguan (misal 'Laporan Mingguan 1').
             user_id (UUID | str): ID pengguna yang melakukan submit.
-            
+
         Returns:
             Any: Record berisi ID laporan yang diajukan.
         """
@@ -125,14 +125,14 @@ class CRUDWeeklyReport(CRUDBase):
                      user_id: UUID | str) -> Any:
         """
         Menyimpan hasil review (setuju atau revisi) laporan mingguan oleh Project Manager.
-        
+
         Args:
             plan_id (UUID | str): ID rencana kerja.
             name (str): Nama laporan mingguan.
             status (str): Status hasil review (misal: APPROVED, CHANGES_REQUESTED).
             note (str | None): Catatan review (opsional).
             user_id (UUID | str): ID pengguna yang me-review.
-            
+
         Returns:
             Any: Record berisi ID laporan yang di-review.
         """

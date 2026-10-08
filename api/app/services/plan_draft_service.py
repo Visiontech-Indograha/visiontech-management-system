@@ -49,7 +49,7 @@ class PlanDraftService:
     def __init__(self, db: AsyncSession) -> None:
         """
         Inisialisasi PlanDraftService.
-        
+
         Args:
             db (AsyncSession): Sesi database asinkron.
         """
@@ -60,10 +60,10 @@ class PlanDraftService:
     async def _creator(self, user: CurrentUser) -> Any:
         """
         Mengambil profil karyawan pembuat SK berdasarkan pengguna yang login.
-        
+
         Args:
             user (CurrentUser): Pengguna yang sedang login.
-            
+
         Returns:
             Any: Data kreator/pembuat SK.
         """
@@ -76,10 +76,10 @@ class PlanDraftService:
     def _oversees(user: CurrentUser) -> bool:
         """
         Memeriksa apakah pengguna memiliki peran pengawas (ADMIN atau OPS).
-        
+
         Args:
             user (CurrentUser): Pengguna.
-            
+
         Returns:
             bool: True jika ADMIN/OPS, sebaliknya False.
         """
@@ -89,11 +89,11 @@ class PlanDraftService:
     async def form_options(self, user: CurrentUser, plan_id: UUID | None) -> dict[str, Any]:
         """
         Mendapatkan seluruh opsi yang diperlukan untuk mengisi form draf SK (unit, lokasi, personel, alat, dsb).
-        
+
         Args:
             user (CurrentUser): Pengguna.
             plan_id (UUID | None): ID SK (jika sedang mengedit, untuk mengecualikan aset/orang yang sudah terikat SK ini).
-            
+
         Returns:
             dict[str, Any]: Kamus berisi opsi kategori, lokasi, calon ketua, calon anggota, dsb.
         """
@@ -114,14 +114,14 @@ class PlanDraftService:
                              period_end: date, plan_id: UUID | None) -> list[str]:
         """
         Calon driver (dari ketua + anggota terpilih) yang ber-SIM sesuai dan tidak terikat SK lain.
-        
+
         Args:
             user (CurrentUser): Pengguna pembuat request.
             vehicle_id (UUID): ID kendaraan yang diplih.
             candidate_ids (list[UUID]): Daftar ID personel.
             period_end (date): Tanggal akhir SK.
             plan_id (UUID | None): ID SK yang sedang diedit.
-            
+
         Returns:
             list[str]: Daftar ID karyawan yang dapat mengemudikan kendaraan tersebut.
         """
@@ -140,7 +140,7 @@ class PlanDraftService:
         """
         Melakukan validasi seluruh komponen isi PlanDraftRequest, mencakup kelengkapan data,
         konsistensi tanggal harian, status dan unit personel (R-17), serta status aset.
-        
+
         Args:
             user (CurrentUser): Pengguna.
             unit_id (str): ID Unit pembuat SK.
@@ -211,12 +211,12 @@ class PlanDraftService:
     async def _site(self, user: CurrentUser, unit_id: str, data: PlanDraftRequest) -> tuple[str, str]:
         """
         Menyimpan data lokasi baru atau mencari nama lokasi lama.
-        
+
         Args:
             user (CurrentUser): Pengguna.
             unit_id (str): ID Unit pembuat.
             data (PlanDraftRequest): Data payload form.
-            
+
         Returns:
             tuple[str, str]: Pasangan ID lokasi dan Nama lokasi.
         """
@@ -238,7 +238,7 @@ class PlanDraftService:
     async def _fill(self, user: CurrentUser, plan_id: str, data: PlanDraftRequest) -> None:
         """
         Mengisi relasi plan: hari, task, file, anggota tim, serta reservasi alat & kendaraan.
-        
+
         Args:
             user (CurrentUser): Pengguna pembuat request.
             plan_id (str): ID SK terkait.
@@ -269,11 +269,11 @@ class PlanDraftService:
     async def create_plan(self, user: CurrentUser, data: PlanDraftRequest) -> Any:
         """
         domain.js CREATE_PLAN versi form lengkap — hasilnya status Draf.
-        
+
         Args:
             user (CurrentUser): Pengguna yang membuat SK.
             data (PlanDraftRequest): Payload form data SK.
-            
+
         Returns:
             Any: Detail dari SK yang baru dibuat.
         """
@@ -295,12 +295,12 @@ class PlanDraftService:
     async def edit_draft(self, user: CurrentUser, plan_id: UUID, data: PlanDraftRequest) -> Any:
         """
         domain.js EDIT_DRAFT versi form lengkap — isi draf disusun ulang seluruhnya.
-        
+
         Args:
             user (CurrentUser): Pengguna pengubah.
             plan_id (UUID): ID SK.
             data (PlanDraftRequest): Data terbaru untuk menimpa draf lama.
-            
+
         Returns:
             Any: Detail dari SK yang sudah diperbarui.
         """
@@ -330,10 +330,10 @@ class PlanDraftService:
     async def detail(self, plan_id: UUID | str) -> dict[str, Any]:
         """
         Mengambil representasi lengkap (detail dan seluruh relasinya) untuk satu SK.
-        
+
         Args:
             plan_id (UUID | str): ID SK.
-            
+
         Returns:
             dict[str, Any]: Kamus detail SK beserta relasinya.
         """

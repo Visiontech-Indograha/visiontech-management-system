@@ -34,7 +34,7 @@ def _status(client, world: World, who: str, file_id: str) -> int:
 
 def _expect(client, world: World, file_id: str, allowed: set[str], denied: set[str]) -> None:
     got = {who: _status(client, world, who, file_id) for who in allowed | denied}
-    assert got == {**{w: 200 for w in allowed}, **{w: 404 for w in denied}}
+    assert got == {**dict.fromkeys(allowed, 200), **dict.fromkeys(denied, 404)}
 
 
 def test_personal_document_is_only_for_its_owner_and_hr(client, world, other_world, fake_storage):

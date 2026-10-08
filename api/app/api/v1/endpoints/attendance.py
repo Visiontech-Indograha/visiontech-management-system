@@ -43,10 +43,10 @@ router = APIRouter(prefix="/attendance", tags=["Attendance"])
 def _response(row: Any) -> AttendanceResponse:
     """
     Fungsi pembantu untuk memetakan row hasil query menjadi skema AttendanceResponse.
-    
+
     Args:
         row (Any): Row data dari database.
-        
+
     Returns:
         AttendanceResponse: Skema respons absensi.
     """
@@ -68,14 +68,14 @@ async def list_attendance(
     """
     Dok 05 §3.5 · R-33: Finance & OPS seluruh organisasi; PM miliknya + bawahan lapangan di unitnya;
     lainnya hanya milik sendiri. Filter `plan_id` di dok 05 belum didukung (dok 10 Bagian C).
-    
+
     Query params:
     - employee_id: Filter UUID karyawan
     - from/to: Filter rentang tanggal
     - status: Filter status absensi
     - scope: `all` (bawaan), `mine` = absensi pribadi, `team` = absensi anggota/umum (selain milik sendiri)
     - page, size: Pagination
-    
+
     Return: Daftar absensi (AttendanceListResponse)
     """
     # Mengambil objek AttendanceSessionService dari injeksi dependensi
@@ -99,10 +99,10 @@ async def register_device_key(
 ) -> dict[str, str]:
     """
     R-34: daftarkan kunci publik Android Keystore perangkat ini untuk memverifikasi absen luring.
-    
+
     Body params:
     - data: Payload device id dan public key (DeviceKeyRequest)
-    
+
     Return: Pesan sukses
     """
     # Injeksi AttendanceOfflineService untuk mengelola kunci offline perangkat
@@ -118,10 +118,10 @@ async def submit_offline_attendance(
 ) -> OfflineAttendanceResult:
     """
     R-34: terima satu absen luring yang ditandatangani perangkat (idempoten per client_op_id).
-    
+
     Body params:
     - data: Event absensi luring berserta signature (OfflineAttendanceEvent)
-    
+
     Return: Hasil pemrosesan sinkronisasi offline (OfflineAttendanceResult)
     """
     # Menggunakan dependensi offline_service
@@ -142,10 +142,10 @@ async def check_in(
     """
     P4-2 · domain.js CHECK_IN. Waktu, tanggal, jarak, dan status dari server (aturan inti #3).
     Pekerja lapangan lewat HP (`channel` MOBILE), pekerja kantor lewat web (`channel` WEB).
-    
+
     Body params:
     - data: Data check in termasuk lokasi dan bukti foto (CheckInRequest)
-    
+
     Return: Detail absensi check in (AttendanceResponse)
     """
     # Mengambil sesi DB dari Depends (get_db_with_user) untuk pengecekan referensi yang aman
@@ -169,10 +169,10 @@ async def check_out(
 ) -> AttendanceResponse:
     """
     domain.js CHECK_OUT — menutup sesi terbuka milik sendiri, dari kanal sesuai jenis pekerja.
-    
+
     Body params:
     - data: Data check out dengan spesifikasi channel (CheckOutRequest)
-    
+
     Return: Detail absensi setelah check out (AttendanceResponse)
     """
     # Menggunakan dependensi attendance_session_service
@@ -191,13 +191,13 @@ async def explain_attendance(
 ) -> dict[str, str]:
     """
     P4-4 · domain.js EXPLAIN_ATTENDANCE — hanya absensi sendiri yang menunggu pemeriksaan.
-    
+
     Path params:
     - att_id: UUID absensi
-    
+
     Body params:
     - data: Catatan penjelasan absensi (ExplanationRequest)
-    
+
     Return: Pesan sukses
     """
     # Meneruskan fungsi anotasi/penjelasan (explain) ke attendance_session_service dari Depends
@@ -215,13 +215,13 @@ async def review_attendance(
     """
     P4-4 · domain.js REVIEW_ATTENDANCE · R-33: PM → bawahan lapangan, Finance → kantor non-Finance,
     OPS → Finance; tidak pernah absensi sendiri.
-    
+
     Path params:
     - att_id: UUID absensi yang direview
-    
+
     Body params:
     - data: Persetujuan atau penolakan dengan catatan (ReviewRequest)
-    
+
     Return: Pesan hasil review
     """
     # Diwajibkan memiliki izin REVIEW_ATTENDANCE (via Depends)
@@ -240,11 +240,11 @@ async def export_attendance(
 ) -> str:
     """
     P4-5: Ekspor CSV untuk Finance. Jam dalam zona waktu organisasi (sebelumnya tercetak UTC).
-    
+
     Query params:
     - start_date: Tanggal mulai ekspor
     - end_date: Tanggal akhir ekspor
-    
+
     Return: Data mentah format CSV
     """
     # Memerlukan izin EXPORT_ATTENDANCE dan sesi db.

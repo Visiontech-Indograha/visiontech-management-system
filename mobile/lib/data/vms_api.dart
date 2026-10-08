@@ -274,6 +274,18 @@ class VmsApi {
   }
 
   // --- Biometrik Wajah (Face API) ------------------------------------------
+  /// Pemeriksaan pembaruan aplikasi (docs/32) — rute publik, juga dipanggil sebelum login.
+  Future<Map<String, dynamic>> appUpdate({
+    required int build,
+    required List<String> abis,
+  }) async {
+    final res = await _dio.get(
+      '$_p/app/android/update',
+      queryParameters: {'build': build, 'abi': abis},
+    );
+    return Map<String, dynamic>.from(res.data as Map);
+  }
+
   Future<Map<String, dynamic>> faceStatus() async {
     final res = await _dio.get('$_p/face/status');
     return Map<String, dynamic>.from(res.data as Map);

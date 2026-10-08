@@ -1,6 +1,15 @@
 # Konfigurasi ruff untuk api/ (dok 12 §7: ruff untuk format + lint).
 target-version = "py312"
-line-length = 110
+line-length = 120
+
+[lint]
+# Set aturan eksplisit (keputusan pemilik 2026-10-07; dulu kosong = bawaan E4/E7/E9/F saja).
+# E/W pycodestyle · F pyflakes · I urutan impor · UP sintaks modern · B bugbear · RUF ruff ·
+# DTZ datetime tanpa zona · BLE except terlalu luas · ASYNC pemblokir di async · SIM/C4/PIE penyederhanaan.
+# Menambah/menghapus kode aturan = keputusan pemilik (tanyakan dulu, docs/12 §5).
+select = ["E", "W", "F", "I", "UP", "B", "RUF", "DTZ", "BLE", "ASYNC", "SIM", "C4", "PIE"]
+# Tanda baca yang memang dipakai di teks pengguna & dokumentasi (en dash, kali, ikon info) — bukan karakter tipuan.
+allowed-confusables = ["–", "×", "ℹ"]
 
 [lint.flake8-bugbear]
 # Dependency FastAPI ditulis sebagai nilai default parameter (pola resmi FastAPI, dok 12 §2).
@@ -20,16 +29,78 @@ extend-immutable-calls = [
 # ── Garis dasar utang lint (dok 17 §3: laporkan hanya yang BARU) ─────────────────────────────
 # Hanya kode aturan spesifik yang masih ada per berkas per 2026-09-23 — BUKAN "ALL".
 # Daftar ini hanya boleh menyusut: hapus barisnya begitu berkas dibersihkan (A-3/A-4 dst).
-# Berkas baru tidak boleh ditambahkan ke sini.
+# Berkas baru tidak boleh ditambahkan ke sini. E501 (baris > 120) = garis dasar 2026-10-07: rapikan saat berkasnya disentuh.
 [lint.per-file-ignores]
-"app/api/v1/endpoints/assets.py" = ["BLE001"]
-"app/api/v1/endpoints/attendance.py" = ["BLE001", "DTZ005"]  # DTZ005 = datetime.now() tanpa zona → A-4
+"app/api/deps.py" = ["E501"]
+"app/api/v1/endpoints/accounts.py" = ["E501"]
+"app/api/v1/endpoints/assets.py" = ["BLE001", "E501"]
+"app/api/v1/endpoints/attendance.py" = ["BLE001", "DTZ005", "E501"]  # DTZ005 = datetime.now() tanpa zona → A-4
 "app/api/v1/endpoints/audit.py" = ["RUF013"]
-"app/api/v1/endpoints/documents.py" = ["BLE001"]
-"app/api/v1/endpoints/employees.py" = ["BLE001"]
-"app/api/v1/endpoints/hse.py" = ["BLE001", "F841"]
-"app/api/v1/endpoints/work_plans.py" = ["BLE001"]
-"app/api/v1/endpoints/sites.py" = ["BLE001"]
+"app/api/v1/endpoints/documents.py" = ["BLE001", "E501"]
+"app/api/v1/endpoints/employees.py" = ["BLE001", "E501"]
+"app/api/v1/endpoints/files.py" = ["E501"]
+"app/api/v1/endpoints/hse.py" = ["BLE001", "F841", "E501"]
+"app/api/v1/endpoints/signatures.py" = ["E501"]
+"app/api/v1/endpoints/sites.py" = ["BLE001", "E501"]
+"app/api/v1/endpoints/weekly_reports.py" = ["E501"]
+"app/api/v1/endpoints/work_plan_attachments.py" = ["E501"]
+"app/api/v1/endpoints/work_plan_changes.py" = ["E501"]
+"app/api/v1/endpoints/work_plan_location.py" = ["E501"]
+"app/api/v1/endpoints/work_plan_transitions.py" = ["E501"]
+"app/api/v1/endpoints/work_plans.py" = ["BLE001", "E501"]
+"app/cli.py" = ["E501"]
+"app/core/config.py" = ["E501"]
 "app/core/discord.py" = ["BLE001"]
 "app/core/image.py" = ["BLE001"]
 "app/core/pagination.py" = ["UP046"]
+"app/crud/crud_asset_reservation.py" = ["E501"]
+"app/crud/crud_attendance_session.py" = ["E501"]
+"app/crud/crud_document.py" = ["E501"]
+"app/crud/crud_employee.py" = ["E501"]
+"app/crud/crud_face.py" = ["E501"]
+"app/crud/crud_member_report.py" = ["E501"]
+"app/crud/crud_overtime.py" = ["E501"]
+"app/crud/crud_plan_access.py" = ["E501"]
+"app/crud/crud_plan_amendment.py" = ["E501"]
+"app/crud/crud_plan_change.py" = ["E501"]
+"app/crud/crud_plan_draft.py" = ["E501"]
+"app/crud/crud_plan_member.py" = ["E501"]
+"app/crud/crud_plan_transition.py" = ["E501"]
+"app/crud/crud_signature.py" = ["E501"]
+"app/schemas/face.py" = ["E501"]
+"app/services/attendance_monitor_service.py" = ["E501"]
+"app/services/attendance_offline_service.py" = ["E501"]
+"app/services/attendance_session_service.py" = ["E501"]
+"app/services/employee_service.py" = ["E501"]
+"app/services/face_service.py" = ["E501"]
+"app/services/monitoring_service.py" = ["E501"]
+"app/services/notification_service.py" = ["E501"]
+"app/services/plan_amendment_service.py" = ["E501"]
+"app/services/plan_assignment_service.py" = ["E501"]
+"app/services/plan_change_service.py" = ["E501"]
+"app/services/plan_draft_service.py" = ["E501"]
+"app/services/plan_member_service.py" = ["E501"]
+"app/services/plan_transition_service.py" = ["E501"]
+"app/services/site_service.py" = ["E501"]
+# Bukan utang: impor app.* sengaja SESUDAH use_test_database() (pengaturan dibaca saat impor).
+"tests/conftest.py" = ["E402", "E501"]
+"tests/test_asset_list_state.py" = ["E501"]
+"tests/test_attendance_channel.py" = ["E501"]
+"tests/test_attendance_monitor.py" = ["E501"]
+"tests/test_attendance_rules.py" = ["E501"]
+"tests/test_attendance_triggers.py" = ["E501"]
+"tests/test_discord.py" = ["E501"]
+"tests/test_employee_account.py" = ["E501"]
+"tests/test_employee_offboard.py" = ["E501"]
+"tests/test_face_integration.py" = ["E501"]
+"tests/test_flow_people.py" = ["E501"]
+"tests/test_flow_plans.py" = ["E501"]
+"tests/test_member_reports.py" = ["E501"]
+"tests/test_plan_amendment_v2.py" = ["E501"]
+"tests/test_plan_appeal_revise.py" = ["E501"]
+"tests/test_plan_attachments.py" = ["E501"]
+"tests/test_plan_draft_v2.py" = ["E501"]
+"tests/test_plan_members.py" = ["E501"]
+"tests/test_plan_transitions.py" = ["E501"]
+"tests/test_route_guards.py" = ["E501"]
+"tests/test_same_org_refs.py" = ["E501"]

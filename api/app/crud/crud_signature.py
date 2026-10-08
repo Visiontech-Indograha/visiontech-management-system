@@ -24,14 +24,14 @@ class CRUDSignature(CRUDBase):
         """
         Menyimpan atau memperbarui kunci publik yang digunakan untuk memverifikasi tanda tangan.
         Hanya bagian publik yang disimpan, tidak pernah kunci privatnya.
-        
+
         Args:
             org_id (UUID | str): ID organisasi.
             kid (str): Key ID dari kunci.
             public_key (bytes): Byte kunci publik.
             kms_ref (str): Referensi KMS (Key Management Service).
             algorithm (str): Algoritma kriptografi (misal: RS256, ES256).
-            
+
         Returns:
             str: ID kunci publik (signing_key_id).
         """
@@ -50,10 +50,10 @@ class CRUDSignature(CRUDBase):
     async def plan_document(self, document_id: UUID | str) -> Any:
         """
         Mengambil informasi dokumen rencana kerja (SK).
-        
+
         Args:
             document_id (UUID | str): ID dokumen.
-            
+
         Returns:
             Any: Record dokumen SK beserta status dan snapshot-nya.
         """
@@ -72,10 +72,10 @@ class CRUDSignature(CRUDBase):
     async def plan_documents(self, plan_id: UUID | str) -> list[Any]:
         """
         Mendaftar semua versi dokumen dari sebuah SK (Rencana Kerja).
-        
+
         Args:
             plan_id (UUID | str): ID rencana kerja.
-            
+
         Returns:
             list[Any]: Daftar dokumen beserta jumlah tanda tangan aktif.
         """
@@ -97,10 +97,10 @@ class CRUDSignature(CRUDBase):
     async def latest_document_id(self, plan_id: UUID | str) -> str | None:
         """
         Mendapatkan ID dokumen SK revisi terakhir/terbaru.
-        
+
         Args:
             plan_id (UUID | str): ID rencana kerja.
-            
+
         Returns:
             str | None: ID dokumen terbaru atau None.
         """
@@ -117,7 +117,7 @@ class CRUDSignature(CRUDBase):
                        key_id: str, signature: bytes, payload: dict[str, Any], issued_by: str) -> Any:
         """
         Mendaftarkan tanda tangan untuk dokumen SK dengan memanggil fungsi basis data internal.
-        
+
         Args:
             org_id (UUID | str): ID organisasi.
             document (Any): Objek/record dokumen SK.
@@ -127,11 +127,11 @@ class CRUDSignature(CRUDBase):
             signature (bytes): Data tanda tangan (kriptografik).
             payload (dict[str, Any]): Payload detail metadata.
             issued_by (str): ID pengguna yang menerbitkan tanda tangan.
-            
+
         Returns:
             Any: Record hasil (signature_id, serial_number, qr_token_id, qr_raw_token).
         """
-        # Memanggil stored procedure (fungsi basis data) `register_document_signature` 
+        # Memanggil stored procedure (fungsi basis data) `register_document_signature`
         # untuk memastikan proses pencatatan tanda tangan + token QR terjadi dalam transaksi yang sama.
         return await self.fetchone(
             """
@@ -147,10 +147,10 @@ class CRUDSignature(CRUDBase):
     async def final_report_document(self, plan_id: UUID | str) -> Any:
         """
         Laporan akhir yang disetujui sebagai dokumen bertanda tangan (R-19).
-        
+
         Args:
             plan_id (UUID | str): ID rencana kerja (SK).
-            
+
         Returns:
             Any: Record laporan akhir, atau None bila belum ada.
         """
@@ -168,7 +168,7 @@ class CRUDSignature(CRUDBase):
                                     key_id: str, signature: bytes, payload: dict[str, Any], issued_by: str) -> Any:
         """
         Mendaftarkan tanda tangan untuk Laporan Akhir (Final Report).
-        
+
         Args:
             org_id (UUID | str): ID organisasi.
             plan (Any): Record rencana kerja (work_plan).
@@ -178,7 +178,7 @@ class CRUDSignature(CRUDBase):
             signature (bytes): Data tanda tangan (kriptografik).
             payload (dict[str, Any]): Payload detail metadata.
             issued_by (str): ID pengguna yang menerbitkan tanda tangan.
-            
+
         Returns:
             Any: Record (signature_id, serial_number, qr_token_id, qr_raw_token).
         """
@@ -198,11 +198,11 @@ class CRUDSignature(CRUDBase):
     async def signatures_of(self, signable_type: str, signable_id: UUID | str) -> list[Any]:
         """
         Mengambil daftar riwayat tanda tangan dari sebuah dokumen generik.
-        
+
         Args:
             signable_type (str): Tipe dokumen ('plan_document' atau 'final_report').
             signable_id (UUID | str): ID dokumen tersebut.
-            
+
         Returns:
             list[Any]: Daftar record tanda tangan yang terkait.
         """
@@ -221,10 +221,10 @@ class CRUDSignature(CRUDBase):
     async def signatures_of_document(self, document_id: UUID | str) -> list[Any]:
         """
         Mengambil daftar riwayat tanda tangan khusus untuk dokumen rencana kerja (SK).
-        
+
         Args:
             document_id (UUID | str): ID dokumen SK.
-            
+
         Returns:
             list[Any]: Daftar record tanda tangan terkait dokumen SK.
         """
@@ -243,10 +243,10 @@ class CRUDSignature(CRUDBase):
     async def signature(self, signature_id: UUID | str) -> Any:
         """
         Mengambil info dari satu entri tanda tangan.
-        
+
         Args:
             signature_id (UUID | str): ID tanda tangan.
-            
+
         Returns:
             Any: Record metadata tanda tangan.
         """
@@ -265,10 +265,10 @@ class CRUDSignature(CRUDBase):
     async def employee_of(self, user_id: UUID | str) -> str | None:
         """
         Mengambil ID karyawan dari sebuah ID pengguna aplikasi.
-        
+
         Args:
             user_id (UUID | str): ID pengguna.
-            
+
         Returns:
             str | None: ID karyawan, atau None.
         """
@@ -280,7 +280,7 @@ class CRUDSignature(CRUDBase):
     async def revoke(self, signature_id: UUID | str, reason: str, employee_id: str | None) -> None:
         """
         Mencabut sebuah tanda tangan yang sudah direkam.
-        
+
         Args:
             signature_id (UUID | str): ID tanda tangan.
             reason (str): Alasan pencabutan.
@@ -297,12 +297,12 @@ class CRUDSignature(CRUDBase):
     async def issue_verify_token(self, org_id: UUID | str, signature_id: UUID | str, issued_by: str) -> str:
         """
         Menerbitkan token QR baru (berupa JWT internal) untuk memverifikasi tanda tangan.
-        
+
         Args:
             org_id (UUID | str): ID organisasi.
             signature_id (UUID | str): ID tanda tangan.
             issued_by (str): Pengguna yang mencetak/menerbitkan kode QR.
-            
+
         Returns:
             str: Token QR string (raw_token).
         """
@@ -319,10 +319,10 @@ class CRUDSignature(CRUDBase):
     async def verify(self, raw_token: str) -> Any:
         """
         Memverifikasi tanda tangan menggunakan raw token (hasil scan QR).
-        
+
         Args:
             raw_token (str): String token hasil scan.
-            
+
         Returns:
             Any: Record hasil verifikasi (status, informasi penandatangan, hash dokumen).
         """

@@ -1,9 +1,10 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Navigate, useNavigate } from "react-router-dom";
 import { z } from "zod";
-import { AlertCircle, Timer } from "lucide-react";
+import { AlertCircle, Smartphone, Timer } from "lucide-react";
 import { useSession } from "@/app/session";
 import logo from "@/assets/brand/logo-visiontech.png";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -11,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ApiError } from "@/lib/api";
+import { ApiError, api } from "@/lib/api";
 
 const schema = z.object({
   email: z.string().trim().email("Format email tidak valid.").min(1, "Email wajib diisi."),
@@ -62,7 +63,7 @@ export function LoginPage({ admin = false }: { admin?: boolean }) {
         <p className="relative text-caption text-brand-200">© PT Visiontech Indograha</p>
       </section>
 
-      <section className="flex items-center justify-center px-4 py-10">
+      <section className="flex flex-col items-center justify-center gap-4 px-4 py-10">
         <Card className="w-full max-w-sm gap-5">
           <CardHeader>
             <img src={logo} alt="Visiontech Indograha" className="mb-3 h-10 w-auto self-start lg:hidden" />
@@ -103,6 +104,7 @@ export function LoginPage({ admin = false }: { admin?: boolean }) {
             </form>
           </CardContent>
         </Card>
+        <AndroidAppLink />
       </section>
     </main>
   );
@@ -129,4 +131,33 @@ function useLockCountdown() {
       setUntil(t + secs * 1000);
     },
   };
+}
+
+type AndroidRelease = {
+  latest_build: number | null;
+  latest_version: string | null;
+  download: { size: number } | null;
+};
+
+/** Tautan pemasangan pertama aplikasi HP (docs/32) — hanya tampil bila sudah ada rilis di portal. */
+function AndroidAppLink() {
+  const { data } = useQuery({
+    queryKey: ["app-android-latest"],
+    queryFn: async () =>
+      (await api.get<AndroidRelease>("/app/android/update", { params: { build: 0, abi: "arm64-v8a" } })).data,
+    staleTime: 10 * 60 * 1000,
+    retry: false,
+  });
+  if (!data?.latest_build || !data.download) return null;
+  const mb = (data.download.size / (1024 * 1024)).toFixed(0);
+  return (
+    <a
+      href={`${import.meta.env.VITE_API_BASE_URL ?? ""}/api/v1/app/android/latest.apk`}
+      className="inline-flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm font-medium text-primary hover:underline"
+      data-testid="unduh-aplikasi-android"
+    >
+      <Smartphone aria-hidden className="size-4" />
+      Unduh aplikasi Android · versi {data.latest_version} (build {data.latest_build}) · {mb} MB
+    </a>
+  );
 }

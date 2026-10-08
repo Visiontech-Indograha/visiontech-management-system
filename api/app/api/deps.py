@@ -16,6 +16,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.alerts import send_security_alert
+from app.core.config import settings
 from app.core.errors import AppError, NotFoundError
 from app.core.permissions import NO_GLOBAL_ROLE, Permission, permissions_for_roles
 from app.core.security import CurrentUser, verify_jwt_token
@@ -37,6 +38,7 @@ from app.crud.crud_user import CRUDUser
 from app.db.session import AsyncSessionLocal, set_request_context, unit_of_work
 from app.services.access_service import PlanAccess, PlanNeed, check_plan_access
 from app.services.account_service import AccountService
+from app.services.app_release_service import AppReleaseService
 from app.services.asset_reservation_service import AssetReservationService
 from app.services.attendance_monitor_service import AttendanceMonitorService
 from app.services.attendance_offline_service import AttendanceOfflineService
@@ -104,7 +106,7 @@ async def get_current_user(
         payload = verify_jwt_token(credentials.credentials)
     except jwt.PyJWTError:
         raise _unauthenticated() from None
-    
+
     user_id, session_id = payload.get("sub"), payload.get("jti")
     if not user_id or not session_id:
         raise _unauthenticated()
@@ -342,6 +344,11 @@ def get_signature_service(db: AsyncSession = Depends(get_db_with_user)) -> Signa
 
 def get_sync_service(db: AsyncSession = Depends(get_db_with_user)) -> SyncService:
     return SyncService(db)
+
+
+def get_app_release_service() -> AppReleaseService:
+    """Rilis APK dibaca dari folder berkas (publik, tanpa sesi DB) — docs/32."""
+    return AppReleaseService(settings.APP_RELEASE_DIR)
 
 
 def get_unit_service(db: AsyncSession = Depends(get_db_with_user)) -> UnitService:

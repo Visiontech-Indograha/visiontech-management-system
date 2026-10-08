@@ -75,10 +75,10 @@ def create_app() -> FastAPI:
     Mendaftarkan middleware, error handler, dan router rute (endpoints).
     """
     app = FastAPI(title=settings.PROJECT_NAME)
-    
+
     # Daftarkan middleware
     app.add_middleware(RequestIDMiddleware)
-    
+
     # Daftarkan penanganan galat aplikasi (error handlers)
     register_error_handlers(app)  # bentuk galat baku dok 05 §2 (app/core/errors.py)
 
@@ -87,11 +87,11 @@ def create_app() -> FastAPI:
     async def health_check() -> dict[str, str]:
         """Endpoint pemeriksaan kesehatan sederhana (liveness probe)."""
         return {"status": "ok"}
-        
+
     @app.get("/ready")
     async def readiness_check() -> JSONResponse:
         """
-        Endpoint kesiapan (readiness probe). 
+        Endpoint kesiapan (readiness probe).
         Memastikan basis data benar-benar bisa dihubungi sebelum melayani request.
         """
         # Siap = basis data benar-benar menjawab; dipakai autodeploy sebelum lapor "berhasil".
@@ -106,16 +106,16 @@ def create_app() -> FastAPI:
                 schema_ok = await conn.scalar(text("SELECT to_regclass('vms.organization') IS NOT NULL"))
         except (OSError, SQLAlchemyError):
             schema_ok = None
-            
+
         if not schema_ok:
             return JSONResponse({"status": "not_ready", "db": "unreachable"}, status_code=503)
         return JSONResponse({"status": "ready", "db": "ok"})
-        
+
     # Memasukkan router utama v1 ke dalam aplikasi
     from app.api.v1.router import api_router
 
     app.include_router(api_router, prefix=API_PREFIX)
-        
+
     return app
 
 # Instance aplikasi FastAPI utama yang siap dijalankan oleh server (seperti Uvicorn)

@@ -34,10 +34,10 @@ class AssetReservationService:
     async def list_assets(self, org_id: str) -> list[Any]:
         """
         Daftar aset beserta alokasi berjalan & pengajuan pengembalian — dasar tombol kembali/periksa.
-        
+
         Args:
             org_id: ID organisasi.
-            
+
         Returns:
             Daftar aset.
         """
@@ -46,10 +46,10 @@ class AssetReservationService:
     async def plan_assets(self, plan_id: UUID) -> list[Any]:
         """
         Mendapatkan aset yang dipakai SK tertentu. Akses VIEW SK diperiksa penjaga rute.
-        
+
         Args:
             plan_id: ID work plan.
-            
+
         Returns:
             Daftar aset yang digunakan pada SK tersebut.
         """
@@ -67,7 +67,7 @@ class AssetReservationService:
     async def bast(self, org_id: str, return_id: UUID) -> Any:
         """
         Berita acara serah terima (P6-4): hanya untuk pengembalian yang sudah diperiksa petugas aset.
-        
+
         Args:
             org_id: ID organisasi.
             return_id: ID pengembalian.
@@ -102,27 +102,27 @@ class AssetReservationService:
     async def reserve(self, user: CurrentUser, asset_id: UUID, plan_id: UUID, driver_id: UUID | None) -> Any:
         """
         Merereservasi aset untuk digunakan pada suatu SK.
-        
+
         Args:
             user: Pengguna yang melakukan reservasi.
             asset_id: ID aset.
             plan_id: ID SK/Work plan.
             driver_id: ID pengemudi (wajib jika aset kendaraan).
-            
+
         Returns:
             Data alokasi aset.
         """
         await self._manager_of(user, plan_id)
         asset = await self._asset(asset_id)
         plan = await self.repo.plan_for_driver(plan_id, driver_id)
-        
+
         # Aset hanya bisa dipinjamkan pada SK yang sedang berjalan/belum selesai.
         if plan.status in (PlanStatus.COMPLETED, PlanStatus.CANCELLED):
             raise _state("Pilih work plan yang masih aktif.")
         # Mencegah bentrokan reservasi jika aset sedang dipakai orang lain.
         if asset.status != "AVAILABLE" or await self.repo.active_allocation(asset_id) is not None:
             raise _state("Aset ini sedang dialokasikan dan belum dikembalikan.")
-            
+
         if asset.kind == "VEHICLE":
             if driver_id is None:
                 raise ValidationError("Pilih pengemudi untuk aset kendaraan.")
@@ -131,13 +131,13 @@ class AssetReservationService:
                 raise ValidationError("Pengemudi harus bagian dari tim penugasan.")
         else:
             driver_id = None
-            
+
         try:
             allocation = await self.repo.insert_allocation(asset_id, plan_id, driver_id, user.user_id)
         except IntegrityError as exc:
             # Aturan SIM hidup di trigger asset_allocation_driver (V-11). Trigger memeriksa masa berlaku SIM pengemudi.
             raise (trigger_rule_error(exc) or _state("Aset ini sedang dialokasikan dan belum dikembalikan.")) from None
-            
+
         in_use = asset.kind != "VEHICLE" and plan.status in RUNNING
         await self.repo.set_asset_status(asset_id, "IN_USE" if in_use else "RESERVED")
         return allocation
@@ -149,11 +149,11 @@ class AssetReservationService:
         await self._manager_of(user, plan_id)
         asset = await self._asset(asset_id)
         allocation = await self.repo.active_allocation(asset_id)
-        
+
         # Memastikan hanya reservasi yang masih dalam status tertunda yang dapat dibatalkan pelepasannya.
         if asset.status != "RESERVED" or allocation is None or str(allocation.work_plan_id) != str(plan_id):
             raise _state("Hanya reservasi yang belum dipakai dapat dilepas.")
-            
+
         await self.repo.free_asset(asset_id, allocation.id, None)
         return "AVAILABLE"
 
@@ -163,7 +163,7 @@ class AssetReservationService:
         """
         asset = await self._asset(asset_id)
         allocation = await self.repo.active_allocation(asset_id)
-        
+
         if allocation is None or asset.kind != "VEHICLE":
             raise _state("Hanya kendaraan yang memerlukan pemeriksaan pengemudi.")
         # Hanya pengemudi yang dialokasikan yang boleh menyatakan kendaraan layak atau tidak.
@@ -171,19 +171,19 @@ class AssetReservationService:
             raise ForbiddenError("Hanya pengemudi yang ditunjuk yang dapat melakukan pemeriksaan.")
         if allocation.driver_checked_at is not None:
             raise _state("Kendaraan ini sudah diperiksa.")
-            
+
         if decision == "ACCEPT":
             await self.repo.mark_checked(allocation.id)
             if allocation.plan_status == PlanStatus.IN_PROGRESS:
                 await self.repo.set_asset_status(asset_id, "IN_USE")
                 return "IN_USE"
             return str(asset.status)
-            
+
         if decision != "APPEAL":
             raise ValidationError("Keputusan tidak valid.")
         if not (reason or "").strip():
             raise ValidationError("Alasan banding kelayakan wajib diisi.")
-            
+
         # Jika kendaraan tidak layak, aset dilepaskan (free) dengan alasan banding dari pengemudi.
         await self.repo.free_asset(asset_id, allocation.id, f"Banding pengemudi: {(reason or '').strip()}")
         return "AVAILABLE"

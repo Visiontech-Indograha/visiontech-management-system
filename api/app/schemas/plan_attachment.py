@@ -6,7 +6,7 @@ from pydantic import BaseModel
 
 class AttachmentsRequest(BaseModel):
     """Permintaan untuk menautkan satu atau lebih file sebagai lampiran.
-    
+
     Skema ini memuat daftar ID file yang ingin dilampirkan pada suatu rencana kerja.
     """
     file_ids: list[UUID]  # Daftar ID file (UUID) yang menjadi lampiran
@@ -14,7 +14,7 @@ class AttachmentsRequest(BaseModel):
 
 class AttachmentResponse(BaseModel):
     """Respons yang menyajikan detail metadata dari file lampiran.
-    
+
     Berisi informasi dasar seperti nama file, tipe MIME, ukuran, serta urutan tampilannya.
     """
     file_id: str  # ID file lampiran

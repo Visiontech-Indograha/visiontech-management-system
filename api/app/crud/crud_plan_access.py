@@ -64,13 +64,13 @@ class CRUDPlanAccess(CRUDBase):
                        archived: bool | None = False) -> Any:
         """Baris SK + kedudukan pengguna; None bila SK tidak ada, milik organisasi lain, atau tak terlihat.
         `archived`: False = aktif saja, True = terarsip saja, None = keduanya (pemulihan).
-        
+
         Args:
             plan_id (UUID | str): ID Work Plan.
             org_id (UUID | str): ID organisasi pengguna.
             user_id (UUID | str): ID pengguna.
             archived (bool | None, optional): Filter untuk status arsip. Default: False.
-            
+
         Returns:
             Any: Baris data berisi detail SK dan hak akses pengguna (manages, is_leader, is_member, visible).
         """
@@ -83,13 +83,13 @@ class CRUDPlanAccess(CRUDBase):
     async def visible_plans(self, org_id: UUID | str, user_id: UUID | str, status: str | None,
                             archived: bool = False) -> Sequence[Any]:
         """Daftar semua SK yang dapat dilihat oleh pengguna di organisasinya.
-        
+
         Args:
             org_id (UUID | str): ID organisasi.
             user_id (UUID | str): ID pengguna.
             status (str | None): Filter status SK.
             archived (bool, optional): Jika True, hanya ambil SK yang diarsipkan. Default: False.
-            
+
         Returns:
             Sequence[Any]: Daftar SK yang dapat diakses pengguna.
         """
@@ -100,10 +100,10 @@ class CRUDPlanAccess(CRUDBase):
 
     async def plan_of_day(self, day_id: UUID | str) -> Any:
         """Mendapatkan ID Work Plan berdasarkan ID harinya.
-        
+
         Args:
             day_id (UUID | str): ID dari work_plan_day.
-            
+
         Returns:
             Any: ID dari work_plan terkait.
         """
@@ -112,10 +112,10 @@ class CRUDPlanAccess(CRUDBase):
 
     async def plan_of_allocation(self, allocation_id: UUID | str) -> Any:
         """Mendapatkan ID Work Plan berdasarkan ID alokasi aset.
-        
+
         Args:
             allocation_id (UUID | str): ID dari asset_allocation.
-            
+
         Returns:
             Any: ID dari work_plan terkait.
         """
@@ -125,11 +125,11 @@ class CRUDPlanAccess(CRUDBase):
 
     async def plan_of_incident(self, incident_id: UUID | str, org_id: UUID | str) -> Any:
         """Mendapatkan ID Work Plan berdasarkan ID laporan insiden.
-        
+
         Args:
             incident_id (UUID | str): ID dari incident_report.
             org_id (UUID | str): ID organisasi untuk validasi kepemilikan.
-            
+
         Returns:
             Any: ID dari work_plan terkait.
         """
@@ -141,12 +141,12 @@ class CRUDPlanAccess(CRUDBase):
 
     async def unit_standing(self, unit_id: UUID | str, org_id: UUID | str, user_id: UUID | str) -> Any:
         """(ada di organisasi ini?, boleh dikelola pengguna?) — untuk membuat SK di sebuah unit.
-        
+
         Args:
             unit_id (UUID | str): ID unit bisnis target.
             org_id (UUID | str): ID organisasi pengguna.
             user_id (UUID | str): ID pengguna (app_user).
-            
+
         Returns:
             Any: Baris dengan field 'manages' (Boolean) jika pengguna berhak mengelola unit.
         """

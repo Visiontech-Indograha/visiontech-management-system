@@ -28,10 +28,10 @@ class CRUDAttendanceSession(CRUDBase):
     async def employee_of(self, user_id: UUID | str) -> Any:
         """
         Mendapatkan ID karyawan berdasarkan ID pengguna (user account).
-        
+
         Args:
             user_id (UUID | str): ID pengguna.
-            
+
         Returns:
             Any: ID karyawan (UUID) atau None.
         """
@@ -42,10 +42,10 @@ class CRUDAttendanceSession(CRUDBase):
         """
         Mengambil informasi (employee_id, attendance_mode, unit_id, is_admin) yang terkait dengan sebuah akun pengguna.
         Mengembalikan None jika akun tidak ditautkan ke profil karyawan mana pun.
-        
+
         Args:
             user_id (UUID | str): ID pengguna.
-            
+
         Returns:
             Any: Record (Row) yang berisi detail karyawan, atau None.
         """
@@ -65,11 +65,11 @@ class CRUDAttendanceSession(CRUDBase):
         Mendapatkan sesi absensi terbaru yang masih terbuka (belum check-out dan belum ditolak),
         berlaku untuk tanggal berapa pun.
         Jika `valid_only` bernilai True, hanya sesi yang otomatis valid atau disetujui yang dikembalikan (syarat check-out R-33).
-        
+
         Args:
             employee_id (UUID | str): ID karyawan.
             valid_only (bool): Jika True, memfilter hanya sesi dengan status valid/disetujui. Defaults to False.
-            
+
         Returns:
             Any: Data sesi absensi terbuka, atau None jika tidak ada.
         """
@@ -91,11 +91,11 @@ class CRUDAttendanceSession(CRUDBase):
     async def active_on(self, employee_id: UUID | str, work_date: Any) -> bool:
         """
         Mengecek apakah ada sesi absensi aktif (tidak ditolak) untuk karyawan tertentu pada tanggal kerja tertentu.
-        
+
         Args:
             employee_id (UUID | str): ID karyawan.
             work_date (Any): Tanggal kerja (date).
-            
+
         Returns:
             bool: True jika ada absensi aktif, False jika tidak ada.
         """
@@ -111,11 +111,11 @@ class CRUDAttendanceSession(CRUDBase):
     async def rejected_on(self, employee_id: UUID | str, work_date: Any) -> int:
         """
         Menghitung jumlah pengajuan absensi yang ditolak untuk karyawan pada tanggal kerja tersebut.
-        
+
         Args:
             employee_id (UUID | str): ID karyawan.
             work_date (Any): Tanggal kerja (date).
-            
+
         Returns:
             int: Jumlah absensi yang ditolak.
         """
@@ -131,15 +131,15 @@ class CRUDAttendanceSession(CRUDBase):
     async def site_for_check_in(self, site_id: UUID | str, org_id: UUID | str, lng: float, lat: float) -> Any:
         """
         Mendapatkan informasi nama lokasi, unit, jarak (dalam meter), dan radius geofence.
-        Rumus jarak (ST_Distance) sama dengan yang ada di fungsi trigger database, 
+        Rumus jarak (ST_Distance) sama dengan yang ada di fungsi trigger database,
         digunakan sementara di API untuk memvalidasi/mewajibkan penjelasan ('explanation') jika pengguna berada di luar radius.
-        
+
         Args:
             site_id (UUID | str): ID lokasi (site).
             org_id (UUID | str): ID organisasi.
             lng (float): Garis bujur (longitude) posisi karyawan.
             lat (float): Garis lintang (latitude) posisi karyawan.
-            
+
         Returns:
             Any: Baris data yang berisi nama lokasi, unit_id, jarak (distance_m), dan batas radius_m.
         """
@@ -164,7 +164,7 @@ class CRUDAttendanceSession(CRUDBase):
         """
         Membuat (menyisipkan) rekaman absensi masuk (check-in) baru.
         Catatan: Kolom radius_m harus NOT NULL, nilainya diset sementara 0, trigger database akan menimpanya.
-        
+
         Args:
             org_id (str): ID organisasi.
             employee_id (Any): ID karyawan.
@@ -180,7 +180,7 @@ class CRUDAttendanceSession(CRUDBase):
             source (str): Sumber absensi ('MOBILE', dll). Defaults to "MOBILE".
             explanation (str | None): Catatan penjelasan keterlambatan/jarak. Defaults to None.
             at (Any | None): Waktu check-in, menggunakan now() jika None.
-            
+
         Returns:
             Any: Baris data absensi yang baru dibuat (RETURNING).
         """
@@ -208,10 +208,10 @@ class CRUDAttendanceSession(CRUDBase):
     async def close(self, attendance_id: UUID | str) -> Any:
         """
         Menutup sesi absensi dengan menetapkan waktu check-out ke saat ini (now()).
-        
+
         Args:
             attendance_id (UUID | str): ID absensi yang ingin ditutup.
-            
+
         Returns:
             Any: Baris data absensi yang telah diperbarui.
         """
@@ -273,11 +273,11 @@ class CRUDAttendanceSession(CRUDBase):
         Mengambil satu rekaman absensi berdasarkan ID dan ID organisasi.
         Catatan: Menggunakan 'FOR UPDATE' sehingga mengunci baris ini untuk mencegah race condition
         selama proses pembaruan data absensi.
-        
+
         Args:
             attendance_id (UUID | str): ID absensi.
             org_id (UUID | str): ID organisasi.
-            
+
         Returns:
             Any: Data absensi yang diminta dan telah dikunci.
         """
@@ -297,11 +297,11 @@ class CRUDAttendanceSession(CRUDBase):
         """
         Mengecek apakah seorang pengguna (viewer) memiliki hak untuk meninjau (review)
         absensi seorang karyawan.
-        
+
         Args:
             viewer_user_id (UUID | str): ID pengguna yang melihat.
             employee_id (UUID | str): ID karyawan yang absensinya dilihat.
-            
+
         Returns:
             bool: True jika pengguna boleh melakukan peninjauan.
         """
@@ -317,7 +317,7 @@ class CRUDAttendanceSession(CRUDBase):
         """
         Mengambil daftar absensi dengan pembagian halaman (pagination) berdasarkan izin pengguna.
         Hanya mengembalikan absensi yang boleh dilihat oleh pengguna (R-33).
-        
+
         Args:
             org_id (str): ID organisasi.
             viewer_user_id (str): ID pengguna yang meminta data.
@@ -330,7 +330,7 @@ class CRUDAttendanceSession(CRUDBase):
                 anggota/umum). Memisahkan absensi pribadi dari absensi orang lain untuk PM/Finance/OPS.
             limit (int): Jumlah maksimum hasil (pagination).
             offset (int): Titik mulai (offset) untuk pagination.
-            
+
         Returns:
             tuple[list[Any], int]: Tuple yang berisi daftar baris (rows) absensi dan jumlah total data (total count).
         """
@@ -388,7 +388,7 @@ class CRUDAttendanceSession(CRUDBase):
     async def set_explanation(self, attendance_id: UUID | str, explanation: str) -> None:
         """
         Menambahkan penjelasan (alasan) keterlambatan atau absen di luar lokasi.
-        
+
         Args:
             attendance_id (UUID | str): ID absensi.
             explanation (str): Penjelasan/keterangan yang diberikan pengguna.
@@ -401,7 +401,7 @@ class CRUDAttendanceSession(CRUDBase):
         """
         Menyimpan hasil peninjauan absensi (misalnya APPROVED, REJECTED) oleh atasan atau tim terkait.
         Juga menangani persetujuan otomatis untuk check-out luring yang tertunda (R-34).
-        
+
         Args:
             attendance_id (UUID | str): ID absensi.
             status (str): Status peninjauan yang baru.

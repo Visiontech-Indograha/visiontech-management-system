@@ -10472,6 +10472,31 @@
     ]
    }
   },
+  "/api/v1/events": {
+   "get": {
+    "description": "Aliran `text/event-stream` peristiwa untuk pengguna yang sedang masuk (GET).\n\nFormat: `event: <topic>` + `data: <json>`; topik `notification`, `plan`, `attendance`. Komentar `: ping` tiap\n25 detik menjaga sambungan tetap hidup di balik proksi.",
+    "operationId": "events_api_v1_events_get",
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Events",
+    "tags": [
+     "Events"
+    ]
+   }
+  },
   "/api/v1/face/challenge-check": {
    "post": {
     "description": "Memeriksa gambar langsung dari kamera HP untuk memvalidasi tantangan liveness.",

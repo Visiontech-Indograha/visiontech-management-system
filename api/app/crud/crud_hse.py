@@ -83,7 +83,13 @@ class CRUDHse(CRUDBase):
 
     async def replace_report_evidence(self, report_id: UUID | str,
                                       items: list[tuple[str, str | None, str]]) -> None:
-        """Ganti seluruh berkas bukti laporan harian: (file_id, slot_label, source)."""
+        """Ganti seluruh berkas bukti laporan harian: (file_id, slot_label, source). Berkas yang sudah punya
+        label/sumber dan kembali tanpa metadata (klien lama/web) mempertahankan metadata lamanya."""
+        old = {str(r.file_id): (r.slot_label, r.source) for r in await self.fetchall(
+            "SELECT file_id, slot_label, source FROM vms.report_evidence WHERE daily_report_id = :rid",
+            {"rid": report_id})}
+        items = [(f, old[f][0], old[f][1]) if (s is None and src == "CAMERA" and f in old) else (f, s, src)
+                 for f, s, src in items]
         await self.execute("DELETE FROM vms.report_evidence WHERE daily_report_id = :rid", {"rid": report_id})
         if items:
             await self.execute(

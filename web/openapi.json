@@ -8078,6 +8078,281 @@
     }
    }
   },
+  "/api/v1/events": {
+   "get": {
+    "tags": [
+     "Events"
+    ],
+    "summary": "Events",
+    "description": "Aliran `text/event-stream` peristiwa untuk pengguna yang sedang masuk (GET).\n\nFormat: `event: <topic>` + `data: <json>`; topik `notification`, `plan`, `attendance`. Komentar `: ping` tiap\n25 detik menjaga sambungan tetap hidup di balik proksi.",
+    "operationId": "events_api_v1_events_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ]
+   }
+  },
+  "/api/v1/work-types": {
+   "get": {
+    "tags": [
+     "Work Types"
+    ],
+    "summary": "List Work Types",
+    "description": "Daftar jenis pekerjaan beserta template foto (GET). Semua yang masuk melihat yang aktif;\n`?all=true` (termasuk yang nonaktif) hanya untuk pengelola rencana kerja.\n\nQuery Parameters:\n- all (bool): sertakan yang nonaktif (butuh izin create:plan).\n\nReturns:\n- list[WorkTypeOut]: jenis pekerjaan.",
+    "operationId": "list_work_types_api_v1_work_types_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "all",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "boolean",
+       "default": false,
+       "title": "All"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/WorkTypeOut"
+         },
+         "title": "Response List Work Types Api V1 Work Types Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "post": {
+    "tags": [
+     "Work Types"
+    ],
+    "summary": "Create Work Type",
+    "description": "Membuat jenis pekerjaan + template foto (POST) — PM/OPS.\n\nRequest Body:\n- data (WorkTypeIn): nama dan daftar slot foto.\n\nReturns:\n- WorkTypeOut: jenis yang dibuat.",
+    "operationId": "create_work_type_api_v1_work_types_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/WorkTypeIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/WorkTypeOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/work-types/{type_id}": {
+   "put": {
+    "tags": [
+     "Work Types"
+    ],
+    "summary": "Update Work Type",
+    "description": "Mengubah nama dan mengganti seluruh daftar slot foto (PUT) — PM/OPS. Mengaktifkan kembali jenis nonaktif.\n\nPath Parameters:\n- type_id (UUID): ID jenis pekerjaan.\n\nReturns:\n- WorkTypeOut: jenis setelah diubah.",
+    "operationId": "update_work_type_api_v1_work_types__type_id__put",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "type_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Type Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/WorkTypeIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/WorkTypeOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "tags": [
+     "Work Types"
+    ],
+    "summary": "Deactivate Work Type",
+    "description": "Menonaktifkan jenis pekerjaan (DELETE) — PM/OPS. Tidak dihapus: rencana kerja lama tetap utuh.\n\nPath Parameters:\n- type_id (UUID): ID jenis pekerjaan.",
+    "operationId": "deactivate_work_type_api_v1_work_types__type_id__delete",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "type_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Type Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/work-plans/{plan_id}/photo-template": {
+   "get": {
+    "tags": [
+     "Work Types"
+    ],
+    "summary": "Plan Photo Template",
+    "description": "Template foto laporan rencana kerja (GET) — kosong bila rencana kerja tanpa jenis pekerjaan.\n\nPath Parameters:\n- plan_id (UUID): ID rencana kerja.\n\nReturns:\n- list[WorkTypePhotoOut]: slot foto berurutan.",
+    "operationId": "plan_photo_template_api_v1_work_plans__plan_id__photo_template_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "plan_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Plan Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/WorkTypePhotoOut"
+         },
+         "title": "Response Plan Photo Template Api V1 Work Plans  Plan Id  Photo Template Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/v1/app/android/update": {
    "get": {
     "tags": [
@@ -10324,6 +10599,14 @@
       "type": "array",
       "title": "Evidence File Ids",
       "default": []
+     },
+     "evidence": {
+      "items": {
+       "$ref": "#/components/schemas/EvidenceIn"
+      },
+      "type": "array",
+      "title": "Evidence",
+      "default": []
      }
     },
     "type": "object",
@@ -10487,6 +10770,14 @@
       },
       "type": "array",
       "title": "Evidence File Ids"
+     },
+     "evidence": {
+      "items": {
+       "$ref": "#/components/schemas/EvidenceOut"
+      },
+      "type": "array",
+      "title": "Evidence",
+      "default": []
      },
      "resubmitted": {
       "type": "boolean",
@@ -11360,6 +11651,77 @@
     ],
     "title": "EnrollResponse"
    },
+   "EvidenceIn": {
+    "properties": {
+     "file_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "File Id"
+     },
+     "slot_label": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 80
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Slot Label"
+     },
+     "source": {
+      "type": "string",
+      "enum": [
+       "CAMERA",
+       "GALLERY"
+      ],
+      "title": "Source",
+      "default": "CAMERA"
+     }
+    },
+    "type": "object",
+    "required": [
+     "file_id"
+    ],
+    "title": "EvidenceIn",
+    "description": "Foto bukti laporan: file + slot template yang dipenuhi + sumbernya."
+   },
+   "EvidenceOut": {
+    "properties": {
+     "file_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "File Id"
+     },
+     "slot_label": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Slot Label"
+     },
+     "source": {
+      "type": "string",
+      "enum": [
+       "CAMERA",
+       "GALLERY"
+      ],
+      "title": "Source",
+      "default": "CAMERA"
+     }
+    },
+    "type": "object",
+    "required": [
+     "file_id"
+    ],
+    "title": "EvidenceOut",
+    "description": "Foto bukti laporan (keluaran)."
+   },
    "ExpiringDocumentList": {
     "properties": {
      "items": {
@@ -12164,6 +12526,14 @@
       "type": "array",
       "title": "Evidence File Ids",
       "default": []
+     },
+     "evidence": {
+      "items": {
+       "$ref": "#/components/schemas/EvidenceIn"
+      },
+      "type": "array",
+      "title": "Evidence",
+      "default": []
      }
     },
     "type": "object",
@@ -12224,6 +12594,14 @@
       },
       "type": "array",
       "title": "Evidence File Ids",
+      "default": []
+     },
+     "evidence": {
+      "items": {
+       "$ref": "#/components/schemas/EvidenceOut"
+      },
+      "type": "array",
+      "title": "Evidence",
       "default": []
      }
     },
@@ -13538,6 +13916,18 @@
       "title": "Is Out Of Town",
       "default": false
      },
+     "work_type_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Work Type Id"
+     },
      "tool_ids": {
       "items": {
        "type": "string",
@@ -13844,6 +14234,18 @@
       "type": "boolean",
       "title": "Is Out Of Town",
       "default": false
+     },
+     "work_type_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Work Type Id"
      },
      "tool_ids": {
       "items": {
@@ -15430,6 +15832,18 @@
       "title": "Is Out Of Town",
       "default": false
      },
+     "work_type_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Work Type Id"
+     },
      "pending_request": {
       "type": "boolean",
       "title": "Pending Request",
@@ -15546,6 +15960,137 @@
     ],
     "title": "WorkPlanUpdate",
     "description": "Skema untuk memperbarui data Rencana Kerja."
+   },
+   "WorkTypeIn": {
+    "properties": {
+     "name": {
+      "type": "string",
+      "maxLength": 80,
+      "minLength": 1,
+      "title": "Name"
+     },
+     "photos": {
+      "items": {
+       "$ref": "#/components/schemas/WorkTypePhotoIn"
+      },
+      "type": "array",
+      "title": "Photos",
+      "default": []
+     }
+    },
+    "type": "object",
+    "required": [
+     "name"
+    ],
+    "title": "WorkTypeIn",
+    "description": "Membuat/mengubah jenis pekerjaan; `photos` mengganti seluruh daftar slot."
+   },
+   "WorkTypeOut": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Id"
+     },
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "is_active": {
+      "type": "boolean",
+      "title": "Is Active",
+      "default": true
+     },
+     "photos": {
+      "items": {
+       "$ref": "#/components/schemas/WorkTypePhotoOut"
+      },
+      "type": "array",
+      "title": "Photos",
+      "default": []
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "name"
+    ],
+    "title": "WorkTypeOut",
+    "description": "Jenis pekerjaan beserta template fotonya."
+   },
+   "WorkTypePhotoIn": {
+    "properties": {
+     "label": {
+      "type": "string",
+      "maxLength": 80,
+      "minLength": 1,
+      "title": "Label"
+     },
+     "hint": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 300
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Hint"
+     },
+     "required": {
+      "type": "boolean",
+      "title": "Required",
+      "default": false
+     }
+    },
+    "type": "object",
+    "required": [
+     "label"
+    ],
+    "title": "WorkTypePhotoIn",
+    "description": "Satu slot foto pada template: label, petunjuk, wajib/tidak."
+   },
+   "WorkTypePhotoOut": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Id"
+     },
+     "sort_order": {
+      "type": "integer",
+      "title": "Sort Order"
+     },
+     "label": {
+      "type": "string",
+      "title": "Label"
+     },
+     "hint": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Hint"
+     },
+     "required": {
+      "type": "boolean",
+      "title": "Required",
+      "default": false
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "sort_order",
+     "label"
+    ],
+    "title": "WorkTypePhotoOut",
+    "description": "Slot foto pada template (keluaran)."
    }
   },
   "securitySchemes": {

@@ -37,13 +37,8 @@ FORBIDDEN: dict[str, set[str]] = {
 EXEMPT_FILES = {"api/deps.py"}
 
 # "berkas -> lapisan terlarang yang diimpor"; hanya boleh menyusut.
-# endpoint -> crud: SQL/crud keluar dari endpoint per modul (docs/26 M6).
-# services/sync_service.py -> api: logika hse masih di endpoint (M6 modul hse).
-KNOWN_VIOLATIONS: set[str] = {
-    "api/v1/endpoints/hse.py -> crud",
-    "api/v1/endpoints/work_plans.py -> crud",
-    "services/sync_service.py -> api",
-}
+# Kosong sejak 2026-10-08 (P9-7): endpoint tidak lagi mengimpor crud, service tidak lagi mengimpor api.
+KNOWN_VIOLATIONS: set[str] = set()
 
 
 def _layer_of_module(module: str) -> str | None:

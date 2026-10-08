@@ -163,7 +163,7 @@ class AttendanceOfflineService:
         if kind == "CHECK_IN":
             result, attendance_id = await self._check_in(user, p, event, notes, selfie_file_id, face_probe_id, face)
         else:
-            result, attendance_id = await self._check_out(user, event, notes, face_probe_id, face)
+            result, attendance_id = await self._check_out(user, event, notes, face_probe_id, face, p)
 
         await self.repo.record_event(client_op_id=client_op_id, org_id=user.organization_id, user_id=user.user_id,
                                      kind=kind, attendance_id=attendance_id, event_time=event,
@@ -212,9 +212,11 @@ class AttendanceOfflineService:
         return str(marked.status), marked.id
 
     async def _check_out(self, user: CurrentUser, event: datetime, notes: list[str],
-                         face_probe_id: UUID | None = None, face: dict[str, Any] | None = None) -> tuple[str, Any]:
+                         face_probe_id: UUID | None = None, face: dict[str, Any] | None = None,
+                         p: dict[str, Any] | None = None) -> tuple[str, Any]:
         """
-        Memproses data absensi pulang (check-out) yang tertunda saat luring.
+        Memproses data absensi pulang (check-out) yang tertunda saat luring. Lokasi pulang ikut disimpan; di luar
+        radius tidak ditolak (sudah terjadi) melainkan ditandai Perlu review oleh trigger (T7).
         """
         worker = await self.sessions.repo.attendance_mode_of(user.user_id)
         if worker is None or worker.attendance_mode != "FIELD":
@@ -223,7 +225,9 @@ class AttendanceOfflineService:
         if target is None:
             raise _reject("NO_OPEN_SESSION", "Tidak ada absen masuk yang bisa ditutup untuk jam ini.", status=409)
         if target.status in VALID_STATUSES:
-            await self.repo.close_at(target.id, event)
+            lat, lng = (p or {}).get("lat"), (p or {}).get("lng")
+            await self.repo.close_at(target.id, event, lat=float(lat) if lat is not None else None,
+                                     lng=float(lng) if lng is not None else None)
             result = "CHECKED_OUT"
         else:
             await self.repo.request_checkout(target.id, event)

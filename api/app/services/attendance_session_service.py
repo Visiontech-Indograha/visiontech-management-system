@@ -64,21 +64,23 @@ class AttendanceSessionService:
             raise AppError("WRONG_ATTENDANCE_CHANNEL", WRONG_CHANNEL[channel], status=403)
         return row
 
-    async def ensure_check_in_refs(self, org_id: str, site_id: UUID, selfie_file_id: UUID | None) -> None:
-        """Lokasi & swafoto absen masuk harus milik organisasi pengguna (galat 422 bila bukan)."""
-        await ensure_same_org(self.repo.db, org_id, sites=[site_id], files=[selfie_file_id])
+    async def ensure_check_in_refs(self, org_id: str, site_id: UUID | None, selfie_file_id: UUID | None) -> None:
+        """Lokasi & swafoto absen (masuk maupun pulang) harus milik organisasi pengguna (galat 422 bila bukan)."""
+        await ensure_same_org(self.repo.db, org_id, sites=[site_id] if site_id else [], files=[selfie_file_id])
 
     async def export_csv(self, org_id: str, start: Any, end: Any) -> str:
         """P4-5 · CSV absensi untuk Finance; jam dalam zona waktu organisasi."""
         out = io.StringIO()
         writer = csv.writer(out)
         writer.writerow(["Tanggal", "NIK", "Nama", "Lokasi", "Check In", "Check Out", "Terlambat", "Pulang Cepat",
-                         "Status"])
+                         "Status", "Kategori", "Jarak pulang (m)"])
         for r in await self.repo.export_rows(org_id, start, end):
             writer.writerow([
                 r.work_date.isoformat(), r.employee_no, r.full_name, r.site_label,
                 r.check_in or "", r.check_out or "", "Ya" if r.is_late else "Tidak",
                 "Ya" if r.is_early_leave else "Tidak", r.status,
+                "Luar kota" if r.city_category == "LUAR_KOTA" else "Dalam kota",
+                "" if r.check_out_distance_m is None else r.check_out_distance_m,
             ])
         return out.getvalue()
 
@@ -205,7 +207,9 @@ class AttendanceSessionService:
 
     async def check_out(self, user_id: str, channel: str = "MOBILE", *, org_id: str | None = None,
                         face_probe_id: UUID | None = None, online: bool = True,
-                        expected_face_sha256: str | None = None) -> Any:
+                        expected_face_sha256: str | None = None, lat: float | None = None, lng: float | None = None,
+                        selfie_file_id: UUID | None = None, explanation: str | None = None,
+                        accuracy_m: float | None = None) -> Any:
         """
         Menutup sesi absensi harian yang sedang terbuka (absen pulang).
 
@@ -221,7 +225,19 @@ class AttendanceSessionService:
             if await self.repo.open_session(worker.employee_id) is not None:
                 raise AppError("CHECKOUT_NOT_VALID", CHECKOUT_NOT_VALID, status=409)
             raise AppError("NO_OPEN_SESSION", "Tidak ada sesi absensi terbuka.", status=409)
-        row = await self.repo.close(session.id)
+        if accuracy_m is not None:   # K-12: titik yang terlalu kabur tidak bisa membuktikan kehadiran
+            limit = MAX_WEB_ACCURACY_M if channel == "WEB" else MAX_GPS_ACCURACY_M
+            if accuracy_m > limit:
+                raise AppError("GPS_INACCURATE", f"Akurasi lokasi {accuracy_m:.0f} m terlalu rendah (maksimal {limit} m). "
+                               "Pindah ke tempat terbuka, tunggu sinyal menguat, lalu coba lagi.", status=422)
+        try:
+            row = await self.repo.close(session.id, lat=lat, lng=lng, selfie_file_id=selfie_file_id,
+                                        explanation=explanation)
+        except IntegrityError as exc:   # T7: di luar radius tanpa swafoto/penjelasan → pesan aturan dari trigger
+            rule = trigger_rule_message(exc)
+            if rule:
+                raise ValidationError(rule) from None
+            raise
         if org_id is not None:
             row = await self.apply_face(org_id, user_id, row, "CHECK_OUT", face_probe_id, online=online,
                                         expected_sha256=expected_face_sha256, device=channel)

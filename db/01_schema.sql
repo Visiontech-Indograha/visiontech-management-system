@@ -511,6 +511,12 @@ CREATE TABLE attendance (
   offline         boolean NOT NULL DEFAULT false,
   offline_note    text,
   check_out_requested_at timestamptz,
+  -- Absen pulang di luar radius (Alembic 0028): jarak dihitung trigger; swafoto + penjelasan wajib bila di luar.
+  check_out_location geography(Point,4326),
+  check_out_distance_m numeric(8,1),
+  check_out_selfie_file_id uuid REFERENCES file_object(id),
+  check_out_explanation text,
+  check_out_outside boolean NOT NULL DEFAULT false,
   created_at      timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (id, work_date),
   CHECK (check_out_at IS NULL OR check_out_at >= check_in_at)

@@ -263,7 +263,10 @@ class VmsApi {
   Future<Map<String, dynamic>> checkOut({
     required double lat,
     required double lng,
+    double? accuracyM,
     String? faceProbeId,
+    String? selfieFileId,
+    String? explanation,
   }) async {
     final res = await _dio.post(
       '$_p/attendance/check-out',
@@ -271,7 +274,10 @@ class VmsApi {
         'channel': 'MOBILE',
         'location': {'lat': lat, 'lng': lng},
         'location_origin': 'GPS',
+        'accuracy_m': ?accuracyM,
         'face_probe_id': ?faceProbeId,
+        'selfie_file_id': ?selfieFileId,
+        'explanation': ?explanation,
       },
     );
     return Map<String, dynamic>.from(res.data as Map);

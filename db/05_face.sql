@@ -485,3 +485,18 @@ BEGIN
     EXECUTE format('REVOKE ALL ON vms.%I FROM vms_api', r.relname);
   END LOOP;
 END $$;
+
+-- RLS batas tenant untuk tabel ber-organization_id yang tersisa (Alembic 0025_rls_remaining_tables). app_user sengaja
+-- tanpa RLS: login & rotasi token mencari akun sebelum identitas/organisasi diketahui.
+ALTER TABLE vms.site ENABLE ROW LEVEL SECURITY;
+CREATE POLICY site_isolation ON vms.site USING (organization_id = vms.current_org_id());
+ALTER TABLE vms.file_object ENABLE ROW LEVEL SECURITY;
+CREATE POLICY file_object_isolation ON vms.file_object USING (organization_id = vms.current_org_id());
+ALTER TABLE vms.notification ENABLE ROW LEVEL SECURITY;
+CREATE POLICY notification_isolation ON vms.notification USING (organization_id = vms.current_org_id());
+ALTER TABLE vms.attendance_device_key ENABLE ROW LEVEL SECURITY;
+CREATE POLICY attendance_device_key_isolation ON vms.attendance_device_key USING (organization_id = vms.current_org_id());
+ALTER TABLE vms.attendance_offline_event ENABLE ROW LEVEL SECURITY;
+CREATE POLICY attendance_offline_event_isolation ON vms.attendance_offline_event USING (organization_id = vms.current_org_id());
+ALTER TABLE vms.signature_serial_counter ENABLE ROW LEVEL SECURITY;
+CREATE POLICY signature_serial_counter_isolation ON vms.signature_serial_counter USING (organization_id = vms.current_org_id());

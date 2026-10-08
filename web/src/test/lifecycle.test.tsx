@@ -96,13 +96,13 @@ const setupPlan = (
     if (c.url?.startsWith("/files/")) return { data: { url: "http://x/f", mime_type: "application/pdf" } };
   });
 
-describe("Lampiran SK", () => {
+describe("Lampiran rencana kerja", () => {
   it("PM menghapus lampiran draf → PUT daftar tersisa", async () => {
     const calls = setupPlan("DRAFT", [att("f1", "RAB.pdf"), att("f2", "Denah.pdf")], (url, method) =>
       url === "/work-plans/p1/attachments" && method === "put" ? { data: [att("f2", "Denah.pdf")] } : undefined,
     );
     renderRoute("/work-plans/p1", { role: "PM" });
-    const section = await screen.findByRole("region", { name: "Lampiran SK" });
+    const section = await screen.findByRole("region", { name: "Lampiran rencana kerja" });
     fireEvent.click(await within(section).findByRole("button", { name: "Hapus RAB.pdf" }));
     await waitFor(() => expect(within(section).queryByText("RAB.pdf")).toBeNull());
     expect(calls.find((c) => c.method === "put")!.data).toEqual({ file_ids: ["f2"] });
@@ -114,17 +114,17 @@ describe("Lampiran SK", () => {
       if (url === "/work-plans/p1/attachments" && method === "put") return { data: [att("f1", "RAB.pdf"), att("f9", "Baru.pdf")] };
     });
     renderRoute("/work-plans/p1", { role: "PM" });
-    const section = await screen.findByRole("region", { name: "Lampiran SK" });
+    const section = await screen.findByRole("region", { name: "Lampiran rencana kerja" });
     const input = await within(section).findByLabelText("Tambah lampiran (Foto/PDF)");
     fireEvent.change(input, { target: { files: [new File(["x"], "Baru.pdf", { type: "application/pdf" })] } });
     expect(await within(section).findByText("Baru.pdf")).toBeInTheDocument();
     expect(calls.find((c) => c.method === "put")!.data).toEqual({ file_ids: ["f1", "f9"] });
   });
 
-  it("SK terbit: lampiran hanya dibaca", async () => {
+  it("Rencana Kerja terbit: lampiran hanya dibaca", async () => {
     setupPlan("PUBLISHED", [att("f1", "RAB.pdf")]);
     renderRoute("/work-plans/p1", { role: "PM" });
-    const section = await screen.findByRole("region", { name: "Lampiran SK" });
+    const section = await screen.findByRole("region", { name: "Lampiran rencana kerja" });
     expect(await within(section).findByText("RAB.pdf")).toBeInTheDocument();
     expect(within(section).queryByRole("button", { name: /Hapus/ })).toBeNull();
     expect(within(section).queryByLabelText("Tambah lampiran (Foto/PDF)")).toBeNull();

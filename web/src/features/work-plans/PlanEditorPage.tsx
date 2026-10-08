@@ -110,19 +110,19 @@ export function PlanEditorPage() {
   const editable = changeId ? detail.data?.plan.status === "IN_PROGRESS" : detail.data?.plan.status === "DRAFT";
   return (
     <>
-      <PageHeader title={changeId ? "Ubah isi SK — adendum" : "Ubah isi SK"} />
+      <PageHeader title={changeId ? "Ubah isi rencana kerja — revisi" : "Ubah isi rencana kerja"} />
       {changeId && (
         <p className="mb-4 rounded-control bg-warning-bg px-3 py-2 text-sm text-warning">
-          SK sedang berjalan: hari yang laporannya sudah dikirim/disetujui tidak berubah, ketua tim dan tanggal mulai tetap.
-          Setelah disimpan, dokumen adendum terbit dengan tanda tangan Anda dan menunggu tanda tangan ketua.
+          Rencana Kerja sedang berjalan: hari yang laporannya sudah dikirim/disetujui tidak berubah, ketua tim dan tanggal mulai tetap.
+          Setelah disimpan, dokumen revisi terbit dengan tanda tangan Anda dan menunggu tanda tangan ketua.
         </p>
       )}
-      <QueryState query={detail} errorText="SK tidak ditemukan atau Anda tidak berwenang mengubahnya.">
+      <QueryState query={detail} errorText="Rencana Kerja tidak ditemukan atau Anda tidak berwenang mengubahnya.">
         {detail.data &&
           (editable ? (
             <PlanEditor planId={id} detail={detail.data} changeId={changeId} />
           ) : (
-            <p className="text-sm text-mist">Isi SK tidak dapat diubah pada tahap ini.</p>
+            <p className="text-sm text-mist">Isi rencana kerja tidak dapat diubah pada tahap ini.</p>
           ))}
       </QueryState>
     </>
@@ -215,7 +215,7 @@ function PlanEditor({ planId, detail, changeId }: { planId?: string; detail?: Pl
     };
     try {
       const saved = await save.mutateAsync(body);
-      toast.success(changeId ? "Adendum terbit dan ditandatangani. Menunggu tanda tangan ketua." : planId ? "Isi SK disimpan." : "SK tersimpan sebagai Draf.");
+      toast.success(changeId ? "Revisi terbit dan ditandatangani. Menunggu tanda tangan ketua." : planId ? "Isi rencana kerja disimpan." : "Rencana Kerja tersimpan sebagai Draf.");
       navigate(`/work-plans/${String(saved.plan.id)}`);
     } catch (err) {
       setFormError(errorMessage(err));
@@ -226,8 +226,8 @@ function PlanEditor({ planId, detail, changeId }: { planId?: string; detail?: Pl
   const o = options.data;
   return (
     <>
-      {!planId && <PageHeader title="Buat SK" />}
-      <QueryState query={options} errorText="Pilihan form SK tidak dapat dimuat.">
+      {!planId && <PageHeader title="Buat rencana kerja" />}
+      <QueryState query={options} errorText="Pilihan form rencana kerja tidak dapat dimuat.">
         {o && (
           <form onSubmit={onSubmit} noValidate className="space-y-6 pb-24">
             {formError && (

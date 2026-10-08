@@ -6,7 +6,7 @@ import { mockApi, renderRoute } from "./utils";
 const plan = (status: string) => ({
   id: "p1", title: "Instalasi CCTV", unit_id: "u1", site_id: null, location_text: "Cikarang", description: null,
   period_start: "2026-10-01", period_end: "2026-10-20", pm_employee_id: "e-pm", leader_employee_id: "e-lead",
-  number: "SK/001", status, revision: 1, row_version: 7, cancellation_reason: null, appeal_reason: null,
+  number: "Rencana Kerja/001", status, revision: 1, row_version: 7, cancellation_reason: null, appeal_reason: null,
 });
 
 const setup = (status: string, extra?: (url: string) => { status?: number; data?: unknown } | undefined) =>
@@ -18,11 +18,11 @@ const setup = (status: string, extra?: (url: string) => { status?: number; data?
     if (c.url === "/work-plans/p1/weekly" || c.url === "/work-plans/p1/days" || c.url === "/work-plans/p1/changes") return { data: [] };
   });
 
-describe("Penutupan SK", () => {
+describe("Penutupan rencana kerja", () => {
   it("tombol laporan akhir & perpanjangan tidak lagi ada di web (ketua memakai HP)", async () => {
     setup("IN_PROGRESS");
     renderRoute("/work-plans/p1", { role: "field" });
-    await screen.findByText("SK/001");
+    await screen.findByText("Rencana Kerja/001");
     expect(screen.queryByRole("button", { name: "Buat Laporan Akhir" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Ajukan perpanjangan" })).toBeNull();
   });

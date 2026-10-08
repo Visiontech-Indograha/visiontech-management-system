@@ -32,7 +32,7 @@ const TILE_URL = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
 const ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 const INDONESIA: LatLng = [-2.5, 118];
 const CLOSED = ["COMPLETED", "CANCELLED"];
-const RUNNING_NOTE = "Teks lokasi di dokumen SK tetap; hanya titik absensi yang berubah (tercatat di audit).";
+const RUNNING_NOTE = "Teks lokasi di dokumen rencana kerja tetap; hanya titik absensi yang berubah (tercatat di audit).";
 
 const locationKey = (planId: string) => ["plan-location", planId] as const;
 

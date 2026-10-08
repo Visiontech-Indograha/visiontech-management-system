@@ -46,7 +46,7 @@ async function downloadFinalReportPdf(plan: WorkPlan) {
     const url = URL.createObjectURL(res.data);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${plan.number ?? "SK"}-laporan-akhir.pdf`.replace(/\//g, "-");
+    a.download = `${plan.number ?? "RK"}-laporan-akhir.pdf`.replace(/\//g, "-");
     a.click();
     URL.revokeObjectURL(url);
   } catch (err) {

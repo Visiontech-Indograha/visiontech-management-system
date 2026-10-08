@@ -46,7 +46,7 @@ export function AssetsPage() {
                 <div>Kode: {a.code}</div>
                 <div>Kondisi: {a.condition}</div>
                 {a.vehicle_type && <div>Jenis: {a.vehicle_type}</div>}
-                {a.plan_number && <div>Dipakai: SK {a.plan_number}</div>}
+                {a.plan_number && <div>Dipakai: rencana kerja {a.plan_number}</div>}
                 {a.pending_return_id && (
                   <div className="mt-1 text-warning">
                     Pengembalian diajukan {a.return_requested_by_name ?? "ketua tim"} · kondisi {a.return_condition}
@@ -413,7 +413,7 @@ function ReturnHistoryDialog({ asset, onClose }: { asset: Asset; onClose: () => 
           <li key={r.id} className="flex flex-col gap-2 py-3 md:flex-row md:items-center md:justify-between">
             <div>
               <p className="font-medium">
-                SK {r.plan_number} ·{" "}
+                Rencana Kerja {r.plan_number} ·{" "}
                 {r.verified_at ? (r.is_accepted ? "Diterima" : "Ditolak") : "Menunggu pemeriksaan"}
               </p>
               <p className="text-mist">

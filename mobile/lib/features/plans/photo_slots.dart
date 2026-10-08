@@ -1,12 +1,18 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../core/gallery_save.dart';
 import '../../core/local_storage.dart';
 import '../../core/photo_capture.dart';
 import '../../core/theme/theme.dart';
 import '../../shared/ui/vms_ui.dart';
+import '../gallery/photo_gallery_screen.dart';
+
+/// Asal foto laporan: kamera aplikasi (bertanda air), galeri HP, atau galeri foto di dalam aplikasi.
+enum PhotoOrigin { camera, phoneGallery, appGallery }
 
 /// Foto yang baru diambil/dipilih dan belum diunggah: jalur berkas, slot template (null = "Foto lain"), sumber.
 class PendingPhoto {
@@ -21,13 +27,20 @@ class PendingPhoto {
 Future<PendingPhoto?> pickReportPhoto({
   required BuildContext context,
   required String? slot,
-  required bool fromGallery,
+  required PhotoOrigin origin,
   String? hint,
   required void Function(String message) onError,
 }) async {
-  if (fromGallery) {
+  if (origin == PhotoOrigin.phoneGallery) {
     final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
     return picked == null ? null : PendingPhoto(path: picked.path, slot: slot, source: 'GALLERY');
+  }
+  if (origin == PhotoOrigin.appGallery) {
+    // Foto lama dari kamera aplikasi: sumbernya tetap CAMERA (bertanda air).
+    final path = await Navigator.of(context).push<String>(
+      MaterialPageRoute(builder: (_) => const PhotoGalleryScreen(selectMode: true)),
+    );
+    return path == null ? null : PendingPhoto(path: path, slot: slot, source: 'CAMERA');
   }
   final (file, err) = await captureWatermarkedPhoto(
     context: context,
@@ -39,6 +52,8 @@ Future<PendingPhoto?> pickReportPhoto({
     if (err != null) onError(err);
     return null;
   }
+  // T10: foto laporan dari kamera ikut tampil di album "Visiontech" galeri HP (galat tidak menggagalkan apa pun).
+  unawaited(saveToPhoneGallery(file.path));
   return PendingPhoto(path: file.path, slot: slot, source: 'CAMERA');
 }
 
@@ -61,7 +76,7 @@ class PhotoSlots extends StatelessWidget {
   final List<Map<String, dynamic>> saved;
   final List<PendingPhoto> pending;
   final bool enabled;
-  final void Function(String? slot, {required bool gallery}) onAdd;
+  final void Function(String? slot, PhotoOrigin origin) onAdd;
   final void Function(PendingPhoto photo) onRemove;
 
   /// Label slot wajib yang belum punya foto (tersimpan maupun baru).
@@ -137,15 +152,21 @@ class PhotoSlots extends StatelessWidget {
                       children: [
                         TextButton.icon(
                           key: Key('photo-camera-${slot ?? 'other'}'),
-                          onPressed: () => onAdd(slot, gallery: false),
+                          onPressed: () => onAdd(slot, PhotoOrigin.camera),
                           icon: const Icon(Icons.add_a_photo_rounded),
                           label: const Text('Kamera'),
                         ),
                         TextButton.icon(
                           key: Key('photo-gallery-${slot ?? 'other'}'),
-                          onPressed: () => onAdd(slot, gallery: true),
+                          onPressed: () => onAdd(slot, PhotoOrigin.phoneGallery),
                           icon: const Icon(Icons.photo_library_rounded),
                           label: const Text('Galeri'),
+                        ),
+                        TextButton.icon(
+                          key: Key('photo-app-${slot ?? 'other'}'),
+                          onPressed: () => onAdd(slot, PhotoOrigin.appGallery),
+                          icon: const Icon(Icons.collections_rounded),
+                          label: const Text('Foto saya'),
                         ),
                       ],
                     ),

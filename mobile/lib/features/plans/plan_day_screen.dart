@@ -110,11 +110,11 @@ class _PlanDayScreenState extends ConsumerState<PlanDayScreen> {
     );
   }
 
-  Future<void> _memberPhoto(String? slot, {required bool gallery}) async {
+  Future<void> _memberPhoto(String? slot, PhotoOrigin origin) async {
     final photo = await pickReportPhoto(
       context: context,
       slot: slot,
-      fromGallery: gallery,
+      origin: origin,
       hint: 'Foto hasil pekerjaan Anda hari ini',
       onError: _snack,
     );
@@ -215,11 +215,11 @@ class _PlanDayScreenState extends ConsumerState<PlanDayScreen> {
     }
   }
 
-  Future<void> _addPhoto(String? slot, {required bool gallery}) async {
+  Future<void> _addPhoto(String? slot, PhotoOrigin origin) async {
     final photo = await pickReportPhoto(
       context: context,
       slot: slot,
-      fromGallery: gallery,
+      origin: origin,
       onError: _snack,
     );
     if (photo != null && mounted) setState(() => _pending.add(photo));

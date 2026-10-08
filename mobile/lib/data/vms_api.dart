@@ -106,6 +106,7 @@ class VmsApi {
     required String body,
     required String obstacle,
     required List<String> evidenceFileIds,
+    List<Map<String, dynamic>> evidence = const [],
   }) async => Map<String, dynamic>.from(
     (await _dio.put(
           '$_p/work-plans/$planId/days/$dayId/member-report',
@@ -113,6 +114,7 @@ class VmsApi {
             'body': body,
             'obstacle': obstacle,
             'evidence_file_ids': evidenceFileIds,
+            'evidence': evidence,
           },
         )).data
         as Map,
@@ -144,6 +146,10 @@ class VmsApi {
       _dio.post('$_p/work-plans/$planId/weekly/$week/submit');
 
   // --- Adendum saat berjalan, aset, laporan akhir (alur SK v2 PR3) ----------
+  /// Template foto laporan rencana kerja (T9): slot `{label, hint, required}`; kosong bila tanpa jenis pekerjaan.
+  Future<List<Map<String, dynamic>>> photoTemplate(String planId) async =>
+      _list((await _dio.get('$_p/work-plans/$planId/photo-template')).data);
+
   /// Aliran peristiwa waktu nyata (SSE, T8). Tanpa batas waktu baca: sambungan sengaja berumur panjang.
   Future<ResponseBody> openEvents(CancelToken cancel) async {
     final res = await _dio.get<ResponseBody>(

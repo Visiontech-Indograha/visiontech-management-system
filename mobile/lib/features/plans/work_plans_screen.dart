@@ -65,6 +65,7 @@ class _WorkPlansScreenState extends ConsumerState<WorkPlansScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(liveEventTickProvider, (_, _) => _load());   // T8: peristiwa waktu nyata
     final running = _plans.where((p) => p['status'] == 'IN_PROGRESS').length;
     return Scaffold(
       appBar: VmsTopBar(
@@ -559,6 +560,7 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(liveEventTickProvider, (_, _) => _load());   // T8: peristiwa waktu nyata
     final p = _plan;
     final isLeader = p['leader_employee_id'] == employeeIdOf(ref);
     return Scaffold(

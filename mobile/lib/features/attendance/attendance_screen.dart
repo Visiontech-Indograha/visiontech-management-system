@@ -572,6 +572,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
   Widget build(BuildContext context) {
     // Sinkron latar selesai (mis. absen luring baru terkirim) → muat ulang kartu & riwayat.
     ref.listen(syncTickProvider, (_, _) => _load());
+    ref.listen(liveEventTickProvider, (_, _) => _load());   // T8: peristiwa waktu nyata
     final today = _today;
     final auth = ref.watch(authControllerProvider);
     final name = auth is AuthAuthenticated

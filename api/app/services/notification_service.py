@@ -5,6 +5,7 @@ adendum diminta → PM, diterima → PM & anggota, mulai berjalan → semua yang
 """
 from __future__ import annotations
 
+from collections.abc import Iterable
 from typing import Any
 from uuid import UUID
 
@@ -159,6 +160,15 @@ class NotificationService:
         else:
             title, body = f"Revisi {self._label(p)} ditolak", note or p.title
         await self.repo.insert_many(p.organization_id, [p.leader], "AMENDMENT_DECIDED", title, body, plan_id)
+
+    async def plan_revised(self, plan_id: UUID | str, actor_name: str, reason: str, diff: list[dict[str, Any]],
+                           recipients: Iterable[str]) -> None:
+        """Revisi PM (T6): ketua serta anggota lama dan baru diberi tahu apa yang berubah."""
+        p = await self._plan(plan_id)
+        labels = ", ".join(str(d["label"]) for d in diff)
+        await self.repo.insert_many(p.organization_id, recipients, "PLAN_REVISED",
+                                    f"{self._label(p)} direvisi oleh {actor_name}",
+                                    f"{p.title} — berubah: {labels}. Alasan: {reason}", plan_id)
 
     async def amendment_accepted(self, plan_id: UUID | str) -> None:
         p = await self._plan(plan_id)

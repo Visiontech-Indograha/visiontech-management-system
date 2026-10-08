@@ -85,6 +85,12 @@ Hasil uji di emulator (Android 16): langkah-langkah di atas lulus, dengan rincia
 - Installer dibatalkan → "Pasang pembaruan" tanpa unduh ulang.
 - Antrean absen luring selamat melewati pembaruan dan tersinkron setelah online (`AUTO_VALID`).
 
+Hasil uji di HP nyata (Realme RMX3933, Android 15, 2026-10-08, rilis prod):
+- Build 1 → 2 dipasang manual. Tanda tangan sama dengan kunci rilis, jadi data lokal (login sidik jari, status wajah) tetap ada.
+- Build 2 → 3 dari dalam aplikasi: lembar pembaruan muncul, unduhan terverifikasi, lalu Play Protect "Pindai aplikasi" dan "Aplikasi terinstal". Aplikasi terbuka sebagai build 3 dan masih login.
+- Izin "instal aplikasi tak dikenal" tidak ditanyakan lagi bila sudah pernah diberikan.
+- Setelah "Nanti", pita tidak tampil 24 jam untuk build itu (sesuai rancangan). "Periksa pembaruan" di Profil tetap menampilkan lembar pembaruan.
+
 ## 6. Keputusan pemilik
 
 - 2026-10-07: opsional + wajib per rilis; unduhan publik; build & tanda tangan di laptop.

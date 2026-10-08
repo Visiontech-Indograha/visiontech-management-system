@@ -106,3 +106,12 @@ def test_runtime_role_switch_backs_up_never_prints_secret_and_rolls_back():
     assert '"vms_api False False"' in text                                    # API benar-benar bukan superuser
     assert text.count("restore_latest") >= 3                                  # /ready gagal / peran salah → rollback
     assert "kembalikan" in text
+
+
+def test_verify_url_script_sets_public_domain_and_keeps_rollback_copies_in_sync():
+    text = read(DEPLOY / "setel-url-verifikasi.sh")
+    assert "set -euo pipefail" in text
+    assert "https://portal.visiontechindo.com/verify" in text                # QR harus terbuka tanpa Tailscale
+    assert "api.env.sebelum-url-verifikasi." in text and "chmod 600" in text
+    assert "api.env.sebelum-vms_api.*" in text                                # `kembalikan` tak membawa IP lama
+    assert "settings.PUBLIC_VERIFY_URL" in text                               # nilai yang benar-benar dibaca API

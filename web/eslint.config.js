@@ -41,7 +41,12 @@ const composition = (who, patterns, layout) => ({
         ? `Elemen HTML hanya boleh di atom; ${who} hanya boleh ${LAYOUT_TAGS.replaceAll('|', '/')} untuk tata letak (docs/33 §2).`
         : `${who} hanya menyusun template — tanpa elemen HTML, termasuk div (docs/33 §2).`,
     },
-    { selector: 'JSXText[value=/\\S/]', message: `Teks langsung di ${who} — teks hanya di atom (docs/33 §2).` },
+    // Teks yang diberikan sebagai isi atom/komponen (mis. <Button>Simpan</Button>) dirender atom itu — boleh.
+    {
+      selector: "JSXElement[openingElement.name.type='JSXIdentifier'][openingElement.name.name=/^[a-z]/] > JSXText[value=/\\S/]",
+      message: `Teks di elemen HTML pada ${who} — bungkus dengan atom Text (docs/33 §2).`,
+    },
+    { selector: 'JSXFragment > JSXText[value=/\\S/]', message: `Teks langsung di ${who} — bungkus dengan atom Text (docs/33 §2).` },
   ],
 })
 const RULES = {
@@ -175,15 +180,6 @@ const ORGANISMS_LEGACY = [
   'src/components/organisms/work-types/WorkTypeList.tsx',
 ]
 
-// Molecule yang masih memakai elemen HTML langsung. Daftar ini HANYA BOLEH MENYUSUT (docs/33 §7).
-const MOLECULES_LEGACY = [
-  'src/components/molecules/Field.tsx',
-  'src/components/molecules/FilePreview.tsx',
-  'src/components/molecules/QueryState.tsx',
-  'src/components/molecules/StatusBadge.tsx',
-  'src/components/molecules/VmsDialog.tsx',
-]
-
 export default tseslint.config(
   { ignores: ['dist', 'legacy_ref'] },
   {
@@ -241,5 +237,4 @@ export default tseslint.config(
     rules: RULES.page,
   },
   { files: ORGANISMS_LEGACY, rules: LEGACY.organism },
-  { files: MOLECULES_LEGACY, rules: LEGACY.molecule },
 )

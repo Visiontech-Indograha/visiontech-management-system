@@ -1,6 +1,9 @@
 import { forwardRef, useId, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from "react";
 import { Label } from "../atoms/Label";
 import { Input } from "../atoms/Input";
+import { Select } from "../atoms/Select";
+import { Text } from "../atoms/Text";
+import { Textarea } from "../atoms/Textarea";
 import { cn } from "@/lib/utils";
 
 interface FieldShellProps {
@@ -19,13 +22,13 @@ function FieldShell({ label, error, hint, children }: FieldShellProps) {
       <Label htmlFor={id}>{label}</Label>
       {children(id, error || hint ? msgId : undefined)}
       {error ? (
-        <p id={msgId} role="alert" className="text-sm text-destructive">
+        <Text id={msgId} role="alert" className="text-sm text-destructive">
           {error}
-        </p>
+        </Text>
       ) : hint ? (
-        <p id={msgId} className="text-sm text-muted-foreground">
+        <Text id={msgId} className="text-sm text-muted-foreground">
           {hint}
-        </p>
+        </Text>
       ) : null}
     </div>
   );
@@ -58,7 +61,7 @@ export const SelectField = forwardRef<
   return (
     <FieldShell label={label} error={error} hint={hint}>
       {(id, describedBy) => (
-        <select
+        <Select
           id={id}
           ref={ref}
           aria-invalid={!!error}
@@ -71,7 +74,7 @@ export const SelectField = forwardRef<
           {...props}
         >
           {children}
-        </select>
+        </Select>
       )}
     </FieldShell>
   );
@@ -85,7 +88,7 @@ export const TextAreaField = forwardRef<
   return (
     <FieldShell label={label} error={error} hint={hint}>
       {(id, describedBy) => (
-        <textarea
+        <Textarea
           id={id}
           ref={ref}
           rows={3}

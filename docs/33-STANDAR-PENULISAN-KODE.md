@@ -37,10 +37,10 @@ Definisi pemilik (2026-10-09):
 
 1. **Atom** — komponen paling dasar yang tidak bisa dipecah lagi: tombol, label, input, ikon, warna, tipografi.
 2. **Molecule** — gabungan beberapa atom dengan satu fungsi kecil: kolom pencarian (input + tombol), kartu kecil.
-3. **Organism** — gabungan **molecule dan/atau atom** yang membentuk bagian kompleks halaman: navbar, header, form.
-   Organism boleh langsung memakai atom (mis. `Button` di `ChangePasswordForm`).
-4. **Template** — kerangka/tata letak halaman yang menyusun organism, tanpa data sungguhan.
-5. **Page** — implementasi nyata template yang diisi data, teks, dan gambar sungguhan.
+3. **Organism** — kumpulan **molecule** yang membentuk bagian kompleks halaman: navbar, header, form
+   (ketetapan akhir pemilik 2026-10-09: organism tidak memakai atom langsung).
+4. **Template** (layout) — kerangka/tata letak halaman yang menyusun organism, tanpa data sungguhan.
+5. **Page** — kumpulan template yang diisi data sungguhan (hook/service → props template).
 
 | Tingkat | Isi | Contoh di repo | Tempat |
 |---|---|---|---|
@@ -53,39 +53,35 @@ Definisi pemilik (2026-10-09):
 **Elemen HTML mentah (`<button>`, `<input>`, `<select>`, `<textarea>`, `<table>`, `<label>`,
 `<p>`, `<span>`, `<img>`, `<a>`, `<h1>`…`<h6>`, `<ul>`, …) setara atom/molecule.**
 
-### 2.1 Aturan Page dan Template — dilarang keras
+### 2.1 Hierarki ketat — dilarang keras (pemilik 2026-10-09)
 
-**Template** hanya boleh menyusun organism + elemen tata letak polos (daftar sama dengan Page di bawah); larangan
-impor dan elemen HTML Page berlaku juga untuk Template.
+> "Page hanya boleh kumpulan dari layout; layout kumpulan dari organism; organism kumpulan dari molecule;
+> molecule kumpulan dari atom."
 
+| Tingkat | Hanya boleh berisi | Dilarang |
+|---|---|---|
+| **Page** | hook data/service, state halaman, **satu atau lebih template** (diisi data lewat props) | organism, molecule, atom, ikon, elemen HTML apa pun (termasuk `div`), teks langsung |
+| **Template** | **organism** + `div/section/main/header/footer/article/aside` untuk tata letak | molecule, atom, ikon, elemen HTML lain, teks langsung |
+| **Organism** | **molecule** (+ organism lain) + elemen tata letak | atom, ikon, `Link`, elemen HTML lain (`p`, `h2`, `table`, `button`, …), teks langsung |
+| **Molecule** | **atom** + elemen tata letak | molecule lain, organism, template, elemen HTML lain, teks langsung |
+| **Atom** | elemen HTML, teks, ikon, kelas Tailwind | mengimpor tingkat di atasnya |
 
-Page **hanya** boleh berisi:
+Akibatnya setiap Page punya template sendiri (`components/templates/<domain>/<Nama>Template.tsx`); teks, judul,
+tabel, tombol, dan ikon diwujudkan sebagai atom (mis. `Text`, `Heading`, `Table`, `Icon`) yang disusun molecule.
 
-- hook data/service (TanStack Query) dan state halaman (`useState`, `useForm`, Zustand selector);
-- **template** dan **organism** (bersama atau milik fitur);
-- elemen tata letak polos: `div`, `section`, `main`, `header`, `footer`, `article`, `aside`
-  (hanya untuk grid, jarak, dan pengelompokan; tanpa teks langsung).
-
-Page **dilarang**:
-
-- mengimpor dari `components/atoms/` atau `components/molecules/`;
-- mengimpor ikon `lucide-react` (ikon adalah atom);
-- menulis elemen HTML selain daftar tata letak di atas.
-
-Ditegakkan ESLint (`web/eslint.config.js`, berkas `pages/**/*.tsx` dan `components/templates/*.tsx`).
-Page/Template lama yang belum dimigrasi tercantum di daftar pengecualian sementara di berkas itu; daftar ini
-**hanya boleh menyusut**.
+Ditegakkan ESLint (`web/eslint.config.js`). Berkas lama yang belum memenuhi tercantum di `PAGES_LEGACY`,
+`ORGANISMS_LEGACY`, `MOLECULES_LEGACY`; daftar ini **hanya boleh menyusut** — berkas baru wajib langsung patuh.
 
 ### 2.2 Arah impor
 
 ```
 app/        → pages (rute)
-pages/      → templates, organisms, services, schemas, hooks, lib, stores
-templates   → organisms, lib                   — TIDAK molecule/atom
-organisms   → organisms lain, molecules, atoms, lib  (organism fitur boleh memakai service fiturnya)
+pages/      → templates, services, schemas, hooks, lib, stores
+templates   → organisms, lib
+organisms   → organisms lain, molecules, services, schemas, hooks, lib
 molecules   → atoms, lib
-atoms       → lib (cn, token)                  — tidak mengimpor tingkat di atasnya
-components/ → services, schemas, hooks, lib — TIDAK BOLEH mengimpor pages/
+atoms       → lib (cn, token)
+components/ → TIDAK BOLEH mengimpor pages/
 services/, hooks/ → lib, schemas — TIDAK BOLEH mengimpor components/ atau pages/
 lib/, schemas/   → TIDAK BOLEH mengimpor services/, hooks/, components/, pages/
 ```

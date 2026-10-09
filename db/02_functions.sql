@@ -243,6 +243,16 @@ END $$;
 CREATE TRIGGER attendance_geofence BEFORE INSERT ON attendance
   FOR EACH ROW EXECUTE FUNCTION tg_attendance_geofence();
 
+-- Kategori Dalam/Luar kota dari jarak titik absen ke pusat kota organisasi (Alembic 0035). NULL bila pusat kota
+-- belum diatur atau absen tanpa titik; pemanggil lalu memakai attendance_city_category (rencana bertanda luar kota).
+CREATE OR REPLACE FUNCTION attendance_city_category_at(p_org uuid, p_location geography) RETURNS text
+LANGUAGE sql STABLE AS $$
+  SELECT CASE WHEN ST_Distance(p_location, o.city_center) > o.city_radius_km * 1000.0
+              THEN 'LUAR_KOTA' ELSE 'DALAM_KOTA' END
+  FROM organization o
+  WHERE o.id = p_org AND o.id = current_org_id() AND o.city_center IS NOT NULL AND p_location IS NOT NULL
+$$;
+
 CREATE OR REPLACE FUNCTION tg_attendance_checkout() RETURNS trigger
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = vms, public AS $$
 DECLARE

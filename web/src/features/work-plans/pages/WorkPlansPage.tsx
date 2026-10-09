@@ -5,7 +5,7 @@ import { useSession } from "@/app/session";
 import { QueryState } from "@/components/molecules/QueryState";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
 import { Button } from "@/components/atoms/Button";
-import { PageHeader } from "@/components/molecules/PageHeader";
+import { PageHeader } from "@/components/organisms/PageHeader";
 import { errorMessage } from "@/lib/errors";
 import { formatDate } from "@/lib/format";
 import { STATUS_LABEL } from "@/lib/labels";

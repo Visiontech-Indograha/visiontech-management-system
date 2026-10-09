@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
-import { PageHeader } from "../molecules/PageHeader";
+import { PageHeader } from "../organisms/PageHeader";
 
 /**
  * Kerangka halaman standar (docs/33 §2.1): judul + keterangan + aksi di atas, isi halaman di bawah.
- * Page memakai template ini alih-alih `PageHeader` (molecule) secara langsung.
+ * Page memakai template ini; template hanya menyusun organism (`PageHeader`).
  *
  *   <PageTemplate title="Lokasi kerja" description="…" action={<SiteActions … />}>
  *     <SiteTable … />

@@ -4,38 +4,41 @@ import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 import tseslint from 'typescript-eslint'
 
-// Atomic design (docs/33, keputusan pemilik 2026-10-09). Arah impor: pages → templates/organisms → molecules → atoms.
+// Atomic design (docs/33, keputusan pemilik 2026-10-09).
+// Urutan: tampilan UI > Page > Template > Organism > Molecule > Atom — tiap tingkat hanya menyusun tingkat di bawahnya.
 const FEATURES = { group: ['@/features/*', '**/features/**'], message: 'components/ dan lib/ tidak boleh mengimpor features/ (docs/33 §2.2).' }
 const COMPONENTS = { group: ['@/components/*', '**/components/**'], message: 'lib/ tidak boleh mengimpor components/ (docs/33 §2.2).' }
 const level = (names, who) => ({
   group: names.flatMap((n) => [`@/components/${n}/*`, `**/components/${n}/**`, `../${n}/*`]),
-  message: `${who} tidak boleh mengimpor tingkat di atasnya (docs/33 §2.2).`,
+  message: `${who} tidak boleh mengimpor tingkat yang sama atau di atasnya (docs/33 §2.2).`,
 })
 
-// Page hanya menyusun template + organism + tata letak polos (docs/33 §2.1).
-const PAGE_LAYOUT_TAGS = 'div|section|main|header|footer|article|aside'
-const pageRules = {
+// Page dan Template hanya menyusun organism (+ template untuk Page) dan tata letak polos (docs/33 §2.1).
+const LAYOUT_TAGS = 'div|section|main|header|footer|article|aside'
+const compositionRules = (who, extraPatterns = []) => ({
   'no-restricted-imports': ['error', {
     patterns: [
-      { group: ['@/components/atoms/*', '**/components/atoms/**'], message: 'Page dilarang memakai atom langsung — pindahkan bagian ini ke organism (docs/33 §2.1).' },
-      { group: ['@/components/molecules/*', '**/components/molecules/**'], message: 'Page dilarang memakai molecule langsung — pindahkan bagian ini ke organism (docs/33 §2.1).' },
+      { group: ['@/components/atoms/*', '**/components/atoms/**', '../atoms/*'], message: `${who} dilarang memakai atom langsung — pindahkan bagian ini ke organism (docs/33 §2.1).` },
+      { group: ['@/components/molecules/*', '**/components/molecules/**', '../molecules/*'], message: `${who} dilarang memakai molecule langsung — pindahkan bagian ini ke organism (docs/33 §2.1).` },
+      ...extraPatterns,
     ],
     paths: [
-      { name: 'lucide-react', message: 'Ikon adalah atom; Page dilarang memakainya langsung (docs/33 §2.1).' },
+      { name: 'lucide-react', message: `Ikon adalah atom; ${who} dilarang memakainya langsung (docs/33 §2.1).` },
       { name: 'react-router-dom', importNames: ['Link', 'NavLink'], message: 'Tautan adalah atom; letakkan di organism (docs/33 §2.1).' },
     ],
   }],
   'no-restricted-syntax': ['error',
     {
-      selector: `JSXOpeningElement[name.type='JSXIdentifier'][name.name=/^[a-z]/]:not([name.name=/^(${PAGE_LAYOUT_TAGS})$/])`,
-      message: `Elemen HTML mentah setara atom/molecule; Page hanya boleh ${PAGE_LAYOUT_TAGS.replaceAll('|', '/')} untuk tata letak (docs/33 §2.1).`,
+      selector: `JSXOpeningElement[name.type='JSXIdentifier'][name.name=/^[a-z]/]:not([name.name=/^(${LAYOUT_TAGS})$/])`,
+      message: `Elemen HTML mentah setara atom/molecule; ${who} hanya boleh ${LAYOUT_TAGS.replaceAll('|', '/')} untuk tata letak (docs/33 §2.1).`,
     },
-    { selector: 'JSXText[value=/\\S/]', message: 'Teks langsung di Page — letakkan di organism (docs/33 §2.1).' },
+    { selector: 'JSXText[value=/\\S/]', message: `Teks langsung di ${who} — letakkan di organism (docs/33 §2.1).` },
   ],
-}
+})
 
-// Page lama yang BELUM dimigrasi (docs/33 §7). Daftar ini HANYA BOLEH MENYUSUT.
-const PAGES_NOT_YET_MIGRATED = [
+// Page/Template lama yang BELUM dimigrasi (docs/33 §7). Daftar ini HANYA BOLEH MENYUSUT.
+const NOT_YET_MIGRATED = [
+  'src/components/templates/AppShell.tsx',
   'src/features/account/pages/AccountPage.tsx',
   'src/features/assets/pages/AssetsPage.tsx',
   'src/features/attendance/pages/AttendancePage.tsx',
@@ -87,7 +90,13 @@ export default tseslint.config(
   },
   {
     files: ['src/components/molecules/**'],
-    rules: { 'no-restricted-imports': ['error', { patterns: [FEATURES, level(['organisms', 'templates'], 'Molecule')] }] },
+    ignores: ['**/*.test.tsx'],
+    rules: {
+      'no-restricted-imports': ['error', { patterns: [
+        FEATURES, level(['organisms', 'templates'], 'Molecule'),
+        { group: ['./*', '@/components/molecules/*'], message: 'Molecule hanya menyusun atom, bukan molecule lain (docs/33 §2.2).' },
+      ] }],
+    },
   },
   {
     files: ['src/components/organisms/**'],
@@ -95,7 +104,8 @@ export default tseslint.config(
   },
   {
     files: ['src/components/templates/**'],
-    rules: { 'no-restricted-imports': ['error', { patterns: [FEATURES] }] },
+    ignores: ['**/*.test.tsx'],
+    rules: compositionRules('Template', [FEATURES]),
   },
   {
     files: ['src/lib/**'],
@@ -104,10 +114,10 @@ export default tseslint.config(
   {
     files: ['src/features/*/pages/**/*.tsx'],
     ignores: ['**/*.test.tsx'],
-    rules: pageRules,
+    rules: compositionRules('Page'),
   },
   {
-    files: PAGES_NOT_YET_MIGRATED,
+    files: NOT_YET_MIGRATED,
     rules: { 'no-restricted-imports': 'off', 'no-restricted-syntax': 'off' },
   },
 )

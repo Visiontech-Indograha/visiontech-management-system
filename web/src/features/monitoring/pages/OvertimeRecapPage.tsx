@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { QueryState } from "@/components/molecules/QueryState";
 import { TextField } from "@/components/molecules/Field";
-import { PageHeader } from "@/components/molecules/PageHeader";
+import { PageHeader } from "@/components/organisms/PageHeader";
 import { api } from "@/lib/apiClient";
 import type { components } from "@/lib/apiTypes";
 

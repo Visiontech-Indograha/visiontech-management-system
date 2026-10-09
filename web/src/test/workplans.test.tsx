@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { apiError, mockApi, renderRoute } from "./utils";
 
@@ -111,26 +111,31 @@ describe("Work plan — daftar", () => {
     fireEvent.click((await screen.findAllByRole("button", { name: "Buat rencana kerja" }))[0]);
     await waitFor(() => expect(router.state.location.pathname).toBe("/work-plans/new"));
     await screen.findByRole("option", { name: "Cikarang" });
-    expect(screen.getByLabelText("Tipe")).toHaveValue("Infrastruktur");
+    expect(screen.getByText("Infrastruktur")).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Judul pekerjaan"), { target: { value: "Instalasi CCTV Gudang" } });
-    fireEvent.change(screen.getByLabelText("Deskripsi pekerjaan keseluruhan"), { target: { value: "Pasang 6 kamera" } });
+    fireEvent.change(screen.getByLabelText("Deskripsi pekerjaan"), { target: { value: "Pasang 6 kamera" } });
     fireEvent.change(screen.getByLabelText("Kategori pekerjaan"), { target: { value: "INSTALASI" } });
     fireEvent.change(screen.getByRole("combobox", { name: "Lokasi kerja" }), { target: { value: "s1" } });
     fireEvent.change(screen.getByLabelText("Tanggal mulai"), { target: { value: "2026-10-01" } });
     fireEvent.change(screen.getByLabelText("Tanggal selesai"), { target: { value: "2026-10-01" } });
-    expect(await screen.findByText("Hari 1 · 1 Okt 2026")).toBeInTheDocument();
+    expect(await screen.findByText("Hari 1")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Tambah hari kerja" }));
-    expect(await screen.findByText("Hari 2 · 2 Okt 2026")).toBeInTheDocument();
-    const titles = screen.getAllByPlaceholderText("mis. Pemasangan CCTV 1");
-    const descs = screen.getAllByPlaceholderText("mis. Memasang CCTV 1 di area A");
+    expect(await screen.findByText("Hari 2")).toBeInTheDocument();
+    const titles = screen.getAllByPlaceholderText("Judul pekerjaan");
+    const descs = screen.getAllByPlaceholderText("Deskripsi");
     fireEvent.change(titles[0], { target: { value: "Pasang CCTV 1" } });
     fireEvent.change(descs[0], { target: { value: "Area A" } });
     fireEvent.change(titles[1], { target: { value: "Uji kamera" } });
     fireEvent.change(descs[1], { target: { value: "Semua" } });
     fireEvent.change(screen.getByLabelText("Ketua tim"), { target: { value: "e-lead" } });
-    // Ketua tidak muncul lagi di daftar anggota.
-    await waitFor(() => expect(screen.queryByRole("checkbox", { name: /Bu Ketua/ })).toBeNull());
-    fireEvent.click(screen.getByRole("checkbox", { name: /Pak Anggota/ }));
+    // Pekerja dipilih per hari lewat dropdown (ketua tidak ditawarkan), lalu "Tambah" → masuk kolom Pekerja.
+    for (const day of [1, 2]) {
+      const pick = screen.getByLabelText(`Pilih anggota hari ${day}`);
+      await waitFor(() => expect(within(pick).queryByRole("option", { name: "Bu Ketua" })).toBeNull());
+      fireEvent.change(pick, { target: { value: "e-member" } });
+      fireEvent.click(within(pick.parentElement!).getByRole("button", { name: "Tambah" }));
+      expect(await within(screen.getByRole("list", { name: `Pekerja hari ${day}` })).findByText("Pak Anggota")).toBeInTheDocument();
+    }
     fireEvent.click(screen.getByRole("checkbox", { name: /Tangga/ }));
     fireEvent.change(screen.getByLabelText(/Kendaraan/), { target: { value: "v1" } });
     await screen.findByRole("option", { name: "Pak Anggota" });
@@ -147,8 +152,8 @@ describe("Work plan — daftar", () => {
       period_start: "2026-10-01",
       period_end: "2026-10-02",
       days: [
-        { work_date: "2026-10-01", tasks: [{ title: "Pasang CCTV 1", description: "Area A", file_ids: [] }], site_id: null, member_employee_ids: null },
-        { work_date: "2026-10-02", tasks: [{ title: "Uji kamera", description: "Semua", file_ids: [] }], site_id: null, member_employee_ids: null },
+        { work_date: "2026-10-01", tasks: [{ title: "Pasang CCTV 1", description: "Area A", file_ids: [] }], site_id: null, work_type_id: null, member_employee_ids: ["e-member"] },
+        { work_date: "2026-10-02", tasks: [{ title: "Uji kamera", description: "Semua", file_ids: [] }], site_id: null, work_type_id: null, member_employee_ids: ["e-member"] },
       ],
       leader_employee_id: "e-lead",
       member_employee_ids: ["e-member"],

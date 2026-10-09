@@ -513,7 +513,8 @@ class CRUDPlanDraft(CRUDBase):
                     'period_start', lower(wp.period), 'period_end', upper(wp.period) - 1,
                     'pm_employee_id', wp.pm_employee_id, 'pm_name', pm.full_name, 'pm_position', pm.position,
                     'leader_employee_id', wp.leader_employee_id, 'appeal_reason', wp.appeal_reason,
-                    'is_out_of_town', wp.is_out_of_town, 'work_type_id', wp.work_type_id)
+                    'is_out_of_town', wp.is_out_of_town, 'work_type_id', wp.work_type_id,
+                    'work_type_name', (SELECT w0.name FROM vms.work_type w0 WHERE w0.id = wp.work_type_id))
                   FROM vms.work_plan wp
                   LEFT JOIN vms.business_unit bu ON bu.id = wp.unit_id
                   LEFT JOIN vms.site s ON s.id = wp.site_id

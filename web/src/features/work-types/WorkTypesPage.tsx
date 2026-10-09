@@ -4,11 +4,11 @@ import { useState } from "react";
 import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
-import { Button } from "@/components/ui/button";
-import { TextField } from "@/components/ui/Field";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Dialog } from "@/components/ui/VmsDialog";
+import { Button } from "@/components/atoms/Button";
+import { TextField } from "@/components/molecules/Field";
+import { PageHeader } from "@/components/molecules/PageHeader";
+import { Skeleton } from "@/components/atoms/Skeleton";
+import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { FilePreview } from "@/components/molecules/FilePreview";
 import { api } from "@/lib/api";
 import { errorMessage } from "@/lib/errors";
@@ -158,7 +158,7 @@ function WorkTypeDialog({ type, onClose }: { type: WorkType | null; onClose: () 
   });
 
   return (
-    <Dialog
+    <VmsDialog
       open
       title={type ? "Ubah jenis pekerjaan" : "Tambah jenis pekerjaan"}
       onClose={onClose}
@@ -233,7 +233,7 @@ function WorkTypeDialog({ type, onClose }: { type: WorkType | null; onClose: () 
           <Plus className="size-4" /> Tambah slot foto
         </Button>
       </form>
-    </Dialog>
+    </VmsDialog>
   );
 }
 
@@ -249,7 +249,7 @@ function DeactivateDialog({ type, onClose }: { type: WorkType; onClose: () => vo
     }
   };
   return (
-    <Dialog
+    <VmsDialog
       open
       title="Nonaktifkan jenis pekerjaan?"
       onClose={onClose}
@@ -268,6 +268,6 @@ function DeactivateDialog({ type, onClose }: { type: WorkType; onClose: () => vo
         <strong className="text-ink">{type.name}</strong> tidak akan ditawarkan lagi untuk rencana kerja baru. Rencana kerja yang
         sudah memakainya tetap utuh.
       </p>
-    </Dialog>
+    </VmsDialog>
   );
 }

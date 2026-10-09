@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/button";
-import { TextField } from "@/components/ui/Field";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/atoms/Badge";
+import { Button } from "@/components/atoms/Button";
+import { TextField } from "@/components/molecules/Field";
+import { Skeleton } from "@/components/atoms/Skeleton";
 import { errorMessage } from "@/lib/errors";
 import { formatDateTime } from "@/lib/format";
 import { useAccount, useAccountAction, type Employee } from "./api";

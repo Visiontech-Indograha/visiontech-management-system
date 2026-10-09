@@ -4,11 +4,11 @@ import { useMemo, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
-import { Button } from "@/components/ui/button";
-import { TextField } from "@/components/ui/Field";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Dialog } from "@/components/ui/VmsDialog";
+import { Button } from "@/components/atoms/Button";
+import { TextField } from "@/components/molecules/Field";
+import { PageHeader } from "@/components/molecules/PageHeader";
+import { Skeleton } from "@/components/atoms/Skeleton";
+import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { ApiError } from "@/lib/api";
 import { useCreateSite, useDeleteSite, useSites, type Site } from "./api";
 import type { LatLng } from "@/features/work-plans/PlanLocation";
@@ -137,7 +137,7 @@ function SiteDialog({ onClose }: { onClose: () => void }) {
   });
 
   return (
-    <Dialog
+    <VmsDialog
       open
       title="Tambah lokasi kerja"
       onClose={onClose}
@@ -184,7 +184,7 @@ function SiteDialog({ onClose }: { onClose: () => void }) {
           {...register("radius_m")}
         />
       </form>
-    </Dialog>
+    </VmsDialog>
   );
 }
 
@@ -200,7 +200,7 @@ function DeleteSiteDialog({ site, onClose }: { site: Site; onClose: () => void }
     }
   };
   return (
-    <Dialog
+    <VmsDialog
       open
       title="Hapus lokasi kerja"
       onClose={onClose}
@@ -218,6 +218,6 @@ function DeleteSiteDialog({ site, onClose }: { site: Site; onClose: () => void }
       <p>
         Hapus <strong>{site.name}</strong>? Lokasi ini tidak bisa dipakai lagi untuk absensi.
       </p>
-    </Dialog>
+    </VmsDialog>
   );
 }

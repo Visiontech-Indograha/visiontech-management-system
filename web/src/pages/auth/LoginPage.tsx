@@ -7,11 +7,11 @@ import { z } from "zod";
 import { AlertCircle, Smartphone, Timer } from "lucide-react";
 import { useSession } from "@/app/session";
 import logo from "@/assets/brand/logo-visiontech.png";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/atoms/Alert";
+import { Button } from "@/components/atoms/Button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/atoms/Card";
+import { Input } from "@/components/atoms/Input";
+import { Label } from "@/components/atoms/Label";
 import { ApiError, api } from "@/lib/api";
 
 const schema = z.object({

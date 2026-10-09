@@ -1,6 +1,6 @@
 import { forwardRef, useId, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from "react";
-import { Label } from "./label";
-import { Input } from "./input";
+import { Label } from "../atoms/Label";
+import { Input } from "../atoms/Input";
 import { cn } from "@/lib/utils";
 
 interface FieldShellProps {

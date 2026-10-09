@@ -9,10 +9,10 @@ import { Circle, MapContainer, Marker, TileLayer, useMap, useMapEvents } from "r
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useSession } from "@/app/session";
-import { Button } from "@/components/ui/button";
-import { TextAreaField, TextField } from "@/components/ui/Field";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Dialog } from "@/components/ui/VmsDialog";
+import { Button } from "@/components/atoms/Button";
+import { TextAreaField, TextField } from "@/components/molecules/Field";
+import { Skeleton } from "@/components/atoms/Skeleton";
+import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { api } from "@/lib/api";
 import type { components } from "@/lib/api-types";
 import { errorMessage } from "@/lib/errors";
@@ -192,7 +192,7 @@ function LocationDialog({ plan, current, onClose }: { plan: WorkPlan; current: P
 
   const radiusNum = Number(radius);
   return (
-    <Dialog
+    <VmsDialog
       open
       title="Atur titik lokasi"
       onClose={onClose}
@@ -282,6 +282,6 @@ function LocationDialog({ plan, current, onClose }: { plan: WorkPlan; current: P
           hint="10–5000 meter."
         />
       </form>
-    </Dialog>
+    </VmsDialog>
   );
 }

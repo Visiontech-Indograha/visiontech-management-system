@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { useSession } from "@/app/session";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/components/atoms/Button";
+import { Checkbox } from "@/components/atoms/Checkbox";
 import { useFaceStatus, useSetFaceConsent, type FaceStatus } from "@/features/account/api";
 import { errorMessage } from "@/lib/errors";
 import { FaceEnrollCapture } from "./FaceEnrollCapture";

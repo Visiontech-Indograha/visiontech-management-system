@@ -2,7 +2,7 @@ import { Paperclip, Plus, Trash2, X } from "lucide-react";
 import { useState } from "react";
 import { useFieldArray, useWatch, type Control, type FieldErrors, type UseFormRegister, type UseFormSetValue } from "react-hook-form";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/atoms/Button";
 import { errorMessage } from "@/lib/errors";
 import { formatDate } from "@/lib/format";
 import type { TaskValue, Values } from "./PlanEditorPage";

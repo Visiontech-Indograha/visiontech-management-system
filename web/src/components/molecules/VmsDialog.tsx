@@ -1,8 +1,8 @@
 import { type ReactNode } from "react";
-import { Dialog as ShadcnDialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "./dialog";
+import { Dialog as ShadcnDialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../atoms/Dialog";
 
 /** Dialog untuk konfirmasi dan formulir singkat. */
-export function Dialog({
+export function VmsDialog({
   open,
   title,
   onClose,

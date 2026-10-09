@@ -1,6 +1,6 @@
 export { HomePage } from "@/features/home/HomePage";
 import { Link } from "react-router-dom";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { PageHeader } from "@/components/molecules/PageHeader";
 
 export function ComingSoonPage({ title }: { title: string }) {
   return (

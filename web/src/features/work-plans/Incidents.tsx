@@ -6,9 +6,9 @@ import { toast } from "sonner";
 import { z } from "zod";
 import { useSession } from "@/app/session";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
-import { Button } from "@/components/ui/button";
-import { SelectField, TextAreaField, TextField } from "@/components/ui/Field";
-import { Dialog } from "@/components/ui/VmsDialog";
+import { Button } from "@/components/atoms/Button";
+import { SelectField, TextAreaField, TextField } from "@/components/molecules/Field";
+import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { api } from "@/lib/api";
 import { errorMessage } from "@/lib/errors";
 import { formatDate } from "@/lib/format";
@@ -61,7 +61,7 @@ export function IncidentDialog({ plan, onClose }: { plan: WorkPlan; onClose: () 
   });
 
   return (
-    <Dialog
+    <VmsDialog
       open
       title="Lapor Insiden/HSE"
       onClose={onClose}
@@ -114,7 +114,7 @@ export function IncidentDialog({ plan, onClose }: { plan: WorkPlan; onClose: () 
           }}
         />
       </form>
-    </Dialog>
+    </VmsDialog>
   );
 }
 
@@ -179,7 +179,7 @@ function ResolveDialog({ plan, incident, onClose }: { plan: WorkPlan; incident: 
     }
   });
   return (
-    <Dialog
+    <VmsDialog
       open
       title="Selesaikan insiden"
       onClose={onClose}
@@ -202,6 +202,6 @@ function ResolveDialog({ plan, incident, onClose }: { plan: WorkPlan; incident: 
         )}
         <TextAreaField label="Catatan penyelesaian" error={errors.resolution_note?.message} {...register("resolution_note")} />
       </form>
-    </Dialog>
+    </VmsDialog>
   );
 }

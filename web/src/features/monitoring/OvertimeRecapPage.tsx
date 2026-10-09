@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { QueryState } from "@/components/molecules/QueryState";
-import { TextField } from "@/components/ui/Field";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { TextField } from "@/components/molecules/Field";
+import { PageHeader } from "@/components/molecules/PageHeader";
 import { api } from "@/lib/api";
 import type { components } from "@/lib/api-types";
 

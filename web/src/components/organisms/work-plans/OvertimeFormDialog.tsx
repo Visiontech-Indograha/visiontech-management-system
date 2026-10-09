@@ -1,7 +1,7 @@
 import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { ActionButton } from "@/components/molecules/ActionButton";
-import { TextBlock } from "@/components/molecules/TextBlock";
 import { FormBlock } from "@/components/molecules/FormBlock";
+import { FormErrorText } from "@/components/molecules/FormErrorText";
 
 export function OvertimeFormDialog({
   title,
@@ -37,11 +37,7 @@ export function OvertimeFormDialog({
       }
     >
       <FormBlock id="overtime-form" onSubmit={onSubmit} noValidate>
-        {formError && (
-          <TextBlock role="alert" className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
-            {formError}
-          </TextBlock>
-        )}
+        <FormErrorText message={formError} />
         {children}
       </FormBlock>
     </VmsDialog>

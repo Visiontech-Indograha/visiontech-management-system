@@ -8,9 +8,9 @@ import { SelectField, TextField } from "@/components/molecules/Field";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { errorMessage } from "@/lib/errors";
 import { useCreateEmployee, useUnits } from "@/services/employeeService";
-import { ActionButton } from "@/components/molecules/ActionButton";
 import { ControlOption, FormBlock } from "@/components/molecules/FormBlock";
 import { FormErrorText } from "@/components/molecules/FormErrorText";
+import { DialogActions } from "@/components/molecules/DialogActions";
 
 const today = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(new Date());
 
@@ -59,14 +59,7 @@ export function EmployeeCreateDialog({ onClose }: { onClose: () => void }) {
       title="Tambah karyawan"
       onClose={onClose}
       footer={
-        <>
-          <ActionButton variant="outline" onClick={onClose} disabled={isSubmitting}>
-            Batal
-          </ActionButton>
-          <ActionButton type="submit" form="create-employee-form" disabled={isSubmitting}>
-            {isSubmitting ? "Menyimpan..." : "Simpan"}
-          </ActionButton>
-        </>
+        <DialogActions onCancel={onClose} busy={isSubmitting} formId="create-employee-form" />
       }
     >
       <FormBlock id="create-employee-form" onSubmit={onSubmit} noValidate>

@@ -11,13 +11,14 @@ import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { errorMessage } from "@/lib/errors";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import type { WorkPlan } from "@/services/workPlanService";
-import { ActionButton } from "@/components/molecules/ActionButton";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
 import { PlainAction } from "@/components/molecules/PlainAction";
 import { FormBlock } from "@/components/molecules/FormBlock";
 import { planLocationKey, savePlanLocation, type PlanLocation, type PlanLocationIn } from "@/services/planLocationService";
 import { searchPlaces, type GeoResult } from "@/services/geoService";
+import { FormErrorText } from "@/components/molecules/FormErrorText";
+import { DialogActions } from "@/components/molecules/DialogActions";
 
 const RUNNING_NOTE =
   "Rencana kerja ini sudah terbit. Mengubah lokasi menerbitkan dokumen versi baru bertanda tangan Anda; versi lama dan absensi sebelumnya tetap tercatat di lokasi lamanya.";
@@ -85,22 +86,11 @@ export function PlanLocationDialog({ plan, current, onClose }: { plan: WorkPlan;
       title="Atur titik lokasi"
       onClose={onClose}
       footer={
-        <>
-          <ActionButton variant="outline" onClick={onClose} disabled={save.isPending}>
-            Batal
-          </ActionButton>
-          <ActionButton type="submit" form="location-form" disabled={save.isPending}>
-            {save.isPending ? "Menyimpan..." : "Simpan titik"}
-          </ActionButton>
-        </>
+        <DialogActions onCancel={onClose} busy={save.isPending} formId="location-form" submitLabel="Simpan titik" busyLabel="Menyimpan..." />
       }
     >
       <FormBlock id="location-form" onSubmit={submit} noValidate>
-        {formError && (
-          <TextBlock role="alert" className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
-            {formError}
-          </TextBlock>
-        )}
+        <FormErrorText message={formError} />
         {plan.status !== "DRAFT" && (
           <>
             <TextBlock className="mb-3 rounded-control bg-warning-bg px-3 py-2 text-sm text-warning">{RUNNING_NOTE}</TextBlock>

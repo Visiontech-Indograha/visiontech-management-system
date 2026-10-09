@@ -19,6 +19,8 @@ import { LoadingBar } from "@/components/molecules/LoadingBar";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { TableBlock, TableBlockBody, TableBlockCell, TableBlockHead, TableBlockHeaderCell, TableBlockRow } from "@/components/molecules/TableBlock";
 import { ControlInput, ControlOption, FormBlock } from "@/components/molecules/FormBlock";
+import { DialogActions } from "@/components/molecules/DialogActions";
+import { FormErrorText } from "@/components/molecules/FormErrorText";
 
 type Errors = Record<string, string>;
 
@@ -234,22 +236,11 @@ function DocumentDialog({
       title={renew ? "Perpanjang berkas" : "Tambah berkas"}
       onClose={onClose}
       footer={
-        <>
-          <ActionButton variant="outline" onClick={onClose} disabled={pending}>
-            Batal
-          </ActionButton>
-          <ActionButton type="submit" form="document-form" disabled={pending}>
-            {pending ? "Menyimpan..." : "Simpan"}
-          </ActionButton>
-        </>
+        <DialogActions onCancel={onClose} busy={pending} formId="document-form" />
       }
     >
       <FormBlock id="document-form" onSubmit={submit} noValidate>
-        {formError && (
-          <TextBlock role="alert" className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
-            {formError}
-          </TextBlock>
-        )}
+        <FormErrorText message={formError} />
         {renew ? (
           <TextBlock className="mb-4 text-sm">
             <ControlInput type="hidden" name="doc_type" value={renew.doc_type} />

@@ -10,8 +10,8 @@ import { errorMessage } from "@/lib/errors";
 import type { WorkPlan } from "@/services/workPlanService";
 import { type Incident, resolveIncident, useStoreIncident } from "@/services/incidentService";
 import { ActionButton } from "@/components/molecules/ActionButton";
-import { TextBlock } from "@/components/molecules/TextBlock";
 import { FormBlock } from "@/components/molecules/FormBlock";
+import { FormErrorText } from "@/components/molecules/FormErrorText";
 
 const resolveSchema = z.object({ resolution_note: z.string().trim().min(1, "Catatan penyelesaian wajib diisi.") });
 
@@ -54,11 +54,7 @@ export function IncidentResolveDialog({ plan, incident, onClose }: { plan: WorkP
       }
     >
       <FormBlock id="resolve-form" onSubmit={onSubmit} noValidate>
-        {formError && (
-          <TextBlock role="alert" className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
-            {formError}
-          </TextBlock>
-        )}
+        <FormErrorText message={formError} />
         <TextAreaField label="Catatan penyelesaian" error={errors.resolution_note?.message} {...register("resolution_note")} />
       </FormBlock>
     </VmsDialog>

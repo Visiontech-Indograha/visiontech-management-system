@@ -8,6 +8,7 @@ import { ActionButton } from "@/components/molecules/ActionButton";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
 import { IncidentResolveDialog } from "@/components/organisms/work-plans/IncidentResolveDialog";
+import { SectionTitle } from "@/components/molecules/SectionTitle";
 
 /** "Laporan Insiden / HSE" di detail SK; PM (create:plan) atau petugas aset dapat menyelesaikan. */
 export function IncidentPanel({ plan }: { plan: WorkPlan }) {
@@ -18,7 +19,7 @@ export function IncidentPanel({ plan }: { plan: WorkPlan }) {
   if (incidents.length === 0) return null;
   return (
     <section aria-label="Laporan Insiden / HSE" className="rounded-panel border border-line bg-surface shadow-card p-4">
-      <TextBlock as="h2" className="mb-3 text-base font-semibold">Laporan Insiden / HSE</TextBlock>
+      <SectionTitle>Laporan Insiden / HSE</SectionTitle>
       <ListBlock className="space-y-3">
         {incidents.map((i) => (
           <ListEntry key={i.id} className="border-b border-line pb-3 last:border-0 last:pb-0">

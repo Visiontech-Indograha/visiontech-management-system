@@ -21,6 +21,7 @@ import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
 import { ControlInput, ControlLabel, ControlOption, FormBlock } from "@/components/molecules/FormBlock";
 import { DisclosureBlock, DisclosureTitle } from "@/components/molecules/DisclosureBlock";
 import { listMemberReports, listPlanDays, reviewDailyReport, saveDailyReport, submitDailyReport, toggleDayTask, type DailyReportInput, type DayTask, type PlanDay, type ReportReviewInput } from "@/services/dailyReportService";
+import { FormErrorText } from "@/components/molecules/FormErrorText";
 
 type Day = PlanDay;
 type Task = DayTask;
@@ -151,11 +152,7 @@ function TaskList({ plan, day, editable }: { plan: WorkPlan; day: Day; editable:
   };
   return (
     <>
-      {error && (
-        <TextBlock role="alert" className="mb-3 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
-          {error}
-        </TextBlock>
-      )}
+      <FormErrorText message={error} className="mb-3" />
       <ListBlock aria-label="Tugas" className="space-y-2">
         {[...day.tasks]
           .sort((a, b) => a.sort_order - b.sort_order)
@@ -306,11 +303,7 @@ function DailyForm({ plan, day }: { plan: WorkPlan; day: Day }) {
 
   return (
     <FormBlock noValidate onSubmit={send(true)} className="mt-4 border-t border-line pt-4">
-      {formError && (
-        <TextBlock role="alert" className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
-          {formError}
-        </TextBlock>
-      )}
+      <FormErrorText message={formError} />
       {day.report?.review_note && <TextBlock className="mb-3 text-sm text-warning">Catatan PM: {day.report.review_note}</TextBlock>}
       <TextAreaField label="Laporan Harian" error={errors.body?.message} {...register("body")} />
       <TextAreaField label="Kendala (Wajib)" error={errors.obstacle?.message} {...register("obstacle")} />
@@ -368,11 +361,7 @@ function DailyReviewForm({ plan, day }: { plan: WorkPlan; day: Day }) {
   });
   return (
     <FormBlock noValidate onSubmit={onSubmit} className="mt-4 border-t border-line pt-4">
-      {formError && (
-        <TextBlock role="alert" className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
-          {formError}
-        </TextBlock>
-      )}
+      <FormErrorText message={formError} />
       <SelectField label="Keputusan" {...register("decision")}>
         <ControlOption value="APPROVE">Setujui laporan</ControlOption>
         <ControlOption value="RETURN">Minta perbaikan</ControlOption>

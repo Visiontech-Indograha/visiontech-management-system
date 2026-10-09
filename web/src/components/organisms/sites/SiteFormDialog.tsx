@@ -9,9 +9,9 @@ import { ApiError } from "@/lib/apiClient";
 import type { LatLng } from "@/lib/geo";
 import { useCreateSite } from "@/services/siteService";
 import { SiteMapPicker } from "./SiteMapPicker";
-import { ActionButton } from "@/components/molecules/ActionButton";
-import { TextBlock } from "@/components/molecules/TextBlock";
 import { FormBlock } from "@/components/molecules/FormBlock";
+import { DialogActions } from "@/components/molecules/DialogActions";
+import { FormErrorText } from "@/components/molecules/FormErrorText";
 
 const coordinate = (min: number, max: number, label: string) =>
   z
@@ -82,22 +82,11 @@ export function SiteFormDialog({ onClose }: { onClose: () => void }) {
       title="Tambah lokasi kerja"
       onClose={onClose}
       footer={
-        <>
-          <ActionButton variant="outline" onClick={onClose} disabled={isSubmitting}>
-            Batal
-          </ActionButton>
-          <ActionButton type="submit" form="site-form" disabled={isSubmitting}>
-            {isSubmitting ? "Menyimpan..." : "Simpan"}
-          </ActionButton>
-        </>
+        <DialogActions onCancel={onClose} busy={isSubmitting} formId="site-form" />
       }
     >
       <FormBlock id="site-form" onSubmit={onSubmit} noValidate>
-        {formError && (
-          <TextBlock role="alert" className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
-            {formError}
-          </TextBlock>
-        )}
+        <FormErrorText message={formError} />
         <SiteMapPicker
           point={point}
           radius={radius}

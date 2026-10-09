@@ -5,6 +5,7 @@ import { weekday } from "@/lib/weekday";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
 import { TableBlock, TableBlockBody, TableBlockCell, TableBlockHead, TableBlockHeaderCell, TableBlockRow } from "@/components/molecules/TableBlock";
+import { SectionTitle } from "@/components/molecules/SectionTitle";
 
 type Task = { title: string; description: string; files: { file_id: string; file_name: string }[] };
 type Day = { work_date: string; tasks: Task[]; site_name?: string | null; work_type_name?: string | null; member_employee_ids?: string[] | null };
@@ -38,7 +39,7 @@ export function PlanDetailCard({ plan }: { plan: WorkPlan }) {
     <div className="mt-6 space-y-6">
       <QueryState query={detail} errorText="Isi rencana kerja tidak dapat dimuat.">
         <section aria-label="Tim" className="rounded-panel border border-line bg-surface p-4 shadow-card">
-          <TextBlock as="h2" className="mb-3 text-base font-semibold">Tim</TextBlock>
+          <SectionTitle>Tim</SectionTitle>
           {team.length === 0 ? (
             <TextBlock className="text-sm text-mist">Belum ada tim.</TextBlock>
           ) : (
@@ -73,7 +74,7 @@ export function PlanDetailCard({ plan }: { plan: WorkPlan }) {
         </section>
 
         <section aria-label="Alat & kendaraan" className="rounded-panel border border-line bg-surface p-4 shadow-card">
-          <TextBlock as="h2" className="mb-3 text-base font-semibold">Alat &amp; kendaraan</TextBlock>
+          <SectionTitle>Alat &amp; kendaraan</SectionTitle>
           {assets.length === 0 ? (
             <TextBlock className="text-sm text-mist">Tanpa alat atau kendaraan.</TextBlock>
           ) : (
@@ -103,7 +104,7 @@ export function PlanDetailCard({ plan }: { plan: WorkPlan }) {
         </section>
 
         <section aria-label="Jadwal hari kerja" className="rounded-panel border border-line bg-surface p-4 shadow-card">
-          <TextBlock as="h2" className="mb-3 text-base font-semibold">Jadwal hari kerja</TextBlock>
+          <SectionTitle>Jadwal hari kerja</SectionTitle>
           {days.length === 0 ? (
             <TextBlock className="text-sm text-mist">Belum ada detail pekerjaan.</TextBlock>
           ) : (

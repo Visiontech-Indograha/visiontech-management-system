@@ -19,7 +19,8 @@ import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
 import { TableBlock, TableBlockBody, TableBlockCell, TableBlockHead, TableBlockHeaderCell, TableBlockRow } from "@/components/molecules/TableBlock";
 import { FormBlock } from "@/components/molecules/FormBlock";
 import { fetchDocumentPdf, listDocumentSignatures, listPlanDocuments, revokeSignature, type PlanDocument, type Signature } from "@/services/planDocumentService";
-
+import { SectionTitle } from "@/components/molecules/SectionTitle";
+import { FormErrorText } from "@/components/molecules/FormErrorText";
 
 const PDF_UNAVAILABLE = "Pembuatan PDF sedang tidak tersedia. Coba lagi nanti atau hubungi admin.";
 const KIND_LABEL: Record<string, string> = {
@@ -52,7 +53,7 @@ export function PlanDocumentsPanel({ plan }: { plan: WorkPlan }) {
   });
   return (
     <section aria-label="Dokumen" className="mt-6">
-      <TextBlock as="h2" className="mb-3 text-base font-semibold">Dokumen</TextBlock>
+      <SectionTitle>Dokumen</SectionTitle>
       <QueryState query={docs} errorText="Dokumen tidak dapat dimuat." empty={docs.data?.length === 0} emptyText="Belum ada dokumen rencana kerja.">
         <ListBlock className="space-y-4">
           {docs.data?.map((d) => (
@@ -201,11 +202,7 @@ function RevokeDialog({ documentId, signature, onClose }: { documentId: string; 
       }
     >
       <FormBlock id="revoke-form" onSubmit={submit} noValidate>
-        {formError && (
-          <TextBlock role="alert" className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
-            {formError}
-          </TextBlock>
-        )}
+        <FormErrorText message={formError} />
         <TextBlock className="mb-3 text-sm">
           Tanda tangan {signature.signer_name} ({signerRoleLabel(signature.signer_role)}) akan dicabut. Pencabutan tercatat di audit dan
           tidak dapat dibatalkan.

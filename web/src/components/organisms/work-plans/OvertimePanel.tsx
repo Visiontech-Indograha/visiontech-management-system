@@ -9,6 +9,7 @@ import { TextBlock } from "@/components/molecules/TextBlock";
 import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
 import { type Overtime, useOvertime } from "@/services/overtimeService";
 import { OvertimeReviewDialog } from "@/components/organisms/work-plans/OvertimeReviewDialog";
+import { SectionTitle } from "@/components/molecules/SectionTitle";
 
 /** Panel "Rekap Lembur" per SK (GET /overtime?work_plan_id); PM (create:plan) meninjau yang PENDING_PM. */
 export function OvertimePanel({ plan }: { plan: WorkPlan }) {
@@ -20,7 +21,7 @@ export function OvertimePanel({ plan }: { plan: WorkPlan }) {
   if (list.data?.length === 0) return null;
   return (
     <section aria-label="Rekap Lembur" className="rounded-panel border border-line bg-surface shadow-card p-4">
-      <TextBlock as="h2" className="mb-3 text-base font-semibold">Rekap Lembur</TextBlock>
+      <SectionTitle>Rekap Lembur</SectionTitle>
       <QueryState query={list} errorText="Data lembur tidak dapat dimuat.">
         <ListBlock className="space-y-3">
           {list.data?.map((o) => (

@@ -7,9 +7,9 @@ import { SelectField, TextField } from "@/components/molecules/Field";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { errorMessage } from "@/lib/errors";
 import { usePromoteEmployee, useUnits, type Employee } from "@/services/employeeService";
-import { ActionButton } from "@/components/molecules/ActionButton";
-import { TextBlock } from "@/components/molecules/TextBlock";
 import { ControlOption, FormBlock } from "@/components/molecules/FormBlock";
+import { DialogActions } from "@/components/molecules/DialogActions";
+import { FormErrorText } from "@/components/molecules/FormErrorText";
 
 const schema = z.object({
   position: z.string().trim().min(1, "Jabatan wajib diisi."),
@@ -55,22 +55,11 @@ export function EmployeePromoteDialog({ employee, onClose }: { employee: Employe
       title="Mutasi / promosi"
       onClose={onClose}
       footer={
-        <>
-          <ActionButton variant="outline" onClick={onClose} disabled={isSubmitting}>
-            Batal
-          </ActionButton>
-          <ActionButton type="submit" form="promote-form" disabled={isSubmitting}>
-            {isSubmitting ? "Menyimpan..." : "Simpan"}
-          </ActionButton>
-        </>
+        <DialogActions onCancel={onClose} busy={isSubmitting} formId="promote-form" />
       }
     >
       <FormBlock id="promote-form" onSubmit={onSubmit} noValidate>
-        {formError && (
-          <TextBlock role="alert" className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
-            {formError}
-          </TextBlock>
-        )}
+        <FormErrorText message={formError} />
         <TextField label="Jabatan" error={errors.position?.message} {...register("position")} />
         <SelectField label="Unit" error={errors.unit_id?.message} {...register("unit_id")}>
           <ControlOption value="" disabled>

@@ -11,8 +11,8 @@ import type { WorkPlan } from "@/services/workPlanService";
 import { INCIDENT_CATEGORY, INCIDENT_SEVERITY, createIncident, useStoreIncident } from "@/services/incidentService";
 import { oversize, uploadFiles } from "@/services/uploadService";
 import { ActionButton } from "@/components/molecules/ActionButton";
-import { TextBlock } from "@/components/molecules/TextBlock";
 import { ControlOption, FormBlock } from "@/components/molecules/FormBlock";
+import { FormErrorText } from "@/components/molecules/FormErrorText";
 
 const schema = z.object({
   category: z.string().min(1, "Pilih kategori."),
@@ -70,11 +70,7 @@ export function IncidentDialog({ plan, onClose }: { plan: WorkPlan; onClose: () 
       }
     >
       <FormBlock id="incident-form" onSubmit={onSubmit} noValidate className="max-h-[65vh] overflow-y-auto px-1">
-        {formError && (
-          <TextBlock role="alert" className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
-            {formError}
-          </TextBlock>
-        )}
+        <FormErrorText message={formError} />
         <SelectField label="Kategori" error={errors.category?.message} {...register("category")}>
           <ControlOption value="">Pilih kategori</ControlOption>
           {Object.entries(INCIDENT_CATEGORY).map(([v, l]) => (

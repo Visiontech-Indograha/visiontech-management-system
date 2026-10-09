@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { ActionButton } from "@/components/molecules/ActionButton";
-import { TextBlock } from "@/components/molecules/TextBlock";
 import { FormBlock } from "@/components/molecules/FormBlock";
+import { FormErrorText } from "@/components/molecules/FormErrorText";
 
 /** Kerangka dialog form aset: judul, galat umum, isi form, tombol Batal/Simpan. */
 export function AssetFormDialog({
@@ -39,11 +39,7 @@ export function AssetFormDialog({
       }
     >
       <FormBlock id="asset-form" onSubmit={onSubmit} noValidate>
-        {formError && (
-          <TextBlock role="alert" className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
-            {formError}
-          </TextBlock>
-        )}
+        <FormErrorText message={formError} />
         {children}
       </FormBlock>
     </VmsDialog>

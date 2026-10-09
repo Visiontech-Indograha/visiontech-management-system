@@ -18,6 +18,7 @@ import { TextBlock } from "@/components/molecules/TextBlock";
 import { ListBlock } from "@/components/molecules/ListBlock";
 import { ControlOption, FormBlock } from "@/components/molecules/FormBlock";
 import { listWeeklyReports, reviewWeeklyReport, saveWeeklyReport, submitWeeklyReport, type WeeklyReport, type WeeklyReportRequest, type WeeklyReviewRequest } from "@/services/weeklyReportService";
+import { FormErrorText } from "@/components/molecules/FormErrorText";
 
 type Week = WeeklyReport;
 
@@ -154,11 +155,7 @@ function WeeklyForm({ plan, week }: { plan: WorkPlan; week: Week }) {
 
   return (
     <FormBlock noValidate onSubmit={send(true)}>
-      {formError && (
-        <TextBlock role="alert" className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
-          {formError}
-        </TextBlock>
-      )}
+      <FormErrorText message={formError} />
       {week.review_note && <TextBlock className="mb-3 text-sm text-warning">Catatan PM: {week.review_note}</TextBlock>}
       <TextAreaField label="Laporan Mingguan" error={errors.body?.message} {...register("body")} />
       <TextAreaField label="Ringkasan Kendala Mingguan (Wajib)" error={errors.obstacle?.message} {...register("obstacle")} />
@@ -198,11 +195,7 @@ function WeeklyReviewForm({ plan, week }: { plan: WorkPlan; week: Week }) {
   });
   return (
     <FormBlock noValidate onSubmit={onSubmit} className="mt-4 border-t border-line pt-4">
-      {formError && (
-        <TextBlock role="alert" className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
-          {formError}
-        </TextBlock>
-      )}
+      <FormErrorText message={formError} />
       <SelectField label="Keputusan" {...register("decision")}>
         <ControlOption value="APPROVE">Setujui laporan</ControlOption>
         <ControlOption value="RETURN">Minta perbaikan</ControlOption>

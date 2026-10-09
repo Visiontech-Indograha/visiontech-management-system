@@ -46,7 +46,8 @@ def _names(snapshot: dict[str, Any], role: str) -> dict[str, str]:
 def _days(snapshot: dict[str, Any]) -> dict[str, list[str]]:
     """Isi tiap hari sebagai daftar penanda (tugas, lokasi hari itu, anggota hari itu) untuk mendeteksi perubahan."""
     return {str(d["work_date"]): [str(t["title"]) + "|" + str(t.get("description") or "") for t in d.get("tasks", [])]
-            + [f"@lokasi|{d.get('site_name') or ''}", f"@anggota|{','.join(d.get('members') or [])}"]
+            + [f"@lokasi|{d.get('site_name') or ''}", f"@anggota|{','.join(d.get('members') or [])}",
+               f"@jenis|{d.get('work_type_name') or ''}"]
             for d in snapshot.get("days", [])}
 
 

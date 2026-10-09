@@ -817,6 +817,9 @@ CREATE INDEX IF NOT EXISTS ix_work_type_photo_organization_id ON work_type_photo
 ALTER TABLE work_plan ADD CONSTRAINT work_plan_work_type_fk FOREIGN KEY (work_type_id) REFERENCES work_type(id);
 -- Lokasi & anggota per hari kerja (Alembic 0031_plan_day_site_members); RLS & hak di 05_face.sql.
 ALTER TABLE work_plan_day ADD CONSTRAINT work_plan_day_site_fk FOREIGN KEY (site_id) REFERENCES site(id);
+-- Jenis pekerjaan khusus hari itu; NULL = ikut jenis rencana (Alembic 0034_plan_day_work_type).
+ALTER TABLE work_plan_day ADD COLUMN IF NOT EXISTS work_type_id uuid REFERENCES work_type(id);
+CREATE INDEX IF NOT EXISTS ix_work_plan_day_work_type_id ON work_plan_day (work_type_id);
 CREATE INDEX IF NOT EXISTS ix_work_plan_day_site_id ON work_plan_day (site_id);
 CREATE TABLE IF NOT EXISTS work_plan_day_member (
   id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),

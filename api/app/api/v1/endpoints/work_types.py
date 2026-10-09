@@ -83,7 +83,7 @@ async def deactivate_work_type(type_id: UUID, current_user: CurrentUser = _MANAG
 
 
 @router.get("/work-plans/{plan_id}/photo-template", response_model=list[WorkTypePhotoOut])
-async def plan_photo_template(plan_id: UUID, access: PlanAccess = _VIEW,
+async def plan_photo_template(plan_id: UUID, day_id: UUID | None = None, access: PlanAccess = _VIEW,
                               service: WorkTypeService = Depends(get_work_type_service)) -> list[WorkTypePhotoOut]:
     """
     Template foto laporan rencana kerja (GET) — kosong bila rencana kerja tanpa jenis pekerjaan.
@@ -91,7 +91,10 @@ async def plan_photo_template(plan_id: UUID, access: PlanAccess = _VIEW,
     Path Parameters:
     - plan_id (UUID): ID rencana kerja.
 
+    Query Parameters:
+    - day_id (UUID, opsional): hari kerja; memakai jenis khusus hari itu bila ada.
+
     Returns:
     - list[WorkTypePhotoOut]: slot foto berurutan.
     """
-    return [WorkTypePhotoOut(**r._mapping) for r in await service.template_of_plan(plan_id)]
+    return [WorkTypePhotoOut(**r._mapping) for r in await service.template_of_plan(plan_id, day_id)]

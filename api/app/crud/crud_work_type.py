@@ -79,23 +79,35 @@ class CRUDWorkType(CRUDBase):
                                   {"id": str(plan_id)})
         return str(value) if value else None
 
-    async def template_of_plan(self, plan_id: UUID | str) -> list[Any]:
-        """Slot template rencana kerja (kosong bila tanpa jenis)."""
+    async def template_of_plan(self, plan_id: UUID | str, day_id: UUID | str | None = None) -> list[Any]:
+        """Slot template rencana kerja; bila `day_id` diberikan memakai jenis khusus hari itu (jika ada), kosong bila
+        tanpa jenis."""
         return list(await self.fetchall(
             "SELECT p.id, p.sort_order, p.label, p.hint, p.required, p.example_file_id "
             "FROM vms.work_plan wp "
-            "JOIN vms.work_type_photo p ON p.work_type_id = wp.work_type_id "
-            "WHERE wp.id = CAST(:plan AS uuid) ORDER BY p.sort_order", {"plan": str(plan_id)}))
+            "LEFT JOIN vms.work_plan_day d ON d.id = CAST(:day AS uuid) AND d.work_plan_id = wp.id "
+            "JOIN vms.work_type_photo p ON p.work_type_id = COALESCE(d.work_type_id, wp.work_type_id) "
+            "WHERE wp.id = CAST(:plan AS uuid) ORDER BY p.sort_order",
+            {"plan": str(plan_id), "day": str(day_id) if day_id else None}))
+
+    async def type_in_plan(self, plan_id: UUID | str, type_id: UUID | str) -> bool:
+        """Jenis ini sudah terpasang pada rencana (tingkat rencana atau salah satu harinya)?"""
+        return bool(await self.scalar(
+            "SELECT EXISTS (SELECT 1 FROM vms.work_plan wp WHERE wp.id = CAST(:plan AS uuid) "
+            "AND (wp.work_type_id = CAST(:wt AS uuid) OR EXISTS (SELECT 1 FROM vms.work_plan_day d "
+            "WHERE d.work_plan_id = wp.id AND d.work_type_id = CAST(:wt AS uuid))))",
+            {"plan": str(plan_id), "wt": str(type_id)}))
 
     async def missing_required_daily(self, plan_id: UUID | str, day_id: UUID | str) -> list[str]:
         """Label slot wajib yang belum punya foto pada laporan harian ketua."""
         rows = await self.fetchall(
             """
             SELECT p.label FROM vms.work_plan wp
-            JOIN vms.work_type_photo p ON p.work_type_id = wp.work_type_id AND p.required
+            JOIN vms.work_plan_day d ON d.id = CAST(:day AS uuid) AND d.work_plan_id = wp.id
+            JOIN vms.work_type_photo p ON p.work_type_id = COALESCE(d.work_type_id, wp.work_type_id) AND p.required
             WHERE wp.id = CAST(:plan AS uuid) AND NOT EXISTS (
                 SELECT 1 FROM vms.daily_report r JOIN vms.report_evidence e ON e.daily_report_id = r.id
-                WHERE r.work_plan_day_id = CAST(:day AS uuid) AND e.slot_label = p.label)
+                WHERE r.work_plan_day_id = d.id AND e.slot_label = p.label)
             ORDER BY p.sort_order
             """, {"plan": str(plan_id), "day": str(day_id)})
         return [str(r.label) for r in rows]
@@ -105,10 +117,12 @@ class CRUDWorkType(CRUDBase):
         rows = await self.fetchall(
             """
             SELECT p.label FROM vms.work_plan wp
-            JOIN vms.work_type_photo p ON p.work_type_id = wp.work_type_id AND p.required
+            JOIN vms.member_daily_report r ON r.id = CAST(:rep AS uuid)
+            JOIN vms.work_plan_day d ON d.id = r.work_plan_day_id AND d.work_plan_id = wp.id
+            JOIN vms.work_type_photo p ON p.work_type_id = COALESCE(d.work_type_id, wp.work_type_id) AND p.required
             WHERE wp.id = CAST(:plan AS uuid) AND NOT EXISTS (
                 SELECT 1 FROM vms.member_report_evidence e
-                WHERE e.member_report_id = CAST(:rep AS uuid) AND e.slot_label = p.label)
+                WHERE e.member_report_id = r.id AND e.slot_label = p.label)
             ORDER BY p.sort_order
             """, {"plan": str(plan_id), "rep": str(report_id)})
         return [str(r.label) for r in rows]

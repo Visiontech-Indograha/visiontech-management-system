@@ -3,7 +3,7 @@ import { formatDate } from "@/lib/format";
 import { usePlanDetail, type WorkPlan } from "./api";
 
 type Task = { title: string; description: string; files: { file_id: string; file_name: string }[] };
-type Day = { work_date: string; tasks: Task[]; site_name?: string | null; member_employee_ids?: string[] | null };
+type Day = { work_date: string; tasks: Task[]; site_name?: string | null; work_type_name?: string | null; member_employee_ids?: string[] | null };
 type Member = { employee_id: string; full_name: string; position: string; role_in_plan: string };
 type Asset = { asset_id: string; kind: string; code: string; name: string; driver_name: string | null };
 
@@ -69,6 +69,7 @@ export function PlanDetailCard({ plan }: { plan: WorkPlan }) {
                   <p className="mb-2 text-sm font-semibold">
                     Hari {i + 1} · {formatDate(day.work_date)}
                   </p>
+                  {day.work_type_name && <p className="mb-1 text-xs text-mist">Jenis pekerjaan hari ini: {day.work_type_name}</p>}
                   {day.site_name && <p className="mb-1 text-xs text-mist">Lokasi hari ini: {day.site_name}</p>}
                   {day.member_employee_ids && (
                     <p className="mb-1 text-xs text-mist">

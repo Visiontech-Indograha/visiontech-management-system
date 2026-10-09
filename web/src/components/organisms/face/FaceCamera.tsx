@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState, type ComponentType } from "react";
-import { api, ApiError } from "@/lib/apiClient";
+import { ApiError } from "@/lib/apiClient";
 import { errorMessage } from "@/lib/errors";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ScanFace, Smile } from "@/components/molecules/Glyphs";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { VideoView } from "@/components/molecules/VideoView";
+import { checkFaceChallenge } from "@/services/faceService";
 
 interface Challenge {
   id: string;
@@ -35,12 +36,6 @@ function pick<T>(items: readonly T[], n: number): T[] {
     [pool[i], pool[j]] = [pool[j]!, pool[i]!];
   }
   return pool.slice(0, n);
-}
-
-interface ChallengeResponse {
-  status: "sukses" | "menunggu";
-  detail: string;
-  proof?: string | null;
 }
 
 export interface FaceLiveness {
@@ -118,7 +113,7 @@ export function FaceCamera({
       form.append("file", await snapshot(), "frame.jpg");
       form.append("challenge", ch.id);
       try {
-        const res = (await api.post<ChallengeResponse>("/face/challenge-check", form)).data;
+        const res = await checkFaceChallenge(form);
         if (res.status === "sukses") return res.proof ?? "";
         setHint(res.detail || ch.text);
       } catch (e) {

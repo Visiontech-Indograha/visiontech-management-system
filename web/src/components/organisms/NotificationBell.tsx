@@ -1,15 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
 import { useNavigate } from "react-router-dom";
-import { api } from "@/lib/apiClient";
-import type { components } from "@/lib/apiTypes";
 import { formatDateTime } from "@/lib/format";
 import { Menu, MenuContent, MenuItem, MenuLabel, MenuSeparator, MenuTrigger } from "@/components/molecules/Menu";
 import { Bell } from "@/components/molecules/Glyphs";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { PlainAction } from "@/components/molecules/PlainAction";
+import { fetchNotifications, markNotificationsRead } from "@/services/notificationService";
 
-type NotificationList = components["schemas"]["NotificationList"];
 const KEY = ["notifications"] as const;
 
 /** Lonceng notifikasi dalam aplikasi (alur SK v2): diperiksa tiap 60 detik, klik membuka SK terkait. */
@@ -18,11 +16,11 @@ export function NotificationBell({ className }: { className?: string }) {
   const navigate = useNavigate();
   const list = useQuery({
     queryKey: KEY,
-    queryFn: async () => (await api.get<NotificationList>("/notifications", { params: { limit: 20 } })).data,
+    queryFn: fetchNotifications,
     refetchInterval: 60_000,
   });
   const read = useMutation({
-    mutationFn: async (id: string | null) => api.post(id ? `/notifications/${id}/read` : "/notifications/read-all"),
+    mutationFn: markNotificationsRead,
     onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
   });
   const unread = list.data?.unread ?? 0;

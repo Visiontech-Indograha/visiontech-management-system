@@ -5,10 +5,9 @@ import { toast } from "sonner";
 import { FilePreview } from "@/components/molecules/FilePreview";
 import { TextField } from "@/components/molecules/Field";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
-import { api } from "@/lib/apiClient";
 import { errorMessage } from "@/lib/errors";
 import { workTypeSchema, type WorkTypeValues } from "@/schemas/workTypeSchema";
-import { oversize } from "@/services/uploadService";
+import { oversize, uploadForm } from "@/services/uploadService";
 import { useSaveWorkType, type WorkType } from "@/services/workTypeService";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { ArrowDown, ArrowUp, Plus, Trash2 } from "@/components/molecules/Glyphs";
@@ -46,7 +45,7 @@ export function WorkTypeFormDialog({ type, onClose }: { type: WorkType | null; o
     try {
       const form = new FormData();
       form.set("file", file);
-      const id = (await api.post<{ file_id: string }>("/files/upload", form)).data.file_id;
+      const id = await uploadForm(form);
       setValue(`photos.${i}.example_file_id`, id, { shouldDirty: true });
     } catch (err) {
       setFormError(errorMessage(err));

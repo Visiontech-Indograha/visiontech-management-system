@@ -3,16 +3,14 @@ import { Circle, MapContainer, Marker } from "react-leaflet";
 import type L from "leaflet";
 import { useEffect, useRef, useState } from "react";
 import { TextField } from "@/components/molecules/Field";
-import { api } from "@/lib/apiClient";
-import type { components } from "@/lib/apiTypes";
 import { errorMessage } from "@/lib/errors";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { ClickToPlace, MapController, Tiles, type LatLng } from "@/components/organisms/work-plans/PlanLocationCard";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
 import { PlainAction } from "@/components/molecules/PlainAction";
+import { searchPlaces } from "@/services/geoService";
 
-type GeoResult = components["schemas"]["GeoResult"];
 
 const INDONESIA: LatLng = [-2.5, 118];
 const key = (p: LatLng) => `${p[0].toFixed(6)},${p[1].toFixed(6)}`;
@@ -35,7 +33,7 @@ export function SiteMapPicker({
   const q = useDebouncedValue(query.trim(), 1000); // kebijakan Nominatim: ≤ 1 permintaan/detik
   const search = useQuery({
     queryKey: ["geo-search", q],
-    queryFn: async () => (await api.get<GeoResult[]>("/geo/search", { params: { q } })).data,
+    queryFn: () => searchPlaces(q),
     enabled: q.length >= 3,
     staleTime: Infinity,
     retry: false,

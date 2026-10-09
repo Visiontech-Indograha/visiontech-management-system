@@ -994,7 +994,46 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
       padding: const EdgeInsets.only(bottom: 6),
       child: InfoRow(icon: icon, text: text),
     );
-    return SurfaceCard(
+    // Hari bertugas: ketua di semua hari; anggota di hari tanpa daftar khusus atau yang mencantumkannya.
+    final leaderId = '${team.where((m) => m['role_in_plan'] == 'LEADER').firstOrNull?['employee_id']}';
+    final memberIds = {for (final m in team) if (m['role_in_plan'] == 'MEMBER') '${m['employee_id']}'};
+    bool onDuty(Map d, String id) {
+      if (id == leaderId) return true;
+      final ids = d['member_employee_ids'];
+      return ids is List ? ids.map((e) => '$e').contains(id) : memberIds.contains(id);
+    }
+    final auth = ref.read(authControllerProvider);
+    final me = auth is AuthAuthenticated ? auth.user.employeeId : '';
+    final inTeam = me == leaderId || memberIds.contains(me);
+    final myDays = [for (final d in days) if (onDuty(d, me)) d];
+    final dayFmt = DateFormat('EEEE, d MMM yyyy', 'id_ID');
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (inTeam)
+          SurfaceCard(
+            key: const Key('my-schedule'),
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  myDays.isEmpty
+                      ? 'Anda belum dijadwalkan di hari mana pun'
+                      : 'Jadwal Anda: ${myDays.length} dari ${days.length} hari kerja',
+                  style: VmsTextStyles.bodySm.copyWith(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 8),
+                for (final d in myDays)
+                  line(
+                    Icons.event_available_rounded,
+                    '${dayFmt.format(DateTime.parse('${d['work_date']}'))} · ${d['site_name'] ?? plan['location_text'] ?? '-'}',
+                  ),
+              ],
+            ),
+          ),
+        if (inTeam) const SizedBox(height: 10),
+        SurfaceCard(
       padding: const EdgeInsets.all(14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1015,7 +1054,8 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
               m['role_in_plan'] == 'LEADER'
                   ? Icons.star_rounded
                   : Icons.person_outline_rounded,
-              '${m['full_name']} — ${m['position']} (${m['role_in_plan'] == 'LEADER' ? 'Ketua tim' : 'Anggota'})',
+              '${m['full_name']} — ${m['position']} (${m['role_in_plan'] == 'LEADER' ? 'Ketua tim' : 'Anggota'}) · '
+              '${days.where((d) => onDuty(d, '${m['employee_id']}')).length} hari',
             ),
           for (final a in assets)
             line(
@@ -1042,6 +1082,8 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
           ],
         ],
       ),
+        ),
+      ],
     );
   }
 

@@ -48,7 +48,11 @@ class CRUDPlanDay(CRUDBase):
                                              FROM vms.report_evidence e WHERE e.daily_report_id = r.id),
                                             '[]')) END AS report,
                    (SELECT count(*) FROM vms.member_daily_report m
-                     WHERE m.work_plan_day_id = d.id AND m.status = 'SENT') AS member_reports_sent
+                     WHERE m.work_plan_day_id = d.id AND m.status = 'SENT') AS member_reports_sent,
+                   (SELECT s.name FROM vms.site s WHERE s.id = d.site_id) AS site_name,
+                   (SELECT w.name FROM vms.work_type w WHERE w.id = d.work_type_id) AS work_type_name,
+                   (SELECT array_agg(dm.employee_id) FROM vms.work_plan_day_member dm
+                     WHERE dm.work_plan_day_id = d.id) AS member_employee_ids
             FROM vms.work_plan_day d
             LEFT JOIN vms.daily_report r ON r.work_plan_day_id = d.id
             WHERE d.work_plan_id = :plan

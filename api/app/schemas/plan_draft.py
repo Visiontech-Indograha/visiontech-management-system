@@ -74,6 +74,7 @@ class DraftDayInput(BaseModel):
     tasks: list[DraftTaskInput]  # Daftar tugas di hari tersebut
     site_id: UUID | None = None  # Lokasi khusus hari itu (kosong = ikut lokasi rencana)
     member_employee_ids: list[UUID] | None = None  # Anggota yang bertugas hari itu (kosong/None = seluruh tim)
+    work_type_id: UUID | None = None  # Jenis pekerjaan khusus hari itu (kosong = ikut jenis rencana)
 
 
 class PlanDraftRequest(BaseModel):

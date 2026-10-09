@@ -2462,6 +2462,18 @@
       "format": "date",
       "title": "Work Date",
       "type": "string"
+     },
+     "work_type_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Work Type Id"
      }
     },
     "required": [
@@ -15088,7 +15100,7 @@
   },
   "/api/v1/work-plans/{plan_id}/photo-template": {
    "get": {
-    "description": "Template foto laporan rencana kerja (GET) — kosong bila rencana kerja tanpa jenis pekerjaan.\n\nPath Parameters:\n- plan_id (UUID): ID rencana kerja.\n\nReturns:\n- list[WorkTypePhotoOut]: slot foto berurutan.",
+    "description": "Template foto laporan rencana kerja (GET) — kosong bila rencana kerja tanpa jenis pekerjaan.\n\nPath Parameters:\n- plan_id (UUID): ID rencana kerja.\n\nQuery Parameters:\n- day_id (UUID, opsional): hari kerja; memakai jenis khusus hari itu bila ada.\n\nReturns:\n- list[WorkTypePhotoOut]: slot foto berurutan.",
     "operationId": "plan_photo_template_api_v1_work_plans__plan_id__photo_template_get",
     "parameters": [
      {
@@ -15099,6 +15111,23 @@
        "format": "uuid",
        "title": "Plan Id",
        "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "day_id",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "format": "uuid",
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Day Id"
       }
      }
     ],

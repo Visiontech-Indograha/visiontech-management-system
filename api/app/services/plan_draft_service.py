@@ -195,6 +195,8 @@ class PlanDraftService:
         for day in data.days:
             if day.member_employee_ids is not None and not {str(m) for m in day.member_employee_ids} <= team:
                 raise _invalid(f"Anggota hari {day.work_date:%d-%m-%Y} harus termasuk tim rencana kerja.")
+        await WorkTypeService(self.db).ensure_day_types(
+            user.organization_id, plan_id, {d.work_type_id for d in data.days if d.work_type_id is not None})
         day_sites = {d.site_id for d in data.days if d.site_id is not None}
         if day_sites:
             await ensure_same_org(self.db, user.organization_id, sites=day_sites)
@@ -282,7 +284,8 @@ class PlanDraftService:
             data (PlanDraftRequest): Data payload form yang berisi daftar list.
         """
         for order, day in enumerate(sorted(data.days, key=lambda d: d.work_date)):
-            day_id = await self.repo.insert_day(plan_id, day.work_date, day.tasks[0].title.strip(), order, day.site_id)
+            day_id = await self.repo.insert_day(plan_id, day.work_date, day.tasks[0].title.strip(), order, day.site_id,
+                                                day.work_type_id)
             await self.repo.set_day_members(user.organization_id, day_id, _day_roster(data, day))
             for t_order, task in enumerate(day.tasks):
                 task_id = await self.repo.insert_task(day_id, task.title.strip(), task.description.strip(), t_order)

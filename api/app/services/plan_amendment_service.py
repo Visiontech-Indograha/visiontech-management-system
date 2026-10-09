@@ -121,11 +121,12 @@ class PlanAmendmentService:
                 continue   # isi hari yang laporannya sudah dikirim/disetujui tidak diubah
             if current is None:
                 day_id = await self.drafts.insert_day(plan.id, new_day.work_date, new_day.tasks[0].title.strip(), order,
-                                                      new_day.site_id)
+                                                      new_day.site_id, new_day.work_type_id)
             else:
                 day_id = current.id
                 await self.repo.clear_tasks(day_id, new_day.tasks[0].title.strip())
                 await self.drafts.set_day_site(day_id, new_day.site_id)
+                await self.drafts.set_day_work_type(day_id, new_day.work_type_id)
             await self.drafts.set_day_members(user.organization_id, day_id, _day_roster(data, new_day))
             for t_order, task in enumerate(new_day.tasks):
                 task_id = await self.drafts.insert_task(day_id, task.title.strip(), task.description.strip(), t_order)

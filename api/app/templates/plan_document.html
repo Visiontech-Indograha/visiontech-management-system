@@ -63,6 +63,7 @@
     <tr><th style="width:24mm">Tanggal</th><th>Detail pekerjaan</th></tr>
     {% for d in days %}<tr><td>{{ d.work_date | tgl }}</td><td>
       {% if d.site_name %}<div class="meta">Lokasi hari ini: <strong>{{ d.site_name }}</strong></div>{% endif %}
+      {% if d.work_type_name %}<div class="meta">Jenis pekerjaan hari ini: {{ d.work_type_name }}</div>{% endif %}
       {% if d.members %}<div class="meta">Bertugas hari ini: {{ d.members | join(", ") }}</div>{% endif %}
       {% for t in d.tasks %}{% if t is string %}<div>{{ t }}</div>{% else %}
       <div class="task"><strong>{{ t.title }}</strong>{% if t.description %} — {{ t.description }}{% endif %}

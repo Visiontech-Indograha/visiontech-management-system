@@ -4,9 +4,9 @@ import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { z } from "zod";
-import { Button } from "@/components/ui/button";
-import { SelectField, TextField } from "@/components/ui/Field";
-import { Dialog } from "@/components/ui/VmsDialog";
+import { Button } from "@/components/atoms/Button";
+import { SelectField, TextField } from "@/components/molecules/Field";
+import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { errorMessage } from "@/lib/errors";
 import { useCreateEmployee, useOffboardEmployee, useUnits, type Employee } from "./api";
 
@@ -60,7 +60,7 @@ export function CreateEmployeeDialog({ onClose }: { onClose: () => void }) {
   });
 
   return (
-    <Dialog
+    <VmsDialog
       open
       title="Tambah karyawan"
       onClose={onClose}
@@ -94,7 +94,7 @@ export function CreateEmployeeDialog({ onClose }: { onClose: () => void }) {
         <TextField label="Email (opsional)" type="email" error={errors.email?.message} {...register("email")} />
         <TextField label="No. telepon (opsional)" error={errors.phone?.message} {...register("phone")} />
       </form>
-    </Dialog>
+    </VmsDialog>
   );
 }
 
@@ -125,7 +125,7 @@ export function OffboardDialog({ employee, onClose }: { employee: Employee; onCl
   });
 
   return (
-    <Dialog
+    <VmsDialog
       open
       title={`Offboarding ${employee.full_name}`}
       onClose={onClose}
@@ -147,6 +147,6 @@ export function OffboardDialog({ employee, onClose }: { employee: Employee; onCl
         </p>
         <TextField label="Alasan" error={errors.reason?.message} {...register("reason")} />
       </form>
-    </Dialog>
+    </VmsDialog>
   );
 }

@@ -1,4 +1,4 @@
-import { Badge } from "@/components/ui/Badge";
+import { Badge } from "@/components/atoms/Badge";
 import { statusLabel, statusTone } from "@/lib/labels";
 
 /** Badge status dengan label & warna dari lib/labels. Contoh: <StatusBadge status="IN_PROGRESS" /> */

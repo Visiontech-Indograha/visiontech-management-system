@@ -1,6 +1,6 @@
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Dialog } from "@/components/ui/VmsDialog";
+import { Button } from "@/components/atoms/Button";
+import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { api, ApiError } from "@/lib/api";
 import { FaceCamera, type FaceLiveness } from "./FaceCamera";
 
@@ -36,7 +36,7 @@ export function FaceProbeDialog({
   };
 
   return (
-    <Dialog
+    <VmsDialog
       open
       title={title}
       onClose={onCancel}
@@ -52,6 +52,6 @@ export function FaceProbeDialog({
         doneMessage="Wajah terverifikasi."
         onCaptured={probe}
       />
-    </Dialog>
+    </VmsDialog>
   );
 }

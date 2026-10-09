@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Dialog } from "@/components/ui/VmsDialog";
+import { Button } from "@/components/atoms/Button";
+import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { api } from "@/lib/api";
 import { errorMessage } from "@/lib/errors";
 
@@ -114,7 +114,7 @@ export function SelfieCaptureDialog({
   };
 
   return (
-    <Dialog
+    <VmsDialog
       open
       title="Swafoto absen"
       onClose={onCancel}
@@ -148,6 +148,6 @@ export function SelfieCaptureDialog({
           {uploadError}
         </p>
       )}
-    </Dialog>
+    </VmsDialog>
   );
 }

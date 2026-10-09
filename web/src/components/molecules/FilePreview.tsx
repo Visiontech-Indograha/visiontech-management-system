@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { api, ApiError } from "@/lib/api";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { Skeleton } from "@/components/atoms/Skeleton";
+import { Button } from "@/components/atoms/Button";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/atoms/Dialog";
 import { Loader2 } from "lucide-react";
 
 interface FileUrlResponse {

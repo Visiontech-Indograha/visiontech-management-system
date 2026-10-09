@@ -4,9 +4,9 @@ import { toast } from "sonner";
 import { useSession } from "@/app/session";
 import { QueryState } from "@/components/molecules/QueryState";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
-import { Button } from "@/components/ui/button";
-import { TextAreaField } from "@/components/ui/Field";
-import { Dialog } from "@/components/ui/VmsDialog";
+import { Button } from "@/components/atoms/Button";
+import { TextAreaField } from "@/components/molecules/Field";
+import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { api, ApiError } from "@/lib/api";
 import type { components } from "@/lib/api-types";
 import { errorMessage } from "@/lib/errors";
@@ -184,7 +184,7 @@ function RevokeDialog({ documentId, signature, onClose }: { documentId: string; 
     }
   };
   return (
-    <Dialog
+    <VmsDialog
       open
       title="Cabut tanda tangan"
       onClose={onClose}
@@ -211,6 +211,6 @@ function RevokeDialog({ documentId, signature, onClose }: { documentId: string; 
         </p>
         <TextAreaField label="Alasan pencabutan" value={reason} onChange={(e) => setReason(e.target.value)} error={error ?? undefined} />
       </form>
-    </Dialog>
+    </VmsDialog>
   );
 }

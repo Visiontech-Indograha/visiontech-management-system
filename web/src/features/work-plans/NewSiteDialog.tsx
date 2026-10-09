@@ -2,9 +2,9 @@ import { useQuery } from "@tanstack/react-query";
 import type L from "leaflet";
 import { useEffect, useState } from "react";
 import { MapContainer, Marker } from "react-leaflet";
-import { Button } from "@/components/ui/button";
-import { TextAreaField, TextField } from "@/components/ui/Field";
-import { Dialog } from "@/components/ui/VmsDialog";
+import { Button } from "@/components/atoms/Button";
+import { TextAreaField, TextField } from "@/components/molecules/Field";
+import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { api } from "@/lib/api";
 import type { components } from "@/lib/api-types";
 import { errorMessage } from "@/lib/errors";
@@ -109,7 +109,7 @@ export function NewSiteDialog({
   };
 
   return (
-    <Dialog
+    <VmsDialog
       open
       title="Lokasi baru"
       onClose={onClose}
@@ -185,6 +185,6 @@ export function NewSiteDialog({
           <TextField label="Longitude" inputMode="decimal" value={lng} onChange={(e) => typed(lat, e.target.value)} error={errors.lng} />
         </div>
       </form>
-    </Dialog>
+    </VmsDialog>
   );
 }

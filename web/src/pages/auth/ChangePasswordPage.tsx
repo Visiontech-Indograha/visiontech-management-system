@@ -5,8 +5,8 @@ import { toast } from "sonner";
 import { Navigate, useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { useSession } from "@/app/session";
-import { Button } from "@/components/ui/button";
-import { TextField } from "@/components/ui/Field";
+import { Button } from "@/components/atoms/Button";
+import { TextField } from "@/components/molecules/Field";
 import { api, ApiError } from "@/lib/api";
 import type { TokenOut } from "@/lib/types";
 

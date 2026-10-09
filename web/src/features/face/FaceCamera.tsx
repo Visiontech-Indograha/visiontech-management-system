@@ -1,6 +1,6 @@
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ScanFace, Smile } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, type ComponentType } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/atoms/Button";
 import { api, ApiError } from "@/lib/api";
 import { errorMessage } from "@/lib/errors";
 

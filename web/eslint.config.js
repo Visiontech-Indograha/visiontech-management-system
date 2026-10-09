@@ -26,7 +26,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['src/components/ui/**'],
+    files: ['src/components/atoms/**'],
     rules: {
       'react-refresh/only-export-components': 'off',
     },

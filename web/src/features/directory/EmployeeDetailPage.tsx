@@ -5,12 +5,12 @@ import { Link, useLocation, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { z } from "zod";
 import { useSession } from "@/app/session";
-import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/button";
-import { SelectField, TextField } from "@/components/ui/Field";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Dialog } from "@/components/ui/VmsDialog";
+import { Badge } from "@/components/atoms/Badge";
+import { Button } from "@/components/atoms/Button";
+import { SelectField, TextField } from "@/components/molecules/Field";
+import { PageHeader } from "@/components/molecules/PageHeader";
+import { Skeleton } from "@/components/atoms/Skeleton";
+import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { ApiError } from "@/lib/api";
 import { errorMessage } from "@/lib/errors";
 import { formatDate } from "@/lib/format";
@@ -187,7 +187,7 @@ function ProfileDialog({ employee, onClose }: { employee: Employee; onClose: () 
   });
 
   return (
-    <Dialog
+    <VmsDialog
       open
       title="Ubah profil"
       onClose={onClose}
@@ -219,7 +219,7 @@ function ProfileDialog({ employee, onClose }: { employee: Employee; onClose: () 
           <option value="OFFICE">{ATTENDANCE_MODE_LABEL.OFFICE}</option>
         </SelectField>
       </form>
-    </Dialog>
+    </VmsDialog>
   );
 }
 
@@ -280,7 +280,7 @@ function ArchivePanel({ employee }: { employee: Employee }) {
           </Button>
         </div>
       )}
-      <Dialog
+      <VmsDialog
         open={confirming}
         title="Hapus karyawan?"
         onClose={() => setConfirming(false)}
@@ -298,7 +298,7 @@ function ArchivePanel({ employee }: { employee: Employee }) {
         <p className="text-sm">
           {employee.full_name} akan disembunyikan dari Direktori. Riwayat rencana kerja, absensi, dan dokumennya tidak dihapus.
         </p>
-      </Dialog>
+      </VmsDialog>
     </section>
   );
 }

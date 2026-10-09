@@ -1,7 +1,9 @@
 import type { UseFormReturn } from "react-hook-form";
-import { Button } from "@/components/atoms/Button";
 import { TextField } from "@/components/molecules/Field";
 import type { ChangePasswordValues } from "@/schemas/changePasswordSchema";
+import { ActionButton } from "@/components/molecules/ActionButton";
+import { TextBlock } from "@/components/molecules/TextBlock";
+import { FormBlock } from "@/components/molecules/FormBlock";
 
 /**
  * Form ganti password: judul, galat umum, tiga field, tombol simpan.
@@ -15,13 +17,13 @@ export function ChangePasswordForm({ form, onSubmit, formError }: {
   const { register, formState: { errors, isSubmitting } } = form;
   return (
     <>
-      <h1 className="mb-1 text-2xl font-semibold">Ganti password</h1>
-      <p className="mb-6 text-mist">Masukkan password saat ini dan password baru.</p>
-      <form onSubmit={onSubmit} noValidate>
+      <TextBlock as="h1" className="mb-1 text-2xl font-semibold">Ganti password</TextBlock>
+      <TextBlock className="mb-6 text-mist">Masukkan password saat ini dan password baru.</TextBlock>
+      <FormBlock onSubmit={onSubmit} noValidate>
         {formError && (
-          <p role="alert" className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
+          <TextBlock role="alert" className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
             {formError}
-          </p>
+          </TextBlock>
         )}
         <TextField
           label="Password saat ini"
@@ -45,10 +47,10 @@ export function ChangePasswordForm({ form, onSubmit, formError }: {
           error={errors.confirm?.message}
           {...register("confirm")}
         />
-        <Button type="submit" className="w-full" disabled={isSubmitting}>
+        <ActionButton type="submit" className="w-full" disabled={isSubmitting}>
           {isSubmitting ? "Menyimpan..." : "Ganti password"}
-        </Button>
-      </form>
+        </ActionButton>
+      </FormBlock>
     </>
   );
 }

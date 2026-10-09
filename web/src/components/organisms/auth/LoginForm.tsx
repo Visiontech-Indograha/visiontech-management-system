@@ -1,12 +1,14 @@
-import { AlertCircle, Timer } from "lucide-react";
 import type { UseFormReturn } from "react-hook-form";
 import logo from "@/assets/brand/logo-visiontech.png";
-import { Alert, AlertDescription } from "@/components/atoms/Alert";
-import { Button } from "@/components/atoms/Button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/atoms/Card";
-import { Input } from "@/components/atoms/Input";
-import { Label } from "@/components/atoms/Label";
 import type { LoginValues } from "@/schemas/loginSchema";
+import { Notice, NoticeDescription } from "@/components/molecules/Notice";
+import { ActionButton } from "@/components/molecules/ActionButton";
+import { Panel, PanelContent, PanelDescription, PanelHeader, PanelTitle } from "@/components/molecules/Panel";
+import { StyledInput, StyledLabel } from "@/components/molecules/InputControls";
+import { AlertCircle, Timer } from "@/components/molecules/Glyphs";
+import { TextBlock } from "@/components/molecules/TextBlock";
+import { ImageView } from "@/components/molecules/ImageView";
+import { FormBlock } from "@/components/molecules/FormBlock";
 
 function mmss(total: number): string {
   return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
@@ -25,45 +27,45 @@ export function LoginForm({ admin, form, onSubmit, formError, lockSeconds }: {
 }) {
   const { register, formState: { errors, isSubmitting } } = form;
   return (
-        <Card className="w-full max-w-sm gap-5">
-          <CardHeader>
-            <img src={logo} alt="Visiontech Indograha" className="mb-3 h-10 w-auto self-start lg:hidden" />
-            <CardTitle>
-              <h1 className="text-title-lg text-ink">{admin ? "Masuk sebagai Admin" : "Selamat datang"}</h1>
-            </CardTitle>
-            <CardDescription>Masuk dengan email dan password akun kantor Anda.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={onSubmit} noValidate className="space-y-4">
+        <Panel className="w-full max-w-sm gap-5">
+          <PanelHeader>
+            <ImageView src={logo} alt="Visiontech Indograha" className="mb-3 h-10 w-auto self-start lg:hidden" />
+            <PanelTitle>
+              <TextBlock as="h1" className="text-title-lg text-ink">{admin ? "Masuk sebagai Admin" : "Selamat datang"}</TextBlock>
+            </PanelTitle>
+            <PanelDescription>Masuk dengan email dan password akun kantor Anda.</PanelDescription>
+          </PanelHeader>
+          <PanelContent>
+            <FormBlock onSubmit={onSubmit} noValidate className="space-y-4">
               {lockSeconds > 0 ? (
-                <Alert variant="destructive" data-testid="login-locked">
+                <Notice variant="destructive" data-testid="login-locked">
                   <Timer aria-hidden />
-                  <AlertDescription>
+                  <NoticeDescription>
                     Login dikunci sementara karena terlalu banyak percobaan gagal. Coba lagi dalam{" "}
-                    <strong>{mmss(lockSeconds)}</strong>.
-                  </AlertDescription>
-                </Alert>
+                    <TextBlock as="strong">{mmss(lockSeconds)}</TextBlock>.
+                  </NoticeDescription>
+                </Notice>
               ) : formError && (
-                <Alert variant="destructive">
+                <Notice variant="destructive">
                   <AlertCircle aria-hidden />
-                  <AlertDescription>{formError}</AlertDescription>
-                </Alert>
+                  <NoticeDescription>{formError}</NoticeDescription>
+                </Notice>
               )}
               <div className="space-y-1.5">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" autoComplete="email" autoCapitalize="none" placeholder="nama@visiontech.co.id" {...register("email")} />
-                {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
+                <StyledLabel htmlFor="email">Email</StyledLabel>
+                <StyledInput id="email" autoComplete="email" autoCapitalize="none" placeholder="nama@visiontech.co.id" {...register("email")} />
+                {errors.email && <TextBlock className="text-sm text-destructive">{errors.email.message}</TextBlock>}
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="password">Password</Label>
-                <Input id="password" type="password" autoComplete="current-password" {...register("password")} />
-                {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
+                <StyledLabel htmlFor="password">Password</StyledLabel>
+                <StyledInput id="password" type="password" autoComplete="current-password" {...register("password")} />
+                {errors.password && <TextBlock className="text-sm text-destructive">{errors.password.message}</TextBlock>}
               </div>
-              <Button type="submit" className="h-11 w-full" disabled={isSubmitting || lockSeconds > 0}>
+              <ActionButton type="submit" className="h-11 w-full" disabled={isSubmitting || lockSeconds > 0}>
                 {isSubmitting ? "Memproses..." : lockSeconds > 0 ? `Tunggu ${mmss(lockSeconds)}` : "Masuk"}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+              </ActionButton>
+            </FormBlock>
+          </PanelContent>
+        </Panel>
   );
 }

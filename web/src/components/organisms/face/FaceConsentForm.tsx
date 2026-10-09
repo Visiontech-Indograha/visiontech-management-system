@@ -1,6 +1,8 @@
 import { useState } from "react";
-import { Button } from "@/components/atoms/Button";
-import { Checkbox } from "@/components/atoms/Checkbox";
+import { ActionButton } from "@/components/molecules/ActionButton";
+import { CheckControl } from "@/components/molecules/CheckControl";
+import { TextBlock } from "@/components/molecules/TextBlock";
+import { ControlLabel } from "@/components/molecules/FormBlock";
 
 /**
  * Persetujuan pemrosesan biometrik: teks kebijakan, centang setuju, tombol lanjut.
@@ -14,19 +16,19 @@ export function FaceConsentForm({ policyText, pending, onGrant }: {
   const [agreed, setAgreed] = useState(false);
   return (
     <>
-      <h2 className="text-sm font-medium">Persetujuan Pemrosesan Biometrik</h2>
-      <p className="rounded border border-line bg-surface p-2.5 text-xs leading-relaxed text-mist">
+      <TextBlock as="h2" className="text-sm font-medium">Persetujuan Pemrosesan Biometrik</TextBlock>
+      <TextBlock className="rounded border border-line bg-surface p-2.5 text-xs leading-relaxed text-mist">
         {policyText}
-      </p>
+      </TextBlock>
       <div className="flex items-center gap-2">
-        <Checkbox id="gate-consent" checked={agreed} onCheckedChange={(c) => setAgreed(!!c)} />
-        <label htmlFor="gate-consent" className="cursor-pointer text-xs">
+        <CheckControl id="gate-consent" checked={agreed} onCheckedChange={(c) => setAgreed(!!c)} />
+        <ControlLabel htmlFor="gate-consent" className="cursor-pointer text-xs">
           Saya menyetujui pemrosesan data biometrik wajah untuk verifikasi kehadiran.
-        </label>
+        </ControlLabel>
       </div>
-      <Button disabled={!agreed || pending} onClick={onGrant}>
+      <ActionButton disabled={!agreed || pending} onClick={onGrant}>
         {pending ? "Menyimpan..." : "Setuju dan Lanjut"}
-      </Button>
+      </ActionButton>
     </>
   );
 }

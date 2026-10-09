@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { FaceEnrollCapture } from "@/features/face/components/FaceEnrollCapture";
-import { FaceProbeDialog } from "@/features/face/components/FaceProbeDialog";
+import { FaceEnrollCapture } from "@/components/organisms/face/FaceEnrollCapture";
+import { FaceProbeDialog } from "@/components/organisms/face/FaceProbeDialog";
 import { apiError, mockApi } from "./utils";
 
 const toast = vi.hoisted(() => ({ warning: vi.fn(), success: vi.fn(), error: vi.fn() }));

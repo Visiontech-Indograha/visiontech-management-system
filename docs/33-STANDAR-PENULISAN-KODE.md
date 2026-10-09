@@ -37,9 +37,9 @@ Template = pelanggaran.**
 |---|---|---|---|
 | **Atom** | Elemen UI terkecil, tanpa pengetahuan domain. Termasuk hasil salinan shadcn/ui. | `Button`, `Input`, `Label`, `Badge`, `Skeleton`, `Checkbox` | `components/atoms/` |
 | **Molecule** | Gabungan beberapa atom dengan satu tujuan kecil, masih netral domain. | `TextField` (label + input + galat), `StatusBadge`, `QueryState`, `VmsDialog` | `components/molecules/` |
-| **Organism** | Blok UI utuh yang punya tujuan bagi pengguna: tabel data, form, panel, kartu ringkasan, dialog bertujuan, kepala halaman. Boleh tahu domain bila milik fitur. | `PageHeader`, `NotificationBell` (bersama), `PlanDetailCard`, `PlanDayTable` (fitur) | `components/organisms/` (dipakai ≥ 2 fitur) atau `features/<fitur>/components/` |
+| **Organism** | Blok UI utuh yang punya tujuan bagi pengguna: tabel data, form, panel, kartu ringkasan, dialog bertujuan, kepala halaman. Boleh tahu domain bila milik fitur. | `PageHeader`, `NotificationBell` (umum), `PlanDetailCard`, `PlanDayTable` (domain) | `components/organisms/` (umum) atau `components/organisms/<domain>/` |
 | **Template** | Kerangka tata letak halaman tanpa data spesifik; hanya menyusun **organism** + elemen tata letak. | `PageTemplate`, `AppShell`, `TitleLayout` | `components/templates/` |
-| **Page** | Satu rute. Mengambil data, memegang state halaman, memilih keadaan layar, menyusun template + organism. | `WorkPlansPage`, `SitesPage` | `features/<fitur>/pages/` |
+| **Page** | Satu rute. Mengambil data, memegang state halaman, memilih keadaan layar, menyusun template + organism. | `WorkPlansPage`, `SitesPage` | `pages/<domain>/` |
 
 **Elemen HTML mentah (`<button>`, `<input>`, `<select>`, `<textarea>`, `<table>`, `<label>`,
 `<p>`, `<span>`, `<img>`, `<a>`, `<h1>`…`<h6>`, `<ul>`, …) setara atom/molecule.**
@@ -63,20 +63,22 @@ Page **dilarang**:
 - mengimpor ikon `lucide-react` (ikon adalah atom);
 - menulis elemen HTML selain daftar tata letak di atas.
 
-Ditegakkan ESLint (`web/eslint.config.js`, berkas `features/*/pages/*.tsx` dan `components/templates/*.tsx`).
+Ditegakkan ESLint (`web/eslint.config.js`, berkas `pages/**/*.tsx` dan `components/templates/*.tsx`).
 Page/Template lama yang belum dimigrasi tercantum di daftar pengecualian sementara di berkas itu; daftar ini
 **hanya boleh menyusut**.
 
 ### 2.2 Arah impor
 
 ```
-pages/      → templates, organisms, features/<fitur>/components, service/hook, lib, stores
+app/        → pages (rute)
+pages/      → templates, organisms, services, schemas, hooks, lib, stores
 templates   → organisms, lib                   — TIDAK molecule/atom
 organisms   → organisms lain, molecules, atoms, lib  (organism fitur boleh memakai service fiturnya)
 molecules   → atoms, lib
 atoms       → lib (cn, token)                  — tidak mengimpor tingkat di atasnya
-components/ → TIDAK BOLEH mengimpor features/
-lib/        → TIDAK BOLEH mengimpor features/ atau components/
+components/ → services, schemas, hooks, lib — TIDAK BOLEH mengimpor pages/
+services/, hooks/ → lib, schemas — TIDAK BOLEH mengimpor components/ atau pages/
+lib/, schemas/   → TIDAK BOLEH mengimpor services/, hooks/, components/, pages/
 ```
 
 ### 2.3 Kapan memecah komponen
@@ -94,17 +96,17 @@ lib/        → TIDAK BOLEH mengimpor features/ atau components/
 web/src/
 ├── app/                    perakitan aplikasi: routes.tsx, lazyPages.ts, navigation.ts,
 │                           SessionProvider.tsx, RouteGuards.tsx
-├── components/             PUSTAKA BERSAMA, netral fitur
+├── pages/<domain>/         HANYA <Nama>Page.tsx — satu rute (work-plans/, sites/, auth/, …)
+├── components/             SEMUA komponen tampilan (fitur tidak membuat komponen sendiri)
 │   ├── atoms/              Button.tsx, Input.tsx, … (shadcn/ui)
 │   ├── molecules/          Field.tsx (TextField…), StatusBadge.tsx, QueryState.tsx, …
-│   ├── organisms/          PageHeader.tsx, NotificationBell.tsx, …
+│   ├── organisms/          umum: PageHeader.tsx, ListPagination.tsx, SidebarNav.tsx, …
+│   │   └── <domain>/       khusus domain: work-plans/PlanDayTable.tsx, sites/SiteList.tsx, …
 │   └── templates/          PageTemplate.tsx, AppShell.tsx, TitleLayout.tsx
-├── features/<fitur>/       satu domain; nama folder kebab-case (work-plans)
-│   ├── pages/              HANYA <Nama>Page.tsx
-│   ├── components/         organism & molecule khusus fitur
-│   ├── <fitur>Service.ts   tipe + hook TanStack Query untuk endpoint fitur
-│   └── <helper>.ts         fungsi murni khusus fitur (camelCase)
-├── lib/                    lintas fitur: apiClient.ts, apiTypes.ts, format.ts, labels.ts, …
+├── services/               <domain>Service.ts — tipe kontrak + hook TanStack Query + panggilan API
+├── schemas/                <tujuan>Schema.ts — skema zod form (loginSchema.ts, planEditorSchema.ts)
+├── hooks/                  use<Tujuan>.ts — hook non-data (useLockCountdown.ts, useLiveEvents.ts)
+├── lib/                    fungsi murni & konfigurasi: apiClient.ts, apiTypes.ts, format.ts, labels.ts, …
 ├── styles/                 token Tailwind v4 (@theme)
 └── test/                   setup & util uji
 ```
@@ -122,7 +124,9 @@ Uji ditaruh **di samping** berkasnya: `PlanDetailCard.test.tsx`.
 | Atom shadcn/ui | PascalCase sesuai komponen utama | `Button.tsx`, `DropdownMenu.tsx` (setelah `npx shadcn add`, ganti nama berkas ke PascalCase) |
 | Service fitur (`.ts`) | `[domain]Service.ts`, camelCase | `workPlanService.ts`, `siteService.ts` |
 | API client bersama | `apiClient.ts` | `lib/apiClient.ts` (satu-satunya `axios.create`) |
-| Hook | `use[Tujuan].ts` | `useDebouncedValue.ts` |
+| Hook | `use[Tujuan].ts` di `hooks/` | `useDebouncedValue.ts` |
+| Skema form | `[tujuan]Schema.ts` di `schemas/` | `loginSchema.ts`, `planEditorSchema.ts` |
+| Folder domain | kebab-case, sama di `pages/` dan `components/organisms/` | `work-plans/` |
 | Fungsi murni / konfigurasi | camelCase | `planChanges.ts`, `weekday.ts`, `labels.ts` |
 | Folder fitur | kebab-case | `work-plans/`, `work-types/` |
 | Folder lapisan | huruf kecil | `atoms/`, `pages/`, `components/` |
@@ -176,7 +180,8 @@ Dikerjakan **per Page / per berkas besar**, bagian demi bagian agar minim galat:
 
 1. Temukan bagian Page yang memakai atom, molecule, atau elemen HTML mentah.
 2. **Pindahkan** bagian itu (tidak dihapus/ditulis ulang) ke organism baru di
-   `features/<fitur>/components/` dengan nama sesuai §4; Page memanggil organism itu dengan props.
+   `components/organisms/<domain>/` dengan nama sesuai §4; Page memanggil organism itu dengan props.
+   Skema zod → `schemas/`, panggilan API/hook data → `services/`, hook lain → `hooks/`.
 3. Jalankan `npm run typecheck`, `npm run lint`, dan uji terkait. Ada galat → perbaiki dulu.
 4. Ulangi sampai Page hanya berisi template + organism + tata letak.
 5. Hapus Page dari daftar pengecualian ESLint, jalankan `npm test`, commit (satu Page = satu commit).
@@ -191,5 +196,5 @@ Perilaku dan tampilan tidak boleh berubah selama migrasi.
 2. [ ] Nama berkas dan folder sesuai §3–§4.
 3. [ ] Service memakai `apiClient`; tidak ada URL/axios tersebar.
 4. [ ] Empat keadaan layar: memuat, kosong, galat, berhasil.
-5. [ ] `components/` tidak mengimpor `features/`; `lib/` tidak mengimpor keduanya.
+5. [ ] Arah impor lapisan dipatuhi (§2.2): hanya `app/` mengimpor `pages/`; `services/`/`lib/` tidak mengimpor `components/`.
 6. [ ] `npm run lint`, `npm run typecheck`, `npm test` hijau — dijalankan, bukan diasumsikan.

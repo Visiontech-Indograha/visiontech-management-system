@@ -63,18 +63,13 @@ const PAGES_LEGACY = [
   'src/pages/assets/AssetsPage.tsx',
   'src/pages/attendance/AttendancePage.tsx',
   'src/pages/audit/AuditLogPage.tsx',
-  'src/pages/auth/LoginPage.tsx',
   'src/pages/directory/DirectoryPage.tsx',
   'src/pages/directory/EmployeeDetailPage.tsx',
-  'src/pages/face/FaceEnrollRequiredPage.tsx',
   'src/pages/home/HomePage.tsx',
   'src/pages/monitoring/AttendanceRecapPage.tsx',
-  'src/pages/sites/SitesPage.tsx',
   'src/pages/work-plans/PlanEditorPage.tsx',
   'src/pages/work-plans/PresentationPage.tsx',
   'src/pages/work-plans/WorkPlanDetailPage.tsx',
-  'src/pages/work-plans/WorkPlansPage.tsx',
-  'src/pages/work-types/WorkTypesPage.tsx',
 ]
 
 // Organism yang masih memakai atom/ikon/HTML langsung. Daftar ini HANYA BOLEH MENYUSUT (docs/33 §7).

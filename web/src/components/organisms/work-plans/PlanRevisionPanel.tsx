@@ -1,10 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { useSession } from "@/app/session";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
-import { Button } from "@/components/atoms/Button";
 import { TextAreaField } from "@/components/molecules/Field";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { api } from "@/lib/apiClient";
@@ -12,6 +10,10 @@ import { errorMessage } from "@/lib/errors";
 import { formatDateTime } from "@/lib/format";
 import type { WorkPlan } from "@/services/workPlanService";
 import { changesKey, usePlanChanges, type Change } from "@/services/planChangeService";
+import { ActionButton } from "@/components/molecules/ActionButton";
+import { InlineLink } from "@/components/molecules/Links";
+import { TextBlock } from "@/components/molecules/TextBlock";
+import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
 
 
 const TYPE_LABEL: Record<string, string> = { AMENDMENT: "Revisi", EXTEND: "Perpanjangan", PERSONNEL: "Revisi personel" };
@@ -21,15 +23,15 @@ export function PendingRequestCard({ c, children }: { c: Change; children?: Reac
   return (
     <div role="alert" className="rounded-panel border-2 border-warning bg-warning-bg p-4 shadow-card">
       <div className="mb-2 flex items-center justify-between gap-2">
-        <h3 className="text-base font-semibold text-ink">Ketua tim meminta revisi</h3>
+        <TextBlock as="h3" className="text-base font-semibold text-ink">Ketua tim meminta revisi</TextBlock>
         <StatusBadge status={c.status} />
       </div>
-      <blockquote className="mb-2 whitespace-pre-line rounded-control border-l-4 border-warning bg-surface px-3 py-2 text-sm text-ink">
+      <TextBlock as="blockquote" className="mb-2 whitespace-pre-line rounded-control border-l-4 border-warning bg-surface px-3 py-2 text-sm text-ink">
         {c.reason}
-      </blockquote>
-      <p className="text-xs text-ink">
-        Diajukan oleh <strong>{c.requested_by_name ?? "-"}</strong> · {formatDateTime(c.created_at)}
-      </p>
+      </TextBlock>
+      <TextBlock className="text-xs text-ink">
+        Diajukan oleh <TextBlock as="strong">{c.requested_by_name ?? "-"}</TextBlock> · {formatDateTime(c.created_at)}
+      </TextBlock>
       {children}
     </div>
   );
@@ -68,16 +70,16 @@ export function PlanRevisionPanel({ plan }: { plan: WorkPlan }) {
               {canManage ? (
                 canAct && (
                   <div className="mt-3 flex flex-col gap-2">
-                    <Button asChild>
-                      <Link to={`/work-plans/${plan.id}/revise?change=${c.id}`}>Revisi rencana kerja (otomatis menyetujui)</Link>
-                    </Button>
-                    <Button variant="outline" onClick={() => (setRejecting(c), setNote(""), setError(null))}>
+                    <ActionButton asChild>
+                      <InlineLink to={`/work-plans/${plan.id}/revise?change=${c.id}`}>Revisi rencana kerja (otomatis menyetujui)</InlineLink>
+                    </ActionButton>
+                    <ActionButton variant="outline" onClick={() => (setRejecting(c), setNote(""), setError(null))}>
                       Tolak permintaan
-                    </Button>
+                    </ActionButton>
                   </div>
                 )
               ) : (
-                <p className="mt-2 text-sm font-medium text-ink">Menunggu keputusan PM.</p>
+                <TextBlock className="mt-2 text-sm font-medium text-ink">Menunggu keputusan PM.</TextBlock>
               )}
             </PendingRequestCard>
           ))}
@@ -85,25 +87,25 @@ export function PlanRevisionPanel({ plan }: { plan: WorkPlan }) {
       )}
       {list.length > 0 && (
     <section aria-label="Permintaan revisi" className="rounded-panel border border-line bg-surface p-4 shadow-card">
-      <h2 className="mb-3 text-base font-semibold">Riwayat permintaan revisi</h2>
-      <ul className="space-y-3">
+      <TextBlock as="h2" className="mb-3 text-base font-semibold">Riwayat permintaan revisi</TextBlock>
+      <ListBlock className="space-y-3">
         {list.map((c) => (
-          <li key={c.id} className="rounded-control border border-line p-3 text-sm">
+          <ListEntry key={c.id} className="rounded-control border border-line p-3 text-sm">
             <div className="mb-1 flex items-center justify-between gap-2">
-              <span className="font-medium">{TYPE_LABEL[c.change_type] ?? c.change_type}</span>
+              <TextBlock as="span" className="font-medium">{TYPE_LABEL[c.change_type] ?? c.change_type}</TextBlock>
               <StatusBadge status={c.status} />
             </div>
-            <p className="whitespace-pre-line">{c.reason}</p>
-            <p className="text-xs text-mist">
+            <TextBlock className="whitespace-pre-line">{c.reason}</TextBlock>
+            <TextBlock className="text-xs text-mist">
               {c.requested_by_name ?? "-"} · {formatDateTime(c.created_at)}
-            </p>
-            {c.decision_reason && <p className="mt-1 text-mist">Catatan PM: {c.decision_reason}</p>}
+            </TextBlock>
+            {c.decision_reason && <TextBlock className="mt-1 text-mist">Catatan PM: {c.decision_reason}</TextBlock>}
             {c.status === "AWAITING_LEADER_ACCEPTANCE" && (
-              <p className="mt-1 text-warning">Rencana Kerja sudah diubah dan ditandatangani PM. Menunggu tanda tangan ketua di HP.</p>
+              <TextBlock className="mt-1 text-warning">Rencana Kerja sudah diubah dan ditandatangani PM. Menunggu tanda tangan ketua di HP.</TextBlock>
             )}
-          </li>
+          </ListEntry>
         ))}
-      </ul>
+      </ListBlock>
     </section>
       )}
       {rejecting && (
@@ -113,10 +115,10 @@ export function PlanRevisionPanel({ plan }: { plan: WorkPlan }) {
           onClose={() => setRejecting(null)}
           footer={
             <>
-              <Button variant="outline" onClick={() => setRejecting(null)} disabled={reject.isPending}>
+              <ActionButton variant="outline" onClick={() => setRejecting(null)} disabled={reject.isPending}>
                 Batal
-              </Button>
-              <Button
+              </ActionButton>
+              <ActionButton
                 variant="destructive"
                 disabled={reject.isPending}
                 onClick={async () => {
@@ -131,7 +133,7 @@ export function PlanRevisionPanel({ plan }: { plan: WorkPlan }) {
                 }}
               >
                 Tolak
-              </Button>
+              </ActionButton>
             </>
           }
         >

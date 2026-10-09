@@ -1,7 +1,8 @@
+import { TextBlock } from "@/components/molecules/TextBlock";
 /** Pemberitahuan di atas form revisi: dampak menyimpan revisi sesuai status rencana kerja. */
 export function PlanReviseNotice({ status }: { status: unknown }) {
   return (
-        <p className="mb-4 rounded-control bg-warning-bg px-3 py-2 text-sm text-warning">
+        <TextBlock className="mb-4 rounded-control bg-warning-bg px-3 py-2 text-sm text-warning">
           {status === "IN_PROGRESS"
             ? "Rencana kerja sedang berjalan: hari yang laporannya sudah dikirim/disetujui tidak berubah dan tanggal mulai tetap. "
             : ""}
@@ -9,6 +10,6 @@ export function PlanReviseNotice({ status }: { status: unknown }) {
           {status === "PUBLISHED" || status === "APPEALED"
             ? "Ketua tim masih perlu menerimanya sekali."
             : "Versi baru langsung berlaku; ketua dan anggota mendapat pemberitahuan."}
-        </p>
+        </TextBlock>
   );
 }

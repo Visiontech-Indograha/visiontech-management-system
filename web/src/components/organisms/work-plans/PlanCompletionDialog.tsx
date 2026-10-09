@@ -5,7 +5,6 @@ import { useForm } from "react-hook-form";
 import { useFormDraft } from "@/hooks/useFormDraft";
 import { toast } from "sonner";
 import { z } from "zod";
-import { Button } from "@/components/atoms/Button";
 import { TextAreaField, TextField } from "@/components/molecules/Field";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { api } from "@/lib/apiClient";
@@ -13,6 +12,9 @@ import type { components } from "@/lib/apiTypes";
 import { errorMessage } from "@/lib/errors";
 import { planKey, type WorkPlan } from "@/services/workPlanService";
 import { oversize, uploadFiles } from "@/services/uploadService";
+import { ActionButton } from "@/components/molecules/ActionButton";
+import { TextBlock } from "@/components/molecules/TextBlock";
+import { FormBlock } from "@/components/molecules/FormBlock";
 
 type CompletionRequest = components["schemas"]["CompletionRequest"];
 
@@ -80,20 +82,20 @@ export function PlanCompletionDialog({ plan, onClose }: { plan: WorkPlan; onClos
       onClose={onClose}
       footer={
         <>
-          <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
+          <ActionButton variant="outline" onClick={onClose} disabled={isSubmitting}>
             Batal
-          </Button>
-          <Button type="submit" form="completion-form" disabled={isSubmitting}>
+          </ActionButton>
+          <ActionButton type="submit" form="completion-form" disabled={isSubmitting}>
             {isSubmitting ? "Mengirim..." : "Kirim Laporan Akhir (Ajukan Selesai)"}
-          </Button>
+          </ActionButton>
         </>
       }
     >
-      <form id="completion-form" onSubmit={onSubmit} noValidate className="max-h-[65vh] overflow-y-auto px-1">
+      <FormBlock id="completion-form" onSubmit={onSubmit} noValidate className="max-h-[65vh] overflow-y-auto px-1">
         {formError && (
-          <p role="alert" className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
+          <TextBlock role="alert" className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
             {formError}
-          </p>
+          </TextBlock>
         )}
         <TextAreaField label="Laporan Keseluruhan" error={errors.body?.message} {...register("body")} />
         <TextAreaField label="Ringkasan Kendala Keseluruhan (Wajib)" error={errors.obstacle?.message} {...register("obstacle")} />
@@ -106,7 +108,7 @@ export function PlanCompletionDialog({ plan, onClose }: { plan: WorkPlan; onClos
           error={fileError ?? undefined}
           onChange={(e) => pickFiles(e.target.files)}
         />
-      </form>
+      </FormBlock>
     </VmsDialog>
   );
 }

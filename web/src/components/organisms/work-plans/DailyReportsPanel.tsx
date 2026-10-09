@@ -9,7 +9,6 @@ import { useSession } from "@/app/session";
 import { FilePreview } from "@/components/molecules/FilePreview";
 import { QueryState } from "@/components/molecules/QueryState";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
-import { Button } from "@/components/atoms/Button";
 import { SelectField, TextAreaField, TextField } from "@/components/molecules/Field";
 import { api } from "@/lib/apiClient";
 import type { components } from "@/lib/apiTypes";
@@ -18,6 +17,11 @@ import { formatDate, formatDateTime } from "@/lib/format";
 import type { WorkPlan } from "@/services/workPlanService";
 import { PlanPreviewDialog } from "./PlanPreviewDialog";
 import { oversize, uploadFiles } from "@/services/uploadService";
+import { ActionButton } from "@/components/molecules/ActionButton";
+import { TextBlock } from "@/components/molecules/TextBlock";
+import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
+import { ControlInput, ControlLabel, ControlOption, FormBlock } from "@/components/molecules/FormBlock";
+import { DisclosureBlock, DisclosureTitle } from "@/components/molecules/DisclosureBlock";
 
 type S = components["schemas"];
 type Day = S["PlanDayOut"];
@@ -67,7 +71,7 @@ export function DailyReportsPanel({ plan }: { plan: WorkPlan }) {
   });
   return (
     <section aria-label="Laporan harian" className="space-y-3">
-      <h2 className="text-base font-semibold">Laporan harian</h2>
+      <TextBlock as="h2" className="text-base font-semibold">Laporan harian</TextBlock>
       <QueryState
         query={days}
         errorText="Laporan harian tidak dapat dimuat."
@@ -90,27 +94,27 @@ export function DayPlanList({ plan }: { plan: WorkPlan }) {
   });
   return (
     <section aria-label="Rincian harian" className="rounded-panel border border-line bg-surface shadow-card p-4">
-      <h2 className="mb-3 text-base font-semibold">Rincian harian</h2>
+      <TextBlock as="h2" className="mb-3 text-base font-semibold">Rincian harian</TextBlock>
       <QueryState
         query={days}
         errorText="Rincian harian tidak dapat dimuat."
         empty={days.data?.length === 0}
         emptyText="Belum ada hari kerja. Setiap tanggal dalam periode wajib diisi sebelum rencana kerja diterbitkan."
       >
-        <ol className="space-y-3">
+        <ListBlock as="ol" className="space-y-3">
           {days.data?.map((d) => (
-            <li key={d.id} className="border-b border-line pb-3 last:border-0 last:pb-0">
-              <p className="font-medium">
+            <ListEntry key={d.id} className="border-b border-line pb-3 last:border-0 last:pb-0">
+              <TextBlock className="font-medium">
                 {formatDate(d.work_date)} · {d.title}
-              </p>
-              <ul className="mt-1 list-disc pl-5 text-sm text-mist">
+              </TextBlock>
+              <ListBlock className="mt-1 list-disc pl-5 text-sm text-mist">
                 {d.tasks.map((t) => (
-                  <li key={t.id}>{t.title}</li>
+                  <ListEntry key={t.id}>{t.title}</ListEntry>
                 ))}
-              </ul>
-            </li>
+              </ListBlock>
+            </ListEntry>
           ))}
-        </ol>
+        </ListBlock>
       </QueryState>
     </section>
   );
@@ -132,21 +136,21 @@ function DayPanel({ plan, day }: { plan: WorkPlan; day: Day }) {
     <article aria-label={label} className="rounded-panel border border-line bg-surface shadow-card p-4">
       <header className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h3 className="font-medium">{day.title || "Hari kerja"}</h3>
-          <p className="text-sm text-mist">{formatDate(day.work_date)}</p>
+          <TextBlock as="h3" className="font-medium">{day.title || "Hari kerja"}</TextBlock>
+          <TextBlock className="text-sm text-mist">{formatDate(day.work_date)}</TextBlock>
         </div>
         <div className="flex items-center gap-2">
-          {day.report ? <StatusBadge status={badge} /> : <span className="text-sm text-mist">Belum ada laporan</span>}
+          {day.report ? <StatusBadge status={badge} /> : <TextBlock as="span" className="text-sm text-mist">Belum ada laporan</TextBlock>}
           {status === "APPROVED" && (
-            <Button variant="outline" size="sm" onClick={() => setViewing(true)}>
+            <ActionButton variant="outline" size="sm" onClick={() => setViewing(true)}>
               Lihat laporan
-            </Button>
+            </ActionButton>
           )}
         </div>
       </header>
       <TaskList plan={plan} day={day} editable={editable} />
       {!reached ? (
-        <p className="mt-3 text-sm text-mist">Laporan dapat diisi mulai {formatDate(day.work_date)}.</p>
+        <TextBlock className="mt-3 text-sm text-mist">Laporan dapat diisi mulai {formatDate(day.work_date)}.</TextBlock>
       ) : editable ? (
         <DailyForm plan={plan} day={day} />
       ) : (
@@ -173,7 +177,7 @@ function TaskList({ plan, day, editable }: { plan: WorkPlan; day: Day; editable:
     async (t: Task) => (await api.post(`/work-plans/${plan.id}/days/${day.id}/tasks/${t.id}/toggle`)).data,
   );
   const [error, setError] = useState<string | null>(null);
-  if (day.tasks.length === 0) return <p className="text-sm text-mist">Belum ada tugas.</p>;
+  if (day.tasks.length === 0) return <TextBlock className="text-sm text-mist">Belum ada tugas.</TextBlock>;
   const onToggle = async (t: Task) => {
     setError(null);
     try {
@@ -185,29 +189,29 @@ function TaskList({ plan, day, editable }: { plan: WorkPlan; day: Day; editable:
   return (
     <>
       {error && (
-        <p role="alert" className="mb-3 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
+        <TextBlock role="alert" className="mb-3 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
           {error}
-        </p>
+        </TextBlock>
       )}
-      <ul aria-label="Tugas" className="space-y-2">
+      <ListBlock aria-label="Tugas" className="space-y-2">
         {[...day.tasks]
           .sort((a, b) => a.sort_order - b.sort_order)
           .map((t) => (
-            <li key={t.id}>
-              <label className="flex items-center gap-3 text-sm">
-                <input
+            <ListEntry key={t.id}>
+              <ControlLabel className="flex items-center gap-3 text-sm">
+                <ControlInput
                   type="checkbox"
                   className="size-5"
                   checked={t.is_done}
                   disabled={!editable || toggle.isPending}
                   onChange={() => onToggle(t)}
                 />
-                <span className={t.is_done ? "text-mist line-through" : undefined}>{t.title}</span>
-                {t.done_at && <span className="text-xs text-mist">{formatDateTime(t.done_at)}</span>}
-              </label>
-            </li>
+                <TextBlock as="span" className={t.is_done ? "text-mist line-through" : undefined}>{t.title}</TextBlock>
+                {t.done_at && <TextBlock as="span" className="text-xs text-mist">{formatDateTime(t.done_at)}</TextBlock>}
+              </ControlLabel>
+            </ListEntry>
           ))}
-      </ul>
+      </ListBlock>
     </>
   );
 }
@@ -220,68 +224,68 @@ function MemberReports({ plan, day }: { plan: WorkPlan; day: Day }) {
   });
   const sent = (reports.data ?? []).filter((r) => r.status === "SENT");
   return (
-    <details className="mt-3 rounded-control border border-line p-3 text-sm">
-      <summary className="cursor-pointer font-medium">Laporan anggota ({day.member_reports_sent})</summary>
-      <ul className="mt-2 space-y-2">
+    <DisclosureBlock className="mt-3 rounded-control border border-line p-3 text-sm">
+      <DisclosureTitle className="cursor-pointer font-medium">Laporan anggota ({day.member_reports_sent})</DisclosureTitle>
+      <ListBlock className="mt-2 space-y-2">
         {sent.map((r) => (
-          <li key={r.id}>
-            <p className="font-medium">
-              {r.full_name} <span className="font-normal text-mist">— {r.position}</span>
-            </p>
-            <p className="whitespace-pre-line">{r.body}</p>
-            {r.obstacle && <p className="text-mist">Kendala: {r.obstacle}</p>}
-          </li>
+          <ListEntry key={r.id}>
+            <TextBlock className="font-medium">
+              {r.full_name} <TextBlock as="span" className="font-normal text-mist">— {r.position}</TextBlock>
+            </TextBlock>
+            <TextBlock className="whitespace-pre-line">{r.body}</TextBlock>
+            {r.obstacle && <TextBlock className="text-mist">Kendala: {r.obstacle}</TextBlock>}
+          </ListEntry>
         ))}
-      </ul>
-    </details>
+      </ListBlock>
+    </DisclosureBlock>
   );
 }
 
 function ReportView({ day }: { day: Day }) {
   const r = day.report;
-  if (!r || !r.body) return <p className="mt-3 text-sm text-mist">Belum ada laporan harian.</p>;
+  if (!r || !r.body) return <TextBlock className="mt-3 text-sm text-mist">Belum ada laporan harian.</TextBlock>;
   return (
-    <dl className="mt-3 space-y-2 text-sm">
+    <ListBlock as="dl" className="mt-3 space-y-2 text-sm">
       <div>
-        <dt className="text-mist">Laporan</dt>
-        <dd className="whitespace-pre-line">{r.body}</dd>
+        <TextBlock as="dt" className="text-mist">Laporan</TextBlock>
+        <TextBlock as="dd" className="whitespace-pre-line">{r.body}</TextBlock>
       </div>
       <div>
-        <dt className="text-mist">Kendala</dt>
-        <dd className="whitespace-pre-line">{r.obstacle}</dd>
+        <TextBlock as="dt" className="text-mist">Kendala</TextBlock>
+        <TextBlock as="dd" className="whitespace-pre-line">{r.obstacle}</TextBlock>
       </div>
       {r.evidence_file_ids.length > 0 && (
         <div>
-          <dt className="text-mist">Bukti ({r.evidence_file_ids.length} foto)</dt>
+          <TextBlock as="dt" className="text-mist">Bukti ({r.evidence_file_ids.length} foto)</TextBlock>
           {/* PM menilai laporan dari foto bukti — tampilkan pratinjau per slot template (T9), bukan sekadar jumlah. */}
-          <dd className="mt-1 space-y-2">
+          <TextBlock as="dd" className="mt-1 space-y-2">
             {evidenceBySlot(r.evidence, r.evidence_file_ids).map(([slot, items]) => (
               <div key={slot}>
-                <p className="text-xs font-medium text-mist">{slot}</p>
+                <TextBlock className="text-xs font-medium text-mist">{slot}</TextBlock>
                 <div className="flex flex-wrap gap-2">
                   {items.map((e, i) => (
                     <div key={e.file_id} className="relative">
                       <FilePreview fileId={e.file_id} fileName={`${slot} ${i + 1}`} />
                       {e.source === "GALLERY" && (
-                        <span className="absolute left-1 top-1 rounded-control bg-surface/90 px-1.5 py-0.5 text-[11px] font-medium text-ink shadow-card">
+                        <TextBlock as="span" className="absolute left-1 top-1 rounded-control bg-surface/90 px-1.5 py-0.5 text-[11px] font-medium text-ink shadow-card">
                           Dari galeri
-                        </span>
+                        </TextBlock>
                       )}
                     </div>
                   ))}
                 </div>
               </div>
             ))}
-          </dd>
+          </TextBlock>
         </div>
       )}
       {r.review_note && (
         <div>
-          <dt className="text-mist">Catatan PM</dt>
-          <dd>{r.review_note}</dd>
+          <TextBlock as="dt" className="text-mist">Catatan PM</TextBlock>
+          <TextBlock as="dd">{r.review_note}</TextBlock>
         </div>
       )}
-    </dl>
+    </ListBlock>
   );
 }
 
@@ -339,13 +343,13 @@ function DailyForm({ plan, day }: { plan: WorkPlan; day: Day }) {
     });
 
   return (
-    <form noValidate onSubmit={send(true)} className="mt-4 border-t border-line pt-4">
+    <FormBlock noValidate onSubmit={send(true)} className="mt-4 border-t border-line pt-4">
       {formError && (
-        <p role="alert" className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
+        <TextBlock role="alert" className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
           {formError}
-        </p>
+        </TextBlock>
       )}
-      {day.report?.review_note && <p className="mb-3 text-sm text-warning">Catatan PM: {day.report.review_note}</p>}
+      {day.report?.review_note && <TextBlock className="mb-3 text-sm text-warning">Catatan PM: {day.report.review_note}</TextBlock>}
       <TextAreaField label="Laporan Harian" error={errors.body?.message} {...register("body")} />
       <TextAreaField label="Kendala (Wajib)" error={errors.obstacle?.message} {...register("obstacle")} />
       <TextField
@@ -358,14 +362,14 @@ function DailyForm({ plan, day }: { plan: WorkPlan; day: Day }) {
         onChange={(e) => pickFiles(e.target.files)}
       />
       <div className="flex flex-col gap-2 md:flex-row md:justify-end">
-        <Button type="button" variant="outline" onClick={send(false)} disabled={isSubmitting}>
+        <ActionButton type="button" variant="outline" onClick={send(false)} disabled={isSubmitting}>
           Simpan draft
-        </Button>
-        <Button type="submit" disabled={isSubmitting}>
+        </ActionButton>
+        <ActionButton type="submit" disabled={isSubmitting}>
           Kirim laporan
-        </Button>
+        </ActionButton>
       </div>
-    </form>
+    </FormBlock>
   );
 }
 
@@ -401,22 +405,22 @@ function DailyReviewForm({ plan, day }: { plan: WorkPlan; day: Day }) {
     }
   });
   return (
-    <form noValidate onSubmit={onSubmit} className="mt-4 border-t border-line pt-4">
+    <FormBlock noValidate onSubmit={onSubmit} className="mt-4 border-t border-line pt-4">
       {formError && (
-        <p role="alert" className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
+        <TextBlock role="alert" className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
           {formError}
-        </p>
+        </TextBlock>
       )}
       <SelectField label="Keputusan" {...register("decision")}>
-        <option value="APPROVE">Setujui laporan</option>
-        <option value="RETURN">Minta perbaikan</option>
+        <ControlOption value="APPROVE">Setujui laporan</ControlOption>
+        <ControlOption value="RETURN">Minta perbaikan</ControlOption>
       </SelectField>
       <TextAreaField label="Catatan (wajib jika dikembalikan)" error={errors.note?.message} {...register("note")} />
       <div className="flex justify-end">
-        <Button type="submit" disabled={isSubmitting}>
+        <ActionButton type="submit" disabled={isSubmitting}>
           Simpan keputusan
-        </Button>
+        </ActionButton>
       </div>
-    </form>
+    </FormBlock>
   );
 }

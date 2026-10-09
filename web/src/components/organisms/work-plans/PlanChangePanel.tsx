@@ -6,13 +6,16 @@ import { toast } from "sonner";
 import { z } from "zod";
 import { useSession } from "@/app/session";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
-import { Button } from "@/components/atoms/Button";
 import { SelectField, TextAreaField, TextField } from "@/components/molecules/Field";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { api } from "@/lib/apiClient";
 import type { components } from "@/lib/apiTypes";
 import { errorMessage } from "@/lib/errors";
 import { planKey, useActiveEmployees, type WorkPlan } from "@/services/workPlanService";
+import { ActionButton } from "@/components/molecules/ActionButton";
+import { TextBlock } from "@/components/molecules/TextBlock";
+import { ControlInput, ControlLabel, ControlOption, FormBlock } from "@/components/molecules/FormBlock";
+import { FieldGroup, FieldGroupLegend } from "@/components/molecules/FieldGroup";
 
 type Change = components["schemas"]["ChangeResponse"];
 type ChangeRequest = components["schemas"]["ChangeRequest"];
@@ -64,23 +67,23 @@ function FormShell({
       onClose={onClose}
       footer={
         <>
-          <Button variant="outline" onClick={onClose} disabled={submitting}>
+          <ActionButton variant="outline" onClick={onClose} disabled={submitting}>
             Batal
-          </Button>
-          <Button type="submit" form="change-form" disabled={submitting}>
+          </ActionButton>
+          <ActionButton type="submit" form="change-form" disabled={submitting}>
             {submitting ? "Mengirim..." : submitLabel}
-          </Button>
+          </ActionButton>
         </>
       }
     >
-      <form id="change-form" onSubmit={onSubmit} noValidate className="max-h-[65vh] overflow-y-auto px-1">
+      <FormBlock id="change-form" onSubmit={onSubmit} noValidate className="max-h-[65vh] overflow-y-auto px-1">
         {formError && (
-          <p role="alert" className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
+          <TextBlock role="alert" className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
             {formError}
-          </p>
+          </TextBlock>
         )}
         {children}
-      </form>
+      </FormBlock>
     </VmsDialog>
   );
 }
@@ -159,31 +162,31 @@ export function PersonnelDialog({ plan, onClose }: { plan: WorkPlan; onClose: ()
   return (
     <FormShell title="Revisi personel" submitLabel="Ajukan revisi" submitting={isSubmitting} formError={formError} onClose={onClose} onSubmit={onSubmit}>
       <SelectField label="Ketua tim" error={errors.leader_employee_id?.message} {...register("leader_employee_id")}>
-        <option value="">{employees.isPending ? "Memuat..." : "Pilih ketua"}</option>
+        <ControlOption value="">{employees.isPending ? "Memuat..." : "Pilih ketua"}</ControlOption>
         {employees.data?.map((e) => (
-          <option key={e.id} value={e.id}>
+          <ControlOption key={e.id} value={e.id}>
             {e.full_name} · {e.position}
-          </option>
+          </ControlOption>
         ))}
       </SelectField>
-      <fieldset className="mb-4">
-        <legend className="mb-2 text-sm font-medium">Anggota tim</legend>
+      <FieldGroup className="mb-4">
+        <FieldGroupLegend className="mb-2 text-sm font-medium">Anggota tim</FieldGroupLegend>
         <div className="max-h-56 space-y-1 overflow-y-auto rounded-control border border-line p-2">
           {employees.data
             ?.filter((e) => e.id !== leader)
             .map((e) => (
-              <label key={e.id} className="flex min-h-11 items-center gap-2 text-sm">
-                <input type="checkbox" className="size-5" value={e.id} {...register("member_employee_ids")} />
+              <ControlLabel key={e.id} className="flex min-h-11 items-center gap-2 text-sm">
+                <ControlInput type="checkbox" className="size-5" value={e.id} {...register("member_employee_ids")} />
                 {e.full_name} · {e.position}
-              </label>
+              </ControlLabel>
             ))}
         </div>
         {errors.member_employee_ids && (
-          <p role="alert" className="mt-1 text-sm text-destructive">
+          <TextBlock role="alert" className="mt-1 text-sm text-destructive">
             {errors.member_employee_ids.message}
-          </p>
+          </TextBlock>
         )}
-      </fieldset>
+      </FieldGroup>
       <TextAreaField label="Alasan" error={errors.reason?.message} {...register("reason")} />
     </FormShell>
   );
@@ -216,38 +219,38 @@ export function PlanChangePanel({ plan }: { plan: WorkPlan }) {
   const buttons: React.ReactNode[] = [];
   if (open && change.status === "PENDING_PM" && canManage)
     buttons.push(
-      <Button key="approve" onClick={() => run("approve", "Perpanjangan disetujui.")} disabled={decide.isPending}>
+      <ActionButton key="approve" onClick={() => run("approve", "Perpanjangan disetujui.")} disabled={decide.isPending}>
         Setujui perpanjangan
-      </Button>,
-      <Button key="reject-pm" variant="outline" onClick={() => setAsking({ action: "reject", title: "Tolak perpanjangan" })}>
+      </ActionButton>,
+      <ActionButton key="reject-pm" variant="outline" onClick={() => setAsking({ action: "reject", title: "Tolak perpanjangan" })}>
         Tolak perpanjangan
-      </Button>,
+      </ActionButton>,
     );
   if (change.status === "AWAITING_LEADER_ACCEPTANCE") {
     buttons.push(
-      <Button key="accept" onClick={() => run("accept", "Revisi diterima.")} disabled={decide.isPending}>
+      <ActionButton key="accept" onClick={() => run("accept", "Revisi diterima.")} disabled={decide.isPending}>
         Terima revisi
-      </Button>,
-      <Button key="reject-leader" variant="outline" onClick={() => setAsking({ action: "reject", title: "Tolak permintaan" })}>
+      </ActionButton>,
+      <ActionButton key="reject-leader" variant="outline" onClick={() => setAsking({ action: "reject", title: "Tolak permintaan" })}>
         Tolak permintaan
-      </Button>,
+      </ActionButton>,
     );
     if (canManage && change.change_type === "PERSONNEL")
       buttons.push(
-        <Button key="withdraw" variant="outline" onClick={() => setAsking({ action: "withdraw", title: "Tarik revisi personel" })}>
+        <ActionButton key="withdraw" variant="outline" onClick={() => setAsking({ action: "withdraw", title: "Tarik revisi personel" })}>
           Tarik revisi personel
-        </Button>,
+        </ActionButton>,
       );
   }
 
   return (
     <section aria-label="Usulan perubahan" className="rounded-panel border border-line bg-surface shadow-card p-4">
       <div className="mb-2 flex items-center justify-between gap-2">
-        <h2 className="text-base font-semibold">{TYPE_LABEL[change.change_type] ?? change.change_type}</h2>
+        <TextBlock as="h2" className="text-base font-semibold">{TYPE_LABEL[change.change_type] ?? change.change_type}</TextBlock>
         <StatusBadge status={change.status} />
       </div>
-      <p className="mb-3 text-sm">{change.reason}</p>
-      {change.decision_reason && <p className="mb-3 text-sm text-mist">Catatan: {change.decision_reason}</p>}
+      <TextBlock className="mb-3 text-sm">{change.reason}</TextBlock>
+      {change.decision_reason && <TextBlock className="mb-3 text-sm text-mist">Catatan: {change.decision_reason}</TextBlock>}
       <div className="flex flex-col gap-2 [&>button]:w-full">{buttons}</div>
       {asking && <DecisionReasonDialog title={asking.title} onClose={() => setAsking(null)} onSubmit={(r) => run(asking.action, `${asking.title} berhasil.`, r)} />}
     </section>

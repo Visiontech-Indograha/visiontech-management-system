@@ -1,10 +1,8 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useFieldArray, useForm, useWatch } from "react-hook-form";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Button } from "@/components/atoms/Button";
 import { QueryState } from "@/components/molecules/QueryState";
 import { TextAreaField } from "@/components/molecules/Field";
 import { errorMessage } from "@/lib/errors";
@@ -22,6 +20,14 @@ import {
 } from "@/services/workPlanService";
 import { NewSiteDialog, type NewSite } from "./NewSiteDialog";
 import { PlanDayTable } from "./PlanDayTable";
+import { ActionButton } from "@/components/molecules/ActionButton";
+import { Plus } from "@/components/molecules/Glyphs";
+import { InlineLink } from "@/components/molecules/Links";
+import { TextBlock } from "@/components/molecules/TextBlock";
+import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
+import { TableBlock, TableBlockBody, TableBlockCell, TableBlockHeaderCell, TableBlockRow } from "@/components/molecules/TableBlock";
+import { PlainAction } from "@/components/molecules/PlainAction";
+import { ControlInput, ControlLabel, ControlOption, ControlSelect, ControlTextarea, FormBlock } from "@/components/molecules/FormBlock";
 
 const emptyTask = (): TaskValue => ({ title: "", description: "", files: [] });
 type DayValue = Values["days"][number];
@@ -269,17 +275,17 @@ export function PlanEditorForm({ planId, detail, revise = false, changeId }: { p
     <>
       <QueryState query={options} errorText="Pilihan form rencana kerja tidak dapat dimuat.">
         {o && (
-          <form onSubmit={onSubmit} noValidate className="space-y-6 pb-24">
+          <FormBlock onSubmit={onSubmit} noValidate className="space-y-6 pb-24">
             {formError && (
-              <p role="alert" className="rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
+              <TextBlock role="alert" className="rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
                 {formError}
-              </p>
+              </TextBlock>
             )}
             {revise && (
               <Section title="Alasan revisi">
-                <p className="mb-2 text-sm text-mist">
+                <TextBlock className="mb-2 text-sm text-mist">
                   Alasan ini dikirim ke ketua dan anggota, dan tercatat di riwayat revisi. Jelaskan apa yang diubah dan mengapa.
-                </p>
+                </TextBlock>
                 <TextAreaField
                   label="Alasan revisi (wajib)"
                   placeholder="Contoh: Jadwal hari ke-2 dimajukan karena material tiba lebih awal."
@@ -290,40 +296,40 @@ export function PlanEditorForm({ planId, detail, revise = false, changeId }: { p
             )}
             <Section title="Data rencana kerja">
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[560px] border-collapse text-sm">
-                  <tbody>
+                <TableBlock className="w-full min-w-[560px] border-collapse text-sm">
+                  <TableBlockBody>
                     <Row label="Jenis pekerjaan" hint="Pilih lebih dulu: menentukan template foto laporan (foto contoh dari PM). Bisa diganti per hari di tabel hari kerja.">
-                      <select aria-label="Jenis pekerjaan" className={inputCls} {...register("work_type_id")}>
-                        <option value="">Tanpa jenis</option>
+                      <ControlSelect aria-label="Jenis pekerjaan" className={inputCls} {...register("work_type_id")}>
+                        <ControlOption value="">Tanpa jenis</ControlOption>
                         {workTypes.data?.map((t) => (
-                          <option key={t.id} value={t.id}>
+                          <ControlOption key={t.id} value={t.id}>
                             {t.name}
-                          </option>
+                          </ControlOption>
                         ))}
-                      </select>
+                      </ControlSelect>
                     </Row>
                     <Row label="Judul pekerjaan" error={errors.title?.message}>
-                      <input aria-label="Judul pekerjaan" className={inputCls} {...register("title")} />
+                      <ControlInput aria-label="Judul pekerjaan" className={inputCls} {...register("title")} />
                     </Row>
                     <Row label="Deskripsi pekerjaan" error={errors.description?.message}>
-                      <textarea aria-label="Deskripsi pekerjaan" rows={3} className={`${inputCls} h-auto py-2`} {...register("description")} />
+                      <ControlTextarea aria-label="Deskripsi pekerjaan" rows={3} className={`${inputCls} h-auto py-2`} {...register("description")} />
                     </Row>
                     <Row label="Kategori" error={errors.category?.message}>
-                      <select aria-label="Kategori pekerjaan" className={inputCls} {...register("category")}>
-                        <option value="">Pilih kategori</option>
+                      <ControlSelect aria-label="Kategori pekerjaan" className={inputCls} {...register("category")}>
+                        <ControlOption value="">Pilih kategori</ControlOption>
                         {o.categories.map((c) => (
-                          <option key={c.code} value={c.code}>
+                          <ControlOption key={c.code} value={c.code}>
                             {c.label}
-                          </option>
+                          </ControlOption>
                         ))}
-                      </select>
+                      </ControlSelect>
                     </Row>
                     <Row label="Tipe" hint="Otomatis mengikuti unit PM.">
-                      <span>{o.unit_name ?? "-"}</span>
+                      <TextBlock as="span">{o.unit_name ?? "-"}</TextBlock>
                     </Row>
                     <Row label="Tanggal" error={errors.period_start?.message ?? errors.period_end?.message}>
                       <div className="flex flex-wrap items-center gap-2">
-                        <input
+                        <ControlInput
                           type="date"
                           aria-label="Tanggal mulai"
                           className={`${inputCls} w-auto`}
@@ -332,22 +338,22 @@ export function PlanEditorForm({ planId, detail, revise = false, changeId }: { p
                         />
                         {!oneDay && (
                           <>
-                            <span>s.d.</span>
-                            <input type="date" aria-label="Tanggal selesai" className={`${inputCls} w-auto`} {...register("period_end")} />
+                            <TextBlock as="span">s.d.</TextBlock>
+                            <ControlInput type="date" aria-label="Tanggal selesai" className={`${inputCls} w-auto`} {...register("period_end")} />
                           </>
                         )}
                       </div>
                       <div className="flex flex-wrap gap-x-4">
-                        <label className="flex min-h-11 items-center gap-2">
-                          <input type="checkbox" className="size-5" {...register("one_day")} /> Rencana kerja 1 hari
-                        </label>
-                        <label className="flex min-h-11 items-center gap-2">
-                          <input type="checkbox" className="size-5" {...register("is_out_of_town")} /> Luar kota (uang absen luar kota)
-                        </label>
+                        <ControlLabel className="flex min-h-11 items-center gap-2">
+                          <ControlInput type="checkbox" className="size-5" {...register("one_day")} /> Rencana kerja 1 hari
+                        </ControlLabel>
+                        <ControlLabel className="flex min-h-11 items-center gap-2">
+                          <ControlInput type="checkbox" className="size-5" {...register("is_out_of_town")} /> Luar kota (uang absen luar kota)
+                        </ControlLabel>
                       </div>
                     </Row>
                     <Row label="Lokasi" hint="Lokasi utama; bisa diganti per hari di tabel hari kerja.">
-                      <select
+                      <ControlSelect
                         aria-label="Lokasi kerja"
                         className={inputCls}
                         {...register("site_id", {
@@ -356,42 +362,42 @@ export function PlanEditorForm({ planId, detail, revise = false, changeId }: { p
                           },
                         })}
                       >
-                        <option value="">Pilih lokasi yang sudah ada</option>
+                        <ControlOption value="">Pilih lokasi yang sudah ada</ControlOption>
                         {o.sites.map((s) => (
-                          <option key={s.id} value={s.id}>
+                          <ControlOption key={s.id} value={s.id}>
                             {s.name}
-                          </option>
+                          </ControlOption>
                         ))}
-                        <option value="__new">+ Lokasi baru{newSite ? `: ${newSite.name}` : ""}</option>
-                      </select>
+                        <ControlOption value="__new">+ Lokasi baru{newSite ? `: ${newSite.name}` : ""}</ControlOption>
+                      </ControlSelect>
                       {siteId === "__new" && newSite && (
-                        <p className="mt-1 text-mist">
+                        <TextBlock className="mt-1 text-mist">
                           {newSite.name} · {newSite.lat.toFixed(6)}, {newSite.lng.toFixed(6)}{" "}
-                          <button type="button" className="min-h-11 text-lens" onClick={() => setSiteDialog(true)}>
+                          <PlainAction type="button" className="min-h-11 text-lens" onClick={() => setSiteDialog(true)}>
                             Ubah
-                          </button>
-                        </p>
+                          </PlainAction>
+                        </TextBlock>
                       )}
                     </Row>
                     <Row label="Ketua tim" error={errors.leader_employee_id?.message} hint="Ketua bertugas di semua hari.">
-                      <select aria-label="Ketua tim" className={inputCls} {...register("leader_employee_id")}>
-                        <option value="">Pilih ketua tim</option>
+                      <ControlSelect aria-label="Ketua tim" className={inputCls} {...register("leader_employee_id")}>
+                        <ControlOption value="">Pilih ketua tim</ControlOption>
                         {o.leaders.map((p) => (
-                          <option key={p.id} value={p.id}>
+                          <ControlOption key={p.id} value={p.id}>
                             {p.full_name} — {p.position}
                             {busyNote(p.busy_dates)}
-                          </option>
+                          </ControlOption>
                         ))}
-                      </select>
+                      </ControlSelect>
                     </Row>
-                  </tbody>
-                </table>
+                  </TableBlockBody>
+                </TableBlock>
               </div>
             </Section>
 
             <Section title="Hari kerja">
               {days.fields.length === 0 ? (
-                <p className="text-sm text-mist">Isi tanggal di atas; baris hari kerja akan muncul di tabel ini.</p>
+                <TextBlock className="text-sm text-mist">Isi tanggal di atas; baris hari kerja akan muncul di tabel ini.</TextBlock>
               ) : (
                 <PlanDayTable
                   fields={days.fields}
@@ -409,64 +415,64 @@ export function PlanEditorForm({ planId, detail, revise = false, changeId }: { p
               )}
               <div className="mt-3 flex flex-wrap gap-2">
                 {days.fields.length > 1 && (
-                  <Button type="button" variant="outline" onClick={copyFirstToAll}>
+                  <ActionButton type="button" variant="outline" onClick={copyFirstToAll}>
                     Samakan semua hari dengan hari pertama
-                  </Button>
+                  </ActionButton>
                 )}
                 {end && !oneDay && (
-                  <Button type="button" variant="outline" onClick={() => setValue("period_end", nextDay(end))}>
+                  <ActionButton type="button" variant="outline" onClick={() => setValue("period_end", nextDay(end))}>
                     <Plus className="size-4" /> Tambah hari kerja
-                  </Button>
+                  </ActionButton>
                 )}
               </div>
               {holidays.length > 0 && (
                 <div className="mt-3 rounded-control border border-line p-3" aria-label="Hari libur">
-                  <p className="mb-2 text-sm font-medium">Hari libur ({holidays.length})</p>
-                  <ul className="space-y-1">
+                  <TextBlock className="mb-2 text-sm font-medium">Hari libur ({holidays.length})</TextBlock>
+                  <ListBlock className="space-y-1">
                     {holidays.map((h) => (
-                      <li key={h} className="flex items-center justify-between gap-2 text-sm">
-                        <span>
+                      <ListEntry key={h} className="flex items-center justify-between gap-2 text-sm">
+                        <TextBlock as="span">
                           {weekday(h)}, {formatDate(h)}
-                        </span>
-                        <Button type="button" variant="outline" size="sm" onClick={() => revokeHoliday(h)}>
+                        </TextBlock>
+                        <ActionButton type="button" variant="outline" size="sm" onClick={() => revokeHoliday(h)}>
                           Jadikan hari kerja
-                        </Button>
-                      </li>
+                        </ActionButton>
+                      </ListEntry>
                     ))}
-                  </ul>
-                  <p className="mt-2 text-xs text-mist">Hari libur tidak wajib absen dan laporan. Hari yang sudah berlaporan tidak dapat diliburkan.</p>
+                  </ListBlock>
+                  <TextBlock className="mt-2 text-xs text-mist">Hari libur tidak wajib absen dan laporan. Hari yang sudah berlaporan tidak dapat diliburkan.</TextBlock>
                 </div>
               )}
               {/* 2026-10-09 (pemilik): anggota, alat, kendaraan & driver di bawah tabel hari kerja. */}
               <div className="mt-4 overflow-x-auto">
-                <table className="w-full min-w-[560px] border-collapse text-sm">
-                  <tbody>
+                <TableBlock className="w-full min-w-[560px] border-collapse text-sm">
+                  <TableBlockBody>
                     <Row label="Anggota (gabungan)" hint="Dipilih per hari di tabel hari kerja di atas.">
-                      <span>{members.length ? members.map((m) => people.get(m) ?? m).join(", ") : "Belum ada anggota"}</span>
+                      <TextBlock as="span">{members.length ? members.map((m) => people.get(m) ?? m).join(", ") : "Belum ada anggota"}</TextBlock>
                     </Row>
                     <Row label="Alat">
                       {o.tools.length === 0 ? (
-                        <span className="text-mist">Tidak ada alat yang siap pakai.</span>
+                        <TextBlock as="span" className="text-mist">Tidak ada alat yang siap pakai.</TextBlock>
                       ) : (
                         <div className="flex max-h-40 flex-wrap gap-x-4 overflow-y-auto">
                           {o.tools.map((t) => (
-                            <label key={t.id} className="flex min-h-11 items-center gap-2">
-                              <input type="checkbox" className="size-5" value={t.id} {...register("tool_ids")} />
+                            <ControlLabel key={t.id} className="flex min-h-11 items-center gap-2">
+                              <ControlInput type="checkbox" className="size-5" value={t.id} {...register("tool_ids")} />
                               {t.name} · {t.code}
-                            </label>
+                            </ControlLabel>
                           ))}
                         </div>
                       )}
                     </Row>
                     <Row label="Kendaraan" hint="Opsional. Hanya kendaraan siap pakai yang tidak terikat rencana lain.">
-                      <select aria-label="Kendaraan" className={inputCls} {...register("vehicle_id")}>
-                        <option value="">Tanpa kendaraan</option>
+                      <ControlSelect aria-label="Kendaraan" className={inputCls} {...register("vehicle_id")}>
+                        <ControlOption value="">Tanpa kendaraan</ControlOption>
                         {o.vehicles.map((v) => (
-                          <option key={v.id} value={v.id}>
+                          <ControlOption key={v.id} value={v.id}>
                             {v.name} · {v.code} ({v.vehicle_type === "MOTORCYCLE" ? "roda dua, SIM C" : "SIM A"})
-                          </option>
+                          </ControlOption>
                         ))}
-                      </select>
+                      </ControlSelect>
                     </Row>
                     {vehicle && (
                       <Row
@@ -480,30 +486,30 @@ export function PlanEditorForm({ planId, detail, revise = false, changeId }: { p
                               : "Ketua atau anggota terpilih dengan SIM sesuai tipe kendaraan."
                         }
                       >
-                        <select aria-label="Driver" className={inputCls} {...register("driver_employee_id")}>
-                          <option value="">{drivers.isFetching ? "Memuat..." : "Pilih driver"}</option>
+                        <ControlSelect aria-label="Driver" className={inputCls} {...register("driver_employee_id")}>
+                          <ControlOption value="">{drivers.isFetching ? "Memuat..." : "Pilih driver"}</ControlOption>
                           {drivers.data?.map((d) => (
-                            <option key={d} value={d}>
+                            <ControlOption key={d} value={d}>
                               {people.get(d) ?? d}
-                            </option>
+                            </ControlOption>
                           ))}
-                        </select>
+                        </ControlSelect>
                       </Row>
                     )}
-                  </tbody>
-                </table>
+                  </TableBlockBody>
+                </TableBlock>
               </div>
             </Section>
 
             <div className="sticky bottom-0 -mx-4 flex gap-3 border-t border-line bg-surface px-4 py-3 md:mx-0 md:rounded-panel md:border">
-              <Button type="button" variant="outline" className="flex-1 md:flex-none" asChild>
-                <Link to={planId ? `/work-plans/${planId}` : "/work-plans"}>Batal</Link>
-              </Button>
-              <Button type="submit" className="flex-1 md:flex-none" disabled={isSubmitting}>
+              <ActionButton type="button" variant="outline" className="flex-1 md:flex-none" asChild>
+                <InlineLink to={planId ? `/work-plans/${planId}` : "/work-plans"}>Batal</InlineLink>
+              </ActionButton>
+              <ActionButton type="submit" className="flex-1 md:flex-none" disabled={isSubmitting}>
                 {isSubmitting ? "Menyimpan..." : "Simpan"}
-              </Button>
+              </ActionButton>
             </div>
-          </form>
+          </FormBlock>
         )}
       </QueryState>
       {siteDialog && (
@@ -527,7 +533,7 @@ export function PlanEditorForm({ planId, detail, revise = false, changeId }: { p
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section aria-label={title} className="rounded-panel border border-line bg-surface p-4 shadow-card md:p-5">
-      <h2 className="mb-4 text-base font-semibold">{title}</h2>
+      <TextBlock as="h2" className="mb-4 text-base font-semibold">{title}</TextBlock>
       {children}
     </section>
   );
@@ -539,14 +545,14 @@ const inputCls =
 /** Satu baris tabel data rencana: label di kiri, isian di kanan, bantuan/galat di bawah isian. */
 function Row({ label, hint, error, children }: { label: string; hint?: string; error?: string; children: React.ReactNode }) {
   return (
-    <tr className="border-b border-line">
-      <th scope="row" className="w-48 py-3 pr-3 text-left align-top font-medium">
+    <TableBlockRow className="border-b border-line">
+      <TableBlockHeaderCell scope="row" className="w-48 py-3 pr-3 text-left align-top font-medium">
         {label}
-      </th>
-      <td className="py-2">
+      </TableBlockHeaderCell>
+      <TableBlockCell className="py-2">
         {children}
-        {error ? <p className="mt-1 text-xs text-destructive">{error}</p> : hint ? <p className="mt-1 text-xs text-mist">{hint}</p> : null}
-      </td>
-    </tr>
+        {error ? <TextBlock className="mt-1 text-xs text-destructive">{error}</TextBlock> : hint ? <TextBlock className="mt-1 text-xs text-mist">{hint}</TextBlock> : null}
+      </TableBlockCell>
+    </TableBlockRow>
   );
 }

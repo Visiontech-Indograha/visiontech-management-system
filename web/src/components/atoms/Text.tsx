@@ -1,6 +1,6 @@
 import type { HTMLAttributes } from "react";
 
-type TextTag = "p" | "span" | "strong" | "em" | "small" | "dt" | "dd" | "pre" | "code" | "h1" | "h2" | "h3" | "h4";
+type TextTag = "p" | "span" | "strong" | "em" | "small" | "dt" | "dd" | "pre" | "code" | "h1" | "h2" | "h3" | "h4" | "blockquote";
 
 /**
  * Atom teks (docs/33 §2.1): satu-satunya tempat teks/elemen tipografi HTML dirender.

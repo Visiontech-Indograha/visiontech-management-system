@@ -8,7 +8,6 @@ import { z } from "zod";
 import { useSession } from "@/app/session";
 import { QueryState } from "@/components/molecules/QueryState";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
-import { Button } from "@/components/atoms/Button";
 import { SelectField, TextAreaField } from "@/components/molecules/Field";
 import { api } from "@/lib/apiClient";
 import type { components } from "@/lib/apiTypes";
@@ -16,6 +15,10 @@ import { errorMessage } from "@/lib/errors";
 import { formatDate } from "@/lib/format";
 import type { WorkPlan } from "@/services/workPlanService";
 import { PlanPreviewDialog } from "./PlanPreviewDialog";
+import { ActionButton } from "@/components/molecules/ActionButton";
+import { TextBlock } from "@/components/molecules/TextBlock";
+import { ListBlock } from "@/components/molecules/ListBlock";
+import { ControlOption, FormBlock } from "@/components/molecules/FormBlock";
 
 type Week = components["schemas"]["WeeklyReportResponse"];
 type WeeklyReportRequest = components["schemas"]["WeeklyReportRequest"];
@@ -40,7 +43,7 @@ export function WeeklyReportsPanel({ plan }: { plan: WorkPlan }) {
   const weeks = useWeeks(plan.id);
   return (
     <section aria-label="Laporan mingguan" className="space-y-3">
-      <h2 className="text-base font-semibold">Laporan mingguan</h2>
+      <TextBlock as="h2" className="text-base font-semibold">Laporan mingguan</TextBlock>
       <QueryState query={weeks} errorText="Laporan mingguan tidak dapat dimuat." empty={weeks.data?.length === 0} emptyText="Belum ada laporan mingguan.">
         {weeks.data?.map((w) => <WeekPanel key={w.week} plan={plan} week={w} />)}
       </QueryState>
@@ -53,10 +56,10 @@ function Panel({ week, children }: { week: Week; children: ReactNode }) {
     <article aria-label={week.name} className="rounded-panel border border-line bg-surface shadow-card p-4">
       <header className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h3 className="font-medium">{week.name}</h3>
-          <p className="text-sm text-mist">
+          <TextBlock as="h3" className="font-medium">{week.name}</TextBlock>
+          <TextBlock className="text-sm text-mist">
             {formatDate(week.starts_on)} – {formatDate(week.ends_on)}
-          </p>
+          </TextBlock>
         </div>
         <StatusBadge status={week.status === "SUBMITTED" && week.resubmitted ? "RESUBMITTED" : week.status} />
       </header>
@@ -77,9 +80,9 @@ function WeekPanel({ plan, week }: { plan: WorkPlan; week: Week }) {
     return (
       <Panel week={week}>
         {!week.days_approved ? (
-          <p className="text-sm text-mist">
+          <TextBlock className="text-sm text-mist">
             Semua laporan harian dalam minggu ini harus disetujui PM sebelum laporan mingguan dapat dibuat.
-          </p>
+          </TextBlock>
         ) : (
           <WeeklyForm plan={plan} week={week} />
         )}
@@ -89,30 +92,30 @@ function WeekPanel({ plan, week }: { plan: WorkPlan; week: Week }) {
   return (
     <Panel week={week}>
       {week.body ? (
-        <dl className="space-y-2 text-sm">
+        <ListBlock as="dl" className="space-y-2 text-sm">
           <div>
-            <dt className="text-mist">Laporan</dt>
-            <dd className="whitespace-pre-line">{week.body}</dd>
+            <TextBlock as="dt" className="text-mist">Laporan</TextBlock>
+            <TextBlock as="dd" className="whitespace-pre-line">{week.body}</TextBlock>
           </div>
           <div>
-            <dt className="text-mist">Kendala</dt>
-            <dd className="whitespace-pre-line">{week.obstacle}</dd>
+            <TextBlock as="dt" className="text-mist">Kendala</TextBlock>
+            <TextBlock as="dd" className="whitespace-pre-line">{week.obstacle}</TextBlock>
           </div>
           {week.review_note && (
             <div>
-              <dt className="text-mist">Catatan PM</dt>
-              <dd>{week.review_note}</dd>
+              <TextBlock as="dt" className="text-mist">Catatan PM</TextBlock>
+              <TextBlock as="dd">{week.review_note}</TextBlock>
             </div>
           )}
-        </dl>
+        </ListBlock>
       ) : (
-        <p className="text-sm text-mist">Belum ada laporan mingguan.</p>
+        <TextBlock className="text-sm text-mist">Belum ada laporan mingguan.</TextBlock>
       )}
       {week.status === "SUBMITTED" && isPM && <WeeklyReviewForm plan={plan} week={week} />}
       {week.status === "APPROVED" && (
-        <Button variant="outline" size="sm" className="mt-3" onClick={() => setViewing(true)}>
+        <ActionButton variant="outline" size="sm" className="mt-3" onClick={() => setViewing(true)}>
           Lihat laporan
-        </Button>
+        </ActionButton>
       )}
       {viewing && (
         <PlanPreviewDialog title={week.name} path={`/work-plans/${plan.id}/weekly/${week.week}/report/html`} onClose={() => setViewing(false)} />
@@ -153,24 +156,24 @@ function WeeklyForm({ plan, week }: { plan: WorkPlan; week: Week }) {
     });
 
   return (
-    <form noValidate onSubmit={send(true)}>
+    <FormBlock noValidate onSubmit={send(true)}>
       {formError && (
-        <p role="alert" className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
+        <TextBlock role="alert" className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
           {formError}
-        </p>
+        </TextBlock>
       )}
-      {week.review_note && <p className="mb-3 text-sm text-warning">Catatan PM: {week.review_note}</p>}
+      {week.review_note && <TextBlock className="mb-3 text-sm text-warning">Catatan PM: {week.review_note}</TextBlock>}
       <TextAreaField label="Laporan Mingguan" error={errors.body?.message} {...register("body")} />
       <TextAreaField label="Ringkasan Kendala Mingguan (Wajib)" error={errors.obstacle?.message} {...register("obstacle")} />
       <div className="flex flex-col gap-2 md:flex-row md:justify-end">
-        <Button type="button" variant="outline" onClick={send(false)} disabled={isSubmitting}>
+        <ActionButton type="button" variant="outline" onClick={send(false)} disabled={isSubmitting}>
           Simpan draft
-        </Button>
-        <Button type="submit" disabled={isSubmitting}>
+        </ActionButton>
+        <ActionButton type="submit" disabled={isSubmitting}>
           Kirim laporan
-        </Button>
+        </ActionButton>
       </div>
-    </form>
+    </FormBlock>
   );
 }
 
@@ -197,22 +200,22 @@ function WeeklyReviewForm({ plan, week }: { plan: WorkPlan; week: Week }) {
     }
   });
   return (
-    <form noValidate onSubmit={onSubmit} className="mt-4 border-t border-line pt-4">
+    <FormBlock noValidate onSubmit={onSubmit} className="mt-4 border-t border-line pt-4">
       {formError && (
-        <p role="alert" className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
+        <TextBlock role="alert" className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
           {formError}
-        </p>
+        </TextBlock>
       )}
       <SelectField label="Keputusan" {...register("decision")}>
-        <option value="APPROVE">Setujui laporan</option>
-        <option value="RETURN">Minta perbaikan</option>
+        <ControlOption value="APPROVE">Setujui laporan</ControlOption>
+        <ControlOption value="RETURN">Minta perbaikan</ControlOption>
       </SelectField>
       <TextAreaField label="Catatan (wajib jika dikembalikan)" error={errors.note?.message} {...register("note")} />
       <div className="flex justify-end">
-        <Button type="submit" disabled={isSubmitting}>
+        <ActionButton type="submit" disabled={isSubmitting}>
           Simpan keputusan
-        </Button>
+        </ActionButton>
       </div>
-    </form>
+    </FormBlock>
   );
 }

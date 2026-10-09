@@ -9,15 +9,19 @@ import { Circle, MapContainer, Marker, TileLayer, useMap, useMapEvents } from "r
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useSession } from "@/app/session";
-import { Button } from "@/components/atoms/Button";
 import { TextAreaField, TextField } from "@/components/molecules/Field";
-import { Skeleton } from "@/components/atoms/Skeleton";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { api } from "@/lib/apiClient";
 import type { components } from "@/lib/apiTypes";
 import { errorMessage } from "@/lib/errors";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import type { WorkPlan } from "@/services/workPlanService";
+import { ActionButton } from "@/components/molecules/ActionButton";
+import { LoadingBar } from "@/components/molecules/LoadingBar";
+import { TextBlock } from "@/components/molecules/TextBlock";
+import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
+import { PlainAction } from "@/components/molecules/PlainAction";
+import { FormBlock } from "@/components/molecules/FormBlock";
 
 type S = components["schemas"];
 type PlanLocation = S["PlanLocationOut"];
@@ -84,30 +88,30 @@ export function PlanLocationCard({ plan }: { plan: WorkPlan }) {
   return (
     <section aria-label="Lokasi penugasan" className="mt-6 rounded-panel border border-line bg-surface shadow-card p-4">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-base font-semibold">Lokasi penugasan</h2>
+        <TextBlock as="h2" className="text-base font-semibold">Lokasi penugasan</TextBlock>
         {canEdit && (
-          <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
+          <ActionButton variant="outline" size="sm" onClick={() => setOpen(true)}>
             Atur titik lokasi
-          </Button>
+          </ActionButton>
         )}
       </div>
-      {loc.isPending && <Skeleton className="h-48 w-full" />}
+      {loc.isPending && <LoadingBar className="h-48 w-full" />}
       {loc.isError && (
-        <p className="text-sm text-danger">
+        <TextBlock className="text-sm text-danger">
           Lokasi tidak dapat dimuat.{" "}
-          <Button variant="outline" size="sm" onClick={() => loc.refetch()}>
+          <ActionButton variant="outline" size="sm" onClick={() => loc.refetch()}>
             Coba lagi
-          </Button>
-        </p>
+          </ActionButton>
+        </TextBlock>
       )}
-      {loc.isSuccess && !l && <p className="text-sm text-mist">Titik lokasi absensi belum ditetapkan.</p>}
+      {loc.isSuccess && !l && <TextBlock className="text-sm text-mist">Titik lokasi absensi belum ditetapkan.</TextBlock>}
       {l && (
         <>
-          <p className="font-medium">{l.name}</p>
-          {l.address && <p className="text-sm text-mist">{l.address}</p>}
-          <p className="mb-3 text-sm text-mist">
+          <TextBlock className="font-medium">{l.name}</TextBlock>
+          {l.address && <TextBlock className="text-sm text-mist">{l.address}</TextBlock>}
+          <TextBlock className="mb-3 text-sm text-mist">
             Radius absensi {l.radius_m ?? "-"} m · {l.lat.toFixed(6)}, {l.lng.toFixed(6)}
-          </p>
+          </TextBlock>
           {/* isolate: panel Leaflet (z-index 400+) tidak menimpa dialog (z-50). */}
           <div className="isolate h-56 overflow-hidden rounded-control border border-line md:h-72">
             <MapContainer
@@ -198,24 +202,24 @@ function LocationDialog({ plan, current, onClose }: { plan: WorkPlan; current: P
       onClose={onClose}
       footer={
         <>
-          <Button variant="outline" onClick={onClose} disabled={save.isPending}>
+          <ActionButton variant="outline" onClick={onClose} disabled={save.isPending}>
             Batal
-          </Button>
-          <Button type="submit" form="location-form" disabled={save.isPending}>
+          </ActionButton>
+          <ActionButton type="submit" form="location-form" disabled={save.isPending}>
             {save.isPending ? "Menyimpan..." : "Simpan titik"}
-          </Button>
+          </ActionButton>
         </>
       }
     >
-      <form id="location-form" onSubmit={submit} noValidate>
+      <FormBlock id="location-form" onSubmit={submit} noValidate>
         {formError && (
-          <p role="alert" className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
+          <TextBlock role="alert" className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
             {formError}
-          </p>
+          </TextBlock>
         )}
         {plan.status !== "DRAFT" && (
           <>
-            <p className="mb-3 rounded-control bg-warning-bg px-3 py-2 text-sm text-warning">{RUNNING_NOTE}</p>
+            <TextBlock className="mb-3 rounded-control bg-warning-bg px-3 py-2 text-sm text-warning">{RUNNING_NOTE}</TextBlock>
             <TextAreaField label="Alasan perubahan lokasi (wajib)" value={reason} onChange={(e) => setReason(e.target.value)} error={errors.reason} />
           </>
         )}
@@ -228,24 +232,24 @@ function LocationDialog({ plan, current, onClose }: { plan: WorkPlan; current: P
         />
         {q.length >= 3 && (
           <div className="mb-3 text-sm">
-            {search.isFetching && <p className="text-mist">Mencari...</p>}
-            {search.isError && <p className="text-danger">{errorMessage(search.error)}</p>}
-            {search.isSuccess && search.data.length === 0 && <p className="text-mist">Tidak ada hasil.</p>}
+            {search.isFetching && <TextBlock className="text-mist">Mencari...</TextBlock>}
+            {search.isError && <TextBlock className="text-danger">{errorMessage(search.error)}</TextBlock>}
+            {search.isSuccess && search.data.length === 0 && <TextBlock className="text-mist">Tidak ada hasil.</TextBlock>}
             {search.data && search.data.length > 0 && (
-              <ul aria-label="Hasil pencarian" className="max-h-40 divide-y divide-line overflow-y-auto rounded-control border border-line">
+              <ListBlock aria-label="Hasil pencarian" className="max-h-40 divide-y divide-line overflow-y-auto rounded-control border border-line">
                 {search.data.map((r) => (
-                  <li key={`${r.lat},${r.lng},${r.name}`}>
-                    <button type="button" className="min-h-11 w-full px-3 py-2 text-left hover:bg-muted" onClick={() => pick(r)}>
+                  <ListEntry key={`${r.lat},${r.lng},${r.name}`}>
+                    <PlainAction type="button" className="min-h-11 w-full px-3 py-2 text-left hover:bg-muted" onClick={() => pick(r)}>
                       {r.name}
-                      <span className="block text-xs text-mist">{r.type}</span>
-                    </button>
-                  </li>
+                      <TextBlock as="span" className="block text-xs text-mist">{r.type}</TextBlock>
+                    </PlainAction>
+                  </ListEntry>
                 ))}
-              </ul>
+              </ListBlock>
             )}
           </div>
         )}
-        <p className="mb-1 text-sm text-mist">Klik peta untuk menaruh titik, atau geser penanda.</p>
+        <TextBlock className="mb-1 text-sm text-mist">Klik peta untuk menaruh titik, atau geser penanda.</TextBlock>
         <div className="isolate mb-1 h-64 overflow-hidden rounded-control border border-line">
           <MapContainer center={view.center} zoom={view.zoom} className="h-full w-full">
             <Tiles />
@@ -268,9 +272,9 @@ function LocationDialog({ plan, current, onClose }: { plan: WorkPlan; current: P
             )}
           </MapContainer>
         </div>
-        <p className={`mb-3 text-sm ${errors.point ? "text-danger" : "text-mist"}`}>
+        <TextBlock className={`mb-3 text-sm ${errors.point ? "text-danger" : "text-mist"}`}>
           {errors.point ?? (point ? `Titik: ${point[0].toFixed(6)}, ${point[1].toFixed(6)}` : "Belum ada titik.")}
-        </p>
+        </TextBlock>
         <TextField label="Nama lokasi" value={name} onChange={(e) => setName(e.target.value)} error={errors.name} maxLength={200} />
         <TextField label="Alamat" value={address} onChange={(e) => setAddress(e.target.value)} hint="Opsional." maxLength={500} />
         <TextField
@@ -281,7 +285,7 @@ function LocationDialog({ plan, current, onClose }: { plan: WorkPlan; current: P
           error={errors.radius}
           hint="10–5000 meter."
         />
-      </form>
+      </FormBlock>
     </VmsDialog>
   );
 }

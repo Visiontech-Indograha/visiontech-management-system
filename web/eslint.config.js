@@ -55,50 +55,6 @@ const RULES = {
   organism: composition('Organism', [ATOMS('Organism'), TEMPLATES('Organism')], true),
   molecule: composition('Molecule', [tier('organisms', 'Molecule', 'tidak boleh mengimpor organism'), TEMPLATES('Molecule'), SAME_MOLECULE], true),
 }
-// Aturan lama (sebelum hierarki ketat) untuk berkas di daftar pengecualian.
-const LEGACY = {
-  organism: { 'no-restricted-imports': ['error', { patterns: [PAGES, TEMPLATES('Organism')] }], 'no-restricted-syntax': 'off' },
-  molecule: { 'no-restricted-imports': ['error', { patterns: [PAGES, tier('organisms', 'Molecule', 'tidak boleh mengimpor organism'), TEMPLATES('Molecule'), SAME_MOLECULE] }], 'no-restricted-syntax': 'off' },
-}
-
-// Organism yang masih memakai atom/ikon/HTML langsung. Daftar ini HANYA BOLEH MENYUSUT (docs/33 §7).
-const ORGANISMS_LEGACY = [
-  'src/components/organisms/work-plans/BackToPlansLink.tsx',
-  'src/components/organisms/work-plans/DailyReportsPanel.tsx',
-  'src/components/organisms/work-plans/FinalReportPanel.tsx',
-  'src/components/organisms/work-plans/IncidentPanel.tsx',
-  'src/components/organisms/work-plans/NewSiteDialog.tsx',
-  'src/components/organisms/work-plans/OvertimePanel.tsx',
-  'src/components/organisms/work-plans/PlanActionsPanel.tsx',
-  'src/components/organisms/work-plans/PlanArchivedCard.tsx',
-  'src/components/organisms/work-plans/PlanAttachmentsPanel.tsx',
-  'src/components/organisms/work-plans/PlanChangePanel.tsx',
-  'src/components/organisms/work-plans/PlanCompletionDialog.tsx',
-  'src/components/organisms/work-plans/PlanCreateButton.tsx',
-  'src/components/organisms/work-plans/PlanDayTable.tsx',
-  'src/components/organisms/work-plans/PlanDetailCard.tsx',
-  'src/components/organisms/work-plans/PlanDocumentsPanel.tsx',
-  'src/components/organisms/work-plans/PlanEditorDetailState.tsx',
-  'src/components/organisms/work-plans/PlanEditorForm.tsx',
-  'src/components/organisms/work-plans/PlanFormDialogs.tsx',
-  'src/components/organisms/work-plans/PlanList.tsx',
-  'src/components/organisms/work-plans/PlanListFilter.tsx',
-  'src/components/organisms/work-plans/PlanLocationCard.tsx',
-  'src/components/organisms/work-plans/PlanPendingRequests.tsx',
-  'src/components/organisms/work-plans/PlanPresentationSlides.tsx',
-  'src/components/organisms/work-plans/PlanPreviewDialog.tsx',
-  'src/components/organisms/work-plans/PlanReviseNotice.tsx',
-  'src/components/organisms/work-plans/PlanRevisionHistory.tsx',
-  'src/components/organisms/work-plans/PlanRevisionPanel.tsx',
-  'src/components/organisms/work-plans/PlanStatusBadge.tsx',
-  'src/components/organisms/work-plans/PlanSummaryCard.tsx',
-  'src/components/organisms/work-plans/PresentationSkeleton.tsx',
-  'src/components/organisms/work-plans/PresentationToolbar.tsx',
-  'src/components/organisms/work-plans/PresentationUnavailable.tsx',
-  'src/components/organisms/work-plans/WeeklyReportsPanel.tsx',
-  'src/components/organisms/work-plans/WorkPlanDetailBody.tsx',
-]
-
 export default tseslint.config(
   { ignores: ['dist', 'legacy_ref'] },
   {
@@ -155,5 +111,4 @@ export default tseslint.config(
     ignores: ['**/*.test.tsx'],
     rules: RULES.page,
   },
-  { files: ORGANISMS_LEGACY, rules: LEGACY.organism },
 )

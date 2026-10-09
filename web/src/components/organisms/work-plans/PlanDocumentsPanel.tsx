@@ -4,7 +4,6 @@ import { toast } from "sonner";
 import { useSession } from "@/app/session";
 import { QueryState } from "@/components/molecules/QueryState";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
-import { Button } from "@/components/atoms/Button";
 import { TextAreaField } from "@/components/molecules/Field";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { api, ApiError } from "@/lib/apiClient";
@@ -14,6 +13,11 @@ import { formatDateTime } from "@/lib/format";
 import { signerRoleLabel } from "@/lib/labels";
 import type { WorkPlan } from "@/services/workPlanService";
 import { PlanPreviewDialog } from "./PlanPreviewDialog";
+import { ActionButton } from "@/components/molecules/ActionButton";
+import { TextBlock } from "@/components/molecules/TextBlock";
+import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
+import { TableBlock, TableBlockBody, TableBlockCell, TableBlockHead, TableBlockHeaderCell, TableBlockRow } from "@/components/molecules/TableBlock";
+import { FormBlock } from "@/components/molecules/FormBlock";
 
 type PlanDocument = components["schemas"]["PlanDocumentOut"];
 type Signature = components["schemas"]["SignatureOut"];
@@ -50,13 +54,13 @@ export function PlanDocumentsPanel({ plan }: { plan: WorkPlan }) {
   });
   return (
     <section aria-label="Dokumen" className="mt-6">
-      <h2 className="mb-3 text-base font-semibold">Dokumen</h2>
+      <TextBlock as="h2" className="mb-3 text-base font-semibold">Dokumen</TextBlock>
       <QueryState query={docs} errorText="Dokumen tidak dapat dimuat." empty={docs.data?.length === 0} emptyText="Belum ada dokumen rencana kerja.">
-        <ul className="space-y-4">
+        <ListBlock className="space-y-4">
           {docs.data?.map((d) => (
             <DocumentCard key={d.id} doc={d} />
           ))}
-        </ul>
+        </ListBlock>
       </QueryState>
     </section>
   );
@@ -75,24 +79,24 @@ function DocumentCard({ doc }: { doc: PlanDocument }) {
   });
 
   return (
-    <li className="rounded-panel border border-line bg-surface shadow-card p-4">
+    <ListEntry className="rounded-panel border border-line bg-surface shadow-card p-4">
       <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
         <div>
-          <p className="font-semibold">
+          <TextBlock className="font-semibold">
             {doc.number} · versi {doc.version}
-          </p>
-          <p className="text-sm text-mist">
+          </TextBlock>
+          <TextBlock className="text-sm text-mist">
             {KIND_LABEL[doc.kind] ?? doc.kind} · terbit {formatDateTime(doc.issued_at)}
             {doc.accepted_at && ` · diterima ${formatDateTime(doc.accepted_at)}`}
-          </p>
-          {doc.reason && <p className="text-sm text-mist">Alasan: {doc.reason}</p>}
+          </TextBlock>
+          {doc.reason && <TextBlock className="text-sm text-mist">Alasan: {doc.reason}</TextBlock>}
         </div>
         <div className="flex items-center gap-2">
           <StatusBadge status={doc.status} />
-          <Button variant="outline" size="sm" onClick={() => setViewing(true)}>
+          <ActionButton variant="outline" size="sm" onClick={() => setViewing(true)}>
             Lihat dokumen
-          </Button>
-          <Button
+          </ActionButton>
+          <ActionButton
             variant="outline"
             size="sm"
             disabled={busy}
@@ -103,60 +107,60 @@ function DocumentCard({ doc }: { doc: PlanDocument }) {
             }}
           >
             {busy ? "Mengunduh..." : "Unduh PDF"}
-          </Button>
+          </ActionButton>
         </div>
       </div>
       {viewing && (
         <PlanPreviewDialog title={`${doc.number} · versi ${doc.version}`} path={`/documents/${doc.id}/html`} onClose={() => setViewing(false)} />
       )}
-      <p className="mb-2 break-all text-xs text-mist">SHA-256: {doc.sha256}</p>
+      <TextBlock className="mb-2 break-all text-xs text-mist">SHA-256: {doc.sha256}</TextBlock>
       <QueryState query={sigs} errorText="Tanda tangan tidak dapat dimuat." empty={sigs.data?.length === 0} emptyText="Belum ada tanda tangan.">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-line text-mist">
-              <tr>
-                <th className="py-2 pr-3 font-medium">Penanda tangan</th>
-                <th className="py-2 pr-3 font-medium">Peran</th>
-                <th className="py-2 pr-3 font-medium">Waktu</th>
-                <th className="py-2 pr-3 font-medium">Status</th>
-                {canRevoke && <th className="py-2 text-right font-medium">Aksi</th>}
-              </tr>
-            </thead>
-            <tbody>
+          <TableBlock className="w-full text-left text-sm">
+            <TableBlockHead className="border-b border-line text-mist">
+              <TableBlockRow>
+                <TableBlockHeaderCell className="py-2 pr-3 font-medium">Penanda tangan</TableBlockHeaderCell>
+                <TableBlockHeaderCell className="py-2 pr-3 font-medium">Peran</TableBlockHeaderCell>
+                <TableBlockHeaderCell className="py-2 pr-3 font-medium">Waktu</TableBlockHeaderCell>
+                <TableBlockHeaderCell className="py-2 pr-3 font-medium">Status</TableBlockHeaderCell>
+                {canRevoke && <TableBlockHeaderCell className="py-2 text-right font-medium">Aksi</TableBlockHeaderCell>}
+              </TableBlockRow>
+            </TableBlockHead>
+            <TableBlockBody>
               {sigs.data?.map((s) => (
-                <tr key={s.id} className="border-b border-line last:border-0">
-                  <td className="py-2 pr-3">
-                    <span className="font-medium">{s.signer_name}</span>
-                    <span className="block text-xs text-mist">{s.signer_position}</span>
-                  </td>
-                  <td className="py-2 pr-3">{signerRoleLabel(s.signer_role)}</td>
-                  <td className="py-2 pr-3">{formatDateTime(s.signed_at)}</td>
-                  <td className="py-2 pr-3">
+                <TableBlockRow key={s.id} className="border-b border-line last:border-0">
+                  <TableBlockCell className="py-2 pr-3">
+                    <TextBlock as="span" className="font-medium">{s.signer_name}</TextBlock>
+                    <TextBlock as="span" className="block text-xs text-mist">{s.signer_position}</TextBlock>
+                  </TableBlockCell>
+                  <TableBlockCell className="py-2 pr-3">{signerRoleLabel(s.signer_role)}</TableBlockCell>
+                  <TableBlockCell className="py-2 pr-3">{formatDateTime(s.signed_at)}</TableBlockCell>
+                  <TableBlockCell className="py-2 pr-3">
                     {s.revoked_at ? (
-                      <span className="text-danger" title={s.revoked_reason ?? undefined}>
+                      <TextBlock as="span" className="text-danger" title={s.revoked_reason ?? undefined}>
                         Dicabut {formatDateTime(s.revoked_at)}
-                      </span>
+                      </TextBlock>
                     ) : (
                       "Berlaku"
                     )}
-                  </td>
+                  </TableBlockCell>
                   {canRevoke && (
-                    <td className="py-2 text-right">
+                    <TableBlockCell className="py-2 text-right">
                       {!s.revoked_at && (
-                        <Button variant="outline" size="sm" onClick={() => setRevoking(s)}>
+                        <ActionButton variant="outline" size="sm" onClick={() => setRevoking(s)}>
                           Cabut tanda tangan
-                        </Button>
+                        </ActionButton>
                       )}
-                    </td>
+                    </TableBlockCell>
                   )}
-                </tr>
+                </TableBlockRow>
               ))}
-            </tbody>
-          </table>
+            </TableBlockBody>
+          </TableBlock>
         </div>
       </QueryState>
       {revoking && <RevokeDialog documentId={doc.id} signature={revoking} onClose={() => setRevoking(null)} />}
-    </li>
+    </ListEntry>
   );
 }
 
@@ -190,27 +194,27 @@ function RevokeDialog({ documentId, signature, onClose }: { documentId: string; 
       onClose={onClose}
       footer={
         <>
-          <Button variant="outline" onClick={onClose} disabled={revoke.isPending}>
+          <ActionButton variant="outline" onClick={onClose} disabled={revoke.isPending}>
             Batal
-          </Button>
-          <Button type="submit" form="revoke-form" variant="destructive" disabled={revoke.isPending}>
+          </ActionButton>
+          <ActionButton type="submit" form="revoke-form" variant="destructive" disabled={revoke.isPending}>
             {revoke.isPending ? "Mencabut..." : "Cabut"}
-          </Button>
+          </ActionButton>
         </>
       }
     >
-      <form id="revoke-form" onSubmit={submit} noValidate>
+      <FormBlock id="revoke-form" onSubmit={submit} noValidate>
         {formError && (
-          <p role="alert" className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
+          <TextBlock role="alert" className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
             {formError}
-          </p>
+          </TextBlock>
         )}
-        <p className="mb-3 text-sm">
+        <TextBlock className="mb-3 text-sm">
           Tanda tangan {signature.signer_name} ({signerRoleLabel(signature.signer_role)}) akan dicabut. Pencabutan tercatat di audit dan
           tidak dapat dibatalkan.
-        </p>
+        </TextBlock>
         <TextAreaField label="Alasan pencabutan" value={reason} onChange={(e) => setReason(e.target.value)} error={error ?? undefined} />
-      </form>
+      </FormBlock>
     </VmsDialog>
   );
 }

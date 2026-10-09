@@ -4,7 +4,6 @@ import { useForm, useWatch } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { z } from "zod";
-import { Button } from "@/components/atoms/Button";
 import { SelectField, TextAreaField, TextField } from "@/components/molecules/Field";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { errorMessage } from "@/lib/errors";
@@ -21,6 +20,10 @@ import {
   type WorkPlan,
 } from "@/services/workPlanService";
 import { usePlanTeam } from "@/services/reportService";
+import { ActionButton } from "@/components/molecules/ActionButton";
+import { TextBlock } from "@/components/molecules/TextBlock";
+import { ControlInput, ControlLabel, ControlOption, FormBlock } from "@/components/molecules/FormBlock";
+import { FieldGroup, FieldGroupLegend } from "@/components/molecules/FieldGroup";
 
 function FormDialog({
   title,
@@ -48,23 +51,23 @@ function FormDialog({
       onClose={onClose}
       footer={
         <>
-          <Button variant="outline" onClick={onClose} disabled={submitting}>
+          <ActionButton variant="outline" onClick={onClose} disabled={submitting}>
             Batal
-          </Button>
-          <Button type="submit" form={formId} disabled={submitting}>
+          </ActionButton>
+          <ActionButton type="submit" form={formId} disabled={submitting}>
             {submitting ? "Menyimpan..." : submitLabel}
-          </Button>
+          </ActionButton>
         </>
       }
     >
-      <form id={formId} onSubmit={onSubmit} noValidate className="max-h-[65vh] overflow-y-auto px-1">
+      <FormBlock id={formId} onSubmit={onSubmit} noValidate className="max-h-[65vh] overflow-y-auto px-1">
         {formError && (
-          <p role="alert" className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
+          <TextBlock role="alert" className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
             {formError}
-          </p>
+          </TextBlock>
         )}
         {children}
-      </form>
+      </FormBlock>
     </VmsDialog>
   );
 }
@@ -167,11 +170,11 @@ export function CreatePlanDialog({ onClose }: { onClose: () => void }) {
     <FormDialog title="Buat rencana kerja" formId="create-plan" submitting={isSubmitting} formError={formError} onClose={onClose} onSubmit={onSubmit}>
       <TextField label="Judul pekerjaan" error={errors.title?.message} {...register("title")} />
       <SelectField label="Lokasi pekerjaan" error={errors.site_id?.message} {...register("site_id")}>
-        <option value="">Pilih lokasi</option>
+        <ControlOption value="">Pilih lokasi</ControlOption>
         {sites.data?.map((s) => (
-          <option key={s.id} value={s.id}>
+          <ControlOption key={s.id} value={s.id}>
             {s.name}
-          </option>
+          </ControlOption>
         ))}
       </SelectField>
       <TextAreaField label="Uraian" error={errors.description?.message} {...register("description")} />
@@ -181,50 +184,50 @@ export function CreatePlanDialog({ onClose }: { onClose: () => void }) {
       </div>
       {options.data?.can_choose_pm ? (
         <SelectField label="PM pekerjaan" error={errors.pm_employee_id?.message} {...register("pm_employee_id")}>
-          <option value="">Pilih PM</option>
+          <ControlOption value="">Pilih PM</ControlOption>
           {options.data.pm_options.map((employee) => (
-            <option key={employee.id} value={employee.id}>{employee.full_name} · {employee.position}</option>
+            <ControlOption key={employee.id} value={employee.id}>{employee.full_name} · {employee.position}</ControlOption>
           ))}
         </SelectField>
       ) : (
-        <p className="mb-4 rounded-control bg-canvas px-3 py-2 text-sm text-mist">PM pekerjaan otomatis adalah Anda.</p>
+        <TextBlock className="mb-4 rounded-control bg-canvas px-3 py-2 text-sm text-mist">PM pekerjaan otomatis adalah Anda.</TextBlock>
       )}
       <SelectField label="Ketua tim" error={errors.leader_employee_id?.message} {...register("leader_employee_id")}>
-        <option value="">{options.isPending ? "Memuat..." : "Pilih ketua"}</option>
+        <ControlOption value="">{options.isPending ? "Memuat..." : "Pilih ketua"}</ControlOption>
         {options.data?.personnel_options.filter((employee) => employee.id !== effectivePm).map((employee) => (
-          <option key={employee.id} value={employee.id}>{employee.full_name} · {employee.position}</option>
+          <ControlOption key={employee.id} value={employee.id}>{employee.full_name} · {employee.position}</ControlOption>
         ))}
       </SelectField>
-      <fieldset className="mb-4">
-        <legend className="mb-2 text-sm font-medium">Anggota tim</legend>
+      <FieldGroup className="mb-4">
+        <FieldGroupLegend className="mb-2 text-sm font-medium">Anggota tim</FieldGroupLegend>
         <div className="max-h-48 space-y-1 overflow-y-auto rounded-control border border-line p-2">
           {options.data?.personnel_options
             .filter((employee) => employee.id !== effectivePm && employee.id !== selectedLeader)
             .map((employee) => (
-              <label key={employee.id} className="flex min-h-11 items-center gap-2 text-sm">
-                <input type="checkbox" className="size-5" value={employee.id} {...register("member_employee_ids")} />
+              <ControlLabel key={employee.id} className="flex min-h-11 items-center gap-2 text-sm">
+                <ControlInput type="checkbox" className="size-5" value={employee.id} {...register("member_employee_ids")} />
                 {employee.full_name} · {employee.position}
-              </label>
+              </ControlLabel>
             ))}
         </div>
-        {errors.member_employee_ids && <p className="mt-1 text-sm text-destructive">{errors.member_employee_ids.message}</p>}
-      </fieldset>
+        {errors.member_employee_ids && <TextBlock className="mt-1 text-sm text-destructive">{errors.member_employee_ids.message}</TextBlock>}
+      </FieldGroup>
       <SelectField
         label="Kendaraan (opsional)"
         hint={vehicles.isError ? "Daftar kendaraan tidak dapat dimuat." : "Hanya kendaraan berstatus tersedia dan belum terikat rencana kerja."}
         {...register("vehicle_id")}
       >
-        <option value="">Tanpa kendaraan</option>
+        <ControlOption value="">Tanpa kendaraan</ControlOption>
         {vehicles.data?.map((vehicle) => (
-          <option key={vehicle.id} value={vehicle.id}>{vehicle.name} · {vehicle.code}</option>
+          <ControlOption key={vehicle.id} value={vehicle.id}>{vehicle.name} · {vehicle.code}</ControlOption>
         ))}
       </SelectField>
       {selectedVehicle && (
         <SelectField label="Pengemudi kendaraan" error={errors.driver_employee_id?.message} {...register("driver_employee_id")}>
-          <option value="">Pilih pengemudi</option>
+          <ControlOption value="">Pilih pengemudi</ControlOption>
           {options.data?.personnel_options
             .filter((employee) => employee.id === selectedLeader || selectedMembers.includes(employee.id))
-            .map((employee) => <option key={employee.id} value={employee.id}>{employee.full_name}</option>)}
+            .map((employee) => <ControlOption key={employee.id} value={employee.id}>{employee.full_name}</ControlOption>)}
         </SelectField>
       )}
     </FormDialog>
@@ -340,29 +343,29 @@ export function TeamDialog({ plan, onClose }: { plan: WorkPlan; onClose: () => v
   return (
     <FormDialog title="Atur tim" formId="team" submitting={isSubmitting} formError={formError} onClose={onClose} onSubmit={onSubmit}>
       <SelectField label="Ketua tim" error={errors.leader_employee_id?.message} {...register("leader_employee_id")}>
-        <option value="">{ready ? "Pilih ketua" : "Memuat..."}</option>
+        <ControlOption value="">{ready ? "Pilih ketua" : "Memuat..."}</ControlOption>
         {people
           .filter((employee) => employee.id !== plan.pm_employee_id)
-          .map((employee) => <option key={employee.id} value={employee.id}>{employee.full_name} · {employee.position}</option>)}
+          .map((employee) => <ControlOption key={employee.id} value={employee.id}>{employee.full_name} · {employee.position}</ControlOption>)}
       </SelectField>
-      <fieldset className="mb-4">
-        <legend className="mb-2 text-sm font-medium">Anggota tim</legend>
+      <FieldGroup className="mb-4">
+        <FieldGroupLegend className="mb-2 text-sm font-medium">Anggota tim</FieldGroupLegend>
         <div className="max-h-56 space-y-1 overflow-y-auto rounded-control border border-line p-2">
           {people
             .filter((e) => e.id !== leader && e.id !== plan.pm_employee_id)
             .map((e) => (
-              <label key={e.id} className="flex min-h-11 items-center gap-2 text-sm">
-                <input type="checkbox" className="size-5" value={e.id} {...register("member_employee_ids")} />
+              <ControlLabel key={e.id} className="flex min-h-11 items-center gap-2 text-sm">
+                <ControlInput type="checkbox" className="size-5" value={e.id} {...register("member_employee_ids")} />
                 {e.full_name} · {e.position}
-              </label>
+              </ControlLabel>
             ))}
         </div>
         {errors.member_employee_ids && (
-          <p role="alert" className="mt-1 text-sm text-destructive">
+          <TextBlock role="alert" className="mt-1 text-sm text-destructive">
             {errors.member_employee_ids.message}
-          </p>
+          </TextBlock>
         )}
-      </fieldset>
+      </FieldGroup>
     </FormDialog>
   );
 }

@@ -4,13 +4,15 @@ import { toast } from "sonner";
 import { useSession } from "@/app/session";
 import { FilePreview } from "@/components/molecules/FilePreview";
 import { QueryState } from "@/components/molecules/QueryState";
-import { Button } from "@/components/atoms/Button";
 import { TextField } from "@/components/molecules/Field";
 import { api } from "@/lib/apiClient";
 import type { components } from "@/lib/apiTypes";
 import { errorMessage } from "@/lib/errors";
 import type { WorkPlan } from "@/services/workPlanService";
 import { oversize, uploadFiles } from "@/services/uploadService";
+import { ActionButton } from "@/components/molecules/ActionButton";
+import { TextBlock } from "@/components/molecules/TextBlock";
+import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
 
 type Attachment = components["schemas"]["AttachmentResponse"];
 const key = (planId: string) => ["plan-attachments", planId] as const;
@@ -70,29 +72,29 @@ export function PlanAttachmentsPanel({ plan }: { plan: WorkPlan }) {
 
   return (
     <section aria-label="Lampiran rencana kerja" className="mt-6 rounded-panel border border-line bg-surface shadow-card p-4">
-      <h2 className="mb-3 text-base font-semibold">Lampiran</h2>
+      <TextBlock as="h2" className="mb-3 text-base font-semibold">Lampiran</TextBlock>
       {error && (
-        <p role="alert" className="mb-3 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
+        <TextBlock role="alert" className="mb-3 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
           {error}
-        </p>
+        </TextBlock>
       )}
       <QueryState query={list} errorText="Lampiran tidak dapat dimuat." empty={current.length === 0} emptyText="Belum ada lampiran.">
-        <ul className="space-y-3">
+        <ListBlock className="space-y-3">
           {current.map((a) => (
-            <li key={a.file_id} className="flex flex-wrap items-center gap-3">
+            <ListEntry key={a.file_id} className="flex flex-wrap items-center gap-3">
               <FilePreview fileId={a.file_id} fileName={a.file_name} />
               <div className="min-w-0 flex-1 text-sm">
-                <p className="truncate font-medium">{a.file_name}</p>
-                <p className="text-mist">{formatSize(a.byte_size)}</p>
+                <TextBlock className="truncate font-medium">{a.file_name}</TextBlock>
+                <TextBlock className="text-mist">{formatSize(a.byte_size)}</TextBlock>
               </div>
               {editable && (
-                <Button variant="outline" onClick={() => remove(a.file_id)} disabled={busy} aria-label={`Hapus ${a.file_name}`}>
+                <ActionButton variant="outline" onClick={() => remove(a.file_id)} disabled={busy} aria-label={`Hapus ${a.file_name}`}>
                   Hapus
-                </Button>
+                </ActionButton>
               )}
-            </li>
+            </ListEntry>
           ))}
-        </ul>
+        </ListBlock>
       </QueryState>
       {editable && (
         <div className="mt-4">

@@ -1,7 +1,8 @@
 import clsx from "clsx";
 import { Fragment } from "react";
-import { NavLink } from "react-router-dom";
 import type { NavItem } from "@/app/navigation";
+import { MenuLink } from "@/components/molecules/Links";
+import { TextBlock } from "@/components/molecules/TextBlock";
 
 /** Menu utama di rail kiri, dikelompokkan per `group`; label disembunyikan saat rail diciutkan. */
 export function SidebarNav({ items, collapsed, onNavigate }: {
@@ -18,9 +19,9 @@ export function SidebarNav({ items, collapsed, onNavigate }: {
         return (
           <Fragment key={item.path}>
             {newGroup && !collapsed && (
-              <p className="overline px-3 pb-1.5 pt-5">{item.group}</p>
+              <TextBlock className="overline px-3 pb-1.5 pt-5">{item.group}</TextBlock>
             )}
-            <NavLink
+            <MenuLink
               to={item.path}
               end
               title={collapsed ? item.label : undefined}
@@ -36,8 +37,8 @@ export function SidebarNav({ items, collapsed, onNavigate }: {
               }
             >
               <Icon size={19} strokeWidth={1.75} aria-hidden className="shrink-0" />
-              <span className={clsx(collapsed && "md:sr-only")}>{item.label}</span>
-            </NavLink>
+              <TextBlock as="span" className={clsx(collapsed && "md:sr-only")}>{item.label}</TextBlock>
+            </MenuLink>
           </Fragment>
         );
       })}

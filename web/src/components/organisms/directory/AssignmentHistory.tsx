@@ -3,37 +3,40 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
-import { Button } from "@/components/atoms/Button";
 import { SelectField, TextField } from "@/components/molecules/Field";
-import { Skeleton } from "@/components/atoms/Skeleton";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { errorMessage } from "@/lib/errors";
 import { formatDate } from "@/lib/format";
 import { useAssignments, usePromoteEmployee, useUnits, type Employee } from "@/services/employeeService";
+import { ActionButton } from "@/components/molecules/ActionButton";
+import { LoadingBar } from "@/components/molecules/LoadingBar";
+import { TextBlock } from "@/components/molecules/TextBlock";
+import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
+import { ControlOption, FormBlock } from "@/components/molecules/FormBlock";
 
 /** Riwayat jabatan/penempatan (M2) — riwayat lama tetap tersimpan saat mutasi/promosi. */
 export function AssignmentHistory({ employee }: { employee: Employee }) {
   const history = useAssignments(employee.id);
   return (
     <section aria-label="Riwayat jabatan" className="mb-8 max-w-xl">
-      <h2 className="mb-3 text-base font-semibold">Riwayat jabatan</h2>
+      <TextBlock as="h2" className="mb-3 text-base font-semibold">Riwayat jabatan</TextBlock>
       <div className="rounded-panel border border-line bg-surface shadow-card px-5 py-2 text-sm">
-        {history.isPending && <Skeleton className="my-2 h-4 w-2/3" />}
-        {history.isError && <p className="py-2 text-danger">Riwayat tidak dapat dimuat.</p>}
-        {history.data?.length === 0 && <p className="py-2 text-mist">Belum ada riwayat penempatan.</p>}
-        <ol>
+        {history.isPending && <LoadingBar className="my-2 h-4 w-2/3" />}
+        {history.isError && <TextBlock className="py-2 text-danger">Riwayat tidak dapat dimuat.</TextBlock>}
+        {history.data?.length === 0 && <TextBlock className="py-2 text-mist">Belum ada riwayat penempatan.</TextBlock>}
+        <ListBlock as="ol">
           {history.data?.map((a) => (
-            <li key={a.id} className="flex flex-col gap-0.5 border-b border-line py-2 last:border-0 md:flex-row md:justify-between">
-              <span>
-                <span className="font-medium">{a.position}</span>
-                {a.unit_name && <span className="text-mist"> · {a.unit_name}</span>}
-              </span>
-              <span className="text-mist">
+            <ListEntry key={a.id} className="flex flex-col gap-0.5 border-b border-line py-2 last:border-0 md:flex-row md:justify-between">
+              <TextBlock as="span">
+                <TextBlock as="span" className="font-medium">{a.position}</TextBlock>
+                {a.unit_name && <TextBlock as="span" className="text-mist"> · {a.unit_name}</TextBlock>}
+              </TextBlock>
+              <TextBlock as="span" className="text-mist">
                 {formatDate(a.valid_from)} – {a.valid_to ? formatDate(a.valid_to) : "sekarang"}
-              </span>
-            </li>
+              </TextBlock>
+            </ListEntry>
           ))}
-        </ol>
+        </ListBlock>
       </div>
     </section>
   );
@@ -83,34 +86,34 @@ export function PromoteDialog({ employee, onClose }: { employee: Employee; onClo
       onClose={onClose}
       footer={
         <>
-          <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
+          <ActionButton variant="outline" onClick={onClose} disabled={isSubmitting}>
             Batal
-          </Button>
-          <Button type="submit" form="promote-form" disabled={isSubmitting}>
+          </ActionButton>
+          <ActionButton type="submit" form="promote-form" disabled={isSubmitting}>
             {isSubmitting ? "Menyimpan..." : "Simpan"}
-          </Button>
+          </ActionButton>
         </>
       }
     >
-      <form id="promote-form" onSubmit={onSubmit} noValidate>
+      <FormBlock id="promote-form" onSubmit={onSubmit} noValidate>
         {formError && (
-          <p role="alert" className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
+          <TextBlock role="alert" className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
             {formError}
-          </p>
+          </TextBlock>
         )}
         <TextField label="Jabatan" error={errors.position?.message} {...register("position")} />
         <SelectField label="Unit" error={errors.unit_id?.message} {...register("unit_id")}>
-          <option value="" disabled>
+          <ControlOption value="" disabled>
             {units.isPending ? "Memuat unit..." : "Pilih unit"}
-          </option>
+          </ControlOption>
           {units.data?.map((u) => (
-            <option key={u.id} value={u.id}>
+            <ControlOption key={u.id} value={u.id}>
               {u.name}
-            </option>
+            </ControlOption>
           ))}
         </SelectField>
         <TextField label="Berlaku mulai" type="date" error={errors.valid_from?.message} {...register("valid_from")} />
-      </form>
+      </FormBlock>
     </VmsDialog>
   );
 }

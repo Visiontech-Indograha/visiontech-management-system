@@ -4,11 +4,13 @@ import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { z } from "zod";
-import { Button } from "@/components/atoms/Button";
 import { SelectField, TextField } from "@/components/molecules/Field";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { errorMessage } from "@/lib/errors";
 import { useCreateEmployee, useOffboardEmployee, useUnits, type Employee } from "@/services/employeeService";
+import { ActionButton } from "@/components/molecules/ActionButton";
+import { TextBlock } from "@/components/molecules/TextBlock";
+import { ControlOption, FormBlock } from "@/components/molecules/FormBlock";
 
 const today = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(new Date());
 
@@ -26,9 +28,9 @@ type CreateValues = z.infer<typeof createSchema>;
 function FormError({ message }: { message: string | null }) {
   if (!message) return null;
   return (
-    <p role="alert" className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
+    <TextBlock role="alert" className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
       {message}
-    </p>
+    </TextBlock>
   );
 }
 
@@ -66,34 +68,34 @@ export function CreateEmployeeDialog({ onClose }: { onClose: () => void }) {
       onClose={onClose}
       footer={
         <>
-          <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
+          <ActionButton variant="outline" onClick={onClose} disabled={isSubmitting}>
             Batal
-          </Button>
-          <Button type="submit" form="create-employee-form" disabled={isSubmitting}>
+          </ActionButton>
+          <ActionButton type="submit" form="create-employee-form" disabled={isSubmitting}>
             {isSubmitting ? "Menyimpan..." : "Simpan"}
-          </Button>
+          </ActionButton>
         </>
       }
     >
-      <form id="create-employee-form" onSubmit={onSubmit} noValidate>
+      <FormBlock id="create-employee-form" onSubmit={onSubmit} noValidate>
         <FormError message={formError} />
         <TextField label="No. karyawan" error={errors.employee_no?.message} {...register("employee_no")} />
         <TextField label="Nama lengkap" error={errors.full_name?.message} {...register("full_name")} />
         <TextField label="Jabatan" error={errors.position?.message} {...register("position")} />
         <SelectField label="Unit" error={errors.unit_id?.message} {...register("unit_id")}>
-          <option value="" disabled>
+          <ControlOption value="" disabled>
             {units.isPending ? "Memuat unit..." : "Pilih unit"}
-          </option>
+          </ControlOption>
           {units.data?.map((u) => (
-            <option key={u.id} value={u.id}>
+            <ControlOption key={u.id} value={u.id}>
               {u.name}
-            </option>
+            </ControlOption>
           ))}
         </SelectField>
         <TextField label="Tanggal bergabung" type="date" error={errors.join_date?.message} {...register("join_date")} />
         <TextField label="Email (opsional)" type="email" error={errors.email?.message} {...register("email")} />
         <TextField label="No. telepon (opsional)" error={errors.phone?.message} {...register("phone")} />
-      </form>
+      </FormBlock>
     </VmsDialog>
   );
 }
@@ -131,22 +133,22 @@ export function OffboardDialog({ employee, onClose }: { employee: Employee; onCl
       onClose={onClose}
       footer={
         <>
-          <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
+          <ActionButton variant="outline" onClick={onClose} disabled={isSubmitting}>
             Batal
-          </Button>
-          <Button type="submit" form="offboard-form" variant="destructive" disabled={isSubmitting}>
+          </ActionButton>
+          <ActionButton type="submit" form="offboard-form" variant="destructive" disabled={isSubmitting}>
             {isSubmitting ? "Memproses..." : "Akhiri masa kerja"}
-          </Button>
+          </ActionButton>
         </>
       }
     >
-      <form id="offboard-form" onSubmit={onSubmit} noValidate>
+      <FormBlock id="offboard-form" onSubmit={onSubmit} noValidate>
         <FormError message={formError} />
-        <p className="mb-4 text-sm text-mist">
+        <TextBlock className="mb-4 text-sm text-mist">
           Akun login karyawan ini dinonaktifkan. Riwayat rencana kerja, absensi, dan dokumen tetap tersimpan.
-        </p>
+        </TextBlock>
         <TextField label="Alasan" error={errors.reason?.message} {...register("reason")} />
-      </form>
+      </FormBlock>
     </VmsDialog>
   );
 }

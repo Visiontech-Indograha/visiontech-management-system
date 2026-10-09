@@ -1,8 +1,10 @@
 import type { UseQueryResult } from "@tanstack/react-query";
-import { Button } from "@/components/atoms/Button";
 import { QueryState } from "@/components/molecules/QueryState";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
 import type { Asset } from "@/services/assetService";
+import { ActionButton } from "@/components/molecules/ActionButton";
+import { TextBlock } from "@/components/molecules/TextBlock";
+import { ListBlock, ListEntry, ListPair } from "@/components/molecules/ListBlock";
 
 /** Dialog aset yang dibuka dari kartu. */
 export type AssetAction = { kind: "reserve" | "release" | "check" | "return" | "verify" | "history"; asset: Asset };
@@ -18,53 +20,53 @@ export function AssetList({ assets, canManage, canReserve, isBorrowingLeader, on
 }) {
   return (
       <QueryState query={assets} errorText="Daftar aset tidak dapat dimuat." empty={assets.data?.length === 0} emptyText="Belum ada kendaraan atau alat.">
-        <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <ListBlock className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {assets.data?.map((a) => (
-            <li key={a.id} className="flex flex-col gap-2 rounded-panel border border-line bg-surface shadow-card p-4">
+            <ListEntry key={a.id} className="flex flex-col gap-2 rounded-panel border border-line bg-surface shadow-card p-4">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-semibold tracking-wide text-mist">{a.kind === "VEHICLE" ? "KENDARAAN" : "PERALATAN"}</span>
+                <TextBlock as="span" className="text-xs font-semibold tracking-wide text-mist">{a.kind === "VEHICLE" ? "KENDARAAN" : "PERALATAN"}</TextBlock>
                 <StatusBadge status={a.status} />
               </div>
-              <h2 className="font-medium">{a.name}</h2>
-              <dl className="text-sm text-mist">
-                <div>Kode: {a.code}</div>
-                <div>Kondisi: {a.condition}</div>
-                {a.vehicle_type && <div>Jenis: {a.vehicle_type}</div>}
-                {a.plan_number && <div>Dipakai: rencana kerja {a.plan_number}</div>}
+              <TextBlock as="h2" className="font-medium">{a.name}</TextBlock>
+              <ListBlock as="dl" className="text-sm text-mist">
+                <ListPair>Kode: {a.code}</ListPair>
+                <ListPair>Kondisi: {a.condition}</ListPair>
+                {a.vehicle_type && <ListPair>Jenis: {a.vehicle_type}</ListPair>}
+                {a.plan_number && <ListPair>Dipakai: rencana kerja {a.plan_number}</ListPair>}
                 {a.pending_return_id && (
-                  <div className="mt-1 text-warning">
+                  <ListPair className="mt-1 text-warning">
                     Pengembalian diajukan {a.return_requested_by_name ?? "ketua tim"} · kondisi {a.return_condition}
                     {a.return_note ? ` — ${a.return_note}` : ""}
-                  </div>
+                  </ListPair>
                 )}
-              </dl>
+              </ListBlock>
               <div className="mt-auto flex flex-col gap-2 md:flex-row md:flex-wrap">
-                {canReserve && a.status === "AVAILABLE" && <Button onClick={() => onOpen({ kind: "reserve", asset: a })}>Alokasikan</Button>}
+                {canReserve && a.status === "AVAILABLE" && <ActionButton onClick={() => onOpen({ kind: "reserve", asset: a })}>Alokasikan</ActionButton>}
                 {canReserve && a.status === "RESERVED" && (
-                  <Button variant="outline" onClick={() => onOpen({ kind: "release", asset: a })}>
+                  <ActionButton variant="outline" onClick={() => onOpen({ kind: "release", asset: a })}>
                     Lepas reservasi
-                  </Button>
+                  </ActionButton>
                 )}
                 {isBorrowingLeader(a) && a.allocation_id && !a.pending_return_id && ["IN_USE", "RESERVED"].includes(a.status) && (
-                  <Button variant="outline" onClick={() => onOpen({ kind: "return", asset: a })}>
+                  <ActionButton variant="outline" onClick={() => onOpen({ kind: "return", asset: a })}>
                     Ajukan pengembalian
-                  </Button>
+                  </ActionButton>
                 )}
                 {canManage && a.status === "RETURN_PENDING" && a.pending_return_id && (
-                  <Button onClick={() => onOpen({ kind: "verify", asset: a })}>Periksa pengembalian</Button>
+                  <ActionButton onClick={() => onOpen({ kind: "verify", asset: a })}>Periksa pengembalian</ActionButton>
                 )}
-                <Button variant="ghost" onClick={() => onOpen({ kind: "history", asset: a })}>
+                <ActionButton variant="ghost" onClick={() => onOpen({ kind: "history", asset: a })}>
                   Riwayat
-                </Button>
+                </ActionButton>
                 {a.kind === "VEHICLE" && a.status === "RESERVED" && (
-                  <Button variant="outline" onClick={() => onOpen({ kind: "check", asset: a })}>
+                  <ActionButton variant="outline" onClick={() => onOpen({ kind: "check", asset: a })}>
                     Periksa Kendaraan
-                  </Button>
+                  </ActionButton>
                 )}
               </div>
-            </li>
+            </ListEntry>
           ))}
-        </ul>
+        </ListBlock>
       </QueryState>
   );
 }

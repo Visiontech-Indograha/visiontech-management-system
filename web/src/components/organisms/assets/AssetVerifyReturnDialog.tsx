@@ -7,6 +7,8 @@ import { errorMessage } from "@/lib/errors";
 import { verifySchema, type VerifyValues } from "@/schemas/assetSchemas";
 import { useVerifyReturn, type Asset } from "@/services/assetService";
 import { AssetFormDialog } from "./AssetFormDialog";
+import { TextBlock } from "@/components/molecules/TextBlock";
+import { ControlOption } from "@/components/molecules/FormBlock";
 
 /** Petugas aset: terima → aset tersedia lagi; tolak → kembali ke tim untuk diperbaiki (R9, tanpa jalan buntu). */
 export function AssetVerifyReturnDialog({ asset, onClose }: { asset: Asset; onClose: () => void }) {
@@ -29,13 +31,13 @@ export function AssetVerifyReturnDialog({ asset, onClose }: { asset: Asset; onCl
   });
   return (
     <AssetFormDialog title={`Periksa pengembalian ${asset.name}`} submitLabel="Simpan hasil" submitting={isSubmitting} formError={formError} onClose={onClose} onSubmit={onSubmit}>
-      <p className="mb-3 text-sm text-mist">
+      <TextBlock className="mb-3 text-sm text-mist">
         Diajukan {asset.return_requested_by_name ?? "ketua tim"} · kondisi {asset.return_condition}
         {asset.return_note ? ` — ${asset.return_note}` : ""}
-      </p>
+      </TextBlock>
       <SelectField label="Hasil pemeriksaan" {...register("decision")}>
-        <option value="ACCEPT">Terima — aset tersedia lagi</option>
-        <option value="REJECT">Tolak — kembali ke tim untuk diperbaiki</option>
+        <ControlOption value="ACCEPT">Terima — aset tersedia lagi</ControlOption>
+        <ControlOption value="REJECT">Tolak — kembali ke tim untuk diperbaiki</ControlOption>
       </SelectField>
       <TextAreaField label="Catatan (wajib jika ditolak)" error={errors.note?.message} {...register("note")} />
     </AssetFormDialog>

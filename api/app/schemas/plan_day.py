@@ -38,3 +38,6 @@ class PlanDayOut(BaseModel):
     tasks: list[DayTaskOut]  # Daftar tugas yang direncanakan pada hari tersebut
     report: DayReportOut | None  # Detail laporan harian jika sudah diisi
     member_reports_sent: int = 0  # Jumlah laporan yang dikirim oleh anggota tim pada hari ini
+    site_name: str | None = None  # Lokasi khusus hari itu (None = ikut lokasi rencana)
+    work_type_name: str | None = None  # Jenis pekerjaan khusus hari itu (None = ikut jenis rencana)
+    member_employee_ids: list[UUID] | None = None  # Yang bertugas hari itu, termasuk ketua (None = seluruh tim)

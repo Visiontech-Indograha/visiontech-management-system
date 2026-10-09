@@ -177,7 +177,21 @@ class _PlanDayScreenState extends ConsumerState<PlanDayScreen> {
       ? 'RESUBMITTED'
       : _status;
   bool get _editable =>
-      widget.canEdit && (_status == 'DRAFT' || _status == 'CHANGES_REQUESTED');
+      widget.canEdit && _dayReached && (_status == 'DRAFT' || _status == 'CHANGES_REQUESTED');
+
+  /// Laporan hanya boleh diisi pada/setelah tanggal pelaksanaan (server tetap memeriksa dengan jamnya sendiri).
+  bool get _dayReached {
+    final date = DateTime.tryParse('${widget.day['work_date']}');
+    if (date == null) return true;
+    final now = DateTime.now();
+    return !DateTime(date.year, date.month, date.day).isAfter(DateTime(now.year, now.month, now.day));
+  }
+
+  String get _dayLabel {
+    final d = DateTime.tryParse('${widget.day['work_date']}');
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+    return d == null ? '${widget.day['work_date']}' : '${d.day} ${months[d.month - 1]} ${d.year}';
+  }
 
   void _snack(String m) =>
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
@@ -349,7 +363,7 @@ class _PlanDayScreenState extends ConsumerState<PlanDayScreen> {
                           horizontal: 12,
                           vertical: 10,
                         ),
-                        onTap: widget.canEdit ? () => _toggle(t) : null,
+                        onTap: widget.canEdit && _dayReached ? () => _toggle(t) : null,
                         child: Row(
                           children: [
                             AnimatedContainer(
@@ -481,7 +495,13 @@ class _PlanDayScreenState extends ConsumerState<PlanDayScreen> {
                     icon: const Icon(Icons.save_rounded),
                     label: const Text('Simpan draf'),
                   ),
-                ] else if (!widget.canEdit)
+                ] else if (widget.canEdit && !_dayReached)
+                  NoticeBanner(
+                    key: const Key('leader-report-not-yet'),
+                    icon: Icons.schedule_rounded,
+                    text: 'Laporan hari ini baru bisa diisi mulai $_dayLabel.',
+                  )
+                else if (!widget.canEdit)
                   const NoticeBanner(
                     icon: Icons.info_outline_rounded,
                     text:
@@ -542,10 +562,17 @@ extension on _PlanDayScreenState {
 
   List<Widget> _memberSection() {
     final sent = _mine?['status'] == 'SENT';
+    final locked = sent || !_dayReached;
     final savedPhotos =
         ((_mine?['evidence_file_ids'] as List?) ?? const []).length;
     return [
       const SectionTitle('Laporan saya untuk ketua'),
+      if (!_dayReached)
+        NoticeBanner(
+          key: const Key('member-report-not-yet'),
+          icon: Icons.schedule_rounded,
+          text: 'Laporan hari ini baru bisa diisi mulai $_dayLabel.',
+        ),
       if (sent)
         const NoticeBanner(
           icon: Icons.check_circle_outline_rounded,
@@ -559,7 +586,7 @@ extension on _PlanDayScreenState {
             TextField(
               key: const Key('member-report-body'),
               controller: _mBody,
-              enabled: !sent,
+              enabled: !locked,
               maxLines: 4,
               decoration: const InputDecoration(
                 labelText: 'Uraian pekerjaan saya',
@@ -569,7 +596,7 @@ extension on _PlanDayScreenState {
             const SizedBox(height: 12),
             TextField(
               controller: _mObstacle,
-              enabled: !sent,
+              enabled: !locked,
               maxLines: 2,
               decoration: const InputDecoration(
                 labelText: 'Kendala (boleh kosong)',
@@ -586,7 +613,7 @@ extension on _PlanDayScreenState {
               template: _template,
               saved: _evidenceOf(_mine),
               pending: _mPending,
-              enabled: !sent,
+              enabled: !locked,
               onAdd: _memberPhoto,
               onRemove: _dropMemberPhoto,
             ),
@@ -594,7 +621,7 @@ extension on _PlanDayScreenState {
         ),
       ),
       const SizedBox(height: 12),
-      if (!sent) ...[
+      if (!locked) ...[
         PrimaryAction(
           label: 'Kirim ke ketua',
           icon: Icons.send_rounded,

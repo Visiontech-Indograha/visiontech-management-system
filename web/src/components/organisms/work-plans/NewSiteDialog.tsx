@@ -59,7 +59,7 @@ export function NewSiteDialog({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [gpsNote, setGpsNote] = useState<string | null>(null);
 
-  // Titik awal = posisi PM saat membuat SK (bila diizinkan browser).
+  // Titik awal = posisi PM saat membuat rencana kerja (bila diizinkan browser).
   useEffect(() => {
     if (initial || !navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(

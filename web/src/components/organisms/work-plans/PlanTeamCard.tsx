@@ -6,7 +6,7 @@ import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
 
 const ROLE: Record<string, string> = { LEADER: "Ketua", MEMBER: "Anggota" };
 
-/** Tim SK di halaman detail: dulu hanya ketua yang tampil (temuan R-19). */
+/** Tim rencana kerja di halaman detail: dulu hanya ketua yang tampil (temuan R-19). */
 export function PlanTeamCard({ plan }: { plan: WorkPlan }) {
   const team = usePlanTeam(plan.id);
   return (

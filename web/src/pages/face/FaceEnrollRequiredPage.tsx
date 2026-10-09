@@ -1,5 +1,5 @@
 import { toast } from "sonner";
-import { useSession } from "@/app/session";
+import { useSession } from "@/stores/sessionStore";
 import { useFaceStatus, useSetFaceConsent, type FaceStatus } from "@/services/accountService";
 import { errorMessage } from "@/lib/errors";
 import { FaceEnrollRequiredTemplate } from "@/components/templates/face/FaceEnrollRequiredTemplate";

@@ -122,6 +122,7 @@ web/src/
 ├── services/               <domain>Service.ts — tipe kontrak + hook TanStack Query + panggilan API
 ├── schemas/                <tujuan>Schema.ts — skema zod form (loginSchema.ts, planEditorSchema.ts)
 ├── hooks/                  use<Tujuan>.ts — hook non-data (useLockCountdown.ts, useLiveEvents.ts)
+├── stores/                 Zustand global (sessionStore.ts) — data API tidak disimpan di sini
 ├── lib/                    fungsi murni & konfigurasi: apiClient.ts, apiTypes.ts, format.ts, labels.ts, …
 ├── styles/                 token Tailwind v4 (@theme)
 └── test/                   setup & util uji
@@ -161,6 +162,8 @@ Uji ditaruh **di samping** berkasnya: `PlanDetailCard.test.tsx`.
 - Hindari nama generik (`Box.tsx`, `Item.tsx`, `helpers.ts`, `data.ts`) dan istilah lama
   (`Sk…` → `Plan…`; SK = Rencana Kerja).
 - `.tsx` hanya untuk berkas ber-JSX; selain itu `.ts`.
+- Konfigurasi ber-JSX yang bukan komponen (`app/routes.tsx`) tetap camelCase. Store Zustand di `stores/` (`sessionStore.ts`).
+- `lib/apiTypes.ts` hasil `npm run gen:api` — **jangan disunting manual**; istilah di dalamnya mengikuti docstring API.
 
 ---
 

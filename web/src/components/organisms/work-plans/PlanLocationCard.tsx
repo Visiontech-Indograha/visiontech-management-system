@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Circle, MapContainer, Marker } from "react-leaflet";
 import { MapTiles } from "@/components/organisms/map/MapTiles";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useSession } from "@/app/session";
+import { useSession } from "@/stores/sessionStore";
 import type { WorkPlan } from "@/services/workPlanService";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { LoadingBar } from "@/components/molecules/LoadingBar";
@@ -14,14 +14,14 @@ const CLOSED = ["COMPLETED", "CANCELLED"];
 
 
 
-/** Kartu "Lokasi penugasan" di detail SK: peta baca-saja + nama + radius; pengelola dapat mengatur titik. */
+/** Kartu "Lokasi penugasan" di detail rencana kerja: peta baca-saja + nama + radius; pengelola dapat mengatur titik. */
 export function PlanLocationCard({ plan }: { plan: WorkPlan }) {
   const { me } = useSession();
   const loc = usePlanLocation(plan.id);
   const routerLocation = useLocation();
   const navigate = useNavigate();
   const canEdit = !!me?.permissions.includes("create:plan") && !CLOSED.includes(plan.status);
-  // Ditawarkan langsung setelah draft SK dibuat (state navigasi dari form buat SK).
+  // Ditawarkan langsung setelah draft rencana kerja dibuat (state navigasi dari form buat rencana kerja).
   const offer = !!(routerLocation.state as { setLocation?: boolean } | null)?.setLocation;
   const [open, setOpen] = useState(() => offer && canEdit);
   useEffect(() => {

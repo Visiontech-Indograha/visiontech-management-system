@@ -2,7 +2,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Navigate, useNavigate } from "react-router-dom";
-import { useSession } from "@/app/session";
+import { useSession } from "@/stores/sessionStore";
 import { ApiError } from "@/lib/apiClient";
 import { LoginTemplate } from "@/components/templates/auth/LoginTemplate";
 import { loginSchema, type LoginValues } from "@/schemas/loginSchema";

@@ -1,6 +1,6 @@
 import { Navigate } from "react-router-dom";
 import { isAllowed, type NavItem } from "@/app/navigation";
-import { useSession } from "@/app/session";
+import { useSession } from "@/stores/sessionStore";
 
 /** Route guard berbasis permissions[] dari /me. */
 export function RequireAccess({ item, children }: { item: NavItem; children: React.ReactNode }) {

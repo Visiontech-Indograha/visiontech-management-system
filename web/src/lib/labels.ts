@@ -1,5 +1,5 @@
 /**
- * Label status Bahasa Indonesia — satu sumber (docs/11 §5). Status SK & dokumen mengikuti alur SK v2
+ * Label status Bahasa Indonesia — satu sumber (docs/11 §5). Status rencana kerja & dokumen mengikuti alur rencana kerja v2
  * (keputusan pemilik 2026-10-03, flowchart SK2 di FigJam).
  * Nilai yang tidak dikenal ditampilkan apa adanya.
  */
@@ -62,7 +62,7 @@ const SIGNER_ROLE: Record<string, string> = { ISSUER: "Penerbit", ACCEPTOR: "Pen
 /** Label peran penanda tangan (enum signature_role). */
 export const signerRoleLabel = (role: string | null | undefined) => (role ? (SIGNER_ROLE[role] ?? role) : "-");
 
-/** Kategori pekerjaan SK (daftar tetap, alur SK v2). */
+/** Kategori pekerjaan rencana kerja (daftar tetap, alur rencana kerja v2). */
 export const CATEGORY_LABEL: Record<string, string> = {
   INSTALASI: "Instalasi",
   PEMELIHARAAN: "Pemeliharaan",

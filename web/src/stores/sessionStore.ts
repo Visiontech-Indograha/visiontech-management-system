@@ -1,8 +1,9 @@
 import { create } from "zustand";
-import { api, refreshAccessToken, setAccessToken, setSessionExpiredHandler } from "@/lib/apiClient";
+import { refreshAccessToken, setAccessToken, setSessionExpiredHandler } from "@/lib/apiClient";
 import type { Me, TokenOut } from "@/lib/types";
-import { mockMe } from "./mockSession";
+import { mockMe } from "../app/mockSession";
 import { queryClient } from "@/lib/queryClient";
+import { fetchMe, login as authLogin, logout as authLogout } from "@/services/authService";
 
 interface SessionState {
   me: Me | null;
@@ -31,18 +32,13 @@ export const useSession = create<SessionState>((set, get) => {
     me: preset,
     ready: skipRestore,
     login: async (email, password, admin = false) => {
-      // For now we use the same endpoint, in future we can split if needed
-      const endpoint = admin ? "/auth/login" : "/auth/login";
-      const { data } = await api.post<TokenOut>(endpoint, {
-        email,
-        password,
-        platform: "web",
-      });
-      return get().applyToken(data);
+      // Admin dan pengguna biasa memakai endpoint yang sama; `admin` hanya membedakan halaman login.
+      void admin;
+      return get().applyToken(await authLogin(email, password));
     },
     logout: async () => {
       try {
-        await api.post("/auth/logout");
+        await authLogout();
       } catch {
         /* sesi lokal tetap dibersihkan */
       }
@@ -50,7 +46,7 @@ export const useSession = create<SessionState>((set, get) => {
     },
     applyToken: async (token: TokenOut) => {
       setAccessToken(token.access_token);
-      const { data: profile } = await api.get<Me>("/auth/me");
+      const profile = await fetchMe();
       set({ me: profile });
       return profile;
     },
@@ -60,8 +56,7 @@ export const useSession = create<SessionState>((set, get) => {
         // Lewat refresh tunggal: efek ganda (StrictMode) atau request paralel tidak boleh merotasi
         // cookie dua kali — refresh kedua memakai token lama dan sesi ikut dicabut.
         await refreshAccessToken();
-        const { data: profile } = await api.get<Me>("/auth/me");
-        set({ me: profile });
+        set({ me: await fetchMe() });
       } catch {
         /* belum login */
       } finally {

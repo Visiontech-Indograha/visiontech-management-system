@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation, useParams } from "react-router-dom";
-import { useSession } from "@/app/session";
+import { useSession } from "@/stores/sessionStore";
 import { EmployeeDetailTemplate } from "@/components/templates/directory/EmployeeDetailTemplate";
 import { useEmployee, useUnits, type Employee } from "@/services/employeeService";
 

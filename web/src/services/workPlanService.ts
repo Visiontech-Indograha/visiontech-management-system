@@ -12,7 +12,7 @@ type Employee = S["EmployeeResponse"];
 type EmployeeList = S["EmployeeListResponse"];
 export type AssignmentOptions = S["PlanAssignmentOptions"];
 
-/** Transisi SK yang memakai TransitionRequest {row_version, reason}. */
+/** Transisi rencana kerja yang memakai TransitionRequest {row_version, reason}. */
 export type Transition =
   | "publish"
   | "accept"
@@ -64,7 +64,7 @@ function useSetPlan() {
     await qc.invalidateQueries({ queryKey: ["work-plans"] });
     // Terbit/terima menandatangani dokumen di server; muat ulang daftar dokumennya.
     await qc.invalidateQueries({ queryKey: ["plan-documents", plan.id] });
-    // Laporan akhir, tim, aset, isi SK, dan usulan ikut berubah saat transisi (mis. penutupan disetujui).
+    // Laporan akhir, tim, aset, isi rencana kerja, dan usulan ikut berubah saat transisi (mis. penutupan disetujui).
     await qc.invalidateQueries({ queryKey: planKey(plan.id) });
     await qc.invalidateQueries({ queryKey: planDetailKey(plan.id) });
     await qc.invalidateQueries({ queryKey: ["plan-changes", plan.id] });
@@ -80,7 +80,7 @@ export function useTransition(id: string) {
   });
 }
 
-// ── Alur SK v2 (keputusan pemilik 2026-10-03, flowchart SK2) ─────────────────────────────────
+// ── Alur rencana kerja v2 (keputusan pemilik 2026-10-03, flowchart SK2) ─────────────────────────────────
 export type PlanFormOptions = S["PlanFormOptions"];
 export type PlanDraftRequest = S["PlanDraftRequest"];
 export type PlanDetail = S["PlanDetailOut"];
@@ -89,7 +89,7 @@ export type FormAsset = S["FormAsset"];
 
 export const planDetailKey = (id: string) => ["work-plan-detail", id] as const;
 
-/** Pilihan form Buat/Ubah SK: kategori, lokasi, ketua, anggota, alat, kendaraan (sudah disaring server). */
+/** Pilihan form Buat/Ubah rencana kerja: kategori, lokasi, ketua, anggota, alat, kendaraan (sudah disaring server). */
 export const usePlanFormOptions = (planId?: string) =>
   useQuery({
     queryKey: ["plan-form-options", planId ?? "new"],
@@ -97,7 +97,7 @@ export const usePlanFormOptions = (planId?: string) =>
       (await api.get<PlanFormOptions>("/work-plans/form-options", { params: planId ? { plan_id: planId } : {} })).data,
   });
 
-/** Calon driver (dari ketua + anggota terpilih) yang ber-SIM sesuai tipe kendaraan dan tidak terikat SK lain. */
+/** Calon driver (dari ketua + anggota terpilih) yang ber-SIM sesuai tipe kendaraan dan tidak terikat rencana kerja lain. */
 export const useDriverOptions = (q: { vehicleId: string; periodEnd: string; candidates: string[]; planId?: string }) =>
   useQuery({
     queryKey: ["plan-driver-options", q],
@@ -123,7 +123,7 @@ export const usePlanDetail = (id: string, enabled = true) =>
     enabled: Boolean(id) && enabled,
   });
 
-/** Simpan SK lengkap dalam satu transaksi: buat (POST /full) atau ubah draf (PUT /{id}/full). */
+/** Simpan rencana kerja lengkap dalam satu transaksi: buat (POST /full) atau ubah draf (PUT /{id}/full). */
 export function useSavePlanDraft(planId?: string) {
   const qc = useQueryClient();
   return useMutation({
@@ -169,7 +169,7 @@ export function useRevisePlan(planId: string) {
   });
 }
 
-/** PM menerima adendum ketua dengan mengubah isi SK yang sedang berjalan (PUT /amendments/{changeId}). */
+/** PM menerima adendum ketua dengan mengubah isi rencana kerja yang sedang berjalan (PUT /amendments/{changeId}). */
 export function useApplyAmendment(planId: string, changeId: string) {
   const qc = useQueryClient();
   return useMutation({

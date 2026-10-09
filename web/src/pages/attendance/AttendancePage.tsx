@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useSession } from "@/app/session";
+import { useSession } from "@/stores/sessionStore";
 import { AttendanceTemplate } from "@/components/templates/attendance/AttendanceTemplate";
 import { useAttendance, type Attendance, type AttendanceFilters } from "@/services/attendanceService";
 

@@ -9,7 +9,7 @@ import { TextBlock } from "@/components/molecules/TextBlock";
 import { FrameView } from "@/components/molecules/FrameView";
 
 /**
- * Tampilan dokumen SK siap cetak A4 ("Sunting SK", flowchart SK2-C). Isi HTML dari server — templat yang sama
+ * Tampilan dokumen rencana kerja siap cetak A4 ("Sunting rencana kerja", flowchart SK2-C). Isi HTML dari server — templat yang sama
  * dengan PDF terbit, termasuk tanda tangan & QR bila dokumen sudah terbit. Dirender di iframe ber-sandbox.
  */
 export function PlanPreviewDialog({

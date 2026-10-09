@@ -1,4 +1,4 @@
-import { useSession } from "@/app/session";
+import { useSession } from "@/stores/sessionStore";
 import { AccountTemplate } from "@/components/templates/account/AccountTemplate";
 import { ROLE_LABEL } from "@/lib/types";
 

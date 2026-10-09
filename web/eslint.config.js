@@ -59,14 +59,8 @@ const LEGACY = {
 
 // Page yang belum punya template sendiri (masih template + organism). Daftar ini HANYA BOLEH MENYUSUT (docs/33 §7).
 const PAGES_LEGACY = [
-  'src/pages/account/AccountPage.tsx',
   'src/pages/assets/AssetsPage.tsx',
   'src/pages/attendance/AttendancePage.tsx',
-  'src/pages/audit/AuditLogPage.tsx',
-  'src/pages/directory/DirectoryPage.tsx',
-  'src/pages/directory/EmployeeDetailPage.tsx',
-  'src/pages/home/HomePage.tsx',
-  'src/pages/monitoring/AttendanceRecapPage.tsx',
   'src/pages/work-plans/PlanEditorPage.tsx',
   'src/pages/work-plans/PresentationPage.tsx',
   'src/pages/work-plans/WorkPlanDetailPage.tsx',

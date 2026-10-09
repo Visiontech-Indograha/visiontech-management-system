@@ -1,18 +1,8 @@
 import { useState } from "react";
 import { useLocation, useParams } from "react-router-dom";
 import { useSession } from "@/app/session";
-import { PageTemplate } from "@/components/templates/PageTemplate";
+import { EmployeeDetailTemplate } from "@/components/templates/directory/EmployeeDetailTemplate";
 import { useEmployee, useUnits, type Employee } from "@/services/employeeService";
-import { AccountCard } from "@/components/organisms/directory/AccountCard";
-import { AssignmentHistory, PromoteDialog } from "@/components/organisms/directory/AssignmentHistory";
-import { DocumentsPanel } from "@/components/organisms/directory/DocumentsPanel";
-import { EmployeeActions } from "@/components/organisms/directory/EmployeeActions";
-import { EmployeeArchivePanel } from "@/components/organisms/directory/EmployeeArchivePanel";
-import { EmployeeDetailSkeleton } from "@/components/organisms/directory/EmployeeDetailSkeleton";
-import { OffboardDialog } from "@/components/organisms/directory/EmployeeLifecycleDialogs";
-import { EmployeeLoadError } from "@/components/organisms/directory/EmployeeLoadError";
-import { EmployeeProfileCard } from "@/components/organisms/directory/EmployeeProfileCard";
-import { EmployeeProfileDialog } from "@/components/organisms/directory/EmployeeProfileDialog";
 
 /** Detail karyawan: profil, akun, riwayat penugasan, arsip, dan dokumen (sesuai izin). */
 export function EmployeeDetailPage() {
@@ -30,36 +20,24 @@ export function EmployeeDetailPage() {
   const canSeePrivate = canManageDocs || me?.employee_id === id;
   const e = employee.data;
 
-  if (employee.isError) return <EmployeeLoadError message={employee.error.message} />;
-
-  if (!e) return <EmployeeDetailSkeleton />;
-
   return (
-    <PageTemplate
-      title={e.full_name}
-      action={
-        canEdit && (
-          <EmployeeActions
-            isActive={e.is_active}
-            onPromote={() => setPromoting(true)}
-            onOffboard={() => setOffboarding(true)}
-            onEdit={() => setEditing(true)}
-          />
-        )
-      }
-    >
-      <EmployeeProfileCard
-        employee={e}
-        unitName={units.data?.find((u) => u.id === e.unit_id)?.name ?? null}
-        canSeePrivate={canSeePrivate}
-      />
-      {canEdit && <AccountCard employee={e} />}
-      <AssignmentHistory employee={e} />
-      {canEdit && !e.is_active && <EmployeeArchivePanel employee={e} />}
-      {canManageDocs && <DocumentsPanel employeeId={e.id} canManage canVerify={!!me?.permissions.includes("verify:documents")} />}
-      {editing && <EmployeeProfileDialog employee={e} onClose={() => setEditing(false)} />}
-      {promoting && <PromoteDialog employee={e} onClose={() => setPromoting(false)} />}
-      {offboarding && <OffboardDialog employee={e} onClose={() => setOffboarding(false)} />}
-    </PageTemplate>
+    <EmployeeDetailTemplate
+      errorMessage={employee.isError ? employee.error.message : null}
+      employee={e}
+      unitName={e ? (units.data?.find((u) => u.id === e.unit_id)?.name ?? null) : null}
+      canEdit={canEdit}
+      canManageDocs={canManageDocs}
+      canVerifyDocs={!!me?.permissions.includes("verify:documents")}
+      canSeePrivate={canSeePrivate}
+      editing={editing}
+      promoting={promoting}
+      offboarding={offboarding}
+      onEdit={() => setEditing(true)}
+      onPromote={() => setPromoting(true)}
+      onOffboard={() => setOffboarding(true)}
+      onCloseEdit={() => setEditing(false)}
+      onClosePromote={() => setPromoting(false)}
+      onCloseOffboard={() => setOffboarding(false)}
+    />
   );
 }

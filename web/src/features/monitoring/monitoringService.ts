@@ -4,6 +4,14 @@ import type { components } from "@/lib/apiTypes";
 
 export type TimelineGroup = components["schemas"]["TimelineGroup"];
 export type AttendanceRecap = components["schemas"]["AttendanceRecap"];
+export type OvertimeRecapRow = components["schemas"]["OvertimeRecapRow"];
+
+/** GET /recaps/overtime — rekap lembur per karyawan per bulan (bulan kosong = semua). */
+export const useOvertimeRecap = (month: string) =>
+  useQuery({
+    queryKey: ["overtime-recap", month],
+    queryFn: async () => (await api.get<OvertimeRecapRow[]>("/recaps/overtime", { params: month ? { month } : {} })).data,
+  });
 
 export const useTimeline = (f: { from: string; to: string }) =>
   useQuery({

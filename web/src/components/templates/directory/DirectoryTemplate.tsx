@@ -1,7 +1,7 @@
 import type { UseQueryResult } from "@tanstack/react-query";
 import { ListPagination } from "@/components/organisms/ListPagination";
 import { EmployeeCreateButton } from "@/components/organisms/directory/EmployeeCreateButton";
-import { CreateEmployeeDialog } from "@/components/organisms/directory/EmployeeLifecycleDialogs";
+import { EmployeeCreateDialog } from "@/components/organisms/directory/EmployeeCreateDialog";
 import { EmployeeListFilter } from "@/components/organisms/directory/EmployeeListFilter";
 import { EmployeeTable } from "@/components/organisms/directory/EmployeeTable";
 import { PAGE_SIZE, type EmployeeList } from "@/services/employeeService";
@@ -25,7 +25,7 @@ export function DirectoryTemplate({ list, canManage, creating, onCreate, onClose
   const data = list.data;
   return (
     <PageTemplate title="Direktori" action={canManage && <EmployeeCreateButton onCreate={onCreate} />}>
-      {creating && <CreateEmployeeDialog onClose={onCloseCreate} />}
+      {creating && <EmployeeCreateDialog onClose={onCloseCreate} />}
       <EmployeeListFilter q={q} onQChange={onQChange} status={status} onStatusChange={onStatusChange} />
       <EmployeeTable list={list} />
       {data && data.total > PAGE_SIZE && (

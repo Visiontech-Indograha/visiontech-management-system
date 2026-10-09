@@ -1,10 +1,11 @@
 import { AccountCard } from "@/components/organisms/directory/AccountCard";
-import { AssignmentHistory, PromoteDialog } from "@/components/organisms/directory/AssignmentHistory";
+import { AssignmentHistory } from "@/components/organisms/directory/AssignmentHistory";
+import { EmployeePromoteDialog } from "@/components/organisms/directory/EmployeePromoteDialog";
 import { DocumentsPanel } from "@/components/organisms/directory/DocumentsPanel";
 import { EmployeeActions } from "@/components/organisms/directory/EmployeeActions";
 import { EmployeeArchivePanel } from "@/components/organisms/directory/EmployeeArchivePanel";
 import { EmployeeDetailSkeleton } from "@/components/organisms/directory/EmployeeDetailSkeleton";
-import { OffboardDialog } from "@/components/organisms/directory/EmployeeLifecycleDialogs";
+import { EmployeeOffboardDialog } from "@/components/organisms/directory/EmployeeOffboardDialog";
 import { EmployeeLoadError } from "@/components/organisms/directory/EmployeeLoadError";
 import { EmployeeProfileCard } from "@/components/organisms/directory/EmployeeProfileCard";
 import { EmployeeProfileDialog } from "@/components/organisms/directory/EmployeeProfileDialog";
@@ -59,8 +60,8 @@ export function EmployeeDetailTemplate(props: {
       {canEdit && !e.is_active && <EmployeeArchivePanel employee={e} />}
       {canManageDocs && <DocumentsPanel employeeId={e.id} canManage canVerify={canVerifyDocs} />}
       {editing && <EmployeeProfileDialog employee={e} onClose={props.onCloseEdit} />}
-      {promoting && <PromoteDialog employee={e} onClose={props.onClosePromote} />}
-      {offboarding && <OffboardDialog employee={e} onClose={props.onCloseOffboard} />}
+      {promoting && <EmployeePromoteDialog employee={e} onClose={props.onClosePromote} />}
+      {offboarding && <EmployeeOffboardDialog employee={e} onClose={props.onCloseOffboard} />}
     </PageTemplate>
   );
 }

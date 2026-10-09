@@ -13,28 +13,9 @@ import { ActionButton } from "@/components/molecules/ActionButton";
 import { InlineLink } from "@/components/molecules/Links";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
-
+import { PlanRevisionRequestCard } from "@/components/organisms/work-plans/PlanRevisionRequestCard";
 
 const TYPE_LABEL: Record<string, string> = { AMENDMENT: "Revisi", EXTEND: "Perpanjangan", PERSONNEL: "Revisi personel" };
-
-/** Kartu mencolok: permintaan revisi ketua yang belum diputuskan PM. Tetap tampil sampai disetujui/ditolak. */
-export function PendingRequestCard({ c, children }: { c: Change; children?: React.ReactNode }) {
-  return (
-    <div role="alert" className="rounded-panel border-2 border-warning bg-warning-bg p-4 shadow-card">
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <TextBlock as="h3" className="text-base font-semibold text-ink">Ketua tim meminta revisi</TextBlock>
-        <StatusBadge status={c.status} />
-      </div>
-      <TextBlock as="blockquote" className="mb-2 whitespace-pre-line rounded-control border-l-4 border-warning bg-surface px-3 py-2 text-sm text-ink">
-        {c.reason}
-      </TextBlock>
-      <TextBlock className="text-xs text-ink">
-        Diajukan oleh <TextBlock as="strong">{c.requested_by_name ?? "-"}</TextBlock> · {formatDateTime(c.created_at)}
-      </TextBlock>
-      {children}
-    </div>
-  );
-}
 
 /**
  * Usulan perubahan SK (alur SK v2 PR3, flowchart SK2-E): adendum yang diajukan ketua saat SK Berjalan.
@@ -64,7 +45,7 @@ export function PlanRevisionPanel({ plan }: { plan: WorkPlan }) {
       {pending.length > 0 && (
         <section aria-label="Permintaan revisi menunggu keputusan" className="space-y-3">
           {pending.map((c) => (
-            <PendingRequestCard key={c.id} c={c}>
+            <PlanRevisionRequestCard key={c.id} c={c}>
               {canManage ? (
                 canAct && (
                   <div className="mt-3 flex flex-col gap-2">
@@ -79,7 +60,7 @@ export function PlanRevisionPanel({ plan }: { plan: WorkPlan }) {
               ) : (
                 <TextBlock className="mt-2 text-sm font-medium text-ink">Menunggu keputusan PM.</TextBlock>
               )}
-            </PendingRequestCard>
+            </PlanRevisionRequestCard>
           ))}
         </section>
       )}

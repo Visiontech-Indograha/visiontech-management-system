@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Button } from "@/components/atoms/Button";
 import { Skeleton } from "@/components/atoms/Skeleton";
+import { Text } from "@/components/atoms/Text";
 
 interface QueryLike {
   isPending: boolean;
@@ -37,7 +38,7 @@ export function QueryState({
   if (query.isError)
     return (
       <div role="alert" className="rounded-panel border border-line bg-surface shadow-card p-6 text-center">
-        <p className="mb-3 text-danger">{errorText}</p>
+        <Text className="mb-3 text-danger">{errorText}</Text>
         <Button variant="outline" onClick={() => query.refetch()}>
           Coba lagi
         </Button>
@@ -46,7 +47,7 @@ export function QueryState({
   if (empty)
     return (
       <div className="rounded-panel border border-line bg-surface shadow-card p-6 text-center">
-        <p className="mb-3 text-mist">{emptyText}</p>
+        <Text className="mb-3 text-mist">{emptyText}</Text>
         {emptyAction}
       </div>
     );

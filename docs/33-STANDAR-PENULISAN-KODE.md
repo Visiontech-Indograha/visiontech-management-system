@@ -66,6 +66,10 @@ Definisi pemilik (2026-10-09):
 | **Molecule** | **atom** + elemen tata letak | molecule lain, organism, template, elemen HTML lain, teks langsung |
 | **Atom** | elemen HTML, teks, ikon, kelas Tailwind | mengimpor tingkat di atasnya |
 
+**Atom teks & elemen dasar** (`components/atoms/`): `Text` (p/span/strong/dt/dd/h1–h4 lewat `as`), `Select`/`SelectOption`,
+`Textarea`, `Image`, `PlainButton`, `Icon` (satu-satunya pintu ke `lucide-react`), plus atom shadcn (`Button`, `Input`, `Badge`, …).
+Teks yang diberikan sebagai **isi atom** (`<Button>Simpan</Button>`) boleh — yang dilarang adalah teks di dalam elemen HTML.
+
 Akibatnya setiap Page punya template sendiri (`components/templates/<domain>/<Nama>Template.tsx`); teks, judul,
 tabel, tombol, dan ikon diwujudkan sebagai atom (mis. `Text`, `Heading`, `Table`, `Icon`) yang disusun molecule.
 

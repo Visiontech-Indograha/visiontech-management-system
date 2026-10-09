@@ -9,7 +9,7 @@ Berlaku bersama aturan umum di `../AGENTS.md`.
 Web dashboard untuk role: **OM, PM, Finance, HES/HR**.
 (Bukan untuk teknisi lapangan — mereka pakai mobile app Flutter di luar repo ini.)
 
-**UI/UX & Direktori:** Seluruh pengembangan UI (React) WAJIB mengikuti SOP struktur folder `src/pages/` dan pembagian fungsionalitas yang tercantum dalam cetak biru `docs/VMS_MASTER_REFERENCE.md`. Rujuk pada referensi wireframe (seperti pembagian halaman HES/HR, Finance, Project Manager) saat membangun dashboard.
+**UI/UX & Direktori:** Struktur folder, atomic design, dan penamaan WAJIB mengikuti `../docs/33-STANDAR-PENULISAN-KODE.md` (keputusan pemilik 2026-10-09). Page hanya menyusun template + organism; atom/molecule/elemen HTML mentah dilarang di Page.
 
 ---
 
@@ -22,7 +22,7 @@ Web dashboard untuk role: **OM, PM, Finance, HES/HR**.
 | Routing dasar (`react-router`) + RBAC per-route (`ProtectedRoute`/`RoleRoute`, ada test) | ✅ Selesai |
 | Vitest setup | ✅ Selesai — tapi cakupan test masih tipis (smoke test App + route guards saja, hook/page belum ada test) |
 | Halaman/komponen per role (Auth, Dashboard, Attendance, HR, OM, PM, HES, Finance, Export) | ✅ Semua halaman utama sudah dibangun dan terhubung ke backend nyata |
-| Reusable UI (`components/ui/`) | ✅ Card, Table, Button, Input/TextArea/Select, Modal/ModalFooter, QueryState — sebagian halaman (EmployeeListPage, LogbookPage, WorkPlanPage, PortofolioPage, InternalDocumentPage) masih pakai markup modal/form inline lama, belum dimigrasikan |
+| Reusable UI (`components/{atoms,molecules,organisms,templates}`) | ✅ Atomic design (`docs/33`); Page lama dimigrasi bertahap — daftar pengecualian di `eslint.config.js` |
 | API integration (TanStack Query) | ✅ Selesai (Axios interceptor + QueryClient, token di memory + refresh via httpOnly cookie) |
 
 > ⚠️ **PENTING:** `typescript` sempat ter-upgrade ke `7.0.2`, yang membuat `typescript-eslint`
@@ -44,7 +44,7 @@ Web dashboard untuk role: **OM, PM, Finance, HES/HR**.
 | Routing | React Router |
 | Data fetching | TanStack Query (React Query) |
 | Form | React Hook Form + Zod |
-| HTTP client | axios (interceptor JWT terpusat di `src/lib/api.ts`) |
+| HTTP client | axios (interceptor JWT terpusat di `src/lib/apiClient.ts`) |
 | Testing | Vitest |
 
 ---
@@ -63,7 +63,7 @@ Web dashboard untuk role: **OM, PM, Finance, HES/HR**.
    (peminjaman alat di LogbookPage) bahkan diam-diam membuang input pengguna karena field
    yang dikirim tidak ada di schema backend.
 3. **Struktur folder per role:** `src/pages/{auth,dashboard,pm,finance,hes,om}/`
-4. **Reusable UI** (button, card, modal, tabel) di `src/components/ui/`.
+4. **Reusable UI**: atom di `src/components/atoms/`, molecule di `src/components/molecules/`, organism bersama di `src/components/organisms/`, kerangka di `src/components/templates/` (`docs/33`).
 5. Sebelum membangun halaman/role baru, cek `docs/requirements/` untuk daftar fitur role.
 6. **Cek backend routes nyata** sebelum menulis axios/fetch call — lihat
    `backend/AGENTS.md` bagian "Peta URL Endpoint Aktual" untuk daftar URL yang valid.

@@ -1,0 +1,49 @@
+import clsx from "clsx";
+import { LogOut, ShieldCheck } from "lucide-react";
+import { NavLink } from "react-router-dom";
+
+function initials(email: string) {
+  const name = email.split("@")[0].replace(/[^a-z]/gi, " ").trim();
+  const parts = name.split(/\s+/).filter(Boolean);
+  return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? parts[0]?.[1] ?? "")).toUpperCase() || "V";
+}
+
+/** Kartu pengguna di dasar rail kiri + tautan "Akun & keamanan" + tombol keluar. */
+export function SidebarProfile({ email, roleLabel, collapsed, onLogout }: {
+  email: string;
+  roleLabel: string;
+  collapsed: boolean;
+  onLogout: () => void;
+}) {
+  return (
+    <div className="p-3">
+      <div className={clsx("flex items-center gap-3 rounded-panel bg-surface p-2.5 shadow-card ring-1 ring-line", collapsed && "md:justify-center md:p-1.5")}>
+        <span
+          aria-hidden
+          className="grid size-9 shrink-0 place-items-center rounded-full bg-accent text-sm font-semibold text-lens"
+        >
+          {initials(email)}
+        </span>
+        <div className={clsx("min-w-0 flex-1", collapsed && "md:sr-only")}>
+          <p className="truncate text-sm font-semibold text-ink">{email}</p>
+          <p className="text-xs text-mist">{roleLabel}</p>
+        </div>
+      </div>
+      <NavLink
+        to="/account"
+        className="mt-2 flex h-10 w-full items-center gap-3 rounded-control px-3 text-sm text-mist transition-colors hover:bg-hover hover:text-ink"
+      >
+        <ShieldCheck size={19} strokeWidth={1.75} aria-hidden />
+        <span className={clsx(collapsed && "md:sr-only")}>Akun & keamanan</span>
+      </NavLink>
+      <button
+        type="button"
+        onClick={onLogout}
+        className="flex h-10 w-full items-center gap-3 rounded-control px-3 text-sm text-mist transition-colors hover:bg-danger-bg hover:text-danger"
+      >
+        <LogOut size={19} strokeWidth={1.75} aria-hidden />
+        <span className={clsx(collapsed && "md:sr-only")}>Keluar</span>
+      </button>
+    </div>
+  );
+}

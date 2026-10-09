@@ -4,7 +4,7 @@
       "Read(./web/openapi.json)",
       "Read(./web/openapi.current.json)",
       "Read(./**/package-lock.json)",
-      "Read(./web/src/lib/api-types.ts)",
+      "Read(./web/src/lib/apiTypes.ts)",
       "Read(./**/node_modules/**)",
       "Read(./api/.venv/**)",
       "Read(./api/.env)",

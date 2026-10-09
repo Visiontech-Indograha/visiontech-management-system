@@ -1,4 +1,4 @@
-import { useSession } from "@/app/session";
+import { useSession } from "@/stores/sessionStore";
 import { HomeTemplate } from "@/components/templates/home/HomeTemplate";
 import { useAttendanceToReview, useExpiringDocuments, usePendingDocuments } from "@/services/homeService";
 import { useWorkPlans } from "@/services/workPlanService";

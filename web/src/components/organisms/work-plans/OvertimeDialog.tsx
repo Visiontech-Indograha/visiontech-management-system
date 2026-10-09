@@ -21,7 +21,7 @@ const reportSchema = z.object({
 
 type ReportValues = z.infer<typeof reportSchema>;
 
-/** "Ajukan Lembur" — ketua/anggota SK berjalan (POST /overtime). Tanggal lembur dicatat server. */
+/** "Ajukan Lembur" — ketua/anggota rencana kerja berjalan (POST /overtime). Tanggal lembur dicatat server. */
 export function OvertimeDialog({ plan, onClose }: { plan: WorkPlan; onClose: () => void }) {
   const report = useOvertimeMutation(plan.id, (body: components["schemas"]["OvertimeCreate"]) => createOvertime(body));
   const [formError, setFormError] = useState<string | null>(null);

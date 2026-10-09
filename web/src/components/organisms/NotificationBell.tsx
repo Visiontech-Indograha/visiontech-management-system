@@ -10,7 +10,7 @@ import { fetchNotifications, markNotificationsRead } from "@/services/notificati
 
 const KEY = ["notifications"] as const;
 
-/** Lonceng notifikasi dalam aplikasi (alur SK v2): diperiksa tiap 60 detik, klik membuka SK terkait. */
+/** Lonceng notifikasi dalam aplikasi (alur rencana kerja v2): diperiksa tiap 60 detik, klik membuka rencana kerja terkait. */
 export function NotificationBell({ className }: { className?: string }) {
   const qc = useQueryClient();
   const navigate = useNavigate();

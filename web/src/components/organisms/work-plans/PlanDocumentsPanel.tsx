@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { useSession } from "@/app/session";
+import { useSession } from "@/stores/sessionStore";
 import { QueryState } from "@/components/molecules/QueryState";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
 import { TextAreaField } from "@/components/molecules/Field";
@@ -45,7 +45,7 @@ async function downloadPdf(doc: PlanDocument) {
   }
 }
 
-/** Bagian "Dokumen": versi SK/revisi/adendum beserta tanda tangan ber-QR (Fase 6). */
+/** Bagian "Dokumen": versi rencana kerja/revisi/adendum beserta tanda tangan ber-QR (Fase 6). */
 export function PlanDocumentsPanel({ plan }: { plan: WorkPlan }) {
   const docs = useQuery({
     queryKey: ["plan-documents", plan.id],
@@ -67,7 +67,7 @@ export function PlanDocumentsPanel({ plan }: { plan: WorkPlan }) {
 
 function DocumentCard({ doc }: { doc: PlanDocument }) {
   const { me } = useSession();
-  // Pencabutan hanya untuk PM unit/OPS SK tersebut — API yang menegakkan; tombol untuk pemegang create:plan.
+  // Pencabutan hanya untuk PM unit/OPS rencana kerja tersebut — API yang menegakkan; tombol untuk pemegang create:plan.
   const canRevoke = !!me?.permissions.includes("create:plan");
   const [busy, setBusy] = useState(false);
   const [revoking, setRevoking] = useState<Signature | null>(null);

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useSession } from "@/app/session";
+import { useSession } from "@/stores/sessionStore";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
 import { formatDate } from "@/lib/format";
 import type { WorkPlan } from "@/services/workPlanService";
@@ -10,7 +10,7 @@ import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
 import { IncidentResolveDialog } from "@/components/organisms/work-plans/IncidentResolveDialog";
 import { SectionTitle } from "@/components/molecules/SectionTitle";
 
-/** "Laporan Insiden / HSE" di detail SK; PM (create:plan) atau petugas aset dapat menyelesaikan. */
+/** "Laporan Insiden / HSE" di detail rencana kerja; PM (create:plan) atau petugas aset dapat menyelesaikan. */
 export function IncidentPanel({ plan }: { plan: WorkPlan }) {
   const { me } = useSession();
   const canResolve = !!me && (me.permissions.includes("create:plan") || me.permissions.includes("manage:assets"));

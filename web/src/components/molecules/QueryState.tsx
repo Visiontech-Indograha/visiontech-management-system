@@ -11,7 +11,7 @@ interface QueryLike {
 
 /**
  * Keadaan memuat / galat / kosong untuk satu query (docs/11 §8).
- * Contoh: <QueryState query={q} empty={q.data?.length === 0} emptyText="Belum ada SK.">{...}</QueryState>
+ * Contoh: <QueryState query={q} empty={q.data?.length === 0} emptyText="Belum ada rencana kerja.">{...}</QueryState>
  */
 export function QueryState({
   query,

@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { useFormDraft } from "@/hooks/useFormDraft";
 import { toast } from "sonner";
 import { z } from "zod";
-import { useSession } from "@/app/session";
+import { useSession } from "@/stores/sessionStore";
 import { QueryState } from "@/components/molecules/QueryState";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
 import { SelectField, TextAreaField } from "@/components/molecules/Field";
@@ -36,7 +36,7 @@ function useWeekMutation<V>(planId: string, fn: (v: V) => Promise<Week>) {
   return useMutation({ mutationFn: fn, onSuccess: () => qc.invalidateQueries({ queryKey: ["weekly", planId] }) });
 }
 
-/** Laporan mingguan SK (GET/PUT/submit/review /work-plans/{id}/weekly), mengikuti prototype renderWeek. */
+/** Laporan mingguan rencana kerja (GET/PUT/submit/review /work-plans/{id}/weekly), mengikuti prototype renderWeek. */
 export function WeeklyReportsPanel({ plan }: { plan: WorkPlan }) {
   const weeks = useWeeks(plan.id);
   return (
@@ -73,7 +73,7 @@ function WeekPanel({ plan, week }: { plan: WorkPlan; week: Week }) {
   const active = plan.status === "IN_PROGRESS";
   const [viewing, setViewing] = useState(false);
 
-  // Alur SK v2: laporan mingguan diisi ketua di HP; PM hanya memeriksa.
+  // Alur rencana kerja v2: laporan mingguan diisi ketua di HP; PM hanya memeriksa.
   if (EDITABLE.includes(week.status) && active && isLeader) {
     return (
       <Panel week={week}>

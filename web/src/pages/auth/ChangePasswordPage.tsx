@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { Navigate, useNavigate } from "react-router-dom";
-import { useSession } from "@/app/session";
+import { useSession } from "@/stores/sessionStore";
 import { ApiError } from "@/lib/apiClient";
 import { changePassword } from "@/services/authService";
 import { changePasswordSchema, type ChangePasswordValues } from "@/schemas/changePasswordSchema";

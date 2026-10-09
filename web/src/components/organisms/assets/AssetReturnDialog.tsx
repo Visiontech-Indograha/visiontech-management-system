@@ -8,7 +8,7 @@ import { returnSchema, type ReturnValues } from "@/schemas/assetSchemas";
 import { useRequestReturn, type Asset } from "@/services/assetService";
 import { AssetFormDialog } from "./AssetFormDialog";
 
-/** Ketua SK peminjam mengajukan pengembalian (BAST) — petugas aset memeriksanya. */
+/** Ketua rencana kerja peminjam mengajukan pengembalian (BAST) — petugas aset memeriksanya. */
 export function AssetReturnDialog({ asset, onClose }: { asset: Asset; onClose: () => void }) {
   const requestReturn = useRequestReturn();
   const [formError, setFormError] = useState<string | null>(null);

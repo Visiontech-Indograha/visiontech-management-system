@@ -23,7 +23,7 @@ const today = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" 
 
 /**
  * HR: mutasi/promosi (domain.js PROMOTE). API menolak mutasi lintas unit selama karyawan masih
- * bertugas di SK aktif — pesannya ditampilkan apa adanya.
+ * bertugas di rencana kerja aktif — pesannya ditampilkan apa adanya.
  */
 export function EmployeePromoteDialog({ employee, onClose }: { employee: Employee; onClose: () => void }) {
   const units = useUnits();

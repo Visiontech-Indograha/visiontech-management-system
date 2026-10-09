@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useSession } from "@/app/session";
+import { useSession } from "@/stores/sessionStore";
 import { DirectoryTemplate } from "@/components/templates/directory/DirectoryTemplate";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useEmployees } from "@/services/employeeService";

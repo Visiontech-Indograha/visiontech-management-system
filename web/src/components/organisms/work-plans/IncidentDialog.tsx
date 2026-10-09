@@ -22,7 +22,7 @@ const schema = z.object({
 
 type Values = z.infer<typeof schema>;
 
-/** "Lapor Insiden/HSE" — ketua/anggota SK berjalan (POST /hse/incidents). */
+/** "Lapor Insiden/HSE" — ketua/anggota rencana kerja berjalan (POST /hse/incidents). */
 export function IncidentDialog({ plan, onClose }: { plan: WorkPlan; onClose: () => void }) {
   const store = useStoreIncident(plan.id);
   const report = useMutation({

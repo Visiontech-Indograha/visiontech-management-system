@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useSession } from "@/app/session";
+import { useSession } from "@/stores/sessionStore";
 import { QueryState } from "@/components/molecules/QueryState";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
 import { formatDate } from "@/lib/format";
@@ -11,7 +11,7 @@ import { type Overtime, useOvertime } from "@/services/overtimeService";
 import { OvertimeReviewDialog } from "@/components/organisms/work-plans/OvertimeReviewDialog";
 import { SectionTitle } from "@/components/molecules/SectionTitle";
 
-/** Panel "Rekap Lembur" per SK (GET /overtime?work_plan_id); PM (create:plan) meninjau yang PENDING_PM. */
+/** Panel "Rekap Lembur" per rencana kerja (GET /overtime?work_plan_id); PM (create:plan) meninjau yang PENDING_PM. */
 export function OvertimePanel({ plan }: { plan: WorkPlan }) {
   const { me } = useSession();
   const canReview = !!me?.permissions.includes("create:plan");

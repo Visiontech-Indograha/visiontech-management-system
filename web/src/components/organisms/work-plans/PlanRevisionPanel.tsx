@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { useSession } from "@/app/session";
+import { useSession } from "@/stores/sessionStore";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
 import { TextAreaField } from "@/components/molecules/Field";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
@@ -19,8 +19,8 @@ import { SectionTitle } from "@/components/molecules/SectionTitle";
 const TYPE_LABEL: Record<string, string> = { AMENDMENT: "Revisi", EXTEND: "Perpanjangan", PERSONNEL: "Revisi personel" };
 
 /**
- * Usulan perubahan SK (alur SK v2 PR3, flowchart SK2-E): adendum yang diajukan ketua saat SK Berjalan.
- * PM menolak dengan catatan, atau menerima dengan mengubah isi SK (dokumen adendum + TTD PM → ketua menandatangani).
+ * Usulan perubahan rencana kerja (alur rencana kerja v2 PR3, flowchart SK2-E): adendum yang diajukan ketua saat rencana kerja Berjalan.
+ * PM menolak dengan catatan, atau menerima dengan mengubah isi rencana kerja (dokumen adendum + TTD PM → ketua menandatangani).
  */
 export function PlanRevisionPanel({ plan }: { plan: WorkPlan }) {
   const { me } = useSession();

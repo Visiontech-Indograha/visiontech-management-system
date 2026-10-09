@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
-import { useSession } from "@/app/session";
+import { useSession } from "@/stores/sessionStore";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { errorMessage } from "@/lib/errors";
 import { formatDate } from "@/lib/format";
@@ -29,14 +29,14 @@ type Dialogs =
 
 /**
  * Tindakan sesuai prototype/js/workplans.js `controls`. Tindakan pengelola memakai izin create:plan;
- * tindakan ketua hanya untuk karyawan yang menjadi ketua pada SK ini (`leader_employee_id`) —
- * kewenangan mengikuti SK, bukan jabatan. API tetap menjadi penjaga terakhir.
+ * tindakan ketua hanya untuk karyawan yang menjadi ketua pada rencana kerja ini (`leader_employee_id`) —
+ * kewenangan mengikuti rencana kerja, bukan jabatan. API tetap menjadi penjaga terakhir.
  */
 export function PlanActionsPanel({ plan }: { plan: WorkPlan }) {
   const { me } = useSession();
   const canManage = !!me?.permissions.includes("create:plan");
   const isLeader = !!me?.employee_id && me.employee_id === plan.leader_employee_id;
-  // Insiden & lembur boleh diajukan anggota tim; PM/pengelola tidak melihatnya kecuali ia ketua SK ini.
+  // Insiden & lembur boleh diajukan anggota tim; PM/pengelola tidak melihatnya kecuali ia ketua rencana kerja ini.
   const isCrew = isLeader || !canManage;
   const transition = useTransition(plan.id);
   const [dialog, setDialog] = useState<Dialogs>(null);
@@ -107,7 +107,7 @@ export function PlanActionsPanel({ plan }: { plan: WorkPlan }) {
         </ActionButton>,
       );
   }
-  // Alur SK v2: Terima SK / Ajukan adendum dilakukan ketua di aplikasi HP; status Berjalan otomatis.
+  // Alur rencana kerja v2: Terima rencana kerja / Ajukan adendum dilakukan ketua di aplikasi HP; status Berjalan otomatis.
   if (isCrew && s === "IN_PROGRESS")
     leader.push(
       <ActionButton key="incident" variant="destructive" onClick={() => setDialog({ kind: "incident" })}>

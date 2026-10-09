@@ -13,7 +13,7 @@ export const INCIDENT_CATEGORY: Record<string, string> = {
 };
 export const INCIDENT_SEVERITY: Record<string, string> = { RENDAH: "Rendah", SEDANG: "Sedang", TINGGI: "Tinggi", KRITIS: "Kritis" };
 
-/** Insiden SK (GET /hse/incidents?plan_id=) — termasuk yang dilaporkan tim dari aplikasi mobile. */
+/** Insiden rencana kerja (GET /hse/incidents?plan_id=) — termasuk yang dilaporkan tim dari aplikasi mobile. */
 export const key = (planId: string) => ["incidents", planId] as const;
 export const useSessionIncidents = (planId: string) =>
   useQuery<Incident[]>({

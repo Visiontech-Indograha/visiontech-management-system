@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { useFormDraft } from "@/hooks/useFormDraft";
 import { toast } from "sonner";
 import { z } from "zod";
-import { useSession } from "@/app/session";
+import { useSession } from "@/stores/sessionStore";
 import { FilePreview } from "@/components/molecules/FilePreview";
 import { QueryState } from "@/components/molecules/QueryState";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
@@ -46,7 +46,7 @@ function useDayMutation<V>(planId: string, fn: (v: V) => Promise<unknown>) {
 }
 
 /**
- * Laporan harian SK (GET /work-plans/{id}/days) — checklist tugas (toggle), isi & kirim laporan (ketua),
+ * Laporan harian rencana kerja (GET /work-plans/{id}/days) — checklist tugas (toggle), isi & kirim laporan (ketua),
  * review PM. Tindakan ketua ditampilkan kepada semua; API menolak dengan pesan jelas bila bukan ketua.
  */
 type Evidence = { file_id: string; slot_label?: string | null; source?: string };
@@ -87,7 +87,7 @@ export function DailyReportsPanel({ plan }: { plan: WorkPlan }) {
 function DayPanel({ plan, day }: { plan: WorkPlan; day: Day }) {
   const { me } = useSession();
   const isPM = !!me?.permissions.includes("create:plan");
-  // Alur SK v2: hanya ketua menurut SK yang mengisi laporan (di HP); PM tidak melihat form ketua (CELAH 7).
+  // Alur rencana kerja v2: hanya ketua menurut rencana kerja yang mengisi laporan (di HP); PM tidak melihat form ketua (CELAH 7).
   const isLeader = !!me?.employee_id && me.employee_id === plan.leader_employee_id;
   const status = day.report?.status ?? "DRAFT";
   const badge = status === "SUBMITTED" && day.report?.resubmitted ? "RESUBMITTED" : status;
@@ -176,7 +176,7 @@ function TaskList({ plan, day, editable }: { plan: WorkPlan; day: Day; editable:
   );
 }
 
-/** Laporan anggota yang dikirim ke ketua (alur SK v2) — dibaca PM saat memeriksa laporan ketua. */
+/** Laporan anggota yang dikirim ke ketua (alur rencana kerja v2) — dibaca PM saat memeriksa laporan ketua. */
 function MemberReports({ plan, day }: { plan: WorkPlan; day: Day }) {
   const reports = useQuery({
     queryKey: ["member-reports", day.id],

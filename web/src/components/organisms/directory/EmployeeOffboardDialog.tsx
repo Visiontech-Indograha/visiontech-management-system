@@ -16,7 +16,7 @@ const offboardSchema = z.object({ reason: z.string().trim().min(1, "Alasan penga
 
 /**
  * M2-02 · HR mengakhiri masa kerja (domain.js OFFBOARD): alasan wajib, akses login dicabut, data historis
- * tetap. API menolak bila karyawan masih bertugas di SK berjalan — pesannya ditampilkan apa adanya.
+ * tetap. API menolak bila karyawan masih bertugas di rencana kerja berjalan — pesannya ditampilkan apa adanya.
  */
 export function EmployeeOffboardDialog({ employee, onClose }: { employee: Employee; onClose: () => void }) {
   const offboard = useOffboardEmployee(employee.id);

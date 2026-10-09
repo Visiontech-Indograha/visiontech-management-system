@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useSession } from "@/app/session";
+import { useSession } from "@/stores/sessionStore";
 import { WorkPlansTemplate } from "@/components/templates/work-plans/WorkPlansTemplate";
 import { useWorkPlans, type WorkPlan } from "@/services/workPlanService";
 

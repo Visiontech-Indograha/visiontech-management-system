@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { useSession } from "@/app/session";
+import { useSession } from "@/stores/sessionStore";
 import { FilePreview } from "@/components/molecules/FilePreview";
 import { QueryState } from "@/components/molecules/QueryState";
 import { TextField } from "@/components/molecules/Field";
@@ -21,7 +21,7 @@ function formatSize(bytes: number): string {
 }
 
 /**
- * Lampiran SK (GET/PUT /work-plans/{id}/attachments, V-29). Semua yang melihat SK dapat membaca;
+ * Lampiran rencana kerja (GET/PUT /work-plans/{id}/attachments, V-29). Semua yang melihat rencana kerja dapat membaca;
  * PM (create:plan) menambah/menghapus selagi DRAFT — PUT mengganti seluruh daftar. Saat terbit dibekukan.
  */
 export function PlanAttachmentsPanel({ plan }: { plan: WorkPlan }) {

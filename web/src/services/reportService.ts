@@ -6,7 +6,7 @@ import { planKey } from "./workPlanService";
 export type TeamMember = components["schemas"]["TeamMemberOut"];
 export type FinalReport = components["schemas"]["FinalReportOut"];
 
-/** Tim aktif SK (GET /work-plans/{id}/members) — kunci di bawah planKey agar ikut segar setelah transisi. */
+/** Tim aktif rencana kerja (GET /work-plans/{id}/members) — kunci di bawah planKey agar ikut segar setelah transisi. */
 export const usePlanTeam = (planId: string) =>
   useQuery({
     queryKey: [...planKey(planId), "team"],
@@ -23,7 +23,7 @@ export const useFinalReport = (planId: string, enabled = true) =>
 
 export type PlanAsset = components["schemas"]["PlanAssetItem"];
 
-/** Aset yang dipakai SK + kondisi saat dikembalikan (GET /work-plans/{id}/assets) — mode presentasi. */
+/** Aset yang dipakai rencana kerja + kondisi saat dikembalikan (GET /work-plans/{id}/assets) — mode presentasi. */
 export const usePlanAssets = (planId: string, enabled = true) =>
   useQuery({
     queryKey: [...planKey(planId), "assets"],

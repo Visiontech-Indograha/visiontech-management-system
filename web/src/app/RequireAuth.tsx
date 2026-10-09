@@ -1,5 +1,5 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
-import { useSession } from "@/app/session";
+import { useSession } from "@/stores/sessionStore";
 import { useFaceStatus } from "@/services/accountService";
 import { FaceEnrollRequiredPage } from "@/pages/face/FaceEnrollRequiredPage";
 

@@ -103,7 +103,7 @@ export default tseslint.config(
     rules: RULES.template,
   },
   {
-    files: ['src/services/**', 'src/hooks/**'],
+    files: ['src/services/**', 'src/hooks/**', 'src/stores/**'],
     rules: { 'no-restricted-imports': ['error', { patterns: [PAGES, COMPONENTS] }] },
   },
   {

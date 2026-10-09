@@ -5,7 +5,7 @@ import { useTransition, type WorkPlan } from "@/services/workPlanService";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { TextBlock } from "@/components/molecules/TextBlock";
 
-/** Draft terarsip tidak dapat dibuka (GET /work-plans/{id} hanya SK aktif); pulihkan dari sini. */
+/** Draft terarsip tidak dapat dibuka (GET /work-plans/{id} hanya rencana kerja aktif); pulihkan dari sini. */
 export function PlanArchivedCard({ plan }: { plan: WorkPlan }) {
   const restore = useTransition(plan.id);
   const onRestore = async () => {

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { api, ApiError } from "@/lib/api";
+import { api, ApiError } from "@/lib/apiClient";
 import { Skeleton } from "@/components/atoms/Skeleton";
 import { Button } from "@/components/atoms/Button";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/atoms/Dialog";

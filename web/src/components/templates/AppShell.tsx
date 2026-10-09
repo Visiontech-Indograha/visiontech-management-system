@@ -6,7 +6,7 @@ import { visibleNav } from "@/app/navigation";
 import { useSession } from "@/app/session";
 import logo from "@/assets/brand/logo-visiontech.png";
 import { Skeleton } from "@/components/atoms/Skeleton";
-import { useLiveEvents } from "@/lib/live-events";
+import { useLiveEvents } from "@/lib/liveEvents";
 import { ROLE_LABEL } from "@/lib/types";
 import { NotificationBell } from "../organisms/NotificationBell";
 

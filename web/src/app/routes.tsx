@@ -3,12 +3,15 @@ import type { RouteObject } from "react-router-dom";
 import { AppShell } from "@/components/templates/AppShell";
 import { RequireAccess, RequireAuth } from "@/app/RouteGuards";
 import { TitleLayout } from "@/components/templates/TitleLayout";
-import { LoginPage } from "@/pages/auth/LoginPage";
-import { ComingSoonPage, ForbiddenPage, HomePage, NotFoundPage } from "@/pages/Placeholders";
+import { LoginPage } from "@/features/auth/pages/LoginPage";
+import { HomePage } from "@/features/home/pages/HomePage";
+import { ComingSoonPage } from "@/features/system/pages/ComingSoonPage";
+import { ForbiddenPage } from "@/features/system/pages/ForbiddenPage";
+import { NotFoundPage } from "@/features/system/pages/NotFoundPage";
 import { NAV_ITEMS } from "./navigation";
 import { AssetsPage, AttendancePage, AuditLogPage, DirectoryPage, EmployeeDetailPage, MyDocumentsPage, SitesPage, WorkTypesPage, WorkPlanDetailPage, WorkPlansPage, PlanEditorPage, AttendanceRecapPage, OvertimeRecapPage, PresentationPage, TimelinePage, AccountPage } from "./lazyPages";
-import { VerifyPage } from "@/features/verify/VerifyPage";
-import { ChangePasswordPage } from "@/pages/auth/ChangePasswordPage";
+import { VerifyPage } from "@/features/verify/pages/VerifyPage";
+import { ChangePasswordPage } from "@/features/auth/pages/ChangePasswordPage";
 
 
 /** Halaman yang sudah dibangun; sisanya tampil "dibangun pada fase berikutnya". */

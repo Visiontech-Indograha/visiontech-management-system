@@ -1,8 +1,8 @@
 import { toast } from "sonner";
-import { Button } from "@/components/atoms/Button";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { api, ApiError } from "@/lib/apiClient";
 import { FaceCamera, type FaceLiveness } from "./FaceCamera";
+import { ActionButton } from "@/components/molecules/ActionButton";
 
 /**
  * Verifikasi wajah untuk absen web (pekerja kantor; web tidak punya jalur luring). Mengunggah gambar wajah sementara
@@ -41,9 +41,9 @@ export function FaceProbeDialog({
       title={title}
       onClose={onCancel}
       footer={
-        <Button variant="outline" onClick={onCancel}>
+        <ActionButton variant="outline" onClick={onCancel}>
           Batal
-        </Button>
+        </ActionButton>
       }
     >
       <FaceCamera

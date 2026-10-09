@@ -2,7 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import type L from "leaflet";
 import { useEffect, useState } from "react";
 import { MapContainer, Marker } from "react-leaflet";
-import { Button } from "@/components/atoms/Button";
 import { TextAreaField, TextField } from "@/components/molecules/Field";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { api } from "@/lib/apiClient";
@@ -10,6 +9,11 @@ import type { components } from "@/lib/apiTypes";
 import { errorMessage } from "@/lib/errors";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { ClickToPlace, MapController, Tiles, type LatLng } from "./PlanLocationCard";
+import { ActionButton } from "@/components/molecules/ActionButton";
+import { TextBlock } from "@/components/molecules/TextBlock";
+import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
+import { PlainAction } from "@/components/molecules/PlainAction";
+import { FormBlock } from "@/components/molecules/FormBlock";
 
 const INDONESIA: LatLng = [-2.5, 118];
 
@@ -115,16 +119,16 @@ export function NewSiteDialog({
       onClose={onClose}
       footer={
         <>
-          <Button variant="outline" onClick={onClose}>
+          <ActionButton variant="outline" onClick={onClose}>
             Batal
-          </Button>
-          <Button type="submit" form="new-site-form">
+          </ActionButton>
+          <ActionButton type="submit" form="new-site-form">
             Simpan lokasi
-          </Button>
+          </ActionButton>
         </>
       }
     >
-      <form id="new-site-form" onSubmit={submit} noValidate>
+      <FormBlock id="new-site-form" onSubmit={submit} noValidate>
         <TextField
           label="Cari nama lokasi"
           value={query}
@@ -134,25 +138,25 @@ export function NewSiteDialog({
         />
         {q.length >= 3 && (
           <div className="mb-3 text-sm">
-            {search.isFetching && <p className="text-mist">Mencari...</p>}
-            {search.isError && <p className="text-danger">{errorMessage(search.error)}</p>}
-            {search.isSuccess && search.data.length === 0 && <p className="text-mist">Tidak ada hasil.</p>}
+            {search.isFetching && <TextBlock className="text-mist">Mencari...</TextBlock>}
+            {search.isError && <TextBlock className="text-danger">{errorMessage(search.error)}</TextBlock>}
+            {search.isSuccess && search.data.length === 0 && <TextBlock className="text-mist">Tidak ada hasil.</TextBlock>}
             {search.data && search.data.length > 0 && (
-              <ul aria-label="Hasil pencarian" className="max-h-40 divide-y divide-line overflow-y-auto rounded-control border border-line">
+              <ListBlock aria-label="Hasil pencarian" className="max-h-40 divide-y divide-line overflow-y-auto rounded-control border border-line">
                 {search.data.map((r) => (
-                  <li key={`${r.lat},${r.lng},${r.name}`}>
-                    <button type="button" className="min-h-11 w-full px-3 py-2 text-left hover:bg-muted" onClick={() => pick(r)}>
+                  <ListEntry key={`${r.lat},${r.lng},${r.name}`}>
+                    <PlainAction type="button" className="min-h-11 w-full px-3 py-2 text-left hover:bg-muted" onClick={() => pick(r)}>
                       {r.name}
-                      <span className="block text-xs text-mist">{r.type}</span>
-                    </button>
-                  </li>
+                      <TextBlock as="span" className="block text-xs text-mist">{r.type}</TextBlock>
+                    </PlainAction>
+                  </ListEntry>
                 ))}
-              </ul>
+              </ListBlock>
             )}
           </div>
         )}
-        <p className="mb-1 text-sm text-mist">Geser penanda atau klik peta untuk mengoreksi titik.</p>
-        {gpsNote && <p className="mb-1 text-sm text-warning">{gpsNote}</p>}
+        <TextBlock className="mb-1 text-sm text-mist">Geser penanda atau klik peta untuk mengoreksi titik.</TextBlock>
+        {gpsNote && <TextBlock className="mb-1 text-sm text-warning">{gpsNote}</TextBlock>}
         <div className="isolate mb-3 h-64 overflow-hidden rounded-control border border-line">
           <MapContainer center={view.center} zoom={view.zoom} className="h-full w-full">
             <Tiles />
@@ -184,7 +188,7 @@ export function NewSiteDialog({
           <TextField label="Latitude" inputMode="decimal" value={lat} onChange={(e) => typed(e.target.value, lng)} error={errors.lat} />
           <TextField label="Longitude" inputMode="decimal" value={lng} onChange={(e) => typed(lat, e.target.value)} error={errors.lng} />
         </div>
-      </form>
+      </FormBlock>
     </VmsDialog>
   );
 }

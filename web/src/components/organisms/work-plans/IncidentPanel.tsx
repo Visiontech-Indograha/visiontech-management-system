@@ -6,7 +6,6 @@ import { toast } from "sonner";
 import { z } from "zod";
 import { useSession } from "@/app/session";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
-import { Button } from "@/components/atoms/Button";
 import { SelectField, TextAreaField, TextField } from "@/components/molecules/Field";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { api } from "@/lib/apiClient";
@@ -15,6 +14,10 @@ import { formatDate } from "@/lib/format";
 import type { WorkPlan } from "@/services/workPlanService";
 import { INCIDENT_CATEGORY, INCIDENT_SEVERITY, key, useSessionIncidents, type Incident } from "@/services/incidentService";
 import { oversize, uploadFiles } from "@/services/uploadService";
+import { ActionButton } from "@/components/molecules/ActionButton";
+import { TextBlock } from "@/components/molecules/TextBlock";
+import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
+import { ControlOption, FormBlock } from "@/components/molecules/FormBlock";
 
 function useStoreIncident(planId: string) {
   const qc = useQueryClient();
@@ -67,35 +70,35 @@ export function IncidentDialog({ plan, onClose }: { plan: WorkPlan; onClose: () 
       onClose={onClose}
       footer={
         <>
-          <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
+          <ActionButton variant="outline" onClick={onClose} disabled={isSubmitting}>
             Batal
-          </Button>
-          <Button type="submit" form="incident-form" variant="destructive" disabled={isSubmitting}>
+          </ActionButton>
+          <ActionButton type="submit" form="incident-form" variant="destructive" disabled={isSubmitting}>
             {isSubmitting ? "Mengirim..." : "Kirim laporan"}
-          </Button>
+          </ActionButton>
         </>
       }
     >
-      <form id="incident-form" onSubmit={onSubmit} noValidate className="max-h-[65vh] overflow-y-auto px-1">
+      <FormBlock id="incident-form" onSubmit={onSubmit} noValidate className="max-h-[65vh] overflow-y-auto px-1">
         {formError && (
-          <p role="alert" className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
+          <TextBlock role="alert" className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
             {formError}
-          </p>
+          </TextBlock>
         )}
         <SelectField label="Kategori" error={errors.category?.message} {...register("category")}>
-          <option value="">Pilih kategori</option>
+          <ControlOption value="">Pilih kategori</ControlOption>
           {Object.entries(INCIDENT_CATEGORY).map(([v, l]) => (
-            <option key={v} value={v}>
+            <ControlOption key={v} value={v}>
               {l}
-            </option>
+            </ControlOption>
           ))}
         </SelectField>
         <SelectField label="Tingkat keparahan" error={errors.severity?.message} {...register("severity")}>
-          <option value="">Pilih tingkat</option>
+          <ControlOption value="">Pilih tingkat</ControlOption>
           {Object.entries(INCIDENT_SEVERITY).map(([v, l]) => (
-            <option key={v} value={v}>
+            <ControlOption key={v} value={v}>
               {l}
-            </option>
+            </ControlOption>
           ))}
         </SelectField>
         <TextAreaField label="Uraian kejadian" error={errors.description?.message} {...register("description")} />
@@ -113,7 +116,7 @@ export function IncidentDialog({ plan, onClose }: { plan: WorkPlan; onClose: () 
             setFiles(big ? [] : picked);
           }}
         />
-      </form>
+      </FormBlock>
     </VmsDialog>
   );
 }
@@ -129,27 +132,27 @@ export function IncidentPanel({ plan }: { plan: WorkPlan }) {
   if (incidents.length === 0) return null;
   return (
     <section aria-label="Laporan Insiden / HSE" className="rounded-panel border border-line bg-surface shadow-card p-4">
-      <h2 className="mb-3 text-base font-semibold">Laporan Insiden / HSE</h2>
-      <ul className="space-y-3">
+      <TextBlock as="h2" className="mb-3 text-base font-semibold">Laporan Insiden / HSE</TextBlock>
+      <ListBlock className="space-y-3">
         {incidents.map((i) => (
-          <li key={i.id} className="border-b border-line pb-3 last:border-0 last:pb-0">
+          <ListEntry key={i.id} className="border-b border-line pb-3 last:border-0 last:pb-0">
             <div className="flex items-start justify-between gap-2">
-              <strong className="text-sm">
+              <TextBlock as="strong" className="text-sm">
                 [{INCIDENT_CATEGORY[i.category] ?? i.category}] {INCIDENT_SEVERITY[i.severity] ?? i.severity}
-              </strong>
+              </TextBlock>
               <StatusBadge status={i.status} />
             </div>
-            <p className="text-sm">{i.description}</p>
-            <p className="text-xs text-mist">{formatDate(i.occurred_on)}</p>
-            {i.resolution_note && <p className="text-sm text-mist">Penyelesaian: {i.resolution_note}</p>}
+            <TextBlock className="text-sm">{i.description}</TextBlock>
+            <TextBlock className="text-xs text-mist">{formatDate(i.occurred_on)}</TextBlock>
+            {i.resolution_note && <TextBlock className="text-sm text-mist">Penyelesaian: {i.resolution_note}</TextBlock>}
             {canResolve && i.status !== "RESOLVED" && (
-              <Button size="sm" className="mt-2" onClick={() => setResolving(i)}>
+              <ActionButton size="sm" className="mt-2" onClick={() => setResolving(i)}>
                 Selesaikan
-              </Button>
+              </ActionButton>
             )}
-          </li>
+          </ListEntry>
         ))}
-      </ul>
+      </ListBlock>
       {resolving && <ResolveDialog plan={plan} incident={resolving} onClose={() => setResolving(null)} />}
     </section>
   );
@@ -185,23 +188,23 @@ function ResolveDialog({ plan, incident, onClose }: { plan: WorkPlan; incident: 
       onClose={onClose}
       footer={
         <>
-          <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
+          <ActionButton variant="outline" onClick={onClose} disabled={isSubmitting}>
             Batal
-          </Button>
-          <Button type="submit" form="resolve-form" disabled={isSubmitting}>
+          </ActionButton>
+          <ActionButton type="submit" form="resolve-form" disabled={isSubmitting}>
             Selesaikan
-          </Button>
+          </ActionButton>
         </>
       }
     >
-      <form id="resolve-form" onSubmit={onSubmit} noValidate>
+      <FormBlock id="resolve-form" onSubmit={onSubmit} noValidate>
         {formError && (
-          <p role="alert" className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
+          <TextBlock role="alert" className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
             {formError}
-          </p>
+          </TextBlock>
         )}
         <TextAreaField label="Catatan penyelesaian" error={errors.resolution_note?.message} {...register("resolution_note")} />
-      </form>
+      </FormBlock>
     </VmsDialog>
   );
 }

@@ -7,7 +7,6 @@ import { z } from "zod";
 import { useSession } from "@/app/session";
 import { QueryState } from "@/components/molecules/QueryState";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
-import { Button } from "@/components/atoms/Button";
 import { SelectField, TextAreaField, TextField } from "@/components/molecules/Field";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { api } from "@/lib/apiClient";
@@ -15,6 +14,10 @@ import type { components } from "@/lib/apiTypes";
 import { errorMessage } from "@/lib/errors";
 import { formatDate } from "@/lib/format";
 import { employeeName, useActiveEmployees, type WorkPlan } from "@/services/workPlanService";
+import { ActionButton } from "@/components/molecules/ActionButton";
+import { TextBlock } from "@/components/molecules/TextBlock";
+import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
+import { ControlOption, FormBlock } from "@/components/molecules/FormBlock";
 
 type Overtime = components["schemas"]["OvertimeResponse"];
 const key = (planId: string) => ["overtime", planId] as const;
@@ -60,23 +63,23 @@ function FormDialog({
       onClose={onClose}
       footer={
         <>
-          <Button variant="outline" onClick={onClose} disabled={submitting}>
+          <ActionButton variant="outline" onClick={onClose} disabled={submitting}>
             Batal
-          </Button>
-          <Button type="submit" form="overtime-form" disabled={submitting}>
+          </ActionButton>
+          <ActionButton type="submit" form="overtime-form" disabled={submitting}>
             {submitting ? "Menyimpan..." : submitLabel}
-          </Button>
+          </ActionButton>
         </>
       }
     >
-      <form id="overtime-form" onSubmit={onSubmit} noValidate>
+      <FormBlock id="overtime-form" onSubmit={onSubmit} noValidate>
         {formError && (
-          <p role="alert" className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
+          <TextBlock role="alert" className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
             {formError}
-          </p>
+          </TextBlock>
         )}
         {children}
-      </form>
+      </FormBlock>
     </VmsDialog>
   );
 }
@@ -130,30 +133,30 @@ export function OvertimePanel({ plan }: { plan: WorkPlan }) {
   if (list.data?.length === 0) return null;
   return (
     <section aria-label="Rekap Lembur" className="rounded-panel border border-line bg-surface shadow-card p-4">
-      <h2 className="mb-3 text-base font-semibold">Rekap Lembur</h2>
+      <TextBlock as="h2" className="mb-3 text-base font-semibold">Rekap Lembur</TextBlock>
       <QueryState query={list} errorText="Data lembur tidak dapat dimuat.">
-        <ul className="space-y-3">
+        <ListBlock className="space-y-3">
           {list.data?.map((o) => (
-            <li key={o.id} className="border-b border-line pb-3 last:border-0 last:pb-0">
+            <ListEntry key={o.id} className="border-b border-line pb-3 last:border-0 last:pb-0">
               <div className="flex items-start justify-between gap-2">
-                <strong className="text-sm">{employeeName(employees.data, o.employee_id)}</strong>
+                <TextBlock as="strong" className="text-sm">{employeeName(employees.data, o.employee_id)}</TextBlock>
                 <StatusBadge status={o.status} />
               </div>
-              <p className="text-sm">
+              <TextBlock className="text-sm">
                 {o.hours} jam · {o.reason}
-              </p>
-              <p className="text-xs text-mist">
+              </TextBlock>
+              <TextBlock className="text-xs text-mist">
                 {formatDate(o.work_date)}
                 {o.review_note ? ` · ${o.review_note}` : ""}
-              </p>
+              </TextBlock>
               {canReview && o.status === "PENDING_PM" && (
-                <Button size="sm" className="mt-2" onClick={() => setReviewing(o)}>
+                <ActionButton size="sm" className="mt-2" onClick={() => setReviewing(o)}>
                   Tinjau lembur
-                </Button>
+                </ActionButton>
               )}
-            </li>
+            </ListEntry>
           ))}
-        </ul>
+        </ListBlock>
       </QueryState>
       {reviewing && <ReviewDialog plan={plan} item={reviewing} onClose={() => setReviewing(null)} />}
     </section>
@@ -185,12 +188,12 @@ function ReviewDialog({ plan, item, onClose }: { plan: WorkPlan; item: Overtime;
   });
   return (
     <FormDialog title="Tinjau lembur" submitLabel="Simpan keputusan" submitting={isSubmitting} formError={formError} onClose={onClose} onSubmit={onSubmit}>
-      <p className="mb-3 text-sm">
+      <TextBlock className="mb-3 text-sm">
         {item.hours} jam · {item.reason}
-      </p>
+      </TextBlock>
       <SelectField label="Keputusan" {...register("decision")}>
-        <option value="APPROVED">Setujui</option>
-        <option value="REJECTED">Tolak</option>
+        <ControlOption value="APPROVED">Setujui</ControlOption>
+        <ControlOption value="REJECTED">Tolak</ControlOption>
       </SelectField>
       <TextAreaField label="Catatan (opsional)" {...register("note")} />
     </FormDialog>

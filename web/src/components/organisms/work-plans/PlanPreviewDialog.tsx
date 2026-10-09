@@ -1,10 +1,12 @@
 import { useRef } from "react";
-import { Link } from "react-router-dom";
-import { Button } from "@/components/atoms/Button";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/atoms/Dialog";
-import { Skeleton } from "@/components/atoms/Skeleton";
 import { errorMessage } from "@/lib/errors";
 import { useHtmlDocument } from "@/services/workPlanService";
+import { ActionButton } from "@/components/molecules/ActionButton";
+import { Modal, ModalContent, ModalFooter, ModalHeader, ModalTitle } from "@/components/molecules/Modal";
+import { LoadingBar } from "@/components/molecules/LoadingBar";
+import { InlineLink } from "@/components/molecules/Links";
+import { TextBlock } from "@/components/molecules/TextBlock";
+import { FrameView } from "@/components/molecules/FrameView";
 
 /**
  * Tampilan dokumen SK siap cetak A4 ("Sunting SK", flowchart SK2-C). Isi HTML dari server — templat yang sama
@@ -24,16 +26,16 @@ export function PlanPreviewDialog({
   const doc = useHtmlDocument(path);
   const frame = useRef<HTMLIFrameElement>(null);
   return (
-    <Dialog open onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="flex max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] max-w-4xl flex-col">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-        </DialogHeader>
+    <Modal open onOpenChange={(v) => !v && onClose()}>
+      <ModalContent className="flex max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] max-w-4xl flex-col">
+        <ModalHeader>
+          <ModalTitle>{title}</ModalTitle>
+        </ModalHeader>
         <div className="min-h-0 flex-1 overflow-auto rounded-control bg-canvas p-2">
-          {doc.isPending && <Skeleton className="h-[60vh] w-full" />}
-          {doc.isError && <p className="p-4 text-sm text-danger">{errorMessage(doc.error)}</p>}
+          {doc.isPending && <LoadingBar className="h-[60vh] w-full" />}
+          {doc.isError && <TextBlock className="p-4 text-sm text-danger">{errorMessage(doc.error)}</TextBlock>}
           {doc.data && (
-            <iframe
+            <FrameView
               ref={frame}
               title={title}
               srcDoc={doc.data}
@@ -42,20 +44,20 @@ export function PlanPreviewDialog({
             />
           )}
         </div>
-        <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={onClose}>
+        <ModalFooter className="gap-2">
+          <ActionButton variant="outline" onClick={onClose}>
             Tutup
-          </Button>
-          <Button variant="outline" disabled={!doc.data} onClick={() => frame.current?.contentWindow?.print()}>
+          </ActionButton>
+          <ActionButton variant="outline" disabled={!doc.data} onClick={() => frame.current?.contentWindow?.print()}>
             Cetak
-          </Button>
+          </ActionButton>
           {editTo && (
-            <Button asChild>
-              <Link to={editTo}>Ubah isi</Link>
-            </Button>
+            <ActionButton asChild>
+              <InlineLink to={editTo}>Ubah isi</InlineLink>
+            </ActionButton>
           )}
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </ModalFooter>
+      </ModalContent>
+    </Modal>
   );
 }

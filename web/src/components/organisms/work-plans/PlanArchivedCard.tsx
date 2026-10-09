@@ -1,8 +1,9 @@
 import { toast } from "sonner";
-import { Button } from "@/components/atoms/Button";
 import { errorMessage } from "@/lib/errors";
 import { formatDate } from "@/lib/format";
 import { useTransition, type WorkPlan } from "@/services/workPlanService";
+import { ActionButton } from "@/components/molecules/ActionButton";
+import { TextBlock } from "@/components/molecules/TextBlock";
 
 /** Draft terarsip tidak dapat dibuka (GET /work-plans/{id} hanya SK aktif); pulihkan dari sini. */
 export function PlanArchivedCard({ plan }: { plan: WorkPlan }) {
@@ -17,13 +18,13 @@ export function PlanArchivedCard({ plan }: { plan: WorkPlan }) {
   };
   return (
     <div className="flex h-full flex-col gap-2 rounded-panel border border-line bg-surface shadow-card p-4">
-      <span className="font-medium">{plan.title}</span>
-      <p className="text-sm text-mist">
+      <TextBlock as="span" className="font-medium">{plan.title}</TextBlock>
+      <TextBlock className="text-sm text-mist">
         {plan.location_text} · {formatDate(plan.period_start)} – {formatDate(plan.period_end)}
-      </p>
-      <Button variant="outline" onClick={onRestore} disabled={restore.isPending}>
+      </TextBlock>
+      <ActionButton variant="outline" onClick={onRestore} disabled={restore.isPending}>
         Pulihkan draf
-      </Button>
+      </ActionButton>
     </div>
   );
 }

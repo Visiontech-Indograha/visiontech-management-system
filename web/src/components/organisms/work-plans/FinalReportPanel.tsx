@@ -2,14 +2,16 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { FilePreview } from "@/components/molecules/FilePreview";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
-import { Button } from "@/components/atoms/Button";
-import { Skeleton } from "@/components/atoms/Skeleton";
 import { api, ApiError } from "@/lib/apiClient";
 import { errorMessage } from "@/lib/errors";
 import { formatDateTime } from "@/lib/format";
 import type { WorkPlan } from "@/services/workPlanService";
 import { PlanPreviewDialog } from "./PlanPreviewDialog";
 import { useFinalReport, usePlanTeam } from "@/services/reportService";
+import { ActionButton } from "@/components/molecules/ActionButton";
+import { LoadingBar } from "@/components/molecules/LoadingBar";
+import { TextBlock } from "@/components/molecules/TextBlock";
+import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
 
 const ROLE: Record<string, string> = { LEADER: "Ketua", MEMBER: "Anggota" };
 
@@ -18,22 +20,22 @@ export function TeamCard({ plan }: { plan: WorkPlan }) {
   const team = usePlanTeam(plan.id);
   return (
     <section aria-label="Tim" className="mt-6 rounded-panel border border-line bg-surface shadow-card px-5 py-4">
-      <h2 className="mb-2 text-base font-semibold">Tim</h2>
-      {team.isPending && <Skeleton className="h-10 w-full" />}
-      {team.isError && <p className="text-sm text-danger">Tim tidak dapat dimuat.</p>}
-      {team.data?.length === 0 && <p className="text-sm text-mist">Belum ada anggota tim.</p>}
+      <TextBlock as="h2" className="mb-2 text-base font-semibold">Tim</TextBlock>
+      {team.isPending && <LoadingBar className="h-10 w-full" />}
+      {team.isError && <TextBlock className="text-sm text-danger">Tim tidak dapat dimuat.</TextBlock>}
+      {team.data?.length === 0 && <TextBlock className="text-sm text-mist">Belum ada anggota tim.</TextBlock>}
       {!!team.data?.length && (
-        <ul className="divide-y divide-line text-sm">
+        <ListBlock className="divide-y divide-line text-sm">
           {team.data.map((m) => (
-            <li key={m.employee_id} className="flex items-center justify-between gap-3 py-2">
-              <span>
-                <span className="font-medium">{m.full_name}</span>
-                {m.position && <span className="text-mist"> · {m.position}</span>}
-              </span>
-              <span className="rounded-full bg-hover px-2.5 py-0.5 text-xs font-medium">{ROLE[m.role_in_plan] ?? m.role_in_plan}</span>
-            </li>
+            <ListEntry key={m.employee_id} className="flex items-center justify-between gap-3 py-2">
+              <TextBlock as="span">
+                <TextBlock as="span" className="font-medium">{m.full_name}</TextBlock>
+                {m.position && <TextBlock as="span" className="text-mist"> · {m.position}</TextBlock>}
+              </TextBlock>
+              <TextBlock as="span" className="rounded-full bg-hover px-2.5 py-0.5 text-xs font-medium">{ROLE[m.role_in_plan] ?? m.role_in_plan}</TextBlock>
+            </ListEntry>
           ))}
-        </ul>
+        </ListBlock>
       )}
     </section>
   );
@@ -67,12 +69,12 @@ export function FinalReportPanel({ plan }: { plan: WorkPlan }) {
   return (
     <section aria-label="Laporan akhir" className="mt-6 rounded-panel border border-line bg-surface shadow-card px-5 py-4">
       <div className="mb-3 flex items-center justify-between gap-3">
-        <h2 className="text-base font-semibold">Laporan akhir</h2>
+        <TextBlock as="h2" className="text-base font-semibold">Laporan akhir</TextBlock>
         {r && <StatusBadge status={r.status} />}
       </div>
       {r?.status === "APPROVED" && <FinalReportView plan={plan} />}
       {r?.status === "APPROVED" && (
-        <Button
+        <ActionButton
           variant="outline"
           className="mb-3"
           disabled={downloading}
@@ -83,43 +85,43 @@ export function FinalReportPanel({ plan }: { plan: WorkPlan }) {
           }}
         >
           {downloading ? "Mengunduh..." : "Unduh PDF laporan akhir"}
-        </Button>
+        </ActionButton>
       )}
-      {report.isError && <p className="text-sm text-danger">Laporan akhir tidak dapat dimuat.</p>}
+      {report.isError && <TextBlock className="text-sm text-danger">Laporan akhir tidak dapat dimuat.</TextBlock>}
       {r && (
-        <dl className="space-y-3 text-sm">
+        <ListBlock as="dl" className="space-y-3 text-sm">
           <div>
-            <dt className="text-mist">Laporan keseluruhan</dt>
-            <dd className="whitespace-pre-line">{r.body}</dd>
+            <TextBlock as="dt" className="text-mist">Laporan keseluruhan</TextBlock>
+            <TextBlock as="dd" className="whitespace-pre-line">{r.body}</TextBlock>
           </div>
           <div>
-            <dt className="text-mist">Kendala keseluruhan</dt>
-            <dd className="whitespace-pre-line">{r.obstacle || "-"}</dd>
+            <TextBlock as="dt" className="text-mist">Kendala keseluruhan</TextBlock>
+            <TextBlock as="dd" className="whitespace-pre-line">{r.obstacle || "-"}</TextBlock>
           </div>
           {r.evidence_file_ids.length > 0 && (
             <div>
-              <dt className="text-mist">Lampiran ({r.evidence_file_ids.length})</dt>
-              <dd className="mt-1 flex flex-wrap gap-2">
+              <TextBlock as="dt" className="text-mist">Lampiran ({r.evidence_file_ids.length})</TextBlock>
+              <TextBlock as="dd" className="mt-1 flex flex-wrap gap-2">
                 {r.evidence_file_ids.map((id, i) => (
                   <FilePreview key={id} fileId={id} fileName={`Lampiran ${i + 1}`} />
                 ))}
-              </dd>
+              </TextBlock>
             </div>
           )}
-          <div className="text-mist">
+          <TextBlock as="span" className="block text-mist">
             Diajukan {r.submitted_by_name ?? "ketua tim"}
             {r.submitted_at && ` · ${formatDateTime(r.submitted_at)}`}
-          </div>
+          </TextBlock>
           {r.review_note && (
             <div>
-              <dt className="text-mist">
+              <TextBlock as="dt" className="text-mist">
                 Catatan {r.reviewed_by_name ?? "PM"}
                 {r.reviewed_at && ` · ${formatDateTime(r.reviewed_at)}`}
-              </dt>
-              <dd>{r.review_note}</dd>
+              </TextBlock>
+              <TextBlock as="dd">{r.review_note}</TextBlock>
             </div>
           )}
-        </dl>
+        </ListBlock>
       )}
     </section>
   );
@@ -130,9 +132,9 @@ function FinalReportView({ plan }: { plan: WorkPlan }) {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <Button variant="outline" className="mr-2" onClick={() => setOpen(true)}>
+      <ActionButton variant="outline" className="mr-2" onClick={() => setOpen(true)}>
         Lihat laporan akhir
-      </Button>
+      </ActionButton>
       {open && (
         <PlanPreviewDialog title={`Laporan akhir — ${plan.title}`} path={`/work-plans/${plan.id}/completion/html`} onClose={() => setOpen(false)} />
       )}

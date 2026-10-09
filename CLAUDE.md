@@ -42,7 +42,7 @@ Daftar pustaka lengkap dan aturan menambah pustaka: `docs/14-DAFTAR-PUSTAKA-TEKN
 
 ```
 api/            FastAPI — endpoint → service → crud (struktur WAJIB: docs/12 §1, migrasi: docs/26)
-web/            React — components/{ui,molecules,organisms,templates} + features/
+web/            React — components/{atoms,molecules,organisms,templates} + features/<fitur>/{pages,components}
 mobile/         Flutter — core/, shared/, features/
 face-service/   layanan wajah (fase 8)
 db/             5 berkas SQL, fondasi skema
@@ -58,7 +58,7 @@ docs/           seluruh rencana dan standar
 | Skema Pydantic, modul API baru | `docs/12` §10 (gaya skema `<Entitas>In/Out`) dan §11 (templat lapisan) |
 | Kode Flutter | `mobile/analysis_options.yaml`, `docs/11` bagian Mobile |
 | Sebelum commit / PR | `docs/CHECKLIST-PR.md` |
-| Komponen / halaman | `docs/11-STANDAR-FRONTEND.md` |
+| Komponen / halaman | `docs/33-STANDAR-PENULISAN-KODE.md` (atomic design, penamaan), `docs/11-STANDAR-FRONTEND.md` |
 | Unggahan berkas | `docs/13-PENGELOLAAN-BERKAS-DAN-KOMPRESI.md` |
 | Auth, izin, biometrik | `docs/08-KEAMANAN-DAN-KEPATUHAN.md` |
 | CI, deploy, peringatan | `docs/17-CI-CD-DAN-NOTIFIKASI.md` |
@@ -92,6 +92,10 @@ docs/           seluruh rencana dan standar
 
 - **Mobile-first.** Gaya dasar untuk ponsel, tambahkan dengan `md:` dan `lg:`. Tidak pernah `max-*`.
 - **Tailwind CSS v4:** Dilarang menggunakan `tailwind.config.js`. Gunakan murni CSS via `@theme` dan plugin `@tailwindcss/vite`.
+- **Atomic design wajib (`docs/33`, keputusan pemilik 2026-10-09):** atoms → molecules → organisms → templates → pages.
+  **Page dilarang keras memakai atom, molecule, ikon, atau elemen HTML mentah** — hanya template, organism, dan
+  `div/section/main/header/footer/article/aside` untuk tata letak (ditegakkan ESLint). Penamaan berkas: komponen
+  `[NamaFitur][OutputTampilan].tsx`, service `[domain]Service.ts`, satu klien HTTP `lib/apiClient.ts`.
 - **Wajib pakai shadcn/ui.** Tidak ada → susun dari yang ada → benar-benar tidak ada → buat sendiri dengan token yang sama, taruh di `components/`.
 - Naikkan komponen ke pustaka bersama **setelah** dipakai dua kali, bukan sebelumnya.
 - **TanStack Query untuk data server, Zustand untuk state klien.** Data API tidak pernah

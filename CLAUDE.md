@@ -93,9 +93,9 @@ docs/           seluruh rencana dan standar
 - **Mobile-first.** Gaya dasar untuk ponsel, tambahkan dengan `md:` dan `lg:`. Tidak pernah `max-*`.
 - **Tailwind CSS v4:** Dilarang menggunakan `tailwind.config.js`. Gunakan murni CSS via `@theme` dan plugin `@tailwindcss/vite`.
 - **Atomic design wajib (`docs/33`, keputusan pemilik 2026-10-09):** atoms → molecules → organisms → templates → pages.
-  Urutan: tampilan UI > Page > Template > Organism > Molecule > Atom. **Page dan Template dilarang keras memakai
-  atom, molecule, ikon, atau elemen HTML mentah** — hanya template, organism, dan
-  `div/section/main/header/footer/article/aside` untuk tata letak (ditegakkan ESLint). Penamaan berkas: komponen
+  Urutan: tampilan UI > Page > Template > Organism > Molecule > Atom — **Page = kumpulan template, Template =
+  kumpulan organism, Organism = kumpulan molecule, Molecule = kumpulan atom**; elemen HTML/teks/ikon hanya di atom
+  (Template/Organism/Molecule boleh `div` tata letak). Ditegakkan ESLint; daftar `*_LEGACY` hanya boleh menyusut. Penamaan berkas: komponen
   `[NamaFitur][OutputTampilan].tsx`, service `[domain]Service.ts`, satu klien HTTP `lib/apiClient.ts`.
 - **Wajib pakai shadcn/ui.** Tidak ada → susun dari yang ada → benar-benar tidak ada → buat sendiri dengan token yang sama, taruh di `components/`.
 - Naikkan komponen ke pustaka bersama **setelah** dipakai dua kali, bukan sebelumnya.

@@ -156,6 +156,8 @@ Uji ditaruh **di samping** berkasnya: `PlanDetailCard.test.tsx`.
 
 - Nama berkas = nama ekspor utama. Satu berkas boleh berisi beberapa komponen kecil yang
   hanya dipakai komponen utamanya.
+- Pengecualian: **berkas keluarga** atom/molecule yang mengekspor varian satu konsep (`Field` → `TextField`/`SelectField`/
+  `TextAreaField`, `Links`, `TableBlock`, `ListBlock`, `FormBlock`, `Panel`, `Menu`). Organism dan Page tidak boleh.
 - Hindari nama generik (`Box.tsx`, `Item.tsx`, `helpers.ts`, `data.ts`) dan istilah lama
   (`Sk…` → `Plan…`; SK = Rencana Kerja).
 - `.tsx` hanya untuk berkas ber-JSX; selain itu `.ts`.

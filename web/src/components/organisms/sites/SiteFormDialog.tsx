@@ -6,7 +6,7 @@ import { z } from "zod";
 import { TextField } from "@/components/molecules/Field";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { ApiError } from "@/lib/apiClient";
-import type { LatLng } from "@/components/organisms/work-plans/PlanLocationCard";
+import type { LatLng } from "@/lib/geo";
 import { useCreateSite } from "@/services/siteService";
 import { SiteMapPicker } from "./SiteMapPicker";
 import { ActionButton } from "@/components/molecules/ActionButton";

@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/apiClient";
 import type { components } from "@/lib/apiTypes";
 
@@ -32,4 +32,11 @@ export async function createIncident(body: IncidentCreateInput): Promise<Inciden
 /** POST /hse/incidents/{id}/resolve — tandai insiden selesai ditangani. */
 export async function resolveIncident(id: string, body: components["schemas"]["IncidentResolve"]): Promise<Incident> {
   return (await api.post<Incident>(`/hse/incidents/${id}/resolve`, body)).data;
+}
+
+/** Simpan insiden baru/terubah ke cache daftar insiden rencana kerja (paling atas). */
+export function useStoreIncident(planId: string) {
+  const qc = useQueryClient();
+  return (inc: Incident) =>
+    qc.setQueryData<Incident[]>(key(planId), (old = []) => [inc, ...old.filter((i) => i.id !== inc.id)]);
 }

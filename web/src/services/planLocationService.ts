@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/apiClient";
 import type { components } from "@/lib/apiTypes";
 
@@ -12,4 +13,15 @@ export async function getPlanLocation(planId: string): Promise<PlanLocation | nu
 /** PUT /work-plans/{id}/location — simpan titik lokasi rencana. */
 export async function savePlanLocation(planId: string, body: PlanLocationIn): Promise<PlanLocation> {
   return (await api.put<PlanLocation>(`/work-plans/${planId}/location`, body)).data;
+}
+
+/** Kunci cache lokasi rencana kerja. */
+export const planLocationKey = (planId: string) => ["plan-location", planId] as const;
+
+/** Lokasi rencana kerja (TanStack Query). */
+export function usePlanLocation(planId: string) {
+  return useQuery({
+    queryKey: planLocationKey(planId),
+    queryFn: () => getPlanLocation(planId),
+  });
 }

@@ -10,8 +10,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/atoms/DropdownMenu";
-import { api } from "@/lib/api";
-import type { components } from "@/lib/api-types";
+import { api } from "@/lib/apiClient";
+import type { components } from "@/lib/apiTypes";
 import { formatDateTime } from "@/lib/format";
 
 type NotificationList = components["schemas"]["NotificationList"];

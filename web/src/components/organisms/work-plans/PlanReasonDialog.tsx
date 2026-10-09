@@ -63,7 +63,7 @@ const required = (msg: string) => z.string().trim().min(1, msg);
 const reasonSchema = z.object({ reason: required("Alasan wajib diisi.") });
 
 /** Dialog alasan untuk banding, batal, arsip (TransitionRequest.reason). */
-export function ReasonDialog({
+export function PlanReasonDialog({
   plan,
   action,
   title,

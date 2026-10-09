@@ -1,124 +1,14 @@
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { toast } from "sonner";
-import { z } from "zod";
 import { useSession } from "@/app/session";
 import { QueryState } from "@/components/molecules/QueryState";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
-import { SelectField, TextAreaField, TextField } from "@/components/molecules/Field";
-import { VmsDialog } from "@/components/molecules/VmsDialog";
-import type { components } from "@/lib/apiTypes";
-import { errorMessage } from "@/lib/errors";
 import { formatDate } from "@/lib/format";
 import { employeeName, useActiveEmployees, type WorkPlan } from "@/services/workPlanService";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
-import { ControlOption, FormBlock } from "@/components/molecules/FormBlock";
-import { createOvertime, listPlanOvertime, reviewOvertime, type Overtime } from "@/services/overtimeService";
-
-const key = (planId: string) => ["overtime", planId] as const;
-
-const useOvertime = (planId: string) =>
-  useQuery({
-    queryKey: key(planId),
-    queryFn: () => listPlanOvertime(planId),
-  });
-
-function useOvertimeMutation<V>(planId: string, fn: (v: V) => Promise<Overtime>) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: fn,
-    onSuccess: async () => {
-      await qc.invalidateQueries({ queryKey: key(planId) });
-      await qc.invalidateQueries({ queryKey: ["overtime-recap"] });
-    },
-  });
-}
-
-function FormDialog({
-  title,
-  submitLabel,
-  submitting,
-  formError,
-  onClose,
-  onSubmit,
-  children,
-}: {
-  title: string;
-  submitLabel: string;
-  submitting: boolean;
-  formError: string | null;
-  onClose: () => void;
-  onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <VmsDialog
-      open
-      title={title}
-      onClose={onClose}
-      footer={
-        <>
-          <ActionButton variant="outline" onClick={onClose} disabled={submitting}>
-            Batal
-          </ActionButton>
-          <ActionButton type="submit" form="overtime-form" disabled={submitting}>
-            {submitting ? "Menyimpan..." : submitLabel}
-          </ActionButton>
-        </>
-      }
-    >
-      <FormBlock id="overtime-form" onSubmit={onSubmit} noValidate>
-        {formError && (
-          <TextBlock role="alert" className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
-            {formError}
-          </TextBlock>
-        )}
-        {children}
-      </FormBlock>
-    </VmsDialog>
-  );
-}
-
-const reportSchema = z.object({
-  hours: z
-    .string()
-    .trim()
-    .min(1, "Jam lembur wajib diisi.")
-    .refine((v) => Number(v) > 0 && Number(v) <= 12, { message: "Jam lembur harus lebih dari 0 dan paling banyak 12." }),
-  reason: z.string().trim().min(1, "Alasan lembur wajib diisi."),
-});
-type ReportValues = z.infer<typeof reportSchema>;
-
-/** "Ajukan Lembur" — ketua/anggota SK berjalan (POST /overtime). Tanggal lembur dicatat server. */
-export function OvertimeDialog({ plan, onClose }: { plan: WorkPlan; onClose: () => void }) {
-  const report = useOvertimeMutation(plan.id, (body: components["schemas"]["OvertimeCreate"]) => createOvertime(body));
-  const [formError, setFormError] = useState<string | null>(null);
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<ReportValues>({ resolver: zodResolver(reportSchema), defaultValues: { hours: "", reason: "" } });
-  const onSubmit = handleSubmit(async (v) => {
-    setFormError(null);
-    try {
-      await report.mutateAsync({ work_plan_id: plan.id, hours: Number(v.hours), reason: v.reason });
-      toast.success("Lembur diajukan ke PM.");
-      onClose();
-    } catch (err) {
-      setFormError(errorMessage(err));
-    }
-  });
-  return (
-    <FormDialog title="Ajukan Lembur" submitLabel="Ajukan lembur" submitting={isSubmitting} formError={formError} onClose={onClose} onSubmit={onSubmit}>
-      <TextField label="Jumlah jam" inputMode="decimal" hint="Maksimal 12 jam." error={errors.hours?.message} {...register("hours")} />
-      <TextAreaField label="Alasan" error={errors.reason?.message} {...register("reason")} />
-    </FormDialog>
-  );
-}
+import { type Overtime, useOvertime } from "@/services/overtimeService";
+import { OvertimeReviewDialog } from "@/components/organisms/work-plans/OvertimeReviewDialog";
 
 /** Panel "Rekap Lembur" per SK (GET /overtime?work_plan_id); PM (create:plan) meninjau yang PENDING_PM. */
 export function OvertimePanel({ plan }: { plan: WorkPlan }) {
@@ -155,42 +45,8 @@ export function OvertimePanel({ plan }: { plan: WorkPlan }) {
           ))}
         </ListBlock>
       </QueryState>
-      {reviewing && <ReviewDialog plan={plan} item={reviewing} onClose={() => setReviewing(null)} />}
+      {reviewing && <OvertimeReviewDialog plan={plan} item={reviewing} onClose={() => setReviewing(null)} />}
     </section>
   );
 }
 
-const reviewSchema = z.object({ decision: z.enum(["APPROVED", "REJECTED"]), note: z.string().trim() });
-type ReviewValues = z.infer<typeof reviewSchema>;
-
-function ReviewDialog({ plan, item, onClose }: { plan: WorkPlan; item: Overtime; onClose: () => void }) {
-  const review = useOvertimeMutation(plan.id, (body: components["schemas"]["OvertimeReview"]) => reviewOvertime(item.id, body));
-  const [formError, setFormError] = useState<string | null>(null);
-  const {
-    register,
-    handleSubmit,
-    formState: { isSubmitting },
-  } = useForm<ReviewValues>({ resolver: zodResolver(reviewSchema), defaultValues: { decision: "APPROVED", note: "" } });
-  const onSubmit = handleSubmit(async (v) => {
-    setFormError(null);
-    try {
-      await review.mutateAsync({ decision: v.decision, note: v.note || null });
-      toast.success(v.decision === "APPROVED" ? "Lembur disetujui." : "Lembur ditolak.");
-      onClose();
-    } catch (err) {
-      setFormError(errorMessage(err));
-    }
-  });
-  return (
-    <FormDialog title="Tinjau lembur" submitLabel="Simpan keputusan" submitting={isSubmitting} formError={formError} onClose={onClose} onSubmit={onSubmit}>
-      <TextBlock className="mb-3 text-sm">
-        {item.hours} jam · {item.reason}
-      </TextBlock>
-      <SelectField label="Keputusan" {...register("decision")}>
-        <ControlOption value="APPROVED">Setujui</ControlOption>
-        <ControlOption value="REJECTED">Tolak</ControlOption>
-      </SelectField>
-      <TextAreaField label="Catatan (opsional)" {...register("note")} />
-    </FormDialog>
-  );
-}

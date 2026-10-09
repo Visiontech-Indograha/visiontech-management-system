@@ -5,9 +5,11 @@ import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { errorMessage } from "@/lib/errors";
 import { formatDate } from "@/lib/format";
 import { useTransition, type Transition, type WorkPlan } from "@/services/workPlanService";
-import { IncidentDialog, IncidentPanel } from "./IncidentPanel";
-import { OvertimeDialog, OvertimePanel } from "./OvertimePanel";
-import { ReasonDialog } from "./PlanFormDialogs";
+import { IncidentPanel } from "./IncidentPanel";
+import { IncidentDialog } from "@/components/organisms/work-plans/IncidentDialog";
+import { OvertimePanel } from "./OvertimePanel";
+import { OvertimeDialog } from "@/components/organisms/work-plans/OvertimeDialog";
+import { PlanReasonDialog } from "@/components/organisms/work-plans/PlanReasonDialog";
 import { PlanPreviewDialog } from "./PlanPreviewDialog";
 import { PlanRevisionHistory } from "./PlanRevisionHistory";
 import { PlanRevisionPanel } from "./PlanRevisionPanel";
@@ -226,7 +228,7 @@ export function PlanActionsPanel({ plan }: { plan: WorkPlan }) {
       {dialog?.kind === "incident" && <IncidentDialog plan={plan} onClose={() => setDialog(null)} />}
       {dialog?.kind === "overtime" && <OvertimeDialog plan={plan} onClose={() => setDialog(null)} />}
       {dialog?.kind === "reason" && (
-        <ReasonDialog plan={plan} action={dialog.action} title={dialog.title} label={dialog.label} onClose={() => setDialog(null)} />
+        <PlanReasonDialog plan={plan} action={dialog.action} title={dialog.title} label={dialog.label} onClose={() => setDialog(null)} />
       )}
     </aside>
   );

@@ -6,7 +6,10 @@ import { TextAreaField, TextField } from "@/components/molecules/Field";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { errorMessage } from "@/lib/errors";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
-import { ClickToPlace, MapController, Tiles, type LatLng } from "./PlanLocationCard";
+import { MapClickToPlace } from "@/components/organisms/map/MapClickToPlace";
+import { MapTiles } from "@/components/organisms/map/MapTiles";
+import { MapViewController } from "@/components/organisms/map/MapViewController";
+import type { LatLng } from "@/lib/geo";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
@@ -157,9 +160,9 @@ export function NewSiteDialog({
         {gpsNote && <TextBlock className="mb-1 text-sm text-warning">{gpsNote}</TextBlock>}
         <div className="isolate mb-3 h-64 overflow-hidden rounded-control border border-line">
           <MapContainer center={view.center} zoom={view.zoom} className="h-full w-full">
-            <Tiles />
-            <MapController center={view.center} zoom={view.zoom} />
-            <ClickToPlace onPick={placeFromMap} />
+            <MapTiles />
+            <MapViewController center={view.center} zoom={view.zoom} />
+            <MapClickToPlace onPick={placeFromMap} />
             {point && (
               <Marker
                 position={point}

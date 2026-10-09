@@ -8,7 +8,7 @@ import { QueryState } from "@/components/molecules/QueryState";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
 import { Button } from "@/components/atoms/Button";
 import { SelectField, TextAreaField, TextField } from "@/components/molecules/Field";
-import { PageHeader } from "@/components/molecules/PageHeader";
+import { PageHeader } from "@/components/organisms/PageHeader";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { api, ApiError } from "@/lib/apiClient";
 import { errorMessage } from "@/lib/errors";

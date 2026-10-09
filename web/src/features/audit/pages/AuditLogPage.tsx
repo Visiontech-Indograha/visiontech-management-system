@@ -1,7 +1,7 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Fragment, useState } from "react";
 import { Button } from "@/components/atoms/Button";
-import { PageHeader } from "@/components/molecules/PageHeader";
+import { PageHeader } from "@/components/organisms/PageHeader";
 import { Skeleton } from "@/components/atoms/Skeleton";
 import { api } from "@/lib/apiClient";
 import type { components } from "@/lib/apiTypes";

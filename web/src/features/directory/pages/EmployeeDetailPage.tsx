@@ -8,7 +8,7 @@ import { useSession } from "@/app/session";
 import { Badge } from "@/components/atoms/Badge";
 import { Button } from "@/components/atoms/Button";
 import { SelectField, TextField } from "@/components/molecules/Field";
-import { PageHeader } from "@/components/molecules/PageHeader";
+import { PageHeader } from "@/components/organisms/PageHeader";
 import { Skeleton } from "@/components/atoms/Skeleton";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { ApiError } from "@/lib/apiClient";

@@ -43,7 +43,6 @@ const NOT_YET_MIGRATED = [
   'src/features/attendance/pages/AttendancePage.tsx',
   'src/features/audit/pages/AuditLogPage.tsx',
   'src/features/directory/pages/DirectoryPage.tsx',
-  'src/features/directory/pages/EmployeeDetailPage.tsx',
   'src/features/home/pages/HomePage.tsx',
   'src/features/monitoring/pages/AttendanceRecapPage.tsx',
   'src/features/work-plans/pages/PlanEditorPage.tsx',

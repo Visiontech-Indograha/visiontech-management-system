@@ -5,9 +5,9 @@ import { useForm } from "react-hook-form";
 import { useFormDraft } from "@/lib/drafts";
 import { toast } from "sonner";
 import { z } from "zod";
-import { Button } from "@/components/ui/button";
-import { TextAreaField, TextField } from "@/components/ui/Field";
-import { Dialog } from "@/components/ui/VmsDialog";
+import { Button } from "@/components/atoms/Button";
+import { TextAreaField, TextField } from "@/components/molecules/Field";
+import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { api } from "@/lib/api";
 import type { components } from "@/lib/api-types";
 import { errorMessage } from "@/lib/errors";
@@ -74,7 +74,7 @@ export function CompletionDialog({ plan, onClose }: { plan: WorkPlan; onClose: (
   });
 
   return (
-    <Dialog
+    <VmsDialog
       open
       title="Laporan akhir"
       onClose={onClose}
@@ -107,6 +107,6 @@ export function CompletionDialog({ plan, onClose }: { plan: WorkPlan; onClose: (
           onChange={(e) => pickFiles(e.target.files)}
         />
       </form>
-    </Dialog>
+    </VmsDialog>
   );
 }

@@ -3,10 +3,10 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
-import { Button } from "@/components/ui/button";
-import { SelectField, TextField } from "@/components/ui/Field";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Dialog } from "@/components/ui/VmsDialog";
+import { Button } from "@/components/atoms/Button";
+import { SelectField, TextField } from "@/components/molecules/Field";
+import { Skeleton } from "@/components/atoms/Skeleton";
+import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { errorMessage } from "@/lib/errors";
 import { formatDate } from "@/lib/format";
 import { useAssignments, usePromoteEmployee, useUnits, type Employee } from "./api";
@@ -77,7 +77,7 @@ export function PromoteDialog({ employee, onClose }: { employee: Employee; onClo
   });
 
   return (
-    <Dialog
+    <VmsDialog
       open
       title="Mutasi / promosi"
       onClose={onClose}
@@ -111,6 +111,6 @@ export function PromoteDialog({ employee, onClose }: { employee: Employee; onClo
         </SelectField>
         <TextField label="Berlaku mulai" type="date" error={errors.valid_from?.message} {...register("valid_from")} />
       </form>
-    </Dialog>
+    </VmsDialog>
   );
 }

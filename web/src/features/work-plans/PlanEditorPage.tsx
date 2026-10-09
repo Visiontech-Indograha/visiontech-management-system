@@ -6,9 +6,9 @@ import { Link, useLocation, useNavigate, useParams, useSearchParams } from "reac
 import { toast } from "sonner";
 import { z } from "zod";
 import { QueryState } from "@/components/molecules/QueryState";
-import { Button } from "@/components/ui/button";
-import { TextAreaField } from "@/components/ui/Field";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { Button } from "@/components/atoms/Button";
+import { TextAreaField } from "@/components/molecules/Field";
+import { PageHeader } from "@/components/molecules/PageHeader";
 import { errorMessage } from "@/lib/errors";
 import { formatDate } from "@/lib/format";
 import {

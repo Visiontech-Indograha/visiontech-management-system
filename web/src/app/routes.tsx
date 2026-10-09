@@ -1,8 +1,8 @@
 import { Suspense, type ReactNode } from "react";
 import type { RouteObject } from "react-router-dom";
-import { AppShell } from "@/components/layout/AppShell";
-import { RequireAccess, RequireAuth } from "@/components/layout/guards";
-import { TitleLayout } from "@/components/layout/TitleLayout";
+import { AppShell } from "@/components/templates/AppShell";
+import { RequireAccess, RequireAuth } from "@/app/RouteGuards";
+import { TitleLayout } from "@/components/templates/TitleLayout";
 import { LoginPage } from "@/pages/auth/LoginPage";
 import { ComingSoonPage, ForbiddenPage, HomePage, NotFoundPage } from "@/pages/Placeholders";
 import { NAV_ITEMS } from "./navigation";

@@ -6,10 +6,10 @@ import { z } from "zod";
 import { useSession } from "@/app/session";
 import { QueryState } from "@/components/molecules/QueryState";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
-import { Button } from "@/components/ui/button";
-import { SelectField, TextAreaField, TextField } from "@/components/ui/Field";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { Dialog } from "@/components/ui/VmsDialog";
+import { Button } from "@/components/atoms/Button";
+import { SelectField, TextAreaField, TextField } from "@/components/molecules/Field";
+import { PageHeader } from "@/components/molecules/PageHeader";
+import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { api, ApiError } from "@/lib/api";
 import { errorMessage } from "@/lib/errors";
 import { formatDateTime } from "@/lib/format";
@@ -111,7 +111,7 @@ function FormDialog({
   children: ReactNode;
 }) {
   return (
-    <Dialog
+    <VmsDialog
       open
       title={title}
       onClose={onClose}
@@ -134,7 +134,7 @@ function FormDialog({
         )}
         {children}
       </form>
-    </Dialog>
+    </VmsDialog>
   );
 }
 
@@ -395,7 +395,7 @@ async function downloadBast(asset: Asset, item: AssetReturnItem) {
 function ReturnHistoryDialog({ asset, onClose }: { asset: Asset; onClose: () => void }) {
   const history = useAssetReturns(asset.id);
   return (
-    <Dialog
+    <VmsDialog
       open
       title={`Riwayat pengembalian ${asset.name}`}
       onClose={onClose}
@@ -429,6 +429,6 @@ function ReturnHistoryDialog({ asset, onClose }: { asset: Asset; onClose: () => 
           </li>
         ))}
       </ul>
-    </Dialog>
+    </VmsDialog>
   );
 }

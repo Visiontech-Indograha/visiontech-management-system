@@ -1,5 +1,5 @@
 import { useSession } from "@/app/session";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { PageHeader } from "@/components/molecules/PageHeader";
 import { DocumentsPanel } from "./DocumentsPanel";
 
 /** "Berkas saya": berkas milik sendiri via /employees/{employee_id}/documents (employee_id dari /auth/me). */

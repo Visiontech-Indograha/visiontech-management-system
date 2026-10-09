@@ -4,9 +4,9 @@ import { useForm, useWatch } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { z } from "zod";
-import { Button } from "@/components/ui/button";
-import { SelectField, TextAreaField, TextField } from "@/components/ui/Field";
-import { Dialog } from "@/components/ui/VmsDialog";
+import { Button } from "@/components/atoms/Button";
+import { SelectField, TextAreaField, TextField } from "@/components/molecules/Field";
+import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { errorMessage } from "@/lib/errors";
 import {
   useAddDay,
@@ -42,7 +42,7 @@ function FormDialog({
   children: ReactNode;
 }) {
   return (
-    <Dialog
+    <VmsDialog
       open
       title={title}
       onClose={onClose}
@@ -65,7 +65,7 @@ function FormDialog({
         )}
         {children}
       </form>
-    </Dialog>
+    </VmsDialog>
   );
 }
 

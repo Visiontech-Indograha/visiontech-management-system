@@ -4,9 +4,9 @@ import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { useSession } from "@/app/session";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
-import { Button } from "@/components/ui/button";
-import { TextAreaField } from "@/components/ui/Field";
-import { Dialog } from "@/components/ui/VmsDialog";
+import { Button } from "@/components/atoms/Button";
+import { TextAreaField } from "@/components/molecules/Field";
+import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { api } from "@/lib/api";
 import { errorMessage } from "@/lib/errors";
 import { formatDateTime } from "@/lib/format";
@@ -107,7 +107,7 @@ export function AmendmentPanel({ plan }: { plan: WorkPlan }) {
     </section>
       )}
       {rejecting && (
-        <Dialog
+        <VmsDialog
           open
           title="Tolak permintaan"
           onClose={() => setRejecting(null)}
@@ -136,7 +136,7 @@ export function AmendmentPanel({ plan }: { plan: WorkPlan }) {
           }
         >
           <TextAreaField label="Catatan untuk ketua tim" value={note} onChange={(e) => setNote(e.target.value)} error={error ?? undefined} />
-        </Dialog>
+        </VmsDialog>
       )}
     </>
   );

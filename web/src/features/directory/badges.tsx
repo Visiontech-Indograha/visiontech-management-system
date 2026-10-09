@@ -1,4 +1,4 @@
-import { Badge } from "@/components/ui/Badge";
+import { Badge } from "@/components/atoms/Badge";
 
 /** Pemetaan status → badge (docs/06-UI-UX §4). */
 export function ExpiryBadge({ level, days }: { level: string | null | undefined; days?: number | null }) {

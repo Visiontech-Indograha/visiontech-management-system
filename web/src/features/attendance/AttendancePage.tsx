@@ -7,10 +7,10 @@ import { z } from "zod";
 import { useSession } from "@/app/session";
 import { QueryState } from "@/components/molecules/QueryState";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
-import { Button } from "@/components/ui/button";
-import { SelectField, TextAreaField, TextField } from "@/components/ui/Field";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { Dialog } from "@/components/ui/VmsDialog";
+import { Button } from "@/components/atoms/Button";
+import { SelectField, TextAreaField, TextField } from "@/components/molecules/Field";
+import { PageHeader } from "@/components/molecules/PageHeader";
+import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { api } from "@/lib/api";
 import type { components } from "@/lib/api-types";
 import { errorMessage } from "@/lib/errors";
@@ -245,7 +245,7 @@ function FormDialog({
   children: React.ReactNode;
 }) {
   return (
-    <Dialog
+    <VmsDialog
       open
       title={title}
       onClose={onClose}
@@ -268,7 +268,7 @@ function FormDialog({
         )}
         {children}
       </form>
-    </Dialog>
+    </VmsDialog>
   );
 }
 

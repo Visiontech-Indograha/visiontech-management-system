@@ -4,9 +4,9 @@ import { toast } from "sonner";
 import { useSession } from "@/app/session";
 import { QueryState } from "@/components/molecules/QueryState";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
-import { Button } from "@/components/ui/button";
-import { Dialog } from "@/components/ui/VmsDialog";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { Button } from "@/components/atoms/Button";
+import { VmsDialog } from "@/components/molecules/VmsDialog";
+import { PageHeader } from "@/components/molecules/PageHeader";
 import { errorMessage } from "@/lib/errors";
 import { formatDate } from "@/lib/format";
 import { CATEGORY_LABEL } from "@/lib/labels";
@@ -229,7 +229,7 @@ function PlanActions({ plan }: { plan: WorkPlan }) {
         </section>
       )}
       {dialog?.kind === "publish" && (
-        <Dialog
+        <VmsDialog
           open
           title="Terbitkan rencana kerja?"
           onClose={() => setDialog(null)}
@@ -255,7 +255,7 @@ function PlanActions({ plan }: { plan: WorkPlan }) {
             notifikasinya dikirim ke ketua tim serta semua anggota. Setelah terbit, isi rencana kerja tidak dapat diubah — perubahan hanya lewat
             revisi.
           </p>
-        </Dialog>
+        </VmsDialog>
       )}
       {dialog?.kind === "preview" && (
         <SkPreviewDialog
@@ -266,7 +266,7 @@ function PlanActions({ plan }: { plan: WorkPlan }) {
         />
       )}
       {dialog?.kind === "approve" && (
-        <Dialog
+        <VmsDialog
           open
           title="Setujui penutupan?"
           onClose={() => setDialog(null)}
@@ -291,7 +291,7 @@ function PlanActions({ plan }: { plan: WorkPlan }) {
             Laporan akhir <strong className="text-ink">{plan.title}</strong> akan dikunci dan ditandatangani ketua tim serta Anda. Rencana Kerja
             yang berlaku menjadi tidak berlaku, ketua & anggota bebas dipilih untuk rencana kerja baru, dan status menjadi Selesai.
           </p>
-        </Dialog>
+        </VmsDialog>
       )}
       {dialog?.kind === "incident" && <IncidentDialog plan={plan} onClose={() => setDialog(null)} />}
       {dialog?.kind === "overtime" && <OvertimeDialog plan={plan} onClose={() => setDialog(null)} />}

@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/button";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { Badge } from "@/components/atoms/Badge";
+import { Button } from "@/components/atoms/Button";
+import { PageHeader } from "@/components/molecules/PageHeader";
 import { formatDate } from "@/lib/format";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { useSession } from "@/app/session";

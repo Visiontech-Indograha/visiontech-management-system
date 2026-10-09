@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { useSession } from "@/app/session";
-import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Dialog } from "@/components/ui/VmsDialog";
-import { SelectField, TextField } from "@/components/ui/Field";
+import { Badge } from "@/components/atoms/Badge";
+import { Button } from "@/components/atoms/Button";
+import { Skeleton } from "@/components/atoms/Skeleton";
+import { VmsDialog } from "@/components/molecules/VmsDialog";
+import { SelectField, TextField } from "@/components/molecules/Field";
 import { ApiError } from "@/lib/api";
 import { formatDate } from "@/lib/format";
 import {
@@ -226,7 +226,7 @@ function DocumentDialog({
   };
 
   return (
-    <Dialog
+    <VmsDialog
       open
       title={renew ? "Perpanjang berkas" : "Tambah berkas"}
       onClose={onClose}
@@ -280,6 +280,6 @@ function DocumentDialog({
         <TextField name="expiry_date" label="Tanggal kedaluwarsa" type="date" error={errors.expiry_date} hint="Bila ada." />
         <TextField name="file" label="File (jpg, png, pdf; maks. 10 MB)" type="file" accept=".jpg,.jpeg,.png,.pdf" error={errors.file} />
       </form>
-    </Dialog>
+    </VmsDialog>
   );
 }

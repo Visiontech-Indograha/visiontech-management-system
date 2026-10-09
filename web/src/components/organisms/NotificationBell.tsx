@@ -9,7 +9,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@/components/atoms/DropdownMenu";
 import { api } from "@/lib/api";
 import type { components } from "@/lib/api-types";
 import { formatDateTime } from "@/lib/format";

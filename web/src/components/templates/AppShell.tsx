@@ -5,10 +5,10 @@ import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { visibleNav } from "@/app/navigation";
 import { useSession } from "@/app/session";
 import logo from "@/assets/brand/logo-visiontech.png";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Skeleton } from "@/components/atoms/Skeleton";
 import { useLiveEvents } from "@/lib/live-events";
 import { ROLE_LABEL } from "@/lib/types";
-import { NotificationBell } from "./NotificationBell";
+import { NotificationBell } from "../organisms/NotificationBell";
 
 function initials(email: string) {
   const name = email.split("@")[0].replace(/[^a-z]/gi, " ").trim();

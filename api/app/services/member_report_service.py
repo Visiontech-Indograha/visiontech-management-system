@@ -83,7 +83,8 @@ class MemberReportService:
         Returns:
             list[Any]: Daftar laporan.
         """
-        return await self.repo.list_for_day(day_id)
+        # Draf laporan anggota hanya milik anggota itu sendiri (dilihat lewat `mine`); ketua/PM melihat yang terkirim.
+        return [r for r in await self.repo.list_for_day(day_id) if r.status == "SENT"]
 
     async def mine(self, access: PlanAccess, day_id: UUID) -> Any:
         """
@@ -171,7 +172,8 @@ class MemberReportService:
             NotFoundError: Jika laporan hari tersebut belum ada.
         """
         report = await self.repo.daily_report_doc(day_id)
-        if report is None:
+        # Draf laporan ketua belum boleh dilihat PM/anggota: sama dengan belum ada (404).
+        if report is None or (report.status == "DRAFT" and not access.is_leader):
             raise NotFoundError("Laporan harian")
         members = await self.repo.list_for_day(day_id)
         header = await self.repo.plan_header(access.plan.id)

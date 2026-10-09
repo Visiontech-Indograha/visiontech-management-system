@@ -28,7 +28,7 @@ def _out(row: Any) -> PlanDayOut:
     Returns:
         PlanDayOut: Respons model hari kerja SK.
     """
-    return PlanDayOut(**row._mapping)
+    return PlanDayOut(**(row if isinstance(row, dict) else row._mapping))
 
 
 @router.get("", response_model=list[PlanDayOut])

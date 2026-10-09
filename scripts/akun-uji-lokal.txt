@@ -1,0 +1,95 @@
+AKUN UJI LOKAL — VMS Visiontech (hanya database pengembangan di komputer sendiri)
+Dibuat ulang dengan: scripts/seed_uji_lokal.py --ya-hapus-semua
+Sandi SEMUA akun: password123   (JANGAN dipakai di staging/produksi)
+
+== AKUN KANTOR (login di WEB) ==
+Email                            Peran     Nama                 Unit
+admin@visiontech.local           ADMIN     Admin Sistem         Kantor Pusat
+pm.survei@visiontech.local       PM        Rina Kartika         Survei & Pemetaan
+pm.infra@visiontech.local        PM        Dimas Prasetyo       Infrastruktur Jaringan
+hr@visiontech.local              HR        Siti Rahmawati       Kantor Pusat (lintas unit)
+aset@visiontech.local            ASSET     Bayu Firmansyah      Kantor Pusat (lintas unit)
+finance@visiontech.local         FINANCE   Agus Wibisono        Kantor Pusat (lintas unit)
+ops@visiontech.local             OPS       Lestari Handayani    Kantor Pusat (lintas unit)
+
+== ANGGOTA LAPANGAN (login di HP / aplikasi Visiontech) ==
+Email                            Nama                   Jabatan          Unit                     SIM
+anggota01@visiontech.local       Agus Setiawan          Teknisi          Survei & Pemetaan        -
+anggota02@visiontech.local       Bayu Pratama           Surveyor         Survei & Pemetaan        SIM A + SIM C
+anggota03@visiontech.local       Candra Wijaya          Helper           Survei & Pemetaan        SIM A + SIM C
+anggota04@visiontech.local       Dedi Kurniawan         Teknisi Senior   Survei & Pemetaan        SIM A
+anggota05@visiontech.local       Eko Saputra            Drafter          Survei & Pemetaan        SIM C
+anggota06@visiontech.local       Fajar Nugroho          Teknisi          Survei & Pemetaan        -
+anggota07@visiontech.local       Galih Permana          Surveyor         Survei & Pemetaan        SIM A + SIM C
+anggota08@visiontech.local       Hadi Susanto           Helper           Survei & Pemetaan        SIM A + SIM C
+anggota09@visiontech.local       Irfan Hakim            Teknisi Senior   Survei & Pemetaan        SIM A
+anggota10@visiontech.local       Joko Santoso           Drafter          Survei & Pemetaan        SIM C
+anggota11@visiontech.local       Kurnia Ramadhan        Teknisi          Survei & Pemetaan        -
+anggota12@visiontech.local       Lutfi Hidayat          Surveyor         Survei & Pemetaan        SIM A + SIM C
+anggota13@visiontech.local       Mahendra Putra         Helper           Survei & Pemetaan        SIM A + SIM C
+anggota14@visiontech.local       Nanda Prakoso          Teknisi Senior   Survei & Pemetaan        SIM A
+anggota15@visiontech.local       Oki Firmansyah         Drafter          Survei & Pemetaan        SIM C
+anggota16@visiontech.local       Putra Ardiansyah       Teknisi          Survei & Pemetaan        -
+anggota17@visiontech.local       Rizky Maulana          Surveyor         Survei & Pemetaan        SIM A + SIM C
+anggota18@visiontech.local       Satria Wibowo          Helper           Survei & Pemetaan        SIM A + SIM C
+anggota19@visiontech.local       Taufik Hidayatullah    Teknisi Senior   Infrastruktur Jaringan   SIM A
+anggota20@visiontech.local       Umar Said              Drafter          Infrastruktur Jaringan   SIM C
+anggota21@visiontech.local       Vicky Prasetyo         Teknisi          Infrastruktur Jaringan   -
+anggota22@visiontech.local       Wahyu Hidayat          Surveyor         Infrastruktur Jaringan   SIM A + SIM C
+anggota23@visiontech.local       Yoga Pratama           Helper           Infrastruktur Jaringan   SIM A + SIM C
+anggota24@visiontech.local       Zainal Arifin          Teknisi Senior   Infrastruktur Jaringan   SIM A
+anggota25@visiontech.local       Arif Rahman            Drafter          Infrastruktur Jaringan   SIM C
+anggota26@visiontech.local       Budi Santoso           Teknisi          Infrastruktur Jaringan   -
+anggota27@visiontech.local       Cahyo Nugroho          Surveyor         Infrastruktur Jaringan   SIM A + SIM C
+anggota28@visiontech.local       Dimas Anggara          Helper           Infrastruktur Jaringan   SIM A + SIM C
+anggota29@visiontech.local       Erwin Syahputra        Teknisi Senior   Infrastruktur Jaringan   SIM A
+anggota30@visiontech.local       Fikri Haikal           Drafter          Infrastruktur Jaringan   SIM C
+anggota31@visiontech.local       Gilang Ramadhan        Teknisi          Infrastruktur Jaringan   -
+anggota32@visiontech.local       Hendra Gunawan         Surveyor         Infrastruktur Jaringan   SIM A + SIM C
+anggota33@visiontech.local       Imam Fauzi             Helper           Infrastruktur Jaringan   SIM A + SIM C
+anggota34@visiontech.local       Jefri Nichol           Teknisi Senior   Infrastruktur Jaringan   SIM A
+anggota35@visiontech.local       Krisna Mukti           Drafter          Infrastruktur Jaringan   SIM C
+
+SIM: berlaku s.d. 31 Des 2030, terverifikasi. Mobil butuh SIM A, motor butuh SIM C.
+Rekap: 7 tanpa SIM, 14 SIM A + SIM C, 7 SIM A saja, 7 SIM C saja.
+
+== KENDARAAN ==
+MTR-01  Motor  Honda Vario 125 (B 3101 VTI)
+MTR-02  Motor  Honda Beat (B 3102 VTI)
+MTR-03  Motor  Yamaha NMAX (B 3103 VTI)
+MTR-04  Motor  Honda Supra X 125 (B 3104 VTI)
+MTR-05  Motor  Yamaha Mio M3 (B 3105 VTI)
+MTR-06  Motor  Honda Vario 125 (B 3106 VTI)
+MTR-07  Motor  Honda Beat (B 3107 VTI)
+MTR-08  Motor  Yamaha NMAX (B 3108 VTI)
+MTR-09  Motor  Honda Supra X 125 (B 3109 VTI)
+MTR-10  Motor  Yamaha Mio M3 (B 3110 VTI)
+MBL-01  Mobil  Toyota Avanza (B 1201 VTI)
+MBL-02  Mobil  Daihatsu Gran Max (B 1202 VTI)
+MBL-03  Mobil  Mitsubishi L300 (B 1203 VTI)
+MBL-04  Mobil  Toyota Hilux (B 1204 VTI)
+MBL-05  Mobil  Suzuki Carry Pick Up (B 1205 VTI)
+MBL-06  Mobil  Toyota Avanza (B 1206 VTI)
+MBL-07  Mobil  Daihatsu Gran Max (B 1207 VTI)
+MBL-08  Mobil  Mitsubishi L300 (B 1208 VTI)
+MBL-09  Mobil  Toyota Hilux (B 1209 VTI)
+MBL-10  Mobil  Suzuki Carry Pick Up (B 1210 VTI)
+
+== ALAT ==
+ALT-01  Total Station Topcon
+ALT-02  GPS Geodetik RTK
+ALT-03  Drone DJI Mavic 3
+ALT-04  Fusion Splicer Fiber
+ALT-05  OTDR Fiber Optik
+ALT-06  Tangga Lipat 4 m
+ALT-07  Bor Listrik Bosch
+ALT-08  Multimeter Digital
+ALT-09  Genset 3 kVA
+ALT-10  Laptop Lapangan
+
+== JENIS PEKERJAAN (template foto; * = wajib) ==
+Survei Lokasi: Foto kondisi awal lokasi*, Foto titik koordinat / patok*, Foto akses jalan
+Instalasi CCTV: Foto sebelum pemasangan*, Foto kamera terpasang*, Foto tampilan monitor/NVR*, Foto jalur kabel
+Instalasi Jaringan Fiber: Foto titik awal & akhir*, Foto hasil splicing*, Foto hasil uji OTDR*
+Replacement: Foto perangkat lama*, Foto perangkat baru terpasang*, Foto uji fungsi
+Pemeliharaan Rutin: Foto sebelum pemeliharaan*, Foto sesudah pemeliharaan*, Foto checklist yang ditandatangani

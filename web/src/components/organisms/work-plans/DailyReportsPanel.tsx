@@ -10,8 +10,6 @@ import { FilePreview } from "@/components/molecules/FilePreview";
 import { QueryState } from "@/components/molecules/QueryState";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
 import { SelectField, TextAreaField, TextField } from "@/components/molecules/Field";
-import { api } from "@/lib/apiClient";
-import type { components } from "@/lib/apiTypes";
 import { errorMessage } from "@/lib/errors";
 import { formatDate, formatDateTime } from "@/lib/format";
 import type { WorkPlan } from "@/services/workPlanService";
@@ -22,13 +20,12 @@ import { TextBlock } from "@/components/molecules/TextBlock";
 import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
 import { ControlInput, ControlLabel, ControlOption, FormBlock } from "@/components/molecules/FormBlock";
 import { DisclosureBlock, DisclosureTitle } from "@/components/molecules/DisclosureBlock";
+import { listMemberReports, listPlanDays, reviewDailyReport, saveDailyReport, submitDailyReport, toggleDayTask, type DailyReportInput, type DayTask, type PlanDay, type ReportReviewInput } from "@/services/dailyReportService";
 
-type S = components["schemas"];
-type Day = S["PlanDayOut"];
-type Task = S["DayTaskOut"];
-type ReportIn = Omit<S["DailyReportCreate"], "evidence"> & { evidence?: S["DailyReportCreate"]["evidence"] };
-type ReviewIn = S["ReportReviewRequest"];
-type MemberReport = S["MemberReportOut"];
+type Day = PlanDay;
+type Task = DayTask;
+type ReportIn = DailyReportInput;
+type ReviewIn = ReportReviewInput;
 
 const LOCKED = ["SUBMITTED", "APPROVED"];
 const daysKey = (planId: string) => ["plan-days", planId] as const;
@@ -67,7 +64,7 @@ function evidenceBySlot(evidence: Evidence[] | undefined, ids: string[]): [strin
 export function DailyReportsPanel({ plan }: { plan: WorkPlan }) {
   const days = useQuery({
     queryKey: daysKey(plan.id),
-    queryFn: async () => (await api.get<Day[]>(`/work-plans/${plan.id}/days`)).data,
+    queryFn: () => listPlanDays(plan.id),
   });
   return (
     <section aria-label="Laporan harian" className="space-y-3">
@@ -90,7 +87,7 @@ export function DailyReportsPanel({ plan }: { plan: WorkPlan }) {
 export function DayPlanList({ plan }: { plan: WorkPlan }) {
   const days = useQuery({
     queryKey: daysKey(plan.id),
-    queryFn: async () => (await api.get<Day[]>(`/work-plans/${plan.id}/days`)).data,
+    queryFn: () => listPlanDays(plan.id),
   });
   return (
     <section aria-label="Rincian harian" className="rounded-panel border border-line bg-surface shadow-card p-4">
@@ -174,7 +171,7 @@ function DayPanel({ plan, day }: { plan: WorkPlan; day: Day }) {
 function TaskList({ plan, day, editable }: { plan: WorkPlan; day: Day; editable: boolean }) {
   const toggle = useDayMutation(
     plan.id,
-    async (t: Task) => (await api.post(`/work-plans/${plan.id}/days/${day.id}/tasks/${t.id}/toggle`)).data,
+    (t: Task) => toggleDayTask(plan.id, day.id, t.id),
   );
   const [error, setError] = useState<string | null>(null);
   if (day.tasks.length === 0) return <TextBlock className="text-sm text-mist">Belum ada tugas.</TextBlock>;
@@ -220,7 +217,7 @@ function TaskList({ plan, day, editable }: { plan: WorkPlan; day: Day; editable:
 function MemberReports({ plan, day }: { plan: WorkPlan; day: Day }) {
   const reports = useQuery({
     queryKey: ["member-reports", day.id],
-    queryFn: async () => (await api.get<MemberReport[]>(`/work-plans/${plan.id}/days/${day.id}/member-reports`)).data,
+    queryFn: () => listMemberReports(plan.id, day.id),
   });
   const sent = (reports.data ?? []).filter((r) => r.status === "SENT");
   return (
@@ -297,9 +294,8 @@ type DailyValues = z.infer<typeof dailySchema>;
 
 /** Ketua menyimpan (PUT /days/{day}) lalu mengirim (POST submit); bukti diunggah ke /files/upload dulu. */
 function DailyForm({ plan, day }: { plan: WorkPlan; day: Day }) {
-  const base = `/work-plans/${plan.id}/days/${day.id}`;
-  const save = useDayMutation(plan.id, async (body: ReportIn) => (await api.put(base, body)).data);
-  const submit = useDayMutation<void>(plan.id, async () => (await api.post(`${base}/submit`)).data);
+  const save = useDayMutation(plan.id, (body: ReportIn) => saveDailyReport(plan.id, day.id, body));
+  const submit = useDayMutation<void>(plan.id, () => submitDailyReport(plan.id, day.id));
   const [files, setFiles] = useState<File[]>([]);
   const [fileError, setFileError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
@@ -384,7 +380,7 @@ type ReviewValues = z.infer<typeof reviewSchema>;
 function DailyReviewForm({ plan, day }: { plan: WorkPlan; day: Day }) {
   const review = useDayMutation(
     plan.id,
-    async (body: ReviewIn) => (await api.post(`/work-plans/${plan.id}/days/${day.id}/review`, body)).data,
+    (body: ReviewIn) => reviewDailyReport(plan.id, day.id, body),
   );
   const [formError, setFormError] = useState<string | null>(null);
   const {

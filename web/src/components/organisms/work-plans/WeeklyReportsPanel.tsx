@@ -9,8 +9,6 @@ import { useSession } from "@/app/session";
 import { QueryState } from "@/components/molecules/QueryState";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
 import { SelectField, TextAreaField } from "@/components/molecules/Field";
-import { api } from "@/lib/apiClient";
-import type { components } from "@/lib/apiTypes";
 import { errorMessage } from "@/lib/errors";
 import { formatDate } from "@/lib/format";
 import type { WorkPlan } from "@/services/workPlanService";
@@ -19,17 +17,16 @@ import { ActionButton } from "@/components/molecules/ActionButton";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { ListBlock } from "@/components/molecules/ListBlock";
 import { ControlOption, FormBlock } from "@/components/molecules/FormBlock";
+import { listWeeklyReports, reviewWeeklyReport, saveWeeklyReport, submitWeeklyReport, type WeeklyReport, type WeeklyReportRequest, type WeeklyReviewRequest } from "@/services/weeklyReportService";
 
-type Week = components["schemas"]["WeeklyReportResponse"];
-type WeeklyReportRequest = components["schemas"]["WeeklyReportRequest"];
-type WeeklyReviewRequest = components["schemas"]["WeeklyReviewRequest"];
+type Week = WeeklyReport;
 
 const EDITABLE = ["DRAFT", "CHANGES_REQUESTED"];
 
 function useWeeks(planId: string) {
   return useQuery({
     queryKey: ["weekly", planId],
-    queryFn: async () => (await api.get<Week[]>(`/work-plans/${planId}/weekly`)).data,
+    queryFn: () => listWeeklyReports(planId),
   });
 }
 
@@ -131,8 +128,8 @@ const weeklySchema = z.object({
 
 /** Ketua menulis laporan (PUT) lalu mengirim (POST submit). API menolak bila bukan ketua. */
 function WeeklyForm({ plan, week }: { plan: WorkPlan; week: Week }) {
-  const save = useWeekMutation(plan.id, async (body: WeeklyReportRequest) => (await api.put<Week>(`/work-plans/${plan.id}/weekly/${week.week}`, body)).data);
-  const submit = useWeekMutation<void>(plan.id, async () => (await api.post<Week>(`/work-plans/${plan.id}/weekly/${week.week}/submit`)).data);
+  const save = useWeekMutation(plan.id, (body: WeeklyReportRequest) => saveWeeklyReport(plan.id, week.week, body));
+  const submit = useWeekMutation<void>(plan.id, () => submitWeeklyReport(plan.id, week.week));
   const [formError, setFormError] = useState<string | null>(null);
   const form = useForm<WeeklyReportRequest>({ resolver: zodResolver(weeklySchema), defaultValues: { body: week.body, obstacle: week.obstacle } });
   const {
@@ -183,7 +180,7 @@ const reviewSchema = z
 type ReviewValues = z.infer<typeof reviewSchema>;
 
 function WeeklyReviewForm({ plan, week }: { plan: WorkPlan; week: Week }) {
-  const review = useWeekMutation(plan.id, async (body: WeeklyReviewRequest) => (await api.post<Week>(`/work-plans/${plan.id}/weekly/${week.week}/review`, body)).data);
+  const review = useWeekMutation(plan.id, (body: WeeklyReviewRequest) => reviewWeeklyReport(plan.id, week.week, body));
   const [formError, setFormError] = useState<string | null>(null);
   const {
     register,

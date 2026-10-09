@@ -46,7 +46,17 @@ class WeeklyReportService:
         Returns:
             list[Any]: Daftar minggu kerja.
         """
-        return await self.repo.list_weeks(access.plan.id)
+        rows = await self.repo.list_weeks(access.plan.id)
+        if access.is_leader:
+            return list(rows)
+        # Draf laporan mingguan hanya milik ketua: selain ketua melihat isinya setelah dikirim.
+        weeks: list[Any] = []
+        for row in rows:
+            week = dict(row._mapping)
+            if week.get("status") == "DRAFT":
+                week["body"], week["obstacle"] = "", ""
+            weeks.append(week)
+        return weeks
 
     async def _week(self, access: PlanAccess, week: int) -> Any:
         """

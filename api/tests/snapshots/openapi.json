@@ -5188,6 +5188,21 @@
       "title": "Id",
       "type": "string"
      },
+     "member_employee_ids": {
+      "anyOf": [
+       {
+        "items": {
+         "format": "uuid",
+         "type": "string"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Member Employee Ids"
+     },
      "member_reports_sent": {
       "default": 0,
       "title": "Member Reports Sent",
@@ -5202,6 +5217,17 @@
         "type": "null"
        }
       ]
+     },
+     "site_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Name"
      },
      "sort_order": {
       "title": "Sort Order",
@@ -5222,6 +5248,17 @@
       "format": "date",
       "title": "Work Date",
       "type": "string"
+     },
+     "work_type_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Work Type Name"
      }
     },
     "required": [

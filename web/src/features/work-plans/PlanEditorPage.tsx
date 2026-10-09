@@ -100,6 +100,12 @@ function datesBetween(start: string, end: string): string[] {
   return out;
 }
 
+/** "(sibuk di rencana lain: 10, 11 Okt)" — tanggal ia sudah bertugas; bentrok hanya bila hari kerja rencana ini sama. */
+const busyNote = (dates?: string[]): string =>
+  dates && dates.length > 0
+    ? ` (sibuk di rencana lain: ${dates.slice(0, 6).map((d) => formatDate(d)).join(", ")}${dates.length > 6 ? ", …" : ""})`
+    : "";
+
 const nextDay = (iso: string) => {
   const d = new Date(`${iso}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + 1);
@@ -507,13 +513,14 @@ function PlanEditor({ planId, detail, revise = false, changeId }: { planId?: str
               <SelectField
                 label="Ketua tim"
                 error={errors.leader_employee_id?.message}
-                hint="Bukan akun kantor dan tidak terikat work plan yang berjalan atau terjadwal."
+                hint="Bukan akun kantor. Sibuk hanya bila bertugas di rencana lain pada tanggal yang sama."
                 {...register("leader_employee_id")}
               >
                 <option value="">Pilih ketua tim</option>
                 {o.leaders.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.full_name} — {p.position}
+                    {busyNote(p.busy_dates)}
                   </option>
                 ))}
               </SelectField>
@@ -530,11 +537,12 @@ function PlanEditor({ planId, detail, revise = false, changeId }: { planId?: str
                         <input type="checkbox" className="size-5" value={p.id} {...register("member_employee_ids")} />
                         <span>
                           {p.full_name} <span className="text-mist">— {p.position}</span>
+                          {(p.busy_dates ?? []).length > 0 && <span className="block text-xs text-warning">{busyNote(p.busy_dates).trim()}</span>}
                         </span>
                       </label>
                     ))}
                 </div>
-                <p className="mt-1 text-sm text-mist">Bawahan Anda yang bukan akun kantor dan tidak terikat work plan lain.</p>
+                <p className="mt-1 text-sm text-mist">Bawahan Anda yang bukan akun kantor. Anggota yang sibuk di rencana lain hanya bentrok pada tanggal yang sama; atur hari tugas per hari bila perlu.</p>
                 {errors.member_employee_ids && <p className="mt-1 text-sm text-destructive">{errors.member_employee_ids.message}</p>}
               </fieldset>
               {vehicle && (

@@ -84,11 +84,12 @@ class CRUDPlanDraft(CRUDBase):
         # berada dalam unit_id (jika diberikan), dan tidak terikat SK lain melalui vms.employee_is_bound().
         return list(await self.fetchall(
             f"""
-            SELECT e.id, e.full_name, e.position, e.unit_id
+            SELECT e.id, e.full_name, e.position, e.unit_id,
+                   COALESCE((SELECT array_agg(b.busy_date ORDER BY b.busy_date)
+                             FROM vms.employee_busy_dates(e.id, CAST(:plan AS uuid)) b), ARRAY[]::date[]) AS busy_dates
             FROM vms.employee e
             WHERE e.organization_id = CAST(:org AS uuid) AND {_FIELD_STAFF}
               AND (CAST(:unit AS uuid) IS NULL OR e.unit_id = CAST(:unit AS uuid))
-              AND NOT vms.employee_is_bound(e.id, CAST(:plan AS uuid))
             ORDER BY e.full_name
             """,
             {"org": str(org_id), "unit": str(unit_id) if unit_id else None,
@@ -175,6 +176,26 @@ class CRUDPlanDraft(CRUDBase):
             {"ids": ids, "licence": licence, "until": until},
         )
         return {str(r.employee_id) for r in rows}
+
+    async def busy_dates(self, employee_ids: Iterable[UUID | str],
+                         exclude_plan: UUID | str | None) -> dict[str, tuple[str, set[date]]]:
+        """Per karyawan: (nama, tanggal hari ini dst. ia bertugas di rencana aktif lain). Tanpa tanggal = tidak dimuat."""
+        ids = [str(v) for v in employee_ids]
+        if not ids:
+            return {}
+        rows = await self.fetchall(
+            """
+            SELECT CAST(x AS text) AS employee_id, e.full_name, b.busy_date
+            FROM unnest(CAST(:ids AS uuid[])) AS x
+            JOIN vms.employee e ON e.id = x
+            CROSS JOIN LATERAL vms.employee_busy_dates(x, CAST(:plan AS uuid)) AS b
+            """,
+            {"ids": ids, "plan": str(exclude_plan) if exclude_plan else None},
+        )
+        out: dict[str, tuple[str, set[date]]] = {}
+        for r in rows:
+            out.setdefault(str(r.employee_id), (str(r.full_name), set()))[1].add(r.busy_date)
+        return out
 
     async def employees_bound(self, employee_ids: Iterable[UUID | str], exclude_plan: UUID | str | None) -> set[str]:
         """

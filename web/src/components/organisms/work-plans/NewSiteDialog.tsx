@@ -4,8 +4,6 @@ import { useEffect, useState } from "react";
 import { MapContainer, Marker } from "react-leaflet";
 import { TextAreaField, TextField } from "@/components/molecules/Field";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
-import { api } from "@/lib/apiClient";
-import type { components } from "@/lib/apiTypes";
 import { errorMessage } from "@/lib/errors";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { ClickToPlace, MapController, Tiles, type LatLng } from "./PlanLocationCard";
@@ -14,10 +12,10 @@ import { TextBlock } from "@/components/molecules/TextBlock";
 import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
 import { PlainAction } from "@/components/molecules/PlainAction";
 import { FormBlock } from "@/components/molecules/FormBlock";
+import { searchPlaces, type GeoResult } from "@/services/geoService";
 
 const INDONESIA: LatLng = [-2.5, 118];
 
-type GeoResult = components["schemas"]["GeoResult"];
 
 export type NewSite = { name: string; description: string; lat: number; lng: number };
 
@@ -41,7 +39,7 @@ export function NewSiteDialog({
   const q = useDebouncedValue(query.trim(), 1000); // kebijakan Nominatim: ≤ 1 permintaan/detik
   const search = useQuery({
     queryKey: ["geo-search", q],
-    queryFn: async () => (await api.get<GeoResult[]>("/geo/search", { params: { q } })).data,
+    queryFn: () => searchPlaces(q),
     enabled: q.length >= 3,
     staleTime: Infinity,
     retry: false,

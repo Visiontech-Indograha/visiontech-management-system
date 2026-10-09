@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
-import { api } from "@/lib/apiClient";
 import { errorMessage } from "@/lib/errors";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { VideoView } from "@/components/molecules/VideoView";
+import { uploadForm } from "@/services/uploadService";
 
 interface Point {
   lat: number;
@@ -106,8 +106,7 @@ export function SelfieCaptureDialog({
       if (!blob) throw new Error("blob");
       const form = new FormData();
       form.append("file", blob, "swafoto-absen.jpg");
-      const uploaded = (await api.post<{ file_id: string }>("/files/upload", form)).data;
-      onCaptured(uploaded.file_id);
+      onCaptured(await uploadForm(form));
     } catch (err) {
       setUploadError(errorMessage(err, "Swafoto gagal disimpan. Coba lagi."));
     } finally {

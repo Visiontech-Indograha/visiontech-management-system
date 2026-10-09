@@ -18,3 +18,8 @@ export function oversize(files: File[]): string | null {
   const big = files.find((f) => f.size > MAX_UPLOAD_BYTES);
   return big ? `${big.name} melebihi 10 MB.` : null;
 }
+
+/** POST /files/upload untuk FormData yang sudah berisi field `file`; kembalikan file_id. */
+export async function uploadForm(form: FormData): Promise<string> {
+  return (await api.post<{ file_id: string }>("/files/upload", form)).data.file_id;
+}

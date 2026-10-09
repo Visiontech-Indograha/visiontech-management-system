@@ -4,7 +4,7 @@ import { QueryState } from "@/components/molecules/QueryState";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
 import { Badge } from "@/components/atoms/Badge";
 import { TextField } from "@/components/molecules/Field";
-import { PageHeader } from "@/components/molecules/PageHeader";
+import { PageHeader } from "@/components/organisms/PageHeader";
 import { formatDate } from "@/lib/format";
 import type { StatusTone } from "@/lib/labels";
 import { useTimeline } from "../monitoringService";

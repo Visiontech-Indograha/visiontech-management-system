@@ -24,18 +24,31 @@ dan disesuaikan dengan tumpukan yang terkunci di `CLAUDE.md`.
 
 ## 2. Atomic design (WAJIB)
 
+Urutan dari terbesar ke terkecil (keputusan pemilik 2026-10-09):
+
+```
+tampilan UI (rute) > Page > Template > Organism > Molecule > Atom
+```
+
+Tiap tingkat hanya menyusun tingkat **di bawahnya**. **Atom atau molecule (termasuk elemen HTML mentah) di Page atau
+Template = pelanggaran.**
+
 | Tingkat | Isi | Contoh di repo | Tempat |
 |---|---|---|---|
 | **Atom** | Elemen UI terkecil, tanpa pengetahuan domain. Termasuk hasil salinan shadcn/ui. | `Button`, `Input`, `Label`, `Badge`, `Skeleton`, `Checkbox` | `components/atoms/` |
-| **Molecule** | Gabungan beberapa atom dengan satu tujuan kecil, masih netral domain. | `TextField` (label + input + galat), `StatusBadge`, `QueryState`, `PageHeader`, `VmsDialog` | `components/molecules/` |
-| **Organism** | Blok UI utuh yang punya tujuan bagi pengguna: tabel data, form, panel, kartu ringkasan, dialog bertujuan. Boleh tahu domain bila milik fitur. | `NotificationBell` (bersama), `PlanDetailCard`, `DayTable` (fitur) | `components/organisms/` (dipakai ≥ 2 fitur) atau `features/<fitur>/components/` |
-| **Template** | Kerangka tata letak halaman tanpa data spesifik. | `AppShell`, `TitleLayout` | `components/templates/` |
+| **Molecule** | Gabungan beberapa atom dengan satu tujuan kecil, masih netral domain. | `TextField` (label + input + galat), `StatusBadge`, `QueryState`, `VmsDialog` | `components/molecules/` |
+| **Organism** | Blok UI utuh yang punya tujuan bagi pengguna: tabel data, form, panel, kartu ringkasan, dialog bertujuan, kepala halaman. Boleh tahu domain bila milik fitur. | `PageHeader`, `NotificationBell` (bersama), `PlanDetailCard`, `PlanDayTable` (fitur) | `components/organisms/` (dipakai ≥ 2 fitur) atau `features/<fitur>/components/` |
+| **Template** | Kerangka tata letak halaman tanpa data spesifik; hanya menyusun **organism** + elemen tata letak. | `PageTemplate`, `AppShell`, `TitleLayout` | `components/templates/` |
 | **Page** | Satu rute. Mengambil data, memegang state halaman, memilih keadaan layar, menyusun template + organism. | `WorkPlansPage`, `SitesPage` | `features/<fitur>/pages/` |
 
 **Elemen HTML mentah (`<button>`, `<input>`, `<select>`, `<textarea>`, `<table>`, `<label>`,
 `<p>`, `<span>`, `<img>`, `<a>`, `<h1>`…`<h6>`, `<ul>`, …) setara atom/molecule.**
 
-### 2.1 Aturan Page — dilarang keras
+### 2.1 Aturan Page dan Template — dilarang keras
+
+**Template** hanya boleh menyusun organism + elemen tata letak polos (daftar sama dengan Page di bawah); larangan
+impor dan elemen HTML Page berlaku juga untuk Template.
+
 
 Page **hanya** boleh berisi:
 
@@ -50,17 +63,18 @@ Page **dilarang**:
 - mengimpor ikon `lucide-react` (ikon adalah atom);
 - menulis elemen HTML selain daftar tata letak di atas.
 
-Ditegakkan ESLint (`web/eslint.config.js`, berkas `**/pages/**/*Page.tsx`). Page lama yang belum
-dimigrasi tercantum di daftar pengecualian sementara di berkas itu; daftar ini **hanya boleh menyusut**.
+Ditegakkan ESLint (`web/eslint.config.js`, berkas `features/*/pages/*.tsx` dan `components/templates/*.tsx`).
+Page/Template lama yang belum dimigrasi tercantum di daftar pengecualian sementara di berkas itu; daftar ini
+**hanya boleh menyusut**.
 
 ### 2.2 Arah impor
 
 ```
 pages/      → templates, organisms, features/<fitur>/components, service/hook, lib, stores
-organisms   → molecules, atoms, lib            (organism fitur boleh memakai service fiturnya)
+templates   → organisms, lib                   — TIDAK molecule/atom
+organisms   → organisms lain, molecules, atoms, lib  (organism fitur boleh memakai service fiturnya)
 molecules   → atoms, lib
 atoms       → lib (cn, token)                  — tidak mengimpor tingkat di atasnya
-templates   → organisms, molecules, atoms, lib
 components/ → TIDAK BOLEH mengimpor features/
 lib/        → TIDAK BOLEH mengimpor features/ atau components/
 ```
@@ -82,9 +96,9 @@ web/src/
 │                           SessionProvider.tsx, RouteGuards.tsx
 ├── components/             PUSTAKA BERSAMA, netral fitur
 │   ├── atoms/              Button.tsx, Input.tsx, … (shadcn/ui)
-│   ├── molecules/          TextField/Field.tsx, StatusBadge.tsx, QueryState.tsx, …
-│   ├── organisms/          NotificationBell.tsx, …
-│   └── templates/          AppShell.tsx, TitleLayout.tsx
+│   ├── molecules/          Field.tsx (TextField…), StatusBadge.tsx, QueryState.tsx, …
+│   ├── organisms/          PageHeader.tsx, NotificationBell.tsx, …
+│   └── templates/          PageTemplate.tsx, AppShell.tsx, TitleLayout.tsx
 ├── features/<fitur>/       satu domain; nama folder kebab-case (work-plans)
 │   ├── pages/              HANYA <Nama>Page.tsx
 │   ├── components/         organism & molecule khusus fitur
@@ -173,7 +187,7 @@ Perilaku dan tampilan tidak boleh berubah selama migrasi.
 
 ## 8. Daftar periksa web
 
-1. [ ] Page tanpa atom/molecule/ikon/elemen HTML mentah (ESLint hijau, tanpa pengecualian baru).
+1. [ ] Page dan Template tanpa atom/molecule/ikon/elemen HTML mentah (ESLint hijau, tanpa pengecualian baru).
 2. [ ] Nama berkas dan folder sesuai §3–§4.
 3. [ ] Service memakai `apiClient`; tidak ada URL/axios tersebar.
 4. [ ] Empat keadaan layar: memuat, kosong, galat, berhasil.

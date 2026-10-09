@@ -5,7 +5,7 @@ import { useSession } from "@/app/session";
 import { Badge } from "@/components/atoms/Badge";
 import { Button } from "@/components/atoms/Button";
 import { Checkbox } from "@/components/atoms/Checkbox";
-import { PageHeader } from "@/components/molecules/PageHeader";
+import { PageHeader } from "@/components/organisms/PageHeader";
 import { Skeleton } from "@/components/atoms/Skeleton";
 import { FaceEnrollCapture } from "@/features/face/components/FaceEnrollCapture";
 import { errorMessage } from "@/lib/errors";

@@ -8,7 +8,7 @@ import { z } from "zod";
 import { QueryState } from "@/components/molecules/QueryState";
 import { Button } from "@/components/atoms/Button";
 import { TextAreaField } from "@/components/molecules/Field";
-import { PageHeader } from "@/components/molecules/PageHeader";
+import { PageHeader } from "@/components/organisms/PageHeader";
 import { errorMessage } from "@/lib/errors";
 import { formatDate } from "@/lib/format";
 import {

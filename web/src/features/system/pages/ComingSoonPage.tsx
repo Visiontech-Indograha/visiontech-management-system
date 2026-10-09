@@ -1,10 +1,11 @@
-import { PageHeader } from "@/components/molecules/PageHeader";
+import { PageTemplate } from "@/components/templates/PageTemplate";
+import { ComingSoonNotice } from "../components/ComingSoonNotice";
 
+/** Halaman sementara untuk menu yang belum dibangun. */
 export function ComingSoonPage({ title }: { title: string }) {
   return (
-    <>
-      <PageHeader title={title} />
-      <p className="text-mist">Halaman ini dibangun pada fase berikutnya.</p>
-    </>
+    <PageTemplate title={title}>
+      <ComingSoonNotice />
+    </PageTemplate>
   );
 }

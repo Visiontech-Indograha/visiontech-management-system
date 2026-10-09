@@ -282,20 +282,22 @@ class CRUDPlanTransition(CRUDBase):
         Returns:
             bool: True jika lengkap seluruh harinya.
         """
-        # Menghitung selisih (jumlah hari SK) lalu membandingkannya dengan
-        # jumlah baris vms.work_plan_day yang memenuhi syarat judul terisi
-        # serta memiliki setidaknya satu tugas tanpa judul kosong.
+        # Hari libur = tanggal yang tidak punya baris hari (2026-10-09), jadi yang diperiksa adalah SEMUA hari kerja yang
+        # ada: tiap hari berjudul dan punya >= 1 tugas berjudul; minimal satu hari, dan hari pertama/terakhir tepat di
+        # tanggal mulai/selesai rencana.
         return bool(await self.scalar(
             """
-            SELECT
-              (SELECT count(*) FROM vms.work_plan_day d
-                 WHERE d.work_plan_id = wp.id AND d.work_date <@ wp.period
-                   AND btrim(d.title) <> ''
-                   AND EXISTS (SELECT 1 FROM vms.work_plan_task t WHERE t.work_plan_day_id = d.id)
-                   AND NOT EXISTS (SELECT 1 FROM vms.work_plan_task t
-                                   WHERE t.work_plan_day_id = d.id AND btrim(t.title) = ''))
-              = (upper(wp.period) - lower(wp.period))
-            FROM vms.work_plan wp WHERE wp.id = :plan
+            SELECT count(*) > 0
+               AND count(*) = count(*) FILTER (
+                     WHERE btrim(d.title) <> ''
+                       AND EXISTS (SELECT 1 FROM vms.work_plan_task t WHERE t.work_plan_day_id = d.id)
+                       AND NOT EXISTS (SELECT 1 FROM vms.work_plan_task t
+                                       WHERE t.work_plan_day_id = d.id AND btrim(t.title) = ''))
+               AND min(d.work_date) = lower(wp.period) AND max(d.work_date) = upper(wp.period) - 1
+            FROM vms.work_plan wp
+            JOIN vms.work_plan_day d ON d.work_plan_id = wp.id AND d.work_date <@ wp.period
+            WHERE wp.id = :plan
+            GROUP BY wp.id, wp.period
             """,
             {"plan": plan_id},
         ))
@@ -323,19 +325,27 @@ class CRUDPlanTransition(CRUDBase):
                    wp.status, wp.pm_employee_id, wp.leader_employee_id, wp.revision, wp.row_version,
                    wp.cancellation_reason, wp.category, bu.name AS unit_name, s.description AS site_description,
                    ST_Y(s.location::geometry) AS lat, ST_X(s.location::geometry) AS lng,
-                   pm.full_name AS pm_name, pm.position AS pm_position
+                   pm.full_name AS pm_name, pm.position AS pm_position,
+                   wp.is_out_of_town, wt.name AS work_type_name
                   FROM vms.work_plan wp
                   LEFT JOIN vms.business_unit bu ON bu.id = wp.unit_id
                   LEFT JOIN vms.site s ON s.id = wp.site_id
                   LEFT JOIN vms.employee pm ON pm.id = wp.pm_employee_id
+                  LEFT JOIN vms.work_type wt ON wt.id = wp.work_type_id
                   WHERE wp.id = :plan) p),
               'team', COALESCE((SELECT jsonb_agg(jsonb_build_object('employee_id', m.employee_id,
                                         'full_name', e.full_name, 'position', e.position,
-                                        'role_in_plan', m.role_in_plan)
+                                        'role_in_plan', m.role_in_plan, 'since', lower(m.valid_period))
                                         ORDER BY m.role_in_plan, e.full_name)
                                 FROM vms.work_plan_member m JOIN vms.employee e ON e.id = m.employee_id
                                 WHERE m.work_plan_id = :plan AND upper_inf(m.valid_period)), '[]'),
               'days', COALESCE((SELECT jsonb_agg(jsonb_build_object('work_date', d.work_date, 'title', d.title,
+                                        'site_name', (SELECT s2.name FROM vms.site s2 WHERE s2.id = d.site_id),
+                                        'work_type_name', (SELECT w2.name FROM vms.work_type w2 WHERE w2.id = d.work_type_id),
+                                        'members', (SELECT jsonb_agg(de2.full_name ORDER BY de2.full_name)
+                                                    FROM vms.work_plan_day_member dm
+                                                    JOIN vms.employee de2 ON de2.id = dm.employee_id
+                                                    WHERE dm.work_plan_day_id = d.id),
                                         'tasks', (SELECT COALESCE(jsonb_agg(jsonb_build_object(
                                                     'title', t.title, 'description', t.description,
                                                     'files', (SELECT COALESCE(jsonb_agg(f.file_name
@@ -403,7 +413,7 @@ class CRUDPlanTransition(CRUDBase):
             """
             UPDATE vms.work_plan
                SET status = :published, row_version = row_version + 1,
-                   number = COALESCE(number, 'SK-' || to_char(CURRENT_DATE, 'YYYYMM') || '-' || right(id::text, 8))
+                   number = COALESCE(number, 'RK-' || to_char(CURRENT_DATE, 'YYYYMM') || '-' || right(id::text, 8))
              WHERE id = :plan
             """,
             {"plan": plan_id, "published": PlanStatus.PUBLISHED},

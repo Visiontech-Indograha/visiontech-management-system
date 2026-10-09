@@ -11,6 +11,9 @@ import '../../core/theme/theme.dart';
 import '../../data/sync_engine.dart';
 import '../../shared/ui/vms_select_field.dart';
 import '../../shared/ui/vms_ui.dart';
+import '../auth/auth_controller.dart';
+import '../auth/auth_state.dart';
+import 'photo_slots.dart';
 import 'sk_viewer_screen.dart';
 
 /// Satu hari kerja SK: checklist tugas + laporan harian (dok 05 §3.7). Ketua SK
@@ -49,15 +52,16 @@ class _PlanDayScreenState extends ConsumerState<PlanDayScreen> {
   late final _obstacle = TextEditingController(
     text: _report?['obstacle'] as String? ?? '',
   );
-  final List<String> _photos = [];
+  final List<PendingPhoto> _pending = [];
   bool _busy = false;
+  List<Map<String, dynamic>> _template = [];   // T9: template foto laporan
 
   // Laporan anggota (alur SK v2 PR2).
   List<Map<String, dynamic>> _memberReports = [];
   Map<String, dynamic>? _mine;
   final _mBody = TextEditingController();
   final _mObstacle = TextEditingController();
-  final List<String> _mPhotos = [];
+  final List<PendingPhoto> _mPending = [];
   bool _mBusy = false;
 
   @override
@@ -68,6 +72,12 @@ class _PlanDayScreenState extends ConsumerState<PlanDayScreen> {
 
   Future<void> _loadMembers() async {
     final api = ref.read(syncEngineProvider).api;
+    try {
+      final template = await api.photoTemplate(widget.planId, dayId: _dayId);
+      if (mounted) setState(() => _template = template);
+    } catch (_) {
+      // Luring: tanpa template, hanya "Foto lain".
+    }
     try {
       if (widget.isLeader) {
         final list = await api.memberReports(widget.planId, _dayId);
@@ -102,42 +112,54 @@ class _PlanDayScreenState extends ConsumerState<PlanDayScreen> {
     );
   }
 
-  Future<void> _memberPhoto() async {
-    final (file, err) = await captureWatermarkedPhoto(
+  Future<void> _memberPhoto(String? slot, PhotoOrigin origin) async {
+    final photo = await pickReportPhoto(
       context: context,
-      label: 'Foto bukti',
-      kind: LocalFileKind.dailyReport,
+      slot: slot,
+      origin: origin,
       hint: 'Foto hasil pekerjaan Anda hari ini',
+      onError: _snack,
     );
-    if (file != null) {
-      setState(() => _mPhotos.add(file.path));
-    } else if (err != null) {
-      _snack(err);
-    }
+    if (photo != null && mounted) setState(() => _mPending.add(photo));
   }
+
+  void _dropMemberPhoto(PendingPhoto photo) => setState(() => _mPending.remove(photo));
+
+  void _dropPhoto(PendingPhoto photo) => setState(() => _pending.remove(photo));
+
+  List<Map<String, dynamic>> _evidenceOf(Map<String, dynamic>? report) =>
+      ((report?['evidence'] as List?) ?? const [])
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
 
   Future<void> _memberSave({required bool send}) async {
     if (_mBody.text.trim().length < 10) {
       return _snack('Uraian laporan minimal 10 karakter.');
     }
+    final missing = PhotoSlots.missingRequired(_template, _evidenceOf(_mine), _mPending);
+    if (send && missing.isNotEmpty) {
+      return _snack('Foto wajib belum lengkap: ${missing.join(', ')}.');
+    }
     setState(() => _mBusy = true);
     final api = ref.read(syncEngineProvider).api;
     try {
-      final uploaded = <String>[];
-      for (final path in _mPhotos) {
-        uploaded.add(await api.uploadFile(File(path)));
+      final evidence = _evidenceOf(_mine);
+      for (final p in _mPending) {
+        evidence.add({
+          'file_id': await api.uploadFile(File(p.path)),
+          'slot_label': p.slot,
+          'source': p.source,
+        });
       }
-      final existing = List<String>.from(
-        (_mine?['evidence_file_ids'] as List?) ?? const [],
-      );
       var mine = await api.saveMemberReport(
         widget.planId,
         _dayId,
         body: _mBody.text.trim(),
         obstacle: _mObstacle.text.trim(),
-        evidenceFileIds: [...existing, ...uploaded],
+        evidenceFileIds: const [],
+        evidence: evidence,
       );
-      _mPhotos.clear();
+      _mPending.clear();
       if (send) mine = await api.sendMemberReport(widget.planId, _dayId);
       if (!mounted) return;
       setState(() => _mine = mine);
@@ -155,10 +177,32 @@ class _PlanDayScreenState extends ConsumerState<PlanDayScreen> {
       ? 'RESUBMITTED'
       : _status;
   bool get _editable =>
-      widget.canEdit && (_status == 'DRAFT' || _status == 'CHANGES_REQUESTED');
+      widget.canEdit && _dayReached && (_status == 'DRAFT' || _status == 'CHANGES_REQUESTED');
+
+  /// Laporan hanya boleh diisi pada/setelah tanggal pelaksanaan (server tetap memeriksa dengan jamnya sendiri).
+  bool get _dayReached {
+    final date = DateTime.tryParse('${widget.day['work_date']}');
+    if (date == null) return true;
+    final now = DateTime.now();
+    return !DateTime(date.year, date.month, date.day).isAfter(DateTime(now.year, now.month, now.day));
+  }
+
+  String get _dayLabel {
+    final d = DateTime.tryParse('${widget.day['work_date']}');
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+    return d == null ? '${widget.day['work_date']}' : '${d.day} ${months[d.month - 1]} ${d.year}';
+  }
 
   void _snack(String m) =>
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
+
+  /// Daftar anggota khusus hari ini (termasuk ketua); null = seluruh tim bertugas.
+  bool get _offDuty {
+    final ids = widget.day['member_employee_ids'];
+    if (widget.isLeader || ids is! List) return false;
+    final auth = ref.read(authControllerProvider);
+    return auth is AuthAuthenticated && !ids.contains(auth.user.employeeId);
+  }
 
   Future<bool> _send(
     String op,
@@ -195,26 +239,46 @@ class _PlanDayScreenState extends ConsumerState<PlanDayScreen> {
     }
   }
 
-  Future<void> _addPhoto() async {
-    final (file, err) = await captureWatermarkedPhoto(
+  Future<void> _addPhoto(String? slot, PhotoOrigin origin) async {
+    final photo = await pickReportPhoto(
       context: context,
-      label: 'Foto bukti',
-      kind: LocalFileKind.dailyReport,
-      hint: 'Foto hasil pekerjaan hari ini',
+      slot: slot,
+      origin: origin,
+      onError: _snack,
     );
-    if (file != null) {
-      setState(() => _photos.add(file.path));
-    } else if (err != null) {
-      _snack(err);
-    }
+    if (photo != null && mounted) setState(() => _pending.add(photo));
   }
 
   Future<void> _save({required bool submit}) async {
     if (_body.text.trim().isEmpty) {
       return _snack('Isi uraian pekerjaan hari ini.');
     }
+    if (submit && _body.text.trim().length < 10) {
+      // Draf boleh pendek, tetapi laporan yang dikirim ke PM minimal 10 karakter (server menolak yang lebih pendek).
+      return _snack('Uraian pekerjaan minimal 10 karakter sebelum dikirim.');
+    }
+    final missing = PhotoSlots.missingRequired(_template, _evidenceOf(_report), _pending);
+    if (submit && missing.isNotEmpty) {
+      return _snack('Foto wajib belum lengkap: ${missing.join(', ')}.');
+    }
     setState(() => _busy = true);
     final base = {'plan_id': widget.planId, 'day_id': _dayId};
+    // T9: foto berlabel slot diunggah langsung (butuh sinyal) agar slot + sumbernya ikut tersimpan; tanpa sinyal,
+    // foto masuk antrean luring tanpa label (server akan menolak kirim bila slot wajib kosong).
+    final evidence = _evidenceOf(_report);
+    var queueFiles = <String>[];
+    try {
+      final api = ref.read(syncEngineProvider).api;
+      for (final p in _pending) {
+        evidence.add({
+          'file_id': await api.uploadFile(File(p.path)),
+          'slot_label': p.slot,
+          'source': p.source,
+        });
+      }
+    } catch (_) {
+      queueFiles = _pending.map((p) => p.path).toList();
+    }
     final saved = await _send(OfflineOp.dailyReportSave, {
       ...base,
       'body': _body.text.trim(),
@@ -222,8 +286,9 @@ class _PlanDayScreenState extends ConsumerState<PlanDayScreen> {
       'evidence_file_ids': List<String>.from(
         (_report?['evidence_file_ids'] as List?) ?? const [],
       ),
-    }, files: List.of(_photos));
-    if (saved) _photos.clear();
+      'evidence': evidence,
+    }, files: queueFiles);
+    if (saved) _pending.clear();
     final submitted =
         saved && submit && await _send(OfflineOp.dailyReportSubmit, base);
     if (mounted) {
@@ -255,6 +320,33 @@ class _PlanDayScreenState extends ConsumerState<PlanDayScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                if (widget.day['site_name'] != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: SurfaceCard(
+                      key: const Key('day-site'),
+                      padding: const EdgeInsets.all(12),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.place_outlined),
+                          const SizedBox(width: 8),
+                          Expanded(child: Text('Lokasi hari ini: ${widget.day['site_name']}')),
+                        ],
+                      ),
+                    ),
+                  ),
+                if (_offDuty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: SurfaceCard(
+                      key: const Key('day-off-duty'),
+                      padding: const EdgeInsets.all(12),
+                      child: Text(
+                        'Anda tidak ditugaskan pada hari ini. Tidak perlu absen dan membuat laporan; Anda tetap tercatat sebagai anggota rencana kerja.',
+                        style: VmsTextStyles.bodySm,
+                      ),
+                    ),
+                  ),
                 const SectionTitle('Tugas'),
                 if (_tasks.isEmpty)
                   const EmptyState(
@@ -271,7 +363,7 @@ class _PlanDayScreenState extends ConsumerState<PlanDayScreen> {
                           horizontal: 12,
                           vertical: 10,
                         ),
-                        onTap: widget.canEdit ? () => _toggle(t) : null,
+                        onTap: widget.canEdit && _dayReached ? () => _toggle(t) : null,
                         child: Row(
                           children: [
                             AnimatedContainer(
@@ -318,7 +410,7 @@ class _PlanDayScreenState extends ConsumerState<PlanDayScreen> {
                       ),
                     ),
                   ),
-                if (!widget.isLeader && widget.running) ..._memberSection(),
+                if (!widget.isLeader && widget.running && !_offDuty) ..._memberSection(),
                 if (widget.isLeader && _memberReports.isNotEmpty)
                   ..._leaderMembersSection(),
                 const SectionTitle('Laporan harian'),
@@ -371,29 +463,20 @@ class _PlanDayScreenState extends ConsumerState<PlanDayScreen> {
                         ),
                       ),
                       const SizedBox(height: 14),
-                      Row(
-                        children: [
-                          const IconTile(
-                            icon: Icons.photo_library_rounded,
-                            accent: Accent.teal,
-                            size: 40,
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              '$saved foto tersimpan${_photos.isEmpty ? '' : ' · ${_photos.length} baru'}',
-                              style: VmsTextStyles.bodySm.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                          if (_editable)
-                            TextButton.icon(
-                              onPressed: _addPhoto,
-                              icon: const Icon(Icons.add_a_photo_rounded),
-                              label: const Text('Foto'),
-                            ),
-                        ],
+                      Text(
+                        '$saved foto tersimpan${_pending.isEmpty ? '' : ' · ${_pending.length} baru'}',
+                        style: VmsTextStyles.bodySm.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      PhotoSlots(
+                        template: _template,
+                        saved: _evidenceOf(_report),
+                        pending: _pending,
+                        enabled: _editable,
+                        onAdd: _addPhoto,
+                        onRemove: _dropPhoto,
                       ),
                     ],
                   ),
@@ -412,11 +495,17 @@ class _PlanDayScreenState extends ConsumerState<PlanDayScreen> {
                     icon: const Icon(Icons.save_rounded),
                     label: const Text('Simpan draf'),
                   ),
-                ] else if (!widget.canEdit)
+                ] else if (widget.canEdit && !_dayReached)
+                  NoticeBanner(
+                    key: const Key('leader-report-not-yet'),
+                    icon: Icons.schedule_rounded,
+                    text: 'Laporan hari ini baru bisa diisi mulai $_dayLabel.',
+                  )
+                else if (!widget.canEdit)
                   const NoticeBanner(
                     icon: Icons.info_outline_rounded,
                     text:
-                        'Hanya ketua SK yang mengisi laporan saat SK berjalan.',
+                        'Hanya ketua rencana kerja yang mengisi laporan saat rencana kerja berjalan.',
                     accent: Accent.blue,
                   ),
               ],
@@ -473,10 +562,17 @@ extension on _PlanDayScreenState {
 
   List<Widget> _memberSection() {
     final sent = _mine?['status'] == 'SENT';
+    final locked = sent || !_dayReached;
     final savedPhotos =
         ((_mine?['evidence_file_ids'] as List?) ?? const []).length;
     return [
       const SectionTitle('Laporan saya untuk ketua'),
+      if (!_dayReached)
+        NoticeBanner(
+          key: const Key('member-report-not-yet'),
+          icon: Icons.schedule_rounded,
+          text: 'Laporan hari ini baru bisa diisi mulai $_dayLabel.',
+        ),
       if (sent)
         const NoticeBanner(
           icon: Icons.check_circle_outline_rounded,
@@ -490,7 +586,7 @@ extension on _PlanDayScreenState {
             TextField(
               key: const Key('member-report-body'),
               controller: _mBody,
-              enabled: !sent,
+              enabled: !locked,
               maxLines: 4,
               decoration: const InputDecoration(
                 labelText: 'Uraian pekerjaan saya',
@@ -500,7 +596,7 @@ extension on _PlanDayScreenState {
             const SizedBox(height: 12),
             TextField(
               controller: _mObstacle,
-              enabled: !sent,
+              enabled: !locked,
               maxLines: 2,
               decoration: const InputDecoration(
                 labelText: 'Kendala (boleh kosong)',
@@ -508,27 +604,24 @@ extension on _PlanDayScreenState {
               ),
             ),
             const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    '$savedPhotos foto tersimpan${_mPhotos.isEmpty ? '' : ' · ${_mPhotos.length} baru'}',
-                    style: VmsTextStyles.bodySm,
-                  ),
-                ),
-                if (!sent)
-                  TextButton.icon(
-                    onPressed: _memberPhoto,
-                    icon: const Icon(Icons.add_a_photo_rounded),
-                    label: const Text('Foto'),
-                  ),
-              ],
+            Text(
+              '$savedPhotos foto tersimpan${_mPending.isEmpty ? '' : ' · ${_mPending.length} baru'}',
+              style: VmsTextStyles.bodySm,
+            ),
+            const SizedBox(height: 8),
+            PhotoSlots(
+              template: _template,
+              saved: _evidenceOf(_mine),
+              pending: _mPending,
+              enabled: !locked,
+              onAdd: _memberPhoto,
+              onRemove: _dropMemberPhoto,
             ),
           ],
         ),
       ),
       const SizedBox(height: 12),
-      if (!sent) ...[
+      if (!locked) ...[
         PrimaryAction(
           label: 'Kirim ke ketua',
           icon: Icons.send_rounded,

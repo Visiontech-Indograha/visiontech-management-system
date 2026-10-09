@@ -5,6 +5,7 @@ import '../data/sync_engine.dart';
 import 'api_client.dart';
 import 'biometric_auth.dart';
 import 'device_id.dart';
+import 'local_notifier.dart';
 import 'token_storage.dart';
 
 final tokenStorageProvider = Provider<TokenStorage>(
@@ -61,3 +62,11 @@ class SyncTickNotifier extends Notifier<int> {
 final syncTickProvider = NotifierProvider<SyncTickNotifier, int>(
   SyncTickNotifier.new,
 );
+
+/// Dinaikkan tiap peristiwa waktu nyata (SSE, T8) masuk: layar yang menampilkan rencana kerja, notifikasi, atau
+/// absensi mendengarkannya lewat `ref.listen` dan memuat ulang datanya.
+final liveEventTickProvider = NotifierProvider<SyncTickNotifier, int>(
+  SyncTickNotifier.new,
+);
+
+final localNotifierProvider = Provider<LocalNotifier>((ref) => LocalNotifier());

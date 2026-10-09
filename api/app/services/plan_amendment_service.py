@@ -24,7 +24,7 @@ from app.crud.crud_plan_transition import CRUDPlanTransition
 from app.schemas.plan_draft import PlanDraftRequest
 from app.services.access_service import PlanAccess, require_plan_status
 from app.services.notification_service import NotificationService
-from app.services.plan_draft_service import PlanDraftService
+from app.services.plan_draft_service import PlanDraftService, _day_roster
 from app.services.signature_service import ACCEPTOR, ISSUER, SignatureService
 
 LOCKED_REPORTS = ("SUBMITTED", "APPROVED")
@@ -60,14 +60,14 @@ class PlanAmendmentService:
     async def _change(self, access: PlanAccess, change_id: UUID, status: ChangeStatus) -> Any:
         change = await self.changes.lock_change(change_id, access.user.organization_id)
         if change is None or str(change.work_plan_id) != str(access.plan.id) or change.change_type != ChangeType.AMENDMENT:
-            raise NotFoundError("Usulan adendum")
+            raise NotFoundError("Permintaan revisi")
         if change.status != status:
-            raise _state("Usulan adendum tidak dalam tahap ini.")
+            raise _state("Permintaan revisi tidak dalam tahap ini.")
         return change
 
     async def request_amendment(self, access: PlanAccess, reason: str) -> Any:
         """
-        Ketua menurut SK (dijaga router) mengajukan adendum; status SK tetap Berjalan.
+        Ketua menurut SK (dijaga router) mengajukan adendum saat Diterima atau Berjalan; status SK tidak berubah.
 
         Args:
             access: Obyek PlanAccess yang memvalidasi hak pengguna terhadap SK.
@@ -76,9 +76,9 @@ class PlanAmendmentService:
         Returns:
             Any: ID dari objek perubahan yang baru dibuat.
         """
-        require_plan_status(access, PlanStatus.IN_PROGRESS)
+        require_plan_status(access, PlanStatus.ACCEPTED, PlanStatus.IN_PROGRESS)
         if not reason.strip():
-            raise ValidationError("Alasan adendum wajib diisi.")
+            raise ValidationError("Alasan revisi wajib diisi.")
         # Validasi: Tidak boleh ada lebih dari satu usulan perubahan yang terbuka sekaligus
         if await self.changes.open_change(access.plan.id) is not None:
             raise _state("Masih ada usulan perubahan yang menunggu penyelesaian.")
@@ -98,6 +98,45 @@ class PlanAmendmentService:
         await self.changes.set_change(change.id, ChangeStatus.REJECTED, await self._employee(access.user.user_id),
                                       reason.strip())
         await self.notify.amendment_decided(access.plan.id, accepted=False, note=reason.strip())
+
+    async def rewrite_days(self, plan: Any, data: PlanDraftRequest, user: Any) -> None:
+        """Menulis ulang header, hari, dan tugas rencana kerja yang sudah terbit (dipakai adendum dan revisi PM).
+        Hari yang sudah berlaporan tidak boleh dihapus; isi hari yang laporannya terkirim/disetujui tidak diubah."""
+        # Mencegah penghapusan hari yang sudah memiliki data laporan harian
+        days = {str(d.work_date): d for d in await self.repo.days_with_report_state(plan.id)}
+        wanted = {str(d.work_date): d for d in data.days}
+        for work_date, day in days.items():
+            if work_date not in wanted and (day.report_status or day.has_member_reports):
+                raise ValidationError(f"Hari {work_date} sudah berlaporan dan tidak dapat dihapus.")
+
+        site_id, site_name = await PlanDraftService(self.db)._site(user, str(plan.unit_id), data)
+        await self.repo.update_header(
+            plan.id, title=data.title.strip(), description=data.description.strip(), category=data.category,
+            site_id=site_id, location_text=site_name, period_start=data.period_start, period_end=data.period_end,
+            is_out_of_town=data.is_out_of_town, work_type_id=data.work_type_id)
+        for order, new_day in enumerate(sorted(data.days, key=lambda d: d.work_date)):
+            key = str(new_day.work_date)
+            current = days.get(key)
+            if current is not None and current.report_status in LOCKED_REPORTS:
+                continue   # isi hari yang laporannya sudah dikirim/disetujui tidak diubah
+            if current is None:
+                day_id = await self.drafts.insert_day(plan.id, new_day.work_date, new_day.tasks[0].title.strip(), order,
+                                                      new_day.site_id, new_day.work_type_id)
+            else:
+                day_id = current.id
+                await self.repo.clear_tasks(day_id, new_day.tasks[0].title.strip())
+                await self.drafts.set_day_site(day_id, new_day.site_id)
+                await self.drafts.set_day_work_type(day_id, new_day.work_type_id)
+            await self.drafts.set_day_members(user.organization_id, day_id, _day_roster(data, new_day))
+            for t_order, task in enumerate(new_day.tasks):
+                task_id = await self.drafts.insert_task(day_id, task.title.strip(), task.description.strip(), t_order)
+                for f_order, file_id in enumerate(dict.fromkeys(task.file_ids)):
+                    await self.drafts.insert_task_file(task_id, file_id, f_order)
+        for work_date, day in days.items():
+            if work_date not in wanted:
+                await self.repo.delete_day(day.id)
+
+
 
     async def apply_amendment(self, access: PlanAccess, change_id: UUID, data: PlanDraftRequest) -> Any:
         """
@@ -120,40 +159,12 @@ class PlanAmendmentService:
 
         # Validasi bisnis: Ketua dan tanggal mulai tidak bisa diubah lewat adendum jenis ini.
         if str(data.leader_employee_id) != str(plan.leader_employee_id):
-            raise ValidationError("Ketua tim tidak dapat diganti lewat adendum ini.")
+            raise ValidationError("Ketua tim tidak dapat diganti lewat revisi ini.")
         if data.period_start != plan.period_start:
-            raise ValidationError("Tanggal mulai SK yang sedang berjalan tidak dapat diubah.")
+            raise ValidationError("Tanggal mulai rencana kerja yang sedang berjalan tidak dapat diubah.")
         await PlanDraftService(self.db)._validate(access.user, str(plan.unit_id), data, plan.id)
 
-        # Mencegah penghapusan hari yang sudah memiliki data laporan harian
-        days = {str(d.work_date): d for d in await self.repo.days_with_report_state(plan.id)}
-        wanted = {str(d.work_date): d for d in data.days}
-        for work_date, day in days.items():
-            if work_date not in wanted and (day.report_status or day.has_member_reports):
-                raise ValidationError(f"Hari {work_date} sudah berlaporan dan tidak dapat dihapus.")
-
-        site_id, site_name = await PlanDraftService(self.db)._site(access.user, str(plan.unit_id), data)
-        await self.repo.update_header(
-            plan.id, title=data.title.strip(), description=data.description.strip(), category=data.category,
-            site_id=site_id, location_text=site_name, period_start=data.period_start, period_end=data.period_end)
-        for order, new_day in enumerate(sorted(data.days, key=lambda d: d.work_date)):
-            key = str(new_day.work_date)
-            current = days.get(key)
-            if current is not None and current.report_status in LOCKED_REPORTS:
-                continue   # isi hari yang laporannya sudah dikirim/disetujui tidak diubah
-            if current is None:
-                day_id = await self.drafts.insert_day(plan.id, new_day.work_date, new_day.tasks[0].title.strip(), order)
-            else:
-                day_id = current.id
-                await self.repo.clear_tasks(day_id, new_day.tasks[0].title.strip())
-            for t_order, task in enumerate(new_day.tasks):
-                task_id = await self.drafts.insert_task(day_id, task.title.strip(), task.description.strip(), t_order)
-                for f_order, file_id in enumerate(dict.fromkeys(task.file_ids)):
-                    await self.drafts.insert_task_file(task_id, file_id, f_order)
-        for work_date, day in days.items():
-            if work_date not in wanted:
-                await self.repo.delete_day(day.id)
-
+        await self.rewrite_days(plan, data, access.user)
         today = jakarta_now().date()
         current_members = {m.employee_id for m in await self.repo.open_members(plan.id) if m.role_in_plan == "MEMBER"}
         wanted_members = {str(m) for m in data.member_employee_ids}
@@ -168,7 +179,7 @@ class PlanAmendmentService:
                     await self.assets.insert_allocation(tool, plan.id, None, access.user.user_id)
                     await self.assets.set_asset_status(tool, "IN_USE")
         except IntegrityError as exc:
-            raise (trigger_rule_error(exc) or _state("Jadwal bentrok dengan SK lain.")) from None
+            raise (trigger_rule_error(exc) or _state("Jadwal bentrok dengan rencana kerja lain.")) from None
 
         version = await self.changes.next_document_version(plan.id)
         raw = await self.plans.snapshot(plan.id)

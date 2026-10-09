@@ -10,7 +10,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useSession } from "@/app/session";
 import { Button } from "@/components/ui/button";
-import { TextField } from "@/components/ui/Field";
+import { TextAreaField, TextField } from "@/components/ui/Field";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog } from "@/components/ui/VmsDialog";
 import { api } from "@/lib/api";
@@ -32,7 +32,8 @@ const TILE_URL = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
 const ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 const INDONESIA: LatLng = [-2.5, 118];
 const CLOSED = ["COMPLETED", "CANCELLED"];
-const RUNNING_NOTE = "Teks lokasi di dokumen SK tetap; hanya titik absensi yang berubah (tercatat di audit).";
+const RUNNING_NOTE =
+  "Rencana kerja ini sudah terbit. Mengubah lokasi menerbitkan dokumen versi baru bertanda tangan Anda; versi lama dan absensi sebelumnya tetap tercatat di lokasi lamanya.";
 
 const locationKey = (planId: string) => ["plan-location", planId] as const;
 
@@ -153,6 +154,7 @@ function LocationDialog({ plan, current, onClose }: { plan: WorkPlan; current: P
   const [name, setName] = useState(current?.name ?? "");
   const [address, setAddress] = useState(current?.address ?? "");
   const [radius, setRadius] = useState(String(current?.radius_m ?? 100));
+  const [reason, setReason] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -176,10 +178,11 @@ function LocationDialog({ plan, current, onClose }: { plan: WorkPlan; current: P
     if (!point) next.point = "Pilih titik pada peta.";
     if (!name.trim()) next.name = "Nama lokasi wajib diisi.";
     if (!Number.isInteger(r) || r < 10 || r > 5000) next.radius = "Radius harus bilangan bulat 10–5000 meter.";
+    if (plan.status !== "DRAFT" && !reason.trim()) next.reason = "Alasan perubahan lokasi wajib diisi.";
     setErrors(next);
     if (Object.keys(next).length || !point) return;
     try {
-      await save.mutateAsync({ name: name.trim(), address: address.trim() || null, lat: point[0], lng: point[1], radius_m: r });
+      await save.mutateAsync({ name: name.trim(), address: address.trim() || null, lat: point[0], lng: point[1], radius_m: r, reason: reason.trim() || null });
       toast.success("Titik lokasi disimpan.");
       onClose();
     } catch (err) {
@@ -210,7 +213,12 @@ function LocationDialog({ plan, current, onClose }: { plan: WorkPlan; current: P
             {formError}
           </p>
         )}
-        {plan.status !== "DRAFT" && <p className="mb-3 rounded-control bg-warning-bg px-3 py-2 text-sm text-warning">{RUNNING_NOTE}</p>}
+        {plan.status !== "DRAFT" && (
+          <>
+            <p className="mb-3 rounded-control bg-warning-bg px-3 py-2 text-sm text-warning">{RUNNING_NOTE}</p>
+            <TextAreaField label="Alasan perubahan lokasi (wajib)" value={reason} onChange={(e) => setReason(e.target.value)} error={errors.reason} />
+          </>
+        )}
         <TextField
           label="Cari kota atau tempat"
           value={query}

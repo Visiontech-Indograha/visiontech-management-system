@@ -11,7 +11,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Health Check */
+        /**
+         * Health Check
+         * @description Endpoint pemeriksaan kesehatan sederhana (liveness probe).
+         */
         get: operations["health_check_health_get"];
         put?: never;
         post?: never;
@@ -28,7 +31,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Readiness Check */
+        /**
+         * Readiness Check
+         * @description Endpoint kesiapan (readiness probe).
+         *     Memastikan basis data benar-benar bisa dihubungi sebelum melayani request.
+         */
         get: operations["readiness_check_ready_get"];
         put?: never;
         post?: never;
@@ -47,7 +54,15 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Login */
+        /**
+         * Login
+         * @description Memproses login pengguna dengan email dan password.
+         *
+         *     Body params:
+         *     - payload: Data login berisi email dan password (LoginRequest)
+         *
+         *     Return: Token akses (TokenResponse) dan menset refresh_token di cookie
+         */
         post: operations["login_api_v1_auth_login_post"];
         delete?: never;
         options?: never;
@@ -64,7 +79,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Refresh Token */
+        /**
+         * Refresh Token
+         * @description Memperbarui access_token menggunakan refresh_token yang ada di cookie.
+         *
+         *     Return: Token akses baru (TokenResponse) dan memperbarui refresh_token di cookie
+         */
         post: operations["refresh_token_api_v1_auth_refresh_post"];
         delete?: never;
         options?: never;
@@ -81,7 +101,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Logout */
+        /**
+         * Logout
+         * @description Mengakhiri sesi pengguna saat ini.
+         *
+         *     Return: Pesan sukses (MessageResponse) dan menghapus cookie refresh_token
+         */
         post: operations["logout_api_v1_auth_logout_post"];
         delete?: never;
         options?: never;
@@ -96,7 +121,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get Me */
+        /**
+         * Get Me
+         * @description Mendapatkan profil dan detail pengguna yang sedang login.
+         *
+         *     Return: Detail pengguna saat ini (UserMeResponse)
+         */
         get: operations["get_me_api_v1_auth_me_get"];
         put?: never;
         post?: never;
@@ -115,7 +145,10 @@ export interface paths {
         };
         /**
          * List Sessions
-         * @description P1-7: perangkat yang sedang masuk dengan akun ini; yang sedang dipakai ditandai `current`.
+         * @description P1-7: Mengambil daftar sesi aktif dari perangkat yang sedang masuk dengan akun ini;
+         *     yang sedang dipakai ditandai `current`.
+         *
+         *     Return: Daftar sesi aktif (list[SessionOut])
          */
         get: operations["list_sessions_api_v1_auth_sessions_get"];
         put?: never;
@@ -138,6 +171,8 @@ export interface paths {
         /**
          * Revoke Other Sessions
          * @description Keluarkan semua perangkat lain. Token akses mereka habis paling lama 15 menit; refresh langsung ditolak.
+         *
+         *     Return: Status revokasi perangkat lain (RevokeOthersResponse)
          */
         post: operations["revoke_other_sessions_api_v1_auth_sessions_revoke_others_post"];
         delete?: never;
@@ -157,7 +192,12 @@ export interface paths {
         put?: never;
         /**
          * Revoke Session
-         * @description Keluarkan satu perangkat milik sendiri. Sesi orang lain → 404.
+         * @description Keluarkan satu perangkat milik sendiri berdasarkan ID sesinya. Sesi orang lain → 404.
+         *
+         *     Path params:
+         *     - session_id: UUID dari sesi perangkat
+         *
+         *     Return: Pesan revokasi berhasil (MessageResponse)
          */
         post: operations["revoke_session_api_v1_auth_sessions__session_id__revoke_post"];
         delete?: never;
@@ -175,7 +215,15 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Change Password */
+        /**
+         * Change Password
+         * @description Mengubah password pengguna saat ini.
+         *
+         *     Body params:
+         *     - payload: Berisi password lama dan password baru (ChangePasswordRequest)
+         *
+         *     Return: Token akses baru (TokenResponse) dengan cookie yang diperbarui
+         */
         post: operations["change_password_api_v1_auth_change_password_post"];
         delete?: never;
         options?: never;
@@ -192,8 +240,16 @@ export interface paths {
         };
         /**
          * Get Audit Events
-         * @description Kejadian audit organisasi pengguna (VIEW_AUDIT). Disaring `organization_id` secara eksplisit —
-         *     tidak hanya mengandalkan RLS, yang terlewati bila aplikasi terhubung sebagai pemilik tabel (T-12).
+         * @description Mendapatkan daftar kejadian audit organisasi pengguna (VIEW_AUDIT).
+         *     Disaring `organization_id` secara eksplisit — tidak hanya mengandalkan RLS,
+         *     yang terlewati bila aplikasi terhubung sebagai pemilik tabel (T-12).
+         *
+         *     Query params:
+         *     - page: Nomor halaman (default 1)
+         *     - size: Jumlah item per halaman (default 20, max 100)
+         *     - entity_type: Filter opsional berdasarkan jenis entitas (contoh: "User", "Asset")
+         *
+         *     Return: Daftar riwayat audit beserta pagination (AuditEventListResponse)
          */
         get: operations["get_audit_events_api_v1_audit_events_get"];
         put?: never;
@@ -218,6 +274,8 @@ export interface paths {
          * @description Unggah file (maks 10MB).
          *     Gambar (jpeg/png) akan dikompresi ke WebP 3 ukuran (thumb, view, full) secara asinkron.
          *     Deduplikasi otomatis berbasis SHA-256 (mencegah double upload untuk org yang sama).
+         *
+         *     Return: ID file yang baru saja diunggah dan pesan sukses
          */
         post: operations["upload_document_api_v1_files_upload_post"];
         delete?: never;
@@ -237,6 +295,14 @@ export interface paths {
          * Get File Url
          * @description Mendapatkan URL Presigned MinIO untuk mengakses file (valid 5 menit).
          *     Varian: full, view, thumb. URL dibuat hanya setelah otorisasi per berkas (V-17, dok 13 §7).
+         *
+         *     Path params:
+         *     - file_id: UUID dari file yang diminta
+         *
+         *     Query params:
+         *     - variant: variasi kompresi ("full", "view", "thumb")
+         *
+         *     Return: Presigned URL dari MinIO beserta mime_type asli
          */
         get: operations["get_file_url_api_v1_files__file_id__url_get"];
         put?: never;
@@ -254,10 +320,30 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get Employees */
+        /**
+         * Get Employees
+         * @description Mendapatkan daftar karyawan di organisasi pengguna.
+         *     Mendukung paginasi dan pencarian (berdasarkan nama atau nomor karyawan).
+         *
+         *     Query params:
+         *     - page: Halaman (default 1)
+         *     - size: Jumlah per halaman (default 20, max 100)
+         *     - is_active: Filter karyawan aktif/nonaktif
+         *     - q: Kata kunci pencarian nama / NIK
+         *
+         *     Return: Daftar karyawan (EmployeeListResponse)
+         */
         get: operations["get_employees_api_v1_employees_get"];
         put?: never;
-        /** Create Employee */
+        /**
+         * Create Employee
+         * @description Menambahkan data karyawan baru ke dalam organisasi.
+         *
+         *     Body params:
+         *     - data: Data karyawan baru (EmployeeCreate)
+         *
+         *     Return: Detail karyawan yang baru dibuat (EmployeeResponse)
+         */
         post: operations["create_employee_api_v1_employees_post"];
         delete?: never;
         options?: never;
@@ -275,9 +361,25 @@ export interface paths {
         /**
          * Get Employee
          * @description Satu karyawan (tautan langsung /directory/{id}); karyawan organisasi lain/terhapus → 404.
+         *
+         *     Path params:
+         *     - emp_id: UUID karyawan yang ingin dilihat detailnya
+         *
+         *     Return: Detail karyawan (EmployeeResponse)
          */
         get: operations["get_employee_api_v1_employees__emp_id__get"];
-        /** Update Employee */
+        /**
+         * Update Employee
+         * @description Mengubah data pribadi karyawan. (Jabatan/unit diubah melalui endpoint /assignments).
+         *
+         *     Path params:
+         *     - emp_id: UUID dari karyawan
+         *
+         *     Body params:
+         *     - data: Data yang ingin diubah (EmployeeUpdate)
+         *
+         *     Return: Detail karyawan yang diperbarui (EmployeeResponse)
+         */
         put: operations["update_employee_api_v1_employees__emp_id__put"];
         post?: never;
         delete?: never;
@@ -296,12 +398,25 @@ export interface paths {
         /**
          * List Assignments
          * @description Riwayat jabatan/penempatan (M2), terbaru dulu. Karyawan organisasi lain → 404.
+         *
+         *     Path params:
+         *     - emp_id: UUID dari karyawan
+         *
+         *     Return: Daftar mutasi jabatan (list[EmployeeAssignmentResponse])
          */
         get: operations["list_assignments_api_v1_employees__emp_id__assignments_get"];
         put?: never;
         /**
          * Add Assignment
          * @description domain.js PROMOTE — mutasi/promosi; aturan di EmployeeService.promote.
+         *
+         *     Path params:
+         *     - emp_id: UUID dari karyawan
+         *
+         *     Body params:
+         *     - data: Data mutasi/promosi baru (EmployeeAssignmentCreate)
+         *
+         *     Return: Riwayat jabatan baru (EmployeeAssignmentResponse)
          */
         post: operations["add_assignment_api_v1_employees__emp_id__assignments_post"];
         delete?: never;
@@ -322,6 +437,14 @@ export interface paths {
         /**
          * Offboard Employee
          * @description domain.js OFFBOARD: HR mengakhiri masa kerja (tidak boleh saat masih di SK berjalan).
+         *
+         *     Path params:
+         *     - emp_id: UUID dari karyawan
+         *
+         *     Body params:
+         *     - data: Data offboard termasuk alasan (EmployeeOffboard)
+         *
+         *     Return: Detail hasil proses offboard
          */
         post: operations["offboard_employee_api_v1_employees__emp_id__offboard_post"];
         delete?: never;
@@ -342,6 +465,11 @@ export interface paths {
         /**
          * Archive Employee
          * @description Hapus karyawan (V-29, keputusan pemilik): hanya yang sudah di-offboard; dibalik lewat /restore.
+         *
+         *     Path params:
+         *     - emp_id: UUID dari karyawan
+         *
+         *     Return: Detail hasil pengarsipan
          */
         post: operations["archive_employee_api_v1_employees__emp_id__archive_post"];
         delete?: never;
@@ -362,6 +490,11 @@ export interface paths {
         /**
          * Restore Employee
          * @description domain.js RESTORE_EMPLOYEE (V-29): HR memulihkan karyawan terhapus sebagai nonaktif.
+         *
+         *     Path params:
+         *     - emp_id: UUID dari karyawan
+         *
+         *     Return: Detail hasil pemulihan
          */
         post: operations["restore_employee_api_v1_employees__emp_id__restore_post"];
         delete?: never;
@@ -399,11 +532,28 @@ export interface paths {
         };
         /**
          * Get Employee Documents
-         * @description Dokumen milik sendiri, atau milik siapa pun di organisasi bagi pengelola dokumen (HR). Lainnya 404.
+         * @description Mendapatkan daftar dokumen pribadi karyawan.
+         *     Dokumen milik sendiri, atau milik siapa pun di organisasi bagi pengelola dokumen (HR). Lainnya 404.
+         *
+         *     Path params:
+         *     - emp_id: UUID dari karyawan
+         *
+         *     Return: Daftar dokumen karyawan (DocumentListResponse)
          */
         get: operations["get_employee_documents_api_v1_employees__emp_id__documents_get"];
         put?: never;
-        /** Upload Document */
+        /**
+         * Upload Document
+         * @description Mengunggah (menambahkan) dokumen baru untuk karyawan.
+         *
+         *     Path params:
+         *     - emp_id: UUID dari karyawan
+         *
+         *     Body params:
+         *     - data: Data dokumen yang akan dibuat, termasuk referensi file (EmployeeDocumentCreate)
+         *
+         *     Return: Detail dokumen yang baru saja ditambahkan (EmployeeDocumentResponse)
+         */
         post: operations["upload_document_api_v1_employees__emp_id__documents_post"];
         delete?: never;
         options?: never;
@@ -420,7 +570,19 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Verify Document */
+        /**
+         * Verify Document
+         * @description Memverifikasi (menyetujui atau menolak) dokumen karyawan.
+         *
+         *     Path params:
+         *     - emp_id: UUID dari karyawan
+         *     - doc_id: UUID dari dokumen
+         *
+         *     Body params:
+         *     - data: Hasil verifikasi dokumen (EmployeeDocumentVerify)
+         *
+         *     Return: Detail dokumen yang telah diverifikasi (EmployeeDocumentResponse)
+         */
         post: operations["verify_document_api_v1_employees__emp_id__documents__doc_id__verify_post"];
         delete?: never;
         options?: never;
@@ -439,6 +601,11 @@ export interface paths {
          * Get Expiring Documents
          * @description Mengambil daftar dokumen yang akan kedaluwarsa atau sudah kedaluwarsa.
          *     Memerlukan izin VERIFY_DOCUMENTS (biasanya HR).
+         *
+         *     Query params:
+         *     - urgency: Opsi pemfilteran berdasarkan tingkat urgensi
+         *
+         *     Return: Daftar dokumen yang memasuki masa kedaluwarsa (ExpiringDocumentList)
          */
         get: operations["get_expiring_documents_api_v1_documents_expiring_get"];
         put?: never;
@@ -459,6 +626,8 @@ export interface paths {
         /**
          * Get Pending Documents
          * @description Antrean verifikasi HR (P2-5): dokumen pribadi berstatus PENDING di organisasi ini, terlama dulu.
+         *
+         *     Return: Daftar dokumen yang perlu diverifikasi (PendingDocumentList)
          */
         get: operations["get_pending_documents_api_v1_documents_pending_get"];
         put?: never;
@@ -483,6 +652,8 @@ export interface paths {
          * @description Dipanggil berkala oleh penjadwal: dokumen 'CURRENT' yang lewat masa berlaku → 'EXPIRED'.
          *     Hanya ADMIN (`run:system_jobs`, sama dengan cron absensi) dan hanya untuk organisasinya (V-09);
          *     "hari ini" menurut zona waktu organisasi, bukan jam server DB.
+         *
+         *     Return: Jumlah dokumen yang diubah (dict)
          */
         post: operations["cron_expire_documents_api_v1_documents_cron_expire_documents_post"];
         delete?: never;
@@ -500,7 +671,14 @@ export interface paths {
         };
         /**
          * Assignment Options
-         * @description Pilihan PM/personel yang sah untuk periode SK baru (R-23).
+         * @description Mengambil pilihan PM/personel yang sah untuk periode SK baru (R-23) (GET).
+         *
+         *     Query Parameters:
+         *     - period_start (date): Tanggal mulai periode SK.
+         *     - period_end (date): Tanggal akhir periode SK.
+         *
+         *     Returns:
+         *     - PlanAssignmentOptions: Pilihan personil yang dapat ditugaskan.
          */
         get: operations["assignment_options_api_v1_work_plans_assignment_options_get"];
         put?: never;
@@ -520,7 +698,13 @@ export interface paths {
         };
         /**
          * Form Options
-         * @description Pilihan form "Buat SK" alur v2 (SK2-A/B). `plan_id` = draf yang sedang diubah (pilihannya ikut tampil).
+         * @description Mengambil pilihan untuk form "Buat SK" pada alur v2 (SK2-A/B) (GET).
+         *
+         *     Query Parameters:
+         *     - plan_id (UUID | None): ID draf yang sedang diubah (pilihannya ikut tampil).
+         *
+         *     Returns:
+         *     - PlanFormOptions: Opsi-opsi untuk mengisi form SK.
          */
         get: operations["form_options_api_v1_work_plans_form_options_get"];
         put?: never;
@@ -540,7 +724,17 @@ export interface paths {
         };
         /**
          * Driver Options
-         * @description Calon driver dari ketua + anggota terpilih yang ber-SIM sesuai tipe kendaraan dan tidak terikat SK lain.
+         * @description Mengambil daftar calon pengemudi (driver) yang valid (GET).
+         *     Calon driver dari ketua + anggota terpilih yang ber-SIM sesuai tipe kendaraan dan tidak terikat SK lain.
+         *
+         *     Query Parameters:
+         *     - vehicle_id (UUID): ID kendaraan.
+         *     - period_end (date): Tanggal akhir periode.
+         *     - candidate_ids (list[UUID]): Daftar ID kandidat.
+         *     - plan_id (UUID | None): ID draf SK terkait jika ada.
+         *
+         *     Returns:
+         *     - list[str]: Daftar ID calon pengemudi yang valid.
          */
         get: operations["driver_options_api_v1_work_plans_driver_options_get"];
         put?: never;
@@ -562,7 +756,14 @@ export interface paths {
         put?: never;
         /**
          * Create Full Plan
-         * @description Buat SK lengkap dalam satu transaksi (alur v2) → status Draf.
+         * @description Membuat SK lengkap dalam satu transaksi (alur v2) (POST).
+         *     Status SK akan langsung menjadi Draf.
+         *
+         *     Request Body:
+         *     - data (PlanDraftRequest): Seluruh rincian SK.
+         *
+         *     Returns:
+         *     - PlanDetailOut: Detail lengkap SK yang baru dibuat.
          */
         post: operations["create_full_plan_api_v1_work_plans_full_post"];
         delete?: never;
@@ -580,12 +781,28 @@ export interface paths {
         };
         /**
          * Get Plans
-         * @description Hanya SK yang terlihat oleh pengguna (V-07, `domain.js` visiblePlans). `archived=true`: draf
-         *     terarsip — hanya untuk pengelola (V-21). SK Diterima yang tanggal mulainya tiba dijalankan dulu (alur v2).
+         * @description Mengambil daftar SK yang terlihat oleh pengguna (V-07) (GET).
+         *     SK Diterima yang tanggal mulainya tiba dijalankan dulu (alur v2).
+         *
+         *     Query Parameters:
+         *     - status_filter (str | None): Filter berdasarkan status SK.
+         *     - archived (bool): Menampilkan draf terarsip (hanya untuk pengelola) (V-21).
+         *
+         *     Returns:
+         *     - list[WorkPlanResponse]: Daftar rencana kerja (SK).
          */
         get: operations["get_plans_api_v1_work_plans_get"];
         put?: never;
-        /** Create Plan */
+        /**
+         * Create Plan
+         * @description Membuat draf rencana kerja (SK) baru (POST).
+         *
+         *     Request Body:
+         *     - data (WorkPlanCreate): Data awal pembuatan SK (unit, lokasi, ketua, dll).
+         *
+         *     Returns:
+         *     - WorkPlanResponse: Data rencana kerja yang baru dibuat.
+         */
         post: operations["create_plan_api_v1_work_plans_post"];
         delete?: never;
         options?: never;
@@ -600,14 +817,35 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get Plan */
+        /**
+         * Get Plan
+         * @description Mengambil data dasar dari sebuah SK (GET).
+         *
+         *     Path Parameters:
+         *     - plan_id (UUID): ID dari SK (work plan).
+         *
+         *     Returns:
+         *     - WorkPlanResponse: Data dasar SK.
+         */
         get: operations["get_plan_api_v1_work_plans__plan_id__get"];
         put?: never;
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
-        /** Update Plan */
+        /**
+         * Update Plan
+         * @description Mengubah rincian SK berstatus Draf (PATCH). (EDIT_DRAFT, dok 05)
+         *
+         *     Path Parameters:
+         *     - plan_id (UUID): ID dari rencana kerja (SK).
+         *
+         *     Request Body:
+         *     - data (WorkPlanUpdate): Data yang ingin diubah (judul, lokasi, dsb).
+         *
+         *     Returns:
+         *     - WorkPlanResponse: Data rencana kerja yang telah di-update.
+         */
         patch: operations["update_plan_api_v1_work_plans__plan_id__patch"];
         trace?: never;
     };
@@ -620,7 +858,13 @@ export interface paths {
         };
         /**
          * Get Plan Detail
-         * @description Isi lengkap SK: data umum, lokasi, tim, detail pekerjaan per hari, alat & kendaraan.
+         * @description Mengambil isi lengkap SK: data umum, lokasi, tim, detail pekerjaan per hari, alat & kendaraan (GET).
+         *
+         *     Path Parameters:
+         *     - plan_id (UUID): ID SK (work plan).
+         *
+         *     Returns:
+         *     - PlanDetailOut: Detail lengkap dari SK.
          */
         get: operations["get_plan_detail_api_v1_work_plans__plan_id__detail_get"];
         put?: never;
@@ -641,7 +885,17 @@ export interface paths {
         get?: never;
         /**
          * Edit Full Plan
-         * @description Ubah isi SK berstatus Draf (termasuk draf revisi setelah adendum diminta) dalam satu transaksi.
+         * @description Mengubah seluruh isi SK (draf) dalam satu transaksi (PUT).
+         *     Termasuk draf revisi setelah adendum diminta.
+         *
+         *     Path Parameters:
+         *     - plan_id (UUID): ID dari SK.
+         *
+         *     Request Body:
+         *     - data (PlanDraftRequest): Data draft SK yang lengkap.
+         *
+         *     Returns:
+         *     - PlanDetailOut: Detail lengkap SK yang baru disimpan.
          */
         put: operations["edit_full_plan_api_v1_work_plans__plan_id__full_put"];
         post?: never;
@@ -660,7 +914,13 @@ export interface paths {
         };
         /**
          * Preview Plan
-         * @description Pratinjau A4 draf SK ("Sunting SK", SK2-C) — format sama dengan dokumen terbit.
+         * @description Pratinjau A4 draf SK ("Sunting SK", SK2-C) — format sama dengan dokumen terbit (GET).
+         *
+         *     Path Parameters:
+         *     - plan_id (UUID): ID dari SK.
+         *
+         *     Returns:
+         *     - HTMLResponse: Representasi HTML draf SK.
          */
         get: operations["preview_plan_api_v1_work_plans__plan_id__preview_get"];
         put?: never;
@@ -680,11 +940,30 @@ export interface paths {
         };
         /**
          * List Plan Days
-         * @description Siapa pun yang melihat SK (V-07); SK tak terlihat / organisasi lain → 404.
+         * @description Mengambil daftar hari kerja beserta tugas dan laporan harian dari SK (GET).
+         *     Siapa pun yang melihat SK (V-07); SK tak terlihat / organisasi lain → 404.
+         *
+         *     Path Parameters:
+         *     - plan_id (tersirat via router prefix): ID SK bersangkutan.
+         *
+         *     Returns:
+         *     - list[PlanDayOut]: Daftar detail hari kerja SK.
          */
         get: operations["list_plan_days_api_v1_work_plans__plan_id__days_get"];
         put?: never;
-        /** Add Day */
+        /**
+         * Add Day
+         * @description Menambahkan data hari ke dalam rencana kerja berstatus DRAFT (POST).
+         *
+         *     Path Parameters:
+         *     - plan_id (UUID): ID rencana kerja.
+         *
+         *     Request Body:
+         *     - data (PlanDayCreate): Rincian hari yang akan ditambahkan.
+         *
+         *     Returns:
+         *     - PlanDayResponse: Data hari yang berhasil ditambahkan.
+         */
         post: operations["add_day_api_v1_work_plans__plan_id__days_post"];
         delete?: never;
         options?: never;
@@ -701,7 +980,20 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Add Task */
+        /**
+         * Add Task
+         * @description Menambahkan tugas baru pada hari tertentu di dalam SK (POST).
+         *
+         *     Path Parameters:
+         *     - plan_id (UUID): ID rencana kerja (SK).
+         *     - day_id (UUID): ID dari hari bersangkutan.
+         *
+         *     Request Body:
+         *     - data (PlanTaskCreate): Rincian tugas yang akan ditambahkan.
+         *
+         *     Returns:
+         *     - PlanTaskResponse: Data tugas yang berhasil dibuat.
+         */
         post: operations["add_task_api_v1_work_plans__plan_id__days__day_id__tasks_post"];
         delete?: never;
         options?: never;
@@ -719,7 +1011,18 @@ export interface paths {
         get?: never;
         /**
          * Save Day
-         * @description domain.js SAVE_DAY (V-23): PM menyusun ulang judul & tugas satu hari selagi SK masih draf.
+         * @description Menyusun ulang judul & tugas satu hari selagi SK masih draf (PUT).
+         *     domain.js SAVE_DAY (V-23).
+         *
+         *     Path Parameters:
+         *     - plan_id (UUID): ID SK.
+         *     - day_id (UUID): ID hari.
+         *
+         *     Request Body:
+         *     - data (DayPlanRequest): Data tugas untuk hari tersebut.
+         *
+         *     Returns:
+         *     - dict[str, object]: Data hari dan daftar tugas yang baru disimpan.
          */
         put: operations["save_day_api_v1_work_plans__plan_id__days__day_id__plan_put"];
         post?: never;
@@ -738,10 +1041,29 @@ export interface paths {
         };
         /**
          * Get Plan Team
-         * @description Tim aktif SK (ketua dulu). SK tak terlihat / organisasi lain → 404 (penjaga VIEW).
+         * @description Mengambil daftar tim aktif pada rencana kerja (GET).
+         *     Tim aktif SK (ketua dulu). SK tak terlihat / organisasi lain → 404 (penjaga VIEW).
+         *
+         *     Path Parameters:
+         *     - plan_id (tersirat via router prefix): ID SK bersangkutan.
+         *
+         *     Returns:
+         *     - list[TeamMemberOut]: Daftar anggota tim (ketua dan anggota).
          */
         get: operations["get_plan_team_api_v1_work_plans__plan_id__members_get"];
-        /** Set Plan Team */
+        /**
+         * Set Plan Team
+         * @description Menyetel (memperbarui) daftar tim SK (ketua dan anggota) (PUT).
+         *
+         *     Path Parameters:
+         *     - plan_id (UUID): ID dari SK.
+         *
+         *     Request Body:
+         *     - payload (TeamRequest): Data ID ketua dan daftar ID anggota, beserta versi row.
+         *
+         *     Returns:
+         *     - TeamResponse: Data susunan tim yang baru.
+         */
         put: operations["set_plan_team_api_v1_work_plans__plan_id__members_put"];
         post?: never;
         delete?: never;
@@ -759,7 +1081,14 @@ export interface paths {
         };
         /**
          * Get Final Report Signatures
-         * @description Tanda tangan laporan akhir (ketua = ISSUER, pemeriksa = APPROVER), R-19.
+         * @description Mengambil daftar tanda tangan laporan akhir (GET).
+         *     Tanda tangan laporan akhir (ketua = ISSUER, pemeriksa = APPROVER), R-19.
+         *
+         *     Path Parameters:
+         *     - plan_id (UUID): ID rencana kerja.
+         *
+         *     Returns:
+         *     - list[FinalReportSignatureOut]: Daftar tanda tangan.
          */
         get: operations["get_final_report_signatures_api_v1_work_plans__plan_id__completion_signatures_get"];
         put?: never;
@@ -779,7 +1108,15 @@ export interface paths {
         };
         /**
          * Get Final Report Pdf
-         * @description PDF laporan akhir ber-QR (P6-4, UAT langkah 10). Hanya setelah disetujui (409). Render → threadpool.
+         * @description Mengunduh PDF laporan akhir ber-QR (GET).
+         *     P6-4, UAT langkah 10. Hanya setelah disetujui (409).
+         *     Render HTML ke PDF berjalan di background threadpool.
+         *
+         *     Path Parameters:
+         *     - plan_id (UUID): ID rencana kerja.
+         *
+         *     Returns:
+         *     - Response: File PDF biner.
          */
         get: operations["get_final_report_pdf_api_v1_work_plans__plan_id__completion_pdf_get"];
         put?: never;
@@ -799,8 +1136,15 @@ export interface paths {
         };
         /**
          * Get Final Report
-         * @description Laporan akhir SK — dibaca PM sebelum menyetujui/mengembalikan, dan untuk mode presentasi.
+         * @description Mengambil data laporan akhir SK (GET).
+         *     Laporan akhir SK — dibaca PM sebelum menyetujui/mengembalikan, dan untuk mode presentasi.
          *     null bila belum pernah diajukan; SK tak terlihat → 404 (penjaga VIEW).
+         *
+         *     Path Parameters:
+         *     - plan_id (UUID): ID dari SK terkait.
+         *
+         *     Returns:
+         *     - FinalReportOut | None: Detail final report jika ada.
          */
         get: operations["get_final_report_api_v1_work_plans__plan_id__completion_get"];
         put?: never;
@@ -820,7 +1164,20 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Publish Plan */
+        /**
+         * Publish Plan
+         * @description PM menerbitkan SK (POST).
+         *     Status SK berubah menjadi PUBLISHED.
+         *
+         *     Path Parameters:
+         *     - plan_id (UUID): ID SK.
+         *
+         *     Request Body:
+         *     - data (TransitionRequest): Versi baris dan data transisi lainnya.
+         *
+         *     Returns:
+         *     - WorkPlanResponse: Rencana kerja terbaru.
+         */
         post: operations["publish_plan_api_v1_work_plans__plan_id__publish_post"];
         delete?: never;
         options?: never;
@@ -837,7 +1194,20 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Accept Plan */
+        /**
+         * Accept Plan
+         * @description Ketua menerima SK yang diterbitkan PM (POST).
+         *     Status SK berubah menjadi ACCEPTED.
+         *
+         *     Path Parameters:
+         *     - plan_id (UUID): ID rencana kerja.
+         *
+         *     Request Body:
+         *     - data (TransitionRequest): Versi baris (row version).
+         *
+         *     Returns:
+         *     - WorkPlanResponse: Rencana kerja terbaru.
+         */
         post: operations["accept_plan_api_v1_work_plans__plan_id__accept_post"];
         delete?: never;
         options?: never;
@@ -856,7 +1226,18 @@ export interface paths {
         put?: never;
         /**
          * Appeal Plan
-         * @description domain.js APPEAL (V-20): ketua mengajukan banding atas SK terbit.
+         * @description Ketua mengajukan banding atas SK yang terbit (POST).
+         *     (domain.js APPEAL, V-20).
+         *     Status SK berubah menjadi APPEALED.
+         *
+         *     Path Parameters:
+         *     - plan_id (UUID): ID SK.
+         *
+         *     Request Body:
+         *     - data (TransitionRequest): Data banding beserta alasannya.
+         *
+         *     Returns:
+         *     - WorkPlanResponse: Rencana kerja dengan status banding.
          */
         post: operations["appeal_plan_api_v1_work_plans__plan_id__appeal_post"];
         delete?: never;
@@ -876,7 +1257,18 @@ export interface paths {
         put?: never;
         /**
          * Revise Plan
-         * @description domain.js REVISE (V-20): PM membuka revisi draf dari SK yang dibanding.
+         * @description PM membuka revisi draf dari SK yang dibanding (POST).
+         *     (domain.js REVISE, V-20).
+         *     Status SK kembali menjadi DRAFT_REV.
+         *
+         *     Path Parameters:
+         *     - plan_id (UUID): ID dari SK yang akan direvisi.
+         *
+         *     Request Body:
+         *     - data (TransitionRequest): Data permintaan transisi (row version).
+         *
+         *     Returns:
+         *     - WorkPlanResponse: Rencana kerja dengan status DRAFT_REV.
          */
         post: operations["revise_plan_api_v1_work_plans__plan_id__revise_post"];
         delete?: never;
@@ -896,7 +1288,18 @@ export interface paths {
         put?: never;
         /**
          * Cancel Plan
-         * @description domain.js CANCEL_PLAN (V-21).
+         * @description Membatalkan rencana kerja (POST).
+         *     (domain.js CANCEL_PLAN, V-21).
+         *     Status SK menjadi CANCELLED.
+         *
+         *     Path Parameters:
+         *     - plan_id (UUID): ID dari SK.
+         *
+         *     Request Body:
+         *     - data (TransitionRequest): Data dan alasan pembatalan.
+         *
+         *     Returns:
+         *     - WorkPlanResponse: Rencana kerja yang dibatalkan.
          */
         post: operations["cancel_plan_api_v1_work_plans__plan_id__cancel_post"];
         delete?: never;
@@ -916,7 +1319,17 @@ export interface paths {
         put?: never;
         /**
          * Archive Plan
-         * @description domain.js DELETE_PLAN (V-21): arsip draf — soft delete, riwayat tetap ada.
+         * @description Mengarsipkan (menghapus secara logis) draf SK (POST).
+         *     (domain.js DELETE_PLAN, V-21): arsip draf — soft delete, riwayat tetap ada.
+         *
+         *     Path Parameters:
+         *     - plan_id (UUID): ID SK.
+         *
+         *     Request Body:
+         *     - data (TransitionRequest): Alasan pengarsipan.
+         *
+         *     Returns:
+         *     - WorkPlanResponse: Rencana kerja yang diarsipkan.
          */
         post: operations["archive_plan_api_v1_work_plans__plan_id__archive_post"];
         delete?: never;
@@ -936,7 +1349,17 @@ export interface paths {
         put?: never;
         /**
          * Restore Plan
-         * @description domain.js RESTORE_PLAN (V-21): pulihkan draf terarsip.
+         * @description Memulihkan draf SK terarsip (POST).
+         *     (domain.js RESTORE_PLAN, V-21).
+         *
+         *     Path Parameters:
+         *     - plan_id (UUID): ID dari SK yang akan dipulihkan.
+         *
+         *     Request Body:
+         *     - data (TransitionRequest): Data baris transisi.
+         *
+         *     Returns:
+         *     - WorkPlanResponse: Rencana kerja yang berhasil dipulihkan.
          */
         post: operations["restore_plan_api_v1_work_plans__plan_id__restore_post"];
         delete?: never;
@@ -954,7 +1377,20 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Start Plan */
+        /**
+         * Start Plan
+         * @description Ketua memulai pekerjaan berdasarkan SK yang telah diterima (POST).
+         *     Status SK berubah menjadi IN_PROGRESS.
+         *
+         *     Path Parameters:
+         *     - plan_id (UUID): ID SK.
+         *
+         *     Request Body:
+         *     - data (TransitionRequest): Versi data row.
+         *
+         *     Returns:
+         *     - WorkPlanResponse: Rencana kerja dengan status berjalan.
+         */
         post: operations["start_plan_api_v1_work_plans__plan_id__start_post"];
         delete?: never;
         options?: never;
@@ -973,7 +1409,17 @@ export interface paths {
         put?: never;
         /**
          * Request Completion
-         * @description domain.js REQUEST_COMPLETE (V-26): ketua menyerahkan laporan akhir → COMPLETION_REVIEW.
+         * @description Ketua menyerahkan laporan akhir (POST).
+         *     (domain.js REQUEST_COMPLETE, V-26): status menjadi COMPLETION_REVIEW.
+         *
+         *     Path Parameters:
+         *     - plan_id (UUID): ID dari rencana kerja.
+         *
+         *     Request Body:
+         *     - data (CompletionRequest): Isi laporan akhir, kendala, dan file bukti (evidence).
+         *
+         *     Returns:
+         *     - WorkPlanResponse: Rencana kerja yang sedang di-review.
          */
         post: operations["request_completion_api_v1_work_plans__plan_id__request_completion_post"];
         delete?: never;
@@ -993,7 +1439,17 @@ export interface paths {
         put?: never;
         /**
          * Approve Completion
-         * @description domain.js APPROVE_COMPLETE (V-26): PM unit/OPS menutup SK → COMPLETED.
+         * @description PM unit/OPS menutup SK setelah menyetujui laporan akhir (POST).
+         *     (domain.js APPROVE_COMPLETE, V-26): status menjadi COMPLETED.
+         *
+         *     Path Parameters:
+         *     - plan_id (UUID): ID dari SK.
+         *
+         *     Request Body:
+         *     - data (TransitionRequest): Data persetujuan.
+         *
+         *     Returns:
+         *     - WorkPlanResponse: SK yang berstatus COMPLETED.
          */
         post: operations["approve_completion_api_v1_work_plans__plan_id__approve_completion_post"];
         delete?: never;
@@ -1013,7 +1469,17 @@ export interface paths {
         put?: never;
         /**
          * Return Completion
-         * @description domain.js RETURN_COMPLETE (V-26): PM unit/OPS mengembalikan ke ketua → IN_PROGRESS.
+         * @description PM unit/OPS mengembalikan laporan akhir ke ketua (POST).
+         *     (domain.js RETURN_COMPLETE, V-26): status menjadi IN_PROGRESS kembali.
+         *
+         *     Path Parameters:
+         *     - plan_id (UUID): ID SK terkait.
+         *
+         *     Request Body:
+         *     - data (TransitionRequest): Data alasan pengembalian laporan.
+         *
+         *     Returns:
+         *     - WorkPlanResponse: Rencana kerja dikembalikan ke berjalan.
          */
         post: operations["return_completion_api_v1_work_plans__plan_id__return_completion_post"];
         delete?: never;
@@ -1031,13 +1497,30 @@ export interface paths {
         };
         /**
          * List Changes
-         * @description Riwayat usulan perubahan SK (menutup celah: usulan tidak bisa dibaca ulang, docs/28).
+         * @description Melihat riwayat usulan perubahan SK (GET).
+         *     Mencegah celah di mana usulan tidak bisa dibaca ulang (docs/28).
+         *
+         *     Path Parameters:
+         *     - plan_id (UUID): ID rencana kerja.
+         *
+         *     Returns:
+         *     - list[PlanChangeOut]: Daftar usulan perubahan yang terkait.
          */
         get: operations["list_changes_api_v1_work_plans__plan_id__changes_get"];
         put?: never;
         /**
          * Request Change
-         * @description REQUEST_CHANGE (ketua, perpanjangan) · REQUEST_PERSONNEL_CHANGE (PM unit/OPS, personel).
+         * @description Mengajukan adendum perubahan pada SK (POST).
+         *     REQUEST_CHANGE (ketua, perpanjangan) · REQUEST_PERSONNEL_CHANGE (PM unit/OPS, personel).
+         *
+         *     Path Parameters:
+         *     - plan_id (UUID): ID dari SK.
+         *
+         *     Request Body:
+         *     - data (ChangeRequest): Data usulan perubahan (jenis perubahan, periode baru, dsb).
+         *
+         *     Returns:
+         *     - ChangeResponse: Data respons dari perubahan yang diusulkan.
          */
         post: operations["request_change_api_v1_work_plans__plan_id__changes_post"];
         delete?: never;
@@ -1057,7 +1540,17 @@ export interface paths {
         put?: never;
         /**
          * Approve Change
-         * @description APPROVE_CHANGE — PM unit/OPS menandatangani perpanjangan.
+         * @description Menyetujui adendum perpanjangan SK (POST).
+         *     APPROVE_CHANGE — PM unit/OPS menandatangani perpanjangan.
+         *
+         *     Path Parameters:
+         *     - change_id (UUID): ID perubahan adendum.
+         *
+         *     Request Body:
+         *     - data (DecisionRequest): Persetujuan atau keputusan.
+         *
+         *     Returns:
+         *     - ChangeResponse: Status terbaru adendum setelah disetujui.
          */
         post: operations["approve_change_api_v1_changes__change_id__approve_post"];
         delete?: never;
@@ -1077,7 +1570,17 @@ export interface paths {
         put?: never;
         /**
          * Accept Change
-         * @description ACCEPT_CHANGE — ketua (perpanjangan) / ketua baru (personel) mengaktifkan adendum.
+         * @description Menerima dan mengaktifkan adendum (POST).
+         *     ACCEPT_CHANGE — ketua (perpanjangan) / ketua baru (personel) mengaktifkan adendum.
+         *
+         *     Path Parameters:
+         *     - change_id (UUID): ID usulan adendum.
+         *
+         *     Request Body:
+         *     - data (DecisionRequest): Konfirmasi penerimaan.
+         *
+         *     Returns:
+         *     - ChangeResponse: Status adendum terbaru.
          */
         post: operations["accept_change_api_v1_changes__change_id__accept_post"];
         delete?: never;
@@ -1097,7 +1600,17 @@ export interface paths {
         put?: never;
         /**
          * Reject Change
-         * @description REJECT_CHANGE — alasan wajib.
+         * @description Menolak adendum (POST).
+         *     REJECT_CHANGE — alasan wajib disertakan.
+         *
+         *     Path Parameters:
+         *     - change_id (UUID): ID adendum.
+         *
+         *     Request Body:
+         *     - data (DecisionRequest): Alasan penolakan.
+         *
+         *     Returns:
+         *     - ChangeResponse: Status adendum yang ditolak.
          */
         post: operations["reject_change_api_v1_changes__change_id__reject_post"];
         delete?: never;
@@ -1117,7 +1630,17 @@ export interface paths {
         put?: never;
         /**
          * Withdraw Change
-         * @description WITHDRAW_CHANGE — PM menarik adendum personel.
+         * @description Menarik kembali usulan adendum personel (POST).
+         *     WITHDRAW_CHANGE — PM menarik adendum personel.
+         *
+         *     Path Parameters:
+         *     - change_id (UUID): ID usulan adendum.
+         *
+         *     Request Body:
+         *     - data (DecisionRequest): Alasan pembatalan.
+         *
+         *     Returns:
+         *     - ChangeResponse: Status adendum yang ditarik.
          */
         post: operations["withdraw_change_api_v1_changes__change_id__withdraw_post"];
         delete?: never;
@@ -1135,14 +1658,27 @@ export interface paths {
         };
         /**
          * Get Sites
-         * @description R-33: lapangan → lokasi unitnya; kantor → lokasi kantor; PM → kantor + unitnya; OPS → semua.
-         *     `for_attendance=true`: hanya lokasi yang sah untuk absen peminta. `can_manage`: boleh dihapus peminta.
+         * @description Mengambil daftar lokasi kerja (GET).
+         *     R-33: lapangan → lokasi unitnya (+ kantor pusat untuk absen); kantor → lokasi kantor; PM → kantor + unitnya; OPS → semua.
+         *
+         *     Query Parameters:
+         *     - for_attendance (bool): Hanya lokasi yang sah untuk absen peminta.
+         *
+         *     Returns:
+         *     - list[SiteResponse]: Daftar lokasi kerja beserta atribut `can_manage`.
          */
         get: operations["get_sites_api_v1_sites_get"];
         put?: never;
         /**
          * Create Site
-         * @description R-33: PM → lokasi proyek unitnya (untuk bawahannya); Finance → lokasi kantor. Unit ditetapkan server.
+         * @description Membuat lokasi kerja baru (POST).
+         *     R-33: PM → lokasi proyek unitnya (untuk bawahannya); Finance → lokasi kantor. Unit ditetapkan server.
+         *
+         *     Request Body:
+         *     - data (SiteCreate): Data lokasi yang akan dibuat.
+         *
+         *     Returns:
+         *     - SiteResponse: Data lokasi kerja yang berhasil dibuat.
          */
         post: operations["create_site_api_v1_sites_post"];
         delete?: never;
@@ -1161,7 +1697,16 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Delete Site */
+        /**
+         * Delete Site
+         * @description Menghapus lokasi kerja berdasarkan ID-nya (DELETE).
+         *
+         *     Path Parameters:
+         *     - site_id (UUID): ID lokasi yang akan dihapus.
+         *
+         *     Returns:
+         *     - dict[str, str]: Pesan konfirmasi penghapusan.
+         */
         delete: operations["delete_site_api_v1_sites__site_id__delete"];
         options?: never;
         head?: never;
@@ -1195,12 +1740,28 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get Account */
+        /**
+         * Get Account
+         * @description Mendapatkan detail akun berdasarkan ID karyawan.
+         *
+         *     Path params:
+         *     - emp_id: UUID dari karyawan
+         *
+         *     Return: Detail akun (AccountOut)
+         */
         get: operations["get_account_api_v1_employees__emp_id__account_get"];
         put?: never;
         /**
          * Create Account
-         * @description Password sementara dikembalikan SEKALI — sampaikan ke karyawan, minta diganti setelah masuk.
+         * @description Membuat akun baru untuk karyawan. Password sementara dikembalikan SEKALI — sampaikan ke karyawan, minta diganti setelah masuk.
+         *
+         *     Path params:
+         *     - emp_id: UUID dari karyawan
+         *
+         *     Body params:
+         *     - data: Data akun baru yang akan dibuat
+         *
+         *     Return: Akun yang dibuat beserta password sementara (AccountWithPassword)
          */
         post: operations["create_account_api_v1_employees__emp_id__account_post"];
         delete?: never;
@@ -1220,7 +1781,12 @@ export interface paths {
         put?: never;
         /**
          * Reset Password
-         * @description Password sementara baru; semua sesi akun itu dicabut.
+         * @description Mereset password akun. Password sementara baru; semua sesi akun itu dicabut.
+         *
+         *     Path params:
+         *     - emp_id: UUID dari karyawan
+         *
+         *     Return: Detail akun beserta password sementara yang baru (AccountWithPassword)
          */
         post: operations["reset_password_api_v1_employees__emp_id__account_reset_password_post"];
         delete?: never;
@@ -1238,7 +1804,15 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Deactivate */
+        /**
+         * Deactivate
+         * @description Menonaktifkan akun karyawan.
+         *
+         *     Path params:
+         *     - emp_id: UUID dari karyawan
+         *
+         *     Return: Detail akun yang baru saja dinonaktifkan (AccountOut)
+         */
         post: operations["deactivate_api_v1_employees__emp_id__account_deactivate_post"];
         delete?: never;
         options?: never;
@@ -1255,7 +1829,15 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Activate */
+        /**
+         * Activate
+         * @description Mengaktifkan kembali akun karyawan.
+         *
+         *     Path params:
+         *     - emp_id: UUID dari karyawan
+         *
+         *     Return: Detail akun yang baru saja diaktifkan (AccountOut)
+         */
         post: operations["activate_api_v1_employees__emp_id__account_activate_post"];
         delete?: never;
         options?: never;
@@ -1312,7 +1894,14 @@ export interface paths {
         };
         /**
          * Geo Search
-         * @description Cari kota/tempat di Indonesia (Nominatim, di-cache). Hanya pengelola SK.
+         * @description Pencarian kota/tempat di Indonesia berdasarkan kueri (Nominatim, di-cache) (GET).
+         *     Untuk pengelola SK dan pengelola lokasi kerja (pencarian alamat saat menambah lokasi).
+         *
+         *     Query Parameters:
+         *     - q (str): Kata kunci lokasi yang dicari.
+         *
+         *     Returns:
+         *     - list[GeoResult]: Daftar hasil pencarian lokasi (koordinat dan nama wilayah).
          */
         get: operations["geo_search_api_v1_geo_search_get"];
         put?: never;
@@ -1330,11 +1919,30 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get Plan Location */
+        /**
+         * Get Plan Location
+         * @description Mengambil lokasi titik absensi untuk sebuah rencana kerja (SK) (GET).
+         *
+         *     Path Parameters:
+         *     - plan_id (UUID): ID dari rencana kerja (SK).
+         *
+         *     Returns:
+         *     - PlanLocationOut | None: Koordinat titik absensi atau null bila belum disetel.
+         */
         get: operations["get_plan_location_api_v1_work_plans__plan_id__location_get"];
         /**
          * Set Plan Location
-         * @description SK draf maupun berjalan; teks lokasi dokumen tetap, hanya titik absensi yang berubah.
+         * @description Menyetel titik absensi (lokasi) untuk rencana kerja (PUT).
+         *     SK draf maupun berjalan; teks lokasi dokumen tetap, hanya titik absensi yang berubah.
+         *
+         *     Path Parameters:
+         *     - plan_id (UUID): ID dari rencana kerja.
+         *
+         *     Request Body:
+         *     - data (PlanLocationIn): Data nama lokasi, alamat, latitude, longitude, dan radius absensi.
+         *
+         *     Returns:
+         *     - PlanLocationOut: Data lokasi terbaru.
          */
         put: operations["set_plan_location_api_v1_work_plans__plan_id__location_put"];
         post?: never;
@@ -1351,7 +1959,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List Weeks */
+        /**
+         * List Weeks
+         * @description Mengambil daftar laporan mingguan untuk sebuah SK (GET).
+         *
+         *     Path Parameters:
+         *     - plan_id (tersirat via router prefix): ID dari work plan.
+         *
+         *     Returns:
+         *     - list[WeeklyReportResponse]: Daftar laporan mingguan.
+         */
         get: operations["list_weeks_api_v1_work_plans__plan_id__weekly_get"];
         put?: never;
         post?: never;
@@ -1369,7 +1986,19 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /** Save Weekly */
+        /**
+         * Save Weekly
+         * @description Menyimpan draf laporan mingguan (PUT). (domain.js SAVE_WEEKLY)
+         *
+         *     Path Parameters:
+         *     - week (int): Minggu ke-berapa.
+         *
+         *     Request Body:
+         *     - data (WeeklyReportRequest): Data isi laporan dan kendala.
+         *
+         *     Returns:
+         *     - WeeklyReportResponse: Data laporan mingguan yang berhasil disimpan.
+         */
         put: operations["save_weekly_api_v1_work_plans__plan_id__weekly__week__put"];
         post?: never;
         delete?: never;
@@ -1387,7 +2016,16 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Submit Weekly */
+        /**
+         * Submit Weekly
+         * @description Mengajukan laporan mingguan agar bisa ditinjau (POST). (domain.js SUBMIT_WEEKLY)
+         *
+         *     Path Parameters:
+         *     - week (int): Minggu ke-berapa.
+         *
+         *     Returns:
+         *     - WeeklyReportResponse: Status laporan mingguan yang baru.
+         */
         post: operations["submit_weekly_api_v1_work_plans__plan_id__weekly__week__submit_post"];
         delete?: never;
         options?: never;
@@ -1404,7 +2042,19 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Review Weekly */
+        /**
+         * Review Weekly
+         * @description Meninjau laporan mingguan (PM Unit) untuk disetujui atau ditolak (POST). (domain.js REVIEW_WEEKLY)
+         *
+         *     Path Parameters:
+         *     - week (int): Minggu ke-berapa.
+         *
+         *     Request Body:
+         *     - data (WeeklyReviewRequest): Keputusan (decision) dan catatan.
+         *
+         *     Returns:
+         *     - WeeklyReportResponse: Status laporan mingguan yang baru.
+         */
         post: operations["review_weekly_api_v1_work_plans__plan_id__weekly__week__review_post"];
         delete?: never;
         options?: never;
@@ -1459,9 +2109,31 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List Attachments */
+        /**
+         * List Attachments
+         * @description Mengambil daftar lampiran dari sebuah SK (GET).
+         *
+         *     Path Parameters:
+         *     - plan_id (tersirat via router prefix): ID dari SK.
+         *
+         *     Returns:
+         *     - list[AttachmentResponse]: Daftar lampiran SK.
+         */
         get: operations["list_attachments_api_v1_work_plans__plan_id__attachments_get"];
-        /** Save Attachments */
+        /**
+         * Save Attachments
+         * @description Menyimpan atau memperbarui lampiran untuk SK (PUT).
+         *     (domain.js SAVE_ATTACHMENTS)
+         *
+         *     Path Parameters:
+         *     - plan_id (tersirat via router prefix): ID SK bersangkutan.
+         *
+         *     Request Body:
+         *     - data (AttachmentsRequest): Daftar ID file lampiran.
+         *
+         *     Returns:
+         *     - list[AttachmentResponse]: Daftar lampiran yang berhasil disimpan.
+         */
         put: operations["save_attachments_api_v1_work_plans__plan_id__attachments_put"];
         post?: never;
         delete?: never;
@@ -1479,7 +2151,13 @@ export interface paths {
         };
         /**
          * List Plan Documents
-         * @description Dok 05 §3.3: SK, revisi, dan adendum beserta jumlah tanda tangan yang berlaku.
+         * @description Dok 05 §3.3: SK, revisi, dan adendum beserta jumlah tanda tangan yang berlaku (GET).
+         *
+         *     Path Parameters:
+         *     - plan_id (tersirat via router prefix): ID dari work plan.
+         *
+         *     Returns:
+         *     - list[PlanDocumentOut]: Daftar dokumen rencana kerja.
          */
         get: operations["list_plan_documents_api_v1_work_plans__plan_id__documents_get"];
         put?: never;
@@ -1497,7 +2175,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List Signatures */
+        /**
+         * List Signatures
+         * @description Mengambil daftar tanda tangan untuk sebuah dokumen (GET).
+         *
+         *     Path Parameters:
+         *     - document_id (UUID): ID dari dokumen yang tanda tangannya ingin diambil.
+         *
+         *     Returns:
+         *     - list[SignatureOut]: Daftar tanda tangan yang terkait dengan dokumen.
+         */
         get: operations["list_signatures_api_v1_documents__document_id__signatures_get"];
         put?: never;
         post?: never;
@@ -1516,7 +2203,14 @@ export interface paths {
         };
         /**
          * Document Pdf
-         * @description PDF bertanda tangan + QR verifikasi (dok 05 §3.9). Render berat → threadpool (CLAUDE.md).
+         * @description Mengunduh dokumen dalam format PDF bertanda tangan + QR verifikasi (dok 05 §3.9) (GET).
+         *     Render berat → threadpool (CLAUDE.md).
+         *
+         *     Path Parameters:
+         *     - document_id (UUID): ID dokumen.
+         *
+         *     Returns:
+         *     - Response: File PDF dari dokumen bersangkutan.
          */
         get: operations["document_pdf_api_v1_documents__document_id__pdf_get"];
         put?: never;
@@ -1536,7 +2230,14 @@ export interface paths {
         };
         /**
          * Document Html
-         * @description Isi yang sama persis dengan PDF (templat A4 + TTD + QR) — untuk penampil di web & HP ("Tinjau SK").
+         * @description Mendapatkan representasi HTML dari dokumen, sama persis dengan PDF (templat A4 + TTD + QR) (GET).
+         *     Untuk penampil di web & HP ("Tinjau SK").
+         *
+         *     Path Parameters:
+         *     - document_id (UUID): ID dari dokumen.
+         *
+         *     Returns:
+         *     - HTMLResponse: Konten HTML dokumen.
          */
         get: operations["document_html_api_v1_documents__document_id__html_get"];
         put?: never;
@@ -1558,7 +2259,17 @@ export interface paths {
         put?: never;
         /**
          * Revoke Signature
-         * @description P6-6: pencabutan beserta alasan (PM unit/OPS SK tersebut); tercatat di audit.
+         * @description Pencabutan tanda tangan beserta alasan (PM unit/OPS SK tersebut) (POST).
+         *     Tercatat di audit. (P6-6)
+         *
+         *     Path Parameters:
+         *     - signature_id (UUID): ID dari tanda tangan yang akan dicabut.
+         *
+         *     Request Body:
+         *     - data (RevokeRequest): Alasan pencabutan.
+         *
+         *     Returns:
+         *     - dict[str, str]: Pesan sukses.
          */
         post: operations["revoke_signature_api_v1_signatures__signature_id__revoke_post"];
         delete?: never;
@@ -1576,7 +2287,14 @@ export interface paths {
         };
         /**
          * Verify Signature
-         * @description PUBLIK: hasil pemindaian QR — hanya data yang perlu dilihat pemverifikasi (db/04 verify_signature_qr).
+         * @description Memverifikasi tanda tangan berdasarkan token dari hasil pemindaian QR (PUBLIK) (GET).
+         *     Hanya mengembalikan data yang perlu dilihat pemverifikasi.
+         *
+         *     Path Parameters:
+         *     - token (str): Token yang diperoleh dari QR code.
+         *
+         *     Returns:
+         *     - VerifyOut: Data verifikasi tanda tangan publik.
          */
         get: operations["verify_signature_api_v1_verify__token__get"];
         put?: never;
@@ -1598,6 +2316,15 @@ export interface paths {
          * List Attendance
          * @description Dok 05 §3.5 · R-33: Finance & OPS seluruh organisasi; PM miliknya + bawahan lapangan di unitnya;
          *     lainnya hanya milik sendiri. Filter `plan_id` di dok 05 belum didukung (dok 10 Bagian C).
+         *
+         *     Query params:
+         *     - employee_id: Filter UUID karyawan
+         *     - from/to: Filter rentang tanggal
+         *     - status: Filter status absensi
+         *     - scope: `all` (bawaan), `mine` = absensi pribadi, `team` = absensi anggota/umum (selain milik sendiri)
+         *     - page, size: Pagination
+         *
+         *     Return: Daftar absensi (AttendanceListResponse)
          */
         get: operations["list_attendance_api_v1_attendance_get"];
         put?: never;
@@ -1620,6 +2347,11 @@ export interface paths {
         /**
          * Register Device Key
          * @description R-34: daftarkan kunci publik Android Keystore perangkat ini untuk memverifikasi absen luring.
+         *
+         *     Body params:
+         *     - data: Payload device id dan public key (DeviceKeyRequest)
+         *
+         *     Return: Pesan sukses
          */
         post: operations["register_device_key_api_v1_attendance_device_key_post"];
         delete?: never;
@@ -1640,6 +2372,11 @@ export interface paths {
         /**
          * Submit Offline Attendance
          * @description R-34: terima satu absen luring yang ditandatangani perangkat (idempoten per client_op_id).
+         *
+         *     Body params:
+         *     - data: Event absensi luring berserta signature (OfflineAttendanceEvent)
+         *
+         *     Return: Hasil pemrosesan sinkronisasi offline (OfflineAttendanceResult)
          */
         post: operations["submit_offline_attendance_api_v1_attendance_offline_post"];
         delete?: never;
@@ -1661,6 +2398,11 @@ export interface paths {
          * Check In
          * @description P4-2 · domain.js CHECK_IN. Waktu, tanggal, jarak, dan status dari server (aturan inti #3).
          *     Pekerja lapangan lewat HP (`channel` MOBILE), pekerja kantor lewat web (`channel` WEB).
+         *
+         *     Body params:
+         *     - data: Data check in termasuk lokasi dan bukti foto (CheckInRequest)
+         *
+         *     Return: Detail absensi check in (AttendanceResponse)
          */
         post: operations["check_in_api_v1_attendance_check_in_post"];
         delete?: never;
@@ -1681,6 +2423,11 @@ export interface paths {
         /**
          * Check Out
          * @description domain.js CHECK_OUT — menutup sesi terbuka milik sendiri, dari kanal sesuai jenis pekerja.
+         *
+         *     Body params:
+         *     - data: Data check out dengan spesifikasi channel (CheckOutRequest)
+         *
+         *     Return: Detail absensi setelah check out (AttendanceResponse)
          */
         post: operations["check_out_api_v1_attendance_check_out_post"];
         delete?: never;
@@ -1701,6 +2448,14 @@ export interface paths {
         /**
          * Explain Attendance
          * @description P4-4 · domain.js EXPLAIN_ATTENDANCE — hanya absensi sendiri yang menunggu pemeriksaan.
+         *
+         *     Path params:
+         *     - att_id: UUID absensi
+         *
+         *     Body params:
+         *     - data: Catatan penjelasan absensi (ExplanationRequest)
+         *
+         *     Return: Pesan sukses
          */
         post: operations["explain_attendance_api_v1_attendance__att_id__explain_post"];
         delete?: never;
@@ -1722,6 +2477,14 @@ export interface paths {
          * Review Attendance
          * @description P4-4 · domain.js REVIEW_ATTENDANCE · R-33: PM → bawahan lapangan, Finance → kantor non-Finance,
          *     OPS → Finance; tidak pernah absensi sendiri.
+         *
+         *     Path params:
+         *     - att_id: UUID absensi yang direview
+         *
+         *     Body params:
+         *     - data: Persetujuan atau penolakan dengan catatan (ReviewRequest)
+         *
+         *     Return: Pesan hasil review
          */
         post: operations["review_attendance_api_v1_attendance__att_id__review_post"];
         delete?: never;
@@ -1740,10 +2503,161 @@ export interface paths {
         /**
          * Export Attendance
          * @description P4-5: Ekspor CSV untuk Finance. Jam dalam zona waktu organisasi (sebelumnya tercetak UTC).
+         *
+         *     Query params:
+         *     - start_date: Tanggal mulai ekspor
+         *     - end_date: Tanggal akhir ekspor
+         *
+         *     Return: Data mentah format CSV
          */
         get: operations["export_attendance_api_v1_attendance_export_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/face/policy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Face Policy
+         * @description Mengambil versi dan teks kebijakan persetujuan biometrik server saat ini.
+         */
+        get: operations["get_face_policy_api_v1_face_policy_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/face/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Face Status
+         * @description Status pengenalan wajah pengguna saat ini: persetujuan biometrik, status pendaftaran,
+         *     versi template, dan kebijakan aktif.
+         */
+        get: operations["get_face_status_api_v1_face_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/face/consent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Set Face Consent
+         * @description Menyetujui atau menarik persetujuan pemakaian data biometrik wajah.
+         *     Menarik persetujuan otomatis menonaktifkan seluruh embedding wajah aktif seketika di database.
+         */
+        post: operations["set_face_consent_api_v1_face_consent_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/face/enroll": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Enroll Face
+         * @description Mendaftarkan 3-5 foto pose wajah karyawan.
+         *     Validasi deteksi tunggal, kualitas, konsistensi antar pose, dan pengecekan anti-duplikat dengan karyawan lain.
+         */
+        post: operations["enroll_face_api_v1_face_enroll_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/face/template": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Face Template
+         * @description Mengunduh embedding wajah milik sendiri untuk disimpan terenkripsi di HP (absen luring).
+         *     Dibatasi rate-limit (10 unduhan/jam) dan hanya untuk pengguna dengan persetujuan aktif.
+         */
+        get: operations["get_face_template_api_v1_face_template_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/face/probe": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Face Probe
+         * @description Mengunggah gambar wajah sementara untuk diverifikasi saat check-in atau check-out.
+         *     Mengembalikan probe_id yang diteruskan pada permintaan absensi.
+         */
+        post: operations["create_face_probe_api_v1_face_probe_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/face/challenge-check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Check Face Challenge
+         * @description Memeriksa gambar langsung dari kamera HP untuk memvalidasi tantangan liveness.
+         */
+        post: operations["check_face_challenge_api_v1_face_challenge_check_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1759,7 +2673,13 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Alert Missing Checkin */
+        /**
+         * Alert Missing Checkin
+         * @description Pemicu cron untuk memeriksa absensi check-in yang belum dilakukan pada hari berjalan,
+         *     kemudian mengirim peringatan jika ditemukan.
+         *
+         *     Return: Detail peringatan (MissingCheckInResponse)
+         */
         post: operations["alert_missing_checkin_api_v1_cron_attendance_alert_missing_post"];
         delete?: never;
         options?: never;
@@ -1776,8 +2696,54 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Alert Needs Review Spike */
+        /**
+         * Alert Needs Review Spike
+         * @description Pemicu cron untuk mendeteksi lonjakan absensi yang memerlukan review (P4-9, dok 17 §5.3)
+         *     dan memperingatkan manajer terkait.
+         *
+         *     Return: Ringkasan hasil pemeriksaan dan jumlah review (NeedsReviewResponse)
+         */
         post: operations["alert_needs_review_spike_api_v1_cron_attendance_alert_needs_review_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cron/attendance/reverify-faces": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reverify Pending Faces
+         * @description Penjadwal: hitung dan cocokkan ulang wajah yang tertunda saat face-service sempat mati.
+         */
+        post: operations["reverify_pending_faces_api_v1_cron_attendance_reverify_faces_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cron/attendance/purge-face-probes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Purge Expired Face Probes
+         * @description Penjadwal: hapus berkas gambar wajah (probe) yang telah melewati masa retensi (P8-6).
+         */
+        post: operations["purge_expired_face_probes_api_v1_cron_attendance_purge_face_probes_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1793,12 +2759,27 @@ export interface paths {
         };
         /**
          * List Incidents
-         * @description Insiden satu SK, terbaru dulu — siapa pun yang dapat melihat SK (temuan uji alur: insiden dari
-         *     lapangan tidak terlihat PM karena belum ada endpoint baca). SK asing/tak terlihat → 404.
+         * @description Mendapatkan daftar insiden untuk satu Surat Kerja (SK).
+         *     Menampilkan insiden terbaru di urutan awal.
+         *     SK asing/tak terlihat → 404.
+         *
+         *     Query params:
+         *     - plan_id: UUID dari Surat Kerja
+         *
+         *     Return: Daftar insiden (list[IncidentResponse])
          */
         get: operations["list_incidents_api_v1_hse_incidents_get"];
         put?: never;
-        /** Report Incident */
+        /**
+         * Report Incident
+         * @description Melaporkan insiden baru untuk SK yang sedang berlangsung.
+         *     (Hanya ketua atau anggota pekerjaan ini, SK harus IN_PROGRESS).
+         *
+         *     Body params:
+         *     - data: Detail insiden yang dilaporkan (IncidentCreate)
+         *
+         *     Return: Detail insiden yang direkam (IncidentResponse)
+         */
         post: operations["report_incident_api_v1_hse_incidents_post"];
         delete?: never;
         options?: never;
@@ -1815,7 +2796,18 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Resolve Incident */
+        /**
+         * Resolve Incident
+         * @description Menyelesaikan masalah insiden. Hanya PM (unit SK), OPS, atau ASSET yang bisa mengeksekusi.
+         *
+         *     Path params:
+         *     - inc_id: UUID dari insiden
+         *
+         *     Body params:
+         *     - data: Catatan resolusi (IncidentResolve)
+         *
+         *     Return: Detail insiden yang telah diselesaikan (IncidentResponse)
+         */
         post: operations["resolve_incident_api_v1_hse_incidents__inc_id__resolve_post"];
         delete?: never;
         options?: never;
@@ -1831,7 +2823,19 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /** Upsert Daily Report */
+        /**
+         * Upsert Daily Report
+         * @description Membuat atau memperbarui DRAFT laporan harian pekerjaan (Hanya Ketua Tim, SK IN_PROGRESS).
+         *
+         *     Path params:
+         *     - plan_id: UUID dari SK (di-routing)
+         *     - day_id: UUID hari pelaksanaan SK
+         *
+         *     Body params:
+         *     - data: Data laporan harian (DailyReportCreate)
+         *
+         *     Return: Laporan harian (DailyReportResponse)
+         */
         put: operations["upsert_daily_report_api_v1_work_plans__plan_id__days__day_id__put"];
         post?: never;
         delete?: never;
@@ -1849,7 +2853,16 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Submit Daily Report */
+        /**
+         * Submit Daily Report
+         * @description Menyerahkan (submit) laporan harian yang berstatus DRAFT atau minta revisi ke manajer/PM.
+         *
+         *     Path params:
+         *     - plan_id: UUID dari SK
+         *     - day_id: UUID hari pelaksanaan SK
+         *
+         *     Return: Laporan harian dengan status tersubmit (DailyReportResponse)
+         */
         post: operations["submit_daily_report_api_v1_work_plans__plan_id__days__day_id__submit_post"];
         delete?: never;
         options?: never;
@@ -1868,7 +2881,16 @@ export interface paths {
         put?: never;
         /**
          * Review Daily Report
-         * @description domain.js REVIEW_REPORT (V-24): PM unit/OPS menyetujui atau mengembalikan laporan yang diserahkan.
+         * @description domain.js REVIEW_REPORT (V-24): PM unit/OPS menyetujui atau mengembalikan laporan harian yang diserahkan.
+         *
+         *     Path params:
+         *     - plan_id: UUID dari SK
+         *     - day_id: UUID hari pelaksanaan SK
+         *
+         *     Body params:
+         *     - data: Data hasil review laporan (ReportReviewRequest)
+         *
+         *     Return: Detail laporan harian pasca-review (DailyReportResponse)
          */
         post: operations["review_daily_report_api_v1_work_plans__plan_id__days__day_id__review_post"];
         delete?: never;
@@ -1888,7 +2910,14 @@ export interface paths {
         put?: never;
         /**
          * Toggle Task
-         * @description domain.js TOGGLE_TASK (V-23): ketua mencentang tugas selama laporan hari itu belum diserahkan.
+         * @description domain.js TOGGLE_TASK (V-23): ketua mencentang/menghapus centang tugas hari tersebut, selama laporan belum diserahkan.
+         *
+         *     Path params:
+         *     - plan_id: UUID SK (di-routing)
+         *     - day_id: UUID hari eksekusi
+         *     - task_id: UUID tugas yang dicentang
+         *
+         *     Return: Status toggle (is_done) dari tugas tersebut
          */
         post: operations["toggle_task_api_v1_work_plans__plan_id__days__day_id__tasks__task_id__toggle_post"];
         delete?: never;
@@ -1907,10 +2936,20 @@ export interface paths {
         /**
          * Get Assets
          * @description Aset organisasi + alokasi berjalan + pengajuan pengembalian yang menunggu (M6/R9 dari layar).
+         *
+         *     Return: Daftar ringkasan aset organisasi (list[AssetListItem])
          */
         get: operations["get_assets_api_v1_assets_get"];
         put?: never;
-        /** Create Asset */
+        /**
+         * Create Asset
+         * @description Membuat aset baru.
+         *
+         *     Body params:
+         *     - data: Data pembuatan aset baru (AssetCreate)
+         *
+         *     Return: Detail aset yang baru dibuat (AssetResponse)
+         */
         post: operations["create_asset_api_v1_assets_post"];
         delete?: never;
         options?: never;
@@ -1928,6 +2967,11 @@ export interface paths {
         /**
          * Get Asset Returns
          * @description Riwayat pengembalian aset (terbaru dulu). Aset organisasi lain → 404.
+         *
+         *     Path params:
+         *     - asset_id: UUID aset
+         *
+         *     Return: Riwayat pengembalian aset (list[AssetReturnHistoryItem])
          */
         get: operations["get_asset_returns_api_v1_assets__asset_id__returns_get"];
         put?: never;
@@ -1948,6 +2992,11 @@ export interface paths {
         /**
          * Get Bast Pdf
          * @description Berita acara serah terima (P6-4) untuk pengembalian yang sudah diperiksa. Render → threadpool.
+         *
+         *     Path params:
+         *     - return_id: UUID catatan pengembalian
+         *
+         *     Return: File PDF (Response)
          */
         get: operations["get_bast_pdf_api_v1_assets_returns__return_id__pdf_get"];
         put?: never;
@@ -1970,6 +3019,14 @@ export interface paths {
         /**
          * Reserve Asset
          * @description domain.js RESERVE_ASSET (V-27): petugas aset atau PM unit/OPS SK memesan aset untuk SK aktif.
+         *
+         *     Path params:
+         *     - asset_id: UUID aset yang dipesan
+         *
+         *     Body params:
+         *     - data: Data reservasi aset (AssetReserveRequest)
+         *
+         *     Return: Detail alokasi aset yang direkam (AssetAllocationResponse)
          */
         post: operations["reserve_asset_api_v1_assets__asset_id__reserve_post"];
         delete?: never;
@@ -1990,6 +3047,14 @@ export interface paths {
         /**
          * Release Asset
          * @description domain.js RELEASE_ASSET (V-27): reservasi yang belum dipakai dilepas.
+         *
+         *     Path params:
+         *     - asset_id: UUID aset yang akan dilepas
+         *
+         *     Body params:
+         *     - data: Data identifikasi SK (AssetReleaseRequest)
+         *
+         *     Return: Status pelepasan aset
          */
         post: operations["release_asset_api_v1_assets__asset_id__release_post"];
         delete?: never;
@@ -2010,6 +3075,14 @@ export interface paths {
         /**
          * Check Asset
          * @description domain.js CHECK_ASSET (V-27): pengemudi yang ditunjuk menyatakan kendaraan layak atau banding.
+         *
+         *     Path params:
+         *     - asset_id: UUID aset yang dicek
+         *
+         *     Body params:
+         *     - data: Data laporan kelayakan (AssetCheckRequest)
+         *
+         *     Return: Status aset pasca-pengecekan
          */
         post: operations["check_asset_api_v1_assets__asset_id__check_post"];
         delete?: never;
@@ -2030,6 +3103,14 @@ export interface paths {
         /**
          * Request Asset Return
          * @description P6-3: Formulir BAST pengembalian aset — diajukan ketua tim menurut SK peminjam (V-09).
+         *
+         *     Path params:
+         *     - alloc_id: UUID alokasi aset yang dikembalikan
+         *
+         *     Body params:
+         *     - data: Data pengembalian aset (AssetReturnCreate)
+         *
+         *     Return: Detail pengajuan pengembalian
          */
         post: operations["request_asset_return_api_v1_assets_allocations__alloc_id__return_post"];
         delete?: never;
@@ -2050,6 +3131,14 @@ export interface paths {
         /**
          * Verify Asset Return
          * @description P6-3: Verifikasi BAST oleh OPS.
+         *
+         *     Path params:
+         *     - return_id: UUID pengembalian aset
+         *
+         *     Body params:
+         *     - data: Verifikasi kondisi (AssetReturnVerify)
+         *
+         *     Return: Detail pengembalian terverifikasi
          */
         post: operations["verify_asset_return_api_v1_assets_returns__return_id__verify_post"];
         delete?: never;
@@ -2068,6 +3157,11 @@ export interface paths {
         /**
          * Get Plan Assets
          * @description Aset yang dipakai SK beserta kondisi saat dikembalikan (mode presentasi, M5). SK tak terlihat → 404.
+         *
+         *     Path params:
+         *     - plan_id: UUID SK (di-routing)
+         *
+         *     Return: Daftar aset SK
          */
         get: operations["get_plan_assets_api_v1_work_plans__plan_id__assets_get"];
         put?: never;
@@ -2149,7 +3243,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List Notifications */
+        /**
+         * List Notifications
+         * @description Mengambil daftar notifikasi milik pengguna saat ini.
+         *
+         *     Query params:
+         *     - unread_only: Filter hanya notifikasi yang belum dibaca (default False)
+         *     - limit: Maksimum jumlah notifikasi yang dikembalikan (default 50)
+         *
+         *     Return: Daftar notifikasi beserta jumlah notifikasi belum dibaca (NotificationList)
+         */
         get: operations["list_notifications_api_v1_notifications_get"];
         put?: never;
         post?: never;
@@ -2168,7 +3271,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Read All */
+        /**
+         * Read All
+         * @description Menandai semua notifikasi milik pengguna saat ini sebagai telah dibaca.
+         *
+         *     Return: Jumlah notifikasi yang berhasil diperbarui
+         */
         post: operations["read_all_api_v1_notifications_read_all_post"];
         delete?: never;
         options?: never;
@@ -2185,7 +3293,15 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Read One */
+        /**
+         * Read One
+         * @description Menandai satu notifikasi tertentu sebagai telah dibaca.
+         *
+         *     Path params:
+         *     - notification_id: UUID dari notifikasi
+         *
+         *     Return: Jumlah notifikasi yang berhasil diperbarui (idealnya 1)
+         */
         post: operations["read_one_api_v1_notifications__notification_id__read_post"];
         delete?: never;
         options?: never;
@@ -2202,7 +3318,14 @@ export interface paths {
         };
         /**
          * Member Reports
-         * @description Laporan anggota satu hari — dibaca ketua untuk disusun, dan PM saat memeriksa.
+         * @description Mendapatkan daftar laporan anggota untuk satu hari tertentu (GET).
+         *     Laporan anggota satu hari — dibaca ketua untuk disusun, dan PM saat memeriksa.
+         *
+         *     Path Parameters:
+         *     - day_id (UUID): ID dari hari bersangkutan.
+         *
+         *     Returns:
+         *     - list[MemberReportOut]: Daftar laporan anggota di hari tersebut.
          */
         get: operations["member_reports_api_v1_work_plans__plan_id__days__day_id__member_reports_get"];
         put?: never;
@@ -2220,9 +3343,30 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** My Member Report */
+        /**
+         * My Member Report
+         * @description Mengambil draf laporan harian milik anggota itu sendiri (GET).
+         *
+         *     Path Parameters:
+         *     - day_id (UUID): ID dari hari bersangkutan.
+         *
+         *     Returns:
+         *     - MemberReportOut | None: Detail laporan atau null jika belum ada.
+         */
         get: operations["my_member_report_api_v1_work_plans__plan_id__days__day_id__member_report_get"];
-        /** Save Member Report */
+        /**
+         * Save Member Report
+         * @description Menyimpan draf laporan harian dari seorang anggota (PUT).
+         *
+         *     Path Parameters:
+         *     - day_id (UUID): ID hari.
+         *
+         *     Request Body:
+         *     - data (MemberReportIn): Isi laporan, kendala, dan file bukti.
+         *
+         *     Returns:
+         *     - MemberReportOut: Data laporan yang berhasil disimpan.
+         */
         put: operations["save_member_report_api_v1_work_plans__plan_id__days__day_id__member_report_put"];
         post?: never;
         delete?: never;
@@ -2242,7 +3386,14 @@ export interface paths {
         put?: never;
         /**
          * Send Member Report
-         * @description Anggota mengirim laporannya ke ketua tim (notifikasi ke ketua).
+         * @description Anggota mengirim laporannya ke ketua tim (POST).
+         *     (Notifikasi ke ketua).
+         *
+         *     Path Parameters:
+         *     - day_id (UUID): ID dari hari bersangkutan.
+         *
+         *     Returns:
+         *     - MemberReportOut: Laporan yang dikirim dengan status terbaru.
          */
         post: operations["send_member_report_api_v1_work_plans__plan_id__days__day_id__member_report_send_post"];
         delete?: never;
@@ -2260,7 +3411,14 @@ export interface paths {
         };
         /**
          * Daily Report Html
-         * @description Dokumen A4 laporan harian (isi ketua + laporan anggota + pemeriksaan PM).
+         * @description Mendapatkan dokumen A4 laporan harian dalam format HTML (GET).
+         *     Isi: ketua + laporan anggota + pemeriksaan PM.
+         *
+         *     Path Parameters:
+         *     - day_id (UUID): ID hari kerja.
+         *
+         *     Returns:
+         *     - HTMLResponse: Dokumen laporan harian.
          */
         get: operations["daily_report_html_api_v1_work_plans__plan_id__days__day_id__report_html_get"];
         put?: never;
@@ -2278,7 +3436,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Weekly Report Html */
+        /**
+         * Weekly Report Html
+         * @description Mendapatkan dokumen laporan mingguan dalam format HTML (GET).
+         *
+         *     Path Parameters:
+         *     - week (int): Minggu ke-berapa.
+         *
+         *     Returns:
+         *     - HTMLResponse: Laporan mingguan.
+         */
         get: operations["weekly_report_html_api_v1_work_plans__plan_id__weekly__week__report_html_get"];
         put?: never;
         post?: never;
@@ -2299,7 +3466,17 @@ export interface paths {
         put?: never;
         /**
          * Request Amendment
-         * @description Ketua mengajukan adendum saat SK Berjalan (status SK tetap Berjalan).
+         * @description Ketua mengajukan adendum saat SK Berjalan (POST).
+         *     Status SK tetap Berjalan.
+         *
+         *     Path Parameters:
+         *     - plan_id (UUID): ID SK terkait.
+         *
+         *     Request Body:
+         *     - data (AmendmentReasonIn): Alasan pengajuan adendum.
+         *
+         *     Returns:
+         *     - list[PlanChangeOut]: Riwayat usulan perubahan SK yang terbaru.
          */
         post: operations["request_amendment_api_v1_work_plans__plan_id__amendments_post"];
         delete?: never;
@@ -2317,7 +3494,20 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Reject Amendment */
+        /**
+         * Reject Amendment
+         * @description PM menolak usulan adendum SK yang diajukan oleh ketua (POST).
+         *
+         *     Path Parameters:
+         *     - plan_id (UUID): ID dari SK.
+         *     - change_id (UUID): ID dari usulan perubahan.
+         *
+         *     Request Body:
+         *     - data (AmendmentReasonIn): Alasan penolakan adendum.
+         *
+         *     Returns:
+         *     - list[PlanChangeOut]: Riwayat usulan perubahan SK yang diperbarui.
+         */
         post: operations["reject_amendment_api_v1_work_plans__plan_id__amendments__change_id__reject_post"];
         delete?: never;
         options?: never;
@@ -2335,7 +3525,18 @@ export interface paths {
         get?: never;
         /**
          * Apply Amendment
-         * @description PM menerima usulan dengan mengubah isi SK; dokumen adendum terbit dengan tanda tangan PM.
+         * @description PM menerima usulan dengan mengubah isi SK (PUT).
+         *     Dokumen adendum terbit dengan tanda tangan PM.
+         *
+         *     Path Parameters:
+         *     - plan_id (UUID): ID dari SK bersangkutan.
+         *     - change_id (UUID): ID perubahan adendum.
+         *
+         *     Request Body:
+         *     - data (PlanDraftRequest): Detail draft yang baru (perubahan dari adendum).
+         *
+         *     Returns:
+         *     - PlanDetailOut: Detail rencana kerja hasil perubahan.
          */
         put: operations["apply_amendment_api_v1_work_plans__plan_id__amendments__change_id__put"];
         post?: never;
@@ -2356,7 +3557,15 @@ export interface paths {
         put?: never;
         /**
          * Accept Amendment
-         * @description Ketua menandatangani adendum; versi SK lama Tidak berlaku.
+         * @description Ketua menandatangani adendum (POST).
+         *     Versi SK lama menjadi tidak berlaku.
+         *
+         *     Path Parameters:
+         *     - plan_id (UUID): ID dari SK.
+         *     - change_id (UUID): ID usulan perubahan.
+         *
+         *     Returns:
+         *     - list[PlanChangeOut]: Riwayat usulan perubahan SK yang diperbarui.
          */
         post: operations["accept_amendment_api_v1_work_plans__plan_id__amendments__change_id__accept_post"];
         delete?: never;
@@ -2374,9 +3583,235 @@ export interface paths {
         };
         /**
          * Final Report Html
-         * @description Laporan akhir yang disetujui (A4, TTD ketua & PM + QR) — penampil web & HP.
+         * @description Mendapatkan laporan akhir yang disetujui (A4, TTD ketua & PM + QR) (GET).
+         *     Ditujukan untuk penampil web & HP.
+         *
+         *     Path Parameters:
+         *     - plan_id (UUID): ID dari SK.
+         *
+         *     Returns:
+         *     - HTMLResponse: Dokumen laporan akhir dalam bentuk HTML.
          */
         get: operations["final_report_html_api_v1_work_plans__plan_id__completion_html_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-plans/{plan_id}/revisions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Revisions
+         * @description Riwayat revisi rencana kerja, terbaru dulu (GET); siapa pun yang berhak melihat rencana kerja.
+         *
+         *     Path Parameters:
+         *     - plan_id (UUID): ID rencana kerja.
+         *
+         *     Returns:
+         *     - list[PlanRevisionOut]: revisi beserta diff sebelum/sesudah.
+         */
+        get: operations["list_revisions_api_v1_work_plans__plan_id__revisions_get"];
+        put?: never;
+        /**
+         * Revise Plan
+         * @description PM unit/OPS merevisi rencana kerja berstatus Terbit, Revisi diminta, Diterima, atau Berjalan (POST).
+         *     Versi dokumen baru ditandatangani PM; ketua dan anggota mendapat notifikasi beserta diff.
+         *
+         *     Path Parameters:
+         *     - plan_id (UUID): ID rencana kerja.
+         *
+         *     Request Body:
+         *     - data (PlanRevisionIn): isi rencana kerja yang baru + `reason` + `change_id` (permintaan ketua, opsional).
+         *
+         *     Returns:
+         *     - PlanDetailOut: detail rencana kerja pasca revisi.
+         */
+        post: operations["revise_plan_api_v1_work_plans__plan_id__revisions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Events
+         * @description Aliran `text/event-stream` peristiwa untuk pengguna yang sedang masuk (GET).
+         *
+         *     Format: `event: <topic>` + `data: <json>`; topik `notification`, `plan`, `attendance`. Komentar `: ping` tiap
+         *     25 detik menjaga sambungan tetap hidup di balik proksi.
+         */
+        get: operations["events_api_v1_events_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-types": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Work Types
+         * @description Daftar jenis pekerjaan beserta template foto (GET). Semua yang masuk melihat yang aktif;
+         *     `?all=true` (termasuk yang nonaktif) hanya untuk pengelola rencana kerja.
+         *
+         *     Query Parameters:
+         *     - all (bool): sertakan yang nonaktif (butuh izin create:plan).
+         *
+         *     Returns:
+         *     - list[WorkTypeOut]: jenis pekerjaan.
+         */
+        get: operations["list_work_types_api_v1_work_types_get"];
+        put?: never;
+        /**
+         * Create Work Type
+         * @description Membuat jenis pekerjaan + template foto (POST) — PM/OPS.
+         *
+         *     Request Body:
+         *     - data (WorkTypeIn): nama dan daftar slot foto.
+         *
+         *     Returns:
+         *     - WorkTypeOut: jenis yang dibuat.
+         */
+        post: operations["create_work_type_api_v1_work_types_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-types/{type_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Update Work Type
+         * @description Mengubah nama dan mengganti seluruh daftar slot foto (PUT) — PM/OPS. Mengaktifkan kembali jenis nonaktif.
+         *
+         *     Path Parameters:
+         *     - type_id (UUID): ID jenis pekerjaan.
+         *
+         *     Returns:
+         *     - WorkTypeOut: jenis setelah diubah.
+         */
+        put: operations["update_work_type_api_v1_work_types__type_id__put"];
+        post?: never;
+        /**
+         * Deactivate Work Type
+         * @description Menonaktifkan jenis pekerjaan (DELETE) — PM/OPS. Tidak dihapus: rencana kerja lama tetap utuh.
+         *
+         *     Path Parameters:
+         *     - type_id (UUID): ID jenis pekerjaan.
+         */
+        delete: operations["deactivate_work_type_api_v1_work_types__type_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-plans/{plan_id}/photo-template": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Plan Photo Template
+         * @description Template foto laporan rencana kerja (GET) — kosong bila rencana kerja tanpa jenis pekerjaan.
+         *
+         *     Path Parameters:
+         *     - plan_id (UUID): ID rencana kerja.
+         *
+         *     Returns:
+         *     - list[WorkTypePhotoOut]: slot foto berurutan.
+         */
+        get: operations["plan_photo_template_api_v1_work_plans__plan_id__photo_template_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/app/android/update": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Check Android Update
+         * @description Apakah HP ini perlu memperbarui aplikasi: UP_TO_DATE, OPTIONAL, atau REQUIRED + berkas unduhannya.
+         */
+        get: operations["check_android_update_api_v1_app_android_update_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/app/android/files/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download Android Release
+         * @description Berkas APK berversi. Nama tidak pernah dipakai ulang, jadi aman di-cache selamanya (Cloudflare).
+         */
+        get: operations["download_android_release_api_v1_app_android_files__name__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/app/android/latest.apk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Latest Android Release
+         * @description Tautan tetap untuk pemasangan pertama (QR di halaman login): diarahkan ke APK terbaru.
+         */
+        get: operations["latest_android_release_api_v1_app_android_latest_apk_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2389,12 +3824,18 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /** AccountCreate */
+        /**
+         * AccountCreate
+         * @description Schema for creating a new user account.
+         */
         AccountCreate: {
             /** Login */
             login: string;
         };
-        /** AccountOut */
+        /**
+         * AccountOut
+         * @description Schema for account output data, detailing user authentication and status.
+         */
         AccountOut: {
             /** Exists */
             exists: boolean;
@@ -2414,7 +3855,10 @@ export interface components {
             /** Locked Until */
             locked_until?: string | null;
         };
-        /** AccountWithPassword */
+        /**
+         * AccountWithPassword
+         * @description Schema for account creation response, including the generated temporary password.
+         */
         AccountWithPassword: {
             /** Exists */
             exists: boolean;
@@ -2436,12 +3880,45 @@ export interface components {
             /** Temporary Password */
             temporary_password: string;
         };
-        /** AmendmentReasonIn */
+        /**
+         * AmendmentReasonIn
+         * @description Masukan berupa alasan diadakannya perubahan (adendum).
+         */
         AmendmentReasonIn: {
             /** Reason */
             reason: string;
         };
-        /** AssetAllocationResponse */
+        /**
+         * AppUpdateOut
+         * @description Jawaban pemeriksaan pembaruan untuk satu HP.
+         */
+        AppUpdateOut: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "UP_TO_DATE" | "OPTIONAL" | "REQUIRED";
+            /** Current Build */
+            current_build: number;
+            /** Latest Build */
+            latest_build?: number | null;
+            /** Latest Version */
+            latest_version?: string | null;
+            /** Min Build */
+            min_build?: number | null;
+            /** Released At */
+            released_at?: string | null;
+            /**
+             * Notes
+             * @default []
+             */
+            notes: string[];
+            download?: components["schemas"]["ReleaseFileOut"] | null;
+        };
+        /**
+         * AssetAllocationResponse
+         * @description Schema detailing a specific asset allocation to a work plan.
+         */
         AssetAllocationResponse: {
             /**
              * Id
@@ -2473,7 +3950,10 @@ export interface components {
             /** Released At */
             released_at: string | null;
         };
-        /** AssetCheckRequest */
+        /**
+         * AssetCheckRequest
+         * @description Schema for asset return check decision.
+         */
         AssetCheckRequest: {
             /**
              * Decision
@@ -2483,7 +3963,10 @@ export interface components {
             /** Reason */
             reason?: string | null;
         };
-        /** AssetCreate */
+        /**
+         * AssetCreate
+         * @description Schema for creating a new asset.
+         */
         AssetCreate: {
             /**
              * Kind
@@ -2504,7 +3987,8 @@ export interface components {
         };
         /**
          * AssetListItem
-         * @description Aset + alokasi berjalan + pengajuan pengembalian yang menunggu (R-19, M6).
+         * @description Schema for an asset listed with its current allocation and pending return requests.
+         *     Aset + alokasi berjalan + pengajuan pengembalian yang menunggu (R-19, M6).
          */
         AssetListItem: {
             /**
@@ -2547,7 +4031,10 @@ export interface components {
             /** Return Requested By Name */
             return_requested_by_name?: string | null;
         };
-        /** AssetReleaseRequest */
+        /**
+         * AssetReleaseRequest
+         * @description Schema for requesting to release a reserved asset.
+         */
         AssetReleaseRequest: {
             /**
              * Work Plan Id
@@ -2555,7 +4042,10 @@ export interface components {
              */
             work_plan_id: string;
         };
-        /** AssetReserveRequest */
+        /**
+         * AssetReserveRequest
+         * @description Schema for requesting to reserve an asset.
+         */
         AssetReserveRequest: {
             /**
              * Work Plan Id
@@ -2565,7 +4055,10 @@ export interface components {
             /** Driver Employee Id */
             driver_employee_id?: string | null;
         };
-        /** AssetResponse */
+        /**
+         * AssetResponse
+         * @description Schema for asset responses, adding system properties like ID and status.
+         */
         AssetResponse: {
             /**
              * Kind
@@ -2591,14 +4084,20 @@ export interface components {
             /** Status */
             status: string;
         };
-        /** AssetReturnCreate */
+        /**
+         * AssetReturnCreate
+         * @description Schema for requesting an asset return.
+         */
         AssetReturnCreate: {
             /** Condition On Return */
             condition_on_return: string;
             /** Note */
             note?: string | null;
         };
-        /** AssetReturnHistoryItem */
+        /**
+         * AssetReturnHistoryItem
+         * @description Schema representing the historical record of an asset return.
+         */
         AssetReturnHistoryItem: {
             /**
              * Id
@@ -2625,7 +4124,10 @@ export interface components {
             /** Is Accepted */
             is_accepted: boolean | null;
         };
-        /** AssetReturnResponse */
+        /**
+         * AssetReturnResponse
+         * @description Schema detailing the outcome of an asset return process.
+         */
         AssetReturnResponse: {
             /**
              * Id
@@ -2656,14 +4158,20 @@ export interface components {
             /** Is Accepted */
             is_accepted: boolean | null;
         };
-        /** AssetReturnVerify */
+        /**
+         * AssetReturnVerify
+         * @description Schema for verifying and accepting or rejecting an asset return.
+         */
         AssetReturnVerify: {
             /** Is Accepted */
             is_accepted: boolean;
             /** Note */
             note?: string | null;
         };
-        /** AssetStatusResponse */
+        /**
+         * AssetStatusResponse
+         * @description Schema for reporting an asset's status.
+         */
         AssetStatusResponse: {
             /**
              * Asset Id
@@ -2673,7 +4181,10 @@ export interface components {
             /** Status */
             status: string;
         };
-        /** AssignmentEmployeeOption */
+        /**
+         * AssignmentEmployeeOption
+         * @description Skema opsi pegawai untuk penugasan.
+         */
         AssignmentEmployeeOption: {
             /**
              * Id
@@ -2687,7 +4198,12 @@ export interface components {
             /** Unit Id */
             unit_id?: string | null;
         };
-        /** AttachmentResponse */
+        /**
+         * AttachmentResponse
+         * @description Respons yang menyajikan detail metadata dari file lampiran.
+         *
+         *     Berisi informasi dasar seperti nama file, tipe MIME, ukuran, serta urutan tampilannya.
+         */
         AttachmentResponse: {
             /** File Id */
             file_id: string;
@@ -2700,12 +4216,20 @@ export interface components {
             /** Sort Order */
             sort_order: number;
         };
-        /** AttachmentsRequest */
+        /**
+         * AttachmentsRequest
+         * @description Permintaan untuk menautkan satu atau lebih file sebagai lampiran.
+         *
+         *     Skema ini memuat daftar ID file yang ingin dilampirkan pada suatu rencana kerja.
+         */
         AttachmentsRequest: {
             /** File Ids */
             file_ids: string[];
         };
-        /** AttendanceListResponse */
+        /**
+         * AttendanceListResponse
+         * @description Schema for paginated responses of attendance records.
+         */
         AttendanceListResponse: {
             /** Items */
             items: components["schemas"]["AttendanceResponse"][];
@@ -2720,7 +4244,10 @@ export interface components {
             /** Time Anchor */
             time_anchor?: string | null;
         };
-        /** AttendanceRecap */
+        /**
+         * AttendanceRecap
+         * @description Schema for the overall monthly attendance recap report.
+         */
         AttendanceRecap: {
             /** Month */
             month: string;
@@ -2734,7 +4261,8 @@ export interface components {
         };
         /**
          * AttendanceRecapRecord
-         * @description Satu absensi dalam riwayat rekap — jam masuk & keluar (R-33).
+         * @description Schema for a single attendance record within a recap history (R-33).
+         *     Satu absensi dalam riwayat rekap — mencakup informasi jam masuk & keluar.
          */
         AttendanceRecapRecord: {
             /** Id */
@@ -2763,8 +4291,13 @@ export interface components {
             is_late: boolean;
             /** Is Early Leave */
             is_early_leave: boolean;
+            /** City Category */
+            city_category?: string | null;
         };
-        /** AttendanceRecapRow */
+        /**
+         * AttendanceRecapRow
+         * @description Schema for a single employee's attendance summary in a recap report.
+         */
         AttendanceRecapRow: {
             /** Employee Id */
             employee_id: string;
@@ -2781,7 +4314,10 @@ export interface components {
             /** Rejected */
             rejected: number;
         };
-        /** AttendanceResponse */
+        /**
+         * AttendanceResponse
+         * @description Schema detailing a single day's attendance record for an employee.
+         */
         AttendanceResponse: {
             /**
              * Id
@@ -2823,6 +4359,14 @@ export interface components {
             reviewed_at: string | null;
             /** Selfie File Id */
             selfie_file_id?: string | null;
+            /** Face Result */
+            face_result?: string | null;
+            /** Face Similarity */
+            face_similarity?: number | null;
+            /** Check Out Face Result */
+            check_out_face_result?: string | null;
+            /** Check Out Face Similarity */
+            check_out_face_similarity?: number | null;
             /** Review Note */
             review_note?: string | null;
             /** Employee Name */
@@ -2841,16 +4385,24 @@ export interface components {
             offline_note?: string | null;
             /** Check Out Requested At */
             check_out_requested_at?: string | null;
-            /** Face Result (Masuk) */
-            face_result?: ("MATCH" | "NO_MATCH" | "LOW_QUALITY" | "NOT_ENROLLED" | "SKIPPED") | null;
-            /** Face Similarity (Masuk) */
-            face_similarity?: number | null;
-            /** Face Result (Pulang) */
-            check_out_face_result?: ("MATCH" | "NO_MATCH" | "LOW_QUALITY" | "NOT_ENROLLED" | "SKIPPED") | null;
-            /** Face Similarity (Pulang) */
-            check_out_face_similarity?: number | null;
+            /** Check Out Distance M */
+            check_out_distance_m?: number | null;
+            /**
+             * Check Out Outside
+             * @default false
+             */
+            check_out_outside: boolean;
+            /** Check Out Selfie File Id */
+            check_out_selfie_file_id?: string | null;
+            /** Check Out Explanation */
+            check_out_explanation?: string | null;
+            /** City Category */
+            city_category?: string | null;
         };
-        /** AuditEventListResponse */
+        /**
+         * AuditEventListResponse
+         * @description Schema for paginated list of audit events.
+         */
         AuditEventListResponse: {
             /** Items */
             items: components["schemas"]["AuditEventResponse"][];
@@ -2861,7 +4413,10 @@ export interface components {
             /** Size */
             size: number;
         };
-        /** AuditEventResponse */
+        /**
+         * AuditEventResponse
+         * @description Schema for an individual audit event.
+         */
         AuditEventResponse: {
             /**
              * Id
@@ -2888,19 +4443,72 @@ export interface components {
                 [key: string]: unknown;
             } | null;
         };
+        /** Body_check_face_challenge_api_v1_face_challenge_check_post */
+        Body_check_face_challenge_api_v1_face_challenge_check_post: {
+            /** File */
+            file: string;
+            /** Challenge */
+            challenge: string;
+        };
+        /** Body_create_face_probe_api_v1_face_probe_post */
+        Body_create_face_probe_api_v1_face_probe_post: {
+            /** File */
+            file: string;
+            /**
+             * Liveness
+             * @default {}
+             */
+            liveness: string;
+        };
+        /** Body_enroll_face_api_v1_face_enroll_post */
+        Body_enroll_face_api_v1_face_enroll_post: {
+            /** Files */
+            files: string[];
+            /**
+             * Liveness
+             * @default {}
+             */
+            liveness: string;
+        };
         /** Body_upload_document_api_v1_files_upload_post */
         Body_upload_document_api_v1_files_upload_post: {
             /** File */
             file: string;
         };
-        /** ChangePasswordRequest */
+        /** ChallengeCheckResponse */
+        ChallengeCheckResponse: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "sukses" | "menunggu";
+            /** Detail */
+            detail: string;
+            /** Quality */
+            quality?: number | null;
+            /** Proof */
+            proof?: string | null;
+            /** Metrics */
+            metrics?: {
+                [key: string]: number;
+            } | null;
+        };
+        /**
+         * ChangePasswordRequest
+         * @description Schema for a user requesting to change their password.
+         */
         ChangePasswordRequest: {
             /** Current Password */
             current_password: string;
             /** New Password */
             new_password: string;
         };
-        /** ChangeRequest */
+        /**
+         * ChangeRequest
+         * @description Permintaan perubahan (Change Request) pada Rencana Kerja.
+         *
+         *     Menangani perubahan jenis ekstensi waktu (EXTEND) atau penyesuaian personel lapangan (PERSONNEL).
+         */
         ChangeRequest: {
             /**
              * Type
@@ -2919,7 +4527,10 @@ export interface components {
             /** Member Employee Ids */
             member_employee_ids?: string[];
         };
-        /** ChangeResponse */
+        /**
+         * ChangeResponse
+         * @description Respons detail dari sebuah entri perubahan Rencana Kerja.
+         */
         ChangeResponse: {
             /**
              * Id
@@ -2940,7 +4551,10 @@ export interface components {
             /** Decision Reason */
             decision_reason?: string | null;
         };
-        /** CheckInRequest */
+        /**
+         * CheckInRequest
+         * @description Schema for processing a check-in request.
+         */
         CheckInRequest: {
             /**
              * Site Id
@@ -2964,6 +4578,8 @@ export interface components {
             accuracy_m?: number | null;
             /** Selfie File Id */
             selfie_file_id?: string | null;
+            /** Face Probe Id */
+            face_probe_id?: string | null;
             /** Face Result */
             face_result?: ("MATCH" | "NO_MATCH" | "LOW_QUALITY" | "NOT_ENROLLED" | "SKIPPED") | null;
             /** Face Similarity */
@@ -2971,7 +4587,10 @@ export interface components {
             /** Explanation */
             explanation?: string | null;
         };
-        /** CheckOutRequest */
+        /**
+         * CheckOutRequest
+         * @description Schema for processing a check-out request.
+         */
         CheckOutRequest: {
             /**
              * Channel
@@ -2986,6 +4605,14 @@ export interface components {
              * @enum {string}
              */
             location_origin: "GPS" | "SIMULASI";
+            /** Face Probe Id */
+            face_probe_id?: string | null;
+            /** Selfie File Id */
+            selfie_file_id?: string | null;
+            /** Explanation */
+            explanation?: string | null;
+            /** Accuracy M */
+            accuracy_m?: number | null;
         };
         /** CompletionRequest */
         CompletionRequest: {
@@ -3001,7 +4628,20 @@ export interface components {
              */
             evidence_file_ids: string[];
         };
-        /** DailyReportCreate */
+        /** ConsentRequest */
+        ConsentRequest: {
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "GRANTED" | "WITHDRAWN";
+            /** Policy Version */
+            policy_version: string;
+        };
+        /**
+         * DailyReportCreate
+         * @description Schema for submitting a daily HSE or operational report.
+         */
         DailyReportCreate: {
             /** Body */
             body: string;
@@ -3012,8 +4652,16 @@ export interface components {
              * @default []
              */
             evidence_file_ids: string[];
+            /**
+             * Evidence
+             * @default []
+             */
+            evidence: components["schemas"]["EvidenceIn"][];
         };
-        /** DailyReportResponse */
+        /**
+         * DailyReportResponse
+         * @description Schema for a daily report response.
+         */
         DailyReportResponse: {
             /**
              * Id
@@ -3038,14 +4686,20 @@ export interface components {
             /** Reviewed At */
             reviewed_at: string | null;
         };
-        /** DayPlanRequest */
+        /**
+         * DayPlanRequest
+         * @description Permintaan pembuatan atau pembaruan rencana harian beserta tugas-tugasnya.
+         */
         DayPlanRequest: {
             /** Title */
             title: string;
             /** Tasks */
             tasks: components["schemas"]["DayTaskInput"][];
         };
-        /** DayReportOut */
+        /**
+         * DayReportOut
+         * @description Skema respons untuk laporan harian.
+         */
         DayReportOut: {
             /** Status */
             status: string;
@@ -3062,17 +4716,28 @@ export interface components {
             /** Evidence File Ids */
             evidence_file_ids: string[];
             /**
+             * Evidence
+             * @default []
+             */
+            evidence: components["schemas"]["EvidenceOut"][];
+            /**
              * Resubmitted
              * @default false
              */
             resubmitted: boolean;
         };
-        /** DayTaskInput */
+        /**
+         * DayTaskInput
+         * @description Input tugas harian dari pengguna.
+         */
         DayTaskInput: {
             /** Title */
             title: string;
         };
-        /** DayTaskOut */
+        /**
+         * DayTaskOut
+         * @description Skema respons untuk tugas harian.
+         */
         DayTaskOut: {
             /**
              * Id
@@ -3088,14 +4753,18 @@ export interface components {
             /** Done At */
             done_at: string | null;
         };
-        /** DecisionRequest */
+        /**
+         * DecisionRequest
+         * @description Permintaan keputusan persetujuan atau penolakan atas pengajuan perubahan.
+         */
         DecisionRequest: {
             /** Reason */
             reason?: string | null;
         };
         /**
          * DeviceKeyRequest
-         * @description Kunci publik EC P-256 (X.509 SubjectPublicKeyInfo DER, base64) dari Android Keystore.
+         * @description Schema for registering a device public key.
+         *     Kunci publik EC P-256 (X.509 SubjectPublicKeyInfo DER, base64) dari Android Keystore.
          */
         DeviceKeyRequest: {
             /** Device Id */
@@ -3103,14 +4772,20 @@ export interface components {
             /** Public Key */
             public_key: string;
         };
-        /** DocumentListResponse */
+        /**
+         * DocumentListResponse
+         * @description Schema for a list of employee documents.
+         */
         DocumentListResponse: {
             /** Items */
             items: components["schemas"]["EmployeeDocumentResponse"][];
             /** Total */
             total: number;
         };
-        /** DraftDayInput */
+        /**
+         * DraftDayInput
+         * @description Masukan aktivitas harian untuk draf Rencana Kerja.
+         */
         DraftDayInput: {
             /**
              * Work Date
@@ -3119,8 +4794,17 @@ export interface components {
             work_date: string;
             /** Tasks */
             tasks: components["schemas"]["DraftTaskInput"][];
+            /** Site Id */
+            site_id?: string | null;
+            /** Member Employee Ids */
+            member_employee_ids?: string[] | null;
+            /** Work Type Id */
+            work_type_id?: string | null;
         };
-        /** DraftTaskInput */
+        /**
+         * DraftTaskInput
+         * @description Masukan tugas untuk draf Rencana Kerja.
+         */
         DraftTaskInput: {
             /** Title */
             title: string;
@@ -3132,7 +4816,10 @@ export interface components {
              */
             file_ids: string[];
         };
-        /** EmployeeAssignmentCreate */
+        /**
+         * EmployeeAssignmentCreate
+         * @description Schema for assigning an employee.
+         */
         EmployeeAssignmentCreate: {
             /** Position */
             position: string;
@@ -3144,7 +4831,10 @@ export interface components {
              */
             valid_from: string;
         };
-        /** EmployeeAssignmentResponse */
+        /**
+         * EmployeeAssignmentResponse
+         * @description Schema for responding with an employee assignment's details.
+         */
         EmployeeAssignmentResponse: {
             /** Position */
             position: string;
@@ -3170,7 +4860,10 @@ export interface components {
             /** Unit Name */
             unit_name?: string | null;
         };
-        /** EmployeeCreate */
+        /**
+         * EmployeeCreate
+         * @description Schema for creating a new employee.
+         */
         EmployeeCreate: {
             /** Employee No */
             employee_no: string;
@@ -3196,7 +4889,10 @@ export interface components {
             /** Emergency Contact */
             emergency_contact?: string | null;
         };
-        /** EmployeeDocumentCreate */
+        /**
+         * EmployeeDocumentCreate
+         * @description Schema for creating or uploading a new employee document.
+         */
         EmployeeDocumentCreate: {
             /** Doc Type */
             doc_type: string;
@@ -3212,7 +4908,10 @@ export interface components {
             /** Supersedes Id */
             supersedes_id?: string | null;
         };
-        /** EmployeeDocumentResponse */
+        /**
+         * EmployeeDocumentResponse
+         * @description Schema detailing an employee document's properties.
+         */
         EmployeeDocumentResponse: {
             /**
              * Id
@@ -3256,14 +4955,20 @@ export interface components {
              */
             created_at: string;
         };
-        /** EmployeeDocumentVerify */
+        /**
+         * EmployeeDocumentVerify
+         * @description Schema for verifying an uploaded employee document.
+         */
         EmployeeDocumentVerify: {
             /** Is Approved */
             is_approved: boolean;
             /** Review Note */
             review_note?: string | null;
         };
-        /** EmployeeListResponse */
+        /**
+         * EmployeeListResponse
+         * @description Schema for paginated employee lists.
+         */
         EmployeeListResponse: {
             /** Items */
             items: components["schemas"]["EmployeeResponse"][];
@@ -3274,12 +4979,18 @@ export interface components {
             /** Size */
             size: number;
         };
-        /** EmployeeOffboard */
+        /**
+         * EmployeeOffboard
+         * @description Schema for requesting to offboard an employee.
+         */
         EmployeeOffboard: {
             /** Reason */
             reason: string;
         };
-        /** EmployeeResponse */
+        /**
+         * EmployeeResponse
+         * @description Schema for an employee response object.
+         */
         EmployeeResponse: {
             /** Employee No */
             employee_no: string;
@@ -3322,7 +5033,10 @@ export interface components {
             /** Offboarding Reason */
             offboarding_reason?: string | null;
         };
-        /** EmployeeUpdate */
+        /**
+         * EmployeeUpdate
+         * @description Schema for updating employee details.
+         */
         EmployeeUpdate: {
             /** Full Name */
             full_name?: string | null;
@@ -3339,12 +5053,67 @@ export interface components {
             /** Emergency Contact */
             emergency_contact?: string | null;
         };
-        /** ExpiringDocumentList */
+        /** EnrollResponse */
+        EnrollResponse: {
+            /** Enrolled */
+            enrolled: number;
+            /** Enrollment Version */
+            enrollment_version: string;
+            /** Model Name */
+            model_name: string;
+            /** Model Version */
+            model_version: string;
+        };
+        /**
+         * EvidenceIn
+         * @description Foto bukti laporan: file + slot template yang dipenuhi + sumbernya.
+         */
+        EvidenceIn: {
+            /**
+             * File Id
+             * Format: uuid
+             */
+            file_id: string;
+            /** Slot Label */
+            slot_label?: string | null;
+            /**
+             * Source
+             * @default CAMERA
+             * @enum {string}
+             */
+            source: "CAMERA" | "GALLERY";
+        };
+        /**
+         * EvidenceOut
+         * @description Foto bukti laporan (keluaran).
+         */
+        EvidenceOut: {
+            /**
+             * File Id
+             * Format: uuid
+             */
+            file_id: string;
+            /** Slot Label */
+            slot_label?: string | null;
+            /**
+             * Source
+             * @default CAMERA
+             * @enum {string}
+             */
+            source: "CAMERA" | "GALLERY";
+        };
+        /**
+         * ExpiringDocumentList
+         * @description Schema for a list of expiring documents.
+         */
         ExpiringDocumentList: {
             /** Items */
             items: components["schemas"]["ExpiringDocumentResponse"][];
         };
-        /** ExpiringDocumentResponse */
+        /**
+         * ExpiringDocumentResponse
+         * @description Schema for a document that is approaching its expiry date.
+         */
         ExpiringDocumentResponse: {
             /**
              * Id
@@ -3370,10 +5139,56 @@ export interface components {
             /** Urgency */
             urgency: string;
         };
-        /** ExplanationRequest */
+        /**
+         * ExplanationRequest
+         * @description Schema for supplying an explanation to an attendance record.
+         */
         ExplanationRequest: {
             /** Explanation */
             explanation: string;
+        };
+        /**
+         * FacePolicy
+         * @description Teks persetujuan biometrik milik server (klien tidak bisa mengubah kalimat yang disetujui).
+         */
+        FacePolicy: {
+            /** Version */
+            version: string;
+            /** Text */
+            text: string;
+        };
+        /** FaceStatus */
+        FaceStatus: {
+            /** Employee Linked */
+            employee_linked: boolean;
+            /** Consent */
+            consent?: ("GRANTED" | "WITHDRAWN") | null;
+            /** Consent Policy Version */
+            consent_policy_version?: string | null;
+            /**
+             * Enrolled
+             * @default false
+             */
+            enrolled: boolean;
+            /** Enrollment Version */
+            enrollment_version?: string | null;
+            /** Model Name */
+            model_name?: string | null;
+            /** Model Version */
+            model_version?: string | null;
+            /**
+             * Liveness Required
+             * @default true
+             */
+            liveness_required: boolean;
+            /**
+             * Enrollment Required
+             * @default false
+             */
+            enrollment_required: boolean;
+            /** Template Ttl Days */
+            template_ttl_days: number;
+            policy: components["schemas"]["FacePolicy"];
         };
         /** FinalReportOut */
         FinalReportOut: {
@@ -3426,7 +5241,10 @@ export interface components {
             /** Revoked Reason */
             revoked_reason: string | null;
         };
-        /** FormAsset */
+        /**
+         * FormAsset
+         * @description Skema untuk menampilkan data aset (kendaraan atau alat) pada opsi formulir.
+         */
         FormAsset: {
             /**
              * Id
@@ -3442,14 +5260,20 @@ export interface components {
             /** Name */
             name: string;
         };
-        /** FormCategory */
+        /**
+         * FormCategory
+         * @description Skema untuk menampilkan kategori Rencana Kerja pada opsi formulir.
+         */
         FormCategory: {
             /** Code */
             code: string;
             /** Label */
             label: string;
         };
-        /** FormPerson */
+        /**
+         * FormPerson
+         * @description Skema untuk menampilkan data orang/pegawai pada opsi formulir.
+         */
         FormPerson: {
             /**
              * Id
@@ -3460,8 +5284,13 @@ export interface components {
             full_name: string;
             /** Position */
             position: string;
+            /** Busy Dates */
+            busy_dates?: string[];
         };
-        /** FormSite */
+        /**
+         * FormSite
+         * @description Skema untuk menampilkan data lokasi/site pada opsi formulir.
+         */
         FormSite: {
             /**
              * Id
@@ -3477,14 +5306,20 @@ export interface components {
             /** Lng */
             lng: number;
         };
-        /** GeoPoint */
+        /**
+         * GeoPoint
+         * @description Schema for geographic coordinates (latitude and longitude).
+         */
         GeoPoint: {
             /** Lat */
             lat: number;
             /** Lng */
             lng: number;
         };
-        /** GeoResult */
+        /**
+         * GeoResult
+         * @description Hasil pencarian atau geokode dari lokasi.
+         */
         GeoResult: {
             /** Name */
             name: string;
@@ -3500,7 +5335,10 @@ export interface components {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
         };
-        /** IncidentCreate */
+        /**
+         * IncidentCreate
+         * @description Schema for creating a new HSE incident report.
+         */
         IncidentCreate: {
             /**
              * Work Plan Id
@@ -3525,12 +5363,18 @@ export interface components {
              */
             evidence_file_ids: string[];
         };
-        /** IncidentResolve */
+        /**
+         * IncidentResolve
+         * @description Schema for resolving a reported incident.
+         */
         IncidentResolve: {
             /** Resolution Note */
             resolution_note: string;
         };
-        /** IncidentResponse */
+        /**
+         * IncidentResponse
+         * @description Schema for a detailed incident report response.
+         */
         IncidentResponse: {
             /**
              * Id
@@ -3577,7 +5421,10 @@ export interface components {
              */
             evidence_file_ids: string[];
         };
-        /** LoginRequest */
+        /**
+         * LoginRequest
+         * @description Schema for a user login request.
+         */
         LoginRequest: {
             /** Email */
             email: string;
@@ -3589,7 +5436,10 @@ export interface components {
              */
             platform: string | null;
         };
-        /** MemberReportIn */
+        /**
+         * MemberReportIn
+         * @description Masukan laporan harian yang disusun oleh anggota tim.
+         */
         MemberReportIn: {
             /** Body */
             body: string;
@@ -3603,8 +5453,16 @@ export interface components {
              * @default []
              */
             evidence_file_ids: string[];
+            /**
+             * Evidence
+             * @default []
+             */
+            evidence: components["schemas"]["EvidenceIn"][];
         };
-        /** MemberReportOut */
+        /**
+         * MemberReportOut
+         * @description Keluaran laporan dari anggota tim yang ditinjau.
+         */
         MemberReportOut: {
             /**
              * Id
@@ -3633,20 +5491,34 @@ export interface components {
              * @default []
              */
             evidence_file_ids: string[];
+            /**
+             * Evidence
+             * @default []
+             */
+            evidence: components["schemas"]["EvidenceOut"][];
         };
-        /** MessageResponse */
+        /**
+         * MessageResponse
+         * @description Schema for a simple status message response.
+         */
         MessageResponse: {
             /** Message */
             message: string;
         };
-        /** MissingCheckInResponse */
+        /**
+         * MissingCheckInResponse
+         * @description Schema for missing check-in alerts (moved from attendance cron endpoint).
+         */
         MissingCheckInResponse: {
             /** Alerted */
             alerted: boolean;
             /** Check Ins Today */
             check_ins_today: number;
         };
-        /** NeedsReviewResponse */
+        /**
+         * NeedsReviewResponse
+         * @description Schema for review alerts.
+         */
         NeedsReviewResponse: {
             /** Alerted */
             alerted: boolean;
@@ -3655,7 +5527,10 @@ export interface components {
             /** Daily Average */
             daily_average: number;
         };
-        /** NewSiteInput */
+        /**
+         * NewSiteInput
+         * @description Masukan untuk membuat lokasi/site baru saat membuat Rencana Kerja.
+         */
         NewSiteInput: {
             /** Name */
             name: string;
@@ -3666,14 +5541,20 @@ export interface components {
             /** Lng */
             lng: number;
         };
-        /** NotificationList */
+        /**
+         * NotificationList
+         * @description Daftar notifikasi untuk pengguna.
+         */
         NotificationList: {
             /** Unread */
             unread: number;
             /** Items */
             items: components["schemas"]["NotificationOut"][];
         };
-        /** NotificationOut */
+        /**
+         * NotificationOut
+         * @description Skema respons untuk satu item notifikasi sistem.
+         */
         NotificationOut: {
             /**
              * Id
@@ -3698,8 +5579,10 @@ export interface components {
         };
         /**
          * OfflineAttendanceEvent
-         * @description Satu absen luring: `payload` = JSON persis seperti yang ditandatangani HP; `signature` = ECDSA SHA-256
-         *     (DER, base64). Swafoto diunggah lebih dulu; kecocokannya dicek lewat `selfie_sha256` di payload.
+         * @description Schema representing a signed offline attendance event.
+         *     Satu absen luring: `payload` adalah JSON persis seperti yang ditandatangani oleh HP;
+         *     `signature` adalah tanda tangan ECDSA SHA-256 (DER, base64).
+         *     Swafoto diunggah lebih dulu; kecocokannya dicek melalui `selfie_sha256` dalam payload.
          */
         OfflineAttendanceEvent: {
             /** Device Id */
@@ -3720,8 +5603,13 @@ export interface components {
             signature: string;
             /** Selfie File Id */
             selfie_file_id?: string | null;
+            /** Face Probe Id */
+            face_probe_id?: string | null;
         };
-        /** OfflineAttendanceResult */
+        /**
+         * OfflineAttendanceResult
+         * @description Schema detailing the result of processing an offline attendance event.
+         */
         OfflineAttendanceResult: {
             /**
              * Client Op Id
@@ -3797,8 +5685,11 @@ export interface components {
         };
         /**
          * OvertimeCreate
-         * @description domain.js REPORT_OVERTIME. Aturan (jam 0–12, alasan wajib) diperiksa di OvertimeService
-         *     agar urutan & pesannya sama dengan prototipe.
+         * @description Schema for reporting overtime (domain.js REPORT_OVERTIME).
+         *
+         *     Aturan validasi seperti jam 0–12 dan alasan yang wajib diisi akan
+         *     diperiksa secara terpusat di OvertimeService. Hal ini dilakukan
+         *     agar urutan dan pesan kesalahan yang muncul sama persis dengan prototipe.
          */
         OvertimeCreate: {
             /**
@@ -3813,7 +5704,9 @@ export interface components {
         };
         /**
          * OvertimeRecapRow
-         * @description Satu baris rekap dari v_overtime_recap (per karyawan per bulan).
+         * @description Schema for a summarized overtime record from the recap view.
+         *     Satu baris rekap yang diambil dari `v_overtime_recap`
+         *     (direkapitulasi per karyawan per bulan).
          */
         OvertimeRecapRow: {
             /**
@@ -3835,7 +5728,10 @@ export interface components {
             /** Approved Hours */
             approved_hours: number;
         };
-        /** OvertimeResponse */
+        /**
+         * OvertimeResponse
+         * @description Schema for a detailed overtime record response.
+         */
         OvertimeResponse: {
             /**
              * Id
@@ -3879,7 +5775,10 @@ export interface components {
         };
         /**
          * OvertimeReview
-         * @description domain.js REVIEW_OVERTIME: decision APPROVED | REJECTED (diperiksa di service).
+         * @description Schema for reviewing an overtime request (domain.js REVIEW_OVERTIME).
+         *
+         *     Status keputusan (decision) berupa APPROVED atau REJECTED, dan akan
+         *     diperiksa serta diproses di dalam service.
          */
         OvertimeReview: {
             /** Decision */
@@ -3887,7 +5786,10 @@ export interface components {
             /** Note */
             note?: string | null;
         };
-        /** PendingDocument */
+        /**
+         * PendingDocument
+         * @description Schema for a document pending review.
+         */
         PendingDocument: {
             /**
              * Id
@@ -3917,12 +5819,18 @@ export interface components {
             /** Uploaded By Me */
             uploaded_by_me: boolean;
         };
-        /** PendingDocumentList */
+        /**
+         * PendingDocumentList
+         * @description Schema for a list of pending documents.
+         */
         PendingDocumentList: {
             /** Items */
             items: components["schemas"]["PendingDocument"][];
         };
-        /** PlanAssetItem */
+        /**
+         * PlanAssetItem
+         * @description Schema for an asset associated with a specific work plan.
+         */
         PlanAssetItem: {
             /**
              * Id
@@ -3955,7 +5863,12 @@ export interface components {
             /** Asset Status */
             asset_status?: string | null;
         };
-        /** PlanAssignmentOptions */
+        /**
+         * PlanAssignmentOptions
+         * @description Skema opsi penugasan pada Rencana Kerja.
+         *
+         *     Mengelompokkan opsi pegawai yang tersedia untuk menjadi PM atau personel lapangan.
+         */
         PlanAssignmentOptions: {
             /** Can Choose Pm */
             can_choose_pm: boolean;
@@ -3968,7 +5881,10 @@ export interface components {
             /** Personnel Options */
             personnel_options: components["schemas"]["AssignmentEmployeeOption"][];
         };
-        /** PlanChangeOut */
+        /**
+         * PlanChangeOut
+         * @description Respons riwayat perubahan atau adendum suatu Rencana Kerja.
+         */
         PlanChangeOut: {
             /**
              * Id
@@ -3995,7 +5911,10 @@ export interface components {
             /** Document Id */
             document_id?: string | null;
         };
-        /** PlanDayCreate */
+        /**
+         * PlanDayCreate
+         * @description Skema pembuatan aktivitas harian dalam Rencana Kerja.
+         */
         PlanDayCreate: {
             /**
              * Work Date
@@ -4010,7 +5929,10 @@ export interface components {
              */
             sort_order: number;
         };
-        /** PlanDayOut */
+        /**
+         * PlanDayOut
+         * @description Skema respons keseluruhan untuk rencana hari kerja.
+         */
         PlanDayOut: {
             /**
              * Id
@@ -4035,7 +5957,10 @@ export interface components {
              */
             member_reports_sent: number;
         };
-        /** PlanDayResponse */
+        /**
+         * PlanDayResponse
+         * @description Skema respons aktivitas harian dalam Rencana Kerja.
+         */
         PlanDayResponse: {
             /**
              * Work Date
@@ -4060,7 +5985,10 @@ export interface components {
              */
             work_plan_id: string;
         };
-        /** PlanDetailOut */
+        /**
+         * PlanDetailOut
+         * @description Skema respons untuk melihat rincian komprehensif Rencana Kerja.
+         */
         PlanDetailOut: {
             /** Plan */
             plan: {
@@ -4105,7 +6033,10 @@ export interface components {
             /** Signature Count */
             signature_count: number;
         };
-        /** PlanDraftRequest */
+        /**
+         * PlanDraftRequest
+         * @description Permintaan pembuatan atau penyimpanan draf Rencana Kerja (SK v2).
+         */
         PlanDraftRequest: {
             /** Title */
             title: string;
@@ -4136,8 +6067,18 @@ export interface components {
              * Format: uuid
              */
             leader_employee_id: string;
-            /** Member Employee Ids */
+            /**
+             * Member Employee Ids
+             * @default []
+             */
             member_employee_ids: string[];
+            /**
+             * Is Out Of Town
+             * @default false
+             */
+            is_out_of_town: boolean;
+            /** Work Type Id */
+            work_type_id?: string | null;
             /**
              * Tool Ids
              * @default []
@@ -4150,7 +6091,10 @@ export interface components {
             /** Row Version */
             row_version?: number | null;
         };
-        /** PlanFormOptions */
+        /**
+         * PlanFormOptions
+         * @description Kumpulan opsi referensi (dropdown options) untuk formulir pembuatan SK (Rencana Kerja).
+         */
         PlanFormOptions: {
             /** Unit Name */
             unit_name: string | null;
@@ -4167,7 +6111,10 @@ export interface components {
             /** Vehicles */
             vehicles: components["schemas"]["FormAsset"][];
         };
-        /** PlanLocationIn */
+        /**
+         * PlanLocationIn
+         * @description Permintaan penambahan atau pengubahan lokasi untuk Rencana Kerja.
+         */
         PlanLocationIn: {
             /** Name */
             name: string;
@@ -4182,8 +6129,13 @@ export interface components {
              * @default 100
              */
             radius_m: number;
+            /** Reason */
+            reason?: string | null;
         };
-        /** PlanLocationOut */
+        /**
+         * PlanLocationOut
+         * @description Respons informasi lokasi suatu Rencana Kerja.
+         */
         PlanLocationOut: {
             /**
              * Id
@@ -4201,7 +6153,98 @@ export interface components {
             /** Radius M */
             radius_m: number | null;
         };
-        /** PlanTaskCreate */
+        /**
+         * PlanRevisionIn
+         * @description Isi rencana kerja yang baru ditambah alasan revisi; `change_id` = permintaan ketua yang diselesaikan.
+         */
+        PlanRevisionIn: {
+            /** Title */
+            title: string;
+            /** Description */
+            description: string;
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "INSTALASI" | "PEMELIHARAAN" | "PERBAIKAN" | "SURVEI" | "LAINNYA";
+            /** Site Id */
+            site_id?: string | null;
+            new_site?: components["schemas"]["NewSiteInput"] | null;
+            /**
+             * Period Start
+             * Format: date
+             */
+            period_start: string;
+            /**
+             * Period End
+             * Format: date
+             */
+            period_end: string;
+            /** Days */
+            days: components["schemas"]["DraftDayInput"][];
+            /**
+             * Leader Employee Id
+             * Format: uuid
+             */
+            leader_employee_id: string;
+            /**
+             * Member Employee Ids
+             * @default []
+             */
+            member_employee_ids: string[];
+            /**
+             * Is Out Of Town
+             * @default false
+             */
+            is_out_of_town: boolean;
+            /** Work Type Id */
+            work_type_id?: string | null;
+            /**
+             * Tool Ids
+             * @default []
+             */
+            tool_ids: string[];
+            /** Vehicle Id */
+            vehicle_id?: string | null;
+            /** Driver Employee Id */
+            driver_employee_id?: string | null;
+            /** Row Version */
+            row_version?: number | null;
+            /** Reason */
+            reason: string;
+            /** Change Id */
+            change_id?: string | null;
+        };
+        /**
+         * PlanRevisionOut
+         * @description Satu baris riwayat revisi: siapa, kapan, mengapa, dan apa yang berubah.
+         */
+        PlanRevisionOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Revision */
+            revision: number;
+            /** Revised By Name */
+            revised_by_name?: string | null;
+            /** Reason */
+            reason: string;
+            /** Diff */
+            diff: {
+                [key: string]: unknown;
+            }[];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /**
+         * PlanTaskCreate
+         * @description Skema pembuatan tugas spesifik dalam suatu aktivitas harian.
+         */
         PlanTaskCreate: {
             /** Title */
             title: string;
@@ -4211,7 +6254,10 @@ export interface components {
              */
             sort_order: number;
         };
-        /** PlanTaskResponse */
+        /**
+         * PlanTaskResponse
+         * @description Skema respons untuk tugas spesifik pada aktivitas harian.
+         */
         PlanTaskResponse: {
             /** Title */
             title: string;
@@ -4233,21 +6279,64 @@ export interface components {
             /** Is Done */
             is_done: boolean;
         };
-        /** ReportReviewRequest */
+        /** ProbeResponse */
+        ProbeResponse: {
+            /**
+             * Probe Id
+             * Format: uuid
+             */
+            probe_id: string;
+            /** Quality */
+            quality?: number | null;
+            /**
+             * Pending
+             * @default false
+             */
+            pending: boolean;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+        };
+        /**
+         * ReleaseFileOut
+         * @description Berkas yang cocok untuk HP penanya.
+         */
+        ReleaseFileOut: {
+            /** Abi */
+            abi: string;
+            /** Url */
+            url: string;
+            /** Sha256 */
+            sha256: string;
+            /** Size */
+            size: number;
+        };
+        /**
+         * ReportReviewRequest
+         * @description Schema for reviewing a submitted daily report.
+         */
         ReportReviewRequest: {
             /** Decision */
             decision: string;
             /** Note */
             note?: string | null;
         };
-        /** ReviewRequest */
+        /**
+         * ReviewRequest
+         * @description Schema for reviewing (approving or rejecting) an attendance event.
+         */
         ReviewRequest: {
             /** Is Approved */
             is_approved: boolean;
             /** Note */
             note?: string | null;
         };
-        /** RevokeOthersResponse */
+        /**
+         * RevokeOthersResponse
+         * @description Schema for the response after revoking other active sessions.
+         */
         RevokeOthersResponse: {
             /** Revoked */
             revoked: number;
@@ -4261,7 +6350,8 @@ export interface components {
         };
         /**
          * SessionOut
-         * @description Satu perangkat yang sedang masuk (P1-7). `current` = perangkat yang sedang dipakai.
+         * @description Schema representing a single active session/device (P1-7).
+         *     `current` denotes the device currently being used.
          */
         SessionOut: {
             /** Id */
@@ -4309,7 +6399,10 @@ export interface components {
             /** Revoked Reason */
             revoked_reason: string | null;
         };
-        /** SiteCreate */
+        /**
+         * SiteCreate
+         * @description Schema for creating a new work site.
+         */
         SiteCreate: {
             /** Name */
             name: string;
@@ -4322,7 +6415,10 @@ export interface components {
              */
             radius_m: number;
         };
-        /** SiteResponse */
+        /**
+         * SiteResponse
+         * @description Schema representing a work site in the system.
+         */
         SiteResponse: {
             /** Name */
             name: string;
@@ -4359,7 +6455,10 @@ export interface components {
             /** Results */
             results: components["schemas"]["OperationResult"][];
         };
-        /** TeamMemberOut */
+        /**
+         * TeamMemberOut
+         * @description Respons detail dari anggota tim dalam suatu Rencana Kerja.
+         */
         TeamMemberOut: {
             /** Employee Id */
             employee_id: string;
@@ -4372,7 +6471,10 @@ export interface components {
             /** Valid From */
             valid_from: string | null;
         };
-        /** TeamRequest */
+        /**
+         * TeamRequest
+         * @description Permintaan pembaruan/penyesuaian tim di dalam Rencana Kerja.
+         */
         TeamRequest: {
             /** Leader Employee Id */
             leader_employee_id?: string | null;
@@ -4381,7 +6483,10 @@ export interface components {
             /** Row Version */
             row_version: number;
         };
-        /** TeamResponse */
+        /**
+         * TeamResponse
+         * @description Respons setelah pembaruan susunan tim Rencana Kerja dilakukan.
+         */
         TeamResponse: {
             /** Leader Employee Id */
             leader_employee_id: string | null;
@@ -4390,7 +6495,29 @@ export interface components {
             /** Row Version */
             row_version: number;
         };
-        /** TimelineDay */
+        /**
+         * TemplateResponse
+         * @description Embedding MILIK SENDIRI untuk dicocokkan di HP saat luring. Disimpan terenkripsi (Keystore); berlaku terbatas.
+         */
+        TemplateResponse: {
+            /** Model Name */
+            model_name: string;
+            /** Model Version */
+            model_version: string;
+            /** Enrollment Version */
+            enrollment_version: string;
+            /** Embeddings */
+            embeddings: number[][];
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+        };
+        /**
+         * TimelineDay
+         * @description Schema for a specific day in a timeline.
+         */
         TimelineDay: {
             /** Id */
             id: string;
@@ -4404,7 +6531,10 @@ export interface components {
             /** State */
             state: string;
         };
-        /** TimelineGroup */
+        /**
+         * TimelineGroup
+         * @description Schema for a grouped timeline representation (e.g., project timeline).
+         */
         TimelineGroup: {
             /** Id */
             id: string;
@@ -4438,14 +6568,20 @@ export interface components {
             /** Days */
             days: components["schemas"]["TimelineDay"][];
         };
-        /** TimelineLeader */
+        /**
+         * TimelineLeader
+         * @description Schema for the leader information within a timeline.
+         */
         TimelineLeader: {
             /** Employee Id */
             employee_id: string;
             /** Full Name */
             full_name: string | null;
         };
-        /** TokenResponse */
+        /**
+         * TokenResponse
+         * @description Schema for the returned authentication token.
+         */
         TokenResponse: {
             /** Access Token */
             access_token: string;
@@ -4477,7 +6613,10 @@ export interface components {
             /** Name */
             name: string;
         };
-        /** UserMeResponse */
+        /**
+         * UserMeResponse
+         * @description Schema for returning the authenticated user's details.
+         */
         UserMeResponse: {
             /** User Id */
             user_id: string;
@@ -4580,7 +6719,10 @@ export interface components {
             /** Note */
             note?: string | null;
         };
-        /** WorkPlanCreate */
+        /**
+         * WorkPlanCreate
+         * @description Skema untuk membuat Rencana Kerja baru.
+         */
         WorkPlanCreate: {
             /** Title */
             title: string;
@@ -4613,7 +6755,12 @@ export interface components {
             /** Leader Employee Id */
             leader_employee_id?: string | null;
         };
-        /** WorkPlanResponse */
+        /**
+         * WorkPlanResponse
+         * @description Skema respons untuk Rencana Kerja.
+         *
+         *     Menyertakan status, nomor dokumen, revisi, dan alasan penolakan jika ada.
+         */
         WorkPlanResponse: {
             /** Title */
             title: string;
@@ -4664,8 +6811,27 @@ export interface components {
             appeal_reason?: string | null;
             /** Category */
             category?: string | null;
+            /**
+             * Is Out Of Town
+             * @default false
+             */
+            is_out_of_town: boolean;
+            /** Work Type Id */
+            work_type_id?: string | null;
+            /**
+             * Pending Request
+             * @default false
+             */
+            pending_request: boolean;
+            /** Today Site Id */
+            today_site_id?: string | null;
+            /** Today Included */
+            today_included?: boolean | null;
         };
-        /** WorkPlanUpdate */
+        /**
+         * WorkPlanUpdate
+         * @description Skema untuk memperbarui data Rencana Kerja.
+         */
         WorkPlanUpdate: {
             /** Title */
             title?: string | null;
@@ -4683,6 +6849,83 @@ export interface components {
             leader_employee_id?: string | null;
             /** Row Version */
             row_version: number;
+        };
+        /**
+         * WorkTypeIn
+         * @description Membuat/mengubah jenis pekerjaan; `photos` mengganti seluruh daftar slot.
+         */
+        WorkTypeIn: {
+            /** Name */
+            name: string;
+            /**
+             * Photos
+             * @default []
+             */
+            photos: components["schemas"]["WorkTypePhotoIn"][];
+        };
+        /**
+         * WorkTypeOut
+         * @description Jenis pekerjaan beserta template fotonya.
+         */
+        WorkTypeOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /**
+             * Is Active
+             * @default true
+             */
+            is_active: boolean;
+            /**
+             * Photos
+             * @default []
+             */
+            photos: components["schemas"]["WorkTypePhotoOut"][];
+        };
+        /**
+         * WorkTypePhotoIn
+         * @description Satu slot foto pada template: label, petunjuk, wajib/tidak.
+         */
+        WorkTypePhotoIn: {
+            /** Label */
+            label: string;
+            /** Hint */
+            hint?: string | null;
+            /**
+             * Required
+             * @default false
+             */
+            required: boolean;
+            /** Example File Id */
+            example_file_id?: string | null;
+        };
+        /**
+         * WorkTypePhotoOut
+         * @description Slot foto pada template (keluaran).
+         */
+        WorkTypePhotoOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Sort Order */
+            sort_order: number;
+            /** Label */
+            label: string;
+            /** Hint */
+            hint?: string | null;
+            /**
+             * Required
+             * @default false
+             */
+            required: boolean;
+            /** Example File Id */
+            example_file_id?: string | null;
         };
     };
     responses: never;
@@ -7693,6 +9936,7 @@ export interface operations {
                 from?: string | null;
                 to?: string | null;
                 status?: string | null;
+                scope?: string;
                 page?: number;
                 size?: number;
             };
@@ -7962,6 +10206,200 @@ export interface operations {
             };
         };
     };
+    get_face_policy_api_v1_face_policy_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FacePolicy"];
+                };
+            };
+        };
+    };
+    get_face_status_api_v1_face_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FaceStatus"];
+                };
+            };
+        };
+    };
+    set_face_consent_api_v1_face_consent_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConsentRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    enroll_face_api_v1_face_enroll_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_enroll_face_api_v1_face_enroll_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnrollResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_face_template_api_v1_face_template_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TemplateResponse"];
+                };
+            };
+        };
+    };
+    create_face_probe_api_v1_face_probe_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_create_face_probe_api_v1_face_probe_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProbeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    check_face_challenge_api_v1_face_challenge_check_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_check_face_challenge_api_v1_face_challenge_check_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChallengeCheckResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     alert_missing_checkin_api_v1_cron_attendance_alert_missing_post: {
         parameters: {
             query?: never;
@@ -7998,6 +10436,61 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["NeedsReviewResponse"];
+                };
+            };
+        };
+    };
+    reverify_pending_faces_api_v1_cron_attendance_reverify_faces_post: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: number;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    purge_expired_face_probes_api_v1_cron_attendance_purge_face_probes_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: number;
+                    };
                 };
             };
         };
@@ -9131,6 +11624,344 @@ export interface operations {
                 content: {
                     "text/html": string;
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_revisions_api_v1_work_plans__plan_id__revisions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanRevisionOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revise_plan_api_v1_work_plans__plan_id__revisions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlanRevisionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanDetailOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    events_api_v1_events_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    list_work_types_api_v1_work_types_get: {
+        parameters: {
+            query?: {
+                all?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkTypeOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_work_type_api_v1_work_types_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkTypeIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkTypeOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_work_type_api_v1_work_types__type_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                type_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkTypeIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkTypeOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    deactivate_work_type_api_v1_work_types__type_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                type_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    plan_photo_template_api_v1_work_plans__plan_id__photo_template_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkTypePhotoOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    check_android_update_api_v1_app_android_update_get: {
+        parameters: {
+            query: {
+                /** @description versionCode aplikasi yang terpasang */
+                build: number;
+                /** @description ABI HP berurutan prioritas (Build.SUPPORTED_ABIS) */
+                abi?: string[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppUpdateOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    download_android_release_api_v1_app_android_files__name__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    latest_android_release_api_v1_app_android_latest_apk_get: {
+        parameters: {
+            query?: {
+                /** @description mis. armeabi-v7a untuk HP 32-bit; bawaan arm64-v8a */
+                abi?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            302: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

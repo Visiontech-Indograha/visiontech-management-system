@@ -19,6 +19,7 @@ class PlanLocationIn(BaseModel):
     lat: float = Field(ge=-90, le=90)  # Koordinat lintang (latitude)
     lng: float = Field(ge=-180, le=180)  # Koordinat bujur (longitude)
     radius_m: int = 100  # Radius efektif (dalam meter) untuk keperluan absensi/presensi
+    reason: str | None = Field(default=None, max_length=500)  # Alasan; wajib bila rencana kerja sudah terbit
 
 
 class PlanLocationOut(BaseModel):

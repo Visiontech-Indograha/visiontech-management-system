@@ -4,7 +4,7 @@ import { apiError, mockApi, renderRoute } from "./utils";
 
 const group = {
   id: "p1",
-  number: "SK/001",
+  number: "Rencana Kerja/001",
   title: "Instalasi CCTV",
   status: "IN_PROGRESS",
   unit_id: "u1",

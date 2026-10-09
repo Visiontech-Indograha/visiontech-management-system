@@ -1105,6 +1105,17 @@
       ],
       "title": "Check Out At"
      },
+     "city_category": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "City Category"
+     },
      "employee_id": {
       "title": "Employee Id",
       "type": "string"
@@ -1223,6 +1234,28 @@
       ],
       "title": "Check Out At"
      },
+     "check_out_distance_m": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Check Out Distance M"
+     },
+     "check_out_explanation": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Check Out Explanation"
+     },
      "check_out_face_result": {
       "anyOf": [
        {
@@ -1245,6 +1278,11 @@
       ],
       "title": "Check Out Face Similarity"
      },
+     "check_out_outside": {
+      "default": false,
+      "title": "Check Out Outside",
+      "type": "boolean"
+     },
      "check_out_requested_at": {
       "anyOf": [
        {
@@ -1256,6 +1294,29 @@
        }
       ],
       "title": "Check Out Requested At"
+     },
+     "check_out_selfie_file_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Check Out Selfie File Id"
+     },
+     "city_category": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "City Category"
      },
      "distance_m": {
       "title": "Distance M",
@@ -1891,6 +1952,18 @@
    "CheckOutRequest": {
     "description": "Schema for processing a check-out request.",
     "properties": {
+     "accuracy_m": {
+      "anyOf": [
+       {
+        "minimum": 0.0,
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Accuracy M"
+     },
      "channel": {
       "default": "MOBILE",
       "enum": [
@@ -1899,6 +1972,18 @@
       ],
       "title": "Channel",
       "type": "string"
+     },
+     "explanation": {
+      "anyOf": [
+       {
+        "maxLength": 1000,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Explanation"
      },
      "face_probe_id": {
       "anyOf": [
@@ -1923,6 +2008,18 @@
       ],
       "title": "Location Origin",
       "type": "string"
+     },
+     "selfie_file_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Selfie File Id"
      }
     },
     "required": [
@@ -1993,6 +2090,14 @@
      "body": {
       "title": "Body",
       "type": "string"
+     },
+     "evidence": {
+      "default": [],
+      "items": {
+       "$ref": "#/components/schemas/EvidenceIn"
+      },
+      "title": "Evidence",
+      "type": "array"
      },
      "evidence_file_ids": {
       "default": [],
@@ -2118,6 +2223,14 @@
      "body": {
       "title": "Body",
       "type": "string"
+     },
+     "evidence": {
+      "default": [],
+      "items": {
+       "$ref": "#/components/schemas/EvidenceOut"
+      },
+      "title": "Evidence",
+      "type": "array"
      },
      "evidence_file_ids": {
       "items": {
@@ -2311,6 +2424,33 @@
    "DraftDayInput": {
     "description": "Masukan aktivitas harian untuk draf Rencana Kerja.",
     "properties": {
+     "member_employee_ids": {
+      "anyOf": [
+       {
+        "items": {
+         "format": "uuid",
+         "type": "string"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Member Employee Ids"
+     },
+     "site_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Id"
+     },
      "tasks": {
       "items": {
        "$ref": "#/components/schemas/DraftTaskInput"
@@ -2322,6 +2462,18 @@
       "format": "date",
       "title": "Work Date",
       "type": "string"
+     },
+     "work_type_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Work Type Id"
      }
     },
     "required": [
@@ -3041,6 +3193,77 @@
     "title": "EnrollResponse",
     "type": "object"
    },
+   "EvidenceIn": {
+    "description": "Foto bukti laporan: file + slot template yang dipenuhi + sumbernya.",
+    "properties": {
+     "file_id": {
+      "format": "uuid",
+      "title": "File Id",
+      "type": "string"
+     },
+     "slot_label": {
+      "anyOf": [
+       {
+        "maxLength": 80,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Slot Label"
+     },
+     "source": {
+      "default": "CAMERA",
+      "enum": [
+       "CAMERA",
+       "GALLERY"
+      ],
+      "title": "Source",
+      "type": "string"
+     }
+    },
+    "required": [
+     "file_id"
+    ],
+    "title": "EvidenceIn",
+    "type": "object"
+   },
+   "EvidenceOut": {
+    "description": "Foto bukti laporan (keluaran).",
+    "properties": {
+     "file_id": {
+      "format": "uuid",
+      "title": "File Id",
+      "type": "string"
+     },
+     "slot_label": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Slot Label"
+     },
+     "source": {
+      "default": "CAMERA",
+      "enum": [
+       "CAMERA",
+       "GALLERY"
+      ],
+      "title": "Source",
+      "type": "string"
+     }
+    },
+    "required": [
+     "file_id"
+    ],
+    "title": "EvidenceOut",
+    "type": "object"
+   },
    "ExpiringDocumentList": {
     "description": "Schema for a list of expiring documents.",
     "properties": {
@@ -3495,6 +3718,15 @@
    "FormPerson": {
     "description": "Skema untuk menampilkan data orang/pegawai pada opsi formulir.",
     "properties": {
+     "busy_dates": {
+      "default": [],
+      "items": {
+       "format": "date",
+       "type": "string"
+      },
+      "title": "Busy Dates",
+      "type": "array"
+     },
      "full_name": {
       "title": "Full Name",
       "type": "string"
@@ -3833,6 +4065,14 @@
       "title": "Body",
       "type": "string"
      },
+     "evidence": {
+      "default": [],
+      "items": {
+       "$ref": "#/components/schemas/EvidenceIn"
+      },
+      "title": "Evidence",
+      "type": "array"
+     },
      "evidence_file_ids": {
       "default": [],
       "items": {
@@ -3865,6 +4105,14 @@
       "format": "uuid",
       "title": "Employee Id",
       "type": "string"
+     },
+     "evidence": {
+      "default": [],
+      "items": {
+       "$ref": "#/components/schemas/EvidenceOut"
+      },
+      "title": "Evidence",
+      "type": "array"
      },
      "evidence_file_ids": {
       "default": [],
@@ -4940,6 +5188,21 @@
       "title": "Id",
       "type": "string"
      },
+     "member_employee_ids": {
+      "anyOf": [
+       {
+        "items": {
+         "format": "uuid",
+         "type": "string"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Member Employee Ids"
+     },
      "member_reports_sent": {
       "default": 0,
       "title": "Member Reports Sent",
@@ -4954,6 +5217,17 @@
         "type": "null"
        }
       ]
+     },
+     "site_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Name"
      },
      "sort_order": {
       "title": "Sort Order",
@@ -4974,6 +5248,17 @@
       "format": "date",
       "title": "Work Date",
       "type": "string"
+     },
+     "work_type_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Work Type Name"
      }
     },
     "required": [
@@ -5177,12 +5462,18 @@
       ],
       "title": "Driver Employee Id"
      },
+     "is_out_of_town": {
+      "default": false,
+      "title": "Is Out Of Town",
+      "type": "boolean"
+     },
      "leader_employee_id": {
       "format": "uuid",
       "title": "Leader Employee Id",
       "type": "string"
      },
      "member_employee_ids": {
+      "default": [],
       "items": {
        "format": "uuid",
        "type": "string"
@@ -5257,6 +5548,18 @@
        }
       ],
       "title": "Vehicle Id"
+     },
+     "work_type_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Work Type Id"
      }
     },
     "required": [
@@ -5266,8 +5569,7 @@
      "period_start",
      "period_end",
      "days",
-     "leader_employee_id",
-     "member_employee_ids"
+     "leader_employee_id"
     ],
     "title": "PlanDraftRequest",
     "type": "object"
@@ -5378,6 +5680,18 @@
       "default": 100,
       "title": "Radius M",
       "type": "integer"
+     },
+     "reason": {
+      "anyOf": [
+       {
+        "maxLength": 500,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Reason"
      }
     },
     "required": [
@@ -5440,6 +5754,223 @@
      "radius_m"
     ],
     "title": "PlanLocationOut",
+    "type": "object"
+   },
+   "PlanRevisionIn": {
+    "description": "Isi rencana kerja yang baru ditambah alasan revisi; `change_id` = permintaan ketua yang diselesaikan.",
+    "properties": {
+     "category": {
+      "enum": [
+       "INSTALASI",
+       "PEMELIHARAAN",
+       "PERBAIKAN",
+       "SURVEI",
+       "LAINNYA"
+      ],
+      "title": "Category",
+      "type": "string"
+     },
+     "change_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Change Id"
+     },
+     "days": {
+      "items": {
+       "$ref": "#/components/schemas/DraftDayInput"
+      },
+      "title": "Days",
+      "type": "array"
+     },
+     "description": {
+      "title": "Description",
+      "type": "string"
+     },
+     "driver_employee_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Driver Employee Id"
+     },
+     "is_out_of_town": {
+      "default": false,
+      "title": "Is Out Of Town",
+      "type": "boolean"
+     },
+     "leader_employee_id": {
+      "format": "uuid",
+      "title": "Leader Employee Id",
+      "type": "string"
+     },
+     "member_employee_ids": {
+      "default": [],
+      "items": {
+       "format": "uuid",
+       "type": "string"
+      },
+      "title": "Member Employee Ids",
+      "type": "array"
+     },
+     "new_site": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/NewSiteInput"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "period_end": {
+      "format": "date",
+      "title": "Period End",
+      "type": "string"
+     },
+     "period_start": {
+      "format": "date",
+      "title": "Period Start",
+      "type": "string"
+     },
+     "reason": {
+      "title": "Reason",
+      "type": "string"
+     },
+     "row_version": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Row Version"
+     },
+     "site_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Id"
+     },
+     "title": {
+      "title": "Title",
+      "type": "string"
+     },
+     "tool_ids": {
+      "default": [],
+      "items": {
+       "format": "uuid",
+       "type": "string"
+      },
+      "title": "Tool Ids",
+      "type": "array"
+     },
+     "vehicle_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Vehicle Id"
+     },
+     "work_type_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Work Type Id"
+     }
+    },
+    "required": [
+     "title",
+     "description",
+     "category",
+     "period_start",
+     "period_end",
+     "days",
+     "leader_employee_id",
+     "reason"
+    ],
+    "title": "PlanRevisionIn",
+    "type": "object"
+   },
+   "PlanRevisionOut": {
+    "description": "Satu baris riwayat revisi: siapa, kapan, mengapa, dan apa yang berubah.",
+    "properties": {
+     "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+     },
+     "diff": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "title": "Diff",
+      "type": "array"
+     },
+     "id": {
+      "format": "uuid",
+      "title": "Id",
+      "type": "string"
+     },
+     "reason": {
+      "title": "Reason",
+      "type": "string"
+     },
+     "revised_by_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Revised By Name"
+     },
+     "revision": {
+      "title": "Revision",
+      "type": "integer"
+     }
+    },
+    "required": [
+     "id",
+     "revision",
+     "reason",
+     "diff",
+     "created_at"
+    ],
+    "title": "PlanRevisionOut",
     "type": "object"
    },
    "PlanTaskCreate": {
@@ -6822,6 +7353,11 @@
       "title": "Id",
       "type": "string"
      },
+     "is_out_of_town": {
+      "default": false,
+      "title": "Is Out Of Town",
+      "type": "boolean"
+     },
      "leader_employee_id": {
       "anyOf": [
        {
@@ -6848,6 +7384,11 @@
        }
       ],
       "title": "Number"
+     },
+     "pending_request": {
+      "default": false,
+      "title": "Pending Request",
+      "type": "boolean"
      },
      "period_end": {
       "format": "date",
@@ -6892,10 +7433,45 @@
       "title": "Title",
       "type": "string"
      },
+     "today_included": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Today Included"
+     },
+     "today_site_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Today Site Id"
+     },
      "unit_id": {
       "format": "uuid",
       "title": "Unit Id",
       "type": "string"
+     },
+     "work_type_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Work Type Id"
      }
     },
     "required": [
@@ -7006,6 +7582,161 @@
      "row_version"
     ],
     "title": "WorkPlanUpdate",
+    "type": "object"
+   },
+   "WorkTypeIn": {
+    "description": "Membuat/mengubah jenis pekerjaan; `photos` mengganti seluruh daftar slot.",
+    "properties": {
+     "name": {
+      "maxLength": 80,
+      "minLength": 1,
+      "title": "Name",
+      "type": "string"
+     },
+     "photos": {
+      "default": [],
+      "items": {
+       "$ref": "#/components/schemas/WorkTypePhotoIn"
+      },
+      "title": "Photos",
+      "type": "array"
+     }
+    },
+    "required": [
+     "name"
+    ],
+    "title": "WorkTypeIn",
+    "type": "object"
+   },
+   "WorkTypeOut": {
+    "description": "Jenis pekerjaan beserta template fotonya.",
+    "properties": {
+     "id": {
+      "format": "uuid",
+      "title": "Id",
+      "type": "string"
+     },
+     "is_active": {
+      "default": true,
+      "title": "Is Active",
+      "type": "boolean"
+     },
+     "name": {
+      "title": "Name",
+      "type": "string"
+     },
+     "photos": {
+      "default": [],
+      "items": {
+       "$ref": "#/components/schemas/WorkTypePhotoOut"
+      },
+      "title": "Photos",
+      "type": "array"
+     }
+    },
+    "required": [
+     "id",
+     "name"
+    ],
+    "title": "WorkTypeOut",
+    "type": "object"
+   },
+   "WorkTypePhotoIn": {
+    "description": "Satu slot foto pada template: label, petunjuk, wajib/tidak.",
+    "properties": {
+     "example_file_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Example File Id"
+     },
+     "hint": {
+      "anyOf": [
+       {
+        "maxLength": 300,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Hint"
+     },
+     "label": {
+      "maxLength": 80,
+      "minLength": 1,
+      "title": "Label",
+      "type": "string"
+     },
+     "required": {
+      "default": false,
+      "title": "Required",
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "label"
+    ],
+    "title": "WorkTypePhotoIn",
+    "type": "object"
+   },
+   "WorkTypePhotoOut": {
+    "description": "Slot foto pada template (keluaran).",
+    "properties": {
+     "example_file_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Example File Id"
+     },
+     "hint": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Hint"
+     },
+     "id": {
+      "format": "uuid",
+      "title": "Id",
+      "type": "string"
+     },
+     "label": {
+      "title": "Label",
+      "type": "string"
+     },
+     "required": {
+      "default": false,
+      "title": "Required",
+      "type": "boolean"
+     },
+     "sort_order": {
+      "title": "Sort Order",
+      "type": "integer"
+     }
+    },
+    "required": [
+     "id",
+     "sort_order",
+     "label"
+    ],
+    "title": "WorkTypePhotoOut",
     "type": "object"
    }
   },
@@ -10152,6 +10883,31 @@
     "summary": "Restore Employee",
     "tags": [
      "Employees"
+    ]
+   }
+  },
+  "/api/v1/events": {
+   "get": {
+    "description": "Aliran `text/event-stream` peristiwa untuk pengguna yang sedang masuk (GET).\n\nFormat: `event: <topic>` + `data: <json>`; topik `notification`, `plan`, `attendance`. Komentar `: ping` tiap\n25 detik menjaga sambungan tetap hidup di balik proksi.",
+    "operationId": "events_api_v1_events_get",
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Events",
+    "tags": [
+     "Events"
     ]
    }
   },
@@ -14379,6 +15135,76 @@
     ]
    }
   },
+  "/api/v1/work-plans/{plan_id}/photo-template": {
+   "get": {
+    "description": "Template foto laporan rencana kerja (GET) — kosong bila rencana kerja tanpa jenis pekerjaan.\n\nPath Parameters:\n- plan_id (UUID): ID rencana kerja.\n\nQuery Parameters:\n- day_id (UUID, opsional): hari kerja; memakai jenis khusus hari itu bila ada.\n\nReturns:\n- list[WorkTypePhotoOut]: slot foto berurutan.",
+    "operationId": "plan_photo_template_api_v1_work_plans__plan_id__photo_template_get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "plan_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Plan Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "day_id",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "format": "uuid",
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Day Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/WorkTypePhotoOut"
+         },
+         "title": "Response Plan Photo Template Api V1 Work Plans  Plan Id  Photo Template Get",
+         "type": "array"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Plan Photo Template",
+    "tags": [
+     "Work Types"
+    ]
+   }
+  },
   "/api/v1/work-plans/{plan_id}/preview": {
    "get": {
     "description": "Pratinjau A4 draf SK (\"Sunting SK\", SK2-C) — format sama dengan dokumen terbit (GET).\n\nPath Parameters:\n- plan_id (UUID): ID dari SK.\n\nReturns:\n- HTMLResponse: Representasi HTML draf SK.",
@@ -14720,6 +15546,116 @@
     "summary": "Revise Plan",
     "tags": [
      "Work Plan Transitions"
+    ]
+   }
+  },
+  "/api/v1/work-plans/{plan_id}/revisions": {
+   "get": {
+    "description": "Riwayat revisi rencana kerja, terbaru dulu (GET); siapa pun yang berhak melihat rencana kerja.\n\nPath Parameters:\n- plan_id (UUID): ID rencana kerja.\n\nReturns:\n- list[PlanRevisionOut]: revisi beserta diff sebelum/sesudah.",
+    "operationId": "list_revisions_api_v1_work_plans__plan_id__revisions_get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "plan_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Plan Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/PlanRevisionOut"
+         },
+         "title": "Response List Revisions Api V1 Work Plans  Plan Id  Revisions Get",
+         "type": "array"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "List Revisions",
+    "tags": [
+     "Work Plan Revisions"
+    ]
+   },
+   "post": {
+    "description": "PM unit/OPS merevisi rencana kerja berstatus Terbit, Revisi diminta, Diterima, atau Berjalan (POST).\nVersi dokumen baru ditandatangani PM; ketua dan anggota mendapat notifikasi beserta diff.\n\nPath Parameters:\n- plan_id (UUID): ID rencana kerja.\n\nRequest Body:\n- data (PlanRevisionIn): isi rencana kerja yang baru + `reason` + `change_id` (permintaan ketua, opsional).\n\nReturns:\n- PlanDetailOut: detail rencana kerja pasca revisi.",
+    "operationId": "revise_plan_api_v1_work_plans__plan_id__revisions_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "plan_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Plan Id",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PlanRevisionIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/PlanDetailOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Revise Plan",
+    "tags": [
+     "Work Plan Revisions"
     ]
    }
   },
@@ -15084,6 +16020,203 @@
     "summary": "Submit Weekly",
     "tags": [
      "Weekly Reports"
+    ]
+   }
+  },
+  "/api/v1/work-types": {
+   "get": {
+    "description": "Daftar jenis pekerjaan beserta template foto (GET). Semua yang masuk melihat yang aktif;\n`?all=true` (termasuk yang nonaktif) hanya untuk pengelola rencana kerja.\n\nQuery Parameters:\n- all (bool): sertakan yang nonaktif (butuh izin create:plan).\n\nReturns:\n- list[WorkTypeOut]: jenis pekerjaan.",
+    "operationId": "list_work_types_api_v1_work_types_get",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "all",
+      "required": false,
+      "schema": {
+       "default": false,
+       "title": "All",
+       "type": "boolean"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/WorkTypeOut"
+         },
+         "title": "Response List Work Types Api V1 Work Types Get",
+         "type": "array"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "List Work Types",
+    "tags": [
+     "Work Types"
+    ]
+   },
+   "post": {
+    "description": "Membuat jenis pekerjaan + template foto (POST) — PM/OPS.\n\nRequest Body:\n- data (WorkTypeIn): nama dan daftar slot foto.\n\nReturns:\n- WorkTypeOut: jenis yang dibuat.",
+    "operationId": "create_work_type_api_v1_work_types_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/WorkTypeIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/WorkTypeOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Create Work Type",
+    "tags": [
+     "Work Types"
+    ]
+   }
+  },
+  "/api/v1/work-types/{type_id}": {
+   "delete": {
+    "description": "Menonaktifkan jenis pekerjaan (DELETE) — PM/OPS. Tidak dihapus: rencana kerja lama tetap utuh.\n\nPath Parameters:\n- type_id (UUID): ID jenis pekerjaan.",
+    "operationId": "deactivate_work_type_api_v1_work_types__type_id__delete",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "type_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Type Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Deactivate Work Type",
+    "tags": [
+     "Work Types"
+    ]
+   },
+   "put": {
+    "description": "Mengubah nama dan mengganti seluruh daftar slot foto (PUT) — PM/OPS. Mengaktifkan kembali jenis nonaktif.\n\nPath Parameters:\n- type_id (UUID): ID jenis pekerjaan.\n\nReturns:\n- WorkTypeOut: jenis setelah diubah.",
+    "operationId": "update_work_type_api_v1_work_types__type_id__put",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "type_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Type Id",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/WorkTypeIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/WorkTypeOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Update Work Type",
+    "tags": [
+     "Work Types"
     ]
    }
   },

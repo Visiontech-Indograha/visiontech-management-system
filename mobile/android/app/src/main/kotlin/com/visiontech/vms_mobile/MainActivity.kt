@@ -27,6 +27,9 @@ class MainActivity : FlutterFragmentActivity() {
         // R-34: kunci Keystore, tanda tangan, & jam internal untuk absen luring.
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "vms/attendance_attest")
             .setMethodCallHandler(AttendanceAttest(applicationContext))
+        // T10: foto laporan dari kamera aplikasi → album "Visiontech" di galeri HP (swafoto absen tidak pernah).
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "vms/gallery")
+            .setMethodCallHandler(GallerySave(applicationContext))
         // docs/32: pembaruan aplikasi tanpa Play Store (versi terpasang, izin pasang, installer).
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "vms/app_update")
             .setMethodCallHandler(AppUpdate(applicationContext))

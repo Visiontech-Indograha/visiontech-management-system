@@ -300,7 +300,7 @@ class SyncEngine {
       await cachePut('work_plans', await _api.workPlans());
     } on DioException catch (e) {
       pull.add(
-        isNetworkFailure(e) ? 'Tidak ada koneksi.' : 'SK: ${_describe(e)}',
+        isNetworkFailure(e) ? 'Tidak ada koneksi.' : 'Rencana Kerja: ${_describe(e)}',
       );
     }
     return SyncSummary(pushErrors: push, pullErrors: pull);

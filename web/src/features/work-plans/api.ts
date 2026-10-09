@@ -243,6 +243,33 @@ export function useSavePlanDraft(planId?: string) {
   });
 }
 
+/** Riwayat revisi rencana kerja (GET /work-plans/{id}/revisions). */
+export type PlanRevision = S["PlanRevisionOut"];
+export const revisionsKey = (planId: string) => ["plan-revisions", planId] as const;
+export const usePlanRevisions = (planId: string) =>
+  useQuery({
+    queryKey: revisionsKey(planId),
+    queryFn: async () => (await api.get<PlanRevision[]>(`/work-plans/${planId}/revisions`)).data,
+  });
+
+/** PM merevisi rencana kerja kapan saja (POST /work-plans/{id}/revisions); `change_id` = permintaan ketua yang selesai. */
+export function useRevisePlan(planId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: PlanDraftRequest & { reason: string; change_id?: string | null }) =>
+      (await api.post<PlanDetail>(`/work-plans/${planId}/revisions`, body)).data,
+    onSuccess: async (detail) => {
+      qc.setQueryData(planDetailKey(planId), detail);
+      await qc.invalidateQueries({ queryKey: planKey(planId) });
+      await qc.invalidateQueries({ queryKey: ["work-plans"] });
+      await qc.invalidateQueries({ queryKey: ["plan-changes", planId] });
+      await qc.invalidateQueries({ queryKey: ["plan-documents", planId] });
+      await qc.invalidateQueries({ queryKey: ["plan-days", planId] });
+      await qc.invalidateQueries({ queryKey: revisionsKey(planId) });
+    },
+  });
+}
+
 /** PM menerima adendum ketua dengan mengubah isi SK yang sedang berjalan (PUT /amendments/{changeId}). */
 export function useApplyAmendment(planId: string, changeId: string) {
   const qc = useQueryClient();

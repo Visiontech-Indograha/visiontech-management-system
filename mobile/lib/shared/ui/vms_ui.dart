@@ -419,7 +419,7 @@ class SectionTitle extends StatelessWidget {
   'DRAFT' => (label: 'Draf', accent: Accent.slate),
   'PUBLISHED' => (label: 'Terbit', accent: Accent.blue),
   'ACCEPTED' => (label: 'Diterima', accent: Accent.indigo),
-  'APPEALED' => (label: 'Adendum diminta', accent: Accent.amber),
+  'APPEALED' => (label: 'Revisi diminta', accent: Accent.amber),
   'IN_PROGRESS' => (label: 'Berjalan', accent: Accent.blue),
   'COMPLETION_REVIEW' || 'COMPLETION_REQUESTED' => (
     label: 'Pengajuan penutupan',

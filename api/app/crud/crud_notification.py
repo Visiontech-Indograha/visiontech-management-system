@@ -8,6 +8,8 @@ from collections.abc import Iterable
 from typing import Any
 from uuid import UUID
 
+from app.core.events import queue_event
+
 from .base import CRUDBase
 
 
@@ -32,7 +34,8 @@ class CRUDNotification(CRUDBase):
         return await self.fetchone(
             """
             SELECT wp.organization_id, wp.number, wp.title, CAST(wp.pm_employee_id AS text) AS pm,
-                   CAST(wp.leader_employee_id AS text) AS leader,
+                   CAST(wp.leader_employee_id AS text) AS leader, lower(wp.period) AS period_start,
+                   upper(wp.period) - 1 AS period_end,
                    COALESCE(ARRAY(SELECT CAST(m.employee_id AS text) FROM vms.work_plan_member m
                                    WHERE m.work_plan_id = wp.id AND upper_inf(m.valid_period)
                                      AND m.role_in_plan = 'MEMBER'), '{}') AS members
@@ -71,6 +74,13 @@ class CRUDNotification(CRUDBase):
             {"org": str(org_id), "ids": ids, "kind": kind, "title": title, "body": body,
              "plan": str(plan_id) if plan_id else None},
         )
+        # T8: siarkan ke HP/web penerima (setelah commit) — notifikasi + penyegaran rencana kerja terkait.
+        users = [str(r.id) for r in await self.fetchall(
+            "SELECT id FROM vms.app_user WHERE employee_id = ANY(CAST(:ids AS uuid[]))", {"ids": ids})]
+        queue_event(self.db, users, "notification",
+                    {"kind": kind, "title": title, "body": body, "plan_id": str(plan_id) if plan_id else None})
+        if plan_id:
+            queue_event(self.db, users, "plan", {"plan_id": str(plan_id)})
 
     async def list_for(self, user_id: UUID | str, unread_only: bool, limit: int) -> list[Any]:
         """Mengambil daftar notifikasi untuk pengguna tertentu.

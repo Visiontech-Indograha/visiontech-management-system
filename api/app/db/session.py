@@ -22,6 +22,7 @@ from sqlalchemy.ext.asyncio import (
 
 from app.core.config import settings
 from app.core.errors import AppError
+from app.core.events import discard_events, flush_events
 
 # ── Engine & sessions ────────────────────────────────────────────────────────────
 # Fungsi & trigger di db/*.sql menyebut tabel tanpa awalan skema,
@@ -71,16 +72,20 @@ async def unit_of_work(db: AsyncSession) -> AsyncIterator[None]:
         # Jika persist=True, simpan perubahan sebelum membuang galat
         if exc.persist:
             await db.commit()
+            flush_events(db)
         else:
             await db.rollback()
+            discard_events(db)
         raise
     except BaseException:
         # Kembalikan perubahan jika terjadi kesalahan lain
         await db.rollback()
+        discard_events(db)
         raise
     else:
-        # Simpan perubahan jika tidak ada kesalahan
+        # Simpan perubahan jika tidak ada kesalahan, lalu siarkan peristiwa realtime (hanya setelah commit)
         await db.commit()
+        flush_events(db)
 
 
 # ── Request context (RLS & audit) ────────────────────────────────────────────

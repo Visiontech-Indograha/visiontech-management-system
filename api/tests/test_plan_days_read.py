@@ -30,10 +30,17 @@ def test_team_reads_days_tasks_and_daily_report(client, world: World):
     assert [d["id"] for d in days] == day_ids
     first, second = days
     assert [(t["title"], t["is_done"]) for t in first["tasks"]] == [("Pasang kamera", True)]
-    assert first["report"]["status"] == "DRAFT"
-    assert first["report"]["body"] == "Kamera 1-4 terpasang dan diuji"
-    assert first["report"]["evidence_file_ids"] == []
+    # 2026-10-09 (pemilik): draf laporan ketua belum terlihat anggota/PM — hanya ketua.
+    assert first["report"] is None
     assert second["report"] is None and second["tasks"][0]["is_done"] is False
+    own = client.get(f"/work-plans/{plan_id}/days", headers=leader).json()[0]["report"]
+    assert own["status"] == "DRAFT" and own["body"] == "Kamera 1-4 terpasang dan diuji"
+    assert own["evidence_file_ids"] == []
+    assert _days(client, world, plan_id, "pm").json()[0]["report"] is None
+
+    assert client.post(f"/work-plans/{plan_id}/days/{day_ids[0]}/submit", headers=leader).status_code == 200
+    sent = _days(client, world, plan_id, "member").json()[0]["report"]
+    assert sent["status"] == "SUBMITTED" and sent["body"] == "Kamera 1-4 terpasang dan diuji"
 
 
 def test_days_follow_plan_visibility(client, world: World, other_world: World):

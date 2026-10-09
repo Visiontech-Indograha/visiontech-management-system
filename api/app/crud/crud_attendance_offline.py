@@ -211,7 +211,8 @@ class CRUDAttendanceOffline(CRUDBase):
             {"emp": str(employee_id), "at": at},
         )
 
-    async def close_at(self, attendance_id: UUID | str, at: datetime) -> None:
+    async def close_at(self, attendance_id: UUID | str, at: datetime, *, lat: float | None = None,
+                       lng: float | None = None) -> None:
         """
         Menutup sesi absensi dengan menetapkan waktu check-out ke waktu spesifik
         (bukan waktu saat ini).
@@ -221,8 +222,15 @@ class CRUDAttendanceOffline(CRUDBase):
             at (datetime): Waktu check-out.
         """
         # Memperbarui kolom check_out_at dengan waktu yang ditentukan dari klien (saat luring)
-        await self.execute("UPDATE vms.attendance SET check_out_at = :at WHERE id = CAST(:id AS uuid)",
-                           {"at": at, "id": str(attendance_id)})
+        # Absen luring sudah terjadi: tidak ditolak karena swafoto/penjelasan kurang (trigger T7 hanya menandai).
+        await self.execute("SELECT set_config('app.relax_checkout', 'on', true)")
+        await self.execute(
+            "UPDATE vms.attendance SET check_out_at = :at, "
+            "check_out_location = CASE WHEN CAST(:lat AS float8) IS NULL THEN NULL "
+            "ELSE ST_SetSRID(ST_MakePoint(CAST(:lng AS float8), CAST(:lat AS float8)), 4326)::geography END "
+            "WHERE id = CAST(:id AS uuid)",
+            {"at": at, "id": str(attendance_id), "lat": lat, "lng": lng})
+        await self.execute("SELECT set_config('app.relax_checkout', 'off', true)")
 
     async def request_checkout(self, attendance_id: UUID | str, at: datetime) -> None:
         """

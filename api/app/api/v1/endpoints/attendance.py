@@ -170,9 +170,11 @@ async def check_out(
     Return: Detail absensi setelah check out (AttendanceResponse)
     """
     # Menggunakan dependensi attendance_session_service
+    await attendance_session_service.ensure_check_in_refs(current_user.organization_id, None, data.selfie_file_id)
     return _response(await attendance_session_service.check_out(
         current_user.user_id, data.channel, org_id=current_user.organization_id,
-        face_probe_id=data.face_probe_id,
+        face_probe_id=data.face_probe_id, lat=data.location.lat, lng=data.location.lng,
+        selfie_file_id=data.selfie_file_id, explanation=data.explanation, accuracy_m=data.accuracy_m,
     ))
 
 

@@ -75,6 +75,10 @@ class CheckOutRequest(BaseModel):
     location_origin: Literal["GPS", "SIMULASI"] = "GPS"
     # Pengenalan wajah saat pulang (tanpa foto bukti): id gambar wajah sementara dari POST /face/probe.
     face_probe_id: UUID | None = None
+    # T7: di luar radius lokasi, swafoto + penjelasan wajib (jarak dihitung ulang oleh server).
+    selfie_file_id: UUID | None = None
+    explanation: str | None = Field(None, max_length=1000)
+    accuracy_m: float | None = Field(None, ge=0)
 
 
 class ExplanationRequest(BaseModel):
@@ -125,6 +129,12 @@ class AttendanceResponse(BaseModel):
     offline: bool = False
     offline_note: str | None = None
     check_out_requested_at: datetime | None = None
+    # T7: absen pulang di luar radius + kategori dalam/luar kota (dihitung saat dibaca).
+    check_out_distance_m: float | None = None
+    check_out_outside: bool = False
+    check_out_selfie_file_id: UUID | None = None
+    check_out_explanation: str | None = None
+    city_category: str | None = None
 
 
 class AttendanceListResponse(BaseModel):

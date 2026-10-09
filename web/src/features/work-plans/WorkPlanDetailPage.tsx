@@ -16,6 +16,7 @@ import { FinalReportPanel } from "./FinalReport";
 import { IncidentDialog, IncidentPanel } from "./Incidents";
 import { OvertimeDialog, OvertimePanel } from "./Overtime";
 import { AmendmentPanel } from "./AmendmentPanel";
+import { RevisionHistory } from "./RevisionHistory";
 import { PlanDetailCard } from "./PlanDetailCard";
 import { ReasonDialog } from "./PlanForms";
 import { DailyReports } from "./DailyReports";
@@ -52,10 +53,11 @@ export function WorkPlanDetailPage() {
       <QueryState query={plan} errorText="Work plan tidak ditemukan atau Anda tidak berwenang melihatnya.">
         {p && (
           <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-            <section aria-label="Rincian SK" className="rounded-panel border border-line bg-surface shadow-card px-5 py-2">
+            <section aria-label="Rincian rencana kerja" className="rounded-panel border border-line bg-surface shadow-card px-5 py-2">
               <dl className="text-sm">
-                <Row label="Nomor SK">{p.number ?? "Belum terbit"}</Row>
+                <Row label="Nomor rencana kerja">{p.number ?? "Belum terbit"}</Row>
                 <Row label="Revisi">{p.revision}</Row>
+                {p.is_out_of_town && <Row label="Jenis">Luar kota</Row>}
                 {p.category && <Row label="Kategori">{CATEGORY_LABEL[p.category] ?? p.category}</Row>}
                 <Row label="Lokasi">{p.location_text}</Row>
                 <Row label="Periode">
@@ -64,7 +66,7 @@ export function WorkPlanDetailPage() {
                 <Row label="PM">{employeeName(employees.data, p.pm_employee_id)}</Row>
                 <Row label="Ketua tim">{employeeName(employees.data, p.leader_employee_id)}</Row>
                 {p.description && <Row label="Deskripsi pekerjaan">{p.description}</Row>}
-                {p.appeal_reason && <Row label="Alasan adendum">{p.appeal_reason}</Row>}
+                {p.appeal_reason && <Row label="Alasan revisi">{p.appeal_reason}</Row>}
                 {p.cancellation_reason && <Row label="Alasan pembatalan">{p.cancellation_reason}</Row>}
               </dl>
             </section>
@@ -126,10 +128,10 @@ function PlanActions({ plan }: { plan: WorkPlan }) {
     if (s === "DRAFT") {
       manager.push(
         <Button key="preview" variant="outline" onClick={() => setDialog({ kind: "preview" })}>
-          Sunting SK
+          Sunting rencana kerja
         </Button>,
         <Button key="publish" onClick={() => setDialog({ kind: "publish" })} disabled={busy}>
-          Terbitkan SK
+          Terbitkan rencana kerja
         </Button>,
       );
       // Draf revisi (pernah terbit) tidak bisa diarsip; pembatalannya lewat "Batalkan pekerjaan".
@@ -142,7 +144,7 @@ function PlanActions({ plan }: { plan: WorkPlan }) {
     }
     if (s === "APPEALED")
       manager.push(
-        <Button key="revise" onClick={() => run("revise", "Revisi dibuka. Ubah isi SK lalu terbitkan lagi.")} disabled={busy}>
+        <Button key="revise" onClick={() => run("revise", "Revisi dibuka. Ubah isi rencana kerja lalu terbitkan lagi.")} disabled={busy}>
           Buka revisi
         </Button>,
       );
@@ -157,6 +159,12 @@ function PlanActions({ plan }: { plan: WorkPlan }) {
           onClick={reason("return-completion", "Kembalikan (perlu perbaikan)", "Catatan untuk ketua tim")}
         >
           Kembalikan (perlu perbaikan)
+        </Button>,
+      );
+    if (["PUBLISHED", "APPEALED", "ACCEPTED", "IN_PROGRESS"].includes(s))
+      manager.push(
+        <Button key="revise-plan" asChild>
+          <Link to={`/work-plans/${plan.id}/revise`}>Revisi rencana kerja</Link>
         </Button>,
       );
     if (CANCELLABLE.includes(s) || (s === "DRAFT" && plan.revision > 1))
@@ -189,6 +197,7 @@ function PlanActions({ plan }: { plan: WorkPlan }) {
         </Button>
       )}
       <AmendmentPanel plan={plan} />
+      <RevisionHistory planId={plan.id} />
       <IncidentPanel plan={plan} />
       <OvertimePanel plan={plan} />
       {manager.length > 0 && (
@@ -196,18 +205,18 @@ function PlanActions({ plan }: { plan: WorkPlan }) {
           <h2 className="mb-3 text-base font-semibold">Tindakan PM</h2>
           {s === "PUBLISHED" && (
             <p className="mb-3 rounded-control bg-warning-bg px-3 py-2 text-sm text-warning">
-              Notifikasi sudah dikirim ke ketua tim dan anggota. Menunggu ketua meninjau SK di aplikasi HP lalu menekan{" "}
-              <strong>Terima SK</strong> atau <strong>Ajukan adendum</strong>.
+              Notifikasi sudah dikirim ke ketua tim dan anggota. Menunggu ketua meninjau rencana kerja di aplikasi HP lalu menekan{" "}
+              <strong>Terima rencana kerja</strong> atau <strong>Ajukan revisi</strong>.
             </p>
           )}
           {s === "APPEALED" && (
             <p className="mb-3 rounded-control bg-warning-bg px-3 py-2 text-sm text-warning">
-              Ketua tim meminta adendum{plan.appeal_reason ? `: "${plan.appeal_reason}"` : ""}. Buka revisi, ubah isi SK, lalu terbitkan lagi.
+              Ketua tim meminta revisi{plan.appeal_reason ? `: "${plan.appeal_reason}"` : ""}. Buka revisi, ubah isi rencana kerja, lalu terbitkan lagi.
             </p>
           )}
           {s === "ACCEPTED" && (
             <p className="mb-3 rounded-control bg-canvas px-3 py-2 text-sm text-mist">
-              SK diterima ketua tim. Status otomatis menjadi Berjalan pada {formatDate(plan.period_start)}.
+              Rencana Kerja diterima ketua tim. Status otomatis menjadi Berjalan pada {formatDate(plan.period_start)}.
             </p>
           )}
           <div className="flex flex-col gap-2 [&>button]:w-full">{manager}</div>
@@ -222,7 +231,7 @@ function PlanActions({ plan }: { plan: WorkPlan }) {
       {dialog?.kind === "publish" && (
         <Dialog
           open
-          title="Terbitkan SK?"
+          title="Terbitkan rencana kerja?"
           onClose={() => setDialog(null)}
           footer={
             <>
@@ -232,7 +241,7 @@ function PlanActions({ plan }: { plan: WorkPlan }) {
               <Button
                 onClick={async () => {
                   // Tetap terbuka bila gagal agar pesan & tombol ulang terlihat (CELAH 6, docs/28).
-                  if (await run("publish", "SK diterbitkan dan ditandatangani. Notifikasi dikirim ke ketua tim dan anggota.")) setDialog(null);
+                  if (await run("publish", "Rencana Kerja diterbitkan dan ditandatangani. Notifikasi dikirim ke ketua tim dan anggota.")) setDialog(null);
                 }}
                 disabled={busy}
               >
@@ -242,15 +251,15 @@ function PlanActions({ plan }: { plan: WorkPlan }) {
           }
         >
           <p className="text-sm text-mist">
-            SK <strong className="text-ink">{plan.title}</strong> akan diberi nomor, ditandatangani otomatis atas nama Anda, dan
-            notifikasinya dikirim ke ketua tim serta semua anggota. Setelah terbit, isi SK tidak dapat diubah — perubahan hanya lewat
-            adendum.
+            Rencana Kerja <strong className="text-ink">{plan.title}</strong> akan diberi nomor, ditandatangani otomatis atas nama Anda, dan
+            notifikasinya dikirim ke ketua tim serta semua anggota. Setelah terbit, isi rencana kerja tidak dapat diubah — perubahan hanya lewat
+            revisi.
           </p>
         </Dialog>
       )}
       {dialog?.kind === "preview" && (
         <SkPreviewDialog
-          title={`Sunting SK — ${plan.title}`}
+          title={`Sunting rencana kerja — ${plan.title}`}
           path={`/work-plans/${plan.id}/preview`}
           editTo={`/work-plans/${plan.id}/edit`}
           onClose={() => setDialog(null)}
@@ -279,8 +288,8 @@ function PlanActions({ plan }: { plan: WorkPlan }) {
           }
         >
           <p className="text-sm text-mist">
-            Laporan akhir <strong className="text-ink">{plan.title}</strong> akan dikunci dan ditandatangani ketua tim serta Anda. SK
-            yang berlaku menjadi tidak berlaku, ketua & anggota bebas dipilih untuk SK baru, dan status menjadi Selesai.
+            Laporan akhir <strong className="text-ink">{plan.title}</strong> akan dikunci dan ditandatangani ketua tim serta Anda. Rencana Kerja
+            yang berlaku menjadi tidak berlaku, ketua & anggota bebas dipilih untuk rencana kerja baru, dan status menjadi Selesai.
           </p>
         </Dialog>
       )}

@@ -211,7 +211,7 @@ async def get_plan_detail(
     - PlanDetailOut: Detail lengkap dari SK.
     """
     # Dependency Injection memastikan hak akses baca (VIEW) dan menyediakan service layer
-    return PlanDetailOut(**await plan_draft_service.detail(plan_id))
+    return PlanDetailOut(**await plan_draft_service.detail(plan_id, include_drafts=access.is_leader))
 
 
 @router.put("/{plan_id}/full", response_model=PlanDetailOut)

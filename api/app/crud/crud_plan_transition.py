@@ -282,20 +282,22 @@ class CRUDPlanTransition(CRUDBase):
         Returns:
             bool: True jika lengkap seluruh harinya.
         """
-        # Menghitung selisih (jumlah hari SK) lalu membandingkannya dengan
-        # jumlah baris vms.work_plan_day yang memenuhi syarat judul terisi
-        # serta memiliki setidaknya satu tugas tanpa judul kosong.
+        # Hari libur = tanggal yang tidak punya baris hari (2026-10-09), jadi yang diperiksa adalah SEMUA hari kerja yang
+        # ada: tiap hari berjudul dan punya >= 1 tugas berjudul; minimal satu hari, dan hari pertama/terakhir tepat di
+        # tanggal mulai/selesai rencana.
         return bool(await self.scalar(
             """
-            SELECT
-              (SELECT count(*) FROM vms.work_plan_day d
-                 WHERE d.work_plan_id = wp.id AND d.work_date <@ wp.period
-                   AND btrim(d.title) <> ''
-                   AND EXISTS (SELECT 1 FROM vms.work_plan_task t WHERE t.work_plan_day_id = d.id)
-                   AND NOT EXISTS (SELECT 1 FROM vms.work_plan_task t
-                                   WHERE t.work_plan_day_id = d.id AND btrim(t.title) = ''))
-              = (upper(wp.period) - lower(wp.period))
-            FROM vms.work_plan wp WHERE wp.id = :plan
+            SELECT count(*) > 0
+               AND count(*) = count(*) FILTER (
+                     WHERE btrim(d.title) <> ''
+                       AND EXISTS (SELECT 1 FROM vms.work_plan_task t WHERE t.work_plan_day_id = d.id)
+                       AND NOT EXISTS (SELECT 1 FROM vms.work_plan_task t
+                                       WHERE t.work_plan_day_id = d.id AND btrim(t.title) = ''))
+               AND min(d.work_date) = lower(wp.period) AND max(d.work_date) = upper(wp.period) - 1
+            FROM vms.work_plan wp
+            JOIN vms.work_plan_day d ON d.work_plan_id = wp.id AND d.work_date <@ wp.period
+            WHERE wp.id = :plan
+            GROUP BY wp.id, wp.period
             """,
             {"plan": plan_id},
         ))

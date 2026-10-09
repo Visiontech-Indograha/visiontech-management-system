@@ -73,7 +73,7 @@ class _PlanDayScreenState extends ConsumerState<PlanDayScreen> {
   Future<void> _loadMembers() async {
     final api = ref.read(syncEngineProvider).api;
     try {
-      final template = await api.photoTemplate(widget.planId);
+      final template = await api.photoTemplate(widget.planId, dayId: _dayId);
       if (mounted) setState(() => _template = template);
     } catch (_) {
       // Luring: tanpa template, hanya "Foto lain".

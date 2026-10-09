@@ -46,6 +46,7 @@ const schema = z
         work_date: z.string(),
         tasks: z.array(taskSchema).min(1, "Isi minimal satu detail pekerjaan."),
         site_id: z.string(), // "" = ikut lokasi rencana
+        work_type_id: z.string(), // "" = ikut jenis rencana
         member_mode: z.enum(["all", "custom"]), // all = seluruh tim; custom = hanya yang dipilih (ketua selalu ikut)
         member_ids: z.array(z.string()),
       }),
@@ -74,6 +75,7 @@ const newDay = (work_date: string, tasks: TaskValue[] = [emptyTask()]): DayValue
   work_date,
   tasks,
   site_id: "",
+  work_type_id: "",
   member_mode: "all",
   member_ids: [],
 });
@@ -106,6 +108,9 @@ const busyNote = (dates?: string[]): string =>
     ? ` (sibuk di rencana lain: ${dates.slice(0, 6).map((d) => formatDate(d)).join(", ")}${dates.length > 6 ? ", …" : ""})`
     : "";
 
+const WEEKDAYS = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+const weekday = (iso: string) => WEEKDAYS[new Date(`${iso}T00:00:00Z`).getUTCDay()];
+
 const nextDay = (iso: string) => {
   const d = new Date(`${iso}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + 1);
@@ -130,6 +135,7 @@ function fromDetail(detail: PlanDetail): { values: Values; site: NewSite | null 
         detail.days as {
           work_date: string;
           site_id?: string | null;
+          work_type_id?: string | null;
           member_employee_ids?: string[] | null;
           tasks: { title: string; description: string; files: TaskValue["files"] }[];
         }[]
@@ -137,6 +143,7 @@ function fromDetail(detail: PlanDetail): { values: Values; site: NewSite | null 
         work_date: d.work_date,
         tasks: d.tasks.map((t) => ({ title: t.title, description: t.description, files: t.files ?? [] })),
         site_id: d.site_id ? String(d.site_id) : "",
+        work_type_id: d.work_type_id ? String(d.work_type_id) : "",
         member_mode: d.member_employee_ids ? "custom" : "all",
         member_ids: (d.member_employee_ids ?? []).filter((m) => m !== team.find((x) => x.role_in_plan === "LEADER")?.employee_id),
       })),
@@ -315,10 +322,13 @@ function PlanEditor({ planId, detail, revise = false, changeId }: { planId?: str
         work_date: d.work_date,
         tasks: d.tasks.map((t) => ({ title: t.title, description: t.description, file_ids: t.files.map((f) => f.file_id) })),
         site_id: d.site_id || null,
-        member_employee_ids: d.member_mode === "custom" ? d.member_ids.filter((m) => v.member_employee_ids.includes(m)) : null,
+        work_type_id: d.work_type_id || null,
+        member_employee_ids: d.member_mode === "custom" ? d.member_ids.filter((m) => m !== v.leader_employee_id) : null,
       })),
       leader_employee_id: v.leader_employee_id,
-      member_employee_ids: v.member_employee_ids,
+      member_employee_ids: [...new Set([...v.member_employee_ids, ...v.days.flatMap((d) => (d.member_mode === "custom" ? d.member_ids : []))])].filter(
+        (m) => m !== v.leader_employee_id,
+      ),
       is_out_of_town: v.is_out_of_town,
       work_type_id: v.work_type_id || null,
       tool_ids: v.tool_ids,
@@ -443,7 +453,11 @@ function PlanEditor({ planId, detail, revise = false, changeId }: { planId?: str
                       setValue={setValue}
                       errors={errors}
                       sites={o.sites}
-                      team={members.map((m) => ({ id: m, name: people.get(m) ?? m }))}
+                      workTypes={(workTypes.data ?? []).map((t) => ({ id: t.id, name: t.name }))}
+                      candidates={(o.members ?? [])
+                        .filter((p) => String(p.id) !== leader)
+                        .map((p) => ({ id: String(p.id), name: p.full_name, busy: p.busy_dates ?? [] }))}
+                      allDays={days.fields.map((f, k) => ({ index: k, date: f.work_date }))}
                       canHoliday={i > 0 && i < days.fields.length - 1}
                       onHoliday={() => markHoliday(day.work_date)}
                     />
@@ -614,7 +628,9 @@ function DayCard({
   setValue,
   errors,
   sites,
-  team,
+  workTypes,
+  candidates,
+  allDays,
   canHoliday,
   onHoliday,
 }: {
@@ -625,13 +641,29 @@ function DayCard({
   setValue: UseFormSetValue<Values>;
   errors: FieldErrors<Values>;
   sites: { id: string; name: string }[];
-  team: { id: string; name: string }[];
+  workTypes: { id: string; name: string }[];
+  candidates: { id: string; name: string; busy: string[] }[];
+  allDays: { index: number; date: string }[];
   canHoliday: boolean;
   onHoliday: () => void;
 }) {
   const tasks = useFieldArray({ control, name: `days.${index}.tasks` });
   const memberMode = useWatch({ control, name: `days.${index}.member_mode` });
   const memberIds = useWatch({ control, name: `days.${index}.member_ids` });
+  const daySite = useWatch({ control, name: `days.${index}.site_id` });
+  const dayWorkType = useWatch({ control, name: `days.${index}.work_type_id` });
+  const [copyTo, setCopyTo] = useState<number[]>([]);
+  /** Terapkan lokasi + daftar anggota hari ini ke hari-hari yang dipilih (mis. Senin, Selasa, Jumat). */
+  const applyToOthers = () => {
+    for (const t of copyTo) {
+      setValue(`days.${t}.site_id`, daySite, { shouldDirty: true });
+      setValue(`days.${t}.work_type_id`, dayWorkType, { shouldDirty: true });
+      setValue(`days.${t}.member_mode`, memberMode, { shouldDirty: true });
+      setValue(`days.${t}.member_ids`, [...memberIds], { shouldDirty: true });
+    }
+    toast.success(`Pengaturan hari ini diterapkan ke ${copyTo.length} hari.`);
+    setCopyTo([]);
+  };
   const live = useWatch({ control, name: `days.${index}.tasks` });
   const [uploading, setUploading] = useState<number | null>(null);
   const dayErr = errors.days?.[index];
@@ -664,7 +696,15 @@ function DayCard({
         </Button>
       </div>
       <details className="mb-3 rounded-control border border-line p-3">
-        <summary className="min-h-11 cursor-pointer text-sm font-medium">Lokasi &amp; anggota hari ini</summary>
+        <summary className="min-h-11 cursor-pointer text-sm font-medium">Jenis, lokasi &amp; anggota hari ini</summary>
+        <SelectField label="Jenis pekerjaan hari ini" hint="Menentukan template foto laporan hari ini." {...register(`days.${index}.work_type_id`)}>
+          <option value="">Ikut jenis rencana</option>
+          {workTypes.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.name}
+            </option>
+          ))}
+        </SelectField>
         <SelectField label="Lokasi hari ini" hint="Absensi hari ini mengikuti lokasi ini." {...register(`days.${index}.site_id`)}>
           <option value="">Ikut lokasi rencana</option>
           {sites.map((s) => (
@@ -683,8 +723,8 @@ function DayCard({
           </label>
           {memberMode === "custom" && (
             <div className="ml-2 space-y-1">
-              {team.length === 0 && <p className="text-sm text-mist">Belum ada anggota tim.</p>}
-              {team.map((m) => (
+              {candidates.length === 0 && <p className="text-sm text-mist">Tidak ada calon anggota.</p>}
+              {candidates.map((m) => (
                 <label key={m.id} className="flex min-h-11 items-center gap-2 text-sm">
                   <input
                     type="checkbox"
@@ -694,13 +734,42 @@ function DayCard({
                       setValue(`days.${index}.member_ids`, e.target.checked ? [...memberIds, m.id] : memberIds.filter((x) => x !== m.id), { shouldDirty: true })
                     }
                   />
-                  {m.name}
+                  <span>
+                    {m.name}
+                    {m.busy.includes(workDate) && <span className="block text-xs text-warning">Sibuk di rencana lain pada tanggal ini</span>}
+                  </span>
                 </label>
               ))}
             </div>
           )}
-          <p className="mt-1 text-xs text-mist">Anggota yang tidak bertugas hari ini tetap tercatat di rencana, tetapi tidak wajib absen dan lapor.</p>
+          <p className="mt-1 text-xs text-mist">
+            Pilih pekerja hari ini langsung di sini; mereka otomatis menjadi anggota rencana, tetapi hanya terikat pada hari yang dipilih
+            dan tetap bebas di hari lainnya.
+          </p>
         </fieldset>
+        {allDays.length > 1 && (
+          <fieldset className="mt-3 border-t border-line pt-3">
+            <legend className="text-sm font-medium">Terapkan jenis, lokasi &amp; pekerja ini ke hari lain</legend>
+            <div className="flex flex-wrap gap-x-4">
+              {allDays
+                .filter((d) => d.index !== index)
+                .map((d) => (
+                  <label key={d.date} className="flex min-h-11 items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      className="size-5"
+                      checked={copyTo.includes(d.index)}
+                      onChange={(e) => setCopyTo(e.target.checked ? [...copyTo, d.index] : copyTo.filter((x) => x !== d.index))}
+                    />
+                    {weekday(d.date)} {formatDate(d.date)}
+                  </label>
+                ))}
+            </div>
+            <Button type="button" variant="outline" size="sm" disabled={copyTo.length === 0} onClick={applyToOthers}>
+              Terapkan ke hari terpilih
+            </Button>
+          </fieldset>
+        )}
       </details>
       <div className="space-y-3">
         {tasks.fields.map((task, t) => (

@@ -147,8 +147,12 @@ class VmsApi {
 
   // --- Adendum saat berjalan, aset, laporan akhir (alur SK v2 PR3) ----------
   /// Template foto laporan rencana kerja (T9): slot `{label, hint, required}`; kosong bila tanpa jenis pekerjaan.
-  Future<List<Map<String, dynamic>>> photoTemplate(String planId) async =>
-      _list((await _dio.get('$_p/work-plans/$planId/photo-template')).data);
+  Future<List<Map<String, dynamic>>> photoTemplate(String planId, {String? dayId}) async => _list(
+    (await _dio.get(
+      '$_p/work-plans/$planId/photo-template',
+      queryParameters: {'day_id': ?dayId},
+    )).data,
+  );
 
   /// URL sementara (presigned) sebuah berkas gambar, mis. foto contoh template. `variant`: thumb | view | full.
   Future<String> fileUrl(String fileId, {String variant = 'view'}) async {

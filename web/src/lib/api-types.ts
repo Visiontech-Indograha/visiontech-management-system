@@ -4798,6 +4798,8 @@ export interface components {
             site_id?: string | null;
             /** Member Employee Ids */
             member_employee_ids?: string[] | null;
+            /** Work Type Id */
+            work_type_id?: string | null;
         };
         /**
          * DraftTaskInput

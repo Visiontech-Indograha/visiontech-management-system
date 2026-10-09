@@ -398,15 +398,21 @@ class CRUDPlanDraft(CRUDBase):
         )
 
     async def insert_day(self, plan_id: UUID | str, work_date: date, title: str, sort_order: int,
-                         site_id: UUID | str | None = None) -> Any:
-        """Menyisipkan hari kerja baru dalam draf (opsional dengan lokasi khusus hari itu)."""
+                         site_id: UUID | str | None = None, work_type_id: UUID | str | None = None) -> Any:
+        """Menyisipkan hari kerja baru dalam draf (opsional dengan lokasi dan jenis pekerjaan khusus hari itu)."""
         # Menambah hari berdasarkan tanggal di work_date dan mereturn id hari.
         return await self.scalar(
-            "INSERT INTO vms.work_plan_day (work_plan_id, work_date, title, sort_order, site_id) "
-            "VALUES (:plan, :date, :title, :sort, CAST(:site AS uuid)) RETURNING id",
+            "INSERT INTO vms.work_plan_day (work_plan_id, work_date, title, sort_order, site_id, work_type_id) "
+            "VALUES (:plan, :date, :title, :sort, CAST(:site AS uuid), CAST(:wt AS uuid)) RETURNING id",
             {"plan": plan_id, "date": work_date, "title": title, "sort": sort_order,
-             "site": str(site_id) if site_id else None},
+             "site": str(site_id) if site_id else None, "wt": str(work_type_id) if work_type_id else None},
         )
+
+    async def set_day_work_type(self, day_id: UUID | str, work_type_id: UUID | str | None) -> None:
+        """Jenis pekerjaan khusus satu hari (None = ikut jenis rencana)."""
+        await self.execute(
+            "UPDATE vms.work_plan_day SET work_type_id = CAST(:wt AS uuid) WHERE id = CAST(:day AS uuid)",
+            {"day": str(day_id), "wt": str(work_type_id) if work_type_id else None})
 
     async def set_day_site(self, day_id: UUID | str, site_id: UUID | str | None) -> None:
         """Lokasi khusus satu hari (None = ikut lokasi rencana)."""
@@ -521,6 +527,8 @@ class CRUDPlanDraft(CRUDBase):
               'days', COALESCE((SELECT jsonb_agg(jsonb_build_object('id', d.id, 'work_date', d.work_date,
                             'title', d.title, 'site_id', d.site_id,
                             'site_name', (SELECT s2.name FROM vms.site s2 WHERE s2.id = d.site_id),
+                            'work_type_id', d.work_type_id,
+                            'work_type_name', (SELECT w2.name FROM vms.work_type w2 WHERE w2.id = d.work_type_id),
                             'member_employee_ids', (SELECT jsonb_agg(dm.employee_id)
                                                     FROM vms.work_plan_day_member dm
                                                     WHERE dm.work_plan_day_id = d.id),

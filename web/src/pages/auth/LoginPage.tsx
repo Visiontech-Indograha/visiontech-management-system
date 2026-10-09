@@ -4,9 +4,7 @@ import { useForm } from "react-hook-form";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useSession } from "@/app/session";
 import { ApiError } from "@/lib/apiClient";
-import { AndroidAppLink } from "@/components/organisms/auth/AndroidAppLink";
-import { LoginBrandPanel } from "@/components/organisms/auth/LoginBrandPanel";
-import { LoginForm } from "@/components/organisms/auth/LoginForm";
+import { LoginTemplate } from "@/components/templates/auth/LoginTemplate";
 import { loginSchema, type LoginValues } from "@/schemas/loginSchema";
 import { useLockCountdown } from "@/hooks/useLockCountdown";
 
@@ -33,15 +31,5 @@ export function LoginPage({ admin = false }: { admin?: boolean }) {
     }
   });
 
-  return (
-    <main className="no-reveal grid min-h-screen bg-background lg:grid-cols-[1.1fr_1fr]">
-      {/* Panel brand (desktop) — navy Visiontech + aksen emas */}
-      <LoginBrandPanel />
-
-      <section className="flex flex-col items-center justify-center gap-4 px-4 py-10">
-        <LoginForm admin={admin} form={form} onSubmit={onSubmit} formError={formError} lockSeconds={lockLeft.seconds} />
-        <AndroidAppLink />
-      </section>
-    </main>
-  );
+  return <LoginTemplate admin={admin} form={form} onSubmit={onSubmit} formError={formError} lockSeconds={lockLeft.seconds} />;
 }

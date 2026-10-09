@@ -38,11 +38,6 @@ const compositionRules = (who, extraPatterns = []) => ({
   ],
 })
 
-// Page/Template lama yang BELUM dimigrasi (docs/33 §7). Daftar ini HANYA BOLEH MENYUSUT.
-const NOT_YET_MIGRATED = [
-  'src/pages/work-plans/PlanEditorPage.tsx',
-]
-
 export default tseslint.config(
   { ignores: ['dist', 'legacy_ref'] },
   {
@@ -102,9 +97,5 @@ export default tseslint.config(
     files: ['src/pages/**/*.tsx'],
     ignores: ['**/*.test.tsx'],
     rules: compositionRules('Page'),
-  },
-  {
-    files: NOT_YET_MIGRATED,
-    rules: { 'no-restricted-imports': 'off', 'no-restricted-syntax': 'off' },
   },
 )

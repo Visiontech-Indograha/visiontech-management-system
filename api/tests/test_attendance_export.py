@@ -14,7 +14,8 @@ from tests.conftest import World, requires_db
 pytestmark = requires_db
 
 INSIDE = {"lat": -6.2, "lng": 106.8}
-HEADER = ["Tanggal", "NIK", "Nama", "Lokasi", "Check In", "Check Out", "Terlambat", "Pulang Cepat", "Status"]
+HEADER = ["Tanggal", "NIK", "Nama", "Lokasi", "Check In", "Check Out", "Terlambat", "Pulang Cepat", "Status",
+          "Kategori", "Jarak pulang (m)"]
 
 
 def _check_in(client, world: World, who: str) -> None:

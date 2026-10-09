@@ -20,10 +20,10 @@ type Signature = components["schemas"]["SignatureOut"];
 
 const PDF_UNAVAILABLE = "Pembuatan PDF sedang tidak tersedia. Coba lagi nanti atau hubungi admin.";
 const KIND_LABEL: Record<string, string> = {
-  INITIAL_ORDER: "SK",
-  REVISION: "Revisi SK",
-  ADDENDUM: "Adendum",
-  PERSONNEL_ADDENDUM: "Adendum personel",
+  INITIAL_ORDER: "Rencana Kerja",
+  REVISION: "Revisi",
+  ADDENDUM: "Revisi",
+  PERSONNEL_ADDENDUM: "Revisi personel",
 };
 
 /** Unduh PDF bertanda tangan (GET /documents/{id}/pdf, blob). */
@@ -51,7 +51,7 @@ export function Documents({ plan }: { plan: WorkPlan }) {
   return (
     <section aria-label="Dokumen" className="mt-6">
       <h2 className="mb-3 text-base font-semibold">Dokumen</h2>
-      <QueryState query={docs} errorText="Dokumen tidak dapat dimuat." empty={docs.data?.length === 0} emptyText="Belum ada dokumen SK.">
+      <QueryState query={docs} errorText="Dokumen tidak dapat dimuat." empty={docs.data?.length === 0} emptyText="Belum ada dokumen rencana kerja.">
         <ul className="space-y-4">
           {docs.data?.map((d) => (
             <DocumentCard key={d.id} doc={d} />

@@ -58,7 +58,7 @@ export function LoginPage({ admin = false }: { admin?: boolean }) {
         <div className="relative max-w-md">
           <span className="mb-4 block h-1 w-12 rounded-full bg-gold" />
           <p className="text-display text-white">Pekerjaan lapangan, rapi dalam satu tempat.</p>
-          <p className="mt-3 text-body text-brand-100">SK penugasan, absensi, laporan harian, aset, dan dokumen bertanda tangan digital.</p>
+          <p className="mt-3 text-body text-brand-100">Rencana Kerja penugasan, absensi, laporan harian, aset, dan dokumen bertanda tangan digital.</p>
         </div>
         <p className="relative text-caption text-brand-200">© PT Visiontech Indograha</p>
       </section>

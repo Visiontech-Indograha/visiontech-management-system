@@ -34,7 +34,7 @@ class PlanNeed(StrEnum):
 
 _REFUSAL = {
     PlanNeed.PM_UNIT: "Hanya PM unit pekerjaan ini yang dapat melakukan tindakan ini.",
-    PlanNeed.LEADER: "Hanya ketua tim menurut SK yang berlaku yang dapat melakukan tindakan ini.",
+    PlanNeed.LEADER: "Hanya ketua tim menurut rencana kerja yang berlaku yang dapat melakukan tindakan ini.",
     PlanNeed.MEMBER: "Hanya anggota tim pekerjaan ini yang dapat melakukan tindakan ini.",
     PlanNeed.LEADER_OR_MEMBER: "Hanya ketua atau anggota tim pekerjaan ini yang dapat melakukan tindakan ini.",
 }
@@ -53,7 +53,7 @@ class PlanAccess:
     is_member: bool
 
 
-STAGE_MISMATCH = "Status SK belum sesuai untuk tindakan ini. Muat ulang halaman."  # domain.js requireStatus
+STAGE_MISMATCH = "Status rencana kerja belum sesuai untuk tindakan ini. Muat ulang halaman."  # domain.js requireStatus
 
 
 def require_plan_status(access: PlanAccess, *allowed: str) -> None:
@@ -118,7 +118,7 @@ async def check_plan_access(
     # Mengambil data akses SK secara spesifik untuk membatasi visibilitas antar-organisasi.
     row = await CRUDPlanAccess(db).standing(plan_id, user.organization_id, user.user_id, archived)
     if row is None:
-        raise NotFoundError("SK")
+        raise NotFoundError("Rencana Kerja")
 
     # Memeriksa apakah kedudukan dari database memenuhi aturan akses bisnis.
     if not satisfies(need, manages=row.manages, is_leader=row.is_leader, is_member=row.is_member):
@@ -147,7 +147,7 @@ async def check_unit_manager(db: AsyncSession, unit_id: UUID | str, user: Curren
 
     # Hanya pengguna dengan peran manajerial yang berwenang.
     if not row.manages:
-        raise ForbiddenError("Hanya PM unit ini yang dapat membuat SK untuk unit tersebut.")
+        raise ForbiddenError("Hanya PM unit ini yang dapat membuat rencana kerja untuk unit tersebut.")
 
 
 async def check_file_access(db: AsyncSession, file_id: UUID, user: CurrentUser) -> Any:
@@ -163,6 +163,8 @@ async def check_file_access(db: AsyncSession, file_id: UUID, user: CurrentUser) 
     if row is None:
         raise NotFoundError("Berkas")
     if row.is_uploader:
+        return row
+    if row.work_type_example:   # foto contoh template: petunjuk kerja, terbuka untuk seluruh organisasi
         return row
     if row.personal_document:
         if row.own_document or Permission.MANAGE_EMPLOYEE_DOCUMENTS.value in user.permissions:
@@ -180,7 +182,7 @@ async def check_file_access(db: AsyncSession, file_id: UUID, user: CurrentUser) 
 
 
 _REF_LABELS = (
-    ("work_plans", "SK"), ("sites", "Lokasi"), ("assets", "Aset"),
+    ("work_plans", "Rencana Kerja"), ("sites", "Lokasi"), ("assets", "Aset"),
     ("files", "Berkas"), ("employees", "Karyawan"), ("units", "Unit bisnis"),
 )
 

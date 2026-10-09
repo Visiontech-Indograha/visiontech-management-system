@@ -143,7 +143,7 @@ export function OffboardDialog({ employee, onClose }: { employee: Employee; onCl
       <form id="offboard-form" onSubmit={onSubmit} noValidate>
         <FormError message={formError} />
         <p className="mb-4 text-sm text-mist">
-          Akun login karyawan ini dinonaktifkan. Riwayat SK, absensi, dan dokumen tetap tersimpan.
+          Akun login karyawan ini dinonaktifkan. Riwayat rencana kerja, absensi, dan dokumen tetap tersimpan.
         </p>
         <TextField label="Alasan" error={errors.reason?.message} {...register("reason")} />
       </form>

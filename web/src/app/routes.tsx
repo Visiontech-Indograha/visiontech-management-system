@@ -6,7 +6,7 @@ import { TitleLayout } from "@/components/layout/TitleLayout";
 import { LoginPage } from "@/pages/auth/LoginPage";
 import { ComingSoonPage, ForbiddenPage, HomePage, NotFoundPage } from "@/pages/Placeholders";
 import { NAV_ITEMS } from "./navigation";
-import { AssetsPage, AttendancePage, AuditLogPage, DirectoryPage, EmployeeDetailPage, MyDocumentsPage, SitesPage, WorkPlanDetailPage, WorkPlansPage, PlanEditorPage, AttendanceRecapPage, OvertimeRecapPage, PresentationPage, TimelinePage, AccountPage } from "./lazyPages";
+import { AssetsPage, AttendancePage, AuditLogPage, DirectoryPage, EmployeeDetailPage, MyDocumentsPage, SitesPage, WorkTypesPage, WorkPlanDetailPage, WorkPlansPage, PlanEditorPage, AttendanceRecapPage, OvertimeRecapPage, PresentationPage, TimelinePage, AccountPage } from "./lazyPages";
 import { VerifyPage } from "@/features/verify/VerifyPage";
 import { ChangePasswordPage } from "@/pages/auth/ChangePasswordPage";
 
@@ -17,6 +17,7 @@ const PAGES: Record<string, ReactNode> = {
   "/directory": <DirectoryPage />,
   "/my-documents": <MyDocumentsPage />,
   "/sites": <SitesPage />,
+  "/work-types": <WorkTypesPage />,
   "/work-plans": <WorkPlansPage />,
   "/assets": <AssetsPage />,
   "/timeline": <TimelinePage />,
@@ -68,6 +69,7 @@ export const routes: RouteObject[] = [
           { path: "/work-plans/new", element: <RequireAccess item={NAV_ITEMS.find((i) => i.path === "/work-plans")!}><PlanEditorPage /></RequireAccess> },
           { path: "/work-plans/:id/edit", element: <PlanEditorPage /> },
           { path: "/work-plans/:id/amend/:changeId", element: <PlanEditorPage /> },
+          { path: "/work-plans/:id/revise", element: <PlanEditorPage /> },
           { path: "/work-plans/:id", element: <WorkPlanDetailPage /> },
           { path: "/account", element: <AccountPage /> },
           { path: "/forbidden", element: <ForbiddenPage /> },

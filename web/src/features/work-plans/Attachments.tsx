@@ -69,7 +69,7 @@ export function Attachments({ plan }: { plan: WorkPlan }) {
   if (!editable && list.isSuccess && current.length === 0) return null;
 
   return (
-    <section aria-label="Lampiran SK" className="mt-6 rounded-panel border border-line bg-surface shadow-card p-4">
+    <section aria-label="Lampiran rencana kerja" className="mt-6 rounded-panel border border-line bg-surface shadow-card p-4">
       <h2 className="mb-3 text-base font-semibold">Lampiran</h2>
       {error && (
         <p role="alert" className="mb-3 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
@@ -101,7 +101,7 @@ export function Attachments({ plan }: { plan: WorkPlan }) {
             type="file"
             multiple
             accept=".jpg,.jpeg,.png,.pdf"
-            hint="Maksimal 10 MB per berkas. Lampiran dibekukan saat SK diterbitkan."
+            hint="Maksimal 10 MB per berkas. Lampiran dibekukan saat rencana kerja diterbitkan."
             disabled={busy}
             onChange={(e) => {
               add(e.target.files);

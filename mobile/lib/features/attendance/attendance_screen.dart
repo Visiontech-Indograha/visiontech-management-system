@@ -18,6 +18,7 @@ import '../../shared/ui/vms_select_field.dart';
 import '../../shared/ui/vms_ui.dart';
 import '../auth/auth_controller.dart';
 import '../auth/auth_state.dart';
+import '../face/face_enroll_gate.dart';
 import '../face/face_flow.dart';
 
 /// Absensi (M5, dok 05 §3.5). Wajib daring: waktu & geofence ditentukan server.
@@ -95,10 +96,10 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
         _faceEnrolled = false;
       }
       // Titik lokasi SK yang sedang berjalan (ditetapkan PM) didahulukan sebagai lokasi absen.
+      // Lokasi absen hari ini mengikuti hari kerja rencana (lokasi khusus hari itu atau lokasi rencana).
       final runningSites = [
         for (final p in plans.items)
-          if (p['status'] == 'IN_PROGRESS' && p['site_id'] != null)
-            p['site_id'] as String,
+          if (todaySiteOf(p) != null) todaySiteOf(p)!,
       ];
       if (!mounted) return;
       setState(() {
@@ -304,7 +305,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       }
       await _load();
     } catch (e) {
-      _snack(apiErrorMessage(e));
+      if (!await _handleFaceNotEnrolled(e)) _snack(apiErrorMessage(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -315,6 +316,49 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     try {
       final pos = await _position();
       if (pos == null) return;
+      // T7: pulang di luar radius lokasi absen masuk → konfirmasi, penjelasan, dan swafoto (tidak masuk galeri).
+      // Jarak resmi dihitung ulang server; ini hanya untuk meminta bukti lebih dulu.
+      final site = _sites.where((s) => s['id'] == _today?['site_id']).firstOrNull;
+      var outside = false;
+      var distance = 0.0;
+      num radius = 50;
+      if (site != null && site['location'] is Map) {
+        final loc = site['location'] as Map;
+        distance = Geolocator.distanceBetween(
+          pos.latitude,
+          pos.longitude,
+          (loc['lat'] as num).toDouble(),
+          (loc['lng'] as num).toDouble(),
+        );
+        radius = (site['radius_m'] as num?) ?? 50;
+        outside = distance > radius;
+      }
+      String? explanation;
+      File? selfieFile;
+      if (outside && _today?['status'] != 'OFFLINE') {
+        if (!mounted) return;
+        explanation = await _askExplanation(
+          title: 'Pulang di luar zona',
+          info:
+              'Anda ${distance.round()} m dari ${site!['name']} (radius ${radius.round()} m). '
+              'Jelaskan mengapa pulang di luar zona.',
+        );
+        if (explanation == null) return;
+        if (!mounted) return;
+        final (file, err) = await captureWatermarkedPhoto(
+          context: context,
+          label: 'Swafoto pulang di luar radius',
+          kind: LocalFileKind.selfie,
+          hint:
+              'Anda ${distance.round()} m dari ${site['name']}. Swafoto wajib di luar radius.',
+          preferFrontCamera: true,
+        );
+        if (file == null) {
+          if (err != null) _snack(err);
+          return;
+        }
+        selfieFile = file;
+      }
       String? faceProbeId;
       // Pulang: hanya pengenalan wajah, TANPA foto bukti.
       if (_faceEnrolled) {
@@ -343,13 +387,19 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
         );
       } else {
         try {
+          final selfieId = selfieFile == null
+              ? null
+              : await ref.read(syncEngineProvider).api.uploadFile(selfieFile);
           await ref
               .read(syncEngineProvider)
               .api
               .checkOut(
                 lat: pos.latitude,
                 lng: pos.longitude,
+                accuracyM: pos.accuracy,
                 faceProbeId: faceProbeId,
+                selfieFileId: selfieId,
+                explanation: explanation,
               );
           _snack('Absen pulang tercatat.');
         } on DioException catch (e) {
@@ -362,10 +412,30 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       }
       await _load();
     } catch (e) {
-      _snack(apiErrorMessage(e));
+      if (!await _handleFaceNotEnrolled(e)) _snack(apiErrorMessage(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  /// T3: server menolak absen karena wajah belum terdaftar → jelaskan, lalu buka gerbang pendaftaran wajah.
+  Future<bool> _handleFaceNotEnrolled(Object e) async {
+    if (apiErrorCode(e) != 'FACE_NOT_ENROLLED' || !mounted) return false;
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Wajah belum terdaftar'),
+        content: Text(apiErrorMessage(e)),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Daftarkan wajah'),
+          ),
+        ],
+      ),
+    );
+    ref.invalidate(faceGateProvider);
+    return true;
   }
 
   /// Dialog penjelasan wajib: Kirim dengan isian kosong menampilkan pesan, bukan menutup diam-diam.
@@ -502,6 +572,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
   Widget build(BuildContext context) {
     // Sinkron latar selesai (mis. absen luring baru terkirim) → muat ulang kartu & riwayat.
     ref.listen(syncTickProvider, (_, _) => _load());
+    ref.listen(liveEventTickProvider, (_, _) => _load());   // T8: peristiwa waktu nyata
     final today = _today;
     final auth = ref.watch(authControllerProvider);
     final name = auth is AuthAuthenticated
@@ -580,7 +651,8 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                                     Text(
                                       today == null
                                           ? 'Belum absen masuk'
-                                          : '${today['site_label']}',
+                                          : '${today['site_label']} · '
+                                                '${today['city_category'] == 'LUAR_KOTA' ? 'Luar kota' : 'Dalam kota'}',
                                       style: VmsTextStyles.bodySm.copyWith(
                                         color: Colors.white.withValues(
                                           alpha: 0.75,
@@ -645,7 +717,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                                 key: Key('belum-ada-lokasi-sk'),
                                 icon: Icons.location_off_rounded,
                                 text:
-                                    'Belum ada lokasi kerja untuk akun Anda (lokasi SK maupun kantor). '
+                                    'Belum ada lokasi kerja untuk akun Anda (lokasi rencana kerja maupun kantor). '
                                     'Hubungi Project Manager atau admin untuk menambahkan lokasi kerja.',
                               ),
                               const SizedBox(height: 12),
@@ -673,8 +745,8 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                                   key: const Key('peringatan-bukan-lokasi-sk'),
                                   icon: Icons.warning_amber_rounded,
                                   text:
-                                      'Anda sedang bertugas di SK dengan lokasi '
-                                      '${_siteName(_runningSites.first)}. Lokasi yang dipilih bukan lokasi SK; '
+                                      'Anda sedang bertugas di rencana kerja dengan lokasi '
+                                      '${_siteName(_runningSites.first)}. Lokasi yang dipilih bukan lokasi rencana kerja; '
                                       'absen tetap bisa dikirim, tetapi pastikan memang bekerja di sini hari ini.',
                                 ),
                                 const SizedBox(height: 14),
@@ -833,4 +905,14 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       ),
     );
   }
+}
+
+/// Lokasi kerja hari ini sebuah rencana yang berjalan: lokasi khusus hari itu atau lokasi rencana. Null bila bukan
+/// rencana berjalan, tidak ada hari kerja hari ini (libur), atau pengguna tidak bertugas hari ini. Data tersimpan
+/// lama (tanpa kolom hari ini) memakai lokasi rencana.
+String? todaySiteOf(Map<String, dynamic> plan) {
+  if (plan['status'] != 'IN_PROGRESS') return null;
+  if (!plan.containsKey('today_site_id')) return plan['site_id'] as String?;
+  if (plan['today_included'] == false) return null;
+  return plan['today_site_id'] as String?;
 }

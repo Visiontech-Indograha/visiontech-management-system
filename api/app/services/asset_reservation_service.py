@@ -163,7 +163,7 @@ class AssetReservationService:
 
         # Aset hanya bisa dipinjamkan pada SK yang sedang berjalan/belum selesai.
         if plan.status in (PlanStatus.COMPLETED, PlanStatus.CANCELLED):
-            raise _state("Pilih SK yang masih aktif.")
+            raise _state("Pilih rencana kerja yang masih aktif.")
         # Mencegah bentrokan reservasi jika aset sedang dipakai orang lain.
         if asset.status != "AVAILABLE" or await self.repo.active_allocation(asset_id) is not None:
             raise _state("Aset ini sedang dialokasikan dan belum dikembalikan.")

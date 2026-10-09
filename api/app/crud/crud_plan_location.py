@@ -128,7 +128,8 @@ class CRUDPlanLocation(CRUDBase):
         # Memperbarui site_id pada tabel work_plan untuk menghubungkan SK dengan lokasi baru.
         await self.execute(
             """
-            UPDATE vms.work_plan SET site_id = CAST(:site AS uuid)
+            UPDATE vms.work_plan SET site_id = CAST(:site AS uuid),
+                   location_text = COALESCE((SELECT name FROM vms.site WHERE id = CAST(:site AS uuid)), location_text)
             WHERE id = CAST(:plan AS uuid) AND deleted_at IS NULL
             """,
             {"plan": plan_id, "site": site_id})

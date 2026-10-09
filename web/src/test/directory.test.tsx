@@ -252,7 +252,7 @@ describe("mutasi / promosi & riwayat jabatan (M2, domain.js PROMOTE)", () => {
     expect(calls.find((c) => c.method === "post")!.data).toEqual({ position: "Supervisor", unit_id: "u2", valid_from: "2026-10-01" });
   });
 
-  it("mutasi lintas unit ditolak API (masih bertugas di SK aktif): pesan tampil di dialog", async () => {
+  it("mutasi lintas unit ditolak API (masih bertugas di rencana kerja aktif): pesan tampil di dialog", async () => {
     api((url, method) =>
       url === "/employees/e1/assignments" && method === "post"
         ? apiError(409, "INVALID_STATE", "Mutasi lintas unit diblokir sampai penugasan aktif diserahterimakan.")

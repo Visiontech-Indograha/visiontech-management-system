@@ -53,6 +53,12 @@ requires_db = pytest.mark.skipif(not _DB_OK, reason="PostgreSQL uji tidak dapat 
 
 
 @pytest.fixture(scope="session", autouse=True)
+def _face_enrollment_off() -> None:
+    # Uji tidak bergantung pada saklar di api/.env; uji gerbang wajah menyalakannya sendiri (monkeypatch).
+    settings.FACE_ENROLLMENT_REQUIRED = False   # sesi penuh: monkeypatch.undo() di uji tidak boleh menghidupkannya lagi
+
+
+@pytest.fixture(scope="session", autouse=True)
 def _null_pool() -> None:
     # Setiap TestClient menjalankan event loop sendiri; koneksi asyncpg tidak boleh dipakai lintas loop.
     AsyncSessionLocal.configure(bind=make_engine(poolclass=NullPool))

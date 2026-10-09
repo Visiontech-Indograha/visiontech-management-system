@@ -4,6 +4,215 @@ import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 import tseslint from 'typescript-eslint'
 
+// Atomic design ketat (docs/33, keputusan pemilik 2026-10-09):
+//   tampilan UI > Page > Template > Organism > Molecule > Atom
+//   Page = kumpulan Template · Template = kumpulan Organism · Organism = kumpulan Molecule · Molecule = kumpulan Atom.
+//   Elemen HTML (teks, tombol, tabel, gambar) hanya di Atom; Template/Organism/Molecule hanya boleh div tata letak.
+// Struktur berbasis lapisan: pages/ · components/ · services/ · schemas/ · hooks/ · lib/.
+const PAGES = { group: ['@/pages/*', '**/pages/**'], message: 'Hanya app/ (rute) yang boleh mengimpor pages/ (docs/33 §2.2).' }
+const COMPONENTS = { group: ['@/components/*', '**/components/**'], message: 'services/, schemas/, hooks/, lib/ tidak boleh mengimpor components/ (docs/33 §2.2).' }
+const DATA = { group: ['@/services/*', '**/services/**', '@/hooks/*', '**/hooks/**'], message: 'lib/ dan schemas/ tidak boleh mengimpor services/ atau hooks/ (docs/33 §2.2).' }
+const tier = (name, who, why) => ({
+  group: [`@/components/${name}/*`, `@/components/${name}/**`, `**/components/${name}/**`, `../${name}/*`, `../../${name}/*`, `../../${name}/**`],
+  message: `${who} ${why} (docs/33 §2).`,
+})
+const ATOMS = (who) => tier('atoms', who, 'dilarang memakai atom langsung — bungkus dalam molecule')
+const MOLECULES = (who) => tier('molecules', who, 'dilarang memakai molecule langsung — susun lewat organism')
+const ORGANISMS = (who) => tier('organisms', who, 'dilarang memakai organism langsung — susun lewat template')
+const TEMPLATES = (who) => tier('templates', who, 'tidak boleh mengimpor template')
+const SAME_MOLECULE = { group: ['./*', '@/components/molecules/*'], message: 'Molecule hanya menyusun atom, bukan molecule lain (docs/33 §2).' }
+
+const LAYOUT_TAGS = 'div|section|main|header|footer|article|aside'
+/** Larangan susunan: impor tingkat terlarang + elemen HTML (kecuali tata letak bila `layout`) + teks langsung. */
+const composition = (who, patterns, layout) => ({
+  'no-restricted-imports': ['error', {
+    patterns: [PAGES, ...patterns],
+    paths: [
+      { name: 'lucide-react', message: `Ikon adalah atom; ${who} dilarang memakainya langsung (docs/33 §2).` },
+      { name: 'react-router-dom', importNames: ['Link', 'NavLink'], message: `Tautan adalah atom; ${who} dilarang memakainya langsung (docs/33 §2).` },
+    ],
+  }],
+  'no-restricted-syntax': ['error',
+    {
+      selector: layout
+        ? `JSXOpeningElement[name.type='JSXIdentifier'][name.name=/^[a-z]/]:not([name.name=/^(${LAYOUT_TAGS})$/])`
+        : "JSXOpeningElement[name.type='JSXIdentifier'][name.name=/^[a-z]/]",
+      message: layout
+        ? `Elemen HTML hanya boleh di atom; ${who} hanya boleh ${LAYOUT_TAGS.replaceAll('|', '/')} untuk tata letak (docs/33 §2).`
+        : `${who} hanya menyusun template — tanpa elemen HTML, termasuk div (docs/33 §2).`,
+    },
+    { selector: 'JSXText[value=/\\S/]', message: `Teks langsung di ${who} — teks hanya di atom (docs/33 §2).` },
+  ],
+})
+const RULES = {
+  page: composition('Page', [ATOMS('Page'), MOLECULES('Page'), ORGANISMS('Page')], false),
+  template: composition('Template', [ATOMS('Template'), MOLECULES('Template')], true),
+  organism: composition('Organism', [ATOMS('Organism'), TEMPLATES('Organism')], true),
+  molecule: composition('Molecule', [tier('organisms', 'Molecule', 'tidak boleh mengimpor organism'), TEMPLATES('Molecule'), SAME_MOLECULE], true),
+}
+// Aturan lama (sebelum hierarki ketat) untuk berkas di daftar pengecualian.
+const LEGACY = {
+  page: composition('Page', [ATOMS('Page'), MOLECULES('Page')], true),
+  organism: { 'no-restricted-imports': ['error', { patterns: [PAGES, TEMPLATES('Organism')] }], 'no-restricted-syntax': 'off' },
+  molecule: { 'no-restricted-imports': ['error', { patterns: [PAGES, tier('organisms', 'Molecule', 'tidak boleh mengimpor organism'), TEMPLATES('Molecule'), SAME_MOLECULE] }], 'no-restricted-syntax': 'off' },
+}
+
+// Page yang belum punya template sendiri (masih template + organism). Daftar ini HANYA BOLEH MENYUSUT (docs/33 §7).
+const PAGES_LEGACY = [
+  'src/pages/account/AccountPage.tsx',
+  'src/pages/assets/AssetsPage.tsx',
+  'src/pages/attendance/AttendancePage.tsx',
+  'src/pages/audit/AuditLogPage.tsx',
+  'src/pages/auth/ChangePasswordPage.tsx',
+  'src/pages/auth/LoginPage.tsx',
+  'src/pages/directory/DirectoryPage.tsx',
+  'src/pages/directory/EmployeeDetailPage.tsx',
+  'src/pages/directory/MyDocumentsPage.tsx',
+  'src/pages/face/FaceEnrollRequiredPage.tsx',
+  'src/pages/home/HomePage.tsx',
+  'src/pages/monitoring/AttendanceRecapPage.tsx',
+  'src/pages/monitoring/OvertimeRecapPage.tsx',
+  'src/pages/monitoring/TimelinePage.tsx',
+  'src/pages/sites/SitesPage.tsx',
+  'src/pages/system/ComingSoonPage.tsx',
+  'src/pages/system/ForbiddenPage.tsx',
+  'src/pages/system/NotFoundPage.tsx',
+  'src/pages/verify/VerifyPage.tsx',
+  'src/pages/work-plans/PlanEditorPage.tsx',
+  'src/pages/work-plans/PresentationPage.tsx',
+  'src/pages/work-plans/WorkPlanDetailPage.tsx',
+  'src/pages/work-plans/WorkPlansPage.tsx',
+  'src/pages/work-types/WorkTypesPage.tsx',
+]
+
+// Organism yang masih memakai atom/ikon/HTML langsung. Daftar ini HANYA BOLEH MENYUSUT (docs/33 §7).
+const ORGANISMS_LEGACY = [
+  'src/components/organisms/ListPagination.tsx',
+  'src/components/organisms/MobileTopBar.tsx',
+  'src/components/organisms/NotificationBell.tsx',
+  'src/components/organisms/PageHeader.tsx',
+  'src/components/organisms/PageLoadingFallback.tsx',
+  'src/components/organisms/SidebarBrand.tsx',
+  'src/components/organisms/SidebarNav.tsx',
+  'src/components/organisms/SidebarProfile.tsx',
+  'src/components/organisms/account/AccountSessionsPanel.tsx',
+  'src/components/organisms/account/AccountSummaryCard.tsx',
+  'src/components/organisms/account/FaceBiometricSection.tsx',
+  'src/components/organisms/assets/AssetCheckDialog.tsx',
+  'src/components/organisms/assets/AssetCreateButton.tsx',
+  'src/components/organisms/assets/AssetCreateDialog.tsx',
+  'src/components/organisms/assets/AssetFormDialog.tsx',
+  'src/components/organisms/assets/AssetList.tsx',
+  'src/components/organisms/assets/AssetPlanSelect.tsx',
+  'src/components/organisms/assets/AssetReleaseDialog.tsx',
+  'src/components/organisms/assets/AssetReserveDialog.tsx',
+  'src/components/organisms/assets/AssetReturnDialog.tsx',
+  'src/components/organisms/assets/AssetReturnHistoryDialog.tsx',
+  'src/components/organisms/assets/AssetVerifyReturnDialog.tsx',
+  'src/components/organisms/attendance/AttendanceExplainDialog.tsx',
+  'src/components/organisms/attendance/AttendanceFilter.tsx',
+  'src/components/organisms/attendance/AttendanceFormDialog.tsx',
+  'src/components/organisms/attendance/AttendanceList.tsx',
+  'src/components/organisms/attendance/AttendanceReviewDialog.tsx',
+  'src/components/organisms/attendance/AttendanceScopeTabs.tsx',
+  'src/components/organisms/attendance/OfficeCheckInCard.tsx',
+  'src/components/organisms/attendance/SelfieCaptureDialog.tsx',
+  'src/components/organisms/audit/AuditEntityFilter.tsx',
+  'src/components/organisms/audit/AuditLogTable.tsx',
+  'src/components/organisms/auth/AndroidAppLink.tsx',
+  'src/components/organisms/auth/ChangePasswordForm.tsx',
+  'src/components/organisms/auth/LoginBrandPanel.tsx',
+  'src/components/organisms/auth/LoginForm.tsx',
+  'src/components/organisms/directory/AccountCard.tsx',
+  'src/components/organisms/directory/AssignmentHistory.tsx',
+  'src/components/organisms/directory/DocumentsPanel.tsx',
+  'src/components/organisms/directory/EmployeeActions.tsx',
+  'src/components/organisms/directory/EmployeeArchivePanel.tsx',
+  'src/components/organisms/directory/EmployeeBadges.tsx',
+  'src/components/organisms/directory/EmployeeCreateButton.tsx',
+  'src/components/organisms/directory/EmployeeDetailSkeleton.tsx',
+  'src/components/organisms/directory/EmployeeLifecycleDialogs.tsx',
+  'src/components/organisms/directory/EmployeeListFilter.tsx',
+  'src/components/organisms/directory/EmployeeLoadError.tsx',
+  'src/components/organisms/directory/EmployeeProfileCard.tsx',
+  'src/components/organisms/directory/EmployeeProfileDialog.tsx',
+  'src/components/organisms/directory/EmployeeTable.tsx',
+  'src/components/organisms/directory/UnlinkedEmployeeNotice.tsx',
+  'src/components/organisms/face/FaceCamera.tsx',
+  'src/components/organisms/face/FaceConsentForm.tsx',
+  'src/components/organisms/face/FaceEnrollCapture.tsx',
+  'src/components/organisms/face/FaceEnrollIntro.tsx',
+  'src/components/organisms/face/FaceGateLogoutButton.tsx',
+  'src/components/organisms/face/FaceProbeDialog.tsx',
+  'src/components/organisms/home/ExpiringDocumentsCard.tsx',
+  'src/components/organisms/home/HomeActivePlansCard.tsx',
+  'src/components/organisms/home/HomeGreeting.tsx',
+  'src/components/organisms/home/HomeStatGrid.tsx',
+  'src/components/organisms/home/PendingDocumentsCard.tsx',
+  'src/components/organisms/monitoring/AttendanceRecapSummary.tsx',
+  'src/components/organisms/monitoring/AttendanceRecordHistory.tsx',
+  'src/components/organisms/monitoring/DateRangeFilter.tsx',
+  'src/components/organisms/monitoring/MonthFilterField.tsx',
+  'src/components/organisms/monitoring/OvertimeRecapList.tsx',
+  'src/components/organisms/monitoring/TimelineGroupList.tsx',
+  'src/components/organisms/sites/SiteAddButton.tsx',
+  'src/components/organisms/sites/SiteDeleteDialog.tsx',
+  'src/components/organisms/sites/SiteFormDialog.tsx',
+  'src/components/organisms/sites/SiteList.tsx',
+  'src/components/organisms/sites/SiteMapPicker.tsx',
+  'src/components/organisms/system/ComingSoonNotice.tsx',
+  'src/components/organisms/system/SystemStatusMessage.tsx',
+  'src/components/organisms/verify/VerificationResultPanel.tsx',
+  'src/components/organisms/verify/VerifyIntro.tsx',
+  'src/components/organisms/work-plans/BackToPlansLink.tsx',
+  'src/components/organisms/work-plans/DailyReportsPanel.tsx',
+  'src/components/organisms/work-plans/FinalReportPanel.tsx',
+  'src/components/organisms/work-plans/IncidentPanel.tsx',
+  'src/components/organisms/work-plans/NewSiteDialog.tsx',
+  'src/components/organisms/work-plans/OvertimePanel.tsx',
+  'src/components/organisms/work-plans/PlanActionsPanel.tsx',
+  'src/components/organisms/work-plans/PlanArchivedCard.tsx',
+  'src/components/organisms/work-plans/PlanAttachmentsPanel.tsx',
+  'src/components/organisms/work-plans/PlanChangePanel.tsx',
+  'src/components/organisms/work-plans/PlanCompletionDialog.tsx',
+  'src/components/organisms/work-plans/PlanCreateButton.tsx',
+  'src/components/organisms/work-plans/PlanDayTable.tsx',
+  'src/components/organisms/work-plans/PlanDetailCard.tsx',
+  'src/components/organisms/work-plans/PlanDocumentsPanel.tsx',
+  'src/components/organisms/work-plans/PlanEditorDetailState.tsx',
+  'src/components/organisms/work-plans/PlanEditorForm.tsx',
+  'src/components/organisms/work-plans/PlanFormDialogs.tsx',
+  'src/components/organisms/work-plans/PlanList.tsx',
+  'src/components/organisms/work-plans/PlanListFilter.tsx',
+  'src/components/organisms/work-plans/PlanLocationCard.tsx',
+  'src/components/organisms/work-plans/PlanPendingRequests.tsx',
+  'src/components/organisms/work-plans/PlanPresentationSlides.tsx',
+  'src/components/organisms/work-plans/PlanPreviewDialog.tsx',
+  'src/components/organisms/work-plans/PlanReviseNotice.tsx',
+  'src/components/organisms/work-plans/PlanRevisionHistory.tsx',
+  'src/components/organisms/work-plans/PlanRevisionPanel.tsx',
+  'src/components/organisms/work-plans/PlanStatusBadge.tsx',
+  'src/components/organisms/work-plans/PlanSummaryCard.tsx',
+  'src/components/organisms/work-plans/PresentationSkeleton.tsx',
+  'src/components/organisms/work-plans/PresentationToolbar.tsx',
+  'src/components/organisms/work-plans/PresentationUnavailable.tsx',
+  'src/components/organisms/work-plans/WeeklyReportsPanel.tsx',
+  'src/components/organisms/work-plans/WorkPlanDetailBody.tsx',
+  'src/components/organisms/work-types/WorkTypeAddButton.tsx',
+  'src/components/organisms/work-types/WorkTypeDeactivateDialog.tsx',
+  'src/components/organisms/work-types/WorkTypeFormDialog.tsx',
+  'src/components/organisms/work-types/WorkTypeList.tsx',
+]
+
+// Molecule yang masih memakai elemen HTML langsung. Daftar ini HANYA BOLEH MENYUSUT (docs/33 §7).
+const MOLECULES_LEGACY = [
+  'src/components/molecules/Field.tsx',
+  'src/components/molecules/FilePreview.tsx',
+  'src/components/molecules/QueryState.tsx',
+  'src/components/molecules/StatusBadge.tsx',
+  'src/components/molecules/VmsDialog.tsx',
+]
+
 export default tseslint.config(
   { ignores: ['dist', 'legacy_ref'] },
   {
@@ -26,9 +235,41 @@ export default tseslint.config(
     },
   },
   {
-    files: ['src/components/ui/**'],
+    files: ['src/components/atoms/**'],
     rules: {
       'react-refresh/only-export-components': 'off',
+      'no-restricted-imports': ['error', { patterns: [PAGES, tier('molecules', 'Atom', 'tidak boleh mengimpor molecule'), tier('organisms', 'Atom', 'tidak boleh mengimpor organism'), TEMPLATES('Atom')] }],
     },
   },
+  {
+    files: ['src/components/molecules/**/*.tsx'],
+    ignores: ['**/*.test.tsx'],
+    rules: RULES.molecule,
+  },
+  {
+    files: ['src/components/organisms/**/*.tsx'],
+    ignores: ['**/*.test.tsx'],
+    rules: RULES.organism,
+  },
+  {
+    files: ['src/components/templates/**/*.tsx'],
+    ignores: ['**/*.test.tsx'],
+    rules: RULES.template,
+  },
+  {
+    files: ['src/services/**', 'src/hooks/**'],
+    rules: { 'no-restricted-imports': ['error', { patterns: [PAGES, COMPONENTS] }] },
+  },
+  {
+    files: ['src/lib/**', 'src/schemas/**'],
+    rules: { 'no-restricted-imports': ['error', { patterns: [PAGES, COMPONENTS, DATA] }] },
+  },
+  {
+    files: ['src/pages/**/*.tsx'],
+    ignores: ['**/*.test.tsx'],
+    rules: RULES.page,
+  },
+  { files: PAGES_LEGACY, rules: LEGACY.page },
+  { files: ORGANISMS_LEGACY, rules: LEGACY.organism },
+  { files: MOLECULES_LEGACY, rules: LEGACY.molecule },
 )

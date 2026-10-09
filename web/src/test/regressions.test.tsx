@@ -62,7 +62,7 @@ describe("R5 · teks laporan tidak hilang saat berpindah layar", () => {
     fireEvent.click(within(p).getByRole("button", { name: "Simpan draft" }));
     await waitFor(() => expect(saved).not.toBeNull());
 
-    const { useDrafts } = await import("@/lib/drafts");
+    const { useDrafts } = await import("@/hooks/useFormDraft");
     await waitFor(() => expect(useDrafts.getState().drafts["daily:d1"]).toBeUndefined());
     await act(() => router.navigate("/work-plans"));
   });

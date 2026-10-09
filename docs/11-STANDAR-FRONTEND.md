@@ -99,6 +99,10 @@ ditulis ulang di setiap halaman.
 
 ## 3. Struktur folder — atomic design + fitur
 
+> **Web: diganti `docs/33-STANDAR-PENULISAN-KODE.md` (2026-10-09).** `components/ui/` kini `components/atoms/`,
+> fitur memakai `pages/` + `components/`, dan Page dilarang memakai atom/molecule langsung. Struktur di bawah
+> tetap menjadi rujukan untuk mobile sampai `docs/33` bagian mobile ditulis.
+
 Atomic design murni (semua komponen dalam lima folder besar) menjadi kacau setelah ratusan
 komponen: `organisms/` berubah jadi keranjang serba ada. Karena itu kita memakai **atomic
 design untuk komponen bersama** dan **folder per fitur untuk yang khusus**.
@@ -185,6 +189,8 @@ supaya pembicaraan tentang antarmuka tidak perlu diterjemahkan antara dua tim.
 ---
 
 ## 4. Aturan komponen
+
+> Web: aturan lengkap dan penamaan di `docs/33` §2–§4.
 
 ### Kapan boleh membuat komponen baru
 

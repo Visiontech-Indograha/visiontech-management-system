@@ -1,13 +1,16 @@
 import { Suspense, type ReactNode } from "react";
 import type { RouteObject } from "react-router-dom";
-import { AppShell } from "@/components/layout/AppShell";
-import { RequireAccess, RequireAuth } from "@/components/layout/guards";
-import { TitleLayout } from "@/components/layout/TitleLayout";
+import { AppShell } from "@/components/templates/AppShell";
+import { RequireAccess, RequireAuth } from "@/app/RouteGuards";
+import { TitleLayout } from "@/components/templates/TitleLayout";
 import { LoginPage } from "@/pages/auth/LoginPage";
-import { ComingSoonPage, ForbiddenPage, HomePage, NotFoundPage } from "@/pages/Placeholders";
+import { HomePage } from "@/pages/home/HomePage";
+import { ComingSoonPage } from "@/pages/system/ComingSoonPage";
+import { ForbiddenPage } from "@/pages/system/ForbiddenPage";
+import { NotFoundPage } from "@/pages/system/NotFoundPage";
 import { NAV_ITEMS } from "./navigation";
 import { AssetsPage, AttendancePage, AuditLogPage, DirectoryPage, EmployeeDetailPage, MyDocumentsPage, SitesPage, WorkTypesPage, WorkPlanDetailPage, WorkPlansPage, PlanEditorPage, AttendanceRecapPage, OvertimeRecapPage, PresentationPage, TimelinePage, AccountPage } from "./lazyPages";
-import { VerifyPage } from "@/features/verify/VerifyPage";
+import { VerifyPage } from "@/pages/verify/VerifyPage";
 import { ChangePasswordPage } from "@/pages/auth/ChangePasswordPage";
 
 

@@ -50,7 +50,6 @@ const NOT_YET_MIGRATED = [
   'src/features/monitoring/pages/OvertimeRecapPage.tsx',
   'src/features/monitoring/pages/TimelinePage.tsx',
   'src/features/sites/pages/SitesPage.tsx',
-  'src/features/verify/pages/VerifyPage.tsx',
   'src/features/work-plans/pages/PlanEditorPage.tsx',
   'src/features/work-plans/pages/PresentationPage.tsx',
   'src/features/work-plans/pages/WorkPlanDetailPage.tsx',

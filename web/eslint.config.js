@@ -47,7 +47,6 @@ const NOT_YET_MIGRATED = [
   'src/pages/work-plans/PlanEditorPage.tsx',
   'src/pages/work-plans/PresentationPage.tsx',
   'src/pages/work-plans/WorkPlanDetailPage.tsx',
-  'src/pages/work-types/WorkTypesPage.tsx',
 ]
 
 export default tseslint.config(

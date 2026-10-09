@@ -1,0 +1,18 @@
+FAILED tests/test_openapi_snapshot.py::test_openapi_matches_snapshot - Assert...
+FAILED tests/test_plan_amendment_v2.py::test_leader_requests_and_pm_rejects_with_a_note
+FAILED tests/test_plan_amendment_v2.py::test_pm_applies_amendment_and_leader_accepts
+FAILED tests/test_plan_amendment_v2.py::test_amendment_cannot_remove_a_day_that_already_has_reports
+FAILED tests/test_plan_appeal_revise.py::test_appeal_needs_a_reason_the_leader_and_a_published_plan
+FAILED tests/test_plan_cancel_archive.py::test_archive_rules - AssertionError...
+FAILED tests/test_plan_cancel_archive.py::test_a_plan_that_once_had_an_sk_cannot_be_archived
+FAILED tests/test_plan_changes.py::test_withdraw_is_only_for_personnel_changes
+FAILED tests/test_plan_draft_v2.py::test_every_date_needs_one_to_thirty_complete_tasks
+FAILED tests/test_plan_status_rules.py::test_daily_report_needs_a_running_plan
+FAILED tests/test_plan_status_rules.py::test_incident_needs_a_running_plan - ...
+FAILED tests/test_plan_status_rules.py::test_asset_is_not_allocated_to_a_finished_plan[COMPLETED]
+FAILED tests/test_plan_status_rules.py::test_asset_is_not_allocated_to_a_finished_plan[CANCELLED]
+13 failed, 923 passed, 1 warning in 1007.88s (0:16:47)
+tests/test_plan_draft_v2.py::test_full_create_rejects_incomplete_forms[override4-Pilih minimal satu anggota tim.]  (T5: anggota kini opsional; hapus kasus ini)
+tests/test_plan_cancel_archive.py::test_restore_rechecks_the_team  (T5: anggota opsional)
+tests/test_plan_transitions.py::test_publish_requires_at_least_one_member  (T5: anggota opsional)
+web: src/test/auth.test.tsx '/auth/me dengan hanya empat field' — flaky (lulus saat dijalankan ulang), bukan akibat perubahan v3

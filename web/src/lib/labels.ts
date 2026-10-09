@@ -7,7 +7,7 @@ export const STATUS_LABEL: Record<string, string> = {
   DRAFT: "Draf",
   PUBLISHED: "Terbit",
   ACCEPTED: "Diterima",
-  APPEALED: "Adendum diminta",
+  APPEALED: "Revisi diminta",
   IN_PROGRESS: "Berjalan",
   COMPLETION_REVIEW: "Pengajuan penutupan",
   COMPLETED: "Selesai",

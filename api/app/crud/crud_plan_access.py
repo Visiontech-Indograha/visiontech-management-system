@@ -20,11 +20,18 @@ from .base import CRUDBase
 
 # `:plan` NULL → semua SK terlihat (daftar); terisi → satu SK (penjaga). `:status` NULL → semua status.
 _STANDING = """
-    SELECT id, unit_id, site_id, number, title, location_text, description, period_start, period_end, status, pm_employee_id, leader_employee_id, revision, row_version, cancellation_reason, appeal_reason, category, created_at, manages, is_leader, is_member, visible FROM (
+    SELECT id, unit_id, site_id, number, title, location_text, description, period_start, period_end, status, pm_employee_id, leader_employee_id, revision, row_version, cancellation_reason, appeal_reason, category, is_out_of_town, work_type_id, pending_request, today_site_id, today_included, created_at, manages, is_leader, is_member, visible FROM (
         SELECT wp.id, wp.unit_id, wp.site_id, wp.number, wp.title, wp.location_text, wp.description,
                lower(wp.period) AS period_start, upper(wp.period) - 1 AS period_end,
                wp.status, wp.pm_employee_id, wp.leader_employee_id, wp.revision, wp.row_version,
-               wp.cancellation_reason, wp.appeal_reason, wp.category, wp.created_at,
+               wp.cancellation_reason, wp.appeal_reason, wp.category, wp.is_out_of_town, wp.work_type_id, wp.created_at,
+               -- T2: ada permintaan revisi dari ketua yang menunggu PM.
+               (wp.status = 'APPEALED' OR EXISTS (SELECT 1 FROM vms.plan_change pc
+                  WHERE pc.work_plan_id = wp.id AND pc.status = 'PENDING_PM')) AS pending_request,
+               -- Hari ini (zona waktu organisasi): lokasi hari itu (atau lokasi rencana) dan apakah pengguna bertugas.
+               -- Tanpa hari kerja hari ini (libur) keduanya NULL.
+               CASE WHEN td.day_id IS NOT NULL THEN COALESCE(td.day_site_id, wp.site_id) END AS today_site_id,
+               td.included AS today_included,
                s.oversees OR s.pm_of_unit AS manages,
                s.is_leader, s.is_member,
                -- Draf terarsip hanya terlihat oleh pengelola (domain.js visiblePlans includeArchived, V-21).
@@ -45,6 +52,15 @@ _STANDING = """
                 vms.is_plan_leader(wp.id, CAST(:user AS uuid)) AS is_leader,
                 vms.is_plan_member(wp.id, CAST(:user AS uuid)) AS is_member
         ) AS s
+        LEFT JOIN LATERAL (
+            SELECT d.id AS day_id, d.site_id AS day_site_id,
+                   (NOT EXISTS (SELECT 1 FROM vms.work_plan_day_member dm WHERE dm.work_plan_day_id = d.id)
+                    OR EXISTS (SELECT 1 FROM vms.work_plan_day_member dm
+                               JOIN vms.app_user u ON u.employee_id = dm.employee_id
+                               WHERE dm.work_plan_day_id = d.id AND u.id = CAST(:user AS uuid))) AS included
+            FROM vms.work_plan_day d JOIN vms.organization o ON o.id = wp.organization_id
+            WHERE d.work_plan_id = wp.id AND d.work_date = (now() AT TIME ZONE o.timezone)::date
+        ) AS td ON true
         WHERE wp.organization_id = CAST(:org AS uuid)
           AND (CAST(:archived AS boolean) IS NULL OR (wp.deleted_at IS NOT NULL) = CAST(:archived AS boolean))
           AND (CAST(:plan AS uuid) IS NULL OR wp.id = CAST(:plan AS uuid))

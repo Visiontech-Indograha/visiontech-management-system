@@ -2,25 +2,42 @@
 <html lang="id">
 <head>
 <meta charset="utf-8">
-<title>{{ doc.number }} — {{ doc.title }}</title>
+<title>{{ doc.number or "Draf" }} — {{ doc.title }}</title>
 <style>
-  @page { size: A4; margin: 18mm 16mm; }
-  body { font-family: "Plus Jakarta Sans", "DejaVu Sans", sans-serif; font-size: 10.5pt; color: #111827; }
-  h1 { font-size: 15pt; margin: 0 0 2mm; } h2 { font-size: 11.5pt; margin: 6mm 0 2mm; }
-  .meta { color: #4b5563; font-size: 9pt; }
-  table { width: 100%; border-collapse: collapse; margin-top: 2mm; }
-  th, td { border: 0.3mm solid #d1d5db; padding: 1.5mm 2mm; text-align: left; vertical-align: top; }
-  th { background: #f3f4f6; }
-  .sig { display: flex; gap: 4mm; margin-top: 3mm; }
-  .sig-box { border: 0.3mm solid #d1d5db; padding: 3mm; width: 50%; }
-  .sig-box img { width: 28mm; height: 28mm; }
-  .hash { font-family: "DejaVu Sans Mono", monospace; font-size: 7.5pt; word-break: break-all; color: #374151; }
+  @page { size: A4; margin: 16mm 14mm 18mm;
+          @bottom-center { content: "{{ doc.number or 'Draf' }} · halaman " counter(page) " dari " counter(pages);
+                           font-size: 7.5pt; color: #6b7280; } }
+  body { font-family: "Plus Jakarta Sans", "DejaVu Sans", sans-serif; font-size: 9.5pt; color: #111827; line-height: 1.35; }
+  h1 { font-size: 15pt; margin: 0 0 1mm; color: #111827; }
+  h2 { font-size: 10.5pt; margin: 6mm 0 2mm; color: #232c6f; text-transform: uppercase; letter-spacing: 0.3mm;
+       border-bottom: 0.4mm solid #e5e7eb; padding-bottom: 1mm; }
+  .meta { color: #4b5563; font-size: 8.5pt; }
+  .muted { color: #6b7280; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { border: 0.25mm solid #d1d5db; padding: 1.4mm 1.8mm; text-align: left; vertical-align: top; }
+  thead th { background: #232c6f; color: #fff; font-weight: 600; font-size: 8.5pt; }
+  tr { page-break-inside: avoid; }
+  .info th { background: #f3f4f6; width: 30mm; font-weight: 600; }
+  .info td { width: auto; }
+  .schedule { font-size: 8.5pt; }
+  .schedule td.no { width: 6mm; text-align: center; }
+  .schedule td.date { width: 24mm; }
+  .tag { display: inline-block; font-size: 7pt; padding: 0.3mm 1.2mm; border-radius: 1mm; background: #fef3c7; color: #92400e; }
+  .task { margin-bottom: 1.2mm; }
+  .task:last-child { margin-bottom: 0; }
+  .files { color: #6b7280; font-size: 7.5pt; }
+  .worker { display: block; }
+  .holiday { margin-top: 2mm; padding: 1.5mm 2mm; background: #f9fafb; border: 0.25mm dashed #d1d5db; font-size: 8.5pt; }
+  .desc { white-space: pre-line; }
+  .sig { display: flex; gap: 4mm; margin-top: 2mm; }
+  .sig-box { border: 0.25mm solid #d1d5db; padding: 3mm; width: 50%; page-break-inside: avoid; }
+  .sig-box img { width: 26mm; height: 26mm; margin-top: 1.5mm; }
+  .hash { font-family: "DejaVu Sans Mono", monospace; font-size: 7pt; word-break: break-all; color: #374151; margin-top: 4mm; }
   .revoked { color: #b91c1c; font-weight: bold; }
-  .task { margin-bottom: 1.5mm; }
-  .draft { color: #b45309; font-weight: bold; font-size: 9pt; margin-bottom: 1mm; }
+  .draft { color: #b45309; font-weight: bold; font-size: 8.5pt; margin-bottom: 1mm; }
   .kop { display: flex; align-items: center; justify-content: space-between;
-         padding-bottom: 3mm; margin-bottom: 5mm; border-bottom: 0.8mm solid #232c6f; }
-  .kop img { height: 13mm; }
+         padding-bottom: 3mm; margin-bottom: 4mm; border-bottom: 0.8mm solid #232c6f; }
+  .kop img { height: 12mm; }
   .kop .kind { font-size: 9pt; font-weight: bold; color: #232c6f; letter-spacing: 0.3mm;
                border-bottom: 0.6mm solid #f0c000; padding-bottom: 0.5mm; }
 </style>
@@ -31,42 +48,54 @@
     <span class="kind">{{ kind_label | upper }}</span>
   </div>
   <h1>{{ doc.title }}</h1>
-  {% if preview %}<div class="draft">PRATINJAU DRAF — nomor SK diberikan saat diterbitkan</div>{% endif %}
+  {% if preview %}<div class="draft">PRATINJAU DRAF — nomor rencana kerja diberikan saat diterbitkan</div>{% endif %}
   <div class="meta">Nomor {{ doc.number or "-" }} · {{ kind_label }} versi {{ doc.version }}{% if issued_at %} · diterbitkan {{ issued_at }}{% endif %}{% if status_label %} · status {{ status_label }}{% endif %}</div>
 
-  <h2>Pelaksanaan</h2>
-  <table>
-    {% if plan.category %}<tr><th>Kategori</th><td>{{ categories.get(plan.category, plan.category) }}</td></tr>{% endif %}
-    {% if plan.unit_name %}<tr><th>Tipe</th><td>{{ plan.unit_name }}</td></tr>{% endif %}
-    <tr><th>Lokasi</th><td>{{ plan.location_text or "-" }}{% if plan.site_description %}<br><span class="meta">{{ plan.site_description }}</span>{% endif %}{% if plan.lat is defined and plan.lat is not none and plan.lng is defined and plan.lng is not none %}<br><span class="meta">{{ "%.6f"|format(plan.lat) }}, {{ "%.6f"|format(plan.lng) }}</span>{% endif %}</td></tr>
-    <tr><th>Periode</th><td>{{ plan.period_start | tgl }} s.d. {{ plan.period_end | tgl }}</td></tr>
-    {% if plan.pm_name %}<tr><th>Project Manager</th><td>{{ plan.pm_name }}{% if plan.pm_position %} — {{ plan.pm_position }}{% endif %}</td></tr>{% endif %}
-    {% if plan.description %}<tr><th>Deskripsi pekerjaan</th><td>{{ plan.description }}</td></tr>{% endif %}
+  <h2>Ringkasan</h2>
+  <table class="info">
+    <tr><th>Jenis pekerjaan</th><td>{{ plan.work_type_name or "-" }}</td>
+        <th>Kategori</th><td>{{ categories.get(plan.category, plan.category) if plan.category else "-" }}</td></tr>
+    <tr><th>Periode</th><td>{{ plan.period_start | tgl }} s.d. {{ plan.period_end | tgl }}<br>
+          <span class="meta">{{ work_days }} hari kerja{% if holidays %} · {{ holidays | length }} hari libur{% endif %}</span></td>
+        <th>Tipe</th><td>{{ plan.unit_name or "-" }}{% if plan.is_out_of_town %}<br><span class="tag">Luar kota</span>{% endif %}</td></tr>
+    <tr><th>Lokasi utama</th><td colspan="3">{{ plan.location_text or "-" }}{% if plan.site_description %} <span class="meta">— {{ plan.site_description }}</span>{% endif %}{% if plan.lat is defined and plan.lat is not none and plan.lng is defined and plan.lng is not none %}<br><span class="meta">Titik {{ "%.6f"|format(plan.lat) }}, {{ "%.6f"|format(plan.lng) }}</span>{% endif %}</td></tr>
+    <tr><th>Project Manager</th><td>{{ plan.pm_name or "-" }}{% if plan.pm_position %}<br><span class="meta">{{ plan.pm_position }}</span>{% endif %}</td>
+        <th>Ketua tim</th><td>{% for m in team if m.role_in_plan == "LEADER" %}{{ m.full_name }}{% if m.position %}<br><span class="meta">{{ m.position }}</span>{% endif %}{% else %}-{% endfor %}</td></tr>
+    {% if plan.description %}<tr><th>Deskripsi</th><td colspan="3" class="desc">{{ plan.description }}</td></tr>{% endif %}
   </table>
 
   <h2>Tim</h2>
   <table>
-    <tr><th>Nama</th><th>Jabatan</th><th>Peran</th></tr>
-    {% for m in team %}<tr><td>{{ m.full_name }}</td><td>{{ m.position or "-" }}</td><td>{{ "Ketua tim" if m.role_in_plan == "LEADER" else "Anggota" }}</td></tr>{% endfor %}
+    <thead><tr><th style="width:7mm">No</th><th>Nama</th><th>Jabatan</th><th style="width:22mm">Peran</th><th>Hari bertugas</th></tr></thead>
+    {% for m in team_rows %}<tr>
+      <td>{{ loop.index }}</td><td>{{ m.full_name }}</td><td>{{ m.position or "-" }}</td>
+      <td>{{ "Ketua tim" if m.role_in_plan == "LEADER" else "Anggota" }}</td>
+      <td>{% if m.days == 0 %}<span class="muted">Belum dijadwalkan</span>{% else %}{{ m.days }} hari{% endif %}{% if m.dates and m.days < work_days %}<br><span class="meta">{{ m.dates }}</span>{% elif m.days == work_days and work_days %}<br><span class="meta">semua hari kerja</span>{% endif %}</td>
+    </tr>{% endfor %}
   </table>
 
   {% if assets %}
   <h2>Alat &amp; kendaraan</h2>
   <table>
-    <tr><th>Jenis</th><th>Kode</th><th>Nama</th><th>Driver</th></tr>
+    <thead><tr><th style="width:22mm">Jenis</th><th style="width:26mm">Kode</th><th>Nama</th><th>Driver</th></tr></thead>
     {% for a in assets %}<tr><td>{{ "Kendaraan" if a.kind == "VEHICLE" else "Alat" }}</td><td>{{ a.code }}</td><td>{{ a.name }}</td><td>{{ a.driver_name or "-" }}</td></tr>{% endfor %}
   </table>
   {% endif %}
 
-  <h2>Detail pekerjaan per hari</h2>
-  <table>
-    <tr><th style="width:24mm">Tanggal</th><th>Detail pekerjaan</th></tr>
-    {% for d in days %}<tr><td>{{ d.work_date | tgl }}</td><td>
-      {% for t in d.tasks %}{% if t is string %}<div>{{ t }}</div>{% else %}
-      <div class="task"><strong>{{ t.title }}</strong>{% if t.description %} — {{ t.description }}{% endif %}
-        {% if t.files %}<div class="meta">Lampiran: {{ t.files | join(", ") }}</div>{% endif %}</div>{% endif %}{% endfor %}
-    </td></tr>{% endfor %}
+  <h2>Jadwal hari kerja</h2>
+  <table class="schedule">
+    <thead><tr><th>No</th><th>Hari, tanggal</th><th style="width:25mm">Jenis pekerjaan</th><th style="width:30mm">Lokasi</th><th>Detail pekerjaan</th><th style="width:30mm">Pekerja</th></tr></thead>
+    {% for r in rows %}<tr>
+      <td class="no">{{ r.no }}</td>
+      <td class="date"><strong>{{ r.weekday }}</strong><br>{{ r.date | tgl }}</td>
+      <td>{{ r.work_type }}</td>
+      <td>{{ r.location }}</td>
+      <td>{% for t in r.tasks %}<div class="task"><strong>{{ t.title }}</strong>{% if t.description %} — {{ t.description }}{% endif %}{% if t.files %}<div class="files">Lampiran: {{ t.files | join(", ") }}</div>{% endif %}</div>{% endfor %}</td>
+      <td>{% if r.workers %}{% for w in r.workers %}<span class="worker">{{ w }}</span>{% endfor %}{% else %}<span class="muted">Ketua saja</span>{% endif %}</td>
+    </tr>{% endfor %}
   </table>
+  <p class="meta">Ketua tim bertugas di semua hari kerja dan tidak diulang di kolom Pekerja.</p>
+  {% if holidays %}<div class="holiday"><strong>Hari libur</strong> (tidak wajib absen dan laporan): {{ holidays_text }}</div>{% endif %}
 
   {% if attachments %}
   <h2>Lampiran</h2>

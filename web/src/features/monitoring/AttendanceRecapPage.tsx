@@ -112,6 +112,7 @@ export function AttendanceRecapPage() {
                   <th className="px-4 py-3 font-medium">Lokasi</th>
                   <th className="px-4 py-3 font-medium">Jam masuk</th>
                   <th className="px-4 py-3 font-medium">Jam keluar</th>
+                  <th className="px-4 py-3 font-medium">Kategori</th>
                   <th className="px-4 py-3 font-medium">Status</th>
                 </tr>
               </thead>
@@ -129,6 +130,7 @@ export function AttendanceRecapPage() {
                       {checkOutLabel(r.work_date, r.check_out_at)}
                       {r.is_early_leave ? " · pulang cepat" : ""}
                     </td>
+                    <td className="px-4 py-2">{r.city_category === "LUAR_KOTA" ? "Luar kota" : "Dalam kota"}</td>
                     <td className="px-4 py-2">
                       <StatusBadge status={r.status} />
                     </td>

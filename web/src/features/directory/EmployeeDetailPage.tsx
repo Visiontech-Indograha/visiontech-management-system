@@ -296,7 +296,7 @@ function ArchivePanel({ employee }: { employee: Employee }) {
         }
       >
         <p className="text-sm">
-          {employee.full_name} akan disembunyikan dari Direktori. Riwayat SK, absensi, dan dokumennya tidak dihapus.
+          {employee.full_name} akan disembunyikan dari Direktori. Riwayat rencana kerja, absensi, dan dokumennya tidak dihapus.
         </p>
       </Dialog>
     </section>

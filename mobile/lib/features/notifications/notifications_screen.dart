@@ -8,6 +8,7 @@ import '../../core/error_message.dart';
 import '../../core/providers.dart';
 import '../../core/theme/theme.dart';
 import '../../shared/ui/vms_ui.dart';
+import '../plans/revision_history_screen.dart';
 import '../plans/work_plans_screen.dart';
 
 final _time = DateFormat('d MMM yyyy, HH.mm', 'id_ID');
@@ -48,7 +49,12 @@ class _NotificationBellState extends ConsumerState<NotificationBell> {
   }
 
   @override
-  Widget build(BuildContext context) => Stack(
+  Widget build(BuildContext context) {
+    ref.listen(liveEventTickProvider, (_, _) => _refresh());
+    return _bell();
+  }
+
+  Widget _bell() => Stack(
     clipBehavior: Clip.none,
     children: [
       HeaderAction(
@@ -130,7 +136,12 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     try {
       if (n['read_at'] == null) await api.readNotification(n['id'] as String);
       final planId = n['work_plan_id'] as String?;
-      if (planId != null) {
+      if (planId != null && n['kind'] == 'PLAN_REVISED') {
+        if (!mounted) return;
+        await Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => RevisionHistoryScreen(planId: planId)),
+        );
+      } else if (planId != null) {
         final plan = await api.workPlan(planId);
         if (!mounted) return;
         await Navigator.of(
@@ -148,6 +159,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(liveEventTickProvider, (_, _) => _load());   // T8: peristiwa waktu nyata
     final unread = _items.where((n) => n['read_at'] == null).length;
     return Scaffold(
       appBar: VmsTopBar(

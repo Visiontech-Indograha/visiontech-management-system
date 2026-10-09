@@ -58,7 +58,7 @@ class _SkViewerScreenState extends ConsumerState<SkViewerScreen> {
         return;
       }
       final docs = await api.planDocuments(widget.planId);
-      if (docs.isEmpty) throw StateError('Dokumen SK belum terbit.');
+      if (docs.isEmpty) throw StateError('Dokumen rencana kerja belum terbit.');
       final latest =
           docs.last; // API mengurutkan versi naik; yang berlaku = terakhir
       final html = await api.documentHtml(latest['id'] as String);

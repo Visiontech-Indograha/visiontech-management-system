@@ -104,7 +104,8 @@ async def upsert_daily_report(
 
     Return: Laporan harian (DailyReportResponse)
     """
-    report = await hse.save_daily_report(access, day_id, data.body, data.obstacle, data.evidence_file_ids)
+    report = await hse.save_daily_report(access, day_id, data.body, data.obstacle, data.evidence_file_ids,
+                                         data.evidence)
     return DailyReportResponse(**report._mapping)
 
 

@@ -12,6 +12,7 @@ val keystoreProperties = Properties().apply {
     if (file.exists()) file.inputStream().use { load(it) }
 }
 val hasReleaseKey = listOf("storeFile", "storePassword", "keyAlias", "keyPassword").all { keystoreProperties.containsKey(it) }
+val isBeta = System.getenv("VMS_BETA") == "1"
 
 android {
     namespace = "com.visiontech.vms_mobile"
@@ -21,6 +22,8 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        // flutter_local_notifications (notifikasi sistem saat peristiwa SSE masuk, T8) butuh desugaring.
+        isCoreLibraryDesugaringEnabled = true
     }
 
     defaultConfig {
@@ -36,6 +39,10 @@ android {
         // flag during build.
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        // APK beta uji lokal (scripts/bangun-beta.sh): berdampingan dengan aplikasi prod.
+        if (isBeta) applicationIdSuffix = ".beta"
+        manifestPlaceholders["appLabel"] = if (isBeta) "Visiontech Beta" else "Visiontech"
     }
 
     signingConfigs {
@@ -55,8 +62,9 @@ android {
         getByName("debug") { manifestPlaceholders["usesCleartextTraffic"] = "true" }
         getByName("profile") { manifestPlaceholders["usesCleartextTraffic"] = "true" }
         release {
+            // Beta mengakses http:// laptop (adb reverse), jadi cleartext diizinkan.
             manifestPlaceholders["usesCleartextTraffic"] =
-                (project.findProperty("allowCleartext") ?: "false").toString()
+                if (isBeta) "true" else (project.findProperty("allowCleartext") ?: "false").toString()
             // Rilis memakai kunci rilis. Tanpa key.properties, build rilis GAGAL (lihat pemeriksaan di bawah) —
             // kecuali uji lokal dengan `-PallowDebugSigning=true` (APK bertanda kunci debug, jangan dibagikan).
             signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
@@ -83,4 +91,8 @@ kotlin {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }

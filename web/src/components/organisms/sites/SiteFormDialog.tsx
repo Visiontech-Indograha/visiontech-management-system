@@ -3,13 +3,15 @@ import { useMemo, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
-import { Button } from "@/components/atoms/Button";
 import { TextField } from "@/components/molecules/Field";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { ApiError } from "@/lib/apiClient";
 import type { LatLng } from "@/components/organisms/work-plans/PlanLocationCard";
 import { useCreateSite } from "@/services/siteService";
 import { SiteMapPicker } from "./SiteMapPicker";
+import { ActionButton } from "@/components/molecules/ActionButton";
+import { TextBlock } from "@/components/molecules/TextBlock";
+import { FormBlock } from "@/components/molecules/FormBlock";
 
 const coordinate = (min: number, max: number, label: string) =>
   z
@@ -81,20 +83,20 @@ export function SiteFormDialog({ onClose }: { onClose: () => void }) {
       onClose={onClose}
       footer={
         <>
-          <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
+          <ActionButton variant="outline" onClick={onClose} disabled={isSubmitting}>
             Batal
-          </Button>
-          <Button type="submit" form="site-form" disabled={isSubmitting}>
+          </ActionButton>
+          <ActionButton type="submit" form="site-form" disabled={isSubmitting}>
             {isSubmitting ? "Menyimpan..." : "Simpan"}
-          </Button>
+          </ActionButton>
         </>
       }
     >
-      <form id="site-form" onSubmit={onSubmit} noValidate>
+      <FormBlock id="site-form" onSubmit={onSubmit} noValidate>
         {formError && (
-          <p role="alert" className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
+          <TextBlock role="alert" className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
             {formError}
-          </p>
+          </TextBlock>
         )}
         <SiteMapPicker
           point={point}
@@ -121,7 +123,7 @@ export function SiteFormDialog({ onClose }: { onClose: () => void }) {
           error={errors.radius_m?.message}
           {...register("radius_m")}
         />
-      </form>
+      </FormBlock>
     </VmsDialog>
   );
 }

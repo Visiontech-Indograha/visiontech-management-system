@@ -1,12 +1,6 @@
 import { useState } from "react";
 import { useSession } from "@/app/session";
-import { AttendanceExplainDialog } from "@/components/organisms/attendance/AttendanceExplainDialog";
-import { AttendanceFilter } from "@/components/organisms/attendance/AttendanceFilter";
-import { AttendanceList } from "@/components/organisms/attendance/AttendanceList";
-import { AttendanceReviewDialog } from "@/components/organisms/attendance/AttendanceReviewDialog";
-import { AttendanceScopeTabs } from "@/components/organisms/attendance/AttendanceScopeTabs";
-import { OfficeCheckInCard } from "@/components/organisms/attendance/OfficeCheckInCard";
-import { PageTemplate } from "@/components/templates/PageTemplate";
+import { AttendanceTemplate } from "@/components/templates/attendance/AttendanceTemplate";
 import { useAttendance, type Attendance, type AttendanceFilters } from "@/services/attendanceService";
 
 /**
@@ -30,20 +24,17 @@ export function AttendancePage() {
   const set = (patch: Partial<AttendanceFilters>) => setF((old) => ({ ...old, ...patch, page: patch.page ?? 1 }));
 
   return (
-    <PageTemplate title="Absensi">
-      <OfficeCheckInCard />
-      {hasTeam && (
-        <AttendanceScopeTabs
-          scope={f.scope}
-          teamLabel={teamLabel}
-          onScopeChange={(key) => setF((old) => ({ ...old, scope: key, status: key === "team" && canReview ? "NEEDS_REVIEW" : "", page: 1 }))}
-        />
-      )}
-      <AttendanceFilter filters={f} onChange={set} />
-      <AttendanceList list={list} page={f.page} meEmployeeId={me?.employee_id} onPageChange={(page) => set({ page })} onOpen={setOpen} />
-
-      {open?.kind === "review" && <AttendanceReviewDialog item={open.item} onClose={() => setOpen(null)} />}
-      {open?.kind === "explain" && <AttendanceExplainDialog item={open.item} onClose={() => setOpen(null)} />}
-    </PageTemplate>
+    <AttendanceTemplate
+      list={list}
+      filters={f}
+      onFilterChange={set}
+      hasTeam={hasTeam}
+      teamLabel={teamLabel}
+      onScopeChange={(key) => setF((old) => ({ ...old, scope: key, status: key === "team" && canReview ? "NEEDS_REVIEW" : "", page: 1 }))}
+      meEmployeeId={me?.employee_id}
+      open={open}
+      onOpen={setOpen}
+      onClose={() => setOpen(null)}
+    />
   );
 }

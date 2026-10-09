@@ -52,19 +52,9 @@ const RULES = {
 }
 // Aturan lama (sebelum hierarki ketat) untuk berkas di daftar pengecualian.
 const LEGACY = {
-  page: composition('Page', [ATOMS('Page'), MOLECULES('Page')], true),
   organism: { 'no-restricted-imports': ['error', { patterns: [PAGES, TEMPLATES('Organism')] }], 'no-restricted-syntax': 'off' },
   molecule: { 'no-restricted-imports': ['error', { patterns: [PAGES, tier('organisms', 'Molecule', 'tidak boleh mengimpor organism'), TEMPLATES('Molecule'), SAME_MOLECULE] }], 'no-restricted-syntax': 'off' },
 }
-
-// Page yang belum punya template sendiri (masih template + organism). Daftar ini HANYA BOLEH MENYUSUT (docs/33 §7).
-const PAGES_LEGACY = [
-  'src/pages/assets/AssetsPage.tsx',
-  'src/pages/attendance/AttendancePage.tsx',
-  'src/pages/work-plans/PlanEditorPage.tsx',
-  'src/pages/work-plans/PresentationPage.tsx',
-  'src/pages/work-plans/WorkPlanDetailPage.tsx',
-]
 
 // Organism yang masih memakai atom/ikon/HTML langsung. Daftar ini HANYA BOLEH MENYUSUT (docs/33 §7).
 const ORGANISMS_LEGACY = [
@@ -250,7 +240,6 @@ export default tseslint.config(
     ignores: ['**/*.test.tsx'],
     rules: RULES.page,
   },
-  { files: PAGES_LEGACY, rules: LEGACY.page },
   { files: ORGANISMS_LEGACY, rules: LEGACY.organism },
   { files: MOLECULES_LEGACY, rules: LEGACY.molecule },
 )

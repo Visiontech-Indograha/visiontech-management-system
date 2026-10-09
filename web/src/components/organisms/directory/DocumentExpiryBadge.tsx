@@ -1,7 +1,7 @@
 import { Pill } from "@/components/molecules/Pill";
 
 /** Pemetaan status → badge (docs/06-UI-UX §4). */
-export function ExpiryBadge({ level, days }: { level: string | null | undefined; days?: number | null }) {
+export function DocumentExpiryBadge({ level, days }: { level: string | null | undefined; days?: number | null }) {
   switch (level) {
     case "EXPIRED":
       return <Pill tone="danger">Kedaluwarsa</Pill>;
@@ -18,11 +18,3 @@ export function ExpiryBadge({ level, days }: { level: string | null | undefined;
   }
 }
 
-export function CompletenessBadge({ status, missing }: { status?: string | null; missing?: number }) {
-  if (!status) return null;
-  return status === "COMPLETE" ? (
-    <Pill tone="success">Lengkap</Pill>
-  ) : (
-    <Pill tone="warning">{`Kurang ${missing ?? ""} berkas`.replace("  ", " ")}</Pill>
-  );
-}

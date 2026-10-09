@@ -33,6 +33,15 @@ tampilan UI (rute) > Page > Template > Organism > Molecule > Atom
 Tiap tingkat hanya menyusun tingkat **di bawahnya**. **Atom atau molecule (termasuk elemen HTML mentah) di Page atau
 Template = pelanggaran.**
 
+Definisi pemilik (2026-10-09):
+
+1. **Atom** — komponen paling dasar yang tidak bisa dipecah lagi: tombol, label, input, ikon, warna, tipografi.
+2. **Molecule** — gabungan beberapa atom dengan satu fungsi kecil: kolom pencarian (input + tombol), kartu kecil.
+3. **Organism** — gabungan **molecule dan/atau atom** yang membentuk bagian kompleks halaman: navbar, header, form.
+   Organism boleh langsung memakai atom (mis. `Button` di `ChangePasswordForm`).
+4. **Template** — kerangka/tata letak halaman yang menyusun organism, tanpa data sungguhan.
+5. **Page** — implementasi nyata template yang diisi data, teks, dan gambar sungguhan.
+
 | Tingkat | Isi | Contoh di repo | Tempat |
 |---|---|---|---|
 | **Atom** | Elemen UI terkecil, tanpa pengetahuan domain. Termasuk hasil salinan shadcn/ui. | `Button`, `Input`, `Label`, `Badge`, `Skeleton`, `Checkbox` | `components/atoms/` |

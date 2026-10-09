@@ -384,55 +384,6 @@ export function PlanEditorForm({ planId, detail, revise = false, changeId }: { p
                         ))}
                       </select>
                     </Row>
-                    <Row label="Anggota (gabungan)" hint="Dipilih per hari di tabel hari kerja di bawah.">
-                      <span>{members.length ? members.map((m) => people.get(m) ?? m).join(", ") : "Belum ada anggota"}</span>
-                    </Row>
-                    <Row label="Alat">
-                      {o.tools.length === 0 ? (
-                        <span className="text-mist">Tidak ada alat yang siap pakai.</span>
-                      ) : (
-                        <div className="flex max-h-40 flex-wrap gap-x-4 overflow-y-auto">
-                          {o.tools.map((t) => (
-                            <label key={t.id} className="flex min-h-11 items-center gap-2">
-                              <input type="checkbox" className="size-5" value={t.id} {...register("tool_ids")} />
-                              {t.name} · {t.code}
-                            </label>
-                          ))}
-                        </div>
-                      )}
-                    </Row>
-                    <Row label="Kendaraan" hint="Opsional. Hanya kendaraan siap pakai yang tidak terikat rencana lain.">
-                      <select aria-label="Kendaraan" className={inputCls} {...register("vehicle_id")}>
-                        <option value="">Tanpa kendaraan</option>
-                        {o.vehicles.map((v) => (
-                          <option key={v.id} value={v.id}>
-                            {v.name} · {v.code} ({v.vehicle_type === "MOTORCYCLE" ? "roda dua, SIM C" : "SIM A"})
-                          </option>
-                        ))}
-                      </select>
-                    </Row>
-                    {vehicle && (
-                      <Row
-                        label="Driver"
-                        error={errors.driver_employee_id?.message}
-                        hint={
-                          candidates.length === 0
-                            ? "Pilih ketua/anggota dulu."
-                            : drivers.data && drivers.data.length === 0
-                              ? "Tidak ada ketua/anggota dengan SIM yang sesuai tipe kendaraan."
-                              : "Ketua atau anggota terpilih dengan SIM sesuai tipe kendaraan."
-                        }
-                      >
-                        <select aria-label="Driver" className={inputCls} {...register("driver_employee_id")}>
-                          <option value="">{drivers.isFetching ? "Memuat..." : "Pilih driver"}</option>
-                          {drivers.data?.map((d) => (
-                            <option key={d} value={d}>
-                              {people.get(d) ?? d}
-                            </option>
-                          ))}
-                        </select>
-                      </Row>
-                    )}
                   </tbody>
                 </table>
               </div>
@@ -486,6 +437,62 @@ export function PlanEditorForm({ planId, detail, revise = false, changeId }: { p
                   <p className="mt-2 text-xs text-mist">Hari libur tidak wajib absen dan laporan. Hari yang sudah berlaporan tidak dapat diliburkan.</p>
                 </div>
               )}
+              {/* 2026-10-09 (pemilik): anggota, alat, kendaraan & driver di bawah tabel hari kerja. */}
+              <div className="mt-4 overflow-x-auto">
+                <table className="w-full min-w-[560px] border-collapse text-sm">
+                  <tbody>
+                    <Row label="Anggota (gabungan)" hint="Dipilih per hari di tabel hari kerja di atas.">
+                      <span>{members.length ? members.map((m) => people.get(m) ?? m).join(", ") : "Belum ada anggota"}</span>
+                    </Row>
+                    <Row label="Alat">
+                      {o.tools.length === 0 ? (
+                        <span className="text-mist">Tidak ada alat yang siap pakai.</span>
+                      ) : (
+                        <div className="flex max-h-40 flex-wrap gap-x-4 overflow-y-auto">
+                          {o.tools.map((t) => (
+                            <label key={t.id} className="flex min-h-11 items-center gap-2">
+                              <input type="checkbox" className="size-5" value={t.id} {...register("tool_ids")} />
+                              {t.name} · {t.code}
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </Row>
+                    <Row label="Kendaraan" hint="Opsional. Hanya kendaraan siap pakai yang tidak terikat rencana lain.">
+                      <select aria-label="Kendaraan" className={inputCls} {...register("vehicle_id")}>
+                        <option value="">Tanpa kendaraan</option>
+                        {o.vehicles.map((v) => (
+                          <option key={v.id} value={v.id}>
+                            {v.name} · {v.code} ({v.vehicle_type === "MOTORCYCLE" ? "roda dua, SIM C" : "SIM A"})
+                          </option>
+                        ))}
+                      </select>
+                    </Row>
+                    {vehicle && (
+                      <Row
+                        label="Driver"
+                        error={errors.driver_employee_id?.message}
+                        hint={
+                          candidates.length === 0
+                            ? "Pilih ketua/anggota dulu."
+                            : drivers.data && drivers.data.length === 0
+                              ? "Tidak ada ketua/anggota dengan SIM yang sesuai tipe kendaraan."
+                              : "Ketua atau anggota terpilih dengan SIM sesuai tipe kendaraan."
+                        }
+                      >
+                        <select aria-label="Driver" className={inputCls} {...register("driver_employee_id")}>
+                          <option value="">{drivers.isFetching ? "Memuat..." : "Pilih driver"}</option>
+                          {drivers.data?.map((d) => (
+                            <option key={d} value={d}>
+                              {people.get(d) ?? d}
+                            </option>
+                          ))}
+                        </select>
+                      </Row>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </Section>
 
             <div className="sticky bottom-0 -mx-4 flex gap-3 border-t border-line bg-surface px-4 py-3 md:mx-0 md:rounded-panel md:border">

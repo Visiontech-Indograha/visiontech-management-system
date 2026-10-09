@@ -14,6 +14,8 @@ import { ArrowDown, ArrowUp, Plus, Trash2 } from "@/components/molecules/Glyphs"
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
 import { ControlInput, ControlLabel, FormBlock } from "@/components/molecules/FormBlock";
+import { DialogActions } from "@/components/molecules/DialogActions";
+import { FormErrorText } from "@/components/molecules/FormErrorText";
 
 /** Dialog tambah/ubah jenis pekerjaan: nama + slot template foto (label, petunjuk, foto contoh, wajib, urutan). */
 export function WorkTypeFormDialog({ type, onClose }: { type: WorkType | null; onClose: () => void }) {
@@ -74,22 +76,11 @@ export function WorkTypeFormDialog({ type, onClose }: { type: WorkType | null; o
       title={type ? "Ubah jenis pekerjaan" : "Tambah jenis pekerjaan"}
       onClose={onClose}
       footer={
-        <>
-          <ActionButton variant="outline" onClick={onClose} disabled={isSubmitting}>
-            Batal
-          </ActionButton>
-          <ActionButton type="submit" form="work-type-form" disabled={isSubmitting}>
-            {isSubmitting ? "Menyimpan..." : "Simpan"}
-          </ActionButton>
-        </>
+        <DialogActions onCancel={onClose} busy={isSubmitting} formId="work-type-form" />
       }
     >
       <FormBlock id="work-type-form" onSubmit={onSubmit} noValidate>
-        {formError && (
-          <TextBlock role="alert" className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
-            {formError}
-          </TextBlock>
-        )}
+        <FormErrorText message={formError} />
         <TextField label="Nama jenis" error={errors.name?.message} {...register("name")} />
         <TextBlock className="mb-2 text-sm font-medium">Template foto laporan</TextBlock>
         {errors.photos?.root?.message && <TextBlock className="mb-2 text-sm text-danger">{errors.photos.root.message}</TextBlock>}

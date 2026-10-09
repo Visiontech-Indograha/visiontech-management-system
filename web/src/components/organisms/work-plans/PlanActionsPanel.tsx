@@ -16,6 +16,7 @@ import { PlanRevisionPanel } from "./PlanRevisionPanel";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { InlineLink } from "@/components/molecules/Links";
 import { TextBlock } from "@/components/molecules/TextBlock";
+import { SectionTitle } from "@/components/molecules/SectionTitle";
 
 const CANCELLABLE = ["PUBLISHED", "APPEALED", "ACCEPTED", "IN_PROGRESS", "COMPLETION_REVIEW"];
 
@@ -134,7 +135,7 @@ export function PlanActionsPanel({ plan }: { plan: WorkPlan }) {
       <OvertimePanel plan={plan} />
       {manager.length > 0 && (
         <section aria-label="Tindakan PM" className="rounded-panel border border-line bg-surface shadow-card p-4">
-          <TextBlock as="h2" className="mb-3 text-base font-semibold">Tindakan PM</TextBlock>
+          <SectionTitle>Tindakan PM</SectionTitle>
           {s === "PUBLISHED" && (
             <TextBlock className="mb-3 rounded-control bg-warning-bg px-3 py-2 text-sm text-warning">
               Notifikasi sudah dikirim ke ketua tim dan anggota. Menunggu ketua meninjau rencana kerja di aplikasi HP lalu menekan{" "}
@@ -156,7 +157,7 @@ export function PlanActionsPanel({ plan }: { plan: WorkPlan }) {
       )}
       {leader.length > 0 && (
         <section aria-label="Tindakan ketua tim" className="rounded-panel border border-line bg-surface shadow-card p-4">
-          <TextBlock as="h2" className="mb-3 text-base font-semibold">Tindakan ketua tim</TextBlock>
+          <SectionTitle>Tindakan ketua tim</SectionTitle>
           <div className="flex flex-col gap-2 [&>button]:w-full">{leader}</div>
         </section>
       )}

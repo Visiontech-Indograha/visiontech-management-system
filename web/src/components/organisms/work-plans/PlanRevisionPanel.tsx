@@ -14,6 +14,7 @@ import { InlineLink } from "@/components/molecules/Links";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
 import { PlanRevisionRequestCard } from "@/components/organisms/work-plans/PlanRevisionRequestCard";
+import { SectionTitle } from "@/components/molecules/SectionTitle";
 
 const TYPE_LABEL: Record<string, string> = { AMENDMENT: "Revisi", EXTEND: "Perpanjangan", PERSONNEL: "Revisi personel" };
 
@@ -66,7 +67,7 @@ export function PlanRevisionPanel({ plan }: { plan: WorkPlan }) {
       )}
       {list.length > 0 && (
     <section aria-label="Permintaan revisi" className="rounded-panel border border-line bg-surface p-4 shadow-card">
-      <TextBlock as="h2" className="mb-3 text-base font-semibold">Riwayat permintaan revisi</TextBlock>
+      <SectionTitle>Riwayat permintaan revisi</SectionTitle>
       <ListBlock className="space-y-3">
         {list.map((c) => (
           <ListEntry key={c.id} className="rounded-control border border-line p-3 text-sm">

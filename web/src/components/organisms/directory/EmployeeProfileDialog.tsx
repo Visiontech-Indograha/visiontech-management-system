@@ -8,9 +8,9 @@ import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { ApiError } from "@/lib/apiClient";
 import { ATTENDANCE_MODE_LABEL } from "@/lib/attendanceModeLabels";
 import { useUpdateEmployee, type Employee, type EmployeeUpdate } from "@/services/employeeService";
-import { ActionButton } from "@/components/molecules/ActionButton";
-import { TextBlock } from "@/components/molecules/TextBlock";
 import { ControlOption, FormBlock } from "@/components/molecules/FormBlock";
+import { DialogActions } from "@/components/molecules/DialogActions";
+import { FormErrorText } from "@/components/molecules/FormErrorText";
 
 const optional = z.string().trim();
 const profileSchema = z.object({
@@ -76,22 +76,11 @@ export function EmployeeProfileDialog({ employee, onClose }: { employee: Employe
       title="Ubah profil"
       onClose={onClose}
       footer={
-        <>
-          <ActionButton variant="outline" onClick={onClose} disabled={isSubmitting}>
-            Batal
-          </ActionButton>
-          <ActionButton type="submit" form="profile-form" disabled={isSubmitting}>
-            {isSubmitting ? "Menyimpan..." : "Simpan"}
-          </ActionButton>
-        </>
+        <DialogActions onCancel={onClose} busy={isSubmitting} formId="profile-form" />
       }
     >
       <FormBlock id="profile-form" onSubmit={onSubmit} noValidate>
-        {formError && (
-          <TextBlock role="alert" className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
-            {formError}
-          </TextBlock>
-        )}
+        <FormErrorText message={formError} />
         <TextField label="Nama lengkap" error={errors.full_name?.message} {...register("full_name")} />
         <TextField label="Email" type="email" error={errors.email?.message} {...register("email")} />
         <TextField label="No. telepon" error={errors.phone?.message} {...register("phone")} />

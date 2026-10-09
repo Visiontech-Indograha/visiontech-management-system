@@ -4,6 +4,7 @@ import type { ChangePasswordValues } from "@/schemas/changePasswordSchema";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { FormBlock } from "@/components/molecules/FormBlock";
+import { FormErrorText } from "@/components/molecules/FormErrorText";
 
 /**
  * Form ganti password: judul, galat umum, tiga field, tombol simpan.
@@ -20,11 +21,7 @@ export function ChangePasswordForm({ form, onSubmit, formError }: {
       <TextBlock as="h1" className="mb-1 text-2xl font-semibold">Ganti password</TextBlock>
       <TextBlock className="mb-6 text-mist">Masukkan password saat ini dan password baru.</TextBlock>
       <FormBlock onSubmit={onSubmit} noValidate>
-        {formError && (
-          <TextBlock role="alert" className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
-            {formError}
-          </TextBlock>
-        )}
+        <FormErrorText message={formError} />
         <TextField
           label="Password saat ini"
           type="password"

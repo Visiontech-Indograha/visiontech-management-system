@@ -6,6 +6,7 @@ import { LoadingBar } from "@/components/molecules/LoadingBar";
 import { MapPin } from "@/components/molecules/Glyphs";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
+import { RetryNotice } from "@/components/molecules/RetryNotice";
 
 /** Daftar lokasi kerja dengan keadaan memuat, galat (+ coba lagi), kosong (+ tambah), dan berhasil. */
 export function SiteList({ sites, onAdd, onRemove }: {
@@ -22,12 +23,7 @@ export function SiteList({ sites, onAdd, onRemove }: {
         </div>
       )}
       {sites.isError && (
-        <div role="alert" className="rounded-panel border border-line bg-surface shadow-card p-6 text-center">
-          <TextBlock className="mb-3 text-danger">Lokasi kerja tidak dapat dimuat.</TextBlock>
-          <ActionButton variant="outline" onClick={() => sites.refetch()}>
-            Coba lagi
-          </ActionButton>
-        </div>
+        <RetryNotice message="Lokasi kerja tidak dapat dimuat." onRetry={() => sites.refetch()} />
       )}
       {sites.data?.length === 0 && (
         <div className="rounded-panel border border-line bg-surface shadow-card p-6 text-center">

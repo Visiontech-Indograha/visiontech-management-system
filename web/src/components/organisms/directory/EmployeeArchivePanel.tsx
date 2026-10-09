@@ -5,6 +5,7 @@ import { errorMessage } from "@/lib/errors";
 import { useArchiveEmployee, useRestoreEmployee, type Employee } from "@/services/employeeService";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { TextBlock } from "@/components/molecules/TextBlock";
+import { FormErrorText } from "@/components/molecules/FormErrorText";
 
 /**
  * Hapus (arsip) karyawan yang sudah di-offboard dan pulihkan kembali (V-29). API tidak menampilkan
@@ -43,11 +44,7 @@ export function EmployeeArchivePanel({ employee }: { employee: Employee }) {
 
   return (
     <section aria-label="Hapus karyawan" className="mb-8 max-w-xl rounded-panel border border-line bg-surface shadow-card p-4">
-      {error && (
-        <TextBlock role="alert" className="mb-3 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
-          {error}
-        </TextBlock>
-      )}
+      <FormErrorText message={error} className="mb-3" />
       {archived ? (
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <TextBlock className="text-sm">Karyawan ini sudah dihapus dan tidak tampil di Direktori.</TextBlock>

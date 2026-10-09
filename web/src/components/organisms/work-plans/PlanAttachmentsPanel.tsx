@@ -11,6 +11,8 @@ import { oversize, uploadFiles } from "@/services/uploadService";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
+import { SectionTitle } from "@/components/molecules/SectionTitle";
+import { FormErrorText } from "@/components/molecules/FormErrorText";
 
 const key = (planId: string) => ["plan-attachments", planId] as const;
 
@@ -64,12 +66,8 @@ export function PlanAttachmentsPanel({ plan }: { plan: WorkPlan }) {
 
   return (
     <section aria-label="Lampiran rencana kerja" className="mt-6 rounded-panel border border-line bg-surface shadow-card p-4">
-      <TextBlock as="h2" className="mb-3 text-base font-semibold">Lampiran</TextBlock>
-      {error && (
-        <TextBlock role="alert" className="mb-3 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
-          {error}
-        </TextBlock>
-      )}
+      <SectionTitle>Lampiran</SectionTitle>
+      <FormErrorText message={error} className="mb-3" />
       <QueryState query={list} errorText="Lampiran tidak dapat dimuat." empty={current.length === 0} emptyText="Belum ada lampiran.">
         <ListBlock className="space-y-3">
           {current.map((a) => (

@@ -8,6 +8,7 @@ import { Pill } from "@/components/molecules/Pill";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { LoadingBar } from "@/components/molecules/LoadingBar";
 import { TextBlock } from "@/components/molecules/TextBlock";
+import { SectionTitle } from "@/components/molecules/SectionTitle";
 
 /**
  * M1-01 · HR/admin mengelola akun login karyawan: buat akun, reset password, nonaktifkan/aktifkan.
@@ -38,7 +39,7 @@ export function AccountCard({ employee }: { employee: Employee }) {
   const a = account.data;
   return (
     <section aria-label="Akun login" className="mb-8 max-w-xl">
-      <TextBlock as="h2" className="mb-3 text-base font-semibold">Akun login</TextBlock>
+      <SectionTitle>Akun login</SectionTitle>
       <div className="rounded-panel border border-line bg-surface px-5 py-4 text-sm shadow-card">
         {account.isPending && <LoadingBar className="h-4 w-2/3" />}
         {account.isError && (

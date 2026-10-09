@@ -3,13 +3,14 @@ import { useAssignments, type Employee } from "@/services/employeeService";
 import { LoadingBar } from "@/components/molecules/LoadingBar";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
+import { SectionTitle } from "@/components/molecules/SectionTitle";
 
 /** Riwayat jabatan/penempatan (M2) — riwayat lama tetap tersimpan saat mutasi/promosi. */
 export function AssignmentHistory({ employee }: { employee: Employee }) {
   const history = useAssignments(employee.id);
   return (
     <section aria-label="Riwayat jabatan" className="mb-8 max-w-xl">
-      <TextBlock as="h2" className="mb-3 text-base font-semibold">Riwayat jabatan</TextBlock>
+      <SectionTitle>Riwayat jabatan</SectionTitle>
       <div className="rounded-panel border border-line bg-surface shadow-card px-5 py-2 text-sm">
         {history.isPending && <LoadingBar className="my-2 h-4 w-2/3" />}
         {history.isError && <TextBlock className="py-2 text-danger">Riwayat tidak dapat dimuat.</TextBlock>}

@@ -3,6 +3,7 @@ import { formatDate, formatDateTime } from "@/lib/format";
 import { usePlanRevisions, type PlanRevision } from "@/services/workPlanService";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
+import { SectionTitle } from "@/components/molecules/SectionTitle";
 
 type DiffItem = { field: string; label: string; before?: unknown; after?: unknown; added?: string[]; removed?: string[]; changed?: string[] };
 
@@ -40,7 +41,7 @@ export function PlanRevisionHistory({ planId }: { planId: string }) {
   if (revisions.isSuccess && revisions.data.length === 0) return null;
   return (
     <section aria-label="Riwayat revisi" className="rounded-panel border border-line bg-surface p-4 shadow-card">
-      <TextBlock as="h2" className="mb-3 text-base font-semibold">Riwayat revisi</TextBlock>
+      <SectionTitle>Riwayat revisi</SectionTitle>
       <QueryState query={revisions} errorText="Riwayat revisi tidak dapat dimuat.">
         <ListBlock className="space-y-4">
           {revisions.data?.map((r: PlanRevision) => (

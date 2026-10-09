@@ -50,7 +50,6 @@ const NOT_YET_MIGRATED = [
   'src/features/work-plans/pages/PlanEditorPage.tsx',
   'src/features/work-plans/pages/PresentationPage.tsx',
   'src/features/work-plans/pages/WorkPlanDetailPage.tsx',
-  'src/features/work-plans/pages/WorkPlansPage.tsx',
   'src/features/work-types/pages/WorkTypesPage.tsx',
 ]
 

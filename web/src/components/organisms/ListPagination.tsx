@@ -1,4 +1,5 @@
-import { Button } from "../atoms/Button";
+import { ActionButton } from "@/components/molecules/ActionButton";
+import { TextBlock } from "@/components/molecules/TextBlock";
 
 /**
  * Navigasi halaman untuk daftar bernomor halaman (Direktori, Audit log, …).
@@ -18,17 +19,17 @@ export function ListPagination({ total, noun, page, shownPage, lastPage, onPageC
 }) {
   return (
         <nav aria-label="Halaman" className="mt-4 flex items-center justify-between text-sm">
-          <span className="text-mist">
+          <TextBlock as="span" className="text-mist">
             {total} {noun} · halaman {shownPage} dari {lastPage}
-          </span>
-          <span className="flex gap-2">
-            <Button variant="outline" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>
+          </TextBlock>
+          <TextBlock as="span" className="flex gap-2">
+            <ActionButton variant="outline" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>
               Sebelumnya
-            </Button>
-            <Button variant="outline" disabled={page >= lastPage} onClick={() => onPageChange(page + 1)}>
+            </ActionButton>
+            <ActionButton variant="outline" disabled={page >= lastPage} onClick={() => onPageChange(page + 1)}>
               Berikutnya
-            </Button>
-          </span>
+            </ActionButton>
+          </TextBlock>
         </nav>
   );
 }

@@ -1,6 +1,7 @@
 import { TextField } from "@/components/molecules/Field";
 import { STATUS_LABEL } from "@/lib/labels";
 import type { AttendanceFilters } from "@/services/attendanceService";
+import { ControlLabel, ControlOption, ControlSelect } from "@/components/molecules/FormBlock";
 
 const STATUSES = ["NEEDS_REVIEW", "AUTO_VALID", "APPROVED", "REJECTED"];
 const selectCls = "h-11 w-full rounded-control border border-line bg-surface px-3 text-sm";
@@ -13,17 +14,17 @@ export function AttendanceFilter({ filters: f, onChange: set }: {
   return (
       <div className="mb-4 grid gap-x-3 md:grid-cols-3">
         <div className="mb-4 space-y-1.5">
-          <label htmlFor="att-status" className="text-sm font-medium">
+          <ControlLabel htmlFor="att-status" className="text-sm font-medium">
             Status
-          </label>
-          <select id="att-status" className={selectCls} value={f.status} onChange={(e) => set({ status: e.target.value })}>
-            <option value="">Semua status</option>
+          </ControlLabel>
+          <ControlSelect id="att-status" className={selectCls} value={f.status} onChange={(e) => set({ status: e.target.value })}>
+            <ControlOption value="">Semua status</ControlOption>
             {STATUSES.map((s) => (
-              <option key={s} value={s}>
+              <ControlOption key={s} value={s}>
                 {STATUS_LABEL[s]}
-              </option>
+              </ControlOption>
             ))}
-          </select>
+          </ControlSelect>
         </div>
         <TextField label="Dari tanggal" type="date" value={f.from} onChange={(e) => set({ from: e.target.value })} />
         <TextField label="Sampai tanggal" type="date" value={f.to} onChange={(e) => set({ to: e.target.value })} />

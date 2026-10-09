@@ -1,18 +1,18 @@
-import { Badge } from "@/components/atoms/Badge";
+import { Pill } from "@/components/molecules/Pill";
 
 /** Pemetaan status → badge (docs/06-UI-UX §4). */
 export function ExpiryBadge({ level, days }: { level: string | null | undefined; days?: number | null }) {
   switch (level) {
     case "EXPIRED":
-      return <Badge tone="danger">Kedaluwarsa</Badge>;
+      return <Pill tone="danger">Kedaluwarsa</Pill>;
     case "CRITICAL":
-      return <Badge tone="danger">≤ 7 hari</Badge>;
+      return <Pill tone="danger">≤ 7 hari</Pill>;
     case "WARNING":
-      return <Badge tone="warning">≤ 30 hari</Badge>;
+      return <Pill tone="warning">≤ 30 hari</Pill>;
     case "NOTICE":
-      return <Badge tone="info">≤ 60 hari</Badge>;
+      return <Pill tone="info">≤ 60 hari</Pill>;
     case "OK":
-      return days != null ? <Badge tone="success">{`${days} hari lagi`}</Badge> : null;
+      return days != null ? <Pill tone="success">{`${days} hari lagi`}</Pill> : null;
     default:
       return null;
   }
@@ -21,8 +21,8 @@ export function ExpiryBadge({ level, days }: { level: string | null | undefined;
 export function CompletenessBadge({ status, missing }: { status?: string | null; missing?: number }) {
   if (!status) return null;
   return status === "COMPLETE" ? (
-    <Badge tone="success">Lengkap</Badge>
+    <Pill tone="success">Lengkap</Pill>
   ) : (
-    <Badge tone="warning">{`Kurang ${missing ?? ""} berkas`.replace("  ", " ")}</Badge>
+    <Pill tone="warning">{`Kurang ${missing ?? ""} berkas`.replace("  ", " ")}</Pill>
   );
 }

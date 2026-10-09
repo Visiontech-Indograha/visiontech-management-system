@@ -7,6 +7,7 @@ import { errorMessage } from "@/lib/errors";
 import { createSchema, type CreateValues } from "@/schemas/assetSchemas";
 import { useCreateAsset } from "@/services/assetService";
 import { AssetFormDialog } from "./AssetFormDialog";
+import { ControlOption } from "@/components/molecules/FormBlock";
 
 /** Dialog "Tambah aset" (kendaraan atau alat). */
 export function AssetCreateDialog({ onClose }: { onClose: () => void }) {
@@ -35,8 +36,8 @@ export function AssetCreateDialog({ onClose }: { onClose: () => void }) {
   return (
     <AssetFormDialog title="Tambah aset" submitting={isSubmitting} formError={formError} onClose={onClose} onSubmit={onSubmit}>
       <SelectField label="Jenis aset" {...register("kind")}>
-        <option value="VEHICLE">Kendaraan</option>
-        <option value="TOOL">Peralatan</option>
+        <ControlOption value="VEHICLE">Kendaraan</ControlOption>
+        <ControlOption value="TOOL">Peralatan</ControlOption>
       </SelectField>
       {kind === "VEHICLE" && <TextField label="Jenis kendaraan" hint="Contoh: Pick-up, Minibus" error={errors.vehicle_type?.message} {...register("vehicle_type")} />}
       <TextField label="Kode aset" error={errors.code?.message} {...register("code")} />

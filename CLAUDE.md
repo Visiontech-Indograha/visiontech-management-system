@@ -42,7 +42,7 @@ Daftar pustaka lengkap dan aturan menambah pustaka: `docs/14-DAFTAR-PUSTAKA-TEKN
 
 ```
 api/            FastAPI — endpoint → service → crud (struktur WAJIB: docs/12 §1, migrasi: docs/26)
-web/            React — components/{atoms,molecules,organisms,templates} + features/<fitur>/{pages,components}
+web/            React — pages/<domain> · components/{atoms,molecules,organisms[/<domain>],templates} · services/ · schemas/ · hooks/ · lib/
 mobile/         Flutter — core/, shared/, features/
 face-service/   layanan wajah (fase 8)
 db/             5 berkas SQL, fondasi skema
@@ -104,7 +104,8 @@ docs/           seluruh rencana dan standar
 - Form: react-hook-form + zod. Pesan validasi Bahasa Indonesia di skema.
 - Setiap layar menangani 4 keadaan: memuat, kosong, galat, berhasil.
 - Sasaran sentuh ≥ 44 px, teks dasar ≥ 16 px, kontras ≥ 4,5:1.
-- `components/` tidak boleh mengimpor dari `features/`.
+- Struktur berbasis lapisan (`docs/33` §3): fitur tidak membuat komponen sendiri; hanya `app/` mengimpor `pages/`;
+  `services/` dan `lib/` tidak mengimpor `components/`.
 - **Dilarang:** `alert()`, `confirm()`, `prompt()`, `any`, `@ts-ignore`.
 
 ## Pengujian

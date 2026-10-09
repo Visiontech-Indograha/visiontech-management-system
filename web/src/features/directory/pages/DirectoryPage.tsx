@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { useSession } from "@/app/session";
+import { ListPagination } from "@/components/organisms/ListPagination";
 import { PageTemplate } from "@/components/templates/PageTemplate";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { PAGE_SIZE, useEmployees } from "../employeeService";
 import { EmployeeCreateButton } from "../components/EmployeeCreateButton";
 import { CreateEmployeeDialog } from "../components/EmployeeLifecycleDialogs";
 import { EmployeeListFilter } from "../components/EmployeeListFilter";
-import { EmployeePagination } from "../components/EmployeePagination";
 import { EmployeeTable } from "../components/EmployeeTable";
 
 /** Direktori karyawan: cari, saring status, halaman per 20 (GET /employees). */
@@ -31,7 +31,7 @@ export function DirectoryPage() {
       <EmployeeListFilter q={q} onQChange={reset(setQ)} status={status} onStatusChange={reset(setStatus)} />
       <EmployeeTable list={list} />
       {data && data.total > PAGE_SIZE && (
-        <EmployeePagination total={data.total} page={page} shownPage={data.page} lastPage={lastPage} onPageChange={setPage} />
+        <ListPagination total={data.total} noun="karyawan" page={page} shownPage={data.page} lastPage={lastPage} onPageChange={setPage} />
       )}
     </PageTemplate>
   );

@@ -1,9 +1,5 @@
 import { useSession } from "@/app/session";
-import { ExpiringDocumentsCard } from "@/components/organisms/home/ExpiringDocumentsCard";
-import { HomeActivePlansCard } from "@/components/organisms/home/HomeActivePlansCard";
-import { HomeGreeting } from "@/components/organisms/home/HomeGreeting";
-import { HomeStatGrid } from "@/components/organisms/home/HomeStatGrid";
-import { PendingDocumentsCard } from "@/components/organisms/home/PendingDocumentsCard";
+import { HomeTemplate } from "@/components/templates/home/HomeTemplate";
 import { useAttendanceToReview, useExpiringDocuments, usePendingDocuments } from "@/services/homeService";
 import { useWorkPlans } from "@/services/workPlanService";
 
@@ -28,27 +24,25 @@ export function HomePage() {
   const today = new Intl.DateTimeFormat("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Jakarta" }).format(new Date());
 
   return (
-    <div className="space-y-6 md:space-y-8">
-      <header>
-        <HomeGreeting today={today} name={me?.email.split("@")[0]} />
-      </header>
-
-      <HomeStatGrid
-        running={{ value: running.length, loading: plans.isPending }}
-        waiting={{ value: waiting.length, loading: plans.isPending }}
-        requests={{ value: requests.length, loading: plans.isPending }}
-        toReview={{ value: toReview.data, loading: toReview.isPending }}
-        pending={{ value: pending.data?.length, loading: pending.isPending }}
-        expiring={{ value: expiring.data?.length, loading: expiring.isPending }}
-        canCreatePlan={perms.includes("create:plan")}
-        canReview={canReview}
-        canVerifyDocs={canVerifyDocs}
-      />
-
-      {canVerifyDocs && !!pending.data?.length && <PendingDocumentsCard items={pending.data} />}
-      {canVerifyDocs && !!expiring.data?.length && <ExpiringDocumentsCard items={expiring.data} />}
-
-      <HomeActivePlansCard plans={plans} active={active} />
-    </div>
+    <HomeTemplate
+      today={today}
+      name={me?.email.split("@")[0]}
+      stats={{
+        running: { value: running.length, loading: plans.isPending },
+        waiting: { value: waiting.length, loading: plans.isPending },
+        requests: { value: requests.length, loading: plans.isPending },
+        toReview: { value: toReview.data, loading: toReview.isPending },
+        pending: { value: pending.data?.length, loading: pending.isPending },
+        expiring: { value: expiring.data?.length, loading: expiring.isPending },
+        canCreatePlan: perms.includes("create:plan"),
+        canReview,
+        canVerifyDocs,
+      }}
+      canVerifyDocs={canVerifyDocs}
+      pendingDocs={pending.data}
+      expiringDocs={expiring.data}
+      plans={plans}
+      active={active}
+    />
   );
 }

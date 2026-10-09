@@ -34,6 +34,9 @@ CATEGORIES = {"INSTALASI": "Instalasi", "PEMELIHARAAN": "Pemeliharaan", "PERBAIK
 MAX_TASKS_PER_DAY = 30
 
 
+_MONTHS = ("Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des")
+
+
 def _day_roster(data: PlanDraftRequest, day: Any) -> list[UUID] | None:
     """Daftar orang yang bertugas pada satu hari: None = seluruh tim; bila ada daftar khusus, ketua selalu ikut."""
     if day.member_employee_ids is None:
@@ -140,8 +143,7 @@ class PlanDraftService:
             raise NotFoundError("Kendaraan")
         ids = [str(c) for c in candidate_ids]
         licensed = await self.repo.licensed(ids, licence_for(vehicle.vehicle_type), period_end)
-        bound = await self.repo.employees_bound(ids, plan_id)
-        return [i for i in ids if i in licensed and i not in bound]
+        return [i for i in ids if i in licensed]   # bentrok jadwal diperiksa per hari saat rencana disimpan
 
     # ── Validasi isi form ─────────────────────────────────────────────────────────────────────
     async def _validate(self, user: CurrentUser, unit_id: str, data: PlanDraftRequest,
@@ -206,8 +208,7 @@ class PlanDraftService:
         # Keputusan pemilik 2026-10-06: ketua juga harus bawahan PM (unit yang sama), seperti anggota.
         if any(staff[m] != unit_id for m in (leader, *members)):
             raise AppError("PERSONNEL_OUTSIDE_PM_UNIT", "Ketua dan anggota tim harus bawahan PM (unit yang sama).", status=422)
-        if await self.repo.employees_bound([leader, *members], plan_id):
-            raise AppError("PERSONNEL_BOUND", "Ada ketua/anggota yang masih terikat rencana kerja lain.", status=409)
+        await self._ensure_available(data, leader, members, plan_id)
 
         free = {str(a.id): a for a in await self.repo.free_assets(user.organization_id, plan_id)}
         for tool in data.tool_ids:
@@ -225,6 +226,24 @@ class PlanDraftService:
             needed = licence_for(vehicle.vehicle_type)
             if driver not in await self.repo.licensed([driver], needed, data.period_end):
                 raise _invalid(f"Driver tidak memiliki {needed} yang berlaku sampai tanggal selesai.")
+
+    async def _ensure_available(self, data: PlanDraftRequest, leader: str, members: list[str],
+                                plan_id: UUID | None) -> None:
+        """Ketersediaan per HARI: ketua bertugas di seluruh hari; anggota hanya di hari ia terdaftar (tanpa daftar khusus =
+        seluruh tim). Bentrok bila tanggal yang sama sudah ia tempati di rencana aktif lain."""
+        duty: dict[str, set[date]] = {leader: {d.work_date for d in data.days}}
+        for member in members:
+            duty[member] = {d.work_date for d in data.days
+                            if d.member_employee_ids is None or UUID(member) in d.member_employee_ids}
+        busy = await self.repo.busy_dates(duty, plan_id)
+        clashes = {emp: sorted(duty[emp] & dates) for emp, (_, dates) in busy.items() if duty[emp] & dates}
+        if clashes:
+            detail = "; ".join(
+                f"{busy[emp][0]}: {', '.join(f'{d.day} {_MONTHS[d.month - 1]}' for d in days)}"
+                for emp, days in clashes.items())
+            raise AppError("PERSONNEL_BOUND",
+                           f"Ada ketua/anggota yang sudah bertugas di rencana kerja lain pada tanggal yang sama ({detail}).",
+                           status=409)
 
     async def _site(self, user: CurrentUser, unit_id: str, data: PlanDraftRequest) -> tuple[str, str]:
         """

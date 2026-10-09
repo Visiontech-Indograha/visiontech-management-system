@@ -15,6 +15,7 @@ class FormPerson(BaseModel):
     id: UUID  # ID pegawai
     full_name: str  # Nama lengkap pegawai
     position: str  # Jabatan pegawai
+    busy_dates: list[date] = []  # Tanggal (hari ini dst.) ia sudah bertugas di rencana kerja aktif lain
 
 
 class FormAsset(BaseModel):

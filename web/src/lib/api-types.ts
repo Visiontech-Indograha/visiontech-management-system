@@ -5282,6 +5282,8 @@ export interface components {
             full_name: string;
             /** Position */
             position: string;
+            /** Busy Dates */
+            busy_dates?: string[];
         };
         /**
          * FormSite

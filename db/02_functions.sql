@@ -346,17 +346,55 @@ $$;
 -- Bentrok jadwal personel: satu orang tidak boleh berada di dua pekerjaan aktif
 -- yang periodenya beririsan. Dipakai UI (untuk menandai) dan trigger (untuk menolak).
 -- -----------------------------------------------------------------------------
-CREATE OR REPLACE FUNCTION personnel_conflict(p_employee uuid, p_period daterange, p_exclude_plan uuid DEFAULT NULL)
+-- Per HARI BERTUGAS (Alembic 0033): bentrok hanya bila ada tanggal yang sama di mana ia bertugas di dua rencana.
+CREATE OR REPLACE FUNCTION vms.personnel_conflict(p_employee uuid, p_period daterange, p_exclude_plan uuid DEFAULT NULL)
 RETURNS TABLE (work_plan_id uuid, number text, title text)
 LANGUAGE sql STABLE AS $$
-  SELECT wp.id, wp.number, wp.title
-  FROM work_plan wp
-  JOIN work_plan_member m ON m.work_plan_id = wp.id AND upper_inf(m.valid_period)
+  SELECT DISTINCT wp.id, wp.number, wp.title
+  FROM vms.work_plan wp
+  JOIN vms.work_plan_member m ON m.work_plan_id = wp.id AND upper_inf(m.valid_period)
+  JOIN vms.work_plan_day d ON d.work_plan_id = wp.id
   WHERE m.employee_id = p_employee
     AND wp.deleted_at IS NULL
     AND wp.status IN ('PUBLISHED','ACCEPTED','IN_PROGRESS','COMPLETION_REVIEW')
     AND (p_exclude_plan IS NULL OR wp.id <> p_exclude_plan)
-    AND wp.period && p_period
+    AND p_period @> d.work_date
+    AND 
+    (NOT EXISTS (SELECT 1 FROM vms.work_plan_day_member dm WHERE dm.work_plan_day_id = d.id)
+     OR EXISTS (SELECT 1 FROM vms.work_plan_day_member dm
+                WHERE dm.work_plan_day_id = d.id AND dm.employee_id = p_employee))
+
+    AND (p_exclude_plan IS NULL
+         OR NOT EXISTS (SELECT 1 FROM vms.work_plan_day c WHERE c.work_plan_id = p_exclude_plan)
+         OR EXISTS (SELECT 1 FROM vms.work_plan_day c
+                    WHERE c.work_plan_id = p_exclude_plan AND c.work_date = d.work_date
+                      AND 
+    (NOT EXISTS (SELECT 1 FROM vms.work_plan_day_member dm WHERE dm.work_plan_day_id = c.id)
+     OR EXISTS (SELECT 1 FROM vms.work_plan_day_member dm
+                WHERE dm.work_plan_day_id = c.id AND dm.employee_id = p_employee))
+))
+$$;
+
+-- Tanggal (hari ini dan sesudahnya) di mana karyawan bertugas pada rencana aktif lain (Alembic 0033).
+CREATE OR REPLACE FUNCTION vms.employee_busy_dates(p_employee uuid, p_exclude_plan uuid DEFAULT NULL)
+RETURNS TABLE (busy_date date)
+LANGUAGE sql STABLE AS $$
+  SELECT DISTINCT d.work_date
+  FROM vms.work_plan wp
+  JOIN vms.work_plan_member m ON m.work_plan_id = wp.id AND upper_inf(m.valid_period)
+  JOIN vms.work_plan_day d ON d.work_plan_id = wp.id
+  JOIN vms.organization o ON o.id = wp.organization_id
+  WHERE m.employee_id = p_employee
+    AND wp.deleted_at IS NULL
+    AND wp.status IN ('PUBLISHED','ACCEPTED','IN_PROGRESS','COMPLETION_REVIEW')
+    AND (p_exclude_plan IS NULL OR wp.id <> p_exclude_plan)
+    AND d.work_date >= (now() AT TIME ZONE o.timezone)::date
+    AND 
+    (NOT EXISTS (SELECT 1 FROM vms.work_plan_day_member dm WHERE dm.work_plan_day_id = d.id)
+     OR EXISTS (SELECT 1 FROM vms.work_plan_day_member dm
+                WHERE dm.work_plan_day_id = d.id AND dm.employee_id = p_employee))
+
+  ORDER BY d.work_date
 $$;
 
 -- Alur SK v2 (Alembic 0018): "tidak terikat SK" = bukan ketua/anggota/driver SK aktif mana pun,

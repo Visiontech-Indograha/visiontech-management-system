@@ -40,7 +40,6 @@ const PAGES_NOT_YET_MIGRATED = [
   'src/features/assets/pages/AssetsPage.tsx',
   'src/features/attendance/pages/AttendancePage.tsx',
   'src/features/audit/pages/AuditLogPage.tsx',
-  'src/features/auth/pages/ChangePasswordPage.tsx',
   'src/features/auth/pages/LoginPage.tsx',
   'src/features/directory/pages/DirectoryPage.tsx',
   'src/features/directory/pages/EmployeeDetailPage.tsx',

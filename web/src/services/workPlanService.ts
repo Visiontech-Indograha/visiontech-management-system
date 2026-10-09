@@ -294,3 +294,30 @@ export const useHtmlDocument = (path: string | null) =>
     enabled: Boolean(path),
     staleTime: 0,
   });
+
+export type PlanAttachment = S["AttachmentResponse"];
+
+/** GET /work-plans/{id}/attachments — lampiran rencana kerja. */
+export async function listPlanAttachments(planId: string): Promise<PlanAttachment[]> {
+  return (await api.get<PlanAttachment[]>(`/work-plans/${planId}/attachments`)).data;
+}
+
+/** PUT /work-plans/{id}/attachments — ganti daftar lampiran (file_id yang sudah diunggah). */
+export async function savePlanAttachments(planId: string, file_ids: string[]): Promise<PlanAttachment[]> {
+  return (await api.put<PlanAttachment[]>(`/work-plans/${planId}/attachments`, { file_ids })).data;
+}
+
+/** POST /work-plans/{id}/request-completion — ketua mengajukan penutupan pekerjaan + laporan akhir. */
+export async function requestCompletion(planId: string, payload: S["CompletionRequest"]): Promise<WorkPlan> {
+  return (await api.post<WorkPlan>(`/work-plans/${planId}/request-completion`, payload)).data;
+}
+
+/** GET /work-plans/{id}/completion/pdf — PDF laporan akhir ber-QR (setelah disetujui). */
+export async function fetchCompletionPdf(planId: string): Promise<Blob> {
+  return (await api.get<Blob>(`/work-plans/${planId}/completion/pdf`, { responseType: "blob" })).data;
+}
+
+/** POST /work-plans/{id}/amendments/{change}/reject — PM menolak permintaan revisi ketua. */
+export async function rejectRevisionRequest(planId: string, changeId: string, reason: string): Promise<unknown> {
+  return (await api.post(`/work-plans/${planId}/amendments/${changeId}/reject`, { reason })).data;
+}

@@ -21,3 +21,15 @@ export const useSessionIncidents = (planId: string) =>
     queryFn: async () => (await api.get<Incident[]>("/hse/incidents", { params: { plan_id: planId } })).data,
   });
 
+/** POST /hse/incidents — laporkan insiden/HSE (bukti sudah diunggah, berupa file_id). */
+/** Kategori & tingkat dari form (string) — nilainya diperiksa server. */
+type IncidentCreateInput = Omit<components["schemas"]["IncidentCreate"], "category" | "severity"> & { category: string; severity: string };
+
+export async function createIncident(body: IncidentCreateInput): Promise<Incident> {
+  return (await api.post<Incident>("/hse/incidents", body)).data;
+}
+
+/** POST /hse/incidents/{id}/resolve — tandai insiden selesai ditangani. */
+export async function resolveIncident(id: string, body: components["schemas"]["IncidentResolve"]): Promise<Incident> {
+  return (await api.post<Incident>(`/hse/incidents/${id}/resolve`, body)).data;
+}

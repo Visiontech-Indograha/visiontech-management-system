@@ -8,11 +8,10 @@ import { useSession } from "@/app/session";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
 import { SelectField, TextAreaField, TextField } from "@/components/molecules/Field";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
-import { api } from "@/lib/apiClient";
 import { errorMessage } from "@/lib/errors";
 import { formatDate } from "@/lib/format";
 import type { WorkPlan } from "@/services/workPlanService";
-import { INCIDENT_CATEGORY, INCIDENT_SEVERITY, key, useSessionIncidents, type Incident } from "@/services/incidentService";
+import { INCIDENT_CATEGORY, INCIDENT_SEVERITY, key, useSessionIncidents, type Incident, createIncident, resolveIncident } from "@/services/incidentService";
 import { oversize, uploadFiles } from "@/services/uploadService";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { TextBlock } from "@/components/molecules/TextBlock";
@@ -38,7 +37,7 @@ export function IncidentDialog({ plan, onClose }: { plan: WorkPlan; onClose: () 
   const report = useMutation({
     mutationFn: async ({ files, ...v }: Values & { files: File[] }) => {
       const evidence_file_ids = await uploadFiles(files);
-      return (await api.post<Incident>("/hse/incidents", { work_plan_id: plan.id, ...v, evidence_file_ids })).data;
+      return createIncident({ work_plan_id: plan.id, ...v, evidence_file_ids });
     },
     onSuccess: store,
   });
@@ -161,8 +160,7 @@ export function IncidentPanel({ plan }: { plan: WorkPlan }) {
 function ResolveDialog({ plan, incident, onClose }: { plan: WorkPlan; incident: Incident; onClose: () => void }) {
   const store = useStoreIncident(plan.id);
   const resolve = useMutation({
-    mutationFn: async (body: { resolution_note: string }) =>
-      (await api.post<Incident>(`/hse/incidents/${incident.id}/resolve`, body)).data,
+    mutationFn: (body: { resolution_note: string }) => resolveIncident(incident.id, body),
     onSuccess: store,
   });
   const [formError, setFormError] = useState<string | null>(null);

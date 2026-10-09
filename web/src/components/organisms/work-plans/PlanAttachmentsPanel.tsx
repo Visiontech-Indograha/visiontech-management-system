@@ -5,16 +5,13 @@ import { useSession } from "@/app/session";
 import { FilePreview } from "@/components/molecules/FilePreview";
 import { QueryState } from "@/components/molecules/QueryState";
 import { TextField } from "@/components/molecules/Field";
-import { api } from "@/lib/apiClient";
-import type { components } from "@/lib/apiTypes";
 import { errorMessage } from "@/lib/errors";
-import type { WorkPlan } from "@/services/workPlanService";
+import { type WorkPlan, listPlanAttachments, savePlanAttachments } from "@/services/workPlanService";
 import { oversize, uploadFiles } from "@/services/uploadService";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
 
-type Attachment = components["schemas"]["AttachmentResponse"];
 const key = (planId: string) => ["plan-attachments", planId] as const;
 
 function formatSize(bytes: number): string {
@@ -31,15 +28,10 @@ export function PlanAttachmentsPanel({ plan }: { plan: WorkPlan }) {
   const qc = useQueryClient();
   const list = useQuery({
     queryKey: key(plan.id),
-    queryFn: async () => (await api.get<Attachment[]>(`/work-plans/${plan.id}/attachments`)).data,
+    queryFn: () => listPlanAttachments(plan.id),
   });
   const save = useMutation({
-    mutationFn: async (file_ids: string[]) =>
-      (
-        await api.put<Attachment[]>(`/work-plans/${plan.id}/attachments`, {
-          file_ids,
-        })
-      ).data,
+    mutationFn: (file_ids: string[]) => savePlanAttachments(plan.id, file_ids),
     onSuccess: (data) => qc.setQueryData(key(plan.id), data),
   });
   const [error, setError] = useState<string | null>(null);

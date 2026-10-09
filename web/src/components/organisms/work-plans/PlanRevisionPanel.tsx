@@ -5,10 +5,9 @@ import { useSession } from "@/app/session";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
 import { TextAreaField } from "@/components/molecules/Field";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
-import { api } from "@/lib/apiClient";
 import { errorMessage } from "@/lib/errors";
 import { formatDateTime } from "@/lib/format";
-import type { WorkPlan } from "@/services/workPlanService";
+import { type WorkPlan, rejectRevisionRequest } from "@/services/workPlanService";
 import { changesKey, usePlanChanges, type Change } from "@/services/planChangeService";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { InlineLink } from "@/components/molecules/Links";
@@ -50,8 +49,7 @@ export function PlanRevisionPanel({ plan }: { plan: WorkPlan }) {
   const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
   const reject = useMutation({
-    mutationFn: async ({ id, reason }: { id: string; reason: string }) =>
-      (await api.post(`/work-plans/${plan.id}/amendments/${id}/reject`, { reason })).data,
+    mutationFn: ({ id, reason }: { id: string; reason: string }) => rejectRevisionRequest(plan.id, id, reason),
     onSuccess: () => qc.invalidateQueries({ queryKey: changesKey(plan.id) }),
   });
   const all = changes.data ?? [];

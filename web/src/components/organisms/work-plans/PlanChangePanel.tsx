@@ -8,17 +8,15 @@ import { useSession } from "@/app/session";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
 import { SelectField, TextAreaField, TextField } from "@/components/molecules/Field";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
-import { api } from "@/lib/apiClient";
-import type { components } from "@/lib/apiTypes";
 import { errorMessage } from "@/lib/errors";
 import { planKey, useActiveEmployees, type WorkPlan } from "@/services/workPlanService";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { ControlInput, ControlLabel, ControlOption, FormBlock } from "@/components/molecules/FormBlock";
 import { FieldGroup, FieldGroupLegend } from "@/components/molecules/FieldGroup";
+import { decidePlanChange, requestPlanChange, type ChangeRequest, type ChangeResponse } from "@/services/planChangeService";
 
-type Change = components["schemas"]["ChangeResponse"];
-type ChangeRequest = components["schemas"]["ChangeRequest"];
+type Change = ChangeResponse;
 type Decision = "approve" | "accept" | "reject" | "withdraw";
 
 /**
@@ -41,7 +39,7 @@ function useChangeMutation<V>(planId: string, fn: (v: V) => Promise<Change>) {
 }
 
 const useRequestChange = (planId: string) =>
-  useChangeMutation(planId, async (body: ChangeRequest) => (await api.post<Change>(`/work-plans/${planId}/changes`, body)).data);
+  useChangeMutation(planId, (body: ChangeRequest) => requestPlanChange(planId, body));
 
 function FormShell({
   title,
@@ -200,9 +198,7 @@ export function PlanChangePanel({ plan }: { plan: WorkPlan }) {
   const { me } = useSession();
   const canManage = !!me?.permissions.includes("create:plan");
   const change = useLastChange(plan.id).data;
-  const decide = useChangeMutation(plan.id, async ({ action, reason }: { action: Decision; reason?: string }) =>
-    (await api.post<Change>(`/changes/${change?.id}/${action}`, { reason: reason ?? null })).data,
-  );
+  const decide = useChangeMutation(plan.id, ({ action, reason }: { action: Decision; reason?: string }) => decidePlanChange(change?.id, action, reason));
   const [asking, setAsking] = useState<{ action: Decision; title: string } | null>(null);
   if (!change) return null;
 

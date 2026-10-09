@@ -9,7 +9,6 @@ import { QueryState } from "@/components/molecules/QueryState";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
 import { SelectField, TextAreaField, TextField } from "@/components/molecules/Field";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
-import { api } from "@/lib/apiClient";
 import type { components } from "@/lib/apiTypes";
 import { errorMessage } from "@/lib/errors";
 import { formatDate } from "@/lib/format";
@@ -18,14 +17,14 @@ import { ActionButton } from "@/components/molecules/ActionButton";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
 import { ControlOption, FormBlock } from "@/components/molecules/FormBlock";
+import { createOvertime, listPlanOvertime, reviewOvertime, type Overtime } from "@/services/overtimeService";
 
-type Overtime = components["schemas"]["OvertimeResponse"];
 const key = (planId: string) => ["overtime", planId] as const;
 
 const useOvertime = (planId: string) =>
   useQuery({
     queryKey: key(planId),
-    queryFn: async () => (await api.get<Overtime[]>("/overtime", { params: { work_plan_id: planId } })).data,
+    queryFn: () => listPlanOvertime(planId),
   });
 
 function useOvertimeMutation<V>(planId: string, fn: (v: V) => Promise<Overtime>) {
@@ -96,9 +95,7 @@ type ReportValues = z.infer<typeof reportSchema>;
 
 /** "Ajukan Lembur" — ketua/anggota SK berjalan (POST /overtime). Tanggal lembur dicatat server. */
 export function OvertimeDialog({ plan, onClose }: { plan: WorkPlan; onClose: () => void }) {
-  const report = useOvertimeMutation(plan.id, async (body: components["schemas"]["OvertimeCreate"]) =>
-    (await api.post<Overtime>("/overtime", body)).data,
-  );
+  const report = useOvertimeMutation(plan.id, (body: components["schemas"]["OvertimeCreate"]) => createOvertime(body));
   const [formError, setFormError] = useState<string | null>(null);
   const {
     register,
@@ -167,9 +164,7 @@ const reviewSchema = z.object({ decision: z.enum(["APPROVED", "REJECTED"]), note
 type ReviewValues = z.infer<typeof reviewSchema>;
 
 function ReviewDialog({ plan, item, onClose }: { plan: WorkPlan; item: Overtime; onClose: () => void }) {
-  const review = useOvertimeMutation(plan.id, async (body: components["schemas"]["OvertimeReview"]) =>
-    (await api.post<Overtime>(`/overtime/${item.id}/review`, body)).data,
-  );
+  const review = useOvertimeMutation(plan.id, (body: components["schemas"]["OvertimeReview"]) => reviewOvertime(item.id, body));
   const [formError, setFormError] = useState<string | null>(null);
   const {
     register,

@@ -6,7 +6,7 @@ import { QueryState } from "@/components/molecules/QueryState";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
 import { TextAreaField } from "@/components/molecules/Field";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
-import { api, ApiError } from "@/lib/apiClient";
+import { ApiError } from "@/lib/apiClient";
 import type { components } from "@/lib/apiTypes";
 import { errorMessage } from "@/lib/errors";
 import { formatDateTime } from "@/lib/format";
@@ -18,9 +18,8 @@ import { TextBlock } from "@/components/molecules/TextBlock";
 import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
 import { TableBlock, TableBlockBody, TableBlockCell, TableBlockHead, TableBlockHeaderCell, TableBlockRow } from "@/components/molecules/TableBlock";
 import { FormBlock } from "@/components/molecules/FormBlock";
+import { fetchDocumentPdf, listDocumentSignatures, listPlanDocuments, revokeSignature, type PlanDocument, type Signature } from "@/services/planDocumentService";
 
-type PlanDocument = components["schemas"]["PlanDocumentOut"];
-type Signature = components["schemas"]["SignatureOut"];
 
 const PDF_UNAVAILABLE = "Pembuatan PDF sedang tidak tersedia. Coba lagi nanti atau hubungi admin.";
 const KIND_LABEL: Record<string, string> = {
@@ -33,8 +32,7 @@ const KIND_LABEL: Record<string, string> = {
 /** Unduh PDF bertanda tangan (GET /documents/{id}/pdf, blob). */
 async function downloadPdf(doc: PlanDocument) {
   try {
-    const res = await api.get<Blob>(`/documents/${doc.id}/pdf`, { responseType: "blob" });
-    const url = URL.createObjectURL(res.data);
+    const url = URL.createObjectURL(await fetchDocumentPdf(doc.id));
     const a = document.createElement("a");
     a.href = url;
     a.download = `${doc.number}-v${doc.version}.pdf`.replace(/\//g, "-");
@@ -50,7 +48,7 @@ async function downloadPdf(doc: PlanDocument) {
 export function PlanDocumentsPanel({ plan }: { plan: WorkPlan }) {
   const docs = useQuery({
     queryKey: ["plan-documents", plan.id],
-    queryFn: async () => (await api.get<PlanDocument[]>(`/work-plans/${plan.id}/documents`)).data,
+    queryFn: () => listPlanDocuments(plan.id),
   });
   return (
     <section aria-label="Dokumen" className="mt-6">
@@ -75,7 +73,7 @@ function DocumentCard({ doc }: { doc: PlanDocument }) {
   const [viewing, setViewing] = useState(false);
   const sigs = useQuery({
     queryKey: ["document-signatures", doc.id],
-    queryFn: async () => (await api.get<Signature[]>(`/documents/${doc.id}/signatures`)).data,
+    queryFn: () => listDocumentSignatures(doc.id),
   });
 
   return (
@@ -170,8 +168,7 @@ function RevokeDialog({ documentId, signature, onClose }: { documentId: string; 
   const [error, setError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const revoke = useMutation({
-    mutationFn: async (body: components["schemas"]["RevokeRequest"]) =>
-      (await api.post<{ message: string }>(`/signatures/${signature.id}/revoke`, body)).data,
+    mutationFn: (body: components["schemas"]["RevokeRequest"]) => revokeSignature(signature.id, body),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["document-signatures", documentId] }),
   });
   const submit = async (e: React.FormEvent<HTMLFormElement>) => {

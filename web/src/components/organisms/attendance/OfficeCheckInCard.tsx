@@ -3,7 +3,6 @@ import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { useSession } from "@/app/session";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
-import { api } from "@/lib/apiClient";
 import type { components } from "@/lib/apiTypes";
 import { ApiError } from "@/lib/apiClient";
 import { TextAreaField } from "@/components/molecules/Field";
@@ -17,8 +16,8 @@ import { ActionButton } from "@/components/molecules/ActionButton";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { ListBlock } from "@/components/molecules/ListBlock";
 import { ControlLabel, ControlOption, ControlSelect } from "@/components/molecules/FormBlock";
+import { checkIn as submitCheckIn, checkOut as submitCheckOut, listEmployeeAttendance } from "@/services/attendanceService";
 
-type AttendanceList = components["schemas"]["AttendanceListResponse"];
 type Attendance = components["schemas"]["AttendanceResponse"];
 // Keputusan pemilik 2026-10-02: ditolak → boleh mengajukan ulang sekali; ditolak lagi → hari itu terkunci.
 const MAX_ATTEMPTS_PER_DAY = 2;
@@ -79,11 +78,7 @@ function useMyToday(employeeId: string | null | undefined) {
     queryKey: ["attendance", "mine-today", employeeId],
     enabled: !!employeeId,
     queryFn: async () => {
-      const data = (
-        await api.get<AttendanceList>("/attendance", {
-          params: { employee_id: employeeId, size: 5 },
-        })
-      ).data;
+      const data = await listEmployeeAttendance(employeeId!, 5);
       // R-33: hanya sesi valid yang bisa absen pulang; absen hari lalu yang menunggu pemeriksaan tidak didahulukan.
       const open = data.items.find((a) => !a.check_out_at && (a.status === "AUTO_VALID" || a.status === "APPROVED"));
       const todays = data.items.filter((a) => a.work_date === data.today);
@@ -169,8 +164,7 @@ function OfficeCheckInForm({ employeeId }: { employeeId: string }) {
         });
         return null;
       }
-      return (
-        await api.post<Attendance>("/attendance/check-in", {
+      return submitCheckIn({
           channel: "WEB",
           site_id: siteId,
           location: { lat: pos.lat, lng: pos.lng },
@@ -179,8 +173,7 @@ function OfficeCheckInForm({ employeeId }: { employeeId: string }) {
           explanation: explanation.trim() || null,
           selfie_file_id: vars?.selfieFileId ?? null,
           face_probe_id: probeRef.current,
-        })
-      ).data;
+        });
     },
     onSuccess: async (a) => {
       if (!a) return; // menunggu swafoto
@@ -209,8 +202,7 @@ function OfficeCheckInForm({ employeeId }: { employeeId: string }) {
     mutationFn: async (vars?: { selfieFileId: string }) => {
       const pos = outPos && vars ? outPos : await currentPosition();
       setOutPos(pos);
-      return (
-        await api.post<Attendance>("/attendance/check-out", {
+      return submitCheckOut({
           channel: "WEB",
           location: { lat: pos.lat, lng: pos.lng },
           location_origin: "GPS",
@@ -218,8 +210,7 @@ function OfficeCheckInForm({ employeeId }: { employeeId: string }) {
           explanation: explanation.trim() || null,
           selfie_file_id: vars?.selfieFileId ?? null,
           face_probe_id: probeRef.current,
-        })
-      ).data;
+        });
     },
     onSuccess: async (a) => {
       probeRef.current = null;

@@ -3,18 +3,14 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { TextAreaField } from "@/components/molecules/Field";
-import { api } from "@/lib/apiClient";
-import type { components } from "@/lib/apiTypes";
 import { errorMessage } from "@/lib/errors";
 import { explainSchema } from "@/schemas/attendanceSchemas";
-import { useAttendanceAction, type Attendance } from "@/services/attendanceService";
+import { explainAttendance, useAttendanceAction, type Attendance, type ExplanationRequest } from "@/services/attendanceService";
 import { AttendanceFormDialog } from "./AttendanceFormDialog";
 
 /** Karyawan memberi penjelasan atas absensi sendiri yang perlu ditinjau (POST /attendance/{id}/explain). */
 export function AttendanceExplainDialog({ item, onClose }: { item: Attendance; onClose: () => void }) {
-  const explain = useAttendanceAction(async (body: components["schemas"]["ExplanationRequest"]) =>
-    (await api.post(`/attendance/${item.id}/explain`, body)).data,
-  );
+  const explain = useAttendanceAction((body: ExplanationRequest) => explainAttendance(item.id, body));
   const [formError, setFormError] = useState<string | null>(null);
   const {
     register,

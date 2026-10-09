@@ -47,3 +47,30 @@ export function useAttendanceAction<V>(fn: (v: V) => Promise<unknown>) {
     },
   });
 }
+
+export type ExplanationRequest = components["schemas"]["ExplanationRequest"];
+
+/** POST /attendance/{id}/explain — karyawan memberi penjelasan atas absensi sendiri. */
+export async function explainAttendance(id: string, body: ExplanationRequest): Promise<unknown> {
+  return (await api.post(`/attendance/${id}/explain`, body)).data;
+}
+
+/** POST /attendance/{id}/review — peninjau menyetujui/menolak absensi. */
+export async function reviewAttendance(id: string, body: components["schemas"]["ReviewRequest"]): Promise<unknown> {
+  return (await api.post(`/attendance/${id}/review`, body)).data;
+}
+
+/** GET /attendance?employee_id= — absensi terbaru seorang karyawan (untuk kartu absen kantor). */
+export async function listEmployeeAttendance(employeeId: string, size: number): Promise<AttendanceList> {
+  return (await api.get<AttendanceList>("/attendance", { params: { employee_id: employeeId, size } })).data;
+}
+
+/** POST /attendance/check-in — absen masuk; waktu & jarak dihitung server (aturan inti #3). */
+export async function checkIn(body: components["schemas"]["CheckInRequest"]): Promise<Attendance> {
+  return (await api.post<Attendance>("/attendance/check-in", body)).data;
+}
+
+/** POST /attendance/check-out — absen pulang. */
+export async function checkOut(body: components["schemas"]["CheckOutRequest"]): Promise<Attendance> {
+  return (await api.post<Attendance>("/attendance/check-out", body)).data;
+}

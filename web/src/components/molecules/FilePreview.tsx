@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { api, ApiError } from "@/lib/apiClient";
+import { ApiError } from "@/lib/apiClient";
 import { Skeleton } from "@/components/atoms/Skeleton";
 import { Button } from "@/components/atoms/Button";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/atoms/Dialog";
@@ -8,19 +8,12 @@ import { Loader2 } from "@/components/atoms/Icon";
 import { Image } from "@/components/atoms/Image";
 import { PlainButton } from "@/components/atoms/PlainButton";
 import { Text } from "@/components/atoms/Text";
-
-interface FileUrlResponse {
-  url: string;
-  mime_type: string;
-}
+import { fetchFileUrl } from "@/services/fileService";
 
 export function FilePreview({ fileId, fileName = "Berkas" }: { fileId: string; fileName?: string }) {
   const [retryCount, setRetryCount] = useState(0);
 
-  const fetchUrlData = async (variant: string) => {
-    const res = await api.get<FileUrlResponse>(`/files/${fileId}/url?variant=${variant}`);
-    return res.data;
-  };
+  const fetchUrlData = (variant: string) => fetchFileUrl(fileId, variant);
 
   const thumbQuery = useQuery({
     queryKey: ["file-url", fileId, "thumb", retryCount],

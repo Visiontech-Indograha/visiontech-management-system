@@ -1,11 +1,6 @@
-import { PageTemplate } from "@/components/templates/PageTemplate";
-import { ComingSoonNotice } from "@/components/organisms/system/ComingSoonNotice";
+import { ComingSoonTemplate } from "@/components/templates/system/ComingSoonTemplate";
 
 /** Halaman sementara untuk menu yang belum dibangun. */
 export function ComingSoonPage({ title }: { title: string }) {
-  return (
-    <PageTemplate title={title}>
-      <ComingSoonNotice />
-    </PageTemplate>
-  );
+  return <ComingSoonTemplate title={title} />;
 }

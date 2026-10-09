@@ -1,6 +1,6 @@
-import { SystemStatusMessage } from "@/components/organisms/system/SystemStatusMessage";
+import { SystemStatusTemplate } from "@/components/templates/system/SystemStatusTemplate";
 
 /** Rute yang tidak dikenal. */
 export function NotFoundPage() {
-  return <SystemStatusMessage title="Halaman tidak ditemukan" />;
+  return <SystemStatusTemplate title="Halaman tidak ditemukan" />;
 }

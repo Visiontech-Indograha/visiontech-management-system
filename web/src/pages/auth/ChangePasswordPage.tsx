@@ -7,7 +7,7 @@ import { useSession } from "@/app/session";
 import { ApiError } from "@/lib/apiClient";
 import { changePassword } from "@/services/authService";
 import { changePasswordSchema, type ChangePasswordValues } from "@/schemas/changePasswordSchema";
-import { ChangePasswordForm } from "@/components/organisms/auth/ChangePasswordForm";
+import { ChangePasswordTemplate } from "@/components/templates/auth/ChangePasswordTemplate";
 
 /** Ganti password (wajib saat login pertama). Berhasil → token baru dipasang, kembali ke Beranda. */
 export function ChangePasswordPage() {
@@ -37,9 +37,5 @@ export function ChangePasswordPage() {
     }
   });
 
-  return (
-    <main className="mx-auto mt-16 w-full max-w-sm px-4">
-      <ChangePasswordForm form={form} onSubmit={onSubmit} formError={formError} />
-    </main>
-  );
+  return <ChangePasswordTemplate form={form} onSubmit={onSubmit} formError={formError} />;
 }

@@ -64,3 +64,8 @@ export const useCheckAsset = () =>
   useAssetMutation(async ({ id, ...body }: { id: string } & S["AssetCheckRequest"]) =>
     (await api.post<S["AssetStatusResponse"]>(`/assets/${id}/check`, body)).data,
   );
+
+/** GET /assets/returns/{id}/pdf — berita acara serah terima (BAST) sebagai Blob. */
+export async function fetchAssetReturnPdf(returnId: string): Promise<Blob> {
+  return (await api.get<Blob>(`/assets/returns/${returnId}/pdf`, { responseType: "blob" })).data;
+}

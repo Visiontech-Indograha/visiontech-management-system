@@ -1,9 +1,9 @@
 import { toast } from "sonner";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
-import { api, ApiError } from "@/lib/apiClient";
+import { ApiError } from "@/lib/apiClient";
 import { errorMessage } from "@/lib/errors";
 import { formatDateTime } from "@/lib/format";
-import { useAssetReturns, type Asset, type AssetReturnItem } from "@/services/assetService";
+import { useAssetReturns, type Asset, type AssetReturnItem, fetchAssetReturnPdf } from "@/services/assetService";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
@@ -11,8 +11,7 @@ import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
 /** Unduh BAST (GET /assets/returns/{id}/pdf, blob). */
 async function downloadBast(asset: Asset, item: AssetReturnItem) {
   try {
-    const res = await api.get<Blob>(`/assets/returns/${item.id}/pdf`, { responseType: "blob" });
-    const url = URL.createObjectURL(res.data);
+    const url = URL.createObjectURL(await fetchAssetReturnPdf(item.id));
     const link = document.createElement("a");
     link.href = url;
     link.download = `BAST-${asset.code}-${item.plan_number ?? ""}.pdf`.replace(/\//g, "-");

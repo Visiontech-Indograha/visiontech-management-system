@@ -4,21 +4,18 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { FilePreview } from "@/components/molecules/FilePreview";
 import { SelectField, TextAreaField } from "@/components/molecules/Field";
-import { api } from "@/lib/apiClient";
 import type { components } from "@/lib/apiTypes";
 import { errorMessage } from "@/lib/errors";
 import { formatDateTime } from "@/lib/format";
 import { reviewSchema, type ReviewValues } from "@/schemas/attendanceSchemas";
-import { useAttendanceAction, type Attendance } from "@/services/attendanceService";
+import { useAttendanceAction, type Attendance, reviewAttendance } from "@/services/attendanceService";
 import { AttendanceFormDialog } from "./AttendanceFormDialog";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { ControlOption } from "@/components/molecules/FormBlock";
 
 /** Finance meninjau absensi di luar radius (POST /attendance/{id}/review). */
 export function AttendanceReviewDialog({ item, onClose }: { item: Attendance; onClose: () => void }) {
-  const review = useAttendanceAction(async (body: components["schemas"]["ReviewRequest"]) =>
-    (await api.post(`/attendance/${item.id}/review`, body)).data,
-  );
+  const review = useAttendanceAction((body: components["schemas"]["ReviewRequest"]) => reviewAttendance(item.id, body));
   const [formError, setFormError] = useState<string | null>(null);
   const {
     register,

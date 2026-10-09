@@ -1,8 +1,9 @@
 import { toast } from "sonner";
-import { Button } from "@/components/atoms/Button";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { ApiError } from "@/lib/apiClient";
 import { useDeleteSite, type Site } from "@/services/siteService";
+import { ActionButton } from "@/components/molecules/ActionButton";
+import { TextBlock } from "@/components/molecules/TextBlock";
 
 /** Konfirmasi hapus lokasi kerja (DELETE /sites/{id}). */
 export function SiteDeleteDialog({ site, onClose }: { site: Site; onClose: () => void }) {
@@ -23,18 +24,18 @@ export function SiteDeleteDialog({ site, onClose }: { site: Site; onClose: () =>
       onClose={onClose}
       footer={
         <>
-          <Button variant="outline" onClick={onClose} disabled={remove.isPending}>
+          <ActionButton variant="outline" onClick={onClose} disabled={remove.isPending}>
             Batal
-          </Button>
-          <Button variant="destructive" onClick={confirm} disabled={remove.isPending}>
+          </ActionButton>
+          <ActionButton variant="destructive" onClick={confirm} disabled={remove.isPending}>
             {remove.isPending ? "Menghapus..." : "Hapus"}
-          </Button>
+          </ActionButton>
         </>
       }
     >
-      <p>
-        Hapus <strong>{site.name}</strong>? Lokasi ini tidak bisa dipakai lagi untuk absensi.
-      </p>
+      <TextBlock>
+        Hapus <TextBlock as="strong">{site.name}</TextBlock>? Lokasi ini tidak bisa dipakai lagi untuk absensi.
+      </TextBlock>
     </VmsDialog>
   );
 }

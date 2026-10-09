@@ -8,6 +8,9 @@ import type { components } from "@/lib/apiTypes";
 import { errorMessage } from "@/lib/errors";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { ClickToPlace, MapController, Tiles, type LatLng } from "@/components/organisms/work-plans/PlanLocationCard";
+import { TextBlock } from "@/components/molecules/TextBlock";
+import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
+import { PlainAction } from "@/components/molecules/PlainAction";
 
 type GeoResult = components["schemas"]["GeoResult"];
 
@@ -80,14 +83,14 @@ export function SiteMapPicker({
       />
       {q.length >= 3 && (
         <div className="mb-3 text-sm">
-          {search.isFetching && <p className="text-mist">Mencari...</p>}
-          {search.isError && <p className="text-danger">{errorMessage(search.error)}</p>}
-          {search.isSuccess && search.data.length === 0 && <p className="text-mist">Tidak ada hasil.</p>}
+          {search.isFetching && <TextBlock className="text-mist">Mencari...</TextBlock>}
+          {search.isError && <TextBlock className="text-danger">{errorMessage(search.error)}</TextBlock>}
+          {search.isSuccess && search.data.length === 0 && <TextBlock className="text-mist">Tidak ada hasil.</TextBlock>}
           {search.data && search.data.length > 0 && (
-            <ul aria-label="Hasil pencarian" className="max-h-40 divide-y divide-line overflow-y-auto rounded-control border border-line">
+            <ListBlock aria-label="Hasil pencarian" className="max-h-40 divide-y divide-line overflow-y-auto rounded-control border border-line">
               {search.data.map((r) => (
-                <li key={`${r.lat},${r.lng},${r.name}`}>
-                  <button
+                <ListEntry key={`${r.lat},${r.lng},${r.name}`}>
+                  <PlainAction
                     type="button"
                     className="min-h-11 w-full px-3 py-2 text-left hover:bg-muted"
                     onClick={() => {
@@ -96,15 +99,15 @@ export function SiteMapPicker({
                     }}
                   >
                     {r.name}
-                    <span className="block text-xs text-mist">{r.type}</span>
-                  </button>
-                </li>
+                    <TextBlock as="span" className="block text-xs text-mist">{r.type}</TextBlock>
+                  </PlainAction>
+                </ListEntry>
               ))}
-            </ul>
+            </ListBlock>
           )}
         </div>
       )}
-      {gpsNote && <p className="mb-1 text-sm text-warning">{gpsNote}</p>}
+      {gpsNote && <TextBlock className="mb-1 text-sm text-warning">{gpsNote}</TextBlock>}
       <div className="isolate h-64 overflow-hidden rounded-control border border-line" data-testid="site-map">
         <MapContainer center={view.center} zoom={view.zoom} className="h-full w-full">
           <Tiles />

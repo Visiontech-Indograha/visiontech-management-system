@@ -22,7 +22,7 @@ const ORGANISMS = (who) => tier('organisms', who, 'dilarang memakai organism lan
 const TEMPLATES = (who) => tier('templates', who, 'tidak boleh mengimpor template')
 const SAME_MOLECULE = { group: ['./*', '@/components/molecules/*'], message: 'Molecule hanya menyusun atom, bukan molecule lain (docs/33 §2).' }
 
-const LAYOUT_TAGS = 'div|section|main|header|footer|article|aside'
+const LAYOUT_TAGS = 'div|section|main|header|footer|article|aside|nav'
 /** Larangan susunan: impor tingkat terlarang + elemen HTML (kecuali tata letak bila `layout`) + teks langsung. */
 const composition = (who, patterns, layout) => ({
   'no-restricted-imports': ['error', {
@@ -131,11 +131,6 @@ const ORGANISMS_LEGACY = [
   'src/components/organisms/monitoring/MonthFilterField.tsx',
   'src/components/organisms/monitoring/OvertimeRecapList.tsx',
   'src/components/organisms/monitoring/TimelineGroupList.tsx',
-  'src/components/organisms/sites/SiteAddButton.tsx',
-  'src/components/organisms/sites/SiteDeleteDialog.tsx',
-  'src/components/organisms/sites/SiteFormDialog.tsx',
-  'src/components/organisms/sites/SiteList.tsx',
-  'src/components/organisms/sites/SiteMapPicker.tsx',
   'src/components/organisms/system/ComingSoonNotice.tsx',
   'src/components/organisms/system/SystemStatusMessage.tsx',
   'src/components/organisms/verify/VerificationResultPanel.tsx',

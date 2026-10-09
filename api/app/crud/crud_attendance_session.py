@@ -157,6 +157,35 @@ class CRUDAttendanceSession(CRUDBase):
             {"site": site_id, "org": org_id, "lng": lng, "lat": lat},
         )
 
+    async def nearest_valid_site(self, org_id: UUID | str, employee_id: Any, work_date: Any,
+                                 lng: float, lat: float) -> Any:
+        """Lokasi sah terdekat untuk absen: kantor (site tanpa unit, mis. Pekanbaru/Duri/Dumai/Jakarta) atau lokasi
+        hari itu dari rencana kerja berjalan yang menugaskan karyawan ini. Diurutkan dari yang paling dalam radius."""
+        return await self.fetchone(
+            """
+            SELECT s.id, s.name, s.unit_id,
+                   round(ST_Distance(ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography, s.location)::numeric, 1)
+                       AS distance_m,
+                   COALESCE(s.radius_m, o.geofence_radius_m, 100) AS radius_m
+            FROM vms.site s JOIN vms.organization o ON o.id = s.organization_id
+            WHERE s.organization_id = :org AND s.deleted_at IS NULL
+              AND (s.unit_id IS NULL OR s.id IN (
+                    SELECT COALESCE(d.site_id, wp.site_id)
+                    FROM vms.work_plan wp
+                    JOIN vms.work_plan_day d ON d.work_plan_id = wp.id AND d.work_date = CAST(:day AS date)
+                    JOIN vms.work_plan_member m ON m.work_plan_id = wp.id AND m.employee_id = :emp
+                                                AND m.valid_period @> d.work_date
+                    WHERE wp.organization_id = :org AND wp.status = 'IN_PROGRESS'
+                      AND (NOT EXISTS (SELECT 1 FROM vms.work_plan_day_member dm WHERE dm.work_plan_day_id = d.id)
+                           OR EXISTS (SELECT 1 FROM vms.work_plan_day_member dm
+                                      WHERE dm.work_plan_day_id = d.id AND dm.employee_id = :emp))))
+            ORDER BY ST_Distance(ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography, s.location)
+                     - COALESCE(s.radius_m, o.geofence_radius_m, 100)
+            LIMIT 1
+            """,
+            {"org": org_id, "emp": employee_id, "day": work_date, "lng": lng, "lat": lat},
+        )
+
     async def insert(self, *, org_id: str, employee_id: Any, work_date: Any, site_id: UUID, site_label: str,
                      lng: float, lat: float, origin: str, selfie_file_id: UUID | None,
                      face_result: str | None, face_similarity: float | None, source: str = "MOBILE",
@@ -381,7 +410,8 @@ class CRUDAttendanceSession(CRUDBase):
                    a.face_result, a.face_similarity, a.check_out_face_result, a.check_out_face_similarity,
                    a.offline, a.offline_note, a.check_out_requested_at,
                    a.check_out_distance_m, a.check_out_outside, a.check_out_selfie_file_id, a.check_out_explanation,
-                   vms.attendance_city_category(a.employee_id, a.work_date) AS city_category,
+                   COALESCE(vms.attendance_city_category_at(a.organization_id, a.location),
+                            vms.attendance_city_category(a.employee_id, a.work_date)) AS city_category,
                    vms.attendance_can_review(CAST(:viewer AS uuid), a.employee_id) AS can_review
             FROM vms.attendance a JOIN vms.employee e ON e.id = a.employee_id
             WHERE a.organization_id = CAST(:org AS uuid)
@@ -467,7 +497,8 @@ class CRUDAttendanceSession(CRUDBase):
                    to_char(a.check_in_at AT TIME ZONE o.timezone, 'HH24:MI:SS') AS check_in,
                    to_char(a.check_out_at AT TIME ZONE o.timezone, 'HH24:MI:SS') AS check_out,
                    a.status, a.is_late, a.is_early_leave, a.check_out_distance_m, a.check_out_outside,
-                   vms.attendance_city_category(a.employee_id, a.work_date) AS city_category
+                   COALESCE(vms.attendance_city_category_at(a.organization_id, a.location),
+                            vms.attendance_city_category(a.employee_id, a.work_date)) AS city_category
               FROM vms.attendance a
               JOIN vms.employee e ON a.employee_id = e.id
               JOIN vms.organization o ON o.id = a.organization_id

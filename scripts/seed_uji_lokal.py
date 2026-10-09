@@ -41,6 +41,15 @@ OFFICE = [
     ("VT-0006", "Agus Wibisono", "Finance Officer", "finance@visiontech.local", "FINANCE", None, "KTR"),
     ("VT-0007", "Lestari Handayani", "Operations Manager", "ops@visiontech.local", "OPS", None, "KTR"),
 ]
+# Kantor (site tanpa unit): absen di dalam radiusnya sah otomatis. Koordinat perkiraan; ubah lewat menu Lokasi kerja.
+OFFICES = [
+    ("Kantor Pusat Visiontech", "Pekanbaru, Riau (kantor pusat)", 0.5071, 101.4478),
+    ("Kantor Duri", "Duri, Mandau, Bengkalis, Riau", 1.2679, 101.1905),
+    ("Kantor Dumai", "Dumai, Riau", 1.6667, 101.4472),
+    ("Kantor Jakarta", "Jl. Jend. Sudirman, Jakarta Selatan", -6.2253, 106.8024),
+]
+CITY = ("Pekanbaru", 0.5071, 101.4478, 60)   # pusat kota acuan Dalam/Luar kota + radius km
+
 MEMBERS = [
     "Agus Setiawan", "Bayu Pratama", "Candra Wijaya", "Dedi Kurniawan", "Eko Saputra", "Fajar Nugroho",
     "Galih Permana", "Hadi Susanto", "Irfan Hakim", "Joko Santoso", "Kurnia Ramadhan", "Lutfi Hidayat",
@@ -107,6 +116,20 @@ async def seed(dry_run: bool = False) -> None:
         wipe = sorted(set(tables) - KEEP)
         await c.execute(text("TRUNCATE " + ", ".join(f"vms.{t}" for t in wipe) + " RESTART IDENTITY CASCADE"))
         await c.execute(text("DELETE FROM vms.organization WHERE id <> :o"), {"o": org})
+
+        await c.execute(text(
+            "UPDATE vms.organization SET city_name = :n, city_radius_km = :km, "
+            "city_center = ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography WHERE id = :o"),
+            {"o": org, "n": CITY[0], "lat": CITY[1], "lng": CITY[2], "km": CITY[3]})
+        point = "ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography"
+        for name, addr, lat, lng in OFFICES:
+            params = {"o": org, "n": name, "a": addr, "lat": lat, "lng": lng}
+            done = await c.execute(text(
+                f"UPDATE vms.site SET address = :a, location = {point}, radius_m = 150, unit_id = NULL, "
+                "deleted_at = NULL WHERE organization_id = :o AND name = :n"), params)
+            if not done.rowcount:
+                await c.execute(text("INSERT INTO vms.site (organization_id, name, address, location, radius_m) "
+                                     f"VALUES (:o, :n, :a, {point}, 150)"), params)
 
         units = {r.code: str(r.id) for r in await c.execute(
             text("SELECT id, code FROM vms.business_unit WHERE organization_id = :o"), {"o": org})}

@@ -158,6 +158,12 @@ class AttendanceSessionService:
         if not allowed:
             raise AppError("SITE_NOT_ALLOWED", "Lokasi ini tidak berlaku untuk Anda. Pilih lokasi kerja Anda.",
                            status=403)
+        # 2026-10-09 (pemilik): absen sah otomatis bila berada dalam radius kantor mana pun (Pekanbaru, Duri, Dumai,
+        # Jakarta, …) atau lokasi tugas hari itu, walau lokasi yang dipilih di HP berbeda — tercatat di lokasi itu.
+        if float(site.distance_m) > site.radius_m:
+            nearest = await self.repo.nearest_valid_site(org_id, employee_id, today, lng, lat)
+            if nearest is not None and float(nearest.distance_m) <= nearest.radius_m:
+                site_id, site = nearest.id, nearest
         note = (explanation or "").strip() or None
         if note is None and float(site.distance_m) > site.radius_m:
             raise AppError("EXPLANATION_REQUIRED", EXPLANATION_OUTSIDE.format(

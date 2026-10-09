@@ -33,7 +33,7 @@ def _invalid(message: str) -> AppError:
     return AppError("VALIDATION_ERROR", message, status=422)
 
 
-def _state(message: str = "Status SK belum sesuai untuk tindakan ini. Muat ulang halaman.") -> AppError:
+def _state(message: str = "Status rencana kerja belum sesuai untuk tindakan ini. Muat ulang halaman.") -> AppError:
     """Mengembalikan error ketika state/status SK tidak mengizinkan aksi perubahan."""
     return AppError("INVALID_STATE", message, status=409)
 
@@ -84,7 +84,7 @@ class PlanChangeService:
         access = await check_plan_access(self.db, plan_id, user, need)
         plan = await self.plans.lock_plan(plan_id, user.organization_id)
         if plan is None:
-            raise NotFoundError("SK")
+            raise NotFoundError("Rencana Kerja")
         if plan.status not in ACTIVE:
             raise _state()
         if await self.repo.open_change(plan_id):
@@ -134,9 +134,7 @@ class PlanChangeService:
         if leader in members:
             raise _invalid("Ketua tim tidak perlu didaftarkan lagi sebagai anggota.")
         if plan.pm_employee_id and leader == str(plan.pm_employee_id):
-            raise _invalid("PM penerbit tidak boleh menerima SK sebagai ketua tim sendiri.")
-        if not members:
-            raise _invalid("Pilih minimal satu anggota tim.")
+            raise _invalid("PM penerbit tidak boleh menerima rencana kerja sebagai ketua tim sendiri.")
         current = {m.employee_id for m in await self.plans.active_team(plan_id)}
         if {leader, *members} == current and leader == str(plan.leader_employee_id):
             raise _invalid("Tidak ada perubahan personel yang diusulkan.")
@@ -203,7 +201,7 @@ class PlanChangeService:
         if change.status != ChangeStatus.PENDING_PM:
             raise _state("Tidak ada perubahan menunggu persetujuan PM.")
         if change.base_revision != change.plan_revision:
-            raise _state("SK sudah berubah sejak usulan ini dibuat. Muat ulang, lalu ajukan perubahan baru.")
+            raise _state("Rencana Kerja sudah berubah sejak usulan ini dibuat. Muat ulang, lalu ajukan perubahan baru.")
         team = [m.employee_id for m in await self.plans.active_team(change.work_plan_id)]
         conflicts = await self.members.schedule_conflicts_until(team, change.work_plan_id, change.new_period_end)
         if conflicts:
@@ -226,15 +224,15 @@ class PlanChangeService:
         change = await self._load(change_id, user)
         if change.change_type == ChangeType.PERSONNEL:
             if not await self._is_incoming_leader(change, user):
-                raise ForbiddenError("Hanya ketua tim yang ditunjuk pada adendum personel ini yang dapat menerimanya.")
+                raise ForbiddenError("Hanya ketua tim yang ditunjuk pada revisi personel ini yang dapat menerimanya.")
         else:
             await check_plan_access(self.db, change.work_plan_id, user, PlanNeed.LEADER)
         if change.plan_status not in ACTIVE:
             raise _state()
         if change.status != ChangeStatus.AWAITING_LEADER_ACCEPTANCE:
-            raise _state("Adendum belum siap diterima.")
+            raise _state("Revisi belum siap diterima.")
         if change.base_revision != change.plan_revision:
-            raise _state("SK sudah berubah sejak usulan ini dibuat. Muat ulang halaman.")
+            raise _state("Rencana Kerja sudah berubah sejak usulan ini dibuat. Muat ulang halaman.")
         acceptor = await self.repo.employee_of(user.user_id)
         if change.change_type == ChangeType.PERSONNEL:
             await self.repo.apply_personnel(change.work_plan_id, change.proposed_leader_id,
@@ -255,7 +253,7 @@ class PlanChangeService:
         change = await self._load(change_id, user)
         if change.change_type == ChangeType.PERSONNEL:
             if not await self._is_incoming_leader(change, user):
-                raise ForbiddenError("Hanya ketua tim yang ditunjuk pada adendum personel ini yang dapat menolaknya. "
+                raise ForbiddenError("Hanya ketua tim yang ditunjuk pada revisi personel ini yang dapat menolaknya. "
                                      "PM dapat menarik usulannya sendiri.")
         else:
             access = await check_plan_access(self.db, change.work_plan_id, user, PlanNeed.VIEW)
@@ -282,7 +280,7 @@ class PlanChangeService:
         if change.status not in OPEN:
             raise _state("Tidak ada usulan perubahan yang terbuka.")
         if change.change_type != ChangeType.PERSONNEL:
-            raise _state("Penarikan hanya tersedia untuk adendum personel yang diajukan PM.")
+            raise _state("Penarikan hanya tersedia untuk revisi personel yang diajukan PM.")
         reason = _require_reason(reason, "Alasan penarikan wajib diisi.")
         await self.repo.set_change(change_id, ChangeStatus.WITHDRAWN, await self.repo.employee_of(user.user_id), reason)
         await self.repo.set_document(change.document_id, DocumentStatus.WITHDRAWN)

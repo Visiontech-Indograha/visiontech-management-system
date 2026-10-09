@@ -196,6 +196,13 @@ class CRUDPlanChange(CRUDBase):
         await self.execute("UPDATE vms.plan_change SET document_id = :doc WHERE id = :id",
                            {"doc": document_id, "id": change_id})
 
+    async def pending_amendment_ids(self, plan_id: UUID | str) -> list[str]:
+        """Permintaan revisi ketua yang masih menunggu PM pada rencana kerja ini (terlama dulu)."""
+        rows = await self.fetchall(
+            "SELECT id FROM vms.plan_change WHERE work_plan_id = CAST(:plan AS uuid) "
+            "AND change_type = 'AMENDMENT' AND status = 'PENDING_PM' ORDER BY created_at", {"plan": str(plan_id)})
+        return [str(r.id) for r in rows]
+
     async def set_change(self, change_id: UUID | str, status: ChangeStatus, decided_by: str | None = None,
                          decision_reason: str | None = None) -> None:
         """Menetapkan status keputusan (disetujui/ditolak) pada suatu usulan perubahan.

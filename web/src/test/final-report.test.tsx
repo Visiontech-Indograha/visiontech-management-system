@@ -46,7 +46,7 @@ const setup = (status: string, finalReport: unknown, incidents: unknown[] = []) 
     if (c.url === "/work-plans/p1/weekly" || c.url === "/work-plans/p1/days") return { data: [] };
   });
 
-describe("detail SK: tim & laporan akhir", () => {
+describe("detail rencana kerja: tim & laporan akhir", () => {
   it("PM membaca laporan akhir saat menunggu persetujuan, dan melihat seluruh tim", async () => {
     setup("COMPLETION_REVIEW", report());
     renderRoute("/work-plans/p1", { role: "PM" });
@@ -97,7 +97,7 @@ describe("detail SK: tim & laporan akhir", () => {
 });
 
 describe("mode presentasi laporan (M5)", () => {
-  it("SK selesai: tombol di detail membuka slide sampul → tim → hasil → insiden → lampiran → pengesahan", async () => {
+  it("Rencana Kerja selesai: tombol di detail membuka slide sampul → tim → hasil → insiden → lampiran → pengesahan", async () => {
     setup(
       "COMPLETED",
       report({ status: "APPROVED", review_note: "Rapi", reviewed_at: "2026-10-21T02:00:00Z", reviewed_by_name: "Ade Candra" }),
@@ -123,7 +123,7 @@ describe("mode presentasi laporan (M5)", () => {
     expect(screen.getByText("6 / 6")).toBeInTheDocument();
   });
 
-  it("SK belum selesai tidak bisa dipresentasikan dan tombolnya tidak tampil", async () => {
+  it("Rencana Kerja belum selesai tidak bisa dipresentasikan dan tombolnya tidak tampil", async () => {
     setup("IN_PROGRESS", null);
     const { router } = renderRoute("/work-plans/p1", { role: "PM" });
     await screen.findByRole("region", { name: "Tim" });

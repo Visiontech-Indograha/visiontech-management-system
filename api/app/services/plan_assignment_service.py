@@ -51,13 +51,13 @@ class PlanAssignmentService:
         if pm_units.get(str(pm_employee_id)) != str(unit_id):
             raise AppError(
                 "PLAN_PM_UNIT_MISMATCH",
-                "PM pekerjaan harus merupakan karyawan aktif pada unit SK yang dipilih.",
+                "PM pekerjaan harus merupakan karyawan aktif pada unit rencana kerja yang dipilih.",
                 status=422,
             )
         if not self._oversees(user) and str(pm_employee_id) != str(creator.employee_id):
             raise AppError(
                 "PLAN_PM_MUST_BE_SELF",
-                "Saat PM membuat SK, PM pekerjaan otomatis adalah dirinya sendiri.",
+                "Saat PM membuat rencana kerja, PM pekerjaan otomatis adalah dirinya sendiri.",
                 status=422,
             )
 

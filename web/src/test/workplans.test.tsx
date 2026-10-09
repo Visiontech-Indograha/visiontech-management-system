@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { apiError, mockApi, renderRoute } from "./utils";
 
@@ -64,11 +64,11 @@ const formOptions = {
 };
 
 describe("Work plan — daftar", () => {
-  it("menampilkan kartu SK dan mengirim filter status", async () => {
+  it("menampilkan kartu rencana kerja dan mengirim filter status", async () => {
     const calls = mockApi((c) => (c.url === "/work-plans" ? { data: [plan()] } : undefined));
     renderRoute("/work-plans", { role: "field" });
     expect(await screen.findByText("Instalasi CCTV Gudang")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Buat SK" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Buat rencana kerja" })).toBeNull();
     fireEvent.change(screen.getByLabelText("Filter status"), { target: { value: "IN_PROGRESS" } });
     await waitFor(() =>
       expect(calls[calls.length - 1].params).toEqual({ archived: false, status_filter: "IN_PROGRESS" }),
@@ -98,7 +98,7 @@ describe("Work plan — daftar", () => {
     expect(calls.find((c) => c.url === "/work-plans/p1/restore")!.data).toEqual({ row_version: 3, reason: "" });
   });
 
-  it("Buat SK v2: satu permintaan POST /work-plans/full berisi hari, detail, tim, alat, kendaraan, driver", async () => {
+  it("Buat rencana kerja v2: satu permintaan POST /work-plans/full berisi hari, detail, tim, alat, kendaraan, driver", async () => {
     const calls = mockApi((c) => {
       if (c.url === "/work-plans" && c.method === "get") return { data: [] };
       if (c.url === "/work-plans/form-options") return { data: formOptions };
@@ -108,29 +108,34 @@ describe("Work plan — daftar", () => {
       if (c.url === "/work-plans/p1/detail") return { data: planDetail(plan()) };
     });
     const { router } = renderRoute("/work-plans", { role: "PM" });
-    fireEvent.click((await screen.findAllByRole("button", { name: "Buat SK" }))[0]);
+    fireEvent.click((await screen.findAllByRole("button", { name: "Buat rencana kerja" }))[0]);
     await waitFor(() => expect(router.state.location.pathname).toBe("/work-plans/new"));
     await screen.findByRole("option", { name: "Cikarang" });
-    expect(screen.getByLabelText("Tipe")).toHaveValue("Infrastruktur");
+    expect(screen.getByText("Infrastruktur")).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Judul pekerjaan"), { target: { value: "Instalasi CCTV Gudang" } });
-    fireEvent.change(screen.getByLabelText("Deskripsi pekerjaan keseluruhan"), { target: { value: "Pasang 6 kamera" } });
+    fireEvent.change(screen.getByLabelText("Deskripsi pekerjaan"), { target: { value: "Pasang 6 kamera" } });
     fireEvent.change(screen.getByLabelText("Kategori pekerjaan"), { target: { value: "INSTALASI" } });
     fireEvent.change(screen.getByRole("combobox", { name: "Lokasi kerja" }), { target: { value: "s1" } });
     fireEvent.change(screen.getByLabelText("Tanggal mulai"), { target: { value: "2026-10-01" } });
     fireEvent.change(screen.getByLabelText("Tanggal selesai"), { target: { value: "2026-10-01" } });
-    expect(await screen.findByText("Hari 1 · 1 Okt 2026")).toBeInTheDocument();
+    expect(await screen.findByText("Hari 1")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Tambah hari kerja" }));
-    expect(await screen.findByText("Hari 2 · 2 Okt 2026")).toBeInTheDocument();
-    const titles = screen.getAllByPlaceholderText("mis. Pemasangan CCTV 1");
-    const descs = screen.getAllByPlaceholderText("mis. Memasang CCTV 1 di area A");
+    expect(await screen.findByText("Hari 2")).toBeInTheDocument();
+    const titles = screen.getAllByPlaceholderText("Judul pekerjaan");
+    const descs = screen.getAllByPlaceholderText("Deskripsi");
     fireEvent.change(titles[0], { target: { value: "Pasang CCTV 1" } });
     fireEvent.change(descs[0], { target: { value: "Area A" } });
     fireEvent.change(titles[1], { target: { value: "Uji kamera" } });
     fireEvent.change(descs[1], { target: { value: "Semua" } });
     fireEvent.change(screen.getByLabelText("Ketua tim"), { target: { value: "e-lead" } });
-    // Ketua tidak muncul lagi di daftar anggota.
-    await waitFor(() => expect(screen.queryByRole("checkbox", { name: /Bu Ketua/ })).toBeNull());
-    fireEvent.click(screen.getByRole("checkbox", { name: /Pak Anggota/ }));
+    // Pekerja dipilih per hari lewat dropdown (ketua tidak ditawarkan), lalu "Tambah" → masuk kolom Pekerja.
+    for (const day of [1, 2]) {
+      const pick = screen.getByLabelText(`Pilih anggota hari ${day}`);
+      await waitFor(() => expect(within(pick).queryByRole("option", { name: "Bu Ketua" })).toBeNull());
+      fireEvent.change(pick, { target: { value: "e-member" } });
+      fireEvent.click(within(pick.parentElement!).getByRole("button", { name: "Tambah" }));
+      expect(await within(screen.getByRole("list", { name: `Pekerja hari ${day}` })).findByText("Pak Anggota")).toBeInTheDocument();
+    }
     fireEvent.click(screen.getByRole("checkbox", { name: /Tangga/ }));
     fireEvent.change(screen.getByLabelText(/Kendaraan/), { target: { value: "v1" } });
     await screen.findByRole("option", { name: "Pak Anggota" });
@@ -147,11 +152,13 @@ describe("Work plan — daftar", () => {
       period_start: "2026-10-01",
       period_end: "2026-10-02",
       days: [
-        { work_date: "2026-10-01", tasks: [{ title: "Pasang CCTV 1", description: "Area A", file_ids: [] }] },
-        { work_date: "2026-10-02", tasks: [{ title: "Uji kamera", description: "Semua", file_ids: [] }] },
+        { work_date: "2026-10-01", tasks: [{ title: "Pasang CCTV 1", description: "Area A", file_ids: [] }], site_id: null, work_type_id: null, member_employee_ids: ["e-member"] },
+        { work_date: "2026-10-02", tasks: [{ title: "Uji kamera", description: "Semua", file_ids: [] }], site_id: null, work_type_id: null, member_employee_ids: ["e-member"] },
       ],
       leader_employee_id: "e-lead",
       member_employee_ids: ["e-member"],
+      is_out_of_town: false,
+      work_type_id: null,
       tool_ids: ["t1"],
       vehicle_id: "v1",
       driver_employee_id: "e-member",
@@ -159,7 +166,7 @@ describe("Work plan — daftar", () => {
     });
   });
 
-  it("validasi Buat SK: wajib isi & tanggal selesai sebelum mulai", async () => {
+  it("validasi Buat rencana kerja: wajib isi & tanggal selesai sebelum mulai", async () => {
     const calls = mockApi((c) => {
       if (c.url === "/work-plans/form-options") return { data: formOptions };
     });
@@ -185,22 +192,22 @@ describe("Work plan — detail & tindakan", () => {
       if (c.url === "/employees") return { data: employees };
     });
 
-  it("PM melihat isi SK dan tindakan draf, lalu menerbitkan dengan row_version", async () => {
+  it("PM melihat isi rencana kerja dan tindakan draf, lalu menerbitkan dengan row_version", async () => {
     // Setelah terbit, GET /work-plans/p1 mengembalikan SK terbit (detail dimuat ulang setelah transisi).
     let current = plan();
     const calls = detail(plan(), (url) => {
-      if (url === "/work-plans/p1/publish") return { data: (current = plan({ status: "PUBLISHED", number: "SK/001" })) };
+      if (url === "/work-plans/p1/publish") return { data: (current = plan({ status: "PUBLISHED", number: "Rencana Kerja/001" })) };
       if (url === "/work-plans/p1") return { data: current };
     });
     renderRoute("/work-plans/p1", { role: "PM" });
     expect(await screen.findByText("Pasang CCTV 1")).toBeInTheDocument();
     expect(screen.getByText("Instalasi")).toBeInTheDocument();
-    for (const name of ["Sunting SK", "Terbitkan SK", "Arsipkan draf"]) expect(screen.getByRole("button", { name })).toBeInTheDocument();
+    for (const name of ["Sunting rencana kerja", "Terbitkan rencana kerja", "Arsipkan draf"]) expect(screen.getByRole("button", { name })).toBeInTheDocument();
     for (const name of ["Sunting draft", "Atur tim", "Tambah hari"]) expect(screen.queryByRole("button", { name })).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "Terbitkan SK" }));
+    fireEvent.click(screen.getByRole("button", { name: "Terbitkan rencana kerja" }));
     expect(calls.find((c) => c.url === "/work-plans/p1/publish")).toBeUndefined();
     fireEvent.click(await screen.findByRole("button", { name: "Ya, terbitkan" }));
-    expect(await screen.findByText("SK/001")).toBeInTheDocument();
+    expect(await screen.findByText("Rencana Kerja/001")).toBeInTheDocument();
     expect(calls.find((c) => c.url === "/work-plans/p1/publish")!.data).toEqual({ row_version: 3, reason: "" });
   });
 
@@ -209,27 +216,27 @@ describe("Work plan — detail & tindakan", () => {
       url === "/work-plans/p1/publish" ? apiError(422, "VALIDATION_ERROR", "Rincian harian belum lengkap.") : undefined,
     );
     renderRoute("/work-plans/p1", { role: "PM" });
-    fireEvent.click(await screen.findByRole("button", { name: "Terbitkan SK" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Terbitkan rencana kerja" }));
     fireEvent.click(await screen.findByRole("button", { name: "Ya, terbitkan" }));
     await waitFor(() => expect(calls.some((c) => c.url === "/work-plans/p1/publish")).toBe(true));
     await waitFor(() => expect(screen.getByRole("button", { name: "Ya, terbitkan" })).toBeEnabled());
-    expect(screen.getByRole("dialog", { name: "Terbitkan SK?" })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "Terbitkan rencana kerja?" })).toBeInTheDocument();
   });
 
-  it("SK terbit: PM tidak punya tombol ketua; menunggu ketua di HP", async () => {
-    detail(plan({ status: "PUBLISHED", number: "SK/001" }));
+  it("Rencana Kerja terbit: PM tidak punya tombol ketua; menunggu ketua di HP", async () => {
+    detail(plan({ status: "PUBLISHED", number: "Rencana Kerja/001" }));
     renderRoute("/work-plans/p1", { role: "PM" });
-    await screen.findByText("SK/001");
+    await screen.findByText("Rencana Kerja/001");
     expect(screen.getByText(/Notifikasi sudah dikirim ke ketua tim dan anggota/)).toBeInTheDocument();
-    for (const name of ["Terima SK", "Ajukan banding", "Mulai pelaksanaan"]) expect(screen.queryByRole("button", { name })).toBeNull();
+    for (const name of ["Terima rencana kerja", "Ajukan banding", "Mulai pelaksanaan"]) expect(screen.queryByRole("button", { name })).toBeNull();
   });
 
-  it("adendum diminta: alasan ketua tampil dan PM membuka revisi", async () => {
-    const calls = detail(plan({ status: "APPEALED", number: "SK/001", appeal_reason: "Tambah 1 hari" }), (url) =>
-      url === "/work-plans/p1/revise" ? { data: plan({ status: "DRAFT", number: "SK/001", revision: 2 }) } : undefined,
+  it("revisi diminta: alasan ketua tampil dan PM membuka revisi", async () => {
+    const calls = detail(plan({ status: "APPEALED", number: "Rencana Kerja/001", appeal_reason: "Tambah 1 hari" }), (url) =>
+      url === "/work-plans/p1/revise" ? { data: plan({ status: "DRAFT", number: "Rencana Kerja/001", revision: 2 }) } : undefined,
     );
     renderRoute("/work-plans/p1", { role: "PM" });
-    expect(await screen.findByText(/Ketua tim meminta adendum: "Tambah 1 hari"/)).toBeInTheDocument();
+    expect(await screen.findByText(/Ketua tim meminta revisi: "Tambah 1 hari"/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Buka revisi" }));
     await waitFor(() => expect(calls.some((c) => c.url === "/work-plans/p1/revise")).toBe(true));
     // Draf revisi tidak bisa diarsip, tetapi bisa dibatalkan.
@@ -241,11 +248,11 @@ describe("Work plan — detail & tindakan", () => {
     detail(plan());
     renderRoute("/work-plans/p1", { role: "field" });
     await screen.findByText("Pasang CCTV 1");
-    expect(screen.queryByRole("button", { name: "Terbitkan SK" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Sunting SK" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Terbitkan rencana kerja" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Sunting rencana kerja" })).toBeNull();
   });
 
-  it("SK tidak ditemukan menampilkan galat", async () => {
+  it("Rencana Kerja tidak ditemukan menampilkan galat", async () => {
     mockApi(() => undefined);
     renderRoute("/work-plans/zz", { role: "PM" });
     expect(await screen.findByText("Work plan tidak ditemukan atau Anda tidak berwenang melihatnya.")).toBeInTheDocument();

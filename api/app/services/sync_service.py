@@ -85,8 +85,10 @@ class SyncService:
             access = await self._day_access(user, plan_id, day_id)
             if op_type == "DAILY_REPORT_SAVE":
                 data = DailyReportCreate(body=p["body"], obstacle=p["obstacle"],
-                                         evidence_file_ids=p.get("evidence_file_ids", []))
-                await hse.save_daily_report(access, day_id, data.body, data.obstacle, data.evidence_file_ids)
+                                         evidence_file_ids=p.get("evidence_file_ids", []),
+                                         evidence=p.get("evidence", []))
+                await hse.save_daily_report(access, day_id, data.body, data.obstacle, data.evidence_file_ids,
+                                            data.evidence)
             elif op_type == "DAILY_REPORT_SUBMIT":
                 await hse.submit_daily_report(access, day_id)
             else:

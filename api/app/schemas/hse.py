@@ -10,6 +10,8 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
+from app.schemas.work_type import EvidenceIn
+
 
 class IncidentCreate(BaseModel):
     """
@@ -58,6 +60,7 @@ class DailyReportCreate(BaseModel):
     body: str
     obstacle: str
     evidence_file_ids: list[UUID] = []
+    evidence: list[EvidenceIn] = []   # T9: foto berlabel slot template + sumber
 
 
 class DailyReportResponse(BaseModel):

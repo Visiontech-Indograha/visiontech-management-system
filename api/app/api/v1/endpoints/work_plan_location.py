@@ -78,5 +78,6 @@ async def set_plan_location(data: PlanLocationIn,
     # Dependency Injection untuk memastikan pengguna bertindak sebagai PM_UNIT
     # Memanggil method layer Service untuk menyimpan pengaturan lokasi
     row = await plan_location_service.set_location(
-        access, name=data.name, address=data.address, lat=data.lat, lng=data.lng, radius_m=data.radius_m)
+        access, name=data.name, address=data.address, lat=data.lat, lng=data.lng, radius_m=data.radius_m,
+        reason=data.reason)
     return PlanLocationOut(**row)

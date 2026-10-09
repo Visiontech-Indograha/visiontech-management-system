@@ -30,7 +30,7 @@ def _out(row: Any) -> WeeklyReportResponse:
     Returns:
         WeeklyReportResponse: Respons model laporan mingguan.
     """
-    return WeeklyReportResponse(**row._mapping)
+    return WeeklyReportResponse(**(row if isinstance(row, dict) else row._mapping))
 
 
 @router.get("", response_model=list[WeeklyReportResponse])

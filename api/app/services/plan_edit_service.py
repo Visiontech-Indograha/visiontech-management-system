@@ -71,10 +71,10 @@ class PlanEditService:
         await ensure_same_org(self.db, user.organization_id, sites=[data.site_id], employees=[data.leader_employee_id])
         row = await self.repo.draft_state(plan_id, user.organization_id)
         if not row:
-            raise HTTPException(status_code=404, detail="SK tidak ditemukan.")
+            raise HTTPException(status_code=404, detail="Rencana Kerja tidak ditemukan.")
         if row.status != "DRAFT":
-            raise HTTPException(status_code=400, detail={"code": "NOT_DRAFT",
-                                                         "message": "Hanya SK berstatus DRAFT yang dapat diubah."})
+            raise HTTPException(status_code=400, detail={
+                "code": "NOT_DRAFT", "message": "Hanya rencana kerja berstatus Draf yang dapat diubah."})
         if row.row_version != data.row_version:
             raise HTTPException(status_code=409, detail={
                 "code": "CONFLICT", "message": "Dokumen ini telah diubah oleh orang lain. Silakan muat ulang halaman."})
@@ -114,7 +114,7 @@ class PlanEditService:
         """Tambah hari pada draf. → id hari."""
         status = await self.repo.plan_status(plan_id, access.user.organization_id)
         if not status or status != "DRAFT":
-            raise HTTPException(status_code=400, detail="Tidak dapat menambah hari. Status SK bukan DRAFT.")
+            raise HTTPException(status_code=400, detail="Tidak dapat menambah hari. Status rencana kerja bukan DRAFT.")
         try:
             return await self.repo.insert_day(plan_id, work_date, title, sort_order)
         except SQLAlchemyError:

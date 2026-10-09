@@ -14,6 +14,7 @@ from app.api.v1.endpoints.audit import router as audit_router
 from app.api.v1.endpoints.auth import router as auth_router
 from app.api.v1.endpoints.documents import router as documents_router
 from app.api.v1.endpoints.employees import router as employees_router
+from app.api.v1.endpoints.events import router as events_router
 from app.api.v1.endpoints.expiry import router as expiry_router
 from app.api.v1.endpoints.face import router as face_router
 from app.api.v1.endpoints.files import router as files_router
@@ -37,8 +38,10 @@ from app.api.v1.endpoints.work_plan_days import router as plan_days_router
 from app.api.v1.endpoints.work_plan_location import router as plan_location_router
 from app.api.v1.endpoints.work_plan_members import router as plan_members_router
 from app.api.v1.endpoints.work_plan_reports import router as plan_reports_router
+from app.api.v1.endpoints.work_plan_revisions import router as plan_revisions_router
 from app.api.v1.endpoints.work_plan_transitions import router as transitions_router
 from app.api.v1.endpoints.work_plans import router as plans_router
+from app.api.v1.endpoints.work_types import router as work_types_router
 
 api_router = APIRouter()
 
@@ -76,4 +79,7 @@ api_router.include_router(overtime_recaps_router)
 api_router.include_router(notifications_router)
 api_router.include_router(plan_reports_router)
 api_router.include_router(plan_amendments_router)
+api_router.include_router(plan_revisions_router)
+api_router.include_router(events_router)
+api_router.include_router(work_types_router)
 api_router.include_router(app_releases_router)

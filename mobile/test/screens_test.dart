@@ -135,7 +135,7 @@ void main() {
       expect(find.text('SK a'), findsOneWidget);
       expect(find.text('SK b'), findsOneWidget);
       expect(find.text('SK c'), findsNothing);
-      expect(find.text('2 SK · 1 sedang berjalan'), findsOneWidget);
+      expect(find.text('2 rencana kerja · 1 sedang berjalan'), findsOneWidget);
     });
 
     testWidgets('luring: menampilkan data tersimpan beserta tandanya', (
@@ -159,7 +159,7 @@ void main() {
         await show(tester, const WorkPlansScreen());
         // Temuan R-18: dulu "Luring — menampilkan data tersimpan." + "Belum ada SK untuk Anda".
         expect(find.text(SyncEngine.offlineNoDataMessage), findsOneWidget);
-        expect(find.text('Belum ada SK untuk Anda'), findsNothing);
+        expect(find.text('Belum ada rencana kerja untuk Anda'), findsNothing);
         expect(find.text('Luring — menampilkan data tersimpan.'), findsNothing);
       },
     );
@@ -177,9 +177,9 @@ void main() {
 
       await tester.tap(find.text('SK a'));
       await settle(tester);
-      expect(find.text('Terima SK'), findsOneWidget);
+      expect(find.text('Terima rencana kerja'), findsOneWidget);
 
-      await tester.tap(find.text('Terima SK'));
+      await tester.tap(find.text('Terima rencana kerja'));
       await tester.pumpAndSettle();
       expect(find.text('Terima surat kerja ini?'), findsOneWidget);
       await tester.tap(find.widgetWithText(FilledButton, 'Terima'));

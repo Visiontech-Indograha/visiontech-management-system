@@ -38,7 +38,6 @@ const compositionRules = (who, extraPatterns = []) => ({
 
 // Page/Template lama yang BELUM dimigrasi (docs/33 §7). Daftar ini HANYA BOLEH MENYUSUT.
 const NOT_YET_MIGRATED = [
-  'src/components/templates/AppShell.tsx',
   'src/features/account/pages/AccountPage.tsx',
   'src/features/assets/pages/AssetsPage.tsx',
   'src/features/attendance/pages/AttendancePage.tsx',

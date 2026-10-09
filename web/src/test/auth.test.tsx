@@ -1,6 +1,6 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { getAccessToken, setAccessToken } from "@/lib/api";
+import { getAccessToken, setAccessToken } from "@/lib/apiClient";
 import { apiError, mockApi, renderRoute } from "./utils";
 
 afterEach(() => setAccessToken(null));

@@ -6,7 +6,7 @@ import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import { mockMe } from "@/app/mockSession";
 import { routes } from "@/app/routes";
 import { SessionProvider } from "@/app/SessionProvider";
-import { api } from "@/lib/api";
+import { api } from "@/lib/apiClient";
 import type { Me } from "@/lib/types";
 
 /** JSON → objek; FormData → objek (nilai berulang dijadikan array). */

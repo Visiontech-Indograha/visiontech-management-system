@@ -1,4 +1,4 @@
-import { ApiError } from "./api";
+import { ApiError } from "./apiClient";
 
 /** Pesan galat untuk pengguna: pesan Indonesia dari API bila ada, selain itu pesan umum. */
 export function errorMessage(err: unknown, fallback = "Terjadi kesalahan. Coba lagi."): string {

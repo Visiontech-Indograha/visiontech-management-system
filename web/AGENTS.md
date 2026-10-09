@@ -22,7 +22,7 @@ Web dashboard untuk role: **OM, PM, Finance, HES/HR**.
 | Routing dasar (`react-router`) + RBAC per-route (`ProtectedRoute`/`RoleRoute`, ada test) | ✅ Selesai |
 | Vitest setup | ✅ Selesai — tapi cakupan test masih tipis (smoke test App + route guards saja, hook/page belum ada test) |
 | Halaman/komponen per role (Auth, Dashboard, Attendance, HR, OM, PM, HES, Finance, Export) | ✅ Semua halaman utama sudah dibangun dan terhubung ke backend nyata |
-| Reusable UI (`components/ui/`) | ✅ Card, Table, Button, Input/TextArea/Select, Modal/ModalFooter, QueryState — sebagian halaman (EmployeeListPage, LogbookPage, WorkPlanPage, PortofolioPage, InternalDocumentPage) masih pakai markup modal/form inline lama, belum dimigrasikan |
+| Reusable UI (`components/{atoms,molecules,organisms,templates}`) | ✅ Atomic design (`docs/33`); Page lama dimigrasi bertahap — daftar pengecualian di `eslint.config.js` |
 | API integration (TanStack Query) | ✅ Selesai (Axios interceptor + QueryClient, token di memory + refresh via httpOnly cookie) |
 
 > ⚠️ **PENTING:** `typescript` sempat ter-upgrade ke `7.0.2`, yang membuat `typescript-eslint`
@@ -44,7 +44,7 @@ Web dashboard untuk role: **OM, PM, Finance, HES/HR**.
 | Routing | React Router |
 | Data fetching | TanStack Query (React Query) |
 | Form | React Hook Form + Zod |
-| HTTP client | axios (interceptor JWT terpusat di `src/lib/api.ts`) |
+| HTTP client | axios (interceptor JWT terpusat di `src/lib/apiClient.ts`) |
 | Testing | Vitest |
 
 ---

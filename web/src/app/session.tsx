@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { api, refreshAccessToken, setAccessToken, setSessionExpiredHandler } from "@/lib/api";
+import { api, refreshAccessToken, setAccessToken, setSessionExpiredHandler } from "@/lib/apiClient";
 import type { Me, TokenOut } from "@/lib/types";
 import { mockMe } from "./mockSession";
 import { queryClient } from "@/lib/queryClient";

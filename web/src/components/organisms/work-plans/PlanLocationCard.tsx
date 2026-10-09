@@ -11,8 +11,6 @@ import { toast } from "sonner";
 import { useSession } from "@/app/session";
 import { TextAreaField, TextField } from "@/components/molecules/Field";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
-import { api } from "@/lib/apiClient";
-import type { components } from "@/lib/apiTypes";
 import { errorMessage } from "@/lib/errors";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import type { WorkPlan } from "@/services/workPlanService";
@@ -22,10 +20,9 @@ import { TextBlock } from "@/components/molecules/TextBlock";
 import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
 import { PlainAction } from "@/components/molecules/PlainAction";
 import { FormBlock } from "@/components/molecules/FormBlock";
+import { getPlanLocation, savePlanLocation, type PlanLocation, type PlanLocationIn } from "@/services/planLocationService";
+import { searchPlaces, type GeoResult } from "@/services/geoService";
 
-type S = components["schemas"];
-type PlanLocation = S["PlanLocationOut"];
-type GeoResult = S["GeoResult"];
 export type LatLng = [number, number];
 
 // Vite mengubah nama berkas gambar; ikon penanda bawaan Leaflet perlu URL eksplisit.
@@ -44,7 +41,7 @@ const locationKey = (planId: string) => ["plan-location", planId] as const;
 function usePlanLocation(planId: string) {
   return useQuery({
     queryKey: locationKey(planId),
-    queryFn: async () => (await api.get<PlanLocation | null>(`/work-plans/${planId}/location`)).data,
+    queryFn: () => getPlanLocation(planId),
   });
 }
 
@@ -145,7 +142,7 @@ function LocationDialog({ plan, current, onClose }: { plan: WorkPlan; current: P
   const q = useDebouncedValue(query.trim(), 1000);
   const search = useQuery({
     queryKey: ["geo-search", q],
-    queryFn: async () => (await api.get<GeoResult[]>("/geo/search", { params: { q } })).data,
+    queryFn: () => searchPlaces(q),
     enabled: q.length >= 3,
     staleTime: Infinity,
     retry: false,
@@ -163,7 +160,7 @@ function LocationDialog({ plan, current, onClose }: { plan: WorkPlan; current: P
   const [formError, setFormError] = useState<string | null>(null);
 
   const save = useMutation({
-    mutationFn: async (body: S["PlanLocationIn"]) => (await api.put<PlanLocation>(`/work-plans/${plan.id}/location`, body)).data,
+    mutationFn: (body: PlanLocationIn) => savePlanLocation(plan.id, body),
     onSuccess: (data) => qc.setQueryData(locationKey(plan.id), data),
   });
 

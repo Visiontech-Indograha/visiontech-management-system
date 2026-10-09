@@ -2,10 +2,10 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { FilePreview } from "@/components/molecules/FilePreview";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
-import { api, ApiError } from "@/lib/apiClient";
+import { ApiError } from "@/lib/apiClient";
 import { errorMessage } from "@/lib/errors";
 import { formatDateTime } from "@/lib/format";
-import type { WorkPlan } from "@/services/workPlanService";
+import { type WorkPlan, fetchCompletionPdf } from "@/services/workPlanService";
 import { PlanPreviewDialog } from "./PlanPreviewDialog";
 import { useFinalReport, usePlanTeam } from "@/services/reportService";
 import { ActionButton } from "@/components/molecules/ActionButton";
@@ -44,8 +44,7 @@ export function TeamCard({ plan }: { plan: WorkPlan }) {
 /** PDF laporan akhir ber-QR (GET /work-plans/{id}/completion/pdf, blob) — tersedia setelah disetujui. */
 async function downloadFinalReportPdf(plan: WorkPlan) {
   try {
-    const res = await api.get<Blob>(`/work-plans/${plan.id}/completion/pdf`, { responseType: "blob" });
-    const url = URL.createObjectURL(res.data);
+    const url = URL.createObjectURL(await fetchCompletionPdf(plan.id));
     const a = document.createElement("a");
     a.href = url;
     a.download = `${plan.number ?? "RK"}-laporan-akhir.pdf`.replace(/\//g, "-");

@@ -7,10 +7,9 @@ import { toast } from "sonner";
 import { z } from "zod";
 import { TextAreaField, TextField } from "@/components/molecules/Field";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
-import { api } from "@/lib/apiClient";
 import type { components } from "@/lib/apiTypes";
 import { errorMessage } from "@/lib/errors";
-import { planKey, type WorkPlan } from "@/services/workPlanService";
+import { planKey, type WorkPlan, requestCompletion } from "@/services/workPlanService";
 import { oversize, uploadFiles } from "@/services/uploadService";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { TextBlock } from "@/components/molecules/TextBlock";
@@ -25,7 +24,7 @@ function useRequestCompletion(plan: WorkPlan) {
     mutationFn: async ({ body, obstacle, files }: { body: string; obstacle: string; files: File[] }) => {
       const evidence_file_ids = await uploadFiles(files);
       const payload: CompletionRequest = { row_version: plan.row_version, body, obstacle, evidence_file_ids };
-      return (await api.post<WorkPlan>(`/work-plans/${plan.id}/request-completion`, payload)).data;
+      return requestCompletion(plan.id, payload);
     },
     onSuccess: async (updated) => {
       qc.setQueryData(planKey(plan.id), updated);

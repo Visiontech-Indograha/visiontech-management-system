@@ -22,6 +22,9 @@ const ORGANISMS = (who) => tier('organisms', who, 'dilarang memakai organism lan
 const TEMPLATES = (who) => tier('templates', who, 'tidak boleh mengimpor template')
 const SAME_MOLECULE = { group: ['./*', '@/components/molecules/*'], message: 'Molecule hanya menyusun atom, bukan molecule lain (docs/33 §2).' }
 
+// Panggilan HTTP hanya di services/ (docs/33 §5); ApiError tetap boleh untuk menangani galat.
+const API_ONLY_IN_SERVICES = { name: '@/lib/apiClient', importNames: ['api'], message: 'Panggilan API hanya di services/ — buat fungsi di <domain>Service.ts (docs/33 §5).' }
+
 const LAYOUT_TAGS = 'div|section|main|header|footer|article|aside|nav'
 /** Larangan susunan: impor tingkat terlarang + elemen HTML (kecuali tata letak bila `layout`) + teks langsung. */
 const composition = (who, patterns, layout) => ({
@@ -30,6 +33,7 @@ const composition = (who, patterns, layout) => ({
     paths: [
       { name: 'lucide-react', message: `Ikon adalah atom; ${who} dilarang memakainya langsung (docs/33 §2).` },
       { name: 'react-router-dom', importNames: ['Link', 'NavLink'], message: `Tautan adalah atom; ${who} dilarang memakainya langsung (docs/33 §2).` },
+      API_ONLY_IN_SERVICES,
     ],
   }],
   'no-restricted-syntax': ['error',

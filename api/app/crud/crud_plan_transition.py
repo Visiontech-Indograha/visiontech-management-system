@@ -325,11 +325,13 @@ class CRUDPlanTransition(CRUDBase):
                    wp.status, wp.pm_employee_id, wp.leader_employee_id, wp.revision, wp.row_version,
                    wp.cancellation_reason, wp.category, bu.name AS unit_name, s.description AS site_description,
                    ST_Y(s.location::geometry) AS lat, ST_X(s.location::geometry) AS lng,
-                   pm.full_name AS pm_name, pm.position AS pm_position
+                   pm.full_name AS pm_name, pm.position AS pm_position,
+                   wp.is_out_of_town, wt.name AS work_type_name
                   FROM vms.work_plan wp
                   LEFT JOIN vms.business_unit bu ON bu.id = wp.unit_id
                   LEFT JOIN vms.site s ON s.id = wp.site_id
                   LEFT JOIN vms.employee pm ON pm.id = wp.pm_employee_id
+                  LEFT JOIN vms.work_type wt ON wt.id = wp.work_type_id
                   WHERE wp.id = :plan) p),
               'team', COALESCE((SELECT jsonb_agg(jsonb_build_object('employee_id', m.employee_id,
                                         'full_name', e.full_name, 'position', e.position,

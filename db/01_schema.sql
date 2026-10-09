@@ -74,6 +74,9 @@ CREATE TABLE organization (
   shift_start   time NOT NULL DEFAULT '08:00',
   shift_end     time NOT NULL DEFAULT '17:00',
   geofence_radius_m integer NOT NULL DEFAULT 100 CHECK (geofence_radius_m BETWEEN 10 AND 5000),
+  city_name     text,                          -- pusat kota acuan kategori Dalam/Luar kota (Alembic 0035)
+  city_center   geography(Point,4326),
+  city_radius_km integer NOT NULL DEFAULT 60 CHECK (city_radius_km BETWEEN 1 AND 1000),
   created_at    timestamptz NOT NULL DEFAULT now(),
   updated_at    timestamptz NOT NULL DEFAULT now()
 );

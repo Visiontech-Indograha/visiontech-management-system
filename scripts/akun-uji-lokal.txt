@@ -93,3 +93,11 @@ Instalasi CCTV: Foto sebelum pemasangan*, Foto kamera terpasang*, Foto tampilan 
 Instalasi Jaringan Fiber: Foto titik awal & akhir*, Foto hasil splicing*, Foto hasil uji OTDR*
 Replacement: Foto perangkat lama*, Foto perangkat baru terpasang*, Foto uji fungsi
 Pemeliharaan Rutin: Foto sebelum pemeliharaan*, Foto sesudah pemeliharaan*, Foto checklist yang ditandatangani
+
+== KANTOR & KATEGORI KOTA ==
+Pusat kota: Pekanbaru, radius 60 km. Absen di luar radius = LUAR KOTA, di dalam = DALAM KOTA.
+Absen sah otomatis bila di dalam radius (150 m) kantor mana pun atau lokasi tugas hari itu; selain itu perlu penjelasan + pemeriksaan.
+Kantor Pusat Visiontech  Pekanbaru   (dalam kota)
+Kantor Duri              ~89 km      (luar kota)
+Kantor Dumai             ~128 km     (luar kota)
+Kantor Jakarta           ~953 km     (luar kota)

@@ -3,7 +3,7 @@ import { Suspense, useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { visibleNav } from "@/app/navigation";
 import { useSession } from "@/app/session";
-import { useLiveEvents } from "@/lib/liveEvents";
+import { useLiveEvents } from "@/hooks/useLiveEvents";
 import { ROLE_LABEL } from "@/lib/types";
 import { MobileTopBar } from "../organisms/MobileTopBar";
 import { NotificationBell } from "../organisms/NotificationBell";

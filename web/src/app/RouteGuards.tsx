@@ -1,8 +1,8 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { isAllowed, type NavItem } from "@/app/navigation";
 import { useSession } from "@/app/session";
-import { useFaceStatus } from "@/features/account/accountService";
-import { FaceEnrollRequiredPage } from "@/features/face/pages/FaceEnrollRequiredPage";
+import { useFaceStatus } from "@/services/accountService";
+import { FaceEnrollRequiredPage } from "@/pages/face/FaceEnrollRequiredPage";
 
 /** Wajib login; menunggu pemulihan sesi (UX saja — backend tetap menegakkan otorisasi). */
 export function RequireAuth() {

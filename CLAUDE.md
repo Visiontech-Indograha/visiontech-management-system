@@ -127,9 +127,10 @@ docs/           seluruh rencana dan standar
 ## Alur kerja per iterasi
 
 **ATURAN WAJIB GIT FLOW (Untuk AI & Developer):**
-- **DILARANG** melakukan commit atau push langsung ke branch `prod` atau `main`.
-- **SELALU** kerjakan tugas di branch `development` atau branch fitur (misal: `feature/nama-fitur`).
-- Penggabungan ke `prod` hanya boleh dilakukan melalui proses *Pull Request* yang ditinjau.
+- **DILARANG KERAS merge, commit, atau push langsung ke `prod` atau `main`.**
+- **Agen AI HANYA boleh membuat Pull Request ke `development`.**
+- **SELALU** kerjakan tugas di branch fitur (misal: `feature/nama-fitur`) yang dicabangkan dari `development`.
+- Penggabungan ke `prod` hanya boleh dilakukan oleh pemilik/manusia melalui proses *Pull Request* yang ditinjau dari `development` → `prod`.
 
 1. Pastikan Anda berada di branch `development` atau branch fitur, bukan `prod`.
 2. Ambil task berikutnya dari `docs/06-RENCANA-FASE.md`.

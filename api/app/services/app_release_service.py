@@ -72,9 +72,11 @@ class AppReleaseService:
         return out
 
     def latest_file_name(self, abi: str | None) -> str:
-        """Nama APK terbaru untuk tautan pemasangan pertama (bawaan arm64-v8a)."""
+        """Nama APK terbaru untuk tautan pemasangan pertama (bawaan universal bila ada, lalu arm64-v8a)."""
         manifest = self.manifest()
-        file = _pick_file(manifest.files, [abi or DEFAULT_ABI]) if manifest else None
+        if manifest is None:
+            raise NotFoundError("Rilis aplikasi Android")
+        file = _pick_file(manifest.files, [abi]) if abi else _pick_file(manifest.files, ["universal", DEFAULT_ABI])
         if file is None:
             raise NotFoundError("Rilis aplikasi Android")
         return file.name

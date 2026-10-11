@@ -7,9 +7,15 @@ from __future__ import annotations
 import contextlib
 import os
 import socket
+import sys
 import uuid
 from collections.abc import Callable, Iterator
 from urllib.parse import urlparse
+
+if sys.platform == "win32":
+    _git_bin = r"C:\Program Files\Git\bin"
+    if os.path.isdir(_git_bin) and _git_bin.lower() not in os.environ.get("PATH", "").lower():
+        os.environ["PATH"] = f"{_git_bin};{os.environ.get('PATH', '')}"
 
 import psycopg2
 import pytest

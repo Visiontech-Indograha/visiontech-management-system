@@ -32,7 +32,7 @@ _ON_DUTY = """
 _NEW_CONFLICT = f"""
 CREATE OR REPLACE FUNCTION vms.personnel_conflict(p_employee uuid, p_period daterange, p_exclude_plan uuid DEFAULT NULL)
 RETURNS TABLE (work_plan_id uuid, number text, title text)
-LANGUAGE sql STABLE AS $$
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = vms, public AS $$
   SELECT DISTINCT wp.id, wp.number, wp.title
   FROM vms.work_plan wp
   JOIN vms.work_plan_member m ON m.work_plan_id = wp.id AND upper_inf(m.valid_period)
@@ -69,7 +69,7 @@ $$
 _BUSY = f"""
 CREATE OR REPLACE FUNCTION vms.employee_busy_dates(p_employee uuid, p_exclude_plan uuid DEFAULT NULL)
 RETURNS TABLE (busy_date date)
-LANGUAGE sql STABLE AS $$
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = vms, public AS $$
   SELECT DISTINCT d.work_date
   FROM vms.work_plan wp
   JOIN vms.work_plan_member m ON m.work_plan_id = wp.id AND upper_inf(m.valid_period)

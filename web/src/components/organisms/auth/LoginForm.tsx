@@ -53,7 +53,7 @@ export function LoginForm({ admin, form, onSubmit, formError, lockSeconds }: {
               )}
               <div className="space-y-1.5">
                 <StyledLabel htmlFor="email">Email</StyledLabel>
-                <StyledInput id="email" autoComplete="email" autoCapitalize="none" placeholder="nama@visiontech.co.id" {...register("email")} />
+                <StyledInput id="email" autoComplete="email" autoCapitalize="none" placeholder="nama@visiontech.id" {...register("email")} />
                 {errors.email && <TextBlock className="text-sm text-destructive">{errors.email.message}</TextBlock>}
               </div>
               <div className="space-y-1.5">

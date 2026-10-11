@@ -21,9 +21,10 @@ Proyek: VMS — FastAPI (`api/`), React/Vite/shadcn (`web/`), Flutter (`mobile/`
 ## Kode
 - Web: TypeScript strict; **dilarang** `any`, `@ts-ignore`, `eslint-disable`, `alert/confirm/prompt`; shadcn/ui;
   TanStack Query; 4 keadaan (memuat/kosong/galat/berhasil); sentuh ≥ 44px; input 16px. Kontrak = `web/openapi.json`.
-- API: router tipis → `services/` (nama fungsi = transaksi domain.js) → `crud/crud_<entitas>.py` (SQL statis, bukan
-  f-string, `CAST(:x AS tipe)` bukan `:x::tipe`); galat `AppError` berbahasa Indonesia. Skema baru `<Entitas>In/Out`
-  (`docs/12` §10); `ruff check app tests` wajib bersih (set aturan di `api/ruff.toml`, baris ≤ 120).
+- API: arsitektur modular domain (`modules/<domain>/routes.py`, `database/`, `shared/`, `core/`), router tipis →
+  `services/` (nama fungsi = transaksi domain.js) → `crud/` (SQL statis, bukan f-string, `CAST(:x AS tipe)` bukan `:x::tipe`);
+  galat `AppError` berbahasa Indonesia. Skema baru `<Entitas>In/Out` (`docs/12` §10); `ruff check app tests` wajib bersih
+  (set aturan di `api/ruff.toml`, baris ≤ 120). Struktur dijaga `api/tests/test_structure.py`.
 
 ## Bila ragu
 - **Tanyakan, jangan menebak.** Spesifikasi ambigu atau ada dua pilihan masuk akal → berhenti dan tulis pertanyaannya

@@ -4,44 +4,42 @@ Urutan include disalin apa adanya dari `main.py` lama (R-28 M2) — urutan memen
 """
 from fastapi import APIRouter
 
-from app.api.v1.endpoints.accounts import router as accounts_router
-from app.api.v1.endpoints.app_releases import router as app_releases_router
-from app.api.v1.endpoints.assets import plan_assets_router
-from app.api.v1.endpoints.assets import router as assets_router
-from app.api.v1.endpoints.attendance import router as attendance_router
-from app.api.v1.endpoints.attendance_cron import router as attendance_cron_router
-from app.api.v1.endpoints.audit import router as audit_router
-from app.api.v1.endpoints.auth import router as auth_router
-from app.api.v1.endpoints.documents import router as documents_router
-from app.api.v1.endpoints.employees import router as employees_router
-from app.api.v1.endpoints.events import router as events_router
-from app.api.v1.endpoints.expiry import router as expiry_router
 from app.api.v1.endpoints.face import router as face_router
-from app.api.v1.endpoints.files import router as files_router
-from app.api.v1.endpoints.hse import days_router as daily_report_router
-from app.api.v1.endpoints.hse import router as hse_router
-from app.api.v1.endpoints.monitoring import router as monitoring_router
-from app.api.v1.endpoints.notifications import router as notifications_router
-from app.api.v1.endpoints.overtime import overtime_router
-from app.api.v1.endpoints.overtime import recaps_router as overtime_recaps_router
-from app.api.v1.endpoints.signatures import plan_documents_router
-from app.api.v1.endpoints.signatures import router as signatures_router
-from app.api.v1.endpoints.sites import router as sites_router
-from app.api.v1.endpoints.sync import router as sync_router
-from app.api.v1.endpoints.units import router as units_router
-from app.api.v1.endpoints.weekly_reports import router as weekly_reports_router
-from app.api.v1.endpoints.work_plan_amendments import router as plan_amendments_router
-from app.api.v1.endpoints.work_plan_attachments import router as plan_attachments_router
-from app.api.v1.endpoints.work_plan_changes import plan_router as plan_changes_router
-from app.api.v1.endpoints.work_plan_changes import router as changes_router
-from app.api.v1.endpoints.work_plan_days import router as plan_days_router
-from app.api.v1.endpoints.work_plan_location import router as plan_location_router
-from app.api.v1.endpoints.work_plan_members import router as plan_members_router
-from app.api.v1.endpoints.work_plan_reports import router as plan_reports_router
-from app.api.v1.endpoints.work_plan_revisions import router as plan_revisions_router
-from app.api.v1.endpoints.work_plan_transitions import router as transitions_router
-from app.api.v1.endpoints.work_plans import router as plans_router
-from app.api.v1.endpoints.work_types import router as work_types_router
+from app.modules.accounts.routes import router as accounts_router
+from app.modules.assets.routes import assets_router, plan_assets_router
+from app.modules.attendance.routes import attendance_cron_router, attendance_router
+from app.modules.audit.routes import audit_router
+from app.modules.auth.routes import router as auth_router
+from app.modules.documents.routes import documents_router, expiry_router
+from app.modules.employees.routes import router as employees_router
+from app.modules.hse.routes import daily_report_router, hse_router
+from app.modules.notifications.routes import notifications_router
+from app.modules.overtime.routes import overtime_recaps_router, overtime_router
+from app.modules.reports.routes import weekly_reports_router
+from app.modules.signatures.routes import plan_documents_router, signatures_router
+from app.modules.sites.routes import router as sites_router
+from app.modules.system.routes import (
+    app_releases_router,
+    events_router,
+    files_router,
+    monitoring_router,
+    sync_router,
+)
+from app.modules.units.routes import router as units_router
+from app.modules.work_plans.routes import (
+    changes_router,
+    plan_amendments_router,
+    plan_attachments_router,
+    plan_changes_router,
+    plan_days_router,
+    plan_location_router,
+    plan_members_router,
+    plan_reports_router,
+    plan_revisions_router,
+    plans_router,
+    transitions_router,
+)
+from app.modules.work_types.routes import router as work_types_router
 
 api_router = APIRouter()
 

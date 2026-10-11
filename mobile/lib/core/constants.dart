@@ -9,7 +9,7 @@
 class ApiConfig {
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://10.0.2.2:8000', // alias emulator Android ke localhost host; ganti ke IP LAN untuk real device
+    defaultValue: 'http://127.0.0.1:8000',
   );
 
   static const Duration connectTimeout = Duration(seconds: 15);

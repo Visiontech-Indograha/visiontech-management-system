@@ -222,12 +222,14 @@ function OfficeCheckInForm({ employeeId }: { employeeId: string }) {
       await refresh();
     },
     onError: (err) => {
-      if (err instanceof ApiError && /swafoto wajib/i.test(err.message)) {
+      if (err instanceof ApiError && /swafoto wajib|isi penjelasan/i.test(err.message)) {
+        // Pulang di luar radius: penjelasan + swafoto wajib (sama seperti absen masuk di luar zona).
         setAskExplanation(true);
         if (!explanation.trim()) {
-          setError(`${err.message} Isi penjelasan, lalu tekan Absen pulang lagi untuk mengambil swafoto.`);
+          setError(`${err.message} Isi penjelasan di bawah, lalu tekan "Ambil swafoto & absen pulang".`);
           return;
         }
+        setError(null);
         setSelfieOut(true);
         return;
       }
@@ -334,6 +336,26 @@ function OfficeCheckInForm({ employeeId }: { employeeId: string }) {
             <TextBlock role="status" className="rounded-control border border-warning-border bg-warning-bg px-3 py-2 text-sm text-warning">
               Absen masuk menunggu pemeriksaan. Absen pulang bisa dilakukan setelah absen masuk disetujui.
             </TextBlock>
+          ) : !rec.check_out_at && askExplanation && outPos ? (
+            <div className="space-y-3">
+              <TextAreaField
+                label="Penjelasan (wajib)"
+                hint="Wajib karena Anda pulang di luar zona lokasi. Setelah itu ambil swafoto."
+                value={explanation}
+                maxLength={1000}
+                onChange={(e) => setExplanation(e.target.value)}
+              />
+              <ActionButton
+                className="h-11 w-full md:w-auto"
+                disabled={busy || !explanation.trim()}
+                onClick={() => {
+                  setError(null);
+                  setSelfieOut(true);
+                }}
+              >
+                {checkOut.isPending ? "Mengirim…" : "Ambil swafoto & absen pulang"}
+              </ActionButton>
+            </div>
           ) : !rec.check_out_at ? (
             <ActionButton className="h-11 w-full md:w-auto" disabled={busy} onClick={() => (needFace ? setFaceFor("out") : checkOut.mutate(undefined))}>
               {checkOut.isPending ? "Membaca lokasi…" : "Absen pulang"}

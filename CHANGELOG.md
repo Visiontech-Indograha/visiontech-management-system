@@ -9,6 +9,12 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased] — `development`
 
+- **Foto profil & dokumen karyawan (permintaan pemilik 2026-10-12):**
+  - 31 foto profil karyawan diupload ke MinIO (nama file diacak dengan UUID) dan tersimpan di `vms.file_object` dengan `storage_key` berprefix `/profile/`
+  - Kolom `photo_file_id` ditambahkan ke tabel `employee` (FK ke `file_object.id`) via migration `0037_employee_photo`
+  - API `EmployeeResponse` mengembalikan `photo_file_id` untuk ditampilkan di web (EmployeeProfileCard) dan HP
+  - 53 dokumen karyawan (KTP, BPJS, PKWT, MCU, sertifikat, SIM, STNK, KIR) diupload ke MinIO dan direkam di `employee_document` dengan status `PENDING`
+  - Script `scripts/upload_profile_photos.py` dan `scripts/upload_employee_documents.py` untuk migrasi data
 - **Ambang kemiripan wajah 0.65 → 0.55 (permintaan pemilik 2026-10-11):** `db/05_face.sql` default `face_match_threshold` diubah dari 0.6500 ke 0.5500; migration `0036_face_threshold.py` update semua organization existing yang masih pakai 0.65. 55% kemiripan sudah cukup untuk match wajah.
 - **Perbaikan test & pembersihan kode (perbaikan QA worktree vms-update):**
   - `web/src/test/android-download.test.tsx`: update ekspektasi build dari 6 ke 4 agar sesuai dengan manifest `latest.json` yang sebenarnya terbit.

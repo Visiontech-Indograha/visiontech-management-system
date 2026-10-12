@@ -1801,6 +1801,17 @@
       "title": "Permissions",
       "type": "array"
      },
+     "photo_file_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Photo File Id"
+     },
      "role": {
       "title": "Role",
       "type": "string"
@@ -2900,6 +2911,18 @@
       ],
       "title": "Phone"
      },
+     "photo_file_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Photo File Id"
+     },
      "position": {
       "title": "Position",
       "type": "string"
@@ -3265,6 +3288,18 @@
        }
       ],
       "title": "Phone"
+     },
+     "photo_file_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Photo File Id"
      },
      "position": {
       "title": "Position",
@@ -11231,6 +11266,63 @@
      }
     ],
     "summary": "Upload Document",
+    "tags": [
+     "Files"
+    ]
+   }
+  },
+  "/api/v1/files/{file_id}": {
+   "get": {
+    "description": "Menyajikan isi berkas langsung sebagai byte (bukan JSON) sehingga bisa dipakai\nsebagai `src` pada tag <img>. Otorisasi tetap diperiksa (404 bila tidak berhak).\n\nQuery params:\n- variant: \"thumb\" | \"view\" | \"full\" (default \"view\")",
+    "operationId": "get_file_content_api_v1_files__file_id__get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "file_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "File Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "variant",
+      "required": false,
+      "schema": {
+       "default": "view",
+       "title": "Variant",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Get File Content",
     "tags": [
      "Files"
     ]

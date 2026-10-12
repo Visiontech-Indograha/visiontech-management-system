@@ -31,6 +31,23 @@ async def upload_document(
     return await controller.handle_upload(current_user, file)
 
 
+@router.get("/{file_id}")
+async def get_file_content(
+    file_id: uuid.UUID,
+    variant: str = "view",
+    current_user: CurrentUser = Depends(get_current_user),
+    controller: FilesController = Depends(),
+):
+    """
+    Menyajikan isi berkas langsung sebagai byte (bukan JSON) sehingga bisa dipakai
+    sebagai `src` pada tag <img>. Otorisasi tetap diperiksa (404 bila tidak berhak).
+
+    Query params:
+    - variant: "thumb" | "view" | "full" (default "view")
+    """
+    return await controller.handle_get_file_content(current_user, file_id, variant=variant)
+
+
 @router.get("/{file_id}/url")
 async def get_file_url(
     file_id: uuid.UUID,

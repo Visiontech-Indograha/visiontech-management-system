@@ -48,6 +48,11 @@ class CRUDFileAccess(CRUDBase):
                            WHERE d.file_id = f.id AND u.id = CAST(:user AS uuid)) AS own_document,
                    EXISTS (SELECT 1 FROM vms.work_type_photo p WHERE p.example_file_id = f.id) AS work_type_example,
                    EXISTS (SELECT 1 FROM vms.attendance a WHERE a.selfie_file_id = f.id) AS selfie,
+                   EXISTS (SELECT 1 FROM vms.employee e WHERE e.photo_file_id = f.id
+                           AND e.organization_id = CAST(:org AS uuid)) AS profile_photo,
+                   EXISTS (SELECT 1 FROM vms.employee e
+                           JOIN vms.app_user u ON u.employee_id = e.id
+                           WHERE e.photo_file_id = f.id AND u.id = CAST(:user AS uuid)) AS own_profile_photo,
                    EXISTS (SELECT 1 FROM vms.attendance a
                            JOIN vms.app_user u ON u.employee_id = a.employee_id
                            WHERE a.selfie_file_id = f.id AND u.id = CAST(:user AS uuid)) AS own_selfie,

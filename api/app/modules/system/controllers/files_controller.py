@@ -12,13 +12,14 @@ import uuid
 
 import filetype
 from fastapi import Depends, HTTPException, UploadFile
+from fastapi.responses import Response
 
 import app.api.v1.endpoints.files as files_api
 from app.api.deps import get_file_service
-from app.core.errors import AppError
+from app.core.errors import AppError, NotFoundError
 from app.core.image import compress_image
 from app.core.security import CurrentUser
-from app.core.storage import get_presigned_url, upload_file
+from app.core.storage import get_object_bytes, get_presigned_url, object_exists, upload_file
 from app.modules.system.services.system_service import FileService
 
 MAX_FILE_SIZE = getattr(files_api, "MAX_FILE_SIZE", 10 * 1024 * 1024)
@@ -116,6 +117,46 @@ class FilesController:
 
         return {"file_id": file_id, "message": "Berkas berhasil diunggah."}
 
+    async def handle_get_file_content(
+        self,
+        current_user: CurrentUser,
+        file_id: uuid.UUID,
+        variant: str = "view",
+    ) -> Response:
+        """
+        Menyajikan isi berkas langsung sebagai byte agar bisa dipakai sebagai `src` <img>.
+
+        Urutan pencarian objek di MinIO:
+        1. `{org}/{file_id}_{variant}.webp` (hasil kompresi aplikasi)
+        2. `file_object.storage_key` (berkas asli / hasil impor massal)
+        3. Semua varian webp lain sebagai cadangan
+        """
+        file_obj = await self.service.authorize(file_id, current_user)
+        is_image = file_obj.mime_type.startswith("image/")
+
+        candidates: list[str] = []
+        if is_image and variant in ("thumb", "view", "full"):
+            candidates.append(f"{current_user.organization_id}/{file_id}_{variant}.webp")
+        candidates.append(file_obj.storage_key)
+        if is_image:
+            for v in ("view", "full", "thumb"):
+                candidates.append(f"{current_user.organization_id}/{file_id}_{v}.webp")
+
+        seen: set[str] = set()
+        for key in candidates:
+            if not key or key in seen:
+                continue
+            seen.add(key)
+            data = get_object_bytes(key)
+            if data:
+                return Response(
+                    content=data,
+                    media_type="image/webp" if key.endswith(".webp") else file_obj.mime_type,
+                    headers={"Cache-Control": "private, max-age=300"},
+                )
+
+        raise NotFoundError("Berkas")
+
     async def handle_get_file_url(
         self,
         current_user: CurrentUser,
@@ -126,19 +167,39 @@ class FilesController:
         file_obj = await self.service.authorize(file_id, current_user)
         is_image = file_obj.mime_type.startswith("image/")
 
-        if is_image and variant in ["thumb", "view", "full"]:
-            target_key = f"{current_user.organization_id}/{file_id}_{variant}.webp"
-            url = get_presigned_url(target_key)
-        else:
-            target_key = file_obj.storage_key
-            url = get_presigned_url(target_key)
+        # Susun kandidat objek: varian webp hasil kompresi lebih dulu, lalu berkas asli
+        # (file_object.storage_key) — penting untuk berkas hasil impor massal yang tidak
+        # punya varian webp. Bila tak satu pun terbukti ada di MinIO (mis. MinIO tidak
+        # tersedia), tetap kembalikan URL kandidat pertama seperti perilaku sebelumnya;
+        # klien akan menerima 404 dari MinIO untuk objek yang memang tidak ada.
+        candidates: list[str] = []
+        if is_image and variant in ("thumb", "view", "full"):
+            candidates.append(f"{current_user.organization_id}/{file_id}_{variant}.webp")
+        candidates.append(file_obj.storage_key)
+        if is_image:
+            for v in ("view", "full", "thumb"):
+                candidates.append(f"{current_user.organization_id}/{file_id}_{v}.webp")
 
+        seen: set[str] = set()
+        fallback_key = ""
+        for key in candidates:
+            if not key or key in seen:
+                continue
+            seen.add(key)
+            if not fallback_key:
+                fallback_key = key
+            if object_exists(key):
+                url = get_presigned_url(key)
+                if url:
+                    return {"url": url, "mime_type": file_obj.mime_type}
+
+        url = get_presigned_url(fallback_key)
         if not url:
-            raise HTTPException(
-                status_code=500,
-                detail={"code": "STORAGE_ERROR", "message": "Gagal membuat URL."},
+            raise AppError(
+                "STORAGE_UNAVAILABLE",
+                "Penyimpanan berkas sedang tidak tersedia. Coba lagi beberapa saat.",
+                status=503,
             )
-
         return {"url": url, "mime_type": file_obj.mime_type}
 
 

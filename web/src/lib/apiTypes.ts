@@ -6632,6 +6632,8 @@ export interface components {
             employee_id?: string | null;
             /** Attendance Mode */
             attendance_mode?: string | null;
+            /** Photo File Id */
+            photo_file_id?: string | null;
         };
         /** ValidationError */
         ValidationError: {

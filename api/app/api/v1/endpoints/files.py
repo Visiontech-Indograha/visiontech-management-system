@@ -4,12 +4,13 @@ import uuid
 
 import filetype
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi.responses import Response
 
 from app.api.deps import get_current_user, get_file_service
-from app.core.errors import AppError
+from app.core.errors import AppError, NotFoundError
 from app.core.image import compress_image
 from app.core.security import CurrentUser
-from app.core.storage import get_presigned_url, upload_file
+from app.core.storage import get_object_bytes, get_presigned_url, upload_file
 from app.services.file_service import FileService
 
 router = APIRouter(prefix="/files", tags=["Files"])
@@ -98,6 +99,51 @@ async def upload_document(
                        "Penyimpanan berkas sedang tidak tersedia. Coba lagi beberapa saat.", status=503)
 
     return {"file_id": file_id, "message": "Berkas berhasil diunggah."}
+
+
+@router.get("/{file_id}")
+async def get_file_content(
+    file_id: uuid.UUID,
+    variant: str = "view",
+    current_user: CurrentUser = Depends(get_current_user),
+    files: FileService = Depends(get_file_service),
+):
+    """
+    Menyajikan isi berkas langsung (bukan JSON) agar bisa dipakai sebagai `src` <img>.
+
+    Urutan pencarian objek di MinIO:
+    1. `{org}/{file_id}_{variant}.webp` (hasil kompresi aplikasi)
+    2. `{org}/{file_id}.{ext}` (berkas asli)
+    3. `file_object.storage_key` (jalur penyimpanan apa pun, termasuk impor massal)
+
+    Otorisasi tetap dilakukan lewat `files.authorize` (404 bila tidak berhak).
+    """
+    file_obj = await files.authorize(file_id, current_user)
+    is_image = file_obj.mime_type.startswith("image/")
+
+    candidates: list[str] = []
+    if is_image and variant in ("thumb", "view", "full"):
+        candidates.append(f"{current_user.organization_id}/{file_id}_{variant}.webp")
+    candidates.append(file_obj.storage_key)
+    # Ekstra: coba semua varian webp bila jalur utama tidak ketemu
+    if is_image:
+        for v in ("view", "full", "thumb"):
+            candidates.append(f"{current_user.organization_id}/{file_id}_{v}.webp")
+
+    seen: set[str] = set()
+    for key in candidates:
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        data = get_object_bytes(key)
+        if data:
+            return Response(
+                content=data,
+                media_type="image/webp" if key.endswith(".webp") else file_obj.mime_type,
+                headers={"Cache-Control": "private, max-age=300"},
+            )
+
+    raise NotFoundError("Berkas")
 
 
 @router.get("/{file_id}/url")

@@ -6,6 +6,7 @@ import { Pill } from "@/components/molecules/Pill";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { ListBlock } from "@/components/molecules/ListBlock";
 import { ImageView } from "@/components/molecules/ImageView";
+import { useFileUrl } from "@/hooks/useFileUrl";
 
 const Row = ({ label, children }: { label: string; children: ReactNode }) => (
   <div className="flex justify-between gap-4 border-b border-line py-2 last:border-0">
@@ -20,12 +21,15 @@ export function EmployeeProfileCard({ employee: e, unitName, canSeePrivate }: {
   unitName: string | null;
   canSeePrivate: boolean;
 }) {
+  // Presigned URL: <img src> tidak bisa mengirim header Authorization.
+  const { data: photoUrl } = useFileUrl(e.photo_file_id, "view");
+
   return (
       <div className="mb-8 max-w-xl rounded-panel border border-line bg-surface shadow-card px-5 py-2">
-        {e.photo_file_id && (
+        {photoUrl && (
           <div className="mb-4 flex justify-center">
             <ImageView
-              src={`/api/v1/files/${e.photo_file_id}`}
+              src={photoUrl}
               alt={e.full_name}
               className="h-24 w-24 rounded-full object-cover"
             />

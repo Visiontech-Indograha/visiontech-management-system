@@ -17,6 +17,7 @@ class AuthUserMeResponseSchema(BaseModel):
     permissions: list[str]
     employee_id: str | None = None
     attendance_mode: str | None = None
+    photo_file_id: str | None = None
 
 
 class AuthChangePasswordRequestSchema(BaseModel):

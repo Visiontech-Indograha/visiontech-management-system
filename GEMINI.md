@@ -14,8 +14,8 @@ Proyek: VMS — FastAPI (`api/`), React/Vite/shadcn (`web/`), Flutter (`mobile/`
   - **DILARANG KERAS merge, commit, atau push langsung ke `prod` / `main`.**
   - Agen AI **hanya boleh membuat Pull Request ke `development`**.
   - Penggabungan ke `prod` sepenuhnya hak pemilik produk (manusia) melalui PR `development` → `prod`.
+  - **DILARANG merge atau push ke `development`.** Push branch fitur saja; Claude / pemilik yang memverifikasi & merge via PR.
 - Kerja di **worktree terpisah**: `git worktree add ../vms-<nama> -b feature/gemini-<tugas> origin/development`.
-- **DILARANG merge atau push ke `development`.** Push branch fitur saja; Claude / pemilik yang memverifikasi & merge via PR.
 - **DILARANG `git stash`** (tumpukan stash dipakai bersama semua worktree).
 - Stage per path, jangan `git add -A`. Jangan commit `migrate_baca.py`, `test_db.py`, `.env`.
 - **CHANGELOG.md**: sisipkan entri dengan editor. **JANGAN** `Get-Content`/`Set-Content`/`>` PowerShell —

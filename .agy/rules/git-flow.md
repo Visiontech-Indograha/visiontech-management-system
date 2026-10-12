@@ -9,9 +9,9 @@ description: Mencegah agen AI melakukan komit langsung ke branch production.
 1. **Dilarang keras** melakukan `git merge`, `git commit`, atau `git push` secara langsung ke branch `prod` atau `main`.
 2. Agen AI **hanya boleh membuat Pull Request ke branch `development`**; dilarang keras merge sendiri ke `prod`.
 3. Jika Anda perlu membuat perubahan kode atau fitur baru, Anda **wajib** membuat branch fitur baru dari `development` (contoh: `feature/nama-fitur`).
-3. Selalu periksa branch aktif menggunakan `git branch` sebelum melakukan modifikasi file besar atau `git commit`.
-4. Jika posisi saat ini berada di `prod`, peringatkan Pengguna dan otomatis jalankan `git checkout development` sebelum melanjutkan tugas yang mengubah kode.
-5. Jika tugas mengharuskan penerapan ke production, berikan instruksi kepada Pengguna untuk membuat *Pull Request* (PR) di GitHub, jangan pernah mem-bypass PR.
+4. Selalu periksa branch aktif menggunakan `git branch` sebelum melakukan modifikasi file besar atau `git commit`.
+5. Jika posisi saat ini berada di `prod`, peringatkan Pengguna dan otomatis jalankan `git checkout development` sebelum melanjutkan tugas yang mengubah kode.
+6. Jika tugas mengharuskan penerapan ke production, berikan instruksi kepada Pengguna untuk membuat *Pull Request* (PR) di GitHub, jangan pernah mem-bypass PR.
 
 ## Wajib Commit dan Push Setiap Tugas Selesai
 

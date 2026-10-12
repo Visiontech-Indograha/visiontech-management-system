@@ -9,6 +9,7 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased] — `development`
 
+- **Ambang kemiripan wajah 0.65 → 0.55 (permintaan pemilik 2026-10-11):** `db/05_face.sql` default `face_match_threshold` diubah dari 0.6500 ke 0.5500; migration `0036_face_threshold.py` update semua organization existing yang masih pakai 0.65. 55% kemiripan sudah cukup untuk match wajah.
 - **Perbaikan test & pembersihan kode (perbaikan QA worktree vms-update):**
   - `web/src/test/android-download.test.tsx`: update ekspektasi build dari 6 ke 4 agar sesuai dengan manifest `latest.json` yang sebenarnya terbit.
   - `web/src/components/organisms/attendance/AttendanceFilter.tsx`: hapus `console.log` debug yang tersisa.

@@ -107,7 +107,7 @@ async def get_file_content(
     variant: str = "view",
     current_user: CurrentUser = Depends(get_current_user),
     files: FileService = Depends(get_file_service),
-):
+) -> Response:
     """
     Menyajikan isi berkas langsung (bukan JSON) agar bisa dipakai sebagai `src` <img>.
 

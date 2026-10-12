@@ -7,6 +7,7 @@ Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.1.
 import uuid
 
 from fastapi import APIRouter, Depends, File, UploadFile
+from fastapi.responses import Response
 
 from app.api.deps import get_current_user
 from app.core.security import CurrentUser
@@ -37,7 +38,7 @@ async def get_file_content(
     variant: str = "view",
     current_user: CurrentUser = Depends(get_current_user),
     controller: FilesController = Depends(),
-):
+) -> Response:
     """
     Menyajikan isi berkas langsung sebagai byte (bukan JSON) sehingga bisa dipakai
     sebagai `src` pada tag <img>. Otorisasi tetap diperiksa (404 bila tidak berhak).

@@ -14,7 +14,7 @@ build/
 web/openapi.json
 web/openapi.current.json
 **/package-lock.json
-web/src/lib/api-types.ts
+web/src/lib/apiTypes.ts
 prototype/assets/
 mobile/build/
 mobile/.dart_tool/

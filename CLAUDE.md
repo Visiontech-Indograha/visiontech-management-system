@@ -41,8 +41,8 @@ Daftar pustaka lengkap dan aturan menambah pustaka: `docs/14-DAFTAR-PUSTAKA-TEKN
 ## Struktur
 
 ```
-api/            FastAPI — endpoint → service → crud (struktur WAJIB: docs/12 §1, migrasi: docs/26)
-web/            React — components/{ui,molecules,organisms,templates} + features/
+api/            FastAPI — arsitektur modular domain modules/, database/, shared/, core/ (struktur WAJIB: docs/12 §1, R-35)
+web/            React — pages/<domain> · components/{atoms,molecules,organisms[/<domain>],templates} · services/ · schemas/ · hooks/ · lib/
 mobile/         Flutter — core/, shared/, features/
 face-service/   layanan wajah (fase 8)
 db/             5 berkas SQL, fondasi skema
@@ -55,7 +55,10 @@ docs/           seluruh rencana dan standar
 | Yang dikerjakan | Baca dulu |
 |---|---|
 | Endpoint / servis | `docs/12-STANDAR-BACKEND.md`, `docs/05-KONTRAK-API.md` |
-| Komponen / halaman | `docs/11-STANDAR-FRONTEND.md` |
+| Skema Pydantic, modul API baru | `docs/12` §10 (gaya skema `<Entitas>In/Out`) dan §11 (templat lapisan) |
+| Kode Flutter | `mobile/analysis_options.yaml`, `docs/11` bagian Mobile |
+| Sebelum commit / PR | `docs/CHECKLIST-PR.md` |
+| Komponen / halaman | `docs/33-STANDAR-PENULISAN-KODE.md` (atomic design, penamaan), `docs/11-STANDAR-FRONTEND.md` |
 | Unggahan berkas | `docs/13-PENGELOLAAN-BERKAS-DAN-KOMPRESI.md` |
 | Auth, izin, biometrik | `docs/08-KEAMANAN-DAN-KEPATUHAN.md` |
 | CI, deploy, peringatan | `docs/17-CI-CD-DAN-NOTIFIKASI.md` |
@@ -63,11 +66,11 @@ docs/           seluruh rencana dan standar
 
 ## Aturan backend
 
-- **Struktur folder `api/app/` WAJIB (keputusan pemilik 2026-09-29, kritis; dikoreksi R-30 2026-09-30) — persis contoh pemilik:**
+- **Struktur folder `api/app/` WAJIB (keputusan pemilik 2026-10-11 R-35, mengunci branch `feature/arsitektur-api-modular`):**
   `api/v1/endpoints/<modul>.py` + `api/v1/router.py` + `api/deps.py` (sesi, auth, izin, penjaga akses, perakitan
   service `get_<nama>_service`) · `core/` (`config.py`, `security.py` + `CurrentUser`, …) · `crud/crud_<entitas>.py` ·
   `models/` · `schemas/` · `services/` · `db/` (`base.py`, `session.py`) · `main.py`.
-  **Tidak ada** `core/database.py`, `app/dependencies.py`, `controllers/`, `repositories/`.
+  **Diizinkan & dikunci:** `modules/`, `database/`, `shared/`, `core/`, `api/v1/router.py`. Folder transisi `crud/`, `models/`, `schemas/`, `services/`, `db/` dipertahankan.
   Berkas baru hanya boleh dibuat di tempat ini. Rincian & pemetaan: `docs/12` §1; migrasi: `docs/26`.
 - Lapisan: **endpoint → service → crud**. Endpoint tidak pernah menyentuh
   basis data. Service tidak pernah menulis SQL.
@@ -81,12 +84,19 @@ docs/           seluruh rencana dan standar
 - Kerja berat (kompresi gambar, render PDF) → `run_in_threadpool`.
 - Waktu hanya lewat `core/time.py`. Rahasia hanya lewat `core/config.py`.
 - Galat: `AppError(code, message)` dengan **message Bahasa Indonesia untuk pengguna**.
+- Lint `ruff` memakai set aturan di `api/ruff.toml` (baris ≤ 120); garis dasar per berkas hanya boleh menyusut.
+- Skema baru: `<Entitas>In` / `<Entitas>Out` (`docs/12` §10). Nama kelas skema lama tidak diganti.
 - Berkas yang tidak berwenang → **404**, bukan 403.
 
 ## Aturan frontend
 
 - **Mobile-first.** Gaya dasar untuk ponsel, tambahkan dengan `md:` dan `lg:`. Tidak pernah `max-*`.
 - **Tailwind CSS v4:** Dilarang menggunakan `tailwind.config.js`. Gunakan murni CSS via `@theme` dan plugin `@tailwindcss/vite`.
+- **Atomic design wajib (`docs/33`, keputusan pemilik 2026-10-09):** atoms → molecules → organisms → templates → pages.
+  Urutan: tampilan UI > Page > Template > Organism > Molecule > Atom — **Page = kumpulan template, Template =
+  kumpulan organism, Organism = kumpulan molecule, Molecule = kumpulan atom**; elemen HTML/teks/ikon hanya di atom
+  (Template/Organism/Molecule boleh `div` tata letak). Ditegakkan ESLint; daftar `*_LEGACY` hanya boleh menyusut. Penamaan berkas: komponen
+  `[NamaFitur][OutputTampilan].tsx`, service `[domain]Service.ts`, satu klien HTTP `lib/apiClient.ts`.
 - **Wajib pakai shadcn/ui.** Tidak ada → susun dari yang ada → benar-benar tidak ada → buat sendiri dengan token yang sama, taruh di `components/`.
 - Naikkan komponen ke pustaka bersama **setelah** dipakai dua kali, bukan sebelumnya.
 - **TanStack Query untuk data server, Zustand untuk state klien.** Data API tidak pernah
@@ -94,7 +104,8 @@ docs/           seluruh rencana dan standar
 - Form: react-hook-form + zod. Pesan validasi Bahasa Indonesia di skema.
 - Setiap layar menangani 4 keadaan: memuat, kosong, galat, berhasil.
 - Sasaran sentuh ≥ 44 px, teks dasar ≥ 16 px, kontras ≥ 4,5:1.
-- `components/` tidak boleh mengimpor dari `features/`.
+- Struktur berbasis lapisan (`docs/33` §3): fitur tidak membuat komponen sendiri; hanya `app/` mengimpor `pages/`;
+  `services/` dan `lib/` tidak mengimpor `components/`.
 - **Dilarang:** `alert()`, `confirm()`, `prompt()`, `any`, `@ts-ignore`.
 
 ## Pengujian
@@ -116,9 +127,10 @@ docs/           seluruh rencana dan standar
 ## Alur kerja per iterasi
 
 **ATURAN WAJIB GIT FLOW (Untuk AI & Developer):**
-- **DILARANG** melakukan commit atau push langsung ke branch `prod` atau `main`.
-- **SELALU** kerjakan tugas di branch `development` atau branch fitur (misal: `feature/nama-fitur`).
-- Penggabungan ke `prod` hanya boleh dilakukan melalui proses *Pull Request* yang ditinjau.
+- **DILARANG KERAS merge, commit, atau push langsung ke `prod` atau `main`.**
+- **Agen AI HANYA boleh membuat Pull Request ke `development`.**
+- **SELALU** kerjakan tugas di branch fitur (misal: `feature/nama-fitur`) yang dicabangkan dari `development`.
+- Penggabungan ke `prod` hanya boleh dilakukan oleh pemilik/manusia melalui proses *Pull Request* yang ditinjau dari `development` → `prod`.
 
 1. Pastikan Anda berada di branch `development` atau branch fitur, bukan `prod`.
 2. Ambil task berikutnya dari `docs/06-RENCANA-FASE.md`.
@@ -127,7 +139,8 @@ docs/           seluruh rencana dan standar
 5. Kerjakan.
 6. Lint + tipe + uji hijau.
 7. Regresi wajib masih hijau.
-8. Ambiguitas yang diputuskan sendiri → catat di `docs/10-...md` Bagian C.
+8. **Ragu atau ambigu → tanyakan pemilik dulu, jangan menebak** (beri pilihan + rekomendasi);
+   jawabannya dicatat di `docs/10-...md` Bagian C (`docs/12` §12).
 9. Tandai selesai hanya bila DoD fase terpenuhi.
 10. Perbarui `CHANGELOG.md`, lalu **commit** (satu task = satu commit).
 11. Periksa rahasia pada commit yang belum di-push, lalu **push** ke `origin` di branch yang
@@ -143,7 +156,8 @@ Satu task per iterasi.
 - Mengompresi PDF atau berkas Office. Hanya foto yang dikompresi.
 - Menyimpan rahasia di Git.
 - Menyalin data karyawan asli ke staging atau ke komputer developer.
-- Menebak saat spesifikasi ambigu — catat di `docs/10-...md` Bagian C.
+- Menebak atau memutuskan sendiri saat spesifikasi ambigu, atau saat keputusan menyangkut keamanan,
+  privasi, data produksi, biaya, atau lisensi — **tanyakan pemilik dulu** (`docs/12` §12).
 - Mengirim data pribadi, koordinat, atau jejak tumpukan ke Discord (`docs/17`).
 - Membuka port 22 ke internet.
 - Menambah fitur di luar MVP. Daftar lanjutan ada di `docs/10-...md` Bagian F.

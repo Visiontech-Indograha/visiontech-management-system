@@ -27,7 +27,7 @@ async def send_security_alert(title: str, description: str, details: dict[str, o
 
     # Mencatat peringatan di log lokal
     logger.warning(f"SECURITY ALERT: {title} - {description} - {details}")
-    
+
     # Mengirim ke Discord tanpa memblokir alur utama
     await send_discord_alert(settings.DISCORD_WEBHOOK_ALERTS, message, level="warning")
 

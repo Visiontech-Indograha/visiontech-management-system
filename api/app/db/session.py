@@ -22,20 +22,21 @@ from sqlalchemy.ext.asyncio import (
 
 from app.core.config import settings
 from app.core.errors import AppError
+from app.core.events import discard_events, flush_events
 
 # ── Engine & sessions ────────────────────────────────────────────────────────────
-# Fungsi & trigger di db/*.sql menyebut tabel tanpa awalan skema, 
+# Fungsi & trigger di db/*.sql menyebut tabel tanpa awalan skema,
 # jadi setiap koneksi aplikasi wajib memakai path yang sama.
 SEARCH_PATH = "vms, public"
 
 
-def make_engine(**kwargs: Any) -> AsyncEngine:
+def make_engine(url: str | None = None, **kwargs: Any) -> AsyncEngine:
     """
-    Create and configure the SQLAlchemy AsyncEngine.
+    Create and configure the SQLAlchemy AsyncEngine. `url` kosong → DATABASE_URL (koneksi API).
     """
     # Membuat engine async dengan path pencarian yang tepat
     return create_async_engine(
-        settings.DATABASE_URL,
+        url or settings.DATABASE_URL,
         echo=False,
         connect_args={"server_settings": {"search_path": SEARCH_PATH}},
         **kwargs,
@@ -71,16 +72,20 @@ async def unit_of_work(db: AsyncSession) -> AsyncIterator[None]:
         # Jika persist=True, simpan perubahan sebelum membuang galat
         if exc.persist:
             await db.commit()
+            flush_events(db)
         else:
             await db.rollback()
+            discard_events(db)
         raise
     except BaseException:
         # Kembalikan perubahan jika terjadi kesalahan lain
         await db.rollback()
+        discard_events(db)
         raise
     else:
-        # Simpan perubahan jika tidak ada kesalahan
+        # Simpan perubahan jika tidak ada kesalahan, lalu siarkan peristiwa realtime (hanya setelah commit)
         await db.commit()
+        flush_events(db)
 
 
 # ── Request context (RLS & audit) ────────────────────────────────────────────
@@ -103,7 +108,7 @@ async def set_request_context(
     actor_label: str,
 ) -> None:
     """
-    Set context variables (user_id, organization_id, actor_label) in the 
+    Set context variables (user_id, organization_id, actor_label) in the
     PostgreSQL session to support Row Level Security (RLS) and audit triggers.
     """
     # Mengeksekusi penyiapan variabel RLS secara lokal

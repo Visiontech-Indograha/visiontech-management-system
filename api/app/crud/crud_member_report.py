@@ -5,7 +5,6 @@ laporan harian/mingguan yang sudah disetujui PM.
 """
 from __future__ import annotations
 
-from collections.abc import Iterable
 from typing import Any
 from uuid import UUID
 
@@ -22,10 +21,10 @@ class CRUDMemberReport(CRUDBase):
     async def employee_of(self, user_id: UUID | str) -> str | None:
         """
         Mendapatkan ID karyawan berdasarkan ID pengguna (user).
-        
+
         Args:
             user_id (UUID | str): ID pengguna.
-            
+
         Returns:
             str | None: ID karyawan dalam bentuk string, atau None.
         """
@@ -33,14 +32,23 @@ class CRUDMemberReport(CRUDBase):
         value = await self.scalar("SELECT CAST(employee_id AS text) FROM vms.app_user WHERE id = :uid", {"uid": user_id})
         return str(value) if value else None
 
+    async def on_duty(self, day_id: UUID | str, employee_id: UUID | str) -> bool:
+        """Karyawan bertugas pada hari itu? Tanpa daftar anggota khusus hari itu = seluruh tim bertugas."""
+        return bool(await self.scalar(
+            """
+            SELECT NOT EXISTS (SELECT 1 FROM vms.work_plan_day_member WHERE work_plan_day_id = CAST(:day AS uuid))
+                OR EXISTS (SELECT 1 FROM vms.work_plan_day_member
+                           WHERE work_plan_day_id = CAST(:day AS uuid) AND employee_id = CAST(:emp AS uuid))
+            """, {"day": str(day_id), "emp": str(employee_id)}))
+
     async def list_for_day(self, day_id: UUID | str) -> list[Any]:
         """
         Mengambil semua laporan harian dari anggota-anggota pada hari kerja (SK) tertentu,
         baik yang sudah dikirim maupun yang masih berupa draf (untuk dilihat oleh Ketua/PM).
-        
+
         Args:
             day_id (UUID | str): ID hari kerja (work_plan_day).
-            
+
         Returns:
             list[Any]: Daftar laporan beserta detail karyawan dan lampiran berkas.
         """
@@ -51,7 +59,11 @@ class CRUDMemberReport(CRUDBase):
             SELECT r.id, CAST(r.employee_id AS text) AS employee_id, e.full_name, e.position, r.status, r.body,
                    r.obstacle, r.sent_at,
                    COALESCE(ARRAY(SELECT CAST(ev.file_id AS text) FROM vms.member_report_evidence ev
-                                  WHERE ev.member_report_id = r.id ORDER BY ev.file_id), '{}') AS evidence_file_ids
+                                  WHERE ev.member_report_id = r.id ORDER BY ev.file_id), '{}') AS evidence_file_ids,
+                   COALESCE((SELECT jsonb_agg(jsonb_build_object('file_id', ev.file_id, 'slot_label', ev.slot_label,
+                                                                 'source', ev.source) ORDER BY ev.file_id)
+                             FROM vms.member_report_evidence ev WHERE ev.member_report_id = r.id),
+                            '[]'::jsonb) AS evidence
             FROM vms.member_daily_report r JOIN vms.employee e ON e.id = r.employee_id
             WHERE r.work_plan_day_id = :day
             ORDER BY r.sent_at NULLS LAST, e.full_name
@@ -62,11 +74,11 @@ class CRUDMemberReport(CRUDBase):
     async def mine(self, day_id: UUID | str, employee_id: str) -> Any:
         """
         Mengambil satu laporan harian milik karyawan spesifik pada hari tertentu.
-        
+
         Args:
             day_id (UUID | str): ID hari kerja.
             employee_id (str): ID karyawan (anggota).
-            
+
         Returns:
             Any: Data laporan anggota beserta lampiran buktinya, atau None jika belum ada.
         """
@@ -76,7 +88,11 @@ class CRUDMemberReport(CRUDBase):
             SELECT r.id, CAST(r.employee_id AS text) AS employee_id, e.full_name, e.position, r.status, r.body,
                    r.obstacle, r.sent_at,
                    COALESCE(ARRAY(SELECT CAST(ev.file_id AS text) FROM vms.member_report_evidence ev
-                                  WHERE ev.member_report_id = r.id ORDER BY ev.file_id), '{}') AS evidence_file_ids
+                                  WHERE ev.member_report_id = r.id ORDER BY ev.file_id), '{}') AS evidence_file_ids,
+                   COALESCE((SELECT jsonb_agg(jsonb_build_object('file_id', ev.file_id, 'slot_label', ev.slot_label,
+                                                                 'source', ev.source) ORDER BY ev.file_id)
+                             FROM vms.member_report_evidence ev WHERE ev.member_report_id = r.id),
+                            '[]'::jsonb) AS evidence
             FROM vms.member_daily_report r JOIN vms.employee e ON e.id = r.employee_id
             WHERE r.work_plan_day_id = :day AND r.employee_id = CAST(:emp AS uuid)
             """,
@@ -88,13 +104,13 @@ class CRUDMemberReport(CRUDBase):
         Menyimpan draf laporan harian anggota (insert atau update).
         Hanya bisa mengupdate jika laporan masih berstatus 'DRAFT'. Jika sudah dikirim ('SENT'),
         data tidak akan berubah.
-        
+
         Args:
             day_id (UUID | str): ID hari kerja.
             employee_id (str): ID karyawan.
             body (str): Isi laporan.
             obstacle (str): Kendala yang dilaporkan.
-            
+
         Returns:
             Any: ID laporan (Row) yang berhasil disimpan/diubah, atau None.
         """
@@ -112,36 +128,43 @@ class CRUDMemberReport(CRUDBase):
             {"day": day_id, "emp": employee_id, "body": body, "obstacle": obstacle},
         )
 
-    async def replace_evidence(self, report_id: UUID | str, file_ids: Iterable[UUID]) -> None:
+    async def replace_evidence(self, report_id: UUID | str, items: list[tuple[str, str | None, str]]) -> None:
         """
         Mengganti seluruh lampiran bukti laporan anggota dengan daftar ID file yang baru.
-        
+
         Args:
             report_id (UUID | str): ID laporan.
             file_ids (Iterable[UUID]): Daftar ID file lampiran baru.
         """
+        # Berkas yang sudah punya label/sumber dan kembali tanpa metadata mempertahankan metadata lamanya.
+        old = {str(r.file_id): (r.slot_label, r.source) for r in await self.fetchall(
+            "SELECT file_id, slot_label, source FROM vms.member_report_evidence WHERE member_report_id = :rid",
+            {"rid": report_id})}
+        items = [(f, old[f][0], old[f][1]) if (s is None and src == "CAMERA" and f in old) else (f, s, src)
+                 for f, s, src in items]
         # Menghapus relasi lampiran bukti (evidence) lama untuk laporan ini
         await self.execute("DELETE FROM vms.member_report_evidence WHERE member_report_id = :rid", {"rid": report_id})
-        unique_fids = list(dict.fromkeys(file_ids))
-        if unique_fids:
-            # Menyisipkan (bulk insert) ID file yang baru menggunakan fungsi unnest()
+        if items:
+            # Menyisipkan (bulk insert) berkas bukti beserta slot template dan sumbernya (unnest paralel)
             await self.execute(
                 """
-                INSERT INTO vms.member_report_evidence (member_report_id, file_id)
-                SELECT :rid, unnest(CAST(:fids AS uuid[]))
+                INSERT INTO vms.member_report_evidence (member_report_id, file_id, slot_label, source)
+                SELECT :rid, CAST(f AS uuid), NULLIF(s, ''), src
+                FROM unnest(CAST(:fids AS text[]), CAST(:slots AS text[]), CAST(:srcs AS text[])) AS t(f, s, src)
                 """,
-                {"rid": report_id, "fids": [str(f) for f in unique_fids]}
+                {"rid": report_id, "fids": [i[0] for i in items], "slots": [i[1] or "" for i in items],
+                 "srcs": [i[2] for i in items]},
             )
 
     async def send(self, day_id: UUID | str, employee_id: str) -> Any:
         """
         Mengirim laporan anggota (mengubah status dari DRAFT menjadi SENT).
         Hanya berlaku jika isi laporan (body) memiliki panjang minimal 10 karakter.
-        
+
         Args:
             day_id (UUID | str): ID hari kerja.
             employee_id (str): ID karyawan pembuat laporan.
-            
+
         Returns:
             Any: ID laporan yang berhasil dikirim, atau None jika gagal/tidak memenuhi syarat.
         """
@@ -160,10 +183,10 @@ class CRUDMemberReport(CRUDBase):
     async def day_info(self, day_id: UUID | str) -> Any:
         """
         Mendapatkan informasi dasar dari hari kerja (SK), seperti tanggal, judul, dan ID rencana (plan).
-        
+
         Args:
             day_id (UUID | str): ID hari kerja.
-            
+
         Returns:
             Any: Informasi hari kerja.
         """
@@ -177,10 +200,10 @@ class CRUDMemberReport(CRUDBase):
         """
         Mendapatkan metadata kop (header) Surat Kerja (SK) untuk dokumen laporan tercetak/PDF,
         seperti nomor, judul, lokasi, periode, PM, dan Ketua.
-        
+
         Args:
             plan_id (UUID | str): ID Surat Kerja (plan).
-            
+
         Returns:
             Any: Data header dokumen laporan.
         """
@@ -204,10 +227,10 @@ class CRUDMemberReport(CRUDBase):
         Mengambil keseluruhan isi laporan harian (PM/Ketua) untuk hari tertentu, termasuk detail peninjau,
         daftar lampiran bukti, serta sub-tugas pada hari tersebut.
         Data ini digunakan untuk menghasilkan dokumen laporan.
-        
+
         Args:
             day_id (UUID | str): ID hari kerja.
-            
+
         Returns:
             Any: Data laporan harian lengkap beserta array bukti (evidence) dan tugas (tasks).
         """
@@ -235,11 +258,11 @@ class CRUDMemberReport(CRUDBase):
         """
         Mengambil laporan mingguan dari sebuah Surat Kerja berdasarkan namanya (misal 'Minggu 1'),
         lengkap dengan rentang periode dan nama peninjau, untuk dirender ke dokumen.
-        
+
         Args:
             plan_id (UUID | str): ID rencana kerja.
             name (str): Nama laporan mingguan.
-            
+
         Returns:
             Any: Data laporan mingguan lengkap.
         """

@@ -26,10 +26,22 @@ from app.core.security import CurrentUser
 from app.crud.crud_asset_reservation import CRUDAssetReservation
 from app.crud.crud_plan_draft import CRUDPlanDraft
 from app.schemas.plan_draft import PlanDraftRequest
+from app.services.access_service import ensure_same_org
+from app.services.work_type_service import WorkTypeService
 
 CATEGORIES = {"INSTALASI": "Instalasi", "PEMELIHARAAN": "Pemeliharaan", "PERBAIKAN": "Perbaikan",
               "SURVEI": "Survei", "LAINNYA": "Lainnya"}
 MAX_TASKS_PER_DAY = 30
+
+
+_MONTHS = ("Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des")
+
+
+def _day_roster(data: PlanDraftRequest, day: Any) -> list[UUID] | None:
+    """Daftar orang yang bertugas pada satu hari: None = seluruh tim; bila ada daftar khusus, ketua selalu ikut."""
+    if day.member_employee_ids is None:
+        return None
+    return [data.leader_employee_id, *[m for m in day.member_employee_ids if m != data.leader_employee_id]]
 
 
 def _invalid(message: str) -> AppError:
@@ -49,7 +61,7 @@ class PlanDraftService:
     def __init__(self, db: AsyncSession) -> None:
         """
         Inisialisasi PlanDraftService.
-        
+
         Args:
             db (AsyncSession): Sesi database asinkron.
         """
@@ -60,10 +72,10 @@ class PlanDraftService:
     async def _creator(self, user: CurrentUser) -> Any:
         """
         Mengambil profil karyawan pembuat SK berdasarkan pengguna yang login.
-        
+
         Args:
             user (CurrentUser): Pengguna yang sedang login.
-            
+
         Returns:
             Any: Data kreator/pembuat SK.
         """
@@ -76,10 +88,10 @@ class PlanDraftService:
     def _oversees(user: CurrentUser) -> bool:
         """
         Memeriksa apakah pengguna memiliki peran pengawas (ADMIN atau OPS).
-        
+
         Args:
             user (CurrentUser): Pengguna.
-            
+
         Returns:
             bool: True jika ADMIN/OPS, sebaliknya False.
         """
@@ -89,11 +101,11 @@ class PlanDraftService:
     async def form_options(self, user: CurrentUser, plan_id: UUID | None) -> dict[str, Any]:
         """
         Mendapatkan seluruh opsi yang diperlukan untuk mengisi form draf SK (unit, lokasi, personel, alat, dsb).
-        
+
         Args:
             user (CurrentUser): Pengguna.
             plan_id (UUID | None): ID SK (jika sedang mengedit, untuk mengecualikan aset/orang yang sudah terikat SK ini).
-            
+
         Returns:
             dict[str, Any]: Kamus berisi opsi kategori, lokasi, calon ketua, calon anggota, dsb.
         """
@@ -114,14 +126,14 @@ class PlanDraftService:
                              period_end: date, plan_id: UUID | None) -> list[str]:
         """
         Calon driver (dari ketua + anggota terpilih) yang ber-SIM sesuai dan tidak terikat SK lain.
-        
+
         Args:
             user (CurrentUser): Pengguna pembuat request.
             vehicle_id (UUID): ID kendaraan yang diplih.
             candidate_ids (list[UUID]): Daftar ID personel.
             period_end (date): Tanggal akhir SK.
             plan_id (UUID | None): ID SK yang sedang diedit.
-            
+
         Returns:
             list[str]: Daftar ID karyawan yang dapat mengemudikan kendaraan tersebut.
         """
@@ -131,8 +143,7 @@ class PlanDraftService:
             raise NotFoundError("Kendaraan")
         ids = [str(c) for c in candidate_ids]
         licensed = await self.repo.licensed(ids, licence_for(vehicle.vehicle_type), period_end)
-        bound = await self.repo.employees_bound(ids, plan_id)
-        return [i for i in ids if i in licensed and i not in bound]
+        return [i for i in ids if i in licensed]   # bentrok jadwal diperiksa per hari saat rencana disimpan
 
     # ── Validasi isi form ─────────────────────────────────────────────────────────────────────
     async def _validate(self, user: CurrentUser, unit_id: str, data: PlanDraftRequest,
@@ -140,7 +151,7 @@ class PlanDraftService:
         """
         Melakukan validasi seluruh komponen isi PlanDraftRequest, mencakup kelengkapan data,
         konsistensi tanggal harian, status dan unit personel (R-17), serta status aset.
-        
+
         Args:
             user (CurrentUser): Pengguna.
             unit_id (str): ID Unit pembuat SK.
@@ -155,14 +166,18 @@ class PlanDraftService:
             raise _invalid("Tanggal selesai tidak boleh sebelum tanggal mulai.")
         if data.site_id is None and data.new_site is None:
             raise _invalid("Pilih lokasi kerja atau tambahkan lokasi baru.")
+        await WorkTypeService(self.db).ensure_plan_type(user.organization_id, plan_id, data.work_type_id)
         if data.new_site is not None and not data.new_site.name.strip():
             raise _invalid("Nama lokasi wajib diisi.")
 
         expected = {data.period_start + timedelta(days=i)
                     for i in range((data.period_end - data.period_start).days + 1)}
         given = [d.work_date for d in data.days]
-        if len(given) != len(set(given)) or set(given) != expected:
-            raise _invalid("Setiap tanggal dalam rentang work plan wajib punya detail pekerjaan.")
+        # Tanggal yang tidak ada di daftar = hari libur (dikeluarkan dari rencana, 2026-10-09).
+        if not given or len(given) != len(set(given)) or not set(given) <= expected:
+            raise _invalid("Hari kerja harus berada dalam rentang rencana kerja dan tidak boleh kembar.")
+        if min(given) != data.period_start or max(given) != data.period_end:
+            raise _invalid("Tanggal mulai dan selesai harus hari kerja (bukan hari libur).")
         files: list[UUID] = []
         for day in data.days:
             if not 1 <= len(day.tasks) <= MAX_TASKS_PER_DAY:
@@ -176,8 +191,15 @@ class PlanDraftService:
 
         leader = str(data.leader_employee_id)
         members = [str(m) for m in data.member_employee_ids]
-        if not members:
-            raise _invalid("Pilih minimal satu anggota tim.")
+        team = {leader, *members}
+        for day in data.days:
+            if day.member_employee_ids is not None and not {str(m) for m in day.member_employee_ids} <= team:
+                raise _invalid(f"Anggota hari {day.work_date:%d-%m-%Y} harus termasuk tim rencana kerja.")
+        await WorkTypeService(self.db).ensure_day_types(
+            user.organization_id, plan_id, {d.work_type_id for d in data.days if d.work_type_id is not None})
+        day_sites = {d.site_id for d in data.days if d.site_id is not None}
+        if day_sites:
+            await ensure_same_org(self.db, user.organization_id, sites=day_sites)
         if leader in members or len(set(members)) != len(members):
             raise _invalid("Ketua tim tidak boleh dipilih lagi sebagai anggota.")
         staff = await self.repo.field_staff_ids([leader, *members], user.organization_id)
@@ -188,8 +210,7 @@ class PlanDraftService:
         # Keputusan pemilik 2026-10-06: ketua juga harus bawahan PM (unit yang sama), seperti anggota.
         if any(staff[m] != unit_id for m in (leader, *members)):
             raise AppError("PERSONNEL_OUTSIDE_PM_UNIT", "Ketua dan anggota tim harus bawahan PM (unit yang sama).", status=422)
-        if await self.repo.employees_bound([leader, *members], plan_id):
-            raise AppError("PERSONNEL_BOUND", "Ada ketua/anggota yang masih terikat work plan lain.", status=409)
+        await self._ensure_available(data, leader, members, plan_id)
 
         free = {str(a.id): a for a in await self.repo.free_assets(user.organization_id, plan_id)}
         for tool in data.tool_ids:
@@ -208,15 +229,33 @@ class PlanDraftService:
             if driver not in await self.repo.licensed([driver], needed, data.period_end):
                 raise _invalid(f"Driver tidak memiliki {needed} yang berlaku sampai tanggal selesai.")
 
+    async def _ensure_available(self, data: PlanDraftRequest, leader: str, members: list[str],
+                                plan_id: UUID | None) -> None:
+        """Ketersediaan per HARI: ketua bertugas di seluruh hari; anggota hanya di hari ia terdaftar (tanpa daftar khusus =
+        seluruh tim). Bentrok bila tanggal yang sama sudah ia tempati di rencana aktif lain."""
+        duty: dict[str, set[date]] = {leader: {d.work_date for d in data.days}}
+        for member in members:
+            duty[member] = {d.work_date for d in data.days
+                            if d.member_employee_ids is None or UUID(member) in d.member_employee_ids}
+        busy = await self.repo.busy_dates(duty, plan_id)
+        clashes = {emp: sorted(duty[emp] & dates) for emp, (_, dates) in busy.items() if duty[emp] & dates}
+        if clashes:
+            detail = "; ".join(
+                f"{busy[emp][0]}: {', '.join(f'{d.day} {_MONTHS[d.month - 1]}' for d in days)}"
+                for emp, days in clashes.items())
+            raise AppError("PERSONNEL_BOUND",
+                           f"Ada ketua/anggota yang sudah bertugas di rencana kerja lain pada tanggal yang sama ({detail}).",
+                           status=409)
+
     async def _site(self, user: CurrentUser, unit_id: str, data: PlanDraftRequest) -> tuple[str, str]:
         """
         Menyimpan data lokasi baru atau mencari nama lokasi lama.
-        
+
         Args:
             user (CurrentUser): Pengguna.
             unit_id (str): ID Unit pembuat.
             data (PlanDraftRequest): Data payload form.
-            
+
         Returns:
             tuple[str, str]: Pasangan ID lokasi dan Nama lokasi.
         """
@@ -238,14 +277,16 @@ class PlanDraftService:
     async def _fill(self, user: CurrentUser, plan_id: str, data: PlanDraftRequest) -> None:
         """
         Mengisi relasi plan: hari, task, file, anggota tim, serta reservasi alat & kendaraan.
-        
+
         Args:
             user (CurrentUser): Pengguna pembuat request.
             plan_id (str): ID SK terkait.
             data (PlanDraftRequest): Data payload form yang berisi daftar list.
         """
         for order, day in enumerate(sorted(data.days, key=lambda d: d.work_date)):
-            day_id = await self.repo.insert_day(plan_id, day.work_date, day.tasks[0].title.strip(), order)
+            day_id = await self.repo.insert_day(plan_id, day.work_date, day.tasks[0].title.strip(), order, day.site_id,
+                                                day.work_type_id)
+            await self.repo.set_day_members(user.organization_id, day_id, _day_roster(data, day))
             for t_order, task in enumerate(day.tasks):
                 task_id = await self.repo.insert_task(day_id, task.title.strip(), task.description.strip(), t_order)
                 for f_order, file_id in enumerate(dict.fromkeys(task.file_ids)):
@@ -262,18 +303,18 @@ class PlanDraftService:
                 await self.assets.set_asset_status(data.vehicle_id, "RESERVED")
         except IntegrityError as exc:
             rule = trigger_rule_error(exc)
-            raise (rule or AppError("CONFLICT", "Data bentrok dengan work plan lain. Muat ulang pilihan.",
+            raise (rule or AppError("CONFLICT", "Jadwal bentrok dengan rencana kerja lain. Muat ulang pilihan.",
                                     status=409)) from None
 
     # ── Simpan ────────────────────────────────────────────────────────────────────────────────
     async def create_plan(self, user: CurrentUser, data: PlanDraftRequest) -> Any:
         """
         domain.js CREATE_PLAN versi form lengkap — hasilnya status Draf.
-        
+
         Args:
             user (CurrentUser): Pengguna yang membuat SK.
             data (PlanDraftRequest): Payload form data SK.
-            
+
         Returns:
             Any: Detail dari SK yang baru dibuat.
         """
@@ -287,7 +328,8 @@ class PlanDraftService:
             user.organization_id, creator.unit_id, user.user_id, title=data.title.strip(),
             description=data.description.strip(), category=data.category, site_id=site_id,
             location_text=site_name, period_start=data.period_start, period_end=data.period_end,
-            pm_employee_id=creator.employee_id, leader_employee_id=data.leader_employee_id)
+            pm_employee_id=creator.employee_id, leader_employee_id=data.leader_employee_id,
+            is_out_of_town=data.is_out_of_town, work_type_id=data.work_type_id)
         # Menyisipkan relasi (tugas harian, tim, reservasi aset)
         await self._fill(user, str(row.id), data)
         return await self.detail(row.id)
@@ -295,21 +337,21 @@ class PlanDraftService:
     async def edit_draft(self, user: CurrentUser, plan_id: UUID, data: PlanDraftRequest) -> Any:
         """
         domain.js EDIT_DRAFT versi form lengkap — isi draf disusun ulang seluruhnya.
-        
+
         Args:
             user (CurrentUser): Pengguna pengubah.
             plan_id (UUID): ID SK.
             data (PlanDraftRequest): Data terbaru untuk menimpa draf lama.
-            
+
         Returns:
             Any: Detail dari SK yang sudah diperbarui.
         """
         plan = await self.repo.lock_draft(plan_id, user.organization_id)
         if plan is None:
-            raise NotFoundError("SK")
+            raise NotFoundError("Rencana Kerja")
         # Validasi status harus DRAFT
         if plan.status != PlanStatus.DRAFT:
-            raise AppError("INVALID_STATE", "Isi SK hanya dapat diubah selama berstatus Draf.", status=409)
+            raise AppError("INVALID_STATE", "Isi rencana kerja hanya dapat diubah selama berstatus Draf.", status=409)
         if data.row_version is None or plan.row_version != data.row_version:
             raise ConflictError()
         unit_id = str(plan.unit_id)
@@ -322,23 +364,29 @@ class PlanDraftService:
         await self.repo.update_plan(
             plan_id, title=data.title.strip(), description=data.description.strip(), category=data.category,
             site_id=site_id, location_text=site_name, period_start=data.period_start, period_end=data.period_end,
-            leader_employee_id=data.leader_employee_id)
+            leader_employee_id=data.leader_employee_id, is_out_of_town=data.is_out_of_town,
+            work_type_id=data.work_type_id)
         # Memasukkan kembali relasi (tugas harian, tim, reservasi aset) dengan data baru
         await self._fill(user, str(plan_id), data)
         return await self.detail(plan_id)
 
-    async def detail(self, plan_id: UUID | str) -> dict[str, Any]:
+    async def detail(self, plan_id: UUID | str, include_drafts: bool = False) -> dict[str, Any]:
         """
         Mengambil representasi lengkap (detail dan seluruh relasinya) untuk satu SK.
-        
+
         Args:
             plan_id (UUID | str): ID SK.
-            
+            include_drafts (bool): Hanya ketua yang boleh melihat laporan harian berstatus Draf; PM/anggota tidak.
+
         Returns:
             dict[str, Any]: Kamus detail SK beserta relasinya.
         """
         value = await self.repo.plan_detail(plan_id)
         detail: dict[str, Any] = json.loads(value) if isinstance(value, str) else value
+        if not include_drafts:   # Draf belum dikirim: tidak boleh terlihat PM seolah-olah sudah terkirim
+            for day in detail.get("days", []):
+                if (day.get("report") or {}).get("status") == "DRAFT":
+                    day["report"] = None
         category = detail["plan"].get("category")
         detail["plan"]["category_label"] = CATEGORIES.get(category, category) if category else None
         return detail

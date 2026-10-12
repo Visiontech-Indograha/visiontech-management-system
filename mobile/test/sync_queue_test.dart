@@ -195,10 +195,10 @@ void main() {
           isTrue,
         );
 
-        expect(backend.sentOps.map((o) => o['payload']['task_id']), ['baik']);
+        expect(backend.sentOps.map((o) => (o['payload'] as Map)['task_id']), ['baik']);
         final rows = await engine.allPendingOperations();
         expect(rows.single.deadLetter, isTrue);
-        expect(_record(rows.single)['payload']['task_id'], 'buruk');
+        expect((_record(rows.single)['payload'] as Map)['task_id'], 'buruk');
       },
     );
 
@@ -278,7 +278,7 @@ void main() {
       () async {
         final foto = File('${Directory.systemTemp.path}/vms_uji_bukti.jpg')
           ..writeAsBytesSync([1, 2, 3]);
-        addTearDown(() => foto.deleteSync());
+        addTearDown(foto.deleteSync);
         backend.routes['/files/upload'] = (_) => {'file_id': 'f-1'};
         backend.answerSync((_) => 'APPLIED');
 

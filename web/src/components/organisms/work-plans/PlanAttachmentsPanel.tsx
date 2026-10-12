@@ -1,0 +1,107 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { toast } from "sonner";
+import { useSession } from "@/stores/sessionStore";
+import { FilePreview } from "@/components/molecules/FilePreview";
+import { QueryState } from "@/components/molecules/QueryState";
+import { TextField } from "@/components/molecules/Field";
+import { errorMessage } from "@/lib/errors";
+import { type WorkPlan, listPlanAttachments, savePlanAttachments } from "@/services/workPlanService";
+import { oversize, uploadFiles } from "@/services/uploadService";
+import { ActionButton } from "@/components/molecules/ActionButton";
+import { TextBlock } from "@/components/molecules/TextBlock";
+import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
+import { SectionTitle } from "@/components/molecules/SectionTitle";
+import { FormErrorText } from "@/components/molecules/FormErrorText";
+
+const key = (planId: string) => ["plan-attachments", planId] as const;
+
+function formatSize(bytes: number): string {
+  return bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`;
+}
+
+/**
+ * Lampiran rencana kerja (GET/PUT /work-plans/{id}/attachments, V-29). Semua yang melihat rencana kerja dapat membaca;
+ * PM (create:plan) menambah/menghapus selagi DRAFT — PUT mengganti seluruh daftar. Saat terbit dibekukan.
+ */
+export function PlanAttachmentsPanel({ plan }: { plan: WorkPlan }) {
+  const { me } = useSession();
+  const editable = plan.status === "DRAFT" && !!me?.permissions.includes("create:plan");
+  const qc = useQueryClient();
+  const list = useQuery({
+    queryKey: key(plan.id),
+    queryFn: () => listPlanAttachments(plan.id),
+  });
+  const save = useMutation({
+    mutationFn: (file_ids: string[]) => savePlanAttachments(plan.id, file_ids),
+    onSuccess: (data) => qc.setQueryData(key(plan.id), data),
+  });
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const current = list.data ?? [];
+
+  const run = async (next: () => Promise<string[]>, done: string) => {
+    setError(null);
+    setBusy(true);
+    try {
+      await save.mutateAsync(await next());
+      toast.success(done);
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const add = (files: FileList | null) => {
+    const picked = files ? Array.from(files) : [];
+    if (picked.length === 0) return;
+    const tooBig = oversize(picked);
+    if (tooBig) return setError(tooBig);
+    void run(async () => [...current.map((a) => a.file_id), ...(await uploadFiles(picked))], "Lampiran ditambahkan.");
+  };
+  const remove = (id: string) => run(async () => current.filter((a) => a.file_id !== id).map((a) => a.file_id), "Lampiran dihapus.");
+
+  if (!editable && list.isSuccess && current.length === 0) return null;
+
+  return (
+    <section aria-label="Lampiran rencana kerja" className="mt-6 rounded-panel border border-line bg-surface shadow-card p-4">
+      <SectionTitle>Lampiran</SectionTitle>
+      <FormErrorText message={error} className="mb-3" />
+      <QueryState query={list} errorText="Lampiran tidak dapat dimuat." empty={current.length === 0} emptyText="Belum ada lampiran.">
+        <ListBlock className="space-y-3">
+          {current.map((a) => (
+            <ListEntry key={a.file_id} className="flex flex-wrap items-center gap-3">
+              <FilePreview fileId={a.file_id} fileName={a.file_name} />
+              <div className="min-w-0 flex-1 text-sm">
+                <TextBlock className="truncate font-medium">{a.file_name}</TextBlock>
+                <TextBlock className="text-mist">{formatSize(a.byte_size)}</TextBlock>
+              </div>
+              {editable && (
+                <ActionButton variant="outline" onClick={() => remove(a.file_id)} disabled={busy} aria-label={`Hapus ${a.file_name}`}>
+                  Hapus
+                </ActionButton>
+              )}
+            </ListEntry>
+          ))}
+        </ListBlock>
+      </QueryState>
+      {editable && (
+        <div className="mt-4">
+          <TextField
+            label="Tambah lampiran (Foto/PDF)"
+            type="file"
+            multiple
+            accept=".jpg,.jpeg,.png,.pdf"
+            hint="Maksimal 10 MB per berkas. Lampiran dibekukan saat rencana kerja diterbitkan."
+            disabled={busy}
+            onChange={(e) => {
+              add(e.target.files);
+              e.target.value = "";
+            }}
+          />
+        </div>
+      )}
+    </section>
+  );
+}

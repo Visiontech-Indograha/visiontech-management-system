@@ -207,7 +207,7 @@ class FaceService:
         except FaceServiceUnavailable:
             raise _unavailable() from None
         except ValueError:
-            raise ValidationError("Gambar wajah tidak valid.") from None
+            raise ValidationError("Gambar wajah tidak dapat dibaca. Ulangi foto wajah.") from None
 
     async def enroll(self, org_id: str, user_id: str, images: list[bytes], liveness: FaceLiveness) -> EnrollResponse:
         employee = await self._employee(user_id, field_only=True)
@@ -283,7 +283,7 @@ class FaceService:
         """Memeriksa satu bingkai kamera terhadap tantangan liveness (online). Layanan mati → 503, TIDAK pernah
         'sukses' otomatis: tantangan yang lolos tanpa pemeriksaan sama dengan tanpa liveness."""
         if challenge not in CHALLENGES:
-            raise ValidationError("Tantangan tidak dikenal.")
+            raise ValidationError("Pemeriksaan keaslian wajah tidak dikenali. Ulangi pengenalan wajah.")
         self._check_image(image)
         self._throttle(_challenge_hits, CHALLENGE_RATE, user_id,
                        "Terlalu banyak pemeriksaan tantangan. Tunggu sebentar lalu ulangi.")
@@ -321,7 +321,7 @@ class FaceService:
         except FaceServiceUnavailable:
             embedding = None   # absen tetap bisa: disimpan, dihitung & diperiksa ulang saat layanan pulih
         except ValueError:
-            raise ValidationError("Gambar wajah tidak valid.") from None
+            raise ValidationError("Gambar wajah tidak dapat dibaca. Ulangi foto wajah.") from None
         if embedding is not None:
             if embedding.faces == 0:
                 raise ValidationError("Wajah tidak terdeteksi. Hadap kamera dengan wajah terlihat jelas.")

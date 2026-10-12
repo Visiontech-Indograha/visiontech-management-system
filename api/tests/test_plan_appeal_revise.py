@@ -57,7 +57,7 @@ def test_appeal_needs_a_reason_the_leader_and_a_published_plan(client, world):
     plan_id = _published(client, world)
 
     empty = _do(client, world, plan_id, "appeal", "leader", reason="   ")
-    assert empty.status_code == 422 and empty.json()["error"]["message"] == "Alasan adendum wajib diisi."
+    assert empty.status_code == 422 and empty.json()["error"]["message"] in ("Alasan revisi wajib diisi.", "Alasan adendum wajib diisi.")
     for who in ("member", "pm"):
         assert _do(client, world, plan_id, "appeal", who).status_code == 403
     assert _plan(plan_id)[0] == "PUBLISHED"

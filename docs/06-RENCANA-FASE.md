@@ -240,6 +240,52 @@ tidak ada satu pun foto wajah tersimpan di luar ketentuan.
 **DoD:** pemulihan dari cadangan berhasil pada basis data kosong; tidak ada endpoint tanpa
 baris di matriks RBAC; tidak ada teks Inggris mentah di layar pengguna.
 
+> **Status (2026-10-08):**
+> - **P9-7 selesai untuk router:** kedelapan router lama (R-25b: audit, kedaluwarsa dokumen, berkas, absensi,
+>   karyawan, aset, HSE, SK) tidak lagi menyentuh basis data. SQL pindah ke `crud/`, aturan ke `services/`.
+>   Sinkronisasi luring kini memanggil `HseService`, bukan fungsi router. `LEGACY` di
+>   `test_router_layering.py` sudah kosong.
+> - **P9-2 — RLS kini benar-benar berlaku (temuan 2026-10-08):** di produksi API tersambung sebagai `vms_app` yang
+>   superuser **dan** pemilik tabel, jadi seluruh kebijakan RLS terlewati. Migrasi `0024_runtime_role` membuat peran
+>   runtime `vms_api` (bukan superuser/pemilik, tanpa BYPASSRLS); alembic & CLI tetap memakai pemilik
+>   (`MIGRATION_DATABASE_URL`). Seluruh suite (±930 uji) lulus dengan API sebagai `vms_api`. Penyesuaian yang
+>   ditemukan: fungsi DB → SECURITY DEFINER (aturan bentrok personel/SIM/QR publik sempat diam-diam lolos, rekursi
+>   kebijakan SK), batas RLS SK/absensi/lembur/insiden/token QR = tenant (docs/10 Bagian C), konteks pengguna
+>   disetel saat login. Pengalihan prod: `deploy/pakai-peran-runtime.sh` (dijalankan pemilik; rollback `kembalikan`).
+> - **P9-2 lanjutan (0025):** enam tabel tenant yang tersisa (`site`, `file_object`, `notification`,
+>   `attendance_device_key`, `attendance_offline_event`, `signature_serial_counter`) kini ber-RLS batas tenant.
+>   `app_user` sengaja tanpa RLS: login & rotasi token mencari akun sebelum identitas/organisasi diketahui.
+
+> - **P9-5 (2026-10-08):** `deploy/uji-pulih-cadangan.sh` menguji pemulihan sungguhan — cadangan baru → salinan
+>   MinIO (SHA-256 cocok) → Postgres kosong sementara → bandingkan jumlah baris, versi alembic, RLS, fungsi dengan prod.
+>   **Lulus di prod 2026-10-08 14:15:** cadangan 1,7 MB dari salinan MinIO pulih ke basis data kosong dalam 1 detik,
+>   galat 0; 48 tabel / 28.114 baris sama persis dengan prod; alembic `0025`, 26 tabel ber-RLS, 44 fungsi
+>   SECURITY DEFINER, 45 partisi cocok. Ulangi tiap bulan & setelah perubahan skema besar. Celah yang ditemukan: (1) berkas MinIO (foto, dokumen, PDF) tidak dicadangkan; (2) cadangan DB hanya
+>   di server yang sama — rusak disk = data & cadangan hilang bersamaan. Keduanya butuh keputusan pemilik (lokasi
+>   salinan di luar server, biaya).
+
+> - **P9-4 (2026-10-08):** 309 pesan galat API ditinjau; 32 diperbaiki agar dipahami orang lapangan — istilah
+>   Inggris/teknis diganti ("work plan" → "SK", "draft" → "draf", "direview" → "diperiksa", "offboarding" →
+>   "pengakhiran masa kerja", "Token tidak valid"/"EC P-256 dari Android Keystore" → petunjuk langkah), dan galat
+>   umum kini menyebut langkah berikutnya ("Terjadi gangguan pada sistem. Coba lagi …; bila berulang, hubungi admin").
+>   Uji pagar `test_error_messages_avoid_technical_jargon` menjaga agar istilah itu tidak kembali.
+>
+> - **P9-1 (2026-10-08):** uji beban k6 `api/tests/beban/` (data sintetis `seed_beban.py`, skenario `beban.js`) —
+>   jam sibuk pagi: 60 pekerja lapangan bersamaan (login HP → beranda → ±30% unggah swafoto di luar radius → absen
+>   masuk → jelajah 5 menit, jeda 5–15 dtk → absen pulang) + 1 PM meninjau. Laptop developer, API satu proses
+>   uvicorn (sama dengan prod) sebagai `vms_api`: **p95 20 ms** (login 137 ms, absen 85 ms, unggah+kompresi
+>   1,25 dtk), 9.200 permintaan, 60/60 absen tercatat; galat 0,30% = `dial timeout` jaringan Docker Desktop (pemantau
+>   di luar Docker 420/420 OK, log API 0 galat). Temuan yang diperbaiki: unggahan bersamaan berkas yang sama → 500
+>   (balapan deduplikasi; kini `ON CONFLICT`). Belum diuji di perangkat server (berbagi CPU dengan prod) — opsional.
+
+> **Hutang teknis (dicatat, belum dikerjakan):**
+> - Kompresi swafoto ±1 dtk per foto 1600×1200 di laptop (threadpool, tidak memblokir API). Bila banyak pekerja
+>   absen di luar radius dalam menit yang sama di server yang lebih lambat, antrean kompresi bisa memanjang —
+>   pantau p95 unggahan (ambang docs/13: 3 dtk).
+> - Pesan trigger DB `Embedding wajah tidak dapat diubah. Nonaktifkan lalu daftarkan ulang.` (db/05,
+>   `tg_face_enrollment_immutable`) masih memakai istilah teknis. Jalur ini hampir tidak pernah tersentuh pengguna
+>   (hanya bila kode mencoba mengubah data wajah); memperbaikinya butuh migrasi. Kerjakan bersama migrasi wajah berikutnya.
+
 ---
 
 ## Fase 10 — UAT dan rilis *(minggu 22–24)*
@@ -252,7 +298,7 @@ baris di matriks RBAC; tidak ada teks Inggris mentah di layar pengguna.
 | P10-4 | Panduan singkat per peran (1 halaman, bergambar) + video pendek |
 | P10-5 | Pelatihan: PM, HR, Finance, Aset, OPS, dan ketua tim |
 | P10-6 | Rilis produksi bertahap: satu unit bisnis dulu, lalu seluruhnya |
-| P10-7 | Distribusi APK + pemeriksaan versi minimum di server |
+| P10-7 | Distribusi APK + pemeriksaan versi minimum di server — **selesai 2026-10-08** (pembaruan otomatis tanpa Play, docs/32; diuji di Realme) |
 | P10-8 | **CD produksi**: GitHub Environment dengan persetujuan manual, cadangan sebelum deploy, migrasi terpisah, uji asap, rollback otomatis, laporan ke `#vms-deploy`; jendela deploy di luar 07.00–19.00 WIB |
 | P10-9 | **Kunci tanda tangan dipindah ke KMS** (K-05) sebelum produksi menyimpan dokumen sungguhan |
 

@@ -28,10 +28,10 @@ async def geo_search(q: str = Query(min_length=1, max_length=120),
     """
     Pencarian kota/tempat di Indonesia berdasarkan kueri (Nominatim, di-cache) (GET).
     Untuk pengelola SK dan pengelola lokasi kerja (pencarian alamat saat menambah lokasi).
-    
+
     Query Parameters:
     - q (str): Kata kunci lokasi yang dicari.
-    
+
     Returns:
     - list[GeoResult]: Daftar hasil pencarian lokasi (koordinat dan nama wilayah).
     """
@@ -45,10 +45,10 @@ async def get_plan_location(access: PlanAccess = _VIEW,
                             plan_location_service: PlanLocationService = Depends(get_plan_location_service)) -> PlanLocationOut | None:
     """
     Mengambil lokasi titik absensi untuk sebuah rencana kerja (SK) (GET).
-    
+
     Path Parameters:
     - plan_id (UUID): ID dari rencana kerja (SK).
-    
+
     Returns:
     - PlanLocationOut | None: Koordinat titik absensi atau null bila belum disetel.
     """
@@ -65,18 +65,19 @@ async def set_plan_location(data: PlanLocationIn,
     """
     Menyetel titik absensi (lokasi) untuk rencana kerja (PUT).
     SK draf maupun berjalan; teks lokasi dokumen tetap, hanya titik absensi yang berubah.
-    
+
     Path Parameters:
     - plan_id (UUID): ID dari rencana kerja.
-    
+
     Request Body:
     - data (PlanLocationIn): Data nama lokasi, alamat, latitude, longitude, dan radius absensi.
-    
+
     Returns:
     - PlanLocationOut: Data lokasi terbaru.
     """
     # Dependency Injection untuk memastikan pengguna bertindak sebagai PM_UNIT
     # Memanggil method layer Service untuk menyimpan pengaturan lokasi
     row = await plan_location_service.set_location(
-        access, name=data.name, address=data.address, lat=data.lat, lng=data.lng, radius_m=data.radius_m)
+        access, name=data.name, address=data.address, lat=data.lat, lng=data.lng, radius_m=data.radius_m,
+        reason=data.reason)
     return PlanLocationOut(**row)

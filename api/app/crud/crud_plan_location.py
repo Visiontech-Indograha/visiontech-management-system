@@ -21,11 +21,11 @@ class CRUDPlanLocation(CRUDBase):
     async def site(self, site_id: UUID | str, org_id: UUID | str) -> Any:
         """
         Mengambil informasi detail sebuah site/lokasi.
-        
+
         Args:
             site_id (UUID | str): ID site.
             org_id (UUID | str): ID organisasi.
-            
+
         Returns:
             Any: Record berisi detail site beserta latitude (lat) dan longitude (lng).
         """
@@ -43,11 +43,11 @@ class CRUDPlanLocation(CRUDBase):
         """
         Mencari nama-nama lokasi (site) yang diawali dengan string tertentu.
         Digunakan untuk memastikan nama site unik per organisasi.
-        
+
         Args:
             org_id (UUID | str): ID organisasi.
             name (str): Prefix nama yang dicari.
-            
+
         Returns:
             set[str]: Himpunan nama-nama lokasi yang cocok.
         """
@@ -65,14 +65,14 @@ class CRUDPlanLocation(CRUDBase):
         """
         Mencari site yang memiliki label, titik koordinat (dalam radius 5 meter),
         dan radius yang sama untuk menghindari duplikasi site.
-        
+
         Args:
             org_id (UUID | str): ID organisasi.
             label (str): Nama dasar site.
             lat (float): Garis lintang (latitude).
             lng (float): Garis bujur (longitude).
             radius_m (int): Radius absensi dalam meter.
-            
+
         Returns:
             Any: Record ID site yang sama (jika ada).
         """
@@ -94,7 +94,7 @@ class CRUDPlanLocation(CRUDBase):
                           lat: float, lng: float, radius_m: int) -> Any:
         """
         Membuat record site/lokasi baru.
-        
+
         Args:
             org_id (UUID | str): ID organisasi.
             name (str): Nama site.
@@ -102,7 +102,7 @@ class CRUDPlanLocation(CRUDBase):
             lat (float): Garis lintang (latitude).
             lng (float): Garis bujur (longitude).
             radius_m (int): Radius (meter).
-            
+
         Returns:
             Any: Record ID dari site yang baru dibuat.
         """
@@ -120,7 +120,7 @@ class CRUDPlanLocation(CRUDBase):
     async def set_plan_site(self, plan_id: UUID | str, site_id: UUID | str) -> None:
         """
         Menetapkan atau memperbarui site yang digunakan oleh sebuah rencana kerja (SK).
-        
+
         Args:
             plan_id (UUID | str): ID rencana kerja.
             site_id (UUID | str): ID lokasi (site).
@@ -128,7 +128,8 @@ class CRUDPlanLocation(CRUDBase):
         # Memperbarui site_id pada tabel work_plan untuk menghubungkan SK dengan lokasi baru.
         await self.execute(
             """
-            UPDATE vms.work_plan SET site_id = CAST(:site AS uuid)
+            UPDATE vms.work_plan SET site_id = CAST(:site AS uuid),
+                   location_text = COALESCE((SELECT name FROM vms.site WHERE id = CAST(:site AS uuid)), location_text)
             WHERE id = CAST(:plan AS uuid) AND deleted_at IS NULL
             """,
             {"plan": plan_id, "site": site_id})

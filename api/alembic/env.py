@@ -14,7 +14,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from app.core.config import settings
 
 config = context.config
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+# Pemilik skema untuk migrasi; API sendiri tersambung sebagai peran runtime (0024_runtime_role).
+config.set_main_option("sqlalchemy.url", settings.MIGRATION_DATABASE_URL or settings.DATABASE_URL)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.

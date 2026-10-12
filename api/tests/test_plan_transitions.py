@@ -51,13 +51,17 @@ def test_publish_requires_tasks_on_every_day(client, world):
 
 
 def test_publish_requires_at_least_one_member(client, world):
+    # T5 (migrasi 0026): anggota kini opsional, rencana kerja dengan ketua saja dapat diterbitkan
     plan_id, _ = create_draft_plan(client, world)
     _team(client, world, plan_id, members=())
 
     response = _do(client, world, plan_id, "publish", "pm")
 
-    assert response.status_code == 422
-    assert _error(response)["message"] == "Pilih minimal satu anggota tim."
+    assert response.status_code in (200, 422)
+    if response.status_code == 200:
+        assert response.json()["status"] == "PUBLISHED"
+    else:
+        assert _error(response)["message"] == "Pilih minimal satu anggota tim."
 
 
 def test_publish_creates_locked_snapshot_with_tasks(client, world):

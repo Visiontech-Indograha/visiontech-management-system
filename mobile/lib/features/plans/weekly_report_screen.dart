@@ -131,7 +131,6 @@ class _WeeklyReportScreenState extends ConsumerState<WeeklyReportScreen> {
                   const NoticeBanner(
                     icon: Icons.hourglass_empty_rounded,
                     text: 'Semua laporan harian minggu ini harus disetujui PM sebelum laporan mingguan dibuat.',
-                    accent: Accent.amber,
                   ),
                 if (w['review_note'] != null)
                   NoticeBanner(
@@ -162,6 +161,30 @@ class _WeeklyReportScreenState extends ConsumerState<WeeklyReportScreen> {
                     label: const Text('Susun dari laporan harian'),
                   ),
                 const SizedBox(height: 12),
+                if (!widget.canEdit)
+                  // Anggota/PM di HP: hanya melihat; draf ketua belum terlihat (server mengosongkan isinya).
+                  SurfaceCard(
+                    key: const Key('weekly-readonly'),
+                    padding: const EdgeInsets.all(14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Laporan mingguan', style: VmsTextStyles.bodySm.copyWith(fontWeight: FontWeight.w700)),
+                        const SizedBox(height: 6),
+                        Text(
+                          _body.text.trim().isEmpty ? 'Belum ada laporan mingguan dari ketua tim.' : _body.text,
+                          style: VmsTextStyles.bodySm,
+                        ),
+                        if (_obstacle.text.trim().isNotEmpty) ...[
+                          const SizedBox(height: 10),
+                          Text('Ringkasan kendala', style: VmsTextStyles.bodySm.copyWith(fontWeight: FontWeight.w700)),
+                          const SizedBox(height: 4),
+                          Text(_obstacle.text, style: VmsTextStyles.bodySm),
+                        ],
+                      ],
+                    ),
+                  )
+                else
                 SurfaceCard(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,

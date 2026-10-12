@@ -22,7 +22,14 @@ PUBLIC_ROUTES = {
     ("POST", "/auth/refresh"),
     ("POST", "/auth/logout"),
     ("GET", "/verify/{token}"),   # fase 6: verifikasi QR publik, dibatasi 30/menit per IP
+    # Pembaruan APK (docs/32, keputusan pemilik 2026-10-07): wajib bisa diunduh sebelum login.
+    ("GET", "/app/android/update"),
+    ("GET", "/app/android/files/{name}"),
+    ("GET", "/app/android/latest.apk"),
 }
+
+# Aliran SSE tak berujung (T8): tanpa token tetap diuji 401 di bawah; dengan token diuji manual (E2E T8).
+STREAMING_ROUTES = {("GET", "/events")}
 
 ROUTES = [(method, path.removeprefix(API_PREFIX)) for method, path in all_routes() if path.startswith(API_PREFIX)]
 
@@ -36,7 +43,7 @@ def test_inventory_is_not_empty():
 
 
 def test_public_routes_exist():
-    assert PUBLIC_ROUTES <= set(ROUTES)
+    assert set(ROUTES) >= PUBLIC_ROUTES
 
 
 @requires_db
@@ -50,6 +57,8 @@ def test_route_requires_login(client, method: str, path: str):
 @requires_db
 @pytest.mark.parametrize(("method", "path"), ROUTES)
 def test_route_never_crashes_for_admin(client, make_user, method: str, path: str):
+    if (method, path) in STREAMING_ROUTES:
+        pytest.skip("aliran SSE tak berujung; diuji manual (E2E T8)")
     headers = login_headers(client, make_user("ADMIN"))
 
     response = client.request(method, _concrete(path), json={}, headers=headers)

@@ -12,7 +12,7 @@ const asset = (over: Record<string, unknown> = {}) => ({
   status: "AVAILABLE",
   ...over,
 });
-const plan = { id: "p1", title: "Instalasi CCTV", number: "SK/001", status: "IN_PROGRESS" };
+const plan = { id: "p1", title: "Instalasi CCTV", number: "Rencana Kerja/001", status: "IN_PROGRESS" };
 const employees = { items: [{ id: "e1", full_name: "Budi Supir", position: "Driver", employee_no: "1", join_date: "2024-01-01", is_active: true }], total: 1, page: 1, size: 100 };
 
 const setup = (assets: unknown[], extra?: (url: string) => { status?: number; data?: unknown } | undefined) =>
@@ -37,7 +37,7 @@ describe("Kendaraan & alat", () => {
     expect(await screen.findByRole("button", { name: "Coba lagi" })).toBeInTheDocument();
   });
 
-  it("alokasi kendaraan wajib pengemudi; hanya SK aktif ditawarkan", async () => {
+  it("alokasi kendaraan wajib pengemudi; hanya rencana kerja aktif ditawarkan", async () => {
     const calls = setup([asset()], (url) =>
       url === "/assets/a1/reserve"
         ? { data: { id: "al1", asset_id: "a1", work_plan_id: "p1", driver_employee_id: "e1", allocated_by: "u", allocated_at: "2026-10-01T00:00:00Z", released_at: null } }
@@ -46,7 +46,7 @@ describe("Kendaraan & alat", () => {
     renderRoute("/assets", { role: "ASSET" });
     fireEvent.click(await screen.findByRole("button", { name: "Alokasikan" }));
     const dialog = screen.getByRole("dialog", { name: "Alokasikan L300 Putih" });
-    await within(dialog).findByRole("option", { name: "SK/001 · Instalasi CCTV" });
+    await within(dialog).findByRole("option", { name: "Rencana Kerja/001 · Instalasi CCTV" });
     expect(within(dialog).queryByRole("option", { name: /Draf/ })).toBeNull();
     fireEvent.change(within(dialog).getByLabelText("Work plan"), { target: { value: "p1" } });
     fireEvent.click(within(dialog).getByRole("button", { name: "Alokasikan" }));
@@ -97,7 +97,7 @@ describe("Kendaraan & alat", () => {
     renderRoute("/assets", { role: "PM" });
     fireEvent.click(await screen.findByRole("button", { name: "Lepas reservasi" }));
     const dialog = screen.getByRole("dialog", { name: "Lepas reservasi L300 Putih" });
-    await within(dialog).findByRole("option", { name: "SK/001 · Instalasi CCTV" });
+    await within(dialog).findByRole("option", { name: "Rencana Kerja/001 · Instalasi CCTV" });
     fireEvent.change(within(dialog).getByLabelText("Work plan"), { target: { value: "p1" } });
     fireEvent.click(within(dialog).getByRole("button", { name: "Lepas reservasi" }));
     await waitFor(() => expect(calls.some((c) => c.url === "/assets/a1/release")).toBe(true));

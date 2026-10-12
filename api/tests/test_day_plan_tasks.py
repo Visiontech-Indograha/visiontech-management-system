@@ -98,4 +98,4 @@ def test_toggle_rules(client, world):
     assert client.post(f"/work-plans/{plan_id}/days/{day_ids[0]}/submit", headers=leader).status_code == 200
     locked = _toggle(client, world, plan_id, day_ids[0], today_task)
     assert locked.status_code == 409
-    assert locked.json()["error"]["message"] == "Checklist tidak dapat diubah setelah laporan diserahkan."
+    assert locked.json()["error"]["message"] == "Daftar tugas tidak dapat diubah setelah laporan diserahkan."

@@ -22,11 +22,11 @@ async def list_notifications(
 ) -> NotificationList:
     """
     Mengambil daftar notifikasi milik pengguna saat ini.
-    
+
     Query params:
     - unread_only: Filter hanya notifikasi yang belum dibaca (default False)
     - limit: Maksimum jumlah notifikasi yang dikembalikan (default 50)
-    
+
     Return: Daftar notifikasi beserta jumlah notifikasi belum dibaca (NotificationList)
     """
     # Menggunakan injeksi dependensi untuk mendapatkan pengguna saat ini dan NotificationService
@@ -43,7 +43,7 @@ async def read_all(
 ) -> dict[str, int]:
     """
     Menandai semua notifikasi milik pengguna saat ini sebagai telah dibaca.
-    
+
     Return: Jumlah notifikasi yang berhasil diperbarui
     """
     # Injeksi NotificationService untuk menangani perubahan status baca
@@ -59,10 +59,10 @@ async def read_one(
 ) -> dict[str, int]:
     """
     Menandai satu notifikasi tertentu sebagai telah dibaca.
-    
+
     Path params:
     - notification_id: UUID dari notifikasi
-    
+
     Return: Jumlah notifikasi yang berhasil diperbarui (idealnya 1)
     """
     # Mengambil NotificationService dari Depends untuk memanipulasi status notifikasi tunggal

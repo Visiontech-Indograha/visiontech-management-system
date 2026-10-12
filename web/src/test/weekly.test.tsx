@@ -13,7 +13,7 @@ const plan = {
   period_end: "2026-10-20",
   pm_employee_id: "e-pm",
   leader_employee_id: "e-lead",
-  number: "SK/001",
+  number: "Rencana Kerja/001",
   status: "IN_PROGRESS",
   revision: 0,
   row_version: 5,

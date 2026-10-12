@@ -14,6 +14,7 @@ from app.core.errors import AppError, NotFoundError
 from app.core.security import create_jwt_token, hash_password, verify_password
 from app.crud.crud_session import MAX_LOGIN_FAILURES, CRUDSession
 from app.crud.crud_user import CRUDUser
+from app.db.session import set_request_context
 
 ACCESS_TOKEN_TTL = timedelta(minutes=15)
 DEFAULT_ROLE = "field"
@@ -45,12 +46,12 @@ class Profile:
 
 def _inactive() -> AppError:
     """Mengembalikan error ketika akun tidak aktif."""
-    return AppError("INACTIVE", "Akun dinonaktifkan", status=403)
+    return AppError("INACTIVE", "Akun Anda dinonaktifkan. Hubungi HR atau admin.", status=403)
 
 
 def _revoked() -> AppError:
     """Mengembalikan error ketika token/sesi telah dicabut atau invalid."""
-    return AppError("SESSION_REVOKED", "Sesi tidak valid atau telah dicabut", status=401, persist=True)
+    return AppError("SESSION_REVOKED", "Sesi berakhir atau dicabut. Silakan masuk kembali.", status=401, persist=True)
 
 
 _DUMMY_HASH: str | None = None
@@ -71,7 +72,7 @@ def _dummy_hash() -> str:
 def _locked(state: Any, *, persist: bool = False) -> AppError:
     """
     Mengembalikan error ketika sesi login terkunci akibat terlalu banyak kegagalan.
-    
+
     Args:
         state (Any): State login yang berisi locked_until dan retry_after_seconds.
         persist (bool): Jika True, pesan akan bertahan di UI (persist).
@@ -89,6 +90,20 @@ class AuthService:
     def __init__(self, users: CRUDUser, sessions: CRUDSession) -> None:
         self.users = users
         self.sessions = sessions
+
+    async def _act_as(self, user: Any) -> None:
+        """Konteks RLS & audit transaksi ini = pengguna ini, setelah identitasnya pasti (sandi benar / token sah).
+        Tanpa ini kueri tabel ber-RLS (mis. `employee`) diam-diam kosong di bawah peran runtime `vms_api` (P9-2)."""
+        await set_request_context(self.users.db, user_id=str(user.id), organization_id=str(user.organization_id),
+                                  actor_label=str(user.login))
+
+    async def _user(self, user_id: str) -> Any:
+        """Akun pengguna yang sudah terautentikasi + konteks RLS-nya; tidak ada → 404."""
+        user = await self.users.find_by_id(user_id)
+        if not user:
+            raise NotFoundError("Pengguna")
+        await self._act_as(user)
+        return user
 
     async def login(self, login: str, password: str, client: ClientInfo, platform: str = "web") -> IssuedTokens:
         """
@@ -118,6 +133,7 @@ class AuthService:
 
         if not user.is_active:
             raise _inactive()
+        await self._act_as(user)
 
         # R-33: aplikasi HP hanya untuk staf lapangan, web hanya untuk akun kantor (attendance_mode).
         # Pengecualian (keputusan pemilik 2026-10-06): ADMINISTRATOR boleh masuk dari web DAN HP, baik tanpa karyawan
@@ -152,13 +168,13 @@ class AuthService:
             )
             raise _revoked()
         if not rotated.session_id:
-            raise AppError("INVALID_TOKEN", "Token tidak valid", status=401)
+            raise AppError("INVALID_TOKEN", "Sesi tidak dikenali. Silakan masuk kembali.", status=401)
 
         user = await self.users.find_by_id(rotated.user_id)
         if not user or not user.is_active:
             # Akun dinonaktifkan: seluruh sesinya berakhir pada permintaan ini juga (DoD fase 1).
             await self.sessions.revoke_all_for_user(rotated.user_id, "Akun dinonaktifkan")
-            raise AppError("INACTIVE", "Akun dinonaktifkan", status=403, persist=True)
+            raise AppError("INACTIVE", "Akun Anda dinonaktifkan. Hubungi HR atau admin.", status=403, persist=True)
 
         return IssuedTokens(
             access_token=self._access_token(user, rotated.session_id),
@@ -174,12 +190,14 @@ class AuthService:
 
     async def active_sessions(self, user_id: str) -> list[Any]:
         """P1-7: perangkat yang sedang masuk dengan akun ini."""
+        await self._user(user_id)
         return await self.sessions.list_active(user_id)
 
     async def revoke_session(self, user_id: str, session_id: str) -> None:
         """
         Mencabut sesi tunggal secara spesifik (digunakan untuk mengeluarkan perangkat lain).
         """
+        await self._user(user_id)
         if not await self.sessions.revoke_session(user_id, session_id, "Dikeluarkan dari perangkat lain"):
             raise NotFoundError("Sesi")
 
@@ -187,15 +205,14 @@ class AuthService:
         """
         Mencabut semua sesi aktif selain sesi saat ini.
         """
+        await self._user(user_id)
         return await self.sessions.revoke_other_sessions(user_id, current_session_id, "Keluarkan perangkat lain")
 
     async def me(self, user_id: str, permissions: list[str]) -> Profile:
         """
         Mengambil data profil pengguna (ME endpoint).
         """
-        user = await self.users.find_by_id(user_id)
-        if not user:
-            raise NotFoundError("Pengguna")
+        user = await self._user(user_id)
         return Profile(
             user_id=user_id,
             email=user.login,
@@ -211,15 +228,13 @@ class AuthService:
         """
         Mengubah kata sandi pengguna, mencabut semua sesi lainnya, lalu mengeluarkan sesi baru.
         """
-        user = await self.users.find_by_id(user_id)
-        if not user:
-            raise NotFoundError("Pengguna")
+        user = await self._user(user_id)
         if not user.password_hash or not verify_password(current_password, user.password_hash):
             raise AppError(
                 "VALIDATION_ERROR",
-                "Data yang dikirim tidak valid.",
+                "Kata sandi saat ini salah.",
                 status=422,
-                details={"fields": {"current_password": "Password saat ini salah."}},
+                details={"fields": {"current_password": "Kata sandi saat ini salah."}},
             )
 
         await self.users.update_password_hash(user_id, hash_password(new_password))

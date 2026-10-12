@@ -26,10 +26,10 @@ UNAVAILABLE = "Pencarian lokasi sedang tidak tersedia. Tetapkan titik langsung d
 async def _fetch(query: str) -> list[dict[str, Any]]:
     """
     Satu panggilan jaringan ke API eksternal Nominatim (dipisahkan agar mudah diganti di uji tiruan/mock).
-    
+
     Args:
         query: Teks kata kunci.
-        
+
     Returns:
         Daftar dictionary JSON hasil balasan dari Nominatim.
     """

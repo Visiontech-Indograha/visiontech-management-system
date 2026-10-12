@@ -50,7 +50,7 @@ class AttendanceOfflineService:
     async def register_device_key(self, user: CurrentUser, device_id: str, public_key: str) -> None:
         """
         Mendaftarkan kunci publik (public key) perangkat keras (Android Keystore) untuk validasi tanda tangan kriptografis.
-        
+
         Args:
             user: Pengguna yang melakukan pendaftaran.
             device_id: ID unik perangkat.
@@ -59,9 +59,9 @@ class AttendanceOfflineService:
         try:
             key = load_der_public_key(base64.b64decode(public_key))
         except ValueError as exc:
-            raise _reject("DEVICE_KEY_INVALID", "Kunci perangkat tidak valid.") from exc
+            raise _reject("DEVICE_KEY_INVALID", "Pendaftaran perangkat untuk absen luring gagal. Perbarui aplikasi, lalu coba lagi saat online.") from exc
         if not isinstance(key, ec.EllipticCurvePublicKey) or key.curve.name != "secp256r1":
-            raise _reject("DEVICE_KEY_INVALID", "Kunci perangkat harus EC P-256 dari Android Keystore.")
+            raise _reject("DEVICE_KEY_INVALID", "Perangkat ini belum dapat dipakai untuk absen luring. Perbarui aplikasi, lalu buka saat online.")
         await self.repo.register_device_key(user.organization_id, user.user_id, device_id, public_key)
 
     async def _verified_payload(self, user: CurrentUser, device_id: str, payload: str,
@@ -89,9 +89,9 @@ class AttendanceOfflineService:
 
     def _event_time(self, user: CurrentUser, p: dict[str, Any]) -> tuple[datetime, bool, list[str]]:
         """
-        Menghitung dan memvalidasi waktu absensi (jam peristiwa) menggunakan mekanisme jangkar waktu (time anchor) 
+        Menghitung dan memvalidasi waktu absensi (jam peristiwa) menggunakan mekanisme jangkar waktu (time anchor)
         untuk melawan manipulasi jam perangkat lokal.
-        
+
         Returns:
             Tuple dari (jam peristiwa, terverifikasi (boolean), daftar alasan perlu review).
         """
@@ -129,7 +129,7 @@ class AttendanceOfflineService:
                     face_probe_id: UUID | None = None) -> dict[str, Any]:
         """
         Memproses sinkronisasi data absensi (masuk/pulang) yang dikumpulkan saat perangkat luring.
-        
+
         Args:
             user: Pengguna yang melakukan absensi.
             device_id: ID perangkat.
@@ -138,7 +138,7 @@ class AttendanceOfflineService:
             payload: Data absensi asli dalam format JSON string.
             signature: Tanda tangan digital atas payload.
             selfie_file_id: ID file foto swafoto jika ada.
-            
+
         Returns:
             Status penerapan data absensi luring.
         """
@@ -146,13 +146,13 @@ class AttendanceOfflineService:
         done = await self.repo.event(client_op_id)
         if done is not None:
             if str(done.user_id) != user.user_id:
-                raise _reject("OFFLINE_TAMPERED", "Peristiwa luring tidak dikenal.", status=404)
+                raise _reject("OFFLINE_TAMPERED", "Data absen luring tidak dikenali. Perbarui aplikasi, lalu kirim ulang.", status=404)
             return {"client_op_id": client_op_id, "result": done.result, "attendance_id": done.attendance_id,
                     "duplicate": True}
         p = await self._verified_payload(user, device_id, payload, signature)
         if p.get("client_op_id") != str(client_op_id) or p.get("kind") != kind:
             raise _reject("OFFLINE_TAMPERED", "Data absen luring tidak cocok dengan kirimannya.")
-            
+
         # Mengekstrak dan memverifikasi waktu absensi secara ketat melawan manipulasi jam perangkat.
         event, trusted, notes = self._event_time(user, p)
         # Pengenalan wajah: blok `face` ikut ditandatangani HP (termasuk hash gambar wajah sementara).
@@ -163,8 +163,8 @@ class AttendanceOfflineService:
         if kind == "CHECK_IN":
             result, attendance_id = await self._check_in(user, p, event, notes, selfie_file_id, face_probe_id, face)
         else:
-            result, attendance_id = await self._check_out(user, event, notes, face_probe_id, face)
-            
+            result, attendance_id = await self._check_out(user, event, notes, face_probe_id, face, p)
+
         await self.repo.record_event(client_op_id=client_op_id, org_id=user.organization_id, user_id=user.user_id,
                                      kind=kind, attendance_id=attendance_id, event_time=event,
                                      time_trusted=trusted, result=result)
@@ -212,9 +212,11 @@ class AttendanceOfflineService:
         return str(marked.status), marked.id
 
     async def _check_out(self, user: CurrentUser, event: datetime, notes: list[str],
-                         face_probe_id: UUID | None = None, face: dict[str, Any] | None = None) -> tuple[str, Any]:
+                         face_probe_id: UUID | None = None, face: dict[str, Any] | None = None,
+                         p: dict[str, Any] | None = None) -> tuple[str, Any]:
         """
-        Memproses data absensi pulang (check-out) yang tertunda saat luring.
+        Memproses data absensi pulang (check-out) yang tertunda saat luring. Lokasi pulang ikut disimpan; di luar
+        radius tidak ditolak (sudah terjadi) melainkan ditandai Perlu review oleh trigger (T7).
         """
         worker = await self.sessions.repo.attendance_mode_of(user.user_id)
         if worker is None or worker.attendance_mode != "FIELD":
@@ -223,7 +225,9 @@ class AttendanceOfflineService:
         if target is None:
             raise _reject("NO_OPEN_SESSION", "Tidak ada absen masuk yang bisa ditutup untuk jam ini.", status=409)
         if target.status in VALID_STATUSES:
-            await self.repo.close_at(target.id, event)
+            lat, lng = (p or {}).get("lat"), (p or {}).get("lng")
+            await self.repo.close_at(target.id, event, lat=float(lat) if lat is not None else None,
+                                     lng=float(lng) if lng is not None else None)
             result = "CHECKED_OUT"
         else:
             await self.repo.request_checkout(target.id, event)

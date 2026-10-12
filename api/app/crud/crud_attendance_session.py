@@ -28,10 +28,10 @@ class CRUDAttendanceSession(CRUDBase):
     async def employee_of(self, user_id: UUID | str) -> Any:
         """
         Mendapatkan ID karyawan berdasarkan ID pengguna (user account).
-        
+
         Args:
             user_id (UUID | str): ID pengguna.
-            
+
         Returns:
             Any: ID karyawan (UUID) atau None.
         """
@@ -42,10 +42,10 @@ class CRUDAttendanceSession(CRUDBase):
         """
         Mengambil informasi (employee_id, attendance_mode, unit_id, is_admin) yang terkait dengan sebuah akun pengguna.
         Mengembalikan None jika akun tidak ditautkan ke profil karyawan mana pun.
-        
+
         Args:
             user_id (UUID | str): ID pengguna.
-            
+
         Returns:
             Any: Record (Row) yang berisi detail karyawan, atau None.
         """
@@ -65,11 +65,11 @@ class CRUDAttendanceSession(CRUDBase):
         Mendapatkan sesi absensi terbaru yang masih terbuka (belum check-out dan belum ditolak),
         berlaku untuk tanggal berapa pun.
         Jika `valid_only` bernilai True, hanya sesi yang otomatis valid atau disetujui yang dikembalikan (syarat check-out R-33).
-        
+
         Args:
             employee_id (UUID | str): ID karyawan.
             valid_only (bool): Jika True, memfilter hanya sesi dengan status valid/disetujui. Defaults to False.
-            
+
         Returns:
             Any: Data sesi absensi terbuka, atau None jika tidak ada.
         """
@@ -91,11 +91,11 @@ class CRUDAttendanceSession(CRUDBase):
     async def active_on(self, employee_id: UUID | str, work_date: Any) -> bool:
         """
         Mengecek apakah ada sesi absensi aktif (tidak ditolak) untuk karyawan tertentu pada tanggal kerja tertentu.
-        
+
         Args:
             employee_id (UUID | str): ID karyawan.
             work_date (Any): Tanggal kerja (date).
-            
+
         Returns:
             bool: True jika ada absensi aktif, False jika tidak ada.
         """
@@ -111,11 +111,11 @@ class CRUDAttendanceSession(CRUDBase):
     async def rejected_on(self, employee_id: UUID | str, work_date: Any) -> int:
         """
         Menghitung jumlah pengajuan absensi yang ditolak untuk karyawan pada tanggal kerja tersebut.
-        
+
         Args:
             employee_id (UUID | str): ID karyawan.
             work_date (Any): Tanggal kerja (date).
-            
+
         Returns:
             int: Jumlah absensi yang ditolak.
         """
@@ -131,15 +131,15 @@ class CRUDAttendanceSession(CRUDBase):
     async def site_for_check_in(self, site_id: UUID | str, org_id: UUID | str, lng: float, lat: float) -> Any:
         """
         Mendapatkan informasi nama lokasi, unit, jarak (dalam meter), dan radius geofence.
-        Rumus jarak (ST_Distance) sama dengan yang ada di fungsi trigger database, 
+        Rumus jarak (ST_Distance) sama dengan yang ada di fungsi trigger database,
         digunakan sementara di API untuk memvalidasi/mewajibkan penjelasan ('explanation') jika pengguna berada di luar radius.
-        
+
         Args:
             site_id (UUID | str): ID lokasi (site).
             org_id (UUID | str): ID organisasi.
             lng (float): Garis bujur (longitude) posisi karyawan.
             lat (float): Garis lintang (latitude) posisi karyawan.
-            
+
         Returns:
             Any: Baris data yang berisi nama lokasi, unit_id, jarak (distance_m), dan batas radius_m.
         """
@@ -157,6 +157,35 @@ class CRUDAttendanceSession(CRUDBase):
             {"site": site_id, "org": org_id, "lng": lng, "lat": lat},
         )
 
+    async def nearest_valid_site(self, org_id: UUID | str, employee_id: Any, work_date: Any,
+                                 lng: float, lat: float) -> Any:
+        """Lokasi sah terdekat untuk absen: kantor (site tanpa unit, mis. Pekanbaru/Duri/Dumai/Jakarta) atau lokasi
+        hari itu dari rencana kerja berjalan yang menugaskan karyawan ini. Diurutkan dari yang paling dalam radius."""
+        return await self.fetchone(
+            """
+            SELECT s.id, s.name, s.unit_id,
+                   round(ST_Distance(ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography, s.location)::numeric, 1)
+                       AS distance_m,
+                   COALESCE(s.radius_m, o.geofence_radius_m, 100) AS radius_m
+            FROM vms.site s JOIN vms.organization o ON o.id = s.organization_id
+            WHERE s.organization_id = :org AND s.deleted_at IS NULL
+              AND (s.unit_id IS NULL OR s.id IN (
+                    SELECT COALESCE(d.site_id, wp.site_id)
+                    FROM vms.work_plan wp
+                    JOIN vms.work_plan_day d ON d.work_plan_id = wp.id AND d.work_date = CAST(:day AS date)
+                    JOIN vms.work_plan_member m ON m.work_plan_id = wp.id AND m.employee_id = :emp
+                                                AND m.valid_period @> d.work_date
+                    WHERE wp.organization_id = :org AND wp.status = 'IN_PROGRESS'
+                      AND (NOT EXISTS (SELECT 1 FROM vms.work_plan_day_member dm WHERE dm.work_plan_day_id = d.id)
+                           OR EXISTS (SELECT 1 FROM vms.work_plan_day_member dm
+                                      WHERE dm.work_plan_day_id = d.id AND dm.employee_id = :emp))))
+            ORDER BY ST_Distance(ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography, s.location)
+                     - COALESCE(s.radius_m, o.geofence_radius_m, 100)
+            LIMIT 1
+            """,
+            {"org": org_id, "emp": employee_id, "day": work_date, "lng": lng, "lat": lat},
+        )
+
     async def insert(self, *, org_id: str, employee_id: Any, work_date: Any, site_id: UUID, site_label: str,
                      lng: float, lat: float, origin: str, selfie_file_id: UUID | None,
                      face_result: str | None, face_similarity: float | None, source: str = "MOBILE",
@@ -164,7 +193,7 @@ class CRUDAttendanceSession(CRUDBase):
         """
         Membuat (menyisipkan) rekaman absensi masuk (check-in) baru.
         Catatan: Kolom radius_m harus NOT NULL, nilainya diset sementara 0, trigger database akan menimpanya.
-        
+
         Args:
             org_id (str): ID organisasi.
             employee_id (Any): ID karyawan.
@@ -180,7 +209,7 @@ class CRUDAttendanceSession(CRUDBase):
             source (str): Sumber absensi ('MOBILE', dll). Defaults to "MOBILE".
             explanation (str | None): Catatan penjelasan keterlambatan/jarak. Defaults to None.
             at (Any | None): Waktu check-in, menggunakan now() jika None.
-            
+
         Returns:
             Any: Baris data absensi yang baru dibuat (RETURNING).
         """
@@ -205,26 +234,59 @@ class CRUDAttendanceSession(CRUDBase):
              "face": face_result, "sim": face_similarity, "source": source, "exp": explanation, "at": at},
         )
 
-    async def close(self, attendance_id: UUID | str) -> Any:
+    async def close(self, attendance_id: UUID | str, *, lat: float | None = None, lng: float | None = None,
+                    selfie_file_id: UUID | None = None, explanation: str | None = None) -> Any:
         """
         Menutup sesi absensi dengan menetapkan waktu check-out ke saat ini (now()).
-        
+
         Args:
             attendance_id (UUID | str): ID absensi yang ingin ditutup.
-            
+
         Returns:
             Any: Baris data absensi yang telah diperbarui.
         """
         # Memperbarui kolom check_out_at dan mengembalikan seluruh data absensi (RETURNING)
         return await self.fetchone(
             """
-            UPDATE vms.attendance SET check_out_at = now() WHERE id = :id
+            UPDATE vms.attendance
+               SET check_out_at = now(),
+                   check_out_location = CASE WHEN CAST(:lat AS float8) IS NULL THEN NULL
+                       ELSE ST_SetSRID(ST_MakePoint(CAST(:lng AS float8), CAST(:lat AS float8)), 4326)::geography END,
+                   check_out_selfie_file_id = CAST(:selfie AS uuid), check_out_explanation = :exp
+             WHERE id = :id
             RETURNING id, employee_id, work_date, site_id, site_label, check_in_at, check_out_at,
                       distance_m, is_late, is_early_leave, status, explanation, reviewed_at, selfie_file_id,
-                      face_result, face_similarity, check_out_face_result, check_out_face_similarity
+                      face_result, face_similarity, check_out_face_result, check_out_face_similarity,
+                      check_out_distance_m, check_out_outside, check_out_selfie_file_id, check_out_explanation
             """,
-            {"id": attendance_id},
+            {"id": attendance_id, "lat": lat, "lng": lng, "selfie": str(selfie_file_id) if selfie_file_id else None,
+             "exp": explanation.strip() if explanation else None},
         )
+
+    async def reviewer_employee_ids(self, org_id: UUID | str, employee_id: UUID | str) -> list[str]:
+        """Karyawan yang berwenang meninjau absensi `employee_id` (aturan satu sumber: vms.attendance_can_review)."""
+        rows = await self.fetchall(
+            """
+            SELECT DISTINCT CAST(u.employee_id AS text) AS employee_id, CAST(u.id AS text) AS user_id
+            FROM vms.app_user u
+            WHERE u.organization_id = CAST(:org AS uuid) AND u.employee_id IS NOT NULL
+              AND u.employee_id <> CAST(:emp AS uuid) AND vms.attendance_can_review(u.id, CAST(:emp AS uuid))
+            """,
+            {"org": str(org_id), "emp": str(employee_id)},
+        )
+        return [r.employee_id for r in rows]
+
+    async def user_ids_of(self, employee_ids: list[str]) -> list[str]:
+        """Akun pengguna milik para karyawan (alamat peristiwa realtime)."""
+        rows = await self.fetchall("SELECT CAST(id AS text) AS id FROM vms.app_user "
+                                   "WHERE employee_id = ANY(CAST(:ids AS uuid[]))", {"ids": employee_ids})
+        return [r.id for r in rows]
+
+    async def employee_name(self, employee_id: UUID | str) -> str:
+        """Nama lengkap karyawan (teks notifikasi)."""
+        name = await self.scalar("SELECT full_name FROM vms.employee WHERE id = CAST(:id AS uuid)",
+                                 {"id": str(employee_id)})
+        return str(name) if name else "Karyawan"
 
     async def flag_missing_face(self, attendance_id: UUID | str, event: str, note: str) -> Any:
         """
@@ -273,11 +335,11 @@ class CRUDAttendanceSession(CRUDBase):
         Mengambil satu rekaman absensi berdasarkan ID dan ID organisasi.
         Catatan: Menggunakan 'FOR UPDATE' sehingga mengunci baris ini untuk mencegah race condition
         selama proses pembaruan data absensi.
-        
+
         Args:
             attendance_id (UUID | str): ID absensi.
             org_id (UUID | str): ID organisasi.
-            
+
         Returns:
             Any: Data absensi yang diminta dan telah dikunci.
         """
@@ -297,11 +359,11 @@ class CRUDAttendanceSession(CRUDBase):
         """
         Mengecek apakah seorang pengguna (viewer) memiliki hak untuk meninjau (review)
         absensi seorang karyawan.
-        
+
         Args:
             viewer_user_id (UUID | str): ID pengguna yang melihat.
             employee_id (UUID | str): ID karyawan yang absensinya dilihat.
-            
+
         Returns:
             bool: True jika pengguna boleh melakukan peninjauan.
         """
@@ -317,7 +379,7 @@ class CRUDAttendanceSession(CRUDBase):
         """
         Mengambil daftar absensi dengan pembagian halaman (pagination) berdasarkan izin pengguna.
         Hanya mengembalikan absensi yang boleh dilihat oleh pengguna (R-33).
-        
+
         Args:
             org_id (str): ID organisasi.
             viewer_user_id (str): ID pengguna yang meminta data.
@@ -330,7 +392,7 @@ class CRUDAttendanceSession(CRUDBase):
                 anggota/umum). Memisahkan absensi pribadi dari absensi orang lain untuk PM/Finance/OPS.
             limit (int): Jumlah maksimum hasil (pagination).
             offset (int): Titik mulai (offset) untuk pagination.
-            
+
         Returns:
             tuple[list[Any], int]: Tuple yang berisi daftar baris (rows) absensi dan jumlah total data (total count).
         """
@@ -347,6 +409,9 @@ class CRUDAttendanceSession(CRUDBase):
                    a.selfie_file_id, a.review_note, e.full_name AS employee_name,
                    a.face_result, a.face_similarity, a.check_out_face_result, a.check_out_face_similarity,
                    a.offline, a.offline_note, a.check_out_requested_at,
+                   a.check_out_distance_m, a.check_out_outside, a.check_out_selfie_file_id, a.check_out_explanation,
+                   COALESCE(vms.attendance_city_category_at(a.organization_id, a.location),
+                            vms.attendance_city_category(a.employee_id, a.work_date)) AS city_category,
                    vms.attendance_can_review(CAST(:viewer AS uuid), a.employee_id) AS can_review
             FROM vms.attendance a JOIN vms.employee e ON e.id = a.employee_id
             WHERE a.organization_id = CAST(:org AS uuid)
@@ -388,7 +453,7 @@ class CRUDAttendanceSession(CRUDBase):
     async def set_explanation(self, attendance_id: UUID | str, explanation: str) -> None:
         """
         Menambahkan penjelasan (alasan) keterlambatan atau absen di luar lokasi.
-        
+
         Args:
             attendance_id (UUID | str): ID absensi.
             explanation (str): Penjelasan/keterangan yang diberikan pengguna.
@@ -401,7 +466,7 @@ class CRUDAttendanceSession(CRUDBase):
         """
         Menyimpan hasil peninjauan absensi (misalnya APPROVED, REJECTED) oleh atasan atau tim terkait.
         Juga menangani persetujuan otomatis untuk check-out luring yang tertunda (R-34).
-        
+
         Args:
             attendance_id (UUID | str): ID absensi.
             status (str): Status peninjauan yang baru.
@@ -423,3 +488,22 @@ class CRUDAttendanceSession(CRUDBase):
             """,
             {"status": status, "emp": reviewer, "note": note, "id": attendance_id},
         )
+
+    async def export_rows(self, org_id: UUID | str, start: Any, end: Any) -> list[Any]:
+        """Baris ekspor Finance (P4-5): jam dalam zona waktu organisasi, urut tanggal lalu nama."""
+        return list(await self.fetchall(
+            """
+            SELECT a.work_date, e.employee_no, e.full_name, a.site_label,
+                   to_char(a.check_in_at AT TIME ZONE o.timezone, 'HH24:MI:SS') AS check_in,
+                   to_char(a.check_out_at AT TIME ZONE o.timezone, 'HH24:MI:SS') AS check_out,
+                   a.status, a.is_late, a.is_early_leave, a.check_out_distance_m, a.check_out_outside,
+                   COALESCE(vms.attendance_city_category_at(a.organization_id, a.location),
+                            vms.attendance_city_category(a.employee_id, a.work_date)) AS city_category
+              FROM vms.attendance a
+              JOIN vms.employee e ON a.employee_id = e.id
+              JOIN vms.organization o ON o.id = a.organization_id
+             WHERE a.organization_id = :org
+               AND a.work_date BETWEEN :start AND :end
+             ORDER BY a.work_date ASC, e.full_name ASC
+            """,
+            {"org": org_id, "start": start, "end": end}))

@@ -1,7 +1,7 @@
 import type { AxiosAdapter, AxiosResponse, InternalAxiosRequestConfig } from "axios";
 import axios from "axios";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { api, ApiError, getAccessToken, setAccessToken, setSessionExpiredHandler } from "@/lib/api";
+import { api, ApiError, getAccessToken, setAccessToken, setSessionExpiredHandler } from "@/lib/apiClient";
 
 function reply(config: InternalAxiosRequestConfig, status: number, data: unknown): Promise<AxiosResponse> {
   const response = { data, status, statusText: "", headers: {}, config } as AxiosResponse;

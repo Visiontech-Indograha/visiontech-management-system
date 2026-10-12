@@ -45,7 +45,7 @@ class PlanTransitionService:
     def __init__(self, repo: CRUDPlanTransition, members: CRUDPlanMember) -> None:
         """
         Inisialisasi PlanTransitionService.
-        
+
         Args:
             repo (CRUDPlanTransition): Repositori khusus transisi status.
             members (CRUDPlanMember): Repositori untuk data anggota (keperluan checkMembers).
@@ -57,21 +57,21 @@ class PlanTransitionService:
         """
         Fungsi bantu untuk memuat SK dan memvalidasi apakah statusnya sesuai dengan yang diizinkan,
         sekaligus mengecek optimis concurrency (row_version).
-        
+
         Args:
             plan_id (UUID): ID SK.
             org_id (str): ID organisasi.
             row_version (int): Versi baris yang dikirim klien.
             allowed (PlanStatus): Status yang dipersyaratkan.
-            
+
         Returns:
             Any: Data SK jika lolos validasi.
         """
         plan = await self.repo.lock_plan(plan_id, org_id)
         if plan is None:
-            raise NotFoundError("SK")
+            raise NotFoundError("Rencana Kerja")
         if plan.status != allowed:
-            raise AppError("INVALID_STATE", f"Tindakan ini hanya untuk SK berstatus {allowed.value}.", status=409)
+            raise AppError("INVALID_STATE", f"Tindakan ini hanya untuk rencana kerja berstatus {allowed.value}.", status=409)
         if plan.row_version != row_version:
             raise ConflictError()
         return plan
@@ -84,9 +84,7 @@ class PlanTransitionService:
         if len(leaders) != 1 or not leaders[0].employee_active:
             raise _invalid("Ketua tim harus karyawan aktif.")
         if plan.pm_employee_id and leaders[0].employee_id == str(plan.pm_employee_id):
-            raise _invalid("PM penerbit tidak boleh menerima SK sebagai ketua tim sendiri.")
-        if not members:
-            raise _invalid("Pilih minimal satu anggota tim.")
+            raise _invalid("PM penerbit tidak boleh menerima rencana kerja sebagai ketua tim sendiri.")
         if any(not m.employee_active for m in members):
             raise _invalid("Semua anggota tim harus karyawan aktif.")
         conflicts = await self.members.schedule_conflicts([m.employee_id for m in team], plan.id)
@@ -97,27 +95,27 @@ class PlanTransitionService:
     async def _leader_only(self, plan_id: UUID, user_id: str) -> None:
         """
         Memastikan tindakan hanya dapat dilakukan oleh ketua tim yang tercantum dalam SK.
-        
+
         Args:
             plan_id (UUID): ID SK.
             user_id (str): ID pengguna saat ini.
-            
+
         Raises:
             ForbiddenError: Jika pengguna bukan ketua tim.
         """
         if not await self.repo.is_leader(plan_id, user_id):
-            raise ForbiddenError("Hanya ketua tim menurut SK yang berlaku yang dapat melakukan ini.")
+            raise ForbiddenError("Hanya ketua tim menurut rencana kerja yang berlaku yang dapat melakukan ini.")
 
     async def publish(self, plan_id: UUID, org_id: str, user_id: str, row_version: int) -> Any:
         """
         Menerbitkan (PUBLISH) SK yang berstatus Draf. Menghasilkan dokumen resmi awal dan meminta tanda tangan.
-        
+
         Args:
             plan_id (UUID): ID SK.
             org_id (str): ID Organisasi.
             user_id (str): ID Pengguna penerbit (PM).
             row_version (int): Versi baris (concurrency control).
-            
+
         Returns:
             Any: Data SK.
         """
@@ -127,7 +125,7 @@ class PlanTransitionService:
             raise _invalid("Rincian harian belum lengkap.")
         issuer = await self.repo.employee_id_of(user_id)
         if issuer is None:
-            raise ForbiddenError("Akun Anda belum tertaut ke data karyawan, jadi tidak dapat menerbitkan SK.")
+            raise ForbiddenError("Akun Anda belum tertaut ke data karyawan, jadi tidak dapat menerbitkan rencana kerja.")
 
         await self.repo.publish(plan_id)
         snapshot = await self.repo.snapshot(plan_id)
@@ -141,13 +139,13 @@ class PlanTransitionService:
     async def accept(self, plan_id: UUID, org_id: str, user_id: str, row_version: int) -> Any:
         """
         Menerima (ACCEPT) SK yang telah Diterbitkan. Hanya dapat dilakukan oleh Ketua Tim.
-        
+
         Args:
             plan_id (UUID): ID SK.
             org_id (str): ID Organisasi.
             user_id (str): ID Ketua Tim.
             row_version (int): Versi baris.
-            
+
         Returns:
             Any: Data SK.
         """
@@ -169,7 +167,7 @@ class PlanTransitionService:
         await self._load(plan_id, org_id, row_version, PlanStatus.PUBLISHED)
         await self._leader_only(plan_id, user_id)
         if not reason.strip():
-            raise AppError("VALIDATION_ERROR", "Alasan adendum wajib diisi.", status=422)
+            raise AppError("VALIDATION_ERROR", "Alasan revisi wajib diisi.", status=422)
         await self.repo.appeal(plan_id, reason.strip())
         await NotificationService(self.repo.db).amendment_requested(plan_id, reason.strip())
         return await self.repo.get_plan(plan_id)
@@ -194,11 +192,11 @@ class PlanTransitionService:
         """domain.js CANCEL_PLAN — PM unit/OPS (dijaga router); draf diarsipkan, bukan dibatalkan."""
         plan = await self.repo.lock_plan(plan_id, org_id)
         if plan is None:
-            raise NotFoundError("SK")
+            raise NotFoundError("Rencana Kerja")
         # Draf hasil revisi (pernah terbit) tidak bisa diarsip, jadi harus bisa dibatalkan (CELAH 8, docs/28).
         revised_draft = plan.status == PlanStatus.DRAFT and await self.repo.ever_published(plan_id)
         if plan.status not in CANCELLABLE and not revised_draft:
-            raise AppError("INVALID_STATE", "Tahap work plan belum sesuai untuk tindakan ini.", status=409)
+            raise AppError("INVALID_STATE", "Status rencana kerja belum sesuai untuk tindakan ini. Muat ulang halaman.", status=409)
         if plan.row_version != row_version:
             raise ConflictError()
         if not reason.strip():
@@ -212,10 +210,10 @@ class PlanTransitionService:
         if not reason.strip():
             raise _invalid("Alasan pengarsipan wajib diisi.")
         if await self.repo.has_active_allocation(plan_id):
-            raise AppError("INVALID_STATE", "Lepaskan reservasi aset sebelum mengarsipkan draft.", status=409)
+            raise AppError("INVALID_STATE", "Lepaskan pemesanan aset dulu sebelum mengarsipkan draf rencana kerja.", status=409)
         if await self.repo.ever_published(plan_id):
             raise AppError("INVALID_STATE",
-                           "Pekerjaan yang pernah memiliki SK tidak dapat diarsipkan. Gunakan opsi pembatalan.",
+                           "Pekerjaan yang pernah memiliki rencana kerja tidak dapat diarsipkan. Gunakan opsi pembatalan.",
                            status=409)
         await self.repo.archive(plan_id, user_id, reason.strip())
         return await self.repo.get_plan(plan_id)
@@ -224,9 +222,9 @@ class PlanTransitionService:
         """domain.js RESTORE_PLAN — hanya draf terarsip; tim diperiksa ulang (checkMembers)."""
         plan = await self.repo.lock_plan(plan_id, org_id, include_archived=True)
         if plan is None:
-            raise NotFoundError("SK")
+            raise NotFoundError("Rencana Kerja")
         if not plan.archived:
-            raise AppError("INVALID_STATE", "Draft tidak berada di arsip.", status=409)
+            raise AppError("INVALID_STATE", "Rencana kerja draf ini tidak sedang diarsipkan.", status=409)
         if plan.row_version != row_version:
             raise ConflictError()
         await self._check_members(plan)
@@ -238,13 +236,13 @@ class PlanTransitionService:
         Memulai pekerjaan (START) secara manual oleh Ketua Tim.
         Dalam alur SK v2, pekerjaan biasanya otomatis berjalan pada tanggal mulai.
         Fungsi ini membuatnya idempoten jika dipanggil manual.
-        
+
         Args:
             plan_id (UUID): ID SK.
             org_id (str): ID Organisasi.
             user_id (str): ID Ketua Tim.
             row_version (int): Versi baris.
-            
+
         Returns:
             Any: Data SK dengan status IN_PROGRESS.
         """
@@ -273,10 +271,10 @@ class PlanTransitionService:
     async def _weeks_approved(self, plan_id: UUID) -> bool:
         """
         Memeriksa apakah seluruh laporan mingguan telah disetujui (APPROVED).
-        
+
         Args:
             plan_id (UUID): ID SK.
-            
+
         Returns:
             bool: True jika semuanya berstatus APPROVED atau tidak ada laporan mingguan.
         """
@@ -288,7 +286,7 @@ class PlanTransitionService:
         """
         domain.js REQUEST_COMPLETE — diajukan oleh ketua menurut SK.
         Memeriksa bahwa seluruh tugas, laporan harian, mingguan, dan pengembalian aset sudah beres.
-        
+
         Args:
             plan_id (UUID): ID SK.
             org_id (str): ID Organisasi.
@@ -297,7 +295,7 @@ class PlanTransitionService:
             body (str): Laporan penyelesaian.
             obstacle (str): Kendala keseluruhan.
             file_ids (list[UUID]): Lampiran foto/dokumen penyelesaian.
-            
+
         Returns:
             Any: Data SK (status menjadi COMPLETION_REVIEW).
         """
@@ -310,12 +308,12 @@ class PlanTransitionService:
             raise _state("Laporan mingguan belum selesai.")
         if not body.strip() or not obstacle.strip():
             raise _invalid("Laporan penyelesaian dan ringkasan kendala keseluruhan wajib diisi.")
-        
+
         # Alur SK v2: alat & kendaraan wajib sudah diajukan kembali sebelum pengajuan penutupan.
         unreturned = await CRUDPlanAmendment(self.repo.db).unreturned_assets(plan_id)
         if unreturned:
             raise _state("Kembalikan alat dan kendaraan terlebih dahulu: " + ", ".join(unreturned) + ".")
-            
+
         await self.repo.submit_final_report(plan_id, user_id, body.strip(), obstacle.strip(), file_ids)
         await self.repo.set_status(plan_id, PlanStatus.COMPLETION_REVIEW)
         await NotificationService(self.repo.db).completion_requested(plan_id)
@@ -325,14 +323,14 @@ class PlanTransitionService:
                                note: str) -> Any:
         """
         domain.js APPROVE_COMPLETE — dilakukan PM unit/OPS untuk menyetujui penutupan SK.
-        
+
         Args:
             plan_id (UUID): ID SK.
             org_id (str): ID organisasi.
             user_id (str): ID peninjau.
             row_version (int): Versi baris.
             note (str): Catatan peninjau.
-            
+
         Returns:
             Any: Data SK (status menjadi COMPLETED).
         """
@@ -345,18 +343,18 @@ class PlanTransitionService:
         if await self.repo.final_report_status(plan_id) != "SUBMITTED":
             raise _state("Laporan akhir belum diserahkan.")
         if await self.repo.has_active_allocation(plan_id):
-            raise _state("Masih ada aset yang belum dikembalikan atau diverifikasi (Asset).")
-            
+            raise _state("Masih ada aset yang belum dikembalikan atau belum diperiksa petugas aset.")
+
         # R-19 (P6-4): laporan akhir dibekukan (frozen) & ditandatangani — ketua (penerbit) dan pemeriksa (APPROVER).
         approver = await self.repo.employee_id_of(user_id)
         snapshot = await self.repo.final_report_snapshot(plan_id, approver, note.strip() or None)
         frozen = json.loads(snapshot) if isinstance(snapshot, str) else snapshot
-        
+
         # Simpan snapshot kanonik sebagai bukti digital (audit)
         await self.repo.store_final_snapshot(plan_id, json.dumps(frozen), hashlib.sha256(canonical(frozen)).digest())
         await self.repo.review_final_report(plan_id, user_id, "APPROVED", note.strip() or None)
         await self.repo.set_status(plan_id, PlanStatus.COMPLETED)
-        
+
         # Tanda tangan elektronik dokumen laporan penyelesaian
         signatures = SignatureService(self.repo.db)
         leader = await self.repo.final_report_submitter(plan_id)
@@ -364,7 +362,7 @@ class PlanTransitionService:
             await signatures.sign_final_report(plan_id, leader, ISSUER, user_id)
         if approver:
             await signatures.sign_final_report(plan_id, approver, APPROVER, user_id)
-            
+
         # Alur SK v2: pekerjaan selesai — versi SK yang berlaku tidak berlaku lagi; tim & aset otomatis bebas.
         await CRUDPlanAmendment(self.repo.db).supersede_effective(plan_id, None)
         await NotificationService(self.repo.db).completion_decided(plan_id, approved=True, note=None)
@@ -375,14 +373,14 @@ class PlanTransitionService:
         """
         domain.js RETURN_COMPLETE — dilakukan PM unit/OPS untuk mengembalikan laporan akhir SK.
         Alasan pengembalian wajib diisi. Status SK kembali ke IN_PROGRESS.
-        
+
         Args:
             plan_id (UUID): ID SK.
             org_id (str): ID Organisasi.
             user_id (str): ID PM / OPS.
             row_version (int): Versi baris.
             reason (str): Alasan pengembalian.
-            
+
         Returns:
             Any: Data SK.
         """

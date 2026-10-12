@@ -6,21 +6,28 @@ diputuskan trigger basis data, dan hasil simpanan itulah yang dikembalikan ke kl
 """
 from __future__ import annotations
 
+import csv
+import io
 from typing import Any
 from uuid import UUID
 
 from sqlalchemy.exc import IntegrityError
 
+from app.core.config import settings
 from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationError, trigger_rule_message
+from app.core.events import queue_event
 from app.crud.crud_attendance_session import CRUDAttendanceSession
 from app.crud.crud_org_clock import CRUDOrgClock
+from app.services.access_service import ensure_same_org
 from app.services.face_service import FaceOutcome, FaceService
+from app.services.notification_service import NotificationService
 
-OPEN_SESSION = "Masih ada sesi absensi terbuka."
+OPEN_SESSION = "Anda belum absen pulang dari absen masuk sebelumnya."
 VALID_STATUSES = ("AUTO_VALID", "APPROVED")
 # R-33 (keputusan pemilik 2026-10-02): absen pulang hanya untuk absen masuk yang sudah valid.
 CHECKOUT_NOT_VALID = ("Absen pulang hanya bisa dilakukan setelah absen masuk valid. "
                       "Absen masuk Anda masih menunggu pemeriksaan.")
+FACE_NOT_ENROLLED = "Daftarkan wajah Anda dulu di menu Profil sebelum absen."
 ALREADY_TODAY = "Absensi untuk hari ini sudah tercatat (hanya dapat mengajukan ulang jika absensi sebelumnya ditolak)."
 # Keputusan pemilik 2026-10-02: ditolak → boleh mengajukan ulang SEKALI; ditolak lagi → hari itu terkunci (tercatat ditolak).
 MAX_ATTEMPTS_PER_DAY = 2
@@ -59,6 +66,47 @@ class AttendanceSessionService:
             raise AppError("WRONG_ATTENDANCE_CHANNEL", WRONG_CHANNEL[channel], status=403)
         return row
 
+    async def ensure_check_in_refs(self, org_id: str, site_id: UUID | None, selfie_file_id: UUID | None) -> None:
+        """Lokasi & swafoto absen (masuk maupun pulang) harus milik organisasi pengguna (galat 422 bila bukan)."""
+        await ensure_same_org(self.repo.db, org_id, sites=[site_id] if site_id else [], files=[selfie_file_id])
+
+    async def export_csv(self, org_id: str, start: Any, end: Any) -> str:
+        """P4-5 · CSV absensi untuk Finance; jam dalam zona waktu organisasi."""
+        out = io.StringIO()
+        writer = csv.writer(out)
+        writer.writerow(["Tanggal", "NIK", "Nama", "Lokasi", "Check In", "Check Out", "Terlambat", "Pulang Cepat",
+                         "Status", "Kategori", "Jarak pulang (m)"])
+        for r in await self.repo.export_rows(org_id, start, end):
+            writer.writerow([
+                r.work_date.isoformat(), r.employee_no, r.full_name, r.site_label,
+                r.check_in or "", r.check_out or "", "Ya" if r.is_late else "Tidak",
+                "Ya" if r.is_early_leave else "Tidak", r.status,
+                "Luar kota" if r.city_category == "LUAR_KOTA" else "Dalam kota",
+                "" if r.check_out_distance_m is None else r.check_out_distance_m,
+            ])
+        return out.getvalue()
+
+    async def _require_enrolled(self, user_id: str, worker: Any, channel: str, online: bool) -> None:
+        """T3: absen HP (online) ditolak bila wajah belum terdaftar dan saklar FACE_ENROLLMENT_REQUIRED menyala.
+        Administrator dikecualikan (sama seperti gerbang pendaftaran). Absen luring tidak ditolak (sudah terjadi)."""
+        if (self.faces is None or not settings.FACE_ENROLLMENT_REQUIRED or channel != "MOBILE" or not online
+                or worker.is_admin):
+            return
+        if not await self.faces.face_expected(user_id):
+            raise AppError("FACE_NOT_ENROLLED", FACE_NOT_ENROLLED, status=409)
+
+    async def _flag_for_review(self, org_id: str, row: Any, template: str) -> None:
+        """T8: absen yang menjadi Perlu review → beri tahu peninjau berwenang (notifikasi + peristiwa realtime)."""
+        if str(row.status) != "NEEDS_REVIEW":
+            return
+        reviewers = await self.repo.reviewer_employee_ids(org_id, row.employee_id)
+        if not reviewers:
+            return
+        name = await self.repo.employee_name(row.employee_id)
+        await NotificationService(self.repo.db).attendance_flagged(org_id, reviewers, template.format(name=name))
+        users = await self.repo.user_ids_of(reviewers)
+        queue_event(self.repo.db, users, "attendance", {"attendance_id": str(row.id)})
+
     async def check_in(self, org_id: str, user_id: str, *, site_id: UUID, lng: float, lat: float,
                        origin: str, selfie_file_id: UUID | None, accuracy_m: float | None = None,
                        channel: str = "MOBILE", explanation: str | None = None,
@@ -66,7 +114,7 @@ class AttendanceSessionService:
                        online: bool = True, expected_face_sha256: str | None = None) -> Any:
         """
         Mencatat absen masuk harian (check-in) dengan mengevaluasi aturan jarak dan akurasi GPS.
-        
+
         `at`/`work_date`: absen luring (R-34) — jam & tanggal peristiwa yang sudah diverifikasi server
         (jangkar waktu + tanda tangan perangkat), bukan jam terima.
 
@@ -74,6 +122,7 @@ class AttendanceSessionService:
         SERVER setelah absen tercatat; klien tidak lagi dipercaya (aturan inti #3).
         """
         worker = await self._employee_for_channel(user_id, channel)
+        await self._require_enrolled(user_id, worker, channel, online)
         employee_id = worker.employee_id
         # K-12: titik GPS yang terlalu kabur tidak bisa membuktikan kehadiran — tolak dengan alasan.
         if channel == "WEB":
@@ -100,14 +149,21 @@ class AttendanceSessionService:
         site = await self.repo.site_for_check_in(site_id, org_id, lng, lat)
         if site is None:
             raise NotFoundError("Lokasi")
-        # R-33: pekerja lapangan hanya di lokasi proyek unitnya, pekerja kantor hanya di lokasi kantor.
+        # R-33: pekerja kantor hanya di lokasi kantor. Pekerja lapangan di lokasi proyek unitnya DAN di kantor pusat
+        # (unit_id NULL): tanpa SK aktif mereka tetap harus bisa absen di kantor (2026-10-07, permintaan pemilik).
         if worker.attendance_mode == "OFFICE":
             allowed = site.unit_id is None
         else:
-            allowed = site.unit_id is not None and site.unit_id == worker.unit_id
+            allowed = site.unit_id is None or site.unit_id == worker.unit_id
         if not allowed:
             raise AppError("SITE_NOT_ALLOWED", "Lokasi ini tidak berlaku untuk Anda. Pilih lokasi kerja Anda.",
                            status=403)
+        # 2026-10-09 (pemilik): absen sah otomatis bila berada dalam radius kantor mana pun (Pekanbaru, Duri, Dumai,
+        # Jakarta, …) atau lokasi tugas hari itu, walau lokasi yang dipilih di HP berbeda — tercatat di lokasi itu.
+        if float(site.distance_m) > site.radius_m:
+            nearest = await self.repo.nearest_valid_site(org_id, employee_id, today, lng, lat)
+            if nearest is not None and float(nearest.distance_m) <= nearest.radius_m:
+                site_id, site = nearest.id, nearest
         note = (explanation or "").strip() or None
         if note is None and float(site.distance_m) > site.radius_m:
             raise AppError("EXPLANATION_REQUIRED", EXPLANATION_OUTSIDE.format(
@@ -121,8 +177,10 @@ class AttendanceSessionService:
                 face_result=None, face_similarity=None, source=channel, explanation=note,
                 at=at,
             )
-            return await self.apply_face(org_id, user_id, row, "CHECK_IN", face_probe_id, online=online,
-                                         expected_sha256=expected_face_sha256, device=channel)
+            row = await self.apply_face(org_id, user_id, row, "CHECK_IN", face_probe_id, online=online,
+                                        expected_sha256=expected_face_sha256, device=channel)
+            await self._flag_for_review(org_id, row, "Absen masuk {name} perlu diperiksa")
+            return row
         except IntegrityError as exc:
             # Aturan dari trigger (mis. di luar radius tanpa swafoto) → 422 dengan pesannya.
             rule = trigger_rule_message(exc)
@@ -146,6 +204,8 @@ class AttendanceSessionService:
             if await self.faces.face_expected(user_id):
                 return await self.repo.flag_missing_face(
                     row.id, event, "wajah tidak diperiksa: karyawan sudah mendaftar wajah tetapi absen tanpa data wajah")
+            if not online and settings.FACE_ENROLLMENT_REQUIRED:   # T3: absen luring tanpa wajah terdaftar
+                return await self.repo.flag_missing_face(row.id, event, "belum mendaftar wajah")
             return row
         outcome: FaceOutcome = await self.faces.verify_for_attendance(
             org_id, user_id, probe_id=face_probe_id, event=event, attendance_id=row.id, device=device,
@@ -169,25 +229,45 @@ class AttendanceSessionService:
 
     async def check_out(self, user_id: str, channel: str = "MOBILE", *, org_id: str | None = None,
                         face_probe_id: UUID | None = None, online: bool = True,
-                        expected_face_sha256: str | None = None) -> Any:
+                        expected_face_sha256: str | None = None, lat: float | None = None, lng: float | None = None,
+                        selfie_file_id: UUID | None = None, explanation: str | None = None,
+                        accuracy_m: float | None = None) -> Any:
         """
         Menutup sesi absensi harian yang sedang terbuka (absen pulang).
-        
+
         Menutup sesi terbuka milik sendiri — tanggal berapa pun, agar sesi yang lupa ditutup tidak
         mengunci check-in berikutnya. Status tidak diubah; pulang cepat diputuskan trigger.
         R-33: hanya sesi yang sudah valid (Valid otomatis / Disetujui) yang boleh absen pulang.
         """
         worker = await self._employee_for_channel(user_id, channel)
+        await self._require_enrolled(user_id, worker, channel, online)
         session = await self.repo.open_session(worker.employee_id, valid_only=True)
         if session is None:
             # Memastikan tidak bisa absen pulang jika absen masuknya ditolak atau masih dalam proses peninjauan.
             if await self.repo.open_session(worker.employee_id) is not None:
                 raise AppError("CHECKOUT_NOT_VALID", CHECKOUT_NOT_VALID, status=409)
             raise AppError("NO_OPEN_SESSION", "Tidak ada sesi absensi terbuka.", status=409)
-        row = await self.repo.close(session.id)
+        if accuracy_m is not None:   # K-12: titik yang terlalu kabur tidak bisa membuktikan kehadiran
+            limit = MAX_WEB_ACCURACY_M if channel == "WEB" else MAX_GPS_ACCURACY_M
+            if accuracy_m > limit:
+                raise AppError("GPS_INACCURATE", f"Akurasi lokasi {accuracy_m:.0f} m terlalu rendah (maksimal {limit} m). "
+                               "Pindah ke tempat terbuka, tunggu sinyal menguat, lalu coba lagi.", status=422)
+        try:
+            row = await self.repo.close(session.id, lat=lat, lng=lng, selfie_file_id=selfie_file_id,
+                                        explanation=explanation)
+        except IntegrityError as exc:   # T7: di luar radius tanpa swafoto/penjelasan → pesan aturan dari trigger
+            rule = trigger_rule_message(exc)
+            if rule:
+                raise ValidationError(rule) from None
+            raise
         if org_id is not None:
             row = await self.apply_face(org_id, user_id, row, "CHECK_OUT", face_probe_id, online=online,
                                         expected_sha256=expected_face_sha256, device=channel)
+            if getattr(row, "check_out_outside", False):
+                await self._flag_for_review(
+                    org_id, row, "Absen pulang {name} di luar radius (" + f"{round(row.check_out_distance_m)} m)")
+            else:
+                await self._flag_for_review(org_id, row, "Absen pulang {name} perlu diperiksa")
         return row
 
     async def list_attendance(self, org_id: str, user_id: str, *, view_all: bool, employee_id: UUID | None,
@@ -195,7 +275,7 @@ class AttendanceSessionService:
                               page: int, size: int, scope: str = "all") -> tuple[list[Any], int]:
         """
         Mendapatkan daftar absensi berdasarkan filter, disesuaikan dengan hak visibilitas pengguna.
-        
+
         R-33: Finance & OPS (`view:all_attendance`) melihat semua; PM melihat miliknya + bawahan lapangan
         di unitnya; selain itu hanya milik sendiri. Di luar cakupan → tidak tampil (tidak dibocorkan).
         Setiap baris membawa `can_review` dari server.
@@ -228,7 +308,7 @@ class AttendanceSessionService:
                                 approve: bool, note: str | None) -> str:
         """
         Meninjau (menyetujui atau menolak) sesi absensi yang anomali.
-        
+
         R-33: PM → bawahan lapangan di unitnya; Finance → pekerja kantor selain Finance; OPS → Finance.
         Tidak ada yang meninjau absensinya sendiri (cakupan: CRUD `CAN_REVIEW`).
         """
@@ -245,7 +325,11 @@ class AttendanceSessionService:
             raise AppError("INVALID_STATE", "Absensi tidak menunggu pemeriksaan.", status=409)
         if not (note or "").strip():
             raise ValidationError("Catatan pemeriksaan wajib diisi.")
-            
+
         status = "APPROVED" if approve else "REJECTED"
         await self.repo.set_review(attendance_id, status, reviewer, (note or "").strip())
+        await NotificationService(self.repo.db).attendance_decided(
+            org_id, str(attendance.employee_id), approve, (note or "").strip())
+        queue_event(self.repo.db, await self.repo.user_ids_of([str(attendance.employee_id)]), "attendance",
+                    {"attendance_id": str(attendance_id)})
         return status

@@ -11,11 +11,11 @@ const PATTERNS: [RegExp, string][] = [
   [/^\/change-password$/, "Ganti password"],
   [/^\/account$/, "Akun & keamanan"],
   [/^\/forbidden$/, "Tidak berwenang"],
-  [/^\/work-plans\/new$/, "Buat SK"],
-  [/^\/work-plans\/[^/]+\/edit$/, "Sunting SK"],
-  [/^\/work-plans\/[^/]+\/amend\/[^/]+$/, "Adendum SK"],
+  [/^\/work-plans\/new$/, "Buat rencana kerja"],
+  [/^\/work-plans\/[^/]+\/edit$/, "Sunting rencana kerja"],
+  [/^\/work-plans\/[^/]+\/amend\/[^/]+$/, "Revisi rencana kerja"],
   [/^\/work-plans\/[^/]+\/presentation$/, "Presentasi laporan"],
-  [/^\/work-plans\/[^/]+$/, "Detail SK"],
+  [/^\/work-plans\/[^/]+$/, "Detail rencana kerja"],
   [/^\/directory\/[^/]+$/, "Detail karyawan"],
 ];
 

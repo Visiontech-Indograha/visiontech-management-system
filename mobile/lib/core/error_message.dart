@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
 
-import 'api_client.dart';
 import '../data/sync_engine.dart';
+import 'api_client.dart';
 
 /// Ubah kegagalan apa pun menjadi kalimat yang berarti bagi teknisi lapangan.
 ///
@@ -40,6 +40,18 @@ String apiErrorMessage(Object error, {String? fallback}) {
   }
 
   return fallback ?? 'Terjadi kesalahan. Coba lagi.';
+}
+
+/// Kode galat backend VMS (`{"error": {"code": ...}}`), atau null bila bukan galat berformat itu.
+String? apiErrorCode(Object error) {
+  if (error is DioException) {
+    final data = error.response?.data;
+    if (data is Map && data['error'] is Map) {
+      final code = (data['error'] as Map)['code'];
+      if (code is String) return code;
+    }
+  }
+  return null;
 }
 
 /// Ambil pesan `detail` dari respons FastAPI bila ada & masuk akal ditampilkan.

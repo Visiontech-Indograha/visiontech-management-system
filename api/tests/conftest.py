@@ -7,9 +7,15 @@ from __future__ import annotations
 import contextlib
 import os
 import socket
+import sys
 import uuid
 from collections.abc import Callable, Iterator
 from urllib.parse import urlparse
+
+if sys.platform == "win32":
+    _git_bin = r"C:\Program Files\Git\bin"
+    if os.path.isdir(_git_bin) and _git_bin.lower() not in os.environ.get("PATH", "").lower():
+        os.environ["PATH"] = f"{_git_bin};{os.environ.get('PATH', '')}"
 
 import psycopg2
 import pytest
@@ -30,7 +36,10 @@ if _UNSAFE:
     # A-00 (docs/24): lebih baik suite berhenti daripada menulis data uji ke produksi.
     raise pytest.UsageError(_UNSAFE)
 
-_DB = urlparse(settings.DATABASE_URL.replace("+asyncpg", ""))
+# Persiapan & pemeriksaan data uji (`sync_query`) memakai URL ini; aplikasi tetap memakai DATABASE_URL. Isi dengan
+# superuser bila DATABASE_URL memakai peran aplikasi yang tunduk RLS (uji RLS penuh, P9-2).
+_SETUP_URL = os.environ.get("TEST_SETUP_DATABASE_URL") or settings.DATABASE_URL
+_DB = urlparse(_SETUP_URL.replace("+asyncpg", ""))
 
 
 def _db_reachable() -> bool:
@@ -47,6 +56,12 @@ if not _DB_OK and os.getenv("VMS_REQUIRE_DB"):
     raise RuntimeError(f"VMS_REQUIRE_DB diset tetapi PostgreSQL {_DB.hostname}:{_DB.port} tidak dapat dijangkau")
 
 requires_db = pytest.mark.skipif(not _DB_OK, reason="PostgreSQL uji tidak dapat dijangkau")
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _face_enrollment_off() -> None:
+    # Uji tidak bergantung pada saklar di api/.env; uji gerbang wajah menyalakannya sendiri (monkeypatch).
+    settings.FACE_ENROLLMENT_REQUIRED = False   # sesi penuh: monkeypatch.undo() di uji tidak boleh menghidupkannya lagi
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -254,8 +269,26 @@ def fake_storage(monkeypatch) -> dict[str, bytes]:
         stored[object_name] = data
         return True
 
-    import app.api.v1.endpoints.files as files_api
+    import app.core.storage as storage_core
 
-    monkeypatch.setattr(files_api, "upload_file", upload)
-    monkeypatch.setattr(files_api, "get_presigned_url", lambda name, expires=None: f"https://minio.uji/{name}")
+    monkeypatch.setattr(storage_core, "upload_file", upload)
+    monkeypatch.setattr(storage_core, "get_presigned_url", lambda name, expires=None: f"https://minio.uji/{name}")
+
+    try:
+        import app.api.v1.endpoints.files as files_api
+
+        monkeypatch.setattr(files_api, "upload_file", upload)
+        monkeypatch.setattr(files_api, "get_presigned_url", lambda name, expires=None: f"https://minio.uji/{name}")
+    except (ImportError, AttributeError):
+        pass
+
+    try:
+        import app.modules.system.controllers.files_controller as files_ctrl
+
+        monkeypatch.setattr(files_ctrl, "upload_file", upload)
+        monkeypatch.setattr(files_ctrl, "get_presigned_url", lambda name, expires=None: f"https://minio.uji/{name}")
+    except (ImportError, AttributeError):
+        pass
+
     return stored
+

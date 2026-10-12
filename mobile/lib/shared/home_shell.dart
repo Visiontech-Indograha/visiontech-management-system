@@ -1,10 +1,16 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../core/live_events.dart';
 import '../core/providers.dart';
 import '../features/auth/auth_controller.dart';
 import '../features/face/face_enroll_gate.dart';
+import '../features/plans/revision_history_screen.dart';
+import '../features/plans/work_plans_screen.dart';
+import '../features/update/update_ui.dart';
 import 'sync_status_banner.dart';
 import 'ui/floating_nav.dart';
 
@@ -27,10 +33,13 @@ class HomeShell extends ConsumerStatefulWidget {
 
 class _HomeShellState extends ConsumerState<HomeShell>
     with WidgetsBindingObserver {
+  LiveEventsClient? _live;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _startLive());
     WidgetsBinding.instance.addPostFrameCallback((_) => _maybeOfferBiometric());
     // Lencana lonceng dihitung dari cache lokal supaya tidak menembak server
     // tiap kali digambar. Konsekuensinya: tepat setelah login cache-nya masih
@@ -38,8 +47,51 @@ class _HomeShellState extends ConsumerState<HomeShell>
     // pengambilan saat aplikasi dibuka menutup celah itu.
   }
 
+  /// T8: sambungan SSE + notifikasi sistem. Berjalan selama aplikasi di depan; dihentikan di latar belakang.
+  void _startLive() {
+    if (!mounted) return;
+    final notifier = ref.read(localNotifierProvider);
+    unawaited(notifier.requestPermission());
+    notifier.onTap = _openFromNotification;
+    _live = LiveEventsClient(
+      open: (cancel) => ref.read(syncEngineProvider).api.openEvents(cancel),
+      onEvent: (event) {
+        if (!mounted) return;
+        ref.read(liveEventTickProvider.notifier).bump();
+        if (event.topic == 'notification') {
+          final planId = event.data['plan_id'] ?? '';
+          unawaited(notifier.show(
+            title: '${event.data['title'] ?? 'Notifikasi baru'}',
+            body: '${event.data['body'] ?? ''}',
+            payload: '$planId|${event.data['kind'] ?? ''}',
+          ));
+        }
+      },
+    )..start();
+  }
+
+  /// Ketukan notifikasi sistem: rencana kerja terkait, atau riwayat revisi untuk PLAN_REVISED.
+  Future<void> _openFromNotification(String payload) async {
+    final parts = payload.split('|');
+    final planId = parts.first;
+    if (planId.isEmpty || !mounted) return;
+    final nav = Navigator.of(context);
+    if (parts.length > 1 && parts[1] == 'PLAN_REVISED') {
+      await nav.push(MaterialPageRoute(builder: (_) => RevisionHistoryScreen(planId: planId)));
+      return;
+    }
+    try {
+      final plan = await ref.read(syncEngineProvider).api.workPlan(planId);
+      if (!mounted) return;
+      await nav.push(MaterialPageRoute(builder: (_) => PlanDetailScreen(plan: plan)));
+    } catch (_) {
+      // Tanpa sinyal / tidak berwenang: abaikan, daftar notifikasi tetap bisa dibuka manual.
+    }
+  }
+
   @override
   void dispose() {
+    _live?.stop();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -58,9 +110,12 @@ class _HomeShellState extends ConsumerState<HomeShell>
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.hidden) {
       _pausedAt = DateTime.now();
+      _live?.stop();
       return;
     }
     if (state != AppLifecycleState.resumed) return;
+    _live?.start();
+    ref.read(liveEventTickProvider.notifier).bump();   // peristiwa selama di latar belakang tidak terlihat
 
     // Kunci ulang saat aplikasi kembali dari latar belakang. Tanpa ini gerbang
     // sidik jari hanya berlaku saat aplikasi dibuka dari kondisi mati total --
@@ -142,6 +197,7 @@ class _HomeShellState extends ConsumerState<HomeShell>
           // dan tidak menggeser AppBar tiap layar.
           Expanded(child: widget.navigationShell),
           const SyncStatusBanner(),
+          const UpdateAvailableBanner(),
         ],
       ),
       bottomNavigationBar: FloatingNavBar(
@@ -159,7 +215,12 @@ class _HomeShellState extends ConsumerState<HomeShell>
           FloatingNavItem(
             icon: Icons.assignment_outlined,
             activeIcon: Icons.assignment_rounded,
-            label: 'Surat Kerja',
+            label: 'Rencana',
+          ),
+          FloatingNavItem(
+            icon: Icons.photo_library_outlined,
+            activeIcon: Icons.photo_library_rounded,
+            label: 'Galeri',
           ),
           FloatingNavItem(
             icon: Icons.person_outline_rounded,

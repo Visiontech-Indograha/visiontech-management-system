@@ -5,7 +5,7 @@ import { apiError, mockApi, renderRoute } from "./utils";
 /** Beranda: ringkasan SK & absensi yang perlu diperiksa (4 keadaan: memuat, kosong, galat, berhasil). */
 
 const plan = (id: string, status: string) => ({
-  id, title: `SK ${id}`, unit_id: "u1", site_id: null, location_text: "Dumai", description: null,
+  id, title: `Rencana Kerja ${id}`, unit_id: "u1", site_id: null, location_text: "Dumai", description: null,
   period_start: "2026-09-01", period_end: "2026-09-30", pm_employee_id: "e-pm", leader_employee_id: "e-lead",
   number: null, status, revision: 0, row_version: 1, cancellation_reason: null, appeal_reason: null,
 });
@@ -13,7 +13,7 @@ const plan = (id: string, status: string) => ({
 const stat = (label: string) => screen.getByText(label).closest("a")!;
 
 describe("beranda", () => {
-  it("menghitung SK berjalan & menunggu, menampilkan maksimal 6 pekerjaan aktif", async () => {
+  it("menghitung rencana kerja berjalan & menunggu, menampilkan maksimal 6 pekerjaan aktif", async () => {
     const plans = [
       plan("a", "IN_PROGRESS"), plan("b", "IN_PROGRESS"), plan("c", "PUBLISHED"), plan("d", "DRAFT"),
       plan("e", "ACCEPTED"), plan("f", "APPEALED"), plan("g", "COMPLETION_REVIEW"), plan("h", "COMPLETED"),
@@ -25,31 +25,31 @@ describe("beranda", () => {
     });
     renderRoute("/", { role: "PM" });
 
-    expect(await screen.findByText("SK a")).toBeInTheDocument();
-    expect(within(stat("SK berjalan")).getByText("2")).toBeInTheDocument();
-    expect(within(stat("SK menunggu tindakan")).getByText("5")).toBeInTheDocument();
+    expect(await screen.findByText("Rencana Kerja a")).toBeInTheDocument();
+    expect(within(stat("Rencana Kerja berjalan")).getByText("2")).toBeInTheDocument();
+    expect(within(stat("Rencana Kerja menunggu tindakan")).getByText("5")).toBeInTheDocument();
     expect(await within(stat("Absensi perlu diperiksa")).findByText("4")).toBeInTheDocument();
     const list = screen.getByText("Pekerjaan aktif").closest("[data-slot=card]") ?? document.body;
     const links = within(list as HTMLElement).getAllByRole("link");
     expect(links).toHaveLength(6);                                  // berjalan dulu, lalu yang menunggu
     expect(links[0]).toHaveAttribute("href", "/work-plans/a");
-    expect(screen.queryByText("SK h")).toBeNull();                  // selesai/batal tidak aktif
-    expect(screen.queryByText("SK i")).toBeNull();
+    expect(screen.queryByText("Rencana Kerja h")).toBeNull();                  // selesai/batal tidak aktif
+    expect(screen.queryByText("Rencana Kerja i")).toBeNull();
   });
 
   it("karyawan lapangan tidak melihat kartu pemeriksaan absensi dan tidak memanggil /attendance", async () => {
     const calls = mockApi((c) => (c.url === "/work-plans" ? { data: [] } : undefined));
     renderRoute("/", { role: "field" });
-    expect(await screen.findByText("Belum ada SK aktif.")).toBeInTheDocument();
+    expect(await screen.findByText("Belum ada rencana kerja aktif.")).toBeInTheDocument();
     expect(screen.queryByText("Absensi perlu diperiksa")).toBeNull();
     expect(calls.some((c) => c.url === "/attendance")).toBe(false);
   });
 
-  it("galat memuat SK: pesan galat, bukan 'Belum ada SK aktif'", async () => {
+  it("galat memuat rencana kerja: pesan galat, bukan 'Belum ada rencana kerja aktif'", async () => {
     mockApi(() => apiError(500, "INTERNAL_ERROR", "Terjadi kesalahan."));
     renderRoute("/", { role: "field" });
-    expect(await screen.findByText("Daftar SK tidak dapat dimuat.")).toBeInTheDocument();
-    expect(screen.queryByText("Belum ada SK aktif.")).toBeNull();
+    expect(await screen.findByText("Daftar rencana kerja tidak dapat dimuat.")).toBeInTheDocument();
+    expect(screen.queryByText("Belum ada rencana kerja aktif.")).toBeNull();
   });
 
   it("HR: dokumen mendekati kedaluwarsa (≤ 30 hari / lewat) tampil, yang aman tidak", async () => {
@@ -78,7 +78,7 @@ describe("beranda", () => {
   it("tanpa izin verifikasi dokumen: tidak memanggil /documents/expiring", async () => {
     const calls = mockApi((c) => (c.url === "/work-plans" ? { data: [] } : undefined));
     renderRoute("/", { role: "PM" });
-    await screen.findByText("Belum ada SK aktif.");
+    await screen.findByText("Belum ada rencana kerja aktif.");
     expect(calls.some((c) => c.url === "/documents/expiring")).toBe(false);
   });
 

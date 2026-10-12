@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { getFileUrl } from "@/services/fileService";
+import { fetchFileUrl } from "@/services/fileService";
 
 /**
  * Mengambil presigned URL MinIO untuk sebuah berkas.
@@ -13,6 +13,6 @@ export function useFileUrl(fileId: string | null | undefined, variant: "thumb" |
     queryKey: ["fileUrl", fileId, variant],
     enabled: Boolean(fileId),
     staleTime: 4 * 60 * 1000, // presigned URL berlaku 5 menit
-    queryFn: async () => (await getFileUrl(fileId as string, variant)).url,
+    queryFn: async () => (await fetchFileUrl(fileId as string, variant)).url,
   });
 }

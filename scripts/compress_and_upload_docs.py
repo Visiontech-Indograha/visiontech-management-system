@@ -10,21 +10,19 @@ from pathlib import Path
 
 import psycopg2
 from minio import Minio
+
+import _config as _cfg
 from minio.error import S3Error
 import fitz
 
 UPLOADS_DIR = Path(r"C:\Users\ageng\visiontect-vms\uploads")
-MINIO_ENDPOINT = "192.168.88.160:9000"
-MINIO_ACCESS_KEY = "[REDACTED-MINIO-USER]"
-MINIO_SECRET_KEY = "[REDACTED-MINIO-SECRET]"
-MINIO_BUCKET = "vms-files"
-MINIO_SECURE = False
-
-DB_HOST = "192.168.88.160"
-DB_PORT = 5433
-DB_USER = "vms_app"
-DB_PASSWORD = "[REDACTED-DB-PASSWORD]"
-DB_NAME = "visiontech_db"
+# Kredensial dibaca dari api/.env (gitignored) atau variabel lingkungan —
+# TIDAK ditulis di kode, agar tidak masuk riwayat git (aturan git-flow §8).
+MINIO_ENDPOINT = _cfg.get("MINIO_ENDPOINT", "127.0.0.1:9100")
+MINIO_ACCESS_KEY = _cfg.get("MINIO_ACCESS_KEY")
+MINIO_SECRET_KEY = _cfg.get("MINIO_SECRET_KEY")
+MINIO_BUCKET = _cfg.get("MINIO_BUCKET", "vms-files")
+MINIO_SECURE = _cfg.get("MINIO_SECURE", "false").lower() == "true"
 
 ORG_ID = "01a0dd85-ab65-737b-8938-a1421957055f"
 UPLOADED_BY = "01a0e5f5-b2f9-7d30-b862-3de528698747"

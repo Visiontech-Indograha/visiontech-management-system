@@ -9,6 +9,14 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased] — `development`
 
+- **Perbaikan test & pembersihan kode (perbaikan QA worktree vms-update):**
+  - `web/src/test/android-download.test.tsx`: update ekspektasi build dari 6 ke 4 agar sesuai dengan manifest `latest.json` yang sebenarnya terbit.
+  - `web/src/components/organisms/attendance/AttendanceFilter.tsx`: hapus `console.log` debug yang tersisa.
+  - `.gitignore`: tambahkan `.agents/`, `.claude/`, `scratch/`, `skills-lock.json` agar file agent config & scratch tidak ikut ter-commit.
+  - `mobile/build/rilis/4/latest.json`: tambah entri `universal` APK (sha256 & size valid) agar HP dengan ABI arm64-v8a yang sudah terinstall tetap bisa update ke universal.
+  - Verifikasi APK: signature v2 valid, certificate SHA-256 cocok dengan `deploy/android-release-cert.sha256`, package `com.visiontech.vms_mobile`, versionCode 4, versionName 1.2.0.
+  - Web tests: 175/175 PASS (29 files), ESLint bersih.
+  - API tests (app_release + deploy_scripts): 26/26 PASS.
 - **Aturan Mutlak Git Flow Agen AI (`GEMINI.md`, `CLAUDE.md`, `.agy/rules/git-flow.md`):** Mengunci aturan global bahwa seluruh agen AI dilarang keras melakukan merge atau commit langsung ke `prod`/`main`. Agen AI hanya diizinkan membuat Pull Request ke branch `development`. Penggabungan ke `prod` sepenuhnya menjadi hak pemilik produk (manusia) melalui proses peninjauan PR resmi.
 - **Build aplikasi mobile di autodeploy & kanal Discord ke-4 (`deploy/autodeploy.sh`, `.env.example`, `deploy/README.md`, `docs/17`):** Menambahkan tahap pembangunan aplikasi mobile Android (Flutter release APK split-per-ABI dan universal) pada alur deploy server otomatis `autodeploy.sh`, memperbarui manifest `latest.json` secara atomik di `$BASE/rilis/android/`, serta mengirim notifikasi hasil kompilasi/rilis ke webhook Discord ke-4 (`DISCORD_WEBHOOK_BUILD` / `DISCORD_WEBHOOK_DIGEST`).
 - **Penyelarasan suite pengujian API terhadap Rencana Kerja v3 & arsitektur modular (`tests/test_plan_*.py`, `0033_availability_per_day.py`, `health_check.py`):** Menyelaraskan ekspektasi pengujian rencana kerja yang masih menggunakan terminologi lama (SK/Adendum) ke Rencana Kerja dan Revisi (T4) serta aturan anggota tim opsional (T5); menyetel fungsi basis data `employee_busy_dates` dan `personnel_conflict` dengan `SECURITY DEFINER SET search_path = vms, public` sesuai aturan RLS; serta menyelaraskan health check database agar 100% lulus (950 lulus, 0 gagal).

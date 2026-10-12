@@ -5015,6 +5015,8 @@ export interface components {
             address?: string | null;
             /** Emergency Contact */
             emergency_contact?: string | null;
+            /** Photo File Id */
+            photo_file_id?: string | null;
             /**
              * Id
              * Format: uuid

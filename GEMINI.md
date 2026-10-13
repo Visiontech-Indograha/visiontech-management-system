@@ -12,9 +12,8 @@ Proyek: VMS — FastAPI (`api/`), React/Vite/shadcn (`web/`), Flutter (`mobile/`
 ## Git — WAJIB
 - **ATURAN GLOBAL AGEN AI (DILARANG MERGE KE PROD):**
   - **DILARANG KERAS merge, commit, atau push langsung ke `prod` / `main`.**
-  - Agen AI **hanya boleh membuat Pull Request ke `development`**.
   - Penggabungan ke `prod` sepenuhnya hak pemilik produk (manusia) melalui PR `development` → `prod`.
-  - **DILARANG merge atau push ke `development`.** Push branch fitur saja; Claude / pemilik yang memverifikasi & merge via PR.
+  - Agen AI diizinkan merge atau push ke `development` jika tugas telah terverifikasi dan lulus uji.
 - Kerja di **worktree terpisah**: `git worktree add ../vms-<nama> -b feature/gemini-<tugas> origin/development`.
 - **DILARANG `git stash`** (tumpukan stash dipakai bersama semua worktree).
 - Stage per path, jangan `git add -A`. Jangan commit `migrate_baca.py`, `test_db.py`, `.env`.
@@ -25,14 +24,8 @@ Proyek: VMS — FastAPI (`api/`), React/Vite/shadcn (`web/`), Flutter (`mobile/`
 ## Kode
 - Web: TypeScript strict; **dilarang** `any`, `@ts-ignore`, `eslint-disable`, `alert/confirm/prompt`; shadcn/ui;
   TanStack Query; 4 keadaan (memuat/kosong/galat/berhasil); sentuh ≥ 44px; input 16px. Kontrak = `web/openapi.json`.
-- API: arsitektur modular domain (`modules/<domain>/routes.py`, `database/`, `shared/`, `core/`), router tipis →
-  `services/` (nama fungsi = transaksi domain.js) → `crud/` (SQL statis, bukan f-string, `CAST(:x AS tipe)` bukan `:x::tipe`);
-  galat `AppError` berbahasa Indonesia. Skema baru `<Entitas>In/Out` (`docs/12` §10); `ruff check app tests` wajib bersih
-  (set aturan di `api/ruff.toml`, baris ≤ 120). Struktur dijaga `api/tests/test_structure.py`.
-
-## Bila ragu
-- **Tanyakan, jangan menebak.** Spesifikasi ambigu atau ada dua pilihan masuk akal → berhenti dan tulis pertanyaannya
-  di baris CATATAN laporan. Jangan mengisi celah dengan asumsi (`docs/12` §12).
+- API: router tipis → `services/` (nama fungsi = transaksi domain.js) → `repositories/` (SQL statis, bukan
+  f-string, `CAST(:x AS tipe)` bukan `:x::tipe`); galat `AppError` berbahasa Indonesia.
 
 ## Bukti selesai (jalankan dari SALINAN BERSIH, bukan disk kerja)
 - Web: `git archive <branch> web | tar -x -C <folder-kosong>` → `npm ci`, `npm run lint`, `npm run typecheck`, `npm test`.

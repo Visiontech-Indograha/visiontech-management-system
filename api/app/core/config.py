@@ -40,8 +40,8 @@ class Settings(BaseSettings):
 
     # Konfigurasi penyimpanan objek (S3/MinIO)
     MINIO_ENDPOINT: str = "127.0.0.1:9000"
-    MINIO_ACCESS_KEY: str = "[REDACTED-MINIO-USER]"
-    MINIO_SECRET_KEY: str = "[REDACTED-MINIO-USER]"
+    MINIO_ACCESS_KEY: str = "minioadmin"
+    MINIO_SECRET_KEY: str = "minioadmin"
     MINIO_BUCKET: str = "vms-files"
     MINIO_SECURE: bool = False
 
@@ -85,8 +85,8 @@ class Settings(BaseSettings):
         missing = [name for name, bad in (
             ("JWT_PRIVATE_KEY_HEX", not self.JWT_PRIVATE_KEY_HEX),
             ("DOC_SIGNING_KEY_HEX", self.DOC_SIGNING_KMS_REF.startswith("env:") and not self.DOC_SIGNING_KEY_HEX),
-            ("MINIO_ACCESS_KEY", self.MINIO_ACCESS_KEY in ("", "[REDACTED-MINIO-USER]")),
-            ("MINIO_SECRET_KEY", self.MINIO_SECRET_KEY in ("", "[REDACTED-MINIO-USER]")),
+            ("MINIO_ACCESS_KEY", self.MINIO_ACCESS_KEY in ("", "minioadmin")),
+            ("MINIO_SECRET_KEY", self.MINIO_SECRET_KEY in ("", "minioadmin")),
         ) if bad]
         if missing:
             raise ValueError("APP_ENV=production tetapi rahasia belum diisi / masih bawaan: " + ", ".join(missing))

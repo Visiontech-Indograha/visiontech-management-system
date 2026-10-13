@@ -9,6 +9,11 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased] — `development`
 
+- **Normalisasi Port Kontainer Basis Data & Diagnostik Deploy (`config.py`, `autodeploy.sh`, `pakai-peran-runtime.sh`, `test_config_database_url.py`):**
+  - Konfigurasi `api/app/core/config.py`: tambahkan fungsi `normalize_database_url_port` dan integrasikan ke validator `_encode_database_url_credentials` agar `DATABASE_URL` dan `MIGRATION_DATABASE_URL` yang keliru memakai port host `5433` untuk host kontainer internal (`vms_db_prod` / `vms_db`) secara otomatis dinormalisasi ke port internal `5432` dengan peringatan log, mencegah insiden `ConnectionRefusedError: [Errno 111]`.
+  - Uji Regresi `api/tests/test_config_database_url.py`: 4 uji baru untuk memvalidasi normalisasi port 5433 ke 5432 pada host kontainer, memastikan port `localhost:5433` di luar Docker tidak terpengaruh, dan memastikan URL yang sudah memakai 5432 tidak diubah.
+  - Skrip Deploy `deploy/autodeploy.sh` & `deploy/pakai-peran-runtime.sh`: perluas `db_hint` dengan deteksi dan pesan kesalahan spesifik untuk ketidakcocokan port 5433 vs 5432, serta pastikan `pakai-peran-runtime.sh` mengonversi port hostpart `vms_db_prod:5433` menjadi `5432`.
+
 - **Tabel Kontak Darurat Karyawan & Penambahan Data Karyawan Lengkap (`0038_employee_emergency_contact.py`, schemas, CRUD, endpoints, web UI):**
   - Basis Data: Migrasi Alembic `0038_employee_emergency_contact.py` membuat tabel terisolasi RLS `vms.employee_emergency_contact` dengan foreign key ke `employee.id`, hak akses untuk `vms_api`, serta backfill otomatis data kontak darurat lama.
   - Backend API: Skema `EmergencyContactCreate/Update/Response`, repository CRUD `CRUDEmergencyContact`, transaksi service `create_emergency_contact`, `list_emergency_contacts`, `update_emergency_contact`, `delete_emergency_contact`, serta router modular di bawah `/employees/{id}/emergency-contacts`.

@@ -11,7 +11,7 @@ from __future__ import annotations
 import pytest
 from sqlalchemy.engine import make_url
 
-from app.core.config import Settings, encode_url_credentials
+from app.core.config import Settings, encode_url_credentials, normalize_database_url_port
 
 _HOST = "vms_db_prod"
 
@@ -130,3 +130,41 @@ def test_repair_is_logged_so_it_is_not_silent(caplog):
         _settings(_url("P@ss"))
     assert "DATABASE_URL" in caplog.text
     assert "belum di-URL-encode" in caplog.text
+
+
+# ── normalize_database_url_port ───────────────────────────────────────────────────────────────
+
+def test_normalize_container_port_5433_to_5432():
+    url = f"postgresql+asyncpg://vms_api:rahasia@{_HOST}:5433/visiontech_db"
+    fixed, changed = normalize_database_url_port(url)
+    assert changed is True
+    parsed = make_url(fixed)
+    assert parsed.host == _HOST
+    assert parsed.port == 5432
+    assert parsed.username == "vms_api"
+    assert parsed.password == "rahasia"
+
+
+def test_localhost_port_5433_is_not_modified():
+    url = "postgresql+asyncpg://vms_app:rahasia@localhost:5433/visiontech_db"
+    fixed, changed = normalize_database_url_port(url)
+    assert changed is False
+    assert fixed == url
+
+
+def test_container_port_already_5432_is_not_modified():
+    url = f"postgresql+asyncpg://vms_api:rahasia@{_HOST}:5432/visiontech_db"
+    fixed, changed = normalize_database_url_port(url)
+    assert changed is False
+    assert fixed == url
+
+
+def test_settings_auto_normalizes_container_port_5433(caplog):
+    url = f"postgresql+asyncpg://vms_api:rahasia@{_HOST}:5433/visiontech_db"
+    with caplog.at_level("WARNING"):
+        settings = _settings(url)
+    parsed = make_url(settings.DATABASE_URL)
+    assert parsed.host == _HOST
+    assert parsed.port == 5432
+    assert "port host 5433" in caplog.text
+    assert "diperbaiki otomatis ke 5432" in caplog.text

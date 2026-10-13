@@ -63,6 +63,24 @@ def encode_url_credentials(url: str) -> tuple[str, bool]:
     return fixed, True
 
 
+def normalize_database_url_port(url: str) -> tuple[str, bool]:
+    """Perbaiki port kontainer ``vms_db_prod:5433`` menjadi ``vms_db_prod:5432``.
+
+    Insiden 2026-10-13: Port PostgreSQL dipetakan ke host sebagai 5433 (0.0.0.0:5433->5432/tcp).
+    Pengguna sering keliru mengisi port 5433 pada DATABASE_URL di api.env padahal di dalam jaringan
+    Docker, kontainer vms_api berkomunikasi langsung dengan kontainer vms_db_prod pada port internal 5432.
+    Jika diisi 5433, koneksi ditolak (ConnectionRefusedError: [Errno 111]).
+    """
+    try:
+        parsed = make_url(url)
+        if parsed.host in ("vms_db_prod", "vms_db") and parsed.port == 5433:
+            fixed_url = parsed.set(port=5432).render_as_string(hide_password=False)
+            return fixed_url, True
+    except Exception:  # noqa: BLE001
+        return url, False
+    return url, False
+
+
 class Settings(BaseSettings):
     """
     Model konfigurasi global untuk VMS.
@@ -131,11 +149,11 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def _encode_database_url_credentials(self) -> Settings:
-        """Sandi DB yang memuat ``@`` wajib di-URL-encode — insiden 2026-10-13.
+        """Sandi DB yang memuat ``@`` wajib di-URL-encode dan port kontainer dinormalisasi.
 
-        Tanpa ini API start lalu mati di ``/ready`` dengan ``socket.gaierror`` yang menyesatkan
-        (terlihat seperti masalah DNS/jaringan, padahal salah parse URL). Nilai diperbaiki otomatis
-        dan dicatat agar tetap terlihat, bukan didiamkan.
+        Tanpa ini API start lalu mati di ``/ready`` dengan ``socket.gaierror`` atau ``ConnectionRefusedError``
+        yang menyesatkan (salah parse URL atau salah port host alih-alih port kontainer).
+        Nilai diperbaiki otomatis dan dicatat agar tetap terlihat, bukan didiamkan.
         """
         for field in ("DATABASE_URL", "MIGRATION_DATABASE_URL"):
             current = getattr(self, field)
@@ -148,7 +166,18 @@ class Settings(BaseSettings):
                     "Perbarui api.env agar tidak bergantung pada perbaikan ini.",
                     field,
                 )
+                current = fixed
                 object.__setattr__(self, field, fixed)
+
+            fixed_port, port_changed = normalize_database_url_port(current)
+            if port_changed:
+                logger.warning(
+                    "%s memakai port host 5433 untuk host kontainer %s — diperbaiki otomatis ke 5432. "
+                    "Perbarui api.env agar memakai port internal 5432.",
+                    field,
+                    make_url(fixed_port).host,
+                )
+                object.__setattr__(self, field, fixed_port)
         return self
 
     @model_validator(mode="after")

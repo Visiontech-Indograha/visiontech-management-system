@@ -80,7 +80,7 @@ def match_employee(filename: str, employees: list[tuple[str, str]]) -> tuple[str
 
 MANUAL_OVERRIDES = {
     "Foto_Rusyidi_Biru.jpeg": "01a0dd85-ab83-7c22-8815-6264145700fc",  # RUSYIDI HALOMOAN SEREGAR
-    "Pass_Foto_3x4_PHR.jpg": "01a0dd85-ab80-736c-b3db-929698e3fe3f",  # HERU PRAYOGA
+    "Pass_Foto_3x4_PHR.jpg": "01a0dd85-ab83-785b-8a1b-4c83681f63d6",  # HANDOKO
     "mega-removebg-preview.png": "01a0dd85-ab8f-7a78-aca4-2ef4a0e3b203",  # MEGAWATI THIO
     "NIta-removebg-preview.png": "01a0dd85-ab7d-7ff7-8b44-c7a92ca20efd",  # Nurfauziah Putri
     "swa_foto_teguh.jpg": "01a0dd85-ab91-7317-ab03-07225b47f56b",  # M. TEGUH WICAKSONO

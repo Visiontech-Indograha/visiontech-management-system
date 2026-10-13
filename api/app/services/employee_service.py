@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import AppError, NotFoundError, ValidationError
 from app.core.permissions import Permission
+from app.crud.crud_emergency_contact import CRUDEmergencyContact
 from app.crud.crud_employee import CRUDEmployee
 from app.crud.crud_org_clock import CRUDOrgClock
 from app.services.access_service import ensure_same_org
@@ -27,6 +28,7 @@ class EmployeeService:
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
         self.repo = CRUDEmployee(db)
+        self.emergency_repo = CRUDEmergencyContact(db)
 
     async def ensure_units(self, org_id: str, *unit_ids: UUID | None) -> None:
         """Unit tujuan harus milik organisasi ini (422 bila bukan)."""
@@ -48,7 +50,13 @@ class EmployeeService:
     async def create(self, org_id: str, data: dict[str, Any]) -> Any:
         """Karyawan baru beserta penempatan perdananya."""
         await self.ensure_units(org_id, data["unit_id"])
-        return await self.repo.insert(org_id, data)
+        emergency_contacts = data.pop("emergency_contacts", None)
+        row = await self.repo.insert(org_id, data)
+        if emergency_contacts:
+            for ec in emergency_contacts:
+                contact_data = ec if isinstance(ec, dict) else ec.model_dump()
+                await self.emergency_repo.insert(org_id, row.id, contact_data)
+        return row
 
     async def update(self, employee_id: UUID, org_id: str, fields: dict[str, Any]) -> Any:
         """Ubah data pribadi (jabatan/unit lewat /assignments). Organisasi lain → None."""
@@ -167,3 +175,36 @@ class EmployeeService:
         today = (await CRUDOrgClock(self.db).local_now(org_id)).today
         await self.repo.offboard(employee_id, reason.strip(), today)
         return {"id": str(employee_id), "message": OFFBOARDED}
+
+    async def list_emergency_contacts(self, employee_id: UUID, org_id: str) -> list[Any]:
+        """Daftar kontak darurat karyawan dalam organisasi."""
+        await self.get(employee_id, org_id)
+        return await self.emergency_repo.list_by_employee(employee_id, org_id)
+
+    async def get_emergency_contact(self, employee_id: UUID, contact_id: UUID, org_id: str) -> Any:
+        """Satu kontak darurat."""
+        row = await self.emergency_repo.get(contact_id, employee_id, org_id)
+        if row is None:
+            raise NotFoundError("Kontak darurat")
+        return row
+
+    async def create_emergency_contact(self, employee_id: UUID, org_id: str, data: dict[str, Any]) -> Any:
+        """Tambah kontak darurat."""
+        await self.get(employee_id, org_id)
+        return await self.emergency_repo.insert(org_id, employee_id, data)
+
+    async def update_emergency_contact(
+        self, employee_id: UUID, contact_id: UUID, org_id: str, fields: dict[str, Any]
+    ) -> Any:
+        """Ubah kontak darurat."""
+        row = await self.emergency_repo.update_fields(contact_id, employee_id, org_id, fields)
+        if row is None:
+            raise NotFoundError("Kontak darurat")
+        return row
+
+    async def delete_emergency_contact(self, employee_id: UUID, contact_id: UUID, org_id: str) -> None:
+        """Hapus kontak darurat."""
+        deleted = await self.emergency_repo.delete(contact_id, employee_id, org_id)
+        if not deleted:
+            raise NotFoundError("Kontak darurat")
+

@@ -12,7 +12,9 @@ export {
   ArrowUp,
   Bell,
   CalendarClock,
+  Camera,
   ClipboardCheck,
+  Edit2,
   FileCheck2,
   FileClock,
   FileWarning,
@@ -23,6 +25,7 @@ export {
   PanelLeftClose,
   PanelLeftOpen,
   Paperclip,
+  Phone,
   Plus,
   ScanFace,
   ShieldCheck,
@@ -30,6 +33,8 @@ export {
   Smile,
   Timer,
   Trash2,
+  Upload,
+  User,
   X,
 } from "lucide-react";
 export type { LucideIcon } from "lucide-react";

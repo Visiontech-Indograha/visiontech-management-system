@@ -9,6 +9,13 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased] — `development`
 
+- **Tabel Kontak Darurat Karyawan & Penambahan Data Karyawan Lengkap (`0038_employee_emergency_contact.py`, schemas, CRUD, endpoints, web UI):**
+  - Basis Data: Migrasi Alembic `0038_employee_emergency_contact.py` membuat tabel terisolasi RLS `vms.employee_emergency_contact` dengan foreign key ke `employee.id`, hak akses untuk `vms_api`, serta backfill otomatis data kontak darurat lama.
+  - Backend API: Skema `EmergencyContactCreate/Update/Response`, repository CRUD `CRUDEmergencyContact`, transaksi service `create_emergency_contact`, `list_emergency_contacts`, `update_emergency_contact`, `delete_emergency_contact`, serta router modular di bawah `/employees/{id}/emergency-contacts`.
+  - Penambahan Karyawan Lengkap: Endpoint `POST /employees` mendukung penyimpanan langsung foto profil (`photo_file_id`), cara absensi (`attendance_mode`), tanggal lahir (`birth_date`), alamat (`address`), dan kontak darurat tersusun.
+  - Web UI: Dialog tambah karyawan (`EmployeeCreateDialog`) dilengkapi unggah/pratinjau foto profil, isian lengkap, dan kontak darurat; dialog edit profil (`EmployeeProfileDialog`) mendukung pergantian foto profil; serta panel khusus kontak darurat (`EmergencyContactsPanel`) di halaman detail karyawan.
+  - Aturan Bersih Commit & Agent: Menambahkan aturan mutlak di `GEMINI.md`, `CLAUDE.md`, `.agy/rules/git-flow.md`, dan `.gitignore` untuk melarang pencantuman AI sebagai author/co-author commit serta melarang commit/push berkas/folder internal agen AI (`.agents/`, `.hermes/`, `.claude/`, `.gemini/`, dsb.) ke GitHub.
+
 - **Pemulihan deploy otomatis & penguatan kestabilan produksi (`0037_employee_photo.py`, `config.py`, `autodeploy.sh`, `backup.sh`, `pakai-peran-runtime.sh`, `test_config_database_url.py`):**
   - Migrasi `0037_employee_photo`: jadikan penambahan foreign key `fk_employee_photo_file` idempoten dengan penanganan eksepsi `duplicate_object`, menyelesaikan `DuplicateObjectError` pada basis data yang sudah memuat constraint dari bootstrap awal `db/01_schema.sql`.
   - Inti konfigurasi `api/app/core/config.py`: tambahkan sanitasi `encode_url_credentials` dan model validator agar sandi dengan karakter khusus (`@`) otomatis di-encode (`%40`), mencegah salah urai host SQLAlchemy dan kegagalan `socket.gaierror`. Dilengkapi 22 uji regresi pada `test_config_database_url.py`.

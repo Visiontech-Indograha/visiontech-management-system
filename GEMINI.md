@@ -14,6 +14,10 @@ Proyek: VMS — FastAPI (`api/`), React/Vite/shadcn (`web/`), Flutter (`mobile/`
   - **DILARANG KERAS merge, commit, atau push langsung ke `prod` / `main`.**
   - Penggabungan ke `prod` sepenuhnya hak pemilik produk (manusia) melalui PR `development` → `prod`.
   - Agen AI diizinkan merge atau push ke `development` jika tugas telah terverifikasi dan lulus uji.
+- **ATURAN IDENTITAS COMMIT & DOKUMENTASI AGENT (WAJIB):**
+  - **DILARANG KERAS** menyertakan Gemini, Claude, AI, bot, atau asisten apa pun sebagai co-author (`Co-authored-by`), collaborator, atau kontributor dalam pesan commit maupun metadata git.
+  - Semua commit harus bersih dari jejak/trailer atribusi AI (hanya author manusia sesuai konfigurasi git).
+  - **DILARANG KERAS** meng-commit atau push berkas/folder internal agen AI (seperti `.agents/`, `.hermes/`, `.claude/`, `.gemini/`, `.cursor/`, `.windsurf/`, file scratch agent, dsb.) ke repositori GitHub. Pastikan folder tersebut masuk `.gitignore`.
 - Kerja di **worktree terpisah**: `git worktree add ../vms-<nama> -b feature/gemini-<tugas> origin/development`.
 - **DILARANG `git stash`** (tumpukan stash dipakai bersama semua worktree).
 - Stage per path, jangan `git add -A`. Jangan commit `migrate_baca.py`, `test_db.py`, `.env`.

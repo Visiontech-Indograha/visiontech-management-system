@@ -245,16 +245,22 @@ class CRUDEmployee(CRUDBase):
             {"id": employee_id, "org": org_id})
 
     async def insert(self, org_id: UUID | str, data: dict[str, Any]) -> Any:
-        """Karyawan baru + penempatan perdana. → (id, is_active, offboarded_at, offboarding_reason)."""
+        """Karyawan baru + penempatan perdana. → (id, is_active, offboarded_at, offboarding_reason, attendance_mode, photo_file_id)."""
+        params = {
+            "attendance_mode": data.get("attendance_mode", "FIELD"),
+            "photo_file_id": data.get("photo_file_id"),
+            **data,
+            "org": org_id,
+        }
         row = await self.fetchone(
             """
             INSERT INTO vms.employee (organization_id, employee_no, full_name, position, unit_id, email, phone,
-                                      join_date, birth_date, address, emergency_contact)
+                                      join_date, birth_date, address, emergency_contact, attendance_mode, photo_file_id)
             VALUES (:org, :employee_no, :full_name, :position, :unit_id, :email, :phone, :join_date, :birth_date,
-                    :address, :emergency_contact)
-            RETURNING id, is_active, offboarded_at, offboarding_reason
+                    :address, :emergency_contact, :attendance_mode, :photo_file_id)
+            RETURNING id, is_active, offboarded_at, offboarding_reason, attendance_mode, photo_file_id
             """,
-            {"org": org_id, **data})
+            params)
         await self.execute(
             """
             INSERT INTO vms.employee_assignment (employee_id, position, unit_id, valid_from)

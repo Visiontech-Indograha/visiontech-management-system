@@ -12,6 +12,8 @@ description: Mencegah agen AI melakukan komit langsung ke branch production.
 4. Selalu periksa branch aktif menggunakan `git branch` sebelum melakukan modifikasi file besar atau `git commit`.
 5. Jika posisi saat ini berada di `prod`, peringatkan Pengguna dan otomatis jalankan `git checkout development` sebelum melanjutkan tugas yang mengubah kode.
 6. Jika tugas mengharuskan penerapan ke production, berikan instruksi kepada Pengguna untuk membuat *Pull Request* (PR) di GitHub, jangan pernah mem-bypass PR.
+7. **DILARANG KERAS** menyertakan Gemini, Claude, AI, bot, atau asisten apa pun sebagai co-author (`Co-authored-by`), collaborator, atau kontributor dalam pesan commit maupun metadata git. Commit harus murni identitas developer manusia.
+8. **DILARANG KERAS** meng-commit atau push berkas/folder internal agen AI (seperti `.agents/`, `.hermes/`, `.claude/`, `.gemini/`, `.cursor/`, `.windsurf/`, file scratch agent, dsb.) ke GitHub. Pastikan folder tersebut masuk `.gitignore`.
 
 ## Wajib Commit dan Push Setiap Tugas Selesai
 

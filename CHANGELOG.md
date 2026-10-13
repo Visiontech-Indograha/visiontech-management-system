@@ -9,6 +9,12 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased] — `development`
 
+- **Pembaruan Alur Absensi Mobile, Penugasan Mandiri PM pada Rencana Kerja, dan Validasi Pulang Wajah Saja (`attendance_screen.dart`, `crud_plan_assignment.py`, `crud_plan_draft.py`, `plan_assignment_service.py`, `0039_checkout_face_only.py`, `db/02_functions.sql`, `rilis-apk.sh`):**
+  - **Alur Absensi Masuk Mobile (`mobile/lib/features/attendance/attendance_screen.dart`):** Mengubah urutan absensi masuk: (1) mendeteksi lokasi koordinat terlebih dahulu, (2) melakukan verifikasi pengenalan wajah, (3) jika berada di luar radius lokasi toleransi kerja, mengambil swafoto ber-watermark beserta penjelasan alasan untuk ditinjau oleh Project Manager (PM).
+  - **Validasi Absensi Pulang (`db/02_functions.sql`, `0039_checkout_face_only.py`, `attendance_screen.dart`):** Menyederhanakan validasi pulang menjadi verifikasi wajah saja tanpa kewajiban swafoto atau penjelasan saat di luar radius toleransi; status absensi tetap otomatis ditandai `NEEDS_REVIEW` untuk tinjauan PM.
+  - **Penugasan Mandiri PM pada Rencana Kerja (`crud_plan_draft.py`, `crud_plan_assignment.py`, `plan_assignment_service.py`):** Mengizinkan Project Manager (PM) untuk memasukkan diri sendiri sebagai ketua atau anggota tim ke dalam draf rencana kerja (`_FIELD_STAFF` menyertakan PM, `available_personnel` menyertakan PM saat pembuat adalah PM, dan `eligible_field_staff` tidak lagi mengecualikan PM).
+  - **Skrip Rilis Android (`scripts/rilis-apk.sh`):** Menambahkan opsi `-k` pada panggilan `curl` ke portal untuk verifikasi rilis yang andal pada lingkungan Windows/lokal.
+
 - **Sinkronisasi Skema DB untuk CI & Pembaruan Rilis Mobile (`db/*.sql`, `mobile/pubspec.yaml`, `GEMINI.md`):**
   - Sinkronisasi Skema Statis CI (`db/01_schema.sql`, `db/03_policies.sql`, `db/05_face.sql`): menyinkronkan definisi tabel `employee_emergency_contact`, indeks, RLS tenant isolation, dan hak akses `GRANT DELETE` untuk `vms_app` dan `vms_api`, menyelesaikan kegagalan uji integrasi CI GitHub Actions pada runner basis data bersih (`alembic stamp head`).
   - Keamanan Fungsi PostgreSQL (`db/02_functions.sql`): menambahkan `SECURITY DEFINER SET search_path = vms, public` pada fungsi `vms.personnel_conflict` dan `vms.employee_busy_dates` agar sesuai dengan kebijakan keamanan fungsi basis data di `test_rls_app_role.py`.

@@ -89,6 +89,7 @@ class CRUDPlanAssignment(CRUDBase):
         period_start: date,
         period_end: date,
         unit_id: UUID | str | None,
+        include_pm: bool = False,
     ) -> list[Any]:
         """Mengambil data pegawai lapangan yang tersedia (tidak bentrok jadwal) untuk ditugaskan.
 
@@ -97,13 +98,14 @@ class CRUDPlanAssignment(CRUDBase):
             period_start (date): Tanggal mulai periode SK.
             period_end (date): Tanggal akhir periode SK.
             unit_id (UUID | str | None): Filter opsional untuk spesifik ID unit bisnis.
+            include_pm (bool): Apakah manajer proyek (PM) diikutsertakan dalam pilihan.
 
         Returns:
             list[Any]: Daftar pegawai lapangan yang memenuhi kriteria.
         """
         # Melakukan verifikasi beberapa kriteria secara bersamaan:
         # 1. EXISTS untuk memastikan punya akun app_user aktif.
-        # 2. NOT EXISTS untuk memastikan bukan user office (PM, OPS, dll).
+        # 2. NOT EXISTS untuk memastikan bukan user office. Jika include_pm aktif, PM diizinkan.
         # 3. NOT EXISTS memanggil stored function vms.personnel_conflict untuk
         #    memastikan tidak ada konflik jadwal/penugasan pada rentang daterange tersebut.
         return list(await self.fetchall(
@@ -120,7 +122,12 @@ class CRUDPlanAssignment(CRUDBase):
                   FROM vms.app_user office_user
                   JOIN vms.user_role office_role ON office_role.user_id = office_user.id
                   WHERE office_user.employee_id = e.id AND office_user.is_active
-                    AND office_role.role IN ('PM', 'OPS', 'ADMIN', 'HR', 'FINANCE', 'ASSET')
+                    AND (
+                        (NOT CAST(:include_pm AS boolean)
+                         AND office_role.role IN ('PM', 'OPS', 'ADMIN', 'HR', 'FINANCE', 'ASSET'))
+                        OR (CAST(:include_pm AS boolean)
+                            AND office_role.role IN ('OPS', 'ADMIN', 'HR', 'FINANCE', 'ASSET'))
+                    )
               )
               AND (CAST(:unit AS uuid) IS NULL OR e.unit_id = CAST(:unit AS uuid))
               AND NOT EXISTS (
@@ -130,7 +137,7 @@ class CRUDPlanAssignment(CRUDBase):
               )
             ORDER BY e.full_name
             """,
-            {"org": org_id, "start": period_start, "end": period_end, "unit": unit_id},
+            {"org": org_id, "start": period_start, "end": period_end, "unit": unit_id, "include_pm": include_pm},
         ))
 
     async def eligible_field_staff(
@@ -167,7 +174,7 @@ class CRUDPlanAssignment(CRUDBase):
                   FROM vms.app_user office_user
                   JOIN vms.user_role office_role ON office_role.user_id = office_user.id
                   WHERE office_user.employee_id = e.id AND office_user.is_active
-                    AND office_role.role IN ('PM', 'OPS', 'ADMIN', 'HR', 'FINANCE', 'ASSET')
+                    AND office_role.role IN ('OPS', 'ADMIN', 'HR', 'FINANCE', 'ASSET')
               )
             """,
             {"ids": ids, "org": org_id},

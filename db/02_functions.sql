@@ -294,16 +294,6 @@ BEGIN
         NEW.check_out_outside := v_dist > v_radius;
       END IF;
       IF NEW.check_out_outside THEN
-        IF COALESCE(current_setting('app.relax_checkout', true), '') <> 'on' AND NEW.source IN ('MOBILE','WEB') THEN
-          IF NEW.check_out_selfie_file_id IS NULL THEN
-            RAISE EXCEPTION 'Pulang di luar radius toleransi (% m > % m): swafoto wajib dilampirkan.',
-              NEW.check_out_distance_m, v_radius USING ERRCODE = '23514';
-          END IF;
-          IF NEW.check_out_explanation IS NULL OR btrim(NEW.check_out_explanation) = '' THEN
-            RAISE EXCEPTION 'Pulang di luar radius toleransi (% m > % m): isi penjelasan.',
-              NEW.check_out_distance_m, v_radius USING ERRCODE = '23514';
-          END IF;
-        END IF;
         IF NEW.status = 'AUTO_VALID' THEN
           NEW.status := 'NEEDS_REVIEW';
         END IF;

@@ -220,7 +220,18 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       );
       final radius = (site['radius_m'] as num?) ?? 50;
       final outside = distance > radius;
-      // R-33: penjelasan wajib di luar zona dan saat mengajukan ulang absensi yang ditolak (dicek server juga).
+
+      // 1. Lokasi di urutan pertama sudah didapat; 2. Baru verifikasi wajah.
+      String? faceProbeId;
+      if (_faceEnrolled) {
+        if (!mounted) return;
+        final face = await captureFaceProbe(context, ref);
+        if (face.cancelled) return;
+        if (face.error != null) return _snack(face.error!);
+        faceProbeId = face.probeId;
+      }
+
+      // 3. Jika lokasi di luar radius yang ditentukan: perlu swafoto setelah verifikasi wajah lalu ditinjau oleh PM.
       String? explanation;
       if (outside || _rejectedToday > 0) {
         if (!mounted) return;
@@ -234,18 +245,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
         if (explanation == null) return;
       }
       String? selfieId;
-      String? faceProbeId;
       File? selfieFile;
-      // Pengenalan wajah (karyawan yang sudah mendaftar): dua tantangan acak + gambar wajah sementara. Ini BUKAN
-      // foto absensi. Server menghitung cocok/tidak; jaringan putus → lanjut luring (server menandai bila perlu).
-      if (_faceEnrolled) {
-        if (!mounted) return;
-        final face = await captureFaceProbe(context, ref);
-        if (face.cancelled) return;
-        if (face.error != null) return _snack(face.error!);
-        faceProbeId = face.probeId;
-      }
-      // Foto bukti (swafoto berwatermark) HANYA di luar radius.
       if (outside) {
         if (!mounted) return;
         final (file, err) = await captureWatermarkedPhoto(
@@ -284,7 +284,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
         _snack('Absen masuk tercatat.');
       } on DioException catch (e) {
         if (!isNetworkFailure(e)) rethrow;
-        // R-34: tanpa sinyal → rekam luring bertanda tangan, kirim otomatis saat online.
+        // R-34: tanpa sinyal — rekam luring bertanda tangan, kirim otomatis saat online.
         await ref
             .read(syncEngineProvider)
             .offlineAttendance
@@ -316,51 +316,9 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     try {
       final pos = await _position();
       if (pos == null) return;
-      // T7: pulang di luar radius lokasi absen masuk → konfirmasi, penjelasan, dan swafoto (tidak masuk galeri).
-      // Jarak resmi dihitung ulang server; ini hanya untuk meminta bukti lebih dulu.
-      final site = _sites.where((s) => s['id'] == _today?['site_id']).firstOrNull;
-      var outside = false;
-      var distance = 0.0;
-      num radius = 50;
-      if (site != null && site['location'] is Map) {
-        final loc = site['location'] as Map;
-        distance = Geolocator.distanceBetween(
-          pos.latitude,
-          pos.longitude,
-          (loc['lat'] as num).toDouble(),
-          (loc['lng'] as num).toDouble(),
-        );
-        radius = (site['radius_m'] as num?) ?? 50;
-        outside = distance > radius;
-      }
-      String? explanation;
-      File? selfieFile;
-      if (outside && _today?['status'] != 'OFFLINE') {
-        if (!mounted) return;
-        explanation = await _askExplanation(
-          title: 'Pulang di luar zona',
-          info:
-              'Anda ${distance.round()} m dari ${site!['name']} (radius ${radius.round()} m). '
-              'Jelaskan mengapa pulang di luar zona.',
-        );
-        if (explanation == null) return;
-        if (!mounted) return;
-        final (file, err) = await captureWatermarkedPhoto(
-          context: context,
-          label: 'Swafoto pulang di luar radius',
-          kind: LocalFileKind.selfie,
-          hint:
-              'Anda ${distance.round()} m dari ${site['name']}. Swafoto wajib di luar radius.',
-          preferFrontCamera: true,
-        );
-        if (file == null) {
-          if (err != null) _snack(err);
-          return;
-        }
-        selfieFile = file;
-      }
+
       String? faceProbeId;
-      // Pulang: hanya pengenalan wajah, TANPA foto bukti.
+      // Validasi pulang: hanya verifikasi wajah saja.
       if (_faceEnrolled) {
         if (!mounted) return;
         final face = await captureFaceProbe(context, ref);
@@ -387,9 +345,6 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
         );
       } else {
         try {
-          final selfieId = selfieFile == null
-              ? null
-              : await ref.read(syncEngineProvider).api.uploadFile(selfieFile);
           await ref
               .read(syncEngineProvider)
               .api
@@ -398,8 +353,6 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                 lng: pos.longitude,
                 accuracyM: pos.accuracy,
                 faceProbeId: faceProbeId,
-                selfieFileId: selfieId,
-                explanation: explanation,
               );
           _snack('Absen pulang tercatat.');
         } on DioException catch (e) {

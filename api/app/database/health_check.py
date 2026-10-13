@@ -21,7 +21,12 @@ async def check_database_health() -> bool:
     try:
         active_engine = getattr(db_session, "engine", engine)
         async with active_engine.connect() as conn:
-            schema_ok = await conn.scalar(text("SELECT to_regclass('vms.organization') IS NOT NULL"))
+            # Alembic membuat tabel version di schema `public`, bukan `vms`.
+            # Periksa keduanya: skema aplikasi ada DAN migrasi sudah pernah dijalankan.
+            schema_ok = await conn.scalar(
+                text("SELECT to_regclass('vms.organization') IS NOT NULL "
+                     "AND to_regclass('public.alembic_version') IS NOT NULL")
+            )
             return bool(schema_ok)
     except (OSError, SQLAlchemyError):
         return False

@@ -33,11 +33,11 @@ SQL_HINT = re.compile(r"\b(select|insert|update|delete|returning|where|from)\b",
 
 # "berkas | aturan" → jumlah pelanggaran lama (R-31, 2026-09-30); hanya boleh menyusut.
 KNOWN: dict[str, int] = {
-    "app/api/v1/endpoints/audit.py | offset": 1,
-    "app/api/v1/endpoints/employees.py | like-leading-wildcard": 1,
-    "app/api/v1/endpoints/employees.py | offset": 1,
     "app/crud/crud_attendance_session.py | offset": 1,
     "app/crud/crud_plan_change.py | not-in-subquery": 1,
+    "app/crud/crud_audit.py | offset": 1,
+    "app/crud/crud_employee.py | like-leading-wildcard": 1,
+    "app/crud/crud_employee.py | offset": 1,
 }
 
 

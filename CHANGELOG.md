@@ -9,6 +9,13 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased] — `development`
 
+- **Sinkronisasi Skema DB untuk CI & Pembaruan Rilis Mobile (`db/*.sql`, `mobile/pubspec.yaml`, `GEMINI.md`):**
+  - Sinkronisasi Skema Statis CI (`db/01_schema.sql`, `db/03_policies.sql`, `db/05_face.sql`): menyinkronkan definisi tabel `employee_emergency_contact`, indeks, RLS tenant isolation, dan hak akses `GRANT DELETE` untuk `vms_app` dan `vms_api`, menyelesaikan kegagalan uji integrasi CI GitHub Actions pada runner basis data bersih (`alembic stamp head`).
+  - Keamanan Fungsi PostgreSQL (`db/02_functions.sql`): menambahkan `SECURITY DEFINER SET search_path = vms, public` pada fungsi `vms.personnel_conflict` dan `vms.employee_busy_dates` agar sesuai dengan kebijakan keamanan fungsi basis data di `test_rls_app_role.py`.
+  - Aplikasi Mobile Android (`mobile/pubspec.yaml`): menaikkan versi rilis ke `1.2.0+5`, memastikan kunci rilis resmi `key.properties` tersambung ke `vms-release-2.jks`, dan mengonfirmasi keberhasilan `flutter analyze` (0 masalah) serta `flutter test` (116 uji lulus).
+  - Pembersihan Berkas Usang: menghapus berkas catatan pengujian usang `docs/_t4-uji-api-teks-lama.txt`.
+  - Aturan Tetap Agen (`GEMINI.md`): mendokumentasikan aturan permanen *Dual-Schema Rule* yang mewajibkan sinkronisasi ganda setiap migrasi Alembic baru ke berkas statis `db/*.sql`.
+
 - **Normalisasi Port Kontainer Basis Data & Diagnostik Deploy (`config.py`, `autodeploy.sh`, `pakai-peran-runtime.sh`, `test_config_database_url.py`):**
   - Konfigurasi `api/app/core/config.py`: tambahkan fungsi `normalize_database_url_port` dan integrasikan ke validator `_encode_database_url_credentials` agar `DATABASE_URL` dan `MIGRATION_DATABASE_URL` yang keliru memakai port host `5433` untuk host kontainer internal (`vms_db_prod` / `vms_db`) secara otomatis dinormalisasi ke port internal `5432` dengan peringatan log, mencegah insiden `ConnectionRefusedError: [Errno 111]`.
   - Uji Regresi `api/tests/test_config_database_url.py`: 4 uji baru untuk memvalidasi normalisasi port 5433 ke 5432 pada host kontainer, memastikan port `localhost:5433` di luar Docker tidak terpengaruh, dan memastikan URL yang sudah memakai 5432 tidak diubah.

@@ -47,6 +47,7 @@ ALTER TABLE organization        ENABLE ROW LEVEL SECURITY;
 ALTER TABLE business_unit       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE employee            ENABLE ROW LEVEL SECURITY;
 ALTER TABLE employee_document   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE employee_emergency_contact ENABLE ROW LEVEL SECURITY;
 ALTER TABLE work_plan           ENABLE ROW LEVEL SECURITY;
 ALTER TABLE plan_document       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE attendance          ENABLE ROW LEVEL SECURITY;
@@ -61,6 +62,7 @@ ALTER TABLE audit_event         ENABLE ROW LEVEL SECURITY;
 CREATE POLICY org_isolation ON organization USING (id = current_org_id());
 CREATE POLICY unit_isolation ON business_unit USING (organization_id = current_org_id());
 CREATE POLICY employee_isolation ON employee USING (organization_id = current_org_id());
+CREATE POLICY employee_emergency_contact_isolation ON employee_emergency_contact USING (organization_id = current_org_id());
 CREATE POLICY asset_isolation ON asset USING (organization_id = current_org_id());
 CREATE POLICY audit_isolation ON audit_event USING (organization_id = current_org_id());
 CREATE POLICY offline_isolation ON offline_operation

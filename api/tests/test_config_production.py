@@ -24,8 +24,8 @@ def test_production_with_all_secrets_starts():
 @pytest.mark.parametrize(("field", "value"), [
     ("JWT_PRIVATE_KEY_HEX", ""),
     ("DOC_SIGNING_KEY_HEX", ""),
-    ("MINIO_ACCESS_KEY", "[REDACTED-MINIO-USER]"),
-    ("MINIO_SECRET_KEY", "[REDACTED-MINIO-USER]"),
+    ("MINIO_ACCESS_KEY", "minioadmin"),
+    ("MINIO_SECRET_KEY", "minioadmin"),
 ])
 def test_production_refuses_missing_or_default_secret(field: str, value: str):
     with pytest.raises(ValidationError, match=field):

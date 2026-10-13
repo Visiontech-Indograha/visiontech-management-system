@@ -313,7 +313,7 @@ Disimpan di **GitHub Secrets** dan `.env` server, tidak pernah di Git:
 | `DISCORD_WEBHOOK_CI` | Kanal `#vms-ci` |
 | `DISCORD_WEBHOOK_DEPLOY` | Kanal `#vms-deploy` |
 | `DISCORD_WEBHOOK_ALERTS` | Kanal `#vms-alerts` |
-| `DISCORD_WEBHOOK_DIGEST` | Kanal `#vms-digest` |
+| `DISCORD_WEBHOOK_BUILD` / `DISCORD_WEBHOOK_DIGEST` | Kanal `#vms-digest` (hasil build aplikasi & ringkasan) |
 | `TAILSCALE_OAUTH_CLIENT` | Runner bergabung ke tailnet |
 | `REGISTRY_TOKEN` | Container registry |
 | `DEPLOY_SSH_KEY` | Deploy lewat Tailscale |

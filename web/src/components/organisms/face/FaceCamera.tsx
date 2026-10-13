@@ -1,8 +1,11 @@
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ScanFace, Smile } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, type ComponentType } from "react";
-import { Button } from "@/components/atoms/Button";
-import { api, ApiError } from "@/lib/apiClient";
+import { ApiError } from "@/lib/apiClient";
 import { errorMessage } from "@/lib/errors";
+import { ActionButton } from "@/components/molecules/ActionButton";
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ScanFace, Smile } from "@/components/molecules/Glyphs";
+import { TextBlock } from "@/components/molecules/TextBlock";
+import { VideoView } from "@/components/molecules/VideoView";
+import { checkFaceChallenge } from "@/services/faceService";
 
 interface Challenge {
   id: string;
@@ -33,12 +36,6 @@ function pick<T>(items: readonly T[], n: number): T[] {
     [pool[i], pool[j]] = [pool[j]!, pool[i]!];
   }
   return pool.slice(0, n);
-}
-
-interface ChallengeResponse {
-  status: "sukses" | "menunggu";
-  detail: string;
-  proof?: string | null;
 }
 
 export interface FaceLiveness {
@@ -116,7 +113,7 @@ export function FaceCamera({
       form.append("file", await snapshot(), "frame.jpg");
       form.append("challenge", ch.id);
       try {
-        const res = (await api.post<ChallengeResponse>("/face/challenge-check", form)).data;
+        const res = await checkFaceChallenge(form);
         if (res.status === "sukses") return res.proof ?? "";
         setHint(res.detail || ch.text);
       } catch (e) {
@@ -204,7 +201,7 @@ export function FaceCamera({
   return (
     <div className="space-y-3" data-testid="face-capture">
       <div className="relative mx-auto aspect-[4/3] w-full max-w-md overflow-hidden rounded-lg bg-black">
-        <video
+        <VideoView
           ref={videoRef}
           playsInline
           muted
@@ -224,31 +221,31 @@ export function FaceCamera({
       {running && (
         <div className="space-y-1 text-center" aria-live="polite">
           {phase === "challenge" && (
-            <p className="text-xs text-mist">
+            <TextBlock className="text-xs text-mist">
               {step < CHALLENGE_COUNT ? `Tantangan ${step + 1} dari ${CHALLENGE_COUNT}` : "Luruskan wajah"}
-            </p>
+            </TextBlock>
           )}
-          <p className="text-base font-semibold" data-testid="face-hint">
+          <TextBlock className="text-base font-semibold" data-testid="face-hint">
             {hint}
-          </p>
+          </TextBlock>
         </div>
       )}
       {phase === "idle" && (
-        <p className="text-center text-xs text-mist">
+        <TextBlock className="text-center text-xs text-mist">
           Duduk di tempat terang, wajah tepat di dalam oval, jarak sekitar satu lengan. Ikuti dua gerakan acak (kiri,
           kanan, atas, bawah, atau buka mulut), lalu hadap lurus.
-        </p>
+        </TextBlock>
       )}
       {phase === "error" && (
-        <p role="alert" className="text-center text-sm text-danger">
+        <TextBlock role="alert" className="text-center text-sm text-danger">
           {error}
-        </p>
+        </TextBlock>
       )}
-      {phase === "done" && <p className="text-center text-sm font-medium text-success">{doneMessage}</p>}
+      {phase === "done" && <TextBlock className="text-center text-sm font-medium text-success">{doneMessage}</TextBlock>}
 
       {!running && phase !== "done" && (
         <div className="flex justify-center">
-          <Button onClick={start}>{phase === "error" ? "Coba Lagi" : startLabel}</Button>
+          <ActionButton onClick={start}>{phase === "error" ? "Coba Lagi" : startLabel}</ActionButton>
         </div>
       )}
     </div>

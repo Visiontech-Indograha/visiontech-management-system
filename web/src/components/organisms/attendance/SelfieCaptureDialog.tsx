@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { Button } from "@/components/atoms/Button";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
-import { api } from "@/lib/apiClient";
 import { errorMessage } from "@/lib/errors";
+import { ActionButton } from "@/components/molecules/ActionButton";
+import { TextBlock } from "@/components/molecules/TextBlock";
+import { VideoView } from "@/components/molecules/VideoView";
+import { uploadForm } from "@/services/uploadService";
 
 interface Point {
   lat: number;
@@ -104,8 +106,7 @@ export function SelfieCaptureDialog({
       if (!blob) throw new Error("blob");
       const form = new FormData();
       form.append("file", blob, "swafoto-absen.jpg");
-      const uploaded = (await api.post<{ file_id: string }>("/files/upload", form)).data;
-      onCaptured(uploaded.file_id);
+      onCaptured(await uploadForm(form));
     } catch (err) {
       setUploadError(errorMessage(err, "Swafoto gagal disimpan. Coba lagi."));
     } finally {
@@ -120,22 +121,22 @@ export function SelfieCaptureDialog({
       onClose={onCancel}
       footer={
         <>
-          <Button variant="outline" onClick={onCancel} disabled={uploading}>
+          <ActionButton variant="outline" onClick={onCancel} disabled={uploading}>
             Batal
-          </Button>
-          <Button onClick={capture} disabled={!ready || uploading}>
+          </ActionButton>
+          <ActionButton onClick={capture} disabled={!ready || uploading}>
             {uploading ? "Menyimpan..." : "Ambil foto"}
-          </Button>
+          </ActionButton>
         </>
       }
     >
-      <p className="mb-3 text-sm text-mist">{info}</p>
+      <TextBlock className="mb-3 text-sm text-mist">{info}</TextBlock>
       {cameraError ? (
-        <p role="alert" className="rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
+        <TextBlock role="alert" className="rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
           {cameraError}
-        </p>
+        </TextBlock>
       ) : (
-        <video
+        <VideoView
           ref={videoRef}
           muted
           playsInline
@@ -144,9 +145,9 @@ export function SelfieCaptureDialog({
         />
       )}
       {uploadError && (
-        <p role="alert" className="mt-3 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
+        <TextBlock role="alert" className="mt-3 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
           {uploadError}
-        </p>
+        </TextBlock>
       )}
     </VmsDialog>
   );

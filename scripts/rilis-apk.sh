@@ -88,9 +88,12 @@ cmd_bangun() {
   local min_build=$cur_min; [ "$wajib" = 1 ] && min_build=$build
 
   info "build $name+$build → $api (target $targets)"
-  rm -f "$MOBILE"/build/app/outputs/flutter-apk/app-*-release.apk   # sisa build ABI lain tidak ikut terbit
+  rm -f "$MOBILE"/build/app/outputs/flutter-apk/app-*-release.apk "$MOBILE"/build/app/outputs/flutter-apk/app-release.apk
   (cd "$MOBILE" && "$FLUTTER" build apk --release --split-per-abi --target-platform "$targets" \
      --build-name "$name" --build-number "$build" -Pforce-version-code-ignoring-abi=true $cleartext \
+     --dart-define=API_BASE_URL="$api")
+  (cd "$MOBILE" && "$FLUTTER" build apk --release --target-platform "$targets" \
+     --build-name "$name" --build-number "$build" $cleartext \
      --dart-define=API_BASE_URL="$api")
 
   local expected out files_json="" sep=""
@@ -111,6 +114,21 @@ cmd_bangun() {
     files_json+="$sep    {\"abi\": \"$abi\", \"name\": \"$dest\", \"sha256\": \"$sha\", \"size\": $size}"; sep=$',\n'
     echo "   $dest  $(( size / 1048576 )) MB  sha256 ${sha:0:12}…  tanda tangan OK"
   done
+  local uni_apk="$MOBILE/build/app/outputs/flutter-apk/app-release.apk"
+  if [ -f "$uni_apk" ]; then
+    local u_abi="universal" u_badging u_digest u_dest u_sha u_size
+    u_badging=$("$AAPT2" dump badging "$uni_apk" | head -1)
+    [[ "$u_badging" == *"name='$PACKAGE'"* ]] || die "universal: paket bukan $PACKAGE"
+    [[ "$u_badging" == *"versionCode='$build'"* ]] || die "universal: versionCode bukan $build ($u_badging)"
+    [[ "$u_badging" == *"versionName='$name'"* ]] || die "universal: versionName bukan $name"
+    u_digest=$("$APKSIGNER" verify --print-certs "$uni_apk" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' | tr -d '\r')
+    [ "$u_digest" = "$expected" ] || die "universal: APK tidak bertanda kunci rilis Visiontech ($u_digest) — cek android/key.properties"
+    u_dest="vms-$name-$build-universal.apk"
+    cp "$uni_apk" "$out/$u_dest"
+    u_sha=$(sha256sum < "$out/$u_dest" | cut -d' ' -f1); u_size=$(stat -c %s "$out/$u_dest")
+    files_json+="$sep    {\"abi\": \"$u_abi\", \"name\": \"$u_dest\", \"sha256\": \"$u_sha\", \"size\": $u_size}"; sep=$',\n'
+    echo "   $u_dest  $(( u_size / 1048576 )) MB  sha256 ${u_sha:0:12}…  tanda tangan OK (Universal)"
+  fi
   [ -n "$files_json" ] || die "tidak ada APK hasil build"
 
   local notes_json="" n

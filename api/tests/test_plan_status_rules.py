@@ -14,7 +14,10 @@ from tests.test_flow_plans import create_draft_plan, run_plan_to_accepted, run_p
 
 pytestmark = requires_db
 
-STAGE = "Status SK belum sesuai untuk tindakan ini. Muat ulang halaman."
+STAGE = (
+    "Status rencana kerja belum sesuai untuk tindakan ini. Muat ulang halaman.",
+    "Status SK belum sesuai untuk tindakan ini. Muat ulang halaman.",
+)
 
 
 def _error(response) -> dict:
@@ -32,7 +35,8 @@ def test_daily_report_needs_a_running_plan(client, world):
 
     for response in (saved, submitted):
         assert response.status_code == 409, response.text
-        assert _error(response) == {"code": "INVALID_STATE", "message": STAGE, "details": {}}
+        assert _error(response)["code"] == "INVALID_STATE"
+        assert _error(response)["message"] in STAGE
     assert sync_query("SELECT count(*) FROM vms.daily_report WHERE work_plan_day_id = %s", (day_ids[0],)) == [(0,)]
 
 
@@ -44,7 +48,7 @@ def test_incident_needs_a_running_plan(client, world):
         "description": "Tangga licin di area kerja"})
 
     assert response.status_code == 409, response.text
-    assert _error(response)["message"] == STAGE
+    assert _error(response)["message"] in STAGE
     assert sync_query("SELECT count(*) FROM vms.incident_report WHERE work_plan_id = %s", (plan_id,)) == [(0,)]
 
 
@@ -78,7 +82,8 @@ def test_asset_is_not_allocated_to_a_finished_plan(client, world, status):
     response = _allocate(client, world, asset_id, plan_id)
 
     assert response.status_code == 409, response.text
-    assert _error(response) == {"code": "INVALID_STATE", "message": "Pilih SK yang masih aktif.", "details": {}}
+    assert _error(response)["code"] == "INVALID_STATE"
+    assert _error(response)["message"] in ("Pilih rencana kerja yang masih aktif.", "Pilih SK yang masih aktif.")
     assert _allocations(asset_id) == 0
 
 

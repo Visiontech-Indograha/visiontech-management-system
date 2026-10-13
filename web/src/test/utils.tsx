@@ -48,7 +48,7 @@ export function apiError(status: number, code: string, message: string, details:
   return { status, data: { error: { code, message, details } } };
 }
 
-import { useSession } from "@/app/session";
+import { useSession } from "@/stores/sessionStore";
 
 export function renderRoute(path: string, opts: { role?: string | null; me?: Me | null } = {}) {
   const me = opts.me !== undefined ? opts.me : opts.role ? mockMe(opts.role) : null;

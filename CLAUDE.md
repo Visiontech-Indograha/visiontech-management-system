@@ -41,7 +41,7 @@ Daftar pustaka lengkap dan aturan menambah pustaka: `docs/14-DAFTAR-PUSTAKA-TEKN
 ## Struktur
 
 ```
-api/            FastAPI — endpoint → service → crud (struktur WAJIB: docs/12 §1, migrasi: docs/26)
+api/            FastAPI — arsitektur modular domain modules/, database/, shared/, core/ (struktur WAJIB: docs/12 §1, R-35)
 web/            React — pages/<domain> · components/{atoms,molecules,organisms[/<domain>],templates} · services/ · schemas/ · hooks/ · lib/
 mobile/         Flutter — core/, shared/, features/
 face-service/   layanan wajah (fase 8)
@@ -66,11 +66,11 @@ docs/           seluruh rencana dan standar
 
 ## Aturan backend
 
-- **Struktur folder `api/app/` WAJIB (keputusan pemilik 2026-09-29, kritis; dikoreksi R-30 2026-09-30) — persis contoh pemilik:**
+- **Struktur folder `api/app/` WAJIB (keputusan pemilik 2026-10-11 R-35, mengunci branch `feature/arsitektur-api-modular`):**
   `api/v1/endpoints/<modul>.py` + `api/v1/router.py` + `api/deps.py` (sesi, auth, izin, penjaga akses, perakitan
   service `get_<nama>_service`) · `core/` (`config.py`, `security.py` + `CurrentUser`, …) · `crud/crud_<entitas>.py` ·
   `models/` · `schemas/` · `services/` · `db/` (`base.py`, `session.py`) · `main.py`.
-  **Tidak ada** `core/database.py`, `app/dependencies.py`, `controllers/`, `repositories/`.
+  **Diizinkan & dikunci:** `modules/`, `database/`, `shared/`, `core/`, `api/v1/router.py`. Folder transisi `crud/`, `models/`, `schemas/`, `services/`, `db/` dipertahankan.
   Berkas baru hanya boleh dibuat di tempat ini. Rincian & pemetaan: `docs/12` §1; migrasi: `docs/26`.
 - Lapisan: **endpoint → service → crud**. Endpoint tidak pernah menyentuh
   basis data. Service tidak pernah menulis SQL.
@@ -127,9 +127,10 @@ docs/           seluruh rencana dan standar
 ## Alur kerja per iterasi
 
 **ATURAN WAJIB GIT FLOW (Untuk AI & Developer):**
-- **DILARANG** melakukan commit atau push langsung ke branch `prod` atau `main`.
-- **SELALU** kerjakan tugas di branch `development` atau branch fitur (misal: `feature/nama-fitur`).
-- Penggabungan ke `prod` hanya boleh dilakukan melalui proses *Pull Request* yang ditinjau.
+- **DILARANG KERAS merge, commit, atau push langsung ke `prod` atau `main`.**
+- **Agen AI HANYA boleh membuat Pull Request ke `development`.**
+- **SELALU** kerjakan tugas di branch fitur (misal: `feature/nama-fitur`) yang dicabangkan dari `development`.
+- Penggabungan ke `prod` hanya boleh dilakukan oleh pemilik/manusia melalui proses *Pull Request* yang ditinjau dari `development` → `prod`.
 
 1. Pastikan Anda berada di branch `development` atau branch fitur, bukan `prod`.
 2. Ambil task berikutnya dari `docs/06-RENCANA-FASE.md`.

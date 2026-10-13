@@ -5,28 +5,29 @@ import { useForm } from "react-hook-form";
 import { useFormDraft } from "@/hooks/useFormDraft";
 import { toast } from "sonner";
 import { z } from "zod";
-import { useSession } from "@/app/session";
+import { useSession } from "@/stores/sessionStore";
 import { QueryState } from "@/components/molecules/QueryState";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
-import { Button } from "@/components/atoms/Button";
 import { SelectField, TextAreaField } from "@/components/molecules/Field";
-import { api } from "@/lib/apiClient";
-import type { components } from "@/lib/apiTypes";
 import { errorMessage } from "@/lib/errors";
 import { formatDate } from "@/lib/format";
 import type { WorkPlan } from "@/services/workPlanService";
 import { PlanPreviewDialog } from "./PlanPreviewDialog";
+import { ActionButton } from "@/components/molecules/ActionButton";
+import { TextBlock } from "@/components/molecules/TextBlock";
+import { ListBlock } from "@/components/molecules/ListBlock";
+import { ControlOption, FormBlock } from "@/components/molecules/FormBlock";
+import { listWeeklyReports, reviewWeeklyReport, saveWeeklyReport, submitWeeklyReport, type WeeklyReport, type WeeklyReportRequest, type WeeklyReviewRequest } from "@/services/weeklyReportService";
+import { FormErrorText } from "@/components/molecules/FormErrorText";
 
-type Week = components["schemas"]["WeeklyReportResponse"];
-type WeeklyReportRequest = components["schemas"]["WeeklyReportRequest"];
-type WeeklyReviewRequest = components["schemas"]["WeeklyReviewRequest"];
+type Week = WeeklyReport;
 
 const EDITABLE = ["DRAFT", "CHANGES_REQUESTED"];
 
 function useWeeks(planId: string) {
   return useQuery({
     queryKey: ["weekly", planId],
-    queryFn: async () => (await api.get<Week[]>(`/work-plans/${planId}/weekly`)).data,
+    queryFn: () => listWeeklyReports(planId),
   });
 }
 
@@ -35,12 +36,12 @@ function useWeekMutation<V>(planId: string, fn: (v: V) => Promise<Week>) {
   return useMutation({ mutationFn: fn, onSuccess: () => qc.invalidateQueries({ queryKey: ["weekly", planId] }) });
 }
 
-/** Laporan mingguan SK (GET/PUT/submit/review /work-plans/{id}/weekly), mengikuti prototype renderWeek. */
+/** Laporan mingguan rencana kerja (GET/PUT/submit/review /work-plans/{id}/weekly), mengikuti prototype renderWeek. */
 export function WeeklyReportsPanel({ plan }: { plan: WorkPlan }) {
   const weeks = useWeeks(plan.id);
   return (
     <section aria-label="Laporan mingguan" className="space-y-3">
-      <h2 className="text-base font-semibold">Laporan mingguan</h2>
+      <TextBlock as="h2" className="text-base font-semibold">Laporan mingguan</TextBlock>
       <QueryState query={weeks} errorText="Laporan mingguan tidak dapat dimuat." empty={weeks.data?.length === 0} emptyText="Belum ada laporan mingguan.">
         {weeks.data?.map((w) => <WeekPanel key={w.week} plan={plan} week={w} />)}
       </QueryState>
@@ -53,10 +54,10 @@ function Panel({ week, children }: { week: Week; children: ReactNode }) {
     <article aria-label={week.name} className="rounded-panel border border-line bg-surface shadow-card p-4">
       <header className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h3 className="font-medium">{week.name}</h3>
-          <p className="text-sm text-mist">
+          <TextBlock as="h3" className="font-medium">{week.name}</TextBlock>
+          <TextBlock className="text-sm text-mist">
             {formatDate(week.starts_on)} – {formatDate(week.ends_on)}
-          </p>
+          </TextBlock>
         </div>
         <StatusBadge status={week.status === "SUBMITTED" && week.resubmitted ? "RESUBMITTED" : week.status} />
       </header>
@@ -72,14 +73,14 @@ function WeekPanel({ plan, week }: { plan: WorkPlan; week: Week }) {
   const active = plan.status === "IN_PROGRESS";
   const [viewing, setViewing] = useState(false);
 
-  // Alur SK v2: laporan mingguan diisi ketua di HP; PM hanya memeriksa.
+  // Alur rencana kerja v2: laporan mingguan diisi ketua di HP; PM hanya memeriksa.
   if (EDITABLE.includes(week.status) && active && isLeader) {
     return (
       <Panel week={week}>
         {!week.days_approved ? (
-          <p className="text-sm text-mist">
+          <TextBlock className="text-sm text-mist">
             Semua laporan harian dalam minggu ini harus disetujui PM sebelum laporan mingguan dapat dibuat.
-          </p>
+          </TextBlock>
         ) : (
           <WeeklyForm plan={plan} week={week} />
         )}
@@ -89,30 +90,30 @@ function WeekPanel({ plan, week }: { plan: WorkPlan; week: Week }) {
   return (
     <Panel week={week}>
       {week.body ? (
-        <dl className="space-y-2 text-sm">
+        <ListBlock as="dl" className="space-y-2 text-sm">
           <div>
-            <dt className="text-mist">Laporan</dt>
-            <dd className="whitespace-pre-line">{week.body}</dd>
+            <TextBlock as="dt" className="text-mist">Laporan</TextBlock>
+            <TextBlock as="dd" className="whitespace-pre-line">{week.body}</TextBlock>
           </div>
           <div>
-            <dt className="text-mist">Kendala</dt>
-            <dd className="whitespace-pre-line">{week.obstacle}</dd>
+            <TextBlock as="dt" className="text-mist">Kendala</TextBlock>
+            <TextBlock as="dd" className="whitespace-pre-line">{week.obstacle}</TextBlock>
           </div>
           {week.review_note && (
             <div>
-              <dt className="text-mist">Catatan PM</dt>
-              <dd>{week.review_note}</dd>
+              <TextBlock as="dt" className="text-mist">Catatan PM</TextBlock>
+              <TextBlock as="dd">{week.review_note}</TextBlock>
             </div>
           )}
-        </dl>
+        </ListBlock>
       ) : (
-        <p className="text-sm text-mist">Belum ada laporan mingguan.</p>
+        <TextBlock className="text-sm text-mist">Belum ada laporan mingguan.</TextBlock>
       )}
       {week.status === "SUBMITTED" && isPM && <WeeklyReviewForm plan={plan} week={week} />}
       {week.status === "APPROVED" && (
-        <Button variant="outline" size="sm" className="mt-3" onClick={() => setViewing(true)}>
+        <ActionButton variant="outline" size="sm" className="mt-3" onClick={() => setViewing(true)}>
           Lihat laporan
-        </Button>
+        </ActionButton>
       )}
       {viewing && (
         <PlanPreviewDialog title={week.name} path={`/work-plans/${plan.id}/weekly/${week.week}/report/html`} onClose={() => setViewing(false)} />
@@ -128,8 +129,8 @@ const weeklySchema = z.object({
 
 /** Ketua menulis laporan (PUT) lalu mengirim (POST submit). API menolak bila bukan ketua. */
 function WeeklyForm({ plan, week }: { plan: WorkPlan; week: Week }) {
-  const save = useWeekMutation(plan.id, async (body: WeeklyReportRequest) => (await api.put<Week>(`/work-plans/${plan.id}/weekly/${week.week}`, body)).data);
-  const submit = useWeekMutation<void>(plan.id, async () => (await api.post<Week>(`/work-plans/${plan.id}/weekly/${week.week}/submit`)).data);
+  const save = useWeekMutation(plan.id, (body: WeeklyReportRequest) => saveWeeklyReport(plan.id, week.week, body));
+  const submit = useWeekMutation<void>(plan.id, () => submitWeeklyReport(plan.id, week.week));
   const [formError, setFormError] = useState<string | null>(null);
   const form = useForm<WeeklyReportRequest>({ resolver: zodResolver(weeklySchema), defaultValues: { body: week.body, obstacle: week.obstacle } });
   const {
@@ -153,24 +154,20 @@ function WeeklyForm({ plan, week }: { plan: WorkPlan; week: Week }) {
     });
 
   return (
-    <form noValidate onSubmit={send(true)}>
-      {formError && (
-        <p role="alert" className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
-          {formError}
-        </p>
-      )}
-      {week.review_note && <p className="mb-3 text-sm text-warning">Catatan PM: {week.review_note}</p>}
+    <FormBlock noValidate onSubmit={send(true)}>
+      <FormErrorText message={formError} />
+      {week.review_note && <TextBlock className="mb-3 text-sm text-warning">Catatan PM: {week.review_note}</TextBlock>}
       <TextAreaField label="Laporan Mingguan" error={errors.body?.message} {...register("body")} />
       <TextAreaField label="Ringkasan Kendala Mingguan (Wajib)" error={errors.obstacle?.message} {...register("obstacle")} />
       <div className="flex flex-col gap-2 md:flex-row md:justify-end">
-        <Button type="button" variant="outline" onClick={send(false)} disabled={isSubmitting}>
+        <ActionButton type="button" variant="outline" onClick={send(false)} disabled={isSubmitting}>
           Simpan draft
-        </Button>
-        <Button type="submit" disabled={isSubmitting}>
+        </ActionButton>
+        <ActionButton type="submit" disabled={isSubmitting}>
           Kirim laporan
-        </Button>
+        </ActionButton>
       </div>
-    </form>
+    </FormBlock>
   );
 }
 
@@ -180,7 +177,7 @@ const reviewSchema = z
 type ReviewValues = z.infer<typeof reviewSchema>;
 
 function WeeklyReviewForm({ plan, week }: { plan: WorkPlan; week: Week }) {
-  const review = useWeekMutation(plan.id, async (body: WeeklyReviewRequest) => (await api.post<Week>(`/work-plans/${plan.id}/weekly/${week.week}/review`, body)).data);
+  const review = useWeekMutation(plan.id, (body: WeeklyReviewRequest) => reviewWeeklyReport(plan.id, week.week, body));
   const [formError, setFormError] = useState<string | null>(null);
   const {
     register,
@@ -197,22 +194,18 @@ function WeeklyReviewForm({ plan, week }: { plan: WorkPlan; week: Week }) {
     }
   });
   return (
-    <form noValidate onSubmit={onSubmit} className="mt-4 border-t border-line pt-4">
-      {formError && (
-        <p role="alert" className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
-          {formError}
-        </p>
-      )}
+    <FormBlock noValidate onSubmit={onSubmit} className="mt-4 border-t border-line pt-4">
+      <FormErrorText message={formError} />
       <SelectField label="Keputusan" {...register("decision")}>
-        <option value="APPROVE">Setujui laporan</option>
-        <option value="RETURN">Minta perbaikan</option>
+        <ControlOption value="APPROVE">Setujui laporan</ControlOption>
+        <ControlOption value="RETURN">Minta perbaikan</ControlOption>
       </SelectField>
       <TextAreaField label="Catatan (wajib jika dikembalikan)" error={errors.note?.message} {...register("note")} />
       <div className="flex justify-end">
-        <Button type="submit" disabled={isSubmitting}>
+        <ActionButton type="submit" disabled={isSubmitting}>
           Simpan keputusan
-        </Button>
+        </ActionButton>
       </div>
-    </form>
+    </FormBlock>
   );
 }

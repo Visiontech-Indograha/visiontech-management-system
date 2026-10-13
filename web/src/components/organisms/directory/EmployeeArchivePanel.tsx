@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/atoms/Button";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { errorMessage } from "@/lib/errors";
 import { useArchiveEmployee, useRestoreEmployee, type Employee } from "@/services/employeeService";
+import { ActionButton } from "@/components/molecules/ActionButton";
+import { TextBlock } from "@/components/molecules/TextBlock";
+import { FormErrorText } from "@/components/molecules/FormErrorText";
 
 /**
  * Hapus (arsip) karyawan yang sudah di-offboard dan pulihkan kembali (V-29). API tidak menampilkan
@@ -42,24 +44,20 @@ export function EmployeeArchivePanel({ employee }: { employee: Employee }) {
 
   return (
     <section aria-label="Hapus karyawan" className="mb-8 max-w-xl rounded-panel border border-line bg-surface shadow-card p-4">
-      {error && (
-        <p role="alert" className="mb-3 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
-          {error}
-        </p>
-      )}
+      <FormErrorText message={error} className="mb-3" />
       {archived ? (
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <p className="text-sm">Karyawan ini sudah dihapus dan tidak tampil di Direktori.</p>
-          <Button variant="outline" onClick={doRestore} disabled={busy}>
+          <TextBlock className="text-sm">Karyawan ini sudah dihapus dan tidak tampil di Direktori.</TextBlock>
+          <ActionButton variant="outline" onClick={doRestore} disabled={busy}>
             Pulihkan karyawan
-          </Button>
+          </ActionButton>
         </div>
       ) : (
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <p className="text-sm text-mist">Karyawan nonaktif dapat dihapus dari Direktori. Data historis tetap tersimpan.</p>
-          <Button variant="outline" onClick={() => setConfirming(true)} disabled={busy}>
+          <TextBlock className="text-sm text-mist">Karyawan nonaktif dapat dihapus dari Direktori. Data historis tetap tersimpan.</TextBlock>
+          <ActionButton variant="outline" onClick={() => setConfirming(true)} disabled={busy}>
             Hapus karyawan
-          </Button>
+          </ActionButton>
         </div>
       )}
       <VmsDialog
@@ -68,18 +66,18 @@ export function EmployeeArchivePanel({ employee }: { employee: Employee }) {
         onClose={() => setConfirming(false)}
         footer={
           <>
-            <Button variant="outline" onClick={() => setConfirming(false)} disabled={busy}>
+            <ActionButton variant="outline" onClick={() => setConfirming(false)} disabled={busy}>
               Batal
-            </Button>
-            <Button onClick={doArchive} disabled={busy}>
+            </ActionButton>
+            <ActionButton onClick={doArchive} disabled={busy}>
               Ya, hapus
-            </Button>
+            </ActionButton>
           </>
         }
       >
-        <p className="text-sm">
+        <TextBlock className="text-sm">
           {employee.full_name} akan disembunyikan dari Direktori. Riwayat rencana kerja, absensi, dan dokumennya tidak dihapus.
-        </p>
+        </TextBlock>
       </VmsDialog>
     </section>
   );

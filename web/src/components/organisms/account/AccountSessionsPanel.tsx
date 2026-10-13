@@ -1,9 +1,11 @@
 import { toast } from "sonner";
-import { Button } from "@/components/atoms/Button";
-import { Skeleton } from "@/components/atoms/Skeleton";
 import { errorMessage } from "@/lib/errors";
 import { formatDateTime } from "@/lib/format";
 import { useRevokeOtherSessions, useRevokeSession, useSessions, type ActiveSession } from "@/services/accountService";
+import { ActionButton } from "@/components/molecules/ActionButton";
+import { LoadingBar } from "@/components/molecules/LoadingBar";
+import { TextBlock } from "@/components/molecules/TextBlock";
+import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
 
 /** Nama perangkat yang bisa dikenali orang awam dari user-agent. */
 function deviceName(s: ActiveSession): string {
@@ -38,36 +40,36 @@ export function AccountSessionsPanel() {
   return (
         <section aria-label="Perangkat yang masuk">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-base font-semibold">Perangkat yang masuk</h2>
+            <TextBlock as="h2" className="text-base font-semibold">Perangkat yang masuk</TextBlock>
             {others > 0 && (
-              <Button
+              <ActionButton
                 variant="outline"
                 disabled={revokeOthers.isPending}
                 onClick={() => run(() => revokeOthers.mutateAsync(), "Perangkat lain dikeluarkan (paling lambat 15 menit).")}
               >
                 Keluarkan perangkat lain
-              </Button>
+              </ActionButton>
             )}
           </div>
           <div className="rounded-panel border border-line bg-surface shadow-card">
-            {sessions.isPending && <Skeleton className="m-4 h-10" />}
-            {sessions.isError && <p className="px-5 py-4 text-sm text-danger">Daftar perangkat tidak dapat dimuat.</p>}
-            <ul className="divide-y divide-line">
+            {sessions.isPending && <LoadingBar className="m-4 h-10" />}
+            {sessions.isError && <TextBlock className="px-5 py-4 text-sm text-danger">Daftar perangkat tidak dapat dimuat.</TextBlock>}
+            <ListBlock className="divide-y divide-line">
               {sessions.data?.map((s) => (
-                <li key={s.id} className="flex flex-col gap-2 px-5 py-3 text-sm md:flex-row md:items-center md:justify-between">
+                <ListEntry key={s.id} className="flex flex-col gap-2 px-5 py-3 text-sm md:flex-row md:items-center md:justify-between">
                   <div>
-                    <p className="font-medium">
+                    <TextBlock className="font-medium">
                       {deviceName(s)}
-                      {s.current && <span className="ml-2 rounded-full bg-success-bg px-2 py-0.5 text-xs text-success">Perangkat ini</span>}
-                    </p>
-                    <p className="text-mist">
+                      {s.current && <TextBlock as="span" className="ml-2 rounded-full bg-success-bg px-2 py-0.5 text-xs text-success">Perangkat ini</TextBlock>}
+                    </TextBlock>
+                    <TextBlock className="text-mist">
                       Masuk {s.issued_at ? formatDateTime(s.issued_at) : "-"}
                       {s.last_used_at && ` · terakhir aktif ${formatDateTime(s.last_used_at)}`}
                       {s.ip_address && ` · ${s.ip_address}`}
-                    </p>
+                    </TextBlock>
                   </div>
                   {!s.current && (
-                    <Button
+                    <ActionButton
                       size="sm"
                       variant="outline"
                       aria-label={`Keluarkan ${deviceName(s)}`}
@@ -75,15 +77,15 @@ export function AccountSessionsPanel() {
                       onClick={() => run(() => revoke.mutateAsync(s.id), "Perangkat dikeluarkan (paling lambat 15 menit).")}
                     >
                       Keluarkan
-                    </Button>
+                    </ActionButton>
                   )}
-                </li>
+                </ListEntry>
               ))}
-            </ul>
+            </ListBlock>
           </div>
-          <p className="mt-2 text-body-sm text-mist">
+          <TextBlock className="mt-2 text-body-sm text-mist">
             Perangkat yang dikeluarkan harus masuk lagi; akses yang sedang berjalan berakhir paling lama 15 menit.
-          </p>
+          </TextBlock>
         </section>
   );
 }

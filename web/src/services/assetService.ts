@@ -12,7 +12,7 @@ const KEY = ["assets"] as const;
 
 export const useAssets = () => useQuery({ queryKey: KEY, queryFn: async () => (await api.get<Asset[]>("/assets")).data });
 
-/** SK aktif yang terlihat pengguna, untuk pilihan alokasi / pelepasan. */
+/** rencana kerja aktif yang terlihat pengguna, untuk pilihan alokasi / pelepasan. */
 const ACTIVE = ["PUBLISHED", "ACCEPTED", "IN_PROGRESS"];
 export const useActivePlans = () =>
   useQuery({
@@ -39,7 +39,7 @@ export const useReleaseAsset = () =>
     (await api.post<S["AssetStatusResponse"]>(`/assets/${id}/release`, body)).data,
   );
 
-/** Ketua SK peminjam mengajukan pengembalian (domain.js RETURN_ASSET). */
+/** Ketua rencana kerja peminjam mengajukan pengembalian (domain.js RETURN_ASSET). */
 export const useRequestReturn = () =>
   useAssetMutation(async ({ allocation_id, ...body }: { allocation_id: string } & S["AssetReturnCreate"]) =>
     (await api.post<S["AssetReturnResponse"]>(`/assets/allocations/${allocation_id}/return`, body)).data,
@@ -64,3 +64,8 @@ export const useCheckAsset = () =>
   useAssetMutation(async ({ id, ...body }: { id: string } & S["AssetCheckRequest"]) =>
     (await api.post<S["AssetStatusResponse"]>(`/assets/${id}/check`, body)).data,
   );
+
+/** GET /assets/returns/{id}/pdf — berita acara serah terima (BAST) sebagai Blob. */
+export async function fetchAssetReturnPdf(returnId: string): Promise<Blob> {
+  return (await api.get<Blob>(`/assets/returns/${returnId}/pdf`, { responseType: "blob" })).data;
+}

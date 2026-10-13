@@ -1,3 +1,4 @@
+import { TextBlock } from "@/components/molecules/TextBlock";
 function greeting(now = new Date()) {
   const hour = Number(new Intl.DateTimeFormat("id-ID", { hour: "numeric", hourCycle: "h23", timeZone: "Asia/Jakarta" }).format(now));
   if (hour < 11) return "Selamat pagi";
@@ -10,11 +11,11 @@ function greeting(now = new Date()) {
 export function HomeGreeting({ today, name }: { today: string; name: string | undefined }) {
   return (
     <>
-        <p className="text-body-sm text-mist">{today}</p>
-        <h1 className="mt-1 text-title-lg text-ink md:text-display">
+        <TextBlock className="text-body-sm text-mist">{today}</TextBlock>
+        <TextBlock as="h1" className="mt-1 text-title-lg text-ink md:text-display">
           {greeting()}
-          <span className="text-mist">, {name}</span>
-        </h1>
+          <TextBlock as="span" className="text-mist">, {name}</TextBlock>
+        </TextBlock>
     </>
   );
 }

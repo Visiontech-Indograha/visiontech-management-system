@@ -1,8 +1,9 @@
 import { toast } from "sonner";
-import { Button } from "@/components/atoms/Button";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
-import { api, ApiError } from "@/lib/apiClient";
+import { ApiError } from "@/lib/apiClient";
 import { FaceCamera, type FaceLiveness } from "./FaceCamera";
+import { ActionButton } from "@/components/molecules/ActionButton";
+import { probeFace } from "@/services/faceService";
 
 /**
  * Verifikasi wajah untuk absen web (pekerja kantor; web tidak punya jalur luring). Mengunggah gambar wajah sementara
@@ -23,8 +24,7 @@ export function FaceProbeDialog({
     form.append("file", photos[0]!, "wajah.jpg");
     form.append("liveness", JSON.stringify(liveness));
     try {
-      const res = (await api.post<{ probe_id: string }>("/face/probe", form)).data;
-      onDone(res.probe_id);
+      onDone(await probeFace(form));
     } catch (e) {
       if (e instanceof ApiError && e.status === 503) {
         toast.warning("Pemeriksaan wajah sedang tidak tersedia. Absen tetap dicatat dan akan diperiksa.");
@@ -41,9 +41,9 @@ export function FaceProbeDialog({
       title={title}
       onClose={onCancel}
       footer={
-        <Button variant="outline" onClick={onCancel}>
+        <ActionButton variant="outline" onClick={onCancel}>
           Batal
-        </Button>
+        </ActionButton>
       }
     >
       <FaceCamera

@@ -1,5 +1,5 @@
-import { api } from "@/lib/apiClient";
 import { FaceCamera, type FaceLiveness } from "./FaceCamera";
+import { enrollFace } from "@/services/faceService";
 
 const POSES = ["Hadap lurus ke kamera", "Tengok sedikit ke kiri", "Tengok sedikit ke kanan", "Tersenyum ke kamera"];
 
@@ -9,7 +9,7 @@ export function FaceEnrollCapture({ onEnrolled }: { onEnrolled: () => void }) {
     const form = new FormData();
     photos.forEach((p, i) => form.append("files", p, `pose${i}.jpg`));
     form.append("liveness", JSON.stringify(liveness));
-    await api.post("/face/enroll", form);
+    await enrollFace(form);
     onEnrolled();
   };
   return (

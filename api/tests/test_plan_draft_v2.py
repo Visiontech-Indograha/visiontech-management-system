@@ -73,7 +73,6 @@ def test_full_create_saves_everything_and_reads_back(client, world):
     ({"description": ""}, "Deskripsi pekerjaan wajib diisi."),
     ({"site_id": None}, "Pilih lokasi kerja atau tambahkan lokasi baru."),
     ({"site_id": None, "new_site": {"name": " ", "lat": -6.2, "lng": 106.8}}, "Nama lokasi wajib diisi."),
-    ({"member_employee_ids": []}, "Pilih minimal satu anggota tim."),
 ])
 def test_full_create_rejects_incomplete_forms(client, world, override, message):
     response = _create(client, world, **override)

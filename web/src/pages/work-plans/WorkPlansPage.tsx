@@ -1,12 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useSession } from "@/app/session";
-import { PageTemplate } from "@/components/templates/PageTemplate";
+import { useSession } from "@/stores/sessionStore";
+import { WorkPlansTemplate } from "@/components/templates/work-plans/WorkPlansTemplate";
 import { useWorkPlans, type WorkPlan } from "@/services/workPlanService";
-import { PlanCreateButton } from "@/components/organisms/work-plans/PlanCreateButton";
-import { PlanList } from "@/components/organisms/work-plans/PlanList";
-import { PlanListFilter } from "@/components/organisms/work-plans/PlanListFilter";
-import { PlanPreviewDialog } from "@/components/organisms/work-plans/PlanPreviewDialog";
 
 /** Daftar rencana kerja yang terlihat oleh pengguna (GET /work-plans; API menyaring sesuai kedudukan). */
 export function WorkPlansPage() {
@@ -20,23 +16,17 @@ export function WorkPlansPage() {
   const plans = useWorkPlans({ status, archived });
 
   return (
-    <PageTemplate title="Rencana Kerja" action={canManage && <PlanCreateButton onCreate={create} />}>
-      <PlanListFilter
-        status={status}
-        onStatusChange={setStatus}
-        archived={archived}
-        onArchivedChange={setArchived}
-        canManage={canManage}
-      />
-      <PlanList plans={plans} archived={archived} canManage={canManage} onCreate={create} onEdit={setPreview} />
-      {preview && (
-        <PlanPreviewDialog
-          title={`Sunting rencana kerja — ${preview.title}`}
-          path={`/work-plans/${preview.id}/preview`}
-          editTo={`/work-plans/${preview.id}/edit`}
-          onClose={() => setPreview(null)}
-        />
-      )}
-    </PageTemplate>
+    <WorkPlansTemplate
+      plans={plans}
+      canManage={canManage}
+      status={status}
+      onStatusChange={setStatus}
+      archived={archived}
+      onArchivedChange={setArchived}
+      preview={preview}
+      onCreate={create}
+      onEdit={setPreview}
+      onClosePreview={() => setPreview(null)}
+    />
   );
 }

@@ -5,6 +5,10 @@ import { formatDate, formatDateTime } from "@/lib/format";
 import { INCIDENT_CATEGORY, INCIDENT_SEVERITY, type Incident } from "@/services/incidentService";
 import type { FinalReport, PlanAsset, TeamMember } from "@/services/reportService";
 import type { WorkPlan } from "@/services/workPlanService";
+import { TextBlock } from "@/components/molecules/TextBlock";
+import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
+import { ImageView } from "@/components/molecules/ImageView";
+import { PrintStyle } from "@/components/molecules/PrintStyle";
 
 /** Satu slide: setinggi layar saat ditampilkan, satu halaman lanskap saat dicetak. */
 function Slide({ title, index, total, children }: { title?: string; index: number; total: number; children: ReactNode }) {
@@ -13,14 +17,14 @@ function Slide({ title, index, total, children }: { title?: string; index: numbe
       aria-label={title ?? "Sampul"}
       className="relative flex min-h-dvh snap-start flex-col justify-center bg-surface px-6 py-16 md:px-16 print:min-h-0 print:h-[100vh] print:break-after-page"
     >
-      <img src={logo} alt="Visiontech" className="absolute left-6 top-6 h-8 md:left-16 md:top-10 md:h-10" />
+      <ImageView src={logo} alt="Visiontech" className="absolute left-6 top-6 h-8 md:left-16 md:top-10 md:h-10" />
       <div className="mx-auto w-full max-w-4xl">
-        {title && <h2 className="mb-6 border-b-2 border-gold pb-3 text-2xl font-semibold text-ink md:text-4xl">{title}</h2>}
+        {title && <TextBlock as="h2" className="mb-6 border-b-2 border-gold pb-3 text-2xl font-semibold text-ink md:text-4xl">{title}</TextBlock>}
         {children}
       </div>
-      <p className="absolute bottom-5 right-6 text-sm text-mist md:right-16">
+      <TextBlock className="absolute bottom-5 right-6 text-sm text-mist md:right-16">
         {index} / {total}
-      </p>
+      </TextBlock>
     </section>
   );
 }
@@ -43,16 +47,16 @@ export function PlanPresentationSlides({ plan: p, report: r, team, incidents, as
     {
       body: (
         <div className="text-center">
-          <p className="mb-3 text-sm font-semibold uppercase tracking-widest text-brand-700">Laporan penyelesaian pekerjaan</p>
-          <h1 className="mb-8 text-3xl font-bold text-ink md:text-5xl">{p.title}</h1>
-          <dl className="mx-auto grid max-w-lg gap-2 text-left text-lg md:text-xl">
-            <div className="flex justify-between gap-6"><dt className="text-mist">Nomor</dt><dd className="font-medium">{p.number}</dd></div>
-            <div className="flex justify-between gap-6"><dt className="text-mist">Lokasi</dt><dd className="font-medium">{p.location_text}</dd></div>
+          <TextBlock className="mb-3 text-sm font-semibold uppercase tracking-widest text-brand-700">Laporan penyelesaian pekerjaan</TextBlock>
+          <TextBlock as="h1" className="mb-8 text-3xl font-bold text-ink md:text-5xl">{p.title}</TextBlock>
+          <ListBlock as="dl" className="mx-auto grid max-w-lg gap-2 text-left text-lg md:text-xl">
+            <div className="flex justify-between gap-6"><TextBlock as="dt" className="text-mist">Nomor</TextBlock><TextBlock as="dd" className="font-medium">{p.number}</TextBlock></div>
+            <div className="flex justify-between gap-6"><TextBlock as="dt" className="text-mist">Lokasi</TextBlock><TextBlock as="dd" className="font-medium">{p.location_text}</TextBlock></div>
             <div className="flex justify-between gap-6">
-              <dt className="text-mist">Periode</dt>
-              <dd className="font-medium">{formatDate(p.period_start)} – {formatDate(p.period_end)}</dd>
+              <TextBlock as="dt" className="text-mist">Periode</TextBlock>
+              <TextBlock as="dd" className="font-medium">{formatDate(p.period_start)} – {formatDate(p.period_end)}</TextBlock>
             </div>
-          </dl>
+          </ListBlock>
         </div>
       ),
     },
@@ -61,27 +65,27 @@ export function PlanPresentationSlides({ plan: p, report: r, team, incidents, as
       body: (
         <div className="grid gap-8 md:grid-cols-2">
           <div>
-            <p className="mb-3 font-semibold text-brand-700">Personel</p>
-            <ul className="space-y-2 text-lg md:text-xl">
-              <li><span className="text-mist">Ketua:</span> <strong>{leader?.full_name ?? "-"}</strong></li>
-              <li>
-                <span className="text-mist">Anggota:</span>{" "}
+            <TextBlock className="mb-3 font-semibold text-brand-700">Personel</TextBlock>
+            <ListBlock className="space-y-2 text-lg md:text-xl">
+              <ListEntry><TextBlock as="span" className="text-mist">Ketua:</TextBlock> <TextBlock as="strong">{leader?.full_name ?? "-"}</TextBlock></ListEntry>
+              <ListEntry>
+                <TextBlock as="span" className="text-mist">Anggota:</TextBlock>{" "}
                 {members.length ? members.map((m) => m.full_name).join(", ") : "-"}
-              </li>
-            </ul>
+              </ListEntry>
+            </ListBlock>
           </div>
           <div>
-            <p className="mb-3 font-semibold text-brand-700">Aset yang digunakan</p>
-            <ul className="space-y-2 text-lg md:text-xl">
+            <TextBlock className="mb-3 font-semibold text-brand-700">Aset yang digunakan</TextBlock>
+            <ListBlock className="space-y-2 text-lg md:text-xl">
               {(assets ?? []).map((a) => (
-                <li key={`${a.id}-${a.allocated_at}`}>
+                <ListEntry key={`${a.id}-${a.allocated_at}`}>
                   {a.name} ({a.code})
-                  {a.driver_name && <span className="text-mist"> · pengemudi {a.driver_name}</span>}
-                  {a.returned_condition && <span className="text-mist"> · dikembalikan {a.returned_condition}</span>}
-                </li>
+                  {a.driver_name && <TextBlock as="span" className="text-mist"> · pengemudi {a.driver_name}</TextBlock>}
+                  {a.returned_condition && <TextBlock as="span" className="text-mist"> · dikembalikan {a.returned_condition}</TextBlock>}
+                </ListEntry>
               ))}
-              {!assets?.length && <li className="text-mist">Tidak ada aset.</li>}
-            </ul>
+              {!assets?.length && <ListEntry className="text-mist">Tidak ada aset.</ListEntry>}
+            </ListBlock>
           </div>
         </div>
       ),
@@ -91,12 +95,12 @@ export function PlanPresentationSlides({ plan: p, report: r, team, incidents, as
       body: (
         <div className="space-y-8 text-lg md:text-xl">
           <div>
-            <p className="mb-2 font-semibold text-brand-700">Ringkasan laporan</p>
-            <p className="whitespace-pre-line">{r.body}</p>
+            <TextBlock className="mb-2 font-semibold text-brand-700">Ringkasan laporan</TextBlock>
+            <TextBlock className="whitespace-pre-line">{r.body}</TextBlock>
           </div>
           <div>
-            <p className="mb-2 font-semibold text-brand-700">Kendala yang dihadapi</p>
-            <p className="whitespace-pre-line">{r.obstacle || "-"}</p>
+            <TextBlock className="mb-2 font-semibold text-brand-700">Kendala yang dihadapi</TextBlock>
+            <TextBlock className="whitespace-pre-line">{r.obstacle || "-"}</TextBlock>
           </div>
         </div>
       ),
@@ -106,19 +110,19 @@ export function PlanPresentationSlides({ plan: p, report: r, team, incidents, as
           {
             title: "Insiden / K3",
             body: (
-              <ul className="space-y-4 text-lg md:text-xl">
+              <ListBlock className="space-y-4 text-lg md:text-xl">
                 {list.map((i) => (
-                  <li key={i.id}>
-                    <strong>
+                  <ListEntry key={i.id}>
+                    <TextBlock as="strong">
                       [{INCIDENT_CATEGORY[i.category] ?? i.category}] {INCIDENT_SEVERITY[i.severity] ?? i.severity}
-                    </strong>{" "}
+                    </TextBlock>{" "}
                     — {i.description}
-                    <span className="block text-base text-mist">
+                    <TextBlock as="span" className="block text-base text-mist">
                       {formatDate(i.occurred_on)} · {i.status === "RESOLVED" ? "Selesai ditangani" : "Belum selesai"}
-                    </span>
-                  </li>
+                    </TextBlock>
+                  </ListEntry>
                 ))}
-              </ul>
+              </ListBlock>
             ),
           },
         ]
@@ -132,24 +136,24 @@ export function PlanPresentationSlides({ plan: p, report: r, team, incidents, as
           ))}
         </div>
       ) : (
-        <p className="text-lg text-mist">Tidak ada lampiran.</p>
+        <TextBlock className="text-lg text-mist">Tidak ada lampiran.</TextBlock>
       ),
     },
     {
       title: "Pengesahan",
       body: (
         <div>
-          <p className="mb-12 text-center text-lg">Pekerjaan telah diselesaikan dan ditutup secara resmi.</p>
+          <TextBlock className="mb-12 text-center text-lg">Pekerjaan telah diselesaikan dan ditutup secara resmi.</TextBlock>
           <div className="grid gap-10 text-center md:grid-cols-2">
             <div>
-              <p className="mb-10 text-mist">Ketua tim pelaksana</p>
-              <p className="text-xl font-bold underline">{r.submitted_by_name ?? leader?.full_name ?? "-"}</p>
-              <p className="mt-1 text-sm text-mist">{r.submitted_at ? formatDateTime(r.submitted_at) : ""}</p>
+              <TextBlock className="mb-10 text-mist">Ketua tim pelaksana</TextBlock>
+              <TextBlock className="text-xl font-bold underline">{r.submitted_by_name ?? leader?.full_name ?? "-"}</TextBlock>
+              <TextBlock className="mt-1 text-sm text-mist">{r.submitted_at ? formatDateTime(r.submitted_at) : ""}</TextBlock>
             </div>
             <div>
-              <p className="mb-10 text-mist">Pemeriksa penyelesaian</p>
-              <p className="text-xl font-bold underline">{r.reviewed_by_name ?? "-"}</p>
-              <p className="mt-1 text-sm text-mist">{r.reviewed_at ? formatDateTime(r.reviewed_at) : ""}</p>
+              <TextBlock className="mb-10 text-mist">Pemeriksa penyelesaian</TextBlock>
+              <TextBlock className="text-xl font-bold underline">{r.reviewed_by_name ?? "-"}</TextBlock>
+              <TextBlock className="mt-1 text-sm text-mist">{r.reviewed_at ? formatDateTime(r.reviewed_at) : ""}</TextBlock>
             </div>
           </div>
         </div>
@@ -163,7 +167,7 @@ export function PlanPresentationSlides({ plan: p, report: r, team, incidents, as
           {s.body}
         </Slide>
       ))}
-      <style>{"@page { size: landscape; margin: 0; }"}</style>
+      <PrintStyle css="@page { size: landscape; margin: 0; }" />
     </>
   );
 }

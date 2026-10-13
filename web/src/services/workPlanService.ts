@@ -10,11 +10,9 @@ export type DayPlanRequest = S["DayPlanRequest"];
 export type TeamRequest = S["TeamRequest"];
 type Employee = S["EmployeeResponse"];
 type EmployeeList = S["EmployeeListResponse"];
-type Site = S["SiteResponse"];
-type Asset = S["AssetListItem"];
 export type AssignmentOptions = S["PlanAssignmentOptions"];
 
-/** Transisi SK yang memakai TransitionRequest {row_version, reason}. */
+/** Transisi rencana kerja yang memakai TransitionRequest {row_version, reason}. */
 export type Transition =
   | "publish"
   | "accept"
@@ -53,28 +51,6 @@ export const useActiveEmployees = () =>
     staleTime: 5 * 60 * 1000,
   });
 
-export const useSiteOptions = () =>
-  useQuery({ queryKey: ["sites"], queryFn: async () => (await api.get<Site[]>("/sites")).data });
-
-export const useAssignmentOptions = (periodStart: string, periodEnd: string) =>
-  useQuery({
-    queryKey: ["plan-assignment-options", periodStart, periodEnd],
-    queryFn: async () =>
-      (
-        await api.get<AssignmentOptions>("/work-plans/assignment-options", {
-          params: { period_start: periodStart, period_end: periodEnd },
-        })
-      ).data,
-    enabled: Boolean(periodStart && periodEnd && periodEnd >= periodStart),
-  });
-
-export const useAvailableVehicles = () =>
-  useQuery({
-    queryKey: ["assets", "available-vehicles"],
-    queryFn: async () => (await api.get<Asset[]>("/assets")).data,
-    select: (assets) => assets.filter((asset) => asset.kind === "VEHICLE" && asset.status === "AVAILABLE" && !asset.allocation_id),
-  });
-
 /** Peta id → nama karyawan untuk menampilkan PM/ketua. */
 export function employeeName(list: Employee[] | undefined, id: string | null | undefined): string {
   if (!id) return "-";
@@ -88,63 +64,11 @@ function useSetPlan() {
     await qc.invalidateQueries({ queryKey: ["work-plans"] });
     // Terbit/terima menandatangani dokumen di server; muat ulang daftar dokumennya.
     await qc.invalidateQueries({ queryKey: ["plan-documents", plan.id] });
-    // Laporan akhir, tim, aset, isi SK, dan usulan ikut berubah saat transisi (mis. penutupan disetujui).
+    // Laporan akhir, tim, aset, isi rencana kerja, dan usulan ikut berubah saat transisi (mis. penutupan disetujui).
     await qc.invalidateQueries({ queryKey: planKey(plan.id) });
     await qc.invalidateQueries({ queryKey: planDetailKey(plan.id) });
     await qc.invalidateQueries({ queryKey: ["plan-changes", plan.id] });
   };
-}
-
-export function useCreatePlan() {
-  const setPlan = useSetPlan();
-  return useMutation({
-    mutationFn: async (body: WorkPlanCreate) => (await api.post<WorkPlan>("/work-plans", body)).data,
-    onSuccess: setPlan,
-  });
-}
-
-export function useCreatePlanWithTeam() {
-  const setPlan = useSetPlan();
-  return useMutation({
-    mutationFn: async ({
-      plan: body,
-      leader_employee_id,
-      member_employee_ids,
-      vehicle_id,
-      driver_employee_id,
-    }: {
-      plan: WorkPlanCreate;
-      leader_employee_id: string;
-      member_employee_ids: string[];
-      vehicle_id?: string;
-      driver_employee_id?: string;
-    }) => {
-      const plan = (await api.post<WorkPlan>("/work-plans", body)).data;
-      const team = (
-        await api.put<S["TeamResponse"]>(`/work-plans/${plan.id}/members`, {
-          leader_employee_id,
-          member_employee_ids,
-          row_version: plan.row_version,
-        })
-      ).data;
-      if (vehicle_id) {
-        await api.post(`/assets/${vehicle_id}/reserve`, {
-          work_plan_id: plan.id,
-          driver_employee_id,
-        });
-      }
-      return { ...plan, leader_employee_id: team.leader_employee_id, row_version: team.row_version };
-    },
-    onSuccess: setPlan,
-  });
-}
-
-export function useUpdatePlan(id: string) {
-  const setPlan = useSetPlan();
-  return useMutation({
-    mutationFn: async (body: WorkPlanUpdate) => (await api.patch<WorkPlan>(`/work-plans/${id}`, body)).data,
-    onSuccess: setPlan,
-  });
 }
 
 export function useTransition(id: string) {
@@ -156,32 +80,7 @@ export function useTransition(id: string) {
   });
 }
 
-/** Tambah hari (POST /days) lalu isi judul + tugasnya (PUT /days/{day}/plan). */
-export function useAddDay(id: string) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async ({ work_date, title, tasks }: { work_date: string; title: string; tasks: string[] }) => {
-      const day = (await api.post<S["PlanDayResponse"]>(`/work-plans/${id}/days`, { work_date, title })).data;
-      const body: DayPlanRequest = { title, tasks: tasks.map((t) => ({ title: t })) };
-      await api.put(`/work-plans/${id}/days/${day.id}/plan`, body);
-      return day;
-    },
-    onSuccess: async () => {
-      await qc.invalidateQueries({ queryKey: planKey(id) });
-      await qc.invalidateQueries({ queryKey: ["plan-days", id] });
-    },
-  });
-}
-
-export function useSetTeam(id: string) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (body: TeamRequest) => (await api.put<S["TeamResponse"]>(`/work-plans/${id}/members`, body)).data,
-    onSuccess: () => qc.invalidateQueries({ queryKey: planKey(id) }),
-  });
-}
-
-// ── Alur SK v2 (keputusan pemilik 2026-10-03, flowchart SK2) ─────────────────────────────────
+// ── Alur rencana kerja v2 (keputusan pemilik 2026-10-03, flowchart SK2) ─────────────────────────────────
 export type PlanFormOptions = S["PlanFormOptions"];
 export type PlanDraftRequest = S["PlanDraftRequest"];
 export type PlanDetail = S["PlanDetailOut"];
@@ -190,7 +89,7 @@ export type FormAsset = S["FormAsset"];
 
 export const planDetailKey = (id: string) => ["work-plan-detail", id] as const;
 
-/** Pilihan form Buat/Ubah SK: kategori, lokasi, ketua, anggota, alat, kendaraan (sudah disaring server). */
+/** Pilihan form Buat/Ubah rencana kerja: kategori, lokasi, ketua, anggota, alat, kendaraan (sudah disaring server). */
 export const usePlanFormOptions = (planId?: string) =>
   useQuery({
     queryKey: ["plan-form-options", planId ?? "new"],
@@ -198,7 +97,7 @@ export const usePlanFormOptions = (planId?: string) =>
       (await api.get<PlanFormOptions>("/work-plans/form-options", { params: planId ? { plan_id: planId } : {} })).data,
   });
 
-/** Calon driver (dari ketua + anggota terpilih) yang ber-SIM sesuai tipe kendaraan dan tidak terikat SK lain. */
+/** Calon driver (dari ketua + anggota terpilih) yang ber-SIM sesuai tipe kendaraan dan tidak terikat rencana kerja lain. */
 export const useDriverOptions = (q: { vehicleId: string; periodEnd: string; candidates: string[]; planId?: string }) =>
   useQuery({
     queryKey: ["plan-driver-options", q],
@@ -224,7 +123,7 @@ export const usePlanDetail = (id: string, enabled = true) =>
     enabled: Boolean(id) && enabled,
   });
 
-/** Simpan SK lengkap dalam satu transaksi: buat (POST /full) atau ubah draf (PUT /{id}/full). */
+/** Simpan rencana kerja lengkap dalam satu transaksi: buat (POST /full) atau ubah draf (PUT /{id}/full). */
 export function useSavePlanDraft(planId?: string) {
   const qc = useQueryClient();
   return useMutation({
@@ -270,7 +169,7 @@ export function useRevisePlan(planId: string) {
   });
 }
 
-/** PM menerima adendum ketua dengan mengubah isi SK yang sedang berjalan (PUT /amendments/{changeId}). */
+/** PM menerima adendum ketua dengan mengubah isi rencana kerja yang sedang berjalan (PUT /amendments/{changeId}). */
 export function useApplyAmendment(planId: string, changeId: string) {
   const qc = useQueryClient();
   return useMutation({
@@ -294,3 +193,30 @@ export const useHtmlDocument = (path: string | null) =>
     enabled: Boolean(path),
     staleTime: 0,
   });
+
+export type PlanAttachment = S["AttachmentResponse"];
+
+/** GET /work-plans/{id}/attachments — lampiran rencana kerja. */
+export async function listPlanAttachments(planId: string): Promise<PlanAttachment[]> {
+  return (await api.get<PlanAttachment[]>(`/work-plans/${planId}/attachments`)).data;
+}
+
+/** PUT /work-plans/{id}/attachments — ganti daftar lampiran (file_id yang sudah diunggah). */
+export async function savePlanAttachments(planId: string, file_ids: string[]): Promise<PlanAttachment[]> {
+  return (await api.put<PlanAttachment[]>(`/work-plans/${planId}/attachments`, { file_ids })).data;
+}
+
+/** POST /work-plans/{id}/request-completion — ketua mengajukan penutupan pekerjaan + laporan akhir. */
+export async function requestCompletion(planId: string, payload: S["CompletionRequest"]): Promise<WorkPlan> {
+  return (await api.post<WorkPlan>(`/work-plans/${planId}/request-completion`, payload)).data;
+}
+
+/** GET /work-plans/{id}/completion/pdf — PDF laporan akhir ber-QR (setelah disetujui). */
+export async function fetchCompletionPdf(planId: string): Promise<Blob> {
+  return (await api.get<Blob>(`/work-plans/${planId}/completion/pdf`, { responseType: "blob" })).data;
+}
+
+/** POST /work-plans/{id}/amendments/{change}/reject — PM menolak permintaan revisi ketua. */
+export async function rejectRevisionRequest(planId: string, changeId: string, reason: string): Promise<unknown> {
+  return (await api.post(`/work-plans/${planId}/amendments/${changeId}/reject`, { reason })).data;
+}

@@ -1,5 +1,6 @@
 import { usePlanChanges } from "@/services/planChangeService";
-import { PendingRequestCard } from "./PlanRevisionPanel";
+import { PlanRevisionRequestCard } from "@/components/organisms/work-plans/PlanRevisionRequestCard";
+import { TextBlock } from "@/components/molecules/TextBlock";
 
 /** Permintaan revisi ketua yang masih menunggu: tampil di atas editor agar PM menjawabnya; menyimpan revisi = menyetujui. */
 export function PlanPendingRequests({ planId }: { planId: string }) {
@@ -9,9 +10,9 @@ export function PlanPendingRequests({ planId }: { planId: string }) {
   return (
     <div className="mb-4 space-y-3">
       {pending.map((c) => (
-        <PendingRequestCard key={c.id} c={c}>
-          <p className="mt-2 text-sm font-medium text-ink">Menyimpan revisi ini otomatis menyetujui permintaan di atas.</p>
-        </PendingRequestCard>
+        <PlanRevisionRequestCard key={c.id} c={c}>
+          <TextBlock className="mt-2 text-sm font-medium text-ink">Menyimpan revisi ini otomatis menyetujui permintaan di atas.</TextBlock>
+        </PlanRevisionRequestCard>
       ))}
     </div>
   );

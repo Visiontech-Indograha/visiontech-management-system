@@ -114,6 +114,17 @@ def delete_object(object_name: str) -> bool:
         return False
 
 
+def object_exists(object_name: str) -> bool:
+    """Cek keberadaan objek di MinIO tanpa mengunduh isinya."""
+    if not ensure_bucket():
+        return False
+    try:
+        minio_client.stat_object(settings.MINIO_BUCKET, object_name)
+        return True
+    except Exception:  # noqa: BLE001
+        return False
+
+
 @lru_cache(maxsize=1)
 def presign_client() -> Minio:
     """

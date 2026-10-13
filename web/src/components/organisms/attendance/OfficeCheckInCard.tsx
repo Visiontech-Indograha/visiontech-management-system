@@ -1,10 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
-import { useSession } from "@/app/session";
+import { useSession } from "@/stores/sessionStore";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
-import { Button } from "@/components/atoms/Button";
-import { api } from "@/lib/apiClient";
 import type { components } from "@/lib/apiTypes";
 import { ApiError } from "@/lib/apiClient";
 import { TextAreaField } from "@/components/molecules/Field";
@@ -14,8 +12,12 @@ import { useAttendanceSites } from "@/services/siteService";
 import { useFaceStatus } from "@/services/accountService";
 import { FaceProbeDialog } from "@/components/organisms/face/FaceProbeDialog";
 import { SelfieCaptureDialog } from "./SelfieCaptureDialog";
+import { ActionButton } from "@/components/molecules/ActionButton";
+import { TextBlock } from "@/components/molecules/TextBlock";
+import { ListBlock } from "@/components/molecules/ListBlock";
+import { ControlLabel, ControlOption, ControlSelect } from "@/components/molecules/FormBlock";
+import { checkIn as submitCheckIn, checkOut as submitCheckOut, listEmployeeAttendance } from "@/services/attendanceService";
 
-type AttendanceList = components["schemas"]["AttendanceListResponse"];
 type Attendance = components["schemas"]["AttendanceResponse"];
 // Keputusan pemilik 2026-10-02: ditolak → boleh mengajukan ulang sekali; ditolak lagi → hari itu terkunci.
 const MAX_ATTEMPTS_PER_DAY = 2;
@@ -76,11 +78,7 @@ function useMyToday(employeeId: string | null | undefined) {
     queryKey: ["attendance", "mine-today", employeeId],
     enabled: !!employeeId,
     queryFn: async () => {
-      const data = (
-        await api.get<AttendanceList>("/attendance", {
-          params: { employee_id: employeeId, size: 5 },
-        })
-      ).data;
+      const data = await listEmployeeAttendance(employeeId!, 5);
       // R-33: hanya sesi valid yang bisa absen pulang; absen hari lalu yang menunggu pemeriksaan tidak didahulukan.
       const open = data.items.find((a) => !a.check_out_at && (a.status === "AUTO_VALID" || a.status === "APPROVED"));
       const todays = data.items.filter((a) => a.work_date === data.today);
@@ -104,10 +102,10 @@ export function OfficeCheckInCard() {
   if (mode !== "OFFICE") {
     return (
       <section aria-label="Absen hari ini" className="mb-6 rounded-panel border border-line bg-surface p-4 shadow-card">
-        <h2 className="font-semibold">Absen hari ini</h2>
-        <p className="mt-1 text-sm text-mist">
+        <TextBlock as="h2" className="font-semibold">Absen hari ini</TextBlock>
+        <TextBlock className="mt-1 text-sm text-mist">
           Anda terdaftar sebagai pekerja lapangan. Absen masuk dan pulang dilakukan lewat aplikasi HP.
-        </p>
+        </TextBlock>
       </section>
     );
   }
@@ -166,8 +164,7 @@ function OfficeCheckInForm({ employeeId }: { employeeId: string }) {
         });
         return null;
       }
-      return (
-        await api.post<Attendance>("/attendance/check-in", {
+      return submitCheckIn({
           channel: "WEB",
           site_id: siteId,
           location: { lat: pos.lat, lng: pos.lng },
@@ -176,8 +173,7 @@ function OfficeCheckInForm({ employeeId }: { employeeId: string }) {
           explanation: explanation.trim() || null,
           selfie_file_id: vars?.selfieFileId ?? null,
           face_probe_id: probeRef.current,
-        })
-      ).data;
+        });
     },
     onSuccess: async (a) => {
       if (!a) return; // menunggu swafoto
@@ -206,8 +202,7 @@ function OfficeCheckInForm({ employeeId }: { employeeId: string }) {
     mutationFn: async (vars?: { selfieFileId: string }) => {
       const pos = outPos && vars ? outPos : await currentPosition();
       setOutPos(pos);
-      return (
-        await api.post<Attendance>("/attendance/check-out", {
+      return submitCheckOut({
           channel: "WEB",
           location: { lat: pos.lat, lng: pos.lng },
           location_origin: "GPS",
@@ -215,8 +210,7 @@ function OfficeCheckInForm({ employeeId }: { employeeId: string }) {
           explanation: explanation.trim() || null,
           selfie_file_id: vars?.selfieFileId ?? null,
           face_probe_id: probeRef.current,
-        })
-      ).data;
+        });
     },
     onSuccess: async (a) => {
       probeRef.current = null;
@@ -228,12 +222,14 @@ function OfficeCheckInForm({ employeeId }: { employeeId: string }) {
       await refresh();
     },
     onError: (err) => {
-      if (err instanceof ApiError && /swafoto wajib/i.test(err.message)) {
+      if (err instanceof ApiError && /swafoto wajib|isi penjelasan/i.test(err.message)) {
+        // Pulang di luar radius: penjelasan + swafoto wajib (sama seperti absen masuk di luar zona).
         setAskExplanation(true);
         if (!explanation.trim()) {
-          setError(`${err.message} Isi penjelasan, lalu tekan Absen pulang lagi untuk mengambil swafoto.`);
+          setError(`${err.message} Isi penjelasan di bawah, lalu tekan "Ambil swafoto & absen pulang".`);
           return;
         }
+        setError(null);
         setSelfieOut(true);
         return;
       }
@@ -247,36 +243,36 @@ function OfficeCheckInForm({ employeeId }: { employeeId: string }) {
     <section aria-label="Absen hari ini" className="mb-6 rounded-panel border border-line bg-surface p-4 shadow-card">
       <div className="flex items-start justify-between gap-2">
         <div>
-          <h2 className="font-semibold">Absen hari ini</h2>
-          <p className="text-sm text-mist">Pekerja kantor · absen lewat web</p>
+          <TextBlock as="h2" className="font-semibold">Absen hari ini</TextBlock>
+          <TextBlock className="text-sm text-mist">Pekerja kantor · absen lewat web</TextBlock>
         </div>
         {rec && <StatusBadge status={rec.status} />}
       </div>
 
       {error && (
-        <p role="alert" className="mt-3 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
+        <TextBlock role="alert" className="mt-3 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
           {error}
-        </p>
+        </TextBlock>
       )}
 
       {today.isLoading ? (
-        <p className="mt-3 text-sm text-mist">Memuat absensi hari ini…</p>
+        <TextBlock className="mt-3 text-sm text-mist">Memuat absensi hari ini…</TextBlock>
       ) : today.isError ? (
-        <p role="alert" className="mt-3 text-sm text-danger">
+        <TextBlock role="alert" className="mt-3 text-sm text-danger">
           Absensi hari ini tidak dapat dimuat.
-        </p>
+        </TextBlock>
       ) : locked ? (
-        <p role="status" className="mt-3 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
+        <TextBlock role="status" className="mt-3 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
           Absensi hari ini ditolak {rejected.length} kali dan tidak dapat diajukan lagi. Hari ini tercatat ditolak.
-        </p>
+        </TextBlock>
       ) : !rec ? (
         <>
           {rejected.length > 0 && (
-            <p role="status" className="mt-3 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
+            <TextBlock role="status" className="mt-3 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
               Absensi ditolak
               {rejected[0].review_note ? `: ${rejected[0].review_note}` : ""}. Anda dapat mengajukan absen ulang satu
               kali hari ini.
-            </p>
+            </TextBlock>
           )}
           {(askExplanation || resubmit) && (
             <div className="mt-3">
@@ -295,57 +291,77 @@ function OfficeCheckInForm({ employeeId }: { employeeId: string }) {
           )}
           <div className="mt-3 grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
             <div className="space-y-1.5">
-              <label htmlFor="office-site" className="text-sm font-medium">
+              <ControlLabel htmlFor="office-site" className="text-sm font-medium">
                 Lokasi kerja
-              </label>
-              <select
+              </ControlLabel>
+              <ControlSelect
                 id="office-site"
                 className={selectCls}
                 value={siteId}
                 disabled={sites.isLoading || busy}
                 onChange={(e) => setPicked(e.target.value)}
               >
-                {sites.data?.length === 0 && <option value="">Belum ada lokasi kerja</option>}
+                {sites.data?.length === 0 && <ControlOption value="">Belum ada lokasi kerja</ControlOption>}
                 {sites.data?.map((s) => (
-                  <option key={s.id} value={s.id}>
+                  <ControlOption key={s.id} value={s.id}>
                     {s.name}
-                  </option>
+                  </ControlOption>
                 ))}
-              </select>
+              </ControlSelect>
             </div>
-            <Button className="h-11" disabled={!siteId || busy} onClick={() => (needFace ? setFaceFor("in") : checkIn.mutate(undefined))}>
+            <ActionButton className="h-11" disabled={!siteId || busy} onClick={() => (needFace ? setFaceFor("in") : checkIn.mutate(undefined))}>
               {checkIn.isPending ? "Membaca lokasi…" : rejected.length > 0 ? "Ajukan absen ulang" : "Absen masuk"}
-            </Button>
+            </ActionButton>
           </div>
         </>
       ) : (
         <div className="mt-3 space-y-3">
-          <dl className="text-sm">
+          <ListBlock as="dl" className="text-sm">
             <div>
-              <dt className="inline text-mist">Lokasi: </dt>
-              <dd className="inline">
+              <TextBlock as="dt" className="inline text-mist">Lokasi: </TextBlock>
+              <TextBlock as="dd" className="inline">
                 {rec.site_label} · {Math.round(rec.distance_m)} m{rec.is_late ? " · terlambat" : ""}
                 {rec.is_early_leave ? " · pulang cepat" : ""}
-              </dd>
+              </TextBlock>
             </div>
             <div>
-              <dt className="inline text-mist">Masuk / pulang: </dt>
-              <dd className="inline">
+              <TextBlock as="dt" className="inline text-mist">Masuk / pulang: </TextBlock>
+              <TextBlock as="dd" className="inline">
                 {formatDateTime(rec.check_in_at)} /{" "}
                 {rec.check_out_at ? formatDateTime(rec.check_out_at) : "belum pulang"}
-              </dd>
+              </TextBlock>
             </div>
-          </dl>
+          </ListBlock>
           {!rec.check_out_at && rec.status === "NEEDS_REVIEW" ? (
-            <p role="status" className="rounded-control border border-warning-border bg-warning-bg px-3 py-2 text-sm text-warning">
+            <TextBlock role="status" className="rounded-control border border-warning-border bg-warning-bg px-3 py-2 text-sm text-warning">
               Absen masuk menunggu pemeriksaan. Absen pulang bisa dilakukan setelah absen masuk disetujui.
-            </p>
+            </TextBlock>
+          ) : !rec.check_out_at && askExplanation && outPos ? (
+            <div className="space-y-3">
+              <TextAreaField
+                label="Penjelasan (wajib)"
+                hint="Wajib karena Anda pulang di luar zona lokasi. Setelah itu ambil swafoto."
+                value={explanation}
+                maxLength={1000}
+                onChange={(e) => setExplanation(e.target.value)}
+              />
+              <ActionButton
+                className="h-11 w-full md:w-auto"
+                disabled={busy || !explanation.trim()}
+                onClick={() => {
+                  setError(null);
+                  setSelfieOut(true);
+                }}
+              >
+                {checkOut.isPending ? "Mengirim…" : "Ambil swafoto & absen pulang"}
+              </ActionButton>
+            </div>
           ) : !rec.check_out_at ? (
-            <Button className="h-11 w-full md:w-auto" disabled={busy} onClick={() => (needFace ? setFaceFor("out") : checkOut.mutate(undefined))}>
+            <ActionButton className="h-11 w-full md:w-auto" disabled={busy} onClick={() => (needFace ? setFaceFor("out") : checkOut.mutate(undefined))}>
               {checkOut.isPending ? "Membaca lokasi…" : "Absen pulang"}
-            </Button>
+            </ActionButton>
           ) : (
-            <p className="text-sm text-success">Absensi hari ini selesai. Terima kasih!</p>
+            <TextBlock className="text-sm text-success">Absensi hari ini selesai. Terima kasih!</TextBlock>
           )}
         </div>
       )}

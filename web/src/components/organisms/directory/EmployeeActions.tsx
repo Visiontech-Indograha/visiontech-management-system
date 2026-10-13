@@ -1,4 +1,4 @@
-import { Button } from "@/components/atoms/Button";
+import { ActionButton } from "@/components/molecules/ActionButton";
 
 /** Aksi HR di kepala halaman detail karyawan: mutasi/promosi & offboarding (hanya karyawan aktif), ubah profil. */
 export function EmployeeActions({ isActive, onPromote, onOffboard, onEdit }: {
@@ -10,18 +10,18 @@ export function EmployeeActions({ isActive, onPromote, onOffboard, onEdit }: {
   return (
             <div className="flex flex-wrap gap-2">
               {isActive && (
-                <Button variant="outline" onClick={onPromote}>
+                <ActionButton variant="outline" onClick={onPromote}>
                   Mutasi / promosi
-                </Button>
+                </ActionButton>
               )}
               {isActive && (
-                <Button variant="outline" onClick={onOffboard}>
+                <ActionButton variant="outline" onClick={onOffboard}>
                   Offboarding
-                </Button>
+                </ActionButton>
               )}
-              <Button variant="outline" onClick={onEdit}>
+              <ActionButton variant="outline" onClick={onEdit}>
                 Ubah profil
-              </Button>
+              </ActionButton>
             </div>
   );
 }

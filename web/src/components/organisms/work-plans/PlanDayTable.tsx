@@ -1,13 +1,19 @@
-import { Paperclip, Plus, Trash2, X } from "lucide-react";
 import { useState } from "react";
 import { useFieldArray, useWatch, type Control, type FieldErrors, type UseFormRegister, type UseFormSetValue } from "react-hook-form";
 import { toast } from "sonner";
-import { Button } from "@/components/atoms/Button";
 import { errorMessage } from "@/lib/errors";
 import { formatDate } from "@/lib/format";
 import type { TaskValue, Values } from "@/schemas/planEditorSchema";
 import { oversize, uploadFiles } from "@/services/uploadService";
 import { weekday } from "@/lib/weekday";
+import { ActionButton } from "@/components/molecules/ActionButton";
+import { Paperclip, Plus, Trash2, X } from "@/components/molecules/Glyphs";
+import { TextBlock } from "@/components/molecules/TextBlock";
+import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
+import { TableBlock, TableBlockBody, TableBlockCell, TableBlockHead, TableBlockHeaderCell, TableBlockRow } from "@/components/molecules/TableBlock";
+import { PlainAction } from "@/components/molecules/PlainAction";
+import { ControlInput, ControlLabel, ControlOption, ControlSelect, ControlTextarea } from "@/components/molecules/FormBlock";
+import { DisclosureBlock, DisclosureTitle } from "@/components/molecules/DisclosureBlock";
 
 const cell = "border-b border-line p-2 align-top";
 const control_ =
@@ -37,23 +43,23 @@ export function PlanDayTable(props: Props) {
   const { fields } = props;
   return (
     <div className="overflow-x-auto rounded-control border border-line">
-      <table className="w-full min-w-[1080px] border-collapse text-sm">
-        <thead className="bg-canvas text-left">
-          <tr>
-            <th className={`${cell} w-36`}>Tanggal</th>
-            <th className={`${cell} w-44`}>Jenis pekerjaan</th>
-            <th className={`${cell} w-44`}>Lokasi</th>
-            <th className={cell}>Detail pekerjaan</th>
-            <th className={`${cell} w-64`}>Pekerja (ketua selalu ikut)</th>
-            <th className={`${cell} w-32`}>Aksi</th>
-          </tr>
-        </thead>
-        <tbody>
+      <TableBlock className="w-full min-w-[1080px] border-collapse text-sm">
+        <TableBlockHead className="bg-canvas text-left">
+          <TableBlockRow>
+            <TableBlockHeaderCell className={`${cell} w-36`}>Tanggal</TableBlockHeaderCell>
+            <TableBlockHeaderCell className={`${cell} w-44`}>Jenis pekerjaan</TableBlockHeaderCell>
+            <TableBlockHeaderCell className={`${cell} w-44`}>Lokasi</TableBlockHeaderCell>
+            <TableBlockHeaderCell className={cell}>Detail pekerjaan</TableBlockHeaderCell>
+            <TableBlockHeaderCell className={`${cell} w-64`}>Pekerja (ketua selalu ikut)</TableBlockHeaderCell>
+            <TableBlockHeaderCell className={`${cell} w-32`}>Aksi</TableBlockHeaderCell>
+          </TableBlockRow>
+        </TableBlockHead>
+        <TableBlockBody>
           {fields.map((f, i) => (
             <DayRow key={f.id} index={i} workDate={f.work_date} total={fields.length} allDays={fields.map((x) => x.work_date)} {...props} />
           ))}
-        </tbody>
-      </table>
+        </TableBlockBody>
+      </TableBlock>
     </div>
   );
 }
@@ -123,13 +129,13 @@ function DayRow({
   };
 
   return (
-    <tr>
-      <td className={cell}>
-        <p className="font-semibold">Hari {index + 1}</p>
-        <p>
+    <TableBlockRow>
+      <TableBlockCell className={cell}>
+        <TextBlock className="font-semibold">Hari {index + 1}</TextBlock>
+        <TextBlock>
           {weekday(workDate)}, {formatDate(workDate)}
-        </p>
-        <Button
+        </TextBlock>
+        <ActionButton
           type="button"
           variant="outline"
           size="sm"
@@ -139,46 +145,46 @@ function DayRow({
           title={canHoliday ? undefined : "Hari pertama dan terakhir tidak bisa diliburkan; ubah tanggal mulai/selesai."}
         >
           Libur
-        </Button>
-      </td>
-      <td className={cell}>
-        <select aria-label={`Jenis pekerjaan hari ${index + 1}`} className={control_} {...register(`days.${index}.work_type_id`)}>
-          <option value="">Ikut jenis rencana</option>
+        </ActionButton>
+      </TableBlockCell>
+      <TableBlockCell className={cell}>
+        <ControlSelect aria-label={`Jenis pekerjaan hari ${index + 1}`} className={control_} {...register(`days.${index}.work_type_id`)}>
+          <ControlOption value="">Ikut jenis rencana</ControlOption>
           {workTypes.map((t) => (
-            <option key={t.id} value={t.id}>
+            <ControlOption key={t.id} value={t.id}>
               {t.name}
-            </option>
+            </ControlOption>
           ))}
-        </select>
-      </td>
-      <td className={cell}>
-        <select aria-label={`Lokasi hari ${index + 1}`} className={control_} {...register(`days.${index}.site_id`)}>
-          <option value="">Ikut lokasi rencana</option>
+        </ControlSelect>
+      </TableBlockCell>
+      <TableBlockCell className={cell}>
+        <ControlSelect aria-label={`Lokasi hari ${index + 1}`} className={control_} {...register(`days.${index}.site_id`)}>
+          <ControlOption value="">Ikut lokasi rencana</ControlOption>
           {sites.map((s) => (
-            <option key={s.id} value={s.id}>
+            <ControlOption key={s.id} value={s.id}>
               {s.name}
-            </option>
+            </ControlOption>
           ))}
-        </select>
-      </td>
-      <td className={cell}>
+        </ControlSelect>
+      </TableBlockCell>
+      <TableBlockCell className={cell}>
         <div className="space-y-2">
           {tasks.fields.map((task, t) => (
             <div key={task.id} className="rounded-control bg-canvas p-2">
               <div className="flex gap-2">
-                <input
+                <ControlInput
                   aria-label={`Judul pekerjaan hari ${index + 1} nomor ${t + 1}`}
                   placeholder="Judul pekerjaan"
                   className={control_}
                   {...register(`days.${index}.tasks.${t}.title`)}
                 />
                 {tasks.fields.length > 1 && (
-                  <Button type="button" variant="ghost" size="sm" onClick={() => tasks.remove(t)} aria-label={`Hapus detail ${t + 1} hari ${index + 1}`}>
+                  <ActionButton type="button" variant="ghost" size="sm" onClick={() => tasks.remove(t)} aria-label={`Hapus detail ${t + 1} hari ${index + 1}`}>
                     <Trash2 className="size-4" />
-                  </Button>
+                  </ActionButton>
                 )}
               </div>
-              <textarea
+              <ControlTextarea
                 aria-label={`Deskripsi pekerjaan hari ${index + 1} nomor ${t + 1}`}
                 placeholder="Deskripsi"
                 rows={2}
@@ -186,12 +192,12 @@ function DayRow({
                 {...register(`days.${index}.tasks.${t}.description`)}
               />
               {(dayErr?.tasks?.[t]?.title || dayErr?.tasks?.[t]?.description) && (
-                <p className="text-xs text-destructive">{dayErr?.tasks?.[t]?.title?.message ?? dayErr?.tasks?.[t]?.description?.message}</p>
+                <TextBlock className="text-xs text-destructive">{dayErr?.tasks?.[t]?.title?.message ?? dayErr?.tasks?.[t]?.description?.message}</TextBlock>
               )}
-              <label className="flex min-h-11 cursor-pointer items-center gap-1 text-xs text-lens">
+              <ControlLabel className="flex min-h-11 cursor-pointer items-center gap-1 text-xs text-lens">
                 <Paperclip className="size-4" />
                 {uploading === t ? "Mengunggah..." : "Foto/PDF (opsional)"}
-                <input
+                <ControlInput
                   type="file"
                   accept=".jpg,.jpeg,.png,.pdf"
                   multiple
@@ -201,84 +207,84 @@ function DayRow({
                     e.target.value = "";
                   }}
                 />
-              </label>
+              </ControlLabel>
               {filesOf(t).map((f) => (
                 <div key={f.file_id} className="flex items-center justify-between gap-1 text-xs">
-                  <span className="truncate">{f.file_name}</span>
-                  <button
+                  <TextBlock as="span" className="truncate">{f.file_name}</TextBlock>
+                  <PlainAction
                     type="button"
                     className="min-h-11 px-2 text-destructive"
                     onClick={() => setValue(`days.${index}.tasks.${t}.files`, filesOf(t).filter((x) => x.file_id !== f.file_id))}
                   >
                     Hapus
-                  </button>
+                  </PlainAction>
                 </div>
               ))}
             </div>
           ))}
-          {dayErr?.tasks?.message && <p className="text-xs text-destructive">{dayErr.tasks.message}</p>}
-          <Button type="button" variant="outline" size="sm" onClick={() => tasks.append({ title: "", description: "", files: [] })}>
+          {dayErr?.tasks?.message && <TextBlock className="text-xs text-destructive">{dayErr.tasks.message}</TextBlock>}
+          <ActionButton type="button" variant="outline" size="sm" onClick={() => tasks.append({ title: "", description: "", files: [] })}>
             <Plus className="size-4" /> Tambah detail
-          </Button>
+          </ActionButton>
         </div>
-      </td>
-      <td className={cell}>
-        <ul className="mb-2 flex flex-wrap gap-1" aria-label={`Pekerja hari ${index + 1}`}>
-          {memberIds.length === 0 && <li className="text-xs text-mist">Belum ada anggota (hanya ketua)</li>}
+      </TableBlockCell>
+      <TableBlockCell className={cell}>
+        <ListBlock className="mb-2 flex flex-wrap gap-1" aria-label={`Pekerja hari ${index + 1}`}>
+          {memberIds.length === 0 && <ListEntry className="text-xs text-mist">Belum ada anggota (hanya ketua)</ListEntry>}
           {memberIds.map((id) => (
-            <li key={id} className="flex items-center gap-1 rounded-full bg-canvas px-2 py-1 text-xs">
+            <ListEntry key={id} className="flex items-center gap-1 rounded-full bg-canvas px-2 py-1 text-xs">
               {nameOf(id)}
-              <button
+              <PlainAction
                 type="button"
                 aria-label={`Keluarkan ${nameOf(id)} dari hari ${index + 1}`}
                 className="flex size-6 items-center justify-center"
                 onClick={() => setMembers(memberIds.filter((m) => m !== id))}
               >
                 <X className="size-3" />
-              </button>
-            </li>
+              </PlainAction>
+            </ListEntry>
           ))}
-        </ul>
+        </ListBlock>
         <div className="flex gap-1">
-          <select aria-label={`Pilih anggota hari ${index + 1}`} className={control_} value={pick} onChange={(e) => setPick(e.target.value)}>
-            <option value="">{free.length ? "Pilih anggota…" : "Tidak ada yang kosong"}</option>
+          <ControlSelect aria-label={`Pilih anggota hari ${index + 1}`} className={control_} value={pick} onChange={(e) => setPick(e.target.value)}>
+            <ControlOption value="">{free.length ? "Pilih anggota…" : "Tidak ada yang kosong"}</ControlOption>
             {free.map((c) => (
-              <option key={c.id} value={c.id}>
+              <ControlOption key={c.id} value={c.id}>
                 {c.name}
-              </option>
+              </ControlOption>
             ))}
-          </select>
-          <Button type="button" size="sm" className="h-11" disabled={!pick} onClick={addMember}>
+          </ControlSelect>
+          <ActionButton type="button" size="sm" className="h-11" disabled={!pick} onClick={addMember}>
             Tambah
-          </Button>
+          </ActionButton>
         </div>
-        {busyCount > 0 && <p className="mt-1 text-xs text-mist">{busyCount} orang sibuk di rencana lain pada tanggal ini.</p>}
-      </td>
-      <td className={cell}>
+        {busyCount > 0 && <TextBlock className="mt-1 text-xs text-mist">{busyCount} orang sibuk di rencana lain pada tanggal ini.</TextBlock>}
+      </TableBlockCell>
+      <TableBlockCell className={cell}>
         {total > 1 && (
-          <details>
-            <summary className="flex min-h-11 cursor-pointer items-center text-xs font-medium text-lens">Salin ke hari lain</summary>
+          <DisclosureBlock>
+            <DisclosureTitle className="flex min-h-11 cursor-pointer items-center text-xs font-medium text-lens">Salin ke hari lain</DisclosureTitle>
             <div className="mt-1 space-y-1">
               {allDays.map((d, k) =>
                 k === index ? null : (
-                  <label key={d} className="flex min-h-11 items-center gap-2 text-xs">
-                    <input
+                  <ControlLabel key={d} className="flex min-h-11 items-center gap-2 text-xs">
+                    <ControlInput
                       type="checkbox"
                       className="size-5"
                       checked={copyTo.includes(k)}
                       onChange={(e) => setCopyTo(e.target.checked ? [...copyTo, k] : copyTo.filter((x) => x !== k))}
                     />
                     {weekday(d)} {formatDate(d)}
-                  </label>
+                  </ControlLabel>
                 ),
               )}
-              <Button type="button" variant="outline" size="sm" disabled={copyTo.length === 0} onClick={applyToOthers}>
+              <ActionButton type="button" variant="outline" size="sm" disabled={copyTo.length === 0} onClick={applyToOthers}>
                 Terapkan
-              </Button>
+              </ActionButton>
             </div>
-          </details>
+          </DisclosureBlock>
         )}
-      </td>
-    </tr>
+      </TableBlockCell>
+    </TableBlockRow>
   );
 }

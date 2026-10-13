@@ -7,9 +7,15 @@ from __future__ import annotations
 import contextlib
 import os
 import socket
+import sys
 import uuid
 from collections.abc import Callable, Iterator
 from urllib.parse import urlparse
+
+if sys.platform == "win32":
+    _git_bin = r"C:\Program Files\Git\bin"
+    if os.path.isdir(_git_bin) and _git_bin.lower() not in os.environ.get("PATH", "").lower():
+        os.environ["PATH"] = f"{_git_bin};{os.environ.get('PATH', '')}"
 
 import psycopg2
 import pytest
@@ -263,8 +269,26 @@ def fake_storage(monkeypatch) -> dict[str, bytes]:
         stored[object_name] = data
         return True
 
-    import app.api.v1.endpoints.files as files_api
+    import app.core.storage as storage_core
 
-    monkeypatch.setattr(files_api, "upload_file", upload)
-    monkeypatch.setattr(files_api, "get_presigned_url", lambda name, expires=None: f"https://minio.uji/{name}")
+    monkeypatch.setattr(storage_core, "upload_file", upload)
+    monkeypatch.setattr(storage_core, "get_presigned_url", lambda name, expires=None: f"https://minio.uji/{name}")
+
+    try:
+        import app.api.v1.endpoints.files as files_api
+
+        monkeypatch.setattr(files_api, "upload_file", upload)
+        monkeypatch.setattr(files_api, "get_presigned_url", lambda name, expires=None: f"https://minio.uji/{name}")
+    except (ImportError, AttributeError):
+        pass
+
+    try:
+        import app.modules.system.controllers.files_controller as files_ctrl
+
+        monkeypatch.setattr(files_ctrl, "upload_file", upload)
+        monkeypatch.setattr(files_ctrl, "get_presigned_url", lambda name, expires=None: f"https://minio.uji/{name}")
+    except (ImportError, AttributeError):
+        pass
+
     return stored
+

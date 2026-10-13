@@ -48,7 +48,7 @@ Rinciannya ada di kolom **Tahapan** pada pesan ✅.
   - Bisa ditimpa lewat env `VMS_DEPLOY_REPO`, `VMS_GITHUB_URL`, `VMS_PUBLIC_URL`.
 - Akses baca repo: deploy key `~/.ssh/vms_deploy` (alias SSH `github-vms`), hanya-baca.
   - Terdaftar di repo baru sebagai `vms-server-deploy`.
-- Berkas rahasia di server (tidak di Git, chmod 600): `api.env`, `notify.env` (`DISCORD_WEBHOOK_DEPLOY`).
+- Berkas rahasia di server (tidak di Git, chmod 600): `api.env`, `notify.env` (`DISCORD_WEBHOOK_DEPLOY`, `DISCORD_WEBHOOK_BUILD` untuk webhook ke-4).
 
 ## Memasang perubahan skrip ini ke server
 

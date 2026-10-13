@@ -1,9 +1,10 @@
 import type { UseQueryResult } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
-import { Badge } from "@/components/atoms/Badge";
-import { Button } from "@/components/atoms/Button";
 import { formatDate } from "@/lib/format";
 import type { EmployeeList } from "@/services/employeeService";
+import { Pill } from "@/components/molecules/Pill";
+import { ActionButton } from "@/components/molecules/ActionButton";
+import { InlineLink } from "@/components/molecules/Links";
+import { TableBlock, TableBlockBody, TableBlockCell, TableBlockHead, TableBlockHeaderCell, TableBlockRow } from "@/components/molecules/TableBlock";
 
 /** Tabel karyawan dengan keadaan memuat, galat (+ coba lagi), kosong, dan berhasil. */
 export function EmployeeTable({ list }: { list: UseQueryResult<EmployeeList> }) {
@@ -11,55 +12,55 @@ export function EmployeeTable({ list }: { list: UseQueryResult<EmployeeList> }) 
   const cols = 4;
   return (
       <div className="overflow-x-auto rounded-panel border border-line bg-surface shadow-card">
-        <table className="w-full text-left text-sm">
-          <thead className="sticky top-0 border-b border-line bg-surface text-mist">
-            <tr>
-              <th className="px-4 py-3 font-medium">Nama</th>
-              <th className="px-4 py-3 font-medium">Jabatan</th>
-              <th className="px-4 py-3 font-medium">Bergabung</th>
-              <th className="px-4 py-3 font-medium">Akun</th>
-            </tr>
-          </thead>
-          <tbody>
+        <TableBlock className="w-full text-left text-sm">
+          <TableBlockHead className="sticky top-0 border-b border-line bg-surface text-mist">
+            <TableBlockRow>
+              <TableBlockHeaderCell className="px-4 py-3 font-medium">Nama</TableBlockHeaderCell>
+              <TableBlockHeaderCell className="px-4 py-3 font-medium">Jabatan</TableBlockHeaderCell>
+              <TableBlockHeaderCell className="px-4 py-3 font-medium">Bergabung</TableBlockHeaderCell>
+              <TableBlockHeaderCell className="px-4 py-3 font-medium">Akun</TableBlockHeaderCell>
+            </TableBlockRow>
+          </TableBlockHead>
+          <TableBlockBody>
             {list.isPending && (
-              <tr aria-hidden>
-                <td colSpan={cols} className="h-11 px-4">
+              <TableBlockRow aria-hidden>
+                <TableBlockCell colSpan={cols} className="h-11 px-4">
                   <div className="h-3 w-1/2 animate-pulse rounded-tag bg-hover" />
-                </td>
-              </tr>
+                </TableBlockCell>
+              </TableBlockRow>
             )}
             {list.isError && (
-              <tr>
-                <td colSpan={cols} className="px-4 py-6 text-center text-danger">
+              <TableBlockRow>
+                <TableBlockCell colSpan={cols} className="px-4 py-6 text-center text-danger">
                   Direktori tidak dapat dimuat.{" "}
-                  <Button variant="outline" size="sm" onClick={() => list.refetch()}>
+                  <ActionButton variant="outline" size="sm" onClick={() => list.refetch()}>
                     Coba lagi
-                  </Button>
-                </td>
-              </tr>
+                  </ActionButton>
+                </TableBlockCell>
+              </TableBlockRow>
             )}
             {data?.items.length === 0 && (
-              <tr>
-                <td colSpan={cols} className="px-4 py-6 text-center text-mist">
+              <TableBlockRow>
+                <TableBlockCell colSpan={cols} className="px-4 py-6 text-center text-mist">
                   Tidak ada karyawan yang cocok.
-                </td>
-              </tr>
+                </TableBlockCell>
+              </TableBlockRow>
             )}
             {data?.items.map((e) => (
-              <tr key={e.id} className="h-11 border-b border-line last:border-0 hover:bg-hover">
-                <td className="px-4 py-2">
-                  <Link to={`/directory/${e.id}`} state={{ employee: e }} className="font-medium text-lens hover:underline">
+              <TableBlockRow key={e.id} className="h-11 border-b border-line last:border-0 hover:bg-hover">
+                <TableBlockCell className="px-4 py-2">
+                  <InlineLink to={`/directory/${e.id}`} state={{ employee: e }} className="font-medium text-lens hover:underline">
                     {e.full_name}
-                  </Link>
+                  </InlineLink>
                   <div className="text-xs text-mist">{e.employee_no}</div>
-                </td>
-                <td className="px-4 py-2">{e.position}</td>
-                <td className="px-4 py-2">{formatDate(e.join_date)}</td>
-                <td className="px-4 py-2">{e.is_active ? <Badge tone="success">Aktif</Badge> : <Badge>Nonaktif</Badge>}</td>
-              </tr>
+                </TableBlockCell>
+                <TableBlockCell className="px-4 py-2">{e.position}</TableBlockCell>
+                <TableBlockCell className="px-4 py-2">{formatDate(e.join_date)}</TableBlockCell>
+                <TableBlockCell className="px-4 py-2">{e.is_active ? <Pill tone="success">Aktif</Pill> : <Pill>Nonaktif</Pill>}</TableBlockCell>
+              </TableBlockRow>
             ))}
-          </tbody>
-        </table>
+          </TableBlockBody>
+        </TableBlock>
       </div>
   );
 }

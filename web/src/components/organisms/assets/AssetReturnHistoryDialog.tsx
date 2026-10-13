@@ -1,16 +1,17 @@
 import { toast } from "sonner";
-import { Button } from "@/components/atoms/Button";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
-import { api, ApiError } from "@/lib/apiClient";
+import { ApiError } from "@/lib/apiClient";
 import { errorMessage } from "@/lib/errors";
 import { formatDateTime } from "@/lib/format";
-import { useAssetReturns, type Asset, type AssetReturnItem } from "@/services/assetService";
+import { useAssetReturns, type Asset, type AssetReturnItem, fetchAssetReturnPdf } from "@/services/assetService";
+import { ActionButton } from "@/components/molecules/ActionButton";
+import { TextBlock } from "@/components/molecules/TextBlock";
+import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
 
 /** Unduh BAST (GET /assets/returns/{id}/pdf, blob). */
 async function downloadBast(asset: Asset, item: AssetReturnItem) {
   try {
-    const res = await api.get<Blob>(`/assets/returns/${item.id}/pdf`, { responseType: "blob" });
-    const url = URL.createObjectURL(res.data);
+    const url = URL.createObjectURL(await fetchAssetReturnPdf(item.id));
     const link = document.createElement("a");
     link.href = url;
     link.download = `BAST-${asset.code}-${item.plan_number ?? ""}.pdf`.replace(/\//g, "-");
@@ -30,35 +31,35 @@ export function AssetReturnHistoryDialog({ asset, onClose }: { asset: Asset; onC
       title={`Riwayat pengembalian ${asset.name}`}
       onClose={onClose}
       footer={
-        <Button variant="outline" onClick={onClose}>
+        <ActionButton variant="outline" onClick={onClose}>
           Tutup
-        </Button>
+        </ActionButton>
       }
     >
-      {history.isPending && <p className="text-sm text-mist">Memuat…</p>}
-      {history.isError && <p className="text-sm text-danger">Riwayat tidak dapat dimuat.</p>}
-      {history.data?.length === 0 && <p className="text-sm text-mist">Belum pernah dikembalikan.</p>}
-      <ul className="divide-y divide-line text-sm">
+      {history.isPending && <TextBlock className="text-sm text-mist">Memuat…</TextBlock>}
+      {history.isError && <TextBlock className="text-sm text-danger">Riwayat tidak dapat dimuat.</TextBlock>}
+      {history.data?.length === 0 && <TextBlock className="text-sm text-mist">Belum pernah dikembalikan.</TextBlock>}
+      <ListBlock className="divide-y divide-line text-sm">
         {history.data?.map((r) => (
-          <li key={r.id} className="flex flex-col gap-2 py-3 md:flex-row md:items-center md:justify-between">
+          <ListEntry key={r.id} className="flex flex-col gap-2 py-3 md:flex-row md:items-center md:justify-between">
             <div>
-              <p className="font-medium">
+              <TextBlock className="font-medium">
                 Rencana Kerja {r.plan_number} ·{" "}
                 {r.verified_at ? (r.is_accepted ? "Diterima" : "Ditolak") : "Menunggu pemeriksaan"}
-              </p>
-              <p className="text-mist">
+              </TextBlock>
+              <TextBlock className="text-mist">
                 {r.requested_by_name} · {formatDateTime(r.requested_at)} · kondisi {r.condition_on_return ?? "-"}
                 {r.verified_by_name && ` · diperiksa ${r.verified_by_name}`}
-              </p>
+              </TextBlock>
             </div>
             {r.verified_at && (
-              <Button size="sm" variant="outline" onClick={() => downloadBast(asset, r)}>
+              <ActionButton size="sm" variant="outline" onClick={() => downloadBast(asset, r)}>
                 Unduh BAST
-              </Button>
+              </ActionButton>
             )}
-          </li>
+          </ListEntry>
         ))}
-      </ul>
+      </ListBlock>
     </VmsDialog>
   );
 }

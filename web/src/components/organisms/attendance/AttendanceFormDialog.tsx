@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
-import { Button } from "@/components/atoms/Button";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
+import { ActionButton } from "@/components/molecules/ActionButton";
+import { FormBlock } from "@/components/molecules/FormBlock";
+import { FormErrorText } from "@/components/molecules/FormErrorText";
 
 /** Kerangka dialog form absensi: judul, galat umum, isi form, tombol Batal/kirim. */
 export function AttendanceFormDialog({
@@ -27,23 +29,19 @@ export function AttendanceFormDialog({
       onClose={onClose}
       footer={
         <>
-          <Button variant="outline" onClick={onClose} disabled={submitting}>
+          <ActionButton variant="outline" onClick={onClose} disabled={submitting}>
             Batal
-          </Button>
-          <Button type="submit" form="attendance-form" disabled={submitting}>
+          </ActionButton>
+          <ActionButton type="submit" form="attendance-form" disabled={submitting}>
             {submitting ? "Menyimpan..." : submitLabel}
-          </Button>
+          </ActionButton>
         </>
       }
     >
-      <form id="attendance-form" onSubmit={onSubmit} noValidate>
-        {formError && (
-          <p role="alert" className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
-            {formError}
-          </p>
-        )}
+      <FormBlock id="attendance-form" onSubmit={onSubmit} noValidate>
+        <FormErrorText message={formError} />
         {children}
-      </form>
+      </FormBlock>
     </VmsDialog>
   );
 }

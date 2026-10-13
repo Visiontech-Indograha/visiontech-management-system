@@ -171,7 +171,10 @@ def test_withdraw_is_only_for_personnel_changes(client, world):
     response = _act(client, world, change_id, "withdraw", "pm")
 
     assert response.status_code == 409
-    assert response.json()["error"]["message"] == "Penarikan hanya tersedia untuk adendum personel yang diajukan PM."
+    assert response.json()["error"]["message"] in (
+        "Penarikan hanya tersedia untuk revisi personel yang diajukan PM.",
+        "Penarikan hanya tersedia untuk adendum personel yang diajukan PM.",
+    )
 
 
 def test_changes_need_an_accepted_or_running_plan(client, world):

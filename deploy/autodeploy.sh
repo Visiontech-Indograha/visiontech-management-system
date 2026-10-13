@@ -91,6 +91,69 @@ stage_times() {
 dur() { local s=$1; [ "$s" -ge 60 ] && printf '%d mnt %02d dtk' $((s/60)) $((s%60)) || printf '%d dtk' "$s"; }
 
 step() { echo; echo "===== $(date '+%H:%M:%S') · $* ====="; echo "$*|$(date +%s)" >> "$STAGES"; }
+
+# Menunggu sampai benar-benar siap, bukan sekadar `sleep`: insiden 2026-10-13 menunjukkan
+# `sleep 8` lolos padahal API belum bisa mencapai DB (host salah parse → socket.gaierror),
+# sehingga kegagalan baru muncul sebagai traceback di tengah tahap migrasi. Menunggu juga
+# mencegah deploy gagal saat DB/MinIO lambat siap (mis. setelah host reboot).
+wait_api_reaches_db() {                       # → 0 bila API benar-benar tersambung ke basis data
+  local i
+  for i in $(seq 1 12); do                    # maks ±60 dtk
+    if docker exec vms_api python -c "
+import asyncio, asyncpg
+from app.core.config import settings
+async def main():
+    conn = await asyncpg.connect(settings.DATABASE_URL.replace('+asyncpg', ''), timeout=5)
+    await conn.close()
+asyncio.run(main())" >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep 5
+  done
+  return 1
+}
+
+wait_api_reaches_minio() {                    # → 0 bila API benar-benar bisa memakai MinIO
+  local i
+  for i in $(seq 1 6); do                     # maks ±30 dtk
+    if docker exec vms_api python -c "
+from minio import Minio
+from app.core.config import settings as s
+host = s.MINIO_ENDPOINT.replace('http://', '').replace('https://', '')
+Minio(host, access_key=s.MINIO_ACCESS_KEY, secret_key=s.MINIO_SECRET_KEY,
+      secure=s.MINIO_SECURE).list_buckets()" >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep 5
+  done
+  return 1
+}
+
+# Menerjemahkan kegagalan di atas menjadi kalimat yang menunjuk berkas & nilai yang salah,
+# bukan sekadar traceback — supaya log Discord langsung memberi arah perbaikan.
+db_hint() {
+  echo "API tidak bisa mencapai basis data lewat DATABASE_URL di api.env."
+  echo "Periksa sandi yang memuat karakter khusus (@ : / #) — WAJIB di-URL-encode ('@' → '%40')."
+  docker exec vms_api python -c "
+import os
+from sqlalchemy.engine import make_url
+for key in ('DATABASE_URL', 'MIGRATION_DATABASE_URL'):
+    value = os.environ.get(key, '')
+    if not value:
+        continue
+    url = make_url(value)
+    print(f'  {key}: user={url.username!r} host={url.host!r} db={url.database!r}')
+    if '@' in (url.host or ''):
+        print(f'  -> {key} SALAH BENTUK: sandi belum di-URL-encode.')
+" 2>&1 || true
+  echo "Lalu: docker compose up -d --force-recreate api dan periksa /ready."
+}
+
+minio_hint() {
+  echo "API tidak bisa memakai MinIO dengan MINIO_ACCESS_KEY / MINIO_SECRET_KEY di api.env."
+  echo "Kredensial itu tidak dikenal MinIO — pakai service account yang valid"
+  echo "(mis. dari /home/ageng/deploy/visiontech/.env: S3_ACCESS_KEY / S3_SECRET_KEY)."
+}
 fail() {
   FIELDS="Commit|1|[\`$SHORT\`]($GH_URL/commit/$NEW)${F}Oleh|1|$AUTHOR${F}Durasi|1|$(dur $(( $(date +%s) - T0 )))\
 ${F}Versi berjalan|0|\`${OLD:0:8}\` (sebelumnya) — kecuali tahap gagal setelah kontainer dinyalakan\
@@ -121,13 +184,18 @@ $CHANGES
   rm -f api/.env web/.env
   step "Build image (docker compose build)"
   docker compose --progress=plain build 2>&1 || exit 12
-  step "Backup database (DB aplikasi → lokal + MinIO vms-backups)"
-  ./backup.sh "pra-deploy-$SHORT" || exit 13
   step "Jalankan kontainer baru (up -d)"
   # Compose dapat mempertahankan kontainer lama bila isi image baru identik (mis. commit hanya docs),
   # padahal pemeriksaan di bawah sengaja mewajibkan ID image hasil build terbaru.
+  # Dijalankan SEBELUM backup & migrasi supaya pemeriksaan berikutnya memakai api.env yang baru —
+  # kalau tidak, perbaikan api.env baru terbaca pada deploy setelahnya (jebakan insiden 2026-10-13).
   docker compose up -d --force-recreate 2>&1 || exit 14
-  sleep 8
+  step "Tunggu API tersambung ke basis data (maks 60 dtk)"
+  wait_api_reaches_db || { db_hint; exit 17; }
+  step "Tunggu API tersambung ke MinIO (maks 30 dtk)"
+  wait_api_reaches_minio || { minio_hint; exit 18; }
+  step "Backup database (DB aplikasi → lokal + MinIO vms-backups)"
+  ./backup.sh "pra-deploy-$SHORT" || exit 13
   step "Migrasi database (alembic upgrade head)"
   docker exec vms_api alembic upgrade head 2>&1 || exit 15
   docker exec vms_api alembic current 2>&1 | tail -1
@@ -157,6 +225,7 @@ case $RC in
   0) ;;
   11) fail "checkout kode" ;; 12) fail "build image" ;; 13) fail "backup database" ;;
   14) fail "menjalankan kontainer" ;; 15) fail "migrasi database" ;; 16) fail "cek siap pakai (server belum sehat/stabil)" ;;
+  17) fail "API tidak bisa mencapai basis data" ;; 18) fail "API tidak bisa mencapai MinIO" ;;
   *) fail "tidak dikenal (kode $RC)" ;;
 esac
 

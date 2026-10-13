@@ -4,8 +4,63 @@ Modul konfigurasi aplikasi VMS.
 Memuat pengaturan sistem dan rahasia (secrets) dari variabel lingkungan (environment variables)
 atau berkas `.env` menggunakan pydantic-settings.
 """
+from __future__ import annotations
+
+import logging
+from urllib.parse import quote
+
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from sqlalchemy.engine import make_url
+
+logger = logging.getLogger(__name__)
+
+
+def encode_url_credentials(url: str) -> tuple[str, bool]:
+    """Kembalikan ``(url, diubah)``. Sandi di userinfo yang belum di-URL-encode diperbaiki.
+
+    Insiden 2026-10-13: ``api.env`` produksi memuat sandi berkarkter ``@`` mentah —
+    ``postgresql+asyncpg://vms_api:P@ss@vms_db_prod:5432/visiontech_db``. SQLAlchemy membaca
+    ``@`` **pertama** sebagai pemisah userinfo/host, sehingga host menjadi
+    ``ss@vms_db_prod`` dan API gagal dengan ``socket.gaierror`` (``/ready`` 503, migrasi
+    alembic putus). Sandi wajib di-encode (``P%40ss``).
+
+    **Cakupan deteksi.** Hanya ``@`` di dalam sandi yang bisa dikenali tanpa mengetahui host yang
+    diharapkan, dan deteksi memakai hasil parse SQLAlchemy sendiri: ``@`` yang masih tersisa di
+    host berarti URL salah bentuk. ``: / ? # %`` dan spasi di sandi terbukti ter-parse dengan
+    benar oleh SQLAlchemy (host tetap bersih), jadi tidak perlu diubah.
+
+    **Batas yang diketahui.** Sandi yang memuat ``@`` **dan** ``?`` (``p@ss?x``) menghasilkan URL
+    yang tampak sehat (host ``ss``) sehingga tidak terdeteksi di sini — memperlebarnya berisiko
+    merusak query string yang sah (``/db?sslmode=require``). Kasus itu ditangkap oleh pemeriksaan
+    koneksi sungguhan (``wait_api_reaches_db`` di ``deploy/autodeploy.sh``) yang mencetak
+    petunjuk ``db_hint``. Nama basis data yang memuat ``@`` juga sengaja tidak disentuh: host-nya
+    bersih, dan menulis ulang URL seperti itu justru merusaknya.
+    """
+    try:
+        if "@" not in (make_url(url).host or ""):
+            return url, False
+    except Exception:  # noqa: BLE001 — penjaga ini TIDAK BOLEH menjatuhkan pemuatan konfigurasi;
+        return url, False  # URL yang tak terurai dibiarkan apa adanya (perilaku lama), bukan bikin API gagal start.
+
+    sep = url.find("://")
+    if sep == -1:
+        return url, False
+    head, rest = url[: sep + 3], url[sep + 3 :]
+    at = rest.rfind("@")                   # '@' terakhir = pemisah userinfo/host yang sebenarnya
+    if at == -1:
+        return url, False
+    user, colon, secret = rest[:at].partition(":")
+    if not colon or not secret:
+        return url, False
+
+    fixed = f"{head}{quote(user, safe='')}:{quote(secret, safe='')}@{rest[at + 1:]}"
+    try:
+        if "@" in (make_url(fixed).host or ""):   # masih salah bentuk → jangan tebak-tebakan
+            return url, False
+    except Exception:  # noqa: BLE001 — sama: hasil perbaikan yang tak terurai diperlakukan sebagai "gagal perbaiki".
+        return url, False
+    return fixed, True
 
 
 class Settings(BaseSettings):
@@ -75,7 +130,29 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     @model_validator(mode="after")
-    def _production_requires_secrets(self) -> "Settings":
+    def _encode_database_url_credentials(self) -> Settings:
+        """Sandi DB yang memuat ``@`` wajib di-URL-encode — insiden 2026-10-13.
+
+        Tanpa ini API start lalu mati di ``/ready`` dengan ``socket.gaierror`` yang menyesatkan
+        (terlihat seperti masalah DNS/jaringan, padahal salah parse URL). Nilai diperbaiki otomatis
+        dan dicatat agar tetap terlihat, bukan didiamkan.
+        """
+        for field in ("DATABASE_URL", "MIGRATION_DATABASE_URL"):
+            current = getattr(self, field)
+            if not current:
+                continue
+            fixed, changed = encode_url_credentials(current)
+            if changed:
+                logger.warning(
+                    "%s memuat sandi yang belum di-URL-encode — diperbaiki otomatis. "
+                    "Perbarui api.env agar tidak bergantung pada perbaikan ini.",
+                    field,
+                )
+                object.__setattr__(self, field, fixed)
+        return self
+
+    @model_validator(mode="after")
+    def _production_requires_secrets(self) -> Settings:
         """
         Validasi paska inisialisasi: Produksi tidak boleh diam-diam memakai kunci JWT sementara,
         tanpa kunci tanda tangan, atau kredensial MinIO bawaan — API menolak start (dok 08).

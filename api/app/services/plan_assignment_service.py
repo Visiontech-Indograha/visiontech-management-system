@@ -126,6 +126,7 @@ class PlanAssignmentService:
             period_start,
             period_end,
             None if oversees else creator.unit_id,
+            include_pm=not oversees,
         )
         managers = await self.repo.active_project_managers(user.organization_id) if oversees else []
         return {

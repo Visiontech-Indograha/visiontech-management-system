@@ -12,14 +12,18 @@ from uuid import UUID
 
 from .base import CRUDBase
 
-# Karyawan lapangan = akun aktif tanpa peran kantor (R-26) dan absen lewat HP (R-33).
+# Karyawan lapangan atau PM = akun aktif (bukan peran kantor lain seperti OPS, ADMIN, HR, FINANCE, ASSET).
 _FIELD_STAFF = """
-    e.is_active AND e.deleted_at IS NULL AND e.attendance_mode = 'FIELD'
+    e.is_active AND e.deleted_at IS NULL
+    AND (e.attendance_mode = 'FIELD' OR EXISTS (
+        SELECT 1 FROM vms.app_user pu JOIN vms.user_role prl ON prl.user_id = pu.id
+        WHERE pu.employee_id = e.id AND pu.is_active AND prl.role = 'PM'
+    ))
     AND EXISTS (SELECT 1 FROM vms.app_user fu WHERE fu.employee_id = e.id AND fu.is_active)
     AND NOT EXISTS (
         SELECT 1 FROM vms.app_user ou JOIN vms.user_role orl ON orl.user_id = ou.id
         WHERE ou.employee_id = e.id AND ou.is_active
-          AND orl.role IN ('PM', 'OPS', 'ADMIN', 'HR', 'FINANCE', 'ASSET'))
+          AND orl.role IN ('OPS', 'ADMIN', 'HR', 'FINANCE', 'ASSET'))
 """
 
 

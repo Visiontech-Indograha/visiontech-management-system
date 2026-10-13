@@ -43,7 +43,7 @@ json_escape() { local s=${1//\\/\\\\}; s=${s//\"/\\\"}; printf '%s' "$s"; }
 
 published() {   # <base-url> → "latest_build min_build" (0 1 bila belum ada rilis / API lama)
   local body
-  body=$(curl -fsS --max-time 15 "$1/api/v1/app/android/update?build=0" 2>/dev/null || true)
+  body=$(curl -k -fsS --max-time 15 "$1/api/v1/app/android/update?build=0" 2>/dev/null || true)
   local latest min
   latest=$(printf '%s' "$body" | sed -n 's/.*"latest_build":\([0-9]*\).*/\1/p')
   min=$(printf '%s' "$body" | sed -n 's/.*"min_build":\([0-9]*\).*/\1/p')
@@ -169,14 +169,14 @@ verify_public() {
   local out=$1 build body
   build=$(sed -n 's/^  "build": \([0-9]*\),/\1/p' "$out/latest.json")
   for i in 1 2 3 4 5 6; do
-    body=$(curl -fsS --max-time 15 "$PORTAL/api/v1/app/android/update?build=0" || true)
+    body=$(curl -k -fsS --max-time 15 "$PORTAL/api/v1/app/android/update?build=0" || true)
     [[ "$body" == *"\"latest_build\":$build"* ]] && break; sleep 5
   done
   [[ "$body" == *"\"latest_build\":$build"* ]] || die "portal belum menampilkan build $build: $body"
   for apk in "$out"/*.apk; do
     local name size remote
     name=$(basename "$apk"); size=$(stat -c %s "$apk")
-    remote=$(curl -fsSI --max-time 30 "$PORTAL/api/v1/app/android/files/$name" | tr -d '\r' \
+    remote=$(curl -k -fsSI --max-time 30 "$PORTAL/api/v1/app/android/files/$name" | tr -d '\r' \
              | sed -n 's/^[Cc]ontent-[Ll]ength: //p' | tail -1)
     [ "$remote" = "$size" ] || die "$name di portal berukuran ${remote:-?}, harus $size"
     echo "   $PORTAL/api/v1/app/android/files/$name  OK"
@@ -201,7 +201,7 @@ print(f"min_build = {build}: HP di bawah build {build} wajib memperbarui.")
 PY
 }
 
-cmd_status() { curl -fsS --max-time 15 "$PORTAL/api/v1/app/android/update?build=0"; echo; }
+cmd_status() { curl -k -fsS --max-time 15 "$PORTAL/api/v1/app/android/update?build=0"; echo; }
 
 case "${1:-}" in
   bangun) shift; cmd_bangun "$@" ;;

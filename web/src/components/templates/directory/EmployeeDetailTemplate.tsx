@@ -2,6 +2,7 @@ import { AccountCard } from "@/components/organisms/directory/AccountCard";
 import { AssignmentHistory } from "@/components/organisms/directory/AssignmentHistory";
 import { EmployeePromoteDialog } from "@/components/organisms/directory/EmployeePromoteDialog";
 import { DocumentsPanel } from "@/components/organisms/directory/DocumentsPanel";
+import { EmergencyContactsPanel } from "@/components/organisms/directory/EmergencyContactsPanel";
 import { EmployeeActions } from "@/components/organisms/directory/EmployeeActions";
 import { EmployeeArchivePanel } from "@/components/organisms/directory/EmployeeArchivePanel";
 import { EmployeeDetailSkeleton } from "@/components/organisms/directory/EmployeeDetailSkeleton";
@@ -55,6 +56,7 @@ export function EmployeeDetailTemplate(props: {
         unitName={unitName}
         canSeePrivate={canSeePrivate}
       />
+      {canSeePrivate && <EmergencyContactsPanel employeeId={e.id} canEdit={canEdit} />}
       {canEdit && <AccountCard employee={e} />}
       <AssignmentHistory employee={e} />
       {canEdit && !e.is_active && <EmployeeArchivePanel employee={e} />}

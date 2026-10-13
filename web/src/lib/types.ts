@@ -3,8 +3,8 @@ import type { components } from "./apiTypes";
 type S = components["schemas"];
 
 /** Respons GET /auth/me sesuai API terbaru: {user_id, email, role, permissions[]}. */
-export type Me = S["UserMeResponse"];
-export type TokenOut = S["TokenResponse"];
+export type Me = S["AuthUserMeResponseSchema"];
+export type TokenOut = S["AuthLoginResponseSchema"];
 
 /** Label peran sesuai RoleCode API. */
 export const ROLE_LABEL: Record<string, string> = {

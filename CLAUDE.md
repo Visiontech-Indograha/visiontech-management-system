@@ -131,6 +131,8 @@ docs/           seluruh rencana dan standar
 - **Agen AI HANYA boleh membuat Pull Request ke `development`.**
 - **SELALU** kerjakan tugas di branch fitur (misal: `feature/nama-fitur`) yang dicabangkan dari `development`.
 - Penggabungan ke `prod` hanya boleh dilakukan oleh pemilik/manusia melalui proses *Pull Request* yang ditinjau dari `development` → `prod`.
+- **DILARANG KERAS menyertakan Claude, Gemini, AI, bot, atau asisten apa pun sebagai co-author (`Co-authored-by`), collaborator, atau kontributor dalam commit.** Commit harus murni identitas developer manusia.
+- **DILARANG KERAS meng-commit atau push berkas/folder internal agen AI** (seperti `.agents/`, `.hermes/`, `.claude/`, `.gemini/`, `.cursor/`, file scratch agent, dsb.) ke repositori GitHub. Semua folder tersebut wajib masuk `.gitignore`.
 
 1. Pastikan Anda berada di branch `development` atau branch fitur, bukan `prod`.
 2. Ambil task berikutnya dari `docs/06-RENCANA-FASE.md`.

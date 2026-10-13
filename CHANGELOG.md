@@ -9,6 +9,39 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased] — `development`
 
+- **Pembaruan Alur Absensi Mobile, Penugasan Mandiri PM pada Rencana Kerja, dan Validasi Pulang Wajah Saja (`attendance_screen.dart`, `crud_plan_assignment.py`, `crud_plan_draft.py`, `plan_assignment_service.py`, `0039_checkout_face_only.py`, `db/02_functions.sql`, `rilis-apk.sh`):**
+  - **Alur Absensi Masuk Mobile (`mobile/lib/features/attendance/attendance_screen.dart`):** Mengubah urutan absensi masuk: (1) mendeteksi lokasi koordinat terlebih dahulu, (2) melakukan verifikasi pengenalan wajah, (3) jika berada di luar radius lokasi toleransi kerja, mengambil swafoto ber-watermark beserta penjelasan alasan untuk ditinjau oleh Project Manager (PM).
+  - **Validasi Absensi Pulang (`db/02_functions.sql`, `0039_checkout_face_only.py`, `attendance_screen.dart`):** Menyederhanakan validasi pulang menjadi verifikasi wajah saja tanpa kewajiban swafoto atau penjelasan saat di luar radius toleransi; status absensi tetap otomatis ditandai `NEEDS_REVIEW` untuk tinjauan PM.
+  - **Penugasan Mandiri PM pada Rencana Kerja (`crud_plan_draft.py`, `crud_plan_assignment.py`, `plan_assignment_service.py`):** Mengizinkan Project Manager (PM) untuk memasukkan diri sendiri sebagai ketua atau anggota tim ke dalam draf rencana kerja (`_FIELD_STAFF` menyertakan PM, `available_personnel` menyertakan PM saat pembuat adalah PM, dan `eligible_field_staff` tidak lagi mengecualikan PM).
+  - **Skrip Rilis Android (`scripts/rilis-apk.sh`):** Menambahkan opsi `-k` pada panggilan `curl` ke portal untuk verifikasi rilis yang andal pada lingkungan Windows/lokal.
+
+- **Sinkronisasi Skema DB untuk CI & Pembaruan Rilis Mobile (`db/*.sql`, `mobile/pubspec.yaml`, `GEMINI.md`):**
+  - Sinkronisasi Skema Statis CI (`db/01_schema.sql`, `db/03_policies.sql`, `db/05_face.sql`): menyinkronkan definisi tabel `employee_emergency_contact`, indeks, RLS tenant isolation, dan hak akses `GRANT DELETE` untuk `vms_app` dan `vms_api`, menyelesaikan kegagalan uji integrasi CI GitHub Actions pada runner basis data bersih (`alembic stamp head`).
+  - Keamanan Fungsi PostgreSQL (`db/02_functions.sql`): menambahkan `SECURITY DEFINER SET search_path = vms, public` pada fungsi `vms.personnel_conflict` dan `vms.employee_busy_dates` agar sesuai dengan kebijakan keamanan fungsi basis data di `test_rls_app_role.py`.
+  - Aplikasi Mobile Android (`mobile/pubspec.yaml`): menaikkan versi rilis ke `1.2.0+5`, memastikan kunci rilis resmi `key.properties` tersambung ke `vms-release-2.jks`, dan mengonfirmasi keberhasilan `flutter analyze` (0 masalah) serta `flutter test` (116 uji lulus).
+  - Pembersihan Berkas Usang: menghapus berkas catatan pengujian usang `docs/_t4-uji-api-teks-lama.txt`.
+  - Aturan Tetap Agen (`GEMINI.md`): mendokumentasikan aturan permanen *Dual-Schema Rule* yang mewajibkan sinkronisasi ganda setiap migrasi Alembic baru ke berkas statis `db/*.sql`.
+
+- **Normalisasi Port Kontainer Basis Data & Diagnostik Deploy (`config.py`, `autodeploy.sh`, `pakai-peran-runtime.sh`, `test_config_database_url.py`):**
+  - Konfigurasi `api/app/core/config.py`: tambahkan fungsi `normalize_database_url_port` dan integrasikan ke validator `_encode_database_url_credentials` agar `DATABASE_URL` dan `MIGRATION_DATABASE_URL` yang keliru memakai port host `5433` untuk host kontainer internal (`vms_db_prod` / `vms_db`) secara otomatis dinormalisasi ke port internal `5432` dengan peringatan log, mencegah insiden `ConnectionRefusedError: [Errno 111]`.
+  - Uji Regresi `api/tests/test_config_database_url.py`: 4 uji baru untuk memvalidasi normalisasi port 5433 ke 5432 pada host kontainer, memastikan port `localhost:5433` di luar Docker tidak terpengaruh, dan memastikan URL yang sudah memakai 5432 tidak diubah.
+  - Skrip Deploy `deploy/autodeploy.sh` & `deploy/pakai-peran-runtime.sh`: perluas `db_hint` dengan deteksi dan pesan kesalahan spesifik untuk ketidakcocokan port 5433 vs 5432, serta pastikan `pakai-peran-runtime.sh` mengonversi port hostpart `vms_db_prod:5433` menjadi `5432`.
+
+- **Tabel Kontak Darurat Karyawan & Penambahan Data Karyawan Lengkap (`0038_employee_emergency_contact.py`, schemas, CRUD, endpoints, web UI):**
+  - Basis Data: Migrasi Alembic `0038_employee_emergency_contact.py` membuat tabel terisolasi RLS `vms.employee_emergency_contact` dengan foreign key ke `employee.id`, hak akses untuk `vms_api`, serta backfill otomatis data kontak darurat lama.
+  - Backend API: Skema `EmergencyContactCreate/Update/Response`, repository CRUD `CRUDEmergencyContact`, transaksi service `create_emergency_contact`, `list_emergency_contacts`, `update_emergency_contact`, `delete_emergency_contact`, serta router modular di bawah `/employees/{id}/emergency-contacts`.
+  - Penambahan Karyawan Lengkap: Endpoint `POST /employees` mendukung penyimpanan langsung foto profil (`photo_file_id`), cara absensi (`attendance_mode`), tanggal lahir (`birth_date`), alamat (`address`), dan kontak darurat tersusun.
+  - Web UI: Dialog tambah karyawan (`EmployeeCreateDialog`) dilengkapi unggah/pratinjau foto profil, isian lengkap, dan kontak darurat; dialog edit profil (`EmployeeProfileDialog`) mendukung pergantian foto profil; serta panel khusus kontak darurat (`EmergencyContactsPanel`) di halaman detail karyawan.
+  - Aturan Bersih Commit & Agent: Menambahkan aturan mutlak di `GEMINI.md`, `CLAUDE.md`, `.agy/rules/git-flow.md`, dan `.gitignore` untuk melarang pencantuman AI sebagai author/co-author commit serta melarang commit/push berkas/folder internal agen AI (`.agents/`, `.hermes/`, `.claude/`, `.gemini/`, dsb.) ke GitHub.
+
+- **Pemulihan deploy otomatis & penguatan kestabilan produksi (`0037_employee_photo.py`, `config.py`, `autodeploy.sh`, `backup.sh`, `pakai-peran-runtime.sh`, `test_config_database_url.py`):**
+  - Migrasi `0037_employee_photo`: jadikan penambahan foreign key `fk_employee_photo_file` idempoten dengan penanganan eksepsi `duplicate_object`, menyelesaikan `DuplicateObjectError` pada basis data yang sudah memuat constraint dari bootstrap awal `db/01_schema.sql`.
+  - Inti konfigurasi `api/app/core/config.py`: tambahkan sanitasi `encode_url_credentials` dan model validator agar sandi dengan karakter khusus (`@`) otomatis di-encode (`%40`), mencegah salah urai host SQLAlchemy dan kegagalan `socket.gaierror`. Dilengkapi 22 uji regresi pada `test_config_database_url.py`.
+  - Skrip operasional `deploy/`:
+    - `autodeploy.sh`: tambahkan pra-cek konektivitas DB dan MinIO sebelum tahap backup dan migrasi, pesan diagnostik terarah (`db_hint`, `minio_hint`), dan pemindahan startup kontainer sebelum backup agar membaca berkas env terbaru.
+    - `backup.sh`: tambahkan trap retensi pembersihan berkas cadangan lokal pada sinyal EXIT agar dump tidak menumpuk saat kendala unggah, serta panduan resolusi kredensial MinIO yang jelas.
+    - `pakai-peran-runtime.sh`: pastikan userinfo kata sandi selalu di-encode saat menghasilkan `DATABASE_URL` runtime.
+
 - **Foto profil & dokumen karyawan (permintaan pemilik 2026-10-12):**
   - 31 foto profil karyawan diupload ke MinIO (nama file diacak dengan UUID) dan tersimpan di `vms.file_object` dengan `storage_key` berprefix `/profile/`
   - Kolom `photo_file_id` ditambahkan ke tabel `employee` (FK ke `file_object.id`) via migration `0037_employee_photo`

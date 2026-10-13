@@ -2740,6 +2740,236 @@
     "title": "DraftTaskInput",
     "type": "object"
    },
+   "EmergencyContactBase": {
+    "description": "Base schema for an employee emergency contact.",
+    "properties": {
+     "address": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Address"
+     },
+     "is_primary": {
+      "default": true,
+      "title": "Is Primary",
+      "type": "boolean"
+     },
+     "name": {
+      "maxLength": 150,
+      "minLength": 1,
+      "title": "Name",
+      "type": "string"
+     },
+     "phone": {
+      "maxLength": 50,
+      "minLength": 1,
+      "title": "Phone",
+      "type": "string"
+     },
+     "relationship": {
+      "maxLength": 50,
+      "minLength": 1,
+      "title": "Relationship",
+      "type": "string"
+     }
+    },
+    "required": [
+     "name",
+     "relationship",
+     "phone"
+    ],
+    "title": "EmergencyContactBase",
+    "type": "object"
+   },
+   "EmergencyContactCreate": {
+    "description": "Schema for adding a new emergency contact.",
+    "properties": {
+     "address": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Address"
+     },
+     "is_primary": {
+      "default": true,
+      "title": "Is Primary",
+      "type": "boolean"
+     },
+     "name": {
+      "maxLength": 150,
+      "minLength": 1,
+      "title": "Name",
+      "type": "string"
+     },
+     "phone": {
+      "maxLength": 50,
+      "minLength": 1,
+      "title": "Phone",
+      "type": "string"
+     },
+     "relationship": {
+      "maxLength": 50,
+      "minLength": 1,
+      "title": "Relationship",
+      "type": "string"
+     }
+    },
+    "required": [
+     "name",
+     "relationship",
+     "phone"
+    ],
+    "title": "EmergencyContactCreate",
+    "type": "object"
+   },
+   "EmergencyContactResponse": {
+    "description": "Schema for returning an emergency contact response.",
+    "properties": {
+     "address": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Address"
+     },
+     "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+     },
+     "employee_id": {
+      "format": "uuid",
+      "title": "Employee Id",
+      "type": "string"
+     },
+     "id": {
+      "format": "uuid",
+      "title": "Id",
+      "type": "string"
+     },
+     "is_primary": {
+      "default": true,
+      "title": "Is Primary",
+      "type": "boolean"
+     },
+     "name": {
+      "maxLength": 150,
+      "minLength": 1,
+      "title": "Name",
+      "type": "string"
+     },
+     "phone": {
+      "maxLength": 50,
+      "minLength": 1,
+      "title": "Phone",
+      "type": "string"
+     },
+     "relationship": {
+      "maxLength": 50,
+      "minLength": 1,
+      "title": "Relationship",
+      "type": "string"
+     },
+     "updated_at": {
+      "format": "date-time",
+      "title": "Updated At",
+      "type": "string"
+     }
+    },
+    "required": [
+     "name",
+     "relationship",
+     "phone",
+     "id",
+     "employee_id",
+     "created_at",
+     "updated_at"
+    ],
+    "title": "EmergencyContactResponse",
+    "type": "object"
+   },
+   "EmergencyContactUpdate": {
+    "description": "Schema for updating an existing emergency contact.",
+    "properties": {
+     "address": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Address"
+     },
+     "is_primary": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Is Primary"
+     },
+     "name": {
+      "anyOf": [
+       {
+        "maxLength": 150,
+        "minLength": 1,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Name"
+     },
+     "phone": {
+      "anyOf": [
+       {
+        "maxLength": 50,
+        "minLength": 1,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Phone"
+     },
+     "relationship": {
+      "anyOf": [
+       {
+        "maxLength": 50,
+        "minLength": 1,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Relationship"
+     }
+    },
+    "title": "EmergencyContactUpdate",
+    "type": "object"
+   },
    "EmployeeAssignmentCreate": {
     "description": "Schema for assigning an employee.",
     "properties": {
@@ -2853,6 +3083,15 @@
       ],
       "title": "Address"
      },
+     "attendance_mode": {
+      "default": "FIELD",
+      "enum": [
+       "FIELD",
+       "OFFICE"
+      ],
+      "title": "Attendance Mode",
+      "type": "string"
+     },
      "birth_date": {
       "anyOf": [
        {
@@ -2886,6 +3125,20 @@
        }
       ],
       "title": "Emergency Contact"
+     },
+     "emergency_contacts": {
+      "anyOf": [
+       {
+        "items": {
+         "$ref": "#/components/schemas/EmergencyContactBase"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Emergency Contacts"
      },
      "employee_no": {
       "title": "Employee No",
@@ -3413,6 +3666,18 @@
        }
       ],
       "title": "Phone"
+     },
+     "photo_file_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Photo File Id"
      }
     },
     "title": "EmployeeUpdate",
@@ -10807,6 +11072,244 @@
     "summary": "Verify Document",
     "tags": [
      "Employee Documents"
+    ]
+   }
+  },
+  "/api/v1/employees/{emp_id}/emergency-contacts": {
+   "get": {
+    "description": "Daftar kontak darurat karyawan (M2-01).",
+    "operationId": "list_emergency_contacts_api_v1_employees__emp_id__emergency_contacts_get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "emp_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Emp Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/EmergencyContactResponse"
+         },
+         "title": "Response List Emergency Contacts Api V1 Employees  Emp Id  Emergency Contacts Get",
+         "type": "array"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "List Emergency Contacts",
+    "tags": [
+     "Employees"
+    ]
+   },
+   "post": {
+    "description": "Menambahkan kontak darurat baru.",
+    "operationId": "create_emergency_contact_api_v1_employees__emp_id__emergency_contacts_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "emp_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Emp Id",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/EmergencyContactCreate"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/EmergencyContactResponse"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Create Emergency Contact",
+    "tags": [
+     "Employees"
+    ]
+   }
+  },
+  "/api/v1/employees/{emp_id}/emergency-contacts/{contact_id}": {
+   "delete": {
+    "description": "Menghapus kontak darurat.",
+    "operationId": "delete_emergency_contact_api_v1_employees__emp_id__emergency_contacts__contact_id__delete",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "emp_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Emp Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "path",
+      "name": "contact_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Contact Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "title": "Response Delete Emergency Contact Api V1 Employees  Emp Id  Emergency Contacts  Contact Id  Delete",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Delete Emergency Contact",
+    "tags": [
+     "Employees"
+    ]
+   },
+   "put": {
+    "description": "Mengubah kontak darurat.",
+    "operationId": "update_emergency_contact_api_v1_employees__emp_id__emergency_contacts__contact_id__put",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "emp_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Emp Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "path",
+      "name": "contact_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Contact Id",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/EmergencyContactUpdate"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/EmergencyContactResponse"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Update Emergency Contact",
+    "tags": [
+     "Employees"
     ]
    }
   },

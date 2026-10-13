@@ -134,6 +134,7 @@ Minio(host, access_key=s.MINIO_ACCESS_KEY, secret_key=s.MINIO_SECRET_KEY,
 db_hint() {
   echo "API tidak bisa mencapai basis data lewat DATABASE_URL di api.env."
   echo "Periksa sandi yang memuat karakter khusus (@ : / #) — WAJIB di-URL-encode ('@' → '%40')."
+  echo "Pastikan port untuk host kontainer (vms_db_prod) adalah 5432, BUKAN 5433 (port host)."
   docker exec vms_api python -c "
 import os
 from sqlalchemy.engine import make_url
@@ -142,9 +143,11 @@ for key in ('DATABASE_URL', 'MIGRATION_DATABASE_URL'):
     if not value:
         continue
     url = make_url(value)
-    print(f'  {key}: user={url.username!r} host={url.host!r} db={url.database!r}')
+    print(f'  {key}: user={url.username!r} host={url.host!r} port={url.port!r} db={url.database!r}')
     if '@' in (url.host or ''):
         print(f'  -> {key} SALAH BENTUK: sandi belum di-URL-encode.')
+    if url.host in ('vms_db_prod', 'vms_db') and url.port == 5433:
+        print(f'  -> {key} SALAH PORT: gunakan 5432 untuk koneksi internal kontainer, bukan 5433.')
 " 2>&1 || true
   echo "Lalu: docker compose up -d --force-recreate api dan periksa /ready."
 }

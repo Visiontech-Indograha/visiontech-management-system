@@ -112,6 +112,7 @@ def verify(url, expect_user, expect_secret):
 
 
 head, old_user, old_secret, hostpart = split_userinfo(old)
+hostpart = hostpart.replace("vms_db_prod:5433", "vms_db_prod:5432").replace("vms_db:5433", "vms_db:5432")
 new = build(head, "vms_api", pw, hostpart)
 migration = build(head, old_user, old_secret, hostpart)   # alembic: peran pemilik, sandi ikut di-encode
 assert new != old, "format DATABASE_URL tidak dikenali"

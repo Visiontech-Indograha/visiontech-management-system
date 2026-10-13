@@ -51,13 +51,13 @@
      "Authentication"
     ],
     "summary": "Login",
-    "description": "Memproses login pengguna dengan email dan password.\n\nBody params:\n- payload: Data login berisi email dan password (LoginRequest)\n\nReturn: Token akses (TokenResponse) dan menset refresh_token di cookie",
+    "description": "Memproses login pengguna dengan email dan password.",
     "operationId": "login_api_v1_auth_login_post",
     "requestBody": {
      "content": {
       "application/json": {
        "schema": {
-        "$ref": "#/components/schemas/LoginRequest"
+        "$ref": "#/components/schemas/AuthLoginRequestSchema"
        }
       }
      },
@@ -69,7 +69,7 @@
       "content": {
        "application/json": {
         "schema": {
-         "$ref": "#/components/schemas/TokenResponse"
+         "$ref": "#/components/schemas/AuthLoginResponseSchema"
         }
        }
       }
@@ -93,7 +93,7 @@
      "Authentication"
     ],
     "summary": "Refresh Token",
-    "description": "Memperbarui access_token menggunakan refresh_token yang ada di cookie.\n\nReturn: Token akses baru (TokenResponse) dan memperbarui refresh_token di cookie",
+    "description": "Memperbarui access_token menggunakan refresh_token yang ada di cookie.",
     "operationId": "refresh_token_api_v1_auth_refresh_post",
     "responses": {
      "200": {
@@ -101,7 +101,7 @@
       "content": {
        "application/json": {
         "schema": {
-         "$ref": "#/components/schemas/TokenResponse"
+         "$ref": "#/components/schemas/AuthLoginResponseSchema"
         }
        }
       }
@@ -115,7 +115,7 @@
      "Authentication"
     ],
     "summary": "Logout",
-    "description": "Mengakhiri sesi pengguna saat ini.\n\nReturn: Pesan sukses (MessageResponse) dan menghapus cookie refresh_token",
+    "description": "Mengakhiri sesi pengguna saat ini dan mencabut cookie refresh_token.",
     "operationId": "logout_api_v1_auth_logout_post",
     "responses": {
      "200": {
@@ -123,7 +123,7 @@
       "content": {
        "application/json": {
         "schema": {
-         "$ref": "#/components/schemas/MessageResponse"
+         "$ref": "#/components/schemas/AuthMessageResponseSchema"
         }
        }
       }
@@ -137,7 +137,7 @@
      "Authentication"
     ],
     "summary": "Get Me",
-    "description": "Mendapatkan profil dan detail pengguna yang sedang login.\n\nReturn: Detail pengguna saat ini (UserMeResponse)",
+    "description": "Mendapatkan profil dan detail pengguna yang sedang login.",
     "operationId": "get_me_api_v1_auth_me_get",
     "responses": {
      "200": {
@@ -145,7 +145,54 @@
       "content": {
        "application/json": {
         "schema": {
-         "$ref": "#/components/schemas/UserMeResponse"
+         "$ref": "#/components/schemas/AuthUserMeResponseSchema"
+        }
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ]
+   }
+  },
+  "/api/v1/auth/change-password": {
+   "post": {
+    "tags": [
+     "Authentication"
+    ],
+    "summary": "Change Password",
+    "description": "Mengubah password pengguna saat ini.",
+    "operationId": "change_password_api_v1_auth_change_password_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/AuthChangePasswordRequestSchema"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AuthLoginResponseSchema"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
         }
        }
       }
@@ -164,7 +211,7 @@
      "Authentication"
     ],
     "summary": "List Sessions",
-    "description": "P1-7: Mengambil daftar sesi aktif dari perangkat yang sedang masuk dengan akun ini;\nyang sedang dipakai ditandai `current`.\n\nReturn: Daftar sesi aktif (list[SessionOut])",
+    "description": "Mengambil daftar sesi aktif dari perangkat yang sedang masuk dengan akun ini.",
     "operationId": "list_sessions_api_v1_auth_sessions_get",
     "responses": {
      "200": {
@@ -173,7 +220,7 @@
        "application/json": {
         "schema": {
          "items": {
-          "$ref": "#/components/schemas/SessionOut"
+          "$ref": "#/components/schemas/AuthSessionResponseSchema"
          },
          "type": "array",
          "title": "Response List Sessions Api V1 Auth Sessions Get"
@@ -195,7 +242,7 @@
      "Authentication"
     ],
     "summary": "Revoke Other Sessions",
-    "description": "Keluarkan semua perangkat lain. Token akses mereka habis paling lama 15 menit; refresh langsung ditolak.\n\nReturn: Status revokasi perangkat lain (RevokeOthersResponse)",
+    "description": "Mencabut seluruh sesi perangkat lain.",
     "operationId": "revoke_other_sessions_api_v1_auth_sessions_revoke_others_post",
     "responses": {
      "200": {
@@ -203,7 +250,7 @@
       "content": {
        "application/json": {
         "schema": {
-         "$ref": "#/components/schemas/RevokeOthersResponse"
+         "$ref": "#/components/schemas/AuthRevokeOthersResponseSchema"
         }
        }
       }
@@ -222,7 +269,7 @@
      "Authentication"
     ],
     "summary": "Revoke Session",
-    "description": "Keluarkan satu perangkat milik sendiri berdasarkan ID sesinya. Sesi orang lain → 404.\n\nPath params:\n- session_id: UUID dari sesi perangkat\n\nReturn: Pesan revokasi berhasil (MessageResponse)",
+    "description": "Mencabut satu sesi perangkat tertentu milik sendiri.",
     "operationId": "revoke_session_api_v1_auth_sessions__session_id__revoke_post",
     "security": [
      {
@@ -247,7 +294,7 @@
       "content": {
        "application/json": {
         "schema": {
-         "$ref": "#/components/schemas/MessageResponse"
+         "$ref": "#/components/schemas/AuthMessageResponseSchema"
         }
        }
       }
@@ -265,60 +312,13 @@
     }
    }
   },
-  "/api/v1/auth/change-password": {
-   "post": {
-    "tags": [
-     "Authentication"
-    ],
-    "summary": "Change Password",
-    "description": "Mengubah password pengguna saat ini.\n\nBody params:\n- payload: Berisi password lama dan password baru (ChangePasswordRequest)\n\nReturn: Token akses baru (TokenResponse) dengan cookie yang diperbarui",
-    "operationId": "change_password_api_v1_auth_change_password_post",
-    "requestBody": {
-     "content": {
-      "application/json": {
-       "schema": {
-        "$ref": "#/components/schemas/ChangePasswordRequest"
-       }
-      }
-     },
-     "required": true
-    },
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/TokenResponse"
-        }
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    },
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ]
-   }
-  },
   "/api/v1/audit-events": {
    "get": {
     "tags": [
      "Audit"
     ],
     "summary": "Get Audit Events",
-    "description": "Mendapatkan daftar kejadian audit organisasi pengguna (VIEW_AUDIT).\nDisaring `organization_id` secara eksplisit — tidak hanya mengandalkan RLS,\nyang terlewati bila aplikasi terhubung sebagai pemilik tabel (T-12).\n\nQuery params:\n- page: Nomor halaman (default 1)\n- size: Jumlah item per halaman (default 20, max 100)\n- entity_type: Filter opsional berdasarkan jenis entitas (contoh: \"User\", \"Asset\")\n\nReturn: Daftar riwayat audit beserta pagination (AuditEventListResponse)",
+    "description": "Mendapatkan daftar kejadian audit organisasi pengguna.",
     "operationId": "get_audit_events_api_v1_audit_events_get",
     "security": [
      {
@@ -441,6 +441,63 @@
     ]
    }
   },
+  "/api/v1/files/{file_id}": {
+   "get": {
+    "tags": [
+     "Files"
+    ],
+    "summary": "Get File Content",
+    "description": "Menyajikan isi berkas langsung sebagai byte (bukan JSON) sehingga bisa dipakai\nsebagai `src` pada tag <img>. Otorisasi tetap diperiksa (404 bila tidak berhak).\n\nQuery params:\n- variant: \"thumb\" | \"view\" | \"full\" (default \"view\")",
+    "operationId": "get_file_content_api_v1_files__file_id__get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "file_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "File Id"
+      }
+     },
+     {
+      "name": "variant",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "default": "view",
+       "title": "Variant"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/v1/files/{file_id}/url": {
    "get": {
     "tags": [
@@ -510,7 +567,7 @@
      "Employees"
     ],
     "summary": "Get Employees",
-    "description": "Mendapatkan daftar karyawan di organisasi pengguna.\nMendukung paginasi dan pencarian (berdasarkan nama atau nomor karyawan).\n\nQuery params:\n- page: Halaman (default 1)\n- size: Jumlah per halaman (default 20, max 100)\n- is_active: Filter karyawan aktif/nonaktif\n- q: Kata kunci pencarian nama / NIK\n\nReturn: Daftar karyawan (EmployeeListResponse)",
+    "description": "Mendapatkan daftar karyawan di organisasi pengguna dengan paginasi dan pencarian.",
     "operationId": "get_employees_api_v1_employees_get",
     "security": [
      {
@@ -602,7 +659,7 @@
      "Employees"
     ],
     "summary": "Create Employee",
-    "description": "Menambahkan data karyawan baru ke dalam organisasi.\n\nBody params:\n- data: Data karyawan baru (EmployeeCreate)\n\nReturn: Detail karyawan yang baru dibuat (EmployeeResponse)",
+    "description": "Menambahkan data karyawan baru ke dalam organisasi.",
     "operationId": "create_employee_api_v1_employees_post",
     "security": [
      {
@@ -649,7 +706,7 @@
      "Employees"
     ],
     "summary": "Get Employee",
-    "description": "Satu karyawan (tautan langsung /directory/{id}); karyawan organisasi lain/terhapus → 404.\n\nPath params:\n- emp_id: UUID karyawan yang ingin dilihat detailnya\n\nReturn: Detail karyawan (EmployeeResponse)",
+    "description": "Detail satu karyawan berdasarkan ID.",
     "operationId": "get_employee_api_v1_employees__emp_id__get",
     "security": [
      {
@@ -696,7 +753,7 @@
      "Employees"
     ],
     "summary": "Update Employee",
-    "description": "Mengubah data pribadi karyawan. (Jabatan/unit diubah melalui endpoint /assignments).\n\nPath params:\n- emp_id: UUID dari karyawan\n\nBody params:\n- data: Data yang ingin diubah (EmployeeUpdate)\n\nReturn: Detail karyawan yang diperbarui (EmployeeResponse)",
+    "description": "Mengubah data pribadi karyawan.",
     "operationId": "update_employee_api_v1_employees__emp_id__put",
     "security": [
      {
@@ -755,7 +812,7 @@
      "Employees"
     ],
     "summary": "List Assignments",
-    "description": "Riwayat jabatan/penempatan (M2), terbaru dulu. Karyawan organisasi lain → 404.\n\nPath params:\n- emp_id: UUID dari karyawan\n\nReturn: Daftar mutasi jabatan (list[EmployeeAssignmentResponse])",
+    "description": "Riwayat jabatan/penempatan karyawan.",
     "operationId": "list_assignments_api_v1_employees__emp_id__assignments_get",
     "security": [
      {
@@ -806,7 +863,7 @@
      "Employees"
     ],
     "summary": "Add Assignment",
-    "description": "domain.js PROMOTE — mutasi/promosi; aturan di EmployeeService.promote.\n\nPath params:\n- emp_id: UUID dari karyawan\n\nBody params:\n- data: Data mutasi/promosi baru (EmployeeAssignmentCreate)\n\nReturn: Riwayat jabatan baru (EmployeeAssignmentResponse)",
+    "description": "Mutasi atau promosi jabatan baru bagi karyawan.",
     "operationId": "add_assignment_api_v1_employees__emp_id__assignments_post",
     "security": [
      {
@@ -865,7 +922,7 @@
      "Employees"
     ],
     "summary": "Offboard Employee",
-    "description": "domain.js OFFBOARD: HR mengakhiri masa kerja (tidak boleh saat masih di SK berjalan).\n\nPath params:\n- emp_id: UUID dari karyawan\n\nBody params:\n- data: Data offboard termasuk alasan (EmployeeOffboard)\n\nReturn: Detail hasil proses offboard",
+    "description": "HR mengakhiri masa kerja karyawan.",
     "operationId": "offboard_employee_api_v1_employees__emp_id__offboard_post",
     "security": [
      {
@@ -926,7 +983,7 @@
      "Employees"
     ],
     "summary": "Archive Employee",
-    "description": "Hapus karyawan (V-29, keputusan pemilik): hanya yang sudah di-offboard; dibalik lewat /restore.\n\nPath params:\n- emp_id: UUID dari karyawan\n\nReturn: Detail hasil pengarsipan",
+    "description": "Pengarsipan (penghapusan lunak) karyawan yang telah dinonaktifkan.",
     "operationId": "archive_employee_api_v1_employees__emp_id__archive_post",
     "security": [
      {
@@ -977,7 +1034,7 @@
      "Employees"
     ],
     "summary": "Restore Employee",
-    "description": "domain.js RESTORE_EMPLOYEE (V-29): HR memulihkan karyawan terhapus sebagai nonaktif.\n\nPath params:\n- emp_id: UUID dari karyawan\n\nReturn: Detail hasil pemulihan",
+    "description": "Memulihkan karyawan terhapus sebagai nonaktif.",
     "operationId": "restore_employee_api_v1_employees__emp_id__restore_post",
     "security": [
      {
@@ -1028,7 +1085,7 @@
      "Employees"
     ],
     "summary": "Check Conflicts",
-    "description": "Mengecek bentrok jadwal (P3-6) — untuk penyusun SK (V-09). Karyawan/SK asing → 404.",
+    "description": "Mengecek konflik jadwal penugasan karyawan.",
     "operationId": "check_conflicts_api_v1_employees__emp_id__conflicts_get",
     "security": [
      {
@@ -1110,13 +1167,251 @@
     }
    }
   },
+  "/api/v1/employees/{emp_id}/emergency-contacts": {
+   "get": {
+    "tags": [
+     "Employees"
+    ],
+    "summary": "List Emergency Contacts",
+    "description": "Daftar kontak darurat karyawan (M2-01).",
+    "operationId": "list_emergency_contacts_api_v1_employees__emp_id__emergency_contacts_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "emp_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Emp Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/EmergencyContactResponse"
+         },
+         "title": "Response List Emergency Contacts Api V1 Employees  Emp Id  Emergency Contacts Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "post": {
+    "tags": [
+     "Employees"
+    ],
+    "summary": "Create Emergency Contact",
+    "description": "Menambahkan kontak darurat baru.",
+    "operationId": "create_emergency_contact_api_v1_employees__emp_id__emergency_contacts_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "emp_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Emp Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/EmergencyContactCreate"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/EmergencyContactResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/employees/{emp_id}/emergency-contacts/{contact_id}": {
+   "put": {
+    "tags": [
+     "Employees"
+    ],
+    "summary": "Update Emergency Contact",
+    "description": "Mengubah kontak darurat.",
+    "operationId": "update_emergency_contact_api_v1_employees__emp_id__emergency_contacts__contact_id__put",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "emp_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Emp Id"
+      }
+     },
+     {
+      "name": "contact_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Contact Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/EmergencyContactUpdate"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/EmergencyContactResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "tags": [
+     "Employees"
+    ],
+    "summary": "Delete Emergency Contact",
+    "description": "Menghapus kontak darurat.",
+    "operationId": "delete_emergency_contact_api_v1_employees__emp_id__emergency_contacts__contact_id__delete",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "emp_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Emp Id"
+      }
+     },
+     {
+      "name": "contact_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Contact Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Delete Emergency Contact Api V1 Employees  Emp Id  Emergency Contacts  Contact Id  Delete"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/v1/employees/{emp_id}/documents": {
    "get": {
     "tags": [
      "Employee Documents"
     ],
     "summary": "Get Employee Documents",
-    "description": "Mendapatkan daftar dokumen pribadi karyawan.\nDokumen milik sendiri, atau milik siapa pun di organisasi bagi pengelola dokumen (HR). Lainnya 404.\n\nPath params:\n- emp_id: UUID dari karyawan\n\nReturn: Daftar dokumen karyawan (DocumentListResponse)",
+    "description": "Mendapatkan daftar dokumen pribadi karyawan.",
     "operationId": "get_employee_documents_api_v1_employees__emp_id__documents_get",
     "security": [
      {
@@ -1163,7 +1458,7 @@
      "Employee Documents"
     ],
     "summary": "Upload Document",
-    "description": "Mengunggah (menambahkan) dokumen baru untuk karyawan.\n\nPath params:\n- emp_id: UUID dari karyawan\n\nBody params:\n- data: Data dokumen yang akan dibuat, termasuk referensi file (EmployeeDocumentCreate)\n\nReturn: Detail dokumen yang baru saja ditambahkan (EmployeeDocumentResponse)",
+    "description": "Mengunggah dokumen baru untuk karyawan.",
     "operationId": "upload_document_api_v1_employees__emp_id__documents_post",
     "security": [
      {
@@ -1222,7 +1517,7 @@
      "Employee Documents"
     ],
     "summary": "Verify Document",
-    "description": "Memverifikasi (menyetujui atau menolak) dokumen karyawan.\n\nPath params:\n- emp_id: UUID dari karyawan\n- doc_id: UUID dari dokumen\n\nBody params:\n- data: Hasil verifikasi dokumen (EmployeeDocumentVerify)\n\nReturn: Detail dokumen yang telah diverifikasi (EmployeeDocumentResponse)",
+    "description": "Memverifikasi (menyetujui atau menolak) dokumen karyawan.",
     "operationId": "verify_document_api_v1_employees__emp_id__documents__doc_id__verify_post",
     "security": [
      {
@@ -1291,7 +1586,7 @@
      "Document Expiry"
     ],
     "summary": "Get Expiring Documents",
-    "description": "Mengambil daftar dokumen yang akan kedaluwarsa atau sudah kedaluwarsa.\nMemerlukan izin VERIFY_DOCUMENTS (biasanya HR).\n\nQuery params:\n- urgency: Opsi pemfilteran berdasarkan tingkat urgensi\n\nReturn: Daftar dokumen yang memasuki masa kedaluwarsa (ExpiringDocumentList)",
+    "description": "Mengambil daftar dokumen yang akan kedaluwarsa atau sudah kedaluwarsa.",
     "operationId": "get_expiring_documents_api_v1_documents_expiring_get",
     "security": [
      {
@@ -1346,7 +1641,7 @@
      "Document Expiry"
     ],
     "summary": "Get Pending Documents",
-    "description": "Antrean verifikasi HR (P2-5): dokumen pribadi berstatus PENDING di organisasi ini, terlama dulu.\n\nReturn: Daftar dokumen yang perlu diverifikasi (PendingDocumentList)",
+    "description": "Antrean verifikasi HR untuk dokumen pribadi berstatus PENDING.",
     "operationId": "get_pending_documents_api_v1_documents_pending_get",
     "responses": {
      "200": {
@@ -1373,7 +1668,7 @@
      "Document Expiry"
     ],
     "summary": "Cron Expire Documents",
-    "description": "Dipanggil berkala oleh penjadwal: dokumen 'CURRENT' yang lewat masa berlaku → 'EXPIRED'.\nHanya ADMIN (`run:system_jobs`, sama dengan cron absensi) dan hanya untuk organisasinya (V-09);\n\"hari ini\" menurut zona waktu organisasi, bukan jam server DB.\n\nReturn: Jumlah dokumen yang diubah (dict)",
+    "description": "Tugas penjadwal untuk menandai dokumen kedaluwarsa menjadi EXPIRED.",
     "operationId": "cron_expire_documents_api_v1_documents_cron_expire_documents_post",
     "responses": {
      "200": {
@@ -1402,7 +1697,7 @@
      "Work Plans"
     ],
     "summary": "Assignment Options",
-    "description": "Mengambil pilihan PM/personel yang sah untuk periode SK baru (R-23) (GET).\n\nQuery Parameters:\n- period_start (date): Tanggal mulai periode SK.\n- period_end (date): Tanggal akhir periode SK.\n\nReturns:\n- PlanAssignmentOptions: Pilihan personil yang dapat ditugaskan.",
+    "description": "Mengambil pilihan PM/personel yang sah untuk periode SK baru (R-23) (GET).",
     "operationId": "assignment_options_api_v1_work_plans_assignment_options_get",
     "security": [
      {
@@ -1461,7 +1756,7 @@
      "Work Plans"
     ],
     "summary": "Form Options",
-    "description": "Mengambil pilihan untuk form \"Buat SK\" pada alur v2 (SK2-A/B) (GET).\n\nQuery Parameters:\n- plan_id (UUID | None): ID draf yang sedang diubah (pilihannya ikut tampil).\n\nReturns:\n- PlanFormOptions: Opsi-opsi untuk mengisi form SK.",
+    "description": "Mengambil pilihan untuk form \"Buat SK\" pada alur v2 (SK2-A/B) (GET).",
     "operationId": "form_options_api_v1_work_plans_form_options_get",
     "security": [
      {
@@ -1517,7 +1812,7 @@
      "Work Plans"
     ],
     "summary": "Driver Options",
-    "description": "Mengambil daftar calon pengemudi (driver) yang valid (GET).\nCalon driver dari ketua + anggota terpilih yang ber-SIM sesuai tipe kendaraan dan tidak terikat SK lain.\n\nQuery Parameters:\n- vehicle_id (UUID): ID kendaraan.\n- period_end (date): Tanggal akhir periode.\n- candidate_ids (list[UUID]): Daftar ID kandidat.\n- plan_id (UUID | None): ID draf SK terkait jika ada.\n\nReturns:\n- list[str]: Daftar ID calon pengemudi yang valid.",
+    "description": "Mengambil daftar calon pengemudi (driver) yang valid (GET).",
     "operationId": "driver_options_api_v1_work_plans_driver_options_get",
     "security": [
      {
@@ -1612,7 +1907,7 @@
      "Work Plans"
     ],
     "summary": "Create Full Plan",
-    "description": "Membuat SK lengkap dalam satu transaksi (alur v2) (POST).\nStatus SK akan langsung menjadi Draf.\n\nRequest Body:\n- data (PlanDraftRequest): Seluruh rincian SK.\n\nReturns:\n- PlanDetailOut: Detail lengkap SK yang baru dibuat.",
+    "description": "Membuat SK lengkap dalam satu transaksi (alur v2) (POST).",
     "operationId": "create_full_plan_api_v1_work_plans_full_post",
     "requestBody": {
      "content": {
@@ -1659,7 +1954,7 @@
      "Work Plans"
     ],
     "summary": "Get Plans",
-    "description": "Mengambil daftar SK yang terlihat oleh pengguna (V-07) (GET).\nSK Diterima yang tanggal mulainya tiba dijalankan dulu (alur v2).\n\nQuery Parameters:\n- status_filter (str | None): Filter berdasarkan status SK.\n- archived (bool): Menampilkan draf terarsip (hanya untuk pengelola) (V-21).\n\nReturns:\n- list[WorkPlanResponse]: Daftar rencana kerja (SK).",
+    "description": "Mengambil daftar SK yang terlihat oleh pengguna (V-07) (GET).",
     "operationId": "get_plans_api_v1_work_plans_get",
     "security": [
      {
@@ -1726,7 +2021,7 @@
      "Work Plans"
     ],
     "summary": "Create Plan",
-    "description": "Membuat draf rencana kerja (SK) baru (POST).\n\nRequest Body:\n- data (WorkPlanCreate): Data awal pembuatan SK (unit, lokasi, ketua, dll).\n\nReturns:\n- WorkPlanResponse: Data rencana kerja yang baru dibuat.",
+    "description": "Membuat draf rencana kerja (SK) baru (POST).",
     "operationId": "create_plan_api_v1_work_plans_post",
     "security": [
      {
@@ -1773,7 +2068,7 @@
      "Work Plans"
     ],
     "summary": "Get Plan",
-    "description": "Mengambil data dasar dari sebuah SK (GET).\n\nPath Parameters:\n- plan_id (UUID): ID dari SK (work plan).\n\nReturns:\n- WorkPlanResponse: Data dasar SK.",
+    "description": "Mengambil data dasar dari sebuah SK (GET).",
     "operationId": "get_plan_api_v1_work_plans__plan_id__get",
     "security": [
      {
@@ -1820,7 +2115,7 @@
      "Work Plans"
     ],
     "summary": "Update Plan",
-    "description": "Mengubah rincian SK berstatus Draf (PATCH). (EDIT_DRAFT, dok 05)\n\nPath Parameters:\n- plan_id (UUID): ID dari rencana kerja (SK).\n\nRequest Body:\n- data (WorkPlanUpdate): Data yang ingin diubah (judul, lokasi, dsb).\n\nReturns:\n- WorkPlanResponse: Data rencana kerja yang telah di-update.",
+    "description": "Mengubah rincian SK berstatus Draf (PATCH). (EDIT_DRAFT, dok 05)",
     "operationId": "update_plan_api_v1_work_plans__plan_id__patch",
     "security": [
      {
@@ -1879,7 +2174,7 @@
      "Work Plans"
     ],
     "summary": "Get Plan Detail",
-    "description": "Mengambil isi lengkap SK: data umum, lokasi, tim, detail pekerjaan per hari, alat & kendaraan (GET).\n\nPath Parameters:\n- plan_id (UUID): ID SK (work plan).\n\nReturns:\n- PlanDetailOut: Detail lengkap dari SK.",
+    "description": "Mengambil isi lengkap SK: data umum, lokasi, tim, detail pekerjaan per hari, alat & kendaraan (GET).",
     "operationId": "get_plan_detail_api_v1_work_plans__plan_id__detail_get",
     "security": [
      {
@@ -1928,7 +2223,7 @@
      "Work Plans"
     ],
     "summary": "Edit Full Plan",
-    "description": "Mengubah seluruh isi SK (draf) dalam satu transaksi (PUT).\nTermasuk draf revisi setelah adendum diminta.\n\nPath Parameters:\n- plan_id (UUID): ID dari SK.\n\nRequest Body:\n- data (PlanDraftRequest): Data draft SK yang lengkap.\n\nReturns:\n- PlanDetailOut: Detail lengkap SK yang baru disimpan.",
+    "description": "Mengubah seluruh isi SK (draf) dalam satu transaksi (PUT).",
     "operationId": "edit_full_plan_api_v1_work_plans__plan_id__full_put",
     "security": [
      {
@@ -1987,7 +2282,7 @@
      "Work Plans"
     ],
     "summary": "Preview Plan",
-    "description": "Pratinjau A4 draf SK (\"Sunting SK\", SK2-C) — format sama dengan dokumen terbit (GET).\n\nPath Parameters:\n- plan_id (UUID): ID dari SK.\n\nReturns:\n- HTMLResponse: Representasi HTML draf SK.",
+    "description": "Pratinjau A4 draf SK (\"Sunting SK\", SK2-C) — format sama dengan dokumen terbit (GET).",
     "operationId": "preview_plan_api_v1_work_plans__plan_id__preview_get",
     "security": [
      {
@@ -2036,7 +2331,7 @@
      "Work Plans"
     ],
     "summary": "Add Day",
-    "description": "Menambahkan data hari ke dalam rencana kerja berstatus DRAFT (POST).\n\nPath Parameters:\n- plan_id (UUID): ID rencana kerja.\n\nRequest Body:\n- data (PlanDayCreate): Rincian hari yang akan ditambahkan.\n\nReturns:\n- PlanDayResponse: Data hari yang berhasil ditambahkan.",
+    "description": "Menambahkan data hari ke dalam rencana kerja berstatus DRAFT (POST).",
     "operationId": "add_day_api_v1_work_plans__plan_id__days_post",
     "security": [
      {
@@ -2093,7 +2388,7 @@
      "Daily Reports"
     ],
     "summary": "List Plan Days",
-    "description": "Mengambil daftar hari kerja beserta tugas dan laporan harian dari SK (GET).\nSiapa pun yang melihat SK (V-07); SK tak terlihat / organisasi lain → 404.\n\nPath Parameters:\n- plan_id (tersirat via router prefix): ID SK bersangkutan.\n\nReturns:\n- list[PlanDayOut]: Daftar detail hari kerja SK.",
+    "description": "Mengambil daftar hari kerja beserta tugas dan laporan harian dari SK (GET).",
     "operationId": "list_plan_days_api_v1_work_plans__plan_id__days_get",
     "security": [
      {
@@ -2146,7 +2441,7 @@
      "Work Plans"
     ],
     "summary": "Add Task",
-    "description": "Menambahkan tugas baru pada hari tertentu di dalam SK (POST).\n\nPath Parameters:\n- plan_id (UUID): ID rencana kerja (SK).\n- day_id (UUID): ID dari hari bersangkutan.\n\nRequest Body:\n- data (PlanTaskCreate): Rincian tugas yang akan ditambahkan.\n\nReturns:\n- PlanTaskResponse: Data tugas yang berhasil dibuat.",
+    "description": "Menambahkan tugas baru pada hari tertentu di dalam SK (POST).",
     "operationId": "add_task_api_v1_work_plans__plan_id__days__day_id__tasks_post",
     "security": [
      {
@@ -2215,7 +2510,7 @@
      "Work Plans"
     ],
     "summary": "Save Day",
-    "description": "Menyusun ulang judul & tugas satu hari selagi SK masih draf (PUT).\ndomain.js SAVE_DAY (V-23).\n\nPath Parameters:\n- plan_id (UUID): ID SK.\n- day_id (UUID): ID hari.\n\nRequest Body:\n- data (DayPlanRequest): Data tugas untuk hari tersebut.\n\nReturns:\n- dict[str, object]: Data hari dan daftar tugas yang baru disimpan.",
+    "description": "Menyusun ulang judul & tugas satu hari selagi SK masih draf (PUT).",
     "operationId": "save_day_api_v1_work_plans__plan_id__days__day_id__plan_put",
     "security": [
      {
@@ -2286,7 +2581,7 @@
      "Plan Members"
     ],
     "summary": "Get Plan Team",
-    "description": "Mengambil daftar tim aktif pada rencana kerja (GET).\nTim aktif SK (ketua dulu). SK tak terlihat / organisasi lain → 404 (penjaga VIEW).\n\nPath Parameters:\n- plan_id (tersirat via router prefix): ID SK bersangkutan.\n\nReturns:\n- list[TeamMemberOut]: Daftar anggota tim (ketua dan anggota).",
+    "description": "Mengambil daftar tim aktif pada rencana kerja (GET).",
     "operationId": "get_plan_team_api_v1_work_plans__plan_id__members_get",
     "security": [
      {
@@ -2337,7 +2632,7 @@
      "Plan Members"
     ],
     "summary": "Set Plan Team",
-    "description": "Menyetel (memperbarui) daftar tim SK (ketua dan anggota) (PUT).\n\nPath Parameters:\n- plan_id (UUID): ID dari SK.\n\nRequest Body:\n- payload (TeamRequest): Data ID ketua dan daftar ID anggota, beserta versi row.\n\nReturns:\n- TeamResponse: Data susunan tim yang baru.",
+    "description": "Menyetel (memperbarui) daftar tim SK (ketua dan anggota) (PUT).",
     "operationId": "set_plan_team_api_v1_work_plans__plan_id__members_put",
     "security": [
      {
@@ -2396,7 +2691,7 @@
      "Work Plan Transitions"
     ],
     "summary": "Get Final Report Signatures",
-    "description": "Mengambil daftar tanda tangan laporan akhir (GET).\nTanda tangan laporan akhir (ketua = ISSUER, pemeriksa = APPROVER), R-19.\n\nPath Parameters:\n- plan_id (UUID): ID rencana kerja.\n\nReturns:\n- list[FinalReportSignatureOut]: Daftar tanda tangan.",
+    "description": "Mengambil daftar tanda tangan laporan akhir (GET).",
     "operationId": "get_final_report_signatures_api_v1_work_plans__plan_id__completion_signatures_get",
     "security": [
      {
@@ -2449,7 +2744,7 @@
      "Work Plan Transitions"
     ],
     "summary": "Get Final Report Pdf",
-    "description": "Mengunduh PDF laporan akhir ber-QR (GET).\nP6-4, UAT langkah 10. Hanya setelah disetujui (409).\nRender HTML ke PDF berjalan di background threadpool.\n\nPath Parameters:\n- plan_id (UUID): ID rencana kerja.\n\nReturns:\n- Response: File PDF biner.",
+    "description": "Mengunduh PDF laporan akhir ber-QR (GET).",
     "operationId": "get_final_report_pdf_api_v1_work_plans__plan_id__completion_pdf_get",
     "security": [
      {
@@ -2491,7 +2786,7 @@
      "Work Plan Transitions"
     ],
     "summary": "Get Final Report",
-    "description": "Mengambil data laporan akhir SK (GET).\nLaporan akhir SK — dibaca PM sebelum menyetujui/mengembalikan, dan untuk mode presentasi.\nnull bila belum pernah diajukan; SK tak terlihat → 404 (penjaga VIEW).\n\nPath Parameters:\n- plan_id (UUID): ID dari SK terkait.\n\nReturns:\n- FinalReportOut | None: Detail final report jika ada.",
+    "description": "Mengambil data laporan akhir SK (GET).",
     "operationId": "get_final_report_api_v1_work_plans__plan_id__completion_get",
     "security": [
      {
@@ -2548,7 +2843,7 @@
      "Work Plan Transitions"
     ],
     "summary": "Publish Plan",
-    "description": "PM menerbitkan SK (POST).\nStatus SK berubah menjadi PUBLISHED.\n\nPath Parameters:\n- plan_id (UUID): ID SK.\n\nRequest Body:\n- data (TransitionRequest): Versi baris dan data transisi lainnya.\n\nReturns:\n- WorkPlanResponse: Rencana kerja terbaru.",
+    "description": "PM menerbitkan SK (POST).",
     "operationId": "publish_plan_api_v1_work_plans__plan_id__publish_post",
     "security": [
      {
@@ -2607,7 +2902,7 @@
      "Work Plan Transitions"
     ],
     "summary": "Accept Plan",
-    "description": "Ketua menerima SK yang diterbitkan PM (POST).\nStatus SK berubah menjadi ACCEPTED.\n\nPath Parameters:\n- plan_id (UUID): ID rencana kerja.\n\nRequest Body:\n- data (TransitionRequest): Versi baris (row version).\n\nReturns:\n- WorkPlanResponse: Rencana kerja terbaru.",
+    "description": "Ketua menerima SK yang diterbitkan PM (POST).",
     "operationId": "accept_plan_api_v1_work_plans__plan_id__accept_post",
     "security": [
      {
@@ -2666,7 +2961,7 @@
      "Work Plan Transitions"
     ],
     "summary": "Appeal Plan",
-    "description": "Ketua mengajukan banding atas SK yang terbit (POST).\n(domain.js APPEAL, V-20).\nStatus SK berubah menjadi APPEALED.\n\nPath Parameters:\n- plan_id (UUID): ID SK.\n\nRequest Body:\n- data (TransitionRequest): Data banding beserta alasannya.\n\nReturns:\n- WorkPlanResponse: Rencana kerja dengan status banding.",
+    "description": "Ketua mengajukan banding atas SK yang terbit (POST).",
     "operationId": "appeal_plan_api_v1_work_plans__plan_id__appeal_post",
     "security": [
      {
@@ -2725,7 +3020,7 @@
      "Work Plan Transitions"
     ],
     "summary": "Revise Plan",
-    "description": "PM membuka revisi draf dari SK yang dibanding (POST).\n(domain.js REVISE, V-20).\nStatus SK kembali menjadi DRAFT_REV.\n\nPath Parameters:\n- plan_id (UUID): ID dari SK yang akan direvisi.\n\nRequest Body:\n- data (TransitionRequest): Data permintaan transisi (row version).\n\nReturns:\n- WorkPlanResponse: Rencana kerja dengan status DRAFT_REV.",
+    "description": "PM membuka revisi draf dari SK yang dibanding (POST).",
     "operationId": "revise_plan_api_v1_work_plans__plan_id__revise_post",
     "security": [
      {
@@ -2784,7 +3079,7 @@
      "Work Plan Transitions"
     ],
     "summary": "Cancel Plan",
-    "description": "Membatalkan rencana kerja (POST).\n(domain.js CANCEL_PLAN, V-21).\nStatus SK menjadi CANCELLED.\n\nPath Parameters:\n- plan_id (UUID): ID dari SK.\n\nRequest Body:\n- data (TransitionRequest): Data dan alasan pembatalan.\n\nReturns:\n- WorkPlanResponse: Rencana kerja yang dibatalkan.",
+    "description": "Membatalkan rencana kerja (POST).",
     "operationId": "cancel_plan_api_v1_work_plans__plan_id__cancel_post",
     "security": [
      {
@@ -2843,7 +3138,7 @@
      "Work Plan Transitions"
     ],
     "summary": "Archive Plan",
-    "description": "Mengarsipkan (menghapus secara logis) draf SK (POST).\n(domain.js DELETE_PLAN, V-21): arsip draf — soft delete, riwayat tetap ada.\n\nPath Parameters:\n- plan_id (UUID): ID SK.\n\nRequest Body:\n- data (TransitionRequest): Alasan pengarsipan.\n\nReturns:\n- WorkPlanResponse: Rencana kerja yang diarsipkan.",
+    "description": "Mengarsipkan (menghapus secara logis) draf SK (POST).",
     "operationId": "archive_plan_api_v1_work_plans__plan_id__archive_post",
     "security": [
      {
@@ -2902,7 +3197,7 @@
      "Work Plan Transitions"
     ],
     "summary": "Restore Plan",
-    "description": "Memulihkan draf SK terarsip (POST).\n(domain.js RESTORE_PLAN, V-21).\n\nPath Parameters:\n- plan_id (UUID): ID dari SK yang akan dipulihkan.\n\nRequest Body:\n- data (TransitionRequest): Data baris transisi.\n\nReturns:\n- WorkPlanResponse: Rencana kerja yang berhasil dipulihkan.",
+    "description": "Memulihkan draf SK terarsip (POST).",
     "operationId": "restore_plan_api_v1_work_plans__plan_id__restore_post",
     "security": [
      {
@@ -2961,7 +3256,7 @@
      "Work Plan Transitions"
     ],
     "summary": "Start Plan",
-    "description": "Ketua memulai pekerjaan berdasarkan SK yang telah diterima (POST).\nStatus SK berubah menjadi IN_PROGRESS.\n\nPath Parameters:\n- plan_id (UUID): ID SK.\n\nRequest Body:\n- data (TransitionRequest): Versi data row.\n\nReturns:\n- WorkPlanResponse: Rencana kerja dengan status berjalan.",
+    "description": "Ketua memulai pekerjaan berdasarkan SK yang telah diterima (POST).",
     "operationId": "start_plan_api_v1_work_plans__plan_id__start_post",
     "security": [
      {
@@ -3020,7 +3315,7 @@
      "Work Plan Transitions"
     ],
     "summary": "Request Completion",
-    "description": "Ketua menyerahkan laporan akhir (POST).\n(domain.js REQUEST_COMPLETE, V-26): status menjadi COMPLETION_REVIEW.\n\nPath Parameters:\n- plan_id (UUID): ID dari rencana kerja.\n\nRequest Body:\n- data (CompletionRequest): Isi laporan akhir, kendala, dan file bukti (evidence).\n\nReturns:\n- WorkPlanResponse: Rencana kerja yang sedang di-review.",
+    "description": "Ketua menyerahkan laporan akhir (POST).",
     "operationId": "request_completion_api_v1_work_plans__plan_id__request_completion_post",
     "security": [
      {
@@ -3079,7 +3374,7 @@
      "Work Plan Transitions"
     ],
     "summary": "Approve Completion",
-    "description": "PM unit/OPS menutup SK setelah menyetujui laporan akhir (POST).\n(domain.js APPROVE_COMPLETE, V-26): status menjadi COMPLETED.\n\nPath Parameters:\n- plan_id (UUID): ID dari SK.\n\nRequest Body:\n- data (TransitionRequest): Data persetujuan.\n\nReturns:\n- WorkPlanResponse: SK yang berstatus COMPLETED.",
+    "description": "PM unit/OPS menutup SK setelah menyetujui laporan akhir (POST).",
     "operationId": "approve_completion_api_v1_work_plans__plan_id__approve_completion_post",
     "security": [
      {
@@ -3138,7 +3433,7 @@
      "Work Plan Transitions"
     ],
     "summary": "Return Completion",
-    "description": "PM unit/OPS mengembalikan laporan akhir ke ketua (POST).\n(domain.js RETURN_COMPLETE, V-26): status menjadi IN_PROGRESS kembali.\n\nPath Parameters:\n- plan_id (UUID): ID SK terkait.\n\nRequest Body:\n- data (TransitionRequest): Data alasan pengembalian laporan.\n\nReturns:\n- WorkPlanResponse: Rencana kerja dikembalikan ke berjalan.",
+    "description": "PM unit/OPS mengembalikan laporan akhir ke ketua (POST).",
     "operationId": "return_completion_api_v1_work_plans__plan_id__return_completion_post",
     "security": [
      {
@@ -3197,7 +3492,7 @@
      "Plan Changes / Addendums"
     ],
     "summary": "Request Change",
-    "description": "Mengajukan adendum perubahan pada SK (POST).\nREQUEST_CHANGE (ketua, perpanjangan) · REQUEST_PERSONNEL_CHANGE (PM unit/OPS, personel).\n\nPath Parameters:\n- plan_id (UUID): ID dari SK.\n\nRequest Body:\n- data (ChangeRequest): Data usulan perubahan (jenis perubahan, periode baru, dsb).\n\nReturns:\n- ChangeResponse: Data respons dari perubahan yang diusulkan.",
+    "description": "Mengajukan adendum perubahan pada SK (POST).",
     "operationId": "request_change_api_v1_work_plans__plan_id__changes_post",
     "security": [
      {
@@ -3254,7 +3549,7 @@
      "Work Plan Amendments"
     ],
     "summary": "List Changes",
-    "description": "Melihat riwayat usulan perubahan SK (GET).\nMencegah celah di mana usulan tidak bisa dibaca ulang (docs/28).\n\nPath Parameters:\n- plan_id (UUID): ID rencana kerja.\n\nReturns:\n- list[PlanChangeOut]: Daftar usulan perubahan yang terkait.",
+    "description": "Melihat riwayat usulan perubahan SK (GET).",
     "operationId": "list_changes_api_v1_work_plans__plan_id__changes_get",
     "security": [
      {
@@ -3307,7 +3602,7 @@
      "Plan Changes / Addendums"
     ],
     "summary": "Approve Change",
-    "description": "Menyetujui adendum perpanjangan SK (POST).\nAPPROVE_CHANGE — PM unit/OPS menandatangani perpanjangan.\n\nPath Parameters:\n- change_id (UUID): ID perubahan adendum.\n\nRequest Body:\n- data (DecisionRequest): Persetujuan atau keputusan.\n\nReturns:\n- ChangeResponse: Status terbaru adendum setelah disetujui.",
+    "description": "Menyetujui adendum perpanjangan SK (POST).",
     "operationId": "approve_change_api_v1_changes__change_id__approve_post",
     "security": [
      {
@@ -3366,7 +3661,7 @@
      "Plan Changes / Addendums"
     ],
     "summary": "Accept Change",
-    "description": "Menerima dan mengaktifkan adendum (POST).\nACCEPT_CHANGE — ketua (perpanjangan) / ketua baru (personel) mengaktifkan adendum.\n\nPath Parameters:\n- change_id (UUID): ID usulan adendum.\n\nRequest Body:\n- data (DecisionRequest): Konfirmasi penerimaan.\n\nReturns:\n- ChangeResponse: Status adendum terbaru.",
+    "description": "Menerima dan mengaktifkan adendum (POST).",
     "operationId": "accept_change_api_v1_changes__change_id__accept_post",
     "security": [
      {
@@ -3425,7 +3720,7 @@
      "Plan Changes / Addendums"
     ],
     "summary": "Reject Change",
-    "description": "Menolak adendum (POST).\nREJECT_CHANGE — alasan wajib disertakan.\n\nPath Parameters:\n- change_id (UUID): ID adendum.\n\nRequest Body:\n- data (DecisionRequest): Alasan penolakan.\n\nReturns:\n- ChangeResponse: Status adendum yang ditolak.",
+    "description": "Menolak adendum (POST).",
     "operationId": "reject_change_api_v1_changes__change_id__reject_post",
     "security": [
      {
@@ -3484,7 +3779,7 @@
      "Plan Changes / Addendums"
     ],
     "summary": "Withdraw Change",
-    "description": "Menarik kembali usulan adendum personel (POST).\nWITHDRAW_CHANGE — PM menarik adendum personel.\n\nPath Parameters:\n- change_id (UUID): ID usulan adendum.\n\nRequest Body:\n- data (DecisionRequest): Alasan pembatalan.\n\nReturns:\n- ChangeResponse: Status adendum yang ditarik.",
+    "description": "Menarik kembali usulan adendum personel (POST).",
     "operationId": "withdraw_change_api_v1_changes__change_id__withdraw_post",
     "security": [
      {
@@ -3543,7 +3838,7 @@
      "Sites"
     ],
     "summary": "Get Sites",
-    "description": "Mengambil daftar lokasi kerja (GET).\nR-33: lapangan → lokasi unitnya (+ kantor pusat untuk absen); kantor → lokasi kantor; PM → kantor + unitnya; OPS → semua.\n\nQuery Parameters:\n- for_attendance (bool): Hanya lokasi yang sah untuk absen peminta.\n\nReturns:\n- list[SiteResponse]: Daftar lokasi kerja beserta atribut `can_manage`.",
+    "description": "Mengambil daftar lokasi kerja (GET).",
     "operationId": "get_sites_api_v1_sites_get",
     "security": [
      {
@@ -3594,7 +3889,7 @@
      "Sites"
     ],
     "summary": "Create Site",
-    "description": "Membuat lokasi kerja baru (POST).\nR-33: PM → lokasi proyek unitnya (untuk bawahannya); Finance → lokasi kantor. Unit ditetapkan server.\n\nRequest Body:\n- data (SiteCreate): Data lokasi yang akan dibuat.\n\nReturns:\n- SiteResponse: Data lokasi kerja yang berhasil dibuat.",
+    "description": "Membuat lokasi kerja baru (POST).",
     "operationId": "create_site_api_v1_sites_post",
     "security": [
      {
@@ -3641,7 +3936,7 @@
      "Sites"
     ],
     "summary": "Delete Site",
-    "description": "Menghapus lokasi kerja berdasarkan ID-nya (DELETE).\n\nPath Parameters:\n- site_id (UUID): ID lokasi yang akan dihapus.\n\nReturns:\n- dict[str, str]: Pesan konfirmasi penghapusan.",
+    "description": "Menghapus lokasi kerja berdasarkan ID-nya (DELETE).",
     "operationId": "delete_site_api_v1_sites__site_id__delete",
     "security": [
      {
@@ -3694,7 +3989,7 @@
      "Units"
     ],
     "summary": "List Units",
-    "description": "Unit milik organisasi pengguna saja (V-09).",
+    "description": "Mengambil daftar unit milik organisasi pengguna saat ini.",
     "operationId": "list_units_api_v1_units_get",
     "responses": {
      "200": {
@@ -3725,7 +4020,7 @@
      "Employee Account"
     ],
     "summary": "Get Account",
-    "description": "Mendapatkan detail akun berdasarkan ID karyawan.\n\nPath params:\n- emp_id: UUID dari karyawan\n\nReturn: Detail akun (AccountOut)",
+    "description": "Mendapatkan detail akun berdasarkan ID karyawan.",
     "operationId": "get_account_api_v1_employees__emp_id__account_get",
     "security": [
      {
@@ -3772,7 +4067,7 @@
      "Employee Account"
     ],
     "summary": "Create Account",
-    "description": "Membuat akun baru untuk karyawan. Password sementara dikembalikan SEKALI — sampaikan ke karyawan, minta diganti setelah masuk.\n\nPath params:\n- emp_id: UUID dari karyawan\n\nBody params:\n- data: Data akun baru yang akan dibuat\n\nReturn: Akun yang dibuat beserta password sementara (AccountWithPassword)",
+    "description": "Membuat akun baru untuk karyawan dengan kata sandi sementara.",
     "operationId": "create_account_api_v1_employees__emp_id__account_post",
     "security": [
      {
@@ -3831,7 +4126,7 @@
      "Employee Account"
     ],
     "summary": "Reset Password",
-    "description": "Mereset password akun. Password sementara baru; semua sesi akun itu dicabut.\n\nPath params:\n- emp_id: UUID dari karyawan\n\nReturn: Detail akun beserta password sementara yang baru (AccountWithPassword)",
+    "description": "Mereset password akun karyawan ke password sementara baru.",
     "operationId": "reset_password_api_v1_employees__emp_id__account_reset_password_post",
     "security": [
      {
@@ -3880,7 +4175,7 @@
      "Employee Account"
     ],
     "summary": "Deactivate",
-    "description": "Menonaktifkan akun karyawan.\n\nPath params:\n- emp_id: UUID dari karyawan\n\nReturn: Detail akun yang baru saja dinonaktifkan (AccountOut)",
+    "description": "Menonaktifkan akun karyawan.",
     "operationId": "deactivate_api_v1_employees__emp_id__account_deactivate_post",
     "security": [
      {
@@ -3929,7 +4224,7 @@
      "Employee Account"
     ],
     "summary": "Activate",
-    "description": "Mengaktifkan kembali akun karyawan.\n\nPath params:\n- emp_id: UUID dari karyawan\n\nReturn: Detail akun yang baru saja diaktifkan (AccountOut)",
+    "description": "Mengaktifkan kembali akun karyawan.",
     "operationId": "activate_api_v1_employees__emp_id__account_activate_post",
     "security": [
      {
@@ -4085,7 +4380,7 @@
      "Plan Location"
     ],
     "summary": "Geo Search",
-    "description": "Pencarian kota/tempat di Indonesia berdasarkan kueri (Nominatim, di-cache) (GET).\nUntuk pengelola SK dan pengelola lokasi kerja (pencarian alamat saat menambah lokasi).\n\nQuery Parameters:\n- q (str): Kata kunci lokasi yang dicari.\n\nReturns:\n- list[GeoResult]: Daftar hasil pencarian lokasi (koordinat dan nama wilayah).",
+    "description": "Pencarian kota/tempat di Indonesia berdasarkan kueri (Nominatim, di-cache) (GET).",
     "operationId": "geo_search_api_v1_geo_search_get",
     "security": [
      {
@@ -4139,7 +4434,7 @@
      "Plan Location"
     ],
     "summary": "Get Plan Location",
-    "description": "Mengambil lokasi titik absensi untuk sebuah rencana kerja (SK) (GET).\n\nPath Parameters:\n- plan_id (UUID): ID dari rencana kerja (SK).\n\nReturns:\n- PlanLocationOut | None: Koordinat titik absensi atau null bila belum disetel.",
+    "description": "Mengambil lokasi titik absensi untuk sebuah rencana kerja (SK) (GET).",
     "operationId": "get_plan_location_api_v1_work_plans__plan_id__location_get",
     "security": [
      {
@@ -4194,7 +4489,7 @@
      "Plan Location"
     ],
     "summary": "Set Plan Location",
-    "description": "Menyetel titik absensi (lokasi) untuk rencana kerja (PUT).\nSK draf maupun berjalan; teks lokasi dokumen tetap, hanya titik absensi yang berubah.\n\nPath Parameters:\n- plan_id (UUID): ID dari rencana kerja.\n\nRequest Body:\n- data (PlanLocationIn): Data nama lokasi, alamat, latitude, longitude, dan radius absensi.\n\nReturns:\n- PlanLocationOut: Data lokasi terbaru.",
+    "description": "Menyetel titik absensi (lokasi) untuk rencana kerja (PUT).",
     "operationId": "set_plan_location_api_v1_work_plans__plan_id__location_put",
     "security": [
      {
@@ -4253,7 +4548,7 @@
      "Weekly Reports"
     ],
     "summary": "List Weeks",
-    "description": "Mengambil daftar laporan mingguan untuk sebuah SK (GET).\n\nPath Parameters:\n- plan_id (tersirat via router prefix): ID dari work plan.\n\nReturns:\n- list[WeeklyReportResponse]: Daftar laporan mingguan.",
+    "description": "Mengambil daftar laporan mingguan untuk sebuah SK.",
     "operationId": "list_weeks_api_v1_work_plans__plan_id__weekly_get",
     "security": [
      {
@@ -4306,7 +4601,7 @@
      "Weekly Reports"
     ],
     "summary": "Save Weekly",
-    "description": "Menyimpan draf laporan mingguan (PUT). (domain.js SAVE_WEEKLY)\n\nPath Parameters:\n- week (int): Minggu ke-berapa.\n\nRequest Body:\n- data (WeeklyReportRequest): Data isi laporan dan kendala.\n\nReturns:\n- WeeklyReportResponse: Data laporan mingguan yang berhasil disimpan.",
+    "description": "Menyimpan draf laporan mingguan.",
     "operationId": "save_weekly_api_v1_work_plans__plan_id__weekly__week__put",
     "security": [
      {
@@ -4374,7 +4669,7 @@
      "Weekly Reports"
     ],
     "summary": "Submit Weekly",
-    "description": "Mengajukan laporan mingguan agar bisa ditinjau (POST). (domain.js SUBMIT_WEEKLY)\n\nPath Parameters:\n- week (int): Minggu ke-berapa.\n\nReturns:\n- WeeklyReportResponse: Status laporan mingguan yang baru.",
+    "description": "Mengajukan laporan mingguan agar bisa ditinjau.",
     "operationId": "submit_weekly_api_v1_work_plans__plan_id__weekly__week__submit_post",
     "security": [
      {
@@ -4432,7 +4727,7 @@
      "Weekly Reports"
     ],
     "summary": "Review Weekly",
-    "description": "Meninjau laporan mingguan (PM Unit) untuk disetujui atau ditolak (POST). (domain.js REVIEW_WEEKLY)\n\nPath Parameters:\n- week (int): Minggu ke-berapa.\n\nRequest Body:\n- data (WeeklyReviewRequest): Keputusan (decision) dan catatan.\n\nReturns:\n- WeeklyReportResponse: Status laporan mingguan yang baru.",
+    "description": "Meninjau laporan mingguan (PM Unit) untuk disetujui atau ditolak.",
     "operationId": "review_weekly_api_v1_work_plans__plan_id__weekly__week__review_post",
     "security": [
      {
@@ -4633,7 +4928,7 @@
      "Work Plans"
     ],
     "summary": "List Attachments",
-    "description": "Mengambil daftar lampiran dari sebuah SK (GET).\n\nPath Parameters:\n- plan_id (tersirat via router prefix): ID dari SK.\n\nReturns:\n- list[AttachmentResponse]: Daftar lampiran SK.",
+    "description": "Mengambil daftar lampiran dari sebuah SK (GET).",
     "operationId": "list_attachments_api_v1_work_plans__plan_id__attachments_get",
     "security": [
      {
@@ -4684,7 +4979,7 @@
      "Work Plans"
     ],
     "summary": "Save Attachments",
-    "description": "Menyimpan atau memperbarui lampiran untuk SK (PUT).\n(domain.js SAVE_ATTACHMENTS)\n\nPath Parameters:\n- plan_id (tersirat via router prefix): ID SK bersangkutan.\n\nRequest Body:\n- data (AttachmentsRequest): Daftar ID file lampiran.\n\nReturns:\n- list[AttachmentResponse]: Daftar lampiran yang berhasil disimpan.",
+    "description": "Menyimpan atau memperbarui lampiran untuk SK (PUT).",
     "operationId": "save_attachments_api_v1_work_plans__plan_id__attachments_put",
     "security": [
      {
@@ -4747,7 +5042,7 @@
      "Documents & Signatures"
     ],
     "summary": "List Plan Documents",
-    "description": "Dok 05 §3.3: SK, revisi, dan adendum beserta jumlah tanda tangan yang berlaku (GET).\n\nPath Parameters:\n- plan_id (tersirat via router prefix): ID dari work plan.\n\nReturns:\n- list[PlanDocumentOut]: Daftar dokumen rencana kerja.",
+    "description": "Dokumen SK, revisi, dan adendum beserta jumlah tanda tangan yang berlaku.",
     "operationId": "list_plan_documents_api_v1_work_plans__plan_id__documents_get",
     "security": [
      {
@@ -4800,7 +5095,7 @@
      "Documents & Signatures"
     ],
     "summary": "List Signatures",
-    "description": "Mengambil daftar tanda tangan untuk sebuah dokumen (GET).\n\nPath Parameters:\n- document_id (UUID): ID dari dokumen yang tanda tangannya ingin diambil.\n\nReturns:\n- list[SignatureOut]: Daftar tanda tangan yang terkait dengan dokumen.",
+    "description": "Mengambil daftar tanda tangan untuk sebuah dokumen.",
     "operationId": "list_signatures_api_v1_documents__document_id__signatures_get",
     "security": [
      {
@@ -4853,7 +5148,7 @@
      "Documents & Signatures"
     ],
     "summary": "Document Pdf",
-    "description": "Mengunduh dokumen dalam format PDF bertanda tangan + QR verifikasi (dok 05 §3.9) (GET).\nRender berat → threadpool (CLAUDE.md).\n\nPath Parameters:\n- document_id (UUID): ID dokumen.\n\nReturns:\n- Response: File PDF dari dokumen bersangkutan.",
+    "description": "Mengunduh dokumen dalam format PDF bertanda tangan + QR verifikasi.",
     "operationId": "document_pdf_api_v1_documents__document_id__pdf_get",
     "security": [
      {
@@ -4895,7 +5190,7 @@
      "Documents & Signatures"
     ],
     "summary": "Document Html",
-    "description": "Mendapatkan representasi HTML dari dokumen, sama persis dengan PDF (templat A4 + TTD + QR) (GET).\nUntuk penampil di web & HP (\"Tinjau SK\").\n\nPath Parameters:\n- document_id (UUID): ID dari dokumen.\n\nReturns:\n- HTMLResponse: Konten HTML dokumen.",
+    "description": "Mendapatkan representasi HTML dari dokumen ber-QR untuk penampil di aplikasi.",
     "operationId": "document_html_api_v1_documents__document_id__html_get",
     "security": [
      {
@@ -4944,7 +5239,7 @@
      "Documents & Signatures"
     ],
     "summary": "Revoke Signature",
-    "description": "Pencabutan tanda tangan beserta alasan (PM unit/OPS SK tersebut) (POST).\nTercatat di audit. (P6-6)\n\nPath Parameters:\n- signature_id (UUID): ID dari tanda tangan yang akan dicabut.\n\nRequest Body:\n- data (RevokeRequest): Alasan pencabutan.\n\nReturns:\n- dict[str, str]: Pesan sukses.",
+    "description": "Pencabutan tanda tangan beserta alasan.",
     "operationId": "revoke_signature_api_v1_signatures__signature_id__revoke_post",
     "security": [
      {
@@ -5007,7 +5302,7 @@
      "Documents & Signatures"
     ],
     "summary": "Verify Signature",
-    "description": "Memverifikasi tanda tangan berdasarkan token dari hasil pemindaian QR (PUBLIK) (GET).\nHanya mengembalikan data yang perlu dilihat pemverifikasi.\n\nPath Parameters:\n- token (str): Token yang diperoleh dari QR code.\n\nReturns:\n- VerifyOut: Data verifikasi tanda tangan publik.",
+    "description": "Memverifikasi tanda tangan berdasarkan token dari hasil pemindaian QR (PUBLIK).",
     "operationId": "verify_signature_api_v1_verify__token__get",
     "parameters": [
      {
@@ -5050,7 +5345,7 @@
      "Attendance"
     ],
     "summary": "List Attendance",
-    "description": "Dok 05 §3.5 · R-33: Finance & OPS seluruh organisasi; PM miliknya + bawahan lapangan di unitnya;\nlainnya hanya milik sendiri. Filter `plan_id` di dok 05 belum didukung (dok 10 Bagian C).\n\nQuery params:\n- employee_id: Filter UUID karyawan\n- from/to: Filter rentang tanggal\n- status: Filter status absensi\n- scope: `all` (bawaan), `mine` = absensi pribadi, `team` = absensi anggota/umum (selain milik sendiri)\n- page, size: Pagination\n\nReturn: Daftar absensi (AttendanceListResponse)",
+    "description": "Dok 05 §3.5 · R-33: Finance & OPS seluruh organisasi; PM miliknya + bawahan lapangan di unitnya;\nlainnya hanya milik sendiri. Filter `plan_id` di dok 05 belum didukung (dok 10 Bagian C).",
     "operationId": "list_attendance_api_v1_attendance_get",
     "security": [
      {
@@ -5190,7 +5485,7 @@
      "Attendance"
     ],
     "summary": "Register Device Key",
-    "description": "R-34: daftarkan kunci publik Android Keystore perangkat ini untuk memverifikasi absen luring.\n\nBody params:\n- data: Payload device id dan public key (DeviceKeyRequest)\n\nReturn: Pesan sukses",
+    "description": "R-34: daftarkan kunci publik Android Keystore perangkat ini untuk memverifikasi absen luring.",
     "operationId": "register_device_key_api_v1_attendance_device_key_post",
     "requestBody": {
      "content": {
@@ -5241,7 +5536,7 @@
      "Attendance"
     ],
     "summary": "Submit Offline Attendance",
-    "description": "R-34: terima satu absen luring yang ditandatangani perangkat (idempoten per client_op_id).\n\nBody params:\n- data: Event absensi luring berserta signature (OfflineAttendanceEvent)\n\nReturn: Hasil pemrosesan sinkronisasi offline (OfflineAttendanceResult)",
+    "description": "R-34: terima satu absen luring yang ditandatangani perangkat (idempoten per client_op_id).",
     "operationId": "submit_offline_attendance_api_v1_attendance_offline_post",
     "requestBody": {
      "content": {
@@ -5288,7 +5583,7 @@
      "Attendance"
     ],
     "summary": "Check In",
-    "description": "P4-2 · domain.js CHECK_IN. Waktu, tanggal, jarak, dan status dari server (aturan inti #3).\nPekerja lapangan lewat HP (`channel` MOBILE), pekerja kantor lewat web (`channel` WEB).\n\nBody params:\n- data: Data check in termasuk lokasi dan bukti foto (CheckInRequest)\n\nReturn: Detail absensi check in (AttendanceResponse)",
+    "description": "P4-2 · domain.js CHECK_IN. Waktu, tanggal, jarak, dan status dari server (aturan inti #3).\nPekerja lapangan lewat HP (`channel` MOBILE), pekerja kantor lewat web (`channel` WEB).",
     "operationId": "check_in_api_v1_attendance_check_in_post",
     "requestBody": {
      "content": {
@@ -5335,7 +5630,7 @@
      "Attendance"
     ],
     "summary": "Check Out",
-    "description": "domain.js CHECK_OUT — menutup sesi terbuka milik sendiri, dari kanal sesuai jenis pekerja.\n\nBody params:\n- data: Data check out dengan spesifikasi channel (CheckOutRequest)\n\nReturn: Detail absensi setelah check out (AttendanceResponse)",
+    "description": "domain.js CHECK_OUT — menutup sesi terbuka milik sendiri, dari kanal sesuai jenis pekerja.",
     "operationId": "check_out_api_v1_attendance_check_out_post",
     "requestBody": {
      "content": {
@@ -5382,7 +5677,7 @@
      "Attendance"
     ],
     "summary": "Explain Attendance",
-    "description": "P4-4 · domain.js EXPLAIN_ATTENDANCE — hanya absensi sendiri yang menunggu pemeriksaan.\n\nPath params:\n- att_id: UUID absensi\n\nBody params:\n- data: Catatan penjelasan absensi (ExplanationRequest)\n\nReturn: Pesan sukses",
+    "description": "P4-4 · domain.js EXPLAIN_ATTENDANCE — hanya absensi sendiri yang menunggu pemeriksaan.",
     "operationId": "explain_attendance_api_v1_attendance__att_id__explain_post",
     "security": [
      {
@@ -5445,7 +5740,7 @@
      "Attendance"
     ],
     "summary": "Review Attendance",
-    "description": "P4-4 · domain.js REVIEW_ATTENDANCE · R-33: PM → bawahan lapangan, Finance → kantor non-Finance,\nOPS → Finance; tidak pernah absensi sendiri.\n\nPath params:\n- att_id: UUID absensi yang direview\n\nBody params:\n- data: Persetujuan atau penolakan dengan catatan (ReviewRequest)\n\nReturn: Pesan hasil review",
+    "description": "P4-4 · domain.js REVIEW_ATTENDANCE · R-33: PM → bawahan lapangan, Finance → kantor non-Finance,\nOPS → Finance; tidak pernah absensi sendiri.",
     "operationId": "review_attendance_api_v1_attendance__att_id__review_post",
     "security": [
      {
@@ -5508,7 +5803,7 @@
      "Attendance"
     ],
     "summary": "Export Attendance",
-    "description": "P4-5: Ekspor CSV untuk Finance. Jam dalam zona waktu organisasi (sebelumnya tercetak UTC).\n\nQuery params:\n- start_date: Tanggal mulai ekspor\n- end_date: Tanggal akhir ekspor\n\nReturn: Data mentah format CSV",
+    "description": "P4-5: Ekspor CSV untuk Finance. Jam dalam zona waktu organisasi (sebelumnya tercetak UTC).",
     "operationId": "export_attendance_api_v1_attendance_export_get",
     "security": [
      {
@@ -5840,7 +6135,7 @@
      "Attendance Cron"
     ],
     "summary": "Alert Missing Checkin",
-    "description": "Pemicu cron untuk memeriksa absensi check-in yang belum dilakukan pada hari berjalan,\nkemudian mengirim peringatan jika ditemukan.\n\nReturn: Detail peringatan (MissingCheckInResponse)",
+    "description": "Pemicu cron untuk memeriksa absensi check-in yang belum dilakukan pada hari berjalan,\nkemudian mengirim peringatan jika ditemukan.",
     "operationId": "alert_missing_checkin_api_v1_cron_attendance_alert_missing_post",
     "responses": {
      "200": {
@@ -5867,7 +6162,7 @@
      "Attendance Cron"
     ],
     "summary": "Alert Needs Review Spike",
-    "description": "Pemicu cron untuk mendeteksi lonjakan absensi yang memerlukan review (P4-9, dok 17 §5.3)\ndan memperingatkan manajer terkait.\n\nReturn: Ringkasan hasil pemeriksaan dan jumlah review (NeedsReviewResponse)",
+    "description": "Pemicu cron untuk mendeteksi lonjakan absensi yang memerlukan review (P4-9, dok 17 §5.3)\ndan memperingatkan manajer terkait.",
     "operationId": "alert_needs_review_spike_api_v1_cron_attendance_alert_needs_review_post",
     "responses": {
      "200": {
@@ -5978,7 +6273,7 @@
      "HSE & Reports"
     ],
     "summary": "List Incidents",
-    "description": "Mendapatkan daftar insiden untuk satu Surat Kerja (SK).\nMenampilkan insiden terbaru di urutan awal.\nSK asing/tak terlihat → 404.\n\nQuery params:\n- plan_id: UUID dari Surat Kerja\n\nReturn: Daftar insiden (list[IncidentResponse])",
+    "description": "Mendapatkan daftar insiden untuk satu Surat Kerja (SK).",
     "operationId": "list_incidents_api_v1_hse_incidents_get",
     "security": [
      {
@@ -6029,7 +6324,7 @@
      "HSE & Reports"
     ],
     "summary": "Report Incident",
-    "description": "Melaporkan insiden baru untuk SK yang sedang berlangsung.\n(Hanya ketua atau anggota pekerjaan ini, SK harus IN_PROGRESS).\n\nBody params:\n- data: Detail insiden yang dilaporkan (IncidentCreate)\n\nReturn: Detail insiden yang direkam (IncidentResponse)",
+    "description": "Melaporkan insiden baru untuk SK yang sedang berlangsung.",
     "operationId": "report_incident_api_v1_hse_incidents_post",
     "security": [
      {
@@ -6076,7 +6371,7 @@
      "HSE & Reports"
     ],
     "summary": "Resolve Incident",
-    "description": "Menyelesaikan masalah insiden. Hanya PM (unit SK), OPS, atau ASSET yang bisa mengeksekusi.\n\nPath params:\n- inc_id: UUID dari insiden\n\nBody params:\n- data: Catatan resolusi (IncidentResolve)\n\nReturn: Detail insiden yang telah diselesaikan (IncidentResponse)",
+    "description": "Menyelesaikan masalah insiden K3.",
     "operationId": "resolve_incident_api_v1_hse_incidents__inc_id__resolve_post",
     "security": [
      {
@@ -6135,7 +6430,7 @@
      "Daily Reports"
     ],
     "summary": "Upsert Daily Report",
-    "description": "Membuat atau memperbarui DRAFT laporan harian pekerjaan (Hanya Ketua Tim, SK IN_PROGRESS).\n\nPath params:\n- plan_id: UUID dari SK (di-routing)\n- day_id: UUID hari pelaksanaan SK\n\nBody params:\n- data: Data laporan harian (DailyReportCreate)\n\nReturn: Laporan harian (DailyReportResponse)",
+    "description": "Membuat atau memperbarui DRAFT laporan harian pekerjaan.",
     "operationId": "upsert_daily_report_api_v1_work_plans__plan_id__days__day_id__put",
     "security": [
      {
@@ -6204,7 +6499,7 @@
      "Daily Reports"
     ],
     "summary": "Submit Daily Report",
-    "description": "Menyerahkan (submit) laporan harian yang berstatus DRAFT atau minta revisi ke manajer/PM.\n\nPath params:\n- plan_id: UUID dari SK\n- day_id: UUID hari pelaksanaan SK\n\nReturn: Laporan harian dengan status tersubmit (DailyReportResponse)",
+    "description": "Menyerahkan (submit) laporan harian untuk ditinjau.",
     "operationId": "submit_daily_report_api_v1_work_plans__plan_id__days__day_id__submit_post",
     "security": [
      {
@@ -6263,7 +6558,7 @@
      "Daily Reports"
     ],
     "summary": "Review Daily Report",
-    "description": "domain.js REVIEW_REPORT (V-24): PM unit/OPS menyetujui atau mengembalikan laporan harian yang diserahkan.\n\nPath params:\n- plan_id: UUID dari SK\n- day_id: UUID hari pelaksanaan SK\n\nBody params:\n- data: Data hasil review laporan (ReportReviewRequest)\n\nReturn: Detail laporan harian pasca-review (DailyReportResponse)",
+    "description": "PM unit/OPS menyetujui atau mengembalikan laporan harian.",
     "operationId": "review_daily_report_api_v1_work_plans__plan_id__days__day_id__review_post",
     "security": [
      {
@@ -6332,7 +6627,7 @@
      "Daily Reports"
     ],
     "summary": "Toggle Task",
-    "description": "domain.js TOGGLE_TASK (V-23): ketua mencentang/menghapus centang tugas hari tersebut, selama laporan belum diserahkan.\n\nPath params:\n- plan_id: UUID SK (di-routing)\n- day_id: UUID hari eksekusi\n- task_id: UUID tugas yang dicentang\n\nReturn: Status toggle (is_done) dari tugas tersebut",
+    "description": "Ketua mencentang atau menghapus centang tugas hari tersebut.",
     "operationId": "toggle_task_api_v1_work_plans__plan_id__days__day_id__tasks__task_id__toggle_post",
     "security": [
      {
@@ -6403,7 +6698,7 @@
      "Assets"
     ],
     "summary": "Get Assets",
-    "description": "Aset organisasi + alokasi berjalan + pengajuan pengembalian yang menunggu (M6/R9 dari layar).\n\nReturn: Daftar ringkasan aset organisasi (list[AssetListItem])",
+    "description": "Aset organisasi + alokasi berjalan + pengajuan pengembalian yang menunggu.",
     "operationId": "get_assets_api_v1_assets_get",
     "responses": {
      "200": {
@@ -6432,7 +6727,7 @@
      "Assets"
     ],
     "summary": "Create Asset",
-    "description": "Membuat aset baru.\n\nBody params:\n- data: Data pembuatan aset baru (AssetCreate)\n\nReturn: Detail aset yang baru dibuat (AssetResponse)",
+    "description": "Membuat aset baru.",
     "operationId": "create_asset_api_v1_assets_post",
     "requestBody": {
      "content": {
@@ -6479,7 +6774,7 @@
      "Assets"
     ],
     "summary": "Get Asset Returns",
-    "description": "Riwayat pengembalian aset (terbaru dulu). Aset organisasi lain → 404.\n\nPath params:\n- asset_id: UUID aset\n\nReturn: Riwayat pengembalian aset (list[AssetReturnHistoryItem])",
+    "description": "Riwayat pengembalian aset (terbaru dulu).",
     "operationId": "get_asset_returns_api_v1_assets__asset_id__returns_get",
     "security": [
      {
@@ -6532,7 +6827,7 @@
      "Assets"
     ],
     "summary": "Get Bast Pdf",
-    "description": "Berita acara serah terima (P6-4) untuk pengembalian yang sudah diperiksa. Render → threadpool.\n\nPath params:\n- return_id: UUID catatan pengembalian\n\nReturn: File PDF (Response)",
+    "description": "Berita acara serah terima (BAST) untuk pengembalian yang sudah diperiksa.",
     "operationId": "get_bast_pdf_api_v1_assets_returns__return_id__pdf_get",
     "security": [
      {
@@ -6574,7 +6869,7 @@
      "Assets"
     ],
     "summary": "Reserve Asset",
-    "description": "domain.js RESERVE_ASSET (V-27): petugas aset atau PM unit/OPS SK memesan aset untuk SK aktif.\n\nPath params:\n- asset_id: UUID aset yang dipesan\n\nBody params:\n- data: Data reservasi aset (AssetReserveRequest)\n\nReturn: Detail alokasi aset yang direkam (AssetAllocationResponse)",
+    "description": "Petugas aset atau PM unit/OPS memesan aset untuk SK aktif.",
     "operationId": "reserve_asset_api_v1_assets__asset_id__reserve_post",
     "security": [
      {
@@ -6633,7 +6928,7 @@
      "Assets"
     ],
     "summary": "Release Asset",
-    "description": "domain.js RELEASE_ASSET (V-27): reservasi yang belum dipakai dilepas.\n\nPath params:\n- asset_id: UUID aset yang akan dilepas\n\nBody params:\n- data: Data identifikasi SK (AssetReleaseRequest)\n\nReturn: Status pelepasan aset",
+    "description": "Reservasi yang belum dipakai dilepas.",
     "operationId": "release_asset_api_v1_assets__asset_id__release_post",
     "security": [
      {
@@ -6692,7 +6987,7 @@
      "Assets"
     ],
     "summary": "Check Asset",
-    "description": "domain.js CHECK_ASSET (V-27): pengemudi yang ditunjuk menyatakan kendaraan layak atau banding.\n\nPath params:\n- asset_id: UUID aset yang dicek\n\nBody params:\n- data: Data laporan kelayakan (AssetCheckRequest)\n\nReturn: Status aset pasca-pengecekan",
+    "description": "Pengemudi yang ditunjuk menyatakan kendaraan layak atau banding.",
     "operationId": "check_asset_api_v1_assets__asset_id__check_post",
     "security": [
      {
@@ -6751,7 +7046,7 @@
      "Assets"
     ],
     "summary": "Request Asset Return",
-    "description": "P6-3: Formulir BAST pengembalian aset — diajukan ketua tim menurut SK peminjam (V-09).\n\nPath params:\n- alloc_id: UUID alokasi aset yang dikembalikan\n\nBody params:\n- data: Data pengembalian aset (AssetReturnCreate)\n\nReturn: Detail pengajuan pengembalian",
+    "description": "Formulir BAST pengembalian aset — diajukan ketua tim menurut SK peminjam.",
     "operationId": "request_asset_return_api_v1_assets_allocations__alloc_id__return_post",
     "security": [
      {
@@ -6810,7 +7105,7 @@
      "Assets"
     ],
     "summary": "Verify Asset Return",
-    "description": "P6-3: Verifikasi BAST oleh OPS.\n\nPath params:\n- return_id: UUID pengembalian aset\n\nBody params:\n- data: Verifikasi kondisi (AssetReturnVerify)\n\nReturn: Detail pengembalian terverifikasi",
+    "description": "Verifikasi BAST pengembalian aset oleh petugas OPS/Aset.",
     "operationId": "verify_asset_return_api_v1_assets_returns__return_id__verify_post",
     "security": [
      {
@@ -6869,7 +7164,7 @@
      "Assets"
     ],
     "summary": "Get Plan Assets",
-    "description": "Aset yang dipakai SK beserta kondisi saat dikembalikan (mode presentasi, M5). SK tak terlihat → 404.\n\nPath params:\n- plan_id: UUID SK (di-routing)\n\nReturn: Daftar aset SK",
+    "description": "Aset yang dipakai SK beserta kondisi saat dikembalikan.",
     "operationId": "get_plan_assets_api_v1_work_plans__plan_id__assets_get",
     "security": [
      {
@@ -6922,7 +7217,7 @@
      "Overtime"
     ],
     "summary": "Report Overtime",
-    "description": "domain.js REPORT_OVERTIME (V-28): ketua atau anggota mengajukan lembur pada SK aktif.",
+    "description": "Mengajukan permohonan lembur pada work plan yang aktif.",
     "operationId": "report_overtime_api_v1_overtime_post",
     "security": [
      {
@@ -6967,7 +7262,7 @@
      "Overtime"
     ],
     "summary": "List Overtime",
-    "description": "Daftar lembur satu SK — siapa pun yang dapat melihat SK (tidak terlihat → 404).",
+    "description": "Mendapatkan daftar lembur untuk satu work plan.",
     "operationId": "list_overtime_api_v1_overtime_get",
     "security": [
      {
@@ -7020,7 +7315,7 @@
      "Overtime"
     ],
     "summary": "Review Overtime",
-    "description": "domain.js REVIEW_OVERTIME (V-28): PM unit/OPS menyetujui atau menolak lembur PENDING_PM.",
+    "description": "Menyetujui atau menolak pengajuan lembur.",
     "operationId": "review_overtime_api_v1_overtime__ot_id__review_post",
     "security": [
      {
@@ -7079,7 +7374,7 @@
      "Overtime"
     ],
     "summary": "Overtime Recap",
-    "description": "Rekap lembur per karyawan per bulan — Finance/OPS/Admin seluruh organisasi, PM unitnya (dok 10 V-28).",
+    "description": "Rekap lembur per karyawan per bulan.",
     "operationId": "overtime_recap_api_v1_recaps_overtime_get",
     "security": [
      {
@@ -7284,7 +7579,7 @@
      "Daily Reports"
     ],
     "summary": "Member Reports",
-    "description": "Mendapatkan daftar laporan anggota untuk satu hari tertentu (GET).\nLaporan anggota satu hari — dibaca ketua untuk disusun, dan PM saat memeriksa.\n\nPath Parameters:\n- day_id (UUID): ID dari hari bersangkutan.\n\nReturns:\n- list[MemberReportOut]: Daftar laporan anggota di hari tersebut.",
+    "description": "Mendapatkan daftar laporan anggota untuk satu hari tertentu (GET).",
     "operationId": "member_reports_api_v1_work_plans__plan_id__days__day_id__member_reports_get",
     "security": [
      {
@@ -7347,7 +7642,7 @@
      "Daily Reports"
     ],
     "summary": "My Member Report",
-    "description": "Mengambil draf laporan harian milik anggota itu sendiri (GET).\n\nPath Parameters:\n- day_id (UUID): ID dari hari bersangkutan.\n\nReturns:\n- MemberReportOut | None: Detail laporan atau null jika belum ada.",
+    "description": "Mengambil draf laporan harian milik anggota itu sendiri (GET).",
     "operationId": "my_member_report_api_v1_work_plans__plan_id__days__day_id__member_report_get",
     "security": [
      {
@@ -7412,7 +7707,7 @@
      "Daily Reports"
     ],
     "summary": "Save Member Report",
-    "description": "Menyimpan draf laporan harian dari seorang anggota (PUT).\n\nPath Parameters:\n- day_id (UUID): ID hari.\n\nRequest Body:\n- data (MemberReportIn): Isi laporan, kendala, dan file bukti.\n\nReturns:\n- MemberReportOut: Data laporan yang berhasil disimpan.",
+    "description": "Menyimpan draf laporan harian dari seorang anggota (PUT).",
     "operationId": "save_member_report_api_v1_work_plans__plan_id__days__day_id__member_report_put",
     "security": [
      {
@@ -7481,7 +7776,7 @@
      "Daily Reports"
     ],
     "summary": "Send Member Report",
-    "description": "Anggota mengirim laporannya ke ketua tim (POST).\n(Notifikasi ke ketua).\n\nPath Parameters:\n- day_id (UUID): ID dari hari bersangkutan.\n\nReturns:\n- MemberReportOut: Laporan yang dikirim dengan status terbaru.",
+    "description": "Anggota mengirim laporannya ke ketua tim (POST).",
     "operationId": "send_member_report_api_v1_work_plans__plan_id__days__day_id__member_report_send_post",
     "security": [
      {
@@ -7540,7 +7835,7 @@
      "Daily Reports"
     ],
     "summary": "Daily Report Html",
-    "description": "Mendapatkan dokumen A4 laporan harian dalam format HTML (GET).\nIsi: ketua + laporan anggota + pemeriksaan PM.\n\nPath Parameters:\n- day_id (UUID): ID hari kerja.\n\nReturns:\n- HTMLResponse: Dokumen laporan harian.",
+    "description": "Mendapatkan dokumen A4 laporan harian dalam format HTML (GET).",
     "operationId": "daily_report_html_api_v1_work_plans__plan_id__days__day_id__report_html_get",
     "security": [
      {
@@ -7599,7 +7894,7 @@
      "Daily Reports"
     ],
     "summary": "Weekly Report Html",
-    "description": "Mendapatkan dokumen laporan mingguan dalam format HTML (GET).\n\nPath Parameters:\n- week (int): Minggu ke-berapa.\n\nReturns:\n- HTMLResponse: Laporan mingguan.",
+    "description": "Mendapatkan dokumen laporan mingguan dalam format HTML (GET).",
     "operationId": "weekly_report_html_api_v1_work_plans__plan_id__weekly__week__report_html_get",
     "security": [
      {
@@ -7657,7 +7952,7 @@
      "Work Plan Amendments"
     ],
     "summary": "Request Amendment",
-    "description": "Ketua mengajukan adendum saat SK Berjalan (POST).\nStatus SK tetap Berjalan.\n\nPath Parameters:\n- plan_id (UUID): ID SK terkait.\n\nRequest Body:\n- data (AmendmentReasonIn): Alasan pengajuan adendum.\n\nReturns:\n- list[PlanChangeOut]: Riwayat usulan perubahan SK yang terbaru.",
+    "description": "Ketua mengajukan adendum saat SK Berjalan (POST).",
     "operationId": "request_amendment_api_v1_work_plans__plan_id__amendments_post",
     "security": [
      {
@@ -7720,7 +8015,7 @@
      "Work Plan Amendments"
     ],
     "summary": "Reject Amendment",
-    "description": "PM menolak usulan adendum SK yang diajukan oleh ketua (POST).\n\nPath Parameters:\n- plan_id (UUID): ID dari SK.\n- change_id (UUID): ID dari usulan perubahan.\n\nRequest Body:\n- data (AmendmentReasonIn): Alasan penolakan adendum.\n\nReturns:\n- list[PlanChangeOut]: Riwayat usulan perubahan SK yang diperbarui.",
+    "description": "PM menolak usulan adendum SK yang diajukan oleh ketua (POST).",
     "operationId": "reject_amendment_api_v1_work_plans__plan_id__amendments__change_id__reject_post",
     "security": [
      {
@@ -7793,7 +8088,7 @@
      "Work Plan Amendments"
     ],
     "summary": "Apply Amendment",
-    "description": "PM menerima usulan dengan mengubah isi SK (PUT).\nDokumen adendum terbit dengan tanda tangan PM.\n\nPath Parameters:\n- plan_id (UUID): ID dari SK bersangkutan.\n- change_id (UUID): ID perubahan adendum.\n\nRequest Body:\n- data (PlanDraftRequest): Detail draft yang baru (perubahan dari adendum).\n\nReturns:\n- PlanDetailOut: Detail rencana kerja hasil perubahan.",
+    "description": "PM menerima usulan dengan mengubah isi SK (PUT).",
     "operationId": "apply_amendment_api_v1_work_plans__plan_id__amendments__change_id__put",
     "security": [
      {
@@ -7862,7 +8157,7 @@
      "Work Plan Amendments"
     ],
     "summary": "Accept Amendment",
-    "description": "Ketua menandatangani adendum (POST).\nVersi SK lama menjadi tidak berlaku.\n\nPath Parameters:\n- plan_id (UUID): ID dari SK.\n- change_id (UUID): ID usulan perubahan.\n\nReturns:\n- list[PlanChangeOut]: Riwayat usulan perubahan SK yang diperbarui.",
+    "description": "Ketua menandatangani adendum (POST).",
     "operationId": "accept_amendment_api_v1_work_plans__plan_id__amendments__change_id__accept_post",
     "security": [
      {
@@ -7925,7 +8220,7 @@
      "Work Plan Amendments"
     ],
     "summary": "Final Report Html",
-    "description": "Mendapatkan laporan akhir yang disetujui (A4, TTD ketua & PM + QR) (GET).\nDitujukan untuk penampil web & HP.\n\nPath Parameters:\n- plan_id (UUID): ID dari SK.\n\nReturns:\n- HTMLResponse: Dokumen laporan akhir dalam bentuk HTML.",
+    "description": "Mendapatkan laporan akhir yang disetujui (A4, TTD ketua & PM + QR) (GET).",
     "operationId": "final_report_html_api_v1_work_plans__plan_id__completion_html_get",
     "security": [
      {
@@ -7974,7 +8269,7 @@
      "Work Plan Revisions"
     ],
     "summary": "Revise Plan",
-    "description": "PM unit/OPS merevisi rencana kerja berstatus Terbit, Revisi diminta, Diterima, atau Berjalan (POST).\nVersi dokumen baru ditandatangani PM; ketua dan anggota mendapat notifikasi beserta diff.\n\nPath Parameters:\n- plan_id (UUID): ID rencana kerja.\n\nRequest Body:\n- data (PlanRevisionIn): isi rencana kerja yang baru + `reason` + `change_id` (permintaan ketua, opsional).\n\nReturns:\n- PlanDetailOut: detail rencana kerja pasca revisi.",
+    "description": "PM unit/OPS merevisi rencana kerja berstatus Terbit, Revisi diminta, Diterima, atau Berjalan (POST).",
     "operationId": "revise_plan_api_v1_work_plans__plan_id__revisions_post",
     "security": [
      {
@@ -8031,7 +8326,7 @@
      "Work Plan Revisions"
     ],
     "summary": "List Revisions",
-    "description": "Riwayat revisi rencana kerja, terbaru dulu (GET); siapa pun yang berhak melihat rencana kerja.\n\nPath Parameters:\n- plan_id (UUID): ID rencana kerja.\n\nReturns:\n- list[PlanRevisionOut]: revisi beserta diff sebelum/sesudah.",
+    "description": "Riwayat revisi rencana kerja, terbaru dulu (GET); siapa pun yang berhak melihat rencana kerja.",
     "operationId": "list_revisions_api_v1_work_plans__plan_id__revisions_get",
     "security": [
      {
@@ -8109,7 +8404,7 @@
      "Work Types"
     ],
     "summary": "List Work Types",
-    "description": "Daftar jenis pekerjaan beserta template foto (GET). Semua yang masuk melihat yang aktif;\n`?all=true` (termasuk yang nonaktif) hanya untuk pengelola rencana kerja.\n\nQuery Parameters:\n- all (bool): sertakan yang nonaktif (butuh izin create:plan).\n\nReturns:\n- list[WorkTypeOut]: jenis pekerjaan.",
+    "description": "Daftar jenis pekerjaan beserta template foto (GET).",
     "operationId": "list_work_types_api_v1_work_types_get",
     "security": [
      {
@@ -8160,7 +8455,7 @@
      "Work Types"
     ],
     "summary": "Create Work Type",
-    "description": "Membuat jenis pekerjaan + template foto (POST) — PM/OPS.\n\nRequest Body:\n- data (WorkTypeIn): nama dan daftar slot foto.\n\nReturns:\n- WorkTypeOut: jenis yang dibuat.",
+    "description": "Membuat jenis pekerjaan baru beserta template foto.",
     "operationId": "create_work_type_api_v1_work_types_post",
     "security": [
      {
@@ -8207,7 +8502,7 @@
      "Work Types"
     ],
     "summary": "Update Work Type",
-    "description": "Mengubah nama dan mengganti seluruh daftar slot foto (PUT) — PM/OPS. Mengaktifkan kembali jenis nonaktif.\n\nPath Parameters:\n- type_id (UUID): ID jenis pekerjaan.\n\nReturns:\n- WorkTypeOut: jenis setelah diubah.",
+    "description": "Mengubah nama dan mengganti seluruh daftar slot foto jenis pekerjaan.",
     "operationId": "update_work_type_api_v1_work_types__type_id__put",
     "security": [
      {
@@ -8264,7 +8559,7 @@
      "Work Types"
     ],
     "summary": "Deactivate Work Type",
-    "description": "Menonaktifkan jenis pekerjaan (DELETE) — PM/OPS. Tidak dihapus: rencana kerja lama tetap utuh.\n\nPath Parameters:\n- type_id (UUID): ID jenis pekerjaan.",
+    "description": "Menonaktifkan jenis pekerjaan.",
     "operationId": "deactivate_work_type_api_v1_work_types__type_id__delete",
     "security": [
      {
@@ -8306,7 +8601,7 @@
      "Work Types"
     ],
     "summary": "Plan Photo Template",
-    "description": "Template foto laporan rencana kerja (GET) — kosong bila rencana kerja tanpa jenis pekerjaan.\n\nPath Parameters:\n- plan_id (UUID): ID rencana kerja.\n\nReturns:\n- list[WorkTypePhotoOut]: slot foto berurutan.",
+    "description": "Template foto laporan rencana kerja.",
     "operationId": "plan_photo_template_api_v1_work_plans__plan_id__photo_template_get",
     "security": [
      {
@@ -8322,6 +8617,23 @@
        "type": "string",
        "format": "uuid",
        "title": "Plan Id"
+      }
+     },
+     {
+      "name": "day_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "uuid"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Day Id"
       }
      }
     ],
@@ -8512,7 +8824,7 @@
      "login"
     ],
     "title": "AccountCreate",
-    "description": "Schema for creating a new user account."
+    "description": "Skema data input untuk pembuatan akun karyawan baru."
    },
    "AccountOut": {
     "properties": {
@@ -8589,7 +8901,7 @@
      "exists"
     ],
     "title": "AccountOut",
-    "description": "Schema for account output data, detailing user authentication and status."
+    "description": "Skema data output akun, mendetailkan status autentikasi pengguna."
    },
    "AccountWithPassword": {
     "properties": {
@@ -8671,7 +8983,7 @@
      "temporary_password"
     ],
     "title": "AccountWithPassword",
-    "description": "Schema for account creation response, including the generated temporary password."
+    "description": "Skema respons pembuatan/reset akun yang menyertakan kata sandi sementara."
    },
    "AmendmentReasonIn": {
     "properties": {
@@ -10079,6 +10391,254 @@
     "title": "AuditEventResponse",
     "description": "Schema for an individual audit event."
    },
+   "AuthChangePasswordRequestSchema": {
+    "properties": {
+     "current_password": {
+      "type": "string",
+      "title": "Current Password"
+     },
+     "new_password": {
+      "type": "string",
+      "title": "New Password"
+     }
+    },
+    "type": "object",
+    "required": [
+     "current_password",
+     "new_password"
+    ],
+    "title": "AuthChangePasswordRequestSchema",
+    "description": "Skema permohonan ganti kata sandi."
+   },
+   "AuthLoginRequestSchema": {
+    "properties": {
+     "email": {
+      "type": "string",
+      "title": "Email"
+     },
+     "password": {
+      "type": "string",
+      "title": "Password"
+     },
+     "platform": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Platform",
+      "default": "web"
+     }
+    },
+    "type": "object",
+    "required": [
+     "email",
+     "password"
+    ],
+    "title": "AuthLoginRequestSchema",
+    "description": "Skema payload untuk permintaan login akun."
+   },
+   "AuthLoginResponseSchema": {
+    "properties": {
+     "access_token": {
+      "type": "string",
+      "title": "Access Token"
+     },
+     "token_type": {
+      "type": "string",
+      "title": "Token Type",
+      "default": "bearer"
+     }
+    },
+    "type": "object",
+    "required": [
+     "access_token"
+    ],
+    "title": "AuthLoginResponseSchema",
+    "description": "Skema respons token akses yang dikembalikan ke klien."
+   },
+   "AuthMessageResponseSchema": {
+    "properties": {
+     "message": {
+      "type": "string",
+      "title": "Message"
+     }
+    },
+    "type": "object",
+    "required": [
+     "message"
+    ],
+    "title": "AuthMessageResponseSchema",
+    "description": "Skema respons pesan status operasional umum."
+   },
+   "AuthRevokeOthersResponseSchema": {
+    "properties": {
+     "revoked": {
+      "type": "integer",
+      "title": "Revoked"
+     },
+     "message": {
+      "type": "string",
+      "title": "Message"
+     }
+    },
+    "type": "object",
+    "required": [
+     "revoked",
+     "message"
+    ],
+    "title": "AuthRevokeOthersResponseSchema",
+    "description": "Skema respons setelah mencabut semua sesi perangkat lain."
+   },
+   "AuthSessionResponseSchema": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "device_label": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Device Label"
+     },
+     "ip_address": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Ip Address"
+     },
+     "user_agent": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "User Agent"
+     },
+     "issued_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Issued At"
+     },
+     "last_used_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Last Used At"
+     },
+     "current": {
+      "type": "boolean",
+      "title": "Current"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "device_label",
+     "ip_address",
+     "user_agent",
+     "issued_at",
+     "last_used_at",
+     "current"
+    ],
+    "title": "AuthSessionResponseSchema",
+    "description": "Skema detail satu sesi perangkat aktif."
+   },
+   "AuthUserMeResponseSchema": {
+    "properties": {
+     "user_id": {
+      "type": "string",
+      "title": "User Id"
+     },
+     "email": {
+      "type": "string",
+      "title": "Email"
+     },
+     "role": {
+      "type": "string",
+      "title": "Role"
+     },
+     "permissions": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Permissions"
+     },
+     "employee_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Employee Id"
+     },
+     "attendance_mode": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Attendance Mode"
+     },
+     "photo_file_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Photo File Id"
+     }
+    },
+    "type": "object",
+    "required": [
+     "user_id",
+     "email",
+     "role",
+     "permissions"
+    ],
+    "title": "AuthUserMeResponseSchema",
+    "description": "Skema detail identitas pengguna yang sedang terautentikasi (/me)."
+   },
    "Body_check_face_challenge_api_v1_face_challenge_check_post": {
     "properties": {
      "file": {
@@ -10210,25 +10770,6 @@
      "detail"
     ],
     "title": "ChallengeCheckResponse"
-   },
-   "ChangePasswordRequest": {
-    "properties": {
-     "current_password": {
-      "type": "string",
-      "title": "Current Password"
-     },
-     "new_password": {
-      "type": "string",
-      "title": "New Password"
-     }
-    },
-    "type": "object",
-    "required": [
-     "current_password",
-     "new_password"
-    ],
-    "title": "ChangePasswordRequest",
-    "description": "Schema for a user requesting to change their password."
    },
    "ChangeRequest": {
     "properties": {
@@ -10931,6 +11472,45 @@
       },
       "type": "array",
       "title": "Tasks"
+     },
+     "site_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Id"
+     },
+     "member_employee_ids": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string",
+         "format": "uuid"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Member Employee Ids"
+     },
+     "work_type_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Work Type Id"
      }
     },
     "type": "object",
@@ -10968,6 +11548,236 @@
     ],
     "title": "DraftTaskInput",
     "description": "Masukan tugas untuk draf Rencana Kerja."
+   },
+   "EmergencyContactBase": {
+    "properties": {
+     "name": {
+      "type": "string",
+      "maxLength": 150,
+      "minLength": 1,
+      "title": "Name"
+     },
+     "relationship": {
+      "type": "string",
+      "maxLength": 50,
+      "minLength": 1,
+      "title": "Relationship"
+     },
+     "phone": {
+      "type": "string",
+      "maxLength": 50,
+      "minLength": 1,
+      "title": "Phone"
+     },
+     "address": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Address"
+     },
+     "is_primary": {
+      "type": "boolean",
+      "title": "Is Primary",
+      "default": true
+     }
+    },
+    "type": "object",
+    "required": [
+     "name",
+     "relationship",
+     "phone"
+    ],
+    "title": "EmergencyContactBase",
+    "description": "Base schema for an employee emergency contact."
+   },
+   "EmergencyContactCreate": {
+    "properties": {
+     "name": {
+      "type": "string",
+      "maxLength": 150,
+      "minLength": 1,
+      "title": "Name"
+     },
+     "relationship": {
+      "type": "string",
+      "maxLength": 50,
+      "minLength": 1,
+      "title": "Relationship"
+     },
+     "phone": {
+      "type": "string",
+      "maxLength": 50,
+      "minLength": 1,
+      "title": "Phone"
+     },
+     "address": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Address"
+     },
+     "is_primary": {
+      "type": "boolean",
+      "title": "Is Primary",
+      "default": true
+     }
+    },
+    "type": "object",
+    "required": [
+     "name",
+     "relationship",
+     "phone"
+    ],
+    "title": "EmergencyContactCreate",
+    "description": "Schema for adding a new emergency contact."
+   },
+   "EmergencyContactResponse": {
+    "properties": {
+     "name": {
+      "type": "string",
+      "maxLength": 150,
+      "minLength": 1,
+      "title": "Name"
+     },
+     "relationship": {
+      "type": "string",
+      "maxLength": 50,
+      "minLength": 1,
+      "title": "Relationship"
+     },
+     "phone": {
+      "type": "string",
+      "maxLength": 50,
+      "minLength": 1,
+      "title": "Phone"
+     },
+     "address": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Address"
+     },
+     "is_primary": {
+      "type": "boolean",
+      "title": "Is Primary",
+      "default": true
+     },
+     "id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Id"
+     },
+     "employee_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Employee Id"
+     },
+     "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Created At"
+     },
+     "updated_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Updated At"
+     }
+    },
+    "type": "object",
+    "required": [
+     "name",
+     "relationship",
+     "phone",
+     "id",
+     "employee_id",
+     "created_at",
+     "updated_at"
+    ],
+    "title": "EmergencyContactResponse",
+    "description": "Schema for returning an emergency contact response."
+   },
+   "EmergencyContactUpdate": {
+    "properties": {
+     "name": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 150,
+        "minLength": 1
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Name"
+     },
+     "relationship": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 50,
+        "minLength": 1
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Relationship"
+     },
+     "phone": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 50,
+        "minLength": 1
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Phone"
+     },
+     "address": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Address"
+     },
+     "is_primary": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Is Primary"
+     }
+    },
+    "type": "object",
+    "title": "EmergencyContactUpdate",
+    "description": "Schema for updating an existing emergency contact."
    },
    "EmployeeAssignmentCreate": {
     "properties": {
@@ -11154,6 +11964,41 @@
        }
       ],
       "title": "Emergency Contact"
+     },
+     "photo_file_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Photo File Id"
+     },
+     "attendance_mode": {
+      "type": "string",
+      "enum": [
+       "FIELD",
+       "OFFICE"
+      ],
+      "title": "Attendance Mode",
+      "default": "FIELD"
+     },
+     "emergency_contacts": {
+      "anyOf": [
+       {
+        "items": {
+         "$ref": "#/components/schemas/EmergencyContactBase"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Emergency Contacts"
      }
     },
     "type": "object",
@@ -11480,6 +12325,18 @@
       ],
       "title": "Emergency Contact"
      },
+     "photo_file_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Photo File Id"
+     },
      "id": {
       "type": "string",
       "format": "uuid",
@@ -11617,6 +12474,18 @@
        }
       ],
       "title": "Emergency Contact"
+     },
+     "photo_file_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Photo File Id"
      }
     },
     "type": "object",
@@ -12187,6 +13056,15 @@
      "position": {
       "type": "string",
       "title": "Position"
+     },
+     "busy_dates": {
+      "items": {
+       "type": "string",
+       "format": "date"
+      },
+      "type": "array",
+      "title": "Busy Dates",
+      "default": []
      }
     },
     "type": "object",
@@ -12476,37 +13354,6 @@
     "title": "IncidentResponse",
     "description": "Schema for a detailed incident report response."
    },
-   "LoginRequest": {
-    "properties": {
-     "email": {
-      "type": "string",
-      "title": "Email"
-     },
-     "password": {
-      "type": "string",
-      "title": "Password"
-     },
-     "platform": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Platform",
-      "default": "web"
-     }
-    },
-    "type": "object",
-    "required": [
-     "email",
-     "password"
-    ],
-    "title": "LoginRequest",
-    "description": "Schema for a user login request."
-   },
    "MemberReportIn": {
     "properties": {
      "body": {
@@ -12617,20 +13464,6 @@
     ],
     "title": "MemberReportOut",
     "description": "Keluaran laporan dari anggota tim yang ditinjau."
-   },
-   "MessageResponse": {
-    "properties": {
-     "message": {
-      "type": "string",
-      "title": "Message"
-     }
-    },
-    "type": "object",
-    "required": [
-     "message"
-    ],
-    "title": "MessageResponse",
-    "description": "Schema for a simple status message response."
    },
    "MissingCheckInResponse": {
     "properties": {
@@ -13670,6 +14503,43 @@
       "type": "integer",
       "title": "Member Reports Sent",
       "default": 0
+     },
+     "site_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Name"
+     },
+     "work_type_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Work Type Name"
+     },
+     "member_employee_ids": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string",
+         "format": "uuid"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Member Employee Ids"
      }
     },
     "type": "object",
@@ -14091,6 +14961,18 @@
       "type": "integer",
       "title": "Radius M",
       "default": 100
+     },
+     "reason": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 500
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Reason"
      }
     },
     "type": "object",
@@ -14543,25 +15425,6 @@
     "title": "ReviewRequest",
     "description": "Schema for reviewing (approving or rejecting) an attendance event."
    },
-   "RevokeOthersResponse": {
-    "properties": {
-     "revoked": {
-      "type": "integer",
-      "title": "Revoked"
-     },
-     "message": {
-      "type": "string",
-      "title": "Message"
-     }
-    },
-    "type": "object",
-    "required": [
-     "revoked",
-     "message"
-    ],
-    "title": "RevokeOthersResponse",
-    "description": "Schema for the response after revoking other active sessions."
-   },
    "RevokeRequest": {
     "properties": {
      "reason": {
@@ -14574,87 +15437,6 @@
      "reason"
     ],
     "title": "RevokeRequest"
-   },
-   "SessionOut": {
-    "properties": {
-     "id": {
-      "type": "string",
-      "title": "Id"
-     },
-     "device_label": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Device Label"
-     },
-     "ip_address": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Ip Address"
-     },
-     "user_agent": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "User Agent"
-     },
-     "issued_at": {
-      "anyOf": [
-       {
-        "type": "string",
-        "format": "date-time"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Issued At"
-     },
-     "last_used_at": {
-      "anyOf": [
-       {
-        "type": "string",
-        "format": "date-time"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Last Used At"
-     },
-     "current": {
-      "type": "boolean",
-      "title": "Current"
-     }
-    },
-    "type": "object",
-    "required": [
-     "id",
-     "device_label",
-     "ip_address",
-     "user_agent",
-     "issued_at",
-     "last_used_at",
-     "current"
-    ],
-    "title": "SessionOut",
-    "description": "Schema representing a single active session/device (P1-7).\n`current` denotes the device currently being used."
    },
    "SignatureOut": {
     "properties": {
@@ -15201,25 +15983,6 @@
     "title": "TimelineLeader",
     "description": "Schema for the leader information within a timeline."
    },
-   "TokenResponse": {
-    "properties": {
-     "access_token": {
-      "type": "string",
-      "title": "Access Token"
-     },
-     "token_type": {
-      "type": "string",
-      "title": "Token Type",
-      "default": "bearer"
-     }
-    },
-    "type": "object",
-    "required": [
-     "access_token"
-    ],
-    "title": "TokenResponse",
-    "description": "Schema for the returned authentication token."
-   },
    "TransitionRequest": {
     "properties": {
      "row_version": {
@@ -15260,61 +16023,8 @@
      "code",
      "name"
     ],
-    "title": "UnitOut"
-   },
-   "UserMeResponse": {
-    "properties": {
-     "user_id": {
-      "type": "string",
-      "title": "User Id"
-     },
-     "email": {
-      "type": "string",
-      "title": "Email"
-     },
-     "role": {
-      "type": "string",
-      "title": "Role"
-     },
-     "permissions": {
-      "items": {
-       "type": "string"
-      },
-      "type": "array",
-      "title": "Permissions"
-     },
-     "employee_id": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Employee Id"
-     },
-     "attendance_mode": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Attendance Mode"
-     }
-    },
-    "type": "object",
-    "required": [
-     "user_id",
-     "email",
-     "role",
-     "permissions"
-    ],
-    "title": "UserMeResponse",
-    "description": "Schema for returning the authenticated user's details."
+    "title": "UnitOut",
+    "description": "Skema data representasi unit kerja organisasi."
    },
    "ValidationError": {
     "properties": {
@@ -15848,6 +16558,29 @@
       "type": "boolean",
       "title": "Pending Request",
       "default": false
+     },
+     "today_site_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Today Site Id"
+     },
+     "today_included": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Today Included"
      }
     },
     "type": "object",

@@ -9,6 +9,11 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
+from app.schemas.emergency_contact import EmergencyContactBase
+
+# FIELD = absen di HP, OFFICE = absen di web
+AttendanceMode = Literal["FIELD", "OFFICE"]
+
 
 class EmployeeBase(BaseModel):
     """
@@ -31,9 +36,8 @@ class EmployeeCreate(EmployeeBase):
     """
     Schema for creating a new employee.
     """
-
-# FIELD = absen di HP, OFFICE = absen di web
-AttendanceMode = Literal["FIELD", "OFFICE"]
+    attendance_mode: AttendanceMode = "FIELD"
+    emergency_contacts: list[EmergencyContactBase] | None = None
 
 
 class EmployeeUpdate(BaseModel):
@@ -47,6 +51,7 @@ class EmployeeUpdate(BaseModel):
     birth_date: date | None = None
     address: str | None = None
     emergency_contact: str | None = None
+    photo_file_id: UUID | None = None
 
 
 class EmployeeResponse(EmployeeBase):

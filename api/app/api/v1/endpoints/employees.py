@@ -8,6 +8,11 @@ from app.api.deps import get_employee_service, require_permission
 from app.core.errors import AppError
 from app.core.permissions import Permission
 from app.core.security import CurrentUser
+from app.schemas.emergency_contact import (
+    EmergencyContactCreate,
+    EmergencyContactResponse,
+    EmergencyContactUpdate,
+)
 from app.schemas.employee import (
     EmployeeAssignmentCreate,
     EmployeeAssignmentResponse,
@@ -246,3 +251,97 @@ async def check_conflicts(
     rows = await employee_service.conflicts(emp_id, current_user.organization_id, start_date, end_date, exclude_plan)
     conflicts = [{"id": r.work_plan_id, "number": r.number, "title": r.title} for r in rows]
     return {"conflicts": conflicts, "has_conflict": len(conflicts) > 0}
+
+
+@router.get("/{emp_id}/emergency-contacts", response_model=list[EmergencyContactResponse])
+async def list_emergency_contacts(
+    emp_id: UUID,
+    current_user: CurrentUser = Depends(require_permission(Permission.VIEW_USERS)),
+    employee_service: EmployeeService = Depends(get_employee_service),
+) -> list[EmergencyContactResponse]:
+    """
+    Mendapatkan daftar kontak darurat karyawan.
+    Data hanya terlihat oleh HR/Admin atau karyawan itu sendiri (M2-01).
+    """
+    scope = await employee_service.private_viewer(current_user.user_id, current_user.permissions)
+    see_all, own = scope
+    if not (see_all or str(emp_id) == own):
+        return []
+    rows = await employee_service.list_emergency_contacts(emp_id, current_user.organization_id)
+    return [EmergencyContactResponse(**r._mapping) for r in rows]
+
+
+@router.post(
+    "/{emp_id}/emergency-contacts",
+    response_model=EmergencyContactResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_emergency_contact(
+    emp_id: UUID,
+    data: EmergencyContactCreate,
+    current_user: CurrentUser = Depends(require_permission(Permission.VIEW_USERS)),
+    employee_service: EmployeeService = Depends(get_employee_service),
+) -> EmergencyContactResponse:
+    """
+    Menambahkan kontak darurat baru.
+    Hanya HR/Admin atau karyawan bersangkutan yang dapat menambahkan.
+    """
+    scope = await employee_service.private_viewer(current_user.user_id, current_user.permissions)
+    _, own = scope
+    can_manage = Permission.MANAGE_USERS.value in current_user.permissions
+    if not (can_manage or str(emp_id) == own):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tidak memiliki izin untuk menambah kontak darurat.",
+        )
+    row = await employee_service.create_emergency_contact(emp_id, current_user.organization_id, data.model_dump())
+    return EmergencyContactResponse(**row._mapping)
+
+
+@router.put("/{emp_id}/emergency-contacts/{contact_id}", response_model=EmergencyContactResponse)
+async def update_emergency_contact(
+    emp_id: UUID,
+    contact_id: UUID,
+    data: EmergencyContactUpdate,
+    current_user: CurrentUser = Depends(require_permission(Permission.VIEW_USERS)),
+    employee_service: EmployeeService = Depends(get_employee_service),
+) -> EmergencyContactResponse:
+    """
+    Mengubah kontak darurat.
+    """
+    scope = await employee_service.private_viewer(current_user.user_id, current_user.permissions)
+    _, own = scope
+    can_manage = Permission.MANAGE_USERS.value in current_user.permissions
+    if not (can_manage or str(emp_id) == own):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tidak memiliki izin untuk mengubah kontak darurat.",
+        )
+    fields = data.model_dump(exclude_unset=True)
+    if not fields:
+        raise HTTPException(status_code=400, detail={"code": "NO_UPDATE", "message": "Tidak ada data untuk diubah."})
+    row = await employee_service.update_emergency_contact(emp_id, contact_id, current_user.organization_id, fields)
+    return EmergencyContactResponse(**row._mapping)
+
+
+@router.delete("/{emp_id}/emergency-contacts/{contact_id}")
+async def delete_emergency_contact(
+    emp_id: UUID,
+    contact_id: UUID,
+    current_user: CurrentUser = Depends(require_permission(Permission.VIEW_USERS)),
+    employee_service: EmployeeService = Depends(get_employee_service),
+) -> dict[str, Any]:
+    """
+    Menghapus kontak darurat.
+    """
+    scope = await employee_service.private_viewer(current_user.user_id, current_user.permissions)
+    _, own = scope
+    can_manage = Permission.MANAGE_USERS.value in current_user.permissions
+    if not (can_manage or str(emp_id) == own):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tidak memiliki izin untuk menghapus kontak darurat.",
+        )
+    await employee_service.delete_emergency_contact(emp_id, contact_id, current_user.organization_id)
+    return {"message": "Kontak darurat berhasil dihapus."}
+

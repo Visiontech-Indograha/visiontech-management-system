@@ -7,7 +7,8 @@ Proyek: VMS — FastAPI (`api/`), React/Vite/shadcn (`web/`), Flutter (`mobile/`
 - **Gemini A = WEB**: hanya `web/` (+ `docs/14` bila menambah pustaka).
 - **Gemini B = API**: hanya `api/app/` untuk membuat **uji-spesifikasi** di `api/tests/` lulus.
   Isi berkas uji TIDAK boleh diubah. Aturan bisnis: `prototype/js/domain.js` (cari dengan grep nama transaksinya).
-- Jangan menyentuh `db/`, `prototype/`, `docs/10`, `docs/PLAN-*`, atau bagian yang bukan peran Anda.
+- Jangan menyentuh `prototype/`, `docs/10`, `docs/PLAN-*`, atau bagian yang bukan peran Anda.
+  **ATURAN SINKRONISASI SKEMA (DUAL-SCHEMA RULE):** Jika membuat migrasi DDL baru di `api/alembic/versions/`, tabel/kolom/indeks/RLS yang bersangkutan **WAJIB** disinkronkan ke `db/01_schema.sql` dan `db/03_policies.sql` / `db/05_face.sql`. CI GitHub Actions tidak menjalankan `alembic upgrade head`, melainkan memasang dari `db/*.sql` lalu menjalankan `alembic stamp head`.
 
 ## Git — WAJIB
 - **ATURAN GLOBAL AGEN AI (DILARANG MERGE KE PROD):**

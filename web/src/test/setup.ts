@@ -7,6 +7,14 @@ import { useDrafts } from '@/hooks/useFormDraft'
 // 5 dtk pun sempat gagal saat uji API berjalan bersamaan (R-19) — lulus cepat tetap cepat.
 configure({ asyncUtilTimeout: 10000 })
 
+if (typeof window !== "undefined" && !window.ResizeObserver) {
+  window.ResizeObserver = class ResizeObserver {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
+}
+
 afterEach(() => {
   cleanup()
   useDrafts.setState({ drafts: {} }) // draf laporan (R5) tidak bocor antar-uji

@@ -2,8 +2,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/apiClient";
 import type { components } from "@/lib/apiTypes";
 
-export type ActiveSession = components["schemas"]["SessionOut"];
-type RevokeOthers = components["schemas"]["RevokeOthersResponse"];
+export type ActiveSession = components["schemas"]["AuthSessionResponseSchema"];
+type RevokeOthers = components["schemas"]["AuthRevokeOthersResponseSchema"];
 
 const key = ["auth", "sessions"] as const;
 

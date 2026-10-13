@@ -474,7 +474,7 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA vms TO vms_api;
 GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA vms TO vms_api;
 GRANT DELETE ON vms.work_plan_attachment, vms.work_plan_task_attachment, vms.work_plan_day, vms.work_plan_task,
                 vms.work_plan_member, vms.report_evidence, vms.member_report_evidence, vms.final_report_evidence,
-                vms.user_session
+                vms.user_session, vms.employee_emergency_contact
    TO vms_api;
 REVOKE UPDATE, DELETE ON vms.audit_event FROM vms_api;
 DO $$

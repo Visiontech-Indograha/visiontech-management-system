@@ -136,6 +136,22 @@ CREATE TABLE employee_assignment (          -- riwayat penempatan/jabatan
 );
 CREATE INDEX employee_assignment_emp_idx ON employee_assignment (employee_id, valid_from DESC);
 
+-- Kontak darurat karyawan (Alembic 0038_employee_emergency_contact)
+CREATE TABLE employee_emergency_contact (
+  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id uuid NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
+  employee_id     uuid NOT NULL REFERENCES employee(id) ON DELETE CASCADE,
+  name            text NOT NULL,
+  relationship    text NOT NULL,
+  phone           text NOT NULL,
+  address         text,
+  is_primary      boolean NOT NULL DEFAULT true,
+  created_at      timestamptz NOT NULL DEFAULT now(),
+  updated_at      timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX ix_employee_emergency_contact_emp ON employee_emergency_contact (employee_id);
+CREATE INDEX ix_employee_emergency_contact_org_emp ON employee_emergency_contact (organization_id, employee_id);
+
 CREATE TABLE app_user (
   id              uuid PRIMARY KEY DEFAULT new_id(),
   organization_id uuid NOT NULL REFERENCES organization(id) ON DELETE CASCADE,

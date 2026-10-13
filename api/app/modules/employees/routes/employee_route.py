@@ -15,6 +15,9 @@ from app.core.permissions import Permission
 from app.core.security import CurrentUser
 from app.modules.employees.controllers.employee_controller import EmployeeController
 from app.modules.employees.schemas.employee_schema import (
+    EmergencyContactCreate,
+    EmergencyContactResponse,
+    EmergencyContactUpdate,
     EmployeeAssignmentCreate,
     EmployeeAssignmentResponse,
     EmployeeCreate,
@@ -134,3 +137,52 @@ async def check_conflicts(
 ) -> dict[str, Any]:
     """Mengecek konflik jadwal penugasan karyawan."""
     return await controller.handle_check_conflicts(current_user, emp_id, start_date, end_date, exclude_plan)
+
+
+@router.get("/{emp_id}/emergency-contacts", response_model=list[EmergencyContactResponse])
+async def list_emergency_contacts(
+    emp_id: UUID,
+    current_user: CurrentUser = Depends(require_permission(Permission.VIEW_USERS)),
+    controller: EmployeeController = Depends(),
+) -> list[EmergencyContactResponse]:
+    """Daftar kontak darurat karyawan (M2-01)."""
+    return await controller.handle_list_emergency_contacts(current_user, emp_id)
+
+
+@router.post(
+    "/{emp_id}/emergency-contacts",
+    response_model=EmergencyContactResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_emergency_contact(
+    emp_id: UUID,
+    data: EmergencyContactCreate,
+    current_user: CurrentUser = Depends(require_permission(Permission.VIEW_USERS)),
+    controller: EmployeeController = Depends(),
+) -> EmergencyContactResponse:
+    """Menambahkan kontak darurat baru."""
+    return await controller.handle_create_emergency_contact(current_user, emp_id, data)
+
+
+@router.put("/{emp_id}/emergency-contacts/{contact_id}", response_model=EmergencyContactResponse)
+async def update_emergency_contact(
+    emp_id: UUID,
+    contact_id: UUID,
+    data: EmergencyContactUpdate,
+    current_user: CurrentUser = Depends(require_permission(Permission.VIEW_USERS)),
+    controller: EmployeeController = Depends(),
+) -> EmergencyContactResponse:
+    """Mengubah kontak darurat."""
+    return await controller.handle_update_emergency_contact(current_user, emp_id, contact_id, data)
+
+
+@router.delete("/{emp_id}/emergency-contacts/{contact_id}")
+async def delete_emergency_contact(
+    emp_id: UUID,
+    contact_id: UUID,
+    current_user: CurrentUser = Depends(require_permission(Permission.VIEW_USERS)),
+    controller: EmployeeController = Depends(),
+) -> dict[str, Any]:
+    """Menghapus kontak darurat."""
+    return await controller.handle_delete_emergency_contact(current_user, emp_id, contact_id)
+

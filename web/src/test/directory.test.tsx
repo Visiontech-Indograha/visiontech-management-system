@@ -412,3 +412,54 @@ describe("akun login karyawan (M1-01)", () => {
     expect(await screen.findByTestId("account-locked")).toHaveTextContent("5 kali gagal login");
   });
 });
+
+describe("kontak darurat karyawan", () => {
+  it("HR melihat daftar kontak darurat dan menambah kontak baru", async () => {
+    const contacts = [
+      {
+        id: "ec1",
+        employee_id: "e1",
+        name: "Siti Rahma",
+        relationship: "Istri",
+        phone: "081299998888",
+        address: "Jl. Mawar No. 12",
+        is_primary: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+    ];
+    const calls = mockApi((c) => {
+      if (c.url === "/employees/e1") return { data: employee() };
+      if (c.url === "/employees/e1/emergency-contacts" && c.method === "get") return { data: contacts };
+      if (c.url === "/employees/e1/emergency-contacts" && c.method === "post") {
+        return {
+          data: {
+            id: "ec2",
+            employee_id: "e1",
+            ...(c.data as Record<string, unknown>),
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          },
+        };
+      }
+    });
+
+    renderRoute("/directory/e1", { role: "HR" });
+    expect(await screen.findByText("Siti Rahma")).toBeInTheDocument();
+    expect(screen.getByText("Istri")).toBeInTheDocument();
+    expect(screen.getByText("Utama")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /tambah kontak/i }));
+    const dialog = screen.getByRole("dialog", { name: "Tambah kontak darurat" });
+    fireEvent.change(within(dialog).getByLabelText(/nama lengkap/i), { target: { value: "Budi Santoso" } });
+    fireEvent.change(within(dialog).getByLabelText(/no.*telepon/i), { target: { value: "081300001111" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Simpan" }));
+
+    await waitFor(() => expect(calls.some((c) => c.url === "/employees/e1/emergency-contacts" && c.method === "post")).toBe(true));
+    expect(calls.find((c) => c.url === "/employees/e1/emergency-contacts" && c.method === "post")!.data).toMatchObject({
+      name: "Budi Santoso",
+      phone: "081300001111",
+      relationship: "Keluarga",
+    });
+  });
+});

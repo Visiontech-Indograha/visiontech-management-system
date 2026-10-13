@@ -8,6 +8,9 @@ export type EmployeeList = S["EmployeeListResponse"];
 export type EmployeeUpdate = S["EmployeeUpdate"];
 export type EmployeeDocument = S["EmployeeDocumentResponse"];
 export type EmployeeDocumentCreate = S["EmployeeDocumentCreate"];
+export type EmergencyContact = S["EmergencyContactResponse"];
+export type EmergencyContactCreate = S["EmergencyContactCreate"];
+export type EmergencyContactUpdate = S["EmergencyContactUpdate"];
 type DocumentList = S["DocumentListResponse"];
 
 /** POST /files/upload belum punya skema respons di OpenAPI; bentuknya dari api/app/api/files.py. */
@@ -192,3 +195,46 @@ export function useAccountAction(employeeId: string) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["employee-account", employeeId] }),
   });
 }
+
+/** Kontak darurat karyawan (GET /employees/{id}/emergency-contacts). */
+export function useEmergencyContacts(employeeId: string) {
+  return useQuery({
+    queryKey: ["employee-emergency-contacts", employeeId],
+    queryFn: async () =>
+      (await api.get<EmergencyContact[]>(`/employees/${employeeId}/emergency-contacts`)).data,
+  });
+}
+
+/** Tambah kontak darurat (POST /employees/{id}/emergency-contacts). */
+export function useCreateEmergencyContact(employeeId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: EmergencyContactCreate) =>
+      (await api.post<EmergencyContact>(`/employees/${employeeId}/emergency-contacts`, body)).data,
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ["employee-emergency-contacts", employeeId] }),
+  });
+}
+
+/** Ubah kontak darurat (PUT /employees/{id}/emergency-contacts/{contactId}). */
+export function useUpdateEmergencyContact(employeeId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ contactId, ...body }: { contactId: string } & EmergencyContactUpdate) =>
+      (await api.put<EmergencyContact>(`/employees/${employeeId}/emergency-contacts/${contactId}`, body)).data,
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ["employee-emergency-contacts", employeeId] }),
+  });
+}
+
+/** Hapus kontak darurat (DELETE /employees/{id}/emergency-contacts/{contactId}). */
+export function useDeleteEmergencyContact(employeeId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (contactId: string) =>
+      (await api.delete<{ message: string }>(`/employees/${employeeId}/emergency-contacts/${contactId}`)).data,
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ["employee-emergency-contacts", employeeId] }),
+  });
+}
+

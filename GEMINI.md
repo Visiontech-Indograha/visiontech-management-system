@@ -7,13 +7,18 @@ Proyek: VMS — FastAPI (`api/`), React/Vite/shadcn (`web/`), Flutter (`mobile/`
 - **Gemini A = WEB**: hanya `web/` (+ `docs/14` bila menambah pustaka).
 - **Gemini B = API**: hanya `api/app/` untuk membuat **uji-spesifikasi** di `api/tests/` lulus.
   Isi berkas uji TIDAK boleh diubah. Aturan bisnis: `prototype/js/domain.js` (cari dengan grep nama transaksinya).
-- Jangan menyentuh `db/`, `prototype/`, `docs/10`, `docs/PLAN-*`, atau bagian yang bukan peran Anda.
+- Jangan menyentuh `prototype/`, `docs/10`, `docs/PLAN-*`, atau bagian yang bukan peran Anda.
+  **ATURAN SINKRONISASI SKEMA (DUAL-SCHEMA RULE):** Jika membuat migrasi DDL baru di `api/alembic/versions/`, tabel/kolom/indeks/RLS yang bersangkutan **WAJIB** disinkronkan ke `db/01_schema.sql` dan `db/03_policies.sql` / `db/05_face.sql`. CI GitHub Actions tidak menjalankan `alembic upgrade head`, melainkan memasang dari `db/*.sql` lalu menjalankan `alembic stamp head`.
 
 ## Git — WAJIB
 - **ATURAN GLOBAL AGEN AI (DILARANG MERGE KE PROD):**
   - **DILARANG KERAS merge, commit, atau push langsung ke `prod` / `main`.**
   - Penggabungan ke `prod` sepenuhnya hak pemilik produk (manusia) melalui PR `development` → `prod`.
   - Agen AI diizinkan merge atau push ke `development` jika tugas telah terverifikasi dan lulus uji.
+- **ATURAN IDENTITAS COMMIT & DOKUMENTASI AGENT (WAJIB):**
+  - **DILARANG KERAS** menyertakan Gemini, Claude, AI, bot, atau asisten apa pun sebagai co-author (`Co-authored-by`), collaborator, atau kontributor dalam pesan commit maupun metadata git.
+  - Semua commit harus bersih dari jejak/trailer atribusi AI (hanya author manusia sesuai konfigurasi git).
+  - **DILARANG KERAS** meng-commit atau push berkas/folder internal agen AI (seperti `.agents/`, `.hermes/`, `.claude/`, `.gemini/`, `.cursor/`, `.windsurf/`, file scratch agent, dsb.) ke repositori GitHub. Pastikan folder tersebut masuk `.gitignore`.
 - Kerja di **worktree terpisah**: `git worktree add ../vms-<nama> -b feature/gemini-<tugas> origin/development`.
 - **DILARANG `git stash`** (tumpukan stash dipakai bersama semua worktree).
 - Stage per path, jangan `git add -A`. Jangan commit `migrate_baca.py`, `test_db.py`, `.env`.

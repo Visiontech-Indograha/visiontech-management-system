@@ -46,7 +46,17 @@ class WeeklyReportService:
         Returns:
             list[Any]: Daftar minggu kerja.
         """
-        return await self.repo.list_weeks(access.plan.id)
+        rows = await self.repo.list_weeks(access.plan.id)
+        if access.is_leader:
+            return list(rows)
+        # Draf laporan mingguan hanya milik ketua: selain ketua melihat isinya setelah dikirim.
+        weeks: list[Any] = []
+        for row in rows:
+            week = dict(row._mapping)
+            if week.get("status") == "DRAFT":
+                week["body"], week["obstacle"] = "", ""
+            weeks.append(week)
+        return weeks
 
     async def _week(self, access: PlanAccess, week: int) -> Any:
         """
@@ -121,7 +131,7 @@ class WeeklyReportService:
         # Validasi: harus mengisi kolom kendala, minimal menyatakan "Tidak ada"
         if not row.obstacle:
             raise ValidationError('Ringkasan kendala mingguan wajib diisi (isi "Tidak ada" jika lancar).')
-        
+
         # Mengeksekusi perubahan status menjadi submitted di database
         await self.repo.submit(access.plan.id, row.name, access.user.user_id)
         # Memicu notifikasi setelah laporan diserahkan
@@ -146,18 +156,18 @@ class WeeklyReportService:
         # Status SK harus IN_PROGRESS atau sedang direview untuk penutupan
         require_plan_status(access, PlanStatus.IN_PROGRESS, PlanStatus.COMPLETION_REVIEW)
         if decision not in ("APPROVE", "RETURN"):
-            raise ValidationError("Keputusan tidak valid.")
+            raise ValidationError("Pilihan keputusan tidak dikenali. Muat ulang, lalu pilih lagi.")
         clean_note = (note or "").strip()
         # Jika direturn (ditolak), wajib memberi catatan alasan penolakan
         if decision == "RETURN" and not clean_note:
             raise ValidationError("Catatan revisi wajib diisi.")
-            
+
         row = await self._week(access, week)
         status = "APPROVED" if decision == "APPROVE" else "CHANGES_REQUESTED"
         # Memastikan statusnya benar menunggu review di database
         if await self.repo.review(access.plan.id, row.name, status, clean_note or None, access.user.user_id) is None:
             raise _state("Laporan mingguan belum menunggu pemeriksaan.")
-            
+
         # Mengirim notifikasi terkait hasil review kepada tim
         await NotificationService(self.repo.db).report_reviewed(access.plan.id, row.name, decision == "APPROVE",
                                                                 clean_note or None)

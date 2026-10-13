@@ -73,8 +73,38 @@ describe("Lokasi kerja (/sites)", () => {
   });
 
   it("galat memuat menampilkan Coba lagi", async () => {
-    mockApi(() => apiError(500, "INTERNAL_ERROR", "Terjadi kesalahan internal pada server."));
+    mockApi(() => apiError(500, "INTERNAL_ERROR", "Terjadi gangguan pada sistem. Coba lagi beberapa saat; bila berulang, hubungi admin."));
     renderRoute("/sites", { role: "PM" });
     expect(await screen.findByRole("button", { name: "Coba lagi" })).toBeInTheDocument();
+  });
+
+  it("dialog tambah punya peta dinamis dan pencarian alamat; hasil cari mengisi lintang, bujur, dan alamat", async () => {
+    const calls = mockApi((c) => {
+      if (c.url === "/sites") return { data: [] };
+      if (c.url === "/geo/search") return { data: [{ name: "Jl. Sudirman, Pekanbaru, Riau", type: "road", lat: 0.5071, lng: 101.4478 }] };
+    });
+    renderRoute("/sites", { role: "PM" });
+    await screen.findByText(/Belum ada lokasi kerja/);
+    fireEvent.click(screen.getAllByRole("button", { name: "Tambah lokasi" })[0]);
+    const dialog = screen.getByRole("dialog", { name: "Tambah lokasi kerja" });
+    expect(within(dialog).getByTestId("site-map")).toBeInTheDocument();
+    fireEvent.change(within(dialog).getByLabelText("Cari alamat atau nama tempat"), { target: { value: "sudirman pekanbaru" } });
+    fireEvent.click(await within(dialog).findByText("Jl. Sudirman, Pekanbaru, Riau", {}, { timeout: 4000 }));
+    expect(within(dialog).getByLabelText("Lintang (lat)")).toHaveValue("0.507100");
+    expect(within(dialog).getByLabelText("Bujur (lng)")).toHaveValue("101.447800");
+    expect(within(dialog).getByLabelText("Alamat")).toHaveValue("Jl. Sudirman, Pekanbaru, Riau");
+    expect(within(dialog).getByLabelText("Nama lokasi")).toHaveValue("Jl. Sudirman");
+    expect(calls.some((c) => c.url === "/geo/search")).toBe(true);
+  });
+
+  it("lintang/bujur tetap bisa diketik manual dan penanda mengikuti", async () => {
+    mockApi((c) => (c.url === "/sites" ? { data: [] } : undefined));
+    renderRoute("/sites", { role: "PM" });
+    await screen.findByText(/Belum ada lokasi kerja/);
+    fireEvent.click(screen.getAllByRole("button", { name: "Tambah lokasi" })[0]);
+    const dialog = screen.getByRole("dialog", { name: "Tambah lokasi kerja" });
+    fireEvent.change(within(dialog).getByLabelText("Lintang (lat)"), { target: { value: "0.5" } });
+    fireEvent.change(within(dialog).getByLabelText("Bujur (lng)"), { target: { value: "101.4" } });
+    await waitFor(() => expect(dialog.querySelector(".leaflet-marker-icon")).not.toBeNull());
   });
 });

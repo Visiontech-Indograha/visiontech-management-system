@@ -7,7 +7,7 @@ from pydantic import BaseModel
 
 class WorkPlanBase(BaseModel):
     """Skema dasar untuk Rencana Kerja.
-    
+
     Menyimpan atribut-atribut umum dari sebuah Work Plan seperti
     judul, unit penanggung jawab, lokasi, periode, dan peran utama.
     """
@@ -37,7 +37,7 @@ class WorkPlanUpdate(BaseModel):
 
 class WorkPlanResponse(WorkPlanBase):
     """Skema respons untuk Rencana Kerja.
-    
+
     Menyertakan status, nomor dokumen, revisi, dan alasan penolakan jika ada.
     """
     id: UUID  # ID rencana kerja
@@ -48,6 +48,11 @@ class WorkPlanResponse(WorkPlanBase):
     cancellation_reason: str | None = None  # Alasan pembatalan (jika dibatalkan)
     appeal_reason: str | None = None  # Alasan banding (jika ada sanggahan penolakan)
     category: str | None = None   # alur SK v2 - Kategori pekerjaan
+    is_out_of_town: bool = False  # Rencana kerja luar kota
+    work_type_id: UUID | None = None  # Jenis pekerjaan (T9)
+    pending_request: bool = False  # T2: ada permintaan revisi dari ketua yang menunggu PM
+    today_site_id: UUID | None = None  # Lokasi kerja hari ini; None = tidak ada hari kerja hari ini
+    today_included: bool | None = None  # Pengguna bertugas hari ini? None = tidak ada hari kerja hari ini
 
 
 class AssignmentEmployeeOption(BaseModel):
@@ -60,7 +65,7 @@ class AssignmentEmployeeOption(BaseModel):
 
 class PlanAssignmentOptions(BaseModel):
     """Skema opsi penugasan pada Rencana Kerja.
-    
+
     Mengelompokkan opsi pegawai yang tersedia untuk menjadi PM atau personel lapangan.
     """
     can_choose_pm: bool  # Apakah diperbolehkan memilih PM secara bebas
@@ -76,7 +81,7 @@ class PlanMemberListResponse(BaseModel):
     role_in_plan: str  # Peran pegawai dalam rencana kerja (misal: LEADER, MEMBER)
     valid_from: date  # Tanggal mulai efektif bergabung
     valid_to: date  # Tanggal akhir efektif bergabung
-    
+
 class PlanDayCreate(BaseModel):
     """Skema pembuatan aktivitas harian dalam Rencana Kerja."""
     work_date: date  # Tanggal pengerjaan aktivitas

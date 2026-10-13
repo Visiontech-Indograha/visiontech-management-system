@@ -8,7 +8,7 @@ ENV PYTHONUNBUFFERED=1 \
     FACE_MODEL_PACK=buffalo_s
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends libglib2.0-0 libgomp1 \
+    && apt-get install -y --no-install-recommends libglib2.0-0 libgomp1 libxcb1 libx11-6 libgl1 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -18,7 +18,7 @@ RUN pip install -r requirements.txt
 # Unduh paket model (lisensi riset non-komersial InsightFace; lihat README) saat build, bukan saat jalan.
 RUN python -c "from insightface.app import FaceAnalysis; FaceAnalysis(name='buffalo_s', root='/models', allowed_modules=['detection','recognition'], providers=['CPUExecutionProvider'])"
 
-COPY main.py .
+COPY main.py rules.py .
 
 RUN useradd --system --no-create-home face && chown -R face /models
 USER face

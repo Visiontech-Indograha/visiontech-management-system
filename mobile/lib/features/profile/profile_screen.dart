@@ -1,17 +1,16 @@
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/error_message.dart';
-import '../../core/local_storage.dart';
-import '../../core/photo_capture.dart';
 import '../../core/providers.dart';
-import '../auth/auth_controller.dart';
-import '../auth/auth_state.dart';
-import '../sync/sync_queue_screen.dart';
 import '../../core/theme/theme.dart';
 import '../../shared/ui/vms_ui.dart';
+import '../auth/auth_controller.dart';
+import '../auth/auth_state.dart';
+import '../face/face_flow.dart';
+import '../sync/sync_queue_screen.dart';
+import '../update/update_ui.dart';
 
 const _roleLabel = {
   'ADMIN': 'Admin',
@@ -44,6 +43,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   bool _isEnrolling = false;
   Map<String, dynamic>? _faceStatus;
   String? _faceError;
+  Future<String>? _photoUrl;
 
   @override
   void initState() {
@@ -51,6 +51,60 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     _loadSyncInfo();
     _loadBiometricState();
     _loadFaceState();
+    _loadPhotoUrl();
+  }
+
+  /// URL bertanda tangan foto profil (berlaku 5 menit). Berkas dilayani API
+  /// hanya setelah otorisasi, jadi URL harus diambil lewat `fileUrl`, bukan
+  /// dipasang langsung sebagai path.
+  void _loadPhotoUrl() {
+    final authState = ref.read(authControllerProvider);
+    final user = authState is AuthAuthenticated
+        ? authState.user
+        : (authState is AuthLocked ? authState.user : null);
+    final id = user?.photoFileId;
+    if (id == null || id.isEmpty) {
+      _photoUrl = null;
+      return;
+    }
+    _photoUrl = ref.read(syncEngineProvider).api.fileUrl(id);
+  }
+
+  /// Avatar bulat: foto profil bila ada, selain itu inisial nama (perilaku lama).
+  Widget _avatar(String name, double size, {TextStyle? textStyle}) {
+    final initials = name.isEmpty ? '?' : name.substring(0, 1).toUpperCase();
+    final fallback = Container(
+      width: size,
+      height: size,
+      alignment: Alignment.center,
+      decoration: const BoxDecoration(color: VmsColors.gold, shape: BoxShape.circle),
+      child: Text(
+        initials,
+        style: (textStyle ?? VmsTextStyles.title).copyWith(
+          color: VmsColors.brand900,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+    if (_photoUrl == null) return fallback;
+    return FutureBuilder<String>(
+      future: _photoUrl,
+      builder: (context, snap) {
+        final url = snap.data;
+        if (url == null || url.isEmpty) return fallback;
+        return ClipOval(
+          child: Image.network(
+            url,
+            width: size,
+            height: size,
+            fit: BoxFit.cover,
+            errorBuilder: (_, _, _) => fallback,
+            loadingBuilder: (_, child, progress) =>
+                progress == null ? child : fallback,
+          ),
+        );
+      },
+    );
   }
 
   Future<void> _loadFaceState() async {
@@ -73,10 +127,23 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Future<void> _toggleFaceConsent(bool grant) async {
     setState(() => _faceLoading = true);
     try {
-      await ref.read(syncEngineProvider).api.setFaceConsent(
-            grant ? 'GRANTED' : 'WITHDRAWN',
-            policyVersion: '1.0',
-          );
+      final api = ref.read(syncEngineProvider).api;
+      // Teks & versi persetujuan MILIK SERVER: pengguna harus melihat kalimat yang benar-benar disetujui.
+      final policy = await api.facePolicy();
+      final version = '${policy['version']}';
+      if (grant) {
+        if (!mounted) return;
+        final ok = await showFaceConsentDialog(
+          context,
+          text: '${policy['text']}',
+          version: version,
+        );
+        if (!ok) return;
+      }
+      await api.setFaceConsent(
+        grant ? 'GRANTED' : 'WITHDRAWN',
+        policyVersion: version,
+      );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -99,50 +166,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   Future<void> _enrollFaceFlow() async {
-    final list = <File>[];
-    const poses = [
-      'Foto 1/3: Posisikan wajah tegak lurus menghadap kamera.',
-      'Foto 2/3: Tersenyum menghadap kamera.',
-      'Foto 3/3: Miringkan sedikit kepala / sudut berbeda.',
-    ];
-
-    for (int i = 0; i < poses.length; i++) {
-      if (!mounted) return;
-      final (file, err) = await captureWatermarkedPhoto(
-        context: context,
-        label: 'Daftar Wajah (${i + 1}/${poses.length})',
-        kind: LocalFileKind.selfie,
-        hint: poses[i],
-        preferFrontCamera: true,
-      );
-      if (file == null) {
-        if (err != null && mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
-        }
-        return;
-      }
-      list.add(file);
-    }
-
+    if (!mounted) return;
     setState(() => _isEnrolling = true);
     try {
-      final res = await ref.read(syncEngineProvider).api.enrollFace(list);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Wajah berhasil didaftarkan! (${res['poses_enrolled'] ?? list.length} pose tersimpan).',
-            ),
-          ),
-        );
+      final out = await runFaceEnrollment(context, ref);
+      if (!mounted) return;
+      if (out.message != null) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(out.message!)));
       }
-      await _loadFaceState();
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(apiErrorMessage(e))),
-        );
-      }
+      if (out.ok) await _loadFaceState();
     } finally {
       if (mounted) setState(() => _isEnrolling = false);
     }
@@ -306,22 +338,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
     return Scaffold(
       appBar: VmsTopBar(
-        trailing: Container(
-          width: 44,
-          height: 44,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: VmsColors.gold,
-            shape: BoxShape.circle,
-          ),
-          child: Text(
-            name.isEmpty ? '?' : name.substring(0, 1).toUpperCase(),
-            style: VmsTextStyles.title.copyWith(
-              color: VmsColors.brand900,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ),
+        trailing: _avatar(name, 44),
       ),
       body: ListView(
         padding: safeListPadding(context),
@@ -330,6 +347,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             eyebrow: 'Profil',
             title: name,
             subtitle: user?.username,
+            trailing: _avatar(name, 64),
             bottom: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               decoration: BoxDecoration(
@@ -488,7 +506,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           NoticeBanner(
                             icon: Icons.info_outline_rounded,
                             text: _faceError!,
-                            accent: Accent.amber,
                           ),
                         ],
                         const SizedBox(height: 12),
@@ -566,9 +583,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     ),
                   ),
                 ],
+                const SectionTitle('Tentang aplikasi'),
+                const FadeSlideIn(index: 2, child: AboutAppCard()),
                 const SizedBox(height: 20),
                 FadeSlideIn(
-                  index: 2,
+                  index: 3,
                   child: SurfaceCard(
                     onTap: _logout,
                     padding: const EdgeInsets.all(14),

@@ -2,9 +2,9 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { FilePreview } from "./FilePreview";
-import { api, ApiError } from "@/lib/api";
+import { api, ApiError } from "@/lib/apiClient";
 
-vi.mock("@/lib/api", () => ({
+vi.mock("@/lib/apiClient", () => ({
   api: { get: vi.fn() },
   ApiError: class extends Error {
     status: number;

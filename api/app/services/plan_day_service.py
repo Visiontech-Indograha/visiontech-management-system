@@ -4,6 +4,7 @@ Baca hari kerja SK beserta tugas & laporan harian. Kewenangan (melihat SK) dijag
 """
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -37,4 +38,17 @@ class PlanDayService:
         """
         # Mengambil data hari kerja dari layer CRUD berdasarkan ID SK yang ada pada objek akses.
         # Hak akses (Kewenangan melihat SK) sudah dijaga di level router.
-        return await self.repo.days_with_tasks_and_reports(access.plan.id)
+        rows = await self.repo.days_with_tasks_and_reports(access.plan.id)
+        if access.is_leader:
+            return list(rows)
+        # Laporan harian berstatus Draf hanya milik ketua: PM/anggota baru melihatnya setelah dikirim.
+        days: list[Any] = []
+        for row in rows:
+            day = dict(row._mapping)
+            report = day.get("report")
+            if isinstance(report, str):
+                report = json.loads(report)
+            if isinstance(report, dict) and report.get("status") == "DRAFT":
+                day["report"] = None
+            days.append(day)
+        return days

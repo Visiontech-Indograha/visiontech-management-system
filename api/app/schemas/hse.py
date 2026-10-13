@@ -1,7 +1,7 @@
 """
 app/schemas/hse.py
 
-Request and response schemas for HSE (Health, Safety, and Environment) 
+Request and response schemas for HSE (Health, Safety, and Environment)
 incident reporting and daily operational reports.
 """
 from datetime import date, datetime
@@ -10,6 +10,8 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
+from app.schemas.work_type import EvidenceIn
+
 
 class IncidentCreate(BaseModel):
     """
@@ -17,7 +19,7 @@ class IncidentCreate(BaseModel):
     """
     work_plan_id: UUID
     # occurred_on tidak diterima dari klien: tanggal insiden selalu dianggap hari ini menurut server (V-10).
-    # Nilai enumerasi DB (db/01 incident_category / incident_severity). 
+    # Nilai enumerasi DB (db/01 incident_category / incident_severity).
     # Jika ada nilai lain yang diberikan, sistem akan mengembalikan galat 422, bukan 500.
     category: Literal["K3_RINGAN", "K3_BERAT", "K3_LINGKUNGAN", "K3_HAMPIR", "ASET"]
     severity: Literal["RENDAH", "SEDANG", "TINGGI", "KRITIS"]
@@ -49,7 +51,7 @@ class IncidentResponse(BaseModel):
     resolution_note: str | None
     created_at: datetime
     evidence_file_ids: list[UUID] = []
-    
+
 
 class DailyReportCreate(BaseModel):
     """
@@ -58,6 +60,7 @@ class DailyReportCreate(BaseModel):
     body: str
     obstacle: str
     evidence_file_ids: list[UUID] = []
+    evidence: list[EvidenceIn] = []   # T9: foto berlabel slot template + sumber
 
 
 class DailyReportResponse(BaseModel):

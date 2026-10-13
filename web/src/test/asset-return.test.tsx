@@ -24,12 +24,12 @@ const setup = (items: unknown[], extra?: (url: string) => { status?: number; dat
   });
 
 describe("pengembalian aset", () => {
-  it("ketua SK peminjam mengajukan pengembalian dengan kondisi & catatan", async () => {
+  it("ketua rencana kerja peminjam mengajukan pengembalian dengan kondisi & catatan", async () => {
     const calls = setup([asset()], (url) =>
       url === "/assets/allocations/al1/return" ? { data: { id: "r1", asset_allocation_id: "al1" } } : undefined,
     );
-    renderRoute("/assets", { role: "field" }); // karyawan lapangan e-lead = ketua SK peminjam
-    expect(await screen.findByText("Dipakai: SK SK-202609-1a2b3c4d")).toBeInTheDocument();
+    renderRoute("/assets", { role: "field" }); // karyawan lapangan e-lead = ketua rencana kerja peminjam
+    expect(await screen.findByText("Dipakai: rencana kerja SK-202609-1a2b3c4d")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Ajukan pengembalian" }));
     const dialog = screen.getByRole("dialog", { name: "Kembalikan Tangga lipat" });
     fireEvent.change(within(dialog).getByLabelText("Catatan (opsional)"), { target: { value: "Selesai dipakai" } });
@@ -41,7 +41,7 @@ describe("pengembalian aset", () => {
     });
   });
 
-  it("bukan ketua SK peminjam: tidak ada tombol pengembalian", async () => {
+  it("bukan ketua rencana kerja peminjam: tidak ada tombol pengembalian", async () => {
     setup([asset({ leader_employee_id: "e-lain" })]);
     renderRoute("/assets", { role: "field" });
     await screen.findByText("Tangga lipat");
@@ -86,8 +86,8 @@ describe("pengembalian aset", () => {
     renderRoute("/assets", { role: "ASSET" });
     fireEvent.click(await screen.findByRole("button", { name: "Riwayat" }));
     const dialog = screen.getByRole("dialog", { name: "Riwayat pengembalian Tangga lipat" });
-    expect(await within(dialog).findByText(/SK SK-1 · Diterima/)).toBeInTheDocument();
-    expect(within(dialog).getByText(/SK SK-2 · Menunggu pemeriksaan/)).toBeInTheDocument();
+    expect(await within(dialog).findByText(/Rencana Kerja SK-1 · Diterima/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/Rencana Kerja SK-2 · Menunggu pemeriksaan/)).toBeInTheDocument();
     const buttons = within(dialog).getAllByRole("button", { name: "Unduh BAST" });
     expect(buttons).toHaveLength(1);                    // hanya yang sudah diperiksa
     fireEvent.click(buttons[0]);

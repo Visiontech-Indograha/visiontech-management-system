@@ -27,9 +27,9 @@ FINAL = {"body": "28 kamera terpasang dan diuji", "obstacle": "Hujan dua hari"}
 def _complete(client, world: World) -> str:
     plan_id, day_ids = run_plan_to_in_progress(client, world)
     _approve_days(day_ids)
-    post = lambda action, who, **b: client.post(
-        f"/work-plans/{plan_id}/{action}", headers=world.headers(client, who),
-        json={"row_version": _row_version(plan_id), **b})
+    def post(action: str, who: str, **b):
+        return client.post(f"/work-plans/{plan_id}/{action}", headers=world.headers(client, who),
+                           json={"row_version": _row_version(plan_id), **b})
     assert post("request-completion", "leader", **FINAL).status_code == 200
     approved = post("approve-completion", "pm", reason="Rapi")
     assert approved.status_code == 200, approved.text

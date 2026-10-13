@@ -99,6 +99,10 @@ ditulis ulang di setiap halaman.
 
 ## 3. Struktur folder — atomic design + fitur
 
+> **Web: diganti `docs/33-STANDAR-PENULISAN-KODE.md` (2026-10-09).** `components/ui/` kini `components/atoms/`,
+> fitur memakai `pages/` + `components/`, dan Page dilarang memakai atom/molecule langsung. Struktur di bawah
+> tetap menjadi rujukan untuk mobile sampai `docs/33` bagian mobile ditulis.
+
 Atomic design murni (semua komponen dalam lima folder besar) menjadi kacau setelah ratusan
 komponen: `organisms/` berubah jadi keranjang serba ada. Karena itu kita memakai **atomic
 design untuk komponen bersama** dan **folder per fitur untuk yang khusus**.
@@ -185,6 +189,8 @@ supaya pembicaraan tentang antarmuka tidak perlu diterjemahkan antara dua tim.
 ---
 
 ## 4. Aturan komponen
+
+> Web: aturan lengkap dan penamaan di `docs/33` §2–§4.
 
 ### Kapan boleh membuat komponen baru
 
@@ -330,3 +336,38 @@ pengguna baru.
 8. [ ] Tidak ada data API yang disimpan di Zustand.
 9. [ ] Tidak ada `any` dan tidak ada `@ts-ignore`.
 10. [ ] Uji komponen untuk logika bersyarat; uji Playwright untuk alur utamanya.
+
+---
+
+## 11. Mobile (Flutter) — konvensi kode
+
+Berlaku untuk `mobile/` (keputusan pemilik 2026-10-07). `flutter analyze` dan `flutter test` wajib bersih.
+
+### Lint (`mobile/analysis_options.yaml`)
+Di atas `flutter_lints`: `unawaited_futures`, `cancel_subscriptions`, `close_sinks`, `only_throw_errors`,
+`avoid_dynamic_calls`, `avoid_print`, `prefer_single_quotes`, `prefer_final_locals`, `prefer_const_*`,
+`directives_ordering`, `prefer_relative_imports`, `always_declare_return_types`, `unnecessary_lambdas`,
+`use_super_parameters`, `avoid_redundant_argument_values`. Sebagian besar diperbaiki `dart fix --apply`.
+
+Sengaja **tidak** dipakai (diputuskan 2026-10-07): `discarded_futures` (sinkronisasi oportunistik memang
+fire-and-forget, contoh `ConnectivitySyncWatcher`), `avoid_catches_without_on_clauses` (alur luring sengaja
+menangkap semua galat agar data masuk antrean), `always_use_package_imports` (seluruh `lib/` memakai impor relatif).
+Mengubah daftar ini = keputusan pemilik.
+
+### Letak berkas
+| Hal | Tempat |
+|---|---|
+| Layar & logika satu fitur | `lib/features/<fitur>/` (`<fitur>_screen.dart`, controller/gate di folder yang sama) |
+| Fondasi lintas fitur (klien API, penyimpanan, kanal native) | `lib/core/` |
+| Komponen UI bersama | `lib/shared/ui/vms_ui.dart` (SurfaceCard, NoticeBanner, PrimaryAction, …) — pakai dulu sebelum membuat baru |
+| Panggilan REST | `lib/data/vms_api.dart` (satu metode per endpoint, bentuk Map JSON apa adanya) |
+| Provider | `lib/core/providers.dart` untuk layanan global; provider fitur di berkas fiturnya |
+
+### Pola wajib
+- **Data JSON:** akses `Map` lewat cast eksplisit (`(data as Map)['x'] as String`), bukan panggilan dinamis.
+- **Gerbang gagal-terbuka:** galat jaringan tidak pernah mengunci pengguna; hanya jawaban eksplisit server yang
+  menutup menu (contoh `features/face/face_enroll_gate.dart`). Pekerja lapangan harus tetap bisa absen luring.
+- **Kanal native:** satu `MethodChannel('vms/<nama>')` per kemampuan, kelas Kotlin `<Nama>.kt` didaftarkan di
+  `MainActivity.kt`; uji Dart memakai `setMockMethodCallHandler` (contoh `test/offline_attendance_test.dart`).
+- **Uji:** server palsu `test/support/fake_backend.dart`; widget diuji dengan `ProviderScope(overrides: …)`.
+- Teks pengguna Bahasa Indonesia; sentuh ≥ 44 dp; tidak ada `print` (pakai `debugPrint`).

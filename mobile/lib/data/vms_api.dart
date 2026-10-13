@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 
@@ -104,6 +106,7 @@ class VmsApi {
     required String body,
     required String obstacle,
     required List<String> evidenceFileIds,
+    List<Map<String, dynamic>> evidence = const [],
   }) async => Map<String, dynamic>.from(
     (await _dio.put(
           '$_p/work-plans/$planId/days/$dayId/member-report',
@@ -111,6 +114,7 @@ class VmsApi {
             'body': body,
             'obstacle': obstacle,
             'evidence_file_ids': evidenceFileIds,
+            'evidence': evidence,
           },
         )).data
         as Map,
@@ -142,6 +146,38 @@ class VmsApi {
       _dio.post('$_p/work-plans/$planId/weekly/$week/submit');
 
   // --- Adendum saat berjalan, aset, laporan akhir (alur SK v2 PR3) ----------
+  /// Template foto laporan rencana kerja (T9): slot `{label, hint, required}`; kosong bila tanpa jenis pekerjaan.
+  Future<List<Map<String, dynamic>>> photoTemplate(String planId, {String? dayId}) async => _list(
+    (await _dio.get(
+      '$_p/work-plans/$planId/photo-template',
+      queryParameters: {'day_id': ?dayId},
+    )).data,
+  );
+
+  /// URL sementara (presigned) sebuah berkas gambar, mis. foto contoh template. `variant`: thumb | view | full.
+  Future<String> fileUrl(String fileId, {String variant = 'view'}) async {
+    final res = await _dio.get('$_p/files/$fileId/url', queryParameters: {'variant': variant});
+    return (res.data as Map)['url'] as String;
+  }
+
+  /// Aliran peristiwa waktu nyata (SSE, T8). Tanpa batas waktu baca: sambungan sengaja berumur panjang.
+  Future<ResponseBody> openEvents(CancelToken cancel) async {
+    final res = await _dio.get<ResponseBody>(
+      '$_p/events',
+      options: Options(
+        responseType: ResponseType.stream,
+        headers: {'Accept': 'text/event-stream'},
+        receiveTimeout: Duration.zero,
+      ),
+      cancelToken: cancel,
+    );
+    return res.data!;
+  }
+
+  /// Riwayat revisi rencana kerja oleh PM (T6), terbaru dulu.
+  Future<List<Map<String, dynamic>>> planRevisions(String planId) async =>
+      _list((await _dio.get('$_p/work-plans/$planId/revisions')).data);
+
   Future<List<Map<String, dynamic>>> planChanges(String planId) async =>
       _list((await _dio.get('$_p/work-plans/$planId/changes')).data);
 
@@ -200,8 +236,12 @@ class VmsApi {
       _dio.post('$_p/notifications/read-all');
 
   // --- Lokasi & absensi ---------------------------------------------------
-  Future<List<Map<String, dynamic>>> sites() async =>
-      _list((await _dio.get('$_p/sites')).data);
+  Future<List<Map<String, dynamic>>> sites() async => _list(
+    (await _dio.get(
+      '$_p/sites',
+      queryParameters: {'for_attendance': true},
+    )).data,
+  );
 
   /// Absensi milik sendiri (server membatasi ke pengguna ini bila bukan HR/Finance).
   /// `today` = tanggal hari ini menurut zona waktu organisasi (O-10), bukan jam HP.
@@ -253,7 +293,10 @@ class VmsApi {
   Future<Map<String, dynamic>> checkOut({
     required double lat,
     required double lng,
+    double? accuracyM,
     String? faceProbeId,
+    String? selfieFileId,
+    String? explanation,
   }) async {
     final res = await _dio.post(
       '$_p/attendance/check-out',
@@ -261,13 +304,28 @@ class VmsApi {
         'channel': 'MOBILE',
         'location': {'lat': lat, 'lng': lng},
         'location_origin': 'GPS',
+        'accuracy_m': ?accuracyM,
         'face_probe_id': ?faceProbeId,
+        'selfie_file_id': ?selfieFileId,
+        'explanation': ?explanation,
       },
     );
     return Map<String, dynamic>.from(res.data as Map);
   }
 
   // --- Biometrik Wajah (Face API) ------------------------------------------
+  /// Pemeriksaan pembaruan aplikasi (docs/32) — rute publik, juga dipanggil sebelum login.
+  Future<Map<String, dynamic>> appUpdate({
+    required int build,
+    required List<String> abis,
+  }) async {
+    final res = await _dio.get(
+      '$_p/app/android/update',
+      queryParameters: {'build': build, 'abi': abis},
+    );
+    return Map<String, dynamic>.from(res.data as Map);
+  }
+
   Future<Map<String, dynamic>> faceStatus() async {
     final res = await _dio.get('$_p/face/status');
     return Map<String, dynamic>.from(res.data as Map);
@@ -278,35 +336,60 @@ class VmsApi {
     return Map<String, dynamic>.from(res.data as Map);
   }
 
-  Future<void> setFaceConsent(String state, {required String policyVersion}) async =>
-      _dio.post(
-        '$_p/face/consent',
-        data: {'state': state, 'policy_version': policyVersion},
-      );
+  Future<void> setFaceConsent(
+    String state, {
+    required String policyVersion,
+  }) async => _dio.post(
+    '$_p/face/consent',
+    data: {'state': state, 'policy_version': policyVersion},
+  );
 
-  Future<String> createFaceProbe(File photo) async {
+  /// Memeriksa satu bingkai kamera terhadap tantangan liveness (online). Bila gerakan terlihat, server
+  /// mengembalikan `proof` bertanda tangan yang nanti dikirim kembali di `liveness.proofs`.
+  Future<Map<String, dynamic>> faceChallengeCheck(
+    Uint8List jpeg,
+    String challenge,
+  ) async {
+    final form = FormData.fromMap({
+      'file': MultipartFile.fromBytes(jpeg, filename: 'frame.jpg'),
+      'challenge': challenge,
+    });
+    final res = await _dio.post('$_p/face/challenge-check', data: form);
+    return Map<String, dynamic>.from(res.data as Map);
+  }
+
+  /// Unggah gambar wajah sementara (bukan foto absensi) beserta hasil tantangan; → `probe_id` untuk absen.
+  Future<String> createFaceProbe(
+    File photo, {
+    required Map<String, dynamic> liveness,
+  }) async {
     final form = FormData.fromMap({
       'file': await MultipartFile.fromFile(
         photo.path,
         filename: photo.uri.pathSegments.last,
       ),
-      'liveness': '{}',
+      'liveness': jsonEncode(liveness),
     });
     final res = await _dio.post('$_p/face/probe', data: form);
     return (res.data as Map)['probe_id'] as String;
   }
 
-  Future<Map<String, dynamic>> enrollFace(List<File> photos) async {
+  Future<Map<String, dynamic>> enrollFace(
+    List<File> photos, {
+    required Map<String, dynamic> liveness,
+  }) async {
     final fileParts = <MultipartFile>[];
     for (final photo in photos) {
-      fileParts.add(await MultipartFile.fromFile(
-        photo.path,
-        filename: photo.uri.pathSegments.last,
-      ));
+      fileParts.add(
+        await MultipartFile.fromFile(
+          photo.path,
+          filename: photo.uri.pathSegments.last,
+        ),
+      );
     }
     final form = FormData.fromMap({
       'files': fileParts,
-      'liveness': '{}',
+      'liveness': jsonEncode(liveness),
     });
     final res = await _dio.post('$_p/face/enroll', data: form);
     return Map<String, dynamic>.from(res.data as Map);

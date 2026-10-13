@@ -7,7 +7,7 @@ import { mockApi, renderRoute } from "./utils";
 const plan = {
   id: "p1", title: "Instalasi CCTV", unit_id: "u1", site_id: null, location_text: "Cikarang", description: null,
   period_start: "2026-01-01", period_end: "2099-12-31", pm_employee_id: "e-pm", leader_employee_id: "e-lead",
-  number: "SK/001", status: "IN_PROGRESS", revision: 0, row_version: 5, cancellation_reason: null, appeal_reason: null,
+  number: "Rencana Kerja/001", status: "IN_PROGRESS", revision: 0, row_version: 5, cancellation_reason: null, appeal_reason: null,
 };
 const day = {
   id: "d1", work_date: "2026-01-05", title: "Tarik kabel", sort_order: 1,
@@ -29,7 +29,7 @@ const api = (extra?: (url: string, method: string) => { status?: number; data?: 
 const panel = () => screen.findByRole("article", { name: /Tarik kabel — / });
 
 describe("R5 · teks laporan tidak hilang saat berpindah layar", () => {
-  it("draf laporan harian dipulihkan setelah pindah ke daftar SK lalu kembali", async () => {
+  it("draf laporan harian dipulihkan setelah pindah ke daftar rencana kerja lalu kembali", async () => {
     api();
     const { router } = renderRoute("/work-plans/p1", { role: "field" });
     fireEvent.change(within(await panel()).getByLabelText("Laporan Harian"), {
@@ -62,7 +62,7 @@ describe("R5 · teks laporan tidak hilang saat berpindah layar", () => {
     fireEvent.click(within(p).getByRole("button", { name: "Simpan draft" }));
     await waitFor(() => expect(saved).not.toBeNull());
 
-    const { useDrafts } = await import("@/lib/drafts");
+    const { useDrafts } = await import("@/hooks/useFormDraft");
     await waitFor(() => expect(useDrafts.getState().drafts["daily:d1"]).toBeUndefined());
     await act(() => router.navigate("/work-plans"));
   });

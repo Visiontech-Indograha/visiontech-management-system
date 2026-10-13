@@ -24,6 +24,7 @@ class EmployeeBase(BaseModel):
     birth_date: date | None = None
     address: str | None = None
     emergency_contact: str | None = None
+    photo_file_id: UUID | None = None
 
 
 class EmployeeCreate(EmployeeBase):
@@ -57,7 +58,7 @@ class EmployeeResponse(EmployeeBase):
     is_active: bool
     offboarded_at: datetime | None = None
     offboarding_reason: str | None = None
-    
+
 
 class EmployeeListResponse(BaseModel):
     """

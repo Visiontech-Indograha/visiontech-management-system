@@ -23,7 +23,7 @@ class CRUDSync(CRUDBase):
                       op_type: str, payload: dict[str, Any], client_created_at: datetime) -> Any:
         """
         Mencatat operasi luring ke dalam antrean atau menemukan operasi yang sudah ada.
-        
+
         Args:
             org_id (UUID | str): ID organisasi.
             user_id (UUID | str): ID pengguna.
@@ -32,11 +32,11 @@ class CRUDSync(CRUDBase):
             op_type (str): Tipe operasi (misalnya INSERT, UPDATE).
             payload (dict[str, Any]): Data payload operasi.
             client_created_at (datetime): Waktu operasi dibuat di perangkat klien.
-            
+
         Returns:
             Any: Record hasil enqueuing beserta status operasinya saat ini.
         """
-        # Dua kueri terpisah digunakan di sini karena baris yang baru disisipkan di dalam 
+        # Dua kueri terpisah digunakan di sini karena baris yang baru disisipkan di dalam
         # fungsi basis data tidak terlihat oleh snapshot SELECT yang sama akibat aturan isolasi (MVCC).
         enqueued = await self.fetchone(
             """
@@ -57,7 +57,7 @@ class CRUDSync(CRUDBase):
     async def mark(self, operation_id: UUID | str, status: str, error_message: str | None) -> None:
         """
         Menandai status akhir dari sebuah operasi luring setelah diproses.
-        
+
         Args:
             operation_id (UUID | str): ID operasi luring.
             status (str): Status penyelesaian (misal: 'APPLIED', 'FAILED').
@@ -78,11 +78,11 @@ class CRUDSync(CRUDBase):
     async def status_since(self, user_id: UUID | str, since: datetime | None) -> list[Any]:
         """
         Mengambil daftar status operasi luring pengguna yang diterima sejak waktu tertentu.
-        
+
         Args:
             user_id (UUID | str): ID pengguna.
             since (datetime | None): Batas waktu pengambilan. Jika None, mengambil semua.
-            
+
         Returns:
             list[Any]: Daftar maksimal 500 riwayat status operasi.
         """

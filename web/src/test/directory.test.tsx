@@ -252,7 +252,7 @@ describe("mutasi / promosi & riwayat jabatan (M2, domain.js PROMOTE)", () => {
     expect(calls.find((c) => c.method === "post")!.data).toEqual({ position: "Supervisor", unit_id: "u2", valid_from: "2026-10-01" });
   });
 
-  it("mutasi lintas unit ditolak API (masih bertugas di SK aktif): pesan tampil di dialog", async () => {
+  it("mutasi lintas unit ditolak API (masih bertugas di rencana kerja aktif): pesan tampil di dialog", async () => {
     api((url, method) =>
       url === "/employees/e1/assignments" && method === "post"
         ? apiError(409, "INVALID_STATE", "Mutasi lintas unit diblokir sampai penugasan aktif diserahterimakan.")
@@ -360,7 +360,7 @@ describe("siklus karyawan oleh HR (M2-02, M2-03)", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Offboarding" }));
     const dialog = screen.getByRole("dialog", { name: "Offboarding Test User" });
     fireEvent.click(within(dialog).getByRole("button", { name: "Akhiri masa kerja" }));
-    expect(await within(dialog).findByText("Alasan offboarding wajib diisi.")).toBeInTheDocument();
+    expect(await within(dialog).findByText("Alasan pengakhiran masa kerja wajib diisi.")).toBeInTheDocument();
     fireEvent.change(within(dialog).getByLabelText("Alasan"), { target: { value: "Kontrak selesai" } });
     fireEvent.click(within(dialog).getByRole("button", { name: "Akhiri masa kerja" }));
     await waitFor(() => expect(calls.some((c) => c.url === "/employees/e1/offboard")).toBe(true));

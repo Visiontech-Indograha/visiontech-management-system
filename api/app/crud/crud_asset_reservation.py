@@ -20,10 +20,10 @@ class CRUDAssetReservation(CRUDBase):
         """
         Mengambil daftar aset milik sebuah organisasi beserta status alokasi yang sedang berjalan
         dan pengajuan pengembalian yang masih menunggu persetujuan (R-19).
-        
+
         Args:
             org_id (UUID | str): ID organisasi.
-            
+
         Returns:
             list[Any]: Daftar aset dengan status alokasi dan pengembaliannya.
         """
@@ -65,11 +65,11 @@ class CRUDAssetReservation(CRUDBase):
         """
         Mengambil riwayat pengembalian sebuah aset, diurutkan dari yang terbaru.
         Mengembalikan None jika aset tidak ditemukan atau bukan milik organisasi ini.
-        
+
         Args:
             asset_id (UUID | str): ID aset.
             org_id (UUID | str): ID organisasi.
-            
+
         Returns:
             list[Any] | None: Daftar riwayat pengembalian, atau None jika aset tidak valid.
         """
@@ -77,7 +77,7 @@ class CRUDAssetReservation(CRUDBase):
         if not await self.scalar("SELECT 1 FROM vms.asset WHERE id = :id AND organization_id = :org",
                                  {"id": asset_id, "org": org_id}):
             return None
-            
+
         # Mengambil riwayat pengembalian untuk aset tersebut, diurutkan berdasarkan waktu permintaan secara menurun (descending)
         return list(await self.fetchall(self._RETURN_ROWS + " WHERE a.id = :id ORDER BY r.requested_at DESC",
                                         {"id": asset_id}))
@@ -85,11 +85,11 @@ class CRUDAssetReservation(CRUDBase):
     async def return_record(self, return_id: UUID | str, org_id: UUID | str) -> Any:
         """
         Mengambil detail satu catatan pengembalian spesifik jika asetnya milik organisasi.
-        
+
         Args:
             return_id (UUID | str): ID pengembalian aset.
             org_id (UUID | str): ID organisasi.
-            
+
         Returns:
             Any: Data catatan pengembalian, atau None jika tidak ditemukan.
         """
@@ -101,14 +101,14 @@ class CRUDAssetReservation(CRUDBase):
         """
         Mengambil daftar aset yang pernah atau sedang dialokasikan ke suatu Surat Kerja (SK),
         beserta status pengembalian terakhirnya untuk keperluan mode presentasi.
-        
+
         Args:
             plan_id (UUID | str): ID Surat Kerja (work plan).
-            
+
         Returns:
             list[Any]: Daftar aset terkait SK.
         """
-        # Mengambil alokasi aset untuk suatu SK, di-JOIN dengan aset dan pengemudi. 
+        # Mengambil alokasi aset untuk suatu SK, di-JOIN dengan aset dan pengemudi.
         # Menggunakan LEFT JOIN LATERAL untuk mengambil informasi pengembalian terbaru (kondisi dan status penerimaan).
         return list(await self.fetchall(
             """
@@ -129,10 +129,10 @@ class CRUDAssetReservation(CRUDBase):
         """
         Mengunci baris aset di database untuk proses pembaruan (FOR UPDATE)
         sehingga mencegah race condition.
-        
+
         Args:
             asset_id (UUID | str): ID aset.
-            
+
         Returns:
             Any: Data aset yang terkunci.
         """
@@ -148,13 +148,13 @@ class CRUDAssetReservation(CRUDBase):
 
     async def plan_for_driver(self, plan_id: UUID | str, driver_id: UUID | str | None) -> Any:
         """
-        Mengecek status Surat Kerja dan memvalidasi apakah seorang pengemudi 
+        Mengecek status Surat Kerja dan memvalidasi apakah seorang pengemudi
         merupakan bagian dari tim penugasan tersebut (termasuk sebagai ketua).
-        
+
         Args:
             plan_id (UUID | str): ID Surat Kerja.
             driver_id (UUID | str | None): ID karyawan pengemudi.
-            
+
         Returns:
             Any: Status SK dan flag boolean driver_on_team.
         """
@@ -175,10 +175,10 @@ class CRUDAssetReservation(CRUDBase):
     async def active_allocation(self, asset_id: UUID | str) -> Any:
         """
         Mencari data alokasi yang sedang aktif (belum dirilis/dikembalikan) untuk suatu aset.
-        
+
         Args:
             asset_id (UUID | str): ID aset.
-            
+
         Returns:
             Any: Data alokasi aktif beserta status SK terkait.
         """
@@ -197,13 +197,13 @@ class CRUDAssetReservation(CRUDBase):
                                 user_id: UUID | str) -> Any:
         """
         Membuat alokasi aset baru untuk sebuah Surat Kerja.
-        
+
         Args:
             asset_id (UUID | str): ID aset.
             plan_id (UUID | str): ID Surat Kerja.
             driver_id (UUID | str | None): ID karyawan pengemudi (jika ada).
             user_id (UUID | str): ID pengguna yang melakukan alokasi.
-            
+
         Returns:
             Any: Record alokasi yang baru dibuat.
         """
@@ -221,7 +221,7 @@ class CRUDAssetReservation(CRUDBase):
     async def set_asset_status(self, asset_id: UUID | str, status: str) -> None:
         """
         Memperbarui status sebuah aset (misalnya menjadi ALLOCATED, MAINTENANCE, dll).
-        
+
         Args:
             asset_id (UUID | str): ID aset.
             status (str): Status aset yang baru.
@@ -233,10 +233,10 @@ class CRUDAssetReservation(CRUDBase):
 
     async def free_asset(self, asset_id: UUID | str, allocation_id: UUID | str, condition: str | None) -> None:
         """
-        Menutup reservasi/alokasi sehingga aset tersedia kembali. 
+        Menutup reservasi/alokasi sehingga aset tersedia kembali.
         Mencatat kondisi akhir aset jika diberikan saat pengembalian (banding).
         (Mewakili operasi domain.js freeAsset)
-        
+
         Args:
             asset_id (UUID | str): ID aset.
             allocation_id (UUID | str): ID alokasi yang ingin ditutup.
@@ -256,7 +256,7 @@ class CRUDAssetReservation(CRUDBase):
     async def mark_checked(self, allocation_id: UUID | str) -> None:
         """
         Menandai bahwa aset telah diperiksa oleh pengemudi.
-        
+
         Args:
             allocation_id (UUID | str): ID alokasi.
         """
@@ -267,10 +267,10 @@ class CRUDAssetReservation(CRUDBase):
     async def employee_of(self, user_id: UUID | str) -> str | None:
         """
         Mendapatkan ID karyawan yang terkait dengan seorang pengguna (app_user).
-        
+
         Args:
             user_id (UUID | str): ID pengguna.
-            
+
         Returns:
             str | None: ID karyawan, atau None jika pengguna tidak memiliki karyawan terkait.
         """
@@ -278,4 +278,74 @@ class CRUDAssetReservation(CRUDBase):
         employee: str | None = await self.scalar(
             "SELECT CAST(employee_id AS text) FROM vms.app_user WHERE id = :uid", {"uid": user_id})
         return employee
+
+    _RETURN_COLUMNS = """id, asset_allocation_id, requested_by, requested_at, condition_on_return, note, verified_by,
+                         verified_at, is_accepted"""
+
+    async def insert_asset(self, org_id: UUID | str, *, kind: str, vehicle_type: str | None, code: str, name: str,
+                           condition: str) -> Any:
+        """Aset baru milik organisasi."""
+        return await self.fetchone(
+            """
+            INSERT INTO vms.asset (organization_id, kind, vehicle_type, code, name, condition)
+            VALUES (:org, :kind, :vtype, :code, :name, :cond)
+            RETURNING id, organization_id, kind, vehicle_type, code, name, condition, status
+            """,
+            {"org": org_id, "kind": kind, "vtype": vehicle_type, "code": code, "name": name, "cond": condition})
+
+    async def employee_of_user(self, user_id: UUID | str) -> Any:
+        """employee_id milik akun, atau None."""
+        row = await self.fetchone("SELECT employee_id FROM vms.app_user WHERE id = :uid", {"uid": user_id})
+        return row.employee_id if row else None
+
+    async def allocation_state_for_update(self, allocation_id: UUID | str) -> Any:
+        """Status peminjaman & aset (aset dikunci) untuk pengajuan pengembalian, atau None."""
+        return await self.fetchone(
+            """
+            SELECT a.released_at IS NULL AS active, s.status AS asset_status, s.id AS asset_id
+              FROM vms.asset_allocation a JOIN vms.asset s ON s.id = a.asset_id
+             WHERE a.id = :alloc
+               FOR UPDATE OF s
+            """,
+            {"alloc": allocation_id})
+
+    async def insert_return(self, allocation_id: UUID | str, employee_id: Any, condition: str,
+                            note: str | None) -> Any:
+        """Pengajuan pengembalian (BAST) baru."""
+        return await self.fetchone(
+            f"""
+            INSERT INTO vms.asset_return (asset_allocation_id, requested_by, condition_on_return, note)
+            VALUES (:alloc, :emp, :cond, :note)
+            RETURNING {self._RETURN_COLUMNS}
+            """,
+            {"alloc": allocation_id, "emp": employee_id, "cond": condition, "note": note})
+
+    async def return_for_update(self, return_id: UUID | str, org_id: UUID | str) -> Any:
+        """Pengembalian milik organisasi ini (aset dikunci) untuk diverifikasi, atau None."""
+        return await self.fetchone(
+            """
+            SELECT r.requested_by, r.verified_at, a.asset_id, a.id AS alloc_id, s.status AS asset_status
+              FROM vms.asset_return r
+              JOIN vms.asset_allocation a ON a.id = r.asset_allocation_id
+              JOIN vms.asset s ON s.id = a.asset_id
+             WHERE r.id = :id AND s.organization_id = :org
+               FOR UPDATE OF s
+            """,
+            {"id": return_id, "org": org_id})
+
+    async def verify_return(self, return_id: UUID | str, employee_id: Any, accepted: bool, note: str) -> Any:
+        """Catat hasil pemeriksaan pengembalian."""
+        return await self.fetchone(
+            f"""
+            UPDATE vms.asset_return
+               SET verified_by = :emp, verified_at = now(), is_accepted = :acc,
+                   note = COALESCE(note, '') || E'\n' || :note
+             WHERE id = :id
+            RETURNING {self._RETURN_COLUMNS}
+            """,
+            {"emp": employee_id, "acc": accepted, "note": note, "id": return_id})
+
+    async def release_allocation(self, allocation_id: UUID | str) -> None:
+        """Akhiri peminjaman (aset kembali)."""
+        await self.execute("UPDATE vms.asset_allocation SET released_at = now() WHERE id = :id", {"id": allocation_id})
 

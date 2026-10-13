@@ -15,6 +15,7 @@ from app.core.errors import AppError, NotFoundError, ValidationError
 from app.core.permissions import Permission
 from app.crud.crud_employee import CRUDEmployee
 from app.crud.crud_org_clock import CRUDOrgClock
+from app.services.access_service import ensure_same_org
 
 RESTORED = "Data dipulihkan sebagai nonaktif. Akses lama tetap dicabut."
 ARCHIVED = "Karyawan dihapus. Data historis tetap tersimpan."
@@ -26,6 +27,38 @@ class EmployeeService:
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
         self.repo = CRUDEmployee(db)
+
+    async def ensure_units(self, org_id: str, *unit_ids: UUID | None) -> None:
+        """Unit tujuan harus milik organisasi ini (422 bila bukan)."""
+        await ensure_same_org(self.db, org_id, units=list(unit_ids))
+
+    async def list_page(self, org_id: str, is_active: bool | None, q: str | None,
+                        page: int, size: int) -> tuple[int, list[Any]]:
+        """(jumlah total, baris halaman `page`) karyawan organisasi ini."""
+        total = await self.repo.count_in_org(org_id, is_active, q)
+        return total, await self.repo.page_in_org(org_id, is_active, q, size, (page - 1) * size)
+
+    async def get(self, employee_id: UUID, org_id: str) -> Any:
+        """Satu karyawan; organisasi lain / terhapus → 404."""
+        row = await self.repo.get_in_org(employee_id, org_id)
+        if row is None:
+            raise AppError("NOT_FOUND", "Karyawan tidak ditemukan.", status=404)
+        return row
+
+    async def create(self, org_id: str, data: dict[str, Any]) -> Any:
+        """Karyawan baru beserta penempatan perdananya."""
+        await self.ensure_units(org_id, data["unit_id"])
+        return await self.repo.insert(org_id, data)
+
+    async def update(self, employee_id: UUID, org_id: str, fields: dict[str, Any]) -> Any:
+        """Ubah data pribadi (jabatan/unit lewat /assignments). Organisasi lain → None."""
+        return await self.repo.update_fields(employee_id, org_id, fields)
+
+    async def conflicts(self, employee_id: UUID, org_id: str, start: date, end: date,
+                        exclude_plan: UUID | None) -> list[Any]:
+        """Bentrok jadwal untuk penyusun SK (V-09); karyawan/SK organisasi lain → 404."""
+        await ensure_same_org(self.db, org_id, employees=[employee_id], work_plans=[exclude_plan])
+        return await self.repo.conflicts(employee_id, start, end, exclude_plan)
 
     async def private_viewer(self, user_id: str, permissions: list[str]) -> tuple[bool, str | None]:
         """Prototipe `privateAccess`: data kontak pribadi hanya untuk HR (dan admin) serta pemiliknya.
@@ -39,11 +72,11 @@ class EmployeeService:
         """
         Memulihkan karyawan yang dihapus (deleted).
         Karyawan yang dipulihkan berstatus nonaktif dan harus diberikan akses baru.
-        
+
         Args:
             employee_id (UUID): ID karyawan.
             org_id (str): ID organisasi tempat karyawan bernaung.
-            
+
         Returns:
             dict[str, Any]: ID karyawan, status is_active (False), dan pesan pemulihan.
         """
@@ -65,18 +98,18 @@ class EmployeeService:
         if employee.deleted:
             raise AppError("INVALID_STATE", "Karyawan sudah dihapus.", status=409)
         if employee.is_active:
-            raise AppError("INVALID_STATE", "Nonaktifkan (offboard) karyawan terlebih dahulu.", status=409)
+            raise AppError("INVALID_STATE", "Akhiri masa kerja karyawan ini terlebih dahulu.", status=409)
         await self.repo.archive(employee_id)
         return {"id": str(employee_id), "message": ARCHIVED}
 
     async def assignments(self, employee_id: UUID, org_id: str) -> list[Any]:
         """
         Mendapatkan riwayat penempatan (jabatan dan unit) seorang karyawan.
-        
+
         Args:
             employee_id (UUID): ID karyawan.
             org_id (str): ID organisasi tempat karyawan bekerja.
-            
+
         Returns:
             list[Any]: Daftar penempatan jabatan historis dan saat ini.
         """
@@ -99,18 +132,18 @@ class EmployeeService:
             raise AppError("INVALID_STATE", "Karyawan harus aktif.", status=409)
         if not position.strip():
             raise ValidationError("Jabatan dan unit wajib valid.")
-            
+
         target_unit = str(unit_id) if unit_id else employee.unit_id
         # Aturan bisnis: Tidak boleh memutasi karyawan ke unit lain jika ia masih bagian dari tim SK di unit lamanya yang belum selesai.
         if target_unit != employee.unit_id and await self.repo.on_running_plan(employee_id):
             raise AppError("INVALID_STATE", "Mutasi lintas unit diblokir sampai penugasan aktif diserahterimakan.",
                            status=409)
-                           
+
         last_start = await self.repo.last_assignment_start(employee_id)
         # Menjaga urutan kronologis penempatan.
         if last_start is not None and valid_from < last_start:
             raise ValidationError("Tanggal berlaku tidak boleh sebelum penempatan terakhir.")
-            
+
         return await self.repo.promote(employee_id, position.strip(), target_unit, valid_from)
 
     async def offboard(self, employee_id: UUID, org_id: str, reason: str) -> dict[str, Any]:
@@ -124,13 +157,13 @@ class EmployeeService:
         if employee.deleted or not employee.is_active:
             raise AppError("INVALID_STATE", "Karyawan sudah nonaktif atau tidak ditemukan.", status=409)
         if not reason.strip():
-            raise ValidationError("Alasan offboarding wajib diisi.")
-            
+            raise ValidationError("Alasan pengakhiran masa kerja wajib diisi.")
+
         # Aturan bisnis: Karyawan yang masih tergabung dalam pekerjaan berjalan (SK aktif) tidak bisa diberhentikan.
         if await self.repo.on_running_plan(employee_id):
-            raise AppError("INVALID_STATE", "Selesaikan atau serahterimakan penugasan aktif sebelum offboarding.",
+            raise AppError("INVALID_STATE", "Selesaikan atau serahterimakan penugasan aktif sebelum mengakhiri masa kerja.",
                            status=409)
-                           
+
         today = (await CRUDOrgClock(self.db).local_now(org_id)).today
         await self.repo.offboard(employee_id, reason.strip(), today)
         return {"id": str(employee_id), "message": OFFBOARDED}

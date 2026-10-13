@@ -21,10 +21,10 @@ _PM_UNIT_ACCESS = Depends(plan_access(PlanNeed.PM_UNIT))    # domain.js SAVE_ATT
 def _out(rows: list[Any]) -> list[AttachmentResponse]:
     """
     Fungsi pembantu untuk memetakan daftar baris lampiran dari database ke skema AttachmentResponse.
-    
+
     Args:
         rows (list[Any]): Daftar row data lampiran.
-        
+
     Returns:
         list[AttachmentResponse]: Daftar model lampiran SK.
     """
@@ -36,10 +36,10 @@ async def list_attachments(access: PlanAccess = _VIEW_ACCESS,
                            plan_attachment_service: PlanAttachmentService = Depends(get_plan_attachment_service)) -> list[AttachmentResponse]:
     """
     Mengambil daftar lampiran dari sebuah SK (GET).
-    
+
     Path Parameters:
     - plan_id (tersirat via router prefix): ID dari SK.
-    
+
     Returns:
     - list[AttachmentResponse]: Daftar lampiran SK.
     """
@@ -55,13 +55,13 @@ async def save_attachments(data: AttachmentsRequest, access: PlanAccess = _PM_UN
     """
     Menyimpan atau memperbarui lampiran untuk SK (PUT).
     (domain.js SAVE_ATTACHMENTS)
-    
+
     Path Parameters:
     - plan_id (tersirat via router prefix): ID SK bersangkutan.
-    
+
     Request Body:
     - data (AttachmentsRequest): Daftar ID file lampiran.
-    
+
     Returns:
     - list[AttachmentResponse]: Daftar lampiran yang berhasil disimpan.
     """

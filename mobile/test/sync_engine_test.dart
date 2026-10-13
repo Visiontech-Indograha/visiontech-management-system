@@ -34,7 +34,7 @@ void main() {
 
         expect(summary.pushErrors, isEmpty);
         expect(backend.syncBatches, hasLength(1));
-        expect(backend.sentOps.map((o) => o['payload']['task_id']), [
+        expect(backend.sentOps.map((o) => (o['payload'] as Map)['task_id']), [
           't-1',
           't-2',
           't-3',
@@ -50,7 +50,7 @@ void main() {
           await engine.submit(OfflineOp.taskToggle, {'task_id': id});
         }
         backend.answerSync(
-          (op) => op['payload']['task_id'] == 't-2' ? 'REJECTED' : 'APPLIED',
+          (op) => (op['payload'] as Map)['task_id'] == 't-2' ? 'REJECTED' : 'APPLIED',
         );
 
         await engine.syncAll();
@@ -65,7 +65,7 @@ void main() {
     test('unggah foto putus sinyal: berhenti di situ, operasi sesudahnya ikut menunggu', () async {
       final foto = File('${Directory.systemTemp.path}/vms_uji_urutan.jpg')
         ..writeAsBytesSync([1, 2, 3]);
-      addTearDown(() => foto.deleteSync());
+      addTearDown(foto.deleteSync);
 
       await engine.submit(OfflineOp.taskToggle, {'task_id': 't-1'});
       await engine.submit(
@@ -83,7 +83,7 @@ void main() {
       await engine.syncAll();
 
       expect(backend.sentOps.map((o) => o['op_type']), [OfflineOp.taskToggle]);
-      expect(backend.sentOps.single['payload']['task_id'], 't-1');
+      expect((backend.sentOps.single['payload'] as Map)['task_id'], 't-1');
       final rows = await engine.allPendingOperations();
       expect(rows.map((r) => r.entityType), [
         OfflineOp.incidentReport,
@@ -99,7 +99,7 @@ void main() {
     test('unggah foto ditolak server: hanya operasi itu dead-letter, sisanya tetap jalan', () async {
       final foto = File('${Directory.systemTemp.path}/vms_uji_tolak.jpg')
         ..writeAsBytesSync([1, 2, 3]);
-      addTearDown(() => foto.deleteSync());
+      addTearDown(foto.deleteSync);
 
       await engine.submit(
         OfflineOp.incidentReport,
@@ -119,7 +119,7 @@ void main() {
       expect(row.entityType, OfflineOp.incidentReport);
       expect(row.deadLetter, isTrue);
       expect(row.lastError, 'Foto gagal diunggah: Berkas terlalu besar');
-      expect(backend.sentOps.single['payload']['task_id'], 't-2');
+      expect((backend.sentOps.single['payload'] as Map)['task_id'], 't-2');
     });
   });
 
@@ -226,7 +226,7 @@ void main() {
       final summary = await engine.syncAll();
 
       expect(summary.pushErrors, isEmpty);
-      expect(summary.pullErrors, ['SK: DB mati']);
+      expect(summary.pullErrors, ['Rencana Kerja: DB mati']);
     });
 
     test('luring total: dua-duanya melapor tidak ada koneksi', () async {

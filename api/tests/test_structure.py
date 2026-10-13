@@ -16,8 +16,11 @@ from pathlib import Path
 
 APP_DIR = Path(__file__).resolve().parents[1] / "app"
 
-# Persis contoh pemilik (docs/12 §1, R-28/R-30) + `templates/` (Jinja2 PDF).
-ALLOWED_DIRS = {"api", "core", "crud", "models", "schemas", "services", "db", "templates"}
+# Persis contoh arsitektur modular + transisi.
+ALLOWED_DIRS = {
+    "api", "core", "crud", "models", "schemas", "services", "db", "templates",
+    "database", "shared", "modules",
+}
 # Berkas di akar app/: main.py (contoh pemilik) + cli.py (seed/create-admin). Tidak ada dependencies.py.
 ALLOWED_ROOT_FILES = {"main.py", "cli.py"}
 
@@ -37,13 +40,8 @@ FORBIDDEN: dict[str, set[str]] = {
 EXEMPT_FILES = {"api/deps.py"}
 
 # "berkas -> lapisan terlarang yang diimpor"; hanya boleh menyusut.
-# endpoint -> crud: SQL/crud keluar dari endpoint per modul (docs/26 M6).
-# services/sync_service.py -> api: logika hse masih di endpoint (M6 modul hse).
-KNOWN_VIOLATIONS: set[str] = {
-    "api/v1/endpoints/hse.py -> crud",
-    "api/v1/endpoints/work_plans.py -> crud",
-    "services/sync_service.py -> api",
-}
+# Kosong sejak 2026-10-08 (P9-7): endpoint tidak lagi mengimpor crud, service tidak lagi mengimpor api.
+KNOWN_VIOLATIONS: set[str] = set()
 
 
 def _layer_of_module(module: str) -> str | None:

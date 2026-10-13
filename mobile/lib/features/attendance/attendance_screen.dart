@@ -1,26 +1,25 @@
 import 'dart:io';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-
-import '../../core/local_storage.dart';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
 
-import 'package:dio/dio.dart';
-
 import '../../core/api_client.dart';
 import '../../core/error_message.dart';
+import '../../core/local_storage.dart';
 import '../../core/location_helper.dart';
 import '../../core/photo_capture.dart';
 import '../../core/providers.dart';
-import '../../data/sync_engine.dart';
-import '../auth/auth_controller.dart';
-import '../auth/auth_state.dart';
 import '../../core/theme/theme.dart';
+import '../../data/sync_engine.dart';
 import '../../shared/ui/vms_select_field.dart';
 import '../../shared/ui/vms_ui.dart';
+import '../auth/auth_controller.dart';
+import '../auth/auth_state.dart';
+import '../face/face_enroll_gate.dart';
+import '../face/face_flow.dart';
 
 /// Absensi (M5, dok 05 §3.5). Wajib daring: waktu & geofence ditentukan server.
 /// Di luar radius lokasi, server mewajibkan swafoto — aplikasi memintanya lebih dulu.
@@ -38,6 +37,8 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
   String? _serverToday;
   List<Map<String, dynamic>> _sites = [];
   String? _siteId;
+  // Lokasi SK yang sedang berjalan untuk akun ini (dasar peringatan bila memilih lokasi lain).
+  List<String> _runningSites = [];
   DateTime? _cachedAt;
   bool _loading = true;
   bool _busy = false;
@@ -52,6 +53,10 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     super.initState();
     _load();
   }
+
+  String _siteName(String id) =>
+      (_sites.where((s) => s['id'] == id).firstOrNull?['name'] as String?) ??
+      'penugasan';
 
   String get _employeeId {
     final auth = ref.read(authControllerProvider);
@@ -91,14 +96,15 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
         _faceEnrolled = false;
       }
       // Titik lokasi SK yang sedang berjalan (ditetapkan PM) didahulukan sebagai lokasi absen.
+      // Lokasi absen hari ini mengikuti hari kerja rencana (lokasi khusus hari itu atau lokasi rencana).
       final runningSites = [
         for (final p in plans.items)
-          if (p['status'] == 'IN_PROGRESS' && p['site_id'] != null)
-            p['site_id'] as String,
+          if (todaySiteOf(p) != null) todaySiteOf(p)!,
       ];
       if (!mounted) return;
       setState(() {
         _records = att.items;
+        _runningSites = runningSites;
         _sites = [
           ...sites.items.where((s) => runningSites.contains(s['id'])),
           ...sites.items.where((s) => !runningSites.contains(s['id'])),
@@ -230,15 +236,24 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       String? selfieId;
       String? faceProbeId;
       File? selfieFile;
-      if (outside || _faceEnrolled) {
+      // Pengenalan wajah (karyawan yang sudah mendaftar): dua tantangan acak + gambar wajah sementara. Ini BUKAN
+      // foto absensi. Server menghitung cocok/tidak; jaringan putus → lanjut luring (server menandai bila perlu).
+      if (_faceEnrolled) {
+        if (!mounted) return;
+        final face = await captureFaceProbe(context, ref);
+        if (face.cancelled) return;
+        if (face.error != null) return _snack(face.error!);
+        faceProbeId = face.probeId;
+      }
+      // Foto bukti (swafoto berwatermark) HANYA di luar radius.
+      if (outside) {
         if (!mounted) return;
         final (file, err) = await captureWatermarkedPhoto(
           context: context,
-          label: outside ? 'Swafoto di luar radius' : 'Swafoto verifikasi wajah',
+          label: 'Swafoto di luar radius',
           kind: LocalFileKind.selfie,
-          hint: outside
-              ? 'Anda ${distance.round()} m dari ${site['name']}. Swafoto wajib di luar radius.'
-              : 'Swafoto untuk verifikasi pengenalan wajah biometrik.',
+          hint:
+              'Anda ${distance.round()} m dari ${site['name']}. Swafoto wajib di luar radius.',
           preferFrontCamera: true,
         );
         if (file == null) {
@@ -253,14 +268,6 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
               .read(syncEngineProvider)
               .api
               .uploadFile(selfieFile);
-          if (_faceEnrolled) {
-            try {
-              faceProbeId = await ref
-                  .read(syncEngineProvider)
-                  .api
-                  .createFaceProbe(selfieFile);
-            } catch (_) {}
-          }
         }
         await ref
             .read(syncEngineProvider)
@@ -298,7 +305,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       }
       await _load();
     } catch (e) {
-      _snack(apiErrorMessage(e));
+      if (!await _handleFaceNotEnrolled(e)) _snack(apiErrorMessage(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -309,26 +316,57 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     try {
       final pos = await _position();
       if (pos == null) return;
-      String? faceProbeId;
-      if (_faceEnrolled) {
+      // T7: pulang di luar radius lokasi absen masuk → konfirmasi, penjelasan, dan swafoto (tidak masuk galeri).
+      // Jarak resmi dihitung ulang server; ini hanya untuk meminta bukti lebih dulu.
+      final site = _sites.where((s) => s['id'] == _today?['site_id']).firstOrNull;
+      var outside = false;
+      var distance = 0.0;
+      num radius = 50;
+      if (site != null && site['location'] is Map) {
+        final loc = site['location'] as Map;
+        distance = Geolocator.distanceBetween(
+          pos.latitude,
+          pos.longitude,
+          (loc['lat'] as num).toDouble(),
+          (loc['lng'] as num).toDouble(),
+        );
+        radius = (site['radius_m'] as num?) ?? 50;
+        outside = distance > radius;
+      }
+      String? explanation;
+      File? selfieFile;
+      if (outside && _today?['status'] != 'OFFLINE') {
+        if (!mounted) return;
+        explanation = await _askExplanation(
+          title: 'Pulang di luar zona',
+          info:
+              'Anda ${distance.round()} m dari ${site!['name']} (radius ${radius.round()} m). '
+              'Jelaskan mengapa pulang di luar zona.',
+        );
+        if (explanation == null) return;
         if (!mounted) return;
         final (file, err) = await captureWatermarkedPhoto(
           context: context,
-          label: 'Swafoto absen pulang',
+          label: 'Swafoto pulang di luar radius',
           kind: LocalFileKind.selfie,
-          hint: 'Swafoto verifikasi wajah untuk absensi pulang.',
+          hint:
+              'Anda ${distance.round()} m dari ${site['name']}. Swafoto wajib di luar radius.',
           preferFrontCamera: true,
         );
         if (file == null) {
           if (err != null) _snack(err);
           return;
         }
-        try {
-          faceProbeId = await ref
-              .read(syncEngineProvider)
-              .api
-              .createFaceProbe(file);
-        } catch (_) {}
+        selfieFile = file;
+      }
+      String? faceProbeId;
+      // Pulang: hanya pengenalan wajah, TANPA foto bukti.
+      if (_faceEnrolled) {
+        if (!mounted) return;
+        final face = await captureFaceProbe(context, ref);
+        if (face.cancelled) return;
+        if (face.error != null) return _snack(face.error!);
+        faceProbeId = face.probeId;
       }
       Future<void> recordOffline() => ref
           .read(syncEngineProvider)
@@ -349,13 +387,19 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
         );
       } else {
         try {
+          final selfieId = selfieFile == null
+              ? null
+              : await ref.read(syncEngineProvider).api.uploadFile(selfieFile);
           await ref
               .read(syncEngineProvider)
               .api
               .checkOut(
                 lat: pos.latitude,
                 lng: pos.longitude,
+                accuracyM: pos.accuracy,
                 faceProbeId: faceProbeId,
+                selfieFileId: selfieId,
+                explanation: explanation,
               );
           _snack('Absen pulang tercatat.');
         } on DioException catch (e) {
@@ -368,10 +412,30 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       }
       await _load();
     } catch (e) {
-      _snack(apiErrorMessage(e));
+      if (!await _handleFaceNotEnrolled(e)) _snack(apiErrorMessage(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  /// T3: server menolak absen karena wajah belum terdaftar → jelaskan, lalu buka gerbang pendaftaran wajah.
+  Future<bool> _handleFaceNotEnrolled(Object e) async {
+    if (apiErrorCode(e) != 'FACE_NOT_ENROLLED' || !mounted) return false;
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Wajah belum terdaftar'),
+        content: Text(apiErrorMessage(e)),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Daftarkan wajah'),
+          ),
+        ],
+      ),
+    );
+    ref.invalidate(faceGateProvider);
+    return true;
   }
 
   /// Dialog penjelasan wajib: Kirim dengan isian kosong menampilkan pesan, bukan menutup diam-diam.
@@ -508,6 +572,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
   Widget build(BuildContext context) {
     // Sinkron latar selesai (mis. absen luring baru terkirim) → muat ulang kartu & riwayat.
     ref.listen(syncTickProvider, (_, _) => _load());
+    ref.listen(liveEventTickProvider, (_, _) => _load());   // T8: peristiwa waktu nyata
     final today = _today;
     final auth = ref.watch(authControllerProvider);
     final name = auth is AuthAuthenticated
@@ -586,7 +651,8 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                                     Text(
                                       today == null
                                           ? 'Belum absen masuk'
-                                          : '${today['site_label']}',
+                                          : '${today['site_label']} · '
+                                                '${today['city_category'] == 'LUAR_KOTA' ? 'Luar kota' : 'Dalam kota'}',
                                       style: VmsTextStyles.bodySm.copyWith(
                                         color: Colors.white.withValues(
                                           alpha: 0.75,
@@ -650,10 +716,9 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                               const NoticeBanner(
                                 key: Key('belum-ada-lokasi-sk'),
                                 icon: Icons.location_off_rounded,
-                                accent: Accent.amber,
                                 text:
-                                    'Belum ada lokasi kerja penugasan aktif (SK) untuk akun Anda. '
-                                    'Pastikan SK telah dibuat dan disetujui, atau hubungi Project Manager.',
+                                    'Belum ada lokasi kerja untuk akun Anda (lokasi rencana kerja maupun kantor). '
+                                    'Hubungi Project Manager atau admin untuk menambahkan lokasi kerja.',
                               ),
                               const SizedBox(height: 12),
                             ] else ...[
@@ -671,6 +736,21 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                                 onChanged: (v) => setState(() => _siteId = v),
                               ),
                               const SizedBox(height: 14),
+                              // Terikat SK berjalan tetapi memilih lokasi lain (mis. kantor): hanya peringatan,
+                              // absen tetap boleh (keputusan pemilik 2026-10-07).
+                              if (_runningSites.isNotEmpty &&
+                                  _siteId != null &&
+                                  !_runningSites.contains(_siteId)) ...[
+                                NoticeBanner(
+                                  key: const Key('peringatan-bukan-lokasi-sk'),
+                                  icon: Icons.warning_amber_rounded,
+                                  text:
+                                      'Anda sedang bertugas di rencana kerja dengan lokasi '
+                                      '${_siteName(_runningSites.first)}. Lokasi yang dipilih bukan lokasi rencana kerja; '
+                                      'absen tetap bisa dikirim, tetapi pastikan memang bekerja di sini hari ini.',
+                                ),
+                                const SizedBox(height: 14),
+                              ],
                             ],
                             PrimaryAction(
                               label: today == null
@@ -710,7 +790,6 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                             const NoticeBanner(
                               key: Key('pulang-menunggu-review'),
                               icon: Icons.hourglass_top_rounded,
-                              accent: Accent.amber,
                               text:
                                   'Absen masuk menunggu pemeriksaan. Absen pulang '
                                   'bisa dilakukan setelah absen masuk disetujui.',
@@ -826,4 +905,14 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       ),
     );
   }
+}
+
+/// Lokasi kerja hari ini sebuah rencana yang berjalan: lokasi khusus hari itu atau lokasi rencana. Null bila bukan
+/// rencana berjalan, tidak ada hari kerja hari ini (libur), atau pengguna tidak bertugas hari ini. Data tersimpan
+/// lama (tanpa kolom hari ini) memakai lokasi rencana.
+String? todaySiteOf(Map<String, dynamic> plan) {
+  if (plan['status'] != 'IN_PROGRESS') return null;
+  if (!plan.containsKey('today_site_id')) return plan['site_id'] as String?;
+  if (plan['today_included'] == false) return null;
+  return plan['today_site_id'] as String?;
 }

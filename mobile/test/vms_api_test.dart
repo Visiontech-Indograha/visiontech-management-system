@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -186,10 +187,53 @@ void main() {
       final file = File('${dir.path}/probe.jpg')..writeAsStringSync('dummy-image');
       backend.routes['/face/probe'] = (_) => {'probe_id': 'probe-123'};
 
-      final probeId = await api.createFaceProbe(file);
+      final probeId = await api.createFaceProbe(
+        file,
+        liveness: {
+          'challenges': ['bawah', 'kiri'],
+          'passed': true,
+          'proofs': ['p1', 'p2'],
+        },
+      );
       expect(probeId, 'probe-123');
       expect(last().path, '/api/v1/face/probe');
-      expect(last().data, isA<FormData>());
+      final form = last().data as FormData;
+      expect(form, isA<FormData>());
+      // Hasil tantangan ikut terkirim sebagai JSON (bukan lagi '{}' kosong).
+      final liveness = form.fields.firstWhere((f) => f.key == 'liveness').value;
+      expect(liveness, contains('"proofs":["p1","p2"]'));
+      expect(liveness, contains('"passed":true'));
+      await dir.delete(recursive: true);
+    });
+
+    test('pemeriksaan tantangan mengirim bingkai dan mengembalikan bukti', () async {
+      backend.routes['/face/challenge-check'] = (_) => {
+        'status': 'sukses',
+        'detail': 'ok',
+        'proof': 'bukti-1',
+      };
+      final res = await api.faceChallengeCheck(Uint8List.fromList([1, 2, 3]), 'bawah');
+      expect(res['proof'], 'bukti-1');
+      expect(last().path, '/api/v1/face/challenge-check');
+      final form = last().data as FormData;
+      expect(form.fields.firstWhere((f) => f.key == 'challenge').value, 'bawah');
+      expect(form.files.single.key, 'file');
+    });
+
+    test('pendaftaran membawa liveness dan banyak berkas', () async {
+      final dir = await Directory.systemTemp.createTemp('vms-face-enroll');
+      final files = [
+        for (var i = 0; i < 3; i++) File('${dir.path}/p$i.jpg')..writeAsStringSync('x$i'),
+      ];
+      backend.routes['/face/enroll'] = (_) => {'enrolled': 3};
+      final res = await api.enrollFace(
+        files,
+        liveness: {'challenges': ['bawah', 'kiri'], 'passed': true, 'proofs': ['a', 'b']},
+      );
+      expect(res['enrolled'], 3);
+      final form = last().data as FormData;
+      expect(form.files.where((f) => f.key == 'files'), hasLength(3));
+      expect(form.fields.firstWhere((f) => f.key == 'liveness').value, contains('"proofs":["a","b"]'));
       await dir.delete(recursive: true);
     });
   });

@@ -12,7 +12,7 @@ from .base import CRUDBase
 
 class CRUDDocument(CRUDBase):
     """
-    Kelas operasi CRUD untuk menangani dokumen pribadi karyawan, 
+    Kelas operasi CRUD untuk menangani dokumen pribadi karyawan,
     seperti antrean verifikasi HR (R-19), pengajuan, dan riwayat dokumen (R-20).
     """
 
@@ -20,11 +20,11 @@ class CRUDDocument(CRUDBase):
         """
         Mendapatkan daftar dokumen dengan status 'PENDING' (menunggu verifikasi)
         yang dimiliki oleh karyawan di sebuah organisasi. Diurutkan dari yang paling lama.
-        
+
         Args:
             org_id (UUID | str): ID organisasi.
             user_id (UUID | str): ID pengguna saat ini.
-            
+
         Returns:
             list[Any]: Daftar dokumen yang menunggu diverifikasi HR.
         """
@@ -43,10 +43,10 @@ class CRUDDocument(CRUDBase):
     async def employee_of_user(self, user_id: UUID | str) -> Any:
         """
         Mendapatkan ID karyawan yang dikaitkan dengan sebuah akun pengguna.
-        
+
         Args:
             user_id (UUID | str): ID pengguna.
-            
+
         Returns:
             Any: ID karyawan.
         """
@@ -56,11 +56,11 @@ class CRUDDocument(CRUDBase):
     async def employee_in_org(self, emp_id: UUID | str, org_id: UUID | str) -> bool:
         """
         Memeriksa apakah seorang karyawan merupakan bagian dari organisasi tertentu.
-        
+
         Args:
             emp_id (UUID | str): ID karyawan.
             org_id (UUID | str): ID organisasi.
-            
+
         Returns:
             bool: True jika karyawan berada di organisasi tersebut.
         """
@@ -73,10 +73,10 @@ class CRUDDocument(CRUDBase):
         """
         Mengambil semua riwayat dokumen pribadi untuk seorang karyawan,
         diurutkan dari yang terbaru.
-        
+
         Args:
             emp_id (UUID | str): ID karyawan.
-            
+
         Returns:
             list[Any]: Daftar dokumen karyawan.
         """
@@ -92,13 +92,13 @@ class CRUDDocument(CRUDBase):
 
     async def has_pending(self, emp_id: UUID | str, doc_type: str) -> bool:
         """
-        Memeriksa apakah ada dokumen dengan tipe tertentu yang masih berstatus 'PENDING' 
+        Memeriksa apakah ada dokumen dengan tipe tertentu yang masih berstatus 'PENDING'
         untuk karyawan tersebut (mencegah pengajuan ganda).
-        
+
         Args:
             emp_id (UUID | str): ID karyawan.
             doc_type (str): Tipe dokumen (misal: 'KTP', 'SIM').
-            
+
         Returns:
             bool: True jika ada pengajuan yang tertunda.
         """
@@ -111,11 +111,11 @@ class CRUDDocument(CRUDBase):
     async def belongs_to(self, doc_id: UUID | str, emp_id: UUID | str) -> bool:
         """
         Memeriksa apakah sebuah dokumen benar-benar milik karyawan tertentu.
-        
+
         Args:
             doc_id (UUID | str): ID dokumen.
             emp_id (UUID | str): ID karyawan.
-            
+
         Returns:
             bool: True jika dokumen milik karyawan.
         """
@@ -128,7 +128,7 @@ class CRUDDocument(CRUDBase):
                      expiry: Any, file_id: UUID | str, user_id: UUID | str, supersedes_id: UUID | str | None) -> Any:
         """
         Menambahkan (menyisipkan) rekaman pengajuan dokumen karyawan yang baru.
-        
+
         Args:
             emp_id (UUID | str): ID karyawan.
             doc_type (str): Tipe dokumen.
@@ -138,7 +138,7 @@ class CRUDDocument(CRUDBase):
             file_id (UUID | str): ID file lampiran dari dokumen.
             user_id (UUID | str): ID pengguna yang mengunggah.
             supersedes_id (UUID | str | None): ID dokumen lama yang digantikan (jika ada).
-            
+
         Returns:
             Any: Baris data dokumen yang baru dibuat.
         """
@@ -160,16 +160,16 @@ class CRUDDocument(CRUDBase):
         Mengambil data dokumen dan menguncinya untuk proses pengambilan keputusan verifikasi (FOR UPDATE).
         Hanya mengembalikan data jika dokumen tersebut milik karyawan dari organisasi yang sesuai.
         (Mencegah dua pemeriksa mengambil keputusan di waktu yang bersamaan).
-        
+
         Args:
             doc_id (UUID | str): ID dokumen.
             emp_id (UUID | str): ID karyawan.
             org_id (UUID | str): ID organisasi.
-            
+
         Returns:
             Any: Baris data dokumen yang dikunci.
         """
-        # Melakukan SELECT ... FOR UPDATE OF d untuk mengunci baris spesifik di tabel employee_document, 
+        # Melakukan SELECT ... FOR UPDATE OF d untuk mengunci baris spesifik di tabel employee_document,
         # setelah di-JOIN dengan employee untuk validasi org_id.
         return await self.fetchone(
             """
@@ -182,9 +182,9 @@ class CRUDDocument(CRUDBase):
 
     async def supersede_current(self, emp_id: UUID | str, doc_id: UUID | str, doc_type: str) -> None:
         """
-        Mengubah status siklus hidup dokumen (lifecycle) dokumen-dokumen yang lama (CURRENT) 
+        Mengubah status siklus hidup dokumen (lifecycle) dokumen-dokumen yang lama (CURRENT)
         menjadi digantikan (SUPERSEDED) saat dokumen baru dengan tipe yang sama telah aktif.
-        
+
         Args:
             emp_id (UUID | str): ID karyawan.
             doc_id (UUID | str): ID dokumen baru yang menjadi CURRENT.
@@ -204,14 +204,14 @@ class CRUDDocument(CRUDBase):
         """
         Menyimpan hasil keputusan (verifikasi) terhadap pengajuan dokumen.
         (Misalnya mengubah status menjadi 'APPROVED' atau 'REJECTED' dan lifecycle-nya).
-        
+
         Args:
             doc_id (UUID | str): ID dokumen.
             status (str): Status verifikasi (APPROVED/REJECTED).
             lifecycle (str): Siklus hidup dokumen (CURRENT, ARCHIVED, dll).
             user_id (UUID | str): ID HR yang memverifikasi.
             note (str | None): Catatan tambahan verifikasi.
-            
+
         Returns:
             Any: Baris data dokumen yang telah diperbarui.
         """
@@ -227,3 +227,29 @@ class CRUDDocument(CRUDBase):
                       uploaded_by, verified_by, verified_at, review_note, created_at
             """,
             {"id": doc_id, "status": status, "lifecycle": lifecycle, "uid": user_id, "note": note})
+
+    async def expiring_for_org(self, org_id: UUID | str, urgency: str | None) -> list[Any]:
+        """Dokumen yang akan/sudah kedaluwarsa (`v_document_expiry`), paling mendesak dulu."""
+        return list(await self.fetchall(
+            """
+            SELECT id, employee_id, full_name, doc_type, expiry_date, days_left, urgency
+              FROM vms.v_document_expiry
+             WHERE organization_id = :org AND (CAST(:urgency AS text) IS NULL OR urgency::text = CAST(:urgency AS text))
+             ORDER BY days_left ASC
+            """,
+            {"org": org_id, "urgency": urgency}))
+
+    async def expire_overdue(self, org_id: UUID | str) -> int:
+        """Dokumen 'CURRENT' yang lewat masa berlaku → 'EXPIRED'; "hari ini" menurut zona waktu organisasi."""
+        rows = await self.fetchall(
+            """
+            UPDATE vms.employee_document d
+               SET lifecycle = 'EXPIRED'
+              FROM vms.employee e
+              JOIN vms.organization o ON o.id = e.organization_id
+             WHERE d.employee_id = e.id AND e.organization_id = CAST(:org AS uuid)
+               AND d.lifecycle = 'CURRENT' AND d.expiry_date < (now() AT TIME ZONE o.timezone)::date
+            RETURNING d.id
+            """,
+            {"org": org_id})
+        return len(rows)

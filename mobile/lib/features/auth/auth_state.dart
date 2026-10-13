@@ -28,6 +28,7 @@ class AuthUser {
     required this.role,
     required this.employeeId,
     this.attendanceMode = 'FIELD',
+    this.photoFileId,
   });
 
   final String id;
@@ -41,9 +42,15 @@ class AuthUser {
   /// Server tetap menolak kanal yang salah; nilai ini hanya untuk tampilan.
   final String attendanceMode;
 
-  bool get absensiLewatWeb => attendanceMode == 'OFFICE';
+  /// ID berkas foto profil karyawan; null bila belum ada. URL bertanda tangan
+  /// diambil lewat `GET /files/{id}/url` (lihat VmsApi.fileUrl).
+  final String? photoFileId;
 
-  /// Bentuk `GET /api/v1/auth/me`: user_id, email, role, permissions, employee_id, attendance_mode.
+  /// Administrator (pemilik sistem) boleh absen dari HP maupun web, jadi tidak diarahkan ke web saja.
+  bool get absensiLewatWeb => attendanceMode == 'OFFICE' && role != UserRole.admin;
+
+  /// Bentuk `GET /api/v1/auth/me`: user_id, email, role, permissions, employee_id,
+  /// attendance_mode, photo_file_id.
   factory AuthUser.fromJson(Map<String, dynamic> json) {
     return AuthUser(
       id: json['user_id'] as String,
@@ -51,6 +58,7 @@ class AuthUser {
       role: UserRole.fromWire(json['role'] as String),
       employeeId: (json['employee_id'] as String?) ?? '',
       attendanceMode: (json['attendance_mode'] as String?) ?? 'FIELD',
+      photoFileId: json['photo_file_id'] as String?,
     );
   }
 }

@@ -16,15 +16,18 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.alerts import send_security_alert
+from app.core.config import settings
 from app.core.errors import AppError, NotFoundError
 from app.core.permissions import NO_GLOBAL_ROLE, Permission, permissions_for_roles
 from app.core.security import CurrentUser, verify_jwt_token
 from app.crud.crud_attendance_monitor import CRUDAttendanceMonitor
 from app.crud.crud_attendance_offline import CRUDAttendanceOffline
 from app.crud.crud_attendance_session import CRUDAttendanceSession
+from app.crud.crud_audit import CRUDAudit
 from app.crud.crud_document import CRUDDocument
 from app.crud.crud_employee import CRUDEmployee
 from app.crud.crud_face import CRUDFace
+from app.crud.crud_file import CRUDFile
 from app.crud.crud_org_clock import CRUDOrgClock
 from app.crud.crud_plan_access import CRUDPlanAccess
 from app.crud.crud_plan_assignment import CRUDPlanAssignment
@@ -37,15 +40,19 @@ from app.crud.crud_user import CRUDUser
 from app.db.session import AsyncSessionLocal, set_request_context, unit_of_work
 from app.services.access_service import PlanAccess, PlanNeed, check_plan_access
 from app.services.account_service import AccountService
+from app.services.app_release_service import AppReleaseService
 from app.services.asset_reservation_service import AssetReservationService
 from app.services.attendance_monitor_service import AttendanceMonitorService
 from app.services.attendance_offline_service import AttendanceOfflineService
 from app.services.attendance_session_service import AttendanceSessionService
+from app.services.audit_service import AuditService
 from app.services.auth_flow import AuthFlowService
 from app.services.document_service import DocumentService
 from app.services.employee_service import EmployeeService
 from app.services.face_embed_client import FaceEmbedClient
 from app.services.face_service import FaceService
+from app.services.file_service import FileService
+from app.services.hse_service import HseService
 from app.services.member_report_service import MemberReportService
 from app.services.monitoring_service import MonitoringService
 from app.services.notification_service import NotificationService
@@ -56,14 +63,17 @@ from app.services.plan_attachment_service import PlanAttachmentService
 from app.services.plan_change_service import PlanChangeService
 from app.services.plan_day_service import PlanDayService
 from app.services.plan_draft_service import PlanDraftService
+from app.services.plan_edit_service import PlanEditService
 from app.services.plan_location_service import PlanLocationService
 from app.services.plan_member_service import PlanMemberService
+from app.services.plan_revision_service import PlanRevisionService
 from app.services.plan_transition_service import PlanTransitionService
 from app.services.signature_service import SignatureService
 from app.services.site_service import SiteService
 from app.services.sync_service import SyncService
 from app.services.unit_service import UnitService
 from app.services.weekly_report_service import WeeklyReportService
+from app.services.work_type_service import WorkTypeService
 
 logger = logging.getLogger(__name__)
 # Keamanan dengan skema Bearer token
@@ -104,7 +114,7 @@ async def get_current_user(
         payload = verify_jwt_token(credentials.credentials)
     except jwt.PyJWTError:
         raise _unauthenticated() from None
-    
+
     user_id, session_id = payload.get("sub"), payload.get("jti")
     if not user_id or not session_id:
         raise _unauthenticated()
@@ -140,6 +150,17 @@ def require_permission(
     return permission_checker
 
 
+def require_any_permission(
+    *required: Permission,
+) -> Callable[[CurrentUser], Coroutine[Any, Any, CurrentUser]]:
+    """Lolos bila pengguna punya SALAH SATU izin yang disebut (mis. cari alamat: pengelola SK atau pengelola lokasi)."""
+    async def permission_checker(current_user: CurrentUser = Depends(get_current_user)) -> CurrentUser:
+        if not any(p.value in current_user.permissions for p in required):
+            raise AppError("FORBIDDEN", "Anda tidak memiliki akses untuk tindakan ini.", status=403)
+        return current_user
+    return permission_checker
+
+
 async def get_db_with_user(
     db: AsyncSession = Depends(get_db, scope=DB_SCOPE),
     current_user: CurrentUser = Depends(get_current_user),
@@ -162,7 +183,7 @@ async def get_db_with_user(
         await send_security_alert(
             "Konteks RLS Gagal Disetel", f"Gagal menetapkan konteks RLS ({type(exc).__name__})."
         )
-        raise AppError("INTERNAL_ERROR", "Terjadi kesalahan internal pada server.", status=500) from None
+        raise AppError("INTERNAL_ERROR", "Terjadi gangguan pada sistem. Coba lagi beberapa saat; bila berulang, hubungi admin.", status=500) from None
     return db
 
 
@@ -231,6 +252,10 @@ def get_account_service(db: AsyncSession = Depends(get_db_with_user)) -> Account
     return AccountService(CRUDUser(db), CRUDEmployee(db), CRUDSession(db))
 
 
+def get_audit_service(db: AsyncSession = Depends(get_db_with_user)) -> AuditService:
+    return AuditService(CRUDAudit(db))
+
+
 def get_asset_reservation_service(db: AsyncSession = Depends(get_db_with_user)) -> AssetReservationService:
     return AssetReservationService(db)
 
@@ -239,20 +264,28 @@ def get_attendance_monitor_service(db: AsyncSession = Depends(get_db_with_user))
     return AttendanceMonitorService(CRUDAttendanceMonitor(db))
 
 
-def get_face_service(db: AsyncSession = Depends(get_db_with_user)) -> FaceService:
-    return FaceService(CRUDFace(db), FaceEmbedClient())
+def get_face_embed_client() -> FaceEmbedClient:
+    """Klien face-service. Dependency tersendiri agar uji dapat menggantinya dengan tiruan."""
+    return FaceEmbedClient()
 
 
-def get_attendance_session_service(db: AsyncSession = Depends(get_db_with_user)) -> AttendanceSessionService:
-    return AttendanceSessionService(CRUDAttendanceSession(db), CRUDOrgClock(db), FaceService(CRUDFace(db), FaceEmbedClient()))
+def get_face_service(db: AsyncSession = Depends(get_db_with_user),
+                     client: FaceEmbedClient = Depends(get_face_embed_client)) -> FaceService:
+    return FaceService(CRUDFace(db), client)
+
+
+def get_attendance_session_service(db: AsyncSession = Depends(get_db_with_user),
+                                   client: FaceEmbedClient = Depends(get_face_embed_client)) -> AttendanceSessionService:
+    return AttendanceSessionService(CRUDAttendanceSession(db), CRUDOrgClock(db), FaceService(CRUDFace(db), client))
 
 
 def get_site_service(db: AsyncSession = Depends(get_db_with_user)) -> SiteService:
     return SiteService(CRUDSite(db))
 
 
-def get_attendance_offline_service(db: AsyncSession = Depends(get_db_with_user)) -> AttendanceOfflineService:
-    faces = FaceService(CRUDFace(db), FaceEmbedClient())
+def get_attendance_offline_service(db: AsyncSession = Depends(get_db_with_user),
+                                   client: FaceEmbedClient = Depends(get_face_embed_client)) -> AttendanceOfflineService:
+    faces = FaceService(CRUDFace(db), client)
     return AttendanceOfflineService(CRUDAttendanceOffline(db),
                                     AttendanceSessionService(CRUDAttendanceSession(db), CRUDOrgClock(db), faces))
 
@@ -263,6 +296,14 @@ def get_document_service(db: AsyncSession = Depends(get_db_with_user)) -> Docume
 
 def get_employee_service(db: AsyncSession = Depends(get_db_with_user)) -> EmployeeService:
     return EmployeeService(db)
+
+
+def get_file_service(db: AsyncSession = Depends(get_db_with_user)) -> FileService:
+    return FileService(CRUDFile(db))
+
+
+def get_hse_service(db: AsyncSession = Depends(get_db_with_user)) -> HseService:
+    return HseService(db)
 
 
 def get_monitoring_service(db: AsyncSession = Depends(get_db_with_user)) -> MonitoringService:
@@ -293,6 +334,14 @@ def get_plan_amendment_service(db: AsyncSession = Depends(get_db_with_user)) -> 
     return PlanAmendmentService(db)
 
 
+def get_work_type_service(db: AsyncSession = Depends(get_db_with_user)) -> WorkTypeService:
+    return WorkTypeService(db)
+
+
+def get_plan_revision_service(db: AsyncSession = Depends(get_db_with_user)) -> PlanRevisionService:
+    return PlanRevisionService(db)
+
+
 def get_plan_draft_service(db: AsyncSession = Depends(get_db_with_user)) -> PlanDraftService:
     return PlanDraftService(db)
 
@@ -303,6 +352,10 @@ def get_member_report_service(db: AsyncSession = Depends(get_db_with_user)) -> M
 
 def get_notification_service(db: AsyncSession = Depends(get_db_with_user)) -> NotificationService:
     return NotificationService(db)
+
+
+def get_plan_edit_service(db: AsyncSession = Depends(get_db_with_user)) -> PlanEditService:
+    return PlanEditService(db, PlanAssignmentService(CRUDPlanAssignment(db)))
 
 
 def get_plan_location_service(db: AsyncSession = Depends(get_db_with_user)) -> PlanLocationService:
@@ -323,6 +376,11 @@ def get_signature_service(db: AsyncSession = Depends(get_db_with_user)) -> Signa
 
 def get_sync_service(db: AsyncSession = Depends(get_db_with_user)) -> SyncService:
     return SyncService(db)
+
+
+def get_app_release_service() -> AppReleaseService:
+    """Rilis APK dibaca dari folder berkas (publik, tanpa sesi DB) — docs/32."""
+    return AppReleaseService(settings.APP_RELEASE_DIR)
 
 
 def get_unit_service(db: AsyncSession = Depends(get_db_with_user)) -> UnitService:

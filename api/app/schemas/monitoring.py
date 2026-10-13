@@ -75,6 +75,7 @@ class AttendanceRecapRecord(BaseModel):
     status: str
     is_late: bool
     is_early_leave: bool
+    city_category: str | None = None  # T7: DALAM_KOTA / LUAR_KOTA
 
 
 class AttendanceRecap(BaseModel):

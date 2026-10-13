@@ -74,6 +74,9 @@ CREATE TABLE organization (
   shift_start   time NOT NULL DEFAULT '08:00',
   shift_end     time NOT NULL DEFAULT '17:00',
   geofence_radius_m integer NOT NULL DEFAULT 100 CHECK (geofence_radius_m BETWEEN 10 AND 5000),
+  city_name     text,                          -- pusat kota acuan kategori Dalam/Luar kota (Alembic 0035)
+  city_center   geography(Point,4326),
+  city_radius_km integer NOT NULL DEFAULT 60 CHECK (city_radius_km BETWEEN 1 AND 1000),
   created_at    timestamptz NOT NULL DEFAULT now(),
   updated_at    timestamptz NOT NULL DEFAULT now()
 );
@@ -173,6 +176,15 @@ CREATE TABLE file_object (
   created_at      timestamptz NOT NULL DEFAULT now(),
   UNIQUE (organization_id, sha256)
 );
+
+-- Foto profil karyawan (Alembic 0037). Ditulis sebagai ALTER karena tabel employee
+-- dibuat lebih dulu daripada file_object di berkas ini. Foto profil tidak disimpan
+-- sebagai path, melainkan merujuk baris file_object (path ada di storage_key).
+ALTER TABLE employee
+  ADD COLUMN photo_file_id uuid REFERENCES file_object(id);
+CREATE INDEX employee_photo_file_idx ON employee (photo_file_id) WHERE photo_file_id IS NOT NULL;
+COMMENT ON COLUMN employee.photo_file_id IS
+  'Berkas foto profil karyawan; diambil lewat GET /files/{id}/url. NULL = belum ada foto.';
 -- -----------------------------------------------------------------------------
 -- Lokasi proyek: titik geografis + radius toleransi absensi
 -- -----------------------------------------------------------------------------
@@ -214,6 +226,8 @@ CREATE TABLE work_plan (
   row_version     integer NOT NULL DEFAULT 1,  -- penguncian optimistis antar-tab
   cancellation_reason text,
   appeal_reason   text,                        -- alasan banding ketua (domain.js APPEAL, V-20)
+  is_out_of_town  boolean NOT NULL DEFAULT false, -- rencana kerja luar kota (Alembic 0026)
+  work_type_id    uuid,                        -- jenis pekerjaan (Alembic 0029; FK ke work_type di akhir berkas)
   deleted_at      timestamptz,                 -- arsip draft (soft delete)
   deleted_by      uuid REFERENCES app_user(id), -- pengarsip (domain.js DELETE_PLAN, V-21)
   deletion_reason text,                        -- alasan pengarsipan (V-21)
@@ -245,6 +259,7 @@ CREATE TABLE work_plan_day (
   work_date     date NOT NULL,
   title         text NOT NULL,
   sort_order    integer NOT NULL DEFAULT 0,
+  site_id       uuid,                        -- lokasi khusus hari itu; NULL = ikut rencana (Alembic 0031; FK di akhir berkas)
   UNIQUE (work_plan_id, work_date)
 );
 
@@ -290,6 +305,8 @@ CREATE TABLE daily_report (
 CREATE TABLE report_evidence (
   daily_report_id uuid NOT NULL REFERENCES daily_report(id) ON DELETE CASCADE,
   file_id         uuid NOT NULL REFERENCES file_object(id),
+  slot_label      text,                         -- slot template foto yang dipenuhi (Alembic 0029)
+  source          text NOT NULL DEFAULT 'CAMERA' CHECK (source IN ('CAMERA','GALLERY')),
   PRIMARY KEY (daily_report_id, file_id)
 );
 
@@ -310,6 +327,8 @@ CREATE TABLE member_daily_report (
 CREATE TABLE member_report_evidence (
   member_report_id uuid NOT NULL REFERENCES member_daily_report(id) ON DELETE CASCADE,
   file_id          uuid NOT NULL REFERENCES file_object(id),
+  slot_label       text,
+  source           text NOT NULL DEFAULT 'CAMERA' CHECK (source IN ('CAMERA','GALLERY')),
   PRIMARY KEY (member_report_id, file_id)
 );
 
@@ -510,6 +529,12 @@ CREATE TABLE attendance (
   offline         boolean NOT NULL DEFAULT false,
   offline_note    text,
   check_out_requested_at timestamptz,
+  -- Absen pulang di luar radius (Alembic 0028): jarak dihitung trigger; swafoto + penjelasan wajib bila di luar.
+  check_out_location geography(Point,4326),
+  check_out_distance_m numeric(8,1),
+  check_out_selfie_file_id uuid REFERENCES file_object(id),
+  check_out_explanation text,
+  check_out_outside boolean NOT NULL DEFAULT false,
   created_at      timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (id, work_date),
   CHECK (check_out_at IS NULL OR check_out_at >= check_in_at)
@@ -762,3 +787,59 @@ CREATE INDEX IF NOT EXISTS ix_qr_token_site_id ON qr_token (site_id);
 CREATE INDEX IF NOT EXISTS ix_incident_report_resolved_by ON incident_report (resolved_by);
 CREATE INDEX IF NOT EXISTS ix_daily_report_reviewed_by ON daily_report (reviewed_by);
 CREATE INDEX IF NOT EXISTS ix_attendance_reviewed_by ON attendance (reviewed_by);
+
+-- Riwayat revisi rencana kerja oleh PM (Alembic 0027_plan_revision): insert-only, RLS di 05_face.sql.
+CREATE TABLE IF NOT EXISTS plan_revision (
+  id                 uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id    uuid NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
+  work_plan_id       uuid NOT NULL REFERENCES work_plan(id) ON DELETE CASCADE,
+  revision           integer NOT NULL,
+  revised_by         uuid REFERENCES employee(id),
+  reason             text NOT NULL,
+  diff               jsonb NOT NULL,
+  resolved_change_id uuid REFERENCES plan_change(id),
+  created_at         timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (work_plan_id, revision)
+);
+CREATE INDEX IF NOT EXISTS ix_plan_revision_organization_id ON plan_revision (organization_id);
+CREATE INDEX IF NOT EXISTS ix_plan_revision_revised_by ON plan_revision (revised_by);
+CREATE INDEX IF NOT EXISTS ix_plan_revision_resolved_change_id ON plan_revision (resolved_change_id);
+
+-- Jenis pekerjaan + template foto laporan (Alembic 0029_work_type_photo); RLS & hak di 05_face.sql.
+CREATE TABLE IF NOT EXISTS work_type (
+  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id uuid NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
+  name            text NOT NULL,
+  is_active       boolean NOT NULL DEFAULT true,
+  created_at      timestamptz NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS work_type_name_uidx ON work_type (organization_id, lower(name));
+CREATE TABLE IF NOT EXISTS work_type_photo (
+  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id uuid NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
+  work_type_id    uuid NOT NULL REFERENCES work_type(id) ON DELETE CASCADE,
+  sort_order      integer NOT NULL,
+  label           text NOT NULL,
+  hint            text,
+  required        boolean NOT NULL DEFAULT false,
+  example_file_id uuid REFERENCES file_object(id) ON DELETE SET NULL  -- foto contoh dari PM (Alembic 0030)
+);
+CREATE INDEX IF NOT EXISTS ix_work_type_photo_work_type_id ON work_type_photo (work_type_id);
+CREATE INDEX IF NOT EXISTS ix_work_type_photo_organization_id ON work_type_photo (organization_id);
+ALTER TABLE work_plan ADD CONSTRAINT work_plan_work_type_fk FOREIGN KEY (work_type_id) REFERENCES work_type(id);
+-- Lokasi & anggota per hari kerja (Alembic 0031_plan_day_site_members); RLS & hak di 05_face.sql.
+ALTER TABLE work_plan_day ADD CONSTRAINT work_plan_day_site_fk FOREIGN KEY (site_id) REFERENCES site(id);
+-- Jenis pekerjaan khusus hari itu; NULL = ikut jenis rencana (Alembic 0034_plan_day_work_type).
+ALTER TABLE work_plan_day ADD COLUMN IF NOT EXISTS work_type_id uuid REFERENCES work_type(id);
+CREATE INDEX IF NOT EXISTS ix_work_plan_day_work_type_id ON work_plan_day (work_type_id);
+CREATE INDEX IF NOT EXISTS ix_work_plan_day_site_id ON work_plan_day (site_id);
+CREATE TABLE IF NOT EXISTS work_plan_day_member (
+  id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id  uuid NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
+  work_plan_day_id uuid NOT NULL REFERENCES work_plan_day(id) ON DELETE CASCADE,
+  employee_id      uuid NOT NULL REFERENCES employee(id),
+  UNIQUE (work_plan_day_id, employee_id)
+);
+CREATE INDEX IF NOT EXISTS ix_work_plan_day_member_employee_id ON work_plan_day_member (employee_id);
+CREATE INDEX IF NOT EXISTS ix_work_plan_day_member_organization_id ON work_plan_day_member (organization_id);
+CREATE INDEX IF NOT EXISTS ix_work_plan_work_type_id ON work_plan (work_type_id);

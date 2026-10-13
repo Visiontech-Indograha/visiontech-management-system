@@ -38,6 +38,8 @@ SELF_SERVICE = {
     ("POST", "/notifications/read-all"): "menandai notifikasi milik sendiri",
     ("POST", "/notifications/{notification_id}/read"): "hanya notifikasi milik sendiri; milik orang lain tidak berubah",
     ("GET", "/sites"): "daftar lokasi organisasi untuk check-in",
+    ("GET", "/events"): "aliran peristiwa milik sendiri; token JWT divalidasi sekali saat menyambung (T8)",
+    ("GET", "/work-types"): "daftar jenis pekerjaan organisasi sendiri; yang nonaktif hanya untuk pengelola (T9)",
     ("GET", "/units"): "daftar unit organisasi sendiri (pilihan mutasi/promosi, R-19)",
     ("GET", "/assets/{asset_id}/returns"): "riwayat pengembalian aset organisasi sendiri; asing → 404 (diuji)",
     ("GET", "/assets/returns/{return_id}/pdf"): "BAST pengembalian organisasi sendiri; asing → 404 (diuji)",
@@ -57,11 +59,13 @@ SELF_SERVICE = {
     ("POST", "/face/enroll"): "pendaftaran template wajah milik sendiri (FIELD)",
     ("GET", "/face/template"): "unduh template embedding milik sendiri untuk absen luring",
     ("POST", "/face/probe"): "unggah probe foto wajah milik sendiri untuk absensi",
+    ("POST", "/face/challenge-check"): "pemeriksaan tantangan liveness bingkai kamera milik sendiri (menerbitkan bukti)",
 }
 # Kewenangan bergantung pada isi permintaan (SK di badan) atau tautan berkas → dijaga di handler.
 GUARDED_IN_HANDLER = {
     ("POST", "/hse/incidents"): "check_plan_access(LEADER_OR_MEMBER) untuk work_plan_id di badan",
     ("GET", "/files/{file_id}/url"): "check_file_access (V-17): pemilik/HR/peninjau/penglihat SK, selain itu 404",
+    ("GET", "/files/{file_id}"): "check_file_access (V-17): isi berkas disajikan setelah otorisasi; tidak berhak → 404",
     # V-22: kewenangan bergantung jenis usulan; ketua baru adendum personel belum tentu anggota SK.
     ("POST", "/work-plans/{plan_id}/changes"): "PlanChangeService: EXTEND=ketua, PERSONNEL=PM unit/OPS",
     ("POST", "/changes/{change_id}/approve"): "PlanChangeService: PM unit/OPS",
@@ -115,12 +119,19 @@ def _routes() -> dict[tuple[str, str], list[str]]:
     return found
 
 
+def _head_of_public_get(key: tuple[str, str]) -> bool:
+    """HEAD hanya mengembalikan header dari GET yang sama: boleh tanpa penjaga bila GET-nya publik (docs/32)."""
+    method, path = key
+    return method == "HEAD" and ("GET", path) in PUBLIC_ROUTES
+
+
 def test_every_route_has_a_permission_or_guard():
     routes = _routes()
     assert len(routes) > 20
     unguarded = sorted(
         key for key, deps in routes.items()
         if key not in PUBLIC_ROUTES and key not in SELF_SERVICE and key not in GUARDED_IN_HANDLER
+        and not _head_of_public_get(key)
         and not any(guard in name for name in deps for guard in _GUARDS)
     )
     assert unguarded == [], f"Rute tanpa izin/penjaga: {unguarded}"

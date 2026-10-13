@@ -243,13 +243,72 @@ END $$;
 CREATE TRIGGER attendance_geofence BEFORE INSERT ON attendance
   FOR EACH ROW EXECUTE FUNCTION tg_attendance_geofence();
 
+-- Kategori Dalam/Luar kota dari jarak titik absen ke pusat kota organisasi (Alembic 0035). NULL bila pusat kota
+-- belum diatur atau absen tanpa titik; pemanggil lalu memakai attendance_city_category (rencana bertanda luar kota).
+CREATE OR REPLACE FUNCTION attendance_city_category_at(p_org uuid, p_location geography) RETURNS text
+LANGUAGE sql STABLE AS $$
+  SELECT CASE WHEN ST_Distance(p_location, o.city_center) > o.city_radius_km * 1000.0
+              THEN 'LUAR_KOTA' ELSE 'DALAM_KOTA' END
+  FROM organization o
+  WHERE o.id = p_org AND o.id = current_org_id() AND o.city_center IS NOT NULL AND p_location IS NOT NULL
+$$;
+
 CREATE OR REPLACE FUNCTION tg_attendance_checkout() RETURNS trigger
-LANGUAGE plpgsql AS $$
-DECLARE v_org organization%ROWTYPE;
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = vms, public AS $$
+DECLARE
+  v_org    organization%ROWTYPE;
+  v_dist   numeric;
+  v_radius integer;
 BEGIN
   IF NEW.check_out_at IS NOT NULL AND OLD.check_out_at IS NULL THEN
     SELECT * INTO v_org FROM organization WHERE id = NEW.organization_id;
     NEW.is_early_leave := (NEW.check_out_at AT TIME ZONE v_org.timezone)::time < v_org.shift_end;
+    IF NEW.check_out_location IS NOT NULL THEN
+      -- Jarak dihitung ulang dari koordinat (nilai perangkat diabaikan) ke lokasi sah TERDEKAT: lokasi absen masuk,
+      -- kantor, atau lokasi hari ini dari rencana kerja berjalan yang menugaskan karyawan ini.
+      SELECT c.dist, c.radius INTO v_dist, v_radius
+      FROM (
+        SELECT ST_Distance(NEW.check_out_location, s.location)::numeric AS dist,
+               CASE WHEN s.id = NEW.site_id THEN NEW.radius_m ELSE COALESCE(s.radius_m, NEW.radius_m) END AS radius
+        FROM site s
+        WHERE s.organization_id = NEW.organization_id
+          AND (s.id = NEW.site_id
+               OR (s.deleted_at IS NULL AND s.unit_id IS NULL)
+               OR (s.deleted_at IS NULL AND s.id IN (
+                     SELECT COALESCE(d.site_id, wp.site_id)
+                     FROM work_plan wp
+                     JOIN work_plan_day d ON d.work_plan_id = wp.id
+                     JOIN work_plan_member m ON m.work_plan_id = wp.id AND m.employee_id = NEW.employee_id
+                     WHERE wp.organization_id = NEW.organization_id
+                       AND wp.status = 'IN_PROGRESS'
+                       AND d.work_date = (NEW.check_out_at AT TIME ZONE v_org.timezone)::date
+                       AND m.valid_period @> d.work_date
+                       AND (NOT EXISTS (SELECT 1 FROM work_plan_day_member dm WHERE dm.work_plan_day_id = d.id)
+                            OR EXISTS (SELECT 1 FROM work_plan_day_member dm
+                                       WHERE dm.work_plan_day_id = d.id AND dm.employee_id = NEW.employee_id)))))
+      ) c
+      ORDER BY (c.dist - c.radius)
+      LIMIT 1;
+      IF v_dist IS NOT NULL THEN
+        NEW.check_out_distance_m := round(v_dist, 1);
+        NEW.check_out_outside := v_dist > v_radius;
+      END IF;
+      IF NEW.check_out_outside THEN
+        IF COALESCE(current_setting('app.relax_checkout', true), '') <> 'on' AND NEW.source IN ('MOBILE','WEB') THEN
+          IF NEW.check_out_selfie_file_id IS NULL THEN
+            RAISE EXCEPTION 'Pulang di luar radius toleransi (% m > % m): swafoto wajib dilampirkan.',
+              NEW.check_out_distance_m, v_radius USING ERRCODE = '23514';
+          END IF;
+          IF NEW.check_out_explanation IS NULL OR btrim(NEW.check_out_explanation) = '' THEN
+            RAISE EXCEPTION 'Pulang di luar radius toleransi (% m > % m): isi penjelasan.',
+              NEW.check_out_distance_m, v_radius USING ERRCODE = '23514';
+          END IF;
+        END IF;
+        IF NEW.status = 'AUTO_VALID' THEN
+          NEW.status := 'NEEDS_REVIEW';
+        END IF;
+      END IF;
+    END IF;
   END IF;
   RETURN NEW;
 END $$;
@@ -297,17 +356,55 @@ $$;
 -- Bentrok jadwal personel: satu orang tidak boleh berada di dua pekerjaan aktif
 -- yang periodenya beririsan. Dipakai UI (untuk menandai) dan trigger (untuk menolak).
 -- -----------------------------------------------------------------------------
-CREATE OR REPLACE FUNCTION personnel_conflict(p_employee uuid, p_period daterange, p_exclude_plan uuid DEFAULT NULL)
+-- Per HARI BERTUGAS (Alembic 0033): bentrok hanya bila ada tanggal yang sama di mana ia bertugas di dua rencana.
+CREATE OR REPLACE FUNCTION vms.personnel_conflict(p_employee uuid, p_period daterange, p_exclude_plan uuid DEFAULT NULL)
 RETURNS TABLE (work_plan_id uuid, number text, title text)
 LANGUAGE sql STABLE AS $$
-  SELECT wp.id, wp.number, wp.title
-  FROM work_plan wp
-  JOIN work_plan_member m ON m.work_plan_id = wp.id AND upper_inf(m.valid_period)
+  SELECT DISTINCT wp.id, wp.number, wp.title
+  FROM vms.work_plan wp
+  JOIN vms.work_plan_member m ON m.work_plan_id = wp.id AND upper_inf(m.valid_period)
+  JOIN vms.work_plan_day d ON d.work_plan_id = wp.id
   WHERE m.employee_id = p_employee
     AND wp.deleted_at IS NULL
     AND wp.status IN ('PUBLISHED','ACCEPTED','IN_PROGRESS','COMPLETION_REVIEW')
     AND (p_exclude_plan IS NULL OR wp.id <> p_exclude_plan)
-    AND wp.period && p_period
+    AND p_period @> d.work_date
+    AND 
+    (NOT EXISTS (SELECT 1 FROM vms.work_plan_day_member dm WHERE dm.work_plan_day_id = d.id)
+     OR EXISTS (SELECT 1 FROM vms.work_plan_day_member dm
+                WHERE dm.work_plan_day_id = d.id AND dm.employee_id = p_employee))
+
+    AND (p_exclude_plan IS NULL
+         OR NOT EXISTS (SELECT 1 FROM vms.work_plan_day c WHERE c.work_plan_id = p_exclude_plan)
+         OR EXISTS (SELECT 1 FROM vms.work_plan_day c
+                    WHERE c.work_plan_id = p_exclude_plan AND c.work_date = d.work_date
+                      AND 
+    (NOT EXISTS (SELECT 1 FROM vms.work_plan_day_member dm WHERE dm.work_plan_day_id = c.id)
+     OR EXISTS (SELECT 1 FROM vms.work_plan_day_member dm
+                WHERE dm.work_plan_day_id = c.id AND dm.employee_id = p_employee))
+))
+$$;
+
+-- Tanggal (hari ini dan sesudahnya) di mana karyawan bertugas pada rencana aktif lain (Alembic 0033).
+CREATE OR REPLACE FUNCTION vms.employee_busy_dates(p_employee uuid, p_exclude_plan uuid DEFAULT NULL)
+RETURNS TABLE (busy_date date)
+LANGUAGE sql STABLE AS $$
+  SELECT DISTINCT d.work_date
+  FROM vms.work_plan wp
+  JOIN vms.work_plan_member m ON m.work_plan_id = wp.id AND upper_inf(m.valid_period)
+  JOIN vms.work_plan_day d ON d.work_plan_id = wp.id
+  JOIN vms.organization o ON o.id = wp.organization_id
+  WHERE m.employee_id = p_employee
+    AND wp.deleted_at IS NULL
+    AND wp.status IN ('PUBLISHED','ACCEPTED','IN_PROGRESS','COMPLETION_REVIEW')
+    AND (p_exclude_plan IS NULL OR wp.id <> p_exclude_plan)
+    AND d.work_date >= (now() AT TIME ZONE o.timezone)::date
+    AND 
+    (NOT EXISTS (SELECT 1 FROM vms.work_plan_day_member dm WHERE dm.work_plan_day_id = d.id)
+     OR EXISTS (SELECT 1 FROM vms.work_plan_day_member dm
+                WHERE dm.work_plan_day_id = d.id AND dm.employee_id = p_employee))
+
+  ORDER BY d.work_date
 $$;
 
 -- Alur SK v2 (Alembic 0018): "tidak terikat SK" = bukan ketua/anggota/driver SK aktif mana pun,
@@ -516,3 +613,18 @@ BEGIN
                    to_char(v_start, 'YYYY"m"MM'), v_start, v_end);
   END LOOP;
 END $$;
+
+-- Kategori dalam/luar kota dihitung saat dibaca (Alembic 0028_attendance_checkout_city).
+CREATE OR REPLACE FUNCTION attendance_city_category(p_employee uuid, p_date date) RETURNS text
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = vms, public AS $$
+  SELECT CASE WHEN EXISTS (
+    SELECT 1
+    FROM work_plan wp
+    JOIN work_plan_member m ON m.work_plan_id = wp.id AND m.employee_id = p_employee
+    WHERE wp.organization_id = current_org_id()
+      AND wp.is_out_of_town
+      AND wp.status IN ('ACCEPTED','IN_PROGRESS','COMPLETION_REVIEW','COMPLETED')
+      AND wp.period @> p_date
+      AND m.valid_period @> p_date
+  ) THEN 'LUAR_KOTA' ELSE 'DALAM_KOTA' END
+$$;

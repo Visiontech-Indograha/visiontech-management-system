@@ -17,17 +17,20 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "Visiontech VMS"
     # Nilai asli hanya di api/.env (tidak masuk Git). Bawaan ini sengaja tidak bisa login.
     DATABASE_URL: str = "postgresql+asyncpg://vms_app:CHANGE_ME@localhost:5433/visiontech_db"
-    
+    # Migrasi (alembic) memakai peran pemilik skema; API memakai peran runtime `vms_api` yang tunduk RLS (0024).
+    # Kosong → migrasi memakai DATABASE_URL (perilaku lama, sebelum pemisahan peran).
+    MIGRATION_DATABASE_URL: str = ""
+
     # Access token EdDSA (dok 08 §7): seed Ed25519 32 byte (hex). Nilai asli hanya di api/.env / KMS.
     JWT_PRIVATE_KEY_HEX: str = ""
     JWT_KID: str = "jwt-dev-1"
-    
+
     # Tanda tangan dokumen (fase 6). Sementara: seed Ed25519 hex dari lingkungan; sebelum produksi diganti
     # adaptor KMS (keputusan pemilik 2026-09-26, dok 10). Kosong → kunci sementara per proses (dev/uji saja).
     DOC_SIGNING_KEY_HEX: str = ""
     DOC_SIGNING_KMS_REF: str = "env:DOC_SIGNING_KEY_HEX"
     PUBLIC_VERIFY_URL: str = "http://localhost:5173/verify"   # isi QR: <PUBLIC_VERIFY_URL>/<token>
-    
+
     # Pencarian lokasi penugasan (revisi PM 2026-09-26): Nominatim/OpenStreetMap lewat backend.
     GEOCODER_URL: str = "https://nominatim.openstreetmap.org/search"
     GEOCODER_USER_AGENT: str = "VisiontechVMS/1.0 (lokasi-penugasan)"
@@ -41,13 +44,13 @@ class Settings(BaseSettings):
     MINIO_SECRET_KEY: str = "[REDACTED-MINIO-USER]"
     MINIO_BUCKET: str = "vms-files"
     MINIO_SECURE: bool = False
-    
+
     # Asal (origin) publik untuk URL presigned, mis. "https://vms.visiontech.id": Caddy meneruskan
     # /<bucket>/* ke MinIO sehingga peramban & HP memuat berkas dari domain aplikasi (CSP img-src 'self',
     # MinIO tanpa port publik). Kosong = pakai MINIO_ENDPOINT (lokal).
     MINIO_PUBLIC_URL: str = ""
     MINIO_REGION: str = "us-east-1"
-    
+
     # Layanan inferensi wajah (face-service, jaringan internal). Kosong = fitur wajah dilewati (absen tetap jalan).
     FACE_SERVICE_URL: str = "http://127.0.0.1:8001"
     FACE_SERVICE_TOKEN: str = ""
@@ -56,6 +59,14 @@ class Settings(BaseSettings):
     FACE_PROBE_MAX_AGE_MIN: int = 15
     # Masa berlaku template di HP; sama dengan batas absen luring (7 hari) agar penarikan persetujuan tetap berlaku.
     FACE_TEMPLATE_TTL_DAYS: int = 7
+    # True = akun yang terhubung ke karyawan WAJIB mendaftarkan wajah sebelum membuka menu lain (web dan HP).
+    # Bawaan True (keputusan pemilik 2026-10-08): absen HP ditolak tanpa wajah terdaftar. Lingkungan yang belum punya
+    # face-service harus mematikannya LEWAT SKRIP `scripts/saklar-wajah.sh off`, kalau tidak semua pekerja terkunci.
+    FACE_ENROLLMENT_REQUIRED: bool = True
+
+    # Folder rilis aplikasi HP (docs/32): berisi `android/latest.json` + APK berversi, di-mount read-only.
+    # Kosong = belum ada rilis; pemeriksaan pembaruan selalu menjawab UP_TO_DATE.
+    APP_RELEASE_DIR: str = ""
 
     # "production" menyalakan penjaga di bawah; nilai lain (development/test) memakai bawaan lokal.
     APP_ENV: str = "development"
@@ -66,7 +77,7 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def _production_requires_secrets(self) -> "Settings":
         """
-        Validasi paska inisialisasi: Produksi tidak boleh diam-diam memakai kunci JWT sementara, 
+        Validasi paska inisialisasi: Produksi tidak boleh diam-diam memakai kunci JWT sementara,
         tanpa kunci tanda tangan, atau kredensial MinIO bawaan — API menolak start (dok 08).
         """
         if self.APP_ENV.strip().lower() != "production":

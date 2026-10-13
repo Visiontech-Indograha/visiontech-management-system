@@ -4,15 +4,16 @@ import 'package:intl/intl.dart';
 
 import '../../core/error_message.dart';
 import '../../core/providers.dart';
+import '../../core/theme/theme.dart';
 import '../../data/sync_engine.dart';
+import '../../shared/ui/vms_ui.dart';
 import '../auth/auth_controller.dart';
 import '../auth/auth_state.dart';
-import '../../core/theme/theme.dart';
-import '../../shared/ui/vms_ui.dart';
 import '../notifications/notifications_screen.dart';
-import 'plan_day_screen.dart';
-import 'sk_viewer_screen.dart';
 import 'final_report_screen.dart';
+import 'plan_day_screen.dart';
+import 'revision_history_screen.dart';
+import 'sk_viewer_screen.dart';
 import 'weekly_report_screen.dart';
 
 final _date = DateFormat('d MMM yyyy', 'id_ID');
@@ -64,6 +65,7 @@ class _WorkPlansScreenState extends ConsumerState<WorkPlansScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(liveEventTickProvider, (_, _) => _load());   // T8: peristiwa waktu nyata
     final running = _plans.where((p) => p['status'] == 'IN_PROGRESS').length;
     return Scaffold(
       appBar: VmsTopBar(
@@ -87,11 +89,11 @@ class _WorkPlansScreenState extends ConsumerState<WorkPlansScreen> {
           padding: safeListPadding(context),
           children: [
             HeroHeader(
-              eyebrow: 'Surat Kerja',
-              title: 'SK Anda',
+              eyebrow: 'Rencana Kerja',
+              title: 'Rencana Kerja Anda',
               subtitle: _loading
                   ? 'Memuat…'
-                  : '${_plans.length} SK · $running sedang berjalan',
+                  : '${_plans.length} rencana kerja · $running sedang berjalan',
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
@@ -117,8 +119,8 @@ class _WorkPlansScreenState extends ConsumerState<WorkPlansScreen> {
                   if (!_loading && _plans.isEmpty && _error == null)
                     const EmptyState(
                       icon: Icons.assignment_rounded,
-                      title: 'Belum ada SK untuk Anda',
-                      message: 'SK yang diterbitkan PM untuk Anda akan tampil di sini.',
+                      title: 'Belum ada rencana kerja untuk Anda',
+                      message: 'Rencana Kerja yang diterbitkan PM untuk Anda akan tampil di sini.',
                     ),
                   for (final (i, p) in _plans.indexed)
                     Padding(
@@ -176,6 +178,13 @@ class _WorkPlansScreenState extends ConsumerState<WorkPlansScreen> {
                                     '${_date.format(DateTime.parse(p['period_start'] as String))} – '
                                     '${_date.format(DateTime.parse(p['period_end'] as String))}',
                               ),
+                              if (p['is_out_of_town'] == true) ...[
+                                const SizedBox(height: 4),
+                                const InfoRow(
+                                  icon: Icons.directions_car_rounded,
+                                  text: 'Luar kota',
+                                ),
+                              ],
                             ],
                           ),
                         ),
@@ -229,7 +238,7 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
       builder: (ctx) => AlertDialog(
         title: const Text('Terima surat kerja ini?'),
         content: const Text(
-          'Penerimaan akan dicatat dan ditandatangani secara digital. Pastikan rincian SK sudah benar.',
+          'Penerimaan akan dicatat dan ditandatangani secara digital. Pastikan rincian rencana kerja sudah benar.',
         ),
         actions: [
           TextButton(
@@ -252,7 +261,7 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
           .acceptPlan(_planId, rowVersion: _plan['row_version'] as int);
       if (!mounted) return;
       setState(() => _plan = accepted);
-      _snack('SK berhasil diterima dan ditandatangani.');
+      _snack('Rencana Kerja berhasil diterima dan ditandatangani.');
       await _load();
     } catch (e) {
       if (mounted) _snack(apiErrorMessage(e));
@@ -266,13 +275,13 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Ajukan adendum'),
+        title: const Text('Ajukan revisi'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'SK akan dikembalikan ke PM untuk direvisi. Tuliskan apa yang perlu diubah.',
+              'Rencana Kerja akan dikembalikan ke PM untuk direvisi. Tuliskan apa yang perlu diubah.',
             ),
             const SizedBox(height: 12),
             TextField(
@@ -281,7 +290,7 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
               maxLines: 4,
               textCapitalization: TextCapitalization.sentences,
               decoration: const InputDecoration(
-                labelText: 'Alasan adendum',
+                labelText: 'Alasan revisi',
                 hintText: 'mis. Meminta penambahan hari kerja',
               ),
             ),
@@ -301,7 +310,7 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
     );
     if (ok != true || _amending) return;
     if (reason.text.trim().isEmpty) {
-      return _snack('Alasan adendum wajib diisi.');
+      return _snack('Alasan revisi wajib diisi.');
     }
     setState(() => _amending = true);
     try {
@@ -315,7 +324,7 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
           );
       if (!mounted) return;
       setState(() => _plan = updated);
-      _snack('Adendum dikirim ke PM.');
+      _snack('Revisi dikirim ke PM.');
     } catch (e) {
       if (mounted) _snack(apiErrorMessage(e));
     } finally {
@@ -328,7 +337,7 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Ajukan adendum'),
+        title: const Text('Ajukan revisi'),
         content: TextField(
           controller: reason,
           autofocus: true,
@@ -352,14 +361,14 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
     );
     if (ok != true) return;
     if (reason.text.trim().isEmpty) {
-      return _snack('Isi pengajuan adendum wajib diisi.');
+      return _snack('Isi pengajuan revisi wajib diisi.');
     }
     try {
       await ref
           .read(syncEngineProvider)
           .api
           .requestRunningAmendment(_planId, reason.text.trim());
-      _snack('Adendum dikirim ke PM. Status SK tetap Berjalan.');
+      _snack('Revisi dikirim ke PM. Status rencana kerja tetap Berjalan.');
       await _load();
     } catch (e) {
       _snack(apiErrorMessage(e));
@@ -370,9 +379,9 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Terima adendum?'),
+        title: const Text('Terima revisi?'),
         content: const Text(
-          'Adendum akan ditandatangani secara digital. Versi SK sebelumnya menjadi tidak berlaku.',
+          'Revisi akan ditandatangani secara digital. Versi rencana kerja sebelumnya menjadi tidak berlaku.',
         ),
         actions: [
           TextButton(
@@ -389,7 +398,7 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
     if (ok != true) return;
     try {
       await ref.read(syncEngineProvider).api.acceptAmendment(_planId, changeId);
-      _snack('Adendum diterima dan ditandatangani.');
+      _snack('Revisi diterima dan ditandatangani.');
       await _load();
     } catch (e) {
       _snack(apiErrorMessage(e));
@@ -551,6 +560,7 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(liveEventTickProvider, (_, _) => _load());   // T8: peristiwa waktu nyata
     final p = _plan;
     final isLeader = p['leader_employee_id'] == employeeIdOf(ref);
     return Scaffold(
@@ -562,7 +572,7 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
           padding: safeListPadding(context),
           children: [
             HeroHeader(
-              eyebrow: '${p['number'] ?? 'Surat Kerja'}',
+              eyebrow: '${p['number'] ?? 'Rencana Kerja'}',
               title: '${p['title']}',
               subtitle: '${p['location_text']}',
               bottom: Wrap(
@@ -636,7 +646,7 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
                         ),
                       ),
                       icon: const Icon(Icons.description_outlined),
-                      label: const Text('Tinjau SK'),
+                      label: const Text('Tinjau rencana kerja'),
                     ),
                   ],
                   if (p['status'] == 'APPEALED')
@@ -645,8 +655,7 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
                       child: NoticeBanner(
                         icon: Icons.edit_note_rounded,
                         text:
-                            'Adendum diminta${p['appeal_reason'] != null ? ': ${p['appeal_reason']}' : ''}. Menunggu PM merevisi dan menerbitkan ulang SK.',
-                        accent: Accent.amber,
+                            'Revisi diminta${p['appeal_reason'] != null ? ': ${p['appeal_reason']}' : ''}. Menunggu PM merevisi dan menerbitkan ulang rencana kerja.',
                       ),
                     ),
                   if (p['status'] == 'ACCEPTED')
@@ -655,16 +664,25 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
                       child: NoticeBanner(
                         icon: Icons.event_available_rounded,
                         text:
-                            'SK diterima. Status otomatis menjadi Berjalan pada ${_date.format(DateTime.parse(p['period_start'] as String))}.',
+                            'Rencana Kerja diterima. Status otomatis menjadi Berjalan pada ${_date.format(DateTime.parse(p['period_start'] as String))}.',
                         accent: Accent.emerald,
                       ),
                     ),
+                  if (isLeader && p['status'] == 'ACCEPTED')
+                    Padding(
+                      padding: const EdgeInsets.only(top: 10),
+                      child: OutlinedButton.icon(
+                        key: const Key('accepted-amendment'),
+                        onPressed: _runningAmendment,
+                        icon: const Icon(Icons.edit_note_rounded),
+                        label: const Text('Ajukan revisi'),
+                      ),
+                    ),
                   if (isLeader && p['status'] == 'PUBLISHED') ...[
-                    const SectionTitle('Penerimaan SK'),
-                    NoticeBanner(
+                    const SectionTitle('Penerimaan rencana kerja'),
+                    const NoticeBanner(
                       icon: Icons.verified_user_outlined,
-                      text: 'Tinjau SK lebih dulu. Terima SK = menandatangani secara digital (perlu internet). Bila ada yang perlu diubah, ajukan adendum ke PM.',
-                      accent: Accent.amber,
+                      text: 'Tinjau rencana kerja lebih dulu. Terima rencana kerja = menandatangani secara digital (perlu internet). Bila ada yang perlu diubah, ajukan revisi ke PM.',
                     ),
                     const SizedBox(height: 10),
                     OutlinedButton.icon(
@@ -673,7 +691,7 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
                           ? null
                           : _requestAmendment,
                       icon: const Icon(Icons.edit_note_rounded),
-                      label: Text(_amending ? 'Mengirim...' : 'Ajukan adendum'),
+                      label: Text(_amending ? 'Mengirim...' : 'Ajukan revisi'),
                     ),
                     const SizedBox(height: 8),
                     FilledButton.icon(
@@ -685,7 +703,7 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Icon(Icons.check_circle_outline_rounded),
-                      label: Text(_accepting ? 'Menerima...' : 'Terima SK'),
+                      label: Text(_accepting ? 'Menerima...' : 'Terima rencana kerja'),
                     ),
                   ],
                   if (_running) ...[
@@ -809,9 +827,8 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
           child: NoticeBanner(
             icon: Icons.edit_note_rounded,
             text: pending['status'] == 'PENDING_PM'
-                ? 'Adendum "${pending['reason']}" menunggu keputusan PM.'
-                : 'PM sudah mengubah isi SK. Tinjau SK lalu terima adendum.',
-            accent: Accent.amber,
+                ? 'Revisi "${pending['reason']}" menunggu keputusan PM.'
+                : 'PM sudah mengubah isi rencana kerja. Tinjau rencana kerja lalu terima revisi.',
           ),
         ),
       if (isLeader && pending?['status'] == 'AWAITING_LEADER_ACCEPTANCE')
@@ -821,7 +838,7 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
             key: const Key('accept-amendment'),
             onPressed: () => _acceptAmendment('${pending!['id']}'),
             icon: const Icon(Icons.verified_rounded),
-            label: const Text('Terima adendum'),
+            label: const Text('Terima revisi'),
           ),
         ),
       for (final c in _changes.where((c) => c['status'] == 'REJECTED').take(1))
@@ -829,7 +846,7 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
           padding: const EdgeInsets.only(top: 12),
           child: NoticeBanner(
             icon: Icons.block_rounded,
-            text: 'Adendum ditolak PM: ${c['decision_reason'] ?? '-'}',
+            text: 'Revisi ditolak PM: ${c['decision_reason'] ?? '-'}',
             accent: Accent.rose,
           ),
         ),
@@ -840,7 +857,21 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
             key: const Key('running-amendment'),
             onPressed: _runningAmendment,
             icon: const Icon(Icons.edit_note_rounded),
-            label: const Text('Ajukan adendum'),
+            label: const Text('Ajukan revisi'),
+          ),
+        ),
+      if (((_plan['revision'] as num?) ?? 1) > 1)
+        Padding(
+          padding: const EdgeInsets.only(top: 10),
+          child: OutlinedButton.icon(
+            key: const Key('revision-history'),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => RevisionHistoryScreen(planId: _planId),
+              ),
+            ),
+            icon: const Icon(Icons.history_rounded),
+            label: const Text('Riwayat revisi'),
           ),
         ),
       if (_assets.isNotEmpty) ...[
@@ -923,7 +954,6 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
           child: NoticeBanner(
             icon: Icons.hourglass_top_rounded,
             text: 'Pengajuan penutupan menunggu persetujuan PM.',
-            accent: Accent.amber,
           ),
         ),
       if (status == 'COMPLETED') ...[
@@ -964,7 +994,46 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
       padding: const EdgeInsets.only(bottom: 6),
       child: InfoRow(icon: icon, text: text),
     );
-    return SurfaceCard(
+    // Hari bertugas: ketua di semua hari; anggota di hari tanpa daftar khusus atau yang mencantumkannya.
+    final leaderId = '${team.where((m) => m['role_in_plan'] == 'LEADER').firstOrNull?['employee_id']}';
+    final memberIds = {for (final m in team) if (m['role_in_plan'] == 'MEMBER') '${m['employee_id']}'};
+    bool onDuty(Map d, String id) {
+      if (id == leaderId) return true;
+      final ids = d['member_employee_ids'];
+      return ids is List ? ids.map((e) => '$e').contains(id) : memberIds.contains(id);
+    }
+    final auth = ref.read(authControllerProvider);
+    final me = auth is AuthAuthenticated ? auth.user.employeeId : '';
+    final inTeam = me == leaderId || memberIds.contains(me);
+    final myDays = [for (final d in days) if (onDuty(d, me)) d];
+    final dayFmt = DateFormat('EEEE, d MMM yyyy', 'id_ID');
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (inTeam)
+          SurfaceCard(
+            key: const Key('my-schedule'),
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  myDays.isEmpty
+                      ? 'Anda belum dijadwalkan di hari mana pun'
+                      : 'Jadwal Anda: ${myDays.length} dari ${days.length} hari kerja',
+                  style: VmsTextStyles.bodySm.copyWith(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 8),
+                for (final d in myDays)
+                  line(
+                    Icons.event_available_rounded,
+                    '${dayFmt.format(DateTime.parse('${d['work_date']}'))} · ${d['site_name'] ?? plan['location_text'] ?? '-'}',
+                  ),
+              ],
+            ),
+          ),
+        if (inTeam) const SizedBox(height: 10),
+        SurfaceCard(
       padding: const EdgeInsets.all(14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -985,7 +1054,8 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
               m['role_in_plan'] == 'LEADER'
                   ? Icons.star_rounded
                   : Icons.person_outline_rounded,
-              '${m['full_name']} — ${m['position']} (${m['role_in_plan'] == 'LEADER' ? 'Ketua tim' : 'Anggota'})',
+              '${m['full_name']} — ${m['position']} (${m['role_in_plan'] == 'LEADER' ? 'Ketua tim' : 'Anggota'}) · '
+              '${days.where((d) => onDuty(d, '${m['employee_id']}')).length} hari',
             ),
           for (final a in assets)
             line(
@@ -1012,13 +1082,15 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
           ],
         ],
       ),
+        ),
+      ],
     );
   }
 
   Widget _dayCard(Map<String, dynamic> d, int i, bool isLeader) {
     final date = DateTime.parse(d['work_date'] as String);
     final tasks = d['tasks'] as List;
-    final done = tasks.where((t) => t['is_done'] == true).length;
+    final done = tasks.where((t) => (t as Map)['is_done'] == true).length;
     final progress = tasks.isEmpty ? 0.0 : done / tasks.length;
     final rep = d['report'] as Map?;
     final report = rep?['status'] == 'SUBMITTED' && rep?['resubmitted'] == true

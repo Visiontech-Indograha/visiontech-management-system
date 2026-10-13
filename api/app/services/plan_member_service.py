@@ -75,12 +75,12 @@ class PlanMemberService:
         """
         plan = await self.repo.lock_plan(plan_id, user.organization_id)
         if plan is None:
-            raise NotFoundError("SK")
+            raise NotFoundError("Rencana Kerja")
         # Validasi: Tim hanya dapat diubah selama SK masih DRAFT
         if plan.status != PlanStatus.DRAFT:
             raise AppError(
                 "PLAN_NOT_DRAFT",
-                "Susunan tim hanya dapat diubah selama SK masih draf. Untuk SK yang sudah terbit, gunakan adendum personel.",
+                "Susunan tim hanya dapat diubah selama rencana kerja masih draf. Untuk rencana kerja yang sudah terbit, gunakan revisi personel.",
                 status=409,
             )
         if plan.row_version != row_version:
@@ -101,7 +101,7 @@ class PlanMemberService:
         if set(people) - known:
             raise NotFoundError("Karyawan")
         current = [m.employee_id for m in await self.repo.active_team(plan_id)]
-        
+
         # Validasi bahwa anggota tim berada dalam unit/otoritas PM yang membuat SK
         await PlanAssignmentService(CRUDPlanAssignment(self.repo.db)).validate_team_scope(
             user, plan.unit_id, people, current_team=current)

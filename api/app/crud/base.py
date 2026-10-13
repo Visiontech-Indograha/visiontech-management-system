@@ -20,7 +20,7 @@ class CRUDBase:
     def __init__(self, db: AsyncSession) -> None:
         """
         Inisialisasi instance CRUDBase.
-        
+
         Args:
             db (AsyncSession): Sesi database asinkron dari SQLAlchemy.
         """
@@ -29,11 +29,11 @@ class CRUDBase:
     async def execute(self, query: str, params: dict[str, Any] | None = None) -> Any:
         """
         Mengeksekusi query SQL (seperti INSERT, UPDATE, DELETE) tanpa harus mengambil baris hasil.
-        
+
         Args:
             query (str): Query SQL mentah.
             params (dict[str, Any] | None): Parameter terikat untuk query. Defaults to None.
-            
+
         Returns:
             Any: Objek hasil eksekusi (CursorResult).
         """
@@ -43,11 +43,11 @@ class CRUDBase:
     async def fetchone(self, query: str, params: dict[str, Any] | None = None) -> Any:
         """
         Mengeksekusi query SQL dan mengambil satu baris pertama dari hasilnya.
-        
+
         Args:
             query (str): Query SQL mentah (biasanya SELECT).
             params (dict[str, Any] | None): Parameter terikat untuk query. Defaults to None.
-            
+
         Returns:
             Any: Satu baris data (Row) atau None jika tidak ada hasil.
         """
@@ -58,11 +58,11 @@ class CRUDBase:
     async def fetchall(self, query: str, params: dict[str, Any] | None = None) -> Sequence[Any]:
         """
         Mengeksekusi query SQL dan mengambil semua baris hasilnya.
-        
+
         Args:
             query (str): Query SQL mentah (biasanya SELECT).
             params (dict[str, Any] | None): Parameter terikat untuk query. Defaults to None.
-            
+
         Returns:
             Sequence[Any]: Daftar baris data (Row) dari hasil query.
         """
@@ -74,11 +74,11 @@ class CRUDBase:
         """
         Mengeksekusi query SQL dan mengambil nilai skalar (kolom pertama dari baris pertama).
         Berguna untuk query agregasi seperti COUNT(), MAX(), dll.
-        
+
         Args:
             query (str): Query SQL mentah.
             params (dict[str, Any] | None): Parameter terikat untuk query. Defaults to None.
-            
+
         Returns:
             Any: Nilai tunggal, atau None jika tidak ada baris yang dikembalikan.
         """

@@ -18,11 +18,11 @@ router = APIRouter(prefix="/sites", tags=["Sites"])
 def _response(r: Any, can_manage: bool = False) -> SiteResponse:
     """
     Fungsi pembantu untuk memetakan row site dari database ke skema SiteResponse.
-    
+
     Args:
         r (Any): Data lokasi dari database.
         can_manage (bool): Menentukan apakah pengguna memiliki hak untuk mengelola lokasi tersebut.
-        
+
     Returns:
         SiteResponse: Respons model lokasi.
     """
@@ -38,11 +38,11 @@ async def get_sites(
 ) -> list[SiteResponse]:
     """
     Mengambil daftar lokasi kerja (GET).
-    R-33: lapangan → lokasi unitnya; kantor → lokasi kantor; PM → kantor + unitnya; OPS → semua.
-    
+    R-33: lapangan → lokasi unitnya (+ kantor pusat untuk absen); kantor → lokasi kantor; PM → kantor + unitnya; OPS → semua.
+
     Query Parameters:
     - for_attendance (bool): Hanya lokasi yang sah untuk absen peminta.
-    
+
     Returns:
     - list[SiteResponse]: Daftar lokasi kerja beserta atribut `can_manage`.
     """
@@ -62,10 +62,10 @@ async def create_site(
     """
     Membuat lokasi kerja baru (POST).
     R-33: PM → lokasi proyek unitnya (untuk bawahannya); Finance → lokasi kantor. Unit ditetapkan server.
-    
+
     Request Body:
     - data (SiteCreate): Data lokasi yang akan dibuat.
-    
+
     Returns:
     - SiteResponse: Data lokasi kerja yang berhasil dibuat.
     """
@@ -84,10 +84,10 @@ async def delete_site(
 ) -> dict[str, str]:
     """
     Menghapus lokasi kerja berdasarkan ID-nya (DELETE).
-    
+
     Path Parameters:
     - site_id (UUID): ID lokasi yang akan dihapus.
-    
+
     Returns:
     - dict[str, str]: Pesan konfirmasi penghapusan.
     """

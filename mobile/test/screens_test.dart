@@ -135,7 +135,7 @@ void main() {
       expect(find.text('SK a'), findsOneWidget);
       expect(find.text('SK b'), findsOneWidget);
       expect(find.text('SK c'), findsNothing);
-      expect(find.text('2 SK · 1 sedang berjalan'), findsOneWidget);
+      expect(find.text('2 rencana kerja · 1 sedang berjalan'), findsOneWidget);
     });
 
     testWidgets('luring: menampilkan data tersimpan beserta tandanya', (
@@ -159,7 +159,7 @@ void main() {
         await show(tester, const WorkPlansScreen());
         // Temuan R-18: dulu "Luring — menampilkan data tersimpan." + "Belum ada SK untuk Anda".
         expect(find.text(SyncEngine.offlineNoDataMessage), findsOneWidget);
-        expect(find.text('Belum ada SK untuk Anda'), findsNothing);
+        expect(find.text('Belum ada rencana kerja untuk Anda'), findsNothing);
         expect(find.text('Luring — menampilkan data tersimpan.'), findsNothing);
       },
     );
@@ -177,9 +177,9 @@ void main() {
 
       await tester.tap(find.text('SK a'));
       await settle(tester);
-      expect(find.text('Terima SK'), findsOneWidget);
+      expect(find.text('Terima rencana kerja'), findsOneWidget);
 
-      await tester.tap(find.text('Terima SK'));
+      await tester.tap(find.text('Terima rencana kerja'));
       await tester.pumpAndSettle();
       expect(find.text('Terima surat kerja ini?'), findsOneWidget);
       await tester.tap(find.widgetWithText(FilledButton, 'Terima'));
@@ -255,6 +255,49 @@ void main() {
         expect((sent.data as Map)['accuracy_m'], 8);
         expect((sent.data as Map).containsKey('selfie_file_id'), isFalse);
         expect(find.text('Absen masuk tercatat.'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'terikat SK tetapi memilih kantor: peringatan tampil, absen tetap terkirim ke kantor',
+      (tester) async {
+        online();
+        const project = {
+          'id': 's2',
+          'name': 'Proyek CCTV Rumbai',
+          'radius_m': 100,
+          'location': {'lat': 1.6650, 'lng': 101.4478},
+        };
+        backend.routes['/sites'] = (_) => [site, project];
+        backend.routes['/work-plans'] = (_) => [
+          {'id': 'wp1', 'status': 'IN_PROGRESS', 'site_id': 's2'},
+        ];
+        GeolocatorPlatform.instance = _FakeGps(
+          _at(1.6650, 101.4478, accuracy: 8),
+        );
+        await show(tester, const AttendanceScreen());
+        // Lokasi SK dipilih otomatis → tanpa peringatan.
+        expect(find.text('Proyek CCTV Rumbai'), findsWidgets);
+        expect(
+          find.byKey(const Key('peringatan-bukan-lokasi-sk')),
+          findsNothing,
+        );
+
+        await tester.tap(find.text('Proyek CCTV Rumbai').first);
+        await settle(tester);
+        await tester.tap(find.text('Kantor Visiontech Dumai').last);
+        await settle(tester);
+        expect(
+          find.byKey(const Key('peringatan-bukan-lokasi-sk')),
+          findsOneWidget,
+        );
+        expect(find.textContaining('Proyek CCTV Rumbai'), findsWidgets);
+
+        await tapCheckIn(tester);
+        final sent = backend.requests
+            .where((r) => r.path.endsWith('/check-in'))
+            .single;
+        expect((sent.data as Map)['site_id'], 's1');
       },
     );
 

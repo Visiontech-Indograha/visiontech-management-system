@@ -121,3 +121,76 @@ def test_me_and_employee_expose_attendance_mode_and_hr_can_change_it(client, wor
                       json={"attendance_mode": None, "phone": "0812"})
     assert kept.status_code == 200, kept.text
     assert kept.json()["attendance_mode"] == "OFFICE"
+
+
+def test_admin_without_employee_can_login_on_web_and_mobile(client, seeded_user):
+    """Keputusan pemilik 2026-10-06: akun administrator (tanpa karyawan) masuk dari web DAN HP."""
+    for platform in ("web", "mobile"):
+        got = client.post("/auth/login", json={"email": seeded_user.login, "password": seeded_user.password,
+                                               "platform": platform})
+        assert got.status_code == 200, (platform, got.text)
+
+
+def test_login_platform_rules_still_hold_for_employees(client, world):
+    from tests.conftest import WORLD_PASSWORD
+    member = {"email": world.logins["member"], "password": WORLD_PASSWORD}
+    assert client.post("/auth/login", json={**member, "platform": "web"}).status_code == 403      # lapangan di web
+    assert client.post("/auth/login", json={**member, "platform": "mobile"}).status_code == 200
+    sync_query("UPDATE vms.employee SET attendance_mode = 'OFFICE' WHERE id = %s", (world.employees["member"],))
+    assert client.post("/auth/login", json={**member, "platform": "mobile"}).status_code == 403   # kantor di HP
+    assert client.post("/auth/login", json={**member, "platform": "web"}).status_code == 200
+
+
+def test_admin_linked_to_an_employee_still_logs_in_on_both_platforms(client, world):
+    """Admin yang akunnya ditautkan ke data karyawan (mis. kantor) tetap boleh login di web DAN HP."""
+    from tests.conftest import WORLD_PASSWORD
+    sync_query("UPDATE vms.employee SET attendance_mode = 'OFFICE' WHERE id = %s", (world.employees["admin"],))
+    creds = {"email": world.logins["admin"], "password": WORLD_PASSWORD}
+    assert client.post("/auth/login", json={**creds, "platform": "mobile"}).status_code == 200
+    assert client.post("/auth/login", json={**creds, "platform": "web"}).status_code == 200
+
+
+def test_admin_can_attend_from_mobile_and_web_regardless_of_mode(client, world):
+    """Pemilik sistem (ADMIN) yang tertaut ke karyawan kantor boleh absen dari HP, sedangkan kantor biasa tidak."""
+    office = _set_mode(world, "admin", "OFFICE")
+    mobile = _check_in(client, world, "admin", "MOBILE", site_id=office)
+    assert mobile.status_code == 200, mobile.text
+    assert mobile.json()["status"] == "AUTO_VALID"
+    assert sync_query("SELECT source::text FROM vms.attendance WHERE id = %s", (mobile.json()["id"],))[0][0] == "MOBILE"
+
+    # Kontrol: pekerja kantor biasa tetap ditolak di HP.
+    sync_query("UPDATE vms.employee SET attendance_mode = 'OFFICE' WHERE id = %s RETURNING id", (world.employees["member"],))
+    denied = _check_in(client, world, "member", "MOBILE", site_id=office)
+    assert denied.status_code == 403 and denied.json()["error"]["code"] == "WRONG_ATTENDANCE_CHANNEL"
+
+
+def test_field_worker_without_sk_can_check_in_at_head_office_and_sees_it(client, world):
+    """Pekerja lapangan tanpa SK/lokasi proyek tetap bisa absen di kantor pusat (2026-10-07)."""
+    office = str(sync_query(
+        "INSERT INTO vms.site (organization_id, name, location, radius_m) "
+        "VALUES (%s, 'Kantor Pusat uji', ST_GeogFromText('POINT(106.8 -6.2)'), 100) RETURNING id",
+        (world.org_id,))[0][0])
+    sites = client.get("/sites", headers=world.headers(client, "member"), params={"for_attendance": "true"})
+    assert sites.status_code == 200, sites.text
+    assert office in {s["id"] for s in sites.json()}
+    # APK lama memanggil /sites tanpa for_attendance — kantor pusat juga harus ada.
+    old_apk = client.get("/sites", headers=world.headers(client, "member")).json()
+    assert office in {s["id"] for s in old_apk}
+    res = _check_in(client, world, "member", "MOBILE", site_id=office)
+    assert res.status_code == 200, res.text
+    assert res.json()["status"] == "AUTO_VALID"
+
+
+def test_field_worker_can_choose_between_several_offices(client, world):
+    """Kantor Visiontech ada beberapa: semuanya tampil di daftar absen dan pekerja memilih sendiri."""
+    offices = [str(sync_query(
+        "INSERT INTO vms.site (organization_id, name, location, radius_m) "
+        "VALUES (%s, %s, ST_GeogFromText(%s), 100) RETURNING id",
+        (world.org_id, name, point))[0][0])
+        for name, point in (("Kantor A uji", "POINT(106.8 -6.2)"), ("Kantor B uji", "POINT(101.4 0.5)"))]
+    listed = {s["id"] for s in client.get("/sites", headers=world.headers(client, "member"),
+                                          params={"for_attendance": "true"}).json()}
+    assert set(offices) <= listed and world.site_id in listed      # kantor + lokasi proyek unitnya
+    res = _check_in(client, world, "member", "MOBILE", site_id=offices[1], location={"lat": 0.5, "lng": 101.4})
+    assert res.status_code == 200, res.text
+    assert sync_query("SELECT site_id::text FROM vms.attendance WHERE id = %s", (res.json()["id"],))[0][0] == offices[1]

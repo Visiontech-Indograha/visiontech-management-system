@@ -1,7 +1,8 @@
 """
 app/api/v1/endpoints/face.py
-Endpoint pengenalan wajah untuk absensi HP (docs/06 fase 8, docs/08 §6).
-Hanya untuk pekerja lapangan (FIELD) pada akun sendiri.
+Endpoint pengenalan wajah untuk absensi (docs/06 fase 8, docs/08 §6).
+Berlaku untuk semua akun karyawan pada data sendiri: pekerja lapangan lewat HP (boleh luring), pekerja kantor lewat
+web (hanya online; web tidak punya jalur luring).
 """
 from __future__ import annotations
 
@@ -10,6 +11,8 @@ import json
 from fastapi import APIRouter, Depends, File, Form, UploadFile
 
 from app.api.deps import get_current_user, get_face_service
+from app.core.errors import AppError, ValidationError
+from app.core.permissions import RoleCode
 from app.core.security import CurrentUser
 from app.schemas.face import (
     ChallengeCheckResponse,
@@ -21,9 +24,25 @@ from app.schemas.face import (
     ProbeResponse,
     TemplateResponse,
 )
-from app.services.face_service import FaceService
+from app.services.face_service import ENROLL_MAX, MAX_IMAGE_BYTES, FaceService
 
 router = APIRouter(prefix="/face", tags=["Face"])
+
+
+async def _read_image(upload: UploadFile) -> bytes:
+    """Baca unggahan paling banyak batas + 1 bita: berkas raksasa tidak pernah dimuat utuh ke memori."""
+    data = await upload.read(MAX_IMAGE_BYTES + 1)
+    if len(data) > MAX_IMAGE_BYTES:
+        raise AppError("FILE_TOO_LARGE", "Ukuran gambar melebihi 5 MB.", status=413)
+    return data
+
+
+def _liveness(raw: str) -> FaceLiveness:
+    """Hasil tantangan dari HP (JSON). Isi tidak valid → 422, bukan 500; kosong = belum lolos."""
+    try:
+        return FaceLiveness(**(json.loads(raw) if raw else {}))
+    except (ValueError, TypeError):
+        raise ValidationError("Pemeriksaan keaslian wajah tidak terbaca. Ulangi pengenalan wajah.") from None
 
 
 @router.get("/policy", response_model=FacePolicy)
@@ -44,7 +63,8 @@ async def get_face_status(
     Status pengenalan wajah pengguna saat ini: persetujuan biometrik, status pendaftaran,
     versi template, dan kebijakan aktif.
     """
-    return await face_service.status(current_user.organization_id, current_user.user_id)
+    return await face_service.status(current_user.organization_id, current_user.user_id,
+                                     exempt_from_required=RoleCode.ADMIN in current_user.roles)
 
 
 @router.post("/consent")
@@ -77,12 +97,10 @@ async def enroll_face(
     Mendaftarkan 3-5 foto pose wajah karyawan.
     Validasi deteksi tunggal, kualitas, konsistensi antar pose, dan pengecekan anti-duplikat dengan karyawan lain.
     """
-    images = [await f.read() for f in files]
-    try:
-        live_data = json.loads(liveness) if liveness else {}
-    except (json.JSONDecodeError, TypeError, ValueError):
-        live_data = {}
-    liveness_obj = FaceLiveness(**live_data)
+    if len(files) > ENROLL_MAX:
+        raise ValidationError(f"Maksimal {ENROLL_MAX} foto untuk pendaftaran wajah.")
+    liveness_obj = _liveness(liveness)
+    images = [await _read_image(f) for f in files]
     return await face_service.enroll(current_user.organization_id, current_user.user_id, images, liveness_obj)
 
 
@@ -109,12 +127,8 @@ async def create_face_probe(
     Mengunggah gambar wajah sementara untuk diverifikasi saat check-in atau check-out.
     Mengembalikan probe_id yang diteruskan pada permintaan absensi.
     """
-    image = await file.read()
-    try:
-        live_data = json.loads(liveness) if liveness else {}
-    except (json.JSONDecodeError, TypeError, ValueError):
-        live_data = {}
-    liveness_obj = FaceLiveness(**live_data)
+    liveness_obj = _liveness(liveness)
+    image = await _read_image(file)
     return await face_service.create_probe(current_user.organization_id, current_user.user_id, image, liveness_obj)
 
 
@@ -128,5 +142,5 @@ async def check_face_challenge(
     """
     Memeriksa gambar langsung dari kamera HP untuk memvalidasi tantangan liveness.
     """
-    image = await file.read()
-    return await face_service.check_challenge(image, challenge)
+    image = await _read_image(file)
+    return await face_service.check_challenge(current_user.user_id, image, challenge)

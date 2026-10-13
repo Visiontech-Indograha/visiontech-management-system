@@ -14,6 +14,8 @@ exec 9>"$BASE/.autodeploy.lock"
 flock -n 9 || exit 0                       # deploy sebelumnya masih berjalan
 # shellcheck disable=SC1091
 source "$BASE/notify.env"
+WEBHOOK_DEPLOY="${DISCORD_WEBHOOK_DEPLOY:-}"
+WEBHOOK_BUILD="${DISCORD_WEBHOOK_BUILD:-${DISCORD_WEBHOOK_DIGEST:-${DISCORD_WEBHOOK_4:-}}}"
 
 LOGDIR="$BASE/logs"; mkdir -p "$LOGDIR" backups
 LAST_FILE="$BASE/.last-deployed"
@@ -42,10 +44,16 @@ APP_URL="${VMS_PUBLIC_URL:-https://visiontech-bar.tail827174.ts.net}"
 STAGES="$LOGDIR/.stages-$STAMP"; : > "$STAGES"
 
 F=$'\036'                                      # pemisah antarkolom embed (nilai boleh berisi baris baru)
-# discord JUDUL WARNA DESKRIPSI [LAMPIRAN] — kolom lewat env FIELDS: "Nama|inline(1/0)|Nilai" dipisah $F.
+# discord JUDUL WARNA DESKRIPSI [LAMPIRAN] [TARGET_WEBHOOK] — kolom lewat env FIELDS: "Nama|inline(1/0)|Nilai" dipisah $F.
 discord() {
-  local body code
+  local body code target_hook
   body=$(mktemp)
+  target_hook="${5:-$WEBHOOK_DEPLOY}"
+  if [ -z "$target_hook" ]; then
+    echo "discord: webhook tidak dikonfigurasi, dilewati" >&2
+    rm -f "$body"
+    return 0
+  fi
   TITLE="$1" COLOR="$2" DESC="$3" URL="$GH_URL/commit/$NEW" HOST="$(hostname)" FIELDS="${FIELDS:-}" \
   python3 - > "$body" <<'PY'
 import json, os
@@ -65,13 +73,13 @@ print(json.dumps({"embeds": [embed]}))
 PY
   # Isi dibaca dari berkas (`<`): pesan commit ber-`;` tidak lagi merusak argumen curl -F.
   if [ -n "${4:-}" ] && [ -f "$4" ]; then
-    code=$(curl -s -o /dev/null -w '%{http_code}' -F "payload_json=<$body" -F "file=@$4;type=text/plain" "$DISCORD_WEBHOOK_DEPLOY")
+    code=$(curl -s -o /dev/null -w '%{http_code}' -F "payload_json=<$body" -F "file=@$4;type=text/plain" "$target_hook")
   else
-    code=$(curl -s -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' --data-binary "@$body" "$DISCORD_WEBHOOK_DEPLOY")
+    code=$(curl -s -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' --data-binary "@$body" "$target_hook")
   fi
   case "$code" in 2*) ;; *)                      # cadangan: tanpa lampiran, tetap kabari
     echo "discord gagal ($code), kirim ulang tanpa lampiran" >&2
-    curl -s -o /dev/null -H 'Content-Type: application/json' --data-binary "@$body" "$DISCORD_WEBHOOK_DEPLOY" ;;
+    curl -s -o /dev/null -H 'Content-Type: application/json' --data-binary "@$body" "$target_hook" ;;
   esac
   rm -f "$body"
 }
@@ -109,7 +117,7 @@ $CHANGES
 
 (
   step "Checkout $SHORT"
-  git -C src checkout -q --force "$NEW" && rm -rf api web && cp -a src/api src/web . || exit 11
+  git -C src checkout -q --force "$NEW" && rm -rf api web face && cp -a src/api src/web . && cp -a src/face-service face || exit 11
   rm -f api/.env web/.env
   step "Build image (docker compose build)"
   docker compose --progress=plain build 2>&1 || exit 12
@@ -170,3 +178,160 @@ Server sudah lolos cek siap pakai (API, basis data, web, dan jalur \`/api\` seha
 
 📎 Log build lengkap terlampir." "$LOG"
 rm -f "$STAGES"
+
+# Build aplikasi mobile Android (bila ada perubahan di mobile/) dan laporkan ke webhook ke-4
+build_mobile() {
+  local mobile_src="$BASE/src/mobile"
+  local rilis_dir="$BASE/rilis/android"
+  local mobile_log="$LOGDIR/mobile-build-$STAMP.log"
+  local t_mb0
+  t_mb0=$(date +%s)
+
+  [ -d "$mobile_src" ] || return 0
+
+  local touched=0
+  if [ -n "$OLD" ]; then
+    if git -C "$BASE/src" diff --name-only "$OLD" "$NEW" | grep -q '^mobile/'; then
+      touched=1
+    fi
+  else
+    touched=1
+  fi
+  [ "${FORCE_BUILD_MOBILE:-0}" = "1" ] && touched=1
+
+  if [ "$touched" -eq 0 ]; then
+    echo "Tidak ada perubahan pada mobile/, build aplikasi mobile dilewati."
+    return 0
+  fi
+
+  step "Build aplikasi mobile Android"
+
+  local flutter_bin=""
+  if [ -n "${FLUTTER:-}" ] && [ -x "${FLUTTER:-}" ]; then
+    flutter_bin="$FLUTTER"
+  elif command -v flutter >/dev/null 2>&1; then
+    flutter_bin="flutter"
+  elif [ -x "$HOME/flutter/bin/flutter" ]; then
+    flutter_bin="$HOME/flutter/bin/flutter"
+  fi
+
+  if [ -z "$flutter_bin" ]; then
+    echo "PERINGATAN: Flutter SDK tidak ditemukan di server ($BASE)." | tee -a "$mobile_log"
+    if [ -n "$WEBHOOK_BUILD" ]; then
+      FIELDS="Commit|1|[\`$SHORT\`]($GH_URL/commit/$NEW)${F}Oleh|1|$AUTHOR${F}Status|1|Flutter SDK Belum Terpasang" \
+      discord "⚠️ Build Aplikasi Mobile Dilewati — $SHORT" 16753920 \
+"Perubahan pada \`mobile/\` terdeteksi di commit ini, tetapi Flutter SDK belum terpasang di host server (\`$BASE\`).
+Silakan pasang Flutter SDK di server atau bangun rilis dari laptop dengan \`scripts/rilis-apk.bat bangun\` lalu kirim." "" "$WEBHOOK_BUILD"
+    fi
+    return 0
+  fi
+
+  local pubspec="$mobile_src/pubspec.yaml"
+  [ -f "$pubspec" ] || { echo "pubspec.yaml tidak ditemukan" | tee -a "$mobile_log"; return 0; }
+
+  local ver name build
+  ver=$(sed -n 's/^version:[[:space:]]*\([0-9][0-9.]*+[0-9][0-9]*\).*/\1/p' "$pubspec")
+  name=${ver%+*}; build=${ver#*+}
+  if [ -z "$name" ] || [ -z "$build" ]; then
+    echo "Format versi di pubspec.yaml tidak valid: $ver" | tee -a "$mobile_log"
+    return 0
+  fi
+
+  local key_props="$mobile_src/android/key.properties"
+  if [ ! -f "$key_props" ] && [ -f "$BASE/keystore/key.properties" ]; then
+    cp "$BASE/keystore/key.properties" "$key_props"
+  fi
+
+  local extra_args=""
+  if [ ! -f "$key_props" ]; then
+    echo "PERINGATAN: key.properties tidak ditemukan di server, mencoba build dengan debug signing." | tee -a "$mobile_log"
+    extra_args="-PallowDebugSigning=true"
+  fi
+
+  mkdir -p "$rilis_dir"
+  local build_ok=0
+  (
+    cd "$mobile_src" || exit 1
+    "$flutter_bin" pub get || exit 31
+    "$flutter_bin" build apk --release --split-per-abi --target-platform android-arm,android-arm64 \
+      --build-name "$name" --build-number "$build" -Pforce-version-code-ignoring-abi=true \
+      --dart-define=API_BASE_URL="$APP_URL" $extra_args || exit 32
+    "$flutter_bin" build apk --release --target-platform android-arm,android-arm64 \
+      --build-name "$name" --build-number "$build" \
+      --dart-define=API_BASE_URL="$APP_URL" $extra_args || exit 33
+  ) > "$mobile_log" 2>&1 && build_ok=1
+
+  local dur_build
+  dur_build=$(( $(date +%s) - t_mb0 ))
+
+  if [ "$build_ok" -eq 1 ]; then
+    local apk_outputs="$mobile_src/build/app/outputs/flutter-apk"
+    local files_json="" sep="" list_msg=""
+
+    for apk in "$apk_outputs"/app-*-release.apk; do
+      [ -f "$apk" ] || continue
+      local abi dest sha size
+      abi=$(basename "$apk" | sed 's/^app-\(.*\)-release\.apk$/\1/')
+      dest="vms-$name-$build-$abi.apk"
+      cp "$apk" "$rilis_dir/$dest"
+      sha=$(sha256sum "$rilis_dir/$dest" | cut -d' ' -f1)
+      size=$(stat -c %s "$rilis_dir/$dest")
+      files_json+="$sep    {\"abi\": \"$abi\", \"name\": \"$dest\", \"sha256\": \"$sha\", \"size\": $size}"
+      sep=$',\n'
+      list_msg+="• \`$dest\` ($(( size / 1048576 )) MB)\n"
+    done
+
+    local uni_apk="$apk_outputs/app-release.apk"
+    if [ -f "$uni_apk" ]; then
+      local uni_dest="vms-$name-$build-universal.apk"
+      cp "$uni_apk" "$rilis_dir/$uni_dest"
+      local uni_sha uni_size
+      uni_sha=$(sha256sum "$rilis_dir/$uni_dest" | cut -d' ' -f1)
+      uni_size=$(stat -c %s "$rilis_dir/$uni_dest")
+      files_json+="$sep    {\"abi\": \"universal\", \"name\": \"$uni_dest\", \"sha256\": \"$uni_sha\", \"size\": $uni_size}"
+      list_msg+="• \`$uni_dest\` (Full Universal, $(( uni_size / 1048576 )) MB)\n"
+    fi
+
+    cat > "$rilis_dir/latest.json.tmp" <<EOF
+{
+  "package": "com.visiontech.vms_mobile",
+  "version_name": "$name",
+  "build": $build,
+  "min_build": 1,
+  "released_at": "$(date +%Y-%m-%dT%H:%M:%S%:z)",
+  "notes": ["Build otomatis dari deploy server commit $SHORT"],
+  "files": [
+$files_json
+  ]
+}
+EOF
+    mv "$rilis_dir/latest.json.tmp" "$rilis_dir/latest.json"
+
+    if [ -n "$WEBHOOK_BUILD" ]; then
+      FIELDS="Versi|1|\`$name+$build\`${F}Commit|1|[\`$SHORT\`]($GH_URL/commit/$NEW)${F}Durasi|1|$(dur "$dur_build")\
+${F}Berkas APK|0|${list_msg}" \
+      discord "📱 Build Aplikasi Mobile Berhasil — v$name+$build" 3066993 \
+"**$SUBJECT**
+
+Aplikasi Android versi **$name** (build $build) berhasil dibangun dan diterbitkan di portal.
+Tersedia berkas arsitektur terpisah (split-per-ABI) dan berkas universal full version.
+
+🔗 $APP_URL" "" "$WEBHOOK_BUILD"
+    fi
+  else
+    if [ -n "$WEBHOOK_BUILD" ]; then
+      FIELDS="Commit|1|[\`$SHORT\`]($GH_URL/commit/$NEW)${F}Oleh|1|$AUTHOR${F}Durasi|1|$(dur "$dur_build")" \
+      discord "🔴 Build Aplikasi Mobile GAGAL — $SHORT" 15158332 \
+"**$SUBJECT**
+
+Build Flutter Android gagal pada tahap kompilasi.
+
+\`\`\`
+$(tail -20 "$mobile_log" | cut -c1-150)
+\`\`\`
+📎 Log build lengkap terlampir." "$mobile_log" "$WEBHOOK_BUILD"
+    fi
+  fi
+}
+
+build_mobile

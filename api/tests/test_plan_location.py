@@ -29,20 +29,28 @@ def test_pm_sets_point_on_draft_then_reads_it_back(client, world: World):
     assert plan["site_id"] == res.json()["id"]
 
 
-def test_running_plan_gets_new_site_and_keeps_document_text(client, world: World):
+def test_running_plan_location_change_is_a_signed_revision(client, world: World):
+    """2026-10-09: lokasi rencana yang sudah terbit berubah lewat revisi — alasan wajib, dokumen & riwayat baru."""
     plan_id, _ = run_plan_to_in_progress(client, world)
     pm = world.headers(client, "pm")
     before = client.get(f"/work-plans/{plan_id}", headers=pm).json()
 
-    res = client.put(f"/work-plans/{plan_id}/location", headers=pm, json=DUMAI)
+    missing = client.put(f"/work-plans/{plan_id}/location", headers=pm, json=DUMAI)
+    assert missing.status_code == 422 and "Alasan perubahan lokasi wajib" in missing.json()["error"]["message"]
+
+    res = client.put(f"/work-plans/{plan_id}/location", headers=pm, json={**DUMAI, "reason": "Lokasi klien pindah"})
     assert res.status_code == 200, res.text
     after = client.get(f"/work-plans/{plan_id}", headers=pm).json()
     assert after["site_id"] == res.json()["id"] != before["site_id"]
-    assert after["location_text"] == before["location_text"] and after["status"] == "IN_PROGRESS"
+    assert after["location_text"] == DUMAI["name"] != before["location_text"] and after["status"] == "IN_PROGRESS"
+    revisions = client.get(f"/work-plans/{plan_id}/revisions", headers=pm).json()
+    assert revisions and revisions[0]["reason"] == "Lokasi klien pindah"
+    assert any(d["field"] == "location_text" for d in revisions[0]["diff"])
     # Site lama tidak diubah (absensi lama tetap merujuk titik & radius saat itu).
     assert sync_query("SELECT count(*) FROM vms.site WHERE id = %s", (before["site_id"],)) == [(1,)]
     # Nama sama disimpan lagi (penyesuaian titik) → tidak 500; nama diberi nomor karena site unik per organisasi.
-    again = client.put(f"/work-plans/{plan_id}/location", headers=pm, json={**DUMAI, "lat": DUMAI["lat"] + 0.001})
+    again = client.put(f"/work-plans/{plan_id}/location", headers=pm,
+                       json={**DUMAI, "lat": DUMAI["lat"] + 0.001, "reason": "Geser titik"})
     assert again.status_code == 200, again.text
     assert again.json()["name"] == f"{DUMAI['name']} (2)" and again.json()["id"] != res.json()["id"]
 
@@ -99,3 +107,5 @@ def test_geo_search_uses_cache_and_requires_manager(client, world: World, monkey
     assert calls == ["Dumai"]                                           # kedua dari cache
     member = client.get("/geo/search", params={"q": "Dumai"}, headers=world.headers(client, "member"))
     assert member.status_code == 403
+    finance = client.get("/geo/search", params={"q": "Dumai"}, headers=world.headers(client, "finance"))
+    assert finance.status_code == 200, finance.text                     # pengelola lokasi kantor juga boleh cari alamat

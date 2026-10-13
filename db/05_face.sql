@@ -162,13 +162,13 @@ CREATE INDEX face_probe_employee_idx ON face_probe (employee_id, created_at DESC
 
 -- Ambang batas disimpan sebagai data agar bisa dikalibrasi tanpa rilis ulang.
 ALTER TABLE organization
-  ADD COLUMN face_match_threshold numeric(5,4) NOT NULL DEFAULT 0.6500
+  ADD COLUMN face_match_threshold numeric(5,4) NOT NULL DEFAULT 0.5500
     CHECK (face_match_threshold BETWEEN 0.3 AND 0.99),
   ADD COLUMN face_liveness_required boolean NOT NULL DEFAULT true,
   ADD COLUMN face_probe_retention_days integer NOT NULL DEFAULT 30
     CHECK (face_probe_retention_days BETWEEN 1 AND 365);
 COMMENT ON COLUMN organization.face_match_threshold IS
-  'Ambang kemiripan kosinus. 0,65 adalah titik awal yang wajar untuk model 512 dimensi, WAJIB dikalibrasi dengan data nyata (ukur FAR dan FRR) sebelum dipakai di lapangan.';
+  'Ambang kemiripan kosinus. 0,55 adalah ambang yang dipilih pemilik (2026-10-11): 55% kemiripan sudah cukup. WAJIB dikalibrasi dengan data nyata (ukur FAR dan FRR) sebelum dipakai di lapangan.';
 
 -- -----------------------------------------------------------------------------
 -- Pencocokan. Mengembalikan kandidat terbaik beserta kemiripannya.
@@ -217,8 +217,10 @@ CREATE OR REPLACE FUNCTION verify_face_for_attendance(
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = vms, public AS $$
 DECLARE
   v_org organization%ROWTYPE;
-  v_best record;
-  v_self record;
+  v_best_emp uuid;
+  v_emp uuid;
+  v_enr uuid;
+  v_sim numeric;
   v_result face_check_result;
   v_note text;
   v_check uuid;
@@ -248,14 +250,15 @@ BEGIN
     v_note := 'Pemeriksaan keaslian wajah (anti-foto) tidak lolos. Coba ulangi di tempat yang lebih terang.';
   ELSE
     -- kemiripan terhadap orang yang mengaku
-    SELECT * INTO v_self FROM match_face(p_org, p_embedding, 50) WHERE employee_id = p_claimed_employee LIMIT 1;
+    SELECT mf.employee_id, mf.enrollment_id, mf.similarity INTO v_emp, v_enr, v_sim
+      FROM match_face(p_org, p_embedding, 50) mf WHERE mf.employee_id = p_claimed_employee LIMIT 1;
     -- kandidat terbaik secara keseluruhan, untuk mendeteksi orang lain yang lebih mirip
-    SELECT * INTO v_best FROM match_face(p_org, p_embedding, 1);
+    SELECT mf.employee_id INTO v_best_emp FROM match_face(p_org, p_embedding, 1) mf;
 
-    IF v_self.similarity IS NULL OR v_self.similarity < v_org.face_match_threshold THEN
+    IF v_sim IS NULL OR v_sim < v_org.face_match_threshold THEN
       v_result := 'NO_MATCH';
       v_note := 'Wajah tidak cocok dengan data karyawan tersebut. Absensi ditandai untuk diperiksa.';
-    ELSIF v_best.employee_id IS DISTINCT FROM p_claimed_employee THEN
+    ELSIF v_best_emp IS DISTINCT FROM p_claimed_employee THEN
       v_result := 'NO_MATCH';
       v_note := 'Wajah lebih menyerupai karyawan lain. Absensi ditandai untuk diperiksa.';
     ELSE
@@ -267,12 +270,12 @@ BEGIN
   INSERT INTO face_check (organization_id, claimed_employee_id, matched_employee_id, matched_enrollment_id,
                           similarity, threshold_used, result, liveness_score, probe_embedding, probe_file_id,
                           device_label, attendance_event)
-  VALUES (p_org, p_claimed_employee, v_self.employee_id, v_self.enrollment_id,
-          v_self.similarity, v_org.face_match_threshold, v_result, p_liveness, p_embedding, p_probe_file,
+  VALUES (p_org, p_claimed_employee, v_emp, v_enr,
+          v_sim, v_org.face_match_threshold, v_result, p_liveness, p_embedding, p_probe_file,
           p_device, p_event)
   RETURNING id INTO v_check;
 
-  RETURN QUERY SELECT v_result, v_self.similarity, v_org.face_match_threshold, v_self.employee_id, v_note, v_check;
+  RETURN QUERY SELECT v_result, v_sim, v_org.face_match_threshold, v_emp, v_note, v_check;
 END $$;
 
 -- Absensi yang gagal cocok wajah tidak ditolak diam-diam, melainkan masuk antrean
@@ -415,3 +418,102 @@ CREATE INDEX IF NOT EXISTS ix_face_enrollment_organization_id ON face_enrollment
 CREATE INDEX IF NOT EXISTS ix_face_check_probe_file_id ON face_check (probe_file_id);
 CREATE INDEX IF NOT EXISTS ix_face_probe_organization_id ON face_probe (organization_id);
 CREATE INDEX IF NOT EXISTS ix_face_probe_file_id ON face_probe (file_id);
+
+-- -----------------------------------------------------------------------------
+-- Peran runtime API (Alembic 0024_runtime_role, P9-2): bukan superuser, bukan pemilik, tanpa BYPASSRLS, sehingga
+-- RLS berlaku. Ditaruh di berkas terakhir karena hak akses mencakup semua tabel. Sandi diatur di luar berkas ini.
+-- -----------------------------------------------------------------------------
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'vms_api') THEN
+    CREATE ROLE vms_api LOGIN NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE NOINHERIT;
+  END IF;
+END $$;
+-- Logout mencabut sesi dari token mentah, sebelum identitas pengguna diketahui.
+CREATE OR REPLACE FUNCTION vms.revoke_session_by_token(p_raw_refresh text, p_reason text) RETURNS void
+LANGUAGE sql SET search_path = vms, public AS $fn$
+  UPDATE user_session SET state = 'REVOKED', revoked_at = now(), revoked_reason = p_reason
+   WHERE refresh_sha256 = digest(p_raw_refresh, 'sha256') AND state = 'ACTIVE';
+$fn$;
+-- Pemeriksaan SIM pengemudi saat PM/OPS menyusun SK: dokumen pribadi tetap tertutup (hanya pemilik & HR yang
+-- melihat barisnya), yang keluar hanya id karyawan yang lolos — padanan trigger tg_vehicle_driver_licence.
+CREATE OR REPLACE FUNCTION vms.employees_with_valid_licence(p_ids uuid[], p_licence text, p_until date)
+RETURNS SETOF uuid LANGUAGE sql STABLE SET search_path = vms, public AS $fn$
+  SELECT DISTINCT d.employee_id FROM employee_document d JOIN employee e ON e.id = d.employee_id
+   WHERE d.employee_id = ANY(p_ids) AND e.organization_id = current_org_id()
+     AND d.doc_type = p_licence AND d.lifecycle = 'CURRENT' AND (d.expiry_date IS NULL OR d.expiry_date >= p_until);
+$fn$;
+-- Fungsi basis data menegakkan aturan yang harus melihat SELURUH data organisasi (bentrok personel lintas unit,
+-- SIM, verifikasi QR publik, sesi saat login/refresh, partisi bulanan, pembantu kebijakan yang membaca tabel
+-- ber-RLS — tanpa ini work_plan → is_plan_leader → work_plan berulang tanpa akhir). Semuanya berjalan sebagai
+-- pemilik (SECURITY DEFINER) dengan search_path tetap; hanya pembaca konteks murni yang tetap sebagai pemanggil.
+DO $$
+DECLARE f regprocedure;
+BEGIN
+  FOR f IN SELECT p.oid::regprocedure FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+            WHERE n.nspname = 'vms' AND p.prokind = 'f'
+              AND p.proname NOT IN ('current_org_id', 'current_user_id', 'new_id') LOOP
+    EXECUTE format('ALTER FUNCTION %s SECURITY DEFINER SET search_path = vms, public', f);
+  END LOOP;
+END $$;
+-- Batas RLS = tenant. Pembatasan per unit/keterlibatan ditegakkan di service (calon ketua pengganti, 403 vs 404,
+-- Finance/HR untuk rekap, ASSET untuk insiden aset) dan diuji matriks RBAC; kebijakan lama lebih sempit dari aturan
+-- itu (tak pernah berlaku karena RLS terlewati). Dokumen pribadi, sesi, antrean luring, dan data wajah tetap
+-- dibatasi per orang.
+ALTER POLICY work_plan_visibility ON vms.work_plan USING (organization_id = vms.current_org_id());
+ALTER POLICY attendance_visibility ON vms.attendance USING (organization_id = vms.current_org_id());
+ALTER POLICY incident_visibility ON vms.incident_report USING (organization_id = vms.current_org_id());
+ALTER POLICY overtime_visibility ON vms.overtime_log USING (organization_id = vms.current_org_id());
+ALTER POLICY qr_token_visibility ON vms.qr_token USING (organization_id = vms.current_org_id());
+-- signing_key hanya menyimpan KUNCI PUBLIK (kunci privat di env/KMS): PM yang menerbitkan SK harus bisa membaca &
+-- mendaftarkan kunci organisasinya.
+ALTER POLICY signing_key_visibility ON vms.signing_key USING (organization_id = vms.current_org_id());
+GRANT USAGE ON SCHEMA vms TO vms_api;
+GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA vms TO vms_api;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA vms TO vms_api;
+GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA vms TO vms_api;
+GRANT DELETE ON vms.work_plan_attachment, vms.work_plan_task_attachment, vms.work_plan_day, vms.work_plan_task,
+                vms.work_plan_member, vms.report_evidence, vms.member_report_evidence, vms.final_report_evidence,
+                vms.user_session
+   TO vms_api;
+REVOKE UPDATE, DELETE ON vms.audit_event FROM vms_api;
+DO $$
+DECLARE r record;
+BEGIN
+  FOR r IN SELECT c.relname FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+            WHERE n.nspname = 'vms' AND c.relkind = 'r' AND c.relispartition LOOP
+    EXECUTE format('REVOKE ALL ON vms.%I FROM vms_api', r.relname);
+  END LOOP;
+END $$;
+
+-- RLS batas tenant untuk tabel ber-organization_id yang tersisa (Alembic 0025_rls_remaining_tables). app_user sengaja
+-- tanpa RLS: login & rotasi token mencari akun sebelum identitas/organisasi diketahui.
+ALTER TABLE vms.site ENABLE ROW LEVEL SECURITY;
+CREATE POLICY site_isolation ON vms.site USING (organization_id = vms.current_org_id());
+ALTER TABLE vms.file_object ENABLE ROW LEVEL SECURITY;
+CREATE POLICY file_object_isolation ON vms.file_object USING (organization_id = vms.current_org_id());
+ALTER TABLE vms.notification ENABLE ROW LEVEL SECURITY;
+CREATE POLICY notification_isolation ON vms.notification USING (organization_id = vms.current_org_id());
+ALTER TABLE vms.attendance_device_key ENABLE ROW LEVEL SECURITY;
+CREATE POLICY attendance_device_key_isolation ON vms.attendance_device_key USING (organization_id = vms.current_org_id());
+ALTER TABLE vms.attendance_offline_event ENABLE ROW LEVEL SECURITY;
+CREATE POLICY attendance_offline_event_isolation ON vms.attendance_offline_event USING (organization_id = vms.current_org_id());
+ALTER TABLE vms.signature_serial_counter ENABLE ROW LEVEL SECURITY;
+CREATE POLICY signature_serial_counter_isolation ON vms.signature_serial_counter USING (organization_id = vms.current_org_id());
+
+-- Riwayat revisi rencana kerja (Alembic 0027_plan_revision): insert-only untuk vms_api.
+REVOKE UPDATE ON vms.plan_revision FROM vms_api;
+ALTER TABLE vms.plan_revision ENABLE ROW LEVEL SECURITY;
+CREATE POLICY plan_revision_isolation ON vms.plan_revision USING (organization_id = vms.current_org_id());
+
+-- Jenis pekerjaan + template foto (Alembic 0029_work_type_photo): hak penuh + RLS tenant.
+GRANT DELETE ON vms.work_type, vms.work_type_photo TO vms_api;
+ALTER TABLE vms.work_type ENABLE ROW LEVEL SECURITY;
+CREATE POLICY work_type_isolation ON vms.work_type USING (organization_id = vms.current_org_id());
+ALTER TABLE vms.work_type_photo ENABLE ROW LEVEL SECURITY;
+CREATE POLICY work_type_photo_isolation ON vms.work_type_photo USING (organization_id = vms.current_org_id());
+
+-- Anggota per hari kerja (Alembic 0031_plan_day_site_members): hak penuh + RLS tenant.
+GRANT DELETE ON vms.work_plan_day_member TO vms_api;
+ALTER TABLE vms.work_plan_day_member ENABLE ROW LEVEL SECURITY;
+CREATE POLICY work_plan_day_member_isolation ON vms.work_plan_day_member USING (organization_id = vms.current_org_id());

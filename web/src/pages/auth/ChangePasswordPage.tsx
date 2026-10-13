@@ -3,47 +3,26 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { Navigate, useNavigate } from "react-router-dom";
-import { z } from "zod";
-import { useSession } from "@/app/session";
-import { Button } from "@/components/ui/button";
-import { TextField } from "@/components/ui/Field";
-import { api, ApiError } from "@/lib/api";
-import type { TokenOut } from "@/lib/types";
+import { useSession } from "@/stores/sessionStore";
+import { ApiError } from "@/lib/apiClient";
+import { changePassword } from "@/services/authService";
+import { changePasswordSchema, type ChangePasswordValues } from "@/schemas/changePasswordSchema";
+import { ChangePasswordTemplate } from "@/components/templates/auth/ChangePasswordTemplate";
 
-const schema = z
-  .object({
-    current_password: z.string().min(1, "Password saat ini wajib diisi."),
-    new_password: z
-      .string()
-      .min(8, "Password minimal 8 karakter.")
-      .regex(/[A-Za-z]/, "Password harus memuat huruf.")
-      .regex(/\d/, "Password harus memuat angka."),
-    confirm: z.string(),
-  })
-  .refine((v) => v.new_password === v.confirm, {
-    path: ["confirm"],
-    message: "Konfirmasi password tidak sama.",
-  });
-type Values = z.infer<typeof schema>;
-
+/** Ganti password (wajib saat login pertama). Berhasil → token baru dipasang, kembali ke Beranda. */
 export function ChangePasswordPage() {
   const { me, applyToken } = useSession();
   const navigate = useNavigate();
   const [formError, setFormError] = useState<string | null>(null);
-  const {
-    register,
-    handleSubmit,
-    setError,
-    formState: { errors, isSubmitting },
-  } = useForm<Values>({ resolver: zodResolver(schema) });
+  const form = useForm<ChangePasswordValues>({ resolver: zodResolver(changePasswordSchema) });
+  const { handleSubmit, setError } = form;
 
   if (!me) return <Navigate to="/login" replace />;
 
   const onSubmit = handleSubmit(async ({ current_password, new_password }) => {
     setFormError(null);
     try {
-      const { data } = await api.post<TokenOut>("/auth/change-password", { current_password, new_password });
-      await applyToken(data);
+      await applyToken(await changePassword(current_password, new_password));
       toast.success("Password diubah.");
       navigate("/", { replace: true });
     } catch (e) {
@@ -58,42 +37,5 @@ export function ChangePasswordPage() {
     }
   });
 
-  return (
-    <main className="mx-auto mt-16 w-full max-w-sm px-4">
-      <h1 className="mb-1 text-2xl font-semibold">Ganti password</h1>
-      <p className="mb-6 text-mist">Masukkan password saat ini dan password baru.</p>
-      <form onSubmit={onSubmit} noValidate>
-        {formError && (
-          <p role="alert" className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
-            {formError}
-          </p>
-        )}
-        <TextField
-          label="Password saat ini"
-          type="password"
-          autoComplete="current-password"
-          error={errors.current_password?.message}
-          {...register("current_password")}
-        />
-        <TextField
-          label="Password baru"
-          type="password"
-          autoComplete="new-password"
-          hint="Minimal 8 karakter, memuat huruf dan angka."
-          error={errors.new_password?.message}
-          {...register("new_password")}
-        />
-        <TextField
-          label="Ulangi password baru"
-          type="password"
-          autoComplete="new-password"
-          error={errors.confirm?.message}
-          {...register("confirm")}
-        />
-        <Button type="submit" className="w-full" disabled={isSubmitting}>
-          {isSubmitting ? "Menyimpan..." : "Ganti password"}
-        </Button>
-      </form>
-    </main>
-  );
+  return <ChangePasswordTemplate form={form} onSubmit={onSubmit} formError={formError} />;
 }

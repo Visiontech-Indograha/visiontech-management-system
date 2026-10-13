@@ -23,24 +23,24 @@ _PM_UNIT_ACCESS = Depends(plan_access(PlanNeed.PM_UNIT))    # domain.js REVIEW_W
 def _out(row: Any) -> WeeklyReportResponse:
     """
     Fungsi pembantu untuk memetakan row laporan mingguan dari database ke skema WeeklyReportResponse.
-    
+
     Args:
         row (Any): Row data laporan mingguan dari database.
-        
+
     Returns:
         WeeklyReportResponse: Respons model laporan mingguan.
     """
-    return WeeklyReportResponse(**row._mapping)
+    return WeeklyReportResponse(**(row if isinstance(row, dict) else row._mapping))
 
 
 @router.get("", response_model=list[WeeklyReportResponse])
 async def list_weeks(access: PlanAccess = _VIEW_ACCESS, weekly_report_service: WeeklyReportService = Depends(get_weekly_report_service)) -> list[WeeklyReportResponse]:
     """
     Mengambil daftar laporan mingguan untuk sebuah SK (GET).
-    
+
     Path Parameters:
     - plan_id (tersirat via router prefix): ID dari work plan.
-    
+
     Returns:
     - list[WeeklyReportResponse]: Daftar laporan mingguan.
     """
@@ -54,13 +54,13 @@ async def save_weekly(week: int, data: WeeklyReportRequest, access: PlanAccess =
                       weekly_report_service: WeeklyReportService = Depends(get_weekly_report_service)) -> WeeklyReportResponse:
     """
     Menyimpan draf laporan mingguan (PUT). (domain.js SAVE_WEEKLY)
-    
+
     Path Parameters:
     - week (int): Minggu ke-berapa.
-    
+
     Request Body:
     - data (WeeklyReportRequest): Data isi laporan dan kendala.
-    
+
     Returns:
     - WeeklyReportResponse: Data laporan mingguan yang berhasil disimpan.
     """
@@ -74,10 +74,10 @@ async def submit_weekly(week: int, access: PlanAccess = _LEADER_ACCESS,
                         weekly_report_service: WeeklyReportService = Depends(get_weekly_report_service)) -> WeeklyReportResponse:
     """
     Mengajukan laporan mingguan agar bisa ditinjau (POST). (domain.js SUBMIT_WEEKLY)
-    
+
     Path Parameters:
     - week (int): Minggu ke-berapa.
-    
+
     Returns:
     - WeeklyReportResponse: Status laporan mingguan yang baru.
     """
@@ -91,13 +91,13 @@ async def review_weekly(week: int, data: WeeklyReviewRequest, access: PlanAccess
                         weekly_report_service: WeeklyReportService = Depends(get_weekly_report_service)) -> WeeklyReportResponse:
     """
     Meninjau laporan mingguan (PM Unit) untuk disetujui atau ditolak (POST). (domain.js REVIEW_WEEKLY)
-    
+
     Path Parameters:
     - week (int): Minggu ke-berapa.
-    
+
     Request Body:
     - data (WeeklyReviewRequest): Keputusan (decision) dan catatan.
-    
+
     Returns:
     - WeeklyReportResponse: Status laporan mingguan yang baru.
     """

@@ -15,7 +15,7 @@ describe("menu berdasarkan izin API", () => {
     expect(labels(["manage:users"])).toEqual(["Beranda", "Work plan", "Absensi", "Rekap absensi", "Kendaraan & alat"]);
     expect(labels(["view:documents"])).toEqual(["Beranda", "Work plan", "Absensi", "Rekap absensi", "Kendaraan & alat", "Berkas saya"]);
     expect(labels(["view:audit"])).toEqual(["Beranda", "Work plan", "Absensi", "Rekap absensi", "Kendaraan & alat", "Audit log"]);
-    expect(labels(["create:plan"])).toEqual(["Beranda", "Work plan", "Absensi", "Rekap absensi", "Rekap lembur", "Kendaraan & alat"]);
+    expect(labels(["create:plan"])).toEqual(["Beranda", "Work plan", "Absensi", "Rekap absensi", "Rekap lembur", "Kendaraan & alat", "Jenis pekerjaan"]);
     // R-33: lokasi kerja dikelola PM (proyek) & Finance (kantor) lewat manage:sites.
     expect(labels(["manage:sites"])).toEqual(["Beranda", "Work plan", "Absensi", "Rekap absensi", "Kendaraan & alat", "Lokasi kerja"]);
     expect(labels(["review:overtime"])).toEqual(["Beranda", "Work plan", "Absensi", "Rekap absensi", "Rekap lembur", "Kendaraan & alat"]);

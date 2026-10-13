@@ -1,7 +1,8 @@
 import { Suspense, type ReactNode } from "react";
 import type { RouteObject } from "react-router-dom";
 import { AppShell } from "@/components/templates/AppShell";
-import { RequireAccess, RequireAuth } from "@/app/RouteGuards";
+import { RequireAuth } from "@/app/RequireAuth";
+import { RequireAccess } from "@/app/RequireAccess";
 import { TitleLayout } from "@/components/templates/TitleLayout";
 import { LoginPage } from "@/pages/auth/LoginPage";
 import { HomePage } from "@/pages/home/HomePage";

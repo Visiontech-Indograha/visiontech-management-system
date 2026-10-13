@@ -5,36 +5,40 @@ PostgreSQL 18 (PostGIS + pgvector), MinIO.
 
 ---
 
-## 1. Struktur folder (WAJIB — keputusan pemilik 2026-09-29, dikoreksi 2026-09-30 R-30)
+## 1. Struktur folder (WAJIB — keputusan pemilik 2026-10-11 R-35)
 
-> **Kritis.** Struktur ini **persis** contoh yang diberikan pemilik (R-28). Versi 2026-09-29 di dokumen ini
-> sempat menyimpang (`core/database.py`, `app/dependencies.py`) dan sudah dikoreksi (R-30). Kode lama
-> dimigrasikan bertahap (`docs/26-PLAN-MIGRASI-STRUKTUR-API.md`); **berkas baru wajib** dibuat di tempat
-> yang benar menurut struktur ini.
+> **Kritis.** Arsitektur backend secara resmi dimodernisasi dan dikunci ke pola **modular domain**
+> (`feature/arsitektur-api-modular`, R-35). Struktur ini mengelompokkan kode per domain bisnis
+> di bawah `app/modules/`, didukung infrastruktur basis data di `app/database/`, modul utilitas di
+> `app/shared/`, serta `app/core/` untuk startup lifespan dan konfigurasi keamanan.
+> Lapisan transisi (`crud/`, `models/`, `schemas/`, `services/`, `db/`) tetap dipertahankan
+> untuk kompatibilitas penuh dan seluruh struktur ini dikunci serta dijaga oleh `api/tests/test_structure.py`.
 
 ```
 api/
 ├── alembic/                  migrasi database (Alembic)
 ├── app/                      kode sumber aplikasi
-│   ├── api/                  endpoint API (routing)
+│   ├── modules/              modul fitur/domain mandiri (routes.py, skema/komponen domain)
+│   │   ├── accounts/ · assets/ · attendance/ · audit/ · auth/ · documents/
+│   │   ├── employees/ · hse/ · notifications/ · overtime/ · reports/
+│   │   └── signatures/ · sites/ · system/ · units/ · work_plans/ · work_types/
+│   ├── database/             manajemen koneksi, sesi DB, dan health check
+│   │   ├── session.py        engine async, session factory, transaksi RLS
+│   │   └── health_check.py   verifikasi koneksi DB
+│   ├── shared/               utilitas, dependensi bersama, dan konstanta lintas modul
+│   ├── core/                 konfigurasi inti, lifespan, keamanan & error handling
+│   │   ├── config.py         pengaturan env via pydantic-settings
+│   │   ├── security.py       hashing password, JWT, identitas CurrentUser
+│   │   ├── lifespan.py       startup & shutdown lifespan context manager
+│   │   └── exception_handlers.py penanganan AppError dan HttpException global
+│   ├── api/                  routing API v1 & dependency injection
 │   │   ├── v1/
-│   │   │   ├── endpoints/    satu berkas per modul: auth.py, work_plans.py, attendance.py, …
-│   │   │   └── router.py     menggabungkan semua router v1
-│   │   └── deps.py           dependency injection global: get_db, get_current_user, izin, penjaga akses,
-│   │                         dan perakitan service (get_<nama>_service)
-│   ├── core/                 konfigurasi inti dan keamanan
-│   │   ├── config.py         pengaturan env via pydantic-settings — SATU-SATUNYA sumber rahasia
-│   │   └── security.py       hashing password, JWT, identitas pengguna (CurrentUser)
-│   ├── crud/                 operasi database — SATU-SATUNYA tempat ada kueri SQL
-│   │   ├── crud_user.py      satu berkas per entitas: crud_<entitas>.py, kelas CRUD<Entitas>
-│   │   └── …
-│   ├── models/               model ORM (SQLModel) — satu berkas per entitas: user.py, work_plan.py, …
-│   ├── schemas/              skema validasi & serialisasi (Pydantic) — satu berkas per entitas
-│   ├── services/             logika bisnis (padanan prototype/js/domain.js), tanpa SQL
-│   ├── db/                   koneksi dan sesi database
-│   │   ├── base.py           basis deklaratif model (metadata untuk Alembic)
-│   │   └── session.py        engine async, session maker, transaksi, konteks RLS (SET LOCAL app.*)
-│   └── main.py               titik masuk aplikasi (instance FastAPI)
+│   │   │   └── router.py     menggabungkan semua router modul ke dalam prefix /api/v1
+│   │   └── deps.py           dependency injection auth, sesi DB, penjaga RBAC
+│   ├── crud/ · models/ · schemas/ · services/ · db/  lapisan domain & kompatibilitas
+│   ├── templates/            Jinja2 untuk PDF dokumen
+│   ├── cli.py                perintah CLI (seed, create-admin)
+│   └── main.py               titik masuk FastAPI aplikasi
 ├── tests/                    pytest: conftest.py, test_<fitur>.py
 ├── .env                      variabel lingkungan lokal (tidak di-commit)
 ├── Dockerfile
@@ -61,7 +65,7 @@ Tambahan proyek yang dipertahankan (tidak ada di contoh, dibutuhkan produk): `ap
   service = `<entitas>_service.py`, schema/model = `<entitas>.py`.
 - Satu arah impor: `endpoints → services → crud → models`; `core` dan `db` tidak mengimpor lapisan domain.
   Dijaga uji `tests/test_structure.py` (docs/26 M0).
-- Tidak ada folder lain di `app/` (mis. `controllers/`, `repositories/`, `dependencies.py`).
+- Folder teratas di `app/` dikunci sesuai arsitektur modular R-35: `modules`, `database`, `shared`, `core`, `api`, `templates`, serta folder transisi `crud`, `models`, `schemas`, `services`, `db` (ditegakkan `tests/test_structure.py`).
 
 ---
 

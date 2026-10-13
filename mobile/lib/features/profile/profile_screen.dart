@@ -43,6 +43,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   bool _isEnrolling = false;
   Map<String, dynamic>? _faceStatus;
   String? _faceError;
+  Future<String>? _photoUrl;
 
   @override
   void initState() {
@@ -50,6 +51,60 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     _loadSyncInfo();
     _loadBiometricState();
     _loadFaceState();
+    _loadPhotoUrl();
+  }
+
+  /// URL bertanda tangan foto profil (berlaku 5 menit). Berkas dilayani API
+  /// hanya setelah otorisasi, jadi URL harus diambil lewat `fileUrl`, bukan
+  /// dipasang langsung sebagai path.
+  void _loadPhotoUrl() {
+    final authState = ref.read(authControllerProvider);
+    final user = authState is AuthAuthenticated
+        ? authState.user
+        : (authState is AuthLocked ? authState.user : null);
+    final id = user?.photoFileId;
+    if (id == null || id.isEmpty) {
+      _photoUrl = null;
+      return;
+    }
+    _photoUrl = ref.read(syncEngineProvider).api.fileUrl(id);
+  }
+
+  /// Avatar bulat: foto profil bila ada, selain itu inisial nama (perilaku lama).
+  Widget _avatar(String name, double size, {TextStyle? textStyle}) {
+    final initials = name.isEmpty ? '?' : name.substring(0, 1).toUpperCase();
+    final fallback = Container(
+      width: size,
+      height: size,
+      alignment: Alignment.center,
+      decoration: const BoxDecoration(color: VmsColors.gold, shape: BoxShape.circle),
+      child: Text(
+        initials,
+        style: (textStyle ?? VmsTextStyles.title).copyWith(
+          color: VmsColors.brand900,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+    if (_photoUrl == null) return fallback;
+    return FutureBuilder<String>(
+      future: _photoUrl,
+      builder: (context, snap) {
+        final url = snap.data;
+        if (url == null || url.isEmpty) return fallback;
+        return ClipOval(
+          child: Image.network(
+            url,
+            width: size,
+            height: size,
+            fit: BoxFit.cover,
+            errorBuilder: (_, _, _) => fallback,
+            loadingBuilder: (_, child, progress) =>
+                progress == null ? child : fallback,
+          ),
+        );
+      },
+    );
   }
 
   Future<void> _loadFaceState() async {
@@ -283,22 +338,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
     return Scaffold(
       appBar: VmsTopBar(
-        trailing: Container(
-          width: 44,
-          height: 44,
-          alignment: Alignment.center,
-          decoration: const BoxDecoration(
-            color: VmsColors.gold,
-            shape: BoxShape.circle,
-          ),
-          child: Text(
-            name.isEmpty ? '?' : name.substring(0, 1).toUpperCase(),
-            style: VmsTextStyles.title.copyWith(
-              color: VmsColors.brand900,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ),
+        trailing: _avatar(name, 44),
       ),
       body: ListView(
         padding: safeListPadding(context),
@@ -307,6 +347,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             eyebrow: 'Profil',
             title: name,
             subtitle: user?.username,
+            trailing: _avatar(name, 64),
             bottom: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               decoration: BoxDecoration(

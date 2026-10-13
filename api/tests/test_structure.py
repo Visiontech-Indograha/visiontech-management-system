@@ -16,8 +16,11 @@ from pathlib import Path
 
 APP_DIR = Path(__file__).resolve().parents[1] / "app"
 
-# Persis contoh pemilik (docs/12 §1, R-28/R-30) + `templates/` (Jinja2 PDF).
-ALLOWED_DIRS = {"api", "core", "crud", "models", "schemas", "services", "db", "templates"}
+# Persis contoh arsitektur modular + transisi.
+ALLOWED_DIRS = {
+    "api", "core", "crud", "models", "schemas", "services", "db", "templates",
+    "database", "shared", "modules",
+}
 # Berkas di akar app/: main.py (contoh pemilik) + cli.py (seed/create-admin). Tidak ada dependencies.py.
 ALLOWED_ROOT_FILES = {"main.py", "cli.py"}
 

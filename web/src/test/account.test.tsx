@@ -1,6 +1,6 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { mockApi, renderRoute } from "./utils";
+import { mockApi, renderRoute, apiError } from "./utils";
 
 /** M1 / P1-7: Akun & keamanan — ganti password bisa ditemukan, daftar perangkat, keluarkan perangkat. */
 
@@ -183,5 +183,64 @@ describe("Tata letak halaman Akun & keamanan", () => {
     expect(grid.className).toContain("lg:grid-cols-2");
     expect(grid.className).toContain("grid");
     for (const card of [akun, wajah]) expect(card.className).not.toContain("max-w-xl"); // tak lagi dibatasi sempit
+  });
+});
+
+/**
+ * Foto profil memakai presigned URL dari `/files/{id}/url` — BUKAN `<img src="/api/v1/files/{id}">`,
+ * karena browser tidak menyertakan header Authorization pada permintaan gambar sehingga API
+ * selalu menjawab 404. Kunci kueri disamakan dengan FilePreview agar tidak meminta URL dua kali.
+ */
+describe("Foto profil di Akun & keamanan", () => {
+  const ME_WITH_PHOTO = {
+    user_id: "u-1", email: "ramadani@visiontech.id", role: "PM",
+    permissions: ["view:users", "view:documents"], employee_id: "e-1",
+    photo_file_id: "f-photo",
+  };
+  const FACE_OK = { data: { employee_linked: true, consent: "GRANTED", consent_policy_version: "v1",
+    enrolled: true, liveness_required: true, template_ttl_days: 7, policy: { version: "v1", text: "t" } } };
+
+  it("mengambil URL bertanda tangan lewat API lalu menampilkan gambar", async () => {
+    const calls = mockApi((c) => {
+      if (c.url === "/auth/me") return { data: ME_WITH_PHOTO };
+      if (c.url === "/auth/sessions") return { data: [] };
+      if (c.url === "/face/status") return FACE_OK;
+      if (c.url === "/files/f-photo/url?variant=view") {
+        return { data: { url: "http://minio.test/vms-files/f-photo_view.webp", mime_type: "image/webp" } };
+      }
+    });
+    renderRoute("/account", { me: ME_WITH_PHOTO as never });
+
+    const akun = await screen.findByRole("region", { name: "Akun" });
+    const img = await within(akun).findByRole("img");
+    expect(img).toHaveAttribute("src", "http://minio.test/vms-files/f-photo_view.webp");
+    expect(calls.some((c) => c.url === "/files/f-photo/url?variant=view")).toBe(true);
+  });
+
+  it("tanpa photo_file_id: tidak ada gambar, tidak ada permintaan URL", async () => {
+    const calls = mockApi((c) => {
+      if (c.url === "/auth/me") return { data: { ...ME_WITH_PHOTO, photo_file_id: null } };
+      if (c.url === "/auth/sessions") return { data: [] };
+      if (c.url === "/face/status") return FACE_OK;
+    });
+    renderRoute("/account", { me: { ...ME_WITH_PHOTO, photo_file_id: null } as never });
+
+    const akun = await screen.findByRole("region", { name: "Akun" });
+    expect(within(akun).queryByRole("img")).toBeNull();
+    expect(calls.some((c) => String(c.url).includes("/url"))).toBe(false);
+  });
+
+  it("URL gagal diambil: kartu akun tetap tampil tanpa gambar", async () => {
+    mockApi((c) => {
+      if (c.url === "/auth/me") return { data: ME_WITH_PHOTO };
+      if (c.url === "/auth/sessions") return { data: [] };
+      if (c.url === "/face/status") return FACE_OK;
+      if (c.url === "/files/f-photo/url?variant=view") return apiError(404, "NOT_FOUND", "Berkas tidak ditemukan.");
+    });
+    renderRoute("/account", { me: ME_WITH_PHOTO as never });
+
+    const akun = await screen.findByRole("region", { name: "Akun" });
+    expect(within(akun).getByText("ramadani@visiontech.id")).toBeInTheDocument();
+    expect(within(akun).queryByRole("img")).toBeNull();
   });
 });

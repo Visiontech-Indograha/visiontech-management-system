@@ -12,3 +12,16 @@ export function usePlanChanges(planId: string) {
     queryFn: async () => (await api.get<Change[]>(`/work-plans/${planId}/changes`)).data,
   });
 }
+
+export type ChangeResponse = components["schemas"]["ChangeResponse"];
+export type ChangeRequest = components["schemas"]["ChangeRequest"];
+
+/** POST /work-plans/{id}/changes — ajukan perubahan personel / perpanjangan. */
+export async function requestPlanChange(planId: string, body: ChangeRequest): Promise<ChangeResponse> {
+  return (await api.post<ChangeResponse>(`/work-plans/${planId}/changes`, body)).data;
+}
+
+/** POST /changes/{id}/{action} — putuskan perubahan (approve/accept/reject/withdraw). */
+export async function decidePlanChange(changeId: string | undefined, action: string, reason?: string): Promise<ChangeResponse> {
+  return (await api.post<ChangeResponse>(`/changes/${changeId}/${action}`, { reason: reason ?? null })).data;
+}

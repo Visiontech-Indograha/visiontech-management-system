@@ -5,14 +5,15 @@ import { useForm } from "react-hook-form";
 import { useFormDraft } from "@/hooks/useFormDraft";
 import { toast } from "sonner";
 import { z } from "zod";
-import { Button } from "@/components/atoms/Button";
 import { TextAreaField, TextField } from "@/components/molecules/Field";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
-import { api } from "@/lib/apiClient";
 import type { components } from "@/lib/apiTypes";
 import { errorMessage } from "@/lib/errors";
-import { planKey, type WorkPlan } from "@/services/workPlanService";
+import { planKey, type WorkPlan, requestCompletion } from "@/services/workPlanService";
 import { oversize, uploadFiles } from "@/services/uploadService";
+import { FormBlock } from "@/components/molecules/FormBlock";
+import { FormErrorText } from "@/components/molecules/FormErrorText";
+import { DialogActions } from "@/components/molecules/DialogActions";
 
 type CompletionRequest = components["schemas"]["CompletionRequest"];
 
@@ -23,7 +24,7 @@ function useRequestCompletion(plan: WorkPlan) {
     mutationFn: async ({ body, obstacle, files }: { body: string; obstacle: string; files: File[] }) => {
       const evidence_file_ids = await uploadFiles(files);
       const payload: CompletionRequest = { row_version: plan.row_version, body, obstacle, evidence_file_ids };
-      return (await api.post<WorkPlan>(`/work-plans/${plan.id}/request-completion`, payload)).data;
+      return requestCompletion(plan.id, payload);
     },
     onSuccess: async (updated) => {
       qc.setQueryData(planKey(plan.id), updated);
@@ -79,22 +80,11 @@ export function PlanCompletionDialog({ plan, onClose }: { plan: WorkPlan; onClos
       title="Laporan akhir"
       onClose={onClose}
       footer={
-        <>
-          <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
-            Batal
-          </Button>
-          <Button type="submit" form="completion-form" disabled={isSubmitting}>
-            {isSubmitting ? "Mengirim..." : "Kirim Laporan Akhir (Ajukan Selesai)"}
-          </Button>
-        </>
+        <DialogActions onCancel={onClose} busy={isSubmitting} formId="completion-form" submitLabel="Kirim Laporan Akhir (Ajukan Selesai)" busyLabel="Mengirim..." />
       }
     >
-      <form id="completion-form" onSubmit={onSubmit} noValidate className="max-h-[65vh] overflow-y-auto px-1">
-        {formError && (
-          <p role="alert" className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
-            {formError}
-          </p>
-        )}
+      <FormBlock id="completion-form" onSubmit={onSubmit} noValidate className="max-h-[65vh] overflow-y-auto px-1">
+        <FormErrorText message={formError} />
         <TextAreaField label="Laporan Keseluruhan" error={errors.body?.message} {...register("body")} />
         <TextAreaField label="Ringkasan Kendala Keseluruhan (Wajib)" error={errors.obstacle?.message} {...register("obstacle")} />
         <TextField
@@ -106,7 +96,7 @@ export function PlanCompletionDialog({ plan, onClose }: { plan: WorkPlan; onClos
           error={fileError ?? undefined}
           onChange={(e) => pickFiles(e.target.files)}
         />
-      </form>
+      </FormBlock>
     </VmsDialog>
   );
 }

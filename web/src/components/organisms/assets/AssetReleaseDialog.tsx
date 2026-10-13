@@ -7,6 +7,7 @@ import { releaseSchema } from "@/schemas/assetSchemas";
 import { useReleaseAsset, type Asset } from "@/services/assetService";
 import { AssetFormDialog } from "./AssetFormDialog";
 import { AssetPlanSelect } from "./AssetPlanSelect";
+import { TextBlock } from "@/components/molecules/TextBlock";
 
 /** Dialog lepas reservasi aset dari rencana kerja. */
 export function AssetReleaseDialog({ asset, onClose }: { asset: Asset; onClose: () => void }) {
@@ -29,7 +30,7 @@ export function AssetReleaseDialog({ asset, onClose }: { asset: Asset; onClose: 
   });
   return (
     <AssetFormDialog title={`Lepas reservasi ${asset.name}`} submitLabel="Lepas reservasi" submitting={isSubmitting} formError={formError} onClose={onClose} onSubmit={onSubmit}>
-      <p className="mb-3 text-sm text-mist">Pilih work plan yang memesan aset ini.</p>
+      <TextBlock className="mb-3 text-sm text-mist">Pilih work plan yang memesan aset ini.</TextBlock>
       <AssetPlanSelect error={errors.work_plan_id?.message} {...register("work_plan_id")} />
     </AssetFormDialog>
   );

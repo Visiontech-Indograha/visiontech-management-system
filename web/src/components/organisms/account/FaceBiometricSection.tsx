@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { Badge } from "@/components/atoms/Badge";
-import { Button } from "@/components/atoms/Button";
-import { Checkbox } from "@/components/atoms/Checkbox";
-import { Skeleton } from "@/components/atoms/Skeleton";
 import { FaceEnrollCapture } from "@/components/organisms/face/FaceEnrollCapture";
 import { errorMessage } from "@/lib/errors";
 import { useFaceStatus, useSetFaceConsent } from "@/services/accountService";
+import { Pill } from "@/components/molecules/Pill";
+import { ActionButton } from "@/components/molecules/ActionButton";
+import { CheckControl } from "@/components/molecules/CheckControl";
+import { LoadingBar } from "@/components/molecules/LoadingBar";
+import { TextBlock } from "@/components/molecules/TextBlock";
+import { ControlLabel } from "@/components/molecules/FormBlock";
 
 /** Biometrik wajah di halaman Akun: status, persetujuan (beri/tarik), pendaftaran/daftar ulang lewat webcam. */
 export function FaceBiometricSection() {
@@ -19,8 +21,8 @@ export function FaceBiometricSection() {
   if (faceStatus.isPending) {
     return (
       <section aria-label="Biometrik Wajah" className="rounded-panel border border-line bg-surface px-5 py-4 shadow-card">
-        <Skeleton className="mb-2 h-6 w-48" />
-        <Skeleton className="h-16 w-full" />
+        <LoadingBar className="mb-2 h-6 w-48" />
+        <LoadingBar className="h-16 w-full" />
       </section>
     );
   }
@@ -33,10 +35,10 @@ export function FaceBiometricSection() {
   if (!data?.employee_linked) {
     return (
       <section aria-label="Biometrik Wajah" className="rounded-panel border border-line bg-surface px-5 py-4 shadow-card">
-        <h2 className="text-base font-semibold">Biometrik Wajah</h2>
-        <p className="mt-2 text-sm text-mist">
+        <TextBlock as="h2" className="text-base font-semibold">Biometrik Wajah</TextBlock>
+        <TextBlock className="mt-2 text-sm text-mist">
           Fitur pendaftaran biometrik wajah hanya tersedia untuk akun yang terhubung dengan data karyawan.
-        </p>
+        </TextBlock>
       </section>
     );
   }
@@ -59,56 +61,56 @@ export function FaceBiometricSection() {
     <section aria-label="Biometrik Wajah" className="rounded-panel border border-line bg-surface px-5 py-4 shadow-card">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h2 className="text-base font-semibold">Biometrik Wajah (Face Recognition)</h2>
-          <p className="text-xs text-mist">Verifikasi kehadiran server-side berbasis pencocokan fitur wajah.</p>
+          <TextBlock as="h2" className="text-base font-semibold">Biometrik Wajah (Face Recognition)</TextBlock>
+          <TextBlock className="text-xs text-mist">Verifikasi kehadiran server-side berbasis pencocokan fitur wajah.</TextBlock>
         </div>
         {data.enrolled ? (
-          <Badge tone="success">Wajah Terdaftar</Badge>
+          <Pill tone="success">Wajah Terdaftar</Pill>
         ) : isConsentGiven ? (
-          <Badge tone="warning">Belum Terdaftar</Badge>
+          <Pill tone="warning">Belum Terdaftar</Pill>
         ) : (
-          <Badge tone="neutral">Belum Persetujuan</Badge>
+          <Pill tone="neutral">Belum Persetujuan</Pill>
         )}
       </div>
 
       {/* Box Persetujuan Kebijakan */}
       <div className="mb-4 rounded-lg border border-line/60 bg-muted/20 p-3.5 text-sm">
         <div className="mb-2 flex items-center justify-between">
-          <span className="font-medium text-foreground">Persetujuan Pemrosesan Biometrik</span>
+          <TextBlock as="span" className="font-medium text-foreground">Persetujuan Pemrosesan Biometrik</TextBlock>
           {isConsentGiven ? (
-            <Badge tone="success">{`Disetujui (v${data.consent_policy_version ?? data.policy.version})`}</Badge>
+            <Pill tone="success">{`Disetujui (v${data.consent_policy_version ?? data.policy.version})`}</Pill>
           ) : (
-            <Badge tone="danger">Belum Disetujui</Badge>
+            <Pill tone="danger">Belum Disetujui</Pill>
           )}
         </div>
 
         {!isConsentGiven ? (
           <div className="mt-2 space-y-3">
-            <p className="rounded border border-line bg-surface p-2.5 text-xs leading-relaxed text-mist">
+            <TextBlock className="rounded border border-line bg-surface p-2.5 text-xs leading-relaxed text-mist">
               {data.policy.text}
-            </p>
+            </TextBlock>
             <div className="flex items-center gap-2">
-              <Checkbox
+              <CheckControl
                 id="consent-agree"
                 checked={agreed}
                 onCheckedChange={(c) => setAgreed(!!c)}
               />
-              <label htmlFor="consent-agree" className="cursor-pointer text-xs text-foreground">
+              <ControlLabel htmlFor="consent-agree" className="cursor-pointer text-xs text-foreground">
                 Saya menyetujui pemrosesan data biometrik wajah untuk verifikasi kehadiran.
-              </label>
+              </ControlLabel>
             </div>
-            <Button
+            <ActionButton
               size="sm"
               disabled={!agreed || setConsent.isPending}
               onClick={() => handleToggleConsent(true)}
             >
               {setConsent.isPending ? "Menyimpan..." : "Beri Persetujuan Biometrik"}
-            </Button>
+            </ActionButton>
           </div>
         ) : (
           <div className="mt-2 flex items-center justify-between text-xs text-mist">
-            <span>Persetujuan aktif. Template biometrik disimpan aman di server.</span>
-            <Button
+            <TextBlock as="span">Persetujuan aktif. Template biometrik disimpan aman di server.</TextBlock>
+            <ActionButton
               size="sm"
               variant="outline"
               className="text-danger hover:text-danger"
@@ -116,7 +118,7 @@ export function FaceBiometricSection() {
               onClick={() => handleToggleConsent(false)}
             >
               Tarik Persetujuan
-            </Button>
+            </ActionButton>
           </div>
         )}
       </div>
@@ -125,17 +127,17 @@ export function FaceBiometricSection() {
       {isConsentGiven && (
         <div className="space-y-3" data-testid="face-enroll-info">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-medium">Pendaftaran Wajah</h3>
+            <TextBlock as="h3" className="text-sm font-medium">Pendaftaran Wajah</TextBlock>
             {data.enrolled && !enrolling && (
-              <Button size="sm" variant="outline" onClick={() => setEnrolling(true)}>
+              <ActionButton size="sm" variant="outline" onClick={() => setEnrolling(true)}>
                 Daftar Ulang Wajah
-              </Button>
+              </ActionButton>
             )}
           </div>
           {data.enrolled && !enrolling ? (
             <div className="space-y-1 rounded-lg border border-line bg-surface p-3 text-xs text-mist">
-              <p>Model Biometrik: <span className="font-mono text-foreground">{data.model_name ?? "InsightFace buffalo_s"}</span></p>
-              <p>Masa Berlaku Template: <span className="text-foreground">{`${data.template_ttl_days} hari`}</span></p>
+              <TextBlock>Model Biometrik: <TextBlock as="span" className="font-mono text-foreground">{data.model_name ?? "InsightFace buffalo_s"}</TextBlock></TextBlock>
+              <TextBlock>Masa Berlaku Template: <TextBlock as="span" className="text-foreground">{`${data.template_ttl_days} hari`}</TextBlock></TextBlock>
             </div>
           ) : (
             <div className="rounded-lg border border-line bg-surface p-3.5">

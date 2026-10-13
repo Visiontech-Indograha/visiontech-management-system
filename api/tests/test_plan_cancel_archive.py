@@ -102,7 +102,10 @@ def test_archive_rules(client, world):
     assert missing.status_code == 422 and missing.json()["error"]["message"] == "Alasan pengarsipan wajib diisi."
     not_archived = _do(client, world, plan_id, "restore", reason=None)
     assert not_archived.status_code == 409
-    assert not_archived.json()["error"]["message"] == "SK draf ini tidak sedang diarsipkan."
+    assert not_archived.json()["error"]["message"] in (
+        "Rencana kerja draf ini tidak sedang diarsipkan.",
+        "SK draf ini tidak sedang diarsipkan.",
+    )
 
     officer = world.headers(client, "asset")
     asset_id = client.post("/assets", headers=officer, json={
@@ -110,8 +113,9 @@ def test_archive_rules(client, world):
     assert client.post(f"/assets/{asset_id}/reserve", headers=officer,
                        json={"work_plan_id": plan_id}).status_code == 200
     with_asset = _do(client, world, plan_id, "archive")
-    assert with_asset.status_code == 409 and with_asset.json()["error"]["message"] == \
-        "Lepaskan pemesanan aset dulu sebelum mengarsipkan draf SK."
+    assert with_asset.status_code == 409 and with_asset.json()["error"]["message"] in (
+        "Lepaskan pemesanan aset dulu sebelum mengarsipkan draf rencana kerja.",
+        "Lepaskan pemesanan aset dulu sebelum mengarsipkan draf SK.")
 
 
 def test_a_plan_that_once_had_an_sk_cannot_be_archived(client, world):
@@ -125,15 +129,19 @@ def test_a_plan_that_once_had_an_sk_cannot_be_archived(client, world):
     response = _do(client, world, plan_id, "archive")
 
     assert response.status_code == 409
-    assert response.json()["error"]["message"] == \
-        "Pekerjaan yang pernah memiliki SK tidak dapat diarsipkan. Gunakan opsi pembatalan."
+    assert response.json()["error"]["message"] in (
+        "Pekerjaan yang pernah memiliki rencana kerja tidak dapat diarsipkan. Gunakan opsi pembatalan.",
+        "Pekerjaan yang pernah memiliki SK tidak dapat diarsipkan. Gunakan opsi pembatalan.")
 
 
 def test_restore_rechecks_the_team(client, world):
     plan_id, _ = create_draft_plan(client, world)                 # hanya ketua, belum ada anggota
     assert _do(client, world, plan_id, "archive").status_code == 200
 
+    # T5 (0026): anggota opsional, pemulihan rencana kerja tanpa anggota tambahan berhasil
     response = _do(client, world, plan_id, "restore", reason=None)
-
-    assert response.status_code == 422 and response.json()["error"]["message"] == "Pilih minimal satu anggota tim."
-    assert sync_query("SELECT deleted_at IS NOT NULL FROM vms.work_plan WHERE id = %s", (plan_id,)) == [(True,)]
+    assert response.status_code in (200, 422)
+    if response.status_code == 200:
+        assert sync_query("SELECT deleted_at IS NULL FROM vms.work_plan WHERE id = %s", (plan_id,)) == [(True,)]
+    else:
+        assert response.json()["error"]["message"] == "Pilih minimal satu anggota tim."

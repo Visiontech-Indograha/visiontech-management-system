@@ -7,6 +7,7 @@ import { errorMessage } from "@/lib/errors";
 import { checkSchema, type CheckValues } from "@/schemas/assetSchemas";
 import { useCheckAsset, type Asset } from "@/services/assetService";
 import { AssetFormDialog } from "./AssetFormDialog";
+import { ControlOption } from "@/components/molecules/FormBlock";
 
 /** Pengemudi yang ditunjuk menyatakan kendaraan layak (ACCEPT) atau banding (APPEAL). */
 export function AssetCheckDialog({ asset, onClose }: { asset: Asset; onClose: () => void }) {
@@ -30,8 +31,8 @@ export function AssetCheckDialog({ asset, onClose }: { asset: Asset; onClose: ()
   return (
     <AssetFormDialog title="Periksa Kendaraan" submitLabel="Simpan hasil" submitting={isSubmitting} formError={formError} onClose={onClose} onSubmit={onSubmit}>
       <SelectField label="Hasil pemeriksaan" {...register("decision")}>
-        <option value="ACCEPT">Kendaraan layak dipakai</option>
-        <option value="APPEAL">Ajukan banding kelayakan</option>
+        <ControlOption value="ACCEPT">Kendaraan layak dipakai</ControlOption>
+        <ControlOption value="APPEAL">Ajukan banding kelayakan</ControlOption>
       </SelectField>
       <TextAreaField label="Alasan (wajib jika banding)" error={errors.reason?.message} {...register("reason")} />
     </AssetFormDialog>

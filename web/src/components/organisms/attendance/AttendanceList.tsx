@@ -1,9 +1,11 @@
 import type { UseQueryResult } from "@tanstack/react-query";
-import { Button } from "@/components/atoms/Button";
 import { QueryState } from "@/components/molecules/QueryState";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
 import { formatDate, formatDateTime } from "@/lib/format";
 import type { Attendance, AttendanceList as AttendanceListData } from "@/services/attendanceService";
+import { ActionButton } from "@/components/molecules/ActionButton";
+import { TextBlock } from "@/components/molecules/TextBlock";
+import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
 
 /** Kartu absensi (jarak, wajah, penjelasan, status) + tombol Tinjau/Beri penjelasan + navigasi halaman. */
 export function AttendanceList({ list, page, meEmployeeId, onPageChange, onOpen }: {
@@ -17,46 +19,46 @@ export function AttendanceList({ list, page, meEmployeeId, onPageChange, onOpen 
   const lastPage = data ? Math.max(1, Math.ceil(data.total / data.size)) : 1;
   return (
       <QueryState query={list} errorText="Absensi tidak dapat dimuat." empty={data?.items.length === 0} emptyText="Tidak ada catatan kehadiran yang cocok.">
-        <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <ListBlock className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {data?.items.map((a) => (
-            <li key={a.id} className="flex flex-col gap-2 rounded-panel border border-line bg-surface shadow-card p-4">
+            <ListEntry key={a.id} className="flex flex-col gap-2 rounded-panel border border-line bg-surface shadow-card p-4">
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <p className="font-medium">{a.employee_name ?? "-"}</p>
-                  <p className="text-sm text-mist">
+                  <TextBlock className="font-medium">{a.employee_name ?? "-"}</TextBlock>
+                  <TextBlock className="text-sm text-mist">
                     {formatDate(a.work_date)} · {a.site_label}
-                  </p>
+                  </TextBlock>
                 </div>
                 <StatusBadge status={a.status} />
               </div>
-              <dl className="text-sm">
+              <ListBlock as="dl" className="text-sm">
                 <div>
-                  <dt className="inline text-mist">Masuk / keluar: </dt>
-                  <dd className="inline">
+                  <TextBlock as="dt" className="inline text-mist">Masuk / keluar: </TextBlock>
+                  <TextBlock as="dd" className="inline">
                     {formatDateTime(a.check_in_at)} / {a.check_out_at ? formatDateTime(a.check_out_at) : "belum keluar"}
-                  </dd>
+                  </TextBlock>
                 </div>
                 <div>
-                  <dt className="inline text-mist">Jarak: </dt>
-                  <dd className="inline">
+                  <TextBlock as="dt" className="inline text-mist">Jarak: </TextBlock>
+                  <TextBlock as="dd" className="inline">
                     {Math.round(a.distance_m)} m{a.is_late ? " · terlambat" : ""}
                     {a.is_early_leave ? " · pulang cepat" : ""}
                     {a.offline ? " · absen luring" : ""}
                     {a.city_category === "LUAR_KOTA" ? " · luar kota" : " · dalam kota"}
-                  </dd>
+                  </TextBlock>
                 </div>
                 {a.check_out_distance_m != null && (
                   <div>
-                    <dt className="inline text-mist">Jarak pulang: </dt>
-                    <dd className="inline">
+                    <TextBlock as="dt" className="inline text-mist">Jarak pulang: </TextBlock>
+                    <TextBlock as="dd" className="inline">
                       {Math.round(a.check_out_distance_m)} m{a.check_out_outside ? " · Pulang di luar radius" : ""}
-                    </dd>
+                    </TextBlock>
                   </div>
                 )}
                 {(a.face_result || a.check_out_face_result) && (
                   <div>
-                    <dt className="inline text-mist">Wajah: </dt>
-                    <dd className="inline">
+                    <TextBlock as="dt" className="inline text-mist">Wajah: </TextBlock>
+                    <TextBlock as="dd" className="inline">
                       {a.face_result
                         ? `Masuk: ${a.face_result}${a.face_similarity !== null && a.face_similarity !== undefined ? ` (${Math.round(a.face_similarity * 100)}%)` : ""}`
                         : ""}
@@ -64,13 +66,13 @@ export function AttendanceList({ list, page, meEmployeeId, onPageChange, onOpen 
                       {a.check_out_face_result
                         ? `Pulang: ${a.check_out_face_result}${a.check_out_face_similarity !== null && a.check_out_face_similarity !== undefined ? ` (${Math.round(a.check_out_face_similarity * 100)}%)` : ""}`
                         : ""}
-                    </dd>
+                    </TextBlock>
                   </div>
                 )}
                 {a.explanation && (
                   <div>
-                    <dt className="inline text-mist">Penjelasan: </dt>
-                    <dd className="inline">{a.explanation}</dd>
+                    <TextBlock as="dt" className="inline text-mist">Penjelasan: </TextBlock>
+                    <TextBlock as="dd" className="inline">{a.explanation}</TextBlock>
                   </div>
                 )}
                 <div className="text-mist">
@@ -80,34 +82,34 @@ export function AttendanceList({ list, page, meEmployeeId, onPageChange, onOpen 
                       ? "Menunggu pemeriksaan"
                       : `Ditinjau ${a.reviewed_at ? formatDateTime(a.reviewed_at) : ""}`}
                 </div>
-              </dl>
+              </ListBlock>
               {a.status === "NEEDS_REVIEW" && (
                 <div className="mt-auto flex flex-col gap-2 md:flex-row">
                   {a.can_review ? (
-                    <Button onClick={() => onOpen({ kind: "review", item: a })}>Tinjau</Button>
+                    <ActionButton onClick={() => onOpen({ kind: "review", item: a })}>Tinjau</ActionButton>
                   ) : a.employee_id === meEmployeeId ? (
-                    <Button variant="outline" onClick={() => onOpen({ kind: "explain", item: a })}>
+                    <ActionButton variant="outline" onClick={() => onOpen({ kind: "explain", item: a })}>
                       {a.explanation ? "Ubah penjelasan" : "Beri penjelasan"}
-                    </Button>
+                    </ActionButton>
                   ) : null}
                 </div>
               )}
-            </li>
+            </ListEntry>
           ))}
-        </ul>
+        </ListBlock>
         {data && data.total > data.size && (
           <nav aria-label="Halaman" className="mt-4 flex flex-col gap-2 text-sm md:flex-row md:items-center md:justify-between">
-            <span className="text-mist">
+            <TextBlock as="span" className="text-mist">
               {data.total} catatan · halaman {data.page} dari {lastPage}
-            </span>
-            <span className="flex gap-2">
-              <Button variant="outline" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>
+            </TextBlock>
+            <TextBlock as="span" className="flex gap-2">
+              <ActionButton variant="outline" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>
                 Sebelumnya
-              </Button>
-              <Button variant="outline" disabled={page >= lastPage} onClick={() => onPageChange(page + 1)}>
+              </ActionButton>
+              <ActionButton variant="outline" disabled={page >= lastPage} onClick={() => onPageChange(page + 1)}>
                 Berikutnya
-              </Button>
-            </span>
+              </ActionButton>
+            </TextBlock>
           </nav>
         )}
       </QueryState>

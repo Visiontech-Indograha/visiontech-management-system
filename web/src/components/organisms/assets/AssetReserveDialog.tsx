@@ -9,6 +9,7 @@ import { useReserveAsset, type Asset } from "@/services/assetService";
 import { useActiveEmployees } from "@/services/workPlanService";
 import { AssetFormDialog } from "./AssetFormDialog";
 import { AssetPlanSelect } from "./AssetPlanSelect";
+import { ControlOption } from "@/components/molecules/FormBlock";
 
 /** Dialog alokasi aset ke rencana kerja (+ pengemudi untuk kendaraan). */
 export function AssetReserveDialog({ asset, onClose }: { asset: Asset; onClose: () => void }) {
@@ -39,11 +40,11 @@ export function AssetReserveDialog({ asset, onClose }: { asset: Asset; onClose: 
       <AssetPlanSelect error={errors.work_plan_id?.message} {...register("work_plan_id")} />
       {vehicle && (
         <SelectField label="Pengemudi" hint="Harus anggota tim penugasan." error={errors.driver_employee_id?.message} {...register("driver_employee_id")}>
-          <option value="">{employees.isPending ? "Memuat..." : "Pilih pengemudi"}</option>
+          <ControlOption value="">{employees.isPending ? "Memuat..." : "Pilih pengemudi"}</ControlOption>
           {employees.data?.map((e) => (
-            <option key={e.id} value={e.id}>
+            <ControlOption key={e.id} value={e.id}>
               {e.full_name}
-            </option>
+            </ControlOption>
           ))}
         </SelectField>
       )}

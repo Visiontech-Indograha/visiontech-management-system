@@ -1,9 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { useSession } from "@/app/session";
-import { Badge } from "@/components/atoms/Badge";
-import { Button } from "@/components/atoms/Button";
-import { Skeleton } from "@/components/atoms/Skeleton";
+import { useSession } from "@/stores/sessionStore";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { SelectField, TextField } from "@/components/molecules/Field";
 import { ApiError } from "@/lib/apiClient";
@@ -16,6 +13,14 @@ import {
   type EmployeeDocument,
 } from "@/services/employeeService";
 import { FilePreview } from "@/components/molecules/FilePreview";
+import { Pill } from "@/components/molecules/Pill";
+import { ActionButton } from "@/components/molecules/ActionButton";
+import { LoadingBar } from "@/components/molecules/LoadingBar";
+import { TextBlock } from "@/components/molecules/TextBlock";
+import { TableBlock, TableBlockBody, TableBlockCell, TableBlockHead, TableBlockHeaderCell, TableBlockRow } from "@/components/molecules/TableBlock";
+import { ControlInput, ControlOption, FormBlock } from "@/components/molecules/FormBlock";
+import { DialogActions } from "@/components/molecules/DialogActions";
+import { FormErrorText } from "@/components/molecules/FormErrorText";
 
 type Errors = Record<string, string>;
 
@@ -32,8 +37,8 @@ function daysUntil(isoDate: string): number {
 function ExpiryWarning({ doc }: { doc: EmployeeDocument }) {
   if (!doc.expiry_date || doc.status !== "VERIFIED" || !["CURRENT", "EXPIRED"].includes(doc.lifecycle)) return null;
   const days = daysUntil(doc.expiry_date);
-  if (days < 0 || doc.lifecycle === "EXPIRED") return <Badge tone="danger">Kedaluwarsa</Badge>;
-  if (days <= 30) return <Badge tone="warning">{days === 0 ? "Berakhir hari ini" : `${days} hari lagi`}</Badge>;
+  if (days < 0 || doc.lifecycle === "EXPIRED") return <Pill tone="danger">Kedaluwarsa</Pill>;
+  if (days <= 30) return <Pill tone="warning">{days === 0 ? "Berakhir hari ini" : `${days} hari lagi`}</Pill>;
   return null;
 }
 
@@ -68,86 +73,86 @@ export function DocumentsPanel({
   return (
     <section aria-label="Berkas">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-base font-semibold">Berkas</h2>
-        {canManage && <Button onClick={() => setEditing(true)}>Tambah berkas</Button>}
+        <TextBlock as="h2" className="text-base font-semibold">Berkas</TextBlock>
+        {canManage && <ActionButton onClick={() => setEditing(true)}>Tambah berkas</ActionButton>}
       </div>
 
       <div className="overflow-x-auto rounded-panel border border-line bg-surface shadow-card">
-        <table className="w-full text-left text-sm">
-          <thead className="border-b border-line text-mist">
-            <tr>
-              <th className="px-4 py-3 font-medium">Berkas</th>
-              <th className="px-4 py-3 font-medium">Nomor</th>
-              <th className="px-4 py-3 font-medium">Kedaluwarsa</th>
-              <th className="px-4 py-3 font-medium">Status</th>
-              <th className="px-4 py-3 font-medium">File</th>
-              {showActions && <th className="px-4 py-3 text-right font-medium">Aksi</th>}
-            </tr>
-          </thead>
-          <tbody>
+        <TableBlock className="w-full text-left text-sm">
+          <TableBlockHead className="border-b border-line text-mist">
+            <TableBlockRow>
+              <TableBlockHeaderCell className="px-4 py-3 font-medium">Berkas</TableBlockHeaderCell>
+              <TableBlockHeaderCell className="px-4 py-3 font-medium">Nomor</TableBlockHeaderCell>
+              <TableBlockHeaderCell className="px-4 py-3 font-medium">Kedaluwarsa</TableBlockHeaderCell>
+              <TableBlockHeaderCell className="px-4 py-3 font-medium">Status</TableBlockHeaderCell>
+              <TableBlockHeaderCell className="px-4 py-3 font-medium">File</TableBlockHeaderCell>
+              {showActions && <TableBlockHeaderCell className="px-4 py-3 text-right font-medium">Aksi</TableBlockHeaderCell>}
+            </TableBlockRow>
+          </TableBlockHead>
+          <TableBlockBody>
             {docs.isPending && (
-              <tr aria-hidden>
-                <td colSpan={6} className="px-4 py-3">
-                  <Skeleton className="h-4 w-1/2" />
-                </td>
-              </tr>
+              <TableBlockRow aria-hidden>
+                <TableBlockCell colSpan={6} className="px-4 py-3">
+                  <LoadingBar className="h-4 w-1/2" />
+                </TableBlockCell>
+              </TableBlockRow>
             )}
             {docs.isError && (
-              <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-danger">
+              <TableBlockRow>
+                <TableBlockCell colSpan={6} className="px-4 py-6 text-center text-danger">
                   Berkas tidak dapat dimuat.{" "}
-                  <Button variant="outline" size="sm" onClick={() => docs.refetch()}>
+                  <ActionButton variant="outline" size="sm" onClick={() => docs.refetch()}>
                     Coba lagi
-                  </Button>
-                </td>
-              </tr>
+                  </ActionButton>
+                </TableBlockCell>
+              </TableBlockRow>
             )}
             {docs.data?.items.length === 0 && (
-              <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-mist">
+              <TableBlockRow>
+                <TableBlockCell colSpan={6} className="px-4 py-6 text-center text-mist">
                   Belum ada berkas.
-                </td>
-              </tr>
+                </TableBlockCell>
+              </TableBlockRow>
             )}
             {docs.data?.items.map((d) => (
-              <tr key={d.id} className="h-11 border-b border-line last:border-0">
-                <td className="px-4 py-2 font-medium">{d.doc_type}</td>
-                <td className="px-4 py-2">{d.number_masked}</td>
-                <td className="px-4 py-2">
+              <TableBlockRow key={d.id} className="h-11 border-b border-line last:border-0">
+                <TableBlockCell className="px-4 py-2 font-medium">{d.doc_type}</TableBlockCell>
+                <TableBlockCell className="px-4 py-2">{d.number_masked}</TableBlockCell>
+                <TableBlockCell className="px-4 py-2">
                   {d.expiry_date ? (
-                    <span className="flex flex-wrap items-center gap-2">
+                    <TextBlock as="span" className="flex flex-wrap items-center gap-2">
                       {formatDate(d.expiry_date)}
                       <ExpiryWarning doc={d} />
-                    </span>
+                    </TextBlock>
                   ) : (
                     "-"
                   )}
-                </td>
-                <td className="px-4 py-2">
-                  <Badge tone={STATUS[d.status]?.tone ?? "warning"}>{STATUS[d.status]?.label ?? "Menunggu verifikasi"}</Badge>
-                </td>
-                <td className="px-4 py-2">
+                </TableBlockCell>
+                <TableBlockCell className="px-4 py-2">
+                  <Pill tone={STATUS[d.status]?.tone ?? "warning"}>{STATUS[d.status]?.label ?? "Menunggu verifikasi"}</Pill>
+                </TableBlockCell>
+                <TableBlockCell className="px-4 py-2">
                   <FilePreview fileId={d.file_id} fileName={d.doc_type} />
-                </td>
+                </TableBlockCell>
                 {showActions && (
-                  <td className="px-4 py-2 text-right">
+                  <TableBlockCell className="px-4 py-2 text-right">
                     {canVerify && d.status === "PENDING" && d.uploaded_by === me?.user_id && (
-                      <span className="text-xs text-mist">Menunggu petugas lain</span>
+                      <TextBlock as="span" className="text-xs text-mist">Menunggu petugas lain</TextBlock>
                     )}
                     {canVerify && d.status === "PENDING" && d.uploaded_by !== me?.user_id && (
                       <VerifyActions employeeId={employeeId} doc={d} />
                     )}
                     {renewable(d) && (
-                      <Button size="sm" variant="outline" aria-label={`Perpanjang ${d.doc_type}`} onClick={() => setRenewing(d)}>
+                      <ActionButton size="sm" variant="outline" aria-label={`Perpanjang ${d.doc_type}`} onClick={() => setRenewing(d)}>
                         Perpanjang
-                      </Button>
+                      </ActionButton>
                     )}
-                  </td>
+                  </TableBlockCell>
                 )}
-              </tr>
+              </TableBlockRow>
             ))}
-          </tbody>
-        </table>
+          </TableBlockBody>
+        </TableBlock>
       </div>
 
       {editing && <DocumentDialog employeeId={employeeId} onClose={() => setEditing(false)} />}
@@ -167,14 +172,14 @@ function VerifyActions({ employeeId, doc }: { employeeId: string; doc: EmployeeD
       },
     );
   return (
-    <span className="inline-flex gap-2">
-      <Button size="sm" onClick={() => decide(true)} disabled={verify.isPending}>
+    <TextBlock as="span" className="inline-flex gap-2">
+      <ActionButton size="sm" onClick={() => decide(true)} disabled={verify.isPending}>
         Verifikasi
-      </Button>
-      <Button size="sm" variant="outline" onClick={() => decide(false)} disabled={verify.isPending}>
+      </ActionButton>
+      <ActionButton size="sm" variant="outline" onClick={() => decide(false)} disabled={verify.isPending}>
         Tolak
-      </Button>
-    </span>
+      </ActionButton>
+    </TextBlock>
   );
 }
 
@@ -231,29 +236,18 @@ function DocumentDialog({
       title={renew ? "Perpanjang berkas" : "Tambah berkas"}
       onClose={onClose}
       footer={
-        <>
-          <Button variant="outline" onClick={onClose} disabled={pending}>
-            Batal
-          </Button>
-          <Button type="submit" form="document-form" disabled={pending}>
-            {pending ? "Menyimpan..." : "Simpan"}
-          </Button>
-        </>
+        <DialogActions onCancel={onClose} busy={pending} formId="document-form" />
       }
     >
-      <form id="document-form" onSubmit={submit} noValidate>
-        {formError && (
-          <p role="alert" className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
-            {formError}
-          </p>
-        )}
+      <FormBlock id="document-form" onSubmit={submit} noValidate>
+        <FormErrorText message={formError} />
         {renew ? (
-          <p className="mb-4 text-sm">
-            <input type="hidden" name="doc_type" value={renew.doc_type} />
-            <span className="text-mist">Jenis dokumen: </span>
-            <span className="font-medium">{renew.doc_type}</span>
-            {renew.expiry_date && <span className="text-mist"> · berlaku sampai {formatDate(renew.expiry_date)}</span>}
-          </p>
+          <TextBlock className="mb-4 text-sm">
+            <ControlInput type="hidden" name="doc_type" value={renew.doc_type} />
+            <TextBlock as="span" className="text-mist">Jenis dokumen: </TextBlock>
+            <TextBlock as="span" className="font-medium">{renew.doc_type}</TextBlock>
+            {renew.expiry_date && <TextBlock as="span" className="text-mist"> · berlaku sampai {formatDate(renew.expiry_date)}</TextBlock>}
+          </TextBlock>
         ) : (
           <>
             <SelectField
@@ -263,15 +257,15 @@ function DocumentDialog({
               defaultValue=""
               onChange={(e) => setOther(e.target.value === OTHER)}
             >
-              <option value="" disabled>
+              <ControlOption value="" disabled>
                 Pilih jenis dokumen
-              </option>
+              </ControlOption>
               {DOC_TYPES.map((t) => (
-                <option key={t} value={t}>
+                <ControlOption key={t} value={t}>
                   {t}
-                </option>
+                </ControlOption>
               ))}
-              <option value={OTHER}>Lainnya…</option>
+              <ControlOption value={OTHER}>Lainnya…</ControlOption>
             </SelectField>
             {other && <TextField name="doc_type_other" label="Jenis dokumen lainnya" hint="Contoh: SIO Excavator, Drone Pilot" />}
           </>
@@ -279,7 +273,7 @@ function DocumentDialog({
         <TextField name="number" label="Nomor dokumen" error={errors.number} />
         <TextField name="expiry_date" label="Tanggal kedaluwarsa" type="date" error={errors.expiry_date} hint="Bila ada." />
         <TextField name="file" label="File (jpg, png, pdf; maks. 10 MB)" type="file" accept=".jpg,.jpeg,.png,.pdf" error={errors.file} />
-      </form>
+      </FormBlock>
     </VmsDialog>
   );
 }

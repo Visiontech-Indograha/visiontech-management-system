@@ -66,11 +66,22 @@ Definisi pemilik (2026-10-09):
 | **Molecule** | **atom** + elemen tata letak | molecule lain, organism, template, elemen HTML lain, teks langsung |
 | **Atom** | elemen HTML, teks, ikon, kelas Tailwind | mengimpor tingkat di atasnya |
 
+**Atom dasar** (`components/atoms/`): `Text` (p/span/strong/dt/dd/h1–h4/blockquote lewat `as`), `Select`/`SelectOption`,
+`Textarea`, `Image`, `Video`, `Frame`, `PlainButton`, `Icon` (satu-satunya pintu ke `lucide-react`), `Table*`, `List*`,
+`RouterLink` (`Link`/`NavLink`/`Anchor`), `NativeControls` (input/label/form/style native), `Disclosure`, `Fieldset`, plus atom shadcn.
+
+**Molecule generik untuk organism** (`components/molecules/`): `TextBlock`, `ListBlock`/`ListEntry`/`ListPair`, `TableBlock*`,
+`FormBlock` (`ControlInput/Select/Option/Textarea/Label`), `Links` (`InlineLink`/`MenuLink`/`ExternalLink`), `PlainAction`,
+`ImageView`, `VideoView`, `FrameView`, `ActionButton`, `LoadingBar`, `Pill`, `Panel*`, `CheckControl`, `Notice*`, `Menu*`, `Modal*`,
+`InputControls`, `Glyphs` (ikon), `DisclosureBlock`, `FieldGroup`, `PrintStyle`; plus molecule bermakna (`Field`, `QueryState`,
+`StatusBadge`, `FilePreview`, `VmsDialog`). Pola yang berulang di banyak organism dinaikkan menjadi molecule bermakna baru.
+Teks yang diberikan sebagai **isi atom** (`<Button>Simpan</Button>`) boleh — yang dilarang adalah teks di dalam elemen HTML.
+
 Akibatnya setiap Page punya template sendiri (`components/templates/<domain>/<Nama>Template.tsx`); teks, judul,
 tabel, tombol, dan ikon diwujudkan sebagai atom (mis. `Text`, `Heading`, `Table`, `Icon`) yang disusun molecule.
 
-Ditegakkan ESLint (`web/eslint.config.js`). Berkas lama yang belum memenuhi tercantum di `PAGES_LEGACY`,
-`ORGANISMS_LEGACY`, `MOLECULES_LEGACY`; daftar ini **hanya boleh menyusut** — berkas baru wajib langsung patuh.
+Ditegakkan ESLint (`web/eslint.config.js`) untuk **seluruh** web — tanpa daftar pengecualian (migrasi selesai
+2026-10-09). Berkas baru yang melanggar membuat lint gagal.
 
 ### 2.2 Arah impor
 
@@ -111,6 +122,7 @@ web/src/
 ├── services/               <domain>Service.ts — tipe kontrak + hook TanStack Query + panggilan API
 ├── schemas/                <tujuan>Schema.ts — skema zod form (loginSchema.ts, planEditorSchema.ts)
 ├── hooks/                  use<Tujuan>.ts — hook non-data (useLockCountdown.ts, useLiveEvents.ts)
+├── stores/                 Zustand global (sessionStore.ts) — data API tidak disimpan di sini
 ├── lib/                    fungsi murni & konfigurasi: apiClient.ts, apiTypes.ts, format.ts, labels.ts, …
 ├── styles/                 token Tailwind v4 (@theme)
 └── test/                   setup & util uji
@@ -145,9 +157,13 @@ Uji ditaruh **di samping** berkasnya: `PlanDetailCard.test.tsx`.
 
 - Nama berkas = nama ekspor utama. Satu berkas boleh berisi beberapa komponen kecil yang
   hanya dipakai komponen utamanya.
+- Pengecualian: **berkas keluarga** atom/molecule yang mengekspor varian satu konsep (`Field` → `TextField`/`SelectField`/
+  `TextAreaField`, `Links`, `TableBlock`, `ListBlock`, `FormBlock`, `Panel`, `Menu`). Organism dan Page tidak boleh.
 - Hindari nama generik (`Box.tsx`, `Item.tsx`, `helpers.ts`, `data.ts`) dan istilah lama
   (`Sk…` → `Plan…`; SK = Rencana Kerja).
 - `.tsx` hanya untuk berkas ber-JSX; selain itu `.ts`.
+- Konfigurasi ber-JSX yang bukan komponen (`app/routes.tsx`) tetap camelCase. Store Zustand di `stores/` (`sessionStore.ts`).
+- `lib/apiTypes.ts` hasil `npm run gen:api` — **jangan disunting manual**; istilah di dalamnya mengikuti docstring API.
 
 ---
 

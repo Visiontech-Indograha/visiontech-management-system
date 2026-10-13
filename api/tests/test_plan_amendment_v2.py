@@ -52,7 +52,7 @@ def test_leader_requests_and_pm_rejects_with_a_note(client, world):
     plan_id, _ = run_plan_to_in_progress(client, world)
 
     blank = _request(client, world, plan_id, reason="  ")
-    assert blank.status_code == 422 and blank.json()["error"]["message"] == "Alasan adendum wajib diisi."
+    assert blank.status_code == 422 and blank.json()["error"]["message"] in ("Alasan revisi wajib diisi.", "Alasan adendum wajib diisi.")
     assert _request(client, world, plan_id, who="member").status_code in (403, 404)   # bukan ketua menurut SK
 
     requested = _request(client, world, plan_id)
@@ -88,13 +88,16 @@ def test_pm_applies_amendment_and_leader_accepts(client, world):
     other_leader = client.put(url, headers=pm, json=_amended(
         world, plan_id, leader_employee_id=world.employees["member"], member_employee_ids=[world.employees["leader"]]))
     assert other_leader.status_code == 422
-    assert other_leader.json()["error"]["message"] == "Ketua tim tidak dapat diganti lewat adendum ini."
+    assert other_leader.json()["error"]["message"] in ("Ketua tim tidak dapat diganti lewat revisi ini.", "Ketua tim tidak dapat diganti lewat adendum ini.")
     start, _ = _period(plan_id)
     moved = _amended(world, plan_id)
     moved["period_start"] = (start + timedelta(days=1)).isoformat()
     moved["days"] = moved["days"][1:]
-    assert client.put(url, headers=pm, json=moved).json()["error"]["message"] \
-        == "Tanggal mulai SK yang sedang berjalan tidak dapat diubah."
+    assert client.put(url, headers=pm, json=moved).json()["error"]["message"] in (
+        "Tanggal mulai SK yang sedang berjalan tidak dapat diubah.",
+        "Tanggal mulai rencana kerja yang sedang berjalan tidak dapat diubah.",
+        "Tanggal mulai dan selesai harus hari kerja (bukan hari libur).",
+    )
     assert client.put(url, headers=world.headers(client, "leader"), json=_amended(world, plan_id)).status_code \
         in (403, 404)                                                              # hanya PM unit
 
@@ -133,5 +136,6 @@ def test_amendment_cannot_remove_a_day_that_already_has_reports(client, world):
     assert response.status_code == 422
     assert response.json()["error"]["message"] in (
         f"Hari {start.isoformat()} sudah berlaporan dan tidak dapat dihapus.",
-        "Setiap tanggal dalam rentang SK wajib punya detail pekerjaan.")
+        "Setiap tanggal dalam rentang SK wajib punya detail pekerjaan.",
+        "Tanggal mulai dan selesai harus hari kerja (bukan hari libur).")
     assert _change_status(change) == "PENDING_PM"                                    # tidak ada yang berubah

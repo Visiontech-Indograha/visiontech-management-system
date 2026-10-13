@@ -1,13 +1,8 @@
 import { useState } from "react";
-import { useSession } from "@/app/session";
-import { ListPagination } from "@/components/organisms/ListPagination";
-import { PageTemplate } from "@/components/templates/PageTemplate";
+import { useSession } from "@/stores/sessionStore";
+import { DirectoryTemplate } from "@/components/templates/directory/DirectoryTemplate";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
-import { PAGE_SIZE, useEmployees } from "@/services/employeeService";
-import { EmployeeCreateButton } from "@/components/organisms/directory/EmployeeCreateButton";
-import { CreateEmployeeDialog } from "@/components/organisms/directory/EmployeeLifecycleDialogs";
-import { EmployeeListFilter } from "@/components/organisms/directory/EmployeeListFilter";
-import { EmployeeTable } from "@/components/organisms/directory/EmployeeTable";
+import { useEmployees } from "@/services/employeeService";
 
 /** Direktori karyawan: cari, saring status, halaman per 20 (GET /employees). */
 export function DirectoryPage() {
@@ -26,13 +21,19 @@ export function DirectoryPage() {
   };
 
   return (
-    <PageTemplate title="Direktori" action={canManage && <EmployeeCreateButton onCreate={() => setCreating(true)} />}>
-      {creating && <CreateEmployeeDialog onClose={() => setCreating(false)} />}
-      <EmployeeListFilter q={q} onQChange={reset(setQ)} status={status} onStatusChange={reset(setStatus)} />
-      <EmployeeTable list={list} />
-      {data && data.total > PAGE_SIZE && (
-        <ListPagination total={data.total} noun="karyawan" page={page} shownPage={data.page} lastPage={lastPage} onPageChange={setPage} />
-      )}
-    </PageTemplate>
+    <DirectoryTemplate
+      list={list}
+      canManage={canManage}
+      creating={creating}
+      onCreate={() => setCreating(true)}
+      onCloseCreate={() => setCreating(false)}
+      q={q}
+      onQChange={reset(setQ)}
+      status={status}
+      onStatusChange={reset(setStatus)}
+      page={page}
+      lastPage={lastPage}
+      onPageChange={setPage}
+    />
   );
 }

@@ -176,6 +176,15 @@ CREATE TABLE file_object (
   created_at      timestamptz NOT NULL DEFAULT now(),
   UNIQUE (organization_id, sha256)
 );
+
+-- Foto profil karyawan (Alembic 0037). Ditulis sebagai ALTER karena tabel employee
+-- dibuat lebih dulu daripada file_object di berkas ini. Foto profil tidak disimpan
+-- sebagai path, melainkan merujuk baris file_object (path ada di storage_key).
+ALTER TABLE employee
+  ADD COLUMN photo_file_id uuid REFERENCES file_object(id);
+CREATE INDEX employee_photo_file_idx ON employee (photo_file_id) WHERE photo_file_id IS NOT NULL;
+COMMENT ON COLUMN employee.photo_file_id IS
+  'Berkas foto profil karyawan; diambil lewat GET /files/{id}/url. NULL = belum ada foto.';
 -- -----------------------------------------------------------------------------
 -- Lokasi proyek: titik geografis + radius toleransi absensi
 -- -----------------------------------------------------------------------------

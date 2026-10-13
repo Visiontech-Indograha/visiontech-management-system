@@ -1,9 +1,6 @@
 import { useState } from "react";
-import { ListPagination } from "@/components/organisms/ListPagination";
-import { PageTemplate } from "@/components/templates/PageTemplate";
+import { AuditLogTemplate } from "@/components/templates/audit/AuditLogTemplate";
 import { useAuditEvents } from "@/services/auditService";
-import { AuditEntityFilter } from "@/components/organisms/audit/AuditEntityFilter";
-import { AuditLogTable } from "@/components/organisms/audit/AuditLogTable";
 
 /** Audit log perubahan data (GET /audit-events, izin view:audit). */
 export function AuditLogPage() {
@@ -14,18 +11,16 @@ export function AuditLogPage() {
   const lastPage = data ? Math.max(1, Math.ceil(data.total / data.size)) : 1;
 
   return (
-    <PageTemplate title="Audit log">
-      <AuditEntityFilter
-        entity={entity}
-        onEntityChange={(value) => {
-          setEntity(value);
-          setPage(1);
-        }}
-      />
-      <AuditLogTable logs={logs} />
-      {data && data.total > data.size && (
-        <ListPagination total={data.total} noun="catatan" page={page} shownPage={data.page} lastPage={lastPage} onPageChange={setPage} />
-      )}
-    </PageTemplate>
+    <AuditLogTemplate
+      logs={logs}
+      entity={entity}
+      onEntityChange={(value) => {
+        setEntity(value);
+        setPage(1);
+      }}
+      page={page}
+      lastPage={lastPage}
+      onPageChange={setPage}
+    />
   );
 }

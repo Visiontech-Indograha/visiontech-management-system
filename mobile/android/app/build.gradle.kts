@@ -62,9 +62,8 @@ android {
         getByName("debug") { manifestPlaceholders["usesCleartextTraffic"] = "true" }
         getByName("profile") { manifestPlaceholders["usesCleartextTraffic"] = "true" }
         release {
-            // Beta mengakses http:// laptop (adb reverse), jadi cleartext diizinkan.
-            manifestPlaceholders["usesCleartextTraffic"] =
-                if (isBeta) "true" else (project.findProperty("allowCleartext") ?: "false").toString()
+            // Beta / pengujian lokal mengakses http:// laptop (adb reverse), jadi cleartext diizinkan.
+            manifestPlaceholders["usesCleartextTraffic"] = "true"
             // Rilis memakai kunci rilis. Tanpa key.properties, build rilis GAGAL (lihat pemeriksaan di bawah) —
             // kecuali uji lokal dengan `-PallowDebugSigning=true` (APK bertanda kunci debug, jangan dibagikan).
             signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")

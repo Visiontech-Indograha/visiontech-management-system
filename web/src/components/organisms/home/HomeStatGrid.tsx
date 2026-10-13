@@ -1,26 +1,27 @@
-import { CalendarClock, ClipboardCheck, FileCheck2, FileClock, FileWarning } from "lucide-react";
 import type { ReactNode } from "react";
-import { Link } from "react-router-dom";
-import { Card, CardContent } from "@/components/atoms/Card";
-import { Skeleton } from "@/components/atoms/Skeleton";
+import { Panel, PanelContent } from "@/components/molecules/Panel";
+import { LoadingBar } from "@/components/molecules/LoadingBar";
+import { CalendarClock, ClipboardCheck, FileCheck2, FileClock, FileWarning } from "@/components/molecules/Glyphs";
+import { InlineLink } from "@/components/molecules/Links";
+import { TextBlock } from "@/components/molecules/TextBlock";
 
 type Count = { value: number | undefined; loading: boolean };
 
 function Stat({ label, value, icon, to, loading }: { label: string; value: number | undefined; icon: ReactNode; to: string; loading: boolean }) {
   return (
-    <Link to={to} className="group block rounded-panel focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-      <Card className="h-full gap-3 py-5">
-        <CardContent className="flex items-start justify-between gap-3 px-5">
+    <InlineLink to={to} className="group block rounded-panel focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+      <Panel className="h-full gap-3 py-5">
+        <PanelContent className="flex items-start justify-between gap-3 px-5">
           <div>
-            <p className="text-body-sm text-mist">{label}</p>
-            {loading ? <Skeleton className="mt-2 h-8 w-12" /> : <p className="mt-1 text-display text-ink">{value ?? 0}</p>}
+            <TextBlock className="text-body-sm text-mist">{label}</TextBlock>
+            {loading ? <LoadingBar className="mt-2 h-8 w-12" /> : <TextBlock className="mt-1 text-display text-ink">{value ?? 0}</TextBlock>}
           </div>
-          <span className="grid size-10 place-items-center rounded-control bg-accent text-lens transition-transform duration-300 group-hover:scale-110" aria-hidden>
+          <TextBlock as="span" className="grid size-10 place-items-center rounded-control bg-accent text-lens transition-transform duration-300 group-hover:scale-110" aria-hidden>
             {icon}
-          </span>
-        </CardContent>
-      </Card>
-    </Link>
+          </TextBlock>
+        </PanelContent>
+      </Panel>
+    </InlineLink>
   );
 }
 

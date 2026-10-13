@@ -166,6 +166,10 @@ async def check_file_access(db: AsyncSession, file_id: UUID, user: CurrentUser) 
         return row
     if row.work_type_example:   # foto contoh template: petunjuk kerja, terbuka untuk seluruh organisasi
         return row
+    if row.profile_photo:   # foto profil: karyawan pemilik & yang boleh melihat karyawan (view:users)
+        if row.own_profile_photo or Permission.VIEW_USERS.value in user.permissions:
+            return row
+        raise NotFoundError("Berkas")
     if row.personal_document:
         if row.own_document or Permission.MANAGE_EMPLOYEE_DOCUMENTS.value in user.permissions:
             return row

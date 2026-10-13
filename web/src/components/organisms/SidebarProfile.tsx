@@ -1,6 +1,8 @@
 import clsx from "clsx";
-import { LogOut, ShieldCheck } from "lucide-react";
-import { NavLink } from "react-router-dom";
+import { LogOut, ShieldCheck } from "@/components/molecules/Glyphs";
+import { MenuLink } from "@/components/molecules/Links";
+import { TextBlock } from "@/components/molecules/TextBlock";
+import { PlainAction } from "@/components/molecules/PlainAction";
 
 function initials(email: string) {
   const name = email.split("@")[0].replace(/[^a-z]/gi, " ").trim();
@@ -18,32 +20,32 @@ export function SidebarProfile({ email, roleLabel, collapsed, onLogout }: {
   return (
     <div className="p-3">
       <div className={clsx("flex items-center gap-3 rounded-panel bg-surface p-2.5 shadow-card ring-1 ring-line", collapsed && "md:justify-center md:p-1.5")}>
-        <span
+        <TextBlock as="span"
           aria-hidden
           className="grid size-9 shrink-0 place-items-center rounded-full bg-accent text-sm font-semibold text-lens"
         >
           {initials(email)}
-        </span>
+        </TextBlock>
         <div className={clsx("min-w-0 flex-1", collapsed && "md:sr-only")}>
-          <p className="truncate text-sm font-semibold text-ink">{email}</p>
-          <p className="text-xs text-mist">{roleLabel}</p>
+          <TextBlock className="truncate text-sm font-semibold text-ink">{email}</TextBlock>
+          <TextBlock className="text-xs text-mist">{roleLabel}</TextBlock>
         </div>
       </div>
-      <NavLink
+      <MenuLink
         to="/account"
         className="mt-2 flex h-10 w-full items-center gap-3 rounded-control px-3 text-sm text-mist transition-colors hover:bg-hover hover:text-ink"
       >
         <ShieldCheck size={19} strokeWidth={1.75} aria-hidden />
-        <span className={clsx(collapsed && "md:sr-only")}>Akun & keamanan</span>
-      </NavLink>
-      <button
+        <TextBlock as="span" className={clsx(collapsed && "md:sr-only")}>Akun & keamanan</TextBlock>
+      </MenuLink>
+      <PlainAction
         type="button"
         onClick={onLogout}
         className="flex h-10 w-full items-center gap-3 rounded-control px-3 text-sm text-mist transition-colors hover:bg-danger-bg hover:text-danger"
       >
         <LogOut size={19} strokeWidth={1.75} aria-hidden />
-        <span className={clsx(collapsed && "md:sr-only")}>Keluar</span>
-      </button>
+        <TextBlock as="span" className={clsx(collapsed && "md:sr-only")}>Keluar</TextBlock>
+      </PlainAction>
     </div>
   );
 }

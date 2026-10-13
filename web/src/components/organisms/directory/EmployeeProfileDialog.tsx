@@ -3,12 +3,14 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
-import { Button } from "@/components/atoms/Button";
 import { SelectField, TextField } from "@/components/molecules/Field";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { ApiError } from "@/lib/apiClient";
 import { ATTENDANCE_MODE_LABEL } from "@/lib/attendanceModeLabels";
 import { useUpdateEmployee, type Employee, type EmployeeUpdate } from "@/services/employeeService";
+import { ControlOption, FormBlock } from "@/components/molecules/FormBlock";
+import { DialogActions } from "@/components/molecules/DialogActions";
+import { FormErrorText } from "@/components/molecules/FormErrorText";
 
 const optional = z.string().trim();
 const profileSchema = z.object({
@@ -74,22 +76,11 @@ export function EmployeeProfileDialog({ employee, onClose }: { employee: Employe
       title="Ubah profil"
       onClose={onClose}
       footer={
-        <>
-          <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
-            Batal
-          </Button>
-          <Button type="submit" form="profile-form" disabled={isSubmitting}>
-            {isSubmitting ? "Menyimpan..." : "Simpan"}
-          </Button>
-        </>
+        <DialogActions onCancel={onClose} busy={isSubmitting} formId="profile-form" />
       }
     >
-      <form id="profile-form" onSubmit={onSubmit} noValidate>
-        {formError && (
-          <p role="alert" className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
-            {formError}
-          </p>
-        )}
+      <FormBlock id="profile-form" onSubmit={onSubmit} noValidate>
+        <FormErrorText message={formError} />
         <TextField label="Nama lengkap" error={errors.full_name?.message} {...register("full_name")} />
         <TextField label="Email" type="email" error={errors.email?.message} {...register("email")} />
         <TextField label="No. telepon" error={errors.phone?.message} {...register("phone")} />
@@ -97,10 +88,10 @@ export function EmployeeProfileDialog({ employee, onClose }: { employee: Employe
         <TextField label="Alamat" error={errors.address?.message} {...register("address")} />
         <TextField label="Kontak darurat" error={errors.emergency_contact?.message} {...register("emergency_contact")} />
         <SelectField label="Absen lewat" error={errors.attendance_mode?.message} {...register("attendance_mode")}>
-          <option value="FIELD">{ATTENDANCE_MODE_LABEL.FIELD}</option>
-          <option value="OFFICE">{ATTENDANCE_MODE_LABEL.OFFICE}</option>
+          <ControlOption value="FIELD">{ATTENDANCE_MODE_LABEL.FIELD}</ControlOption>
+          <ControlOption value="OFFICE">{ATTENDANCE_MODE_LABEL.OFFICE}</ControlOption>
         </SelectField>
-      </form>
+      </FormBlock>
     </VmsDialog>
   );
 }

@@ -162,13 +162,13 @@ CREATE INDEX face_probe_employee_idx ON face_probe (employee_id, created_at DESC
 
 -- Ambang batas disimpan sebagai data agar bisa dikalibrasi tanpa rilis ulang.
 ALTER TABLE organization
-  ADD COLUMN face_match_threshold numeric(5,4) NOT NULL DEFAULT 0.6500
+  ADD COLUMN face_match_threshold numeric(5,4) NOT NULL DEFAULT 0.5500
     CHECK (face_match_threshold BETWEEN 0.3 AND 0.99),
   ADD COLUMN face_liveness_required boolean NOT NULL DEFAULT true,
   ADD COLUMN face_probe_retention_days integer NOT NULL DEFAULT 30
     CHECK (face_probe_retention_days BETWEEN 1 AND 365);
 COMMENT ON COLUMN organization.face_match_threshold IS
-  'Ambang kemiripan kosinus. 0,65 adalah titik awal yang wajar untuk model 512 dimensi, WAJIB dikalibrasi dengan data nyata (ukur FAR dan FRR) sebelum dipakai di lapangan.';
+  'Ambang kemiripan kosinus. 0,55 adalah ambang yang dipilih pemilik (2026-10-11): 55% kemiripan sudah cukup. WAJIB dikalibrasi dengan data nyata (ukur FAR dan FRR) sebelum dipakai di lapangan.';
 
 -- -----------------------------------------------------------------------------
 -- Pencocokan. Mengembalikan kandidat terbaik beserta kemiripannya.

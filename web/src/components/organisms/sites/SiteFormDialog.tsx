@@ -3,13 +3,15 @@ import { useMemo, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
-import { Button } from "@/components/atoms/Button";
 import { TextField } from "@/components/molecules/Field";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { ApiError } from "@/lib/apiClient";
-import type { LatLng } from "@/components/organisms/work-plans/PlanLocationCard";
+import type { LatLng } from "@/lib/geo";
 import { useCreateSite } from "@/services/siteService";
 import { SiteMapPicker } from "./SiteMapPicker";
+import { FormBlock } from "@/components/molecules/FormBlock";
+import { DialogActions } from "@/components/molecules/DialogActions";
+import { FormErrorText } from "@/components/molecules/FormErrorText";
 
 const coordinate = (min: number, max: number, label: string) =>
   z
@@ -80,22 +82,11 @@ export function SiteFormDialog({ onClose }: { onClose: () => void }) {
       title="Tambah lokasi kerja"
       onClose={onClose}
       footer={
-        <>
-          <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
-            Batal
-          </Button>
-          <Button type="submit" form="site-form" disabled={isSubmitting}>
-            {isSubmitting ? "Menyimpan..." : "Simpan"}
-          </Button>
-        </>
+        <DialogActions onCancel={onClose} busy={isSubmitting} formId="site-form" />
       }
     >
-      <form id="site-form" onSubmit={onSubmit} noValidate>
-        {formError && (
-          <p role="alert" className="mb-4 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
-            {formError}
-          </p>
-        )}
+      <FormBlock id="site-form" onSubmit={onSubmit} noValidate>
+        <FormErrorText message={formError} />
         <SiteMapPicker
           point={point}
           radius={radius}
@@ -121,7 +112,7 @@ export function SiteFormDialog({ onClose }: { onClose: () => void }) {
           error={errors.radius_m?.message}
           {...register("radius_m")}
         />
-      </form>
+      </FormBlock>
     </VmsDialog>
   );
 }

@@ -72,15 +72,58 @@ echo "   disetel"
 
 echo "== 4/5 api.env"
 OLD_URL="$OLD_URL" PW="$PW" python3 - "$ENV_FILE" <<'PY'
-import os, re, sys
+import os, sys, urllib.parse
+
 path = sys.argv[1]
 old, pw = os.environ["OLD_URL"], os.environ["PW"]
-new = re.sub(r"://[^:@/]+:[^@]*@", f"://vms_api:{pw}@", old, count=1)
+
+
+def split_userinfo(url):
+    """Pisahkan URL pada '@' TERAKHIR — itu pemisah userinfo/host yang sebenarnya.
+
+    Sandi boleh memuat '@' (insiden 2026-10-13: sandi 'P@ss...' ditulis mentah sehingga
+    SQLAlchemy membaca '@' pertama, host jadi 'ss...@vms_db_prod', API mati socket.gaierror).
+    """
+    head, sep, rest = url.partition("://")
+    assert sep, "format DATABASE_URL tidak dikenali (tanpa '://')"
+    at = rest.rfind("@")
+    assert at != -1, "format DATABASE_URL tidak dikenali (tanpa '@')"
+    user, colon, secret = rest[:at].partition(":")
+    assert colon, "format DATABASE_URL tidak dikenali (userinfo tanpa ':')"
+    return head, user, secret, rest[at + 1:]
+
+
+def build(head, user, secret, hostpart):
+    """Sandi & user WAJIB di-encode; tanpa ini '@' di sandi merusak parsing host."""
+    return f"{head}://{urllib.parse.quote(user, safe='')}:{urllib.parse.quote(secret, safe='')}@{hostpart}"
+
+
+def verify(url, expect_user, expect_secret):
+    parsed = urllib.parse.urlsplit(url.replace("+asyncpg", ""))
+    # urlsplit mengembalikan userinfo MASIH ter-encode, jadi harus di-unquote dulu —
+    # tanpa ini pemeriksaan selalu gagal walau URL-nya benar (uji 2026-10-13).
+    got_user = urllib.parse.unquote(parsed.username or "")
+    got_secret = urllib.parse.unquote(parsed.password or "")
+    assert got_user == expect_user, f"user salah: {got_user!r}"
+    assert got_secret == expect_secret, "sandi tidak utuh setelah di-encode"
+    assert "@" not in (parsed.hostname or ""), f"host salah bentuk: {parsed.hostname!r}"
+    assert parsed.hostname and parsed.path.lstrip("/"), "host/nama basis data kosong"
+    return parsed.hostname
+
+
+head, old_user, old_secret, hostpart = split_userinfo(old)
+new = build(head, "vms_api", pw, hostpart)
+migration = build(head, old_user, old_secret, hostpart)   # alembic: peran pemilik, sandi ikut di-encode
 assert new != old, "format DATABASE_URL tidak dikenali"
+
+host = verify(new, "vms_api", pw)
+verify(migration, old_user, old_secret)
+
 lines = [l for l in open(path, encoding="utf-8").read().splitlines() if not l.startswith("MIGRATION_DATABASE_URL=")]
 lines = [f"DATABASE_URL={new}" if l.startswith("DATABASE_URL=") else l for l in lines]
-lines.append(f"MIGRATION_DATABASE_URL={old}")
+lines.append(f"MIGRATION_DATABASE_URL={migration}")
 open(path, "w", encoding="utf-8").write("\n".join(lines) + "\n")
+print(f"   host terverifikasi: {host} (sandi ter-encode, '@' tidak merusak parsing)")
 PY
 unset PW
 chmod 600 "$ENV_FILE"

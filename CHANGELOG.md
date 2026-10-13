@@ -9,6 +9,14 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased] — `development`
 
+- **Pemulihan deploy otomatis & penguatan kestabilan produksi (`0037_employee_photo.py`, `config.py`, `autodeploy.sh`, `backup.sh`, `pakai-peran-runtime.sh`, `test_config_database_url.py`):**
+  - Migrasi `0037_employee_photo`: jadikan penambahan foreign key `fk_employee_photo_file` idempoten dengan penanganan eksepsi `duplicate_object`, menyelesaikan `DuplicateObjectError` pada basis data yang sudah memuat constraint dari bootstrap awal `db/01_schema.sql`.
+  - Inti konfigurasi `api/app/core/config.py`: tambahkan sanitasi `encode_url_credentials` dan model validator agar sandi dengan karakter khusus (`@`) otomatis di-encode (`%40`), mencegah salah urai host SQLAlchemy dan kegagalan `socket.gaierror`. Dilengkapi 22 uji regresi pada `test_config_database_url.py`.
+  - Skrip operasional `deploy/`:
+    - `autodeploy.sh`: tambahkan pra-cek konektivitas DB dan MinIO sebelum tahap backup dan migrasi, pesan diagnostik terarah (`db_hint`, `minio_hint`), dan pemindahan startup kontainer sebelum backup agar membaca berkas env terbaru.
+    - `backup.sh`: tambahkan trap retensi pembersihan berkas cadangan lokal pada sinyal EXIT agar dump tidak menumpuk saat kendala unggah, serta panduan resolusi kredensial MinIO yang jelas.
+    - `pakai-peran-runtime.sh`: pastikan userinfo kata sandi selalu di-encode saat menghasilkan `DATABASE_URL` runtime.
+
 - **Foto profil & dokumen karyawan (permintaan pemilik 2026-10-12):**
   - 31 foto profil karyawan diupload ke MinIO (nama file diacak dengan UUID) dan tersimpan di `vms.file_object` dengan `storage_key` berprefix `/profile/`
   - Kolom `photo_file_id` ditambahkan ke tabel `employee` (FK ke `file_object.id`) via migration `0037_employee_photo`

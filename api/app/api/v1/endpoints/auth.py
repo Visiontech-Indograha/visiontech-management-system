@@ -9,7 +9,6 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Request, Response
 
 from app.api.deps import get_auth_flow_service, get_current_user
-from app.core.config import settings
 from app.core.errors import AppError
 from app.core.security import CurrentUser
 from app.schemas.auth import (
@@ -77,19 +76,9 @@ def _issue(response: Response, tokens: IssuedTokens, request: Request | None = N
     Returns:
         TokenResponse: Respons payload akses token.
     """
-    is_secure = False
-    if request is not None:
-        is_secure = (
-            request.url.scheme == "https"
-            or request.headers.get("x-forwarded-proto") == "https"
-            or settings.APP_ENV == "production"
-        )
-    else:
-        is_secure = settings.APP_ENV == "production"
-
     response.set_cookie(
         key=REFRESH_COOKIE, value=tokens.refresh_token, httponly=True,
-        secure=is_secure, samesite="lax", max_age=REFRESH_COOKIE_MAX_AGE, path=REFRESH_COOKIE_PATH,
+        secure=True, samesite="strict", max_age=REFRESH_COOKIE_MAX_AGE, path=REFRESH_COOKIE_PATH,
     )
     return TokenResponse(access_token=tokens.access_token)
 

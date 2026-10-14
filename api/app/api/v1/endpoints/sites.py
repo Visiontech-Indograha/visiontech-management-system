@@ -50,7 +50,8 @@ async def get_sites(
     # Memanggil Service layer untuk mendapatkan daftar lokasi
     manager, unit = await site_service.manageable(current_user)
     rows = await site_service.list_sites(current_user, for_attendance=for_attendance)
-    return [_response(r, manager and r.unit_id == unit) for r in rows]
+    is_admin = "ADMIN" in current_user.roles or current_user.role == "ADMIN"
+    return [_response(r, True if is_admin else (manager and r.unit_id == unit)) for r in rows]
 
 
 @router.post("", response_model=SiteResponse, status_code=status.HTTP_201_CREATED)

@@ -54,6 +54,8 @@ android {
                 keyPassword = keystoreProperties.getProperty("keyPassword")
                 enableV1Signing = true
                 enableV2Signing = true
+                enableV3Signing = true
+                enableV4Signing = true
             }
         }
     }
@@ -64,8 +66,8 @@ android {
         getByName("debug") { manifestPlaceholders["usesCleartextTraffic"] = "true" }
         getByName("profile") { manifestPlaceholders["usesCleartextTraffic"] = "true" }
         release {
-            // Beta / pengujian lokal mengakses http:// laptop (adb reverse), jadi cleartext diizinkan.
-            manifestPlaceholders["usesCleartextTraffic"] = "true"
+            manifestPlaceholders["usesCleartextTraffic"] =
+                (project.findProperty("allowCleartext") ?: "false").toString()
             // Rilis memakai kunci rilis. Tanpa key.properties, build rilis GAGAL (lihat pemeriksaan di bawah) —
             // kecuali uji lokal dengan `-PallowDebugSigning=true` (APK bertanda kunci debug, jangan dibagikan).
             signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")

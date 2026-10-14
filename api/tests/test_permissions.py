@@ -37,10 +37,9 @@ def test_role_codes_match_database_enum():
     assert {r.value for r in RoleCode} == set(labels)
 
 
-def test_admin_has_every_permission_except_attendance_and_sites():
-    """R-33: Admin tidak melihat/meninjau absensi orang lain dan tidak mengelola lokasi."""
-    excluded = {P.VIEW_ALL_ATTENDANCE, P.REVIEW_ATTENDANCE, P.EXPORT_ATTENDANCE, P.MANAGE_SITES}
-    assert set(get_role_permissions(RoleCode.ADMIN)) == {p.value for p in Permission} - {p.value for p in excluded}
+def test_admin_has_every_permission():
+    """Admin memiliki kuasa penuh atas seluruh perizinan sistem."""
+    assert set(get_role_permissions(RoleCode.ADMIN)) == {p.value for p in Permission}
 
 
 @pytest.mark.parametrize("role", list(EXPECTED_EXTRA))

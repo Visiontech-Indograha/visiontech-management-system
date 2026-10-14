@@ -11743,7 +11743,7 @@
   },
   "/api/v1/files/{file_id}": {
    "get": {
-    "description": "Menyajikan isi berkas langsung sebagai byte (bukan JSON) sehingga bisa dipakai\nsebagai `src` pada tag <img>. Otorisasi tetap diperiksa (404 bila tidak berhak).\n\nQuery params:\n- variant: \"thumb\" | \"view\" | \"full\" (default \"view\")",
+    "description": "Menyajikan isi berkas langsung sebagai byte (bukan JSON) sehingga bisa dipakai\nsebagai `src` pada tag <img> atau unduhan aman. Otorisasi tetap diperiksa (404 bila tidak berhak).\nMendukung Header Authorization: Bearer ATAU query parameter ?token=<ticket>.\n\nQuery params:\n- variant: \"thumb\" | \"view\" | \"full\" (default \"view\")\n- download: bool (default False, jika True menyetel Content-Disposition: attachment)",
     "operationId": "get_file_content_api_v1_files__file_id__get",
     "parameters": [
      {
@@ -11764,6 +11764,32 @@
        "default": "view",
        "title": "Variant",
        "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "download",
+      "required": false,
+      "schema": {
+       "default": false,
+       "title": "Download",
+       "type": "boolean"
+      }
+     },
+     {
+      "in": "query",
+      "name": "token",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Token"
       }
      }
     ],

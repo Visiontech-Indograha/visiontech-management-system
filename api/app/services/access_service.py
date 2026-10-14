@@ -17,7 +17,7 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import AppError, ForbiddenError, NotFoundError
-from app.core.permissions import Permission
+from app.core.permissions import Permission, RoleCode
 from app.core.security import CurrentUser
 from app.crud.crud_file_access import CRUDFileAccess
 from app.crud.crud_org_ref import CRUDOrgRef
@@ -140,6 +140,9 @@ async def check_unit_manager(db: AsyncSession, unit_id: UUID | str, user: Curren
         NotFoundError: Jika unit tidak ditemukan (atau dari organisasi lain).
         ForbiddenError: Jika pengguna tidak memiliki peran manajerial di unit ini.
     """
+    if "ADMIN" in user.roles or RoleCode.ADMIN in user.roles:
+        return
+
     # Mengambil data posisi pengguna di tingkat unit untuk memvalidasi kepemimpinan.
     row = await CRUDPlanAccess(db).unit_standing(unit_id, user.organization_id, user.user_id)
     if row is None:
@@ -162,26 +165,37 @@ async def check_file_access(db: AsyncSession, file_id: UUID, user: CurrentUser) 
                                          Permission.VIEW_ALL_ATTENDANCE.value in user.permissions)
     if row is None:
         raise NotFoundError("Berkas")
-    if row.is_uploader:
-        return row
+    is_admin = "ADMIN" in user.roles or RoleCode.ADMIN in user.roles
     if row.work_type_example:   # foto contoh template: petunjuk kerja, terbuka untuk seluruh organisasi
         return row
-    if row.profile_photo:   # foto profil: karyawan pemilik & yang boleh melihat karyawan (view:users)
-        if row.own_profile_photo or Permission.VIEW_USERS.value in user.permissions:
+    if row.profile_photo:   # foto profil: karyawan pemilik & yang boleh melihat karyawan (view:users) atau admin
+        if is_admin or row.own_profile_photo or Permission.VIEW_USERS.value in user.permissions:
             return row
         raise NotFoundError("Berkas")
     if row.personal_document:
-        if row.own_document or Permission.MANAGE_EMPLOYEE_DOCUMENTS.value in user.permissions:
+        if (
+            is_admin
+            or row.own_document
+            or Permission.MANAGE_EMPLOYEE_DOCUMENTS.value in user.permissions
+            or Permission.VERIFY_DOCUMENTS.value in user.permissions
+        ):
             return row
         raise NotFoundError("Berkas")
     if row.selfie:
-        if row.own_selfie or row.selfie_viewable:
+        if is_admin or row.own_selfie or row.selfie_viewable:
             return row
         raise NotFoundError("Berkas")
-    plans = CRUDPlanAccess(db)
-    for plan_id in row.plan_ids:
-        if await plans.standing(plan_id, user.organization_id, user.user_id) is not None:
+    if row.plan_ids:
+        if is_admin:
             return row
+        plans = CRUDPlanAccess(db)
+        for plan_id in row.plan_ids:
+            if await plans.standing(plan_id, user.organization_id, user.user_id) is not None:
+                return row
+        raise NotFoundError("Berkas")
+    # Selain itu (belum dilampirkan): hanya pengunggahnya sendiri
+    if row.is_uploader:
+        return row
     raise NotFoundError("Berkas")
 
 

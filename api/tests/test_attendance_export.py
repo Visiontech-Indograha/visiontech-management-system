@@ -51,5 +51,6 @@ def test_finance_exports_own_organisation_in_local_time(client, world, other_wor
 
 
 def test_export_needs_export_permission(client, world):
-    for who in ("member", "hr", "admin"):
+    for who in ("member", "hr"):
         assert _export(client, world, who).status_code == 403, who
+    assert _export(client, world, "admin").status_code == 200

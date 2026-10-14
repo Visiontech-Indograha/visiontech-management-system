@@ -48,7 +48,6 @@ export function EmployeeProfileCard({ employee: e, unitName, canSeePrivate }: {
               <Row label="No. telepon">{e.phone}</Row>
               <Row label="Tanggal lahir">{e.birth_date ? formatDate(e.birth_date) : null}</Row>
               <Row label="Alamat">{e.address}</Row>
-              <Row label="Kontak darurat">{e.emergency_contact}</Row>
             </>
           )}
           {e.offboarded_at && (

@@ -11954,17 +11954,6 @@
       ],
       "title": "Address"
      },
-     "emergency_contact": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Emergency Contact"
-     },
      "photo_file_id": {
       "anyOf": [
        {
@@ -12314,17 +12303,6 @@
       ],
       "title": "Address"
      },
-     "emergency_contact": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Emergency Contact"
-     },
      "photo_file_id": {
       "anyOf": [
        {
@@ -12463,17 +12441,6 @@
        }
       ],
       "title": "Address"
-     },
-     "emergency_contact": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Emergency Contact"
      },
      "photo_file_id": {
       "anyOf": [

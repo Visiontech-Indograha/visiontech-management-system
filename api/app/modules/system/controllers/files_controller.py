@@ -16,10 +16,11 @@ from fastapi.responses import Response
 
 import app.api.v1.endpoints.files as files_api
 from app.api.deps import get_file_service
+from app.core.config import settings
 from app.core.errors import AppError, NotFoundError
 from app.core.image import compress_image
-from app.core.security import CurrentUser
-from app.core.storage import get_object_bytes, get_presigned_url, object_exists, upload_file
+from app.core.security import CurrentUser, create_file_access_ticket
+from app.core.storage import get_object_bytes, upload_file
 from app.modules.system.services.system_service import FileService
 
 MAX_FILE_SIZE = getattr(files_api, "MAX_FILE_SIZE", 10 * 1024 * 1024)
@@ -122,9 +123,10 @@ class FilesController:
         current_user: CurrentUser,
         file_id: uuid.UUID,
         variant: str = "view",
+        download: bool = False,
     ) -> Response:
         """
-        Menyajikan isi berkas langsung sebagai byte agar bisa dipakai sebagai `src` <img>.
+        Menyajikan isi berkas langsung sebagai byte agar bisa dipakai sebagai `src` <img> atau unduhan aman.
 
         Urutan pencarian objek di MinIO:
         1. `{org}/{file_id}_{variant}.webp` (hasil kompresi aplikasi)
@@ -149,10 +151,16 @@ class FilesController:
             seen.add(key)
             data = get_object_bytes(key)
             if data:
+                file_name = getattr(file_obj, "file_name", None) or f"{file_id}.{file_obj.mime_type.split('/')[-1]}"
+                safe_name = str(file_name).replace('"', '\\"')
+                disp_type = "attachment" if download else "inline"
                 return Response(
                     content=data,
                     media_type="image/webp" if key.endswith(".webp") else file_obj.mime_type,
-                    headers={"Cache-Control": "private, max-age=300"},
+                    headers={
+                        "Content-Disposition": f'{disp_type}; filename="{safe_name}"',
+                        "Cache-Control": "private, no-cache, no-store, must-revalidate",
+                    },
                 )
 
         raise NotFoundError("Berkas")
@@ -163,43 +171,19 @@ class FilesController:
         file_id: uuid.UUID,
         variant: str = "full",
     ) -> dict[str, str]:
-        """Memeriksa otorisasi akses pengguna atas berkas dan membuat URL presigned MinIO."""
+        """Memeriksa otorisasi akses pengguna atas berkas dan membuat URL aplikasi bertiket aman."""
         file_obj = await self.service.authorize(file_id, current_user)
-        is_image = file_obj.mime_type.startswith("image/")
 
-        # Susun kandidat objek: varian webp hasil kompresi lebih dulu, lalu berkas asli
-        # (file_object.storage_key) — penting untuk berkas hasil impor massal yang tidak
-        # punya varian webp. Bila tak satu pun terbukti ada di MinIO (mis. MinIO tidak
-        # tersedia), tetap kembalikan URL kandidat pertama seperti perilaku sebelumnya;
-        # klien akan menerima 404 dari MinIO untuk objek yang memang tidak ada.
-        candidates: list[str] = []
-        if is_image and variant in ("thumb", "view", "full"):
-            candidates.append(f"{current_user.organization_id}/{file_id}_{variant}.webp")
-        candidates.append(file_obj.storage_key)
-        if is_image:
-            for v in ("view", "full", "thumb"):
-                candidates.append(f"{current_user.organization_id}/{file_id}_{v}.webp")
+        # Buat tiket akses berumur singkat terikat ke user_id dan file_id
+        ticket = create_file_access_ticket(
+            current_user.user_id,
+            str(file_id),
+            current_user.organization_id,
+            variant=variant,
+        )
 
-        seen: set[str] = set()
-        fallback_key = ""
-        for key in candidates:
-            if not key or key in seen:
-                continue
-            seen.add(key)
-            if not fallback_key:
-                fallback_key = key
-            if object_exists(key):
-                url = get_presigned_url(key)
-                if url:
-                    return {"url": url, "mime_type": file_obj.mime_type}
-
-        url = get_presigned_url(fallback_key)
-        if not url:
-            raise AppError(
-                "STORAGE_UNAVAILABLE",
-                "Penyimpanan berkas sedang tidak tersedia. Coba lagi beberapa saat.",
-                status=503,
-            )
+        base_url = (settings.MINIO_PUBLIC_URL or "").rstrip("/")
+        url = f"{base_url}/api/v1/files/{file_id}?variant={variant}&token={ticket}"
         return {"url": url, "mime_type": file_obj.mime_type}
 
 

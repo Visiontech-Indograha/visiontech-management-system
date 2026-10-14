@@ -9,7 +9,7 @@ import uuid
 from fastapi import APIRouter, Depends, File, UploadFile
 from fastapi.responses import Response
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, get_file_viewer
 from app.core.security import CurrentUser
 from app.modules.system.controllers.files_controller import FilesController
 
@@ -36,17 +36,20 @@ async def upload_document(
 async def get_file_content(
     file_id: uuid.UUID,
     variant: str = "view",
-    current_user: CurrentUser = Depends(get_current_user),
+    download: bool = False,
+    current_user: CurrentUser = Depends(get_file_viewer),
     controller: FilesController = Depends(),
 ) -> Response:
     """
     Menyajikan isi berkas langsung sebagai byte (bukan JSON) sehingga bisa dipakai
-    sebagai `src` pada tag <img>. Otorisasi tetap diperiksa (404 bila tidak berhak).
+    sebagai `src` pada tag <img> atau unduhan aman. Otorisasi tetap diperiksa (404 bila tidak berhak).
+    Mendukung Header Authorization: Bearer ATAU query parameter ?token=<ticket>.
 
     Query params:
     - variant: "thumb" | "view" | "full" (default "view")
+    - download: bool (default False, jika True menyetel Content-Disposition: attachment)
     """
-    return await controller.handle_get_file_content(current_user, file_id, variant=variant)
+    return await controller.handle_get_file_content(current_user, file_id, variant=variant, download=download)
 
 
 @router.get("/{file_id}/url")

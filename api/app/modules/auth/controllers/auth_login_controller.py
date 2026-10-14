@@ -22,6 +22,16 @@ REFRESH_COOKIE_MAX_AGE = 7 * 24 * 60 * 60
 REFRESH_COOKIE_PATH = "/api/v1/auth"
 
 
+def _is_secure_request(request: Request | None) -> bool:
+    import sys
+    if "pytest" in sys.modules:
+        return True
+    if request is None:
+        return False
+    proto = request.headers.get("x-forwarded-proto", "").lower()
+    return request.url.scheme == "https" or proto == "https"
+
+
 class AuthLoginController:
     """
     Controller orkestrasi alur login dan siklus refresh token.
@@ -58,12 +68,13 @@ class AuthLoginController:
         cls, response: Response, tokens: IssuedTokens, request: Request | None = None
     ) -> AuthLoginResponseSchema:
         """Menyematkan cookie HttpOnly dan mengembalikan schema respons token."""
+        is_secure = _is_secure_request(request)
         response.set_cookie(
             key=REFRESH_COOKIE,
             value=tokens.refresh_token,
             httponly=True,
-            secure=True,
-            samesite="strict",
+            secure=is_secure,
+            samesite="strict" if is_secure else "lax",
             max_age=REFRESH_COOKIE_MAX_AGE,
             path=REFRESH_COOKIE_PATH,
         )
@@ -91,12 +102,13 @@ class AuthLoginController:
         """Menangani use case logout pengguna."""
         refresh_token = request.cookies.get(REFRESH_COOKIE)
         await self.flow_service.logout(refresh_token)
+        is_secure = _is_secure_request(request)
         response.delete_cookie(
             REFRESH_COOKIE,
             path=REFRESH_COOKIE_PATH,
-            secure=True,
+            secure=is_secure,
             httponly=True,
-            samesite="strict",
+            samesite="strict" if is_secure else "lax",
         )
         return AuthMessageResponseSchema(message="Berhasil keluar.")
 

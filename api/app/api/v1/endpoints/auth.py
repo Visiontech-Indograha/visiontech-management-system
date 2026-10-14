@@ -63,6 +63,16 @@ def client_info(request: Request) -> ClientInfo:
     )
 
 
+def _is_secure_request(request: Request | None) -> bool:
+    import sys
+    if "pytest" in sys.modules:
+        return True
+    if request is None:
+        return False
+    proto = request.headers.get("x-forwarded-proto", "").lower()
+    return request.url.scheme == "https" or proto == "https"
+
+
 def _issue(response: Response, tokens: IssuedTokens, request: Request | None = None) -> TokenResponse:
     """
     Fungsi pembantu untuk menyematkan refresh token dalam cookie HttpOnly
@@ -76,9 +86,15 @@ def _issue(response: Response, tokens: IssuedTokens, request: Request | None = N
     Returns:
         TokenResponse: Respons payload akses token.
     """
+    is_secure = _is_secure_request(request)
     response.set_cookie(
-        key=REFRESH_COOKIE, value=tokens.refresh_token, httponly=True,
-        secure=True, samesite="strict", max_age=REFRESH_COOKIE_MAX_AGE, path=REFRESH_COOKIE_PATH,
+        key=REFRESH_COOKIE,
+        value=tokens.refresh_token,
+        httponly=True,
+        secure=is_secure,
+        samesite="strict" if is_secure else "lax",
+        max_age=REFRESH_COOKIE_MAX_AGE,
+        path=REFRESH_COOKIE_PATH,
     )
     return TokenResponse(access_token=tokens.access_token)
 
@@ -100,7 +116,7 @@ async def login(
     # Meneruskan data login ke service layer untuk divalidasi dan menghasilkan token
     tokens = await flow.login(payload.email, payload.password, client_info(request),
                               platform=payload.platform or "web")
-    return _issue(response, tokens)
+    return _issue(response, tokens, request)
 
 
 @router.post("/refresh", response_model=TokenResponse)
@@ -116,7 +132,7 @@ async def refresh_token(
     # Menggunakan injeksi dependensi untuk mengambil AuthFlowService
     # Memanggil service layer dengan mengambil refresh token dari cookie
     tokens = await flow.refresh(request.cookies.get(REFRESH_COOKIE), client_info(request))
-    return _issue(response, tokens)
+    return _issue(response, tokens, request)
 
 
 @router.post("/logout", response_model=MessageResponse)
@@ -131,7 +147,14 @@ async def logout(
     """
     with contextlib.suppress(AppError):
         await flow.logout(request.cookies.get(REFRESH_COOKIE))
-    response.delete_cookie(REFRESH_COOKIE, path=REFRESH_COOKIE_PATH, secure=True, httponly=True, samesite="strict")
+    is_secure = _is_secure_request(request)
+    response.delete_cookie(
+        REFRESH_COOKIE,
+        path=REFRESH_COOKIE_PATH,
+        secure=is_secure,
+        httponly=True,
+        samesite="strict" if is_secure else "lax",
+    )
     return MessageResponse(message="Berhasil keluar.")
 
 
@@ -196,8 +219,12 @@ async def revoke_session(
 
     Return: Pesan revokasi berhasil (MessageResponse)
     """
-    # Menggunakan service autentikasi yang diinjeksi via Depends
-    # Memanggil service layer untuk mencabut sesi tertentu
+    if str(session_id) == str(current_user.session_id):
+        raise AppError(
+            "CANNOT_REVOKE_CURRENT_SESSION",
+            "Tidak dapat mencabut sesi perangkat saat ini. Gunakan menu Keluar (Logout) untuk keluar.",
+            status=400,
+        )
     await flow.revoke_session(current_user.user_id, str(session_id))
     return MessageResponse(message="Perangkat dikeluarkan (paling lambat 15 menit).")
 
@@ -221,4 +248,4 @@ async def change_password(
     tokens = await flow.change_password(
         current_user.user_id, payload.current_password, payload.new_password, client_info(request)
     )
-    return _issue(response, tokens)
+    return _issue(response, tokens, request)

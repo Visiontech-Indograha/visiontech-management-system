@@ -367,9 +367,13 @@ class CRUDAttendanceSession(CRUDBase):
         Returns:
             bool: True jika pengguna boleh melakukan peninjauan.
         """
-        # Memanggil fungsi database kustom vms.attendance_can_review untuk mengevaluasi hak peninjauan
+        # Memanggil evaluasi hak peninjauan (peran ADMIN berhak meninjau absensi karyawan lain)
         return bool(await self.scalar(
-            "SELECT vms.attendance_can_review(CAST(:viewer AS uuid), CAST(:emp AS uuid))",
+            """
+            SELECT (CAST(:emp AS uuid) IS DISTINCT FROM (SELECT employee_id FROM vms.app_user WHERE id = CAST(:viewer AS uuid)))
+               AND (EXISTS (SELECT 1 FROM vms.user_role r WHERE r.user_id = CAST(:viewer AS uuid) AND r.role = 'ADMIN')
+                    OR vms.attendance_can_review(CAST(:viewer AS uuid), CAST(:emp AS uuid)))
+            """,
             {"viewer": str(viewer_user_id), "emp": str(employee_id)},
         ))
 
@@ -412,7 +416,9 @@ class CRUDAttendanceSession(CRUDBase):
                    a.check_out_distance_m, a.check_out_outside, a.check_out_selfie_file_id, a.check_out_explanation,
                    COALESCE(vms.attendance_city_category_at(a.organization_id, a.location),
                             vms.attendance_city_category(a.employee_id, a.work_date)) AS city_category,
-                   vms.attendance_can_review(CAST(:viewer AS uuid), a.employee_id) AS can_review
+                   ((EXISTS (SELECT 1 FROM vms.user_role r WHERE r.user_id = CAST(:viewer AS uuid) AND r.role = 'ADMIN')
+                     AND a.employee_id IS DISTINCT FROM (SELECT employee_id FROM vms.app_user WHERE id = CAST(:viewer AS uuid)))
+                    OR vms.attendance_can_review(CAST(:viewer AS uuid), a.employee_id)) AS can_review
             FROM vms.attendance a JOIN vms.employee e ON e.id = a.employee_id
             WHERE a.organization_id = CAST(:org AS uuid)
               AND vms.attendance_viewable(CAST(:viewer AS uuid), CAST(:view_all AS boolean), a.employee_id)

@@ -17,7 +17,7 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import AppError, ForbiddenError, NotFoundError
-from app.core.permissions import Permission
+from app.core.permissions import Permission, RoleCode
 from app.core.security import CurrentUser
 from app.crud.crud_file_access import CRUDFileAccess
 from app.crud.crud_org_ref import CRUDOrgRef
@@ -120,11 +120,18 @@ async def check_plan_access(
     if row is None:
         raise NotFoundError("Rencana Kerja")
 
-    # Memeriksa apakah kedudukan dari database memenuhi aturan akses bisnis.
-    if not satisfies(need, manages=row.manages, is_leader=row.is_leader, is_member=row.is_member):
+    is_admin = RoleCode.ADMIN in user.roles or "ADMIN" in user.roles
+    # Memeriksa apakah kedudukan dari database memenuhi aturan akses bisnis (ADMIN memiliki akses penuh).
+    if not is_admin and not satisfies(need, manages=row.manages, is_leader=row.is_leader, is_member=row.is_member):
         raise ForbiddenError(_REFUSAL[need])
 
-    return PlanAccess(plan=row, user=user, manages=row.manages, is_leader=row.is_leader, is_member=row.is_member)
+    return PlanAccess(
+        plan=row,
+        user=user,
+        manages=True if is_admin else row.manages,
+        is_leader=True if is_admin else row.is_leader,
+        is_member=True if is_admin else row.is_member,
+    )
 
 
 async def check_unit_manager(db: AsyncSession, unit_id: UUID | str, user: CurrentUser) -> None:
@@ -140,6 +147,9 @@ async def check_unit_manager(db: AsyncSession, unit_id: UUID | str, user: Curren
         NotFoundError: Jika unit tidak ditemukan (atau dari organisasi lain).
         ForbiddenError: Jika pengguna tidak memiliki peran manajerial di unit ini.
     """
+    if "ADMIN" in user.roles or RoleCode.ADMIN in user.roles:
+        return
+
     # Mengambil data posisi pengguna di tingkat unit untuk memvalidasi kepemimpinan.
     row = await CRUDPlanAccess(db).unit_standing(unit_id, user.organization_id, user.user_id)
     if row is None:
@@ -162,6 +172,8 @@ async def check_file_access(db: AsyncSession, file_id: UUID, user: CurrentUser) 
                                          Permission.VIEW_ALL_ATTENDANCE.value in user.permissions)
     if row is None:
         raise NotFoundError("Berkas")
+    if "ADMIN" in user.roles or RoleCode.ADMIN in user.roles:
+        return row
     if row.is_uploader:
         return row
     if row.work_type_example:   # foto contoh template: petunjuk kerja, terbuka untuk seluruh organisasi

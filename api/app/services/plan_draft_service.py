@@ -81,6 +81,19 @@ class PlanDraftService:
         """
         creator = await self.repo.creator(user.user_id)
         if creator is None or not creator.unit_id:
+            if RoleCode.ADMIN in user.roles or "ADMIN" in user.roles:
+                first_unit = await self.repo.fetchone(
+                    """
+                    SELECT bu.id AS unit_id, bu.name AS unit_name,
+                           (SELECT e.id FROM vms.employee e WHERE e.organization_id = bu.organization_id LIMIT 1) AS employee_id
+                    FROM vms.business_unit bu
+                    WHERE bu.organization_id = CAST(:org AS uuid)
+                    LIMIT 1
+                    """,
+                    {"org": user.organization_id},
+                )
+                if first_unit and first_unit.unit_id:
+                    return first_unit
             raise ForbiddenError("Akun Anda belum tertaut ke data karyawan aktif pada sebuah unit.")
         return creator
 

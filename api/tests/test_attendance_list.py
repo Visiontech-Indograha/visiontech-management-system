@@ -50,7 +50,7 @@ def day(client, world, other_world, fake_storage):
     }
 
 
-@pytest.mark.parametrize("who", ["finance", "ops"])
+@pytest.mark.parametrize("who", ["finance", "ops", "admin"])
 def test_finance_and_ops_see_the_whole_organisation_but_nothing_else(client, world, day, who):
     listed = _list(client, world, who)
     ids = {a["id"] for a in listed["items"]}
@@ -89,7 +89,7 @@ def test_scope_mine_for_account_without_employee_is_empty_and_rejects_bad_value(
     assert bad.status_code == 422
 
 
-@pytest.mark.parametrize("who", ["member", "leader", "asset", "hr", "admin"])
+@pytest.mark.parametrize("who", ["member", "leader", "asset", "hr"])
 def test_everyone_else_sees_only_their_own(client, world, day, who):
     listed = _list(client, world, who, employee_id=world.employees["leader"])   # upaya melihat milik orang lain
 

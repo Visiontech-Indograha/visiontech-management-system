@@ -16,4 +16,12 @@ describe("Header keamanan Caddy", () => {
     const csp = /Content-Security-Policy\s+"([^"]+)"/.exec(caddy)?.[1] ?? "";
     expect(csp).toMatch(/img-src[^;]*blob:/);
   });
+
+  it("CSP mengizinkan font data: dan script/koneksi Cloudflare Insights", () => {
+    const csp = /Content-Security-Policy\s+"([^"]+)"/.exec(caddy)?.[1] ?? "";
+    expect(csp).toMatch(/font-src[^;]*data:/);
+    expect(csp).toMatch(/script-src[^;]*https:\/\/static\.cloudflareinsights\.com/);
+    expect(csp).toMatch(/connect-src[^;]*https:\/\/cloudflareinsights\.com/);
+  });
 });
+

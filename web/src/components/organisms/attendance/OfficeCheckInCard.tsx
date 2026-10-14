@@ -13,6 +13,7 @@ import { useFaceStatus } from "@/services/accountService";
 import { FaceProbeDialog } from "@/components/organisms/face/FaceProbeDialog";
 import { SelfieCaptureDialog } from "./SelfieCaptureDialog";
 import { ActionButton } from "@/components/molecules/ActionButton";
+import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { ListBlock } from "@/components/molecules/ListBlock";
 import { ControlLabel, ControlOption, ControlSelect } from "@/components/molecules/FormBlock";
@@ -135,9 +136,49 @@ function OfficeCheckInForm({ employeeId }: { employeeId: string }) {
   const locked = !rec && rejected.length >= MAX_ATTEMPTS_PER_DAY;
   const resubmit = rejected.length > 0;
 
+  const [confirmEarlyLeave, setConfirmEarlyLeave] = useState<{ effH: number; effM: number } | null>(null);
+  const [encouragementModal, setEncouragementModal] = useState<string | null>(null);
+
   const refresh = async () => {
     await qc.invalidateQueries({ queryKey: ["attendance"] });
     await qc.invalidateQueries({ queryKey: ["attendance-recap"] });
+  };
+
+  const handleCheckInClick = () => {
+    const now = new Date();
+    if (now.getHours() < 7) {
+      setError("Absensi masuk belum dibuka. Jam masuk kerja dimulai pukul 07:00 WIB.");
+      return;
+    }
+    setError(null);
+    if (needFace) setFaceFor("in");
+    else checkIn.mutate(undefined);
+  };
+
+  const proceedCheckOut = () => {
+    if (needFace) setFaceFor("out");
+    else checkOut.mutate(undefined);
+  };
+
+  const handleCheckOutClick = () => {
+    const now = new Date();
+    if (now.getHours() >= 19) {
+      setError("Batas waktu absensi pulang mandiri telah ditutup pada pukul 19:00 WIB (Sistem auto check-out aktif).");
+      return;
+    }
+    setError(null);
+    if (rec?.check_in_at) {
+      const checkInTime = new Date(rec.check_in_at).getTime();
+      const grossSec = Math.max(0, (now.getTime() - checkInTime) / 1000);
+      if (grossSec < 9 * 3600) {
+        const effSec = Math.max(0, grossSec - 3600);
+        const effH = Math.floor(effSec / 3600);
+        const effM = Math.floor((effSec % 3600) / 60);
+        setConfirmEarlyLeave({ effH, effM });
+        return;
+      }
+    }
+    proceedCheckOut();
   };
 
   // Alur (flowchart R-33): cek lokasi & jam → di luar zona/ajukan ulang: alasan wajib → di luar zona: swafoto
@@ -218,7 +259,11 @@ function OfficeCheckInForm({ employeeId }: { employeeId: string }) {
       setError(null);
       setExplanation("");
       setAskExplanation(false);
-      toast.success(a.check_out_outside ? "Absen pulang tercatat di luar radius — menunggu pemeriksaan." : "Absen pulang tercatat.");
+      if (a?.encouragement_message) {
+        setEncouragementModal(a.encouragement_message);
+      } else {
+        toast.success(a?.check_out_outside ? "Absen pulang tercatat di luar radius — menunggu pemeriksaan." : "Absen pulang tercatat.");
+      }
       await refresh();
     },
     onError: (err) => {
@@ -309,7 +354,7 @@ function OfficeCheckInForm({ employeeId }: { employeeId: string }) {
                 ))}
               </ControlSelect>
             </div>
-            <ActionButton className="h-11" disabled={!siteId || busy} onClick={() => (needFace ? setFaceFor("in") : checkIn.mutate(undefined))}>
+            <ActionButton className="h-11" disabled={!siteId || busy} onClick={handleCheckInClick}>
               {checkIn.isPending ? "Membaca lokasi…" : rejected.length > 0 ? "Ajukan absen ulang" : "Absen masuk"}
             </ActionButton>
           </div>
@@ -357,7 +402,7 @@ function OfficeCheckInForm({ employeeId }: { employeeId: string }) {
               </ActionButton>
             </div>
           ) : !rec.check_out_at ? (
-            <ActionButton className="h-11 w-full md:w-auto" disabled={busy} onClick={() => (needFace ? setFaceFor("out") : checkOut.mutate(undefined))}>
+            <ActionButton className="h-11 w-full md:w-auto" disabled={busy} onClick={handleCheckOutClick}>
               {checkOut.isPending ? "Membaca lokasi…" : "Absen pulang"}
             </ActionButton>
           ) : (
@@ -402,6 +447,55 @@ function OfficeCheckInForm({ employeeId }: { employeeId: string }) {
             checkIn.mutate({ pos, selfieFileId: fileId });
           }}
         />
+      )}
+      {confirmEarlyLeave && (
+        <VmsDialog
+          open={!!confirmEarlyLeave}
+          title="Waktu Kerja Belum Mencapai 8 Jam"
+          onClose={() => setConfirmEarlyLeave(null)}
+          footer={
+            <div className="flex w-full justify-end gap-2">
+              <ActionButton variant="outline" className="h-11" onClick={() => setConfirmEarlyLeave(null)}>
+                Batal
+              </ActionButton>
+              <ActionButton
+                className="h-11"
+                onClick={() => {
+                  setConfirmEarlyLeave(null);
+                  proceedCheckOut();
+                }}
+              >
+                Lanjutkan Pulang Cepat
+              </ActionButton>
+            </div>
+          }
+        >
+          <TextBlock className="text-sm leading-relaxed text-ink">
+            {`Waktu kerja kamu saat ini baru ${confirmEarlyLeave.effH} jam ${confirmEarlyLeave.effM} menit (belum mencapai 8 jam kerja efektif, karena 1 jam istirahat tidak termasuk jam kerja).`}
+          </TextBlock>
+          <TextBlock className="mt-2 text-sm text-mist">
+            Jika tetap melanjutkan pulang sekarang, absensi hari ini akan dicatat dengan keterangan Pulang Cepat. Yakin ingin tetap absen pulang?
+          </TextBlock>
+        </VmsDialog>
+      )}
+      {encouragementModal && (
+        <VmsDialog
+          open={!!encouragementModal}
+          title="Terima Kasih Atas Kerja Kerasmu! 🌟"
+          onClose={() => setEncouragementModal(null)}
+          footer={
+            <ActionButton className="h-11 w-full" onClick={() => setEncouragementModal(null)}>
+              Tutup & Selamat Beristirahat
+            </ActionButton>
+          }
+        >
+          <div className="space-y-3 py-2 text-center">
+            <TextBlock className="text-4xl">🌟💪</TextBlock>
+            <TextBlock className="text-base font-medium leading-relaxed text-ink">
+              {encouragementModal}
+            </TextBlock>
+          </div>
+        </VmsDialog>
       )}
     </section>
   );

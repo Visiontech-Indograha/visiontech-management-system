@@ -1459,6 +1459,17 @@
       "format": "date",
       "title": "Work Date",
       "type": "string"
+     },
+     "encouragement_message": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Encouragement Message"
      }
     },
     "required": [

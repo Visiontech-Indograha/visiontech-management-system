@@ -30,23 +30,15 @@ function parseAuthTime(token: string | null): number | null {
   }
 }
 
-/** Mengecek apakah sesi sudah melewati 24 jam atau cutoff 02:00 dini hari berikutnya. */
+/** Mengecek apakah sesi sudah melewati batas 24 jam absolut (86400 detik) sesuai aturan backend. */
 function isSessionExpired(authTimeSec: number | null): boolean {
   if (!authTimeSec) return false;
   const loginDate = new Date(authTimeSec * 1000);
   const now = new Date();
-
-  // Batas 24 jam absolut
-  if (now.getTime() - loginDate.getTime() >= 24 * 3600 * 1000) return true;
-
-  // Cutoff 02:00 dini hari berikutnya setelah login
-  const cutoff = new Date(loginDate);
-  cutoff.setHours(2, 0, 0, 0);
-  if (cutoff.getTime() <= loginDate.getTime()) {
-    cutoff.setDate(cutoff.getDate() + 1);
-  }
-  return now.getTime() >= cutoff.getTime();
+  return now.getTime() - loginDate.getTime() >= 24 * 3600 * 1000;
 }
+
+let initSessionPromise: Promise<void> | null = null;
 
 export const useSession = create<SessionState>((set, get) => {
   const skipRestore = import.meta.env.DEV && !!import.meta.env.VITE_MOCK_ROLE;
@@ -60,8 +52,8 @@ export const useSession = create<SessionState>((set, get) => {
 
   setSessionExpiredHandler(clear);
 
-  // Monitor periodik & fokus jendela untuk auto-logout saat sesi melampaui 24 jam / cutoff 02:00
-  if (typeof window !== "undefined") {
+  // Monitor periodik & fokus jendela untuk auto-logout saat sesi melampaui 24 jam
+  if (typeof window !== "undefined" && import.meta.env.MODE !== "test") {
     const checkExpiration = () => {
       const token = getAccessToken();
       if (token && isSessionExpired(parseAuthTime(token))) {
@@ -103,20 +95,27 @@ export const useSession = create<SessionState>((set, get) => {
     },
     initSession: async () => {
       if (get().ready || getAccessToken()) return;
-      try {
-        // Lewat refresh tunggal: efek ganda (StrictMode) atau request paralel tidak boleh merotasi
-        // cookie dua kali — refresh kedua memakai token lama dan sesi ikut dicabut.
-        const token = await refreshAccessToken();
-        if (isSessionExpired(parseAuthTime(token))) {
-          clear();
-          return;
+      if (initSessionPromise) return initSessionPromise;
+
+      initSessionPromise = (async () => {
+        try {
+          // Lewat refresh tunggal: efek ganda (StrictMode) atau request paralel tidak boleh merotasi
+          // cookie dua kali — refresh kedua memakai token lama dan sesi ikut dicabut.
+          const token = await refreshAccessToken();
+          if (isSessionExpired(parseAuthTime(token))) {
+            clear();
+            return;
+          }
+          set({ me: await fetchMe() });
+        } catch {
+          /* belum login atau refresh cookie tidak valid */
+        } finally {
+          set({ ready: true });
+          initSessionPromise = null;
         }
-        set({ me: await fetchMe() });
-      } catch {
-        /* belum login */
-      } finally {
-        set({ ready: true });
-      }
+      })();
+
+      return initSessionPromise;
     },
   };
 });

@@ -72,6 +72,14 @@ class AttendanceCronController:
         purged = await self.session_service.purge_faces()
         return {"purged": purged}
 
+    async def handle_auto_checkout(
+        self,
+        current_user: CurrentUser,
+    ) -> dict[str, int]:
+        """Menutup otomatis sesi absensi yang belum ditutup pada pukul 19:00."""
+        closed = await self.monitor_service.auto_checkout_unclosed_sessions(current_user.organization_id)
+        return {"closed_count": closed}
+
 
 __all__ = ["AttendanceCronController"]
 

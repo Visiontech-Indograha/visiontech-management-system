@@ -19,7 +19,7 @@ from app.core.alerts import send_security_alert
 from app.core.config import settings
 from app.core.errors import AppError, NotFoundError
 from app.core.permissions import NO_GLOBAL_ROLE, Permission, RoleCode, permissions_for_roles
-from app.core.security import CurrentUser, verify_jwt_token
+from app.core.security import CurrentUser, verify_file_access_ticket, verify_jwt_token
 from app.core.time import utcnow
 from app.crud.crud_attendance_monitor import CRUDAttendanceMonitor
 from app.crud.crud_attendance_offline import CRUDAttendanceOffline
@@ -130,6 +130,63 @@ async def get_current_user(
             pass
 
     # Memuat identitas dan peran terbaru dari database
+    identity = await CRUDUser(db).find_identity(user_id)
+    if not identity or not identity.is_active:
+        raise _unauthenticated()
+
+    roles = list(identity.roles)
+    return CurrentUser(
+        user_id=user_id,
+        organization_id=str(identity.organization_id),
+        email=identity.login,
+        role=roles[0] if roles else NO_GLOBAL_ROLE,
+        roles=roles,
+        session_id=session_id,
+        permissions=permissions_for_roles(roles or [NO_GLOBAL_ROLE]),
+    )
+
+
+async def get_file_viewer(
+    file_id: UUID,
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
+    token: str | None = None,
+    db: AsyncSession = Depends(get_db, scope=DB_SCOPE),
+) -> CurrentUser:
+    """
+    Mendapatkan pengguna yang meminta isi berkas (GET /files/{file_id}).
+    Mendukung dua kanal autentikasi yang aman:
+    1. Header standar `Authorization: Bearer <access_token>`
+    2. Tiket akses berkas `?token=<ticket>` yang diterbitkan /files/{file_id}/url
+       (untuk tag <img> atau viewer dokumen yang tidak dapat menyertakan header Bearer).
+    """
+    if credentials is not None:
+        try:
+            payload = verify_jwt_token(credentials.credentials)
+        except jwt.PyJWTError:
+            raise _unauthenticated() from None
+
+        user_id, session_id = payload.get("sub"), payload.get("jti")
+        if not user_id or not session_id:
+            raise _unauthenticated()
+
+        auth_time = payload.get("auth_time")
+        if auth_time is not None:
+            try:
+                if int(utcnow().timestamp()) - int(auth_time) > 86400:
+                    raise _unauthenticated()
+            except (ValueError, TypeError):
+                pass
+    elif token is not None:
+        claims = verify_file_access_ticket(token, str(file_id))
+        if claims is None:
+            raise _unauthenticated()
+        user_id = claims.get("sub")
+        session_id = str(claims.get("jti") or "file-ticket")
+        if not user_id:
+            raise _unauthenticated()
+    else:
+        raise _unauthenticated()
+
     identity = await CRUDUser(db).find_identity(user_id)
     if not identity or not identity.is_active:
         raise _unauthenticated()

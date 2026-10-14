@@ -77,7 +77,7 @@ cmd_bangun() {
     git fetch -q origin prod || true
     [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/prod 2>/dev/null || echo x)" ] \
       || echo "PERINGATAN: HEAD bukan origin/prod — pastikan API di server sudah memuat perubahan yang dibutuhkan APK ini."
-    api="https://portal.visiontechindo.com"; targets="android-arm,android-arm64"; cleartext=""
+    api="https://portal.visiontechindo.com"; targets="android-arm,android-arm64,android-x64"; cleartext=""
     outroot="$MOBILE/build/rilis"
   fi
   [[ "$build" =~ ^[0-9]+$ ]] || die "nomor build tidak valid: $build"

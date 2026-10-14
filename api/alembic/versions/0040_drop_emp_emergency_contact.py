@@ -1,6 +1,6 @@
 """Hapus kolom lama emergency_contact dari tabel employee.
 
-Revision ID: 0040_drop_employee_emergency_contact_column
+Revision ID: 0040_drop_emp_emergency_contact
 Revises: 0039_checkout_face_only
 Create Date: 2026-10-14
 
@@ -12,7 +12,7 @@ from collections.abc import Sequence
 
 from alembic import op
 
-revision: str = "0040_drop_employee_emergency_contact_column"
+revision: str = "0040_drop_emp_emergency_contact"
 down_revision: str | None = "0039_checkout_face_only"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None

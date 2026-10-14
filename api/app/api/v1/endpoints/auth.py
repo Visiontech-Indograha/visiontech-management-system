@@ -47,17 +47,23 @@ def client_info(request: Request) -> ClientInfo:
         ip = str(ipaddress.ip_address(host)) if host else None
     except ValueError:
         ip = None  # kolom inet hanya menerima alamat IP yang sah
-    fingerprint = request.headers.get("x-device-fingerprint") or None
-    device_label = request.headers.get("x-device-label") or "Web Login"
+    user_agent = request.headers.get("user-agent", "Unknown")
+    fingerprint = request.headers.get("x-device-fingerprint") or request.headers.get("x-device-id")
+    if not fingerprint:
+        import hashlib
+        fingerprint = hashlib.sha256(user_agent.encode()).hexdigest()[:32]
+    device_label = request.headers.get("x-device-label") or (
+        "Aplikasi HP" if request.headers.get("x-device-id") else "Web Login"
+    )
     return ClientInfo(
         ip=ip,
-        user_agent=request.headers.get("user-agent", "Unknown"),
+        user_agent=user_agent,
         device_label=device_label,
         fingerprint=fingerprint,
     )
 
 
-def _issue(response: Response, tokens: IssuedTokens) -> TokenResponse:
+def _issue(response: Response, tokens: IssuedTokens, request: Request | None = None) -> TokenResponse:
     """
     Fungsi pembantu untuk menyematkan refresh token dalam cookie HttpOnly
     serta mereturn access token di payload.
@@ -65,6 +71,7 @@ def _issue(response: Response, tokens: IssuedTokens) -> TokenResponse:
     Args:
         response (Response): Objek respons FastAPI.
         tokens (IssuedTokens): Kumpulan token yang diterbitkan.
+        request (Request | None): Objek request untuk mendeteksi HTTPS.
 
     Returns:
         TokenResponse: Respons payload akses token.

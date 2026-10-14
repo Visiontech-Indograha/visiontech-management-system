@@ -32,16 +32,31 @@ class AuthLoginController:
 
     @staticmethod
     def extract_client_info(request: Request) -> ClientInfo:
-        """Mengambil IP dan User-Agent dari permintaan HTTP."""
+        """Mengambil IP, User-Agent, Device-Label, dan Device-Fingerprint dari permintaan HTTP."""
         host = request.client.host if request.client else None
         try:
             ip = str(ipaddress.ip_address(host)) if host else None
         except ValueError:
             ip = None
-        return ClientInfo(ip=ip, user_agent=request.headers.get("user-agent", "Unknown"))
+        user_agent = request.headers.get("user-agent", "Unknown")
+        fingerprint = request.headers.get("x-device-fingerprint") or request.headers.get("x-device-id")
+        if not fingerprint:
+            import hashlib
+            fingerprint = hashlib.sha256(user_agent.encode()).hexdigest()[:32]
+        device_label = request.headers.get("x-device-label") or (
+            "Aplikasi HP" if request.headers.get("x-device-id") else "Web Login"
+        )
+        return ClientInfo(
+            ip=ip,
+            user_agent=user_agent,
+            device_label=device_label,
+            fingerprint=fingerprint,
+        )
 
-    @staticmethod
-    def issue_token_response(response: Response, tokens: IssuedTokens) -> AuthLoginResponseSchema:
+    @classmethod
+    def issue_token_response(
+        cls, response: Response, tokens: IssuedTokens, request: Request | None = None
+    ) -> AuthLoginResponseSchema:
         """Menyematkan cookie HttpOnly dan mengembalikan schema respons token."""
         response.set_cookie(
             key=REFRESH_COOKIE,
@@ -64,13 +79,13 @@ class AuthLoginController:
             self.extract_client_info(request),
             platform=payload.platform or "web",
         )
-        return self.issue_token_response(response, tokens)
+        return self.issue_token_response(response, tokens, request)
 
     async def handle_refresh(self, request: Request, response: Response) -> AuthLoginResponseSchema:
         """Menangani use case perpanjangan token akses."""
         refresh_token = request.cookies.get(REFRESH_COOKIE)
         tokens = await self.flow_service.refresh(refresh_token, self.extract_client_info(request))
-        return self.issue_token_response(response, tokens)
+        return self.issue_token_response(response, tokens, request)
 
     async def handle_logout(self, request: Request, response: Response) -> AuthMessageResponseSchema:
         """Menangani use case logout pengguna."""

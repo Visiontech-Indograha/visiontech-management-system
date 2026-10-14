@@ -99,9 +99,11 @@ export const useSession = create<SessionState>((set, get) => {
 
       initSessionPromise = (async () => {
         try {
+          if (getAccessToken() || get().me) return;
           // Lewat refresh tunggal: efek ganda (StrictMode) atau request paralel tidak boleh merotasi
           // cookie dua kali — refresh kedua memakai token lama dan sesi ikut dicabut.
           const token = await refreshAccessToken();
+          if (getAccessToken() && getAccessToken() !== token) return;
           if (isSessionExpired(parseAuthTime(token))) {
             clear();
             return;
@@ -111,7 +113,9 @@ export const useSession = create<SessionState>((set, get) => {
           set({ me: profile });
         } catch {
           /* belum login atau refresh cookie tidak valid */
-          clear();
+          if (!getAccessToken() && !get().me) {
+            clear();
+          }
         } finally {
           set({ ready: true });
           initSessionPromise = null;

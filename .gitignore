@@ -105,11 +105,21 @@ ehthumbs_vista.db
 .agents/
 .claude/
 .gemini/
+.geminiignore
 .hermes/
 .cursor/
 .windsurf/
 .copilot/
+.agy/
 scratch/
 skills-lock.json
+MEMORY.md
+memory.md
+CLAUDE.md
+GEMINI.md
+prototype/GEMINI.md
+prototype/agent.md
+prototype/coordination/
+*.agent.md
 
 !web/src/lib/

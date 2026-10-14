@@ -140,6 +140,49 @@ def verify_face_challenge_proof(token: str, user_id: str) -> tuple[str, str] | N
     return str(claims["chl"]), str(claims["jti"])
 
 
+# ── Tiket akses berkas aman (Zero Public Access) ──────────────────────────────
+# Diterbitkan oleh /files/{id}/url setelah otorisasi berhasil. Menggantikan URL presigned MinIO publik.
+# Terikat ketat pada user_id, file_id, organization_id, dan berumur singkat (5 menit).
+FILE_TICKET_AUDIENCE = "vms-file-ticket"
+FILE_TICKET_TTL = timedelta(minutes=5)
+
+
+def create_file_access_ticket(user_id: str, file_id: str, org_id: str, variant: str = "view") -> str:
+    now = utcnow()
+    claims = {
+        "sub": user_id,
+        "fid": str(file_id),
+        "org": str(org_id),
+        "var": variant,
+        "iat": now,
+        "exp": now + FILE_TICKET_TTL,
+        "aud": FILE_TICKET_AUDIENCE,
+        "iss": ACCESS_ISSUER,
+        "jti": uuid.uuid4().hex,
+    }
+    return jwt.encode(claims, _private_key, algorithm=_ALGORITHM, headers={"kid": settings.JWT_KID})
+
+
+def verify_file_access_ticket(token: str, file_id: str) -> dict[str, Any] | None:
+    """Klaim tiket bila token sah, belum kedaluwarsa, dan sesuai dengan file_id; selain itu None."""
+    try:
+        if jwt.get_unverified_header(token).get("kid") != settings.JWT_KID:
+            return None
+        claims = jwt.decode(
+            token,
+            _public_key,
+            algorithms=[_ALGORITHM],
+            audience=FILE_TICKET_AUDIENCE,
+            issuer=ACCESS_ISSUER,
+            options={"require": ["exp", "iat", "sub", "fid", "org"]},
+        )
+    except jwt.PyJWTError:
+        return None
+    if str(claims.get("fid")) != str(file_id):
+        return None
+    return claims
+
+
 # Identitas pengguna yang sedang masuk (dibangun api/deps.py::get_current_user dari token + DB).
 class CurrentUser(BaseModel):
     """

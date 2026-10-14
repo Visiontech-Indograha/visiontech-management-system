@@ -6,11 +6,12 @@ import filetype
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import Response
 
-from app.api.deps import get_current_user, get_file_service
+from app.api.deps import get_current_user, get_file_service, get_file_viewer
+from app.core.config import settings
 from app.core.errors import AppError, NotFoundError
 from app.core.image import compress_image
-from app.core.security import CurrentUser
-from app.core.storage import get_object_bytes, get_presigned_url, upload_file
+from app.core.security import CurrentUser, create_file_access_ticket
+from app.core.storage import get_object_bytes, upload_file
 from app.services.file_service import FileService
 
 router = APIRouter(prefix="/files", tags=["Files"])
@@ -105,11 +106,13 @@ async def upload_document(
 async def get_file_content(
     file_id: uuid.UUID,
     variant: str = "view",
-    current_user: CurrentUser = Depends(get_current_user),
+    download: bool = False,
+    current_user: CurrentUser = Depends(get_file_viewer),
     files: FileService = Depends(get_file_service),
 ) -> Response:
     """
-    Menyajikan isi berkas langsung (bukan JSON) agar bisa dipakai sebagai `src` <img>.
+    Menyajikan isi berkas langsung (bukan JSON) agar bisa dipakai sebagai `src` <img> atau unduhan aman.
+    Mendukung Header Authorization: Bearer ATAU query parameter ?token=<ticket>.
 
     Urutan pencarian objek di MinIO:
     1. `{org}/{file_id}_{variant}.webp` (hasil kompresi aplikasi)
@@ -137,10 +140,16 @@ async def get_file_content(
         seen.add(key)
         data = get_object_bytes(key)
         if data:
+            file_name = getattr(file_obj, "file_name", None) or f"{file_id}.{file_obj.mime_type.split('/')[-1]}"
+            safe_name = str(file_name).replace('"', '\\"')
+            disp_type = "attachment" if download else "inline"
             return Response(
                 content=data,
                 media_type="image/webp" if key.endswith(".webp") else file_obj.mime_type,
-                headers={"Cache-Control": "private, max-age=300"},
+                headers={
+                    "Content-Disposition": f'{disp_type}; filename="{safe_name}"',
+                    "Cache-Control": "private, no-cache, no-store, must-revalidate",
+                },
             )
 
     raise NotFoundError("Berkas")
@@ -154,7 +163,7 @@ async def get_file_url(
     files: FileService = Depends(get_file_service),
 ) -> dict[str, str]:
     """
-    Mendapatkan URL Presigned MinIO untuk mengakses file (valid 5 menit).
+    Mendapatkan URL bertiket aman untuk mengakses file (valid 5 menit).
     Varian: full, view, thumb. URL dibuat hanya setelah otorisasi per berkas (V-17, dok 13 §7).
 
     Path params:
@@ -163,29 +172,18 @@ async def get_file_url(
     Query params:
     - variant: variasi kompresi ("full", "view", "thumb")
 
-    Return: Presigned URL dari MinIO beserta mime_type asli
+    Return: URL aplikasi bertanda tangan beserta mime_type asli
     """
-    # Mengambil database dan detail user melalui Dependensi injeksi
-    # Memeriksa hak akses pada level aplikasi
     file_obj = await files.authorize(file_id, current_user)
 
-    is_image = file_obj.mime_type.startswith("image/")
+    # Buat tiket akses berumur singkat terikat ke user_id dan file_id
+    ticket = create_file_access_ticket(
+        current_user.user_id,
+        str(file_id),
+        current_user.organization_id,
+        variant=variant,
+    )
 
-    if is_image and variant in ["thumb", "view", "full"]:
-        # Gambar yang sukses dikompresi diubah menjadi webp
-        # Kita perlu fallback jika ternyata kompresi gagal (tersimpan storage_key asli)
-        target_key = f"{current_user.organization_id}/{file_id}_{variant}.webp"
-        url = get_presigned_url(target_key)
-        # Jika presigned URL MinIO bisa digenerate meskipun objek belum dicek eksistensinya (S3 behavior)
-        # Maka client akan dapat 404 dari MinIO jika kompresi sempat gagal.
-        # Untuk ketahanan, aplikasi semestinya memverifikasi atau client men-fallback ke full URL.
-    else:
-        target_key = file_obj.storage_key
-        url = get_presigned_url(target_key)
-
-    if not url:
-        raise HTTPException(status_code=500, detail={"code": "STORAGE_ERROR", "message": "Gagal membuat URL."})
-
-    # mime_type dari basis data (hasil pemeriksaan magic bytes saat unggah) — klien tidak perlu
-    # menebak jenis berkas dari ekstensi URL.
+    base_url = (settings.MINIO_PUBLIC_URL or "").rstrip("/")
+    url = f"{base_url}/api/v1/files/{file_id}?variant={variant}&token={ticket}"
     return {"url": url, "mime_type": file_obj.mime_type}

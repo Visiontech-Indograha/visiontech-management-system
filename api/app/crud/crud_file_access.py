@@ -40,7 +40,7 @@ class CRUDFileAccess(CRUDBase):
         # Hasilnya adalah serangkaian nilai boolean dan array ID rencana (plan_ids) untuk validasi di lapisan atas.
         return await self.fetchone(
             """
-            SELECT f.storage_key, f.mime_type,
+            SELECT f.storage_key, f.mime_type, f.file_name,
                    f.uploaded_by IS NOT DISTINCT FROM CAST(:user AS uuid) AS is_uploader,
                    EXISTS (SELECT 1 FROM vms.employee_document d WHERE d.file_id = f.id) AS personal_document,
                    EXISTS (SELECT 1 FROM vms.employee_document d

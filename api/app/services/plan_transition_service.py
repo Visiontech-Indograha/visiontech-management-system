@@ -94,7 +94,7 @@ class PlanTransitionService:
 
     async def _leader_only(self, plan_id: UUID, user_id: str) -> None:
         """
-        Memastikan tindakan hanya dapat dilakukan oleh ketua tim yang tercantum dalam SK.
+        Memastikan tindakan hanya dapat dilakukan oleh ketua tim yang tercantum dalam SK (atau Admin).
 
         Args:
             plan_id (UUID): ID SK.
@@ -103,6 +103,12 @@ class PlanTransitionService:
         Raises:
             ForbiddenError: Jika pengguna bukan ketua tim.
         """
+        is_admin = bool(await self.repo.scalar(
+            "SELECT EXISTS (SELECT 1 FROM vms.user_role WHERE user_id = CAST(:uid AS uuid) AND role = 'ADMIN')",
+            {"uid": user_id}
+        ))
+        if is_admin:
+            return
         if not await self.repo.is_leader(plan_id, user_id):
             raise ForbiddenError("Hanya ketua tim menurut rencana kerja yang berlaku yang dapat melakukan ini.")
 
@@ -125,7 +131,14 @@ class PlanTransitionService:
             raise _invalid("Rincian harian belum lengkap.")
         issuer = await self.repo.employee_id_of(user_id)
         if issuer is None:
-            raise ForbiddenError("Akun Anda belum tertaut ke data karyawan, jadi tidak dapat menerbitkan rencana kerja.")
+            is_admin = bool(await self.repo.scalar(
+                "SELECT EXISTS (SELECT 1 FROM vms.user_role WHERE user_id = CAST(:uid AS uuid) AND role = 'ADMIN')",
+                {"uid": user_id}
+            ))
+            if is_admin:
+                issuer = plan.pm_employee_id
+            if issuer is None:
+                raise ForbiddenError("Akun Anda belum tertaut ke data karyawan, jadi tidak dapat menerbitkan rencana kerja.")
 
         await self.repo.publish(plan_id)
         snapshot = await self.repo.snapshot(plan_id)

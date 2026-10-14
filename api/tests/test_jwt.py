@@ -92,3 +92,17 @@ def test_forged_hs256_token_gets_401_from_api(client, make_user):
     response = client.get("/auth/me", headers={"Authorization": f"Bearer {forged}"})
 
     assert response.status_code == 401
+
+
+def test_file_access_ticket_roundtrip():
+    from app.core.security import create_file_access_ticket, verify_file_access_ticket
+
+    ticket = create_file_access_ticket("user-1", "file-1", "org-1", "view")
+    claims = verify_file_access_ticket(ticket, "file-1")
+    assert claims is not None
+    assert claims["sub"] == "user-1"
+    assert claims["fid"] == "file-1"
+    assert claims["org"] == "org-1"
+
+    # Mismatched file_id must be rejected
+    assert verify_file_access_ticket(ticket, "file-2") is None

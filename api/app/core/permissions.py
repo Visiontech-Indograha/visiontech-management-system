@@ -71,11 +71,9 @@ P = Permission
 # Setiap karyawan yang login: direktori, dokumen pribadinya sendiri.
 BASE_PERMISSIONS: frozenset[Permission] = frozenset({P.VIEW_USERS, P.VIEW_DOCUMENTS, P.UPLOAD_DOCUMENTS})
 
-# R-33: Admin tidak melihat/meninjau absensi orang lain dan tidak mengelola lokasi (hanya riwayat sendiri).
-_ADMIN_EXCLUDED = frozenset({P.VIEW_ALL_ATTENDANCE, P.REVIEW_ATTENDANCE, P.EXPORT_ATTENDANCE, P.MANAGE_SITES})
-
+# Admin memiliki kuasa penuh atas seluruh perizinan sistem.
 _ROLE_EXTRA: dict[RoleCode, frozenset[Permission]] = {
-    RoleCode.ADMIN: frozenset(Permission) - _ADMIN_EXCLUDED,
+    RoleCode.ADMIN: frozenset(Permission),
     RoleCode.PM: frozenset({P.CREATE_PLAN, P.PUBLISH_PLAN, P.VIEW_TIMELINE, P.REVIEW_ATTENDANCE, P.MANAGE_SITES}),
     RoleCode.HR: frozenset({P.MANAGE_USERS, P.VERIFY_DOCUMENTS, P.MANAGE_EMPLOYEE_DOCUMENTS}),
     RoleCode.FINANCE: frozenset({P.VIEW_ALL_ATTENDANCE, P.REVIEW_ATTENDANCE, P.EXPORT_ATTENDANCE,

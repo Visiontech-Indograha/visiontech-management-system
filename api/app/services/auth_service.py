@@ -155,6 +155,10 @@ class AuthService:
         if client.fingerprint:
             existing_family = await self.sessions.find_active_family_by_fingerprint(user.id, client.fingerprint)
 
+        if existing_family is not None:
+            # Perangkat yang sama masuk ulang: cabut rantai sesi lama agar tidak tercatat ganda di vms.user_session
+            await self.sessions.revoke_family(user.id, existing_family, "Masuk ulang pada perangkat yang sama")
+
         active_devices = await self.sessions.count_active_devices(user.id)
         if existing_family is None and active_devices >= 4:
             raise AppError(
@@ -164,8 +168,6 @@ class AuthService:
                 status=403,
                 details={"max_devices": 4, "active_devices": active_devices},
             )
-        if existing_family is not None:
-            await self.sessions.revoke_family(user.id, existing_family, "Masuk ulang pada perangkat yang sama")
 
         await self.sessions.record_login_attempt(login, client.ip, True)
         auth_time = int(utcnow().timestamp())

@@ -106,9 +106,12 @@ export const useSession = create<SessionState>((set, get) => {
             clear();
             return;
           }
-          set({ me: await fetchMe() });
+          setAccessToken(token);
+          const profile = await fetchMe();
+          set({ me: profile });
         } catch {
           /* belum login atau refresh cookie tidak valid */
+          clear();
         } finally {
           set({ ready: true });
           initSessionPromise = null;

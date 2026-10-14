@@ -120,7 +120,6 @@ export function EmployeeProfileDialog({ employee, onClose }: { employee: Employe
         phone: v.phone || null,
         birth_date: v.birth_date || null,
         address: v.address || null,
-        emergency_contact: employee.emergency_contact ?? null,
         attendance_mode: v.attendance_mode,
         ...(finalPhotoId !== undefined ? { photo_file_id: finalPhotoId } : {}),
       };

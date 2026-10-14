@@ -4221,8 +4221,6 @@ export interface components {
             birth_date?: string | null;
             /** Address */
             address?: string | null;
-            /** Emergency Contact */
-            emergency_contact?: string | null;
             /** Photo File Id */
             photo_file_id?: string | null;
             /**
@@ -4358,8 +4356,6 @@ export interface components {
             birth_date?: string | null;
             /** Address */
             address?: string | null;
-            /** Emergency Contact */
-            emergency_contact?: string | null;
             /** Photo File Id */
             photo_file_id?: string | null;
             /**
@@ -4397,8 +4393,6 @@ export interface components {
             birth_date?: string | null;
             /** Address */
             address?: string | null;
-            /** Emergency Contact */
-            emergency_contact?: string | null;
             /** Photo File Id */
             photo_file_id?: string | null;
         };

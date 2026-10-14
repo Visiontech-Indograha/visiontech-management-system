@@ -135,6 +135,8 @@ class AttendanceResponse(BaseModel):
     check_out_selfie_file_id: UUID | None = None
     check_out_explanation: str | None = None
     city_category: str | None = None
+    # Pesan penyemangat saat karyawan menyelesaikan waktu kerja penuh (8 jam kerja efektif)
+    encouragement_message: str | None = None
 
 
 class AttendanceListResponse(BaseModel):

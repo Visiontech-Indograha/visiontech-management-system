@@ -6,7 +6,8 @@ import { ExternalLink } from "@/components/molecules/Links";
 export function AndroidAppLink() {
   const { data } = useLatestAndroidRelease();
   if (!data?.latest_build || !data.download) return null;
-  const mb = (data.download.size / (1024 * 1024)).toFixed(0);
+  const sizeMb = data.download.size / (1024 * 1024);
+  const mb = sizeMb % 1 === 0 ? sizeMb.toFixed(0) : sizeMb.toFixed(1);
   return (
     <ExternalLink
       href={`${import.meta.env.VITE_API_BASE_URL ?? ""}/api/v1/app/android/latest.apk`}

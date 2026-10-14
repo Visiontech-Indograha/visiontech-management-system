@@ -141,6 +141,13 @@ class Settings(BaseSettings):
     # Kosong = belum ada rilis; pemeriksaan pembaruan selalu menjawab UP_TO_DATE.
     APP_RELEASE_DIR: str = ""
 
+    # Pengaturan jam operasional absensi (07:00 s.d. 19:00, 8 jam kerja efektif + 1 jam istirahat)
+    ATTENDANCE_OPEN_TIME: str = "07:00"
+    ATTENDANCE_CLOSE_TIME: str = "19:00"
+    ATTENDANCE_REQUIRED_WORK_HOURS: int = 8
+    ATTENDANCE_BREAK_HOURS: int = 1
+    SKIP_ATTENDANCE_HOURS_CHECK: bool = False
+
     # "production" menyalakan penjaga di bawah; nilai lain (development/test) memakai bawaan lokal.
     APP_ENV: str = "development"
 

@@ -10,8 +10,11 @@ from uuid import UUID
 from zoneinfo import ZoneInfo
 
 from app.core.alerts import send_business_alert
+from app.core.config import settings
 from app.core.time import jakarta_now
 from app.crud.crud_attendance_monitor import CRUDAttendanceMonitor
+from app.crud.crud_attendance_session import CRUDAttendanceSession
+from app.services.notification_service import NotificationService
 
 WIB = ZoneInfo("Asia/Jakarta")
 CHECK_IN_DEADLINE = time(9, 0)
@@ -91,3 +94,24 @@ class AttendanceMonitorService:
                 f"{average:.1f}/hari. Periksa ambang wajah, koordinat lokasi, atau akurasi GPS.",
             )
         return NeedsReviewResult(alerted=alerted, needs_review_today=count, daily_average=round(average, 2))
+
+    async def auto_checkout_unclosed_sessions(self, org_id: UUID | str) -> int:
+        """
+        Menutup otomatis sesi absensi yang belum check-out pada pukul 19:00 WIB
+        dengan keterangan 'Lupa absen pulang (ditutup otomatis oleh sistem pada pukul 19:00)'.
+        """
+        now = jakarta_now()
+        close_hour, close_min = [int(p) for p in settings.ATTENDANCE_CLOSE_TIME.split(":")]
+        if not settings.SKIP_ATTENDANCE_HOURS_CHECK and now.time() < time(close_hour, close_min):
+            return 0
+
+        today = now.date()
+        close_time = now.replace(hour=close_hour, minute=close_min, second=0, microsecond=0)
+        explanation = f"Lupa absen pulang (ditutup otomatis oleh sistem pada pukul {settings.ATTENDANCE_CLOSE_TIME})"
+
+        session_repo = CRUDAttendanceSession(self.repo.db)
+        closed_rows = await session_repo.auto_checkout_unclosed(org_id, today, close_time, explanation)
+        if closed_rows:
+            emp_ids = [str(r.employee_id) for r in closed_rows]
+            await NotificationService(self.repo.db).attendance_auto_checkout_bulk(str(org_id), emp_ids)
+        return len(closed_rows)

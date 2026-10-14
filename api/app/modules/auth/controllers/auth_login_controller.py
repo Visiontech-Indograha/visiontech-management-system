@@ -58,24 +58,12 @@ class AuthLoginController:
         cls, response: Response, tokens: IssuedTokens, request: Request | None = None
     ) -> AuthLoginResponseSchema:
         """Menyematkan cookie HttpOnly dan mengembalikan schema respons token."""
-        from app.core.config import settings
-
-        is_secure = False
-        if request is not None:
-            is_secure = (
-                request.url.scheme == "https"
-                or request.headers.get("x-forwarded-proto") == "https"
-                or settings.APP_ENV == "production"
-            )
-        else:
-            is_secure = settings.APP_ENV == "production"
-
         response.set_cookie(
             key=REFRESH_COOKIE,
             value=tokens.refresh_token,
             httponly=True,
-            secure=is_secure,
-            samesite="lax",
+            secure=True,
+            samesite="strict",
             max_age=REFRESH_COOKIE_MAX_AGE,
             path=REFRESH_COOKIE_PATH,
         )
@@ -101,21 +89,14 @@ class AuthLoginController:
 
     async def handle_logout(self, request: Request, response: Response) -> AuthMessageResponseSchema:
         """Menangani use case logout pengguna."""
-        from app.core.config import settings
-
         refresh_token = request.cookies.get(REFRESH_COOKIE)
         await self.flow_service.logout(refresh_token)
-        is_secure = (
-            request.url.scheme == "https"
-            or request.headers.get("x-forwarded-proto") == "https"
-            or settings.APP_ENV == "production"
-        )
         response.delete_cookie(
             REFRESH_COOKIE,
             path=REFRESH_COOKIE_PATH,
-            secure=is_secure,
+            secure=True,
             httponly=True,
-            samesite="lax",
+            samesite="strict",
         )
         return AuthMessageResponseSchema(message="Berhasil keluar.")
 

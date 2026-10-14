@@ -16,6 +16,7 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
     - Menghitung durasi kerja 9 jam kotor (8 jam kerja efektif + 1 jam istirahat tidak dihitung); jika checkout < 9 jam kotor (< 8 jam efektif), absensi dicatat dengan status Pulang Cepat (`is_early_leave = true`) dan keterangan waktu kerja efektif.
     - Memberikan pesan apresiasi/penyemangat (`encouragement_message`) dan notifikasi apresiasi kepada karyawan saat absensi pulang memenuhi atau melebihi 8 jam kerja efektif.
     - Menyediakan endpoint cron `POST /cron/attendance/auto-checkout` untuk menutup otomatis sesi absensi terbuka pada pukul 19:00 WIB dengan keterangan lupa absen pulang dan menyiarkan notifikasi.
+    - Menyelaraskan snapshot OpenAPI (`test_openapi_snapshot.py`) dan memastikan sinkronisasi absensi luring (offline) tidak terhalang validasi jam masuk operasional.
   - **Frontend Web UI & Sesi (`OfficeCheckInCard.tsx`, `appReleaseService.ts`, `sessionStore.ts`, `AndroidAppLink.tsx`, `apiTypes.ts`, `openapi.json`):**
     - Menambahkan validasi tombol absen masuk sebelum pukul 07:00 WIB dan tombol absen pulang setelah pukul 19:00 WIB.
     - Menambahkan dialog konfirmasi interaktif saat karyawan hendak checkout sebelum 8 jam kerja efektif (dengan opsi Batal atau Lanjutkan Pulang Cepat).

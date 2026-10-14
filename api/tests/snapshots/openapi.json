@@ -1338,6 +1338,17 @@
       ],
       "title": "Employee Name"
      },
+     "encouragement_message": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Encouragement Message"
+     },
      "explanation": {
       "anyOf": [
        {
@@ -9776,6 +9787,37 @@
      }
     ],
     "summary": "Alert Needs Review Spike",
+    "tags": [
+     "Attendance Cron"
+    ]
+   }
+  },
+  "/api/v1/cron/attendance/auto-checkout": {
+   "post": {
+    "description": "Penjadwal / Cron: Menutup otomatis sesi absensi yang belum ditutup pada pukul 19:00.",
+    "operationId": "auto_checkout_daily_api_v1_cron_attendance_auto_checkout_post",
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": {
+          "type": "integer"
+         },
+         "title": "Response Auto Checkout Daily Api V1 Cron Attendance Auto Checkout Post",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Auto Checkout Daily",
     "tags": [
      "Attendance Cron"
     ]

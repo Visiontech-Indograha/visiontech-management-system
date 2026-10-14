@@ -65,6 +65,12 @@ class _HomeShellState extends ConsumerState<HomeShell>
             body: '${event.data['body'] ?? ''}',
             payload: '$planId|${event.data['kind'] ?? ''}',
           ));
+        } else if (event.topic == 'security') {
+          unawaited(notifier.show(
+            title: '${event.data['title'] ?? 'Aktivitas Keamanan'}',
+            body: '${event.data['body'] ?? 'Ada perangkat lain yang masuk dengan akun Anda.'}',
+            payload: 'security',
+          ));
         }
       },
     )..start();

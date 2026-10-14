@@ -121,16 +121,56 @@ class CRUDSession(CRUDBase):
             user_agent (str): User agent asal rotasi.
 
         Returns:
-            Any: (session_id, user_id, refresh_token, expires_at, reused).
+            Any: (session_id, user_id, refresh_token, expires_at, reused, family_created_at).
         """
         # Memanggil fungsi tersimpan `rotate_session`.
         # Jika token dicuri dan digunakan ulang, `reused` akan bernilai true.
         return await self.fetchone(
             """
-            SELECT session_id, user_id, refresh_token, expires_at, reused
+            SELECT session_id, user_id, refresh_token, expires_at, reused, family_created_at
             FROM vms.rotate_session(:rt, :ip, :agent)
             """,
             {"rt": raw_refresh_token, "ip": ip, "agent": user_agent},
+        )
+
+    async def count_active_devices(self, user_id: UUID | str) -> int:
+        """Menghitung jumlah rantai sesi unik (perangkat aktif) yang dimiliki pengguna."""
+        return int(
+            await self.scalar(
+                """
+                SELECT count(DISTINCT family_id)::int
+                FROM vms.user_session
+                WHERE user_id = :uid AND state = 'ACTIVE' AND expires_at > now()
+                """,
+                {"uid": user_id},
+            )
+            or 0
+        )
+
+    async def find_active_family_by_fingerprint(
+        self, user_id: UUID | str, fingerprint: str
+    ) -> UUID | None:
+        """Mencari family_id aktif berdasarkan fingerprint perangkat."""
+        val = await self.scalar(
+            """
+            SELECT family_id
+            FROM vms.user_session
+            WHERE user_id = :uid AND device_fingerprint = :fp AND state = 'ACTIVE' AND expires_at > now()
+            LIMIT 1
+            """,
+            {"uid": user_id, "fp": fingerprint},
+        )
+        return UUID(str(val)) if val else None
+
+    async def revoke_family(self, user_id: UUID | str, family_id: UUID | str, reason: str) -> None:
+        """Mencabut seluruh sesi dalam satu rantai perangkat (family_id)."""
+        await self.execute(
+            """
+            UPDATE vms.user_session
+            SET state = 'REVOKED', revoked_at = now(), revoked_reason = :reason
+            WHERE user_id = :uid AND family_id = :family AND state = 'ACTIVE'
+            """,
+            {"uid": user_id, "family": family_id, "reason": reason},
         )
 
     async def revoke_by_refresh_token(self, raw_refresh_token: str, reason: str) -> None:

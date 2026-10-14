@@ -2,12 +2,14 @@
 Rute autentikasi. Tipis (dok 12 §2): jalur, status, skema, dependency, dan cookie refresh.
 Aturan bisnis ada di services/auth_service.py; transaksi di services/auth_flow.py.
 """
+import contextlib
 import ipaddress
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Request, Response
 
 from app.api.deps import get_auth_flow_service, get_current_user
+from app.core.errors import AppError
 from app.core.security import CurrentUser
 from app.schemas.auth import (
     ChangePasswordRequest,
@@ -113,9 +115,8 @@ async def logout(
 
     Return: Pesan sukses (MessageResponse) dan menghapus cookie refresh_token
     """
-    # Injeksi dependensi untuk service alur autentikasi
-    # Memanggil logout di service layer menggunakan refresh token di cookie
-    await flow.logout(request.cookies.get(REFRESH_COOKIE))
+    with contextlib.suppress(AppError):
+        await flow.logout(request.cookies.get(REFRESH_COOKIE))
     response.delete_cookie(REFRESH_COOKIE, path=REFRESH_COOKIE_PATH, secure=True, httponly=True, samesite="strict")
     return MessageResponse(message="Berhasil keluar.")
 

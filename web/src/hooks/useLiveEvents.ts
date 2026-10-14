@@ -29,10 +29,50 @@ function parseBlock(block: string): LiveEvent | null {
   }
 }
 
+/** Memutar nada lonceng default sistem dua nada (D5 -> A5) via Web Audio API tanpa berkas eksternal. */
+function playNotificationChime() {
+  if (typeof window === "undefined") return;
+  try {
+    const AudioCtx =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = "sine";
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    const now = ctx.currentTime;
+    osc.frequency.setValueAtTime(587.33, now);
+    osc.frequency.setValueAtTime(880, now + 0.1);
+
+    gain.gain.setValueAtTime(0.12, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+
+    osc.start(now);
+    osc.stop(now + 0.45);
+    setTimeout(() => {
+      void ctx.close();
+    }, 500);
+  } catch {
+    // Autoplay kebijakan peramban atau audio dinonaktifkan
+  }
+}
+
 function handle(qc: QueryClient, ev: LiveEvent) {
   if (ev.topic === "notification") {
     void qc.invalidateQueries({ queryKey: ["notifications"] });
+    playNotificationChime();
     toast(String(ev.data.title ?? "Notifikasi baru"), { description: String(ev.data.body ?? "") });
+  } else if (ev.topic === "security") {
+    void qc.invalidateQueries({ queryKey: ["sessions"] });
+    playNotificationChime();
+    toast.warning(String(ev.data.title ?? "Aktivitas Keamanan"), {
+      description: String(ev.data.body ?? "Ada perangkat lain yang masuk dengan akun Anda."),
+    });
   } else if (ev.topic === "plan") {
     // Daftar, detail, perubahan, dokumen, hari, dan riwayat revisi: semua kunci yang diawali "work-plan"/"plan-".
     void qc.invalidateQueries({

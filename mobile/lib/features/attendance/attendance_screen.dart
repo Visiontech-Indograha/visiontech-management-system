@@ -201,6 +201,11 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
   }
 
   Future<void> _checkIn() async {
+    final now = DateTime.now();
+    if (now.hour < 7) {
+      _snack('Absensi masuk baru dibuka mulai pukul 07:00 WIB.');
+      return;
+    }
     final site = _sites.where((s) => s['id'] == _siteId).firstOrNull;
     if (site == null) return _snack('Pilih lokasi kerja dulu.');
     setState(() => _busy = true);
@@ -312,6 +317,51 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
   }
 
   Future<void> _checkOut() async {
+    final now = DateTime.now();
+    if (now.hour >= 19) {
+      _snack(
+        'Batas waktu absensi pulang mandiri telah ditutup pada pukul 19:00 WIB (Sistem auto check-out aktif).',
+      );
+      return;
+    }
+
+    final checkInAtStr = _today?['check_in_at'] as String?;
+    if (checkInAtStr != null) {
+      final checkInAt = DateTime.tryParse(checkInAtStr)?.toLocal();
+      if (checkInAt != null) {
+        final grossSec = now.difference(checkInAt).inSeconds;
+        if (grossSec < 9 * 3600) {
+          final effSec = grossSec > 3600 ? grossSec - 3600 : 0;
+          final effH = effSec ~/ 3600;
+          final effM = (effSec % 3600) ~/ 60;
+          if (!mounted) return;
+          final proceed = await showDialog<bool>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text('Waktu Kerja Belum Mencapai 8 Jam'),
+              content: Text(
+                'Waktu kerja kamu saat ini baru $effH jam $effM menit '
+                '(belum mencapai 8 jam kerja efektif, karena 1 jam istirahat tidak termasuk jam kerja).\n\n'
+                'Jika tetap melanjutkan pulang sekarang, absensi hari ini akan dicatat dengan status Pulang Cepat. '
+                'Yakin ingin tetap absen pulang?',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('Batal'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: const Text('Lanjutkan Pulang Cepat'),
+                ),
+              ],
+            ),
+          );
+          if (proceed != true) return;
+        }
+      }
+    }
+
     setState(() => _busy = true);
     try {
       final pos = await _position();
@@ -345,7 +395,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
         );
       } else {
         try {
-          await ref
+          final res = await ref
               .read(syncEngineProvider)
               .api
               .checkOut(
@@ -354,7 +404,41 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                 accuracyM: pos.accuracy,
                 faceProbeId: faceProbeId,
               );
-          _snack('Absen pulang tercatat.');
+          final encouragement = res['encouragement_message'] as String?;
+          if (encouragement != null && encouragement.isNotEmpty && mounted) {
+            await showDialog<void>(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: const Row(
+                  children: [
+                    Text('🌟 '),
+                    Expanded(child: Text('Terima Kasih Atas Kerja Kerasmu!')),
+                  ],
+                ),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const SizedBox(height: 8),
+                    const Center(child: Text('🌟💪', style: TextStyle(fontSize: 40))),
+                    const SizedBox(height: 16),
+                    Text(
+                      encouragement,
+                      style: const TextStyle(fontSize: 14, height: 1.4),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+                actions: [
+                  FilledButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('Tutup & Selamat Beristirahat'),
+                  ),
+                ],
+              ),
+            );
+          } else {
+            _snack('Absen pulang tercatat.');
+          }
         } on DioException catch (e) {
           if (!isNetworkFailure(e)) rethrow;
           await recordOffline();

@@ -77,7 +77,7 @@ class CRUDAttendanceSession(CRUDBase):
         # Menambahkan kondisi pengecekan status berdasarkan parameter `valid_only`.
         return await self.fetchone(
             """
-            SELECT id, employee_id, work_date, site_id, site_label, check_in_at, check_out_at,
+            SELECT id, employee_id, organization_id, work_date, site_id, site_label, check_in_at, check_out_at,
                    distance_m, is_late, is_early_leave, status, explanation, reviewed_at, selfie_file_id,
                       face_result, face_similarity, check_out_face_result, check_out_face_similarity
             FROM vms.attendance
@@ -86,6 +86,34 @@ class CRUDAttendanceSession(CRUDBase):
             ORDER BY check_in_at DESC LIMIT 1
             """,
             {"emp": employee_id, "valid": valid_only},
+        )
+
+    async def auto_checkout_unclosed(
+        self,
+        org_id: UUID | str,
+        work_date: Any,
+        close_time: Any,
+        explanation: str,
+    ) -> list[Any]:
+        """
+        Menutup otomatis sesi absensi yang belum ditutup pada pukul 19:00 (keterangan: Lupa absen pulang).
+        """
+        return list(
+            await self.fetchall(
+                """
+                UPDATE vms.attendance
+                   SET check_out_at = :close_time,
+                       check_out_explanation = :explanation,
+                       is_early_leave = false
+                 WHERE organization_id = CAST(:org AS uuid)
+                   AND work_date = :work_date
+                   AND check_in_at IS NOT NULL
+                   AND check_out_at IS NULL
+                   AND status <> 'REJECTED'
+                RETURNING id, employee_id, site_label
+                """,
+                {"org": str(org_id), "work_date": work_date, "close_time": close_time, "explanation": explanation},
+            )
         )
 
     async def active_on(self, employee_id: UUID | str, work_date: Any) -> bool:

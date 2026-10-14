@@ -3554,6 +3554,8 @@ export interface components {
             check_out_explanation?: string | null;
             /** City Category */
             city_category?: string | null;
+            /** Encouragement Message */
+            encouragement_message?: string | null;
         };
         /**
          * AuditEventListResponse

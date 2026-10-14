@@ -18,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.alerts import send_security_alert
 from app.core.config import settings
 from app.core.errors import AppError, NotFoundError
-from app.core.permissions import NO_GLOBAL_ROLE, Permission, permissions_for_roles
+from app.core.permissions import NO_GLOBAL_ROLE, Permission, RoleCode, permissions_for_roles
 from app.core.security import CurrentUser, verify_jwt_token
 from app.core.time import utcnow
 from app.crud.crud_attendance_monitor import CRUDAttendanceMonitor
@@ -154,6 +154,8 @@ def require_permission(
     Jika tidak, akan memunculkan galat 403 Forbidden.
     """
     async def permission_checker(current_user: CurrentUser = Depends(get_current_user)) -> CurrentUser:
+        if "ADMIN" in current_user.roles or RoleCode.ADMIN in current_user.roles:
+            return current_user
         if required_permission.value not in current_user.permissions:
             raise AppError("FORBIDDEN", "Anda tidak memiliki akses untuk tindakan ini.", status=403)
         return current_user
@@ -165,6 +167,8 @@ def require_any_permission(
 ) -> Callable[[CurrentUser], Coroutine[Any, Any, CurrentUser]]:
     """Lolos bila pengguna punya SALAH SATU izin yang disebut (mis. cari alamat: pengelola SK atau pengelola lokasi)."""
     async def permission_checker(current_user: CurrentUser = Depends(get_current_user)) -> CurrentUser:
+        if "ADMIN" in current_user.roles or RoleCode.ADMIN in current_user.roles:
+            return current_user
         if not any(p.value in current_user.permissions for p in required):
             raise AppError("FORBIDDEN", "Anda tidak memiliki akses untuk tindakan ini.", status=403)
         return current_user

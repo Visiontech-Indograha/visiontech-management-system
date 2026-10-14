@@ -13,6 +13,7 @@ from uuid import UUID
 from sqlalchemy.exc import IntegrityError
 
 from app.core.errors import AppError, ForbiddenError, NotFoundError
+from app.core.permissions import RoleCode
 from app.core.security import CurrentUser
 from app.crud.crud_site import CRUDSite
 
@@ -52,8 +53,8 @@ class SiteService:
             # Staf kantor: lokasi kantor. Pekerja lapangan: lokasi unitnya + kantor pusat (tanpa SK tetap bisa absen).
             return await self.repo.list_visible(user.organization_id, all_sites=False, office=True,
                                                 unit_id=unit)
-        # OPS dapat melihat semua lokasi
-        if "OPS" in user.roles:
+        # ADMIN dan OPS dapat melihat semua lokasi
+        if "ADMIN" in user.roles or RoleCode.ADMIN in user.roles or "OPS" in user.roles:
             return await self.repo.list_visible(user.organization_id, all_sites=True, office=True, unit_id=None)
 
         # PM melihat lokasi kantor + unitnya. Staf lapangan: lokasi unitnya + kantor (APK lama memakai daftar ini untuk absen).
@@ -73,6 +74,8 @@ class SiteService:
         Returns:
             tuple[bool, UUID | None]: Status boolean dan ID unit yang dikelola (jika ada).
         """
+        if "ADMIN" in user.roles or RoleCode.ADMIN in user.roles:
+            return True, None
         try:
             return True, await self._managed_unit(user)
         except ForbiddenError:
@@ -80,7 +83,7 @@ class SiteService:
 
     async def _managed_unit(self, user: CurrentUser) -> UUID | None:
         """
-        Menentukan unit yang boleh dikelola oleh pengguna: PM -> unitnya; Finance -> None (lokasi kantor).
+        Menentukan unit yang boleh dikelola oleh pengguna: PM -> unitnya; Finance/Admin -> None (lokasi kantor/umum).
 
         Args:
             user (CurrentUser): Pengguna.
@@ -88,6 +91,8 @@ class SiteService:
         Returns:
             UUID | None: ID unit.
         """
+        if "ADMIN" in user.roles or RoleCode.ADMIN in user.roles:
+            return None
         if "PM" in user.roles:
             viewer = await self.repo.viewer(user.user_id)
             if viewer is None or viewer.pm_unit_id is None:
@@ -96,7 +101,7 @@ class SiteService:
             return unit
         if "FINANCE" in user.roles:
             return None
-        raise ForbiddenError("Lokasi kerja hanya dapat dikelola PM (lokasi proyek) atau Finance (lokasi kantor).")
+        raise ForbiddenError("Lokasi kerja hanya dapat dikelola PM (lokasi proyek), Finance (lokasi kantor), atau Admin.")
 
     async def create_site(self, user: CurrentUser, *, name: str, address: str | None, radius_m: int,
                           lat: float, lng: float) -> Any:
@@ -133,7 +138,10 @@ class SiteService:
         """
         unit = await self._managed_unit(user)
         site = await self.repo.get(site_id, user.organization_id)
-        # Tidak membocorkan eksistensi lokasi di luar unit kelolaan (memulangkan 404)
-        if site is None or site.unit_id != unit:
+        if site is None:
+            raise NotFoundError("Lokasi")
+        is_admin = "ADMIN" in user.roles or RoleCode.ADMIN in user.roles
+        # Tidak membocorkan eksistensi lokasi di luar unit kelolaan (memulangkan 404), kecuali Admin
+        if not is_admin and site.unit_id != unit:
             raise NotFoundError("Lokasi")
         await self.repo.archive(site_id)

@@ -120,18 +120,11 @@ async def check_plan_access(
     if row is None:
         raise NotFoundError("Rencana Kerja")
 
-    is_admin = RoleCode.ADMIN in user.roles or "ADMIN" in user.roles
-    # Memeriksa apakah kedudukan dari database memenuhi aturan akses bisnis (ADMIN memiliki akses penuh).
-    if not is_admin and not satisfies(need, manages=row.manages, is_leader=row.is_leader, is_member=row.is_member):
+    # Memeriksa apakah kedudukan dari database memenuhi aturan akses bisnis.
+    if not satisfies(need, manages=row.manages, is_leader=row.is_leader, is_member=row.is_member):
         raise ForbiddenError(_REFUSAL[need])
 
-    return PlanAccess(
-        plan=row,
-        user=user,
-        manages=True if is_admin else row.manages,
-        is_leader=True if is_admin else row.is_leader,
-        is_member=True if is_admin else row.is_member,
-    )
+    return PlanAccess(plan=row, user=user, manages=row.manages, is_leader=row.is_leader, is_member=row.is_member)
 
 
 async def check_unit_manager(db: AsyncSession, unit_id: UUID | str, user: CurrentUser) -> None:

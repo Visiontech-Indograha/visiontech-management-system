@@ -12,7 +12,7 @@ export function useLatestAndroidRelease() {
   return useQuery({
     queryKey: ["app-android-latest"],
     queryFn: async () =>
-      (await api.get<AndroidRelease>("/app/android/update", { params: { build: 0, abi: ["universal", "arm64-v8a"] } })).data,
+      (await api.get<AndroidRelease>("/app/android/update", { params: { build: 0, abi: ["arm64-v8a", "universal"] } })).data,
     staleTime: 10 * 60 * 1000,
     retry: false,
   });

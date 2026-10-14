@@ -9,6 +9,26 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased] — `development`
 
+- **Validasi Jam Kerja Absensi (07:00–19:00 WIB), Konfirmasi 8 Jam Kerja Efektif, Apresiasi Kerja, Auto Check-out, dan Perbaikan Web/Mobile (`config.py`, `attendance_session_service.py`, `attendance_monitor_service.py`, `attendance_cron_controller.py`, `attendance_cron_route.py`, `OfficeCheckInCard.tsx`, `attendance_screen.dart`, `appReleaseService.ts`, `sessionStore.ts`, `pubspec.yaml`):**
+  - **Backend API & Layanan Absensi (`config.py`, `attendance_session_service.py`, `attendance_monitor_service.py`, `attendance_cron_controller.py`, `attendance_cron_route.py`, `test_attendance_hours.py`):**
+    - Menegakkan validasi jam buka absensi masuk mulai pukul 07:00 WIB (`CHECKIN_TOO_EARLY`, 422).
+    - Menegakkan penutupan absensi pulang mandiri pada pukul 19:00 WIB (`CHECKOUT_CLOSED`, 422).
+    - Menghitung durasi kerja 9 jam kotor (8 jam kerja efektif + 1 jam istirahat tidak dihitung); jika checkout < 9 jam kotor (< 8 jam efektif), absensi dicatat dengan status Pulang Cepat (`is_early_leave = true`) dan keterangan waktu kerja efektif.
+    - Memberikan pesan apresiasi/penyemangat (`encouragement_message`) dan notifikasi apresiasi kepada karyawan saat absensi pulang memenuhi atau melebihi 8 jam kerja efektif.
+    - Menyediakan endpoint cron `POST /cron/attendance/auto-checkout` untuk menutup otomatis sesi absensi terbuka pada pukul 19:00 WIB dengan keterangan lupa absen pulang dan menyiarkan notifikasi.
+    - Menyelaraskan snapshot OpenAPI (`test_openapi_snapshot.py`) dan memastikan sinkronisasi absensi luring (offline) tidak terhalang validasi jam masuk operasional.
+  - **Frontend Web UI & Sesi (`OfficeCheckInCard.tsx`, `appReleaseService.ts`, `sessionStore.ts`, `AndroidAppLink.tsx`, `apiTypes.ts`, `openapi.json`):**
+    - Menambahkan validasi tombol absen masuk sebelum pukul 07:00 WIB dan tombol absen pulang setelah pukul 19:00 WIB.
+    - Menambahkan dialog konfirmasi interaktif saat karyawan hendak checkout sebelum 8 jam kerja efektif (dengan opsi Batal atau Lanjutkan Pulang Cepat).
+    - Menampilkan modal apresiasi kata-kata penyemangat setelah checkout valid.
+    - Memperbaiki ukuran MB unduhan APK di halaman login agar memprioritaskan APK arsitektur `arm64-v8a` selaras dengan endpoint download rilis.
+    - Memperbaiki bug sesi web yang hilang saat refresh browser (F5) dengan mengeliminasi cutoff keliru 02:00 dini hari dan menambahkan mutex promise untuk mencegah token race condition.
+  - **Aplikasi Mobile Android (`attendance_screen.dart`, `pubspec.yaml`):**
+    - Menerapkan validasi jam masuk mulai pukul 07:00 WIB dan penutupan absensi pulang pukul 19:00 WIB.
+    - Menampilkan dialog konfirmasi peringatan waktu kerja belum 8 jam efektif sebelum absen pulang.
+    - Menampilkan dialog apresiasi penyemangat kerja setelah absen pulang valid.
+    - Menyelaraskan build number rilis ke versi 1.2.0+8.
+
 - **Penegakan Batas Sesi 24 Jam, Batas Maksimal 4 Perangkat, Notifikasi Login Real-time, dan Idempotensi Logout (`0041_session_and_device_limit.py`, `db/04_signature_auth.sql`, `security.py`, `auth_service.py`, `crud_session.py`, `deps.py`, `useLiveEvents.ts`, `apiClient.ts`, `sessionStore.ts`, `local_notifier.dart`, `home_shell.dart`):**
   - **Basis Data & Dual-Schema (`0041_session_and_device_limit.py`, `db/04_signature_auth.sql`):** Migrasi Alembic 0041 dan DDL `db/04_signature_auth.sql` memperbarui `issue_session` dengan batas masa hidup default 1 hari (24 jam), memperbarui `rotate_session` untuk memisahkan pencurian token (`reused = true` hanya bila token berstatus `ROTATED` dipakai lagi) dari kedaluwarsa waktu normal (`reused = false`), membatasi rotasi tidak melampaui 24 jam sejak pembuatan rantai sesi (`family_created_at`), serta menambahkan fungsi tersimpan `count_active_devices(p_user uuid)` untuk menghitung perangkat aktif unik pengguna.
   - **Backend API & Layanan Autentikasi (`security.py`, `crud_session.py`, `auth_service.py`, `deps.py`, `endpoints/auth.py`):**

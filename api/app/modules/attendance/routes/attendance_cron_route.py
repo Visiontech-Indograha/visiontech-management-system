@@ -67,5 +67,16 @@ async def purge_expired_face_probes(
     return await controller.handle_purge_face_probes()
 
 
+@router.post("/auto-checkout")
+async def auto_checkout_daily(
+    current_user: CurrentUser = Depends(require_permission(Permission.RUN_SYSTEM_JOBS)),
+    controller: AttendanceCronController = Depends(),
+) -> dict[str, int]:
+    """
+    Penjadwal / Cron: Menutup otomatis sesi absensi yang belum ditutup pada pukul 19:00.
+    """
+    return await controller.handle_auto_checkout(current_user)
+
+
 __all__ = ["router"]
 

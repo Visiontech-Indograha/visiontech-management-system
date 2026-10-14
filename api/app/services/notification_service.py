@@ -231,6 +231,31 @@ class NotificationService:
         await self.repo.insert_many(org_id, [employee_id], "ATTENDANCE_DECIDED",
                                     f"{await self._actor()} {verb} absensi Anda", f"Catatan: {note}", None)
 
+    async def attendance_early_leave(self, org_id: str, reviewers: Iterable[str], employee_name: str,
+                                     detail: str) -> None:
+        """Pemberitahuan kepada peninjau/PM saat karyawan pulang lebih awal."""
+        await self.repo.insert_many(
+            org_id, reviewers, "ATTENDANCE_EARLY_LEAVE",
+            f"Pulang Cepat: {employee_name}",
+            f"{employee_name} melakukan absen pulang lebih awal ({detail}).", None,
+        )
+
+    async def attendance_encouragement(self, org_id: str, employee_id: str, message: str) -> None:
+        """Pesan penyemangat untuk karyawan yang menyelesaikan waktu kerja penuh."""
+        await self.repo.insert_many(
+            org_id, [employee_id], "ATTENDANCE_ENCOURAGEMENT",
+            "Terima Kasih Atas Kerja Kerasmu Hari Ini! 🌟", message, None,
+        )
+
+    async def attendance_auto_checkout_bulk(self, org_id: str, employee_ids: Iterable[str]) -> None:
+        """Pemberitahuan bahwa absensi ditutup otomatis oleh sistem pada pukul 19:00."""
+        await self.repo.insert_many(
+            org_id, employee_ids, "ATTENDANCE_AUTO_CHECKOUT",
+            "Absensi Ditutup Otomatis (19:00)",
+            "Sesi absensi Anda hari ini telah ditutup otomatis oleh sistem pada pukul 19:00 dengan keterangan "
+            "'Lupa absen pulang'.", None,
+        )
+
     async def amendment_accepted(self, plan_id: UUID | str) -> None:
         p = await self._plan(plan_id)
         await self.repo.insert_many(p.organization_id, [p.pm, *p.members], "AMENDMENT_ACCEPTED",

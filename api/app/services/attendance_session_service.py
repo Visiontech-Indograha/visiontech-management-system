@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import csv
 import io
+from datetime import time
 from typing import Any
 from uuid import UUID
 
@@ -21,6 +22,30 @@ from app.crud.crud_org_clock import CRUDOrgClock
 from app.services.access_service import ensure_same_org
 from app.services.face_service import FaceOutcome, FaceService
 from app.services.notification_service import NotificationService
+
+
+class AttendanceRowWithEncouragement:
+    """Pembungkus row absensi agar menyertakan pesan penyemangat dan kompatibel dengan _mapping."""
+
+    def __init__(self, row: Any, encouragement_message: str | None = None) -> None:
+        self._row = row
+        self.encouragement_message = encouragement_message
+
+    @property
+    def _mapping(self) -> dict[str, Any]:
+        d = dict(self._row._mapping) if hasattr(self._row, "_mapping") else dict(self._row)
+        d["encouragement_message"] = self.encouragement_message
+        return d
+
+    def __getattr__(self, name: str) -> Any:
+        if name == "encouragement_message":
+            return self.encouragement_message
+        return getattr(self._row, name)
+
+    def __getitem__(self, item: Any) -> Any:
+        if item == "encouragement_message":
+            return self.encouragement_message
+        return self._row[item]
 
 OPEN_SESSION = "Anda belum absen pulang dari absen masuk sebelumnya."
 VALID_STATUSES = ("AUTO_VALID", "APPROVED")
@@ -135,7 +160,19 @@ class AttendanceSessionService:
             raise AppError("GPS_INACCURATE",
                            f"Akurasi GPS {accuracy_m:.0f} m terlalu rendah (maksimal {MAX_GPS_ACCURACY_M} m). "
                            "Pindah ke tempat terbuka, tunggu sinyal GPS menguat, lalu coba lagi.", status=422)
-        today = work_date or (await self.clock.local_now(org_id)).today
+        local_clock = await self.clock.local_now(org_id)
+        today = work_date or (local_clock.today if local_clock else None)
+        # Validasi jam masuk: dibuka mulai pukul 07:00 (keputusan pemilik 2026-10-14).
+        if online and not settings.SKIP_ATTENDANCE_HOURS_CHECK:
+            check_in_time = at.time() if at is not None else (local_clock.local_now.time() if local_clock else None)
+            if check_in_time is not None:
+                open_hour, open_min = [int(p) for p in settings.ATTENDANCE_OPEN_TIME.split(":")]
+                if check_in_time < time(open_hour, open_min):
+                    raise AppError(
+                        "CHECKIN_TOO_EARLY",
+                        f"Absensi masuk belum dibuka. Jam masuk kerja dimulai pukul {settings.ATTENDANCE_OPEN_TIME}.",
+                        status=422,
+                    )
         # Sesi valid yang lupa ditutup mengunci absen masuk berikutnya (O-10); absen hari lalu yang masih
         # menunggu pemeriksaan tidak mengunci hari baru (R-33).
         if await self.repo.active_on(employee_id, today):
@@ -247,11 +284,53 @@ class AttendanceSessionService:
             if await self.repo.open_session(worker.employee_id) is not None:
                 raise AppError("CHECKOUT_NOT_VALID", CHECKOUT_NOT_VALID, status=409)
             raise AppError("NO_OPEN_SESSION", "Tidak ada sesi absensi terbuka.", status=409)
+        effective_org_id = org_id or str(getattr(session, "organization_id", ""))
+        local_clock = await self.clock.local_now(effective_org_id) if effective_org_id else None
+        now_local = local_clock.local_now if local_clock else None
+
+        # Validasi batas waktu absensi pulang: ditutup pada pukul 19:00 (keputusan pemilik 2026-10-14).
+        if online and not settings.SKIP_ATTENDANCE_HOURS_CHECK and now_local is not None:
+            close_hour, close_min = [int(p) for p in settings.ATTENDANCE_CLOSE_TIME.split(":")]
+            if now_local.time() >= time(close_hour, close_min):
+                raise AppError(
+                    "CHECKOUT_CLOSED",
+                    f"Batas waktu absensi pulang mandiri telah ditutup pada pukul {settings.ATTENDANCE_CLOSE_TIME}. "
+                    "Sesi yang belum selesai akan ditutup secara otomatis oleh sistem.",
+                    status=422,
+                )
+
         if accuracy_m is not None:   # K-12: titik yang terlalu kabur tidak bisa membuktikan kehadiran
             limit = MAX_WEB_ACCURACY_M if channel == "WEB" else MAX_GPS_ACCURACY_M
             if accuracy_m > limit:
                 raise AppError("GPS_INACCURATE", f"Akurasi lokasi {accuracy_m:.0f} m terlalu rendah (maksimal {limit} m). "
                                "Pindah ke tempat terbuka, tunggu sinyal menguat, lalu coba lagi.", status=422)
+
+        # Evaluasi durasi kerja: 9 jam kotor = 8 jam kerja efektif + 1 jam istirahat.
+        is_under_required_hours = False
+        duration_text = ""
+        if session.check_in_at is not None:
+            check_in_time = session.check_in_at
+            curr_dt = now_local
+            if curr_dt is None:
+                from app.core.time import jakarta_now
+                curr_dt = jakarta_now()
+
+            if getattr(check_in_time, "tzinfo", None) is not None and getattr(curr_dt, "tzinfo", None) is None:
+                curr_dt = curr_dt.replace(tzinfo=check_in_time.tzinfo)
+            elif getattr(check_in_time, "tzinfo", None) is None and getattr(curr_dt, "tzinfo", None) is not None:
+                curr_dt = curr_dt.replace(tzinfo=None)
+
+            duration_sec = max(0.0, (curr_dt - check_in_time).total_seconds())
+            required_gross_sec = (settings.ATTENDANCE_REQUIRED_WORK_HOURS + settings.ATTENDANCE_BREAK_HOURS) * 3600
+            if duration_sec < required_gross_sec:
+                is_under_required_hours = True
+                effective_sec = max(0.0, duration_sec - (settings.ATTENDANCE_BREAK_HOURS * 3600))
+                eff_h = int(effective_sec // 3600)
+                eff_m = int((effective_sec % 3600) // 60)
+                duration_text = f"{eff_h} jam {eff_m} menit"
+                early_note = f"Pulang Cepat (waktu kerja efektif: {duration_text})"
+                explanation = f"{explanation} - {early_note}" if (explanation or "").strip() else early_note
+
         try:
             row = await self.repo.close(session.id, lat=lat, lng=lng, selfie_file_id=selfie_file_id,
                                         explanation=explanation)
@@ -268,7 +347,27 @@ class AttendanceSessionService:
                     org_id, row, "Absen pulang {name} di luar radius (" + f"{round(row.check_out_distance_m)} m)")
             else:
                 await self._flag_for_review(org_id, row, "Absen pulang {name} perlu diperiksa")
-        return row
+
+        encouragement_msg = None
+        if is_under_required_hours:
+            if effective_org_id:
+                reviewers = await self.repo.reviewer_employee_ids(effective_org_id, worker.employee_id)
+                if reviewers:
+                    emp_name = await self.repo.employee_name(worker.employee_id)
+                    await NotificationService(self.repo.db).attendance_early_leave(
+                        effective_org_id, reviewers, emp_name, duration_text
+                    )
+        else:
+            encouragement_msg = (
+                "Terima kasih atas kerja keras dan dedikasimu hari ini! Kamu telah menyelesaikan 8 jam kerja "
+                "dengan luar biasa. Selamat beristirahat, jaga kesehatan, dan tetap semangat untuk esok hari! 🌟💪"
+            )
+            if effective_org_id:
+                await NotificationService(self.repo.db).attendance_encouragement(
+                    effective_org_id, str(worker.employee_id), encouragement_msg
+                )
+
+        return AttendanceRowWithEncouragement(row, encouragement_msg)
 
     async def list_attendance(self, org_id: str, user_id: str, *, view_all: bool, employee_id: UUID | None,
                               date_from: Any, date_to: Any, status: str | None,

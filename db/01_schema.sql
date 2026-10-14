@@ -111,7 +111,6 @@ CREATE TABLE employee (
   join_date       date NOT NULL,
   birth_date      date,
   address         text,
-  emergency_contact text,
   -- FIELD = absen lewat aplikasi HP; OFFICE = absen lewat web (Alembic 0013)
   attendance_mode text NOT NULL DEFAULT 'FIELD' CHECK (attendance_mode IN ('FIELD','OFFICE')),
   is_active       boolean NOT NULL DEFAULT true,

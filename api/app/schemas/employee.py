@@ -28,7 +28,6 @@ class EmployeeBase(BaseModel):
     join_date: date
     birth_date: date | None = None
     address: str | None = None
-    emergency_contact: str | None = None
     photo_file_id: UUID | None = None
 
 
@@ -50,7 +49,6 @@ class EmployeeUpdate(BaseModel):
     phone: str | None = None
     birth_date: date | None = None
     address: str | None = None
-    emergency_contact: str | None = None
     photo_file_id: UUID | None = None
 
 

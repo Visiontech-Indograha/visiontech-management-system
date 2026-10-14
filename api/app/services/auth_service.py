@@ -11,7 +11,9 @@ from typing import Any
 
 from app.core.alerts import send_security_alert
 from app.core.errors import AppError, NotFoundError
+from app.core.events import broker
 from app.core.security import create_jwt_token, hash_password, verify_password
+from app.core.time import utcnow
 from app.crud.crud_session import MAX_LOGIN_FAILURES, CRUDSession
 from app.crud.crud_user import CRUDUser
 from app.db.session import set_request_context
@@ -25,7 +27,7 @@ class ClientInfo:
     ip: str | None
     user_agent: str
     device_label: str = "Web Login"
-    fingerprint: str | None = "fingerprint"
+    fingerprint: str | None = None
 
 
 @dataclass(frozen=True)
@@ -148,8 +150,46 @@ class AuthService:
                 raise AppError("NOT_OFFICE_ACCOUNT", "Akun Anda bukan kategori akun kantor. "
                                "Silakan gunakan aplikasi HP Visiontech.", status=403)
 
+        # Batas maksimal 4 perangkat aktif per akun
+        existing_family = None
+        if client.fingerprint:
+            existing_family = await self.sessions.find_active_family_by_fingerprint(user.id, client.fingerprint)
+
+        active_devices = await self.sessions.count_active_devices(user.id)
+        if existing_family is None and active_devices >= 4:
+            raise AppError(
+                "MAX_DEVICES_REACHED",
+                "Batas maksimum 4 perangkat telah tercapai. "
+                "Silakan keluar dari salah satu perangkat Anda terlebih dahulu sebelum masuk di perangkat baru.",
+                status=403,
+                details={"max_devices": 4, "active_devices": active_devices},
+            )
+        if existing_family is not None:
+            await self.sessions.revoke_family(user.id, existing_family, "Masuk ulang pada perangkat yang sama")
+
         await self.sessions.record_login_attempt(login, client.ip, True)
-        return await self._start_session(user, client)
+        auth_time = int(utcnow().timestamp())
+        tokens = await self._start_session(user, client, auth_time=auth_time)
+
+        # Siarkan peristiwa keamanan ke semua perangkat aktif pengguna
+        broker.publish(
+            [str(user.id)],
+            {
+                "topic": "security",
+                "data": {
+                    "type": "SECURITY_LOGIN",
+                    "title": "Masuk dari Perangkat Baru",
+                    "body": (
+                        f"Akun Anda baru saja masuk dari {client.device_label or 'perangkat baru'} "
+                        f"(IP: {client.ip or 'tidak diketahui'})."
+                    ),
+                    "device_label": client.device_label or "Perangkat",
+                    "ip": client.ip or "-",
+                    "time": auth_time,
+                },
+            },
+        )
+        return tokens
 
     async def refresh(self, raw_refresh_token: str | None, client: ClientInfo) -> IssuedTokens:
         """
@@ -168,7 +208,9 @@ class AuthService:
             )
             raise _revoked()
         if not rotated.session_id:
-            raise AppError("INVALID_TOKEN", "Sesi tidak dikenali. Silakan masuk kembali.", status=401)
+            raise AppError(
+                "INVALID_TOKEN", "Sesi telah berakhir atau tidak dikenali. Silakan masuk kembali.", status=401
+            )
 
         user = await self.users.find_by_id(rotated.user_id)
         if not user or not user.is_active:
@@ -176,8 +218,13 @@ class AuthService:
             await self.sessions.revoke_all_for_user(rotated.user_id, "Akun dinonaktifkan")
             raise AppError("INACTIVE", "Akun Anda dinonaktifkan. Hubungi HR atau admin.", status=403, persist=True)
 
+        auth_time = (
+            int(rotated.family_created_at.timestamp())
+            if getattr(rotated, "family_created_at", None)
+            else int(utcnow().timestamp())
+        )
         return IssuedTokens(
-            access_token=self._access_token(user, rotated.session_id),
+            access_token=self._access_token(user, rotated.session_id, auth_time=auth_time),
             refresh_token=rotated.refresh_token,
         )
 
@@ -242,24 +289,26 @@ class AuthService:
         await self.sessions.revoke_all_for_user(user_id, "Kata sandi diganti")
         return await self._start_session(user, client)
 
-    async def _start_session(self, user: Any, client: ClientInfo) -> IssuedTokens:
+    async def _start_session(
+        self, user: Any, client: ClientInfo, auth_time: int | None = None
+    ) -> IssuedTokens:
         """Membuat sesi baru dalam database dan mengeluarkan sepasang access/refresh token."""
         session = await self.sessions.issue(
             user.organization_id, user.id, client.device_label, client.fingerprint,
             client.ip, client.user_agent,
         )
         return IssuedTokens(
-            access_token=self._access_token(user, session.session_id),
+            access_token=self._access_token(user, session.session_id, auth_time=auth_time),
             refresh_token=session.refresh_token,
         )
 
     @staticmethod
-    def _access_token(user: Any, session_id: Any) -> str:
+    def _access_token(user: Any, session_id: Any, auth_time: int | None = None) -> str:
         """
         Menghasilkan JWT akses.
         Hanya identitas (dok 05 §4); peran & status akun dibaca dari DB tiap permintaan.
         """
-        return create_jwt_token(
-            {"sub": str(user.id), "org": str(user.organization_id), "jti": str(session_id)},
-            ACCESS_TOKEN_TTL,
-        )
+        payload: dict[str, Any] = {"sub": str(user.id), "org": str(user.organization_id), "jti": str(session_id)}
+        if auth_time is not None:
+            payload["auth_time"] = auth_time
+        return create_jwt_token(payload, ACCESS_TOKEN_TTL)

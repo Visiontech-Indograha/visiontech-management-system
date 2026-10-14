@@ -20,6 +20,7 @@ from app.core.config import settings
 from app.core.errors import AppError, NotFoundError
 from app.core.permissions import NO_GLOBAL_ROLE, Permission, permissions_for_roles
 from app.core.security import CurrentUser, verify_jwt_token
+from app.core.time import utcnow
 from app.crud.crud_attendance_monitor import CRUDAttendanceMonitor
 from app.crud.crud_attendance_offline import CRUDAttendanceOffline
 from app.crud.crud_attendance_session import CRUDAttendanceSession
@@ -118,6 +119,15 @@ async def get_current_user(
     user_id, session_id = payload.get("sub"), payload.get("jti")
     if not user_id or not session_id:
         raise _unauthenticated()
+
+    auth_time = payload.get("auth_time")
+    if auth_time is not None:
+        try:
+            # Sesi berakhir otomatis jika umur login awal sudah melewati 24 jam (86400 detik)
+            if int(utcnow().timestamp()) - int(auth_time) > 86400:
+                raise _unauthenticated()
+        except (ValueError, TypeError):
+            pass
 
     # Memuat identitas dan peran terbaru dari database
     identity = await CRUDUser(db).find_identity(user_id)

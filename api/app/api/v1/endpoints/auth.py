@@ -9,6 +9,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Request, Response
 
 from app.api.deps import get_auth_flow_service, get_current_user
+from app.core.config import settings
 from app.core.errors import AppError
 from app.core.security import CurrentUser
 from app.schemas.auth import (
@@ -47,17 +48,23 @@ def client_info(request: Request) -> ClientInfo:
         ip = str(ipaddress.ip_address(host)) if host else None
     except ValueError:
         ip = None  # kolom inet hanya menerima alamat IP yang sah
-    fingerprint = request.headers.get("x-device-fingerprint") or None
-    device_label = request.headers.get("x-device-label") or "Web Login"
+    user_agent = request.headers.get("user-agent", "Unknown")
+    fingerprint = request.headers.get("x-device-fingerprint") or request.headers.get("x-device-id")
+    if not fingerprint:
+        import hashlib
+        fingerprint = hashlib.sha256(user_agent.encode()).hexdigest()[:32]
+    device_label = request.headers.get("x-device-label") or (
+        "Aplikasi HP" if request.headers.get("x-device-id") else "Web Login"
+    )
     return ClientInfo(
         ip=ip,
-        user_agent=request.headers.get("user-agent", "Unknown"),
+        user_agent=user_agent,
         device_label=device_label,
         fingerprint=fingerprint,
     )
 
 
-def _issue(response: Response, tokens: IssuedTokens) -> TokenResponse:
+def _issue(response: Response, tokens: IssuedTokens, request: Request | None = None) -> TokenResponse:
     """
     Fungsi pembantu untuk menyematkan refresh token dalam cookie HttpOnly
     serta mereturn access token di payload.
@@ -65,13 +72,24 @@ def _issue(response: Response, tokens: IssuedTokens) -> TokenResponse:
     Args:
         response (Response): Objek respons FastAPI.
         tokens (IssuedTokens): Kumpulan token yang diterbitkan.
+        request (Request | None): Objek request untuk mendeteksi HTTPS.
 
     Returns:
         TokenResponse: Respons payload akses token.
     """
+    is_secure = False
+    if request is not None:
+        is_secure = (
+            request.url.scheme == "https"
+            or request.headers.get("x-forwarded-proto") == "https"
+            or settings.APP_ENV == "production"
+        )
+    else:
+        is_secure = settings.APP_ENV == "production"
+
     response.set_cookie(
         key=REFRESH_COOKIE, value=tokens.refresh_token, httponly=True,
-        secure=True, samesite="strict", max_age=REFRESH_COOKIE_MAX_AGE, path=REFRESH_COOKIE_PATH,
+        secure=is_secure, samesite="lax", max_age=REFRESH_COOKIE_MAX_AGE, path=REFRESH_COOKIE_PATH,
     )
     return TokenResponse(access_token=tokens.access_token)
 

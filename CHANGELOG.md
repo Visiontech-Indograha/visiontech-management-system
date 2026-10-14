@@ -17,12 +17,13 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
     - Memberikan pesan apresiasi/penyemangat (`encouragement_message`) dan notifikasi apresiasi kepada karyawan saat absensi pulang memenuhi atau melebihi 8 jam kerja efektif.
     - Menyediakan endpoint cron `POST /cron/attendance/auto-checkout` untuk menutup otomatis sesi absensi terbuka pada pukul 19:00 WIB dengan keterangan lupa absen pulang dan menyiarkan notifikasi.
     - Menyelaraskan snapshot OpenAPI (`test_openapi_snapshot.py`) dan memastikan sinkronisasi absensi luring (offline) tidak terhalang validasi jam masuk operasional.
-  - **Frontend Web UI & Sesi (`OfficeCheckInCard.tsx`, `appReleaseService.ts`, `sessionStore.ts`, `AndroidAppLink.tsx`, `apiTypes.ts`, `openapi.json`):**
+    - Mengeliminasi pencatatan perangkat ganda di `vms.user_session` saat login ulang dari perangkat/browser yang sama (`auth_login_controller.py`, `auth_service.py`, `auth.py`) dengan mencabut sesi aktif lama perangkat tersebut dan mendukung header `x-device-fingerprint` / `x-device-id`.
+  - **Frontend Web UI & Sesi (`OfficeCheckInCard.tsx`, `appReleaseService.ts`, `sessionStore.ts`, `session.tsx`, `apiClient.ts`, `AndroidAppLink.tsx`, `apiTypes.ts`, `openapi.json`):**
     - Menambahkan validasi tombol absen masuk sebelum pukul 07:00 WIB dan tombol absen pulang setelah pukul 19:00 WIB.
     - Menambahkan dialog konfirmasi interaktif saat karyawan hendak checkout sebelum 8 jam kerja efektif (dengan opsi Batal atau Lanjutkan Pulang Cepat).
     - Menampilkan modal apresiasi kata-kata penyemangat setelah checkout valid.
     - Memperbaiki ukuran MB unduhan APK di halaman login agar memprioritaskan APK arsitektur `arm64-v8a` selaras dengan endpoint download rilis.
-    - Memperbaiki bug sesi web yang hilang saat refresh browser (F5) dengan mengeliminasi cutoff keliru 02:00 dini hari dan menambahkan mutex promise untuk mencegah token race condition.
+    - Memperbaiki bug sesi web yang hilang saat refresh browser (F5) dengan menyatukan Zustand store (`session.tsx` re-export `sessionStore.ts`), menyesuaikan cookie `samesite="lax"`, dan mengirim header fingerprint perangkat persisten saat refresh token.
   - **Aplikasi Mobile Android (`attendance_screen.dart`, `pubspec.yaml`):**
     - Menerapkan validasi jam masuk mulai pukul 07:00 WIB dan penutupan absensi pulang pukul 19:00 WIB.
     - Menampilkan dialog konfirmasi peringatan waktu kerja belum 8 jam efektif sebelum absen pulang.

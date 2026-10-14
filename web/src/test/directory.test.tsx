@@ -69,7 +69,7 @@ describe("halaman detail karyawan (HR)", () => {
     });
     renderRoute("/directory/e1", { role: "HR" });
     expect(await screen.findByText("Test User")).toBeInTheDocument();
-    expect(screen.getByText("Kontak darurat")).toBeInTheDocument();
+    expect(screen.getByText("No. telepon")).toBeInTheDocument();
   });
 
   it("M2-01: rekan kerja tidak melihat baris data pribadi, hanya catatan", async () => {
@@ -78,7 +78,7 @@ describe("halaman detail karyawan (HR)", () => {
     });
     renderRoute("/directory/e1", { role: "field" });
     expect(await screen.findByText("Test User")).toBeInTheDocument();
-    expect(screen.queryByText("Kontak darurat")).toBeNull();
+    expect(screen.queryByText("No. telepon")).toBeNull();
     expect(screen.getByText(/hanya terlihat oleh pemilik serta HR/)).toBeInTheDocument();
   });
 
@@ -136,7 +136,6 @@ describe("halaman detail karyawan (HR)", () => {
       phone: "0812",
       birth_date: "1990-05-01",
       address: null,
-      emergency_contact: null,
       attendance_mode: "FIELD",
     });
   });

@@ -3115,17 +3115,6 @@
       ],
       "title": "Email"
      },
-     "emergency_contact": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Emergency Contact"
-     },
      "emergency_contacts": {
       "anyOf": [
        {
@@ -3475,17 +3464,6 @@
       ],
       "title": "Email"
      },
-     "emergency_contact": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Emergency Contact"
-     },
      "employee_no": {
       "title": "Employee No",
       "type": "string"
@@ -3633,17 +3611,6 @@
        }
       ],
       "title": "Email"
-     },
-     "emergency_contact": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Emergency Contact"
      },
      "full_name": {
       "anyOf": [

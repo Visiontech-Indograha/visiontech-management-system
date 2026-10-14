@@ -9,13 +9,13 @@ from tests.conftest import World, requires_db, sync_query
 
 pytestmark = requires_db
 
-PRIVATE = ("email", "phone", "address", "birth_date", "emergency_contact")
+PRIVATE = ("email", "phone", "address", "birth_date")
 
 
 def _fill(world: World, who: str) -> str:
     emp = world.employees[who]
     sync_query("UPDATE vms.employee SET phone = '0812', address = 'Jl. Uji 1', birth_date = '1990-01-02', "
-               "emergency_contact = 'Ibu 0813', email = 'uji@contoh.id' WHERE id = %s RETURNING id", (emp,))
+               "email = 'uji@contoh.id' WHERE id = %s RETURNING id", (emp,))
     return emp
 
 
@@ -42,5 +42,5 @@ def test_owner_and_hr_see_private_fields(client, world: World):
     emp = _fill(world, "member")
     for who in ("member", "hr", "admin"):
         view = _detail(client, world, who, emp)
-        assert (view["phone"], view["address"], view["emergency_contact"]) == ("0812", "Jl. Uji 1", "Ibu 0813"), who
+        assert (view["phone"], view["address"]) == ("0812", "Jl. Uji 1"), who
         assert _listed(client, world, who, emp)["phone"] == "0812", who

@@ -209,7 +209,7 @@ class CRUDEmployee(CRUDBase):
         await self.execute("UPDATE vms.app_user SET is_active = false WHERE employee_id = :id", {"id": employee_id})
 
     _COLUMNS = """id, employee_no, full_name, position, unit_id, email, phone, join_date, birth_date, address,
-                  emergency_contact, attendance_mode, is_active, offboarded_at, offboarding_reason, photo_file_id"""
+                  attendance_mode, is_active, offboarded_at, offboarding_reason, photo_file_id"""
 
     @staticmethod
     def _list_filter(is_active: bool | None, q: str | None) -> tuple[str, dict[str, Any]]:
@@ -255,9 +255,9 @@ class CRUDEmployee(CRUDBase):
         row = await self.fetchone(
             """
             INSERT INTO vms.employee (organization_id, employee_no, full_name, position, unit_id, email, phone,
-                                      join_date, birth_date, address, emergency_contact, attendance_mode, photo_file_id)
+                                      join_date, birth_date, address, attendance_mode, photo_file_id)
             VALUES (:org, :employee_no, :full_name, :position, :unit_id, :email, :phone, :join_date, :birth_date,
-                    :address, :emergency_contact, :attendance_mode, :photo_file_id)
+                    :address, :attendance_mode, :photo_file_id)
             RETURNING id, is_active, offboarded_at, offboarding_reason, attendance_mode, photo_file_id
             """,
             params)

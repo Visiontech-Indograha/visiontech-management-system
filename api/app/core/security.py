@@ -55,7 +55,15 @@ def verify_password(password: str, hashed: str) -> bool:
 
 def create_jwt_token(data: dict[str, Any], expires_delta: timedelta) -> str:
     now = utcnow()
-    claims = {**data, "iat": now, "exp": now + expires_delta, "aud": ACCESS_AUDIENCE, "iss": ACCESS_ISSUER}
+    auth_time = data.get("auth_time") or int(now.timestamp())
+    claims = {
+        "auth_time": auth_time,
+        **data,
+        "iat": now,
+        "exp": now + expires_delta,
+        "aud": ACCESS_AUDIENCE,
+        "iss": ACCESS_ISSUER,
+    }
     return jwt.encode(claims, _private_key, algorithm=_ALGORITHM, headers={"kid": settings.JWT_KID})
 
 

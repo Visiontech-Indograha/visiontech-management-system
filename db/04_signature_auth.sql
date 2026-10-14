@@ -312,9 +312,10 @@ CREATE INDEX login_attempt_recent_idx ON login_attempt (login, attempted_at DESC
 CREATE INDEX login_attempt_ip_idx ON login_attempt (ip_address, attempted_at DESC);
 
 -- Terbitkan sesi baru; pemanggil menyimpan refresh token mentah di perangkat.
+-- Sesi dibatasi maksimal 1 hari (24 jam); rotasi tidak boleh melampaui batas ini.
 CREATE OR REPLACE FUNCTION issue_session(
   p_org uuid, p_user uuid, p_device text, p_fingerprint text,
-  p_ip inet, p_agent text, p_lifetime interval DEFAULT interval '14 days'
+  p_ip inet, p_agent text, p_lifetime interval DEFAULT interval '1 day'
 ) RETURNS TABLE (session_id uuid, family_id uuid, refresh_token text, expires_at timestamptz)
 LANGUAGE plpgsql AS $$
 DECLARE v_raw text; v_family uuid := new_id(); v_id uuid; v_exp timestamptz := now() + p_lifetime;
@@ -329,30 +330,66 @@ END $$;
 
 -- Rotasi refresh token. Bila token lama dipakai ulang (tanda pencurian),
 -- seluruh rantai perangkat itu dicabut sekaligus.
+-- Token kedaluwarsa waktu normal atau sudah melebihi 24 jam ditolak dengan reused = false.
 CREATE OR REPLACE FUNCTION rotate_session(
   p_raw_refresh text, p_ip inet DEFAULT NULL, p_agent text DEFAULT NULL
-) RETURNS TABLE (session_id uuid, user_id uuid, refresh_token text, expires_at timestamptz, reused boolean)
+) RETURNS TABLE (
+  session_id uuid,
+  user_id uuid,
+  refresh_token text,
+  expires_at timestamptz,
+  reused boolean,
+  family_created_at timestamptz
+)
 LANGUAGE plpgsql AS $$
-DECLARE v_old user_session%ROWTYPE; v_raw text; v_id uuid; v_exp timestamptz;
+DECLARE
+  v_old user_session%ROWTYPE;
+  v_raw text;
+  v_id uuid;
+  v_exp timestamptz;
+  v_family_created_at timestamptz;
 BEGIN
   SELECT * INTO v_old FROM user_session WHERE refresh_sha256 = digest(p_raw_refresh, 'sha256');
 
   IF NOT FOUND THEN
-    RETURN QUERY SELECT NULL::uuid, NULL::uuid, NULL::text, NULL::timestamptz, false;
+    RETURN QUERY SELECT NULL::uuid, NULL::uuid, NULL::text, NULL::timestamptz, false, NULL::timestamptz;
     RETURN;
   END IF;
 
-  IF v_old.state <> 'ACTIVE' OR v_old.expires_at < now() THEN
-    -- Token yang sudah dirotasi dipakai lagi: perlakukan sebagai pencurian sesi.
+  -- Cari waktu pertama kali rantai sesi (family_id) ini dibuat
+  SELECT min(issued_at) INTO v_family_created_at
+  FROM user_session
+  WHERE family_id = v_old.family_id;
+
+  -- 1. Deteksi pencurian sesi (REUSE DETECTION):
+  -- HANYA berlaku bila token yang SUDAH dirotasi dipakai lagi.
+  IF v_old.state = 'ROTATED' THEN
     UPDATE user_session
        SET state = 'REVOKED', revoked_at = now(), revoked_reason = 'Refresh token dipakai ulang'
      WHERE family_id = v_old.family_id AND state <> 'REVOKED';
-    RETURN QUERY SELECT NULL::uuid, v_old.user_id, NULL::text, NULL::timestamptz, true;
+    RETURN QUERY SELECT NULL::uuid, v_old.user_id, NULL::text, NULL::timestamptz, true, v_family_created_at;
     RETURN;
   END IF;
 
+  -- 2. Bila token sudah dicabut (misal setelah logout normal)
+  IF v_old.state = 'REVOKED' THEN
+    RETURN QUERY SELECT NULL::uuid, v_old.user_id, NULL::text, NULL::timestamptz, false, v_family_created_at;
+    RETURN;
+  END IF;
+
+  -- 3. Batas umur sesi: kedaluwarsa waktu normal atau sudah melebihi 24 jam sejak pertama kali login
+  IF v_old.expires_at <= now() OR (v_family_created_at IS NOT NULL AND v_family_created_at <= now() - interval '1 day') THEN
+    UPDATE user_session
+       SET state = 'REVOKED', revoked_at = now(), revoked_reason = 'Sesi kedaluwarsa 24 jam'
+     WHERE id = v_old.id AND state = 'ACTIVE';
+    RETURN QUERY SELECT NULL::uuid, v_old.user_id, NULL::text, NULL::timestamptz, false, v_family_created_at;
+    RETURN;
+  END IF;
+
+  -- 4. Rotasi berhasil: terbitkan token baru, dibatasi maksimal 24 jam sejak awal sesi
   v_raw := encode(gen_random_bytes(32), 'base64');
-  v_exp := now() + (v_old.expires_at - v_old.issued_at);
+  v_exp := LEAST(now() + (v_old.expires_at - v_old.issued_at), v_family_created_at + interval '1 day');
+
   INSERT INTO user_session (organization_id, user_id, family_id, refresh_sha256, device_label,
                             device_fingerprint, ip_address, user_agent, expires_at)
   VALUES (v_old.organization_id, v_old.user_id, v_old.family_id, digest(v_raw, 'sha256'),
@@ -363,8 +400,16 @@ BEGIN
   UPDATE user_session SET state = 'ROTATED', rotated_to = v_id, last_used_at = now()
    WHERE id = v_old.id;
 
-  RETURN QUERY SELECT v_id, v_old.user_id, v_raw, v_exp, false;
+  RETURN QUERY SELECT v_id, v_old.user_id, v_raw, v_exp, false, v_family_created_at;
 END $$;
+
+-- Menghitung jumlah rantai sesi unik (perangkat aktif) yang dimiliki pengguna.
+CREATE OR REPLACE FUNCTION count_active_devices(p_user uuid)
+RETURNS integer LANGUAGE sql STABLE AS $$
+  SELECT count(DISTINCT family_id)::integer
+  FROM user_session
+  WHERE user_id = p_user AND state = 'ACTIVE' AND expires_at > now();
+$$;
 
 CREATE OR REPLACE FUNCTION revoke_sessions(p_user uuid, p_reason text DEFAULT 'Dicabut administrator')
 RETURNS integer LANGUAGE plpgsql AS $$

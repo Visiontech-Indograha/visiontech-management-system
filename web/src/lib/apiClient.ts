@@ -71,7 +71,7 @@ export async function refreshAccessToken(): Promise<string> {
   return refreshing;
 }
 
-const AUTH_PATHS = ["/auth/login", "/auth/admin-login", "/auth/refresh"];
+const AUTH_PATHS = ["/auth/login", "/auth/admin-login", "/auth/refresh", "/auth/logout"];
 
 api.interceptors.response.use(
   (response) => response,

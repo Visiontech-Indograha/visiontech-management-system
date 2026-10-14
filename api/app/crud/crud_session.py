@@ -162,6 +162,41 @@ class CRUDSession(CRUDBase):
         )
         return UUID(str(val)) if val else None
 
+    async def revoke_active_by_device(
+        self, user_id: UUID | str, fingerprint: str | None, user_agent: str, reason: str
+    ) -> int:
+        """
+        Mencabut SEMUA sesi aktif milik pengguna untuk perangkat yang sama
+        (mencocokkan fingerprint jika ada, atau user-agent yang sama jika belum memiliki fingerprint).
+        Mencegah pencatatan ganda pada tabel vms.user_session.
+        """
+        if fingerprint:
+            query = """
+                UPDATE vms.user_session
+                SET state = 'REVOKED', revoked_at = now(), revoked_reason = :reason
+                WHERE user_id = CAST(:uid AS uuid)
+                  AND state = 'ACTIVE'
+                  AND (
+                      device_fingerprint = CAST(:fp AS text)
+                      OR (device_fingerprint IS NULL AND user_agent = CAST(:agent AS text))
+                  )
+                RETURNING id
+            """
+            params: dict[str, Any] = {"uid": user_id, "fp": fingerprint, "agent": user_agent, "reason": reason}
+        else:
+            query = """
+                UPDATE vms.user_session
+                SET state = 'REVOKED', revoked_at = now(), revoked_reason = :reason
+                WHERE user_id = CAST(:uid AS uuid)
+                  AND state = 'ACTIVE'
+                  AND user_agent = CAST(:agent AS text)
+                RETURNING id
+            """
+            params = {"uid": user_id, "agent": user_agent, "reason": reason}
+
+        rows = await self.fetchall(query, params)
+        return len(rows)
+
     async def revoke_family(self, user_id: UUID | str, family_id: UUID | str, reason: str) -> None:
         """Mencabut seluruh sesi dalam satu rantai perangkat (family_id)."""
         await self.execute(

@@ -92,7 +92,7 @@ class AuthFlowService:
             list[SessionOut]: Daftar sesi yang aktif.
         """
         rows = await self.service.active_sessions(user_id)
-        return [SessionOut(**r._mapping, current=r.id == current_session_id) for r in rows]
+        return [SessionOut(**r._mapping, current=str(r.id) == str(current_session_id)) for r in rows]
 
     async def revoke_session(self, user_id: str, session_id: str) -> None:
         """

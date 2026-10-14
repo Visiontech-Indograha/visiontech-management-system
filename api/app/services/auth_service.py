@@ -159,6 +159,12 @@ class AuthService:
             # Perangkat yang sama masuk ulang: cabut rantai sesi lama agar tidak tercatat ganda di vms.user_session
             await self.sessions.revoke_family(user.id, existing_family, "Masuk ulang pada perangkat yang sama")
 
+        # Pastikan seluruh sesi aktif lama pada perangkat yang sama
+        # (baik via fingerprint maupun user-agent) dicabut bersih
+        await self.sessions.revoke_active_by_device(
+            user.id, client.fingerprint, client.user_agent, "Masuk ulang pada perangkat yang sama"
+        )
+
         active_devices = await self.sessions.count_active_devices(user.id)
         if existing_family is None and active_devices >= 4:
             raise AppError(

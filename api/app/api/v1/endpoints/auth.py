@@ -47,7 +47,14 @@ def client_info(request: Request) -> ClientInfo:
         ip = str(ipaddress.ip_address(host)) if host else None
     except ValueError:
         ip = None  # kolom inet hanya menerima alamat IP yang sah
-    return ClientInfo(ip=ip, user_agent=request.headers.get("user-agent", "Unknown"))
+    fingerprint = request.headers.get("x-device-fingerprint") or None
+    device_label = request.headers.get("x-device-label") or "Web Login"
+    return ClientInfo(
+        ip=ip,
+        user_agent=request.headers.get("user-agent", "Unknown"),
+        device_label=device_label,
+        fingerprint=fingerprint,
+    )
 
 
 def _issue(response: Response, tokens: IssuedTokens) -> TokenResponse:

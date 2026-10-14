@@ -5,7 +5,6 @@ Tidak menulis SQL (lewat crud) dan tidak tahu HTTP (cookie diurus router).
 """
 from __future__ import annotations
 
-import time
 from dataclasses import dataclass
 from datetime import timedelta
 from typing import Any
@@ -14,6 +13,7 @@ from app.core.alerts import send_security_alert
 from app.core.errors import AppError, NotFoundError
 from app.core.events import broker
 from app.core.security import create_jwt_token, hash_password, verify_password
+from app.core.time import utcnow
 from app.crud.crud_session import MAX_LOGIN_FAILURES, CRUDSession
 from app.crud.crud_user import CRUDUser
 from app.db.session import set_request_context
@@ -27,7 +27,7 @@ class ClientInfo:
     ip: str | None
     user_agent: str
     device_label: str = "Web Login"
-    fingerprint: str | None = "fingerprint"
+    fingerprint: str | None = None
 
 
 @dataclass(frozen=True)
@@ -168,7 +168,7 @@ class AuthService:
             await self.sessions.revoke_family(user.id, existing_family, "Masuk ulang pada perangkat yang sama")
 
         await self.sessions.record_login_attempt(login, client.ip, True)
-        auth_time = int(time.time())
+        auth_time = int(utcnow().timestamp())
         tokens = await self._start_session(user, client, auth_time=auth_time)
 
         # Siarkan peristiwa keamanan ke semua perangkat aktif pengguna
@@ -221,7 +221,7 @@ class AuthService:
         auth_time = (
             int(rotated.family_created_at.timestamp())
             if getattr(rotated, "family_created_at", None)
-            else int(time.time())
+            else int(utcnow().timestamp())
         )
         return IssuedTokens(
             access_token=self._access_token(user, rotated.session_id, auth_time=auth_time),

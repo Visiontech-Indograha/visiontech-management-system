@@ -54,6 +54,13 @@ class AuthSessionController:
 
     async def handle_revoke_session(self, session_id: UUID, current_user: CurrentUser) -> AuthMessageResponseSchema:
         """Mencabut satu sesi perangkat tertentu milik pengguna."""
+        if str(session_id) == str(current_user.session_id):
+            from app.core.errors import AppError
+            raise AppError(
+                "CANNOT_REVOKE_CURRENT_SESSION",
+                "Tidak dapat mencabut sesi perangkat saat ini. Gunakan menu Keluar (Logout) untuk keluar.",
+                status=400,
+            )
         await self.flow_service.revoke_session(current_user.user_id, str(session_id))
         return AuthMessageResponseSchema(message="Perangkat dikeluarkan (paling lambat 15 menit).")
 

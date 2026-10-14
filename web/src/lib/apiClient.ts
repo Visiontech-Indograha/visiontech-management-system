@@ -32,8 +32,45 @@ export const setSessionExpiredHandler = (fn: (() => void) | null) => {
   onSessionExpired = fn;
 };
 
+function getOrCreateDeviceFingerprint(): string {
+  if (typeof window === "undefined") return "web-client";
+  try {
+    let fp = localStorage.getItem("vms_device_fingerprint");
+    if (!fp) {
+      fp = typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : `web-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+      localStorage.setItem("vms_device_fingerprint", fp);
+    }
+    return fp;
+  } catch {
+    return "web-client";
+  }
+}
+
+function getDeviceLabel(): string {
+  if (typeof navigator === "undefined" || !navigator.userAgent) return "Web Browser";
+  const ua = navigator.userAgent;
+  let browser = "Browser";
+  if (ua.includes("Firefox")) browser = "Firefox";
+  else if (ua.includes("Edg")) browser = "Edge";
+  else if (ua.includes("Chrome")) browser = "Chrome";
+  else if (ua.includes("Safari")) browser = "Safari";
+
+  let os = "Desktop";
+  if (ua.includes("Windows")) os = "Windows";
+  else if (ua.includes("Mac OS")) os = "macOS";
+  else if (ua.includes("Linux")) os = "Linux";
+  else if (ua.includes("Android")) os = "Android";
+  else if (ua.includes("iPhone") || ua.includes("iPad")) os = "iOS";
+
+  return `${browser} on ${os}`;
+}
+
 api.interceptors.request.use((config) => {
   if (accessToken) config.headers.Authorization = `Bearer ${accessToken}`;
+  config.headers["X-Device-Fingerprint"] = getOrCreateDeviceFingerprint();
+  config.headers["X-Device-Label"] = getDeviceLabel();
   return config;
 });
 
@@ -60,7 +97,17 @@ let refreshing: Promise<string> | null = null;
 
 export async function refreshAccessToken(): Promise<string> {
   refreshing ??= axios
-    .post<{ access_token: string }>(`${baseURL}/auth/refresh`, null, { withCredentials: true })
+    .post<{ access_token: string }>(
+      `${baseURL}/auth/refresh`,
+      null,
+      {
+        withCredentials: true,
+        headers: {
+          "X-Device-Fingerprint": getOrCreateDeviceFingerprint(),
+          "X-Device-Label": getDeviceLabel(),
+        },
+      },
+    )
     .then((r) => {
       accessToken = r.data.access_token;
       return accessToken;

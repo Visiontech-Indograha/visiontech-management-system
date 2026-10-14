@@ -34,7 +34,7 @@ def upgrade() -> None:
           p_org uuid, p_user uuid, p_device text, p_fingerprint text,
           p_ip inet, p_agent text, p_lifetime interval DEFAULT interval '1 day'
         ) RETURNS TABLE (session_id uuid, family_id uuid, refresh_token text, expires_at timestamptz)
-        LANGUAGE plpgsql AS $$
+        LANGUAGE plpgsql SECURITY DEFINER SET search_path = vms, public AS $$
         DECLARE v_raw text; v_family uuid := new_id(); v_id uuid; v_exp timestamptz := now() + p_lifetime;
         BEGIN
           v_raw := encode(gen_random_bytes(32), 'base64');
@@ -60,7 +60,7 @@ def upgrade() -> None:
           reused boolean,
           family_created_at timestamptz
         )
-        LANGUAGE plpgsql AS $$
+        LANGUAGE plpgsql SECURITY DEFINER SET search_path = vms, public AS $$
         DECLARE
           v_old vms.user_session%ROWTYPE;
           v_raw text;
@@ -129,7 +129,7 @@ def upgrade() -> None:
     op.execute(
         """
         CREATE OR REPLACE FUNCTION vms.count_active_devices(p_user uuid)
-        RETURNS integer LANGUAGE sql STABLE AS $$
+        RETURNS integer LANGUAGE sql STABLE SECURITY DEFINER SET search_path = vms, public AS $$
           SELECT count(DISTINCT family_id)::integer
           FROM vms.user_session
           WHERE user_id = p_user AND state = 'ACTIVE' AND expires_at > now();
@@ -147,7 +147,7 @@ def downgrade() -> None:
           p_org uuid, p_user uuid, p_device text, p_fingerprint text,
           p_ip inet, p_agent text, p_lifetime interval DEFAULT interval '14 days'
         ) RETURNS TABLE (session_id uuid, family_id uuid, refresh_token text, expires_at timestamptz)
-        LANGUAGE plpgsql AS $$
+        LANGUAGE plpgsql SECURITY DEFINER SET search_path = vms, public AS $$
         DECLARE v_raw text; v_family uuid := new_id(); v_id uuid; v_exp timestamptz := now() + p_lifetime;
         BEGIN
           v_raw := encode(gen_random_bytes(32), 'base64');
@@ -164,7 +164,7 @@ def downgrade() -> None:
         CREATE OR REPLACE FUNCTION vms.rotate_session(
           p_raw_refresh text, p_ip inet DEFAULT NULL, p_agent text DEFAULT NULL
         ) RETURNS TABLE (session_id uuid, user_id uuid, refresh_token text, expires_at timestamptz, reused boolean)
-        LANGUAGE plpgsql AS $$
+        LANGUAGE plpgsql SECURITY DEFINER SET search_path = vms, public AS $$
         DECLARE v_old vms.user_session%ROWTYPE; v_raw text; v_id uuid; v_exp timestamptz;
         BEGIN
           SELECT * INTO v_old FROM vms.user_session WHERE refresh_sha256 = digest(p_raw_refresh, 'sha256');

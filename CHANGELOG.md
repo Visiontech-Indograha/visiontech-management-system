@@ -24,6 +24,7 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
     - Menampilkan modal apresiasi kata-kata penyemangat setelah checkout valid.
     - Memperbaiki ukuran MB unduhan APK di halaman login agar memprioritaskan APK arsitektur `arm64-v8a` selaras dengan endpoint download rilis.
     - Memperbaiki bug sesi web yang hilang saat refresh browser (F5) dengan menyatukan Zustand store (`session.tsx` re-export `sessionStore.ts`), memastikan cookie `HttpOnly; Secure; SameSite=Strict`, dan mengirim header fingerprint perangkat persisten saat refresh token.
+    - Memperbarui Content-Security-Policy pada `web/Caddyfile` agar mengizinkan font berformat `data:` dan script/koneksi telemetri Cloudflare Insights (`static.cloudflareinsights.com` dan `cloudflareinsights.com`).
   - **Aplikasi Mobile Android (`attendance_screen.dart`, `pubspec.yaml`):**
     - Menerapkan validasi jam masuk mulai pukul 07:00 WIB dan penutupan absensi pulang pukul 19:00 WIB.
     - Menampilkan dialog konfirmasi peringatan waktu kerja belum 8 jam efektif sebelum absen pulang.

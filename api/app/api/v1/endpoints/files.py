@@ -6,8 +6,7 @@ import filetype
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import Response
 
-from app.api.deps import get_current_user, get_file_service, get_file_viewer
-from app.core.config import settings
+from app.api.deps import get_current_user, get_file_service, get_file_viewer, get_file_viewer_service
 from app.core.errors import AppError, NotFoundError
 from app.core.image import compress_image
 from app.core.security import CurrentUser, create_file_access_ticket
@@ -108,7 +107,7 @@ async def get_file_content(
     variant: str = "view",
     download: bool = False,
     current_user: CurrentUser = Depends(get_file_viewer),
-    files: FileService = Depends(get_file_service),
+    files: FileService = Depends(get_file_viewer_service),
 ) -> Response:
     """
     Menyajikan isi berkas langsung (bukan JSON) agar bisa dipakai sebagai `src` <img> atau unduhan aman.
@@ -163,7 +162,7 @@ async def get_file_url(
     files: FileService = Depends(get_file_service),
 ) -> dict[str, str]:
     """
-    Mendapatkan URL bertiket aman untuk mengakses file (valid 5 menit).
+    Mendapatkan URL API bertiket aman untuk mengakses file (valid 5 menit).
     Varian: full, view, thumb. URL dibuat hanya setelah otorisasi per berkas (V-17, dok 13 §7).
 
     Path params:
@@ -172,7 +171,7 @@ async def get_file_url(
     Query params:
     - variant: variasi kompresi ("full", "view", "thumb")
 
-    Return: URL aplikasi bertanda tangan beserta mime_type asli
+    Return: URL API same-origin bertiket beserta mime_type asli
     """
     file_obj = await files.authorize(file_id, current_user)
 
@@ -184,6 +183,8 @@ async def get_file_url(
         variant=variant,
     )
 
-    base_url = (settings.MINIO_PUBLIC_URL or "").rstrip("/")
-    url = f"{base_url}/api/v1/files/{file_id}?variant={variant}&token={ticket}"
+    query = f"variant={variant}&token={ticket}"
+    if variant == "full":
+        query += "&download=true"
+    url = f"/api/v1/files/{file_id}?{query}"
     return {"url": url, "mime_type": file_obj.mime_type}

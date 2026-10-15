@@ -25,9 +25,11 @@ function renderWithClient(ui: React.ReactElement) {
 }
 
 describe("FilePreview", () => {
+  const popup = { location: { replace: vi.fn() }, close: vi.fn() };
+
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.stubGlobal("open", vi.fn());
+    vi.stubGlobal("open", vi.fn(() => popup));
   });
 
   it("menampilkan Skeleton saat memuat", () => {
@@ -50,7 +52,8 @@ describe("FilePreview", () => {
     
     await waitFor(() => {
       expect(api.get).toHaveBeenCalledWith("/files/f2/url?variant=full");
-      expect(window.open).toHaveBeenCalledWith("https://mock/file_full.pdf", "_blank");
+      expect(window.open).toHaveBeenCalledWith("about:blank", "_blank");
+      expect(popup.location.replace).toHaveBeenCalledWith("https://mock/file_full.pdf");
     });
   });
 

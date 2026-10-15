@@ -10,7 +10,7 @@ from typing import Any, Literal
 from uuid import UUID
 
 import jwt
-from fastapi import Depends
+from fastapi import Depends, Query
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -148,8 +148,8 @@ async def get_current_user(
 
 async def get_file_viewer(
     file_id: UUID,
+    token: str | None = Query(None, alias="token"),
     credentials: HTTPAuthorizationCredentials | None = Depends(security),
-    token: str | None = None,
     db: AsyncSession = Depends(get_db, scope=DB_SCOPE),
 ) -> CurrentUser:
     """
@@ -162,20 +162,28 @@ async def get_file_viewer(
     if credentials is not None:
         try:
             payload = verify_jwt_token(credentials.credentials)
+            user_id, session_id = payload.get("sub"), payload.get("jti")
+            if not user_id or not session_id:
+                raise _unauthenticated()
+
+            auth_time = payload.get("auth_time")
+            if auth_time is not None:
+                try:
+                    if int(utcnow().timestamp()) - int(auth_time) > 86400:
+                        raise _unauthenticated()
+                except (ValueError, TypeError):
+                    pass
         except jwt.PyJWTError:
-            raise _unauthenticated() from None
-
-        user_id, session_id = payload.get("sub"), payload.get("jti")
-        if not user_id or not session_id:
-            raise _unauthenticated()
-
-        auth_time = payload.get("auth_time")
-        if auth_time is not None:
-            try:
-                if int(utcnow().timestamp()) - int(auth_time) > 86400:
-                    raise _unauthenticated()
-            except (ValueError, TypeError):
-                pass
+            # Jika header Authorization gagal diverifikasi, coba tiket akses berkas dari query parameter.
+            if token is None:
+                raise _unauthenticated() from None
+            claims = verify_file_access_ticket(token, str(file_id))
+            if claims is None:
+                raise _unauthenticated() from None
+            user_id = claims.get("sub")
+            session_id = str(claims.get("jti") or "file-ticket")
+            if not user_id:
+                raise _unauthenticated() from None
     elif token is not None:
         claims = verify_file_access_ticket(token, str(file_id))
         if claims is None:
@@ -370,6 +378,35 @@ def get_employee_service(db: AsyncSession = Depends(get_db_with_user)) -> Employ
 
 
 def get_file_service(db: AsyncSession = Depends(get_db_with_user)) -> FileService:
+    return FileService(CRUDFile(db))
+
+
+async def get_file_viewer_db(
+    db: AsyncSession = Depends(get_db, scope=DB_SCOPE),
+    current_user: CurrentUser = Depends(get_file_viewer),
+) -> AsyncSession:
+    """Pasang konteks RLS untuk route konten berkas, yang juga mengizinkan tiket URL."""
+    try:
+        await set_request_context(
+            db,
+            user_id=current_user.user_id,
+            organization_id=current_user.organization_id,
+            actor_label=current_user.email,
+        )
+    except SQLAlchemyError as exc:
+        logger.exception("Konteks RLS gagal disetel untuk akses berkas")
+        await send_security_alert(
+            "Konteks RLS Gagal Disetel", f"Gagal menetapkan konteks RLS ({type(exc).__name__})."
+        )
+        raise AppError(
+            "INTERNAL_ERROR",
+            "Terjadi gangguan pada sistem. Coba lagi beberapa saat; bila berulang, hubungi admin.",
+            status=500,
+        ) from None
+    return db
+
+
+def get_file_viewer_service(db: AsyncSession = Depends(get_file_viewer_db)) -> FileService:
     return FileService(CRUDFile(db))
 
 

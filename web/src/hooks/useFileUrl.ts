@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchFileUrl } from "@/services/fileService";
 
 /**
- * Mengambil presigned URL MinIO untuk sebuah berkas.
+ * Mengambil URL API bertiket untuk sebuah berkas.
  *
  * `<img src="/api/v1/files/{id}">` tidak bisa dipakai karena permintaan gambar oleh browser
  * tidak menyertakan header Authorization; API hanya melayani berkas terautentikasi.

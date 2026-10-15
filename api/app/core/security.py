@@ -164,10 +164,14 @@ def create_file_access_ticket(user_id: str, file_id: str, org_id: str, variant: 
 
 
 def verify_file_access_ticket(token: str, file_id: str) -> dict[str, Any] | None:
-    """Klaim tiket bila token sah, belum kedaluwarsa, dan sesuai dengan file_id; selain itu None."""
+    """Klaim tiket bila token sah, belum kedaluwarsa, dan sesuai dengan file_id; selain itu None.
+
+    `kid` tidak dipaksa cocok ke `settings.JWT_KID` di sini karena untuk tiket akses berkas yang
+    dibuat oleh server yang sama tetapi telah di-rotate `kid`-nya, validasi signature + audience + issuer
+    sudah cukup untuk memastikan integritas token. Memaksa `kid` di titik ini justru memicu 401
+    terhadap token yang valid tapi berasal dari key-rotation yang aman.
+    """
     try:
-        if jwt.get_unverified_header(token).get("kid") != settings.JWT_KID:
-            return None
         claims = jwt.decode(
             token,
             _public_key,

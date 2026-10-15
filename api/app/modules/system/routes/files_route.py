@@ -9,9 +9,10 @@ import uuid
 from fastapi import APIRouter, Depends, File, UploadFile
 from fastapi.responses import Response
 
-from app.api.deps import get_current_user, get_file_viewer
+from app.api.deps import get_current_user, get_file_viewer, get_file_viewer_service
 from app.core.security import CurrentUser
 from app.modules.system.controllers.files_controller import FilesController
+from app.modules.system.services.system_service import FileService
 
 router = APIRouter(prefix="/files", tags=["Files"])
 
@@ -38,7 +39,7 @@ async def get_file_content(
     variant: str = "view",
     download: bool = False,
     current_user: CurrentUser = Depends(get_file_viewer),
-    controller: FilesController = Depends(),
+    file_service: FileService = Depends(get_file_viewer_service),
 ) -> Response:
     """
     Menyajikan isi berkas langsung sebagai byte (bukan JSON) sehingga bisa dipakai
@@ -49,6 +50,7 @@ async def get_file_content(
     - variant: "thumb" | "view" | "full" (default "view")
     - download: bool (default False, jika True menyetel Content-Disposition: attachment)
     """
+    controller = FilesController(file_service)
     return await controller.handle_get_file_content(current_user, file_id, variant=variant, download=download)
 
 
@@ -60,7 +62,7 @@ async def get_file_url(
     controller: FilesController = Depends(),
 ) -> dict[str, str]:
     """
-    Mendapatkan URL Presigned MinIO untuk mengakses file (valid 5 menit).
+    Mendapatkan URL aplikasi bertiket untuk mengakses file (valid 5 menit).
     Varian: full, view, thumb. URL dibuat hanya setelah otorisasi per berkas (V-17, dok 13 §7).
 
     Path params:
@@ -69,10 +71,9 @@ async def get_file_url(
     Query params:
     - variant: variasi kompresi ("full", "view", "thumb")
 
-    Return: Presigned URL dari MinIO beserta mime_type asli
+    Return: URL API bertiket beserta mime_type asli
     """
     return await controller.handle_get_file_url(current_user, file_id, variant=variant)
 
 
 __all__ = ["router"]
-

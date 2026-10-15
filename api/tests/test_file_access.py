@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import io
 import uuid
+from urllib.parse import urlsplit
 
 import pytest
 from PIL import Image
@@ -83,6 +84,59 @@ def test_unattached_upload_is_only_for_its_uploader(client, world, other_world, 
     # Kontrak: jenis berkas dikirim server (magic bytes saat unggah), bukan ditebak klien dari URL.
     body = client.get(f"/files/{file_id}/url", headers=world.headers(client, "member")).json()
     assert body["mime_type"] == "image/png" and body["url"]
+
+
+def test_file_ticket_url_serves_image_and_full_variant_downloads_as_attachment(
+    client, world, fake_storage, monkeypatch,
+):
+    from app.modules.system.controllers import files_controller
+
+    file_id = _upload(client, world, "member", (20, 30, 40))
+    monkeypatch.setattr(files_controller, "get_object_bytes", lambda key: fake_storage.get(key))
+    headers = world.headers(client, "member")
+
+    view_url_response = client.get(f"/files/{file_id}/url?variant=view", headers=headers)
+    assert view_url_response.status_code == 200, view_url_response.text
+    view_url = view_url_response.json()["url"]
+    assert view_url.startswith(f"/api/v1/files/{file_id}?")
+    assert "localhost:9100" not in view_url
+
+    view_parts = urlsplit(view_url)
+    view_response_path = view_parts.path.removeprefix("/api/v1")
+    image_response = client.get(f"{view_response_path}?{view_parts.query}")
+    assert image_response.status_code == 200, image_response.text
+    assert image_response.headers["content-type"] == "image/webp"
+    assert image_response.content
+    assert image_response.headers["content-disposition"].startswith("inline;")
+
+    full_url_response = client.get(f"/files/{file_id}/url?variant=full", headers=headers)
+    assert full_url_response.status_code == 200, full_url_response.text
+    full_url = full_url_response.json()["url"]
+    assert "download=true" in full_url
+
+    full_parts = urlsplit(full_url)
+    full_response_path = full_parts.path.removeprefix("/api/v1")
+    download_response = client.get(f"{full_response_path}?{full_parts.query}")
+    assert download_response.status_code == 200, download_response.text
+    assert download_response.headers["content-disposition"].startswith("attachment;")
+
+    pdf_bytes = b"%PDF-1.7\n1 0 obj\n<<>>\nendobj\n%%EOF"
+    pdf_upload = client.post(
+        "/files/upload",
+        headers=headers,
+        files={"file": ("dokumen.pdf", pdf_bytes, "application/pdf")},
+    )
+    assert pdf_upload.status_code == 200, pdf_upload.text
+    pdf_id = pdf_upload.json()["file_id"]
+    pdf_url_response = client.get(f"/files/{pdf_id}/url?variant=full", headers=headers)
+    assert pdf_url_response.status_code == 200, pdf_url_response.text
+    pdf_parts = urlsplit(pdf_url_response.json()["url"])
+    pdf_path = pdf_parts.path.removeprefix("/api/v1")
+    pdf_response = client.get(f"{pdf_path}?{pdf_parts.query}")
+    assert pdf_response.status_code == 200, pdf_response.text
+    assert pdf_response.content == pdf_bytes
+    assert pdf_response.headers["content-type"] == "application/pdf"
+    assert pdf_response.headers["content-disposition"].startswith("attachment;")
 
 
 @pytest.mark.parametrize("file_id", [str(uuid.uuid4()), "bukan-uuid"])

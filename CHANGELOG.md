@@ -9,6 +9,8 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased] — `development`
 
+- **Perbaikan Pratinjau dan Unduh Berkas (`deps.py`, `files.py`, `files_controller.py`, `files_route.py`, `FilePreview.tsx`):** menerima tiket file tanpa Bearer pada rute konten dengan konteks RLS pengguna, membuat URL bertiket same-origin melalui API (bukan host MinIO), dan mengatur unduhan `full` sebagai attachment tanpa diblokir popup browser. Menambahkan uji regresi gambar dan PDF.
+
 - **Validasi Jam Kerja Absensi (07:00–19:00 WIB), Konfirmasi 8 Jam Kerja Efektif, Apresiasi Kerja, Auto Check-out, dan Perbaikan Web/Mobile (`config.py`, `attendance_session_service.py`, `attendance_monitor_service.py`, `attendance_cron_controller.py`, `attendance_cron_route.py`, `OfficeCheckInCard.tsx`, `attendance_screen.dart`, `appReleaseService.ts`, `sessionStore.ts`, `pubspec.yaml`):**
   - **Backend API & Layanan Absensi (`config.py`, `attendance_session_service.py`, `attendance_monitor_service.py`, `attendance_cron_controller.py`, `attendance_cron_route.py`, `test_attendance_hours.py`):**
     - Menegakkan validasi jam buka absensi masuk mulai pukul 07:00 WIB (`CHECKIN_TOO_EARLY`, 422).

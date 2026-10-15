@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { ApiError } from "@/lib/apiClient";
 import { Skeleton } from "@/components/atoms/Skeleton";
@@ -12,6 +12,7 @@ import { fetchFileUrl } from "@/services/fileService";
 
 export function FilePreview({ fileId, fileName = "Berkas" }: { fileId: string; fileName?: string }) {
   const [retryCount, setRetryCount] = useState(0);
+  const downloadWindow = useRef<Window | null>(null);
 
   const fetchUrlData = (variant: string) => fetchFileUrl(fileId, variant);
 
@@ -32,7 +33,16 @@ export function FilePreview({ fileId, fileName = "Berkas" }: { fileId: string; f
   const downloadMutation = useMutation({
     mutationFn: () => fetchUrlData("full"),
     onSuccess: (data) => {
-      window.open(data.url, "_blank");
+      if (downloadWindow.current) {
+        downloadWindow.current.location.replace(new URL(data.url, window.location.origin).toString());
+        downloadWindow.current = null;
+      } else {
+        window.location.assign(data.url);
+      }
+    },
+    onError: () => {
+      downloadWindow.current?.close();
+      downloadWindow.current = null;
     },
   });
 
@@ -62,7 +72,10 @@ export function FilePreview({ fileId, fileName = "Berkas" }: { fileId: string; f
   if (!isImage) {
     return (
       <PlainButton
-        onClick={() => downloadMutation.mutate()} 
+        onClick={() => {
+          downloadWindow.current = window.open("about:blank", "_blank");
+          downloadMutation.mutate();
+        }}
         className="flex items-center gap-2 text-sm font-medium text-lens hover:underline focus-visible:outline-none"
         disabled={downloadMutation.isPending}
       >

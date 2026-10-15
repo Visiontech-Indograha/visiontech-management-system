@@ -106,3 +106,28 @@ def test_file_access_ticket_roundtrip():
 
     # Mismatched file_id must be rejected
     assert verify_file_access_ticket(ticket, "file-2") is None
+
+
+def test_file_access_ticket_accepts_rotated_kid_for_same_signing_key():
+    from app.core.security import verify_file_access_ticket
+
+    now = int(security.utcnow().timestamp())
+    token = jwt.encode(
+        {
+            "sub": "user-1",
+            "fid": "file-1",
+            "org": "org-1",
+            "var": "view",
+            "iat": now,
+            "exp": now + 3600,
+            "aud": "vms-file-ticket",
+            "iss": "vms",
+            "jti": "legacy-ticket-1",
+        },
+        security._private_key,
+        algorithm="EdDSA",
+        headers={"kid": "jwt-dev-legacy"},
+    )
+
+    claims = verify_file_access_ticket(token, "file-1")
+    assert claims is not None and claims["sub"] == "user-1"

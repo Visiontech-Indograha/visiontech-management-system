@@ -11868,7 +11868,7 @@
   },
   "/api/v1/files/{file_id}/url": {
    "get": {
-    "description": "Mendapatkan URL Presigned MinIO untuk mengakses file (valid 5 menit).\nVarian: full, view, thumb. URL dibuat hanya setelah otorisasi per berkas (V-17, dok 13 §7).\n\nPath params:\n- file_id: UUID dari file yang diminta\n\nQuery params:\n- variant: variasi kompresi (\"full\", \"view\", \"thumb\")\n\nReturn: Presigned URL dari MinIO beserta mime_type asli",
+    "description": "Mendapatkan URL aplikasi bertiket untuk mengakses file (valid 5 menit).\nVarian: full, view, thumb. URL dibuat hanya setelah otorisasi per berkas (V-17, dok 13 §7).\n\nPath params:\n- file_id: UUID dari file yang diminta\n\nQuery params:\n- variant: variasi kompresi (\"full\", \"view\", \"thumb\")\n\nReturn: URL API bertiket beserta mime_type asli",
     "operationId": "get_file_url_api_v1_files__file_id__url_get",
     "parameters": [
      {

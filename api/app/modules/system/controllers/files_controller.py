@@ -1,7 +1,7 @@
 """
 app/modules/system/controllers/files_controller.py
 
-Controller orkestrasi use case unggah berkas, kompresi gambar, dan pembuatan presigned URL MinIO.
+Controller orkestrasi unggah berkas, kompresi gambar, dan akses berkas bertiket.
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.2.
 """
 from __future__ import annotations
@@ -16,7 +16,6 @@ from fastapi.responses import Response
 
 import app.api.v1.endpoints.files as files_api
 from app.api.deps import get_file_service
-from app.core.config import settings
 from app.core.errors import AppError, NotFoundError
 from app.core.image import compress_image
 from app.core.security import CurrentUser, create_file_access_ticket
@@ -36,7 +35,7 @@ ALLOWED_MIMES = [
 
 
 class FilesController:
-    """Controller pengelolaan unggahan berkas dan penyediaan URL presigned MinIO."""
+    """Controller pengelolaan unggahan berkas dan URL akses aplikasi bertiket."""
 
     def __init__(
         self,
@@ -171,10 +170,10 @@ class FilesController:
         file_id: uuid.UUID,
         variant: str = "full",
     ) -> dict[str, str]:
-        """Memeriksa otorisasi akses pengguna atas berkas dan membuat URL aplikasi bertiket aman."""
+        """Memeriksa otorisasi dan membuat URL aplikasi bertiket yang bisa dipakai browser."""
         file_obj = await self.service.authorize(file_id, current_user)
 
-        # Buat tiket akses berumur singkat terikat ke user_id dan file_id
+        # URL file harus menuju FastAPI, bukan MINIO_PUBLIC_URL yang merupakan origin S3/MinIO.
         ticket = create_file_access_ticket(
             current_user.user_id,
             str(file_id),
@@ -182,10 +181,11 @@ class FilesController:
             variant=variant,
         )
 
-        base_url = (settings.MINIO_PUBLIC_URL or "").rstrip("/")
-        url = f"{base_url}/api/v1/files/{file_id}?variant={variant}&token={ticket}"
+        query = f"variant={variant}&token={ticket}"
+        if variant == "full":
+            query += "&download=true"
+        url = f"/api/v1/files/{file_id}?{query}"
         return {"url": url, "mime_type": file_obj.mime_type}
 
 
 __all__ = ["ALLOWED_MIMES", "MAX_FILE_SIZE", "FilesController"]
-

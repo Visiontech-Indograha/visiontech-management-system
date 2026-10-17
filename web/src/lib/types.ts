@@ -8,6 +8,12 @@ export type TokenOut = S["AuthLoginResponseSchema"];
 
 /** Label peran sesuai RoleCode API. */
 export const ROLE_LABEL: Record<string, string> = {
+  SUPER_ADMIN: "Super Admin",
+  OPERATIONAL_MANAGER: "Operational Manager",
+  PROJECT_MANAGER: "Project Manager",
+  TEAM_LEADER: "Team Leader",
+  ADMIN_HR_GA: "Admin HR & GA",
+  EMPLOYEE: "Karyawan / Teknisi",
   ADMIN: "Admin",
   HR: "HR",
   PM: "Project Manager",

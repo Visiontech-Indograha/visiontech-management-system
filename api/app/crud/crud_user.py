@@ -1,6 +1,6 @@
 """
 app/crud/crud_user.py
-Query untuk vms.app_user dan peran globalnya.
+Query untuk tabel users dan employee di skema public VMS V2.
 """
 from __future__ import annotations
 
@@ -8,71 +8,66 @@ from typing import Any
 from uuid import UUID
 
 from .base import CRUDBase
-from .crud_session import FAILED_LOGINS_SQL
 
-# Peran global pertama; peran per pekerjaan (LEADER/MEMBER) berasal dari SK, bukan dari sini.
 _USER_WITH_ROLE = """
-    SELECT u.id, u.login, u.password_hash, u.is_active, u.organization_id, r.role
-    FROM vms.app_user u
-    LEFT JOIN vms.user_role r ON r.user_id = u.id
+    SELECT 
+        u.user_id AS id,
+        u.user_id,
+        u.email AS login,
+        u.email,
+        u.username,
+        u.password_hash,
+        u.is_active,
+        u.system_role::text AS role,
+        u.employee_id,
+        COALESCE(e.office_id, '11111111-0000-4000-a000-000000000001'::uuid) AS organization_id,
+        e.full_name,
+        e.employee_no
+    FROM users u
+    LEFT JOIN employee e ON e.employee_id = u.employee_id AND e.delete_at IS NULL
 """
 
 
 class CRUDUser(CRUDBase):
     """
-    CRUD untuk mengelola entitas AppUser (pengguna aplikasi).
-    Mendukung pencarian pengguna, peran, serta pembuatan akun untuk karyawan.
+    CRUD untuk mengelola entitas User (Master Schema V2).
     """
 
     async def find_by_login(self, login: str) -> Any:
         """
-        Mencari data pengguna beserta peran globalnya berdasarkan login (username/email).
-
-        Args:
-            login (str): Identifier login pengguna.
-
-        Returns:
-            Any: Record pengguna jika ditemukan, None jika tidak.
+        Mencari data pengguna beserta peran globalnya berdasarkan login (email atau username).
         """
-        # Melakukan pencarian menggunakan query dasar _USER_WITH_ROLE yang menggabungkan
-        # app_user dan user_role.
-        return await self.fetchone(f"{_USER_WITH_ROLE} WHERE u.login = :login", {"login": login})
+        return await self.fetchone(
+            f"{_USER_WITH_ROLE} WHERE (u.email = :login OR u.username = :login) AND u.delete_at IS NULL",
+            {"login": login},
+        )
 
     async def find_by_id(self, user_id: UUID | str) -> Any:
         """
         Mencari data pengguna berdasarkan ID.
-
-        Args:
-            user_id (UUID | str): ID pengguna.
-
-        Returns:
-            Any: Record pengguna.
         """
-        # Mengambil informasi profil lengkap user berdasarkan primary key.
-        return await self.fetchone(f"{_USER_WITH_ROLE} WHERE u.id = :id", {"id": user_id})
+        return await self.fetchone(
+            f"{_USER_WITH_ROLE} WHERE u.user_id = :id AND u.delete_at IS NULL",
+            {"id": user_id},
+        )
 
     async def find_identity(self, user_id: UUID | str) -> Any:
         """
-        Mengambil status aktif akun dan seluruh peran global dalam bentuk list (array).
+        Mengambil status aktif akun dan peran dalam bentuk list (array).
         Digunakan di setiap request untuk authorisasi token.
-
-        Args:
-            user_id (UUID | str): ID pengguna.
-
-        Returns:
-            Any: Record berisi status aktif dan list peran.
         """
-        # Menggabungkan role menjadi sebuah array (menggunakan array_agg di PostgreSQL)
-        # sehingga semua hak akses pengguna bisa diambil dalam 1 query.
         return await self.fetchone(
             """
-            SELECT u.login, u.is_active, u.organization_id,
-                   COALESCE(array_agg(r.role::text ORDER BY r.role) FILTER (WHERE r.role IS NOT NULL),
-                            '{}') AS roles
-            FROM vms.app_user u
-            LEFT JOIN vms.user_role r ON r.user_id = u.id
-            WHERE u.id = :id
-            GROUP BY u.id
+            SELECT 
+                u.user_id AS id,
+                u.email AS login,
+                u.email,
+                u.is_active,
+                COALESCE(e.office_id, '11111111-0000-4000-a000-000000000001'::uuid) AS organization_id,
+                ARRAY[u.system_role::text] AS roles
+            FROM users u
+            LEFT JOIN employee e ON e.employee_id = u.employee_id AND e.delete_at IS NULL
+            WHERE u.user_id = :id AND u.delete_at IS NULL
             """,
             {"id": user_id},
         )
@@ -80,124 +75,93 @@ class CRUDUser(CRUDBase):
     async def update_password_hash(self, user_id: UUID | str, password_hash: str) -> None:
         """
         Memperbarui hash password pengguna.
-
-        Args:
-            user_id (UUID | str): ID pengguna.
-            password_hash (str): Hash password baru.
         """
-        # Memperbarui nilai hash password di tabel app_user.
         await self.execute(
-            "UPDATE vms.app_user SET password_hash = :hash WHERE id = :id",
+            "UPDATE users SET password_hash = :hash, update_at = now() WHERE user_id = :id AND delete_at IS NULL",
             {"hash": password_hash, "id": user_id},
         )
 
     async def get_employee_id(self, user_id: UUID | str) -> UUID | None:
         """
         Mendapatkan ID Karyawan (employee_id) yang tertaut ke akun pengguna ini.
-
-        Args:
-            user_id (UUID | str): ID pengguna aplikasi.
-
-        Returns:
-            UUID | None: ID karyawan jika tertaut, atau None.
         """
-        # Mengambil mapping employee_id dari entitas user.
-        employee_id: UUID | None = await self.scalar(
-            "SELECT employee_id FROM vms.app_user WHERE id = :uid",
+        return await self.scalar(
+            "SELECT employee_id FROM users WHERE user_id = :uid AND delete_at IS NULL",
             {"uid": user_id},
         )
-        return employee_id
 
     async def get_attendance_mode(self, user_id: UUID | str) -> str | None:
         """
-        Mendapatkan mode absensi yang diberlakukan kepada karyawan terkait.
-
-        Args:
-            user_id (UUID | str): ID pengguna.
-
-        Returns:
-            str | None: Mode absensi (misal: 'FIELD', 'OFFICE').
+        Mendapatkan mode absensi yang diberlakukan kepada pengguna:
+        - SUPER_ADMIN, OPERATIONAL_MANAGER, ADMIN_HR_GA: OFFICE
+        - PROJECT_MANAGER, TEAM_LEADER, EMPLOYEE: BOTH (dapat di mobile/web)
         """
-        # Menggabungkan app_user dengan tabel employee untuk mengekstrak attendance_mode.
-        mode: str | None = await self.scalar(
-            """
-            SELECT e.attendance_mode FROM vms.app_user u JOIN vms.employee e ON e.id = u.employee_id
-            WHERE u.id = :uid
-            """,
+        role = await self.scalar(
+            "SELECT system_role::text FROM users WHERE user_id = :uid AND delete_at IS NULL",
             {"uid": user_id},
         )
-        return mode
+        if not role:
+            return None
+        if role in ("SUPER_ADMIN", "ADMIN", "OPERATIONAL_MANAGER", "ADMIN_HR_GA"):
+            return "OFFICE"
+        return "BOTH"
 
-    # ── Akun karyawan (M1-01, R-20) ─────────────────────────────────────────────────────────────
     async def account_of_employee(self, employee_id: UUID | str) -> Any:
         """
         Mengambil profil akun dari karyawan tertentu.
-        Mencakup histori login gagal dan kapan status lock berakhir.
-
-        Args:
-            employee_id (UUID | str): ID karyawan.
-
-        Returns:
-            Any: Record akun dengan metrik kegagalan login.
         """
-        # Menggunakan fungsi JOIN LATERAL untuk mengalkulasi jumlah kegagalan login
-        # (mengacu ke query di _USER_WITH_ROLE dan FAILED_LOGINS_SQL) secara real-time.
         return await self.fetchone(
-            f"""
-            SELECT u.id, u.login, u.is_active, u.last_login_at, f.failures, f.locked_until
-            FROM vms.app_user u
-            LEFT JOIN LATERAL ({FAILED_LOGINS_SQL.format(login="u.login")}) f ON true
-            WHERE u.employee_id = CAST(:emp AS uuid)
+            """
+            SELECT 
+                u.user_id AS id, 
+                u.email AS login, 
+                u.username,
+                u.system_role::text AS role,
+                u.is_active, 
+                u.update_at AS last_login_at, 
+                0::int AS failures, 
+                NULL::timestamptz AS locked_until
+            FROM users u
+            WHERE u.employee_id = CAST(:emp AS uuid) AND u.delete_at IS NULL
             """,
-            {"emp": employee_id})
+            {"emp": employee_id},
+        )
 
     async def login_taken(self, org_id: UUID | str, login: str) -> bool:
         """
-        Mengecek apakah nama login tertentu sudah dipakai di organisasi.
-
-        Args:
-            org_id (UUID | str): ID organisasi.
-            login (str): Nama login (username/email) yang akan dicek.
-
-        Returns:
-            bool: True jika sudah dipakai, False jika tersedia.
+        Mengecek apakah email/username sudah dipakai.
         """
-        # Menggunakan klausa EXISTS untuk performa pengecekan ketersediaan yang cepat.
         return bool(await self.scalar(
-            "SELECT EXISTS (SELECT 1 FROM vms.app_user WHERE organization_id = :org AND login = :login)",
-            {"org": org_id, "login": login}))
+            "SELECT EXISTS (SELECT 1 FROM users WHERE (email = :login OR username = :login) AND delete_at IS NULL)",
+            {"login": login},
+        ))
 
-    async def create_for_employee(self, org_id: UUID | str, employee_id: UUID | str, login: str,
-                                  password_hash: str) -> Any:
+    async def create_for_employee(
+        self, org_id: UUID | str, employee_id: UUID | str, login: str, password_hash: str, system_role: str = "EMPLOYEE"
+    ) -> Any:
         """
         Membuat akun pengguna baru untuk seorang karyawan.
-
-        Args:
-            org_id (UUID | str): ID organisasi.
-            employee_id (UUID | str): ID karyawan yang akan dikaitkan.
-            login (str): Nama login.
-            password_hash (str): Hash kata sandi.
-
-        Returns:
-            Any: Detail singkat akun yang baru dibuat.
         """
-        # Menyisipkan record app_user dan segera mengaktifkannya (is_active = true).
         return await self.fetchone(
             """
-            INSERT INTO vms.app_user (organization_id, employee_id, login, password_hash, is_active)
-            VALUES (:org, CAST(:emp AS uuid), :login, :hash, true)
-            RETURNING id, login, is_active, last_login_at
+            INSERT INTO users (employee_id, username, email, password_hash, system_role, is_active)
+            VALUES (CAST(:emp AS uuid), :username, :email, :hash, CAST(:role AS system_role_enum), true)
+            RETURNING user_id AS id, email AS login, is_active, update_at AS last_login_at
             """,
-            {"org": org_id, "emp": employee_id, "login": login, "hash": password_hash})
+            {
+                "emp": employee_id,
+                "username": login.split("@")[0],
+                "email": login,
+                "hash": password_hash,
+                "role": system_role,
+            },
+        )
 
     async def set_active(self, user_id: UUID | str, active: bool) -> None:
         """
         Mengubah status aktif/non-aktif akun.
-
-        Args:
-            user_id (UUID | str): ID pengguna.
-            active (bool): Status aktif yang baru.
         """
-        # Memperbarui nilai is_active dan mengganti updated_at menjadi waktu saat ini.
-        await self.execute("UPDATE vms.app_user SET is_active = :a, updated_at = now() WHERE id = :id",
-                           {"a": active, "id": user_id})
+        await self.execute(
+            "UPDATE users SET is_active = :a, update_at = now() WHERE user_id = :id AND delete_at IS NULL",
+            {"a": active, "id": user_id},
+        )

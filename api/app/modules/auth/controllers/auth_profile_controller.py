@@ -35,8 +35,8 @@ class AuthProfileController:
         # Foto profil karyawan: /auth/me hanya mengembalikan id berkasnya; URL
         # bertanda tangan diambil klien lewat GET /files/{id}/url.
         sql = (
-            "SELECT photo_file_id FROM vms.employee "
-            "WHERE id = (SELECT employee_id FROM vms.app_user WHERE id = :uid) LIMIT 1"
+            "SELECT profile_photo_path FROM employee "
+            "WHERE employee_id = (SELECT employee_id FROM users WHERE user_id = :uid) LIMIT 1"
         )
         async with AsyncSessionLocal() as db:
             result = await db.execute(text(sql), {"uid": current_user.user_id})

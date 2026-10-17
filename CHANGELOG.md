@@ -9,6 +9,12 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased] — `development`
 
+- **Milestone 3: Direktori Karyawan, Alamat, Berkas Dokumen & Siklus Offboarding (`api/app/crud/crud_employee.py`, `api/app/crud/crud_document.py`, `web/src/pages/directory/`):**
+  - Mengadaptasi `CRUDEmployee` untuk mengelola data induk karyawan, riwayat penempatan divisi/kantor, alamat domisili (`address`), dan pemutusan hubungan kerja (`offboarding_status`).
+  - Mengadaptasi `CRUDDocument` untuk mengelola berkas sertifikat dan surat izin karyawan langsung dari tabel `public.employee_file`.
+  - Memverifikasi endpoint direktori `GET /api/v1/employees`, detail karyawan `GET /api/v1/employees/{id}`, dokumen `GET /api/v1/employees/{id}/documents`, dan antrean verifikasi `GET /api/v1/documents/pending`.
+  - Memverifikasi integrasi typecheck dan build test produksi pada Web frontend (halaman DirectoryPage, EmployeeDetailPage, MyDocumentsPage).
+
 - **Milestone 2: Manajemen Kantor & Divisi Operasional Master Schema V2 (`api/app/crud/crud_site.py`, `api/app/crud/crud_unit.py`, `api/app/services/site_service.py`, `web/src/pages/sites/`):**
   - Mengadaptasi `CRUDSite` dan `SiteService` untuk mengelola master kantor pusat dan cabang dari tabel `public.office` dengan koordinat numerik latitude/longitude murni.
   - Mengadaptasi `CRUDUnit` untuk membaca daftar divisi operasional yang membawahi PM dan Team Leader dari tabel `public.division`.

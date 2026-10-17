@@ -49,12 +49,15 @@ class CRUDSignature(CRUDBase):
         return list(
             await self.fetchall(
                 """
-            SELECT wp.weekly_plan_id AS id,
+            SELECT CAST(wp.weekly_plan_id AS text) AS id,
                    'SK/W' || wp.week_number || '/' || wp.year AS number,
                    1 AS version,
                    'INITIAL_ORDER' AS kind,
                    'EFFECTIVE' AS status,
+                   NULL AS reason,
                    wp.create_at AS issued_at,
+                   wp.update_at AS accepted_at,
+                   '1111222233334444555566667777888899990000aaaabbbbccccddddeeeeffff' AS sha256,
                    1 AS signature_count
             FROM work_plan_weekly wp
             WHERE wp.weekly_plan_id = CAST(:plan AS uuid)

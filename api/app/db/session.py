@@ -27,7 +27,7 @@ from app.core.events import discard_events, flush_events
 # ── Engine & sessions ────────────────────────────────────────────────────────────
 # Fungsi & trigger di db/*.sql menyebut tabel tanpa awalan skema,
 # jadi setiap koneksi aplikasi wajib memakai path yang sama.
-SEARCH_PATH = "vms, public"
+SEARCH_PATH = "public, vms"
 
 
 def make_engine(url: str | None = None, **kwargs: Any) -> AsyncEngine:

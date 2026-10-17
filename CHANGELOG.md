@@ -9,6 +9,21 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased] — `development`
 
+- **Milestone 1: Adaptasi Autentikasi, Manajemen Sesi & Profil Pengguna ke Master Schema V2 (`api/app/crud/crud_user.py`, `api/app/crud/crud_session.py`, `api/app/core/permissions.py`, `api/app/modules/auth/`, `web/src/lib/types.ts`):**
+  - Mengadaptasi `CRUDUser` dan `AuthUserRepository` untuk membaca dan mengelola data pengguna langsung dari tabel `public.users` dan `public.employee` (Master Schema V2).
+  - Mengadaptasi `CRUDSession` dan `AuthSessionRepository` untuk menerbitkan, merotasi token refresh SHA-256, dan mencabut sesi secara terpusat pada tabel `public.user_sessions`.
+  - Memperbarui `RoleCode` dan pemetaan hak akses `_ROLE_EXTRA` untuk mendukung 6 peran V2 (`SUPER_ADMIN`, `OPERATIONAL_MANAGER`, `PROJECT_MANAGER`, `TEAM_LEADER`, `ADMIN_HR_GA`, `EMPLOYEE`).
+  - Memperbarui `auth_profile_controller.py` untuk membaca data profil foto dan relasi karyawan skema V2 secara akurat.
+  - Memperbarui pemetaan `ROLE_LABEL` pada Web frontend untuk menampilkan nama peran baru secara konsisten.
+  - Memverifikasi login seluruh akun uji (Super Admin, OM, TL) dan kelulusan build test backend dan web frontend.
+
+- **Master DDL V2 26 Tabel & Konfigurasi Otonom (`db/06_master_schema_v2.sql`, `db/07_master_seed_v2.sql`, `.agents/`, `docs/35`, `docs/36`):**
+  - Menerapkan arsitektur database Master DDL 26 tabel terintegrasi dengan soft delete (`delete_at`), partial unique index, dan partisi bulanan log aktivitas (`app_activity_logs`).
+  - Menyiapkan 113 baris data uji komprehensif pada database `test_migration` (`192.168.88.160:5434`).
+  - Mengonfigurasi direktori `.agents/` yang memuat aturan skema lengkap (`rules/01_database_context.md`), standar koding branch `development` (`rules/02_coding_standards.md`), dan tata kelola per-page (`rules/03_per_page_pipeline.md`).
+  - Menyediakan berkas panduan flowchart bisnis menyeluruh (`docs/35-FLOWCHART-DAN-ALUR-BISNIS-V2.md`) dan aturan pengembangan otonom (`docs/36-ATURAN-PENGEMBANGAN-OTONOM.md`).
+  - Memperbarui `health_check.py` agar mengenali ketersediaan tabel master `public.office` sekaligus menjaga kompatibilitas ke belakang.
+
 - **Perbaikan Pratinjau dan Unduh Berkas (`deps.py`, `files.py`, `files_controller.py`, `files_route.py`, `FilePreview.tsx`):** menerima tiket file tanpa Bearer pada rute konten dengan konteks RLS pengguna, membuat URL bertiket same-origin melalui API (bukan host MinIO), dan mengatur unduhan `full` sebagai attachment tanpa diblokir popup browser. Menambahkan uji regresi gambar dan PDF.
 
 - **Validasi Jam Kerja Absensi (07:00–19:00 WIB), Konfirmasi 8 Jam Kerja Efektif, Apresiasi Kerja, Auto Check-out, dan Perbaikan Web/Mobile (`config.py`, `attendance_session_service.py`, `attendance_monitor_service.py`, `attendance_cron_controller.py`, `attendance_cron_route.py`, `OfficeCheckInCard.tsx`, `attendance_screen.dart`, `appReleaseService.ts`, `sessionStore.ts`, `pubspec.yaml`):**

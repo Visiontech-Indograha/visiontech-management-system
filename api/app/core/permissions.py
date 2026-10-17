@@ -12,16 +12,25 @@ from enum import StrEnum
 class RoleCode(StrEnum):
     """
     Kode peran pengguna di seluruh sistem (global roles).
-    Daftar ini sejalan dengan tipe enum PostgreSQL `vms.role_code`.
+    Mendukung Master DDL V2 (system_role_enum) dan kompatibilitas mundur.
     """
+    # VMS Master V2 Roles
+    SUPER_ADMIN = "SUPER_ADMIN"
+    OPERATIONAL_MANAGER = "OPERATIONAL_MANAGER"
+    PROJECT_MANAGER = "PROJECT_MANAGER"
+    TEAM_LEADER = "TEAM_LEADER"
+    ADMIN_HR_GA = "ADMIN_HR_GA"
+    EMPLOYEE = "EMPLOYEE"
+
+    # Legacy Aliases
+    ADMIN = "ADMIN"
+    OPS = "OPS"
     PM = "PM"
     LEADER = "LEADER"
+    HR = "HR"
     MEMBER = "MEMBER"
     FINANCE = "FINANCE"
-    HR = "HR"
     ASSET = "ASSET"
-    OPS = "OPS"
-    ADMIN = "ADMIN"
 
 
 # Label di token untuk akun tanpa baris user_role — karyawan biasa.
@@ -73,18 +82,36 @@ BASE_PERMISSIONS: frozenset[Permission] = frozenset({P.VIEW_USERS, P.VIEW_DOCUME
 
 # Admin memiliki kuasa penuh atas seluruh perizinan sistem.
 _ROLE_EXTRA: dict[RoleCode, frozenset[Permission]] = {
+    RoleCode.SUPER_ADMIN: frozenset(Permission),
     RoleCode.ADMIN: frozenset(Permission),
-    RoleCode.PM: frozenset({P.CREATE_PLAN, P.PUBLISH_PLAN, P.VIEW_TIMELINE, P.REVIEW_ATTENDANCE, P.MANAGE_SITES}),
-    RoleCode.HR: frozenset({P.MANAGE_USERS, P.VERIFY_DOCUMENTS, P.MANAGE_EMPLOYEE_DOCUMENTS}),
-    RoleCode.FINANCE: frozenset({P.VIEW_ALL_ATTENDANCE, P.REVIEW_ATTENDANCE, P.EXPORT_ATTENDANCE,
-                                 P.REVIEW_OVERTIME, P.MANAGE_SITES}),
+    RoleCode.OPERATIONAL_MANAGER: frozenset({
+        P.CREATE_PLAN, P.PUBLISH_PLAN, P.REVIEW_OVERTIME, P.VIEW_ALL_ATTENDANCE,
+        P.REVIEW_ATTENDANCE, P.VIEW_TIMELINE, P.VIEW_AUDIT
+    }),
+    RoleCode.OPS: frozenset({
+        P.CREATE_PLAN, P.PUBLISH_PLAN, P.REVIEW_OVERTIME, P.VIEW_ALL_ATTENDANCE,
+        P.REVIEW_ATTENDANCE, P.VIEW_TIMELINE, P.VIEW_AUDIT
+    }),
+    RoleCode.PROJECT_MANAGER: frozenset({
+        P.CREATE_PLAN, P.PUBLISH_PLAN, P.VIEW_TIMELINE, P.REVIEW_ATTENDANCE, P.MANAGE_SITES
+    }),
+    RoleCode.PM: frozenset({
+        P.CREATE_PLAN, P.PUBLISH_PLAN, P.VIEW_TIMELINE, P.REVIEW_ATTENDANCE, P.MANAGE_SITES
+    }),
+    RoleCode.ADMIN_HR_GA: frozenset({
+        P.MANAGE_USERS, P.VERIFY_DOCUMENTS, P.MANAGE_EMPLOYEE_DOCUMENTS, P.MANAGE_ASSETS
+    }),
+    RoleCode.HR: frozenset({
+        P.MANAGE_USERS, P.VERIFY_DOCUMENTS, P.MANAGE_EMPLOYEE_DOCUMENTS
+    }),
+    RoleCode.FINANCE: frozenset({
+        P.VIEW_ALL_ATTENDANCE, P.REVIEW_ATTENDANCE, P.EXPORT_ATTENDANCE,
+        P.REVIEW_OVERTIME, P.MANAGE_SITES
+    }),
     RoleCode.ASSET: frozenset({P.MANAGE_ASSETS}),
-    # OPS memegang kewenangan PM lintas unit (domain.js permissions.OPS; dok 10 Bagian C, V-07).
-    # PROMOTE/OFFBOARD prototipe belum dipetakan: MANAGE_USERS juga mencakup ubah data karyawan (HR saja).
-    # R-33: OPS melihat semua absensi (baca saja) dan hanya meninjau absensi Finance.
-    RoleCode.OPS: frozenset({P.CREATE_PLAN, P.PUBLISH_PLAN, P.REVIEW_OVERTIME, P.VIEW_ALL_ATTENDANCE,
-                             P.REVIEW_ATTENDANCE, P.VIEW_TIMELINE, P.VIEW_AUDIT}),
+    RoleCode.TEAM_LEADER: frozenset(),
     RoleCode.LEADER: frozenset(),
+    RoleCode.EMPLOYEE: frozenset(),
     RoleCode.MEMBER: frozenset(),
 }
 

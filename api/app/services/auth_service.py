@@ -142,11 +142,11 @@ class AuthService:
         # maupun yang tertaut ke data karyawan (jenis absennya tidak membatasi login). Akun tanpa karyawan (mode None)
         # juga boleh keduanya. Kredensial sudah benar, jadi penolakan tidak dihitung sebagai gagal login.
         mode = await self.users.get_attendance_mode(user.id)
-        if (user.role or "") != "ADMIN":
-            if platform == "mobile" and mode not in ("FIELD", None):
+        if (user.role or "") not in ("ADMIN", "SUPER_ADMIN"):
+            if platform == "mobile" and mode not in ("FIELD", "BOTH", None):
                 raise AppError("NOT_FIELD_STAFF", "Akun Anda tidak termasuk kategori staf lapangan. "
                                "Silakan masuk lewat web.", status=403)
-            if platform != "mobile" and mode == "FIELD":
+            if platform != "mobile" and mode not in ("OFFICE", "BOTH", None):
                 raise AppError("NOT_OFFICE_ACCOUNT", "Akun Anda bukan kategori akun kantor. "
                                "Silakan gunakan aplikasi HP Visiontech.", status=403)
 

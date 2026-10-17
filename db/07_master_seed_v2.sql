@@ -26,14 +26,14 @@ ON CONFLICT (employee_id) DO NOTHING;
 
 -- 3. Seed users (8 Akun Login terpisah dari tabel employee - Konfirmasi 1B)
 INSERT INTO users (user_id, employee_id, username, email, password_hash, system_role, is_active) VALUES
-('29999999-0000-4000-a000-000000000001', '22222222-0000-4000-a000-000000000001', 'superadmin', 'admin@visiontech.co.id', '$2b$12$KIX/xSampleBcryptHashForPassword12345678901234567890', 'SUPER_ADMIN', TRUE),
-('29999999-0000-4000-a000-000000000002', '22222222-0000-4000-a000-000000000002', 'om_randi', 'randi.om@visiontech.co.id', '$2b$12$KIX/xSampleBcryptHashForPassword12345678901234567890', 'OPERATIONAL_MANAGER', TRUE),
-('29999999-0000-4000-a000-000000000003', '22222222-0000-4000-a000-000000000003', 'pm_hendrik', 'hendrik.pm@visiontech.co.id', '$2b$12$KIX/xSampleBcryptHashForPassword12345678901234567890', 'PROJECT_MANAGER', TRUE),
-('29999999-0000-4000-a000-000000000004', '22222222-0000-4000-a000-000000000004', 'pm_dian', 'dian.pm@visiontech.co.id', '$2b$12$KIX/xSampleBcryptHashForPassword12345678901234567890', 'PROJECT_MANAGER', TRUE),
-('29999999-0000-4000-a000-000000000005', '22222222-0000-4000-a000-000000000005', 'hr_siti', 'siti.hr@visiontech.co.id', '$2b$12$KIX/xSampleBcryptHashForPassword12345678901234567890', 'ADMIN_HR_GA', TRUE),
-('29999999-0000-4000-a000-000000000006', '22222222-0000-4000-a000-000000000006', 'tl_agus', 'agus.tl@visiontech.co.id', '$2b$12$KIX/xSampleBcryptHashForPassword12345678901234567890', 'TEAM_LEADER', TRUE),
-('29999999-0000-4000-a000-000000000007', '22222222-0000-4000-a000-000000000007', 'tech_riko', 'riko.tech@visiontech.co.id', '$2b$12$KIX/xSampleBcryptHashForPassword12345678901234567890', 'EMPLOYEE', TRUE),
-('29999999-0000-4000-a000-000000000008', '22222222-0000-4000-a000-000000000008', 'tech_doni', 'doni.tech@visiontech.co.id', '$2b$12$KIX/xSampleBcryptHashForPassword12345678901234567890', 'EMPLOYEE', TRUE)
+('29999999-0000-4000-a000-000000000001', '22222222-0000-4000-a000-000000000001', 'superadmin', 'admin@visiontech.co.id', '$argon2id$v=19$m=65536,t=3,p=4$ldNRoAZ1ZP85rMv/CvKC4w$0kNdrnB4fAtMMoGZYxxfJBape7gJskOsyMI2X9ZOwFY', 'SUPER_ADMIN', TRUE),
+('29999999-0000-4000-a000-000000000002', '22222222-0000-4000-a000-000000000002', 'om_randi', 'randi.om@visiontech.co.id', '$argon2id$v=19$m=65536,t=3,p=4$ldNRoAZ1ZP85rMv/CvKC4w$0kNdrnB4fAtMMoGZYxxfJBape7gJskOsyMI2X9ZOwFY', 'OPERATIONAL_MANAGER', TRUE),
+('29999999-0000-4000-a000-000000000003', '22222222-0000-4000-a000-000000000003', 'pm_hendrik', 'hendrik.pm@visiontech.co.id', '$argon2id$v=19$m=65536,t=3,p=4$ldNRoAZ1ZP85rMv/CvKC4w$0kNdrnB4fAtMMoGZYxxfJBape7gJskOsyMI2X9ZOwFY', 'PROJECT_MANAGER', TRUE),
+('29999999-0000-4000-a000-000000000004', '22222222-0000-4000-a000-000000000004', 'pm_dian', 'dian.pm@visiontech.co.id', '$argon2id$v=19$m=65536,t=3,p=4$ldNRoAZ1ZP85rMv/CvKC4w$0kNdrnB4fAtMMoGZYxxfJBape7gJskOsyMI2X9ZOwFY', 'PROJECT_MANAGER', TRUE),
+('29999999-0000-4000-a000-000000000005', '22222222-0000-4000-a000-000000000005', 'hr_siti', 'siti.hr@visiontech.co.id', '$argon2id$v=19$m=65536,t=3,p=4$ldNRoAZ1ZP85rMv/CvKC4w$0kNdrnB4fAtMMoGZYxxfJBape7gJskOsyMI2X9ZOwFY', 'ADMIN_HR_GA', TRUE),
+('29999999-0000-4000-a000-000000000006', '22222222-0000-4000-a000-000000000006', 'tl_agus', 'agus.tl@visiontech.co.id', '$argon2id$v=19$m=65536,t=3,p=4$ldNRoAZ1ZP85rMv/CvKC4w$0kNdrnB4fAtMMoGZYxxfJBape7gJskOsyMI2X9ZOwFY', 'TEAM_LEADER', TRUE),
+('29999999-0000-4000-a000-000000000007', '22222222-0000-4000-a000-000000000007', 'tech_riko', 'riko.tech@visiontech.co.id', '$argon2id$v=19$m=65536,t=3,p=4$ldNRoAZ1ZP85rMv/CvKC4w$0kNdrnB4fAtMMoGZYxxfJBape7gJskOsyMI2X9ZOwFY', 'EMPLOYEE', TRUE),
+('29999999-0000-4000-a000-000000000008', '22222222-0000-4000-a000-000000000008', 'tech_doni', 'doni.tech@visiontech.co.id', '$argon2id$v=19$m=65536,t=3,p=4$ldNRoAZ1ZP85rMv/CvKC4w$0kNdrnB4fAtMMoGZYxxfJBape7gJskOsyMI2X9ZOwFY', 'EMPLOYEE', TRUE)
 ON CONFLICT (user_id) DO NOTHING;
 
 -- 4. Seed user_sessions (4 Sesi Aktif di Web React & Android Flutter)

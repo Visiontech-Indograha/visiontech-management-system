@@ -31,3 +31,8 @@ class AuditController:
     ) -> AuditEventListResponse:
         """Mengambil daftar kejadian audit organisasi pengguna dengan paginasi dan filter entitas."""
         return await self.service.list_events(current_user.organization_id, page, size, entity_type)
+
+    async def handle_list_backups(self) -> list[dict[str, Any]]:
+        """Mengambil daftar berkas arsip backup sistem dari system_backup_registry."""
+        return await self.service.list_backups()
+

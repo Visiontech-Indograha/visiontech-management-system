@@ -9,6 +9,13 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased] — `development`
 
+- **Milestone 9: Audit Logs, Monthly Partition & System Backup (`api/app/crud/crud_audit.py`, `api/app/services/audit_service.py`, `api/app/modules/audit/controllers/audit_controller.py`, `api/app/modules/audit/routes/audit_route.py`, `web/src/pages/audit/AuditLogPage.tsx`):**
+  - Mengadaptasi `CRUDAudit` (`count`, `list_page`) ke skema master terpartisi bulanan `public.app_activity_logs` dengan pemetaan JOIN ke tabel `public.users` dan `public.employee` untuk resolusi nama lengkap dan peran sistem aktor.
+  - Mendukung penelusuran audit dengan saringan entitas, rentang tanggal, paginasi stabil, dan parsing cerdas perubahan data JSON (`payload_diff` / `changes`).
+  - Menambahkan dukungan manajemen arsip cadangan sistem melalui `list_backups()` membaca tabel `public.system_backup_registry` lengkap dengan tipe cadangan, hash SHA-256, ukuran berkas, dan status keberhasilan.
+  - Menambahkan endpoint `GET /api/v1/audit-events/backups` pada router audit.
+  - Memverifikasi kelulusan pembacaan 6 log aktivitas riil lintas partisi dan 2 snapshot arsip cadangan sistem via kueri backend serta kelulusan build frontend (`npm.cmd run build`).
+
 - **Milestone 8: Daily Reports, HSE, Work Completion & Template Export (`api/app/crud/crud_plan_transition.py`, `api/app/crud/crud_weekly_report.py`, `api/app/crud/crud_member_report.py`, `api/app/crud/crud_asset_reservation.py`, `api/app/modules/work_plans/routes/work_plan_reports_route.py`, `web/src/pages/work-plans/`):**
   - Mengadaptasi `CRUDPlanTransition` untuk penyerahan (`submit_final_report`), peninjauan (`review_final_report`), serta pembacaan laporan akhir (`final_report`) langsung dari tabel `public.work_completion` terintegrasi dengan tanda tangan digital TL & PM dan foto realisasi JSON.
   - Mengadaptasi `CRUDWeeklyReport` (`list_weeks`, `get_week`, `save`, `submit`, `review`) ke skema V2 membaca kemajuan dari `work_plan_weekly`, item pekerjaan `work_plan_item`, dan rekapitulasi `work_completion`.

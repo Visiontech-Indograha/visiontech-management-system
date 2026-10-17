@@ -12,7 +12,6 @@ import sys
 from sqlalchemy import text
 
 from app.core.config import settings
-from app.core.permissions import RoleCode
 from app.core.security import hash_password
 from app.db.session import make_engine
 

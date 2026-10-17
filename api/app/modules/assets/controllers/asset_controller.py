@@ -12,7 +12,6 @@ from uuid import UUID
 from fastapi import Depends, HTTPException, Response
 from fastapi.concurrency import run_in_threadpool
 
-import app.api.v1.endpoints.assets as legacy_assets_endpoint
 from app.api.deps import get_asset_reservation_service
 from app.core.security import CurrentUser
 from app.modules.assets.schemas.asset_schema import (
@@ -77,8 +76,7 @@ class AssetController:
     async def handle_bast_pdf(self, current_user: CurrentUser, return_id: UUID) -> Response:
         """Menghasilkan file PDF Berita Acara Serah Terima (BAST) pengembalian aset."""
         record = await self.service.bast(current_user.organization_id, return_id)
-        pdf_func = getattr(legacy_assets_endpoint, "html_to_pdf", html_to_pdf)
-        pdf = await run_in_threadpool(pdf_func, render_bast_html(record))
+        pdf = await run_in_threadpool(html_to_pdf, render_bast_html(record))
         filename = f"BAST-{record.asset_code}-{record.plan_number}.pdf".replace("/", "-")
         return Response(
             pdf,

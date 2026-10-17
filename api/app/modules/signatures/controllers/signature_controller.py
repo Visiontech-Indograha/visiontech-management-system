@@ -16,7 +16,6 @@ from fastapi import Depends
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import HTMLResponse, Response
 
-import app.api.v1.endpoints.signatures as legacy_signatures_endpoint
 from app.api.deps import get_public_signature_service, get_signature_service
 from app.core.errors import AppError
 from app.core.security import CurrentUser
@@ -58,8 +57,7 @@ class SignatureController:
         """Menghasilkan file PDF dokumen bertanda tangan dengan QR verifikasi."""
         document, signatures = await self.signature_service.document_with_qr(current_user, document_id)
         html = render_plan_document_html(document, signatures)
-        pdf_func = getattr(legacy_signatures_endpoint, "html_to_pdf", html_to_pdf)
-        pdf = await run_in_threadpool(pdf_func, html)
+        pdf = await run_in_threadpool(html_to_pdf, html)
         filename = f"{document.number}-v{document.version}.pdf".replace("/", "-")
         return Response(
             pdf,
@@ -93,9 +91,9 @@ class PublicSignatureController:
 
     async def handle_verify(self, token: str, client_ip: str) -> VerifyOut:
         """Verifikasi keabsahan tanda tangan secara publik dari hasil pindai QR."""
-        limit = getattr(legacy_signatures_endpoint, "VERIFY_LIMIT", 30)
-        window = getattr(legacy_signatures_endpoint, "VERIFY_WINDOW", 60.0)
-        hits_dict = getattr(legacy_signatures_endpoint, "_verify_hits", _verify_hits)
+        limit = 30
+        window = 60.0
+        hits_dict = _verify_hits
 
         now, hits = time.monotonic(), hits_dict[client_ip]
         while hits and now - hits[0] > window:

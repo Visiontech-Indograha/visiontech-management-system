@@ -14,7 +14,6 @@ from fastapi import Depends, Response
 from fastapi.concurrency import run_in_threadpool
 from sqlalchemy.ext.asyncio import AsyncSession
 
-import app.api.v1.endpoints.work_plan_transitions as legacy_transitions_endpoint
 from app.api.deps import (
     get_db_with_user,
     get_plan_transition_service,
@@ -69,8 +68,7 @@ class WorkPlanTransitionsController:
     ) -> Response:
         """Mengunduh berkas biner PDF laporan akhir ber-QR code."""
         plan, signatures = await self.signature_service.final_report_with_qr(access.user, plan_id)
-        pdf_func = getattr(legacy_transitions_endpoint, "html_to_pdf", html_to_pdf)
-        pdf = await run_in_threadpool(pdf_func, render_final_report_html(plan, signatures))
+        pdf = await run_in_threadpool(html_to_pdf, render_final_report_html(plan, signatures))
         filename = f"{plan.number}-laporan-akhir.pdf".replace("/", "-")
         return Response(
             pdf,

@@ -17,3 +17,8 @@ export const OvertimeRecapPage = lazy(() => import("@/pages/monitoring/OvertimeR
 export const TimelinePage = lazy(() => import("@/pages/monitoring/TimelinePage").then((m) => ({ default: m.TimelinePage })));
 export const AccountPage = lazy(() => import("@/pages/account/AccountPage").then((m) => ({ default: m.AccountPage })));
 export const PresentationPage = lazy(() => import("@/pages/work-plans/PresentationPage").then((m) => ({ default: m.PresentationPage })));
+
+// Halaman Baru Master Schema V2
+export const TeamsPage = lazy(() => import("@/pages/teams/TeamsPage").then((m) => ({ default: m.TeamsPage })));
+export const MessPage = lazy(() => import("@/pages/mess/MessPage").then((m) => ({ default: m.MessPage })));
+export const OffboardingPage = lazy(() => import("@/pages/offboarding/OffboardingPage").then((m) => ({ default: m.OffboardingPage })));

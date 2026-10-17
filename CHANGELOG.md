@@ -9,6 +9,14 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased] — `development`
 
+- **Pembersihan Hutang Teknis Legacy & Integrasi Master Schema V2 (`api/app/`, `web/src/`):**
+  - Menghapus 28 file legacy endpoint di `api/app/api/v1/endpoints/` dan membersihkan monkeypatching `getattr(legacy_endpoint, ...)`.
+  - Mengembangkan modul backend baru berbasis Master Schema V2: `teams`, `mess`, `offboarding`, `image_requirements`, dan `system_backup` lengkap dengan routes, controllers, services, repositories, dan schemas.
+  - Memutakhirkan manajemen peran (`core/permissions.py`) menyelaraskan 6 peran sistem Master V2 (`SUPER_ADMIN`, `OPERATIONAL_MANAGER`, `PROJECT_MANAGER`, `TEAM_LEADER`, `ADMIN_HR_GA`, `EMPLOYEE`) dengan tetap menjaga kompatibilitas `RoleCode`.
+  - Mengembangkan antarmuka Web frontend baru dengan standar Atomic Design ketat (`docs/33 §2`): modul Tim Kerja (`/teams`), Hunian Mess Proyek (`/mess`), dan Offboarding Karyawan (`/offboarding`).
+  - Mengimplementasikan Just-In-Time (JIT) provisioning akun login dari `vms.app_user` ke `public.users` pada `crud_user.py` untuk menjamin integritas relasional sesi.
+  - Memverifikasi kelulusan 100% pengujian: backend `pytest` core suite (61 lulus), `ruff check app tests` (0 error), `mypy app\modules` (0 error), serta frontend `npm run typecheck`, `npm run lint`, dan `npm run build` (exit code 0).
+
 - **Audit Komprehensif & Perbaikan Menyeluruh VMS Master Schema V2 (`api/app/crud/`, `api/app/schemas/`, `api/app/database/`, `web/openapi.json`):**
   - Mengadaptasi dan menyelaraskan seluruh kueri database pada 20 modul CRUD backend (`crud_user`, `crud_employee`, `crud_unit`, `crud_site`, `crud_plan_draft`, `crud_plan_access`, `crud_plan_day`, `crud_plan_location`, `crud_plan_member`, `crud_plan_transition`, `crud_work_type`, `crud_monitoring`, `crud_hse`, `crud_signature`, `crud_attendance_offline`, `crud_face`, `crud_sync`, `crud_audit`, `crud_overtime`, `crud_notification`) ke Master Schema V2, mencapai 20/20 lulus uji eksekusi riil terhadap PostgreSQL (0 galat).
   - Memperbaiki kueri `CRUDPlanDay` dan `CRUDPlanEdit` agar menggunakan kolom aktual V2 (`title`, `completed_qty`, `target_qty`, `site_name`, join `work_completion`).

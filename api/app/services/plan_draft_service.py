@@ -140,6 +140,7 @@ class PlanDraftService:
             "members": await self.repo.field_staff(user.organization_id, unit, plan_id),
             "tools": [a for a in assets if a.kind == "TOOL"],
             "vehicles": [a for a in assets if a.kind == "VEHICLE"],
+            "work_types": await self.repo.work_types(None if self._oversees(user) else unit),
         }
 
     async def driver_options(

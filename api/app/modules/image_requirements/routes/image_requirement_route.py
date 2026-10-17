@@ -8,7 +8,8 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, require_permission
+from app.core.permissions import Permission
 from app.core.security import CurrentUser
 from app.modules.image_requirements.controllers.image_requirement_controller import ImageRequirementController
 from app.modules.image_requirements.schemas.image_requirement_schema import (
@@ -18,6 +19,7 @@ from app.modules.image_requirements.schemas.image_requirement_schema import (
 )
 
 router = APIRouter(prefix="/image-requirements", tags=["Image Requirements"])
+_MANAGE = Depends(require_permission(Permission.MANAGE_IMAGE_REQUIREMENTS))
 
 
 @router.get("/by-work-type/{work_type_id}", response_model=list[ImageRequirementOut])
@@ -43,7 +45,7 @@ async def get_by_id(
 @router.post("", response_model=ImageRequirementOut, status_code=201)
 async def create_requirement(
     data: ImageRequirementCreate,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = _MANAGE,
     controller: ImageRequirementController = Depends(),
 ) -> ImageRequirementOut:
     """Menambahkan persyaratan foto wajib dokumentasi lapangan."""
@@ -54,7 +56,7 @@ async def create_requirement(
 async def update_requirement(
     requirement_id: UUID,
     data: ImageRequirementUpdate,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = _MANAGE,
     controller: ImageRequirementController = Depends(),
 ) -> ImageRequirementOut:
     """Memperbarui informasi persyaratan foto."""
@@ -64,7 +66,7 @@ async def update_requirement(
 @router.delete("/{requirement_id}")
 async def delete_requirement(
     requirement_id: UUID,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = _MANAGE,
     controller: ImageRequirementController = Depends(),
 ) -> dict[str, str]:
     """Menghapus persyaratan foto dokumentasi."""

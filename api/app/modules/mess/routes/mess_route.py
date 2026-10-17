@@ -8,7 +8,8 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
 
-from app.api.deps import get_current_user
+from app.api.deps import require_permission
+from app.core.permissions import Permission
 from app.core.security import CurrentUser
 from app.modules.mess.controllers.mess_controller import MessController
 from app.modules.mess.schemas.mess_schema import (
@@ -18,13 +19,15 @@ from app.modules.mess.schemas.mess_schema import (
 )
 
 router = APIRouter(prefix="/mess", tags=["Mess"])
+_VIEW = Depends(require_permission(Permission.VIEW_MESS))
+_MANAGE = Depends(require_permission(Permission.MANAGE_MESS))
 
 
 @router.get("", response_model=list[MessStayOut])
 async def list_stays(
     employee_id: UUID | None = Query(None, description="Filter berdasarkan ID karyawan"),
     weekly_plan_id: UUID | None = Query(None, description="Filter berdasarkan ID rencana mingguan"),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = _VIEW,
     controller: MessController = Depends(),
 ) -> list[MessStayOut]:
     """Mengambil daftar riwayat dan jadwal hunian mess karyawan."""
@@ -34,7 +37,7 @@ async def list_stays(
 @router.get("/{mess_stay_id}", response_model=MessStayOut)
 async def get_stay(
     mess_stay_id: UUID,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = _VIEW,
     controller: MessController = Depends(),
 ) -> MessStayOut:
     """Mengambil detail hunian mess karyawan."""
@@ -44,7 +47,7 @@ async def get_stay(
 @router.post("", response_model=MessStayOut, status_code=201)
 async def create_stay(
     data: MessStayCreate,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = _MANAGE,
     controller: MessController = Depends(),
 ) -> MessStayOut:
     """Mencatat hunian mess karyawan baru."""
@@ -55,7 +58,7 @@ async def create_stay(
 async def update_stay(
     mess_stay_id: UUID,
     data: MessStayUpdate,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = _MANAGE,
     controller: MessController = Depends(),
 ) -> MessStayOut:
     """Memperbarui informasi hunian mess karyawan."""
@@ -65,7 +68,7 @@ async def update_stay(
 @router.delete("/{mess_stay_id}")
 async def delete_stay(
     mess_stay_id: UUID,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = _MANAGE,
     controller: MessController = Depends(),
 ) -> dict[str, str]:
     """Menghapus data hunian mess karyawan."""

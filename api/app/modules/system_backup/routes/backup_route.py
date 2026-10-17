@@ -8,7 +8,8 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
 
-from app.api.deps import get_current_user
+from app.api.deps import require_permission
+from app.core.permissions import Permission
 from app.core.security import CurrentUser
 from app.modules.system_backup.controllers.backup_controller import BackupController
 from app.modules.system_backup.schemas.backup_schema import BackupCreate, BackupOut
@@ -19,7 +20,7 @@ router = APIRouter(prefix="/backup-registry", tags=["Backup Registry"])
 @router.get("", response_model=list[BackupOut])
 async def list_backups(
     limit: int = Query(50, ge=1, le=200),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(require_permission(Permission.MANAGE_BACKUPS)),
     controller: BackupController = Depends(),
 ) -> list[BackupOut]:
     """Mengambil riwayat pencatatan backup basis data sistem."""
@@ -29,7 +30,7 @@ async def list_backups(
 @router.get("/{backup_id}", response_model=BackupOut)
 async def get_by_id(
     backup_id: UUID,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(require_permission(Permission.MANAGE_BACKUPS)),
     controller: BackupController = Depends(),
 ) -> BackupOut:
     """Mengambil detail rekaman backup sistem."""
@@ -39,7 +40,7 @@ async def get_by_id(
 @router.post("", response_model=BackupOut, status_code=201)
 async def record_backup(
     data: BackupCreate,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(require_permission(Permission.MANAGE_BACKUPS)),
     controller: BackupController = Depends(),
 ) -> BackupOut:
     """Mencatat rekaman eksekusi backup berkala baru."""

@@ -9,6 +9,14 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased] — `development`
 
+- **Pembaruan Skema Work Type per Divisi & Penegakan RBAC Master Schema V2 (`db/`, `api/app/`):**
+  - Menambahkan kolom `division_id UUID NOT NULL REFERENCES division(division_id)` pada tabel `work_type` di DDL `db/06_master_schema_v2.sql` dan data seed `db/07_master_seed_v2.sql`, serta melakukan migrasi langsung pada basis data `test_migration` dan `vms_test`.
+  - Menambahkan indeks unik majemuk `uq_work_type_division_name (division_id, lower(name)) WHERE delete_at IS NULL` yang mengizinkan jenis pekerjaan bernama sama di divisi berbeda sekaligus mencegah duplikasi dalam divisi yang sama.
+  - Memperbarui `CRUDWorkType`, `WorkTypeService`, dan `work_type_route.py` untuk mengisolasi akses PM ke divisi miliknya secara otomatis dan membatasi aksi mutasi work type hanya dalam cakupan divisinya.
+  - Memperbarui `CRUDPlanDraft` dan `CRUDPlanEdit` agar opsi `work_types` pada form draf rencana kerja dan penugasan item kerja otomatis merujuk ke jenis pekerjaan sesuai divisi rencana kerja.
+  - Memperketat otorisasi hak akses (RBAC) pada rute modul Master Schema V2 baru (`/teams`, `/mess`, `/offboarding`, `/image-requirements`, `/backup-registry`).
+  - Memverifikasi kelulusan 100% pengujian: `test_work_types_and_rbac.py` (lulus uji multi-divisi & RBAC), `test_all_endpoints.py` (39/39 endpoint lulus HTTP 200 OK), `ruff check app` (0 error), `mypy app/modules` (0 error), serta frontend `tsc -b --noEmit` dan `eslint` (0 warning/error).
+
 - **Pembersihan Hutang Teknis Legacy & Integrasi Master Schema V2 (`api/app/`, `web/src/`):**
   - Menghapus 28 file legacy endpoint di `api/app/api/v1/endpoints/` dan membersihkan monkeypatching `getattr(legacy_endpoint, ...)`.
   - Mengembangkan modul backend baru berbasis Master Schema V2: `teams`, `mess`, `offboarding`, `image_requirements`, dan `system_backup` lengkap dengan routes, controllers, services, repositories, dan schemas.

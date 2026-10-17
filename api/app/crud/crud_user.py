@@ -131,27 +131,7 @@ class CRUDUser(CRUDBase):
         Mengambil status aktif akun dan peran dalam bentuk list (array).
         Digunakan di setiap request untuk authorisasi token.
         """
-        try:
-            legacy = await self.fetchone(
-                """
-                SELECT
-                    u.id,
-                    u.login,
-                    u.login AS email,
-                    u.is_active,
-                    u.organization_id,
-                    ARRAY(SELECT r.role::text FROM vms.user_role r WHERE r.user_id = u.id) AS roles
-                FROM vms.app_user u
-                WHERE u.id = :id
-                """,
-                {"id": user_id},
-            )
-            if legacy is not None:
-                return legacy
-        except SQLAlchemyError:
-            pass
-
-        return await self.fetchone(
+        identity = await self.fetchone(
             """
             SELECT
                 u.user_id AS id,
@@ -166,6 +146,26 @@ class CRUDUser(CRUDBase):
             """,
             {"id": user_id},
         )
+        if identity is not None:
+            return identity
+
+        try:
+            return await self.fetchone(
+                """
+                SELECT
+                    u.id,
+                    u.login,
+                    u.login AS email,
+                    u.is_active,
+                    u.organization_id,
+                    ARRAY(SELECT r.role::text FROM vms.user_role r WHERE r.user_id = u.id) AS roles
+                FROM vms.app_user u
+                WHERE u.id = :id
+                """,
+                {"id": user_id},
+            )
+        except SQLAlchemyError:
+            return None
 
     async def update_password_hash(self, user_id: UUID | str, password_hash: str) -> None:
         """
@@ -180,19 +180,19 @@ class CRUDUser(CRUDBase):
         """
         Mendapatkan ID Karyawan (employee_id) yang tertaut ke akun pengguna ini.
         """
-        try:
-            emp = await self.scalar(
-                "SELECT employee_id FROM vms.app_user WHERE id = :uid",
-                {"uid": user_id},
-            )
-            if emp is not None:
-                return emp
-        except SQLAlchemyError:
-            pass
-        return await self.scalar(
+        emp = await self.scalar(
             "SELECT employee_id FROM users WHERE user_id = :uid AND delete_at IS NULL",
             {"uid": user_id},
         )
+        if emp is not None:
+            return emp
+        try:
+            return await self.scalar(
+                "SELECT employee_id FROM vms.app_user WHERE id = :uid",
+                {"uid": user_id},
+            )
+        except SQLAlchemyError:
+            return None
 
     async def get_attendance_mode(self, user_id: UUID | str) -> str | None:
         """
@@ -200,27 +200,26 @@ class CRUDUser(CRUDBase):
         - SUPER_ADMIN, OPERATIONAL_MANAGER, ADMIN_HR_GA: OFFICE
         - PROJECT_MANAGER, TEAM_LEADER, EMPLOYEE: BOTH (dapat di mobile/web)
         """
-        try:
-            mode = await self.scalar(
-                "SELECT e.attendance_mode FROM vms.app_user u "
-                "JOIN vms.employee e ON e.id = u.employee_id WHERE u.id = :uid",
-                {"uid": user_id},
-            )
-            if mode is not None:
-                return mode
-        except SQLAlchemyError:
-            pass
-
         role = await self.scalar(
             "SELECT system_role::text FROM users WHERE user_id = :uid AND delete_at IS NULL",
             {"uid": user_id},
         )
         if not role:
-            with contextlib.suppress(SQLAlchemyError):
+            try:
+                mode = await self.scalar(
+                    "SELECT e.attendance_mode FROM vms.app_user u "
+                    "JOIN vms.employee e ON e.id = u.employee_id WHERE u.id = :uid",
+                    {"uid": user_id},
+                )
+                if mode is not None:
+                    return mode
                 role = await self.scalar(
                     "SELECT role::text FROM vms.user_role WHERE user_id = :uid LIMIT 1",
                     {"uid": user_id},
                 )
+            except SQLAlchemyError:
+                return None
+
         if not role:
             return None
         if role in ("SUPER_ADMIN", "ADMIN", "OPERATIONAL_MANAGER", "ADMIN_HR_GA"):

@@ -149,7 +149,21 @@ class CRUDPlanEdit(CRUDBase):
 
     async def insert_task(self, day_id: UUID | str, title: str, sort_order: int) -> Any:
         """Item tugas baru pada hari kerja."""
-        wt_id = await self.scalar("SELECT work_type_id FROM work_type WHERE delete_at IS NULL LIMIT 1")
+        wt_id = await self.scalar(
+            """
+            SELECT wt.work_type_id
+            FROM work_type wt
+            JOIN work_plan_weekly wpw ON wpw.division_id = wt.division_id
+            WHERE wpw.weekly_plan_id = (
+                SELECT weekly_plan_id FROM work_plan_daily WHERE daily_plan_id = CAST(:day AS uuid)
+            )
+              AND wt.delete_at IS NULL
+            LIMIT 1
+            """,
+            {"day": str(day_id)},
+        )
+        if not wt_id:
+            wt_id = await self.scalar("SELECT work_type_id FROM work_type WHERE delete_at IS NULL LIMIT 1")
         row = await self.fetchone(
             """
             INSERT INTO work_plan_item (

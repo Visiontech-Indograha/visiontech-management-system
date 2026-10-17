@@ -8,7 +8,8 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
 
-from app.api.deps import get_current_user
+from app.api.deps import require_permission
+from app.core.permissions import Permission
 from app.core.security import CurrentUser
 from app.modules.offboarding.controllers.offboarding_controller import OffboardingController
 from app.modules.offboarding.schemas.offboarding_schema import (
@@ -20,12 +21,14 @@ from app.modules.offboarding.schemas.offboarding_schema import (
 )
 
 router = APIRouter(prefix="/offboarding", tags=["Offboarding"])
+_VIEW = Depends(require_permission(Permission.VIEW_OFFBOARDING))
+_MANAGE = Depends(require_permission(Permission.MANAGE_OFFBOARDING))
 
 
 @router.get("", response_model=list[OffboardingListItem])
 async def list_offboardings(
     status: str | None = Query(None, description="Filter status (active, in_process, offboarded)"),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = _VIEW,
     controller: OffboardingController = Depends(),
 ) -> list[OffboardingListItem]:
     """Mengambil daftar seluruh permohonan offboarding karyawan."""
@@ -35,7 +38,7 @@ async def list_offboardings(
 @router.get("/{offboarding_id}", response_model=OffboardingDetail)
 async def get_offboarding(
     offboarding_id: UUID,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = _VIEW,
     controller: OffboardingController = Depends(),
 ) -> OffboardingDetail:
     """Mengambil detail offboarding beserta checklist pengembalian asetnya."""
@@ -45,7 +48,7 @@ async def get_offboarding(
 @router.post("", response_model=OffboardingListItem, status_code=201)
 async def create_offboarding(
     data: OffboardingCreate,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = _MANAGE,
     controller: OffboardingController = Depends(),
 ) -> OffboardingListItem:
     """Mengajukan proses offboarding / pengunduran diri karyawan."""
@@ -56,7 +59,7 @@ async def create_offboarding(
 async def verify_clearance_item(
     clearance_item_id: UUID,
     data: ClearanceItemVerify,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = _MANAGE,
     controller: OffboardingController = Depends(),
 ) -> dict[str, str]:
     """Verifikasi dan checklist fisik pengembalian aset pinjaman."""
@@ -67,7 +70,7 @@ async def verify_clearance_item(
 async def approve_offboarding(
     offboarding_id: UUID,
     data: OffboardingApprove,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = _MANAGE,
     controller: OffboardingController = Depends(),
 ) -> OffboardingListItem:
     """Menyetujui proses offboarding oleh PM (operasional) atau HR (final clearance)."""

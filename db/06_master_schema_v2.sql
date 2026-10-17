@@ -261,15 +261,19 @@ CREATE TABLE IF NOT EXISTS vehicle_inspection (
     delete_at TIMESTAMPTZ NULL
 );
 
--- 14. Tabel work_type (CSV #1 Revisi - Konfirmasi 2B: Hapus FK tunggal image_requirements_id)
+-- 14. Tabel work_type (CSV #1 Revisi - Terikat Divisi & Multi SOP Foto)
 CREATE TABLE IF NOT EXISTS work_type (
     work_type_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    division_id UUID NOT NULL REFERENCES division(division_id),
     name VARCHAR(100) NOT NULL,
     description TEXT NULL,
     create_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     update_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     delete_at TIMESTAMPTZ NULL
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_work_type_division_name ON work_type (division_id, lower(name)) WHERE delete_at IS NULL;
+
 
 -- 15. Tabel image_requirement (CSV #5 Revisi - Konfirmasi 2A & 2B: 1 work_type punya banyak syarat foto SOP)
 CREATE TABLE IF NOT EXISTS image_requirement (
@@ -550,6 +554,7 @@ CREATE INDEX IF NOT EXISTS idx_work_plan_daily_weekly ON work_plan_daily (weekly
 CREATE INDEX IF NOT EXISTS idx_work_plan_item_daily ON work_plan_item (daily_plan_id) WHERE delete_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_work_plan_item_weekly ON work_plan_item (weekly_plan_id) WHERE delete_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_work_plan_item_work_type ON work_plan_item (work_type_id) WHERE delete_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_work_type_division ON work_type (division_id) WHERE delete_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_asset_assignment_tool ON asset_assignment (tool_id) WHERE delete_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_asset_assignment_vehicle ON asset_assignment (vehicle_id) WHERE delete_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_asset_assignment_employee ON asset_assignment (employee_id) WHERE delete_at IS NULL;

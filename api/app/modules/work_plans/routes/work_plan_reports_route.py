@@ -4,10 +4,12 @@ app/modules/work_plans/routes/work_plan_reports_route.py
 Rute endpoint HTTP untuk laporan harian berjenjang & dokumen laporan (/work-plans/{plan_id}).
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.1.
 """
+from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import HTMLResponse
+from sqlalchemy import text
 
 from app.api.deps import plan_access, plan_day_access
 from app.modules.work_plans.controllers.work_plan_reports_controller import (
@@ -84,6 +86,36 @@ async def weekly_report_html(
 ) -> HTMLResponse:
     """Mendapatkan dokumen laporan mingguan dalam format HTML (GET)."""
     return await controller.handle_weekly_report_html(access, week)
+
+
+@router.get("/exports")
+async def list_plan_exports(
+    plan_id: UUID,
+    access: PlanAccess = _VIEW,
+) -> list[dict[str, Any]]:
+    """Daftar ekspor template dokumen (DOCX, PPTX, PDF, XLSX) dari public.document_template_export."""
+    rows = await access.db.execute(
+        text(
+            """
+            SELECT 
+                dte.export_id,
+                dte.completion_id,
+                dte.template_type,
+                dte.master_template_path,
+                dte.export_format,
+                dte.file_output_url,
+                dte.generated_by_id,
+                dte.create_at
+            FROM public.document_template_export dte
+            JOIN public.work_completion wc ON wc.completion_id = dte.completion_id
+            WHERE (wc.weekly_plan_id = :plan OR wc.daily_plan_id = :plan OR dte.completion_id = :plan)
+              AND dte.delete_at IS NULL
+            ORDER BY dte.create_at DESC
+            """
+        ),
+        {"plan": plan_id},
+    )
+    return [dict(r._mapping) for r in rows]
 
 
 __all__ = ["router"]

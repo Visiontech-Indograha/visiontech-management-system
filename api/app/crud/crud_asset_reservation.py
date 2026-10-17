@@ -65,14 +65,48 @@ class CRUDAssetReservation(CRUDBase):
         return list(await self.fetchall(sql, {}))
 
     async def return_history(self, asset_id: UUID | str, org_id: UUID | str) -> list[Any] | None:
-        """Riwayat inspeksi/pengembalian aset."""
-        return []
+        """Riwayat inspeksi/pengembalian aset dari public.vehicle_inspection."""
+        return list(await self.fetchall(
+            """
+            SELECT 
+                vi.vehicle_inspection_id AS id,
+                vi.vehicle_id AS asset_id,
+                vi.inspector_employee_id AS inspector_id,
+                e.full_name AS inspector_name,
+                vi.type AS inspection_type,
+                vi.path_file AS file_url,
+                vi.create_at AS inspected_at
+            FROM public.vehicle_inspection vi
+            JOIN public.employee e ON e.employee_id = vi.inspector_employee_id
+            WHERE vi.vehicle_id = :aid AND vi.delete_at IS NULL
+            ORDER BY vi.create_at DESC
+            """,
+            {"aid": asset_id},
+        ))
 
     async def return_record(self, return_id: UUID | str, org_id: UUID | str) -> Any:
         return None
 
     async def plan_assets(self, plan_id: UUID | str) -> list[Any]:
-        return []
+        """Daftar aset yang dialokasikan untuk suatu rencana kerja / tim."""
+        return list(await self.fetchall(
+            """
+            SELECT 
+                aa.assignment_id AS id,
+                COALESCE(t.name, v.name) AS name,
+                COALESCE(t.tool_code, v.number_plate) AS code,
+                CASE WHEN t.tool_id IS NOT NULL THEN 'TOOL' ELSE 'VEHICLE' END AS kind,
+                v.vehicle_type::text AS vehicle_type,
+                e.full_name AS driver_name
+            FROM public.asset_assignment aa
+            LEFT JOIN public.tool t ON t.tool_id = aa.tool_id
+            LEFT JOIN public.vehicle v ON v.vehicle_id = aa.vehicle_id
+            LEFT JOIN public.employee e ON e.employee_id = aa.employee_id
+            WHERE aa.delete_at IS NULL
+            ORDER BY name ASC
+            """,
+            {"plan": plan_id},
+        ))
 
     async def insert_asset(
         self,

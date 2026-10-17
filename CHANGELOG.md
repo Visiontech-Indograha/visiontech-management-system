@@ -9,6 +9,14 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased] — `development`
 
+- **Milestone 5: Siklus Rencana Kerja Mingguan, Harian, & Penugasan Tim (`api/app/crud/crud_plan_access.py`, `api/app/crud/crud_plan_draft.py`, `api/app/crud/crud_plan_transition.py`, `web/src/pages/work-plans/`):**
+  - Mengadaptasi `CRUDPlanAccess` untuk memetakan visibilitas rencana kerja dari tabel `work_plan_weekly`, `work_plan_daily`, dan item pekerjaan `work_plan_item`.
+  - Mengadaptasi `CRUDPlanDraft` untuk menyediakan opsi formulir (`form_options`) meliputi staf lapangan aktif, perkakas siap pakai, kendaraan, dan lokasi kantor/proyek.
+  - Mengadaptasi `plan_detail` untuk membangun hierarki lengkap rencana kerja mingguan, hari kerja pelaksanaan, rincian penugasan target qty, tim teknisi, dan alokasi aset secara komprehensif.
+  - Menyesuaikan `start_due` dan transisi otomatis rencana kerja pada `CRUDPlanTransition` agar memperbarui status tabel `work_plan_weekly`.
+  - Memverifikasi endpoint `GET /api/v1/work-plans` (mengembalikan 2 SK mingguan aktif), `GET /api/v1/work-plans/form-options`, `GET /api/v1/work-plans/{id}`, dan `GET /api/v1/work-plans/{id}/detail` (200 OK).
+  - Memverifikasi kelulusan typecheck dan build test produksi pada Web frontend (halaman `WorkPlansPage`, `WorkPlanDetailPage`, `PlanEditorPage`).
+
 - **Milestone 4: Manajemen Tim, Anggota & Inventaris Aset Perkakas dan Kendaraan (`api/app/crud/crud_asset_reservation.py`, `web/src/pages/assets/`):**
   - Mengadaptasi `CRUDAssetReservation` untuk mengagregasikan inventaris perkakas kerja (`tool`) dan armada kendaraan (`vehicle`) dari Master Schema V2 via UNION query.
   - Menyesuaikan penambahan aset baru (`insert_asset`) agar menyimpan entitas perkakas ke tabel `tool` dan kendaraan operasional ke tabel `vehicle` sesuai enumerasi tipe.

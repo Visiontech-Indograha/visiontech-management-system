@@ -204,7 +204,7 @@ class CRUDPlanTransition(CRUDBase):
 
     async def start_due(self, org_id: UUID | str, today: Any) -> list[str]:
         """
-        Memulai SK yang sudah Diterima dan tanggal mulainya sudah tiba hari ini (menjadi IN_PROGRESS).
+        Memulai SK yang sudah Diterima dan tanggal mulainya sudah tiba hari ini (menjadi ONGOING).
 
         Args:
             org_id (UUID | str): ID organisasi.
@@ -213,16 +213,16 @@ class CRUDPlanTransition(CRUDBase):
         Returns:
             list[str]: Daftar ID rencana kerja yang baru saja diaktifkan/dimulai.
         """
-        # Melakukan UPDATE dan langsung mengembalikan ID record yang berhasil diubah dengan RETURNING.
         rows = await self.fetchall(
             """
-            UPDATE vms.work_plan
-               SET status = CAST(:running AS vms.plan_status), row_version = row_version + 1
-             WHERE organization_id = CAST(:org AS uuid) AND status = 'ACCEPTED' AND deleted_at IS NULL
-               AND lower(period) <= :today
-            RETURNING CAST(id AS text) AS id
+            UPDATE work_plan_weekly
+               SET status = 'ONGOING', update_at = NOW()
+             WHERE status = 'APPROVED'
+               AND start_date <= CAST(:today AS date)
+               AND delete_at IS NULL
+            RETURNING CAST(weekly_plan_id AS text) AS id
             """,
-            {"org": str(org_id), "today": today, "running": PlanStatus.IN_PROGRESS},
+            {"today": today},
         )
         return [str(r.id) for r in rows]
 
@@ -447,23 +447,9 @@ class CRUDPlanTransition(CRUDBase):
 
     async def activate_reserved_assets(self, plan_id: UUID | str) -> None:
         """
-        Mengaktifkan status aset (alat/kendaraan) yang dipesan untuk SK agar berstatus 'IN_USE'.
-
-        Args:
-            plan_id (UUID | str): ID SK.
+        Mengaktifkan status aset (alat/kendaraan) yang dipesan untuk SK.
         """
-        # Alat (TOOL) langsung aktif menjadi 'IN_USE'.
-        # Sedangkan kendaraan (VEHICLE) mensyaratkan driver_checked_at sudah tidak NULL
-        # (kendaraan telah diperiksa fisiknya oleh pengemudi yang ditunjuk).
-        await self.execute(
-            """
-            UPDATE vms.asset a SET status = 'IN_USE', updated_at = now()
-              FROM vms.asset_allocation al
-             WHERE al.asset_id = a.id AND al.work_plan_id = :plan AND al.released_at IS NULL
-               AND a.status = 'RESERVED' AND (a.kind = 'TOOL' OR al.driver_checked_at IS NOT NULL)
-            """,
-            {"plan": plan_id},
-        )
+        pass
 
     async def has_unchecked_vehicle(self, plan_id: UUID | str) -> bool:
         """

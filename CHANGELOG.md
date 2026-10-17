@@ -9,6 +9,12 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased] — `development`
 
+- **Milestone 4: Manajemen Tim, Anggota & Inventaris Aset Perkakas dan Kendaraan (`api/app/crud/crud_asset_reservation.py`, `web/src/pages/assets/`):**
+  - Mengadaptasi `CRUDAssetReservation` untuk mengagregasikan inventaris perkakas kerja (`tool`) dan armada kendaraan (`vehicle`) dari Master Schema V2 via UNION query.
+  - Menyesuaikan penambahan aset baru (`insert_asset`) agar menyimpan entitas perkakas ke tabel `tool` dan kendaraan operasional ke tabel `vehicle` sesuai enumerasi tipe.
+  - Memverifikasi endpoint daftar aset `GET /api/v1/assets` (mengembalikan 10 aset gabungan dari seed data V2) dan pembuatan aset baru `POST /api/v1/assets` (201 Created).
+  - Memverifikasi kelulusan typecheck dan build test produksi pada Web frontend (halaman `AssetsPage`).
+
 - **Milestone 3: Direktori Karyawan, Alamat, Berkas Dokumen & Siklus Offboarding (`api/app/crud/crud_employee.py`, `api/app/crud/crud_document.py`, `web/src/pages/directory/`):**
   - Mengadaptasi `CRUDEmployee` untuk mengelola data induk karyawan, riwayat penempatan divisi/kantor, alamat domisili (`address`), dan pemutusan hubungan kerja (`offboarding_status`).
   - Mengadaptasi `CRUDDocument` untuk mengelola berkas sertifikat dan surat izin karyawan langsung dari tabel `public.employee_file`.

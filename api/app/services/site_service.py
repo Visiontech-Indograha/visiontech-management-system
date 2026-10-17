@@ -53,11 +53,11 @@ class SiteService:
             # Staf kantor: lokasi kantor. Pekerja lapangan: lokasi unitnya + kantor pusat (tanpa SK tetap bisa absen).
             return await self.repo.list_visible(user.organization_id, all_sites=False, office=True,
                                                 unit_id=unit)
-        # ADMIN dan OPS dapat melihat semua lokasi
-        if "ADMIN" in user.roles or RoleCode.ADMIN in user.roles or "OPS" in user.roles:
+        # ADMIN, SUPER_ADMIN, OPERATIONAL_MANAGER, OPS, ADMIN_HR_GA dapat melihat semua lokasi kantor
+        if any(r in ("ADMIN", "SUPER_ADMIN", "OPERATIONAL_MANAGER", "OPS", "ADMIN_HR_GA") for r in user.roles):
             return await self.repo.list_visible(user.organization_id, all_sites=True, office=True, unit_id=None)
 
-        # PM melihat lokasi kantor + unitnya. Staf lapangan: lokasi unitnya + kantor (APK lama memakai daftar ini untuk absen).
+        # PM melihat lokasi kantor + unitnya. Staf lapangan: lokasi unitnya + kantor
         unit = viewer.pm_unit_id if viewer and viewer.pm_unit_id else (
             viewer.employee_unit_id if viewer and mode == "FIELD" else None)
         return await self.repo.list_visible(user.organization_id, all_sites=False,
@@ -67,14 +67,8 @@ class SiteService:
         """
         Memeriksa apakah pengguna memiliki hak untuk mengelola (membuat/menghapus) lokasi.
         Digunakan untuk penanda `can_manage` per lokasi.
-
-        Args:
-            user (CurrentUser): Pengguna.
-
-        Returns:
-            tuple[bool, UUID | None]: Status boolean dan ID unit yang dikelola (jika ada).
         """
-        if "ADMIN" in user.roles or RoleCode.ADMIN in user.roles:
+        if any(r in ("ADMIN", "SUPER_ADMIN", "OPERATIONAL_MANAGER", "ADMIN_HR_GA") for r in user.roles):
             return True, None
         try:
             return True, await self._managed_unit(user)
@@ -83,25 +77,18 @@ class SiteService:
 
     async def _managed_unit(self, user: CurrentUser) -> UUID | None:
         """
-        Menentukan unit yang boleh dikelola oleh pengguna: PM -> unitnya; Finance/Admin -> None (lokasi kantor/umum).
-
-        Args:
-            user (CurrentUser): Pengguna.
-
-        Returns:
-            UUID | None: ID unit.
+        Menentukan unit yang boleh dikelola oleh pengguna: PM -> unitnya; Admin/OM/HR -> None (kantor umum).
         """
-        if "ADMIN" in user.roles or RoleCode.ADMIN in user.roles:
+        if any(r in ("ADMIN", "SUPER_ADMIN", "OPERATIONAL_MANAGER", "ADMIN_HR_GA") for r in user.roles):
             return None
-        if "PM" in user.roles:
+        if "PM" in user.roles or "PROJECT_MANAGER" in user.roles:
             viewer = await self.repo.viewer(user.user_id)
             if viewer is None or viewer.pm_unit_id is None:
-                raise ForbiddenError("Akun PM ini belum memegang unit, sehingga belum dapat membuat lokasi.")
-            unit: UUID = viewer.pm_unit_id
-            return unit
+                return None
+            return viewer.pm_unit_id
         if "FINANCE" in user.roles:
             return None
-        raise ForbiddenError("Lokasi kerja hanya dapat dikelola PM (lokasi proyek), Finance (lokasi kantor), atau Admin.")
+        raise ForbiddenError("Lokasi kerja hanya dapat dikelola oleh Admin, Operational Manager, Project Manager, atau HR.")
 
     async def create_site(self, user: CurrentUser, *, name: str, address: str | None, radius_m: int,
                           lat: float, lng: float) -> Any:

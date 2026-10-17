@@ -1,7 +1,7 @@
 """
 app/crud/crud_site.py
-Lokasi kerja (R-33): `unit_id` NULL = lokasi kantor (Finance), terisi = lokasi proyek unit itu (PM).
-Kolom PostGIS tidak keluar mentah — selalu `lat`/`lng`.
+Master Kantor Pusat & Kantor Cabang dari tabel office (Master Schema V2).
+Koordinat disimpan langsung dalam latitude dan longitude numerik standar.
 """
 from __future__ import annotations
 
@@ -13,125 +13,132 @@ from .base import CRUDBase
 
 class CRUDSite(CRUDBase):
     """
-    CRUD untuk mengelola titik lokasi kerja (Site).
-    Membedakan lokasi kantor pusat/cabang (unit_id NULL) dan lokasi proyek (unit_id terisi).
+    CRUD untuk mengelola master lokasi kantor dan site operasional (tabel office).
     """
 
     async def viewer(self, user_id: UUID | str) -> Any:
         """
-        Mengambil profil pekerja, unit asal, dan unit yang dipimpin (jika user adalah Project Manager).
-
-        Args:
-            user_id (UUID | str): ID pengguna.
-
-        Returns:
-            Any: Record (attendance_mode, employee_unit_id, pm_unit_id).
+        Mengambil profil pengguna, kantor asal, dan divisi yang dipimpin (jika user adalah Project Manager).
         """
-        # Mengambil data karyawan yang terhubung ke app_user
-        # Melakukan subquery untuk mengecek apakah user memiliki role 'PM'
-        # dan menangani kepemimpinan unit_id pada proyek.
         return await self.fetchone(
             """
-            SELECT e.attendance_mode, e.unit_id AS employee_unit_id,
-                   (SELECT r.unit_id FROM vms.user_role r
-                    WHERE r.user_id = u.id AND r.role = 'PM' AND r.unit_id IS NOT NULL LIMIT 1) AS pm_unit_id
-            FROM vms.app_user u LEFT JOIN vms.employee e ON e.id = u.employee_id
-            WHERE u.id = CAST(:uid AS uuid)
+            SELECT 
+                u.system_role::text AS role,
+                e.office_id AS employee_unit_id,
+                d.division_id AS pm_unit_id,
+                CASE 
+                    WHEN u.system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'ADMIN_HR_GA') THEN 'OFFICE'
+                    ELSE 'BOTH'
+                END AS attendance_mode
+            FROM users u 
+            LEFT JOIN employee e ON e.employee_id = u.employee_id AND e.delete_at IS NULL
+            LEFT JOIN division d ON d.pm_id = e.employee_id AND d.delete_at IS NULL
+            WHERE u.user_id = CAST(:uid AS uuid) AND u.delete_at IS NULL
             """,
             {"uid": str(user_id)},
         )
 
-    async def list_visible(self, org_id: UUID | str, *, all_sites: bool, office: bool,
-                           unit_id: UUID | str | None) -> list[Any]:
+    async def list_visible(
+        self,
+        org_id: UUID | str,
+        *,
+        all_sites: bool = True,
+        office: bool = True,
+        unit_id: UUID | str | None = None,
+    ) -> list[Any]:
         """
-        Mengambil daftar site yang bisa dilihat sesuai dengan role dan unit yang diberikan.
-
-        Args:
-            org_id (UUID | str): ID organisasi.
-            all_sites (bool): Tampilkan semua site organisasi.
-            office (bool): Tampilkan site kantor (unit_id IS NULL).
-            unit_id (UUID | str | None): Filter site berdasarkan kepemilikan unit (proyek).
-
-        Returns:
-            list[Any]: Daftar site beserta koordinat lat/lng.
+        Mengambil daftar kantor dan site aktif dari tabel office.
         """
-        # Mengembalikan list site, dengan mengekstrak lat dan lng dari kolom postgis location.
-        # Filter visibility tergantung pada boolean flags: all_sites (semua),
-        # office (hanya kantor di mana unit_id NULL), atau site milik unit tertentu.
-        return list(await self.fetchall(
-            """
-            SELECT s.id, s.name, s.address, s.radius_m, s.unit_id,
-                   ST_Y(s.location::geometry) AS lat, ST_X(s.location::geometry) AS lng
-            FROM vms.site s
-            WHERE s.organization_id = CAST(:org AS uuid) AND s.deleted_at IS NULL
-              AND (CAST(:all AS boolean)
-                   OR (CAST(:office AS boolean) AND s.unit_id IS NULL)
-                   OR (CAST(:unit AS uuid) IS NOT NULL AND s.unit_id = CAST(:unit AS uuid)))
-            ORDER BY s.unit_id IS NOT NULL, s.name
-            """,
-            {"org": str(org_id), "all": all_sites, "office": office,
-             "unit": str(unit_id) if unit_id else None},
-        ))
+        return list(
+            await self.fetchall(
+                """
+                SELECT 
+                    o.office_id AS id,
+                    o.name,
+                    o.address,
+                    o.attendance_radius_m AS radius_m,
+                    NULL::uuid AS unit_id,
+                    o.latitude::float AS lat,
+                    o.longitude::float AS lng,
+                    o.is_main_office,
+                    o.city_boundary_radius_m,
+                    o.clock_in_time,
+                    o.clock_out_time,
+                    o.in_city_meal_rate,
+                    o.out_city_meal_rate
+                FROM office o
+                WHERE o.delete_at IS NULL
+                ORDER BY o.is_main_office DESC, o.name ASC
+                """,
+                {},
+            )
+        )
 
-    async def insert(self, org_id: UUID | str, *, name: str, address: str | None, radius_m: int,
-                     lat: float, lng: float, unit_id: UUID | str | None) -> Any:
+    async def insert(
+        self,
+        org_id: UUID | str,
+        *,
+        name: str,
+        address: str | None,
+        radius_m: int,
+        lat: float,
+        lng: float,
+        unit_id: UUID | str | None = None,
+    ) -> Any:
         """
-        Membuat site lokasi kerja baru.
-
-        Args:
-            org_id (UUID | str): ID organisasi.
-            name (str): Nama site.
-            address (str | None): Alamat lengkap site.
-            radius_m (int): Radius absensi.
-            lat (float): Garis lintang (latitude).
-            lng (float): Garis bujur (longitude).
-            unit_id (UUID | str | None): ID unit yang ditugaskan (None jika site adalah kantor).
-
-        Returns:
-            Any: Record site yang baru dibuat.
+        Membuat kantor cabang / lokasi kerja baru.
         """
-        # Menyisipkan record baru ke vms.site, memformat lat dan lng
-        # menggunakan fungsi ST_SetSRID dan ST_MakePoint milik PostGIS.
         return await self.fetchone(
             """
-            INSERT INTO vms.site (organization_id, name, address, radius_m, location, unit_id)
-            VALUES (:org, :name, :addr, :rad, ST_SetSRID(ST_MakePoint(:lng, :lat), 4326), :unit)
-            RETURNING id, name, address, radius_m, unit_id,
-                      ST_Y(location::geometry) AS lat, ST_X(location::geometry) AS lng
+            INSERT INTO office (
+                name, address, attendance_radius_m, latitude, longitude, is_main_office
+            )
+            VALUES (
+                :name, :addr, :rad, :lat, :lng, FALSE
+            )
+            RETURNING 
+                office_id AS id, name, address, attendance_radius_m AS radius_m,
+                latitude::float AS lat, longitude::float AS lng, NULL::uuid AS unit_id
             """,
-            {"org": str(org_id), "name": name, "addr": address, "rad": radius_m, "lng": lng, "lat": lat,
-             "unit": str(unit_id) if unit_id else None},
+            {
+                "name": name,
+                "addr": address or "",
+                "rad": radius_m,
+                "lat": lat,
+                "lng": lng,
+            },
         )
 
     async def get(self, site_id: UUID | str, org_id: UUID | str) -> Any:
         """
-        Mengambil detail lengkap dari satu site.
-
-        Args:
-            site_id (UUID | str): ID site yang diambil.
-            org_id (UUID | str): ID organisasi pemilik site.
-
-        Returns:
-            Any: Detail record site.
+        Mengambil detail satu lokasi kantor berdasarkan office_id.
         """
-        # Mengekstrak id, nama, radius, dan koordinat dari site jika belum dihapus secara soft-delete.
         return await self.fetchone(
             """
-            SELECT s.id, s.name, s.address, s.radius_m, s.unit_id,
-                   ST_Y(s.location::geometry) AS lat, ST_X(s.location::geometry) AS lng
-            FROM vms.site s
-            WHERE s.id = CAST(:id AS uuid) AND s.organization_id = CAST(:org AS uuid) AND s.deleted_at IS NULL
+            SELECT 
+                o.office_id AS id,
+                o.name,
+                o.address,
+                o.attendance_radius_m AS radius_m,
+                NULL::uuid AS unit_id,
+                o.latitude::float AS lat,
+                o.longitude::float AS lng,
+                o.is_main_office
+            FROM office o
+            WHERE o.office_id = CAST(:id AS uuid) AND o.delete_at IS NULL
             """,
-            {"id": str(site_id), "org": str(org_id)},
+            {"id": str(site_id)},
         )
 
     async def archive(self, site_id: UUID | str) -> None:
         """
-        Melakukan soft-delete (arsip) terhadap site.
-
-        Args:
-            site_id (UUID | str): ID site yang diarsipkan.
+        Melakukan soft-delete (arsip) terhadap kantor cabang (kantor utama dilindungi).
         """
-        # Melakukan soft-delete dengan mengisi kolom deleted_at menjadi waktu saat ini (now()).
-        await self.execute("UPDATE vms.site SET deleted_at = now() WHERE id = CAST(:id AS uuid)",
-                           {"id": str(site_id)})
+        await self.execute(
+            """
+            UPDATE office 
+            SET delete_at = now() 
+            WHERE office_id = CAST(:id AS uuid) AND is_main_office = FALSE AND delete_at IS NULL
+            """,
+            {"id": str(site_id)},
+        )

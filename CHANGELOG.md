@@ -9,6 +9,13 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased] — `development`
 
+- **Milestone 2: Manajemen Kantor & Divisi Operasional Master Schema V2 (`api/app/crud/crud_site.py`, `api/app/crud/crud_unit.py`, `api/app/services/site_service.py`, `web/src/pages/sites/`):**
+  - Mengadaptasi `CRUDSite` dan `SiteService` untuk mengelola master kantor pusat dan cabang dari tabel `public.office` dengan koordinat numerik latitude/longitude murni.
+  - Mengadaptasi `CRUDUnit` untuk membaca daftar divisi operasional yang membawahi PM dan Team Leader dari tabel `public.division`.
+  - Memperbarui izin pengelolaan lokasi pada `SiteService` agar mengenali peran `SUPER_ADMIN`, `OPERATIONAL_MANAGER`, `PROJECT_MANAGER`, dan `ADMIN_HR_GA`.
+  - Memvalidasi endpoint `GET /api/v1/sites`, `GET /api/v1/units`, `POST /api/v1/sites`, dan `DELETE /api/v1/sites/{id}` dengan seed data 3 kantor dan 2 divisi.
+  - Memverifikasi kelulusan typecheck dan build test produksi pada Web frontend.
+
 - **Milestone 1: Adaptasi Autentikasi, Manajemen Sesi & Profil Pengguna ke Master Schema V2 (`api/app/crud/crud_user.py`, `api/app/crud/crud_session.py`, `api/app/core/permissions.py`, `api/app/modules/auth/`, `web/src/lib/types.ts`):**
   - Mengadaptasi `CRUDUser` dan `AuthUserRepository` untuk membaca dan mengelola data pengguna langsung dari tabel `public.users` dan `public.employee` (Master Schema V2).
   - Mengadaptasi `CRUDSession` dan `AuthSessionRepository` untuk menerbitkan, merotasi token refresh SHA-256, dan mencabut sesi secara terpusat pada tabel `public.user_sessions`.

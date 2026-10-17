@@ -23,8 +23,10 @@ class WorkTypeService:
         self.db = db
         self.repo = CRUDWorkType(db)
 
-    async def list_types(self, org_id: str, include_inactive: bool) -> list[Any]:
-        return await self.repo.list_types(org_id, include_inactive)
+    async def list_types(
+        self, org_id: str, include_inactive: bool, division_id: UUID | None = None
+    ) -> list[Any]:
+        return await self.repo.list_types(org_id, include_inactive, division_id)
 
     async def get(self, org_id: str, type_id: UUID) -> Any:
         row = await self.repo.get_type(org_id, type_id)
@@ -57,28 +59,42 @@ class WorkTypeService:
         """Foto contoh harus berkas milik organisasi ini (V-08)."""
         await ensure_same_org(self.db, org_id, files=[p["example_file_id"] for p in photos])
 
-    async def create(self, org_id: str, data: WorkTypeIn) -> Any:
+    async def create(self, org_id: str, data: WorkTypeIn, creator_division_id: UUID | None = None) -> Any:
+        division_id = data.division_id or creator_division_id
+        if division_id is None:
+            raise ValidationError("Divisi wajib ditentukan untuk jenis pekerjaan ini.")
         name, photos = self._clean(data)
-        if await self.repo.name_taken(org_id, name, None):
-            raise AppError("DUPLICATE", "Jenis pekerjaan dengan nama itu sudah ada.", status=409)
+        if await self.repo.name_taken(org_id, division_id, name, None):
+            raise AppError("DUPLICATE", "Jenis pekerjaan dengan nama itu sudah ada di divisi ini.", status=409)
         await self._check_examples(org_id, photos)
-        type_id = await self.repo.insert_type(org_id, name)
+        type_id = await self.repo.insert_type(org_id, division_id, name, data.description)
         await self.repo.replace_photos(org_id, type_id, photos)
         return await self.get(org_id, UUID(type_id))
 
-    async def update(self, org_id: str, type_id: UUID, data: WorkTypeIn) -> Any:
-        await self.get(org_id, type_id)
+    async def update(
+        self, org_id: str, type_id: UUID, data: WorkTypeIn, creator_division_id: UUID | None = None
+    ) -> Any:
+        existing = await self.get(org_id, type_id)
+        if creator_division_id is not None and str(existing.division_id) != str(creator_division_id):
+            raise AppError(
+                "FORBIDDEN", "Anda tidak memiliki hak untuk mengubah jenis pekerjaan divisi lain.", status=403
+            )
+        target_division = data.division_id or existing.division_id
         name, photos = self._clean(data)
-        if await self.repo.name_taken(org_id, name, type_id):
-            raise AppError("DUPLICATE", "Jenis pekerjaan dengan nama itu sudah ada.", status=409)
+        if await self.repo.name_taken(org_id, target_division, name, type_id):
+            raise AppError("DUPLICATE", "Jenis pekerjaan dengan nama itu sudah ada di divisi ini.", status=409)
         await self._check_examples(org_id, photos)
-        await self.repo.update_type(type_id, name, True)
+        await self.repo.update_type(type_id, name, target_division, data.description, True)
         await self.repo.replace_photos(org_id, type_id, photos)
         return await self.get(org_id, type_id)
 
-    async def deactivate(self, org_id: str, type_id: UUID) -> None:
-        row = await self.get(org_id, type_id)
-        await self.repo.update_type(type_id, row.name, False)
+    async def deactivate(self, org_id: str, type_id: UUID, creator_division_id: UUID | None = None) -> None:
+        existing = await self.get(org_id, type_id)
+        if creator_division_id is not None and str(existing.division_id) != str(creator_division_id):
+            raise AppError(
+                "FORBIDDEN", "Anda tidak memiliki hak untuk menonaktifkan jenis pekerjaan divisi lain.", status=403
+            )
+        await self.repo.update_type(type_id, existing.name, is_active=False)
 
     async def ensure_usable(self, org_id: str, type_id: UUID | None) -> None:
         """Jenis yang dipilih rencana kerja harus ada di organisasi ini dan aktif."""

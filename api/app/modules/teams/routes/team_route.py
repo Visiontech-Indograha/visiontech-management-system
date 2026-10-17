@@ -8,7 +8,8 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
 
-from app.api.deps import get_current_user
+from app.api.deps import require_permission
+from app.core.permissions import Permission
 from app.core.security import CurrentUser
 from app.modules.teams.controllers.team_controller import TeamController
 from app.modules.teams.schemas.team_schema import (
@@ -20,12 +21,14 @@ from app.modules.teams.schemas.team_schema import (
 )
 
 router = APIRouter(prefix="/teams", tags=["Teams"])
+_VIEW = Depends(require_permission(Permission.VIEW_TEAMS))
+_MANAGE = Depends(require_permission(Permission.MANAGE_TEAMS))
 
 
 @router.get("", response_model=list[TeamListItem])
 async def list_teams(
     division_id: UUID | None = Query(None, description="Filter berdasarkan ID divisi"),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = _VIEW,
     controller: TeamController = Depends(),
 ) -> list[TeamListItem]:
     """Mengambil daftar seluruh tim operasional."""
@@ -35,7 +38,7 @@ async def list_teams(
 @router.get("/{team_id}", response_model=TeamDetail)
 async def get_team(
     team_id: UUID,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = _VIEW,
     controller: TeamController = Depends(),
 ) -> TeamDetail:
     """Mengambil detail tim operasional beserta anggota aktifnya."""
@@ -45,7 +48,7 @@ async def get_team(
 @router.post("", response_model=TeamListItem, status_code=201)
 async def create_team(
     data: TeamCreate,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = _MANAGE,
     controller: TeamController = Depends(),
 ) -> TeamListItem:
     """Membuat tim operasional baru."""
@@ -56,7 +59,7 @@ async def create_team(
 async def update_team(
     team_id: UUID,
     data: TeamUpdate,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = _MANAGE,
     controller: TeamController = Depends(),
 ) -> TeamListItem:
     """Memperbarui informasi tim operasional."""
@@ -66,7 +69,7 @@ async def update_team(
 @router.delete("/{team_id}")
 async def delete_team(
     team_id: UUID,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = _MANAGE,
     controller: TeamController = Depends(),
 ) -> dict[str, str]:
     """Menghapus (soft delete) tim operasional."""
@@ -77,7 +80,7 @@ async def delete_team(
 async def add_member(
     team_id: UUID,
     data: MemberAdd,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = _MANAGE,
     controller: TeamController = Depends(),
 ) -> dict[str, str]:
     """Menambahkan anggota karyawan ke dalam tim."""
@@ -88,7 +91,7 @@ async def add_member(
 async def remove_member(
     team_id: UUID,
     employee_id: UUID,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = _MANAGE,
     controller: TeamController = Depends(),
 ) -> dict[str, str]:
     """Mengeluarkan anggota dari tim operasional."""

@@ -30,24 +30,36 @@ class WorkTypeController:
         """Memetakan hasil query ke model WorkTypeOut."""
         return WorkTypeOut(**row._mapping)
 
-    async def handle_list_types(self, organization_id: str, include_inactive: bool) -> list[WorkTypeOut]:
-        """Mengambil seluruh jenis pekerjaan milik organisasi."""
-        rows = await self.service.list_types(organization_id, include_inactive)
+    async def get_user_division(self, user_id: UUID | str) -> UUID | None:
+        """Mendapatkan divisi karyawan yang terikat pada akun pengguna."""
+        return await self.service.repo.get_user_division(user_id)
+
+    async def handle_list_types(
+        self, organization_id: str, include_inactive: bool, division_id: UUID | None = None
+    ) -> list[WorkTypeOut]:
+        """Mengambil seluruh jenis pekerjaan milik organisasi atau divisi tertentu."""
+        rows = await self.service.list_types(organization_id, include_inactive, division_id)
         return [self.map_row_to_out(r) for r in rows]
 
-    async def handle_create(self, organization_id: str, data: WorkTypeIn) -> WorkTypeOut:
+    async def handle_create(
+        self, organization_id: str, data: WorkTypeIn, creator_division_id: UUID | None = None
+    ) -> WorkTypeOut:
         """Membuat jenis pekerjaan baru beserta template foto."""
-        row = await self.service.create(organization_id, data)
+        row = await self.service.create(organization_id, data, creator_division_id)
         return self.map_row_to_out(row)
 
-    async def handle_update(self, organization_id: str, type_id: UUID, data: WorkTypeIn) -> WorkTypeOut:
+    async def handle_update(
+        self, organization_id: str, type_id: UUID, data: WorkTypeIn, creator_division_id: UUID | None = None
+    ) -> WorkTypeOut:
         """Mengubah jenis pekerjaan dan memperbarui slot foto."""
-        row = await self.service.update(organization_id, type_id, data)
+        row = await self.service.update(organization_id, type_id, data, creator_division_id)
         return self.map_row_to_out(row)
 
-    async def handle_deactivate(self, organization_id: str, type_id: UUID) -> None:
+    async def handle_deactivate(
+        self, organization_id: str, type_id: UUID, creator_division_id: UUID | None = None
+    ) -> None:
         """Menonaktifkan jenis pekerjaan."""
-        await self.service.deactivate(organization_id, type_id)
+        await self.service.deactivate(organization_id, type_id, creator_division_id)
 
     async def handle_template_of_plan(self, plan_id: UUID, day_id: UUID | None) -> list[WorkTypePhotoOut]:
         """Mengambil template foto laporan rencana kerja."""

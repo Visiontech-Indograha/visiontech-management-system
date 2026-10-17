@@ -72,14 +72,16 @@ class CRUDAssetReservation(CRUDBase):
                 """
             SELECT
                 vi.vehicle_inspection_id AS id,
-                vi.vehicle_id AS asset_id,
-                vi.inspector_employee_id AS inspector_id,
-                e.full_name AS inspector_name,
-                vi.type AS inspection_type,
-                vi.path_file AS file_url,
-                vi.create_at AS inspected_at
+                NULL::text AS plan_number,
+                COALESCE(e.full_name, 'Sistem') AS requested_by_name,
+                vi.create_at AS requested_at,
+                vi.type::text AS condition_on_return,
+                vi.path_file AS note,
+                COALESCE(e.full_name, 'Petugas') AS verified_by_name,
+                vi.create_at AS verified_at,
+                TRUE AS is_accepted
             FROM public.vehicle_inspection vi
-            JOIN public.employee e ON e.employee_id = vi.inspector_employee_id
+            LEFT JOIN public.employee e ON e.employee_id = vi.inspector_employee_id
             WHERE vi.vehicle_id = :aid AND vi.delete_at IS NULL
             ORDER BY vi.create_at DESC
             """,

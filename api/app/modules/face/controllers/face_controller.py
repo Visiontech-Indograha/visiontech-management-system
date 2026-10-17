@@ -11,7 +11,7 @@ from fastapi import Depends, UploadFile
 
 from app.api.deps import get_face_service
 from app.core.errors import AppError, ValidationError
-from app.core.permissions import RoleCode
+from app.core.permissions import RoleCode, SystemRole
 from app.core.security import CurrentUser
 from app.schemas.face import (
     ChallengeCheckResponse,
@@ -57,7 +57,7 @@ class FaceController:
         Status pengenalan wajah pengguna saat ini: persetujuan biometrik, status pendaftaran,
         versi template, dan kebijakan aktif.
         """
-        is_admin = RoleCode.ADMIN in current_user.roles or RoleCode.SUPER_ADMIN in current_user.roles
+        is_admin = RoleCode.ADMIN in current_user.roles or SystemRole.SUPER_ADMIN in current_user.roles
         return await self.service.status(
             current_user.organization_id,
             current_user.user_id,

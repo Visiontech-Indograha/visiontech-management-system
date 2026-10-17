@@ -27,14 +27,19 @@ class WorkTypePhotoOut(BaseModel):
 
 class WorkTypeIn(BaseModel):
     """Membuat/mengubah jenis pekerjaan; `photos` mengganti seluruh daftar slot."""
-    name: str = Field(..., min_length=1, max_length=80)  # Nama jenis, mis. "Replacement"
+    name: str = Field(..., min_length=1, max_length=100)  # Nama jenis, mis. "Replacement"
+    division_id: UUID | None = None  # ID Divisi pemilik work type
+    description: str | None = Field(None, max_length=255)  # Keterangan pekerjaan
     photos: list[WorkTypePhotoIn] = []  # Template foto, urut sesuai daftar
 
 
 class WorkTypeOut(BaseModel):
     """Jenis pekerjaan beserta template fotonya."""
     id: UUID  # ID jenis
+    division_id: UUID  # ID Divisi pemilik
+    division_name: str | None = None  # Nama Divisi
     name: str  # Nama jenis
+    description: str | None = None  # Keterangan pekerjaan
     is_active: bool = True  # Nonaktif = tidak ditawarkan lagi, rencana kerja lama tetap utuh
     photos: list[WorkTypePhotoOut] = []  # Template foto
 

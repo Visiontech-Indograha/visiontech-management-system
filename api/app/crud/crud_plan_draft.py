@@ -123,6 +123,23 @@ class CRUDPlanDraft(CRUDBase):
             )
         )
 
+    async def work_types(self, division_id: UUID | str | None) -> list[Any]:
+        """
+        Daftar jenis pekerjaan (work_type) yang aktif sesuai divisi.
+        """
+        return list(
+            await self.fetchall(
+                """
+            SELECT wt.work_type_id AS id, wt.division_id, wt.name, wt.description
+            FROM work_type wt
+            WHERE wt.delete_at IS NULL
+              AND (CAST(:div_id AS uuid) IS NULL OR wt.division_id = CAST(:div_id AS uuid))
+            ORDER BY lower(wt.name) ASC
+            """,
+                {"div_id": str(division_id) if division_id else None},
+            )
+        )
+
     async def licensed(self, employee_ids: Iterable[UUID | str], licence: str, until: date) -> set[str]:
         """
         Karyawan dengan SIM yang berlaku.
@@ -354,7 +371,9 @@ class CRUDPlanDraft(CRUDBase):
     ) -> None:
         pass
 
-    async def insert_task(self, day_id: UUID | str, title: str, description: str, sort_order: int) -> Any:
+    async def insert_task(
+        self, day_id: UUID | str, title: str, description: str, sort_order: int, work_type_id: UUID | str | None = None
+    ) -> Any:
         """Menyisipkan rincian tugas untuk suatu hari kerja dalam work_plan_item V2."""
         return await self.scalar(
             """
@@ -364,12 +383,21 @@ class CRUDPlanDraft(CRUDBase):
             VALUES (
                 CAST(:day AS uuid),
                 (SELECT weekly_plan_id FROM work_plan_daily WHERE daily_plan_id = CAST(:day AS uuid)),
-                COALESCE((SELECT work_type_id FROM work_type WHERE delete_at IS NULL LIMIT 1), '00000000-0000-0000-0000-000000000001'::uuid),
+                COALESCE(
+                    CAST(:wt AS uuid),
+                    (SELECT wt.work_type_id
+                     FROM work_type wt
+                     JOIN work_plan_weekly wpw ON wpw.division_id = wt.division_id
+                     WHERE wpw.weekly_plan_id = (SELECT weekly_plan_id FROM work_plan_daily WHERE daily_plan_id = CAST(:day AS uuid))
+                       AND wt.delete_at IS NULL
+                     LIMIT 1),
+                    (SELECT work_type_id FROM work_type WHERE delete_at IS NULL LIMIT 1)
+                ),
                 :title, 100.00, 0.00, 0.00, 'IN_PROGRESS'
             )
             RETURNING item_id AS id
             """,
-            {"day": str(day_id), "title": title},
+            {"day": str(day_id), "title": title, "wt": str(work_type_id) if work_type_id else None},
         )
 
     async def insert_task_file(self, task_id: UUID | str, file_id: UUID | str, sort_order: int) -> None:

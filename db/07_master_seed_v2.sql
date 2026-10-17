@@ -121,11 +121,11 @@ INSERT INTO vehicle_inspection (vehicle_inspection_id, vehicle_id, inspector_emp
 ('64444444-0000-4000-a000-000000000003', '62222222-0000-4000-a000-000000000003', '22222222-0000-4000-a000-000000000005', 'repair', '/files/inspections/crf_service_oct.jpg')
 ON CONFLICT (vehicle_inspection_id) DO NOTHING;
 
--- 14. Seed work_type (3 Jenis Pekerjaan Kontraktor)
-INSERT INTO work_type (work_type_id, name, description) VALUES
-('71111111-0000-4000-a000-000000000001', 'Penarikan Kabel Fiber Optik & Tiang', 'Pekerjaan galian, penancapan tiang, dan penarikan kabel udara/tanah'),
-('71111111-0000-4000-a000-000000000002', 'Instalasi Panel Listrik & Perangkat IoT', 'Pemasangan box panel, terminasi MCB, dan integrasi sensor/mikrokontroler'),
-('71111111-0000-4000-a000-000000000003', 'Pengecoran Pondasi & Sipil Gedung', 'Pekerjaan bekisting, pembesian, dan pengecoran struktur sipil')
+-- 14. Seed work_type (3 Jenis Pekerjaan Kontraktor terikat Divisi)
+INSERT INTO work_type (work_type_id, division_id, name, description) VALUES
+('71111111-0000-4000-a000-000000000001', '33333333-0000-4000-a000-000000000001', 'Penarikan Kabel Fiber Optik & Tiang', 'Pekerjaan galian, penancapan tiang, dan penarikan kabel udara/tanah'),
+('71111111-0000-4000-a000-000000000002', '33333333-0000-4000-a000-000000000002', 'Instalasi Panel Listrik & Perangkat IoT', 'Pemasangan box panel, terminasi MCB, dan integrasi sensor/mikrokontroler'),
+('71111111-0000-4000-a000-000000000003', '33333333-0000-4000-a000-000000000001', 'Pengecoran Pondasi & Sipil Gedung', 'Pekerjaan bekisting, pembesian, dan pengecoran struktur sipil')
 ON CONFLICT (work_type_id) DO NOTHING;
 
 -- 15. Seed image_requirement (7 Syarat Foto SOP untuk 3 work_type - Konfirmasi 2A & 2B: 1 work_type punya banyak syarat foto)

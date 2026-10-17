@@ -11,7 +11,8 @@ from uuid import UUID
 from .base import CRUDBase
 
 _SELECT = """
-    SELECT wt.work_type_id AS id, wt.name, (wt.delete_at IS NULL) AS is_active,
+    SELECT wt.work_type_id AS id, wt.division_id, d.name AS division_name,
+           wt.name, wt.description, (wt.delete_at IS NULL) AS is_active,
            COALESCE((SELECT jsonb_agg(jsonb_build_object(
                                          'id', p.image_requirement_id,
                                          'sort_order', p.sort_order,
@@ -23,6 +24,7 @@ _SELECT = """
                      FROM image_requirement p
                      WHERE p.work_type_id = wt.work_type_id AND p.delete_at IS NULL), '[]'::jsonb) AS photos
     FROM work_type wt
+    LEFT JOIN division d ON d.division_id = wt.division_id
     WHERE wt.delete_at IS NULL
 """
 
@@ -30,11 +32,30 @@ _SELECT = """
 class CRUDWorkType(CRUDBase):
     """Akses data Master Schema V2 `work_type` dan `image_requirement`."""
 
-    async def list_types(self, org_id: UUID | str, include_inactive: bool) -> list[Any]:
-        """Daftar jenis pekerjaan beserta slot fotonya, urut nama."""
-        return list(
-            await self.fetchall(_SELECT + " ORDER BY lower(wt.name)", {"org": str(org_id), "all": include_inactive})
+    async def get_user_division(self, user_id: UUID | str) -> UUID | None:
+        """Mendapatkan division_id karyawan dari user_id."""
+        val = await self.scalar(
+            """
+            SELECT e.division_id
+            FROM users u
+            JOIN employee e ON e.employee_id = u.employee_id
+            WHERE u.user_id = CAST(:uid AS uuid) AND u.delete_at IS NULL AND e.delete_at IS NULL
+            """,
+            {"uid": str(user_id)},
         )
+        return UUID(str(val)) if val else None
+
+    async def list_types(
+        self, org_id: UUID | str, include_inactive: bool, division_id: UUID | str | None = None
+    ) -> list[Any]:
+        """Daftar jenis pekerjaan beserta slot fotonya, urut nama."""
+        query = _SELECT
+        params: dict[str, Any] = {"org": str(org_id), "all": include_inactive}
+        if division_id is not None:
+            query += " AND wt.division_id = CAST(:div_id AS uuid)"
+            params["div_id"] = str(division_id)
+        query += " ORDER BY lower(wt.name)"
+        return list(await self.fetchall(query, params))
 
     async def get_type(self, org_id: UUID | str, type_id: UUID | str) -> Any:
         """Satu jenis pekerjaan."""
@@ -42,28 +63,60 @@ class CRUDWorkType(CRUDBase):
             _SELECT + " AND wt.work_type_id = CAST(:id AS uuid)", {"org": str(org_id), "id": str(type_id)}
         )
 
-    async def name_taken(self, org_id: UUID | str, name: str, except_id: UUID | str | None) -> bool:
-        """Nama sudah dipakai jenis lain (tanpa membedakan huruf besar/kecil)?"""
+    async def name_taken(
+        self, org_id: UUID | str, division_id: UUID | str, name: str, except_id: UUID | str | None
+    ) -> bool:
+        """Nama sudah dipakai jenis lain dalam divisi yang sama (tanpa membedakan huruf besar/kecil)?"""
         return bool(
             await self.scalar(
                 "SELECT EXISTS (SELECT 1 FROM work_type WHERE delete_at IS NULL "
+                "AND division_id = CAST(:div_id AS uuid) "
                 "AND lower(name) = lower(:name) AND (CAST(:ex AS uuid) IS NULL OR work_type_id <> CAST(:ex AS uuid)))",
-                {"org": str(org_id), "name": name, "ex": str(except_id) if except_id else None},
+                {"div_id": str(division_id), "name": name, "ex": str(except_id) if except_id else None},
             )
         )
 
-    async def insert_type(self, org_id: UUID | str, name: str) -> str:
+    async def insert_type(
+        self, org_id: UUID | str, division_id: UUID | str, name: str, description: str | None = None
+    ) -> str:
         """Jenis baru → id."""
         return str(
-            await self.scalar("INSERT INTO work_type (name) VALUES (:name) RETURNING work_type_id", {"name": name})
+            await self.scalar(
+                "INSERT INTO work_type (division_id, name, description) "
+                "VALUES (CAST(:div_id AS uuid), :name, :desc) RETURNING work_type_id",
+                {"div_id": str(division_id), "name": name, "desc": description},
+            )
         )
 
-    async def update_type(self, type_id: UUID | str, name: str, is_active: bool | None = None) -> None:
-        """Ubah nama."""
-        await self.execute(
-            "UPDATE work_type SET name = :name, update_at = NOW() WHERE work_type_id = CAST(:id AS uuid)",
-            {"id": str(type_id), "name": name},
-        )
+    async def update_type(
+        self,
+        type_id: UUID | str,
+        name: str,
+        division_id: UUID | str | None = None,
+        description: str | None = None,
+        is_active: bool | None = None,
+    ) -> None:
+        """Ubah nama dan divisi (atau soft delete bila nonaktif)."""
+        if is_active is False:
+            await self.execute(
+                "UPDATE work_type SET delete_at = NOW() WHERE work_type_id = CAST(:id AS uuid)",
+                {"id": str(type_id)},
+            )
+            return
+
+        if division_id is not None:
+            await self.execute(
+                "UPDATE work_type SET name = :name, division_id = CAST(:div_id AS uuid), "
+                "description = :desc, update_at = NOW() WHERE work_type_id = CAST(:id AS uuid)",
+                {"id": str(type_id), "name": name, "div_id": str(division_id), "desc": description},
+            )
+        else:
+            await self.execute(
+                "UPDATE work_type SET name = :name, description = :desc, "
+                "update_at = NOW() WHERE work_type_id = CAST(:id AS uuid)",
+                {"id": str(type_id), "name": name, "desc": description},
+            )
+
 
     async def replace_photos(self, org_id: UUID | str, type_id: UUID | str, photos: list[dict[str, Any]]) -> None:
         """Ganti seluruh daftar slot foto SOP (urutan = urutan daftar)."""

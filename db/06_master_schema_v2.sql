@@ -505,4 +505,24 @@ CREATE TABLE IF NOT EXISTS system_backup_registry (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- 27. Tabel overtime (Pengajuan & Persetujuan Lembur per Rencana Kerja)
+CREATE TABLE IF NOT EXISTS overtime (
+    overtime_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    weekly_plan_id UUID NOT NULL REFERENCES work_plan_weekly(weekly_plan_id),
+    employee_id UUID NOT NULL REFERENCES employee(employee_id),
+    work_date DATE NOT NULL,
+    hours NUMERIC(4,2) NOT NULL,
+    reason TEXT NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'PENDING_PM',
+    reviewed_by_id UUID NULL REFERENCES employee(employee_id),
+    reviewed_at TIMESTAMPTZ NULL,
+    review_note TEXT NULL,
+    create_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    update_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    delete_at TIMESTAMPTZ NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_overtime_weekly_plan ON overtime (weekly_plan_id);
+CREATE INDEX IF NOT EXISTS idx_overtime_employee ON overtime (employee_id);
+
 COMMIT;

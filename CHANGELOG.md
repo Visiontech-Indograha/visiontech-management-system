@@ -9,6 +9,13 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased] — `development`
 
+- **Milestone 7: Pengajuan, Peninjauan & Rekapitulasi Lembur Kerja (`api/app/crud/crud_overtime.py`, `db/06_master_schema_v2.sql`, `web/src/pages/monitoring/OvertimeRecapPage.tsx`):**
+  - Mengintegrasikan tabel master `public.overtime` pada DDL dan database lokal untuk mencatat jam lembur per rencana kerja mingguan (`weekly_plan_id`).
+  - Mengadaptasi `CRUDOvertime` untuk pengajuan lembur tim lapangan (`insert`), peninjauan keputusan PM (`review` status `APPROVED`/`REJECTED` dengan catatan), serta riwayat lembur per rencana kerja (`list_by_plan`).
+  - Mengimplementasikan agregasi rekapitulasi lembur per karyawan per bulan (`recap`) yang kompatibel dengan skema `OvertimeRecapRow`.
+  - Memverifikasi endpoint daftar lembur per rencana kerja `GET /api/v1/overtime?work_plan_id=...`, persetujuan lembur `POST /api/v1/overtime/{id}/review`, dan rekapitulasi bulanan `GET /api/v1/recaps/overtime` (200 OK).
+  - Memverifikasi kelulusan typecheck dan build test produksi pada Web frontend (halaman `OvertimeRecapPage`, komponen `OvertimePanel`).
+
 - **Milestone 6: Absensi, Validasi Wajah, Uang Makan & Persetujuan Lapangan (`api/app/crud/crud_attendance_session.py`, `api/app/crud/crud_attendance_monitor.py`, `api/app/crud/crud_org_clock.py`, `api/app/crud/crud_org_ref.py`, `api/app/crud/crud_notification.py`, `web/src/pages/attendance/`):**
   - Mengadaptasi `CRUDAttendanceSession` ke Master Schema V2 (`public.attendance`, `public.office`, `public.work_plan_daily`, `public.employee`) dengan formula kalkulasi jarak GPS Haversine murni tanpa dependensi PostGIS.
   - Mengimplementasikan kalkulasi penentuan zona kota (`DALAM_KOTA` vs `LUAR_KOTA`) dan nominal uang makan (`in_city_meal_rate` Rp 35.000 vs `out_city_meal_rate` Rp 65.000) berdasarkan radius batas kota kantor utama.

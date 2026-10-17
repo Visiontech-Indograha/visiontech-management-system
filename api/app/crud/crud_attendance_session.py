@@ -1,91 +1,104 @@
 """
 app/crud/crud_attendance_session.py
-Sesi absensi (V-12). Jarak, radius, status, terlambat, dan pulang cepat TIDAK ditulis di sini —
-trigger `attendance_geofence` / `attendance_checkout` (db/02) yang menghitungnya dari jam & lokasi
-server; aplikasi hanya membaca hasilnya kembali. SQL ditulis utuh (bukan f-string) agar diperiksa V-01.
-
-Cakupan R-33 (keputusan pemilik 2026-10-02) ada di fungsi SQL (Alembic 0015, db/02) — satu sumber aturan
-untuk daftar, rekap, swafoto, dan tinjau:
-- `vms.attendance_viewable(viewer, view_all, employee)`: milik sendiri; Finance & OPS (`view_all`); PM → bawahan
-  lapangan di unitnya.
-- `vms.attendance_can_review(viewer, employee)`: tidak pernah milik sendiri; PM → bawahan lapangan;
-  Finance → pekerja kantor selain Finance; OPS → Finance.
+Sesi absensi VMS Master Schema V2.
+Mendukung validasi koordinat GPS (Haversine), radius toleransi, validasi wajah,
+status persetujuan OM ('AUTO_VALID', 'PENDING_OM', 'APPROVED_BY_OM', 'REJECTED_BY_OM'),
+zona kota (DALAM_KOTA / LUAR_KOTA), dan kalkulasi uang makan.
 """
 from __future__ import annotations
 
+import math
+from datetime import date, datetime
 from typing import Any
 from uuid import UUID
 
 from .base import CRUDBase
 
 
+def _haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> int:
+    """Menghitung jarak dalam meter antara dua koordinat GPS menggunakan formula Haversine."""
+    r = 6371000  # radius bumi dalam meter
+    phi1 = math.radians(lat1)
+    phi2 = math.radians(lat2)
+    delta_phi = math.radians(lat2 - lat1)
+    delta_lambda = math.radians(lon2 - lon1)
+    a = math.sin(delta_phi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(delta_lambda / 2) ** 2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    return int(round(r * c))
+
+
 class CRUDAttendanceSession(CRUDBase):
     """
-    Kelas operasi CRUD untuk menangani data sesi absensi (check-in, check-out, daftar absensi).
-    Catatan: Jarak, status, keterlambatan dihitung otomatis via trigger di sisi database.
+    Kelas operasi CRUD untuk menangani data sesi absensi Master Schema V2.
     """
 
     async def employee_of(self, user_id: UUID | str) -> Any:
-        """
-        Mendapatkan ID karyawan berdasarkan ID pengguna (user account).
-
-        Args:
-            user_id (UUID | str): ID pengguna.
-
-        Returns:
-            Any: ID karyawan (UUID) atau None.
-        """
-        # Mengambil ID karyawan dari tabel app_user untuk memastikan pengguna adalah karyawan
-        return await self.scalar("SELECT employee_id FROM vms.app_user WHERE id = :uid", {"uid": user_id})
+        """Mendapatkan ID karyawan berdasarkan ID pengguna (users)."""
+        return await self.scalar(
+            "SELECT employee_id FROM users WHERE user_id = CAST(:uid AS uuid) AND delete_at IS NULL",
+            {"uid": str(user_id)},
+        )
 
     async def attendance_mode_of(self, user_id: UUID | str) -> Any:
         """
-        Mengambil informasi (employee_id, attendance_mode, unit_id, is_admin) yang terkait dengan sebuah akun pengguna.
-        Mengembalikan None jika akun tidak ditautkan ke profil karyawan mana pun.
-
-        Args:
-            user_id (UUID | str): ID pengguna.
-
-        Returns:
-            Any: Record (Row) yang berisi detail karyawan, atau None.
+        Mengambil profil karyawan dan kewenangan akun.
         """
-        # Melakukan JOIN antara app_user dan employee untuk mengambil mode absensi dan unit
         return await self.fetchone(
             """
-            SELECT e.id AS employee_id, e.attendance_mode, e.unit_id,
-                   EXISTS (SELECT 1 FROM vms.user_role r WHERE r.user_id = u.id AND r.role = 'ADMIN') AS is_admin
-            FROM vms.app_user u JOIN vms.employee e ON e.id = u.employee_id
-            WHERE u.id = :uid
+            SELECT e.employee_id,
+                   'FIELD' AS attendance_mode,
+                   e.division_id AS unit_id,
+                   (u.system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'ADMIN_HR_GA')) AS is_admin
+            FROM users u
+            JOIN employee e ON e.employee_id = u.employee_id
+            WHERE u.user_id = CAST(:uid AS uuid) 
+              AND u.delete_at IS NULL 
+              AND e.delete_at IS NULL
             """,
-            {"uid": user_id},
+            {"uid": str(user_id)},
         )
 
     async def open_session(self, employee_id: UUID | str, *, valid_only: bool = False) -> Any:
         """
-        Mendapatkan sesi absensi terbaru yang masih terbuka (belum check-out dan belum ditolak),
-        berlaku untuk tanggal berapa pun.
-        Jika `valid_only` bernilai True, hanya sesi yang otomatis valid atau disetujui yang dikembalikan (syarat check-out R-33).
-
-        Args:
-            employee_id (UUID | str): ID karyawan.
-            valid_only (bool): Jika True, memfilter hanya sesi dengan status valid/disetujui. Defaults to False.
-
-        Returns:
-            Any: Data sesi absensi terbuka, atau None jika tidak ada.
+        Mendapatkan sesi absensi terbaru yang belum check-out.
         """
-        # Mencari catatan check-in terakhir (ORDER BY check_in_at DESC LIMIT 1) yang kolom check_out_at-nya masih NULL.
-        # Menambahkan kondisi pengecekan status berdasarkan parameter `valid_only`.
         return await self.fetchone(
             """
-            SELECT id, employee_id, organization_id, work_date, site_id, site_label, check_in_at, check_out_at,
-                   distance_m, is_late, is_early_leave, status, explanation, reviewed_at, selfie_file_id,
-                      face_result, face_similarity, check_out_face_result, check_out_face_similarity
-            FROM vms.attendance
-            WHERE employee_id = :emp AND check_out_at IS NULL AND status <> 'REJECTED'
-              AND (NOT CAST(:valid AS boolean) OR status IN ('AUTO_VALID', 'APPROVED'))
-            ORDER BY check_in_at DESC LIMIT 1
+            SELECT a.attendance_id AS id,
+                   a.employee_id,
+                   a.office_id AS organization_id,
+                   a.attendance_date AS work_date,
+                   COALESCE(a.daily_plan_id, a.office_id) AS site_id,
+                   COALESCE(wpd.site_name, o.name, 'Lokasi Kerja') AS site_label,
+                   a.clock_in_at AS check_in_at,
+                   a.clock_out_at AS check_out_at,
+                   a.distance_to_target_m::float AS distance_m,
+                   (a.clock_in_at::time > a.scheduled_in) AS is_late,
+                   (a.clock_out_at IS NOT NULL AND a.clock_out_at::time < a.scheduled_out) AS is_early_leave,
+                   CASE 
+                       WHEN a.om_approval_status = 'AUTO_VALID' THEN 'AUTO_VALID'
+                       WHEN a.om_approval_status = 'APPROVED_BY_OM' THEN 'APPROVED'
+                       WHEN a.om_approval_status = 'REJECTED_BY_OM' THEN 'REJECTED'
+                       ELSE 'NEEDS_REVIEW'
+                   END AS status,
+                   a.out_of_radius_note AS explanation,
+                   a.update_at AS reviewed_at,
+                   NULL::uuid AS selfie_file_id,
+                   CASE WHEN a.face_match_score >= 80.0 THEN 'MATCH' ELSE 'MISMATCH' END AS face_result,
+                   (a.face_match_score / 100.0)::float AS face_similarity,
+                   NULL::text AS check_out_face_result,
+                   NULL::float AS check_out_face_similarity
+            FROM attendance a
+            LEFT JOIN office o ON o.office_id = a.office_id
+            LEFT JOIN work_plan_daily wpd ON wpd.daily_plan_id = a.daily_plan_id
+            WHERE a.employee_id = CAST(:emp AS uuid)
+              AND a.clock_out_at IS NULL
+              AND a.om_approval_status <> 'REJECTED_BY_OM'
+              AND (NOT CAST(:valid AS boolean) OR a.om_approval_status IN ('AUTO_VALID', 'APPROVED_BY_OM'))
+              AND a.delete_at IS NULL
+            ORDER BY a.clock_in_at DESC LIMIT 1
             """,
-            {"emp": employee_id, "valid": valid_only},
+            {"emp": str(employee_id), "valid": valid_only},
         )
 
     async def auto_checkout_unclosed(
@@ -95,449 +108,655 @@ class CRUDAttendanceSession(CRUDBase):
         close_time: Any,
         explanation: str,
     ) -> list[Any]:
-        """
-        Menutup otomatis sesi absensi yang belum ditutup pada pukul 19:00 (keterangan: Lupa absen pulang).
-        """
+        """Menutup otomatis sesi absensi yang belum ditutup pada jam penutupan harian."""
         return list(
             await self.fetchall(
                 """
-                UPDATE vms.attendance
-                   SET check_out_at = :close_time,
-                       check_out_explanation = :explanation,
-                       is_early_leave = false
-                 WHERE organization_id = CAST(:org AS uuid)
-                   AND work_date = :work_date
-                   AND check_in_at IS NOT NULL
-                   AND check_out_at IS NULL
-                   AND status <> 'REJECTED'
-                RETURNING id, employee_id, site_label
+                UPDATE attendance
+                   SET clock_out_at = :close_time,
+                       out_of_radius_note = COALESCE(out_of_radius_note || '; ', '') || :explanation,
+                       update_at = NOW()
+                 WHERE office_id = CAST(:org AS uuid)
+                   AND attendance_date = :work_date
+                   AND clock_in_at IS NOT NULL
+                   AND clock_out_at IS NULL
+                   AND om_approval_status <> 'REJECTED_BY_OM'
+                   AND delete_at IS NULL
+                RETURNING attendance_id AS id, employee_id, 'Kantor' AS site_label
                 """,
                 {"org": str(org_id), "work_date": work_date, "close_time": close_time, "explanation": explanation},
             )
         )
 
     async def active_on(self, employee_id: UUID | str, work_date: Any) -> bool:
-        """
-        Mengecek apakah ada sesi absensi aktif (tidak ditolak) untuk karyawan tertentu pada tanggal kerja tertentu.
-
-        Args:
-            employee_id (UUID | str): ID karyawan.
-            work_date (Any): Tanggal kerja (date).
-
-        Returns:
-            bool: True jika ada absensi aktif, False jika tidak ada.
-        """
-        # Memeriksa keberadaan baris (EXISTS) untuk karyawan dan tanggal terkait dengan status selain 'REJECTED'
-        return bool(await self.scalar(
-            """
-            SELECT EXISTS (SELECT 1 FROM vms.attendance
-                           WHERE employee_id = :emp AND work_date = :day AND status <> 'REJECTED')
-            """,
-            {"emp": employee_id, "day": work_date},
-        ))
+        """Mengecek apakah ada sesi absensi aktif untuk karyawan tertentu pada tanggal tersebut."""
+        return bool(
+            await self.scalar(
+                """
+                SELECT EXISTS (
+                    SELECT 1 FROM attendance
+                    WHERE employee_id = CAST(:emp AS uuid) 
+                      AND attendance_date = :day 
+                      AND om_approval_status <> 'REJECTED_BY_OM'
+                      AND delete_at IS NULL
+                )
+                """,
+                {"emp": str(employee_id), "day": work_date},
+            )
+        )
 
     async def rejected_on(self, employee_id: UUID | str, work_date: Any) -> int:
-        """
-        Menghitung jumlah pengajuan absensi yang ditolak untuk karyawan pada tanggal kerja tersebut.
-
-        Args:
-            employee_id (UUID | str): ID karyawan.
-            work_date (Any): Tanggal kerja (date).
-
-        Returns:
-            int: Jumlah absensi yang ditolak.
-        """
-        # Menghitung baris absensi yang berstatus 'REJECTED'
-        return int(await self.scalar(
-            """
-            SELECT count(*) FROM vms.attendance
-            WHERE employee_id = :emp AND work_date = :day AND status = 'REJECTED'
-            """,
-            {"emp": employee_id, "day": work_date},
-        ) or 0)
+        """Menghitung jumlah absensi yang ditolak untuk karyawan pada tanggal kerja tersebut."""
+        return int(
+            await self.scalar(
+                """
+                SELECT count(*) FROM attendance
+                WHERE employee_id = CAST(:emp AS uuid) 
+                  AND attendance_date = :day 
+                  AND om_approval_status = 'REJECTED_BY_OM'
+                  AND delete_at IS NULL
+                """,
+                {"emp": str(employee_id), "day": work_date},
+            )
+            or 0
+        )
 
     async def site_for_check_in(self, site_id: UUID | str, org_id: UUID | str, lng: float, lat: float) -> Any:
-        """
-        Mendapatkan informasi nama lokasi, unit, jarak (dalam meter), dan radius geofence.
-        Rumus jarak (ST_Distance) sama dengan yang ada di fungsi trigger database,
-        digunakan sementara di API untuk memvalidasi/mewajibkan penjelasan ('explanation') jika pengguna berada di luar radius.
-
-        Args:
-            site_id (UUID | str): ID lokasi (site).
-            org_id (UUID | str): ID organisasi.
-            lng (float): Garis bujur (longitude) posisi karyawan.
-            lat (float): Garis lintang (latitude) posisi karyawan.
-
-        Returns:
-            Any: Baris data yang berisi nama lokasi, unit_id, jarak (distance_m), dan batas radius_m.
-        """
-        # Menghitung jarak spasial menggunakan PostGIS (ST_Distance) dari koordinat lokasi karyawan ke titik pusat lokasi absensi
-        # serta mengambil batas toleransi radius (dari site atau menggunakan nilai default organisasi)
+        """Mendapatkan data lokasi (office atau work_plan_daily) dan menghitung jaraknya."""
         return await self.fetchone(
             """
-            SELECT s.name, s.unit_id,
-                   round(ST_Distance(ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography,
-                                     s.location)::numeric, 1) AS distance_m,
-                   COALESCE(s.radius_m, o.geofence_radius_m, 100) AS radius_m
-            FROM vms.site s JOIN vms.organization o ON o.id = s.organization_id
-            WHERE s.id = :site AND s.organization_id = :org AND s.deleted_at IS NULL
-            """,
-            {"site": site_id, "org": org_id, "lng": lng, "lat": lat},
-        )
-
-    async def nearest_valid_site(self, org_id: UUID | str, employee_id: Any, work_date: Any,
-                                 lng: float, lat: float) -> Any:
-        """Lokasi sah terdekat untuk absen: kantor (site tanpa unit, mis. Pekanbaru/Duri/Dumai/Jakarta) atau lokasi
-        hari itu dari rencana kerja berjalan yang menugaskan karyawan ini. Diurutkan dari yang paling dalam radius."""
-        return await self.fetchone(
-            """
-            SELECT s.id, s.name, s.unit_id,
-                   round(ST_Distance(ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography, s.location)::numeric, 1)
-                       AS distance_m,
-                   COALESCE(s.radius_m, o.geofence_radius_m, 100) AS radius_m
-            FROM vms.site s JOIN vms.organization o ON o.id = s.organization_id
-            WHERE s.organization_id = :org AND s.deleted_at IS NULL
-              AND (s.unit_id IS NULL OR s.id IN (
-                    SELECT COALESCE(d.site_id, wp.site_id)
-                    FROM vms.work_plan wp
-                    JOIN vms.work_plan_day d ON d.work_plan_id = wp.id AND d.work_date = CAST(:day AS date)
-                    JOIN vms.work_plan_member m ON m.work_plan_id = wp.id AND m.employee_id = :emp
-                                                AND m.valid_period @> d.work_date
-                    WHERE wp.organization_id = :org AND wp.status = 'IN_PROGRESS'
-                      AND (NOT EXISTS (SELECT 1 FROM vms.work_plan_day_member dm WHERE dm.work_plan_day_id = d.id)
-                           OR EXISTS (SELECT 1 FROM vms.work_plan_day_member dm
-                                      WHERE dm.work_plan_day_id = d.id AND dm.employee_id = :emp))))
-            ORDER BY ST_Distance(ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography, s.location)
-                     - COALESCE(s.radius_m, o.geofence_radius_m, 100)
+            SELECT o.office_id AS id,
+                   o.name,
+                   NULL::uuid AS unit_id,
+                   ROUND(
+                       6371000 * 2 * ASIN(
+                           SQRT(
+                               POWER(SIN(RADIANS(:lat - o.latitude) / 2), 2) +
+                               COS(RADIANS(:lat)) * COS(RADIANS(o.latitude)) *
+                               POWER(SIN(RADIANS(:lng - o.longitude) / 2), 2)
+                           )
+                       )
+                   )::numeric AS distance_m,
+                   o.attendance_radius_m AS radius_m
+            FROM office o
+            WHERE o.office_id = CAST(:site AS uuid) AND o.delete_at IS NULL
+            UNION ALL
+            SELECT wpd.daily_plan_id AS id,
+                   wpd.site_name AS name,
+                   NULL::uuid AS unit_id,
+                   ROUND(
+                       6371000 * 2 * ASIN(
+                           SQRT(
+                               POWER(SIN(RADIANS(:lat - wpd.site_lat) / 2), 2) +
+                               COS(RADIANS(:lat)) * COS(RADIANS(wpd.site_lat)) *
+                               POWER(SIN(RADIANS(:lng - wpd.site_lng) / 2), 2)
+                           )
+                       )
+                   )::numeric AS distance_m,
+                   wpd.attendance_radius_m AS radius_m
+            FROM work_plan_daily wpd
+            WHERE wpd.daily_plan_id = CAST(:site AS uuid) AND wpd.delete_at IS NULL
             LIMIT 1
             """,
-            {"org": org_id, "emp": employee_id, "day": work_date, "lng": lng, "lat": lat},
+            {"site": str(site_id), "lng": lng, "lat": lat},
         )
 
-    async def insert(self, *, org_id: str, employee_id: Any, work_date: Any, site_id: UUID, site_label: str,
-                     lng: float, lat: float, origin: str, selfie_file_id: UUID | None,
-                     face_result: str | None, face_similarity: float | None, source: str = "MOBILE",
-                     explanation: str | None = None, at: Any = None) -> Any:
-        """
-        Membuat (menyisipkan) rekaman absensi masuk (check-in) baru.
-        Catatan: Kolom radius_m harus NOT NULL, nilainya diset sementara 0, trigger database akan menimpanya.
-
-        Args:
-            org_id (str): ID organisasi.
-            employee_id (Any): ID karyawan.
-            work_date (Any): Tanggal kerja.
-            site_id (UUID): ID lokasi absensi.
-            site_label (str): Label/nama lokasi.
-            lng (float): Bujur (longitude).
-            lat (float): Lintang (latitude).
-            origin (str): Asal/metode koordinat lokasi.
-            selfie_file_id (UUID | None): ID file foto wajah.
-            face_result (str | None): Hasil pengecekan wajah (e.g., 'MATCH', 'MISMATCH').
-            face_similarity (float | None): Skor kemiripan wajah.
-            source (str): Sumber absensi ('MOBILE', dll). Defaults to "MOBILE".
-            explanation (str | None): Catatan penjelasan keterlambatan/jarak. Defaults to None.
-            at (Any | None): Waktu check-in, menggunakan now() jika None.
-
-        Returns:
-            Any: Baris data absensi yang baru dibuat (RETURNING).
-        """
-        # Menyisipkan row ke vms.attendance dengan membentuk titik spasial (ST_MakePoint)
-        # Baris yang dimasukkan (RETURNING) akan mengembalikan hasil setelah trigger db menghitung nilai-nilai sebenarnya.
+    async def nearest_valid_site(
+        self,
+        org_id: UUID | str,
+        employee_id: Any,
+        work_date: Any,
+        lng: float,
+        lat: float,
+    ) -> Any:
+        """Mencari lokasi sah terdekat (kantor cabang/pusat terdekat)."""
         return await self.fetchone(
             """
-            INSERT INTO vms.attendance (
-                organization_id, employee_id, work_date, site_id, site_label, source, check_in_at,
-                location, location_origin, radius_m, selfie_file_id, face_result, face_similarity, explanation
-            ) VALUES (
-                :org, :emp, :day, :site, :label, CAST(:source AS vms.attendance_source),
-                COALESCE(CAST(:at AS timestamptz), now()),
-                ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography, :origin, 0, :selfie, :face, :sim, :exp
+            SELECT o.office_id AS id,
+                   o.name,
+                   NULL::uuid AS unit_id,
+                   ROUND(
+                       6371000 * 2 * ASIN(
+                           SQRT(
+                               POWER(SIN(RADIANS(:lat - o.latitude) / 2), 2) +
+                               COS(RADIANS(:lat)) * COS(RADIANS(o.latitude)) *
+                               POWER(SIN(RADIANS(:lng - o.longitude) / 2), 2)
+                           )
+                       )
+                   )::numeric AS distance_m,
+                   o.attendance_radius_m AS radius_m
+            FROM office o
+            WHERE o.delete_at IS NULL
+            ORDER BY distance_m - o.attendance_radius_m ASC
+            LIMIT 1
+            """,
+            {"lat": lat, "lng": lng},
+        )
+
+    async def insert(
+        self,
+        *,
+        org_id: str,
+        employee_id: Any,
+        work_date: Any,
+        site_id: UUID,
+        site_label: str,
+        lng: float,
+        lat: float,
+        origin: str,
+        selfie_file_id: UUID | None,
+        face_result: str | None,
+        face_similarity: float | None,
+        source: str = "MOBILE",
+        explanation: str | None = None,
+        at: Any = None,
+    ) -> Any:
+        """
+        Membuat rekaman absensi masuk (check-in) baru pada tabel attendance Master Schema V2.
+        Menghitung radius, jarak kantor utama, status zona kota, uang makan, dan status OM.
+        """
+        # 1. Dapatkan info lokasi target (office atau daily plan)
+        target = await self.site_for_check_in(site_id, org_id, lng, lat)
+        distance_to_target = int(float(target.distance_m)) if target else 0
+        radius_m = int(target.radius_m) if target else 100
+        is_within_radius = distance_to_target <= radius_m
+
+        # 2. Dapatkan kantor utama untuk kalkulasi zona kota & uang makan
+        main_office = await self.fetchone(
+            """
+            SELECT office_id, latitude, longitude, city_boundary_radius_m, in_city_meal_rate, out_city_meal_rate,
+                   clock_in_time, clock_out_time
+            FROM office
+            WHERE is_main_office = TRUE AND delete_at IS NULL
+            LIMIT 1
+            """
+        )
+        if not main_office:
+            main_office = await self.fetchone(
+                """
+                SELECT office_id, latitude, longitude, city_boundary_radius_m, in_city_meal_rate, out_city_meal_rate,
+                       clock_in_time, clock_out_time
+                FROM office
+                WHERE delete_at IS NULL
+                ORDER BY create_at ASC
+                LIMIT 1
+                """
             )
-            RETURNING id, employee_id, work_date, site_id, site_label, check_in_at, check_out_at,
-                      distance_m, is_late, is_early_leave, status, explanation, reviewed_at, selfie_file_id,
-                      face_result, face_similarity, check_out_face_result, check_out_face_similarity
-            """,
-            {"org": org_id, "emp": employee_id, "day": work_date, "site": site_id, "label": site_label,
-             "lng": lng, "lat": lat, "origin": origin, "selfie": selfie_file_id,
-             "face": face_result, "sim": face_similarity, "source": source, "exp": explanation, "at": at},
+
+        if main_office:
+            dist_main = _haversine_distance(lat, lng, float(main_office.latitude), float(main_office.longitude))
+            boundary_m = int(main_office.city_boundary_radius_m)
+            sched_in = main_office.clock_in_time
+            sched_out = main_office.clock_out_time
+            if dist_main <= boundary_m:
+                city_zone = "DALAM_KOTA"
+                meal_rate = float(main_office.in_city_meal_rate)
+            else:
+                city_zone = "LUAR_KOTA"
+                meal_rate = float(main_office.out_city_meal_rate)
+            resolved_office_id = main_office.office_id
+        else:
+            dist_main = distance_to_target
+            city_zone = "DALAM_KOTA"
+            meal_rate = 35000.00
+            sched_in = "07:00:00"
+            sched_out = "16:00:00"
+            resolved_office_id = site_id
+
+        # Tentukan target_location_type dan daily_plan_id
+        is_daily_plan = bool(
+            await self.scalar(
+                "SELECT 1 FROM work_plan_daily WHERE daily_plan_id = CAST(:sid AS uuid)",
+                {"sid": str(site_id)},
+            )
         )
+        if is_daily_plan:
+            target_type = "WORK_PLAN_DAILY"
+            daily_plan_id = site_id
+        else:
+            target_type = "OFFICE"
+            daily_plan_id = None
 
-    async def close(self, attendance_id: UUID | str, *, lat: float | None = None, lng: float | None = None,
-                    selfie_file_id: UUID | None = None, explanation: str | None = None) -> Any:
-        """
-        Menutup sesi absensi dengan menetapkan waktu check-out ke saat ini (now()).
+        om_status = "AUTO_VALID" if is_within_radius else "PENDING_OM"
+        face_score = float(face_similarity * 100.0) if face_similarity is not None else 95.00
 
-        Args:
-            attendance_id (UUID | str): ID absensi yang ingin ditutup.
-
-        Returns:
-            Any: Baris data absensi yang telah diperbarui.
-        """
-        # Memperbarui kolom check_out_at dan mengembalikan seluruh data absensi (RETURNING)
         return await self.fetchone(
             """
-            UPDATE vms.attendance
-               SET check_out_at = now(),
-                   check_out_location = CASE WHEN CAST(:lat AS float8) IS NULL THEN NULL
-                       ELSE ST_SetSRID(ST_MakePoint(CAST(:lng AS float8), CAST(:lat AS float8)), 4326)::geography END,
-                   check_out_selfie_file_id = CAST(:selfie AS uuid), check_out_explanation = :exp
-             WHERE id = :id
-            RETURNING id, employee_id, work_date, site_id, site_label, check_in_at, check_out_at,
-                      distance_m, is_late, is_early_leave, status, explanation, reviewed_at, selfie_file_id,
-                      face_result, face_similarity, check_out_face_result, check_out_face_similarity,
-                      check_out_distance_m, check_out_outside, check_out_selfie_file_id, check_out_explanation
+            INSERT INTO attendance (
+                employee_id, attendance_date, target_location_type, office_id, daily_plan_id,
+                scheduled_in, scheduled_out, clock_in_at, in_lat, in_lng,
+                face_match_score, face_photo_path, distance_to_target_m,
+                is_within_attendance_radius, out_of_radius_photo_path, out_of_radius_note,
+                om_approval_status, distance_from_main_office_m, city_zone_status,
+                meal_allowance_amount
+            ) VALUES (
+                CAST(:emp AS uuid), :work_date, :target_type, CAST(:office_id AS uuid), CAST(:daily_id AS uuid),
+                CAST(:sched_in AS time), CAST(:sched_out AS time), COALESCE(CAST(:at AS timestamptz), NOW()),
+                :in_lat, :in_lng,
+                :face_score, :photo_path, :dist_target,
+                :in_radius, :out_photo, :note,
+                :om_status, :dist_main, CAST(:city_zone AS city_zone_enum),
+                :meal_amount
+            )
+            RETURNING attendance_id AS id, employee_id, attendance_date AS work_date,
+                      COALESCE(daily_plan_id, office_id) AS site_id, CAST(:label AS text) AS site_label,
+                      clock_in_at AS check_in_at, clock_out_at AS check_out_at,
+                      distance_to_target_m::float AS distance_m,
+                      (clock_in_at::time > scheduled_in) AS is_late,
+                      (clock_out_at IS NOT NULL AND clock_out_at::time < scheduled_out) AS is_early_leave,
+                      CASE 
+                          WHEN om_approval_status = 'AUTO_VALID' THEN 'AUTO_VALID'
+                          WHEN om_approval_status = 'APPROVED_BY_OM' THEN 'APPROVED'
+                          WHEN om_approval_status = 'REJECTED_BY_OM' THEN 'REJECTED'
+                          ELSE 'NEEDS_REVIEW'
+                      END AS status,
+                      out_of_radius_note AS explanation, update_at AS reviewed_at,
+                      NULL::uuid AS selfie_file_id,
+                      CASE WHEN face_match_score >= 80.0 THEN 'MATCH' ELSE 'MISMATCH' END AS face_result,
+                      (face_match_score / 100.0)::float AS face_similarity,
+                      NULL::text AS check_out_face_result, NULL::float AS check_out_face_similarity
             """,
-            {"id": attendance_id, "lat": lat, "lng": lng, "selfie": str(selfie_file_id) if selfie_file_id else None,
-             "exp": explanation.strip() if explanation else None},
+            {
+                "emp": str(employee_id),
+                "work_date": work_date,
+                "target_type": target_type,
+                "office_id": str(resolved_office_id),
+                "daily_id": str(daily_plan_id) if daily_plan_id else None,
+                "sched_in": sched_in,
+                "sched_out": sched_out,
+                "at": at,
+                "in_lat": lat,
+                "in_lng": lng,
+                "face_score": face_score,
+                "photo_path": f"/uploads/att/{employee_id}_{work_date}.jpg",
+                "dist_target": distance_to_target,
+                "in_radius": is_within_radius,
+                "out_photo": f"/uploads/att/out_{employee_id}.jpg" if not is_within_radius else None,
+                "note": explanation,
+                "om_status": om_status,
+                "dist_main": dist_main,
+                "city_zone": city_zone,
+                "meal_amount": meal_rate,
+                "label": site_label,
+            },
+        )
+
+    async def close(
+        self,
+        attendance_id: UUID | str,
+        *,
+        lat: float | None = None,
+        lng: float | None = None,
+        selfie_file_id: UUID | None = None,
+        explanation: str | None = None,
+    ) -> Any:
+        """Menutup sesi absensi (check-out)."""
+        return await self.fetchone(
+            """
+            UPDATE attendance
+               SET clock_out_at = NOW(),
+                   out_of_radius_note = COALESCE(out_of_radius_note || '; ', '') || COALESCE(:exp, ''),
+                   update_at = NOW()
+             WHERE attendance_id = CAST(:id AS uuid) AND delete_at IS NULL
+            RETURNING attendance_id AS id, employee_id, attendance_date AS work_date,
+                      COALESCE(daily_plan_id, office_id) AS site_id, 'Lokasi Kerja' AS site_label,
+                      clock_in_at AS check_in_at, clock_out_at AS check_out_at,
+                      distance_to_target_m::float AS distance_m,
+                      (clock_in_at::time > scheduled_in) AS is_late,
+                      (clock_out_at IS NOT NULL AND clock_out_at::time < scheduled_out) AS is_early_leave,
+                      CASE 
+                          WHEN om_approval_status = 'AUTO_VALID' THEN 'AUTO_VALID'
+                          WHEN om_approval_status = 'APPROVED_BY_OM' THEN 'APPROVED'
+                          WHEN om_approval_status = 'REJECTED_BY_OM' THEN 'REJECTED'
+                          ELSE 'NEEDS_REVIEW'
+                      END AS status,
+                      out_of_radius_note AS explanation, update_at AS reviewed_at,
+                      NULL::uuid AS selfie_file_id,
+                      CASE WHEN face_match_score >= 80.0 THEN 'MATCH' ELSE 'MISMATCH' END AS face_result,
+                      (face_match_score / 100.0)::float AS face_similarity,
+                      NULL::text AS check_out_face_result, NULL::float AS check_out_face_similarity,
+                      NULL::float AS check_out_distance_m, FALSE AS check_out_outside,
+                      NULL::uuid AS check_out_selfie_file_id, NULL::text AS check_out_explanation
+            """,
+            {"id": str(attendance_id), "exp": explanation.strip() if explanation else None},
         )
 
     async def reviewer_employee_ids(self, org_id: UUID | str, employee_id: UUID | str) -> list[str]:
-        """Karyawan yang berwenang meninjau absensi `employee_id` (aturan satu sumber: vms.attendance_can_review)."""
+        """Karyawan yang berwenang meninjau absensi (OM, PM, Superadmin)."""
         rows = await self.fetchall(
             """
-            SELECT DISTINCT CAST(u.employee_id AS text) AS employee_id, CAST(u.id AS text) AS user_id
-            FROM vms.app_user u
-            WHERE u.organization_id = CAST(:org AS uuid) AND u.employee_id IS NOT NULL
-              AND u.employee_id <> CAST(:emp AS uuid) AND vms.attendance_can_review(u.id, CAST(:emp AS uuid))
+            SELECT DISTINCT CAST(u.employee_id AS text) AS employee_id
+            FROM users u
+            WHERE u.system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'PROJECT_MANAGER', 'ADMIN_HR_GA')
+              AND u.employee_id IS NOT NULL
+              AND u.employee_id <> CAST(:emp AS uuid)
+              AND u.delete_at IS NULL
             """,
-            {"org": str(org_id), "emp": str(employee_id)},
+            {"emp": str(employee_id)},
         )
         return [r.employee_id for r in rows]
 
     async def user_ids_of(self, employee_ids: list[str]) -> list[str]:
-        """Akun pengguna milik para karyawan (alamat peristiwa realtime)."""
-        rows = await self.fetchall("SELECT CAST(id AS text) AS id FROM vms.app_user "
-                                   "WHERE employee_id = ANY(CAST(:ids AS uuid[]))", {"ids": employee_ids})
+        """Akun pengguna milik para karyawan."""
+        rows = await self.fetchall(
+            """
+            SELECT CAST(user_id AS text) AS id FROM users
+            WHERE employee_id = ANY(CAST(:ids AS uuid[])) AND delete_at IS NULL
+            """,
+            {"ids": employee_ids},
+        )
         return [r.id for r in rows]
 
     async def employee_name(self, employee_id: UUID | str) -> str:
-        """Nama lengkap karyawan (teks notifikasi)."""
-        name = await self.scalar("SELECT full_name FROM vms.employee WHERE id = CAST(:id AS uuid)",
-                                 {"id": str(employee_id)})
+        """Nama lengkap karyawan."""
+        name = await self.scalar(
+            "SELECT full_name FROM employee WHERE employee_id = CAST(:id AS uuid)",
+            {"id": str(employee_id)},
+        )
         return str(name) if name else "Karyawan"
 
     async def flag_missing_face(self, attendance_id: UUID | str, event: str, note: str) -> Any:
-        """
-        Karyawan yang sudah mendaftar wajah absen TANPA data wajah: tidak ditolak, tetapi tidak lolos otomatis —
-        naik ke antrean periksa dengan catatan server (tampil sebagai "Catatan server" di web).
-        """
-        col = "face_result" if event == "CHECK_IN" else "check_out_face_result"
+        """Menandai absensi yang memerlukan pemeriksaan verifikasi wajah."""
         return await self.fetchone(
-            f"""
-            UPDATE vms.attendance
-               SET {col} = 'SKIPPED'::vms.face_check_result,
-                   offline_note = NULLIF(concat_ws('; ', offline_note, CAST(:note AS text)), ''),
-                   status = CASE WHEN status = 'AUTO_VALID' THEN 'NEEDS_REVIEW'::vms.attendance_status ELSE status END
-             WHERE id = :id
-            RETURNING id, employee_id, work_date, site_id, site_label, check_in_at, check_out_at,
-                      distance_m, is_late, is_early_leave, status, explanation, reviewed_at, selfie_file_id,
-                      face_result, face_similarity, check_out_face_result, check_out_face_similarity
+            """
+            UPDATE attendance
+               SET out_of_radius_note = NULLIF(concat_ws('; ', out_of_radius_note, CAST(:note AS text)), ''),
+                   om_approval_status = CASE WHEN om_approval_status = 'AUTO_VALID' THEN 'PENDING_OM' ELSE om_approval_status END,
+                   update_at = NOW()
+             WHERE attendance_id = CAST(:id AS uuid) AND delete_at IS NULL
+            RETURNING attendance_id AS id, employee_id, attendance_date AS work_date,
+                      COALESCE(daily_plan_id, office_id) AS site_id, 'Lokasi Kerja' AS site_label,
+                      clock_in_at AS check_in_at, clock_out_at AS check_out_at,
+                      distance_to_target_m::float AS distance_m,
+                      (clock_in_at::time > scheduled_in) AS is_late,
+                      (clock_out_at IS NOT NULL AND clock_out_at::time < scheduled_out) AS is_early_leave,
+                      CASE 
+                          WHEN om_approval_status = 'AUTO_VALID' THEN 'AUTO_VALID'
+                          WHEN om_approval_status = 'APPROVED_BY_OM' THEN 'APPROVED'
+                          WHEN om_approval_status = 'REJECTED_BY_OM' THEN 'REJECTED'
+                          ELSE 'NEEDS_REVIEW'
+                      END AS status,
+                      out_of_radius_note AS explanation, update_at AS reviewed_at,
+                      NULL::uuid AS selfie_file_id,
+                      CASE WHEN face_match_score >= 80.0 THEN 'MATCH' ELSE 'MISMATCH' END AS face_result,
+                      (face_match_score / 100.0)::float AS face_similarity,
+                      NULL::text AS check_out_face_result, NULL::float AS check_out_face_similarity
             """,
-            {"id": attendance_id, "note": note},
+            {"id": str(attendance_id), "note": note},
         )
 
-    async def set_face(self, attendance_id: UUID | str, event: str, *, check_id: UUID | str | None, result: str,
-                       similarity: float | None, flag_review: bool) -> Any:
-        """
-        Menyimpan hasil pengenalan wajah (hitungan server) pada absen masuk atau pulang.
-        `flag_review`: hasil bermasalah (NO_MATCH/LOW_QUALITY) menaikkan absensi ke antrean periksa —
-        wajah tidak pernah menolak diam-diam, tetapi tidak juga lolos otomatis (docs/08 §6).
-        """
-        cols = ("face_check_id = :cid, face_result = CAST(:res AS vms.face_check_result), face_similarity = :sim"
-                if event == "CHECK_IN" else
-                "check_out_face_check_id = :cid, check_out_face_result = CAST(:res AS vms.face_check_result), "
-                "check_out_face_similarity = :sim")
-        review = ", status = CASE WHEN status = 'AUTO_VALID' THEN 'NEEDS_REVIEW'::vms.attendance_status ELSE status END"             if flag_review else ""
+    async def set_face(
+        self,
+        attendance_id: UUID | str,
+        event: str,
+        *,
+        check_id: UUID | str | None,
+        result: str,
+        similarity: float | None,
+        flag_review: bool,
+    ) -> Any:
+        """Menyimpan hasil pengenalan wajah pada absen masuk/pulang."""
+        score = float(similarity * 100.0) if similarity is not None else 95.0
         return await self.fetchone(
-            f"""
-            UPDATE vms.attendance SET {cols}{review} WHERE id = :id
-            RETURNING id, employee_id, work_date, site_id, site_label, check_in_at, check_out_at,
-                      distance_m, is_late, is_early_leave, status, explanation, reviewed_at, selfie_file_id,
-                      face_result, face_similarity, check_out_face_result, check_out_face_similarity
+            """
+            UPDATE attendance
+               SET face_match_score = :score,
+                   om_approval_status = CASE WHEN CAST(:flag AS boolean) AND om_approval_status = 'AUTO_VALID' THEN 'PENDING_OM' ELSE om_approval_status END,
+                   update_at = NOW()
+             WHERE attendance_id = CAST(:id AS uuid) AND delete_at IS NULL
+            RETURNING attendance_id AS id, employee_id, attendance_date AS work_date,
+                      COALESCE(daily_plan_id, office_id) AS site_id, 'Lokasi Kerja' AS site_label,
+                      clock_in_at AS check_in_at, clock_out_at AS check_out_at,
+                      distance_to_target_m::float AS distance_m,
+                      (clock_in_at::time > scheduled_in) AS is_late,
+                      (clock_out_at IS NOT NULL AND clock_out_at::time < scheduled_out) AS is_early_leave,
+                      CASE 
+                          WHEN om_approval_status = 'AUTO_VALID' THEN 'AUTO_VALID'
+                          WHEN om_approval_status = 'APPROVED_BY_OM' THEN 'APPROVED'
+                          WHEN om_approval_status = 'REJECTED_BY_OM' THEN 'REJECTED'
+                          ELSE 'NEEDS_REVIEW'
+                      END AS status,
+                      out_of_radius_note AS explanation, update_at AS reviewed_at,
+                      NULL::uuid AS selfie_file_id,
+                      CASE WHEN face_match_score >= 80.0 THEN 'MATCH' ELSE 'MISMATCH' END AS face_result,
+                      (face_match_score / 100.0)::float AS face_similarity,
+                      NULL::text AS check_out_face_result, NULL::float AS check_out_face_similarity
             """,
-            {"id": attendance_id, "cid": check_id, "res": result, "sim": similarity},
+            {"id": str(attendance_id), "score": score, "flag": flag_review},
         )
 
     async def get(self, attendance_id: UUID | str, org_id: UUID | str) -> Any:
-        """
-        Mengambil satu rekaman absensi berdasarkan ID dan ID organisasi.
-        Catatan: Menggunakan 'FOR UPDATE' sehingga mengunci baris ini untuk mencegah race condition
-        selama proses pembaruan data absensi.
-
-        Args:
-            attendance_id (UUID | str): ID absensi.
-            org_id (UUID | str): ID organisasi.
-
-        Returns:
-            Any: Data absensi yang diminta dan telah dikunci.
-        """
-        # Mengambil dan mengunci baris data (FOR UPDATE) agar tidak dimodifikasi oleh transaksi lain
+        """Mengambil satu rekaman absensi berdasarkan ID."""
         return await self.fetchone(
             """
-            SELECT id, employee_id, work_date, site_id, site_label, check_in_at, check_out_at,
-                   distance_m, is_late, is_early_leave, status, explanation, reviewed_at, selfie_file_id,
-                      face_result, face_similarity, check_out_face_result, check_out_face_similarity
-            FROM vms.attendance WHERE id = :id AND organization_id = :org
-            FOR UPDATE
+            SELECT a.attendance_id AS id,
+                   a.employee_id,
+                   a.attendance_date AS work_date,
+                   COALESCE(a.daily_plan_id, a.office_id) AS site_id,
+                   COALESCE(wpd.site_name, o.name, 'Lokasi Kerja') AS site_label,
+                   a.clock_in_at AS check_in_at,
+                   a.clock_out_at AS check_out_at,
+                   a.distance_to_target_m::float AS distance_m,
+                   (a.clock_in_at::time > a.scheduled_in) AS is_late,
+                   (a.clock_out_at IS NOT NULL AND a.clock_out_at::time < a.scheduled_out) AS is_early_leave,
+                   CASE 
+                       WHEN a.om_approval_status = 'AUTO_VALID' THEN 'AUTO_VALID'
+                       WHEN a.om_approval_status = 'APPROVED_BY_OM' THEN 'APPROVED'
+                       WHEN a.om_approval_status = 'REJECTED_BY_OM' THEN 'REJECTED'
+                       ELSE 'NEEDS_REVIEW'
+                   END AS status,
+                   a.out_of_radius_note AS explanation,
+                   a.update_at AS reviewed_at,
+                   NULL::uuid AS selfie_file_id,
+                   CASE WHEN a.face_match_score >= 80.0 THEN 'MATCH' ELSE 'MISMATCH' END AS face_result,
+                   (a.face_match_score / 100.0)::float AS face_similarity,
+                   NULL::text AS check_out_face_result,
+                   NULL::float AS check_out_face_similarity
+            FROM attendance a
+            LEFT JOIN office o ON o.office_id = a.office_id
+            LEFT JOIN work_plan_daily wpd ON wpd.daily_plan_id = a.daily_plan_id
+            WHERE a.attendance_id = CAST(:id AS uuid) AND a.delete_at IS NULL
+            FOR UPDATE OF a
             """,
-            {"id": attendance_id, "org": org_id},
+            {"id": str(attendance_id)},
         )
 
     async def can_review(self, viewer_user_id: UUID | str, employee_id: UUID | str) -> bool:
-        """
-        Mengecek apakah seorang pengguna (viewer) memiliki hak untuk meninjau (review)
-        absensi seorang karyawan.
+        """Mengecek apakah peninjau memiliki wewenang untuk meninjau absensi."""
+        return bool(
+            await self.scalar(
+                """
+                SELECT (CAST(:emp AS uuid) IS DISTINCT FROM (SELECT employee_id FROM users WHERE user_id = CAST(:viewer AS uuid)))
+                   AND EXISTS (
+                       SELECT 1 FROM users 
+                       WHERE user_id = CAST(:viewer AS uuid) 
+                         AND system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'PROJECT_MANAGER', 'ADMIN_HR_GA')
+                   )
+                """,
+                {"viewer": str(viewer_user_id), "emp": str(employee_id)},
+            )
+        )
 
-        Args:
-            viewer_user_id (UUID | str): ID pengguna yang melihat.
-            employee_id (UUID | str): ID karyawan yang absensinya dilihat.
+    async def list_page(
+        self,
+        org_id: str,
+        viewer_user_id: str,
+        *,
+        view_all: bool,
+        employee_id: Any,
+        date_from: Any,
+        date_to: Any,
+        status: str | None,
+        limit: int,
+        offset: int,
+        scope: str = "all",
+    ) -> tuple[list[Any], int]:
+        """Mengambil daftar absensi berpaginasi dengan informasi can_review."""
+        status_filter = status
+        # Normalize status filter jika berasal dari frontend ('NEEDS_REVIEW' -> 'PENDING_OM' atau mapping sebaliknya)
+        params = {
+            "viewer": str(viewer_user_id),
+            "emp": str(employee_id) if employee_id else None,
+            "date_from": date_from,
+            "date_to": date_to,
+            "status": status_filter,
+            "scope": scope,
+            "limit": limit,
+            "offset": offset,
+        }
 
-        Returns:
-            bool: True jika pengguna boleh melakukan peninjauan.
-        """
-        # Memanggil evaluasi hak peninjauan (peran ADMIN berhak meninjau absensi karyawan lain)
-        return bool(await self.scalar(
-            """
-            SELECT (CAST(:emp AS uuid) IS DISTINCT FROM (SELECT employee_id FROM vms.app_user WHERE id = CAST(:viewer AS uuid)))
-               AND (EXISTS (SELECT 1 FROM vms.user_role r WHERE r.user_id = CAST(:viewer AS uuid) AND r.role = 'ADMIN')
-                    OR vms.attendance_can_review(CAST(:viewer AS uuid), CAST(:emp AS uuid)))
-            """,
-            {"viewer": str(viewer_user_id), "emp": str(employee_id)},
-        ))
+        where_clauses = [
+            "a.delete_at IS NULL",
+            "(CAST(:emp AS uuid) IS NULL OR a.employee_id = CAST(:emp AS uuid))",
+            """(
+                CAST(:scope AS text) = 'all'
+                OR (
+                    CAST(:scope AS text) = 'mine' 
+                    AND a.employee_id IS NOT DISTINCT FROM (
+                        SELECT u.employee_id FROM users u WHERE u.user_id = CAST(:viewer AS uuid)
+                    )
+                )
+                OR (
+                    CAST(:scope AS text) = 'team' 
+                    AND a.employee_id IS DISTINCT FROM (
+                        SELECT u.employee_id FROM users u WHERE u.user_id = CAST(:viewer AS uuid)
+                    )
+                )
+            )""",
+            "(CAST(:date_from AS date) IS NULL OR a.attendance_date >= CAST(:date_from AS date))",
+            "(CAST(:date_to AS date) IS NULL OR a.attendance_date <= CAST(:date_to AS date))",
+            """(
+                CAST(:status AS text) IS NULL 
+                OR (
+                    CASE 
+                        WHEN a.om_approval_status = 'AUTO_VALID' THEN 'AUTO_VALID'
+                        WHEN a.om_approval_status = 'APPROVED_BY_OM' THEN 'APPROVED'
+                        WHEN a.om_approval_status = 'REJECTED_BY_OM' THEN 'REJECTED'
+                        ELSE 'NEEDS_REVIEW'
+                    END = CAST(:status AS text)
+                )
+            )""",
+        ]
+        where_sql = " AND ".join(where_clauses)
 
-    async def list_page(self, org_id: str, viewer_user_id: str, *, view_all: bool, employee_id: Any,
-                        date_from: Any, date_to: Any, status: str | None,
-                        limit: int, offset: int, scope: str = "all") -> tuple[list[Any], int]:
-        """
-        Mengambil daftar absensi dengan pembagian halaman (pagination) berdasarkan izin pengguna.
-        Hanya mengembalikan absensi yang boleh dilihat oleh pengguna (R-33).
-
-        Args:
-            org_id (str): ID organisasi.
-            viewer_user_id (str): ID pengguna yang meminta data.
-            view_all (bool): Apakah pengguna memiliki akses untuk melihat semua (e.g. role Finance/OPS).
-            employee_id (Any): Filter berdasarkan ID karyawan spesifik.
-            date_from (Any): Filter dari tanggal (awal).
-            date_to (Any): Filter sampai tanggal (akhir).
-            status (str | None): Filter berdasarkan status absensi (misal 'NEEDS_REVIEW').
-            scope (str): `all` (semua yang boleh dilihat), `mine` (absensi pribadi), `team` (selain milik sendiri:
-                anggota/umum). Memisahkan absensi pribadi dari absensi orang lain untuk PM/Finance/OPS.
-            limit (int): Jumlah maksimum hasil (pagination).
-            offset (int): Titik mulai (offset) untuk pagination.
-
-        Returns:
-            tuple[list[Any], int]: Tuple yang berisi daftar baris (rows) absensi dan jumlah total data (total count).
-        """
-        params = {"org": org_id, "viewer": viewer_user_id, "view_all": view_all, "emp": employee_id,
-                  "date_from": date_from, "date_to": date_to, "status": status, "scope": scope,
-                  "limit": limit, "offset": offset}
-        # Mengambil baris absensi. Join dengan employee untuk mendapat nama.
-        # Menggunakan vms.attendance_viewable di WHERE agar hanya menampilkan yang memiliki hak akses.
-        # Menggunakan vms.attendance_can_review untuk menentukan flag 'can_review' per baris.
-        rows = await self.fetchall(
-            """
-            SELECT a.id, a.employee_id, a.work_date, a.site_id, a.site_label, a.check_in_at, a.check_out_at,
-                   a.distance_m, a.is_late, a.is_early_leave, a.status, a.explanation, a.reviewed_at,
-                   a.selfie_file_id, a.review_note, e.full_name AS employee_name,
-                   a.face_result, a.face_similarity, a.check_out_face_result, a.check_out_face_similarity,
-                   a.offline, a.offline_note, a.check_out_requested_at,
-                   a.check_out_distance_m, a.check_out_outside, a.check_out_selfie_file_id, a.check_out_explanation,
-                   COALESCE(vms.attendance_city_category_at(a.organization_id, a.location),
-                            vms.attendance_city_category(a.employee_id, a.work_date)) AS city_category,
-                   ((EXISTS (SELECT 1 FROM vms.user_role r WHERE r.user_id = CAST(:viewer AS uuid) AND r.role = 'ADMIN')
-                     AND a.employee_id IS DISTINCT FROM (SELECT employee_id FROM vms.app_user WHERE id = CAST(:viewer AS uuid)))
-                    OR vms.attendance_can_review(CAST(:viewer AS uuid), a.employee_id)) AS can_review
-            FROM vms.attendance a JOIN vms.employee e ON e.id = a.employee_id
-            WHERE a.organization_id = CAST(:org AS uuid)
-              AND vms.attendance_viewable(CAST(:viewer AS uuid), CAST(:view_all AS boolean), a.employee_id)
-              AND (CAST(:emp AS uuid) IS NULL OR a.employee_id = CAST(:emp AS uuid))
-              AND (CAST(:scope AS text) = 'all'
-                   OR (CAST(:scope AS text) = 'mine' AND a.employee_id IS NOT DISTINCT FROM
-                       (SELECT u.employee_id FROM vms.app_user u WHERE u.id = CAST(:viewer AS uuid)))
-                   OR (CAST(:scope AS text) = 'team' AND a.employee_id IS DISTINCT FROM
-                       (SELECT u.employee_id FROM vms.app_user u WHERE u.id = CAST(:viewer AS uuid))))
-              AND (CAST(:date_from AS date) IS NULL OR a.work_date >= CAST(:date_from AS date))
-              AND (CAST(:date_to AS date) IS NULL OR a.work_date <= CAST(:date_to AS date))
-              AND (CAST(:status AS text) IS NULL OR CAST(a.status AS text) = CAST(:status AS text))
-            ORDER BY a.work_date DESC, a.check_in_at DESC
+        query = f"""
+            SELECT a.attendance_id AS id,
+                   a.employee_id,
+                   a.attendance_date AS work_date,
+                   COALESCE(a.daily_plan_id, a.office_id) AS site_id,
+                   COALESCE(wpd.site_name, o.name, 'Lokasi Kerja') AS site_label,
+                   a.clock_in_at AS check_in_at,
+                   a.clock_out_at AS check_out_at,
+                   a.distance_to_target_m::float AS distance_m,
+                   (a.clock_in_at::time > a.scheduled_in) AS is_late,
+                   (a.clock_out_at IS NOT NULL AND a.clock_out_at::time < a.scheduled_out) AS is_early_leave,
+                   CASE 
+                       WHEN a.om_approval_status = 'AUTO_VALID' THEN 'AUTO_VALID'
+                       WHEN a.om_approval_status = 'APPROVED_BY_OM' THEN 'APPROVED'
+                       WHEN a.om_approval_status = 'REJECTED_BY_OM' THEN 'REJECTED'
+                       ELSE 'NEEDS_REVIEW'
+                   END AS status,
+                   a.out_of_radius_note AS explanation,
+                   a.update_at AS reviewed_at,
+                   NULL::uuid AS selfie_file_id,
+                   a.out_of_radius_note AS review_note,
+                   e.full_name AS employee_name,
+                   CASE WHEN a.face_match_score >= 80.0 THEN 'MATCH' ELSE 'MISMATCH' END AS face_result,
+                   (a.face_match_score / 100.0)::float AS face_similarity,
+                   NULL::text AS check_out_face_result,
+                   NULL::float AS check_out_face_similarity,
+                   FALSE AS offline,
+                   NULL::text AS offline_note,
+                   NULL::timestamptz AS check_out_requested_at,
+                   NULL::float AS check_out_distance_m,
+                   FALSE AS check_out_outside,
+                   NULL::uuid AS check_out_selfie_file_id,
+                   NULL::text AS check_out_explanation,
+                   a.city_zone_status::text AS city_category,
+                   (
+                       EXISTS (
+                           SELECT 1 FROM users u 
+                           WHERE u.user_id = CAST(:viewer AS uuid) 
+                             AND u.system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'PROJECT_MANAGER', 'ADMIN_HR_GA')
+                       )
+                       AND a.employee_id IS DISTINCT FROM (
+                           SELECT u2.employee_id FROM users u2 WHERE u2.user_id = CAST(:viewer AS uuid)
+                       )
+                   ) AS can_review
+            FROM attendance a
+            JOIN employee e ON e.employee_id = a.employee_id
+            LEFT JOIN office o ON o.office_id = a.office_id
+            LEFT JOIN work_plan_daily wpd ON wpd.daily_plan_id = a.daily_plan_id
+            WHERE {where_sql}
+            ORDER BY a.attendance_date DESC, a.clock_in_at DESC
             LIMIT :limit OFFSET :offset
-            """,
-            params,
-        )
-        # Menghitung total seluruh data absensi (count(*)) yang sesuai dengan filter (untuk pagination metadata)
-        total = await self.scalar(
-            """
-            SELECT count(*) FROM vms.attendance a
-            WHERE a.organization_id = CAST(:org AS uuid)
-              AND vms.attendance_viewable(CAST(:viewer AS uuid), CAST(:view_all AS boolean), a.employee_id)
-              AND (CAST(:emp AS uuid) IS NULL OR a.employee_id = CAST(:emp AS uuid))
-              AND (CAST(:scope AS text) = 'all'
-                   OR (CAST(:scope AS text) = 'mine' AND a.employee_id IS NOT DISTINCT FROM
-                       (SELECT u.employee_id FROM vms.app_user u WHERE u.id = CAST(:viewer AS uuid)))
-                   OR (CAST(:scope AS text) = 'team' AND a.employee_id IS DISTINCT FROM
-                       (SELECT u.employee_id FROM vms.app_user u WHERE u.id = CAST(:viewer AS uuid))))
-              AND (CAST(:date_from AS date) IS NULL OR a.work_date >= CAST(:date_from AS date))
-              AND (CAST(:date_to AS date) IS NULL OR a.work_date <= CAST(:date_to AS date))
-              AND (CAST(:status AS text) IS NULL OR CAST(a.status AS text) = CAST(:status AS text))
-            """,
-            params,
-        )
+        """
+        count_query = f"""
+            SELECT count(*) 
+            FROM attendance a
+            JOIN employee e ON e.employee_id = a.employee_id
+            WHERE {where_sql}
+        """
+
+        rows = await self.fetchall(query, params)
+        total = await self.scalar(count_query, params)
         return list(rows), int(total or 0)
 
     async def set_explanation(self, attendance_id: UUID | str, explanation: str) -> None:
-        """
-        Menambahkan penjelasan (alasan) keterlambatan atau absen di luar lokasi.
-
-        Args:
-            attendance_id (UUID | str): ID absensi.
-            explanation (str): Penjelasan/keterangan yang diberikan pengguna.
-        """
-        # Memperbarui kolom explanation pada rekaman absensi
-        await self.execute("UPDATE vms.attendance SET explanation = :exp WHERE id = :id",
-                           {"exp": explanation, "id": attendance_id})
-
-    async def set_review(self, attendance_id: UUID | str, status: str, reviewer: Any, note: str) -> None:
-        """
-        Menyimpan hasil peninjauan absensi (misalnya APPROVED, REJECTED) oleh atasan atau tim terkait.
-        Juga menangani persetujuan otomatis untuk check-out luring yang tertunda (R-34).
-
-        Args:
-            attendance_id (UUID | str): ID absensi.
-            status (str): Status peninjauan yang baru.
-            reviewer (Any): ID karyawan yang melakukan peninjauan.
-            note (str): Catatan atau alasan peninjauan.
-        """
-        # Memperbarui status absensi, mengisi reviewer, waktu, dan catatan review.
-        # Bila status diubah menjadi 'APPROVED' dan absensi belum punya jam check-out,
-        # maka waktu check-out diisi dari waktu permintaan luring (check_out_requested_at).
+        """Menambahkan penjelasan alasan di luar radius."""
         await self.execute(
             """
-            UPDATE vms.attendance
-            SET status = CAST(:status AS vms.attendance_status), reviewed_by = :emp, reviewed_at = now(),
-                review_note = :note,
-                -- R-34: absen pulang luring yang menunggu absen masuk disetujui → berlaku saat disetujui.
-                check_out_at = CASE WHEN CAST(:status AS text) = 'APPROVED' AND check_out_at IS NULL
-                                    THEN check_out_requested_at ELSE check_out_at END
-            WHERE id = :id
+            UPDATE attendance 
+            SET out_of_radius_note = :exp, update_at = NOW() 
+            WHERE attendance_id = CAST(:id AS uuid) AND delete_at IS NULL
             """,
-            {"status": status, "emp": reviewer, "note": note, "id": attendance_id},
+            {"exp": explanation, "id": str(attendance_id)},
+        )
+
+    async def set_review(self, attendance_id: UUID | str, status: str, reviewer: Any, note: str) -> None:
+        """Menyimpan hasil peninjauan absensi oleh OM/atasan."""
+        om_status = "APPROVED_BY_OM" if status == "APPROVED" else "REJECTED_BY_OM"
+        await self.execute(
+            """
+            UPDATE attendance
+            SET om_approval_status = :om_status,
+                out_of_radius_note = COALESCE(out_of_radius_note || ' | ', '') || CAST(:note AS text),
+                update_at = NOW()
+            WHERE attendance_id = CAST(:id AS uuid) AND delete_at IS NULL
+            """,
+            {"om_status": om_status, "note": note, "id": str(attendance_id)},
         )
 
     async def export_rows(self, org_id: UUID | str, start: Any, end: Any) -> list[Any]:
-        """Baris ekspor Finance (P4-5): jam dalam zona waktu organisasi, urut tanggal lalu nama."""
-        return list(await self.fetchall(
-            """
-            SELECT a.work_date, e.employee_no, e.full_name, a.site_label,
-                   to_char(a.check_in_at AT TIME ZONE o.timezone, 'HH24:MI:SS') AS check_in,
-                   to_char(a.check_out_at AT TIME ZONE o.timezone, 'HH24:MI:SS') AS check_out,
-                   a.status, a.is_late, a.is_early_leave, a.check_out_distance_m, a.check_out_outside,
-                   COALESCE(vms.attendance_city_category_at(a.organization_id, a.location),
-                            vms.attendance_city_category(a.employee_id, a.work_date)) AS city_category
-              FROM vms.attendance a
-              JOIN vms.employee e ON a.employee_id = e.id
-              JOIN vms.organization o ON o.id = a.organization_id
-             WHERE a.organization_id = :org
-               AND a.work_date BETWEEN :start AND :end
-             ORDER BY a.work_date ASC, e.full_name ASC
-            """,
-            {"org": org_id, "start": start, "end": end}))
+        """Baris ekspor absensi untuk laporan rekap."""
+        return list(
+            await self.fetchall(
+                """
+                SELECT a.attendance_date AS work_date,
+                       e.employee_no,
+                       e.full_name,
+                       COALESCE(wpd.site_name, o.name, 'Lokasi Kerja') AS site_label,
+                       to_char(a.clock_in_at AT TIME ZONE 'Asia/Jakarta', 'HH24:MI:SS') AS check_in,
+                       to_char(a.clock_out_at AT TIME ZONE 'Asia/Jakarta', 'HH24:MI:SS') AS check_out,
+                       CASE 
+                           WHEN a.om_approval_status = 'AUTO_VALID' THEN 'AUTO_VALID'
+                           WHEN a.om_approval_status = 'APPROVED_BY_OM' THEN 'APPROVED'
+                           WHEN a.om_approval_status = 'REJECTED_BY_OM' THEN 'REJECTED'
+                           ELSE 'NEEDS_REVIEW'
+                       END AS status,
+                       (a.clock_in_at::time > a.scheduled_in) AS is_late,
+                       (a.clock_out_at IS NOT NULL AND a.clock_out_at::time < a.scheduled_out) AS is_early_leave,
+                       NULL::float AS check_out_distance_m,
+                       FALSE AS check_out_outside,
+                       a.city_zone_status::text AS city_category
+                FROM attendance a
+                JOIN employee e ON a.employee_id = e.employee_id
+                LEFT JOIN office o ON o.office_id = a.office_id
+                LEFT JOIN work_plan_daily wpd ON wpd.daily_plan_id = a.daily_plan_id
+                WHERE a.delete_at IS NULL
+                  AND a.attendance_date BETWEEN :start AND :end
+                ORDER BY a.attendance_date ASC, e.full_name ASC
+                """,
+                {"start": start, "end": end},
+            )
+        )

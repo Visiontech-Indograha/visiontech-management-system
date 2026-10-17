@@ -1,8 +1,6 @@
 """
 app/crud/crud_org_clock.py
-Jam organisasi (V-10): waktu & tanggal lokal menurut `organization.timezone`, dari jam server
-basis data — sama dengan yang dipakai trigger dan kueri lain (`now() AT TIME ZONE o.timezone`).
-Bukan jam perangkat, bukan zona waktu mesin aplikasi (Docker = UTC).
+Waktu server lokal berbasis zona waktu Asia/Jakarta (WIB) Master Schema V2.
 """
 from __future__ import annotations
 
@@ -14,49 +12,25 @@ from .base import CRUDBase
 
 class CRUDOrgClock(CRUDBase):
     """
-    Kelas CRUD untuk operasi yang berkaitan dengan waktu dan zona waktu organisasi.
+    Kelas CRUD untuk operasi waktu dan tanggal lokal.
     """
 
-    async def local_now(self, org_id: UUID | str) -> Any:
-        """Baris `(local_now, today)` untuk organisasi.
-
-        Args:
-            org_id (UUID | str): ID organisasi.
-
-        Returns:
-            Any: Baris data yang menyimpan nilai waktu (timestamp) dan tanggal (date) lokal organisasi.
-        """
-        # Mengekstrak waktu server (now()) dan mentransformasikannya secara real-time
-        # ke zona waktu spesifik organisasi (o.timezone) melalui fitur AT TIME ZONE PostgreSQL.
+    async def local_now(self, org_id: UUID | str | None = None) -> Any:
+        """Baris `(local_now, today)` untuk organisasi."""
         return await self.fetchone(
             """
-            SELECT (now() AT TIME ZONE o.timezone) AS local_now,
-                   (now() AT TIME ZONE o.timezone)::date AS today
-            FROM vms.organization o WHERE o.id = CAST(:org AS uuid)
-            """,
-            {"org": org_id},
+            SELECT (now() AT TIME ZONE 'Asia/Jakarta') AS local_now,
+                   (now() AT TIME ZONE 'Asia/Jakarta')::date AS today
+            """
         )
 
     async def day_reached(self, day_id: UUID | str) -> Any:
-        """Apakah tanggal hari kerja sudah tiba menurut zona waktu organisasi SK-nya. None = hari tidak ada.
-
-        Args:
-            day_id (UUID | str): ID dari entri hari kerja (work_plan_day).
-
-        Returns:
-            Any: Boolean evaluasi waktu, atau None.
-        """
-        # Melakukan JOIN bertingkat dari tabel hari (work_plan_day) ke work_plan lalu ke organization.
-        # Membandingkan kolom work_date dengan tanggal lokal terkini dari zona waktu organisasi tersebut
-        # untuk menentukan apakah suatu hari kerja SK sudah tiba atau belum.
+        """Apakah tanggal hari kerja sudah tiba menurut zona waktu lokal."""
         return await self.scalar(
             """
-            SELECT d.work_date <= (now() AT TIME ZONE o.timezone)::date
-            FROM vms.work_plan_day d
-            JOIN vms.work_plan w ON w.id = d.work_plan_id
-            JOIN vms.organization o ON o.id = w.organization_id
-            WHERE d.id = :day
+            SELECT d.work_date <= (now() AT TIME ZONE 'Asia/Jakarta')::date
+            FROM work_plan_daily d
+            WHERE d.daily_plan_id = CAST(:day AS uuid)
             """,
-            {"day": day_id},
+            {"day": str(day_id)},
         )
-

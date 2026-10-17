@@ -26,3 +26,9 @@ class AuditService:
             entity_type=r.entity_type, entity_id=r.entity_id, detail=r.detail, changes=r.changes,
         ) for r in rows]
         return AuditEventListResponse(items=items, total=total, page=page, size=size)
+
+    async def list_backups(self) -> list[dict[str, Any]]:
+        """Daftar riwayat arsip backup basis data dan berkas."""
+        rows = await self.repo.list_backups()
+        return [dict(r._mapping) for r in rows]
+

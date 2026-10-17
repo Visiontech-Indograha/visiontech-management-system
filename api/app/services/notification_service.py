@@ -76,9 +76,10 @@ class NotificationService:
     async def _actor(self) -> str:
         """Nama karyawan pelaku (pengguna yang sedang masuk), dibaca dari konteks sesi `app.user_id`."""
         name = await self.repo.scalar(
-            "SELECT e.full_name FROM vms.app_user u JOIN vms.employee e ON e.id = u.employee_id "
-            "WHERE u.id = NULLIF(current_setting('app.user_id', true), '')::uuid")
-        return str(name) if name else "PM"
+            "SELECT e.full_name FROM users u JOIN employee e ON e.employee_id = u.employee_id "
+            "WHERE u.user_id = NULLIF(current_setting('app.user_id', true), '')::uuid"
+        )
+        return str(name) if name else "OM"
 
     @staticmethod
     def _span(p: Any) -> str:

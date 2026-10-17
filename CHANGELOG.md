@@ -9,6 +9,14 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased] — `development`
 
+- **Milestone 6: Absensi, Validasi Wajah, Uang Makan & Persetujuan Lapangan (`api/app/crud/crud_attendance_session.py`, `api/app/crud/crud_attendance_monitor.py`, `api/app/crud/crud_org_clock.py`, `api/app/crud/crud_org_ref.py`, `api/app/crud/crud_notification.py`, `web/src/pages/attendance/`):**
+  - Mengadaptasi `CRUDAttendanceSession` ke Master Schema V2 (`public.attendance`, `public.office`, `public.work_plan_daily`, `public.employee`) dengan formula kalkulasi jarak GPS Haversine murni tanpa dependensi PostGIS.
+  - Mengimplementasikan kalkulasi penentuan zona kota (`DALAM_KOTA` vs `LUAR_KOTA`) dan nominal uang makan (`in_city_meal_rate` Rp 35.000 vs `out_city_meal_rate` Rp 65.000) berdasarkan radius batas kota kantor utama.
+  - Menyelaraskan status persetujuan kehadiran OM (`AUTO_VALID`, `PENDING_OM`, `APPROVED_BY_OM`, `REJECTED_BY_OM`) serta penguncian baris konkuren (`FOR UPDATE OF a`).
+  - Mengadaptasi `CRUDAttendanceMonitor`, `CRUDOrgClock` (zona waktu Asia/Jakarta), `CRUDOrgRef`, dan `CRUDNotification` agar kompatibel penuh dengan Master DDL V2.
+  - Memverifikasi endpoint `GET /api/v1/attendance` (mengembalikan 4 data absensi seed: Siti HR, Dian PM, Agus TL, Riko Tech), persetujuan kehadiran `POST /api/v1/attendance/{id}/review`, dan ekspor rekap `GET /api/v1/attendance/export` (200 OK).
+  - Memverifikasi kelulusan typecheck dan build test produksi pada Web frontend (halaman `AttendancePage`, `AttendanceRecapPage`).
+
 - **Milestone 5: Siklus Rencana Kerja Mingguan, Harian, & Penugasan Tim (`api/app/crud/crud_plan_access.py`, `api/app/crud/crud_plan_draft.py`, `api/app/crud/crud_plan_transition.py`, `web/src/pages/work-plans/`):**
   - Mengadaptasi `CRUDPlanAccess` untuk memetakan visibilitas rencana kerja dari tabel `work_plan_weekly`, `work_plan_daily`, dan item pekerjaan `work_plan_item`.
   - Mengadaptasi `CRUDPlanDraft` untuk menyediakan opsi formulir (`form_options`) meliputi staf lapangan aktif, perkakas siap pakai, kendaraan, dan lokasi kantor/proyek.

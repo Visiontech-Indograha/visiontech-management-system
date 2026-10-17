@@ -124,7 +124,7 @@ export function PlanDetailCard({ plan }: { plan: WorkPlan }) {
                   {days.map((day, i) => {
                     const workers = workersOf(day);
                     return (
-                      <TableBlockRow key={day.work_date}>
+                      <TableBlockRow key={day.id ?? `${day.work_date}-${i}`}>
                         <TableBlockCell className={td}>{i + 1}</TableBlockCell>
                         <TableBlockCell className={td}>
                           <TextBlock as="span" className="font-medium">{weekday(day.work_date)}</TextBlock>

@@ -11,6 +11,9 @@ export default defineConfig(({ mode }) => {
     resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
     server: {
       port: 5173,
+      fs: {
+        allow: ['../..'],
+      },
       proxy: {
         '/api': {
           target: env.DEV_API_PROXY_TARGET || 'http://localhost:8000',

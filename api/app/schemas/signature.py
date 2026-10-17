@@ -1,20 +1,21 @@
 """Skema permintaan & respons: signature (dipindah dari api/v1/endpoints/signatures.py, R-28 M2b)."""
 from datetime import datetime
+from uuid import UUID
 
 from pydantic import BaseModel
 
 
 class PlanDocumentOut(BaseModel):
-    id: str
+    id: str | UUID
     kind: str
     version: int
     number: str
     status: str
-    reason: str | None
+    reason: str | None = None
     issued_at: datetime
-    accepted_at: datetime | None
-    sha256: str
-    signature_count: int
+    accepted_at: datetime | None = None
+    sha256: str = ""
+    signature_count: int = 0
 
 
 class SignatureOut(BaseModel):

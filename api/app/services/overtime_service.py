@@ -3,6 +3,7 @@ app/services/overtime_service.py
 Aturan bisnis lembur (V-28) — domain.js REPORT_OVERTIME (baris 607–614), REVIEW_OVERTIME (616–627).
 Router tipis → service → crud; aturan bisnis di sini, SQL di crud.
 """
+
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -30,6 +31,7 @@ def _state(msg: str) -> AppError:
 
 class OvertimeService:
     """Layanan pengelolaan pengajuan dan persetujuan lembur."""
+
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
         self.repo = CRUDOvertime(db)
@@ -95,9 +97,7 @@ class OvertimeService:
     # ------------------------------------------------------------------
     # domain.js REVIEW_OVERTIME (baris 616–627)
     # ------------------------------------------------------------------
-    async def review(
-        self, user: CurrentUser, overtime_id: UUID, decision: str, note: str | None
-    ) -> Any:
+    async def review(self, user: CurrentUser, overtime_id: UUID, decision: str, note: str | None) -> Any:
         """
         PM unit atau tim OPS memberikan persetujuan atau penolakan atas pengajuan lembur.
         Lembur harus dalam status 'PENDING_PM'. Sesuai alur pada domain.js baris 616-627.
@@ -121,13 +121,9 @@ class OvertimeService:
 
         # domain.js baris 620: can(actor, 'REVIEW_OVERTIME', unit) = PM unit SK, OPS, ADMIN.
         # Realisasi: cek plan.manages (PM unit / OPS / ADMIN) dari CRUDPlanAccess.
-        plan_access = await CRUDPlanAccess(self.db).standing(
-            ot.work_plan_id, user.organization_id, user.user_id
-        )
+        plan_access = await CRUDPlanAccess(self.db).standing(ot.work_plan_id, user.organization_id, user.user_id)
         if plan_access is None or not plan_access.manages:
-            raise ForbiddenError(
-                "Lembur ini berada di luar unit atau kewenangan Anda."
-            )
+            raise ForbiddenError("Lembur ini berada di luar unit atau kewenangan Anda.")
 
         # domain.js baris 621: pengaju tidak dapat menyetujui sendiri.
         reviewer_emp = await self.repo.employee_of(user.user_id)

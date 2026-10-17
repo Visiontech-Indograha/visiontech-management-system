@@ -4,6 +4,7 @@ app/modules/assets/routes/plan_asset_route.py
 Rute endpoint HTTP untuk aset yang terkait dengan SK (/work-plans/{plan_id}/assets).
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.1.
 """
+
 from uuid import UUID
 
 from fastapi import APIRouter, Depends

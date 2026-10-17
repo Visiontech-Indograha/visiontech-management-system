@@ -2,6 +2,7 @@
 app/crud/crud_notification.py
 Notifikasi dalam aplikasi untuk Master Schema V2.
 """
+
 from __future__ import annotations
 
 from collections.abc import Iterable
@@ -22,18 +23,20 @@ class CRUDNotification(CRUDBase):
         """PM, ketua, dan anggota sebuah SK mingguan."""
         return await self.fetchone(
             """
-            SELECT wp.office_id AS organization_id,
-                   wp.work_plan_number AS number,
-                   wp.title,
-                   CAST(wp.pm_id AS text) AS pm,
-                   CAST(wp.team_id AS text) AS leader,
+            SELECT t.office_id AS organization_id,
+                   'SK/W' || wp.week_number || '/' || wp.year AS number,
+                   'Rencana Kerja Mingguan W' || wp.week_number || ' - ' || t.name AS title,
+                   CAST(COALESCE(wp.approved_by_pm_id, div.pm_id) AS text) AS pm,
+                   CAST(t.leader_employee_id AS text) AS leader,
                    wp.start_date AS period_start,
                    wp.end_date AS period_end,
                    COALESCE(ARRAY(
                        SELECT CAST(m.employee_id AS text) FROM member m
-                       WHERE m.team_id = wp.team_id AND m.is_active AND m.delete_at IS NULL
+                       WHERE m.team_id = wp.team_id AND m.is_active = TRUE AND m.delete_at IS NULL
                    ), '{}') AS members
             FROM work_plan_weekly wp
+            JOIN division div ON div.division_id = wp.division_id
+            JOIN team t ON t.team_id = wp.team_id
             WHERE wp.weekly_plan_id = CAST(:plan AS uuid)
             """,
             {"plan": str(plan_id)},

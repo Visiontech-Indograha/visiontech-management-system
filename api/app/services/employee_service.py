@@ -3,6 +3,7 @@ app/services/employee_service.py
 Karyawan — padanan `domain.js` OFFBOARD dan RESTORE_EMPLOYEE (V-29), plus hapus karyawan (keputusan pemilik
 2026-09-25; prototipe tidak punya tindakannya). Izin HR (`manage:users`) dijaga router.
 """
+
 from __future__ import annotations
 
 from datetime import date
@@ -25,6 +26,7 @@ OFFBOARDED = "Masa kerja diakhiri dan akses dicabut. Data historis tetap tersedi
 
 class EmployeeService:
     """Layanan untuk mengelola data karyawan, penempatan (assignment), mutasi, dan offboarding."""
+
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
         self.repo = CRUDEmployee(db)
@@ -34,8 +36,9 @@ class EmployeeService:
         """Unit tujuan harus milik organisasi ini (422 bila bukan)."""
         await ensure_same_org(self.db, org_id, units=list(unit_ids))
 
-    async def list_page(self, org_id: str, is_active: bool | None, q: str | None,
-                        page: int, size: int) -> tuple[int, list[Any]]:
+    async def list_page(
+        self, org_id: str, is_active: bool | None, q: str | None, page: int, size: int
+    ) -> tuple[int, list[Any]]:
         """(jumlah total, baris halaman `page`) karyawan organisasi ini."""
         total = await self.repo.count_in_org(org_id, is_active, q)
         return total, await self.repo.page_in_org(org_id, is_active, q, size, (page - 1) * size)
@@ -62,8 +65,9 @@ class EmployeeService:
         """Ubah data pribadi (jabatan/unit lewat /assignments). Organisasi lain → None."""
         return await self.repo.update_fields(employee_id, org_id, fields)
 
-    async def conflicts(self, employee_id: UUID, org_id: str, start: date, end: date,
-                        exclude_plan: UUID | None) -> list[Any]:
+    async def conflicts(
+        self, employee_id: UUID, org_id: str, start: date, end: date, exclude_plan: UUID | None
+    ) -> list[Any]:
         """Bentrok jadwal untuk penyusun SK (V-09); karyawan/SK organisasi lain → 404."""
         await ensure_same_org(self.db, org_id, employees=[employee_id], work_plans=[exclude_plan])
         return await self.repo.conflicts(employee_id, start, end, exclude_plan)
@@ -92,9 +96,11 @@ class EmployeeService:
         if employee is None:
             raise NotFoundError("Karyawan")
         if not employee.deleted:
-            raise AppError("INVALID_STATE",
-                           "Karyawan tidak dihapus. Untuk bergabung kembali dibutuhkan masa kerja dan akses baru.",
-                           status=409)
+            raise AppError(
+                "INVALID_STATE",
+                "Karyawan tidak dihapus. Untuk bergabung kembali dibutuhkan masa kerja dan akses baru.",
+                status=409,
+            )
         await self.repo.restore(employee_id)
         return {"id": str(employee_id), "is_active": False, "message": RESTORED}
 
@@ -126,8 +132,9 @@ class EmployeeService:
             raise NotFoundError("Karyawan")
         return rows
 
-    async def promote(self, employee_id: UUID, org_id: str, position: str, unit_id: UUID | None,
-                      valid_from: date) -> Any:
+    async def promote(
+        self, employee_id: UUID, org_id: str, position: str, unit_id: UUID | None, valid_from: date
+    ) -> Any:
         """
         domain.js PROMOTE — mutasi atau promosi jabatan karyawan.
         karyawan aktif, jabatan & unit valid, mutasi lintas unit diblokir selama
@@ -144,8 +151,9 @@ class EmployeeService:
         target_unit = str(unit_id) if unit_id else employee.unit_id
         # Aturan bisnis: Tidak boleh memutasi karyawan ke unit lain jika ia masih bagian dari tim SK di unit lamanya yang belum selesai.
         if target_unit != employee.unit_id and await self.repo.on_running_plan(employee_id):
-            raise AppError("INVALID_STATE", "Mutasi lintas unit diblokir sampai penugasan aktif diserahterimakan.",
-                           status=409)
+            raise AppError(
+                "INVALID_STATE", "Mutasi lintas unit diblokir sampai penugasan aktif diserahterimakan.", status=409
+            )
 
         last_start = await self.repo.last_assignment_start(employee_id)
         # Menjaga urutan kronologis penempatan.
@@ -169,8 +177,11 @@ class EmployeeService:
 
         # Aturan bisnis: Karyawan yang masih tergabung dalam pekerjaan berjalan (SK aktif) tidak bisa diberhentikan.
         if await self.repo.on_running_plan(employee_id):
-            raise AppError("INVALID_STATE", "Selesaikan atau serahterimakan penugasan aktif sebelum mengakhiri masa kerja.",
-                           status=409)
+            raise AppError(
+                "INVALID_STATE",
+                "Selesaikan atau serahterimakan penugasan aktif sebelum mengakhiri masa kerja.",
+                status=409,
+            )
 
         today = (await CRUDOrgClock(self.db).local_now(org_id)).today
         await self.repo.offboard(employee_id, reason.strip(), today)
@@ -207,4 +218,3 @@ class EmployeeService:
         deleted = await self.emergency_repo.delete(contact_id, employee_id, org_id)
         if not deleted:
             raise NotFoundError("Kontak darurat")
-

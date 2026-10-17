@@ -4,6 +4,7 @@ app/modules/work_plans/controllers/work_plan_changes_controller.py
 Controller orkestrasi use case adendum perpanjangan waktu dan perubahan personel SK.
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.2.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -43,9 +44,7 @@ class WorkPlanChangesController:
     ) -> ChangeResponse:
         """Mengajukan usulan perpanjangan tanggal selesai atau pergantian susunan personel."""
         if data.type == "EXTEND":
-            change_id = await self.service.request_change(
-                plan_id, current_user, data.new_period_end, data.reason
-            )
+            change_id = await self.service.request_change(plan_id, current_user, data.new_period_end, data.reason)
         else:
             change_id = await self.service.request_personnel_change(
                 plan_id, current_user, data.leader_employee_id, data.member_employee_ids, data.reason
@@ -96,4 +95,3 @@ class WorkPlanChangesController:
 
 
 __all__ = ["WorkPlanChangesController"]
-

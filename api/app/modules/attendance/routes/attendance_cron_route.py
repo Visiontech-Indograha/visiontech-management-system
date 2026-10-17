@@ -4,6 +4,7 @@ app/modules/attendance/routes/attendance_cron_route.py
 Rute endpoint HTTP untuk cron absensi (/cron/attendance).
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.1.
 """
+
 from fastapi import APIRouter, Depends
 
 from app.api.deps import require_permission
@@ -79,4 +80,3 @@ async def auto_checkout_daily(
 
 
 __all__ = ["router"]
-

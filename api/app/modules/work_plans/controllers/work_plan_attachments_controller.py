@@ -4,6 +4,7 @@ app/modules/work_plans/controllers/work_plan_attachments_controller.py
 Controller orkestrasi use case berkas lampiran pendukung draf rencana kerja (SK).
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.2.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -56,4 +57,3 @@ class WorkPlanAttachmentsController:
 
 
 __all__ = ["WorkPlanAttachmentsController"]
-

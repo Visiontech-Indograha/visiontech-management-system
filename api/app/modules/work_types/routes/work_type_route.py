@@ -4,6 +4,7 @@ app/modules/work_types/routes/work_type_route.py
 Rute endpoint HTTP untuk jenis pekerjaan (/work-types dan /work-plans/{plan_id}/photo-template).
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.1.
 """
+
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Response, status
@@ -82,4 +83,3 @@ async def plan_photo_template(
     Template foto laporan rencana kerja.
     """
     return await controller.handle_template_of_plan(plan_id, day_id)
-

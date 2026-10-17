@@ -4,6 +4,7 @@ app/modules/reports/controllers/weekly_report_controller.py
 Controller orkestrasi use case laporan mingguan SK.
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.2.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -48,9 +49,7 @@ class WeeklyReportController:
         row = await self.service.save_weekly(access, week, data.body, data.obstacle)
         return _out(row)
 
-    async def handle_submit_weekly(
-        self, access: PlanAccess, week: int
-    ) -> WeeklyReportResponse:
+    async def handle_submit_weekly(self, access: PlanAccess, week: int) -> WeeklyReportResponse:
         """Mengajukan laporan mingguan agar dapat ditinjau oleh PM."""
         row = await self.service.submit_weekly(access, week)
         return _out(row)

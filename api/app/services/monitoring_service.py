@@ -4,6 +4,7 @@ Pemantauan OPS (V-30, dok 03 M11) — lini masa dikelompokkan per pekerjaan (pro
 timeline()) dan rekap absensi per karyawan. Visibilitas SK memakai aturan `GET /work-plans` (V-07);
 siapa yang melihat absensi seluruh organisasi memakai aturan `GET /attendance`.
 """
+
 from __future__ import annotations
 
 from datetime import date
@@ -19,7 +20,7 @@ from app.crud.crud_monitoring import CRUDMonitoring
 from app.crud.crud_org_clock import CRUDOrgClock
 from app.crud.crud_plan_access import CRUDPlanAccess
 
-HIDDEN = (PlanStatus.CANCELLED, PlanStatus.COMPLETED)   # operations.js timeline()
+HIDDEN = (PlanStatus.CANCELLED, PlanStatus.COMPLETED)  # operations.js timeline()
 REPORTED = ("APPROVED", "SUBMITTED", "CHANGES_REQUESTED")
 
 
@@ -62,7 +63,9 @@ def _month_range(month: str | None, today: date) -> tuple[str, date, date]:
         first = date.fromisoformat(f"{month}-01") if month else today.replace(day=1)
     except ValueError:
         raise ValidationError("Bulan harus berformat YYYY-MM.") from None
-    following = first.replace(year=first.year + 1, month=1) if first.month == 12 else first.replace(month=first.month + 1)
+    following = (
+        first.replace(year=first.year + 1, month=1) if first.month == 12 else first.replace(month=first.month + 1)
+    )
     return first.strftime("%Y-%m"), first, following
 
 
@@ -103,7 +106,8 @@ class MonitoringService:
         """
         # Ambil SK yang boleh dilihat pengguna sesuai hak aksesnya (V-07)
         plans = [
-            p for p in await CRUDPlanAccess(self.db).visible_plans(user.organization_id, user.user_id, None)
+            p
+            for p in await CRUDPlanAccess(self.db).visible_plans(user.organization_id, user.user_id, None)
             if p.status not in HIDDEN
             and (date_from is None or p.period_end >= date_from)
             and (date_to is None or p.period_start <= date_to)
@@ -118,19 +122,33 @@ class MonitoringService:
 
         groups = []
         for plan in plans:
-            rows = [{"id": str(d.id), "work_date": d.work_date, "title": d.title,
-                     "state": _day_state(d.work_date, d.report_status, today)} for d in days[str(plan.id)]]
+            rows = [
+                {
+                    "id": str(d.id),
+                    "work_date": d.work_date,
+                    "title": d.title,
+                    "state": _day_state(d.work_date, d.report_status, today),
+                }
+                for d in days[str(plan.id)]
+            ]
             leader = str(plan.leader_employee_id) if plan.leader_employee_id else None
-            groups.append({
-                "id": str(plan.id), "number": plan.number, "title": plan.title, "status": plan.status,
-                "unit_id": plan.unit_id, "location_text": plan.location_text,
-                "period_start": plan.period_start, "period_end": plan.period_end,
-                "leader": {"employee_id": leader, "full_name": leaders.get(leader or "")} if leader else None,
-                "total_days": len(rows),
-                "approved_days": sum(1 for r in rows if r["state"] == "APPROVED"),
-                "late_days": sum(1 for r in rows if r["state"] == "LATE"),
-                "days": rows,
-            })
+            groups.append(
+                {
+                    "id": str(plan.id),
+                    "number": plan.number,
+                    "title": plan.title,
+                    "status": plan.status,
+                    "unit_id": plan.unit_id,
+                    "location_text": plan.location_text,
+                    "period_start": plan.period_start,
+                    "period_end": plan.period_end,
+                    "leader": {"employee_id": leader, "full_name": leaders.get(leader or "")} if leader else None,
+                    "total_days": len(rows),
+                    "approved_days": sum(1 for r in rows if r["state"] == "APPROVED"),
+                    "late_days": sum(1 for r in rows if r["state"] == "LATE"),
+                    "days": rows,
+                }
+            )
         return groups
 
     async def attendance_recap(self, user: CurrentUser, month: str | None) -> dict[str, Any]:
@@ -155,5 +173,8 @@ class MonitoringService:
             scope = "own"
         rows = await self.repo.attendance_recap(user.organization_id, starts, ends, user.user_id, scope)
         days = await self.repo.attendance_recap_days(user.organization_id, starts, ends, user.user_id, scope)
-        return {"month": label, "employees": [dict(row._mapping) for row in rows],
-                "records": [dict(row._mapping) for row in days]}
+        return {
+            "month": label,
+            "employees": [dict(row._mapping) for row in rows],
+            "records": [dict(row._mapping) for row in days],
+        }

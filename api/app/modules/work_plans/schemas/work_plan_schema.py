@@ -4,6 +4,7 @@ app/modules/work_plans/schemas/work_plan_schema.py
 Skema validasi permintaan dan respons modul rencana kerja (SK).
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §5.4.
 """
+
 from app.schemas.plan import (
     AssignmentEmployeeOption,
     DayPlanRequest,

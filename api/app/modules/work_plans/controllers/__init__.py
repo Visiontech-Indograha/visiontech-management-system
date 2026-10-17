@@ -1,6 +1,7 @@
 """
 Paket controller untuk modul work_plans.
 """
+
 from app.modules.work_plans.controllers.work_plan_amendments_controller import (
     WorkPlanAmendmentsController,
 )
@@ -44,4 +45,3 @@ __all__ = [
     "WorkPlanRevisionsController",
     "WorkPlanTransitionsController",
 ]
-

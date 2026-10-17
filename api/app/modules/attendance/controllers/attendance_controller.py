@@ -4,6 +4,7 @@ app/modules/attendance/controllers/attendance_controller.py
 Controller orkestrasi use case absensi lapangan dan luring.
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.2.
 """
+
 from __future__ import annotations
 
 from datetime import date
@@ -119,9 +120,7 @@ class AttendanceController:
         data: CheckInRequest,
     ) -> AttendanceResponse:
         """Memproses absensi masuk (check-in) pengguna."""
-        await self.session_service.ensure_check_in_refs(
-            current_user.organization_id, data.site_id, data.selfie_file_id
-        )
+        await self.session_service.ensure_check_in_refs(current_user.organization_id, data.site_id, data.selfie_file_id)
         row = await self.session_service.check_in(
             current_user.organization_id,
             current_user.user_id,
@@ -143,9 +142,7 @@ class AttendanceController:
         data: CheckOutRequest,
     ) -> AttendanceResponse:
         """Memproses absensi pulang (check-out) pengguna."""
-        await self.session_service.ensure_check_in_refs(
-            current_user.organization_id, None, data.selfie_file_id
-        )
+        await self.session_service.ensure_check_in_refs(current_user.organization_id, None, data.selfie_file_id)
         row = await self.session_service.check_out(
             current_user.user_id,
             data.channel,
@@ -190,10 +187,7 @@ class AttendanceController:
         end_date: date,
     ) -> str:
         """Mengekspor data absensi organisasi dalam rentang tanggal ke format CSV."""
-        return await self.session_service.export_csv(
-            current_user.organization_id, start_date, end_date
-        )
+        return await self.session_service.export_csv(current_user.organization_id, start_date, end_date)
 
 
 __all__ = ["AttendanceController"]
-

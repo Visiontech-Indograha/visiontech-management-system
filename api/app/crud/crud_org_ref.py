@@ -2,6 +2,7 @@
 app/crud/crud_org_ref.py
 Kepemilikan rujukan di badan permintaan Master Schema V2.
 """
+
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -33,14 +34,18 @@ class CRUDOrgRef(CRUDBase):
                 (SELECT count(*) FROM work_plan_weekly WHERE weekly_plan_id = ANY(CAST(:work_plans AS uuid[]))
                     AND delete_at IS NULL) AS work_plans,
                 (SELECT count(*) FROM (
-                    SELECT office_id AS id FROM office WHERE office_id = ANY(CAST(:sites AS uuid[])) AND delete_at IS NULL
+                    SELECT office_id AS id FROM office
+                    WHERE office_id = ANY(CAST(:sites AS uuid[])) AND delete_at IS NULL
                     UNION
-                    SELECT daily_plan_id AS id FROM work_plan_daily WHERE daily_plan_id = ANY(CAST(:sites AS uuid[])) AND delete_at IS NULL
+                    SELECT daily_plan_id AS id FROM work_plan_daily
+                    WHERE daily_plan_id = ANY(CAST(:sites AS uuid[])) AND delete_at IS NULL
                 ) s) AS sites,
                 (SELECT count(*) FROM (
-                    SELECT tool_id AS id FROM tool WHERE tool_id = ANY(CAST(:assets AS uuid[])) AND delete_at IS NULL
+                    SELECT tool_id AS id FROM tool
+                    WHERE tool_id = ANY(CAST(:assets AS uuid[])) AND delete_at IS NULL
                     UNION
-                    SELECT vehicle_id AS id FROM vehicle WHERE vehicle_id = ANY(CAST(:assets AS uuid[])) AND delete_at IS NULL
+                    SELECT vehicle_id AS id FROM vehicle
+                    WHERE vehicle_id = ANY(CAST(:assets AS uuid[])) AND delete_at IS NULL
                 ) a) AS assets,
                 (SELECT count(*) FROM employee_file WHERE employee_file_id = ANY(CAST(:files AS uuid[]))
                     AND delete_at IS NULL) AS files,

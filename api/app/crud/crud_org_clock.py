@@ -2,6 +2,7 @@
 app/crud/crud_org_clock.py
 Waktu server lokal berbasis zona waktu Asia/Jakarta (WIB) Master Schema V2.
 """
+
 from __future__ import annotations
 
 from typing import Any

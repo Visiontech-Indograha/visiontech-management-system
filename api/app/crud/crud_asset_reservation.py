@@ -3,6 +3,7 @@ app/crud/crud_asset_reservation.py
 Reservasi dan inventaris aset perkakas (tool) dan kendaraan (vehicle) untuk Master Schema V2.
 Mendukung alur penugasan dan pengembalian aset.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -21,7 +22,7 @@ class CRUDAssetReservation(CRUDBase):
         Mengambil daftar aset (tool dan vehicle) dari Master Schema V2.
         """
         sql = """
-            SELECT 
+            SELECT
                 t.tool_id AS id,
                 'TOOL' AS kind,
                 NULL::text AS vehicle_type,
@@ -42,7 +43,7 @@ class CRUDAssetReservation(CRUDBase):
 
             UNION ALL
 
-            SELECT 
+            SELECT
                 v.vehicle_id AS id,
                 'VEHICLE' AS kind,
                 v.vehicle_type::text AS vehicle_type,
@@ -66,9 +67,10 @@ class CRUDAssetReservation(CRUDBase):
 
     async def return_history(self, asset_id: UUID | str, org_id: UUID | str) -> list[Any] | None:
         """Riwayat inspeksi/pengembalian aset dari public.vehicle_inspection."""
-        return list(await self.fetchall(
-            """
-            SELECT 
+        return list(
+            await self.fetchall(
+                """
+            SELECT
                 vi.vehicle_inspection_id AS id,
                 vi.vehicle_id AS asset_id,
                 vi.inspector_employee_id AS inspector_id,
@@ -81,17 +83,19 @@ class CRUDAssetReservation(CRUDBase):
             WHERE vi.vehicle_id = :aid AND vi.delete_at IS NULL
             ORDER BY vi.create_at DESC
             """,
-            {"aid": asset_id},
-        ))
+                {"aid": asset_id},
+            )
+        )
 
     async def return_record(self, return_id: UUID | str, org_id: UUID | str) -> Any:
         return None
 
     async def plan_assets(self, plan_id: UUID | str) -> list[Any]:
         """Daftar aset yang dialokasikan untuk suatu rencana kerja / tim."""
-        return list(await self.fetchall(
-            """
-            SELECT 
+        return list(
+            await self.fetchall(
+                """
+            SELECT
                 aa.assignment_id AS id,
                 COALESCE(t.name, v.name) AS name,
                 COALESCE(t.tool_code, v.number_plate) AS code,
@@ -105,8 +109,9 @@ class CRUDAssetReservation(CRUDBase):
             WHERE aa.delete_at IS NULL
             ORDER BY name ASC
             """,
-            {"plan": plan_id},
-        ))
+                {"plan": plan_id},
+            )
+        )
 
     async def insert_asset(
         self,
@@ -134,7 +139,7 @@ class CRUDAssetReservation(CRUDBase):
                     :name,
                     'ready'
                 )
-                RETURNING vehicle_id AS id, name, number_plate AS code, 'VEHICLE' AS kind, 
+                RETURNING vehicle_id AS id, name, number_plate AS code, 'VEHICLE' AS kind,
                           vehicle_type::text AS vehicle_type, 'Baik' AS condition, status::text AS status
                 """,
                 {"code": code, "vtype": v_type, "name": name},
@@ -155,7 +160,7 @@ class CRUDAssetReservation(CRUDBase):
                     :code,
                     'ready'
                 )
-                RETURNING tool_id AS id, name, tool_code AS code, 'TOOL' AS kind, 
+                RETURNING tool_id AS id, name, tool_code AS code, 'TOOL' AS kind,
                           NULL::text AS vehicle_type, 'Baik' AS condition, status::text AS status
                 """,
                 {"name": name, "code": code},
@@ -171,9 +176,7 @@ class CRUDAssetReservation(CRUDBase):
     async def allocation_state_for_update(self, allocation_id: UUID | str) -> Any:
         return None
 
-    async def insert_return(
-        self, allocation_id: UUID | str, employee_id: Any, condition: str, note: str | None
-    ) -> Any:
+    async def insert_return(self, allocation_id: UUID | str, employee_id: Any, condition: str, note: str | None) -> Any:
         return None
 
     async def return_for_update(self, return_id: UUID | str, org_id: UUID | str) -> Any:

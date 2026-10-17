@@ -5,6 +5,7 @@ Lokasi kerja (R-33, keputusan pemilik 2026-10-02):
 - Finance membuat lokasi kantor (tanpa unit) — berlaku untuk semua pekerja kantor.
 - Yang terlihat: lapangan → lokasi unitnya; kantor → lokasi kantor; PM → kantor + unitnya; OPS → semua.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -24,6 +25,7 @@ class SiteService:
     PM dapat membuat lokasi proyek; Finance membuat lokasi kantor.
     Hak akses melihat dibedakan antara pekerja lapangan, kantor, PM, dan OPS.
     """
+
     def __init__(self, repo: CRUDSite) -> None:
         """
         Inisialisasi SiteService.
@@ -51,17 +53,18 @@ class SiteService:
             field = mode == "FIELD"
             unit = viewer.employee_unit_id if viewer and field else None
             # Staf kantor: lokasi kantor. Pekerja lapangan: lokasi unitnya + kantor pusat (tanpa SK tetap bisa absen).
-            return await self.repo.list_visible(user.organization_id, all_sites=False, office=True,
-                                                unit_id=unit)
+            return await self.repo.list_visible(user.organization_id, all_sites=False, office=True, unit_id=unit)
         # ADMIN, SUPER_ADMIN, OPERATIONAL_MANAGER, OPS, ADMIN_HR_GA dapat melihat semua lokasi kantor
         if any(r in ("ADMIN", "SUPER_ADMIN", "OPERATIONAL_MANAGER", "OPS", "ADMIN_HR_GA") for r in user.roles):
             return await self.repo.list_visible(user.organization_id, all_sites=True, office=True, unit_id=None)
 
         # PM melihat lokasi kantor + unitnya. Staf lapangan: lokasi unitnya + kantor
-        unit = viewer.pm_unit_id if viewer and viewer.pm_unit_id else (
-            viewer.employee_unit_id if viewer and mode == "FIELD" else None)
-        return await self.repo.list_visible(user.organization_id, all_sites=False,
-                                            office=True, unit_id=unit)
+        unit = (
+            viewer.pm_unit_id
+            if viewer and viewer.pm_unit_id
+            else (viewer.employee_unit_id if viewer and mode == "FIELD" else None)
+        )
+        return await self.repo.list_visible(user.organization_id, all_sites=False, office=True, unit_id=unit)
 
     async def manageable(self, user: CurrentUser) -> tuple[bool, UUID | None]:
         """
@@ -88,10 +91,13 @@ class SiteService:
             return viewer.pm_unit_id
         if "FINANCE" in user.roles:
             return None
-        raise ForbiddenError("Lokasi kerja hanya dapat dikelola oleh Admin, Operational Manager, Project Manager, atau HR.")
+        raise ForbiddenError(
+            "Lokasi kerja hanya dapat dikelola oleh Admin, Operational Manager, Project Manager, atau HR."
+        )
 
-    async def create_site(self, user: CurrentUser, *, name: str, address: str | None, radius_m: int,
-                          lat: float, lng: float) -> Any:
+    async def create_site(
+        self, user: CurrentUser, *, name: str, address: str | None, radius_m: int, lat: float, lng: float
+    ) -> Any:
         """
         Membuat lokasi kerja baru.
 
@@ -108,12 +114,20 @@ class SiteService:
         """
         unit = await self._managed_unit(user)
         try:
-            return await self.repo.insert(user.organization_id, name=name.strip(), address=address,
-                                          radius_m=radius_m, lat=lat, lng=lng, unit_id=unit)
+            return await self.repo.insert(
+                user.organization_id,
+                name=name.strip(),
+                address=address,
+                radius_m=radius_m,
+                lat=lat,
+                lng=lng,
+                unit_id=unit,
+            )
         except IntegrityError as exc:
             # Menangkap galat jika nama lokasi sudah digunakan (unique constraint)
-            raise AppError("SITE_INVALID", "Lokasi tidak dapat disimpan. Nama mungkin sudah dipakai.",
-                           status=409) from exc
+            raise AppError(
+                "SITE_INVALID", "Lokasi tidak dapat disimpan. Nama mungkin sudah dipakai.", status=409
+            ) from exc
 
     async def delete_site(self, user: CurrentUser, site_id: UUID) -> None:
         """

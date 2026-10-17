@@ -525,4 +525,41 @@ CREATE TABLE IF NOT EXISTS overtime (
 CREATE INDEX IF NOT EXISTS idx_overtime_weekly_plan ON overtime (weekly_plan_id);
 CREATE INDEX IF NOT EXISTS idx_overtime_employee ON overtime (employee_id);
 
+-- Indeks Tambahan untuk Relasi Foreign Key & Filter Soft Delete
+CREATE INDEX IF NOT EXISTS idx_employee_office ON employee (office_id) WHERE delete_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_employee_division ON employee (division_id) WHERE delete_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_user_sessions_user ON user_sessions (user_id) WHERE delete_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_division_om ON division (om_id) WHERE delete_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_division_pm ON division (pm_id) WHERE delete_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_team_office ON team (office_id) WHERE delete_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_team_division ON team (division_id) WHERE delete_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_team_leader ON team (leader_employee_id) WHERE delete_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_member_team ON member (team_id) WHERE delete_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_member_employee ON member (employee_id) WHERE delete_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_address_employee ON address (employee_id) WHERE delete_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_employee_file_employee ON employee_file (employee_id) WHERE delete_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_tool_office ON tool (office_id) WHERE delete_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_tool_division ON tool (division_id) WHERE delete_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_vehicle_office ON vehicle (office_id) WHERE delete_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_vehicle_division ON vehicle (division_id) WHERE delete_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_vehicle_file_vehicle ON vehicle_file (vehicle_id) WHERE delete_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_vehicle_inspection_vehicle ON vehicle_inspection (vehicle_id) WHERE delete_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_work_plan_weekly_division ON work_plan_weekly (division_id) WHERE delete_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_work_plan_weekly_team ON work_plan_weekly (team_id) WHERE delete_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_work_plan_daily_weekly ON work_plan_daily (weekly_plan_id) WHERE delete_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_work_plan_item_daily ON work_plan_item (daily_plan_id) WHERE delete_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_work_plan_item_weekly ON work_plan_item (weekly_plan_id) WHERE delete_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_work_plan_item_work_type ON work_plan_item (work_type_id) WHERE delete_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_asset_assignment_tool ON asset_assignment (tool_id) WHERE delete_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_asset_assignment_vehicle ON asset_assignment (vehicle_id) WHERE delete_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_asset_assignment_employee ON asset_assignment (employee_id) WHERE delete_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_attendance_employee ON attendance (employee_id) WHERE delete_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_attendance_office ON attendance (office_id) WHERE delete_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_attendance_daily_plan ON attendance (daily_plan_id) WHERE delete_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_work_completion_daily ON work_completion (daily_plan_id) WHERE delete_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_work_completion_weekly ON work_completion (weekly_plan_id) WHERE delete_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_offboarding_employee ON employee_offboarding (employee_id) WHERE delete_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_clearance_offboarding ON offboarding_clearance_item (offboarding_id) WHERE delete_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_clearance_assignment ON offboarding_clearance_item (assignment_id) WHERE delete_at IS NULL;
+
 COMMIT;

@@ -6,6 +6,7 @@ Rilis aplikasi Android tanpa Play Store (docs/32). Sumber data: berkas `android/
 Prinsip: pemeriksaan pembaruan **tidak pernah** mengunci HP karena kesalahan server. Manifest hilang atau rusak
 dianggap "belum ada rilis", dan status REQUIRED hanya diberikan bila memang ada berkas yang bisa diunduh HP itu.
 """
+
 from __future__ import annotations
 
 import logging
@@ -58,17 +59,20 @@ class AppReleaseService:
         if manifest is None:
             return AppUpdateOut(status="UP_TO_DATE", current_build=build)
         file = _pick_file(manifest.files, abis)
-        min_build = min(manifest.min_build, manifest.build)   # tidak mungkin mewajibkan build yang belum ada
+        min_build = min(manifest.min_build, manifest.build)  # tidak mungkin mewajibkan build yang belum ada
         out = AppUpdateOut(
-            status="UP_TO_DATE", current_build=build, latest_build=manifest.build,
-            latest_version=manifest.version_name, min_build=min_build,
-            released_at=manifest.released_at, notes=manifest.notes,
+            status="UP_TO_DATE",
+            current_build=build,
+            latest_build=manifest.build,
+            latest_version=manifest.version_name,
+            min_build=min_build,
+            released_at=manifest.released_at,
+            notes=manifest.notes,
         )
         if build >= manifest.build or file is None:
             return out
         out.status = "REQUIRED" if build < min_build else "OPTIONAL"
-        out.download = ReleaseFileOut(abi=file.abi, url=f"{FILES_PATH}/{file.name}", sha256=file.sha256,
-                                      size=file.size)
+        out.download = ReleaseFileOut(abi=file.abi, url=f"{FILES_PATH}/{file.name}", sha256=file.sha256, size=file.size)
         return out
 
     def latest_file_name(self, abi: str | None) -> str:

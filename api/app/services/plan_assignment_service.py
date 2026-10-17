@@ -1,4 +1,5 @@
 """Aturan pembuat dan cakupan personel SK (R-23)."""
+
 from __future__ import annotations
 
 from collections.abc import Iterable
@@ -14,6 +15,7 @@ from app.crud.crud_plan_assignment import CRUDPlanAssignment
 
 class PlanAssignmentService:
     """Layanan validasi pemilihan personel (PM, ketua, anggota) pada pembentukan SK."""
+
     def __init__(self, repo: CRUDPlanAssignment) -> None:
         self.repo = repo
 
@@ -136,4 +138,3 @@ class PlanAssignmentService:
             "pm_options": managers,
             "personnel_options": personnel,
         }
-

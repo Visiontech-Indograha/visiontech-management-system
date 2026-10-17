@@ -9,6 +9,16 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased] — `development`
 
+- **Audit Komprehensif & Perbaikan Menyeluruh VMS Master Schema V2 (`api/app/crud/`, `api/app/schemas/`, `api/app/database/`, `web/openapi.json`):**
+  - Mengadaptasi dan menyelaraskan seluruh kueri database pada 20 modul CRUD backend (`crud_user`, `crud_employee`, `crud_unit`, `crud_site`, `crud_plan_draft`, `crud_plan_access`, `crud_plan_day`, `crud_plan_location`, `crud_plan_member`, `crud_plan_transition`, `crud_work_type`, `crud_monitoring`, `crud_hse`, `crud_signature`, `crud_attendance_offline`, `crud_face`, `crud_sync`, `crud_audit`, `crud_overtime`, `crud_notification`) ke Master Schema V2, mencapai 20/20 lulus uji eksekusi riil terhadap PostgreSQL (0 galat).
+  - Memperbaiki kueri `CRUDPlanDay` dan `CRUDPlanEdit` agar menggunakan kolom aktual V2 (`title`, `completed_qty`, `target_qty`, `site_name`, join `work_completion`).
+  - Memperbaiki kueri `CRUDMonitoring` agar menggunakan `attendance_date`, `clock_in_at`, `clock_out_at`, `is_within_attendance_radius`, dan `city_zone_status`.
+  - Memperbaiki kueri `CRUDSync` agar sinkron dengan skema terpartisi `app_activity_logs` (`actor_user_id`, `platform`, `entity_table`, `entity_id`, `changed_diff`, `created_at`).
+  - Memperbarui skema `WorkTypePhotoIn/Out` untuk mendukung path foto contoh string (`path_image`) maupun UUID.
+  - Memperbarui endpoint pemeriksaan kesehatan `check_database_health` agar mengecek tabel Master Schema V2 (`public.office`, `public.users`).
+  - Menghasilkan dan menyelaraskan kontrak API `web/openapi.json` (145 endpoint) dan tipe TypeScript `web/src/lib/apiTypes.ts`.
+  - Memverifikasi kelulusan pengujian konkurensi (6 simultaneous multi-role logins + 20 concurrent read requests), pengujian linting Python ruff (`ruff check` 0 error), serta verifikasi penuh frontend web (`npm run typecheck`, `npm run lint`, `npm run build` lulus dengan exit code 0).
+
 - **Milestone 9: Audit Logs, Monthly Partition & System Backup (`api/app/crud/crud_audit.py`, `api/app/services/audit_service.py`, `api/app/modules/audit/controllers/audit_controller.py`, `api/app/modules/audit/routes/audit_route.py`, `web/src/pages/audit/AuditLogPage.tsx`):**
   - Mengadaptasi `CRUDAudit` (`count`, `list_page`) ke skema master terpartisi bulanan `public.app_activity_logs` dengan pemetaan JOIN ke tabel `public.users` dan `public.employee` untuk resolusi nama lengkap dan peran sistem aktor.
   - Mendukung penelusuran audit dengan saringan entitas, rentang tanggal, paginasi stabil, dan parsing cerdas perubahan data JSON (`payload_diff` / `changes`).

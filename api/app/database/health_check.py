@@ -26,8 +26,7 @@ async def check_database_health() -> bool:
             schema_ok = await conn.scalar(
                 text(
                     "SELECT (to_regclass('public.office') IS NOT NULL) "
-                    "OR (to_regclass('vms.organization') IS NOT NULL "
-                    "AND to_regclass('public.alembic_version') IS NOT NULL)"
+                    "AND (to_regclass('public.users') IS NOT NULL)"
                 )
             )
             return bool(schema_ok)

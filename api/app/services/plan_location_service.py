@@ -4,6 +4,7 @@ Titik lokasi penugasan SK (revisi PM 2026-09-26, dok 10). PM unit menetapkan tit
 radius absensi untuk SK draf maupun yang sedang berjalan. Teks lokasi di dokumen SK tidak diubah
 (aturan 2: dokumen terbit tidak berubah) — yang berubah hanya titik geofence, tercatat di audit.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -16,7 +17,7 @@ from app.services.access_service import PlanAccess
 from app.services.plan_revision_service import PlanRevisionService
 
 CLOSED = ("COMPLETED", "CANCELLED")
-ISSUED = ("PUBLISHED", "APPEALED", "ACCEPTED", "IN_PROGRESS")   # dokumen sudah terbit → perubahan = revisi
+ISSUED = ("PUBLISHED", "APPEALED", "ACCEPTED", "IN_PROGRESS")  # dokumen sudah terbit → perubahan = revisi
 CLOSED_MESSAGE = "Titik lokasi tidak dapat diubah pada rencana kerja yang sudah selesai atau dibatalkan."
 MIN_RADIUS, MAX_RADIUS = 10, 5000
 
@@ -26,6 +27,7 @@ class PlanLocationService:
     Layanan untuk mengelola titik lokasi penugasan sebuah SK.
     Menangani penetapan titik koordinat dan radius absensi untuk SK.
     """
+
     def __init__(self, db: AsyncSession) -> None:
         """
         Inisialisasi PlanLocationService.
@@ -53,9 +55,17 @@ class PlanLocationService:
         row = await self.repo.site(site_id, access.user.organization_id)
         return None if row is None else dict(row._mapping)
 
-    async def set_location(self, access: PlanAccess, *, name: str, address: str | None,
-                           lat: float, lng: float, radius_m: int,
-                           reason: str | None = None) -> dict[str, Any]:
+    async def set_location(
+        self,
+        access: PlanAccess,
+        *,
+        name: str,
+        address: str | None,
+        lat: float,
+        lng: float,
+        radius_m: int,
+        reason: str | None = None,
+    ) -> dict[str, Any]:
         """
         Menetapkan atau memperbarui titik koordinat dan radius absensi untuk SK.
         Aturan bisnis memastikan dokumen fisik (teks lokasi) tidak berubah, hanya geofence yang diperbarui.
@@ -101,7 +111,7 @@ class PlanLocationService:
             site_id = (await self.repo.create_site(org_id, unique, address, lat, lng, radius_m)).id
         # Menautkan SK dengan site_id yang sudah divalidasi/dibuat
         await self.repo.set_plan_site(plan.id, site_id)
-        if before is not None:   # dokumen versi baru bertanda tangan PM + riwayat revisi + pemberitahuan
+        if before is not None:  # dokumen versi baru bertanda tangan PM + riwayat revisi + pemberitahuan
             await self.revisions.after_change(access, before, reason)
         row = await self.repo.site(site_id, org_id)
         return dict(row._mapping)

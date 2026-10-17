@@ -4,6 +4,7 @@ app/modules/hse/routes/daily_report_route.py
 Rute endpoint HTTP untuk laporan harian pekerjaan (/work-plans/{plan_id}/days).
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.1.
 """
+
 from uuid import UUID
 
 from fastapi import APIRouter, Depends

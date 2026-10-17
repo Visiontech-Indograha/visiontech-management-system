@@ -1,6 +1,7 @@
 """
 Paket skema untuk modul attendance.
 """
+
 from app.modules.attendance.schemas.attendance_schema import (
     AttendanceChannel,
     AttendanceListResponse,
@@ -36,4 +37,3 @@ __all__ = [
     "SiteCreate",
     "SiteResponse",
 ]
-

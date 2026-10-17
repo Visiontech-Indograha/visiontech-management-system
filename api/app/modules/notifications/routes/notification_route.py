@@ -4,6 +4,7 @@ app/modules/notifications/routes/notification_route.py
 Rute endpoint HTTP untuk notifikasi pengguna (/notifications).
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.1.
 """
+
 from uuid import UUID
 
 from fastapi import APIRouter, Depends
@@ -66,4 +67,3 @@ async def read_one(
 
 
 __all__ = ["router"]
-

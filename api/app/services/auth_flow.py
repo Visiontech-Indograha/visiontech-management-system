@@ -2,6 +2,7 @@
 Kasus pakai autentikasi: membuka transaksi, memanggil AuthService, mengubah hasil ke skema.
 Dipindah dari app/controllers/auth_controller.py (R-28 M4) tanpa perubahan perilaku.
 """
+
 from __future__ import annotations
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,6 +19,7 @@ class AuthFlowService:
     Layanan alur autentikasi pengguna yang menggabungkan operasi AuthService dengan unit of work
     dan pemformatan respons Pydantic (schema).
     """
+
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
         self.service = AuthService(CRUDUser(db), CRUDSession(db))
@@ -75,8 +77,11 @@ class AuthFlowService:
         """
         profile = await self.service.me(user_id, permissions)
         return UserMeResponse(
-            user_id=profile.user_id, email=profile.email,
-            role=profile.role, permissions=profile.permissions, employee_id=profile.employee_id,
+            user_id=profile.user_id,
+            email=profile.email,
+            role=profile.role,
+            permissions=profile.permissions,
+            employee_id=profile.employee_id,
             attendance_mode=profile.attendance_mode,
         )
 

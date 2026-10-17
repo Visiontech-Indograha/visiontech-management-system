@@ -1,6 +1,7 @@
 """
 Paket skema untuk modul assets.
 """
+
 from app.modules.assets.schemas.asset_schema import (
     AssetAllocationResponse,
     AssetCheckRequest,

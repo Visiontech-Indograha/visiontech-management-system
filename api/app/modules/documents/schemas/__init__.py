@@ -1,6 +1,7 @@
 """
 Paket skema untuk modul documents.
 """
+
 from app.modules.documents.schemas.document_schema import (
     DocumentListResponse,
     EmployeeDocumentCreate,

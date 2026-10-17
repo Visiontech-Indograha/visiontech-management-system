@@ -4,6 +4,7 @@ app/modules/assets/controllers/asset_controller.py
 Controller orkestrasi use case manajemen aset, pemesanan, dan BAST pengembalian.
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.2.
 """
+
 from __future__ import annotations
 
 from uuid import UUID
@@ -45,9 +46,7 @@ class AssetController:
     ) -> None:
         self.service = asset_reservation_service
 
-    async def handle_create_asset(
-        self, current_user: CurrentUser, data: AssetCreate
-    ) -> AssetResponse:
+    async def handle_create_asset(self, current_user: CurrentUser, data: AssetCreate) -> AssetResponse:
         """Membuat aset baru dalam organisasi."""
         try:
             row = await self.service.create_asset(
@@ -70,9 +69,7 @@ class AssetController:
         rows = await self.service.list_assets(current_user.organization_id)
         return [AssetListItem(**r._mapping) for r in rows]
 
-    async def handle_return_history(
-        self, current_user: CurrentUser, asset_id: UUID
-    ) -> list[AssetReturnHistoryItem]:
+    async def handle_return_history(self, current_user: CurrentUser, asset_id: UUID) -> list[AssetReturnHistoryItem]:
         """Mengambil riwayat pengembalian aset."""
         rows = await self.service.return_history(current_user.organization_id, asset_id)
         return [AssetReturnHistoryItem(**r._mapping) for r in rows]
@@ -99,9 +96,7 @@ class AssetController:
             work_plans=[data.work_plan_id],
             employees=[data.driver_employee_id],
         )
-        allocation = await self.service.reserve(
-            current_user, asset_id, data.work_plan_id, data.driver_employee_id
-        )
+        allocation = await self.service.reserve(current_user, asset_id, data.work_plan_id, data.driver_employee_id)
         return AssetAllocationResponse(**allocation._mapping)
 
     async def handle_release(
@@ -128,18 +123,14 @@ class AssetController:
         self, access: PlanAccess, alloc_id: UUID, data: AssetReturnCreate
     ) -> AssetReturnResponse:
         """Mengajukan pengembalian aset oleh ketua tim SK."""
-        row = await self.service.request_return(
-            access.user, alloc_id, data.condition_on_return, data.note
-        )
+        row = await self.service.request_return(access.user, alloc_id, data.condition_on_return, data.note)
         return AssetReturnResponse(**row._mapping)
 
     async def handle_verify_return(
         self, current_user: CurrentUser, return_id: UUID, data: AssetReturnVerify
     ) -> AssetReturnResponse:
         """Verifikasi BAST pengembalian aset oleh petugas OPS/Aset."""
-        row = await self.service.verify_return(
-            current_user, return_id, data.is_accepted, data.note
-        )
+        row = await self.service.verify_return(current_user, return_id, data.is_accepted, data.note)
         return AssetReturnResponse(**row._mapping)
 
     async def handle_plan_assets(self, plan_id: UUID) -> list[PlanAssetItem]:

@@ -2,6 +2,7 @@
 app/crud/crud_unit.py
 Divisi bisnis organisasi dari tabel division (Master Schema V2).
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -22,10 +23,10 @@ class CRUDUnit(CRUDBase):
         return list(
             await self.fetchall(
                 """
-                SELECT 
-                    d.division_id AS id, 
+                SELECT
+                    d.division_id AS id,
                     d.division_id,
-                    'DIV-' || UPPER(SUBSTRING(d.name FROM 1 FOR 3)) AS code, 
+                    'DIV-' || UPPER(SUBSTRING(d.name FROM 1 FOR 3)) AS code,
                     d.name,
                     d.status,
                     d.om_id,

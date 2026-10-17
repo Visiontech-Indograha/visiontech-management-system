@@ -4,6 +4,7 @@ app/modules/system/controllers/sync_controller.py
 Controller orkestrasi use case sinkronisasi luring (kirim antrean & periksa status).
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.2.
 """
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -36,9 +37,7 @@ class SyncController:
         data: SyncRequest,
     ) -> SyncResponse:
         """Menerapkan antrean operasi dari perangkat klien secara idempoten."""
-        results = await self.service.apply_operations(
-            current_user, data.device_id, data.operations
-        )
+        results = await self.service.apply_operations(current_user, data.device_id, data.operations)
         return SyncResponse(results=[OperationResult(**r) for r in results])
 
     async def handle_sync_status(
@@ -52,4 +51,3 @@ class SyncController:
 
 
 __all__ = ["SyncController"]
-

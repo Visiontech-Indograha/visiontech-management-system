@@ -12,7 +12,7 @@ class WorkTypePhotoIn(BaseModel):
     label: str = Field(..., min_length=1, max_length=80)  # Nama slot, mis. "Foto panel sebelum"
     hint: str | None = Field(None, max_length=300)  # Petunjuk pengambilan foto
     required: bool = False  # Wajib terisi sebelum laporan dikirim
-    example_file_id: UUID | None = None  # Foto contoh dari PM (berkas yang sudah diunggah)
+    example_file_id: str | None = None  # Foto contoh dari PM (berkas yang sudah diunggah atau path)
 
 
 class WorkTypePhotoOut(BaseModel):
@@ -22,7 +22,7 @@ class WorkTypePhotoOut(BaseModel):
     label: str  # Nama slot
     hint: str | None = None  # Petunjuk
     required: bool = False  # Wajib
-    example_file_id: UUID | None = None  # Foto contoh dari PM (None = tanpa contoh)
+    example_file_id: str | None = None  # Foto contoh dari PM (None = tanpa contoh atau path)
 
 
 class WorkTypeIn(BaseModel):

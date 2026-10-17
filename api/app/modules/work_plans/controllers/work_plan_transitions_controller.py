@@ -4,6 +4,7 @@ app/modules/work_plans/controllers/work_plan_transitions_controller.py
 Controller orkestrasi use case transisi status rencana kerja (terbitkan, terima, banding, mulai, tutup).
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.2.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -132,9 +133,7 @@ class WorkPlanTransitionsController:
         data: TransitionRequest,
     ) -> WorkPlanResponse:
         """PM membuka status revisi draf dari rencana kerja yang dibanding."""
-        plan = await self.transition_service.revise(
-            plan_id, access.user.organization_id, data.row_version
-        )
+        plan = await self.transition_service.revise(plan_id, access.user.organization_id, data.row_version)
         return _response(plan)
 
     async def handle_cancel(
@@ -175,9 +174,7 @@ class WorkPlanTransitionsController:
     ) -> WorkPlanResponse:
         """Memulihkan draf rencana kerja terarsip."""
         return _response(
-            await self.transition_service.restore_plan(
-                plan_id, access.user.organization_id, data.row_version
-            )
+            await self.transition_service.restore_plan(plan_id, access.user.organization_id, data.row_version)
         )
 
     async def handle_start(
@@ -248,4 +245,3 @@ class WorkPlanTransitionsController:
 
 
 __all__ = ["WorkPlanTransitionsController"]
-

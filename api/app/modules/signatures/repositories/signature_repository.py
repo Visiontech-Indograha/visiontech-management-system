@@ -4,6 +4,7 @@ app/modules/signatures/repositories/signature_repository.py
 Repositori data tanda tangan dokumen SK.
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §5.5.
 """
+
 from app.crud.crud_signature import CRUDSignature
 
 

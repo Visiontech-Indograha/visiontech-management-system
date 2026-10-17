@@ -4,6 +4,7 @@ app/modules/work_types/controllers/work_type_controller.py
 Controller orkestrasi use case jenis pekerjaan dan template foto laporan.
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.2.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -52,4 +53,3 @@ class WorkTypeController:
         """Mengambil template foto laporan rencana kerja."""
         rows = await self.service.template_of_plan(plan_id, day_id)
         return [WorkTypePhotoOut(**r._mapping) for r in rows]
-

@@ -4,6 +4,7 @@ app/modules/work_plans/controllers/work_plan_days_controller.py
 Controller orkestrasi use case pembacaan hari kerja dan tugas harian SK.
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.2.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -39,4 +40,3 @@ class WorkPlanDaysController:
 
 
 __all__ = ["WorkPlanDaysController"]
-

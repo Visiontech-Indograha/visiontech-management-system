@@ -1,6 +1,7 @@
 """
 Paket skema untuk modul HSE.
 """
+
 from app.modules.hse.schemas.hse_schema import (
     DailyReportCreate,
     DailyReportResponse,

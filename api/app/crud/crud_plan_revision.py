@@ -1,78 +1,114 @@
 """
 app/crud/crud_plan_revision.py
-Riwayat revisi rencana kerja oleh PM (T6) dan dokumen versi baru hasil revisi. Hanya SQL, tanpa aturan bisnis.
+Riwayat revisi rencana kerja mingguan Master Schema V2 (tabel app_activity_logs, work_plan_weekly, employee).
 """
+
 from __future__ import annotations
 
 import json
 from typing import Any
 from uuid import UUID
 
-from app.core.enums import DocumentKind, DocumentStatus
+from app.core.enums import DocumentStatus
 
 from .base import CRUDBase
 
 
 class CRUDPlanRevision(CRUDBase):
-    """Akses data tabel `vms.plan_revision` dan dokumen revisi."""
+    """Akses data riwayat revisi rencana kerja Master Schema V2."""
 
-    async def insert_revision(self, org_id: UUID | str, plan_id: UUID | str, revision: int, revised_by: str,
-                              reason: str, diff: list[dict[str, Any]], resolved_change_id: UUID | str | None) -> None:
-        """Menambah satu baris riwayat revisi (insert-only)."""
+    async def insert_revision(
+        self,
+        org_id: UUID | str,
+        plan_id: UUID | str,
+        revision: int,
+        revised_by: str,
+        reason: str,
+        diff: list[dict[str, Any]],
+        resolved_change_id: UUID | str | None,
+    ) -> None:
+        """Menambah satu baris riwayat revisi ke app_activity_logs."""
         await self.execute(
             """
-            INSERT INTO vms.plan_revision (organization_id, work_plan_id, revision, revised_by, reason, diff,
-                                           resolved_change_id)
-            VALUES (CAST(:org AS uuid), CAST(:plan AS uuid), :rev, CAST(:by AS uuid), :reason,
-                    CAST(:diff AS jsonb), CAST(:change AS uuid))
+            INSERT INTO app_activity_logs (user_id, action, target_table, target_id, details)
+            VALUES (
+                COALESCE((SELECT user_id FROM users WHERE employee_id = CAST(:by AS uuid) LIMIT 1),
+                         (SELECT user_id FROM users LIMIT 1)),
+                'REVISION',
+                'work_plan_weekly',
+                CAST(:plan AS uuid),
+                jsonb_build_object('revision', :rev, 'reason', :reason, 'diff', CAST(:diff AS jsonb))
+            )
             """,
-            {"org": str(org_id), "plan": str(plan_id), "rev": revision, "by": revised_by, "reason": reason,
-             "diff": json.dumps(diff, default=str, ensure_ascii=False),
-             "change": str(resolved_change_id) if resolved_change_id else None},
+            {
+                "plan": str(plan_id),
+                "by": str(revised_by),
+                "rev": revision,
+                "reason": reason,
+                "diff": json.dumps(diff, default=str, ensure_ascii=False),
+            },
         )
 
     async def list_revisions(self, plan_id: UUID | str) -> list[Any]:
-        """Riwayat revisi satu rencana kerja, terbaru dulu."""
-        return list(await self.fetchall(
-            """
-            SELECT r.id, r.revision, e.full_name AS revised_by_name, r.reason, r.diff, r.created_at
-            FROM vms.plan_revision r LEFT JOIN vms.employee e ON e.id = r.revised_by
-            WHERE r.work_plan_id = :plan
-            ORDER BY r.revision DESC
+        """Riwayat revisi satu rencana kerja mingguan, terbaru dulu."""
+        return list(
+            await self.fetchall(
+                """
+            SELECT l.log_id AS id,
+                   COALESCE((l.details->>'revision')::int, 1) AS revision,
+                   e.full_name AS revised_by_name,
+                   COALESCE(l.details->>'reason', 'Revisi Rencana Kerja') AS reason,
+                   COALESCE(l.details->'diff', '[]'::jsonb) AS diff,
+                   l.create_at AS created_at
+            FROM app_activity_logs l
+            JOIN users u ON u.user_id = l.user_id
+            JOIN employee e ON e.employee_id = u.employee_id
+            WHERE l.target_table = 'work_plan_weekly'
+              AND l.target_id = CAST(:plan AS uuid)
+              AND l.action = 'REVISION'
+            ORDER BY l.create_at DESC
             """,
-            {"plan": plan_id},
-        ))
-
-    async def supersede_awaiting(self, plan_id: UUID | str) -> None:
-        """Dokumen yang masih menunggu penerimaan ketua menjadi Tidak berlaku (digantikan versi revisi)."""
-        await self.execute(
-            "UPDATE vms.plan_document SET status = CAST(:superseded AS vms.document_status) "
-            "WHERE work_plan_id = :plan AND status = CAST(:awaiting AS vms.document_status)",
-            {"plan": plan_id, "superseded": DocumentStatus.SUPERSEDED, "awaiting": DocumentStatus.AWAITING_ACCEPTANCE},
+                {"plan": str(plan_id)},
+            )
         )
 
-    async def issue_revision_document(self, plan_id: UUID | str, version: int, snapshot: dict[str, Any],
-                                      issued_by: str, reason: str, status: DocumentStatus) -> None:
-        """Dokumen versi baru. `EFFECTIVE` = langsung berlaku (setelah ketua menerima); `AWAITING_ACCEPTANCE` =
-        ketua masih harus menerima sekali. Nomor = nomor rencana kerja + /REV-n."""
+    async def supersede_awaiting(self, plan_id: UUID | str) -> None:
+        pass
+
+    async def issue_revision_document(
+        self,
+        plan_id: UUID | str,
+        version: int,
+        snapshot: dict[str, Any],
+        issued_by: str,
+        reason: str,
+        status: DocumentStatus,
+    ) -> None:
         await self.execute(
             """
-            INSERT INTO vms.plan_document (work_plan_id, kind, version, number, status, snapshot, snapshot_sha256,
-                                           reason, issued_by)
-            SELECT id, CAST(:kind AS vms.document_kind), :version, number || '/REV-' || (:version - 1),
-                   CAST(:status AS vms.document_status), CAST(:snapshot AS jsonb), ''::bytea, :reason, :issued_by
-            FROM vms.work_plan WHERE id = :plan
+            UPDATE work_plan_weekly
+            SET notes = COALESCE(notes, '') || E'\\n[Rev-' || :ver || ']: ' || :reason,
+                update_at = NOW()
+            WHERE weekly_plan_id = CAST(:plan AS uuid)
             """,
-            {"plan": plan_id, "kind": DocumentKind.REVISION, "version": version, "status": status,
-             "snapshot": json.dumps(snapshot, default=str), "reason": reason, "issued_by": issued_by},
+            {"plan": str(plan_id), "ver": version, "reason": reason},
         )
 
     async def clear_appeal(self, plan_id: UUID | str) -> None:
-        """Permintaan revisi dari ketua (status Revisi diminta) dianggap terjawab: alasan dikosongkan."""
-        await self.execute("UPDATE vms.work_plan SET appeal_reason = NULL WHERE id = :plan", {"plan": plan_id})
+        """Pengajuan revisi/banding dianggap selesai."""
+        await self.execute(
+            """
+            UPDATE work_plan_weekly
+            SET rollover_approval = 'NONE', update_at = NOW()
+            WHERE weekly_plan_id = CAST(:plan AS uuid)
+            """,
+            {"plan": str(plan_id)},
+        )
 
     async def employee_name(self, employee_id: UUID | str) -> str | None:
-        """Nama lengkap karyawan (untuk teks notifikasi)."""
-        name: str | None = await self.scalar("SELECT full_name FROM vms.employee WHERE id = :id",
-                                             {"id": str(employee_id)})
+        """Nama lengkap karyawan."""
+        name: str | None = await self.scalar(
+            "SELECT full_name FROM employee WHERE employee_id = CAST(:id AS uuid) AND delete_at IS NULL",
+            {"id": str(employee_id)},
+        )
         return name

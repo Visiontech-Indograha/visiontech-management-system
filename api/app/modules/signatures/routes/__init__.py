@@ -1,6 +1,7 @@
 """
 Paket routing untuk modul signatures.
 """
+
 from app.modules.signatures.routes.plan_document_route import (
     router as plan_documents_router,
 )

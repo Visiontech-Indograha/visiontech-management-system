@@ -4,6 +4,7 @@ app/modules/audit/services/audit_service.py
 Layanan logika bisnis untuk modul audit kejadian sistem.
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §5.3.
 """
+
 from app.services.audit_service import AuditService as BaseAuditService
 
 

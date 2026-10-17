@@ -3,6 +3,7 @@ app/services/auth_service.py
 Aturan bisnis autentikasi: login, rotasi refresh token, logout, ganti kata sandi.
 Tidak menulis SQL (lewat crud) dan tidak tahu HTTP (cookie diurus router).
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -42,7 +43,7 @@ class Profile:
     email: str
     role: str
     permissions: list[str]
-    employee_id: str | None = None   # karyawan milik akun ("Berkas saya"); None = akun tanpa karyawan
+    employee_id: str | None = None  # karyawan milik akun ("Berkas saya"); None = akun tanpa karyawan
     attendance_mode: str | None = None  # FIELD = absen di HP, OFFICE = absen di web; None = tanpa karyawan
 
 
@@ -81,7 +82,9 @@ def _locked(state: Any, *, persist: bool = False) -> AppError:
     """
     minutes = max(1, -(-state.retry_after_seconds // 60))
     return AppError(
-        "LOCKED", f"Terlalu banyak kegagalan login. Coba lagi dalam {minutes} menit.", status=403,
+        "LOCKED",
+        f"Terlalu banyak kegagalan login. Coba lagi dalam {minutes} menit.",
+        status=403,
         persist=persist,
         details={"retry_after_seconds": state.retry_after_seconds, "locked_until": state.locked_until.isoformat()},
     )
@@ -89,6 +92,7 @@ def _locked(state: Any, *, persist: bool = False) -> AppError:
 
 class AuthService:
     """Layanan aturan bisnis untuk autentikasi dan manajemen sesi pengguna."""
+
     def __init__(self, users: CRUDUser, sessions: CRUDSession) -> None:
         self.users = users
         self.sessions = sessions
@@ -96,8 +100,9 @@ class AuthService:
     async def _act_as(self, user: Any) -> None:
         """Konteks RLS & audit transaksi ini = pengguna ini, setelah identitasnya pasti (sandi benar / token sah).
         Tanpa ini kueri tabel ber-RLS (mis. `employee`) diam-diam kosong di bawah peran runtime `vms_api` (P9-2)."""
-        await set_request_context(self.users.db, user_id=str(user.id), organization_id=str(user.organization_id),
-                                  actor_label=str(user.login))
+        await set_request_context(
+            self.users.db, user_id=str(user.id), organization_id=str(user.organization_id), actor_label=str(user.login)
+        )
 
     async def _user(self, user_id: str) -> Any:
         """Akun pengguna yang sudah terautentikasi + konteks RLS-nya; tidak ada → 404."""
@@ -130,8 +135,13 @@ class AuthService:
             if after.locked_until:
                 raise _locked(after, persist=True)
             remaining = MAX_LOGIN_FAILURES - after.failures
-            raise AppError("INVALID_CREDENTIALS", f"Email atau kata sandi salah. Sisa {remaining} percobaan.",
-                           status=400, persist=True, details={"remaining_attempts": remaining})
+            raise AppError(
+                "INVALID_CREDENTIALS",
+                f"Email atau kata sandi salah. Sisa {remaining} percobaan.",
+                status=400,
+                persist=True,
+                details={"remaining_attempts": remaining},
+            )
 
         if not user.is_active:
             raise _inactive()
@@ -144,11 +154,17 @@ class AuthService:
         mode = await self.users.get_attendance_mode(user.id)
         if (user.role or "") not in ("ADMIN", "SUPER_ADMIN"):
             if platform == "mobile" and mode not in ("FIELD", "BOTH", None):
-                raise AppError("NOT_FIELD_STAFF", "Akun Anda tidak termasuk kategori staf lapangan. "
-                               "Silakan masuk lewat web.", status=403)
+                raise AppError(
+                    "NOT_FIELD_STAFF",
+                    "Akun Anda tidak termasuk kategori staf lapangan. Silakan masuk lewat web.",
+                    status=403,
+                )
             if platform != "mobile" and mode not in ("OFFICE", "BOTH", None):
-                raise AppError("NOT_OFFICE_ACCOUNT", "Akun Anda bukan kategori akun kantor. "
-                               "Silakan gunakan aplikasi HP Visiontech.", status=403)
+                raise AppError(
+                    "NOT_OFFICE_ACCOUNT",
+                    "Akun Anda bukan kategori akun kantor. Silakan gunakan aplikasi HP Visiontech.",
+                    status=403,
+                )
 
         # Batas maksimal 4 perangkat aktif per akun
         existing_family = None
@@ -289,13 +305,15 @@ class AuthService:
         await self.sessions.revoke_all_for_user(user_id, "Kata sandi diganti")
         return await self._start_session(user, client)
 
-    async def _start_session(
-        self, user: Any, client: ClientInfo, auth_time: int | None = None
-    ) -> IssuedTokens:
+    async def _start_session(self, user: Any, client: ClientInfo, auth_time: int | None = None) -> IssuedTokens:
         """Membuat sesi baru dalam database dan mengeluarkan sepasang access/refresh token."""
         session = await self.sessions.issue(
-            user.organization_id, user.id, client.device_label, client.fingerprint,
-            client.ip, client.user_agent,
+            user.organization_id,
+            user.id,
+            client.device_label,
+            client.fingerprint,
+            client.ip,
+            client.user_agent,
         )
         return IssuedTokens(
             access_token=self._access_token(user, session.session_id, auth_time=auth_time),

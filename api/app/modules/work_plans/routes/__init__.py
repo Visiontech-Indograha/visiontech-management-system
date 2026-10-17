@@ -1,6 +1,7 @@
 """
 Paket routing untuk modul work_plans.
 """
+
 from app.modules.work_plans.routes.work_plan_amendments_route import (
     router as plan_amendments_router,
 )
@@ -48,4 +49,3 @@ __all__ = [
     "plans_router",
     "transitions_router",
 ]
-

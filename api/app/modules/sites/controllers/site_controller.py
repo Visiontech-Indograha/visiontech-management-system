@@ -4,6 +4,7 @@ app/modules/sites/controllers/site_controller.py
 Controller orkestrasi use case lokasi kerja.
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.2.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -38,17 +39,13 @@ class SiteController:
             location=GeoPoint(lat=r.lat, lng=r.lng),
         )
 
-    async def handle_list_sites(
-        self, current_user: CurrentUser, for_attendance: bool
-    ) -> list[SiteResponse]:
+    async def handle_list_sites(self, current_user: CurrentUser, for_attendance: bool) -> list[SiteResponse]:
         """Mengambil daftar lokasi yang dapat diakses pengguna."""
         manager, unit = await self.site_service.manageable(current_user)
         rows = await self.site_service.list_sites(current_user, for_attendance=for_attendance)
         return [self.map_row_to_response(r, manager and r.unit_id == unit) for r in rows]
 
-    async def handle_create_site(
-        self, current_user: CurrentUser, data: SiteCreate
-    ) -> SiteResponse:
+    async def handle_create_site(self, current_user: CurrentUser, data: SiteCreate) -> SiteResponse:
         """Membuat lokasi kerja baru."""
         row = await self.site_service.create_site(
             current_user,
@@ -60,9 +57,7 @@ class SiteController:
         )
         return self.map_row_to_response(row, True)
 
-    async def handle_delete_site(
-        self, current_user: CurrentUser, site_id: UUID
-    ) -> dict[str, str]:
+    async def handle_delete_site(self, current_user: CurrentUser, site_id: UUID) -> dict[str, str]:
         """Menghapus lokasi kerja."""
         await self.site_service.delete_site(current_user, site_id)
         return {"message": "Lokasi dihapus."}

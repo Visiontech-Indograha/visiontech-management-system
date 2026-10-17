@@ -3,6 +3,7 @@ app/services/notification_service.py
 Notifikasi dalam aplikasi untuk tahap SK (alur SK v2, flowchart SK2): terbit → ketua & anggota,
 adendum diminta → PM, diterima → PM & anggota, mulai berjalan → semua yang terikat.
 """
+
 from __future__ import annotations
 
 from collections.abc import Iterable
@@ -71,7 +72,7 @@ class NotificationService:
         """
         Membuat teks label untuk keperluan subjek notifikasi.
         """
-        return str(people.number) if people.number else "Rencana Kerja"   # nomor sudah berawalan "SK-"
+        return str(people.number) if people.number else "Rencana Kerja"  # nomor sudah berawalan "SK-"
 
     async def _actor(self) -> str:
         """Nama karyawan pelaku (pengguna yang sedang masuk), dibaca dari konteks sesi `app.user_id`."""
@@ -102,10 +103,17 @@ class NotificationService:
         p = await self._plan(plan_id)
         actor, head = await self._actor(), f"{p.title}, {self._span(p)}."
         title = f"{actor} menerbitkan {self._label(p)}"
-        await self.repo.insert_many(p.organization_id, [p.leader], "PLAN_PUBLISHED", title,
-                                    f"{head} Anda ketua tim: tinjau lalu terima, atau ajukan revisi.", plan_id)
-        await self.repo.insert_many(p.organization_id, p.members, "PLAN_PUBLISHED", title,
-                                    f"{head} Anda anggota tim.", plan_id)
+        await self.repo.insert_many(
+            p.organization_id,
+            [p.leader],
+            "PLAN_PUBLISHED",
+            title,
+            f"{head} Anda ketua tim: tinjau lalu terima, atau ajukan revisi.",
+            plan_id,
+        )
+        await self.repo.insert_many(
+            p.organization_id, p.members, "PLAN_PUBLISHED", title, f"{head} Anda anggota tim.", plan_id
+        )
 
     async def amendment_requested(self, plan_id: UUID | str, reason: str) -> None:
         """
@@ -116,9 +124,14 @@ class NotificationService:
             reason: Alasan permintaan adendum.
         """
         p = await self._plan(plan_id)
-        await self.repo.insert_many(p.organization_id, [p.pm], "PLAN_AMENDMENT_REQUESTED",
-                                    f"{await self._actor()} meminta revisi {self._label(p)}",
-                                    f"{p.title}. Alasan: {reason}", plan_id)
+        await self.repo.insert_many(
+            p.organization_id,
+            [p.pm],
+            "PLAN_AMENDMENT_REQUESTED",
+            f"{await self._actor()} meminta revisi {self._label(p)}",
+            f"{p.title}. Alasan: {reason}",
+            plan_id,
+        )
 
     async def plan_accepted(self, plan_id: UUID | str) -> None:
         """
@@ -128,9 +141,14 @@ class NotificationService:
             plan_id (UUID | str): ID SK terkait.
         """
         p = await self._plan(plan_id)
-        await self.repo.insert_many(p.organization_id, [p.pm, *p.members], "PLAN_ACCEPTED",
-                                    f"{await self._actor()} menerima {self._label(p)}",
-                                    f"{p.title} — berjalan otomatis pada tanggal mulai.", plan_id)
+        await self.repo.insert_many(
+            p.organization_id,
+            [p.pm, *p.members],
+            "PLAN_ACCEPTED",
+            f"{await self._actor()} menerima {self._label(p)}",
+            f"{p.title} — berjalan otomatis pada tanggal mulai.",
+            plan_id,
+        )
 
     async def plan_started(self, plan_id: UUID | str) -> None:
         """
@@ -140,8 +158,14 @@ class NotificationService:
             plan_id (UUID | str): ID SK terkait.
         """
         p = await self._plan(plan_id)
-        await self.repo.insert_many(p.organization_id, [p.pm, p.leader, *p.members], "PLAN_STARTED",
-                                    f"{self._label(p)} mulai berjalan", p.title, plan_id)
+        await self.repo.insert_many(
+            p.organization_id,
+            [p.pm, p.leader, *p.members],
+            "PLAN_STARTED",
+            f"{self._label(p)} mulai berjalan",
+            p.title,
+            plan_id,
+        )
 
     async def list_for(self, user_id: str, unread_only: bool = False, limit: int = 50) -> list[Any]:
         """
@@ -185,22 +209,31 @@ class NotificationService:
     # ── Laporan berjenjang (PR2) ─────────────────────────────────────────────────────────────
     async def member_report_sent(self, plan_id: UUID | str, member_name: str, work_date: Any) -> None:
         p = await self._plan(plan_id)
-        await self.repo.insert_many(p.organization_id, [p.leader], "MEMBER_REPORT_SENT",
-                                    f"{member_name} mengirim laporan {work_date:%d-%m-%Y}",
-                                    f"{p.title} ({self._label(p)}) — menunggu Anda memeriksa.", plan_id)
+        await self.repo.insert_many(
+            p.organization_id,
+            [p.leader],
+            "MEMBER_REPORT_SENT",
+            f"{member_name} mengirim laporan {work_date:%d-%m-%Y}",
+            f"{p.title} ({self._label(p)}) — menunggu Anda memeriksa.",
+            plan_id,
+        )
 
     async def report_submitted(self, plan_id: UUID | str, what: str, resubmitted: bool) -> None:
         p = await self._plan(plan_id)
         verb = "mengirim ulang" if resubmitted else "mengirim"
-        await self.repo.insert_many(p.organization_id, [p.pm], "REPORT_SUBMITTED",
-                                    f"{await self._actor()} {verb} {what} {self._label(p)}",
-                                    f"{p.title} — menunggu pemeriksaan PM.", plan_id)
+        await self.repo.insert_many(
+            p.organization_id,
+            [p.pm],
+            "REPORT_SUBMITTED",
+            f"{await self._actor()} {verb} {what} {self._label(p)}",
+            f"{p.title} — menunggu pemeriksaan PM.",
+            plan_id,
+        )
 
     async def report_reviewed(self, plan_id: UUID | str, what: str, approved: bool, note: str | None) -> None:
         p = await self._plan(plan_id)
         title = f"{await self._actor()} {'menyetujui' if approved else 'mengembalikan'} {what} {self._label(p)}"
-        await self.repo.insert_many(p.organization_id, [p.leader], "REPORT_REVIEWED", title,
-                                    note or p.title, plan_id)
+        await self.repo.insert_many(p.organization_id, [p.leader], "REPORT_REVIEWED", title, note or p.title, plan_id)
 
     # ── Adendum saat berjalan & penutupan (PR3) ──────────────────────────────────────────────
     async def amendment_decided(self, plan_id: UUID | str, *, accepted: bool, note: str | None) -> None:
@@ -213,69 +246,111 @@ class NotificationService:
             body = f"Catatan: {note}" if note else p.title
         await self.repo.insert_many(p.organization_id, [p.leader], "AMENDMENT_DECIDED", title, body, plan_id)
 
-    async def plan_revised(self, plan_id: UUID | str, actor_name: str, reason: str, diff: list[dict[str, Any]],
-                           recipients: Iterable[str]) -> None:
+    async def plan_revised(
+        self, plan_id: UUID | str, actor_name: str, reason: str, diff: list[dict[str, Any]], recipients: Iterable[str]
+    ) -> None:
         """Revisi PM (T6): ketua serta anggota lama dan baru diberi tahu apa yang berubah."""
         p = await self._plan(plan_id)
-        await self.repo.insert_many(p.organization_id, recipients, "PLAN_REVISED",
-                                    f"{actor_name} merevisi {self._label(p)}",
-                                    f"{diff_summary(diff)} Alasan: {reason}", plan_id)
+        await self.repo.insert_many(
+            p.organization_id,
+            recipients,
+            "PLAN_REVISED",
+            f"{actor_name} merevisi {self._label(p)}",
+            f"{diff_summary(diff)} Alasan: {reason}",
+            plan_id,
+        )
 
     async def attendance_flagged(self, org_id: str, reviewers: Iterable[str], title: str) -> None:
         """Absen Perlu review (mis. "Absen pulang Andi di luar radius (420 m)") → PM/peninjau berwenang."""
-        await self.repo.insert_many(org_id, reviewers, "ATTENDANCE_FLAGGED", title,
-                                    "Periksa di menu Absensi.", None)
+        await self.repo.insert_many(org_id, reviewers, "ATTENDANCE_FLAGGED", title, "Periksa di menu Absensi.", None)
 
     async def attendance_decided(self, org_id: str, employee_id: str, approved: bool, note: str) -> None:
         """Keputusan peninjau atas absensi → karyawannya."""
         verb = "menyetujui" if approved else "menolak"
-        await self.repo.insert_many(org_id, [employee_id], "ATTENDANCE_DECIDED",
-                                    f"{await self._actor()} {verb} absensi Anda", f"Catatan: {note}", None)
+        await self.repo.insert_many(
+            org_id,
+            [employee_id],
+            "ATTENDANCE_DECIDED",
+            f"{await self._actor()} {verb} absensi Anda",
+            f"Catatan: {note}",
+            None,
+        )
 
-    async def attendance_early_leave(self, org_id: str, reviewers: Iterable[str], employee_name: str,
-                                     detail: str) -> None:
+    async def attendance_early_leave(
+        self, org_id: str, reviewers: Iterable[str], employee_name: str, detail: str
+    ) -> None:
         """Pemberitahuan kepada peninjau/PM saat karyawan pulang lebih awal."""
         await self.repo.insert_many(
-            org_id, reviewers, "ATTENDANCE_EARLY_LEAVE",
+            org_id,
+            reviewers,
+            "ATTENDANCE_EARLY_LEAVE",
             f"Pulang Cepat: {employee_name}",
-            f"{employee_name} melakukan absen pulang lebih awal ({detail}).", None,
+            f"{employee_name} melakukan absen pulang lebih awal ({detail}).",
+            None,
         )
 
     async def attendance_encouragement(self, org_id: str, employee_id: str, message: str) -> None:
         """Pesan penyemangat untuk karyawan yang menyelesaikan waktu kerja penuh."""
         await self.repo.insert_many(
-            org_id, [employee_id], "ATTENDANCE_ENCOURAGEMENT",
-            "Terima Kasih Atas Kerja Kerasmu Hari Ini! 🌟", message, None,
+            org_id,
+            [employee_id],
+            "ATTENDANCE_ENCOURAGEMENT",
+            "Terima Kasih Atas Kerja Kerasmu Hari Ini! 🌟",
+            message,
+            None,
         )
 
     async def attendance_auto_checkout_bulk(self, org_id: str, employee_ids: Iterable[str]) -> None:
         """Pemberitahuan bahwa absensi ditutup otomatis oleh sistem pada pukul 19:00."""
         await self.repo.insert_many(
-            org_id, employee_ids, "ATTENDANCE_AUTO_CHECKOUT",
+            org_id,
+            employee_ids,
+            "ATTENDANCE_AUTO_CHECKOUT",
             "Absensi Ditutup Otomatis (19:00)",
             "Sesi absensi Anda hari ini telah ditutup otomatis oleh sistem pada pukul 19:00 dengan keterangan "
-            "'Lupa absen pulang'.", None,
+            "'Lupa absen pulang'.",
+            None,
         )
 
     async def amendment_accepted(self, plan_id: UUID | str) -> None:
         p = await self._plan(plan_id)
-        await self.repo.insert_many(p.organization_id, [p.pm, *p.members], "AMENDMENT_ACCEPTED",
-                                    f"{await self._actor()} menerima revisi {self._label(p)}",
-                                    f"{p.title} — versi sebelumnya tidak berlaku lagi.", plan_id)
+        await self.repo.insert_many(
+            p.organization_id,
+            [p.pm, *p.members],
+            "AMENDMENT_ACCEPTED",
+            f"{await self._actor()} menerima revisi {self._label(p)}",
+            f"{p.title} — versi sebelumnya tidak berlaku lagi.",
+            plan_id,
+        )
 
     async def completion_requested(self, plan_id: UUID | str) -> None:
         p = await self._plan(plan_id)
-        await self.repo.insert_many(p.organization_id, [p.pm], "COMPLETION_REQUESTED",
-                                    f"{await self._actor()} mengajukan penutupan {self._label(p)}",
-                                    f"{p.title} — laporan akhir menunggu pemeriksaan.", plan_id)
+        await self.repo.insert_many(
+            p.organization_id,
+            [p.pm],
+            "COMPLETION_REQUESTED",
+            f"{await self._actor()} mengajukan penutupan {self._label(p)}",
+            f"{p.title} — laporan akhir menunggu pemeriksaan.",
+            plan_id,
+        )
 
     async def completion_decided(self, plan_id: UUID | str, *, approved: bool, note: str | None) -> None:
         p = await self._plan(plan_id)
         if approved:
-            await self.repo.insert_many(p.organization_id, [p.leader, *p.members], "PLAN_COMPLETED",
-                                        f"{await self._actor()} menutup {self._label(p)}",
-                                        f"{p.title} — selesai; tim dan aset sudah dilepas.", plan_id)
+            await self.repo.insert_many(
+                p.organization_id,
+                [p.leader, *p.members],
+                "PLAN_COMPLETED",
+                f"{await self._actor()} menutup {self._label(p)}",
+                f"{p.title} — selesai; tim dan aset sudah dilepas.",
+                plan_id,
+            )
         else:
-            await self.repo.insert_many(p.organization_id, [p.leader], "COMPLETION_RETURNED",
-                                        f"{await self._actor()} mengembalikan laporan akhir {self._label(p)}",
-                                        f"Catatan: {note}" if note else p.title, plan_id)
+            await self.repo.insert_many(
+                p.organization_id,
+                [p.leader],
+                "COMPLETION_RETURNED",
+                f"{await self._actor()} mengembalikan laporan akhir {self._label(p)}",
+                f"Catatan: {note}" if note else p.title,
+                plan_id,
+            )

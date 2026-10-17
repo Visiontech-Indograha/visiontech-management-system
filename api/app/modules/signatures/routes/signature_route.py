@@ -4,6 +4,7 @@ app/modules/signatures/routes/signature_route.py
 Rute endpoint HTTP untuk tanda tangan, PDF/HTML, dan verifikasi token publik.
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.1.
 """
+
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Request

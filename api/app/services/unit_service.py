@@ -2,6 +2,7 @@
 app/services/unit_service.py
 Unit bisnis milik organisasi pengguna — bukan data rahasia, terbuka untuk semua peran di organisasinya.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -14,6 +15,7 @@ class UnitService:
     """
     Layanan untuk mengelola unit bisnis dalam organisasi.
     """
+
     def __init__(self, repo: CRUDUnit) -> None:
         """
         Inisialisasi UnitService.

@@ -4,6 +4,7 @@ Akun login karyawan (M1-01, R-20): HR/admin membuat akun, mereset password, meno
 Izin manage:users dijaga router; batas organisasi & aturan di sini. Password sementara hanya dikembalikan
 sekali dan tidak pernah disimpan selain hash argon2.
 """
+
 from __future__ import annotations
 
 import secrets
@@ -21,12 +22,16 @@ _ALPHABET = string.ascii_letters + string.digits
 
 def temporary_password() -> str:
     """12 karakter acak + jaminan huruf & angka (kebijakan password web: min 8, huruf + angka)."""
-    return "".join(secrets.choice(_ALPHABET) for _ in range(10)) + secrets.choice(string.ascii_lowercase) \
+    return (
+        "".join(secrets.choice(_ALPHABET) for _ in range(10))
+        + secrets.choice(string.ascii_lowercase)
         + secrets.choice(string.digits)
+    )
 
 
 class AccountService:
     """Layanan untuk mengelola akun autentikasi karyawan, termasuk pembuatan akun dan reset kata sandi."""
+
     def __init__(self, users: CRUDUser, employees: CRUDEmployee, sessions: CRUDSession) -> None:
         self.users, self.employees, self.sessions = users, employees, sessions
 
@@ -121,8 +126,7 @@ class AccountService:
             emp = await self._employee(employee_id, org_id)
             # Menjaga konsistensi bisnis: Akun tidak boleh aktif jika status pekerjanya sudah nonaktif.
             if not emp.is_active:
-                raise AppError("EMPLOYEE_INACTIVE", "Karyawan sudah nonaktif; akun tidak dapat diaktifkan.",
-                               status=409)
+                raise AppError("EMPLOYEE_INACTIVE", "Karyawan sudah nonaktif; akun tidak dapat diaktifkan.", status=409)
         await self.users.set_active(account.id, active)
         if not active:
             # Mencabut semua sesi terbuka sebagai konsekuensi keamanan penonaktifan akun.

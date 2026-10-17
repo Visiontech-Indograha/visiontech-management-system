@@ -4,6 +4,7 @@ app/services/face_embed_client.py
 Klien HTTP ke face-service (inferensi saja, jaringan internal). Tidak pernah mencatat embedding atau gambar.
 Layanan mati/lambat → `FaceServiceUnavailable`; pemanggil memutuskan (absen tetap berjalan, hasil SKIPPED).
 """
+
 from __future__ import annotations
 
 import logging
@@ -23,7 +24,7 @@ class FaceServiceUnavailable(Exception):
 
 @dataclass(frozen=True)
 class EmbedResult:
-    faces: int                              # jumlah wajah terdeteksi; embedding hanya ada bila tepat 1
+    faces: int  # jumlah wajah terdeteksi; embedding hanya ada bila tepat 1
     embedding: list[float] | None
     quality: float | None
     detection_score: float | None
@@ -44,8 +45,9 @@ class FaceEmbedClient:
             raise FaceServiceUnavailable("face-service belum dikonfigurasi")
         try:
             async with httpx.AsyncClient(timeout=self.timeout_s) as client:
-                response = await client.post(f"{self.base_url}/embed", files={"file": (filename, image)},
-                                             headers={"X-Face-Token": self.token})
+                response = await client.post(
+                    f"{self.base_url}/embed", files={"file": (filename, image)}, headers={"X-Face-Token": self.token}
+                )
         except httpx.HTTPError as exc:
             logger.warning("face-service tidak terjangkau: %s", type(exc).__name__)
             raise FaceServiceUnavailable(type(exc).__name__) from None
@@ -56,9 +58,14 @@ class FaceEmbedClient:
             # 400/413: gambar tidak valid — kesalahan pemanggil, bukan layanan mati.
             raise ValueError(f"face-service menolak gambar (HTTP {response.status_code})")
         body = response.json()
-        return EmbedResult(faces=int(body["faces"]), embedding=body.get("embedding"), quality=body.get("quality"),
-                           detection_score=body.get("detection_score"), model_name=body["model_name"],
-                           model_version=body["model_version"])
+        return EmbedResult(
+            faces=int(body["faces"]),
+            embedding=body.get("embedding"),
+            quality=body.get("quality"),
+            detection_score=body.get("detection_score"),
+            model_name=body["model_name"],
+            model_version=body["model_version"],
+        )
 
     async def check_challenge(self, image: bytes, challenge: str, filename: str = "frame.jpg") -> dict[str, Any]:
         if not self.base_url or not self.token:

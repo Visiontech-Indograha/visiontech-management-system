@@ -4,6 +4,7 @@ app/modules/work_plans/controllers/work_plan_revisions_controller.py
 Controller orkestrasi use case revisi rencana kerja oleh PM dan riwayatnya.
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.2.
 """
+
 from __future__ import annotations
 
 from uuid import UUID
@@ -49,4 +50,3 @@ class WorkPlanRevisionsController:
 
 
 __all__ = ["WorkPlanRevisionsController"]
-

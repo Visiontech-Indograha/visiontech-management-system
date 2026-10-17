@@ -4,6 +4,7 @@ app/modules/work_plans/routes/work_plan_amendments_route.py
 Rute endpoint HTTP untuk adendum saat SK berjalan dan laporan akhir (/work-plans/{plan_id}).
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.1.
 """
+
 from uuid import UUID
 
 from fastapi import APIRouter, Depends
@@ -94,4 +95,3 @@ async def final_report_html(
 
 
 __all__ = ["router"]
-

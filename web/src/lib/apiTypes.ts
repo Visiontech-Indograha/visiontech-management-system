@@ -205,6 +205,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/audit-events/backups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get System Backups
+         * @description Mendapatkan daftar berkas arsip backup sistem dari public.system_backup_registry.
+         */
+        get: operations["get_system_backups_api_v1_audit_events_backups_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/audit-events": {
         parameters: {
             query?: never;
@@ -259,10 +279,12 @@ export interface paths {
         /**
          * Get File Content
          * @description Menyajikan isi berkas langsung sebagai byte (bukan JSON) sehingga bisa dipakai
-         *     sebagai `src` pada tag <img>. Otorisasi tetap diperiksa (404 bila tidak berhak).
+         *     sebagai `src` pada tag <img> atau unduhan aman. Otorisasi tetap diperiksa (404 bila tidak berhak).
+         *     Mendukung Header Authorization: Bearer ATAU query parameter ?token=<ticket>.
          *
          *     Query params:
          *     - variant: "thumb" | "view" | "full" (default "view")
+         *     - download: bool (default False, jika True menyetel Content-Disposition: attachment)
          */
         get: operations["get_file_content_api_v1_files__file_id__get"];
         put?: never;
@@ -282,7 +304,7 @@ export interface paths {
         };
         /**
          * Get File Url
-         * @description Mendapatkan URL Presigned MinIO untuk mengakses file (valid 5 menit).
+         * @description Mendapatkan URL aplikasi bertiket untuk mengakses file (valid 5 menit).
          *     Varian: full, view, thumb. URL dibuat hanya setelah otorisasi per berkas (V-17, dok 13 §7).
          *
          *     Path params:
@@ -291,7 +313,7 @@ export interface paths {
          *     Query params:
          *     - variant: variasi kompresi ("full", "view", "thumb")
          *
-         *     Return: Presigned URL dari MinIO beserta mime_type asli
+         *     Return: URL API bertiket beserta mime_type asli
          */
         get: operations["get_file_url_api_v1_files__file_id__url_get"];
         put?: never;
@@ -2152,6 +2174,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/cron/attendance/auto-checkout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Auto Checkout Daily
+         * @description Penjadwal / Cron: Menutup otomatis sesi absensi yang belum ditutup pada pukul 19:00.
+         */
+        post: operations["auto_checkout_daily_api_v1_cron_attendance_auto_checkout_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/hse/incidents": {
         parameters: {
             query?: never;
@@ -2693,6 +2735,26 @@ export interface paths {
          * @description Mendapatkan dokumen laporan mingguan dalam format HTML (GET).
          */
         get: operations["weekly_report_html_api_v1_work_plans__plan_id__weekly__week__report_html_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-plans/{plan_id}/exports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Plan Exports
+         * @description Daftar ekspor template dokumen (DOCX, PPTX, PDF, XLSX) dari public.document_template_export.
+         */
+        get: operations["list_plan_exports_api_v1_work_plans__plan_id__exports_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -6447,6 +6509,28 @@ export interface operations {
             };
         };
     };
+    get_system_backups_api_v1_audit_events_backups_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+        };
+    };
     get_audit_events_api_v1_audit_events_get: {
         parameters: {
             query?: {
@@ -6519,6 +6603,8 @@ export interface operations {
         parameters: {
             query?: {
                 variant?: string;
+                download?: boolean;
+                token?: string | null;
             };
             header?: never;
             path: {
@@ -9936,6 +10022,28 @@ export interface operations {
             };
         };
     };
+    auto_checkout_daily_api_v1_cron_attendance_auto_checkout_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: number;
+                    };
+                };
+            };
+        };
+    };
     list_incidents_api_v1_hse_incidents_get: {
         parameters: {
             query: {
@@ -10894,6 +11002,39 @@ export interface operations {
                 };
                 content: {
                     "text/html": string;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_plan_exports_api_v1_work_plans__plan_id__exports_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
                 };
             };
             /** @description Validation Error */

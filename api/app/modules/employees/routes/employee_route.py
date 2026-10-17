@@ -4,6 +4,7 @@ app/modules/employees/routes/employee_route.py
 Rute endpoint HTTP untuk data karyawan (/employees).
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.1.
 """
+
 from datetime import date
 from typing import Any
 from uuid import UUID
@@ -185,4 +186,3 @@ async def delete_emergency_contact(
 ) -> dict[str, Any]:
     """Menghapus kontak darurat."""
     return await controller.handle_delete_emergency_contact(current_user, emp_id, contact_id)
-

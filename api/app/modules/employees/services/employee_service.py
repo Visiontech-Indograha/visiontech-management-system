@@ -4,6 +4,7 @@ app/modules/employees/services/employee_service.py
 Layanan logika bisnis untuk modul karyawan.
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §5.3.
 """
+
 from app.services.employee_service import (
     ARCHIVED,
     OFFBOARDED,

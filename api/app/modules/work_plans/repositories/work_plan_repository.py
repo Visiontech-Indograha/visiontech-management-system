@@ -4,6 +4,7 @@ app/modules/work_plans/repositories/work_plan_repository.py
 Repositori data rencana kerja (SK), transisi status, tim personel, adendum, dan laporan.
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §5.5.
 """
+
 from app.crud.crud_member_report import CRUDMemberReport
 from app.crud.crud_plan_access import CRUDPlanAccess
 from app.crud.crud_plan_amendment import CRUDPlanAmendment
@@ -86,4 +87,3 @@ __all__ = [
     "PlanRevisionRepository",
     "PlanTransitionRepository",
 ]
-

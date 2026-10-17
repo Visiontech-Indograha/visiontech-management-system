@@ -4,6 +4,7 @@ app/modules/accounts/controllers/account_profile_controller.py
 Controller orkestrasi operasi akun karyawan (lihat akun, buat akun, reset sandi, aktivasi/deaktivasi).
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.2.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -48,17 +49,13 @@ class AccountProfileController:
         self, emp_id: UUID, organization_id: str, data: AccountCreate
     ) -> AccountWithPassword:
         """Membuat akun login baru untuk karyawan."""
-        row, password = await self.account_service.create(
-            emp_id, organization_id, data.login.strip().lower()
-        )
+        row, password = await self.account_service.create(emp_id, organization_id, data.login.strip().lower())
         return AccountWithPassword(
             **self.map_row_to_out(row).model_dump(),
             temporary_password=password,
         )
 
-    async def handle_reset_password(
-        self, emp_id: UUID, organization_id: str
-    ) -> AccountWithPassword:
+    async def handle_reset_password(self, emp_id: UUID, organization_id: str) -> AccountWithPassword:
         """Mereset kata sandi akun karyawan ke sandi sementara baru."""
         row, password = await self.account_service.reset_password(emp_id, organization_id)
         return AccountWithPassword(
@@ -75,4 +72,3 @@ class AccountProfileController:
         """Mengaktifkan kembali akun karyawan."""
         row = await self.account_service.set_active(emp_id, organization_id, True)
         return self.map_row_to_out(row)
-

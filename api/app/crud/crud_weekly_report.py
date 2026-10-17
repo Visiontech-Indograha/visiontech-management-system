@@ -2,6 +2,7 @@
 app/crud/crud_weekly_report.py
 Laporan mingguan rencana kerja (work_plan_weekly & work_completion) untuk Master Schema V2.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -10,13 +11,13 @@ from uuid import UUID
 from .base import CRUDBase
 
 _WEEKS = """
-    SELECT 
+    SELECT
         wpw.week_number AS week,
         'Laporan Mingguan ' || wpw.week_number AS name,
         wpw.start_date AS starts_on,
         wpw.end_date AS ends_on,
         COALESCE(bool_and(wpi.progress_percent >= 100), true) AS days_approved,
-        CASE 
+        CASE
             WHEN wc.pm_signed_at IS NOT NULL THEN 'APPROVED'
             WHEN wc.leader_signed_at IS NOT NULL THEN 'SUBMITTED'
             WHEN wpw.status = 'COMPLETED' THEN 'APPROVED'
@@ -27,8 +28,10 @@ _WEEKS = """
         CASE WHEN wc.pm_signed_at IS NOT NULL THEN 'Telah disetujui PM' ELSE NULL END AS review_note,
         false AS resubmitted
     FROM public.work_plan_weekly wpw
-    LEFT JOIN public.work_plan_item wpi ON wpi.weekly_plan_id = wpw.weekly_plan_id AND wpi.delete_at IS NULL
-    LEFT JOIN public.work_completion wc ON wc.weekly_plan_id = wpw.weekly_plan_id AND wc.report_scope = 'WEEKLY' AND wc.delete_at IS NULL
+    LEFT JOIN public.work_plan_item wpi
+        ON wpi.weekly_plan_id = wpw.weekly_plan_id AND wpi.delete_at IS NULL
+    LEFT JOIN public.work_completion wc
+        ON wc.weekly_plan_id = wpw.weekly_plan_id AND wc.report_scope = 'WEEKLY' AND wc.delete_at IS NULL
     WHERE wpw.delete_at IS NULL
       AND (CAST(:plan AS uuid) IS NULL OR wpw.weekly_plan_id = CAST(:plan AS uuid))
       AND (CAST(:week AS integer) IS NULL OR wpw.week_number = CAST(:week AS integer))
@@ -83,7 +86,10 @@ class CRUDWeeklyReport(CRUDBase):
             Any: Record yang menyimpan ID laporan mingguan (jika berhasil).
         """
         existing = await self.scalar(
-            "SELECT completion_id FROM public.work_completion WHERE weekly_plan_id = :plan AND report_scope = 'WEEKLY' AND delete_at IS NULL",
+            """
+            SELECT completion_id FROM public.work_completion
+            WHERE weekly_plan_id = :plan AND report_scope = 'WEEKLY' AND delete_at IS NULL
+            """,
             {"plan": plan_id},
         )
         if existing:
@@ -138,8 +144,7 @@ class CRUDWeeklyReport(CRUDBase):
             {"plan": plan_id, "uid": user_id},
         )
 
-    async def review(self, plan_id: UUID | str, name: str, status: str, note: str | None,
-                     user_id: UUID | str) -> Any:
+    async def review(self, plan_id: UUID | str, name: str, status: str, note: str | None, user_id: UUID | str) -> Any:
         """
         Menyimpan hasil review (setuju atau revisi) laporan mingguan oleh Project Manager.
 

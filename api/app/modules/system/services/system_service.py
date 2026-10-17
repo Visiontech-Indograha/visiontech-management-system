@@ -4,6 +4,7 @@ app/modules/system/services/system_service.py
 Layanan logika bisnis untuk modul sistem (rilis aplikasi, sinkronisasi, pemantauan, pengelolaan berkas).
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §5.3.
 """
+
 from app.services.app_release_service import (
     FILES_PATH,
 )
@@ -40,4 +41,3 @@ __all__ = [
     "MonitoringService",
     "SyncService",
 ]
-

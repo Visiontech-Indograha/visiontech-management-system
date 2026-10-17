@@ -2,6 +2,7 @@
 app/services/attendance_monitor_service.py
 Aturan peringatan bisnis absensi (dok 17 §5.3, P4-9). Pesan hanya berisi angka & waktu (dok 17 §2).
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -38,6 +39,7 @@ class NeedsReviewResult:
 
 class AttendanceMonitorService:
     """Layanan untuk memantau dan menghasilkan notifikasi terkait kedisiplinan dan janggalan absensi harian."""
+
     def __init__(self, repo: CRUDAttendanceMonitor) -> None:
         self.repo = repo
 

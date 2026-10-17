@@ -2,6 +2,7 @@
 app/crud/crud_attendance_monitor.py
 Kueri agregat untuk pemantauan absensi Master Schema V2.
 """
+
 from __future__ import annotations
 
 from datetime import date, datetime, timedelta
@@ -39,9 +40,7 @@ class CRUDAttendanceMonitor(CRUDBase):
 
     async def last_check_in_at(self, org_id: UUID | str) -> datetime | None:
         """Mendapatkan waktu check-in terakhir (paling baru)."""
-        value: datetime | None = await self.scalar(
-            "SELECT max(clock_in_at) FROM attendance WHERE delete_at IS NULL"
-        )
+        value: datetime | None = await self.scalar("SELECT max(clock_in_at) FROM attendance WHERE delete_at IS NULL")
         return value
 
     async def needs_review_count(self, org_id: UUID | str, work_date: date) -> int:

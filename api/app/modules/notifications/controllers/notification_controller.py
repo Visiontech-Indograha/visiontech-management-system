@@ -4,6 +4,7 @@ app/modules/notifications/controllers/notification_controller.py
 Controller orkestrasi use case notifikasi pengguna.
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.2.
 """
+
 from __future__ import annotations
 
 from uuid import UUID
@@ -50,4 +51,3 @@ class NotificationController:
 
 
 __all__ = ["NotificationController"]
-

@@ -1,6 +1,7 @@
 """
 Paket routing untuk modul system.
 """
+
 from app.modules.system.routes.app_release_route import (
     router as app_releases_router,
 )
@@ -18,4 +19,3 @@ __all__ = [
     "monitoring_router",
     "sync_router",
 ]
-

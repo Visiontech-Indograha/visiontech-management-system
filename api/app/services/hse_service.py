@@ -3,6 +3,7 @@ app/services/hse_service.py
 domain.js REPORT/RESOLVE_INCIDENT, SAVE/SUBMIT/REVIEW_REPORT, TOGGLE_TASK. Akses SK diperiksa dependency
 (`plan_day_access`, `incident_plan_access`) atau `check_plan_access`; aturan status & tanggal di sini.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -42,8 +43,15 @@ class HseService:
         await check_plan_access(self.db, plan_id, user, PlanNeed.VIEW)
         return await self.repo.incidents_of_plan(plan_id, user.organization_id)
 
-    async def report_incident(self, user: CurrentUser, plan_id: UUID, category: str, severity: str,
-                              description: str, evidence_file_ids: list[UUID]) -> Any:
+    async def report_incident(
+        self,
+        user: CurrentUser,
+        plan_id: UUID,
+        category: str,
+        severity: str,
+        description: str,
+        evidence_file_ids: list[UUID],
+    ) -> Any:
         """domain.js REPORT_INCIDENT: ketua/anggota SK yang sedang berjalan (V-09, V-11). Tanggal insiden = hari
         ini menurut server & zona organisasi (V-10) — tanggal kiriman klien tidak dipakai."""
         standing = await check_plan_access(self.db, plan_id, user, PlanNeed.LEADER_OR_MEMBER)
@@ -51,8 +59,9 @@ class HseService:
         await ensure_same_org(self.db, user.organization_id, files=evidence_file_ids)
         employee_id = await self.repo.employee_of_user(user.user_id)
         today = (await self.clock.local_now(user.organization_id)).today
-        incident = await self.repo.insert_incident(user.organization_id, plan_id, employee_id, today, category,
-                                                   severity, description)
+        incident = await self.repo.insert_incident(
+            user.organization_id, plan_id, employee_id, today, category, severity, description
+        )
         if evidence_file_ids:
             await self.repo.add_incident_evidence(incident.id, [str(f) for f in evidence_file_ids])
         return incident
@@ -68,8 +77,15 @@ class HseService:
             raise HTTPException(status_code=404, detail="Insiden tidak ditemukan.")
         return row
 
-    async def save_daily_report(self, access: PlanAccess, day_id: UUID, body: str | None, obstacle: str | None,
-                                evidence_file_ids: list[UUID], evidence: list[EvidenceIn] | None = None) -> Any:
+    async def save_daily_report(
+        self,
+        access: PlanAccess,
+        day_id: UUID,
+        body: str | None,
+        obstacle: str | None,
+        evidence_file_ids: list[UUID],
+        evidence: list[EvidenceIn] | None = None,
+    ) -> Any:
         """domain.js SAVE_REPORT (V-11, V-24): ketua, SK berjalan, hari sudah tiba, laporan belum diserahkan."""
         require_plan_status(access, PlanStatus.IN_PROGRESS)
         await self._ensure_day_reached(day_id)
@@ -90,7 +106,7 @@ class HseService:
         body = await self.repo.daily_report_body(day_id)
         if body is not None and len(body.strip()) < 10:
             raise ValidationError("Uraian pekerjaan minimal 10 karakter sebelum laporan dikirim.")
-        await WorkTypeService(self.db).ensure_daily_complete(access.plan.id, day_id)   # T9: slot foto wajib
+        await WorkTypeService(self.db).ensure_daily_complete(access.plan.id, day_id)  # T9: slot foto wajib
         try:
             report = await self.repo.submit_daily_report(day_id, employee_id)
         except Exception as e:

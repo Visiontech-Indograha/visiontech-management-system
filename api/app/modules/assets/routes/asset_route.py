@@ -4,6 +4,7 @@ app/modules/assets/routes/asset_route.py
 Rute endpoint HTTP untuk manajemen aset (/assets).
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.1.
 """
+
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Response, status

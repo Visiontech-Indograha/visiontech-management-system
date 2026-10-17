@@ -2,6 +2,7 @@
 app/crud/crud_member_report.py
 Laporan harian dan dokumen penyelesaian pekerjaan untuk Master Schema V2.
 """
+
 from __future__ import annotations
 
 import json
@@ -20,13 +21,16 @@ class CRUDMemberReport(CRUDBase):
         """
         Mendapatkan ID karyawan berdasarkan ID pengguna (users).
         """
-        value = await self.scalar("SELECT CAST(employee_id AS text) FROM public.users WHERE user_id = :uid", {"uid": user_id})
+        value = await self.scalar(
+            "SELECT CAST(employee_id AS text) FROM public.users WHERE user_id = :uid", {"uid": user_id}
+        )
         return str(value) if value else None
 
     async def on_duty(self, day_id: UUID | str, employee_id: UUID | str) -> bool:
         """Karyawan bertugas pada hari itu (anggota tim aktif)."""
-        return bool(await self.scalar(
-            """
+        return bool(
+            await self.scalar(
+                """
             SELECT EXISTS (
                 SELECT 1 FROM public.work_plan_daily d
                 JOIN public.work_plan_weekly w ON w.weekly_plan_id = d.weekly_plan_id
@@ -37,21 +41,23 @@ class CRUDMemberReport(CRUDBase):
                   AND m.delete_at IS NULL
             )
             """,
-            {"day": str(day_id), "emp": str(employee_id)},
-        ))
+                {"day": str(day_id), "emp": str(employee_id)},
+            )
+        )
 
     async def list_for_day(self, day_id: UUID | str) -> list[Any]:
         """
         Mengambil semua laporan harian untuk hari kerja tertentu.
         """
-        return list(await self.fetchall(
-            """
-            SELECT 
+        return list(
+            await self.fetchall(
+                """
+            SELECT
                 c.completion_id AS id,
                 CAST(c.leader_signer_id AS text) AS employee_id,
                 e.full_name,
                 'Team Leader' AS position,
-                CASE 
+                CASE
                     WHEN c.pm_signed_at IS NOT NULL THEN 'APPROVED'
                     WHEN c.leader_signed_at IS NOT NULL THEN 'SENT'
                     ELSE 'DRAFT'
@@ -66,8 +72,9 @@ class CRUDMemberReport(CRUDBase):
             WHERE c.daily_plan_id = :day AND c.report_scope = 'DAILY' AND c.delete_at IS NULL
             ORDER BY c.create_at DESC
             """,
-            {"day": day_id},
-        ))
+                {"day": day_id},
+            )
+        )
 
     async def mine(self, day_id: UUID | str, employee_id: str) -> Any:
         """
@@ -75,12 +82,12 @@ class CRUDMemberReport(CRUDBase):
         """
         return await self.fetchone(
             """
-            SELECT 
+            SELECT
                 c.completion_id AS id,
                 CAST(c.leader_signer_id AS text) AS employee_id,
                 e.full_name,
                 'Team Leader' AS position,
-                CASE 
+                CASE
                     WHEN c.pm_signed_at IS NOT NULL THEN 'APPROVED'
                     WHEN c.leader_signed_at IS NOT NULL THEN 'SENT'
                     ELSE 'DRAFT'
@@ -92,9 +99,9 @@ class CRUDMemberReport(CRUDBase):
                 COALESCE(c.realization_photos_json, '[]'::jsonb) AS evidence
             FROM public.work_completion c
             LEFT JOIN public.employee e ON e.employee_id = c.leader_signer_id
-            WHERE c.daily_plan_id = :day 
+            WHERE c.daily_plan_id = :day
               AND c.leader_signer_id = CAST(:emp AS uuid)
-              AND c.report_scope = 'DAILY' 
+              AND c.report_scope = 'DAILY'
               AND c.delete_at IS NULL
             ORDER BY c.create_at DESC LIMIT 1
             """,
@@ -107,8 +114,8 @@ class CRUDMemberReport(CRUDBase):
         """
         existing = await self.scalar(
             """
-            SELECT completion_id FROM public.work_completion 
-            WHERE daily_plan_id = :day AND leader_signer_id = CAST(:emp AS uuid) 
+            SELECT completion_id FROM public.work_completion
+            WHERE daily_plan_id = :day AND leader_signer_id = CAST(:emp AS uuid)
               AND report_scope = 'DAILY' AND delete_at IS NULL
             """,
             {"day": day_id, "emp": employee_id},
@@ -131,7 +138,7 @@ class CRUDMemberReport(CRUDBase):
                     realization_photos_json, leader_signer_id, signature_hash
                 )
                 VALUES (
-                    'DAILY', :day, 
+                    'DAILY', :day,
                     (SELECT weekly_plan_id FROM public.work_plan_daily WHERE daily_plan_id = :day),
                     :body, :obstacle, '[]'::jsonb, CAST(:emp AS uuid),
                     md5(random()::text || clock_timestamp()::text)
@@ -186,7 +193,7 @@ class CRUDMemberReport(CRUDBase):
         """
         return await self.fetchone(
             """
-            SELECT 
+            SELECT
                 'WP-W' || wp.week_number || '-' || wp.year AS number,
                 wp.project_name AS title,
                 '' AS location_text,
@@ -211,33 +218,33 @@ class CRUDMemberReport(CRUDBase):
         """
         return await self.fetchone(
             """
-            SELECT 
-                d.work_date, 
-                d.site_name AS day_title, 
-                CASE 
+            SELECT
+                d.work_date,
+                d.site_name AS day_title,
+                CASE
                     WHEN c.pm_signed_at IS NOT NULL THEN 'APPROVED'
                     WHEN c.leader_signed_at IS NOT NULL THEN 'SUBMITTED'
                     ELSE 'DRAFT'
-                END AS status, 
-                c.summary_notes AS body, 
+                END AS status,
+                c.summary_notes AS body,
                 c.obstacles AS obstacle,
-                false AS resubmitted, 
-                c.leader_signed_at AS submitted_at, 
-                c.pm_signed_at AS reviewed_at, 
+                false AS resubmitted,
+                c.leader_signed_at AS submitted_at,
+                c.pm_signed_at AS reviewed_at,
                 'Laporan diverifikasi' AS review_note,
-                se.full_name AS submitted_by_name, 
+                se.full_name AS submitted_by_name,
                 re.full_name AS reviewed_by_name,
                 COALESCE(
                     ARRAY(
-                        SELECT elem->>'url' 
+                        SELECT elem->>'url'
                         FROM jsonb_array_elements(c.realization_photos_json) AS elem
                     ),
                     '{}'
                 ) AS evidence,
                 COALESCE(
                     ARRAY(
-                        SELECT wpi.title 
-                        FROM public.work_plan_item wpi 
+                        SELECT wpi.title
+                        FROM public.work_plan_item wpi
                         WHERE wpi.daily_plan_id = d.daily_plan_id AND wpi.delete_at IS NULL
                         ORDER BY wpi.create_at
                     ),
@@ -259,20 +266,20 @@ class CRUDMemberReport(CRUDBase):
         """
         return await self.fetchone(
             """
-            SELECT 
-                'Laporan Mingguan ' || wr.week_number AS name, 
-                wr.start_date AS starts_on, 
+            SELECT
+                'Laporan Mingguan ' || wr.week_number AS name,
+                wr.start_date AS starts_on,
                 wr.end_date AS ends_on,
-                CASE 
+                CASE
                     WHEN c.pm_signed_at IS NOT NULL THEN 'APPROVED'
                     WHEN c.leader_signed_at IS NOT NULL THEN 'SUBMITTED'
                     ELSE 'DRAFT'
-                END AS status, 
-                c.summary_notes AS body, 
-                c.obstacles AS obstacle, 
-                false AS resubmitted, 
+                END AS status,
+                c.summary_notes AS body,
+                c.obstacles AS obstacle,
+                false AS resubmitted,
                 'Laporan disetujui PM' AS review_note,
-                se.full_name AS submitted_by_name, 
+                se.full_name AS submitted_by_name,
                 re.full_name AS reviewed_by_name
             FROM public.work_plan_weekly wr
             LEFT JOIN public.work_completion c ON c.weekly_plan_id = wr.weekly_plan_id AND c.report_scope = 'WEEKLY' AND c.delete_at IS NULL

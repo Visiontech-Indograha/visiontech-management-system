@@ -3,6 +3,7 @@ app/crud/crud_site.py
 Master Kantor Pusat & Kantor Cabang dari tabel office (Master Schema V2).
 Koordinat disimpan langsung dalam latitude dan longitude numerik standar.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -22,15 +23,15 @@ class CRUDSite(CRUDBase):
         """
         return await self.fetchone(
             """
-            SELECT 
+            SELECT
                 u.system_role::text AS role,
                 e.office_id AS employee_unit_id,
                 d.division_id AS pm_unit_id,
-                CASE 
+                CASE
                     WHEN u.system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'ADMIN_HR_GA') THEN 'OFFICE'
                     ELSE 'BOTH'
                 END AS attendance_mode
-            FROM users u 
+            FROM users u
             LEFT JOIN employee e ON e.employee_id = u.employee_id AND e.delete_at IS NULL
             LEFT JOIN division d ON d.pm_id = e.employee_id AND d.delete_at IS NULL
             WHERE u.user_id = CAST(:uid AS uuid) AND u.delete_at IS NULL
@@ -52,7 +53,7 @@ class CRUDSite(CRUDBase):
         return list(
             await self.fetchall(
                 """
-                SELECT 
+                SELECT
                     o.office_id AS id,
                     o.name,
                     o.address,
@@ -96,7 +97,7 @@ class CRUDSite(CRUDBase):
             VALUES (
                 :name, :addr, :rad, :lat, :lng, FALSE
             )
-            RETURNING 
+            RETURNING
                 office_id AS id, name, address, attendance_radius_m AS radius_m,
                 latitude::float AS lat, longitude::float AS lng, NULL::uuid AS unit_id
             """,
@@ -115,7 +116,7 @@ class CRUDSite(CRUDBase):
         """
         return await self.fetchone(
             """
-            SELECT 
+            SELECT
                 o.office_id AS id,
                 o.name,
                 o.address,
@@ -136,8 +137,8 @@ class CRUDSite(CRUDBase):
         """
         await self.execute(
             """
-            UPDATE office 
-            SET delete_at = now() 
+            UPDATE office
+            SET delete_at = now()
             WHERE office_id = CAST(:id AS uuid) AND is_main_office = FALSE AND delete_at IS NULL
             """,
             {"id": str(site_id)},

@@ -4,6 +4,7 @@ app/modules/system/controllers/app_release_controller.py
 Controller orkestrasi use case pembaruan aplikasi Android tanpa Play Store.
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.2.
 """
+
 from __future__ import annotations
 
 from fastapi import Depends, Response
@@ -63,4 +64,3 @@ class AppReleaseController:
 
 
 __all__ = ["APK_MEDIA_TYPE", "AppReleaseController"]
-

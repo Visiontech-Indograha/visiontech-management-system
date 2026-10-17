@@ -4,6 +4,7 @@ app/modules/documents/routes/employee_document_route.py
 Rute endpoint HTTP untuk dokumen pribadi karyawan (/employees/{emp_id}/documents).
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.1.
 """
+
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, status

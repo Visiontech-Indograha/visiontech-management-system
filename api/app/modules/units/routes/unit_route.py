@@ -4,6 +4,7 @@ app/modules/units/routes/unit_route.py
 Rute endpoint HTTP untuk unit organisasi (/units).
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.1.
 """
+
 from fastapi import APIRouter, Depends
 
 from app.api.deps import get_current_user
@@ -23,4 +24,3 @@ async def list_units(
     Mengambil daftar unit milik organisasi pengguna saat ini.
     """
     return await controller.handle_list_units(current_user.organization_id)
-

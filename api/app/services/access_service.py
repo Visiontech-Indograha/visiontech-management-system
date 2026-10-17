@@ -8,6 +8,7 @@ terlihat tetapi tidak berwenang → 403.
 Dipindah dari api/deps.py (R-28 M5): service tidak mengimpor `app.api` (docs/12 §1).
 Dependency FastAPI-nya (`plan_access`, `plan_day_access`, …) tetap di api/deps.py.
 """
+
 from collections.abc import Iterable
 from dataclasses import dataclass
 from enum import StrEnum
@@ -25,9 +26,9 @@ from app.crud.crud_plan_access import CRUDPlanAccess
 
 
 class PlanNeed(StrEnum):
-    PM_UNIT = "PM_UNIT"                    # PM unit SK, OPS, ADMIN
-    LEADER = "LEADER"                      # ketua menurut SK yang berlaku
-    MEMBER = "MEMBER"                      # anggota aktif (termasuk ketua)
+    PM_UNIT = "PM_UNIT"  # PM unit SK, OPS, ADMIN
+    LEADER = "LEADER"  # ketua menurut SK yang berlaku
+    MEMBER = "MEMBER"  # anggota aktif (termasuk ketua)
     LEADER_OR_MEMBER = "LEADER_OR_MEMBER"
     VIEW = "VIEW"
 
@@ -46,7 +47,8 @@ class PlanAccess:
     Menyimpan informasi akses pengguna terhadap sebuah work plan (SK).
     Menentukan apakah pengguna bertindak sebagai PM unit, ketua, atau anggota.
     """
-    plan: Any               # baris SK (kolom WorkPlanResponse + kedudukan)
+
+    plan: Any  # baris SK (kolom WorkPlanResponse + kedudukan)
     user: CurrentUser
     manages: bool
     is_leader: bool
@@ -161,14 +163,15 @@ async def check_file_access(db: AsyncSession, file_id: UUID, user: CurrentUser) 
       Finance & OPS semua);
     - bukti laporan/insiden/laporan akhir: siapa pun yang melihat SK-nya (V-07);
     - selain itu (belum dilampirkan, QR, wajah): hanya pengunggah."""
-    row = await CRUDFileAccess(db).links(file_id, user.organization_id, user.user_id,
-                                         Permission.VIEW_ALL_ATTENDANCE.value in user.permissions)
+    row = await CRUDFileAccess(db).links(
+        file_id, user.organization_id, user.user_id, Permission.VIEW_ALL_ATTENDANCE.value in user.permissions
+    )
     if row is None:
         raise NotFoundError("Berkas")
     is_admin = "ADMIN" in user.roles or RoleCode.ADMIN in user.roles
-    if row.work_type_example:   # foto contoh template: petunjuk kerja, terbuka untuk seluruh organisasi
+    if row.work_type_example:  # foto contoh template: petunjuk kerja, terbuka untuk seluruh organisasi
         return row
-    if row.profile_photo:   # foto profil: karyawan pemilik & yang boleh melihat karyawan (view:users) atau admin
+    if row.profile_photo:  # foto profil: karyawan pemilik & yang boleh melihat karyawan (view:users) atau admin
         if is_admin or row.own_profile_photo or Permission.VIEW_USERS.value in user.permissions:
             return row
         raise NotFoundError("Berkas")
@@ -200,8 +203,12 @@ async def check_file_access(db: AsyncSession, file_id: UUID, user: CurrentUser) 
 
 
 _REF_LABELS = (
-    ("work_plans", "Rencana Kerja"), ("sites", "Lokasi"), ("assets", "Aset"),
-    ("files", "Berkas"), ("employees", "Karyawan"), ("units", "Unit bisnis"),
+    ("work_plans", "Rencana Kerja"),
+    ("sites", "Lokasi"),
+    ("assets", "Aset"),
+    ("files", "Berkas"),
+    ("employees", "Karyawan"),
+    ("units", "Unit bisnis"),
 )
 
 
@@ -220,8 +227,14 @@ async def ensure_same_org(
     agar keberadaan data organisasi lain tidak bocor). Dipanggil SEBELUM menulis apa pun."""
     refs = {
         kind: sorted({str(i) for i in ids if i is not None})
-        for kind, ids in (("work_plans", work_plans), ("sites", sites), ("assets", assets),
-                          ("files", files), ("employees", employees), ("units", units))
+        for kind, ids in (
+            ("work_plans", work_plans),
+            ("sites", sites),
+            ("assets", assets),
+            ("files", files),
+            ("employees", employees),
+            ("units", units),
+        )
     }
     if not any(refs.values()):
         return

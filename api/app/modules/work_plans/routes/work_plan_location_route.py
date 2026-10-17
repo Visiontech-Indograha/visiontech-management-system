@@ -4,6 +4,7 @@ app/modules/work_plans/routes/work_plan_location_route.py
 Rute endpoint HTTP untuk lokasi penugasan SK (/geo/search, /work-plans/{plan_id}/location).
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.1.
 """
+
 from fastapi import APIRouter, Depends, Query
 
 from app.api.deps import plan_access, require_any_permission
@@ -55,4 +56,3 @@ async def set_plan_location(
 
 
 __all__ = ["router"]
-

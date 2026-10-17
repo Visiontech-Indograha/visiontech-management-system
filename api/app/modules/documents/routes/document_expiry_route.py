@@ -4,6 +4,7 @@ app/modules/documents/routes/document_expiry_route.py
 Rute endpoint HTTP untuk kedaluwarsa dan verifikasi antrean dokumen (/documents).
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.1.
 """
+
 from fastapi import APIRouter, Depends
 
 from app.api.deps import require_permission

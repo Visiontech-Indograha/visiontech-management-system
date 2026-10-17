@@ -4,6 +4,7 @@ app/modules/work_plans/routes/work_plan_members_route.py
 Rute endpoint HTTP untuk susunan tim SK (/work-plans/{plan_id}/members).
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.1.
 """
+
 from uuid import UUID
 
 from fastapi import APIRouter, Depends
@@ -46,4 +47,3 @@ async def set_plan_team(
 
 
 __all__ = ["router"]
-

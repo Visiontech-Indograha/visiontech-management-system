@@ -4,6 +4,7 @@ Tanda tangan dokumen SK ber-QR (fase 6; keputusan pemilik 2026-09-26: otomatis �
 terbit, ketua sebagai ACCEPTOR saat menerima). Payload JSON kanonik RFC 8785 ditandatangani lewat
 `DocumentSigner` (lokal dulu, KMS nanti). Verifikasi publik memakai `verify_signature_qr` (db/04).
 """
+
 from __future__ import annotations
 
 import base64
@@ -44,6 +45,7 @@ class SignatureService:
     Layanan untuk mengelola tanda tangan elektronik pada dokumen SK dan laporan akhir.
     Menggunakan mekanisme payload JSON kanonik dan public key cryptography untuk menghasilkan tanda tangan.
     """
+
     def __init__(self, db: AsyncSession) -> None:
         """
         Inisialisasi SignatureService.
@@ -58,10 +60,12 @@ class SignatureService:
         """Baris signing_key MILIK organisasi ini. `kid` memakai id organisasi lengkap — dulu 8 karakter
         awal (cap waktu UUIDv7), sehingga organisasi yang dibuat berdekatan berbagi kunci (temuan R-19)."""
         return await self.repo.ensure_signing_key(
-            org_id, f"doc-{org_id}-{signer.fingerprint}", signer.public_key, signer.kms_ref, signer.algorithm)
+            org_id, f"doc-{org_id}-{signer.fingerprint}", signer.public_key, signer.kms_ref, signer.algorithm
+        )
 
-    async def sign_plan_document(self, document_id: UUID | str, signer_employee_id: str, role: str,
-                                 issued_by_user: str) -> Any:
+    async def sign_plan_document(
+        self, document_id: UUID | str, signer_employee_id: str, role: str, issued_by_user: str
+    ) -> Any:
         """
         Menandatangani dokumen SK secara elektronik (menghasilkan hash dari payload kanonik).
 
@@ -80,18 +84,24 @@ class SignatureService:
         signer = get_document_signer()
         key_id = await self._signing_key(document.organization_id, signer)
         payload = {
-            "type": "plan_document", "document_id": str(document.id), "document_number": document.number,
-            "document_version": document.version, "document_sha256": bytes(document.snapshot_sha256).hex(),
-            "signer_employee_id": str(signer_employee_id), "signer_role": role,
+            "type": "plan_document",
+            "document_id": str(document.id),
+            "document_number": document.number,
+            "document_version": document.version,
+            "document_sha256": bytes(document.snapshot_sha256).hex(),
+            "signer_employee_id": str(signer_employee_id),
+            "signer_role": role,
             "organization_id": str(document.organization_id),
         }
         # Menghasilkan signature kriptografi dari payload kanonik JSON
         signature = signer.sign(canonical(payload))
-        return await self.repo.register(document.organization_id, document, signer_employee_id, role, key_id,
-                                        signature, payload, issued_by_user)
+        return await self.repo.register(
+            document.organization_id, document, signer_employee_id, role, key_id, signature, payload, issued_by_user
+        )
 
-    async def sign_latest_plan_document(self, plan_id: UUID | str, signer_employee_id: str, role: str,
-                                        issued_by_user: str) -> Any:
+    async def sign_latest_plan_document(
+        self, plan_id: UUID | str, signer_employee_id: str, role: str, issued_by_user: str
+    ) -> Any:
         """
         Menemukan dokumen terbaru dari suatu SK dan menandatanganinya.
 
@@ -123,11 +133,12 @@ class SignatureService:
         document = await self.repo.plan_document(document_id)
         if document is None or str(document.organization_id) != str(user.organization_id):
             raise NotFoundError("Dokumen")
-        await check_plan_access(self.db, document.work_plan_id, user, PlanNeed.VIEW)   # tak terlihat → 404
+        await check_plan_access(self.db, document.work_plan_id, user, PlanNeed.VIEW)  # tak terlihat → 404
         return document
 
-    async def sign_final_report(self, plan_id: UUID | str, signer_employee_id: str, role: str,
-                                issued_by_user: str) -> Any:
+    async def sign_final_report(
+        self, plan_id: UUID | str, signer_employee_id: str, role: str, issued_by_user: str
+    ) -> Any:
         """Laporan akhir yang disetujui (R-19, P6-4): payload kanonik atas snapshot SHA-256-nya."""
         plan = await self.repo.final_report_document(plan_id)
         if plan is None or plan.snapshot_sha256 is None:
@@ -135,12 +146,24 @@ class SignatureService:
         signer = get_document_signer()
         key_id = await self._signing_key(plan.organization_id, signer)
         payload = {
-            "type": "final_report", "document_id": str(plan.id), "document_number": f"{plan.number}-LA",
-            "document_sha256": bytes(plan.snapshot_sha256).hex(), "signer_employee_id": str(signer_employee_id),
-            "signer_role": role, "organization_id": str(plan.organization_id),
+            "type": "final_report",
+            "document_id": str(plan.id),
+            "document_number": f"{plan.number}-LA",
+            "document_sha256": bytes(plan.snapshot_sha256).hex(),
+            "signer_employee_id": str(signer_employee_id),
+            "signer_role": role,
+            "organization_id": str(plan.organization_id),
         }
-        return await self.repo.register_final_report(plan.organization_id, plan, signer_employee_id, role, key_id,
-                                                     signer.sign(canonical(payload)), payload, issued_by_user)
+        return await self.repo.register_final_report(
+            plan.organization_id,
+            plan,
+            signer_employee_id,
+            role,
+            key_id,
+            signer.sign(canonical(payload)),
+            payload,
+            issued_by_user,
+        )
 
     async def final_report_signatures(self, plan_id: UUID) -> list[Any]:
         """Tanda tangan laporan akhir — akses VIEW SK diperiksa penjaga rute."""

@@ -4,6 +4,7 @@ Kueri lembur Master Schema V2.
 Mendukung pengajuan lembur per rencana kerja mingguan (work_plan_weekly)
 serta rekapitulasi bulanan per karyawan.
 """
+
 from __future__ import annotations
 
 from collections.abc import Sequence

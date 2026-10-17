@@ -4,6 +4,7 @@ app/modules/work_plans/routes/work_plan_reports_route.py
 Rute endpoint HTTP untuk laporan harian berjenjang & dokumen laporan (/work-plans/{plan_id}).
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.1.
 """
+
 from typing import Any
 from uuid import UUID
 
@@ -97,7 +98,7 @@ async def list_plan_exports(
     rows = await access.db.execute(
         text(
             """
-            SELECT 
+            SELECT
                 dte.export_id,
                 dte.completion_id,
                 dte.template_type,
@@ -119,4 +120,3 @@ async def list_plan_exports(
 
 
 __all__ = ["router"]
-

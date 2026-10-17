@@ -3,6 +3,7 @@ app/services/document_service.py
 Dokumen pribadi — daftar, pengajuan (UPLOAD_DOCUMENT), verifikasi (VERIFY_DOCUMENT) dan antrean HR.
 Izin (view/upload/verify:documents) dijaga router; aturan & batas organisasi di sini (R-20).
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -25,6 +26,7 @@ def mask_number(number: str) -> str:
 
 class DocumentService:
     """Layanan untuk mengelola dokumen pribadi karyawan (KTP, SIM, dll) dan alur persetujuannya."""
+
     def __init__(self, repo: CRUDDocument) -> None:
         self.repo = repo
 
@@ -67,8 +69,9 @@ class DocumentService:
         await self._reachable(org_id, user_id, permissions, emp_id)
         return await self.repo.list_for_employee(emp_id)
 
-    async def upload(self, org_id: str, user_id: str, permissions: list[str], emp_id: Any,
-                     data: EmployeeDocumentCreate) -> Any:
+    async def upload(
+        self, org_id: str, user_id: str, permissions: list[str], emp_id: Any, data: EmployeeDocumentCreate
+    ) -> Any:
         """
         Mendaftarkan dokumen baru (pengajuan unggahan).
 
@@ -83,9 +86,15 @@ class DocumentService:
             raise AppError("DOCUMENT_PENDING", "Masih ada dokumen jenis ini menunggu pemeriksaan.", status=409)
 
         return await self.repo.insert(
-            emp_id=emp_id, doc_type=data.doc_type, masked=mask_number(data.number),
-            number_hash=hashlib.sha256(data.number.encode("utf-8")).digest(), expiry=data.expiry_date,
-            file_id=data.file_id, user_id=user_id, supersedes_id=data.supersedes_id)
+            emp_id=emp_id,
+            doc_type=data.doc_type,
+            masked=mask_number(data.number),
+            number_hash=hashlib.sha256(data.number.encode("utf-8")).digest(),
+            expiry=data.expiry_date,
+            file_id=data.file_id,
+            user_id=user_id,
+            supersedes_id=data.supersedes_id,
+        )
 
     async def verify(self, org_id: str, user_id: str, emp_id: Any, doc_id: Any, data: EmployeeDocumentVerify) -> Any:
         """
@@ -101,14 +110,18 @@ class DocumentService:
             raise AppError("NOT_PENDING", "Dokumen tidak menunggu verifikasi.", status=409)
         # Aturan Empat Mata (Four-Eyes Principle): Tidak boleh memverifikasi dokumen sendiri.
         if str(doc.uploaded_by) == str(user_id) or str(await self.repo.employee_of_user(user_id)) == str(emp_id):
-            raise AppError("FOUR_EYES", "Pemilik atau pengunggah tidak dapat memverifikasi dokumen sendiri.",
-                           status=409)
+            raise AppError(
+                "FOUR_EYES", "Pemilik atau pengunggah tidak dapat memverifikasi dokumen sendiri.", status=409
+            )
 
         if data.is_approved:
             # Mengarsipkan versi yang lama.
             await self.repo.supersede_current(emp_id, doc_id, doc.doc_type)
 
         return await self.repo.decide(
-            doc_id, status="VERIFIED" if data.is_approved else "REJECTED",
-            lifecycle="CURRENT" if data.is_approved else "PENDING", user_id=user_id,
-            note=(data.review_note or "").strip() or None)
+            doc_id,
+            status="VERIFIED" if data.is_approved else "REJECTED",
+            lifecycle="CURRENT" if data.is_approved else "PENDING",
+            user_id=user_id,
+            note=(data.review_note or "").strip() or None,
+        )

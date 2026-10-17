@@ -2,6 +2,7 @@
 app/services/work_type_service.py
 Jenis pekerjaan + template foto laporan (T9). PM/OPS mengelola; semua yang masuk boleh membaca yang aktif.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -36,8 +37,15 @@ class WorkTypeService:
         name = data.name.strip()
         if not name:
             raise ValidationError("Nama jenis pekerjaan wajib diisi.")
-        photos = [{"label": p.label.strip(), "hint": (p.hint or "").strip() or None, "required": p.required,
-                   "example_file_id": p.example_file_id} for p in data.photos]
+        photos = [
+            {
+                "label": p.label.strip(),
+                "hint": (p.hint or "").strip() or None,
+                "required": p.required,
+                "example_file_id": p.example_file_id,
+            }
+            for p in data.photos
+        ]
         labels = [str(p["label"]).lower() for p in photos]
         if any(not label for label in labels):
             raise ValidationError("Label slot foto wajib diisi.")

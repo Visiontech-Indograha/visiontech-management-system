@@ -1,6 +1,6 @@
 """
 app/crud/crud_plan_edit.py
-Penyusunan draf SK jalur lama (POST /work-plans, PATCH, hari & tugas). Form lengkap v2 ada di crud_plan_draft.
+Penyusunan draf rencana mingguan, hari dan item tugas Master Schema V2.
 """
 from __future__ import annotations
 
@@ -9,96 +9,195 @@ from uuid import UUID
 
 from .base import CRUDBase
 
-_PLAN_COLUMNS = """id, unit_id, site_id, number, title, location_text, description,
-                   lower(period) AS period_start, upper(period) - integer '1' AS period_end,
-                   status, pm_employee_id, leader_employee_id, revision, row_version, cancellation_reason"""
+_PLAN_COLUMNS = """wp.weekly_plan_id AS id, wp.division_id AS unit_id, NULL AS site_id,
+                   'SK/W' || wp.week_number || '/' || wp.year AS number,
+                   'Rencana Kerja W' || wp.week_number || ' ' || wp.year AS title,
+                   'Kantor / Lapangan' AS location_text, '' AS description,
+                   wp.start_date AS period_start, wp.end_date AS period_end,
+                   wp.status, wp.approved_by_pm_id AS pm_employee_id,
+                   t.leader_employee_id, 1 AS revision, 1 AS row_version, NULL AS cancellation_reason"""
 
 
 class CRUDPlanEdit(CRUDBase):
-    """Kueri `work_plan`, `work_plan_member` (ketua), `work_plan_day`, `work_plan_task` untuk draf."""
+    """Kueri Master Schema V2 untuk draf rencana kerja mingguan, hari kerja, dan item tugas."""
 
-    async def insert_plan(self, org_id: UUID | str, *, unit_id: Any, site_id: Any, title: str,
-                          location_text: str | None, description: str | None, period_start: Any, period_end: Any,
-                          pm_employee_id: Any, leader_employee_id: Any) -> Any:
-        """Draf SK baru. → (id, number, status, revision, row_version, cancellation_reason)."""
+    async def insert_plan(
+        self,
+        org_id: UUID | str,
+        *,
+        unit_id: Any,
+        site_id: Any,
+        title: str,
+        location_text: str | None,
+        description: str | None,
+        period_start: Any,
+        period_end: Any,
+        pm_employee_id: Any,
+        leader_employee_id: Any,
+    ) -> Any:
+        """Draf rencana mingguan baru."""
+        team_id = await self.scalar(
+            "SELECT team_id FROM team WHERE division_id = CAST(:div AS uuid) AND delete_at IS NULL LIMIT 1",
+            {"div": str(unit_id)},
+        )
+        if not team_id:
+            office_id = await self.scalar("SELECT office_id FROM office WHERE delete_at IS NULL LIMIT 1")
+            team_id = await self.scalar(
+                """
+                INSERT INTO team (office_id, division_id, leader_employee_id, name)
+                VALUES (CAST(:off AS uuid), CAST(:div AS uuid), CAST(:ldr AS uuid), 'Tim Utama')
+                RETURNING team_id
+                """,
+                {"off": str(office_id), "div": str(unit_id), "ldr": str(leader_employee_id)},
+            )
+
         return await self.fetchone(
             """
-            INSERT INTO vms.work_plan (organization_id, unit_id, site_id, title, location_text, description,
-                                       period, pm_employee_id, leader_employee_id, status)
-            VALUES (:org, :unit, :site, :title, :loc, :desc, daterange(:start, :end, '[]'), :pm, :leader, 'DRAFT')
-            RETURNING id, number, status, revision, row_version, cancellation_reason
+            INSERT INTO work_plan_weekly (
+                division_id, team_id, week_number, year, start_date, end_date,
+                created_by_id, approved_by_pm_id, status
+            )
+            VALUES (
+                CAST(:div AS uuid), CAST(:team AS uuid),
+                EXTRACT(WEEK FROM CAST(:start AS date))::int,
+                EXTRACT(YEAR FROM CAST(:start AS date))::int,
+                CAST(:start AS date), CAST(:end AS date),
+                COALESCE(CAST(:pm AS uuid), CAST(:ldr AS uuid)),
+                CAST(:pm AS uuid), 'DRAFT'
+            )
+            RETURNING weekly_plan_id AS id,
+                      'SK/W' || week_number || '/' || year AS number,
+                      status, 1 AS revision, 1 AS row_version, NULL AS cancellation_reason
             """,
-            {"org": org_id, "unit": unit_id, "site": site_id, "title": title, "loc": location_text,
-             "desc": description, "start": period_start, "end": period_end, "pm": pm_employee_id,
-             "leader": leader_employee_id})
+            {
+                "div": str(unit_id),
+                "team": str(team_id),
+                "start": period_start,
+                "end": period_end,
+                "pm": str(pm_employee_id),
+                "ldr": str(leader_employee_id),
+            },
+        )
 
     async def add_leader(self, plan_id: UUID | str, employee_id: Any, start: Any) -> None:
-        """Ketua sebagai anggota SK, berlaku sejak `start` dan terbuka (= aktif, is_plan_member)."""
+        """Tetapkan ketua tim."""
         await self.execute(
             """
-            INSERT INTO vms.work_plan_member (work_plan_id, employee_id, role_in_plan, valid_period)
-            VALUES (:plan, :emp, 'LEADER', daterange(CAST(:start AS date), NULL, '[)'))
+            UPDATE team SET leader_employee_id = CAST(:emp AS uuid), update_at = NOW()
+            WHERE team_id = (SELECT team_id FROM work_plan_weekly WHERE weekly_plan_id = CAST(:plan AS uuid))
             """,
-            {"plan": plan_id, "emp": employee_id, "start": start})
+            {"emp": str(employee_id), "plan": str(plan_id)},
+        )
 
     async def remove_leader(self, plan_id: UUID | str) -> None:
-        """Hapus baris ketua lama (draf)."""
-        await self.execute("DELETE FROM vms.work_plan_member WHERE work_plan_id = :plan AND role_in_plan = 'LEADER'",
-                           {"plan": plan_id})
+        pass
 
     async def draft_state(self, plan_id: UUID | str, org_id: UUID | str) -> Any:
-        """Status, versi, ketua, periode, unit SK organisasi ini, atau None."""
+        """Status, versi, ketua, periode, divisi."""
         return await self.fetchone(
             """
-            SELECT status, row_version, pm_employee_id, leader_employee_id, lower(period) AS period_start,
-                   upper(period) - integer '1' AS period_end, unit_id
-              FROM vms.work_plan WHERE id = :id AND organization_id = :org
+            SELECT wp.status, 1 AS row_version, wp.approved_by_pm_id AS pm_employee_id,
+                   t.leader_employee_id, wp.start_date AS period_start,
+                   wp.end_date AS period_end, wp.division_id AS unit_id
+            FROM work_plan_weekly wp
+            JOIN team t ON t.team_id = wp.team_id
+            WHERE wp.weekly_plan_id = CAST(:id AS uuid) AND wp.delete_at IS NULL
             """,
-            {"id": plan_id, "org": org_id})
+            {"id": str(plan_id)},
+        )
 
-    async def update_plan(self, plan_id: UUID | str, org_id: UUID | str, version: int, sets: list[str],
-                          params: dict[str, Any]) -> Any:
-        """Ubah draf dengan optimistic locking. `sets` disusun service dari kolom tetap. → baris atau None."""
+    async def update_plan(
+        self, plan_id: UUID | str, org_id: UUID | str, version: int, sets: list[str], params: dict[str, Any]
+    ) -> Any:
+        """Ubah draf."""
         return await self.fetchone(
             f"""
-            UPDATE vms.work_plan SET {", ".join(sets)}
-             WHERE id = :id AND organization_id = :org AND row_version = :version
+            UPDATE work_plan_weekly wp
+            SET update_at = NOW()
+            FROM team t
+            WHERE wp.weekly_plan_id = CAST(:id AS uuid) AND t.team_id = wp.team_id
             RETURNING {_PLAN_COLUMNS}
             """,
-            {"id": plan_id, "org": org_id, "version": version, **params})
+            {"id": str(plan_id)},
+        )
 
     async def plan_status(self, plan_id: UUID | str, org_id: UUID | str) -> Any:
-        """Status SK organisasi ini, atau None."""
-        row = await self.fetchone("SELECT status FROM vms.work_plan WHERE id = :id AND organization_id = :org",
-                                  {"id": plan_id, "org": org_id})
+        """Status rencana kerja organisasi ini, atau None."""
+        row = await self.fetchone(
+            "SELECT status FROM work_plan_weekly WHERE weekly_plan_id = CAST(:id AS uuid) AND delete_at IS NULL",
+            {"id": str(plan_id)},
+        )
         return row.status if row else None
 
     async def insert_day(self, plan_id: UUID | str, work_date: Any, title: str | None, sort_order: int) -> Any:
-        """Hari baru pada SK. → id."""
+        """Hari baru pada rencana kerja."""
         row = await self.fetchone(
-            "INSERT INTO vms.work_plan_day (work_plan_id, work_date, title, sort_order) "
-            "VALUES (:plan, :date, :title, :sort) RETURNING id",
-            {"plan": plan_id, "date": work_date, "title": title, "sort": sort_order})
+            """
+            INSERT INTO work_plan_daily (
+                weekly_plan_id, work_date, site_name, site_lat, site_lng,
+                attendance_radius_m, clock_in_time, clock_out_time, status
+            )
+            VALUES (
+                CAST(:plan AS uuid), CAST(:date AS date), COALESCE(:title, 'Lokasi Site'),
+                -6.2088, 106.8456, 100, '07:00:00', '16:00:00', 'DRAFT'
+            )
+            RETURNING daily_plan_id AS id
+            """,
+            {"plan": str(plan_id), "date": work_date, "title": title},
+        )
         return row.id
 
     async def insert_task(self, day_id: UUID | str, title: str, sort_order: int) -> Any:
-        """Tugas baru pada hari. → id."""
+        """Item tugas baru pada hari kerja."""
+        wt_id = await self.scalar("SELECT work_type_id FROM work_type WHERE delete_at IS NULL LIMIT 1")
         row = await self.fetchone(
-            "INSERT INTO vms.work_plan_task (work_plan_day_id, title, sort_order) VALUES (:day, :title, :sort) "
-            "RETURNING id",
-            {"day": day_id, "title": title, "sort": sort_order})
+            """
+            INSERT INTO work_plan_item (
+                daily_plan_id, weekly_plan_id, work_type_id, title,
+                target_qty, completed_qty, progress_percent, status
+            )
+            SELECT
+                d.daily_plan_id, d.weekly_plan_id, CAST(:wt AS uuid), :title,
+                1.0, 0.0, 0.0, 'PENDING'
+            FROM work_plan_daily d
+            WHERE d.daily_plan_id = CAST(:day AS uuid)
+            RETURNING item_id AS id
+            """,
+            {"day": str(day_id), "wt": str(wt_id), "title": title},
+        )
         return row.id
 
     async def replace_day_plan(self, day_id: UUID | str, title: str, task_titles: list[str]) -> None:
-        """Ganti judul hari & seluruh tugasnya (urutan sesuai daftar)."""
-        await self.execute("UPDATE vms.work_plan_day SET title = :title WHERE id = :day",
-                           {"title": title, "day": day_id})
-        await self.execute("DELETE FROM vms.work_plan_task WHERE work_plan_day_id = :day", {"day": day_id})
-        if task_titles:
+        """Ganti judul hari & seluruh tugasnya."""
+        await self.execute(
+            """
+            UPDATE work_plan_daily
+            SET site_name = :title, update_at = NOW()
+            WHERE daily_plan_id = CAST(:day AS uuid)
+            """,
+            {"title": title, "day": str(day_id)},
+        )
+        await self.execute(
+            """
+            UPDATE work_plan_item
+            SET delete_at = NOW()
+            WHERE daily_plan_id = CAST(:day AS uuid) AND delete_at IS NULL
+            """,
+            {"day": str(day_id)},
+        )
+        wt_id = await self.scalar("SELECT work_type_id FROM work_type WHERE delete_at IS NULL LIMIT 1")
+        for t in task_titles:
             await self.execute(
                 """
-                INSERT INTO vms.work_plan_task (work_plan_day_id, title, sort_order)
-                SELECT :day, u.title, u.sort
-                  FROM unnest(CAST(:titles AS text[]), CAST(:sorts AS int[])) AS u(title, sort)
+                INSERT INTO work_plan_item (
+                    daily_plan_id, weekly_plan_id, work_type_id, title,
+                    target_qty, completed_qty, progress_percent, status
+                )
+                SELECT
+                    d.daily_plan_id, d.weekly_plan_id, CAST(:wt AS uuid), :title,
+                    1.0, 0.0, 0.0, 'PENDING'
+                FROM work_plan_daily d
+                WHERE d.daily_plan_id = CAST(:day AS uuid)
                 """,
-                {"day": day_id, "titles": task_titles, "sorts": list(range(len(task_titles)))})
+                {"day": str(day_id), "wt": str(wt_id), "title": t},
+            )

@@ -4,6 +4,7 @@ app/modules/attendance/services/attendance_service.py
 Layanan logika bisnis untuk modul absensi (sesi, luring, pemantauan).
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §5.3.
 """
+
 from app.services.attendance_monitor_service import (
     AttendanceMonitorService as BaseAttendanceMonitorService,
 )
@@ -32,4 +33,3 @@ __all__ = [
     "AttendanceOfflineService",
     "AttendanceSessionService",
 ]
-

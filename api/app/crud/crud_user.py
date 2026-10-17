@@ -2,6 +2,7 @@
 app/crud/crud_user.py
 Query untuk tabel users dan employee di skema public VMS V2.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -10,7 +11,7 @@ from uuid import UUID
 from .base import CRUDBase
 
 _USER_WITH_ROLE = """
-    SELECT 
+    SELECT
         u.user_id AS id,
         u.user_id,
         u.email AS login,
@@ -58,7 +59,7 @@ class CRUDUser(CRUDBase):
         """
         return await self.fetchone(
             """
-            SELECT 
+            SELECT
                 u.user_id AS id,
                 u.email AS login,
                 u.email,
@@ -112,14 +113,14 @@ class CRUDUser(CRUDBase):
         """
         return await self.fetchone(
             """
-            SELECT 
-                u.user_id AS id, 
-                u.email AS login, 
+            SELECT
+                u.user_id AS id,
+                u.email AS login,
                 u.username,
                 u.system_role::text AS role,
-                u.is_active, 
-                u.update_at AS last_login_at, 
-                0::int AS failures, 
+                u.is_active,
+                u.update_at AS last_login_at,
+                0::int AS failures,
                 NULL::timestamptz AS locked_until
             FROM users u
             WHERE u.employee_id = CAST(:emp AS uuid) AND u.delete_at IS NULL
@@ -131,10 +132,12 @@ class CRUDUser(CRUDBase):
         """
         Mengecek apakah email/username sudah dipakai.
         """
-        return bool(await self.scalar(
-            "SELECT EXISTS (SELECT 1 FROM users WHERE (email = :login OR username = :login) AND delete_at IS NULL)",
-            {"login": login},
-        ))
+        return bool(
+            await self.scalar(
+                "SELECT EXISTS (SELECT 1 FROM users WHERE (email = :login OR username = :login) AND delete_at IS NULL)",
+                {"login": login},
+            )
+        )
 
     async def create_for_employee(
         self, org_id: UUID | str, employee_id: UUID | str, login: str, password_hash: str, system_role: str = "EMPLOYEE"

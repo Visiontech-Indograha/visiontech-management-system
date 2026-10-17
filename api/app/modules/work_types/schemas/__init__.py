@@ -1,6 +1,7 @@
 """
 Paket skema untuk modul work_types.
 """
+
 from app.modules.work_types.schemas.work_type_schema import (
     EvidenceIn,
     EvidenceOut,
@@ -22,4 +23,3 @@ __all__ = [
     "WorkTypePhotoOut",
     "merge_evidence",
 ]
-

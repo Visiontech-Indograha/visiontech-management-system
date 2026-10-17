@@ -4,6 +4,7 @@ app/modules/auth/repositories/auth_user_repository.py
 Repository akses data persistensi untuk entitas pengguna (vms.app_user) dan perannya.
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.4.
 """
+
 from app.crud.crud_user import CRUDUser
 
 

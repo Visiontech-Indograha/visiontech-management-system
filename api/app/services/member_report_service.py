@@ -3,6 +3,7 @@ app/services/member_report_service.py
 Laporan harian berjenjang (alur SK v2 PR2, flowchart SK2-E): anggota menulis & mengirim laporannya ke ketua;
 ketua menghimpunnya menjadi laporan harian untuk PM. Juga dokumen A4 laporan harian/mingguan.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -69,8 +70,9 @@ class MemberReportService:
         employee_id = await self._me(access)
         # Anggota hanya melapor pada hari ia ditugaskan (daftar anggota per hari; tanpa daftar = seluruh tim).
         if not await self.repo.on_duty(day_id, employee_id):
-            raise AppError("NOT_ON_DUTY", "Anda tidak ditugaskan pada hari ini, jadi tidak perlu membuat laporan.",
-                           status=409)
+            raise AppError(
+                "NOT_ON_DUTY", "Anda tidak ditugaskan pada hari ini, jadi tidak perlu membuat laporan.", status=409
+            )
         return employee_id
 
     async def list_for_day(self, day_id: UUID) -> list[Any]:
@@ -99,8 +101,15 @@ class MemberReportService:
         """
         return await self.repo.mine(day_id, await self._me(access))
 
-    async def save(self, access: PlanAccess, day_id: UUID, body: str, obstacle: str, file_ids: list[UUID],
-                   evidence: list[EvidenceIn] | None = None) -> Any:
+    async def save(
+        self,
+        access: PlanAccess,
+        day_id: UUID,
+        body: str,
+        obstacle: str,
+        file_ids: list[UUID],
+        evidence: list[EvidenceIn] | None = None,
+    ) -> Any:
         """
         Anggota menyimpan draf laporannya (selama belum dikirim ke ketua).
 
@@ -150,7 +159,7 @@ class MemberReportService:
             raise AppError("INVALID_STATE", "Laporan sudah dikirim ke ketua.", status=409)
         if len(current.body.strip()) < 10:
             raise ValidationError("Uraian laporan minimal 10 karakter.")
-        await WorkTypeService(self.db).ensure_member_complete(access.plan.id, current.id)   # T9: slot foto wajib
+        await WorkTypeService(self.db).ensure_member_complete(access.plan.id, current.id)  # T9: slot foto wajib
         await self.repo.send(day_id, employee)
         day = await self.repo.day_info(day_id)
         await NotificationService(self.db).member_report_sent(access.plan.id, current.full_name, day.work_date)
@@ -177,8 +186,13 @@ class MemberReportService:
             raise NotFoundError("Laporan harian")
         members = await self.repo.list_for_day(day_id)
         header = await self.repo.plan_header(access.plan.id)
-        return render_report_html("Laporan harian", header, report,
-                                  period=report.work_date, members=[m for m in members if m.status == "SENT"])
+        return render_report_html(
+            "Laporan harian",
+            header,
+            report,
+            period=report.work_date,
+            members=[m for m in members if m.status == "SENT"],
+        )
 
     async def weekly_report_html(self, access: PlanAccess, name: str) -> str:
         """

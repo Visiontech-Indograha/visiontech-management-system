@@ -4,6 +4,7 @@ app/modules/system/controllers/monitoring_controller.py
 Controller orkestrasi use case pemantauan lini masa pekerjaan dan rekap absensi.
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.2.
 """
+
 from __future__ import annotations
 
 from datetime import date
@@ -48,4 +49,3 @@ class MonitoringController:
 
 
 __all__ = ["MonitoringController"]
-

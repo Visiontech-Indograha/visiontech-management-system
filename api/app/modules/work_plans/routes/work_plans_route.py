@@ -4,6 +4,7 @@ app/modules/work_plans/routes/work_plans_route.py
 Rute endpoint HTTP untuk manajemen rencana kerja / SK (/work-plans).
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.1.
 """
+
 from datetime import date
 from uuid import UUID
 
@@ -74,9 +75,7 @@ async def driver_options(
     controller: WorkPlanController = Depends(),
 ) -> list[str]:
     """Mengambil daftar calon pengemudi (driver) yang valid (GET)."""
-    return await controller.handle_driver_options(
-        current_user, vehicle_id, period_end, candidate_ids, plan_id
-    )
+    return await controller.handle_driver_options(current_user, vehicle_id, period_end, candidate_ids, plan_id)
 
 
 @router.post("/full", response_model=PlanDetailOut, status_code=status.HTTP_201_CREATED)
@@ -197,4 +196,3 @@ async def save_day(
 
 
 __all__ = ["router"]
-

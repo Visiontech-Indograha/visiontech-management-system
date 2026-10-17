@@ -1,6 +1,7 @@
 """
 Paket layanan bisnis untuk modul work_plans.
 """
+
 from app.modules.work_plans.services.work_plan_service import (
     GeocodeService,
     MemberReportService,
@@ -40,4 +41,3 @@ __all__ = [
     "render_final_report_html",
     "render_plan_preview_html",
 ]
-

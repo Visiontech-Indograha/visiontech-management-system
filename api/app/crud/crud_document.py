@@ -3,6 +3,7 @@ app/crud/crud_document.py
 Dokumen dan sertifikat karyawan dari tabel employee_file (Master Schema V2).
 Tipe dokumen: 'KTP', 'SIM_A', 'SIM_B', 'SERTIFIKAT_K3', 'PKWT', dsb.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -26,17 +27,19 @@ class CRUDDocument(CRUDBase):
 
     async def employee_in_org(self, emp_id: UUID | str, org_id: UUID | str) -> bool:
         """Cek apakah karyawan ada di sistem."""
-        return bool(await self.scalar(
-            "SELECT EXISTS (SELECT 1 FROM employee WHERE employee_id = CAST(:emp AS uuid) AND delete_at IS NULL)",
-            {"emp": emp_id},
-        ))
+        return bool(
+            await self.scalar(
+                "SELECT EXISTS (SELECT 1 FROM employee WHERE employee_id = CAST(:emp AS uuid) AND delete_at IS NULL)",
+                {"emp": emp_id},
+            )
+        )
 
     async def pending_for_org(self, org_id: UUID | str, user_id: UUID | str) -> list[Any]:
         """Dokumen yang menunggu verifikasi HR (status not_active)."""
         return list(
             await self.fetchall(
                 """
-                SELECT 
+                SELECT
                     ef.employee_file_id AS id,
                     ef.employee_id,
                     e.full_name,
@@ -60,7 +63,7 @@ class CRUDDocument(CRUDBase):
         return list(
             await self.fetchall(
                 """
-                SELECT 
+                SELECT
                     ef.employee_file_id AS id,
                     ef.employee_id,
                     ef.type AS doc_type,
@@ -89,10 +92,10 @@ class CRUDDocument(CRUDBase):
             await self.scalar(
                 """
                 SELECT EXISTS (
-                    SELECT 1 FROM employee_file 
-                    WHERE employee_id = CAST(:emp AS uuid) 
-                      AND type = :type 
-                      AND status = 'not_active' 
+                    SELECT 1 FROM employee_file
+                    WHERE employee_id = CAST(:emp AS uuid)
+                      AND type = :type
+                      AND status = 'not_active'
                       AND delete_at IS NULL
                 )
                 """,
@@ -104,7 +107,7 @@ class CRUDDocument(CRUDBase):
         """Mengambil detail satu dokumen."""
         return await self.fetchone(
             """
-            SELECT 
+            SELECT
                 ef.employee_file_id AS id,
                 ef.employee_id,
                 ef.type AS doc_type,
@@ -146,10 +149,10 @@ class CRUDDocument(CRUDBase):
                 now(),
                 CAST(:exp AS timestamptz)
             )
-            RETURNING 
-                employee_file_id AS id, employee_id, type AS doc_type, 
-                type AS number_masked, expired_at::date AS expiry_date, 
-                status::text AS status, 'CURRENT' AS lifecycle, 
+            RETURNING
+                employee_file_id AS id, employee_id, type AS doc_type,
+                type AS number_masked, expired_at::date AS expiry_date,
+                status::text AS status, 'CURRENT' AS lifecycle,
                 employee_file_id AS file_id, create_at AS created_at
             """,
             {

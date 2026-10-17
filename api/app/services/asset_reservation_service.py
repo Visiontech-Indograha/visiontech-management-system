@@ -3,6 +3,7 @@ app/services/asset_reservation_service.py
 Reservasi aset (V-27) — padanan `domain.js` RESERVE_ASSET, RELEASE_ASSET, CHECK_ASSET.
 Pesan & lepas: petugas aset, atau PM unit/OPS SK tersebut. Periksa: hanya pengemudi yang ditunjuk.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -27,6 +28,7 @@ def _state(message: str) -> AppError:
 
 class AssetReservationService:
     """Layanan untuk mengelola proses reservasi, peminjaman, dan pengembalian aset proyek."""
+
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
         self.repo = CRUDAssetReservation(db)
@@ -35,11 +37,13 @@ class AssetReservationService:
         """Aset / SK yang dirujuk harus milik organisasi ini (404/422 bila bukan)."""
         await ensure_same_org(self.db, org_id, **refs)
 
-    async def create_asset(self, org_id: str, *, kind: str, vehicle_type: str | None, code: str, name: str,
-                           condition: str) -> Any:
+    async def create_asset(
+        self, org_id: str, *, kind: str, vehicle_type: str | None, code: str, name: str, condition: str
+    ) -> Any:
         """Aset baru milik organisasi."""
-        return await self.repo.insert_asset(org_id, kind=kind, vehicle_type=vehicle_type, code=code, name=name,
-                                            condition=condition)
+        return await self.repo.insert_asset(
+            org_id, kind=kind, vehicle_type=vehicle_type, code=code, name=name, condition=condition
+        )
 
     async def request_return(self, user: CurrentUser, allocation_id: UUID, condition: str, note: str | None) -> Any:
         """domain.js RETURN_ASSET (P6-3, R9): ketua tim mengajukan BAST pengembalian aset yang sedang dipinjam —
@@ -67,7 +71,8 @@ class AssetReservationService:
             raise AppError("INVALID_STATE", "Aset belum menunggu verifikasi pengembalian.", status=409)
         if info.requested_by == employee_id:
             raise ForbiddenError(
-                "Pengembalian tidak dapat diperiksa oleh pengaju yang sama. Gunakan ketua tim untuk serah terima.")
+                "Pengembalian tidak dapat diperiksa oleh pengaju yang sama. Gunakan ketua tim untuk serah terima."
+            )
         row = await self.repo.verify_return(return_id, employee_id, accepted, note or "")
         if accepted:
             await self.repo.release_allocation(info.alloc_id)
@@ -122,8 +127,9 @@ class AssetReservationService:
             raise NotFoundError("Pengembalian aset")
         # Dokumen BAST hanya dapat dicetak apabila pengembalian fisik telah divalidasi oleh petugas aset.
         if record.verified_at is None:
-            raise AppError("INVALID_STATE", "Berita acara tersedia setelah pengembalian diperiksa petugas aset.",
-                           status=409)
+            raise AppError(
+                "INVALID_STATE", "Berita acara tersedia setelah pengembalian diperiksa petugas aset.", status=409
+            )
         return record
 
     async def _manager_of(self, user: CurrentUser, plan_id: UUID | str) -> None:

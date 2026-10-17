@@ -4,6 +4,7 @@ app/modules/work_plans/routes/work_plan_days_route.py
 Rute endpoint HTTP untuk membaca hari kerja SK (/work-plans/{plan_id}/days).
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.1.
 """
+
 from fastapi import APIRouter, Depends
 
 from app.api.deps import plan_access
@@ -27,4 +28,3 @@ async def list_plan_days(
 
 
 __all__ = ["router"]
-

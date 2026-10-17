@@ -4,6 +4,7 @@ app/modules/assets/services/asset_service.py
 Layanan logika bisnis untuk modul aset dan peminjaman/pengembalian kerja.
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §5.3.
 """
+
 from app.services.asset_reservation_service import (
     AssetReservationService as BaseAssetReservationService,
 )

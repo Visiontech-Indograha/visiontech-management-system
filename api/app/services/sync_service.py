@@ -4,6 +4,7 @@ Sinkronisasi luring (M12; dok 02 A-08, dok 04 §7). Tiap operasi dijalankan dala
 logika yang sama dengan jalur daring, lalu ditandai APPLIED / REJECTED (alasan disimpan, tidak dibuang).
 Hanya aksi lapangan yang boleh luring; absensi, penerbitan & persetujuan wajib daring (waktu & geofence server).
 """
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -42,6 +43,7 @@ class SyncService:
     Layanan sinkronisasi untuk memproses antrean operasi yang dikirim oleh klien secara luring (offline).
     Menjamin operasi divalidasi dengan aturan yang sama seperti saat online dan hasil sinkronisasi dicatat.
     """
+
     def __init__(self, db: AsyncSession) -> None:
         """
         Inisialisasi SyncService.
@@ -84,27 +86,36 @@ class SyncService:
             plan_id, day_id = UUID(str(p["plan_id"])), UUID(str(p["day_id"]))
             access = await self._day_access(user, plan_id, day_id)
             if op_type == "DAILY_REPORT_SAVE":
-                data = DailyReportCreate(body=p["body"], obstacle=p["obstacle"],
-                                         evidence_file_ids=p.get("evidence_file_ids", []),
-                                         evidence=p.get("evidence", []))
-                await hse.save_daily_report(access, day_id, data.body, data.obstacle, data.evidence_file_ids,
-                                            data.evidence)
+                data = DailyReportCreate(
+                    body=p["body"],
+                    obstacle=p["obstacle"],
+                    evidence_file_ids=p.get("evidence_file_ids", []),
+                    evidence=p.get("evidence", []),
+                )
+                await hse.save_daily_report(
+                    access, day_id, data.body, data.obstacle, data.evidence_file_ids, data.evidence
+                )
             elif op_type == "DAILY_REPORT_SUBMIT":
                 await hse.submit_daily_report(access, day_id)
             else:
                 await hse.toggle_task(access, day_id, UUID(str(p["task_id"])))
         elif op_type == "INCIDENT_REPORT":
             incident = IncidentCreate(**p)
-            await hse.report_incident(user, incident.work_plan_id, incident.category, incident.severity,
-                                      incident.description, incident.evidence_file_ids)
+            await hse.report_incident(
+                user,
+                incident.work_plan_id,
+                incident.category,
+                incident.severity,
+                incident.description,
+                incident.evidence_file_ids,
+            )
         elif op_type == "OVERTIME_REPORT":
             plan_id = UUID(str(p["work_plan_id"]))
             # Memastikan pengguna dan SK berada dalam organisasi yang sama
             await ensure_same_org(self.db, user.organization_id, work_plans=[plan_id])
             await OvertimeService(self.db).report(user, plan_id, float(p["hours"]), str(p["reason"]))
 
-    async def apply_operations(self, user: CurrentUser, device_id: str,
-                               operations: list[Any]) -> list[dict[str, Any]]:
+    async def apply_operations(self, user: CurrentUser, device_id: str, operations: list[Any]) -> list[dict[str, Any]]:
         """
         Memproses sekumpulan operasi dari antrean sinkronisasi luring yang dikirim klien.
 
@@ -119,8 +130,15 @@ class SyncService:
         results = []
         for op in operations:
             # Mendaftarkan operasi ke tabel sinkronisasi agar tidak terjadi double-processing
-            row = await self.repo.enqueue(user.organization_id, user.user_id, device_id, op.client_op_id,
-                                          op.op_type, op.payload, op.client_created_at)
+            row = await self.repo.enqueue(
+                user.organization_id,
+                user.user_id,
+                device_id,
+                op.client_op_id,
+                op.op_type,
+                op.payload,
+                op.client_created_at,
+            )
             status, error = row.status, row.error_message
             # Jika operasi belum pernah diproses (PENDING), maka eksekusi sekarang
             if status == "PENDING":
@@ -133,8 +151,7 @@ class SyncService:
                         async with self.db.begin_nested():
                             await self._apply(user, op.op_type, op.payload)
                         status, error = "APPLIED", None
-                    except (AppError, HTTPException, PydanticValidationError, KeyError, ValueError,
-                            TypeError) as exc:
+                    except (AppError, HTTPException, PydanticValidationError, KeyError, ValueError, TypeError) as exc:
                         # Menangkap segala error validasi atau logika bisnis untuk ditandai sebagai ditolak
                         status, error = "REJECTED", _message(exc)
                 # Menandai hasil akhir pemrosesan operasi di database

@@ -4,6 +4,7 @@ app/modules/attendance/controllers/attendance_cron_controller.py
 Controller orkestrasi use case tugas terjadwal pemantauan absensi (cron).
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.2.
 """
+
 from __future__ import annotations
 
 from fastapi import Depends
@@ -82,4 +83,3 @@ class AttendanceCronController:
 
 
 __all__ = ["AttendanceCronController"]
-

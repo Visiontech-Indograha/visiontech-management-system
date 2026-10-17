@@ -3,6 +3,7 @@ app/crud/crud_employee.py
 Kueri direktori karyawan, penempatan, alamat, dan siklus offboarding (Master Schema V2).
 Tabel yang dikelola: employee, address, users, office, division.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -28,10 +29,10 @@ class CRUDEmployee(CRUDBase):
         """Mengunci baris karyawan untuk transaksi aman."""
         return await self.fetchone(
             """
-            SELECT employee_id AS id, delete_at IS NOT NULL AS deleted, 
-                   (offboarding_status != 'offboarded') AS is_active, 
+            SELECT employee_id AS id, delete_at IS NOT NULL AS deleted,
+                   (offboarding_status != 'offboarded') AS is_active,
                    CAST(division_id AS text) AS unit_id
-            FROM employee 
+            FROM employee
             WHERE employee_id = CAST(:id AS uuid)
             FOR UPDATE
             """,
@@ -42,8 +43,8 @@ class CRUDEmployee(CRUDBase):
         """Memulihkan karyawan dari status offboarded."""
         await self.execute(
             """
-            UPDATE employee 
-            SET offboarding_status = 'active', delete_at = NULL, update_at = now() 
+            UPDATE employee
+            SET offboarding_status = 'active', delete_at = NULL, update_at = now()
             WHERE employee_id = CAST(:id AS uuid)
             """,
             {"id": employee_id},
@@ -57,8 +58,8 @@ class CRUDEmployee(CRUDBase):
         """Soft delete karyawan."""
         await self.execute(
             """
-            UPDATE employee 
-            SET delete_at = now(), offboarding_status = 'offboarded', update_at = now() 
+            UPDATE employee
+            SET delete_at = now(), offboarding_status = 'offboarded', update_at = now()
             WHERE employee_id = CAST(:id AS uuid)
             """,
             {"id": employee_id},
@@ -72,7 +73,7 @@ class CRUDEmployee(CRUDBase):
         """Riwayat penempatan divisi/kantor karyawan."""
         row = await self.fetchone(
             """
-            SELECT 
+            SELECT
                 e.employee_id AS id,
                 e.employee_id,
                 COALESCE(u.system_role::text, 'EMPLOYEE') AS position,
@@ -99,15 +100,15 @@ class CRUDEmployee(CRUDBase):
         """Memutasi karyawan ke divisi baru."""
         await self.execute(
             """
-            UPDATE employee 
-            SET division_id = CAST(:unit AS uuid), update_at = now() 
+            UPDATE employee
+            SET division_id = CAST(:unit AS uuid), update_at = now()
             WHERE employee_id = CAST(:id AS uuid)
             """,
             {"id": employee_id, "unit": unit_id},
         )
         return await self.fetchone(
             """
-            SELECT 
+            SELECT
                 e.employee_id AS id, e.employee_id, :pos AS position, e.division_id AS unit_id,
                 :start AS valid_from, e.pkwt_end_date::date AS valid_to
             FROM employee e WHERE e.employee_id = CAST(:id AS uuid)
@@ -117,8 +118,9 @@ class CRUDEmployee(CRUDBase):
 
     async def on_running_plan(self, employee_id: UUID | str) -> bool:
         """Cek apakah karyawan terlibat dalam rencana kerja yang sedang berjalan."""
-        return bool(await self.scalar(
-            """
+        return bool(
+            await self.scalar(
+                """
             SELECT EXISTS (
                 SELECT 1 FROM work_plan wp
                 WHERE wp.delete_at IS NULL AND wp.status NOT IN ('DRAFT', 'COMPLETED', 'CANCELLED')
@@ -130,15 +132,16 @@ class CRUDEmployee(CRUDBase):
                        ))
             )
             """,
-            {"emp": employee_id},
-        ))
+                {"emp": employee_id},
+            )
+        )
 
     async def offboard(self, employee_id: UUID | str, reason: str, today: Any) -> None:
         """Offboarding karyawan dan pencabutan akses login/sesi."""
         await self.execute(
             """
-            UPDATE employee 
-            SET offboarding_status = 'offboarded', update_at = now() 
+            UPDATE employee
+            SET offboarding_status = 'offboarded', update_at = now()
             WHERE employee_id = CAST(:id AS uuid)
             """,
             {"id": employee_id},
@@ -165,7 +168,7 @@ class CRUDEmployee(CRUDBase):
         e.join_date::date AS join_date,
         NULL::date AS birth_date,
         addr.full_address AS address,
-        CASE 
+        CASE
             WHEN u.system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'ADMIN_HR_GA') THEN 'OFFICE'
             ELSE 'FIELD'
         END AS attendance_mode,
@@ -191,7 +194,7 @@ class CRUDEmployee(CRUDBase):
     async def count_in_org(self, org_id: UUID | str, is_active: bool | None, q: str | None) -> int:
         where_sql, params = self._filter(is_active, q)
         sql = f"""
-            SELECT COUNT(*) AS n 
+            SELECT COUNT(*) AS n
             FROM employee e
             LEFT JOIN users u ON u.employee_id = e.employee_id AND u.delete_at IS NULL
             WHERE {where_sql}
@@ -208,8 +211,8 @@ class CRUDEmployee(CRUDBase):
             FROM employee e
             LEFT JOIN users u ON u.employee_id = e.employee_id AND u.delete_at IS NULL
             LEFT JOIN LATERAL (
-                SELECT string_agg(a.address_line || ', ' || a.city, '; ') AS full_address 
-                FROM address a 
+                SELECT string_agg(a.address_line || ', ' || a.city, '; ') AS full_address
+                FROM address a
                 WHERE a.employee_id = e.employee_id AND a.delete_at IS NULL
             ) addr ON true
             WHERE {where_sql}
@@ -224,8 +227,8 @@ class CRUDEmployee(CRUDBase):
             FROM employee e
             LEFT JOIN users u ON u.employee_id = e.employee_id AND u.delete_at IS NULL
             LEFT JOIN LATERAL (
-                SELECT string_agg(a.address_line || ', ' || a.city, '; ') AS full_address 
-                FROM address a 
+                SELECT string_agg(a.address_line || ', ' || a.city, '; ') AS full_address
+                FROM address a
                 WHERE a.employee_id = e.employee_id AND a.delete_at IS NULL
             ) addr ON true
             WHERE e.employee_id = CAST(:id AS uuid) AND e.delete_at IS NULL

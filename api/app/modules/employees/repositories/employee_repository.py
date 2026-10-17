@@ -4,6 +4,7 @@ app/modules/employees/repositories/employee_repository.py
 Repositori data karyawan (abstraksi akses data/SQL).
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §5.5.
 """
+
 from app.crud.crud_employee import CRUDEmployee
 
 

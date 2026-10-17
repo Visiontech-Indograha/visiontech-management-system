@@ -2,6 +2,7 @@
 app/services/plan_member_service.py
 Aturan susunan tim SK draft — padanan `checkMembers`/`checkSchedule` di prototype/js/domain.js.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -28,6 +29,7 @@ class PlanMemberService:
     Layanan untuk mengelola anggota tim (ketua dan anggota) dari draf SK.
     Mengakomodasi logika penugasan dan validasi personel (checkMembers dan checkSchedule).
     """
+
     def __init__(self, repo: CRUDPlanMember) -> None:
         """
         Inisialisasi PlanMemberService.
@@ -104,7 +106,8 @@ class PlanMemberService:
 
         # Validasi bahwa anggota tim berada dalam unit/otoritas PM yang membuat SK
         await PlanAssignmentService(CRUDPlanAssignment(self.repo.db)).validate_team_scope(
-            user, plan.unit_id, people, current_team=current)
+            user, plan.unit_id, people, current_team=current
+        )
 
         # Memeriksa bentrok jadwal (schedule conflicts) dengan SK/pekerjaan lain
         conflicts = await self.repo.schedule_conflicts(people, plan_id)
@@ -114,10 +117,17 @@ class PlanMemberService:
                 "PERSONNEL_CONFLICT",
                 f"Jadwal personel bertabrakan dengan pekerjaan lain: {numbers}.",
                 status=409,
-                details={"conflicts": [
-                    {"employee_id": c.employee_id, "work_plan_id": c.work_plan_id, "number": c.number, "title": c.title}
-                    for c in conflicts
-                ]},
+                details={
+                    "conflicts": [
+                        {
+                            "employee_id": c.employee_id,
+                            "work_plan_id": c.work_plan_id,
+                            "number": c.number,
+                            "title": c.title,
+                        }
+                        for c in conflicts
+                    ]
+                },
             )
 
         # Mengganti anggota dan ketua tim jika validasi lolos

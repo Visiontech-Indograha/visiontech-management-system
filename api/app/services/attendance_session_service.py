@@ -4,6 +4,7 @@ Aturan absensi (V-12) — padanan `domain.js` CHECK_IN, CHECK_OUT, EXPLAIN_ATTEN
 Tanggal & jam dari server menurut zona waktu organisasi (V-10); jarak/status/terlambat/pulang cepat
 diputuskan trigger basis data, dan hasil simpanan itulah yang dikembalikan ke klien.
 """
+
 from __future__ import annotations
 
 import csv
@@ -47,17 +48,18 @@ class AttendanceRowWithEncouragement:
             return self.encouragement_message
         return self._row[item]
 
+
 OPEN_SESSION = "Anda belum absen pulang dari absen masuk sebelumnya."
 VALID_STATUSES = ("AUTO_VALID", "APPROVED")
 # R-33 (keputusan pemilik 2026-10-02): absen pulang hanya untuk absen masuk yang sudah valid.
-CHECKOUT_NOT_VALID = ("Absen pulang hanya bisa dilakukan setelah absen masuk valid. "
-                      "Absen masuk Anda masih menunggu pemeriksaan.")
+CHECKOUT_NOT_VALID = (
+    "Absen pulang hanya bisa dilakukan setelah absen masuk valid. Absen masuk Anda masih menunggu pemeriksaan."
+)
 FACE_NOT_ENROLLED = "Daftarkan wajah Anda dulu di menu Profil sebelum absen."
 ALREADY_TODAY = "Absensi untuk hari ini sudah tercatat (hanya dapat mengajukan ulang jika absensi sebelumnya ditolak)."
 # Keputusan pemilik 2026-10-02: ditolak → boleh mengajukan ulang SEKALI; ditolak lagi → hari itu terkunci (tercatat ditolak).
 MAX_ATTEMPTS_PER_DAY = 2
-ATTEMPTS_USED = ("Absensi hari ini sudah ditolak {n} kali dan tidak dapat diajukan lagi. "
-                 "Hari ini tercatat ditolak.")
+ATTEMPTS_USED = "Absensi hari ini sudah ditolak {n} kali dan tidak dapat diajukan lagi. Hari ini tercatat ditolak."
 MAX_GPS_ACCURACY_M = 100  # K-12 (docs/10): akurasi GPS > 100 m ditolak
 # Absen web: lokasi browser laptop/PC berasal dari WiFi, bukan GPS — lebih kabur (docs/10 Bagian C).
 MAX_WEB_ACCURACY_M = 300
@@ -74,6 +76,7 @@ EXPLANATION_RESUBMIT = "Isi penjelasan untuk mengajukan ulang absensi yang ditol
 
 class AttendanceSessionService:
     """Layanan inti untuk mengelola rekaman absensi masuk/pulang, validasi koordinat GPS, dan verifikasi sesi kerja."""
+
     def __init__(self, repo: CRUDAttendanceSession, clock: CRUDOrgClock, faces: FaceService | None = None) -> None:
         self.repo = repo
         self.clock = clock
@@ -99,23 +102,49 @@ class AttendanceSessionService:
         """P4-5 · CSV absensi untuk Finance; jam dalam zona waktu organisasi."""
         out = io.StringIO()
         writer = csv.writer(out)
-        writer.writerow(["Tanggal", "NIK", "Nama", "Lokasi", "Check In", "Check Out", "Terlambat", "Pulang Cepat",
-                         "Status", "Kategori", "Jarak pulang (m)"])
+        writer.writerow(
+            [
+                "Tanggal",
+                "NIK",
+                "Nama",
+                "Lokasi",
+                "Check In",
+                "Check Out",
+                "Terlambat",
+                "Pulang Cepat",
+                "Status",
+                "Kategori",
+                "Jarak pulang (m)",
+            ]
+        )
         for r in await self.repo.export_rows(org_id, start, end):
-            writer.writerow([
-                r.work_date.isoformat(), r.employee_no, r.full_name, r.site_label,
-                r.check_in or "", r.check_out or "", "Ya" if r.is_late else "Tidak",
-                "Ya" if r.is_early_leave else "Tidak", r.status,
-                "Luar kota" if r.city_category == "LUAR_KOTA" else "Dalam kota",
-                "" if r.check_out_distance_m is None else r.check_out_distance_m,
-            ])
+            writer.writerow(
+                [
+                    r.work_date.isoformat(),
+                    r.employee_no,
+                    r.full_name,
+                    r.site_label,
+                    r.check_in or "",
+                    r.check_out or "",
+                    "Ya" if r.is_late else "Tidak",
+                    "Ya" if r.is_early_leave else "Tidak",
+                    r.status,
+                    "Luar kota" if r.city_category == "LUAR_KOTA" else "Dalam kota",
+                    "" if r.check_out_distance_m is None else r.check_out_distance_m,
+                ]
+            )
         return out.getvalue()
 
     async def _require_enrolled(self, user_id: str, worker: Any, channel: str, online: bool) -> None:
         """T3: absen HP (online) ditolak bila wajah belum terdaftar dan saklar FACE_ENROLLMENT_REQUIRED menyala.
         Administrator dikecualikan (sama seperti gerbang pendaftaran). Absen luring tidak ditolak (sudah terjadi)."""
-        if (self.faces is None or not settings.FACE_ENROLLMENT_REQUIRED or channel != "MOBILE" or not online
-                or worker.is_admin):
+        if (
+            self.faces is None
+            or not settings.FACE_ENROLLMENT_REQUIRED
+            or channel != "MOBILE"
+            or not online
+            or worker.is_admin
+        ):
             return
         if not await self.faces.face_expected(user_id):
             raise AppError("FACE_NOT_ENROLLED", FACE_NOT_ENROLLED, status=409)
@@ -132,11 +161,25 @@ class AttendanceSessionService:
         users = await self.repo.user_ids_of(reviewers)
         queue_event(self.repo.db, users, "attendance", {"attendance_id": str(row.id)})
 
-    async def check_in(self, org_id: str, user_id: str, *, site_id: UUID, lng: float, lat: float,
-                       origin: str, selfie_file_id: UUID | None, accuracy_m: float | None = None,
-                       channel: str = "MOBILE", explanation: str | None = None,
-                       at: Any = None, work_date: Any = None, face_probe_id: UUID | None = None,
-                       online: bool = True, expected_face_sha256: str | None = None) -> Any:
+    async def check_in(
+        self,
+        org_id: str,
+        user_id: str,
+        *,
+        site_id: UUID,
+        lng: float,
+        lat: float,
+        origin: str,
+        selfie_file_id: UUID | None,
+        accuracy_m: float | None = None,
+        channel: str = "MOBILE",
+        explanation: str | None = None,
+        at: Any = None,
+        work_date: Any = None,
+        face_probe_id: UUID | None = None,
+        online: bool = True,
+        expected_face_sha256: str | None = None,
+    ) -> Any:
         """
         Mencatat absen masuk harian (check-in) dengan mengevaluasi aturan jarak dan akurasi GPS.
 
@@ -152,22 +195,31 @@ class AttendanceSessionService:
         # K-12: titik GPS yang terlalu kabur tidak bisa membuktikan kehadiran — tolak dengan alasan.
         if channel == "WEB":
             if accuracy_m is not None and accuracy_m > MAX_WEB_ACCURACY_M:
-                raise AppError("GPS_INACCURATE",
-                               f"Akurasi lokasi browser {accuracy_m:.0f} m terlalu rendah (maksimal "
-                               f"{MAX_WEB_ACCURACY_M} m). Nyalakan WiFi perangkat, izinkan akses lokasi, "
-                               "lalu coba lagi.", status=422)
+                raise AppError(
+                    "GPS_INACCURATE",
+                    f"Akurasi lokasi browser {accuracy_m:.0f} m terlalu rendah (maksimal "
+                    f"{MAX_WEB_ACCURACY_M} m). Nyalakan WiFi perangkat, izinkan akses lokasi, "
+                    "lalu coba lagi.",
+                    status=422,
+                )
         elif accuracy_m is not None and accuracy_m > MAX_GPS_ACCURACY_M:
-            raise AppError("GPS_INACCURATE",
-                           f"Akurasi GPS {accuracy_m:.0f} m terlalu rendah (maksimal {MAX_GPS_ACCURACY_M} m). "
-                           "Pindah ke tempat terbuka, tunggu sinyal GPS menguat, lalu coba lagi.", status=422)
+            raise AppError(
+                "GPS_INACCURATE",
+                f"Akurasi GPS {accuracy_m:.0f} m terlalu rendah (maksimal {MAX_GPS_ACCURACY_M} m). "
+                "Pindah ke tempat terbuka, tunggu sinyal GPS menguat, lalu coba lagi.",
+                status=422,
+            )
         local_clock = await self.clock.local_now(org_id)
         today = work_date or (local_clock.today if local_clock else None)
         # Validasi jam masuk: dibuka mulai pukul 07:00 (keputusan pemilik 2026-10-14).
         import sys
+
         is_test_env = "pytest" in sys.modules
         is_mocked_clock = hasattr(self.clock, "assert_called") or hasattr(self.clock, "return_value")
-        should_check_hours = online and not settings.SKIP_ATTENDANCE_HOURS_CHECK and (
-            not is_test_env or at is not None or is_mocked_clock
+        should_check_hours = (
+            online
+            and not settings.SKIP_ATTENDANCE_HOURS_CHECK
+            and (not is_test_env or at is not None or is_mocked_clock)
         )
         if should_check_hours:
             check_in_time = at.time() if at is not None else (local_clock.local_now.time() if local_clock else None)
@@ -199,8 +251,9 @@ class AttendanceSessionService:
         else:
             allowed = site.unit_id is None or site.unit_id == worker.unit_id
         if not allowed:
-            raise AppError("SITE_NOT_ALLOWED", "Lokasi ini tidak berlaku untuk Anda. Pilih lokasi kerja Anda.",
-                           status=403)
+            raise AppError(
+                "SITE_NOT_ALLOWED", "Lokasi ini tidak berlaku untuk Anda. Pilih lokasi kerja Anda.", status=403
+            )
         # 2026-10-09 (pemilik): absen sah otomatis bila berada dalam radius kantor mana pun (Pekanbaru, Duri, Dumai,
         # Jakarta, …) atau lokasi tugas hari itu, walau lokasi yang dipilih di HP berbeda — tercatat di lokasi itu.
         if float(site.distance_m) > site.radius_m:
@@ -209,19 +262,40 @@ class AttendanceSessionService:
                 site_id, site = nearest.id, nearest
         note = (explanation or "").strip() or None
         if note is None and float(site.distance_m) > site.radius_m:
-            raise AppError("EXPLANATION_REQUIRED", EXPLANATION_OUTSIDE.format(
-                d=float(site.distance_m), site=site.name, r=site.radius_m), status=422)
+            raise AppError(
+                "EXPLANATION_REQUIRED",
+                EXPLANATION_OUTSIDE.format(d=float(site.distance_m), site=site.name, r=site.radius_m),
+                status=422,
+            )
         if note is None and rejected >= 1:
             raise AppError("EXPLANATION_REQUIRED", EXPLANATION_RESUBMIT, status=422)
         try:
             row = await self.repo.insert(
-                org_id=org_id, employee_id=employee_id, work_date=today, site_id=site_id, site_label=site.name,
-                lng=lng, lat=lat, origin=origin, selfie_file_id=selfie_file_id,
-                face_result=None, face_similarity=None, source=channel, explanation=note,
+                org_id=org_id,
+                employee_id=employee_id,
+                work_date=today,
+                site_id=site_id,
+                site_label=site.name,
+                lng=lng,
+                lat=lat,
+                origin=origin,
+                selfie_file_id=selfie_file_id,
+                face_result=None,
+                face_similarity=None,
+                source=channel,
+                explanation=note,
                 at=at,
             )
-            row = await self.apply_face(org_id, user_id, row, "CHECK_IN", face_probe_id, online=online,
-                                        expected_sha256=expected_face_sha256, device=channel)
+            row = await self.apply_face(
+                org_id,
+                user_id,
+                row,
+                "CHECK_IN",
+                face_probe_id,
+                online=online,
+                expected_sha256=expected_face_sha256,
+                device=channel,
+            )
             await self._flag_for_review(org_id, row, "Absen masuk {name} perlu diperiksa")
             return row
         except IntegrityError as exc:
@@ -233,8 +307,18 @@ class AttendanceSessionService:
                 raise AppError("ALREADY_CHECKED_IN", ALREADY_TODAY, status=409) from None
             raise
 
-    async def apply_face(self, org_id: str, user_id: str, row: Any, event: str, face_probe_id: UUID | None, *,
-                         online: bool = True, expected_sha256: str | None = None, device: str | None = None) -> Any:
+    async def apply_face(
+        self,
+        org_id: str,
+        user_id: str,
+        row: Any,
+        event: str,
+        face_probe_id: UUID | None,
+        *,
+        online: bool = True,
+        expected_sha256: str | None = None,
+        device: str | None = None,
+    ) -> Any:
         """
         Mencocokkan wajah untuk absen `row` (masuk/pulang) dan menyimpan hasilnya. Hasil bermasalah menaikkan absensi
         ke antrean periksa; tidak pernah menolak. Tanpa `face_probe_id`: karyawan tanpa pendaftaran wajah tidak
@@ -246,15 +330,29 @@ class AttendanceSessionService:
         if face_probe_id is None:
             if await self.faces.face_expected(user_id):
                 return await self.repo.flag_missing_face(
-                    row.id, event, "wajah tidak diperiksa: karyawan sudah mendaftar wajah tetapi absen tanpa data wajah")
-            if not online and settings.FACE_ENROLLMENT_REQUIRED:   # T3: absen luring tanpa wajah terdaftar
+                    row.id, event, "wajah tidak diperiksa: karyawan sudah mendaftar wajah tetapi absen tanpa data wajah"
+                )
+            if not online and settings.FACE_ENROLLMENT_REQUIRED:  # T3: absen luring tanpa wajah terdaftar
                 return await self.repo.flag_missing_face(row.id, event, "belum mendaftar wajah")
             return row
         outcome: FaceOutcome = await self.faces.verify_for_attendance(
-            org_id, user_id, probe_id=face_probe_id, event=event, attendance_id=row.id, device=device,
-            online=online, expected_sha256=expected_sha256)
-        return await self.repo.set_face(row.id, event, check_id=outcome.check_id, result=outcome.result,
-                                        similarity=outcome.similarity, flag_review=outcome.flag_review)
+            org_id,
+            user_id,
+            probe_id=face_probe_id,
+            event=event,
+            attendance_id=row.id,
+            device=device,
+            online=online,
+            expected_sha256=expected_sha256,
+        )
+        return await self.repo.set_face(
+            row.id,
+            event,
+            check_id=outcome.check_id,
+            result=outcome.result,
+            similarity=outcome.similarity,
+            flag_review=outcome.flag_review,
+        )
 
     async def reverify_faces(self, limit: int = 50) -> tuple[int, int]:
         """Penjadwal: hitung & cocokkan ulang wajah yang tertunda (face-service mati saat absen). → (selesai, tersisa)."""
@@ -262,19 +360,35 @@ class AttendanceSessionService:
             return 0, 0
         done, left = await self.faces.recompute_pending(limit)
         for attendance_id, event, outcome in done:
-            await self.repo.set_face(attendance_id, event, check_id=outcome.check_id, result=outcome.result,
-                                     similarity=outcome.similarity, flag_review=outcome.flag_review)
+            await self.repo.set_face(
+                attendance_id,
+                event,
+                check_id=outcome.check_id,
+                result=outcome.result,
+                similarity=outcome.similarity,
+                flag_review=outcome.flag_review,
+            )
         return len(done), left
 
     async def purge_faces(self) -> int:
         """Penjadwal: hapus gambar wajah yang lewat masa simpan."""
         return await self.faces.purge_expired() if self.faces is not None else 0
 
-    async def check_out(self, user_id: str, channel: str = "MOBILE", *, org_id: str | None = None,
-                        face_probe_id: UUID | None = None, online: bool = True,
-                        expected_face_sha256: str | None = None, lat: float | None = None, lng: float | None = None,
-                        selfie_file_id: UUID | None = None, explanation: str | None = None,
-                        accuracy_m: float | None = None) -> Any:
+    async def check_out(
+        self,
+        user_id: str,
+        channel: str = "MOBILE",
+        *,
+        org_id: str | None = None,
+        face_probe_id: UUID | None = None,
+        online: bool = True,
+        expected_face_sha256: str | None = None,
+        lat: float | None = None,
+        lng: float | None = None,
+        selfie_file_id: UUID | None = None,
+        explanation: str | None = None,
+        accuracy_m: float | None = None,
+    ) -> Any:
         """
         Menutup sesi absensi harian yang sedang terbuka (absen pulang).
 
@@ -296,10 +410,14 @@ class AttendanceSessionService:
 
         # Validasi batas waktu absensi pulang: ditutup pada pukul 19:00 (keputusan pemilik 2026-10-14).
         import sys
+
         is_test_env = "pytest" in sys.modules
         is_mocked_clock = hasattr(self.clock, "assert_called") or hasattr(self.clock, "return_value")
-        should_check_close = online and not settings.SKIP_ATTENDANCE_HOURS_CHECK and now_local is not None and (
-            not is_test_env or is_mocked_clock
+        should_check_close = (
+            online
+            and not settings.SKIP_ATTENDANCE_HOURS_CHECK
+            and now_local is not None
+            and (not is_test_env or is_mocked_clock)
         )
         if should_check_close and now_local is not None:
             close_hour, close_min = [int(p) for p in settings.ATTENDANCE_CLOSE_TIME.split(":")]
@@ -311,11 +429,15 @@ class AttendanceSessionService:
                     status=422,
                 )
 
-        if accuracy_m is not None:   # K-12: titik yang terlalu kabur tidak bisa membuktikan kehadiran
+        if accuracy_m is not None:  # K-12: titik yang terlalu kabur tidak bisa membuktikan kehadiran
             limit = MAX_WEB_ACCURACY_M if channel == "WEB" else MAX_GPS_ACCURACY_M
             if accuracy_m > limit:
-                raise AppError("GPS_INACCURATE", f"Akurasi lokasi {accuracy_m:.0f} m terlalu rendah (maksimal {limit} m). "
-                               "Pindah ke tempat terbuka, tunggu sinyal menguat, lalu coba lagi.", status=422)
+                raise AppError(
+                    "GPS_INACCURATE",
+                    f"Akurasi lokasi {accuracy_m:.0f} m terlalu rendah (maksimal {limit} m). "
+                    "Pindah ke tempat terbuka, tunggu sinyal menguat, lalu coba lagi.",
+                    status=422,
+                )
 
         # Evaluasi durasi kerja: 9 jam kotor = 8 jam kerja efektif + 1 jam istirahat.
         is_under_required_hours = False
@@ -325,6 +447,7 @@ class AttendanceSessionService:
             curr_dt = now_local
             if curr_dt is None:
                 from app.core.time import jakarta_now
+
                 curr_dt = jakarta_now()
 
             if getattr(check_in_time, "tzinfo", None) is not None and getattr(curr_dt, "tzinfo", None) is None:
@@ -344,19 +467,29 @@ class AttendanceSessionService:
                 explanation = f"{explanation} - {early_note}" if (explanation or "").strip() else early_note
 
         try:
-            row = await self.repo.close(session.id, lat=lat, lng=lng, selfie_file_id=selfie_file_id,
-                                        explanation=explanation)
-        except IntegrityError as exc:   # T7: di luar radius tanpa swafoto/penjelasan → pesan aturan dari trigger
+            row = await self.repo.close(
+                session.id, lat=lat, lng=lng, selfie_file_id=selfie_file_id, explanation=explanation
+            )
+        except IntegrityError as exc:  # T7: di luar radius tanpa swafoto/penjelasan → pesan aturan dari trigger
             rule = trigger_rule_message(exc)
             if rule:
                 raise ValidationError(rule) from None
             raise
         if org_id is not None:
-            row = await self.apply_face(org_id, user_id, row, "CHECK_OUT", face_probe_id, online=online,
-                                        expected_sha256=expected_face_sha256, device=channel)
+            row = await self.apply_face(
+                org_id,
+                user_id,
+                row,
+                "CHECK_OUT",
+                face_probe_id,
+                online=online,
+                expected_sha256=expected_face_sha256,
+                device=channel,
+            )
             if getattr(row, "check_out_outside", False):
                 await self._flag_for_review(
-                    org_id, row, "Absen pulang {name} di luar radius (" + f"{round(row.check_out_distance_m)} m)")
+                    org_id, row, "Absen pulang {name} di luar radius (" + f"{round(row.check_out_distance_m)} m)"
+                )
             else:
                 await self._flag_for_review(org_id, row, "Absen pulang {name} perlu diperiksa")
 
@@ -381,9 +514,20 @@ class AttendanceSessionService:
 
         return AttendanceRowWithEncouragement(row, encouragement_msg)
 
-    async def list_attendance(self, org_id: str, user_id: str, *, view_all: bool, employee_id: UUID | None,
-                              date_from: Any, date_to: Any, status: str | None,
-                              page: int, size: int, scope: str = "all") -> tuple[list[Any], int]:
+    async def list_attendance(
+        self,
+        org_id: str,
+        user_id: str,
+        *,
+        view_all: bool,
+        employee_id: UUID | None,
+        date_from: Any,
+        date_to: Any,
+        status: str | None,
+        page: int,
+        size: int,
+        scope: str = "all",
+    ) -> tuple[list[Any], int]:
         """
         Mendapatkan daftar absensi berdasarkan filter, disesuaikan dengan hak visibilitas pengguna.
 
@@ -391,9 +535,18 @@ class AttendanceSessionService:
         di unitnya; selain itu hanya milik sendiri. Di luar cakupan → tidak tampil (tidak dibocorkan).
         Setiap baris membawa `can_review` dari server.
         """
-        return await self.repo.list_page(org_id, user_id, view_all=view_all, employee_id=employee_id,
-                                         date_from=date_from, date_to=date_to, status=status, scope=scope,
-                                         limit=size, offset=(page - 1) * size)
+        return await self.repo.list_page(
+            org_id,
+            user_id,
+            view_all=view_all,
+            employee_id=employee_id,
+            date_from=date_from,
+            date_to=date_to,
+            status=status,
+            scope=scope,
+            limit=size,
+            offset=(page - 1) * size,
+        )
 
     async def today(self, org_id: str) -> Any:
         """Tanggal kerja hari ini menurut zona waktu organisasi — sama dengan `work_date` absen masuk."""
@@ -409,14 +562,16 @@ class AttendanceSessionService:
         if attendance is None or attendance.employee_id != employee_id:
             raise NotFoundError("Absensi")  # milik orang lain tidak dibocorkan (V-09)
         if attendance.status != "NEEDS_REVIEW":
-            raise AppError("INVALID_STATE",
-                           "Hanya absensi sendiri yang menunggu pemeriksaan dapat diberi penjelasan.", status=409)
+            raise AppError(
+                "INVALID_STATE", "Hanya absensi sendiri yang menunggu pemeriksaan dapat diberi penjelasan.", status=409
+            )
         if not explanation.strip():
             raise ValidationError("Penjelasan wajib diisi.")
         await self.repo.set_explanation(attendance_id, explanation.strip())
 
-    async def review_attendance(self, org_id: str, user_id: str, attendance_id: UUID,
-                                approve: bool, note: str | None) -> str:
+    async def review_attendance(
+        self, org_id: str, user_id: str, attendance_id: UUID, approve: bool, note: str | None
+    ) -> str:
         """
         Meninjau (menyetujui atau menolak) sesi absensi yang anomali.
 
@@ -440,7 +595,12 @@ class AttendanceSessionService:
         status = "APPROVED" if approve else "REJECTED"
         await self.repo.set_review(attendance_id, status, reviewer, (note or "").strip())
         await NotificationService(self.repo.db).attendance_decided(
-            org_id, str(attendance.employee_id), approve, (note or "").strip())
-        queue_event(self.repo.db, await self.repo.user_ids_of([str(attendance.employee_id)]), "attendance",
-                    {"attendance_id": str(attendance_id)})
+            org_id, str(attendance.employee_id), approve, (note or "").strip()
+        )
+        queue_event(
+            self.repo.db,
+            await self.repo.user_ids_of([str(attendance.employee_id)]),
+            "attendance",
+            {"attendance_id": str(attendance_id)},
+        )
         return status

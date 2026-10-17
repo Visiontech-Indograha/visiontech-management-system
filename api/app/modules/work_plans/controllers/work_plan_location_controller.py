@@ -4,6 +4,7 @@ app/modules/work_plans/controllers/work_plan_location_controller.py
 Controller orkestrasi use case pencarian lokasi geospasial dan penetapan titik absensi SK.
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.2.
 """
+
 from __future__ import annotations
 
 from fastapi import Depends
@@ -64,4 +65,3 @@ class WorkPlanLocationController:
 
 
 __all__ = ["WorkPlanLocationController"]
-

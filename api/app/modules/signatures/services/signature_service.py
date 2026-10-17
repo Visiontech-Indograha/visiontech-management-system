@@ -4,6 +4,7 @@ app/modules/signatures/services/signature_service.py
 Layanan logika bisnis untuk modul tanda tangan elektronik dan verifikasi QR.
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §5.3.
 """
+
 from app.services.signature_service import (
     ACCEPTOR,
     APPROVER,

@@ -5,10 +5,10 @@ Mendukung validasi koordinat GPS (Haversine), radius toleransi, validasi wajah,
 status persetujuan OM ('AUTO_VALID', 'PENDING_OM', 'APPROVED_BY_OM', 'REJECTED_BY_OM'),
 zona kota (DALAM_KOTA / LUAR_KOTA), dan kalkulasi uang makan.
 """
+
 from __future__ import annotations
 
 import math
-from datetime import date, datetime
 from typing import Any
 from uuid import UUID
 
@@ -24,7 +24,7 @@ def _haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> i
     delta_lambda = math.radians(lon2 - lon1)
     a = math.sin(delta_phi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(delta_lambda / 2) ** 2
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-    return int(round(r * c))
+    return round(r * c)
 
 
 class CRUDAttendanceSession(CRUDBase):
@@ -51,8 +51,8 @@ class CRUDAttendanceSession(CRUDBase):
                    (u.system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'ADMIN_HR_GA')) AS is_admin
             FROM users u
             JOIN employee e ON e.employee_id = u.employee_id
-            WHERE u.user_id = CAST(:uid AS uuid) 
-              AND u.delete_at IS NULL 
+            WHERE u.user_id = CAST(:uid AS uuid)
+              AND u.delete_at IS NULL
               AND e.delete_at IS NULL
             """,
             {"uid": str(user_id)},
@@ -75,7 +75,7 @@ class CRUDAttendanceSession(CRUDBase):
                    a.distance_to_target_m::float AS distance_m,
                    (a.clock_in_at::time > a.scheduled_in) AS is_late,
                    (a.clock_out_at IS NOT NULL AND a.clock_out_at::time < a.scheduled_out) AS is_early_leave,
-                   CASE 
+                   CASE
                        WHEN a.om_approval_status = 'AUTO_VALID' THEN 'AUTO_VALID'
                        WHEN a.om_approval_status = 'APPROVED_BY_OM' THEN 'APPROVED'
                        WHEN a.om_approval_status = 'REJECTED_BY_OM' THEN 'REJECTED'
@@ -135,8 +135,8 @@ class CRUDAttendanceSession(CRUDBase):
                 """
                 SELECT EXISTS (
                     SELECT 1 FROM attendance
-                    WHERE employee_id = CAST(:emp AS uuid) 
-                      AND attendance_date = :day 
+                    WHERE employee_id = CAST(:emp AS uuid)
+                      AND attendance_date = :day
                       AND om_approval_status <> 'REJECTED_BY_OM'
                       AND delete_at IS NULL
                 )
@@ -151,8 +151,8 @@ class CRUDAttendanceSession(CRUDBase):
             await self.scalar(
                 """
                 SELECT count(*) FROM attendance
-                WHERE employee_id = CAST(:emp AS uuid) 
-                  AND attendance_date = :day 
+                WHERE employee_id = CAST(:emp AS uuid)
+                  AND attendance_date = :day
                   AND om_approval_status = 'REJECTED_BY_OM'
                   AND delete_at IS NULL
                 """,
@@ -344,7 +344,7 @@ class CRUDAttendanceSession(CRUDBase):
                       distance_to_target_m::float AS distance_m,
                       (clock_in_at::time > scheduled_in) AS is_late,
                       (clock_out_at IS NOT NULL AND clock_out_at::time < scheduled_out) AS is_early_leave,
-                      CASE 
+                      CASE
                           WHEN om_approval_status = 'AUTO_VALID' THEN 'AUTO_VALID'
                           WHEN om_approval_status = 'APPROVED_BY_OM' THEN 'APPROVED'
                           WHEN om_approval_status = 'REJECTED_BY_OM' THEN 'REJECTED'
@@ -404,7 +404,7 @@ class CRUDAttendanceSession(CRUDBase):
                       distance_to_target_m::float AS distance_m,
                       (clock_in_at::time > scheduled_in) AS is_late,
                       (clock_out_at IS NOT NULL AND clock_out_at::time < scheduled_out) AS is_early_leave,
-                      CASE 
+                      CASE
                           WHEN om_approval_status = 'AUTO_VALID' THEN 'AUTO_VALID'
                           WHEN om_approval_status = 'APPROVED_BY_OM' THEN 'APPROVED'
                           WHEN om_approval_status = 'REJECTED_BY_OM' THEN 'REJECTED'
@@ -470,7 +470,7 @@ class CRUDAttendanceSession(CRUDBase):
                       distance_to_target_m::float AS distance_m,
                       (clock_in_at::time > scheduled_in) AS is_late,
                       (clock_out_at IS NOT NULL AND clock_out_at::time < scheduled_out) AS is_early_leave,
-                      CASE 
+                      CASE
                           WHEN om_approval_status = 'AUTO_VALID' THEN 'AUTO_VALID'
                           WHEN om_approval_status = 'APPROVED_BY_OM' THEN 'APPROVED'
                           WHEN om_approval_status = 'REJECTED_BY_OM' THEN 'REJECTED'
@@ -510,7 +510,7 @@ class CRUDAttendanceSession(CRUDBase):
                       distance_to_target_m::float AS distance_m,
                       (clock_in_at::time > scheduled_in) AS is_late,
                       (clock_out_at IS NOT NULL AND clock_out_at::time < scheduled_out) AS is_early_leave,
-                      CASE 
+                      CASE
                           WHEN om_approval_status = 'AUTO_VALID' THEN 'AUTO_VALID'
                           WHEN om_approval_status = 'APPROVED_BY_OM' THEN 'APPROVED'
                           WHEN om_approval_status = 'REJECTED_BY_OM' THEN 'REJECTED'
@@ -539,7 +539,7 @@ class CRUDAttendanceSession(CRUDBase):
                    a.distance_to_target_m::float AS distance_m,
                    (a.clock_in_at::time > a.scheduled_in) AS is_late,
                    (a.clock_out_at IS NOT NULL AND a.clock_out_at::time < a.scheduled_out) AS is_early_leave,
-                   CASE 
+                   CASE
                        WHEN a.om_approval_status = 'AUTO_VALID' THEN 'AUTO_VALID'
                        WHEN a.om_approval_status = 'APPROVED_BY_OM' THEN 'APPROVED'
                        WHEN a.om_approval_status = 'REJECTED_BY_OM' THEN 'REJECTED'
@@ -568,8 +568,8 @@ class CRUDAttendanceSession(CRUDBase):
                 """
                 SELECT (CAST(:emp AS uuid) IS DISTINCT FROM (SELECT employee_id FROM users WHERE user_id = CAST(:viewer AS uuid)))
                    AND EXISTS (
-                       SELECT 1 FROM users 
-                       WHERE user_id = CAST(:viewer AS uuid) 
+                       SELECT 1 FROM users
+                       WHERE user_id = CAST(:viewer AS uuid)
                          AND system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'PROJECT_MANAGER', 'ADMIN_HR_GA')
                    )
                 """,
@@ -611,13 +611,13 @@ class CRUDAttendanceSession(CRUDBase):
             """(
                 CAST(:scope AS text) = 'all'
                 OR (
-                    CAST(:scope AS text) = 'mine' 
+                    CAST(:scope AS text) = 'mine'
                     AND a.employee_id IS NOT DISTINCT FROM (
                         SELECT u.employee_id FROM users u WHERE u.user_id = CAST(:viewer AS uuid)
                     )
                 )
                 OR (
-                    CAST(:scope AS text) = 'team' 
+                    CAST(:scope AS text) = 'team'
                     AND a.employee_id IS DISTINCT FROM (
                         SELECT u.employee_id FROM users u WHERE u.user_id = CAST(:viewer AS uuid)
                     )
@@ -626,9 +626,9 @@ class CRUDAttendanceSession(CRUDBase):
             "(CAST(:date_from AS date) IS NULL OR a.attendance_date >= CAST(:date_from AS date))",
             "(CAST(:date_to AS date) IS NULL OR a.attendance_date <= CAST(:date_to AS date))",
             """(
-                CAST(:status AS text) IS NULL 
+                CAST(:status AS text) IS NULL
                 OR (
-                    CASE 
+                    CASE
                         WHEN a.om_approval_status = 'AUTO_VALID' THEN 'AUTO_VALID'
                         WHEN a.om_approval_status = 'APPROVED_BY_OM' THEN 'APPROVED'
                         WHEN a.om_approval_status = 'REJECTED_BY_OM' THEN 'REJECTED'
@@ -650,7 +650,7 @@ class CRUDAttendanceSession(CRUDBase):
                    a.distance_to_target_m::float AS distance_m,
                    (a.clock_in_at::time > a.scheduled_in) AS is_late,
                    (a.clock_out_at IS NOT NULL AND a.clock_out_at::time < a.scheduled_out) AS is_early_leave,
-                   CASE 
+                   CASE
                        WHEN a.om_approval_status = 'AUTO_VALID' THEN 'AUTO_VALID'
                        WHEN a.om_approval_status = 'APPROVED_BY_OM' THEN 'APPROVED'
                        WHEN a.om_approval_status = 'REJECTED_BY_OM' THEN 'REJECTED'
@@ -675,8 +675,8 @@ class CRUDAttendanceSession(CRUDBase):
                    a.city_zone_status::text AS city_category,
                    (
                        EXISTS (
-                           SELECT 1 FROM users u 
-                           WHERE u.user_id = CAST(:viewer AS uuid) 
+                           SELECT 1 FROM users u
+                           WHERE u.user_id = CAST(:viewer AS uuid)
                              AND u.system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'PROJECT_MANAGER', 'ADMIN_HR_GA')
                        )
                        AND a.employee_id IS DISTINCT FROM (
@@ -692,7 +692,7 @@ class CRUDAttendanceSession(CRUDBase):
             LIMIT :limit OFFSET :offset
         """
         count_query = f"""
-            SELECT count(*) 
+            SELECT count(*)
             FROM attendance a
             JOIN employee e ON e.employee_id = a.employee_id
             WHERE {where_sql}
@@ -706,8 +706,8 @@ class CRUDAttendanceSession(CRUDBase):
         """Menambahkan penjelasan alasan di luar radius."""
         await self.execute(
             """
-            UPDATE attendance 
-            SET out_of_radius_note = :exp, update_at = NOW() 
+            UPDATE attendance
+            SET out_of_radius_note = :exp, update_at = NOW()
             WHERE attendance_id = CAST(:id AS uuid) AND delete_at IS NULL
             """,
             {"exp": explanation, "id": str(attendance_id)},
@@ -738,7 +738,7 @@ class CRUDAttendanceSession(CRUDBase):
                        COALESCE(wpd.site_name, o.name, 'Lokasi Kerja') AS site_label,
                        to_char(a.clock_in_at AT TIME ZONE 'Asia/Jakarta', 'HH24:MI:SS') AS check_in,
                        to_char(a.clock_out_at AT TIME ZONE 'Asia/Jakarta', 'HH24:MI:SS') AS check_out,
-                       CASE 
+                       CASE
                            WHEN a.om_approval_status = 'AUTO_VALID' THEN 'AUTO_VALID'
                            WHEN a.om_approval_status = 'APPROVED_BY_OM' THEN 'APPROVED'
                            WHEN a.om_approval_status = 'REJECTED_BY_OM' THEN 'REJECTED'

@@ -4,6 +4,7 @@ app/modules/system/controllers/files_controller.py
 Controller orkestrasi unggah berkas, kompresi gambar, dan akses berkas bertiket.
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.2.
 """
+
 from __future__ import annotations
 
 import asyncio

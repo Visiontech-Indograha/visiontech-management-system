@@ -1,8 +1,8 @@
 """
 app/crud/crud_sync.py
-Antrean luring (M12, dok 02 A-08): offline_operation + enqueue_offline_operation (db/01, db/02).
-Idempoten per (user_id, client_op_id).
+Antrean luring dan sinkronisasi Master Schema V2 (tabel app_activity_logs).
 """
+
 from __future__ import annotations
 
 import json
@@ -15,88 +15,87 @@ from .base import CRUDBase
 
 class CRUDSync(CRUDBase):
     """
-    CRUD untuk mengelola antrean operasi luring (offline) yang dikirimkan oleh klien.
-    Menjamin proses sinkronisasi data dari mode luring secara aman dan idempoten.
+    CRUD untuk mengelola antrean operasi luring (offline) Master Schema V2.
     """
 
-    async def enqueue(self, org_id: UUID | str, user_id: UUID | str, device_id: str, client_op_id: UUID,
-                      op_type: str, payload: dict[str, Any], client_created_at: datetime) -> Any:
+    async def enqueue(
+        self,
+        org_id: UUID | str,
+        user_id: UUID | str,
+        device_id: str,
+        client_op_id: UUID,
+        op_type: str,
+        payload: dict[str, Any],
+        client_created_at: datetime,
+    ) -> Any:
         """
-        Mencatat operasi luring ke dalam antrean atau menemukan operasi yang sudah ada.
-
-        Args:
-            org_id (UUID | str): ID organisasi.
-            user_id (UUID | str): ID pengguna.
-            device_id (str): ID perangkat yang melakukan sinkronisasi.
-            client_op_id (UUID): ID unik operasi dari klien (menjamin idempotensi).
-            op_type (str): Tipe operasi (misalnya INSERT, UPDATE).
-            payload (dict[str, Any]): Data payload operasi.
-            client_created_at (datetime): Waktu operasi dibuat di perangkat klien.
-
-        Returns:
-            Any: Record hasil enqueuing beserta status operasinya saat ini.
+        Mencatat operasi luring ke dalam antrean audit activity log.
         """
-        # Dua kueri terpisah digunakan di sini karena baris yang baru disisipkan di dalam
-        # fungsi basis data tidak terlihat oleh snapshot SELECT yang sama akibat aturan isolasi (MVCC).
-        enqueued = await self.fetchone(
+        row = await self.fetchone(
             """
-            SELECT vms.enqueue_offline_operation(
-                CAST(:org AS uuid), CAST(:user AS uuid), :device, CAST(:op AS uuid), :type,
-                CAST(:payload AS jsonb), CAST(:created AS timestamptz)) AS id
+            INSERT INTO app_activity_logs (
+                actor_user_id, actor_role, platform, action,
+                entity_table, entity_id, changed_diff, created_at
+            )
+            VALUES (
+                CAST(:user AS uuid), 'EMPLOYEE', 'android_flutter',
+                'OFFLINE_OPERATION', 'offline_sync', CAST(:op AS uuid),
+                jsonb_build_object(
+                    'client_op_id', CAST(:op AS text),
+                    'op_type', :type,
+                    'status', 'APPLIED',
+                    'device_id', :device,
+                    'payload', CAST(:payload AS jsonb),
+                    'client_created_at', :created
+                ),
+                NOW()
+            )
+            RETURNING log_id AS id, 'APPLIED' AS status, NULL AS error_message
             """,
-            {"org": org_id, "user": user_id, "device": device_id, "op": client_op_id, "type": op_type,
-             "payload": json.dumps(payload), "created": client_created_at})
-        return await self.fetchone(
-            """
-            SELECT o.id, CAST(o.status AS text) AS status, o.error_message
-            FROM vms.offline_operation o
-            WHERE o.id = CAST(:id AS uuid)
-            """,
-            {"id": enqueued.id})
+            {
+                "user": str(user_id),
+                "device": device_id,
+                "op": str(client_op_id),
+                "type": op_type,
+                "payload": json.dumps(payload),
+                "created": client_created_at.isoformat(),
+            },
+        )
+        return row
 
     async def mark(self, operation_id: UUID | str, status: str, error_message: str | None) -> None:
-        """
-        Menandai status akhir dari sebuah operasi luring setelah diproses.
-
-        Args:
-            operation_id (UUID | str): ID operasi luring.
-            status (str): Status penyelesaian (misal: 'APPLIED', 'FAILED').
-            error_message (str | None): Pesan error jika gagal, None jika berhasil.
-        """
-        # Memperbarui status operasi luring.
-        # Jika statusnya 'APPLIED', maka applied_at akan disetel ke waktu sekarang (now()),
-        # jika tidak, nilai applied_at tidak diubah.
+        """Menandai status akhir dari operasi luring."""
         await self.execute(
             """
-            UPDATE vms.offline_operation
-               SET status = CAST(:status AS vms.sync_status), error_message = :error,
-                   applied_at = CASE WHEN CAST(:status AS text) = 'APPLIED' THEN now() ELSE applied_at END
-             WHERE id = :id
+            UPDATE app_activity_logs
+            SET changed_diff = jsonb_set(
+                jsonb_set(changed_diff, '{status}', to_jsonb(CAST(:status AS text))),
+                '{error_message}', to_jsonb(CAST(:error AS text))
+            )
+            WHERE log_id = CAST(:id AS uuid)
             """,
-            {"id": operation_id, "status": status, "error": error_message})
+            {"id": str(operation_id), "status": status, "error": error_message or ""},
+        )
 
     async def status_since(self, user_id: UUID | str, since: datetime | None) -> list[Any]:
-        """
-        Mengambil daftar status operasi luring pengguna yang diterima sejak waktu tertentu.
-
-        Args:
-            user_id (UUID | str): ID pengguna.
-            since (datetime | None): Batas waktu pengambilan. Jika None, mengambil semua.
-
-        Returns:
-            list[Any]: Daftar maksimal 500 riwayat status operasi.
-        """
-        # Mengambil status operasi luring milik pengguna.
-        # Jika parameter `since` diberikan, hanya mengambil operasi yang diterima (received_at)
-        # setelah waktu tersebut untuk menghemat bandwidth sinkronisasi klien.
-        return list(await self.fetchall(
-            """
-            SELECT CAST(client_op_id AS text) AS client_op_id, op_type, CAST(status AS text) AS status,
-                   error_message, client_created_at, received_at, applied_at
-            FROM vms.offline_operation
-            WHERE user_id = :user
-              AND (CAST(:since AS timestamptz) IS NULL OR received_at >= CAST(:since AS timestamptz))
-            ORDER BY received_at DESC
+        """Mengambil status operasi luring pengguna."""
+        return list(
+            await self.fetchall(
+                """
+            SELECT changed_diff->>'client_op_id' AS client_op_id,
+                   changed_diff->>'op_type' AS op_type,
+                   COALESCE(changed_diff->>'status', 'APPLIED') AS status,
+                   changed_diff->>'error_message' AS error_message,
+                   created_at AS client_created_at,
+                   created_at AS received_at,
+                   created_at AS applied_at
+            FROM app_activity_logs
+            WHERE actor_user_id = CAST(:user AS uuid)
+              AND action = 'OFFLINE_OPERATION'
+              AND (CAST(:since AS timestamptz) IS NULL OR created_at >= CAST(:since AS timestamptz))
+            ORDER BY created_at DESC
             LIMIT 500
             """,
-            {"user": user_id, "since": since}))
+                {"user": str(user_id), "since": since},
+            )
+        )

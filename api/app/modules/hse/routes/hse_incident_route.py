@@ -4,6 +4,7 @@ app/modules/hse/routes/hse_incident_route.py
 Rute endpoint HTTP untuk insiden K3 (HSE) (/hse).
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.1.
 """
+
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, status

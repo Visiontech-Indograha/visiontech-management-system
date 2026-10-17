@@ -10,6 +10,7 @@ Terlihat (`domain.js` visiblePlans; `db/03` work_plan_visibility):
 - ketua/anggota menurut SK, ASSET — SK yang sudah terbit (bukan DRAFT).
 Mengelola (kewenangan PM) = ADMIN, OPS (`domain.js` permissions.OPS), atau PM unit SK itu.
 """
+
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -20,7 +21,7 @@ from .base import CRUDBase
 
 # `:plan` NULL → semua SK terlihat (daftar); terisi → satu SK (penjaga). `:status` NULL → semua status.
 _STANDING = """
-    SELECT 
+    SELECT
         w.weekly_plan_id AS id,
         w.division_id AS unit_id,
         o.office_id AS site_id,
@@ -41,8 +42,8 @@ _STANDING = """
         FALSE AS is_out_of_town,
         item.work_type_id,
         EXISTS (
-            SELECT 1 FROM work_plan_item wpi 
-            WHERE wpi.weekly_plan_id = w.weekly_plan_id 
+            SELECT 1 FROM work_plan_item wpi
+            WHERE wpi.weekly_plan_id = w.weekly_plan_id
               AND wpi.rollover_approval_status = 'WAITING_PM'
         ) AS pending_request,
         today_d.daily_plan_id AS today_site_id,
@@ -66,8 +67,8 @@ _STANDING = """
     LEFT JOIN LATERAL (
         SELECT wpd.daily_plan_id
         FROM work_plan_daily wpd
-        WHERE wpd.weekly_plan_id = w.weekly_plan_id 
-          AND wpd.work_date = CURRENT_DATE 
+        WHERE wpd.weekly_plan_id = w.weekly_plan_id
+          AND wpd.work_date = CURRENT_DATE
           AND wpd.delete_at IS NULL
         LIMIT 1
     ) today_d ON TRUE
@@ -94,15 +95,19 @@ class CRUDPlanAccess(CRUDBase):
     Kelas CRUD untuk mengelola dan memverifikasi akses pengguna terhadap Work Plan (SK).
     """
 
-    async def standing(self, plan_id: UUID | str, org_id: UUID | str, user_id: UUID | str,
-                       archived: bool | None = False) -> Any:
-        return await self.fetchone(_STANDING, {"plan": str(plan_id), "org": org_id, "user": user_id,
-                                               "status": None, "archived": archived})
+    async def standing(
+        self, plan_id: UUID | str, org_id: UUID | str, user_id: UUID | str, archived: bool | None = False
+    ) -> Any:
+        return await self.fetchone(
+            _STANDING, {"plan": str(plan_id), "org": org_id, "user": user_id, "status": None, "archived": archived}
+        )
 
-    async def visible_plans(self, org_id: UUID | str, user_id: UUID | str, status: str | None,
-                            archived: bool = False) -> Sequence[Any]:
-        return await self.fetchall(_STANDING, {"plan": None, "org": org_id, "user": user_id,
-                                               "status": status, "archived": archived})
+    async def visible_plans(
+        self, org_id: UUID | str, user_id: UUID | str, status: str | None, archived: bool = False
+    ) -> Sequence[Any]:
+        return await self.fetchall(
+            _STANDING, {"plan": None, "org": org_id, "user": user_id, "status": status, "archived": archived}
+        )
 
     async def plan_of_day(self, day_id: UUID | str) -> Any:
         return await self.scalar(
@@ -113,9 +118,9 @@ class CRUDPlanAccess(CRUDBase):
     async def plan_of_allocation(self, allocation_id: UUID | str) -> Any:
         return await self.scalar(
             """
-            SELECT wpd.weekly_plan_id AS work_plan_id 
-            FROM asset_assignment aa 
-            JOIN work_plan_daily wpd ON wpd.daily_plan_id = aa.daily_plan_id 
+            SELECT wpd.weekly_plan_id AS work_plan_id
+            FROM asset_assignment aa
+            JOIN work_plan_daily wpd ON wpd.daily_plan_id = aa.daily_plan_id
             WHERE aa.assignment_id = CAST(:alloc AS uuid) AND aa.delete_at IS NULL
             """,
             {"alloc": allocation_id},

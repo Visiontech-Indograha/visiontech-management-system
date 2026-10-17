@@ -4,6 +4,7 @@ app/modules/work_plans/controllers/work_plan_controller.py
 Controller orkestrasi use case manajemen rencana kerja (SK).
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.2.
 """
+
 from __future__ import annotations
 
 from datetime import date
@@ -104,9 +105,7 @@ class WorkPlanController:
         plan_id: UUID | None = None,
     ) -> list[str]:
         """Mengambil calon pengemudi yang memiliki SIM dan tidak bentrok tugas."""
-        return await self.draft_service.driver_options(
-            current_user, vehicle_id, candidate_ids, period_end, plan_id
-        )
+        return await self.draft_service.driver_options(current_user, vehicle_id, candidate_ids, period_end, plan_id)
 
     async def handle_create_full_plan(
         self,
@@ -140,9 +139,7 @@ class WorkPlanController:
         plan_id: UUID,
     ) -> PlanDetailOut:
         """Mengambil seluruh detail rincian dokumen rencana kerja."""
-        return PlanDetailOut(
-            **await self.draft_service.detail(plan_id, include_drafts=access.is_leader)
-        )
+        return PlanDetailOut(**await self.draft_service.detail(plan_id, include_drafts=access.is_leader))
 
     async def handle_edit_full_plan(
         self,
@@ -194,9 +191,7 @@ class WorkPlanController:
         data: PlanDayCreate,
     ) -> PlanDayResponse:
         """Menambahkan jadwal hari kerja ke dalam draf rencana kerja."""
-        day_id = await self.edit_service.add_day(
-            access, plan_id, data.work_date, data.title, data.sort_order
-        )
+        day_id = await self.edit_service.add_day(access, plan_id, data.work_date, data.title, data.sort_order)
         return PlanDayResponse(id=day_id, work_plan_id=plan_id, **data.model_dump())
 
     async def handle_add_task(
@@ -206,9 +201,7 @@ class WorkPlanController:
     ) -> PlanTaskResponse:
         """Menambahkan butir tugas pekerjaan ke dalam jadwal hari kerja."""
         task_id = await self.edit_service.add_task(day_id, data.title, data.sort_order)
-        return PlanTaskResponse(
-            id=task_id, work_plan_day_id=day_id, is_done=False, **data.model_dump()
-        )
+        return PlanTaskResponse(id=task_id, work_plan_day_id=day_id, is_done=False, **data.model_dump())
 
     async def handle_save_day(
         self,
@@ -217,11 +210,8 @@ class WorkPlanController:
         data: DayPlanRequest,
     ) -> dict[str, object]:
         """Menyusun ulang judul dan daftar tugas hari kerja secara menyeluruh."""
-        title, tasks = await self.edit_service.save_day(
-            access, day_id, data.title, [t.title for t in data.tasks]
-        )
+        title, tasks = await self.edit_service.save_day(access, day_id, data.title, [t.title for t in data.tasks])
         return {"id": str(day_id), "title": title, "tasks": tasks}
 
 
 __all__ = ["WorkPlanController"]
-

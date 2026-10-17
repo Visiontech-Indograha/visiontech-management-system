@@ -4,6 +4,7 @@ app/modules/system/routes/sync_route.py
 Rute endpoint HTTP untuk sinkronisasi luring (/sync).
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.1.
 """
+
 from datetime import datetime
 
 from fastapi import APIRouter, Depends
@@ -41,4 +42,3 @@ async def sync_status(
 
 
 __all__ = ["router"]
-

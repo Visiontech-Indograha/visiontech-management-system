@@ -4,6 +4,7 @@ app/modules/attendance/routes/attendance_route.py
 Rute endpoint HTTP untuk absensi lapangan dan luring (/attendance).
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.1.
 """
+
 from datetime import date
 from uuid import UUID
 
@@ -150,4 +151,3 @@ async def export_attendance(
 
 
 __all__ = ["router"]
-

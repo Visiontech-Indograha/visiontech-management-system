@@ -4,6 +4,7 @@ app/modules/work_plans/controllers/work_plan_reports_controller.py
 Controller orkestrasi use case laporan harian berjenjang anggota dan dokumen laporan.
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.2.
 """
+
 from __future__ import annotations
 
 from uuid import UUID
@@ -86,10 +87,7 @@ class WorkPlanReportsController:
         week: int,
     ) -> HTMLResponse:
         """Menghasilkan representasi HTML format cetak A4 laporan mingguan."""
-        return HTMLResponse(
-            await self.service.weekly_report_html(access, f"Laporan Mingguan {week}")
-        )
+        return HTMLResponse(await self.service.weekly_report_html(access, f"Laporan Mingguan {week}"))
 
 
 __all__ = ["WorkPlanReportsController"]
-

@@ -4,6 +4,7 @@ app/modules/system/routes/files_route.py
 Rute endpoint HTTP untuk unggah berkas dan pembuatan URL MinIO (/files).
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.1.
 """
+
 import uuid
 
 from fastapi import APIRouter, Depends, File, UploadFile

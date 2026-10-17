@@ -3,6 +3,7 @@ app/crud/crud_session.py
 Sesi login dan percobaan masuk menggunakan tabel user_sessions (Master Schema V2).
 Refresh token mentah tidak pernah disimpan; basis data hanya menyimpan SHA-256-nya.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -13,6 +14,7 @@ from typing import Any
 from uuid import UUID, uuid4
 
 from app.core.time import utcnow
+
 from .base import CRUDBase
 
 MAX_LOGIN_FAILURES = 5
@@ -62,7 +64,8 @@ class CRUDSession(CRUDBase):
         await self.execute(
             """
             INSERT INTO user_sessions (
-                session_id, user_id, token_family_id, refresh_token_hash, platform, device_name, ip_address, is_revoked, expires_at
+                session_id, user_id, token_family_id, refresh_token_hash,
+                platform, device_name, ip_address, is_revoked, expires_at
             )
             VALUES (
                 :sid, :uid, :fid, :hash, CAST(:plat AS client_platform_enum), :device, CAST(:ip AS inet), FALSE, :exp
@@ -90,7 +93,8 @@ class CRUDSession(CRUDBase):
         token_hash = hashlib.sha256(raw_refresh_token.encode("utf-8")).hexdigest()
         row = await self.fetchone(
             """
-            SELECT session_id, user_id, token_family_id, platform, device_name, is_revoked, expires_at, create_at, delete_at
+            SELECT session_id, user_id, token_family_id, platform,
+                   device_name, is_revoked, expires_at, create_at, delete_at
             FROM user_sessions
             WHERE refresh_token_hash = :hash
             """,
@@ -128,7 +132,8 @@ class CRUDSession(CRUDBase):
         await self.execute(
             """
             INSERT INTO user_sessions (
-                session_id, user_id, token_family_id, refresh_token_hash, platform, device_name, ip_address, is_revoked, expires_at
+                session_id, user_id, token_family_id, refresh_token_hash,
+                platform, device_name, ip_address, is_revoked, expires_at
             )
             VALUES (
                 :sid, :uid, :fid, :hash, :plat, :device, CAST(:ip AS inet), FALSE, :exp
@@ -182,13 +187,9 @@ class CRUDSession(CRUDBase):
                 {"uid": user_id},
             )
             if oldest_family:
-                await self.revoke_family(
-                    user_id, oldest_family, "Batas perangkat tercapai - sesi terlama dikeluarkan"
-                )
+                await self.revoke_family(user_id, oldest_family, "Batas perangkat tercapai - sesi terlama dikeluarkan")
 
-    async def find_active_family_by_fingerprint(
-        self, user_id: UUID | str, fingerprint: str
-    ) -> UUID | None:
+    async def find_active_family_by_fingerprint(self, user_id: UUID | str, fingerprint: str) -> UUID | None:
         val = await self.scalar(
             """
             SELECT token_family_id
@@ -210,7 +211,7 @@ class CRUDSession(CRUDBase):
             WHERE user_id = CAST(:uid AS uuid)
               AND is_revoked = FALSE
               AND (
-                  device_name = :agent 
+                  device_name = :agent
                   OR device_name = 'Web Login'
                   OR device_name = 'Aplikasi HP'
               )
@@ -241,11 +242,11 @@ class CRUDSession(CRUDBase):
         return list(
             await self.fetchall(
                 """
-                SELECT 
-                    CAST(s.session_id AS text) AS id, 
-                    s.device_name AS device_label, 
+                SELECT
+                    CAST(s.session_id AS text) AS id,
+                    s.device_name AS device_label,
                     CAST(host(s.ip_address) AS text) AS ip_address,
-                    s.device_name AS user_agent, 
+                    s.device_name AS user_agent,
                     s.update_at AS last_used_at,
                     s.create_at AS issued_at
                 FROM user_sessions s
@@ -263,9 +264,9 @@ class CRUDSession(CRUDBase):
                 SELECT token_family_id FROM user_sessions
                 WHERE session_id = :sid AND user_id = :uid AND is_revoked = FALSE
             )
-            UPDATE user_sessions s 
+            UPDATE user_sessions s
             SET is_revoked = TRUE, update_at = now()
-            FROM target 
+            FROM target
             WHERE s.token_family_id = target.token_family_id AND s.is_revoked = FALSE
             RETURNING 1
             """,
@@ -276,7 +277,7 @@ class CRUDSession(CRUDBase):
     async def revoke_other_sessions(self, user_id: UUID | str, keep_session_id: UUID | str, reason: str) -> int:
         rows = await self.fetchall(
             """
-            UPDATE user_sessions 
+            UPDATE user_sessions
             SET is_revoked = TRUE, update_at = now()
             WHERE user_id = :uid AND is_revoked = FALSE
               AND token_family_id IS DISTINCT FROM (SELECT token_family_id FROM user_sessions WHERE session_id = :keep)
@@ -288,7 +289,12 @@ class CRUDSession(CRUDBase):
 
     async def revoke_all_for_user(self, user_id: UUID | str, reason: str) -> int:
         rows = await self.fetchall(
-            "UPDATE user_sessions SET is_revoked = TRUE, update_at = now() WHERE user_id = :uid AND is_revoked = FALSE RETURNING session_id",
+            """
+            UPDATE user_sessions
+            SET is_revoked = TRUE, update_at = now()
+            WHERE user_id = :uid AND is_revoked = FALSE
+            RETURNING session_id
+            """,
             {"uid": user_id},
         )
         return len(rows)

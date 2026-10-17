@@ -4,6 +4,7 @@ app/modules/system/repositories/system_repository.py
 Repositori data sistem (sinkronisasi luring, pemantauan timeline, dan metadata berkas).
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §5.5.
 """
+
 from app.crud.crud_file import CRUDFile
 from app.crud.crud_file_access import CRUDFileAccess
 from app.crud.crud_monitoring import CRUDMonitoring
@@ -32,4 +33,3 @@ __all__ = [
     "MonitoringRepository",
     "SyncRepository",
 ]
-

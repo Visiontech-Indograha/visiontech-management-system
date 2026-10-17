@@ -2,6 +2,7 @@
 app/services/plan_day_service.py
 Baca hari kerja SK beserta tugas & laporan harian. Kewenangan (melihat SK) dijaga penjaga V-07 di router.
 """
+
 from __future__ import annotations
 
 import json
@@ -17,6 +18,7 @@ class PlanDayService:
     """
     Layanan untuk mengelola hari kerja (plan day) dalam sebuah SK (Surat Keputusan).
     """
+
     def __init__(self, db: AsyncSession) -> None:
         """
         Inisialisasi PlanDayService.

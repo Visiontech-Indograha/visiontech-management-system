@@ -4,6 +4,7 @@ app/modules/work_plans/routes/work_plan_changes_route.py
 Rute endpoint HTTP untuk adendum perpanjangan & personel (/work-plans/{plan_id}/changes, /changes).
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.1.
 """
+
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
@@ -79,4 +80,3 @@ async def withdraw_change(
 
 
 __all__ = ["plan_router", "router"]
-

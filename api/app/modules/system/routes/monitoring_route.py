@@ -4,6 +4,7 @@ app/modules/system/routes/monitoring_route.py
 Rute endpoint HTTP untuk pemantauan lini masa dan rekap kehadiran (/timeline, /recaps/attendance).
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.1.
 """
+
 from datetime import date
 
 from fastapi import APIRouter, Depends, Query
@@ -44,4 +45,3 @@ async def attendance_recap(
 
 
 __all__ = ["router"]
-

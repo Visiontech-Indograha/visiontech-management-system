@@ -4,6 +4,7 @@ app/modules/signatures/controllers/signature_controller.py
 Controller orkestrasi use case tanda tangan dokumen SK dan verifikasi publik.
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.2.
 """
+
 from __future__ import annotations
 
 import time
@@ -48,16 +49,12 @@ class SignatureController:
         rows = await self.signature_service.list_plan_documents(plan_id)
         return [PlanDocumentOut(**r._mapping) for r in rows]
 
-    async def handle_list_signatures(
-        self, current_user: CurrentUser, document_id: UUID
-    ) -> list[SignatureOut]:
+    async def handle_list_signatures(self, current_user: CurrentUser, document_id: UUID) -> list[SignatureOut]:
         """Mengambil daftar tanda tangan yang tercatat untuk sebuah dokumen."""
         rows = await self.signature_service.list_signatures(current_user, document_id)
         return [SignatureOut(**r._mapping) for r in rows]
 
-    async def handle_document_pdf(
-        self, current_user: CurrentUser, document_id: UUID
-    ) -> Response:
+    async def handle_document_pdf(self, current_user: CurrentUser, document_id: UUID) -> Response:
         """Menghasilkan file PDF dokumen bertanda tangan dengan QR verifikasi."""
         document, signatures = await self.signature_service.document_with_qr(current_user, document_id)
         html = render_plan_document_html(document, signatures)
@@ -70,9 +67,7 @@ class SignatureController:
             headers={"Content-Disposition": f'inline; filename="{filename}"'},
         )
 
-    async def handle_document_html(
-        self, current_user: CurrentUser, document_id: UUID
-    ) -> HTMLResponse:
+    async def handle_document_html(self, current_user: CurrentUser, document_id: UUID) -> HTMLResponse:
         """Menghasilkan representasi HTML dokumen bertanda tangan untuk penampil aplikasi."""
         document, signatures = await self.signature_service.document_with_qr(current_user, document_id)
         return HTMLResponse(render_plan_document_html(document, signatures))

@@ -4,6 +4,7 @@ app/modules/work_plans/controllers/work_plan_amendments_controller.py
 Controller orkestrasi use case adendum saat SK berjalan dan dokumen laporan akhir.
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.2.
 """
+
 from __future__ import annotations
 
 from uuid import UUID
@@ -100,4 +101,3 @@ class WorkPlanAmendmentsController:
 
 
 __all__ = ["WorkPlanAmendmentsController"]
-

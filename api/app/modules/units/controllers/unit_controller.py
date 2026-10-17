@@ -4,6 +4,7 @@ app/modules/units/controllers/unit_controller.py
 Controller orkestrasi operasi unit kerja organisasi.
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.2.
 """
+
 from fastapi import Depends
 
 from app.api.deps import get_unit_service
@@ -23,4 +24,3 @@ class UnitController:
         """Mengambil seluruh unit milik organisasi pengguna."""
         rows = await self.unit_service.list_units(organization_id)
         return [UnitOut(**r._mapping) for r in rows]
-

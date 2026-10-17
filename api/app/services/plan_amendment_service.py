@@ -4,6 +4,7 @@ Adendum saat SK Berjalan (alur SK v2 PR3, flowchart SK2-E): ketua mengajukan (al
 Berjalan → PM menolak (catatan) atau menerima dengan mengubah isi SK → dokumen adendum ditandatangani PM →
 ketua menerima (tanda tangan) → versi SK lama Tidak berlaku.
 """
+
 from __future__ import annotations
 
 import json
@@ -39,6 +40,7 @@ class PlanAmendmentService:
     Layanan yang mengelola proses perubahan atau adendum terhadap SK yang sedang berjalan.
     Proses ini mencakup usulan perubahan, persetujuan PM, penerbitan dokumen adendum, dan penerimaan ketua tim.
     """
+
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
         self.repo = CRUDPlanAmendment(db)
@@ -59,7 +61,11 @@ class PlanAmendmentService:
 
     async def _change(self, access: PlanAccess, change_id: UUID, status: ChangeStatus) -> Any:
         change = await self.changes.lock_change(change_id, access.user.organization_id)
-        if change is None or str(change.work_plan_id) != str(access.plan.id) or change.change_type != ChangeType.AMENDMENT:
+        if (
+            change is None
+            or str(change.work_plan_id) != str(access.plan.id)
+            or change.change_type != ChangeType.AMENDMENT
+        ):
             raise NotFoundError("Permintaan revisi")
         if change.status != status:
             raise _state("Permintaan revisi tidak dalam tahap ini.")
@@ -85,8 +91,14 @@ class PlanAmendmentService:
         requester = await self._employee(access.user.user_id)
         revision = int(access.plan.revision)
         change_id = await self.changes.insert_change(
-            plan_id=access.plan.id, change_type=ChangeType.AMENDMENT, status=ChangeStatus.PENDING_PM,
-            reason=reason.strip(), base_revision=revision, proposed_revision=revision + 1, requested_by=requester)
+            plan_id=access.plan.id,
+            change_type=ChangeType.AMENDMENT,
+            status=ChangeStatus.PENDING_PM,
+            reason=reason.strip(),
+            base_revision=revision,
+            proposed_revision=revision + 1,
+            requested_by=requester,
+        )
         await self.notify.amendment_requested(access.plan.id, reason.strip())
         return change_id
 
@@ -95,8 +107,9 @@ class PlanAmendmentService:
         change = await self._change(access, change_id, ChangeStatus.PENDING_PM)
         if not reason.strip():
             raise ValidationError("Catatan penolakan wajib diisi.")
-        await self.changes.set_change(change.id, ChangeStatus.REJECTED, await self._employee(access.user.user_id),
-                                      reason.strip())
+        await self.changes.set_change(
+            change.id, ChangeStatus.REJECTED, await self._employee(access.user.user_id), reason.strip()
+        )
         await self.notify.amendment_decided(access.plan.id, accepted=False, note=reason.strip())
 
     async def rewrite_days(self, plan: Any, data: PlanDraftRequest, user: Any) -> None:
@@ -111,17 +124,31 @@ class PlanAmendmentService:
 
         site_id, site_name = await PlanDraftService(self.db)._site(user, str(plan.unit_id), data)
         await self.repo.update_header(
-            plan.id, title=data.title.strip(), description=data.description.strip(), category=data.category,
-            site_id=site_id, location_text=site_name, period_start=data.period_start, period_end=data.period_end,
-            is_out_of_town=data.is_out_of_town, work_type_id=data.work_type_id)
+            plan.id,
+            title=data.title.strip(),
+            description=data.description.strip(),
+            category=data.category,
+            site_id=site_id,
+            location_text=site_name,
+            period_start=data.period_start,
+            period_end=data.period_end,
+            is_out_of_town=data.is_out_of_town,
+            work_type_id=data.work_type_id,
+        )
         for order, new_day in enumerate(sorted(data.days, key=lambda d: d.work_date)):
             key = str(new_day.work_date)
             current = days.get(key)
             if current is not None and current.report_status in LOCKED_REPORTS:
-                continue   # isi hari yang laporannya sudah dikirim/disetujui tidak diubah
+                continue  # isi hari yang laporannya sudah dikirim/disetujui tidak diubah
             if current is None:
-                day_id = await self.drafts.insert_day(plan.id, new_day.work_date, new_day.tasks[0].title.strip(), order,
-                                                      new_day.site_id, new_day.work_type_id)
+                day_id = await self.drafts.insert_day(
+                    plan.id,
+                    new_day.work_date,
+                    new_day.tasks[0].title.strip(),
+                    order,
+                    new_day.site_id,
+                    new_day.work_type_id,
+                )
             else:
                 day_id = current.id
                 await self.repo.clear_tasks(day_id, new_day.tasks[0].title.strip())
@@ -135,8 +162,6 @@ class PlanAmendmentService:
         for work_date, day in days.items():
             if work_date not in wanted:
                 await self.repo.delete_day(day.id)
-
-
 
     async def apply_amendment(self, access: PlanAccess, change_id: UUID, data: PlanDraftRequest) -> Any:
         """
@@ -185,8 +210,9 @@ class PlanAmendmentService:
         raw = await self.plans.snapshot(plan.id)
         snapshot = json.loads(raw) if isinstance(raw, str) else raw
         issuer = await self._employee(access.user.user_id)
-        await self.changes.issue_addendum(change.id, plan.id, DocumentKind.ADDENDUM, version, snapshot, issuer,
-                                          change.reason)
+        await self.changes.issue_addendum(
+            change.id, plan.id, DocumentKind.ADDENDUM, version, snapshot, issuer, change.reason
+        )
         await SignatureService(self.db).sign_latest_plan_document(plan.id, issuer, ISSUER, access.user.user_id)
         await self.changes.set_change(change.id, ChangeStatus.AWAITING_LEADER_ACCEPTANCE, issuer)
         await self.notify.amendment_decided(plan.id, accepted=True, note=None)
@@ -202,4 +228,3 @@ class PlanAmendmentService:
         await self.changes.set_change(change.id, ChangeStatus.EFFECTIVE)
         await self.repo.set_revision(access.plan.id, await self.changes.next_document_version(access.plan.id) - 1)
         await self.notify.amendment_accepted(access.plan.id)
-

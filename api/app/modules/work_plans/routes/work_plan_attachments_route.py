@@ -4,6 +4,7 @@ app/modules/work_plans/routes/work_plan_attachments_route.py
 Rute endpoint HTTP untuk berkas lampiran pendukung SK (/work-plans/{plan_id}/attachments).
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.1.
 """
+
 from fastapi import APIRouter, Depends
 
 from app.api.deps import plan_access
@@ -41,4 +42,3 @@ async def save_attachments(
 
 
 __all__ = ["router"]
-

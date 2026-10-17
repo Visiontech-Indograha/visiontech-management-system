@@ -4,6 +4,7 @@ app/modules/auth/controllers/auth_profile_controller.py
 Controller untuk identitas pengguna (/me) dan penggantian kata sandi.
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.2.
 """
+
 from __future__ import annotations
 
 from fastapi import Depends, Request, Response
@@ -68,4 +69,3 @@ class AuthProfileController:
             client_info,
         )
         return AuthLoginController.issue_token_response(response, tokens)
-

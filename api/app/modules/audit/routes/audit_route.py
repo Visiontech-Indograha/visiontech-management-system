@@ -4,7 +4,9 @@ app/modules/audit/routes/audit_route.py
 Rute endpoint HTTP untuk riwayat kejadian audit (/audit-events).
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.1.
 """
+
 from typing import Any
+
 from fastapi import APIRouter, Depends, Query
 
 from app.api.deps import require_permission

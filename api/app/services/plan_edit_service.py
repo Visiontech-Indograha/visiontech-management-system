@@ -3,6 +3,7 @@ app/services/plan_edit_service.py
 Draf SK jalur lama: buat (POST /work-plans), ubah (PATCH, EDIT_DRAFT dok 05), tambah hari/tugas, simpan hari
 (domain.js SAVE_DAY, V-23). Form lengkap v2 di plan_draft_service. Pesan & kode galat dipertahankan apa adanya.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -37,23 +38,35 @@ class PlanEditService:
 
     async def visible_plans(self, user: CurrentUser, status_filter: str | None, archived: bool) -> list[Any]:
         """SK yang terlihat oleh pengguna (V-07); draf terarsip hanya untuk pengelola (V-21)."""
-        return list(await CRUDPlanAccess(self.db).visible_plans(user.organization_id, user.user_id, status_filter,
-                                                                 archived))
+        return list(
+            await CRUDPlanAccess(self.db).visible_plans(user.organization_id, user.user_id, status_filter, archived)
+        )
 
     async def create(self, user: CurrentUser, data: WorkPlanCreate) -> Any:
         """Draf SK baru; ketua (bila ada) langsung jadi anggota. Bentrok jadwal ketua dari trigger → pesan jelas."""
         await check_unit_manager(self.db, data.unit_id, user)
-        await ensure_same_org(self.db, user.organization_id, sites=[data.site_id],
-                              employees=[data.pm_employee_id, data.leader_employee_id])
+        await ensure_same_org(
+            self.db,
+            user.organization_id,
+            sites=[data.site_id],
+            employees=[data.pm_employee_id, data.leader_employee_id],
+        )
         await self.assignments.validate_owner(user, data.unit_id, data.pm_employee_id)
         if data.leader_employee_id:
             await self.assignments.validate_team_scope(user, data.unit_id, [data.leader_employee_id])
         try:
             row = await self.repo.insert_plan(
-                user.organization_id, unit_id=data.unit_id, site_id=data.site_id, title=data.title,
-                location_text=data.location_text, description=data.description, period_start=data.period_start,
-                period_end=data.period_end, pm_employee_id=data.pm_employee_id,
-                leader_employee_id=data.leader_employee_id)
+                user.organization_id,
+                unit_id=data.unit_id,
+                site_id=data.site_id,
+                title=data.title,
+                location_text=data.location_text,
+                description=data.description,
+                period_start=data.period_start,
+                period_end=data.period_end,
+                pm_employee_id=data.pm_employee_id,
+                leader_employee_id=data.leader_employee_id,
+            )
             if data.leader_employee_id:
                 await self.repo.add_leader(row.id, data.leader_employee_id, data.period_start)
         except IntegrityError as e:
@@ -73,17 +86,27 @@ class PlanEditService:
         if not row:
             raise HTTPException(status_code=404, detail="Rencana Kerja tidak ditemukan.")
         if row.status != "DRAFT":
-            raise HTTPException(status_code=400, detail={
-                "code": "NOT_DRAFT", "message": "Hanya rencana kerja berstatus Draf yang dapat diubah."})
+            raise HTTPException(
+                status_code=400,
+                detail={"code": "NOT_DRAFT", "message": "Hanya rencana kerja berstatus Draf yang dapat diubah."},
+            )
         if row.row_version != data.row_version:
-            raise HTTPException(status_code=409, detail={
-                "code": "CONFLICT", "message": "Dokumen ini telah diubah oleh orang lain. Silakan muat ulang halaman."})
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "code": "CONFLICT",
+                    "message": "Dokumen ini telah diubah oleh orang lain. Silakan muat ulang halaman.",
+                },
+            )
 
         sets: list[str] = []
         params: dict[str, Any] = {}
-        for column, key, value in (("title", "title", data.title), ("site_id", "site", data.site_id),
-                                   ("location_text", "loc", data.location_text),
-                                   ("description", "desc", data.description)):
+        for column, key, value in (
+            ("title", "title", data.title),
+            ("site_id", "site", data.site_id),
+            ("location_text", "loc", data.location_text),
+            ("description", "desc", data.description),
+        ):
             if value is not None:
                 sets.append(f"{column} = :{key}")
                 params[key] = value
@@ -105,12 +128,15 @@ class PlanEditService:
 
         updated = await self.repo.update_plan(plan_id, user.organization_id, data.row_version, sets, params)
         if not updated:
-            raise HTTPException(status_code=409, detail={
-                "code": "CONFLICT", "message": "Gagal update, kemungkinan data diubah secara bersamaan."})
+            raise HTTPException(
+                status_code=409,
+                detail={"code": "CONFLICT", "message": "Gagal update, kemungkinan data diubah secara bersamaan."},
+            )
         return updated
 
-    async def add_day(self, access: PlanAccess, plan_id: UUID, work_date: Any, title: str | None,
-                      sort_order: int) -> Any:
+    async def add_day(
+        self, access: PlanAccess, plan_id: UUID, work_date: Any, title: str | None, sort_order: int
+    ) -> Any:
         """Tambah hari pada draf. → id hari."""
         status = await self.repo.plan_status(plan_id, access.user.organization_id)
         if not status or status != "DRAFT":
@@ -118,15 +144,18 @@ class PlanEditService:
         try:
             return await self.repo.insert_day(plan_id, work_date, title, sort_order)
         except SQLAlchemyError:
-            raise HTTPException(status_code=400, detail={
-                "code": "DB_ERROR", "message": "Gagal menambahkan hari (mungkin tanggal bentrok)."}) from None
+            raise HTTPException(
+                status_code=400,
+                detail={"code": "DB_ERROR", "message": "Gagal menambahkan hari (mungkin tanggal bentrok)."},
+            ) from None
 
     async def add_task(self, day_id: UUID, title: str, sort_order: int) -> Any:
         """Tambah tugas pada hari. → id tugas."""
         return await self.repo.insert_task(day_id, title, sort_order)
 
-    async def save_day(self, access: PlanAccess, day_id: UUID, title: str,
-                       task_titles: list[str]) -> tuple[str, list[str]]:
+    async def save_day(
+        self, access: PlanAccess, day_id: UUID, title: str, task_titles: list[str]
+    ) -> tuple[str, list[str]]:
         """domain.js SAVE_DAY (V-23): selagi draf, 1–30 tugas, judul hari & tugas wajib. → (judul, tugas)."""
         require_plan_status(access, PlanStatus.DRAFT)
         if not 1 <= len(task_titles) <= 30:

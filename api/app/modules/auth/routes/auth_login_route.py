@@ -4,6 +4,7 @@ app/modules/auth/routes/auth_login_route.py
 Rute endpoint HTTP untuk login, refresh token, dan logout.
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.1.
 """
+
 from fastapi import APIRouter, Depends, Request, Response
 
 from app.modules.auth.controllers.auth_login_controller import AuthLoginController
@@ -49,4 +50,3 @@ async def logout(
     Mengakhiri sesi pengguna saat ini dan mencabut cookie refresh_token.
     """
     return await controller.handle_logout(request, response)
-

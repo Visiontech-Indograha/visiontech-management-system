@@ -43,37 +43,29 @@ async def create_admin(email: str, password: str, organization_id: str | None = 
     engine = make_engine(_operator_url())
     try:
         async with engine.begin() as conn:
-            if organization_id:
-                if not (await conn.execute(
-                    text("SELECT 1 FROM vms.organization WHERE id = :id"), {"id": organization_id}
-                )).scalar():
-                    raise CliError(f"Organisasi {organization_id} tidak ditemukan.")
-                org_id = organization_id
-            else:
-                orgs = (await conn.execute(text("SELECT id FROM vms.organization"))).scalars().all()
-                if len(orgs) > 1:
-                    raise CliError("Ada lebih dari satu organisasi; pilih dengan --organization-id.")
-                org_id = orgs[0] if orgs else (await conn.execute(text(
-                    "INSERT INTO vms.organization (name) VALUES ('Default Organization') RETURNING id"
-                ))).scalar_one()
-
             if (await conn.execute(
-                text("SELECT 1 FROM vms.app_user WHERE login = :login"), {"login": email}
+                text("SELECT 1 FROM users WHERE email = :email AND delete_at IS NULL"), {"email": email}
             )).scalar():
                 raise CliError(f"Pengguna {email} sudah ada.")
 
+            office_id = (await conn.execute(text("SELECT office_id FROM office WHERE delete_at IS NULL LIMIT 1"))).scalar()
+            if not office_id:
+                office_id = (await conn.execute(text(
+                    "INSERT INTO office (name, address, latitude, longitude) VALUES ('Kantor Utama', 'Jakarta', -6.2088, 106.8456) RETURNING office_id"
+                ))).scalar_one()
+
+            emp_id = (await conn.execute(text(
+                "INSERT INTO employee (office_id, full_name, employee_no, join_date) VALUES (:off, 'Admin Super', 'EMP-ADMIN', NOW()) RETURNING employee_id"
+            ), {"off": office_id})).scalar_one()
+
             user_id = (await conn.execute(
                 text("""
-                    INSERT INTO vms.app_user (organization_id, login, password_hash, is_active)
-                    VALUES (:org_id, :login, :password_hash, true)
-                    RETURNING id
+                    INSERT INTO users (employee_id, username, email, password_hash, system_role, is_active)
+                    VALUES (:emp_id, :email, :email, :password_hash, 'SUPER_ADMIN', true)
+                    RETURNING user_id
                 """),
-                {"org_id": org_id, "login": email, "password_hash": hash_password(password)},
+                {"emp_id": emp_id, "email": email, "password_hash": hash_password(password)},
             )).scalar_one()
-            await conn.execute(
-                text("INSERT INTO vms.user_role (user_id, role) VALUES (:user_id, :role)"),
-                {"user_id": user_id, "role": RoleCode.ADMIN.value},
-            )
     finally:
         await engine.dispose()
     return str(user_id)
@@ -81,45 +73,29 @@ async def create_admin(email: str, password: str, organization_id: str | None = 
 
 async def seed() -> None:
     """
-    Mengisi database dengan data sampel awal (seed).
-    Membuat data organisasi, unit bisnis, dan karyawan contoh jika belum ada.
+    Mengisi database dengan data sampel awal (seed) Master Schema V2.
     """
-    # Membuat engine untuk koneksi database
     engine = make_engine(_operator_url())
     async with engine.begin() as conn:
-        # Periksa apakah data organisasi sudah ada, jika belum buat baru
-        org_id = (await conn.execute(text("SELECT id FROM vms.organization LIMIT 1"))).scalar()
-        if not org_id:
-            org_id = (await conn.execute(text("INSERT INTO vms.organization (name) VALUES ('VisionTech') RETURNING id"))).scalar()
+        office_id = (await conn.execute(text("SELECT office_id FROM office LIMIT 1"))).scalar()
+        if not office_id:
+            office_id = (await conn.execute(text(
+                "INSERT INTO office (name, address, latitude, longitude) VALUES ('Kantor Pusat Visiontech', 'Jl. Sudirman Jakarta', -6.2088, 106.8456) RETURNING office_id"
+            ))).scalar()
 
-        # Periksa data unit bisnis (Business Unit), buat jika belum ada
-        unit_id = (await conn.execute(text("SELECT id FROM vms.business_unit WHERE code = 'IT'"))).scalar()
-        if not unit_id:
-            unit_id = (await conn.execute(text("INSERT INTO vms.business_unit (organization_id, code, name) VALUES (:org, 'IT', 'Information Technology') RETURNING id"), {"org": org_id})).scalar()
-
-        # Periksa data karyawan (Employee), buat jika belum ada
-        emp_id = (await conn.execute(text("SELECT id FROM vms.employee WHERE employee_no = 'EMP001'"))).scalar()
-        if not emp_id:
-            emp_id = (await conn.execute(text("""
-                INSERT INTO vms.employee (organization_id, employee_no, full_name, position, unit_id, join_date)
-                VALUES (:org, 'EMP001', 'John Doe', 'Engineer', :unit, '2026-01-01') RETURNING id
-            """), {"org": org_id, "unit": unit_id})).scalar()
-
-        print("Database seeded with sample data.")
+        print("Database seeded with Master Schema V2 initial data.")
     await engine.dispose()
 
 async def cleanup_orphans() -> None:
     """
     Membersihkan sesi pengguna yang yatim (orphan) atau sudah kedaluwarsa.
     """
-    # Membuat koneksi database untuk proses pembersihan
     engine = make_engine(_operator_url())
     async with engine.begin() as conn:
-        # Hapus session kedaluwarsa atau ter-revoke yang lebih dari 30 hari
         res = await conn.execute(text("""
-            DELETE FROM vms.user_session
-            WHERE (state = 'REVOKED' OR state = 'ROTATED' OR expires_at < now())
-            AND last_used_at < now() - interval '30 days'
+            DELETE FROM user_sessions
+            WHERE (is_revoked = TRUE OR expires_at < now())
+            AND update_at < now() - interval '30 days'
         """))
         print(f"Cleaned up {res.rowcount} orphan/expired sessions.")
     await engine.dispose()

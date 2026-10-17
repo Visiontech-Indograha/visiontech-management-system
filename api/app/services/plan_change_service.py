@@ -5,6 +5,7 @@ ACCEPT_CHANGE, REJECT_CHANGE, WITHDRAW_CHANGE. Rencana lama tetap berlaku sampai
 Kewenangan: PM unit/OPS & ketua menurut SK dibaca lewat penjaga V-07; ketua baru pada adendum
 personel dikenali dari usulan itu sendiri (ia belum tentu anggota SK).
 """
+
 from __future__ import annotations
 
 import json
@@ -24,7 +25,7 @@ from app.crud.crud_plan_transition import CRUDPlanTransition
 from app.services.access_service import PlanNeed, check_plan_access
 from app.services.plan_assignment_service import PlanAssignmentService
 
-ACTIVE = (PlanStatus.ACCEPTED, PlanStatus.IN_PROGRESS)   # domain.js requireStatus(['ACCEPTED','IN_PROGRESS'])
+ACTIVE = (PlanStatus.ACCEPTED, PlanStatus.IN_PROGRESS)  # domain.js requireStatus(['ACCEPTED','IN_PROGRESS'])
 OPEN = (ChangeStatus.PENDING_PM, ChangeStatus.AWAITING_LEADER_ACCEPTANCE)
 
 
@@ -50,6 +51,7 @@ class PlanChangeService:
     Layanan utama yang mengelola usulan perubahan pada SK yang sedang berjalan (adendum),
     termasuk perubahan jadwal/perpanjangan maupun pergantian komposisi tim (personel).
     """
+
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
         self.repo = CRUDPlanChange(db)
@@ -115,12 +117,20 @@ class PlanChangeService:
         reason = _require_reason(reason, "Alasan perubahan wajib diisi.")
         version = await self.repo.next_document_version(plan_id)
         return await self.repo.insert_change(
-            plan_id=plan_id, change_type=ChangeType.EXTEND, status=ChangeStatus.PENDING_PM, reason=reason,
-            base_revision=plan.revision, proposed_revision=version,
-            requested_by=await self.repo.employee_of(user.user_id), old_end=plan.period_end, new_end=new_end)
+            plan_id=plan_id,
+            change_type=ChangeType.EXTEND,
+            status=ChangeStatus.PENDING_PM,
+            reason=reason,
+            base_revision=plan.revision,
+            proposed_revision=version,
+            requested_by=await self.repo.employee_of(user.user_id),
+            old_end=plan.period_end,
+            new_end=new_end,
+        )
 
-    async def request_personnel_change(self, plan_id: UUID, user: CurrentUser, leader_id: UUID | None,
-                                       member_ids: list[UUID], reason: str) -> Any:
+    async def request_personnel_change(
+        self, plan_id: UUID, user: CurrentUser, leader_id: UUID | None, member_ids: list[UUID], reason: str
+    ) -> Any:
         """
         PM mengajukan susunan personel baru (domain.js REQUEST_PERSONNEL_CHANGE).
         Adendum langsung terbit dan menunggu penerimaan oleh ketua tim yang ditunjuk.
@@ -142,7 +152,10 @@ class PlanChangeService:
         if set(people) - await self.members.active_employees(people, user.organization_id):
             raise _invalid("Semua anggota tim harus aktif.")
         await PlanAssignmentService(CRUDPlanAssignment(self.db)).validate_team_scope(
-            user, plan.unit_id, people, current_team=current,
+            user,
+            plan.unit_id,
+            people,
+            current_team=current,
         )
         conflicts = await self.members.schedule_conflicts(people, plan_id)
         if conflicts:
@@ -151,12 +164,20 @@ class PlanChangeService:
         version = await self.repo.next_document_version(plan_id)
         requester = await self.repo.employee_of(user.user_id)
         change_id = await self.repo.insert_change(
-            plan_id=plan_id, change_type=ChangeType.PERSONNEL, status=ChangeStatus.AWAITING_LEADER_ACCEPTANCE,
-            reason=reason, base_revision=plan.revision, proposed_revision=version, requested_by=requester,
-            leader_id=leader, member_ids=members)
+            plan_id=plan_id,
+            change_type=ChangeType.PERSONNEL,
+            status=ChangeStatus.AWAITING_LEADER_ACCEPTANCE,
+            reason=reason,
+            base_revision=plan.revision,
+            proposed_revision=version,
+            requested_by=requester,
+            leader_id=leader,
+            member_ids=members,
+        )
         snapshot = {"sk": await self._snapshot(plan_id), "usulan": {"ketua": leader, "anggota": members}}
-        await self.repo.issue_addendum(change_id, plan_id, DocumentKind.PERSONNEL_ADDENDUM, version,
-                                       snapshot, requester, reason)
+        await self.repo.issue_addendum(
+            change_id, plan_id, DocumentKind.PERSONNEL_ADDENDUM, version, snapshot, requester, reason
+        )
         return change_id
 
     # ── Keputusan ────────────────────────────────────────────────────────────────────────────
@@ -187,7 +208,9 @@ class PlanChangeService:
         Returns:
             bool: True jika pengguna adalah ketua tim yang diusulkan.
         """
-        return bool(change.proposed_leader_id) and change.proposed_leader_id == await self.repo.employee_of(user.user_id)
+        return bool(change.proposed_leader_id) and change.proposed_leader_id == await self.repo.employee_of(
+            user.user_id
+        )
 
     async def approve_change(self, change_id: UUID, user: CurrentUser) -> Any:
         """
@@ -207,13 +230,22 @@ class PlanChangeService:
         if conflicts:
             other = conflicts[0].number or conflicts[0].title or "work plan lain"
             raise AppError("PERSONNEL_CONFLICT", f"Jadwal personel bertabrakan dengan {other}.", status=409)
-        await self.repo.set_change(change_id, ChangeStatus.AWAITING_LEADER_ACCEPTANCE,
-                                   decided_by=await self.repo.employee_of(user.user_id))
-        snapshot = {"sk": await self._snapshot(change.work_plan_id),
-                    "usulan": {"akhir_baru": change.new_period_end.isoformat()}}
-        await self.repo.issue_addendum(change_id, change.work_plan_id, DocumentKind.ADDENDUM,
-                                       change.proposed_revision, snapshot,
-                                       await self.repo.employee_of(user.user_id), change.reason)
+        await self.repo.set_change(
+            change_id, ChangeStatus.AWAITING_LEADER_ACCEPTANCE, decided_by=await self.repo.employee_of(user.user_id)
+        )
+        snapshot = {
+            "sk": await self._snapshot(change.work_plan_id),
+            "usulan": {"akhir_baru": change.new_period_end.isoformat()},
+        }
+        await self.repo.issue_addendum(
+            change_id,
+            change.work_plan_id,
+            DocumentKind.ADDENDUM,
+            change.proposed_revision,
+            snapshot,
+            await self.repo.employee_of(user.user_id),
+            change.reason,
+        )
         return change_id
 
     async def accept_change(self, change_id: UUID, user: CurrentUser) -> Any:
@@ -235,11 +267,16 @@ class PlanChangeService:
             raise _state("Rencana Kerja sudah berubah sejak usulan ini dibuat. Muat ulang halaman.")
         acceptor = await self.repo.employee_of(user.user_id)
         if change.change_type == ChangeType.PERSONNEL:
-            await self.repo.apply_personnel(change.work_plan_id, change.proposed_leader_id,
-                                            [str(m) for m in change.proposed_members], change.proposed_revision)
+            await self.repo.apply_personnel(
+                change.work_plan_id,
+                change.proposed_leader_id,
+                [str(m) for m in change.proposed_members],
+                change.proposed_revision,
+            )
         else:
-            await self.repo.apply_extension(change.work_plan_id, change.period_end, change.new_period_end,
-                                            change.proposed_revision)
+            await self.repo.apply_extension(
+                change.work_plan_id, change.period_end, change.new_period_end, change.proposed_revision
+            )
         await self.repo.set_change(change_id, ChangeStatus.EFFECTIVE)
         await self.repo.set_document(change.document_id, DocumentStatus.EFFECTIVE, accepted_by=acceptor)
         return change_id
@@ -253,8 +290,10 @@ class PlanChangeService:
         change = await self._load(change_id, user)
         if change.change_type == ChangeType.PERSONNEL:
             if not await self._is_incoming_leader(change, user):
-                raise ForbiddenError("Hanya ketua tim yang ditunjuk pada revisi personel ini yang dapat menolaknya. "
-                                     "PM dapat menarik usulannya sendiri.")
+                raise ForbiddenError(
+                    "Hanya ketua tim yang ditunjuk pada revisi personel ini yang dapat menolaknya. "
+                    "PM dapat menarik usulannya sendiri."
+                )
         else:
             access = await check_plan_access(self.db, change.work_plan_id, user, PlanNeed.VIEW)
             if not (access.is_leader or access.manages):

@@ -4,6 +4,7 @@ app/modules/signatures/routes/plan_document_route.py
 Rute endpoint HTTP untuk dokumen rencana kerja (/work-plans/{plan_id}/documents).
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.1.
 """
+
 from fastapi import APIRouter, Depends
 
 from app.api.deps import plan_access

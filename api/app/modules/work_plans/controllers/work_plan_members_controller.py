@@ -4,6 +4,7 @@ app/modules/work_plans/controllers/work_plan_members_controller.py
 Controller orkestrasi use case susunan tim SK (ketua dan anggota).
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.2.
 """
+
 from __future__ import annotations
 
 from uuid import UUID
@@ -59,4 +60,3 @@ class WorkPlanMembersController:
 
 
 __all__ = ["WorkPlanMembersController"]
-

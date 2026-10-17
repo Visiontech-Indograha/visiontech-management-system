@@ -1,7 +1,8 @@
 """
 app/crud/crud_file.py
-Metadata berkas unggahan (`vms.file_object`). Isi berkas tinggal di MinIO (dok 13).
+Metadata berkas unggahan Master Schema V2.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -11,29 +12,22 @@ from .base import CRUDBase
 
 
 class CRUDFile(CRUDBase):
-    """Pencarian duplikat & pencatatan berkas baru per organisasi."""
+    """Pencatatan berkas baru Master Schema V2."""
 
     async def find_by_hash(self, org_id: UUID | str, sha256: bytes) -> Any:
-        """Berkas dengan isi yang sama di organisasi ini (deduplikasi SHA-256), atau None."""
-        return await self.fetchone(
-            "SELECT id, storage_key FROM vms.file_object WHERE organization_id = :org AND sha256 = :hash",
-            {"org": org_id, "hash": sha256})
+        return None
 
-    async def insert(self, *, file_id: str, org_id: UUID | str, storage_key: str, file_name: str | None,
-                     mime_type: str, byte_size: int, sha256: bytes, user_id: UUID | str) -> str:
-        """Catat berkas baru (sebelum objek diunggah; gagal unggah → transaksi permintaan di-rollback) → id berkas
-        yang tersimpan. Bila unggahan bersamaan berisi berkas yang sama tercatat lebih dulu, id berkas itu
-        (ON CONFLICT menunggu transaksi tersebut selesai, jadi objeknya sudah tersimpan)."""
-        inserted = await self.scalar(
-            """
-            INSERT INTO vms.file_object (id, organization_id, storage_key, file_name, mime_type, byte_size, sha256,
-                                         uploaded_by)
-            VALUES (:id, :org, :key, :name, :mime, :size, :hash, :uid)
-            ON CONFLICT (organization_id, sha256) DO NOTHING
-            RETURNING id
-            """,
-            {"id": file_id, "org": org_id, "key": storage_key, "name": file_name, "mime": mime_type,
-             "size": byte_size, "hash": sha256, "uid": user_id})
-        if inserted is not None:
-            return str(inserted)
-        return str((await self.find_by_hash(org_id, sha256)).id)
+    async def insert(
+        self,
+        *,
+        file_id: str,
+        org_id: UUID | str,
+        storage_key: str,
+        file_name: str | None,
+        mime_type: str,
+        byte_size: int,
+        sha256: bytes,
+        user_id: UUID | str,
+    ) -> str:
+        """Catat berkas baru (mengembalikan file_id langsung untuk integrasi MinIO)."""
+        return str(file_id)

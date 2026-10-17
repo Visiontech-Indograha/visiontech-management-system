@@ -4,6 +4,7 @@ app/modules/employees/controllers/employee_controller.py
 Controller orkestrasi use case manajemen karyawan.
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.2.
 """
+
 from __future__ import annotations
 
 from datetime import date
@@ -58,9 +59,7 @@ class EmployeeController:
         q: str | None,
     ) -> EmployeeListResponse:
         """Mengambil daftar karyawan dengan paginasi dan filter privasi."""
-        total, rows = await self.employee_service.list_page(
-            current_user.organization_id, is_active, q, page, size
-        )
+        total, rows = await self.employee_service.list_page(current_user.organization_id, is_active, q, page, size)
         scope = await self.employee_service.private_viewer(current_user.user_id, current_user.permissions)
         items = [_shown(EmployeeResponse(**row._mapping), scope) for row in rows]
         return EmployeeListResponse(items=items, total=total, page=page, size=size)
@@ -71,9 +70,7 @@ class EmployeeController:
         scope = await self.employee_service.private_viewer(current_user.user_id, current_user.permissions)
         return _shown(EmployeeResponse(**row._mapping), scope)
 
-    async def handle_create_employee(
-        self, current_user: CurrentUser, data: EmployeeCreate
-    ) -> EmployeeResponse:
+    async def handle_create_employee(self, current_user: CurrentUser, data: EmployeeCreate) -> EmployeeResponse:
         """Menambahkan karyawan baru ke dalam organisasi."""
         try:
             row = await self.employee_service.create(current_user.organization_id, data.model_dump())
@@ -94,8 +91,7 @@ class EmployeeController:
     ) -> EmployeeResponse:
         """Mengubah data pribadi karyawan."""
         fields = {
-            k: v for k, v in data.model_dump(exclude_unset=True).items()
-            if not (k == "attendance_mode" and v is None)
+            k: v for k, v in data.model_dump(exclude_unset=True).items() if not (k == "attendance_mode" and v is None)
         }
         if not fields:
             raise HTTPException(
@@ -127,9 +123,7 @@ class EmployeeController:
         )
         return EmployeeAssignmentResponse(**row._mapping)
 
-    async def handle_offboard(
-        self, current_user: CurrentUser, emp_id: UUID, data: EmployeeOffboard
-    ) -> dict[str, Any]:
+    async def handle_offboard(self, current_user: CurrentUser, emp_id: UUID, data: EmployeeOffboard) -> dict[str, Any]:
         """Mengakhiri masa kerja karyawan."""
         return await self.employee_service.offboard(emp_id, current_user.organization_id, data.reason)
 
@@ -220,4 +214,3 @@ class EmployeeController:
             )
         await self.employee_service.delete_emergency_contact(emp_id, contact_id, current_user.organization_id)
         return {"message": "Kontak darurat berhasil dihapus."}
-

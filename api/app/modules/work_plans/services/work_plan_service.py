@@ -4,6 +4,7 @@ app/modules/work_plans/services/work_plan_service.py
 Layanan logika bisnis untuk modul rencana kerja (SK).
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §5.3.
 """
+
 from app.services.geocode_service import GeocodeService
 from app.services.member_report_service import (
     MemberReportService as BaseMemberReportService,
@@ -116,4 +117,3 @@ __all__ = [
     "render_final_report_html",
     "render_plan_preview_html",
 ]
-

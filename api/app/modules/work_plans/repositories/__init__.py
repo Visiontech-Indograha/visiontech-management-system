@@ -1,6 +1,7 @@
 """
 Paket repositori untuk modul work_plans.
 """
+
 from app.modules.work_plans.repositories.work_plan_repository import (
     MemberReportRepository,
     PlanAccessRepository,
@@ -32,4 +33,3 @@ __all__ = [
     "PlanRevisionRepository",
     "PlanTransitionRepository",
 ]
-

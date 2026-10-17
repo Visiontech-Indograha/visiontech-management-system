@@ -3,6 +3,7 @@ app/services/weekly_report_service.py
 Laporan mingguan (V-25) — padanan `domain.js` SAVE_WEEKLY, SUBMIT_WEEKLY, REVIEW_WEEKLY.
 Ketua menurut SK mengisi & menyerahkan; PM unit/OPS memeriksa. Kewenangan dicek penjaga V-07 di router.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -27,6 +28,7 @@ class WeeklyReportService:
     Layanan untuk mengelola laporan mingguan dari tim SK.
     Mengontrol proses pengisian, penyerahan, dan peninjauan laporan mingguan.
     """
+
     def __init__(self, db: AsyncSession) -> None:
         """
         Inisialisasi WeeklyReportService.
@@ -135,8 +137,9 @@ class WeeklyReportService:
         # Mengeksekusi perubahan status menjadi submitted di database
         await self.repo.submit(access.plan.id, row.name, access.user.user_id)
         # Memicu notifikasi setelah laporan diserahkan
-        await NotificationService(self.repo.db).report_submitted(access.plan.id, row.name,
-                                                                 row.status == "CHANGES_REQUESTED")
+        await NotificationService(self.repo.db).report_submitted(
+            access.plan.id, row.name, row.status == "CHANGES_REQUESTED"
+        )
         return await self._week(access, week)
 
     async def review_weekly(self, access: PlanAccess, week: int, decision: str, note: str | None) -> Any:
@@ -169,6 +172,7 @@ class WeeklyReportService:
             raise _state("Laporan mingguan belum menunggu pemeriksaan.")
 
         # Mengirim notifikasi terkait hasil review kepada tim
-        await NotificationService(self.repo.db).report_reviewed(access.plan.id, row.name, decision == "APPROVE",
-                                                                clean_note or None)
+        await NotificationService(self.repo.db).report_reviewed(
+            access.plan.id, row.name, decision == "APPROVE", clean_note or None
+        )
         return await self._week(access, week)

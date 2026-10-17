@@ -4,7 +4,10 @@ app/modules/audit/controllers/audit_controller.py
 Controller orkestrasi use case penelusuran riwayat log audit.
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.2.
 """
+
 from __future__ import annotations
+
+from typing import Any
 
 from fastapi import Depends
 
@@ -35,4 +38,3 @@ class AuditController:
     async def handle_list_backups(self) -> list[dict[str, Any]]:
         """Mengambil daftar berkas arsip backup sistem dari system_backup_registry."""
         return await self.service.list_backups()
-

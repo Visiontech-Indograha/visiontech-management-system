@@ -1,6 +1,7 @@
 """
 Paket skema untuk modul work_plans.
 """
+
 from app.modules.work_plans.schemas.work_plan_schema import (
     AmendmentReasonIn,
     AssignmentEmployeeOption,
@@ -82,4 +83,3 @@ __all__ = [
     "WorkPlanResponse",
     "WorkPlanUpdate",
 ]
-

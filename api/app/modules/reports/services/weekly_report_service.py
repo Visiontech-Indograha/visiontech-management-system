@@ -4,6 +4,7 @@ app/modules/reports/services/weekly_report_service.py
 Layanan logika bisnis untuk modul laporan mingguan pekerjaan.
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §5.3.
 """
+
 from app.services.weekly_report_service import (
     WeeklyReportService as BaseWeeklyReportService,
 )

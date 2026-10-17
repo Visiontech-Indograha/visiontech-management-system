@@ -152,7 +152,7 @@ class Settings(BaseSettings):
     APP_ENV: str = "development"
 
     # Mengabaikan variabel lingkungan berlebih yang tidak dipetakan ke atribut di sini
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(env_file=(".env", "api/.env"), extra="ignore")
 
     @model_validator(mode="after")
     def _encode_database_url_credentials(self) -> Settings:

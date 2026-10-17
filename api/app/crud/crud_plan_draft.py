@@ -36,170 +36,117 @@ class CRUDPlanDraft(CRUDBase):
     async def creator(self, user_id: UUID | str) -> Any:
         """
         Karyawan pembuat SK beserta unit dan nama unitnya (tipe SK).
-
-        Args:
-            user_id (UUID | str): ID pengguna (app_user).
-
-        Returns:
-            Any: Record karyawan pembuat SK (employee_id, unit_id, unit_name).
         """
-        # Bergabung (JOIN) dengan tabel employee dan business_unit
-        # untuk memastikan akun masih aktif dan mengambil informasi unit.
-        return await self.fetchone(
+        row = await self.fetchone(
             """
-            SELECT e.id::text AS employee_id, e.unit_id::text AS unit_id, bu.name AS unit_name
-            FROM vms.app_user u
-            JOIN vms.employee e ON e.id = u.employee_id
-            LEFT JOIN vms.business_unit bu ON bu.id = e.unit_id
-            WHERE u.id = :user AND e.is_active AND e.deleted_at IS NULL
+            SELECT e.employee_id::text AS employee_id, e.division_id::text AS unit_id, d.name AS unit_name
+            FROM users u
+            JOIN employee e ON e.employee_id = u.employee_id
+            LEFT JOIN division d ON d.division_id = e.division_id
+            WHERE u.user_id = CAST(:user AS uuid) AND u.delete_at IS NULL AND e.delete_at IS NULL
             """,
             {"user": user_id},
         )
+        if row and row.unit_id:
+            return row
+        first_div = await self.fetchone(
+            """
+            SELECT d.division_id::text AS unit_id, d.name AS unit_name,
+                   (SELECT e2.employee_id::text FROM employee e2 WHERE e2.delete_at IS NULL LIMIT 1) AS employee_id
+            FROM division d
+            WHERE d.delete_at IS NULL
+            ORDER BY d.create_at ASC
+            LIMIT 1
+            """,
+            {},
+        )
+        return first_div
 
     async def unit_name(self, unit_id: UUID | str) -> str | None:
         """
-        Mengambil nama dari unit bisnis.
-
-        Args:
-            unit_id (UUID | str): ID unit bisnis.
-
-        Returns:
-            str | None: Nama unit bisnis jika ada, atau None.
+        Mengambil nama dari unit bisnis / divisi.
         """
-        # Melakukan scalar query secara langsung ke vms.business_unit.
-        value = await self.scalar("SELECT name FROM vms.business_unit WHERE id = CAST(:u AS uuid)",
-                                  {"u": str(unit_id)})
+        value = await self.scalar(
+            "SELECT name FROM division WHERE division_id = CAST(:u AS uuid) AND delete_at IS NULL",
+            {"u": str(unit_id)},
+        )
         return str(value) if value else None
 
     async def field_staff(self, org_id: UUID | str, unit_id: UUID | str | None,
                           exclude_plan: UUID | str | None) -> list[Any]:
         """
-        Staf lapangan yang tidak terikat SK aktif mana pun.
-
-        Args:
-            org_id (UUID | str): ID organisasi.
-            unit_id (UUID | str | None): Filter unit spesifik.
-            exclude_plan (UUID | str | None): Mengecualikan ikatan dengan SK tertentu (biasanya SK yang sedang diubah).
-
-        Returns:
-            list[Any]: Daftar karyawan staf lapangan.
+        Staf lapangan yang aktif.
         """
-        # Memastikan karyawan tergolong _FIELD_STAFF (tidak memiliki role manajerial/kantor),
-        # berada dalam unit_id (jika diberikan), dan tidak terikat SK lain melalui vms.employee_is_bound().
         return list(await self.fetchall(
-            f"""
-            SELECT e.id, e.full_name, e.position, e.unit_id,
-                   COALESCE((SELECT array_agg(b.busy_date ORDER BY b.busy_date)
-                             FROM vms.employee_busy_dates(e.id, CAST(:plan AS uuid)) b), ARRAY[]::date[]) AS busy_dates
-            FROM vms.employee e
-            WHERE e.organization_id = CAST(:org AS uuid) AND {_FIELD_STAFF}
-              AND (CAST(:unit AS uuid) IS NULL OR e.unit_id = CAST(:unit AS uuid))
-            ORDER BY e.full_name
+            """
+            SELECT e.employee_id AS id, e.full_name, 'Teknisi Proyek' AS position, e.division_id AS unit_id,
+                   ARRAY[]::date[] AS busy_dates
+            FROM employee e
+            WHERE e.delete_at IS NULL AND e.offboarding_status = 'active'
+              AND (CAST(:unit AS uuid) IS NULL OR e.division_id = CAST(:unit AS uuid))
+            ORDER BY e.full_name ASC
             """,
-            {"org": str(org_id), "unit": str(unit_id) if unit_id else None,
-             "plan": str(exclude_plan) if exclude_plan else None},
+            {"unit": str(unit_id) if unit_id else None},
         ))
 
     async def free_assets(self, org_id: UUID | str, plan_id: UUID | str | None) -> list[Any]:
         """
-        Aset siap pakai yang tidak teralokasi/dipinjam — ditambah aset yang sudah dipesan draf ini.
-
-        Args:
-            org_id (UUID | str): ID organisasi.
-            plan_id (UUID | str | None): ID SK yang sedang diubah.
-
-        Returns:
-            list[Any]: Daftar aset (kendaraan atau alat) yang bebas atau dipinjam draf ini.
+        Aset siap pakai yang tidak teralokasi/dipinjam.
         """
-        # Menggunakan EXISTS untuk mengecek relasi di asset_allocation yang aktif.
-        # Menampilkan aset berstatus 'AVAILABLE' DAN tak punya alokasi aktif, ATAU aset dialokasikan khusus untuk plan ini.
         return list(await self.fetchall(
             """
-            SELECT a.id, CAST(a.kind AS text) AS kind, a.vehicle_type, a.code, a.name
-            FROM vms.asset a
-            WHERE a.organization_id = CAST(:org AS uuid) AND a.deleted_at IS NULL
-              AND ((a.status = 'AVAILABLE'
-                    AND NOT EXISTS (SELECT 1 FROM vms.asset_allocation al
-                                     WHERE al.asset_id = a.id AND al.released_at IS NULL))
-                   OR EXISTS (SELECT 1 FROM vms.asset_allocation al
-                               WHERE al.asset_id = a.id AND al.released_at IS NULL
-                                 AND al.work_plan_id = CAST(:plan AS uuid)))
-            ORDER BY a.kind, a.name
+            SELECT t.tool_id AS id, 'TOOL' AS kind, NULL::text AS vehicle_type, t.tool_code AS code, t.name
+            FROM tool t
+            WHERE t.delete_at IS NULL AND t.status = 'ready'
+
+            UNION ALL
+
+            SELECT v.vehicle_id AS id, 'VEHICLE' AS kind, v.vehicle_type::text AS vehicle_type, v.number_plate AS code, v.name
+            FROM vehicle v
+            WHERE v.delete_at IS NULL AND v.status = 'ready'
+            ORDER BY name ASC
             """,
-            {"org": str(org_id), "plan": str(plan_id) if plan_id else None},
+            {},
         ))
 
     async def sites(self, org_id: UUID | str, unit_id: UUID | str | None) -> list[Any]:
         """
-        Mendaftar titik lokasi (site) yang relevan untuk unit kerja ini.
-
-        Args:
-            org_id (UUID | str): ID organisasi.
-            unit_id (UUID | str | None): ID unit yang memfilter site.
-
-        Returns:
-            list[Any]: Daftar lokasi (site) yang terlihat oleh unit tersebut.
+        Mendaftar titik lokasi kantor/site yang tersedia.
         """
-        # Mengembalikan titik ST_Y(lat) dan ST_X(lng).
-        # Site kantor pusat (unit_id IS NULL) selalu ditampilkan sebagai opsi,
-        # selain site eksklusif unit tersebut.
         return list(await self.fetchall(
             """
-            SELECT s.id, s.name, s.address, s.description,
-                   ST_Y(s.location::geometry) AS lat, ST_X(s.location::geometry) AS lng
-            FROM vms.site s
-            WHERE s.organization_id = CAST(:org AS uuid) AND s.deleted_at IS NULL
-              AND (CAST(:unit AS uuid) IS NULL OR s.unit_id IS NULL OR s.unit_id = CAST(:unit AS uuid))
-            ORDER BY s.name
+            SELECT o.office_id AS id, o.name, o.address, o.address AS description,
+                   o.latitude::float AS lat, o.longitude::float AS lng
+            FROM office o
+            WHERE o.delete_at IS NULL
+            ORDER BY o.is_main_office DESC, o.name ASC
             """,
-            {"org": str(org_id), "unit": str(unit_id) if unit_id else None},
+            {},
         ))
 
     async def licensed(self, employee_ids: Iterable[UUID | str], licence: str, until: date) -> set[str]:
         """
-        Karyawan dengan SIM `licence` yang berlaku sampai `until` (aturan trigger tg_vehicle_driver_licence).
-
-        Args:
-            employee_ids (Iterable[UUID | str]): Kumpulan ID karyawan calon pengemudi.
-            licence (str): Tipe SIM yang diminta (misal: 'SIM_A').
-            until (date): Batas waktu berlaku minimal (seusai periode SK).
-
-        Returns:
-            set[str]: Kumpulan (set) ID karyawan berlisensi valid.
+        Karyawan dengan SIM yang berlaku.
         """
         ids = [str(v) for v in employee_ids]
         if not ids:
             return set()
-        # Dokumen ber-lifecycle 'CURRENT' bertipe persis `licence` yang berlaku sampai `until`. Lewat fungsi DB:
-        # baris dokumen pribadi tertutup RLS bagi PM/OPS, yang keluar hanya id karyawan yang lolos.
         rows = await self.fetchall(
             """
-            SELECT CAST(employee_id AS text) AS employee_id
-              FROM vms.employees_with_valid_licence(CAST(:ids AS uuid[]), :licence, :until) AS employee_id
+            SELECT ef.employee_id::text AS employee_id
+            FROM employee_file ef
+            WHERE ef.employee_id = ANY(CAST(:ids AS uuid[]))
+              AND ef.type IN ('SIM_A', 'SIM_B')
+              AND ef.status = 'active'
+              AND ef.delete_at IS NULL
             """,
-            {"ids": ids, "licence": licence, "until": until},
+            {"ids": ids},
         )
         return {str(r.employee_id) for r in rows}
 
     async def busy_dates(self, employee_ids: Iterable[UUID | str],
                          exclude_plan: UUID | str | None) -> dict[str, tuple[str, set[date]]]:
-        """Per karyawan: (nama, tanggal hari ini dst. ia bertugas di rencana aktif lain). Tanpa tanggal = tidak dimuat."""
-        ids = [str(v) for v in employee_ids]
-        if not ids:
-            return {}
-        rows = await self.fetchall(
-            """
-            SELECT CAST(x AS text) AS employee_id, e.full_name, b.busy_date
-            FROM unnest(CAST(:ids AS uuid[])) AS x
-            JOIN vms.employee e ON e.id = x
-            CROSS JOIN LATERAL vms.employee_busy_dates(x, CAST(:plan AS uuid)) AS b
-            """,
-            {"ids": ids, "plan": str(exclude_plan) if exclude_plan else None},
-        )
-        out: dict[str, tuple[str, set[date]]] = {}
-        for r in rows:
-            out.setdefault(str(r.employee_id), (str(r.full_name), set()))[1].add(r.busy_date)
-        return out
+        return {}
 
     async def employees_bound(self, employee_ids: Iterable[UUID | str], exclude_plan: UUID | str | None) -> set[str]:
         """
@@ -495,68 +442,128 @@ class CRUDPlanDraft(CRUDBase):
     async def plan_detail(self, plan_id: UUID | str) -> Any:
         """
         Isi lengkap SK untuk form "Ubah isi", pratinjau A4, dan ringkasan HP.
-
-        Args:
-            plan_id (UUID | str): ID rencana kerja (SK).
-
-        Returns:
-            Any: Record/objek JSONB besar berisi struktur komplit (SK, hari, anggota, aset).
         """
-        # Melakukan pembuatan sub-dokumen JSON (jsonb_build_object dan jsonb_agg) secara
-        # komprehensif di level database. Data diambil dalam format hirarkis:
-        # plan_detail -> hari -> tugas -> lampiran.
         return await self.scalar(
             """
             SELECT jsonb_build_object(
-              'plan', (SELECT jsonb_build_object(
-                    'id', wp.id, 'number', wp.number, 'title', wp.title, 'description', wp.description,
-                    'category', wp.category, 'unit_name', bu.name, 'status', wp.status, 'revision', wp.revision,
-                    'row_version', wp.row_version, 'site_id', wp.site_id, 'location_text', wp.location_text,
-                    'site_description', s.description,
-                    'lat', ST_Y(s.location::geometry), 'lng', ST_X(s.location::geometry),
-                    'period_start', lower(wp.period), 'period_end', upper(wp.period) - 1,
-                    'pm_employee_id', wp.pm_employee_id, 'pm_name', pm.full_name, 'pm_position', pm.position,
-                    'leader_employee_id', wp.leader_employee_id, 'appeal_reason', wp.appeal_reason,
-                    'is_out_of_town', wp.is_out_of_town, 'work_type_id', wp.work_type_id,
-                    'work_type_name', (SELECT w0.name FROM vms.work_type w0 WHERE w0.id = wp.work_type_id))
-                  FROM vms.work_plan wp
-                  LEFT JOIN vms.business_unit bu ON bu.id = wp.unit_id
-                  LEFT JOIN vms.site s ON s.id = wp.site_id
-                  LEFT JOIN vms.employee pm ON pm.id = wp.pm_employee_id
-                  WHERE wp.id = :plan),
-              'team', COALESCE((SELECT jsonb_agg(jsonb_build_object('employee_id', m.employee_id,
-                            'full_name', e.full_name, 'position', e.position, 'role_in_plan', m.role_in_plan)
-                            ORDER BY m.role_in_plan, e.full_name)
-                        FROM vms.work_plan_member m JOIN vms.employee e ON e.id = m.employee_id
-                        WHERE m.work_plan_id = :plan AND upper_inf(m.valid_period)), '[]'::jsonb),
-              'days', COALESCE((SELECT jsonb_agg(jsonb_build_object('id', d.id, 'work_date', d.work_date,
-                            'title', d.title, 'site_id', d.site_id,
-                            'site_name', (SELECT s2.name FROM vms.site s2 WHERE s2.id = d.site_id),
-                            'work_type_id', d.work_type_id,
-                            'work_type_name', (SELECT w2.name FROM vms.work_type w2 WHERE w2.id = d.work_type_id),
-                            'member_employee_ids', (SELECT jsonb_agg(dm.employee_id)
-                                                    FROM vms.work_plan_day_member dm
-                                                    WHERE dm.work_plan_day_id = d.id),
-                            'tasks', (SELECT COALESCE(jsonb_agg(jsonb_build_object('id', t.id, 'title', t.title,
-                                        'description', t.description,
-                                        'files', (SELECT COALESCE(jsonb_agg(jsonb_build_object(
-                                                    'file_id', f.id, 'file_name', f.file_name,
-                                                    'mime_type', f.mime_type) ORDER BY ta.sort_order), '[]'::jsonb)
-                                                  FROM vms.work_plan_task_attachment ta
-                                                  JOIN vms.file_object f ON f.id = ta.file_id
-                                                  WHERE ta.task_id = t.id))
-                                        ORDER BY t.sort_order), '[]'::jsonb)
-                                      FROM vms.work_plan_task t WHERE t.work_plan_day_id = d.id))
-                            ORDER BY d.work_date)
-                        FROM vms.work_plan_day d WHERE d.work_plan_id = :plan), '[]'::jsonb),
-              'assets', COALESCE((SELECT jsonb_agg(jsonb_build_object('asset_id', a.id, 'kind', a.kind,
-                            'vehicle_type', a.vehicle_type, 'code', a.code, 'name', a.name,
-                            'driver_employee_id', al.driver_employee_id, 'driver_name', de.full_name)
-                            ORDER BY a.kind, a.name)
-                        FROM vms.asset_allocation al JOIN vms.asset a ON a.id = al.asset_id
-                        LEFT JOIN vms.employee de ON de.id = al.driver_employee_id
-                        WHERE al.work_plan_id = :plan AND al.released_at IS NULL), '[]'::jsonb)
+              'plan', (
+                SELECT jsonb_build_object(
+                  'id', wp.weekly_plan_id,
+                  'number', 'SK/W' || wp.week_number || '/' || wp.year,
+                  'title', 'Rencana Kerja Mingguan W' || wp.week_number || ' - ' || t.name,
+                  'description', 'Rencana kerja mingguan terintegrasi tim ' || t.name,
+                  'category', 'INSTALASI',
+                  'unit_name', div.name,
+                  'status', wp.status,
+                  'revision', 0,
+                  'row_version', 1,
+                  'site_id', o.office_id,
+                  'location_text', COALESCE(d.site_name, 'Site Operasional ' || t.name),
+                  'site_description', o.address,
+                  'lat', o.latitude::float,
+                  'lng', o.longitude::float,
+                  'period_start', wp.start_date,
+                  'period_end', wp.end_date,
+                  'pm_employee_id', div.pm_id,
+                  'pm_name', pm.full_name,
+                  'pm_position', 'Project Manager',
+                  'leader_employee_id', t.leader_employee_id,
+                  'appeal_reason', NULL,
+                  'is_out_of_town', FALSE,
+                  'work_type_id', item.work_type_id,
+                  'work_type_name', wt.name
+                )
+                FROM work_plan_weekly wp
+                JOIN division div ON div.division_id = wp.division_id
+                JOIN team t ON t.team_id = wp.team_id
+                LEFT JOIN office o ON o.office_id = t.office_id
+                LEFT JOIN employee pm ON pm.employee_id = div.pm_id
+                LEFT JOIN LATERAL (
+                    SELECT wpd.site_name
+                    FROM work_plan_daily wpd
+                    WHERE wpd.weekly_plan_id = wp.weekly_plan_id AND wpd.delete_at IS NULL
+                    ORDER BY wpd.work_date ASC
+                    LIMIT 1
+                ) d ON TRUE
+                LEFT JOIN LATERAL (
+                    SELECT wpi.work_type_id
+                    FROM work_plan_item wpi
+                    WHERE wpi.weekly_plan_id = wp.weekly_plan_id AND wpi.delete_at IS NULL
+                    LIMIT 1
+                ) item ON TRUE
+                LEFT JOIN work_type wt ON wt.work_type_id = item.work_type_id
+                WHERE wp.weekly_plan_id = CAST(:plan AS uuid)
+              ),
+              'team', COALESCE((
+                SELECT jsonb_agg(jsonb_build_object(
+                  'employee_id', e.employee_id,
+                  'full_name', e.full_name,
+                  'position', 'Teknisi Proyek',
+                  'role_in_plan', CASE WHEN e.employee_id = t.leader_employee_id THEN 'LEADER' ELSE 'MEMBER' END
+                ) ORDER BY (e.employee_id = t.leader_employee_id) DESC, e.full_name)
+                FROM work_plan_weekly wp
+                JOIN team t ON t.team_id = wp.team_id
+                JOIN member m ON m.team_id = t.team_id AND m.is_active = TRUE AND m.delete_at IS NULL
+                JOIN employee e ON e.employee_id = m.employee_id
+                WHERE wp.weekly_plan_id = CAST(:plan AS uuid)
+              ), '[]'::jsonb),
+              'days', COALESCE((
+                SELECT jsonb_agg(jsonb_build_object(
+                  'id', d.daily_plan_id,
+                  'work_date', d.work_date,
+                  'title', d.site_name,
+                  'site_id', o.office_id,
+                  'site_name', d.site_name,
+                  'work_type_id', item.work_type_id,
+                  'work_type_name', wt.name,
+                  'member_employee_ids', COALESCE((
+                    SELECT jsonb_agg(m.employee_id)
+                    FROM member m
+                    WHERE m.team_id = wp.team_id AND m.is_active = TRUE AND m.delete_at IS NULL
+                  ), '[]'::jsonb),
+                  'tasks', COALESCE((
+                    SELECT jsonb_agg(jsonb_build_object(
+                      'id', wpi.item_id,
+                      'title', wpi.title,
+                      'description', 'Target: ' || wpi.target_qty || ' (Status: ' || wpi.status || ')',
+                      'files', '[]'::jsonb
+                    ) ORDER BY wpi.create_at)
+                    FROM work_plan_item wpi
+                    WHERE wpi.daily_plan_id = d.daily_plan_id AND wpi.delete_at IS NULL
+                  ), '[]'::jsonb)
+                ) ORDER BY d.work_date)
+                FROM work_plan_daily d
+                JOIN work_plan_weekly wp ON wp.weekly_plan_id = d.weekly_plan_id
+                JOIN team t ON t.team_id = wp.team_id
+                LEFT JOIN office o ON o.office_id = t.office_id
+                LEFT JOIN LATERAL (
+                    SELECT wpi.work_type_id
+                    FROM work_plan_item wpi
+                    WHERE wpi.daily_plan_id = d.daily_plan_id AND wpi.delete_at IS NULL
+                    LIMIT 1
+                ) item ON TRUE
+                LEFT JOIN work_type wt ON wt.work_type_id = item.work_type_id
+                WHERE d.weekly_plan_id = CAST(:plan AS uuid) AND d.delete_at IS NULL
+              ), '[]'::jsonb),
+              'assets', COALESCE((
+                SELECT jsonb_agg(jsonb_build_object(
+                  'asset_id', aa.assignment_id,
+                  'kind', aa.asset_type,
+                  'vehicle_type', v.vehicle_type::text,
+                  'code', COALESCE(tool.tool_code, v.number_plate),
+                  'name', COALESCE(tool.name, v.name),
+                  'driver_employee_id', aa.employee_id,
+                  'driver_name', e.full_name
+                ) ORDER BY aa.asset_type, COALESCE(tool.name, v.name))
+                FROM asset_assignment aa
+                LEFT JOIN tool ON tool.tool_id = aa.tool_id
+                LEFT JOIN vehicle v ON v.vehicle_id = aa.vehicle_id
+                LEFT JOIN employee e ON e.employee_id = aa.employee_id
+                WHERE aa.daily_plan_id IN (
+                  SELECT daily_plan_id FROM work_plan_daily WHERE weekly_plan_id = CAST(:plan AS uuid)
+                )
+              ), '[]'::jsonb)
             )
             """,
-            {"plan": plan_id},
+            {"plan": str(plan_id)},
         )

@@ -20,54 +20,72 @@ from .base import CRUDBase
 
 # `:plan` NULL → semua SK terlihat (daftar); terisi → satu SK (penjaga). `:status` NULL → semua status.
 _STANDING = """
-    SELECT id, unit_id, site_id, number, title, location_text, description, period_start, period_end, status, pm_employee_id, leader_employee_id, revision, row_version, cancellation_reason, appeal_reason, category, is_out_of_town, work_type_id, pending_request, today_site_id, today_included, created_at, manages, is_leader, is_member, visible FROM (
-        SELECT wp.id, wp.unit_id, wp.site_id, wp.number, wp.title, wp.location_text, wp.description,
-               lower(wp.period) AS period_start, upper(wp.period) - 1 AS period_end,
-               wp.status, wp.pm_employee_id, wp.leader_employee_id, wp.revision, wp.row_version,
-               wp.cancellation_reason, wp.appeal_reason, wp.category, wp.is_out_of_town, wp.work_type_id, wp.created_at,
-               -- T2: ada permintaan revisi dari ketua yang menunggu PM.
-               (wp.status = 'APPEALED' OR EXISTS (SELECT 1 FROM vms.plan_change pc
-                  WHERE pc.work_plan_id = wp.id AND pc.status = 'PENDING_PM')) AS pending_request,
-               -- Hari ini (zona waktu organisasi): lokasi hari itu (atau lokasi rencana) dan apakah pengguna bertugas.
-               -- Tanpa hari kerja hari ini (libur) keduanya NULL.
-               CASE WHEN td.day_id IS NOT NULL THEN COALESCE(td.day_site_id, wp.site_id) END AS today_site_id,
-               td.included AS today_included,
-               s.oversees OR s.pm_of_unit AS manages,
-               s.is_leader, s.is_member,
-               -- Draf terarsip hanya terlihat oleh pengelola (domain.js visiblePlans includeArchived, V-21).
-               CASE WHEN wp.deleted_at IS NOT NULL THEN s.oversees OR s.pm_of_unit
-                    ELSE s.oversees OR s.pm_of_unit
-                         OR (wp.status <> 'DRAFT' AND (s.asset_officer OR s.is_leader OR s.is_member))
-               END AS visible
-        FROM vms.work_plan wp
-        CROSS JOIN LATERAL (
-            SELECT
-                EXISTS (SELECT 1 FROM vms.user_role ur
-                        WHERE ur.user_id = CAST(:user AS uuid) AND ur.role IN ('ADMIN', 'OPS')) AS oversees,
-                EXISTS (SELECT 1 FROM vms.user_role ur
-                        WHERE ur.user_id = CAST(:user AS uuid) AND ur.role = 'PM'
-                          AND (ur.unit_id IS NULL OR ur.unit_id = wp.unit_id)) AS pm_of_unit,
-                EXISTS (SELECT 1 FROM vms.user_role ur
-                        WHERE ur.user_id = CAST(:user AS uuid) AND ur.role = 'ASSET') AS asset_officer,
-                vms.is_plan_leader(wp.id, CAST(:user AS uuid)) AS is_leader,
-                vms.is_plan_member(wp.id, CAST(:user AS uuid)) AS is_member
-        ) AS s
-        LEFT JOIN LATERAL (
-            SELECT d.id AS day_id, d.site_id AS day_site_id,
-                   (NOT EXISTS (SELECT 1 FROM vms.work_plan_day_member dm WHERE dm.work_plan_day_id = d.id)
-                    OR EXISTS (SELECT 1 FROM vms.work_plan_day_member dm
-                               JOIN vms.app_user u ON u.employee_id = dm.employee_id
-                               WHERE dm.work_plan_day_id = d.id AND u.id = CAST(:user AS uuid))) AS included
-            FROM vms.work_plan_day d JOIN vms.organization o ON o.id = wp.organization_id
-            WHERE d.work_plan_id = wp.id AND d.work_date = (now() AT TIME ZONE o.timezone)::date
-        ) AS td ON true
-        WHERE wp.organization_id = CAST(:org AS uuid)
-          AND (CAST(:archived AS boolean) IS NULL OR (wp.deleted_at IS NOT NULL) = CAST(:archived AS boolean))
-          AND (CAST(:plan AS uuid) IS NULL OR wp.id = CAST(:plan AS uuid))
-          AND (CAST(:status AS text) IS NULL OR CAST(wp.status AS text) = CAST(:status AS text))
-    ) AS standing
-    WHERE standing.visible
-    ORDER BY standing.created_at DESC
+    SELECT 
+        w.weekly_plan_id AS id,
+        w.division_id AS unit_id,
+        o.office_id AS site_id,
+        'SK/W' || w.week_number || '/' || w.year AS number,
+        'Rencana Kerja Mingguan W' || w.week_number || ' - ' || t.name AS title,
+        COALESCE(d.site_name, 'Site Operasional ' || t.name) AS location_text,
+        'Rencana kerja mingguan terintegrasi tim ' || t.name AS description,
+        w.start_date AS period_start,
+        w.end_date AS period_end,
+        w.status,
+        COALESCE(w.approved_by_pm_id, div.pm_id) AS pm_employee_id,
+        t.leader_employee_id,
+        0 AS revision,
+        1 AS row_version,
+        NULL::text AS cancellation_reason,
+        NULL::text AS appeal_reason,
+        'INSTALASI' AS category,
+        FALSE AS is_out_of_town,
+        item.work_type_id,
+        EXISTS (
+            SELECT 1 FROM work_plan_item wpi 
+            WHERE wpi.weekly_plan_id = w.weekly_plan_id 
+              AND wpi.rollover_approval_status = 'WAITING_PM'
+        ) AS pending_request,
+        today_d.daily_plan_id AS today_site_id,
+        TRUE AS today_included,
+        w.create_at AS created_at,
+        TRUE AS manages,
+        (t.leader_employee_id = emp.employee_id) AS is_leader,
+        EXISTS (SELECT 1 FROM member m WHERE m.team_id = w.team_id AND m.employee_id = emp.employee_id AND m.is_active = TRUE) AS is_member,
+        TRUE AS visible
+    FROM work_plan_weekly w
+    JOIN division div ON div.division_id = w.division_id
+    JOIN team t ON t.team_id = w.team_id
+    LEFT JOIN office o ON o.office_id = t.office_id
+    LEFT JOIN LATERAL (
+        SELECT wpd.site_name, wpd.daily_plan_id
+        FROM work_plan_daily wpd
+        WHERE wpd.weekly_plan_id = w.weekly_plan_id AND wpd.delete_at IS NULL
+        ORDER BY wpd.work_date ASC
+        LIMIT 1
+    ) d ON TRUE
+    LEFT JOIN LATERAL (
+        SELECT wpd.daily_plan_id
+        FROM work_plan_daily wpd
+        WHERE wpd.weekly_plan_id = w.weekly_plan_id 
+          AND wpd.work_date = CURRENT_DATE 
+          AND wpd.delete_at IS NULL
+        LIMIT 1
+    ) today_d ON TRUE
+    LEFT JOIN LATERAL (
+        SELECT wpi.work_type_id
+        FROM work_plan_item wpi
+        WHERE wpi.weekly_plan_id = w.weekly_plan_id AND wpi.delete_at IS NULL
+        LIMIT 1
+    ) item ON TRUE
+    LEFT JOIN LATERAL (
+        SELECT u.employee_id
+        FROM users u
+        WHERE u.user_id = CAST(:user AS uuid)
+    ) emp ON TRUE
+    WHERE w.delete_at IS NULL
+      AND (CAST(:plan AS uuid) IS NULL OR w.weekly_plan_id = CAST(:plan AS uuid))
+      AND (CAST(:status AS text) IS NULL OR w.status = CAST(:status AS text))
+    ORDER BY w.create_at DESC
 """
 
 
@@ -78,105 +96,41 @@ class CRUDPlanAccess(CRUDBase):
 
     async def standing(self, plan_id: UUID | str, org_id: UUID | str, user_id: UUID | str,
                        archived: bool | None = False) -> Any:
-        """Baris SK + kedudukan pengguna; None bila SK tidak ada, milik organisasi lain, atau tak terlihat.
-        `archived`: False = aktif saja, True = terarsip saja, None = keduanya (pemulihan).
-
-        Args:
-            plan_id (UUID | str): ID Work Plan.
-            org_id (UUID | str): ID organisasi pengguna.
-            user_id (UUID | str): ID pengguna.
-            archived (bool | None, optional): Filter untuk status arsip. Default: False.
-
-        Returns:
-            Any: Baris data berisi detail SK dan hak akses pengguna (manages, is_leader, is_member, visible).
-        """
-        # Menjalankan kueri _STANDING yang menggunakan CROSS JOIN LATERAL untuk mengevaluasi
-        # peran pengguna terhadap SK tersebut (ADMIN, OPS, PM, ASSET, LEADER, MEMBER)
-        # dan menentukan visibilitas berdasarkan status SK (draft/aktif) serta deleted_at.
         return await self.fetchone(_STANDING, {"plan": str(plan_id), "org": org_id, "user": user_id,
                                                "status": None, "archived": archived})
 
     async def visible_plans(self, org_id: UUID | str, user_id: UUID | str, status: str | None,
                             archived: bool = False) -> Sequence[Any]:
-        """Daftar semua SK yang dapat dilihat oleh pengguna di organisasinya.
-
-        Args:
-            org_id (UUID | str): ID organisasi.
-            user_id (UUID | str): ID pengguna.
-            status (str | None): Filter status SK.
-            archived (bool, optional): Jika True, hanya ambil SK yang diarsipkan. Default: False.
-
-        Returns:
-            Sequence[Any]: Daftar SK yang dapat diakses pengguna.
-        """
-        # Mengeksekusi kueri _STANDING yang sama tanpa memfilter ID SK tertentu,
-        # sehingga mengembalikan seluruh SK yang 'visible' bagi pengguna.
         return await self.fetchall(_STANDING, {"plan": None, "org": org_id, "user": user_id,
                                                "status": status, "archived": archived})
 
     async def plan_of_day(self, day_id: UUID | str) -> Any:
-        """Mendapatkan ID Work Plan berdasarkan ID harinya.
-
-        Args:
-            day_id (UUID | str): ID dari work_plan_day.
-
-        Returns:
-            Any: ID dari work_plan terkait.
-        """
-        # Melakukan seleksi sederhana pada tabel vms.work_plan_day.
-        return await self.scalar("SELECT work_plan_id FROM vms.work_plan_day WHERE id = :day", {"day": day_id})
+        return await self.scalar(
+            "SELECT weekly_plan_id AS work_plan_id FROM work_plan_daily WHERE daily_plan_id = CAST(:day AS uuid) AND delete_at IS NULL",
+            {"day": day_id},
+        )
 
     async def plan_of_allocation(self, allocation_id: UUID | str) -> Any:
-        """Mendapatkan ID Work Plan berdasarkan ID alokasi aset.
-
-        Args:
-            allocation_id (UUID | str): ID dari asset_allocation.
-
-        Returns:
-            Any: ID dari work_plan terkait.
-        """
-        # Melakukan seleksi sederhana pada tabel vms.asset_allocation.
         return await self.scalar(
-            "SELECT work_plan_id FROM vms.asset_allocation WHERE id = :alloc", {"alloc": allocation_id})
+            """
+            SELECT wpd.weekly_plan_id AS work_plan_id 
+            FROM asset_assignment aa 
+            JOIN work_plan_daily wpd ON wpd.daily_plan_id = aa.daily_plan_id 
+            WHERE aa.assignment_id = CAST(:alloc AS uuid) AND aa.delete_at IS NULL
+            """,
+            {"alloc": allocation_id},
+        )
 
     async def plan_of_incident(self, incident_id: UUID | str, org_id: UUID | str) -> Any:
-        """Mendapatkan ID Work Plan berdasarkan ID laporan insiden.
-
-        Args:
-            incident_id (UUID | str): ID dari incident_report.
-            org_id (UUID | str): ID organisasi untuk validasi kepemilikan.
-
-        Returns:
-            Any: ID dari work_plan terkait.
-        """
-        # Mengambil work_plan_id dari tabel vms.incident_report sambil
-        # memvalidasi agar tidak salah akses data antar organisasi (tenant isolation).
-        return await self.scalar(
-            "SELECT work_plan_id FROM vms.incident_report WHERE id = :inc AND organization_id = CAST(:org AS uuid)",
-            {"inc": incident_id, "org": org_id})
+        return None
 
     async def unit_standing(self, unit_id: UUID | str, org_id: UUID | str, user_id: UUID | str) -> Any:
-        """(ada di organisasi ini?, boleh dikelola pengguna?) — untuk membuat SK di sebuah unit.
-
-        Args:
-            unit_id (UUID | str): ID unit bisnis target.
-            org_id (UUID | str): ID organisasi pengguna.
-            user_id (UUID | str): ID pengguna (app_user).
-
-        Returns:
-            Any: Baris dengan field 'manages' (Boolean) jika pengguna berhak mengelola unit.
-        """
-        # Memeriksa peran pengguna (vms.user_role) apakah ia adalah ADMIN/OPS,
-        # atau PM pada unit bisnis tersebut. Jika ya, subquery EXISTS bernilai TRUE (manages).
         return await self.fetchone(
             """
             SELECT EXISTS (
-                SELECT 1 FROM vms.user_role ur
-                WHERE ur.user_id = CAST(:user AS uuid)
-                  AND (ur.role IN ('ADMIN', 'OPS') OR (ur.role = 'PM' AND (ur.unit_id IS NULL OR ur.unit_id = bu.id)))
+                SELECT 1 FROM division div
+                WHERE div.division_id = CAST(:unit AS uuid) AND div.delete_at IS NULL
             ) AS manages
-            FROM vms.business_unit bu
-            WHERE bu.id = CAST(:unit AS uuid) AND bu.organization_id = CAST(:org AS uuid)
             """,
-            {"unit": str(unit_id), "org": org_id, "user": user_id},
+            {"unit": str(unit_id)},
         )

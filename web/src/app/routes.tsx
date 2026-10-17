@@ -10,7 +10,27 @@ import { ComingSoonPage } from "@/pages/system/ComingSoonPage";
 import { ForbiddenPage } from "@/pages/system/ForbiddenPage";
 import { NotFoundPage } from "@/pages/system/NotFoundPage";
 import { NAV_ITEMS } from "./navigation";
-import { AssetsPage, AttendancePage, AuditLogPage, DirectoryPage, EmployeeDetailPage, MyDocumentsPage, SitesPage, WorkTypesPage, WorkPlanDetailPage, WorkPlansPage, PlanEditorPage, AttendanceRecapPage, OvertimeRecapPage, PresentationPage, TimelinePage, AccountPage } from "./lazyPages";
+import {
+  AccountPage,
+  AssetsPage,
+  AttendancePage,
+  AttendanceRecapPage,
+  AuditLogPage,
+  DirectoryPage,
+  EmployeeDetailPage,
+  MessPage,
+  MyDocumentsPage,
+  OffboardingPage,
+  OvertimeRecapPage,
+  PlanEditorPage,
+  PresentationPage,
+  SitesPage,
+  TeamsPage,
+  TimelinePage,
+  WorkPlanDetailPage,
+  WorkPlansPage,
+  WorkTypesPage,
+} from "./lazyPages";
 import { VerifyPage } from "@/pages/verify/VerifyPage";
 import { ChangePasswordPage } from "@/pages/auth/ChangePasswordPage";
 
@@ -23,6 +43,9 @@ const PAGES: Record<string, ReactNode> = {
   "/sites": <SitesPage />,
   "/work-types": <WorkTypesPage />,
   "/work-plans": <WorkPlansPage />,
+  "/teams": <TeamsPage />,
+  "/mess": <MessPage />,
+  "/offboarding": <OffboardingPage />,
   "/assets": <AssetsPage />,
   "/timeline": <TimelinePage />,
   "/attendance": <AttendancePage />,

@@ -10,19 +10,7 @@ from enum import StrEnum
 
 
 class RoleCode(StrEnum):
-    """
-    Kode peran pengguna di seluruh sistem (global roles).
-    Mendukung Master DDL V2 (system_role_enum) dan kompatibilitas mundur.
-    """
-    # VMS Master V2 Roles
-    SUPER_ADMIN = "SUPER_ADMIN"
-    OPERATIONAL_MANAGER = "OPERATIONAL_MANAGER"
-    PROJECT_MANAGER = "PROJECT_MANAGER"
-    TEAM_LEADER = "TEAM_LEADER"
-    ADMIN_HR_GA = "ADMIN_HR_GA"
-    EMPLOYEE = "EMPLOYEE"
-
-    # Legacy Aliases
+    """Kode peran pengguna di seluruh organisasi (enum vms.role_code)."""
     ADMIN = "ADMIN"
     OPS = "OPS"
     PM = "PM"
@@ -31,6 +19,16 @@ class RoleCode(StrEnum):
     MEMBER = "MEMBER"
     FINANCE = "FINANCE"
     ASSET = "ASSET"
+
+
+class SystemRole(StrEnum):
+    """Kode peran pengguna sistem Master Schema V2 (system_role_enum)."""
+    SUPER_ADMIN = "SUPER_ADMIN"
+    OPERATIONAL_MANAGER = "OPERATIONAL_MANAGER"
+    PROJECT_MANAGER = "PROJECT_MANAGER"
+    TEAM_LEADER = "TEAM_LEADER"
+    ADMIN_HR_GA = "ADMIN_HR_GA"
+    EMPLOYEE = "EMPLOYEE"
 
 
 # Label di token untuk akun tanpa baris user_role — karyawan biasa.
@@ -67,8 +65,28 @@ class Permission(StrEnum):
     # Aset
     MANAGE_ASSETS = "manage:assets"
 
-    # Pemantauan
+    # Tim operasional (Master V2)
+    MANAGE_TEAMS = "manage:teams"
+    VIEW_TEAMS = "view:teams"
+
+    # Mess karyawan (Master V2)
+    MANAGE_MESS = "manage:mess"
+    VIEW_MESS = "view:mess"
+
+    # Offboarding & clearance aset (Master V2)
+    MANAGE_OFFBOARDING = "manage:offboarding"
+    VIEW_OFFBOARDING = "view:offboarding"
+
+    # Syarat foto pekerjaan (Master V2)
+    MANAGE_IMAGE_REQUIREMENTS = "manage:image_requirements"
+
+    # Registry backup sistem (Master V2)
+    MANAGE_BACKUPS = "manage:backups"
+
+    # Linimasa
     VIEW_TIMELINE = "view:timeline"
+
+    # Log audit
     VIEW_AUDIT = "view:audit"
 
     # Tugas terjadwal (cron) yang memicu peringatan — hanya ADMIN
@@ -80,39 +98,46 @@ P = Permission
 # Setiap karyawan yang login: direktori, dokumen pribadinya sendiri.
 BASE_PERMISSIONS: frozenset[Permission] = frozenset({P.VIEW_USERS, P.VIEW_DOCUMENTS, P.UPLOAD_DOCUMENTS})
 
-# Admin memiliki kuasa penuh atas seluruh perizinan sistem.
+# Izin tambahan per peran legacy (vms.role_code) - mematuhi dok 03 & test_permissions.py
 _ROLE_EXTRA: dict[RoleCode, frozenset[Permission]] = {
-    RoleCode.SUPER_ADMIN: frozenset(Permission),
     RoleCode.ADMIN: frozenset(Permission),
-    RoleCode.OPERATIONAL_MANAGER: frozenset({
-        P.CREATE_PLAN, P.PUBLISH_PLAN, P.REVIEW_OVERTIME, P.VIEW_ALL_ATTENDANCE,
-        P.REVIEW_ATTENDANCE, P.VIEW_TIMELINE, P.VIEW_AUDIT
-    }),
     RoleCode.OPS: frozenset({
-        P.CREATE_PLAN, P.PUBLISH_PLAN, P.REVIEW_OVERTIME, P.VIEW_ALL_ATTENDANCE,
-        P.REVIEW_ATTENDANCE, P.VIEW_TIMELINE, P.VIEW_AUDIT
-    }),
-    RoleCode.PROJECT_MANAGER: frozenset({
-        P.CREATE_PLAN, P.PUBLISH_PLAN, P.VIEW_TIMELINE, P.REVIEW_ATTENDANCE, P.MANAGE_SITES
+        P.CREATE_PLAN, P.PUBLISH_PLAN, P.REVIEW_OVERTIME, P.VIEW_TIMELINE, P.VIEW_AUDIT,
+        P.VIEW_ALL_ATTENDANCE, P.REVIEW_ATTENDANCE,
     }),
     RoleCode.PM: frozenset({
-        P.CREATE_PLAN, P.PUBLISH_PLAN, P.VIEW_TIMELINE, P.REVIEW_ATTENDANCE, P.MANAGE_SITES
-    }),
-    RoleCode.ADMIN_HR_GA: frozenset({
-        P.MANAGE_USERS, P.VERIFY_DOCUMENTS, P.MANAGE_EMPLOYEE_DOCUMENTS, P.MANAGE_ASSETS
+        P.CREATE_PLAN, P.PUBLISH_PLAN, P.VIEW_TIMELINE, P.REVIEW_ATTENDANCE, P.MANAGE_SITES,
     }),
     RoleCode.HR: frozenset({
-        P.MANAGE_USERS, P.VERIFY_DOCUMENTS, P.MANAGE_EMPLOYEE_DOCUMENTS
+        P.MANAGE_USERS, P.VERIFY_DOCUMENTS, P.MANAGE_EMPLOYEE_DOCUMENTS,
     }),
     RoleCode.FINANCE: frozenset({
         P.VIEW_ALL_ATTENDANCE, P.REVIEW_ATTENDANCE, P.EXPORT_ATTENDANCE,
-        P.REVIEW_OVERTIME, P.MANAGE_SITES
+        P.REVIEW_OVERTIME, P.MANAGE_SITES,
     }),
     RoleCode.ASSET: frozenset({P.MANAGE_ASSETS}),
-    RoleCode.TEAM_LEADER: frozenset(),
     RoleCode.LEADER: frozenset(),
-    RoleCode.EMPLOYEE: frozenset(),
     RoleCode.MEMBER: frozenset(),
+}
+
+# Izin tambahan per peran Master Schema V2 (system_role_enum)
+_SYSTEM_ROLE_EXTRA: dict[SystemRole, frozenset[Permission]] = {
+    SystemRole.SUPER_ADMIN: frozenset(Permission),
+    SystemRole.OPERATIONAL_MANAGER: frozenset({
+        P.CREATE_PLAN, P.PUBLISH_PLAN, P.REVIEW_OVERTIME, P.VIEW_ALL_ATTENDANCE,
+        P.REVIEW_ATTENDANCE, P.VIEW_TIMELINE, P.VIEW_AUDIT, P.VIEW_TEAMS,
+        P.VIEW_MESS, P.VIEW_OFFBOARDING,
+    }),
+    SystemRole.PROJECT_MANAGER: frozenset({
+        P.CREATE_PLAN, P.PUBLISH_PLAN, P.VIEW_TIMELINE, P.REVIEW_ATTENDANCE, P.MANAGE_SITES,
+        P.MANAGE_TEAMS, P.VIEW_TEAMS, P.VIEW_MESS, P.VIEW_OFFBOARDING, P.MANAGE_IMAGE_REQUIREMENTS,
+    }),
+    SystemRole.ADMIN_HR_GA: frozenset({
+        P.MANAGE_USERS, P.VERIFY_DOCUMENTS, P.MANAGE_EMPLOYEE_DOCUMENTS, P.MANAGE_ASSETS,
+        P.MANAGE_MESS, P.VIEW_MESS, P.MANAGE_OFFBOARDING, P.VIEW_OFFBOARDING, P.VIEW_TEAMS,
+    }),
+    SystemRole.TEAM_LEADER: frozenset(),
+    SystemRole.EMPLOYEE: frozenset(),
 }
 
 
@@ -124,6 +149,8 @@ def permissions_for_roles(roles: Iterable[str]) -> list[str]:
             granted |= BASE_PERMISSIONS
         elif role in RoleCode.__members__:
             granted |= BASE_PERMISSIONS | _ROLE_EXTRA[RoleCode(role)]
+        elif role in SystemRole.__members__:
+            granted |= BASE_PERMISSIONS | _SYSTEM_ROLE_EXTRA[SystemRole(role)]
     return sorted(p.value for p in granted)
 
 

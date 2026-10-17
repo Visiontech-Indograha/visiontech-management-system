@@ -11,8 +11,9 @@ from uuid import UUID
 from fastapi import APIRouter, Depends
 from fastapi.responses import HTMLResponse
 from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import plan_access, plan_day_access
+from app.api.deps import get_db_with_user, plan_access, plan_day_access
 from app.modules.work_plans.controllers.work_plan_reports_controller import (
     WorkPlanReportsController,
 )
@@ -93,9 +94,10 @@ async def weekly_report_html(
 async def list_plan_exports(
     plan_id: UUID,
     access: PlanAccess = _VIEW,
+    db: AsyncSession = Depends(get_db_with_user),
 ) -> list[dict[str, Any]]:
     """Daftar ekspor template dokumen (DOCX, PPTX, PDF, XLSX) dari public.document_template_export."""
-    rows = await access.db.execute(
+    rows = await db.execute(
         text(
             """
             SELECT

@@ -101,7 +101,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_employee_no_active ON employee (employee_no
 -- 3. Tabel users (Konfirmasi 1B: Dipisah dari employee)
 CREATE TABLE IF NOT EXISTS users (
     user_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    employee_id UUID NOT NULL UNIQUE REFERENCES employee(employee_id),
+    employee_id UUID NULL UNIQUE REFERENCES employee(employee_id),
     username VARCHAR(100) NOT NULL,
     email VARCHAR(150) NOT NULL,
     password_hash VARCHAR(255) NOT NULL,

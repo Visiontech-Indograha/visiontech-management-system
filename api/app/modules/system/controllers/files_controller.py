@@ -15,7 +15,6 @@ import filetype
 from fastapi import Depends, HTTPException, UploadFile
 from fastapi.responses import Response
 
-import app.api.v1.endpoints.files as files_api
 from app.api.deps import get_file_service
 from app.core.errors import AppError, NotFoundError
 from app.core.image import compress_image
@@ -23,7 +22,7 @@ from app.core.security import CurrentUser, create_file_access_ticket
 from app.core.storage import get_object_bytes, upload_file
 from app.modules.system.services.system_service import FileService
 
-MAX_FILE_SIZE = getattr(files_api, "MAX_FILE_SIZE", 10 * 1024 * 1024)
+MAX_FILE_SIZE = 10 * 1024 * 1024
 ALLOWED_MIMES = [
     "image/jpeg",
     "image/png",
@@ -50,11 +49,10 @@ class FilesController:
         file: UploadFile,
     ) -> dict[str, str]:
         """Validasi tipe, ukuran, deduplikasi SHA-256, kompresi citra, dan penyimpanan MinIO."""
-        max_size = getattr(files_api, "MAX_FILE_SIZE", MAX_FILE_SIZE)
-        file_bytes = await file.read(max_size + 1)
+        file_bytes = await file.read(MAX_FILE_SIZE + 1)
         byte_size = len(file_bytes)
 
-        if byte_size > max_size:
+        if byte_size > MAX_FILE_SIZE:
             raise HTTPException(
                 status_code=413,
                 detail={"code": "FILE_TOO_LARGE", "message": "Ukuran berkas melebihi batas 10MB."},
@@ -96,17 +94,16 @@ class FilesController:
             return {"file_id": stored_id, "message": "File sudah ada (deduplikasi)."}
 
         is_image = mime_type.startswith("image/")
-        uploader = getattr(files_api, "upload_file", upload_file)
 
         def process_and_upload() -> bool:
             if is_image:
                 results = compress_image(file_bytes)
                 if results:
                     return all(
-                        uploader(f"{current_user.organization_id}/{file_id}_{variant}.webp", v_bytes, "image/webp")
+                        upload_file(f"{current_user.organization_id}/{file_id}_{variant}.webp", v_bytes, "image/webp")
                         for variant, v_bytes in results.items()
                     )
-            return uploader(storage_key, file_bytes, mime_type)
+            return upload_file(storage_key, file_bytes, mime_type)
 
         loop = asyncio.get_running_loop()
         if not await loop.run_in_executor(None, process_and_upload):

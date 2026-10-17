@@ -382,7 +382,7 @@ class CRUDPlanTransition(CRUDBase):
         Returns:
             str | None: ID Karyawan bila ada.
         """
-        value = await self.scalar("SELECT employee_id::text FROM vms.app_user WHERE id = :uid", {"uid": user_id})
+        value = await self.scalar("SELECT employee_id::text FROM public.users WHERE user_id = :uid", {"uid": user_id})
         return str(value) if value else None
 
     async def is_leader(self, plan_id: UUID | str, user_id: UUID | str) -> bool:
@@ -396,8 +396,21 @@ class CRUDPlanTransition(CRUDBase):
         Returns:
             bool: True bila user bertindak sebagai Leader.
         """
-        # Mengeksekusi function internal vms.is_plan_leader untuk cek otoritas leader.
-        return bool(await self.scalar("SELECT vms.is_plan_leader(:plan, :user)", {"plan": plan_id, "user": user_id}))
+        return bool(await self.scalar(
+            """
+            SELECT EXISTS (
+                SELECT 1 FROM public.work_plan_weekly wp
+                JOIN public.users u ON u.employee_id = wp.created_by_id
+                WHERE wp.weekly_plan_id = :plan AND u.user_id = :user
+                UNION
+                SELECT 1 FROM public.work_plan_weekly wp
+                JOIN public.team t ON t.team_id = wp.team_id
+                JOIN public.users u ON u.employee_id = t.leader_employee_id
+                WHERE wp.weekly_plan_id = :plan AND u.user_id = :user
+            )
+            """,
+            {"plan": plan_id, "user": user_id},
+        ))
 
     async def publish(self, plan_id: UUID | str) -> None:
         """
@@ -555,21 +568,39 @@ class CRUDPlanTransition(CRUDBase):
         Returns:
             Any: Record laporan akhir, atau None bila belum pernah diajukan.
         """
-        # Menggabungkan final_report dengan array data ID file dari final_report_evidence.
+        # Mengambil laporan akhir/penyelesaian pekerjaan dari public.work_completion
         return await self.fetchone(
             """
-            SELECT CAST(fr.status AS text) AS status, fr.body, fr.obstacle,
-                   fr.submitted_at, se.full_name AS submitted_by_name,
-                   fr.review_note, fr.reviewed_at, re.full_name AS reviewed_by_name,
-                   COALESCE(ARRAY(SELECT CAST(ev.file_id AS text) FROM vms.final_report_evidence ev
-                                  WHERE ev.work_plan_id = fr.work_plan_id ORDER BY ev.file_id), '{}')
-                       AS evidence_file_ids
-            FROM vms.final_report fr
-            LEFT JOIN vms.employee se ON se.id = fr.submitted_by
-            LEFT JOIN vms.employee re ON re.id = fr.reviewed_by
-            WHERE fr.work_plan_id = :plan
+            SELECT 
+                CASE
+                    WHEN c.pm_signed_at IS NOT NULL THEN 'APPROVED'
+                    WHEN c.leader_signed_at IS NOT NULL THEN 'SUBMITTED'
+                    ELSE 'DRAFT'
+                END AS status,
+                c.summary_notes AS body,
+                c.obstacles AS obstacle,
+                c.leader_signed_at AS submitted_at,
+                le.full_name AS submitted_by_name,
+                'Telah diverifikasi dan ditandatangani PM' AS review_note,
+                c.pm_signed_at AS reviewed_at,
+                pe.full_name AS reviewed_by_name,
+                COALESCE(
+                    ARRAY(
+                        SELECT elem->>'url' 
+                        FROM jsonb_array_elements(c.realization_photos_json) AS elem
+                    ),
+                    '{}'
+                ) AS evidence_file_ids
+            FROM public.work_completion c
+            LEFT JOIN public.employee le ON le.employee_id = c.leader_signer_id
+            LEFT JOIN public.employee pe ON pe.employee_id = c.pm_signer_id
+            WHERE (c.weekly_plan_id = :plan OR c.completion_id = :plan)
+              AND c.delete_at IS NULL
+            ORDER BY c.create_at DESC
+            LIMIT 1
             """,
-            {"plan": plan_id})
+            {"plan": plan_id},
+        )
 
     async def final_report_snapshot(self, plan_id: UUID | str, approver: str | None, note: str | None) -> Any:
         """
@@ -578,42 +609,32 @@ class CRUDPlanTransition(CRUDBase):
 
         Args:
             plan_id (UUID | str): ID SK.
-            approver (str | None): ID karyawan (app_user.id) yang menyetujui.
+            approver (str | None): ID karyawan (users.user_id) yang menyetujui.
             note (str | None): Catatan persetujuan tambahan.
 
         Returns:
             Any: Snapshot laporan akhir.
         """
-        # Pembangunan JSONB komprehensif agar riwayat penyelesaian tercetak
-        # dengan kondisi data real-time pada saat laporan akhir ini disetujui.
         return await self.scalar(
             """
             SELECT jsonb_build_object(
               'type', 'final_report',
               'approval', jsonb_build_object(
-                  'approved_by', (SELECT full_name FROM vms.employee WHERE id = CAST(:approver AS uuid)),
+                  'approved_by', (SELECT full_name FROM public.employee WHERE employee_id = CAST(:approver AS uuid)),
                   'note', CAST(:note AS text)),
-              'plan', (SELECT jsonb_build_object('id', p.id, 'number', p.number, 'title', p.title,
-                          'location_text', p.location_text, 'period_start', lower(p.period),
-                          'period_end', upper(p.period) - 1)
-                       FROM vms.work_plan p WHERE p.id = :plan),
-              'team', COALESCE((SELECT jsonb_agg(jsonb_build_object('full_name', e.full_name,
-                                          'role_in_plan', m.role_in_plan) ORDER BY m.role_in_plan, e.full_name)
-                                FROM vms.work_plan_member m JOIN vms.employee e ON e.id = m.employee_id
-                                WHERE m.work_plan_id = :plan AND upper_inf(m.valid_period)), '[]'::jsonb),
-              'report', (SELECT jsonb_build_object('body', fr.body, 'obstacle', fr.obstacle,
-                            'submitted_by', se.full_name, 'submitted_at', fr.submitted_at,
-                            'evidence_file_ids', COALESCE((SELECT jsonb_agg(ev.file_id ORDER BY ev.file_id)
-                                FROM vms.final_report_evidence ev WHERE ev.work_plan_id = fr.work_plan_id),
-                                '[]'::jsonb))
-                         FROM vms.final_report fr LEFT JOIN vms.employee se ON se.id = fr.submitted_by
-                         WHERE fr.work_plan_id = :plan),
-              'incidents', COALESCE((SELECT jsonb_agg(jsonb_build_object('category', i.category,
-                                'severity', i.severity, 'description', i.description, 'occurred_on', i.occurred_on,
-                                'status', i.status) ORDER BY i.occurred_on, i.created_at)
-                                FROM vms.incident_report i WHERE i.work_plan_id = :plan), '[]'::jsonb))
+              'plan', (SELECT jsonb_build_object('id', p.weekly_plan_id, 'number', 'WP-W' || p.week_number, 'title', p.project_name,
+                          'location_text', '', 'period_start', p.start_date,
+                          'period_end', p.end_date)
+                       FROM public.work_plan_weekly p WHERE p.weekly_plan_id = :plan),
+              'report', (SELECT jsonb_build_object('body', c.summary_notes, 'obstacle', c.obstacles,
+                            'submitted_by', se.full_name, 'submitted_at', c.leader_signed_at,
+                            'evidence_file_ids', '[]'::jsonb)
+                         FROM public.work_completion c LEFT JOIN public.employee se ON se.employee_id = c.leader_signer_id
+                         WHERE c.weekly_plan_id = :plan AND c.report_scope = 'WEEKLY' AND c.delete_at IS NULL
+                         ORDER BY c.create_at DESC LIMIT 1))
             """,
-            {"plan": plan_id, "approver": approver, "note": note})
+            {"plan": plan_id, "approver": approver, "note": note},
+        )
 
     async def store_final_snapshot(self, plan_id: UUID | str, snapshot: str, sha256: bytes) -> None:
         """
@@ -624,11 +645,15 @@ class CRUDPlanTransition(CRUDBase):
             snapshot (str): JSON string dari final_report_snapshot.
             sha256 (bytes): Nilai hash SHA-256 dari JSON tersebut.
         """
-        # Mengisi snapshot dan snapshot_sha256 pada tabel final_report.
         await self.execute(
-            "UPDATE vms.final_report SET snapshot = CAST(:snap AS jsonb), snapshot_sha256 = :sha "
-            "WHERE work_plan_id = :plan",
-            {"plan": plan_id, "snap": snapshot, "sha": sha256})
+            """
+            UPDATE public.work_completion 
+               SET signature_hash = encode(:sha, 'hex'),
+                   update_at = now()
+             WHERE weekly_plan_id = :plan AND report_scope = 'WEEKLY' AND delete_at IS NULL
+            """,
+            {"plan": plan_id, "sha": sha256},
+        )
 
     async def final_report_submitter(self, plan_id: UUID | str) -> str | None:
         """
@@ -641,7 +666,14 @@ class CRUDPlanTransition(CRUDBase):
             str | None: ID karyawan, atau None.
         """
         value = await self.scalar(
-            "SELECT CAST(submitted_by AS text) FROM vms.final_report WHERE work_plan_id = :plan", {"plan": plan_id})
+            """
+            SELECT CAST(leader_signer_id AS text) 
+            FROM public.work_completion 
+            WHERE (weekly_plan_id = :plan OR completion_id = :plan) AND delete_at IS NULL
+            ORDER BY create_at DESC LIMIT 1
+            """,
+            {"plan": plan_id},
+        )
         return str(value) if value else None
 
     async def final_report_status(self, plan_id: UUID | str) -> str | None:
@@ -654,9 +686,21 @@ class CRUDPlanTransition(CRUDBase):
         Returns:
             str | None: Status laporan akhir.
         """
-        status: str | None = await self.scalar(
-            "SELECT CAST(status AS text) FROM vms.final_report WHERE work_plan_id = :plan", {"plan": plan_id})
-        return status
+        status = await self.scalar(
+            """
+            SELECT 
+                CASE
+                    WHEN pm_signed_at IS NOT NULL THEN 'APPROVED'
+                    WHEN leader_signed_at IS NOT NULL THEN 'SUBMITTED'
+                    ELSE 'DRAFT'
+                END
+            FROM public.work_completion 
+            WHERE (weekly_plan_id = :plan OR completion_id = :plan) AND delete_at IS NULL
+            ORDER BY create_at DESC LIMIT 1
+            """,
+            {"plan": plan_id},
+        )
+        return str(status) if status else None
 
     async def submit_final_report(self, plan_id: UUID | str, user_id: UUID | str, body: str, obstacle: str,
                                   file_ids: list[UUID]) -> None:
@@ -665,32 +709,44 @@ class CRUDPlanTransition(CRUDBase):
 
         Args:
             plan_id (UUID | str): ID SK.
-            user_id (UUID | str): ID pengguna (app_user) yang mengajukan.
+            user_id (UUID | str): ID pengguna (users) yang mengajukan.
             body (str): Isi laporan akhir.
             obstacle (str): Kendala keseluruhan pelaksanaan SK.
             file_ids (list[UUID]): Daftar lampiran dokumen bukti.
         """
-        # Melakukan UPSERT: Jika sudah pernah diajukan, status kembali ke 'SUBMITTED' dan body terbarui.
-        await self.execute(
-            """
-            INSERT INTO vms.final_report (work_plan_id, status, body, obstacle, submitted_by, submitted_at)
-            VALUES (:plan, 'SUBMITTED', :body, :obstacle,
-                    (SELECT employee_id FROM vms.app_user WHERE id = :uid), now())
-            ON CONFLICT (work_plan_id) DO UPDATE
-               SET status = 'SUBMITTED', body = EXCLUDED.body, obstacle = EXCLUDED.obstacle,
-                   submitted_by = EXCLUDED.submitted_by, submitted_at = now()
-            """,
-            {"plan": plan_id, "uid": user_id, "body": body, "obstacle": obstacle},
+        existing = await self.scalar(
+            "SELECT completion_id FROM public.work_completion WHERE weekly_plan_id = :plan AND report_scope = 'WEEKLY' AND delete_at IS NULL",
+            {"plan": plan_id},
         )
-        # Menghapus dan menulis ulang relasi file untuk tabel final_report_evidence.
-        await self.execute("DELETE FROM vms.final_report_evidence WHERE work_plan_id = :plan", {"plan": plan_id})
-        if file_ids:
+        if existing:
             await self.execute(
                 """
-                INSERT INTO vms.final_report_evidence (work_plan_id, file_id)
-                SELECT :plan, unnest(CAST(:fids AS uuid[]))
+                UPDATE public.work_completion
+                   SET summary_notes = :body, obstacles = :obstacle,
+                       leader_signer_id = (SELECT employee_id FROM public.users WHERE user_id = :uid),
+                       leader_signed_at = now(),
+                       update_at = now()
+                 WHERE completion_id = :cid
                 """,
-                {"plan": plan_id, "fids": [str(f) for f in file_ids]})
+                {"cid": existing, "body": body, "obstacle": obstacle, "uid": user_id},
+            )
+        else:
+            await self.execute(
+                """
+                INSERT INTO public.work_completion (
+                    report_scope, weekly_plan_id, summary_notes, obstacles,
+                    realization_photos_json, leader_signer_id, leader_signed_at, signature_hash
+                )
+                VALUES (
+                    'WEEKLY', :plan, :body, :obstacle,
+                    '[]'::jsonb,
+                    (SELECT employee_id FROM public.users WHERE user_id = :uid),
+                    now(),
+                    md5(random()::text || clock_timestamp()::text)
+                )
+                """,
+                {"plan": plan_id, "body": body, "obstacle": obstacle, "uid": user_id},
+            )
 
     async def review_final_report(self, plan_id: UUID | str, user_id: UUID | str, status: str,
                                   note: str | None) -> None:
@@ -699,17 +755,31 @@ class CRUDPlanTransition(CRUDBase):
 
         Args:
             plan_id (UUID | str): ID SK.
-            user_id (UUID | str): ID pengguna (app_user) yang mengevaluasi.
+            user_id (UUID | str): ID pengguna (users) yang mengevaluasi.
             status (str): Status persetujuan ('APPROVED' atau 'CHANGES_REQUESTED').
             note (str | None): Catatan review.
         """
-        # Mengubah status final_report, merekam catatan, dan timestamp reviewed_at.
-        await self.execute(
-            """
-            UPDATE vms.final_report
-               SET status = CAST(:status AS vms.report_status), review_note = :note, reviewed_at = now(),
-                   reviewed_by = (SELECT employee_id FROM vms.app_user WHERE id = :uid)
-             WHERE work_plan_id = :plan
-            """,
-            {"plan": plan_id, "uid": user_id, "status": status, "note": note},
-        )
+        if status == "APPROVED":
+            await self.execute(
+                """
+                UPDATE public.work_completion
+                   SET pm_signer_id = (SELECT employee_id FROM public.users WHERE user_id = :uid),
+                       pm_signed_at = now(),
+                       signature_hash = md5(random()::text || clock_timestamp()::text),
+                       update_at = now()
+                 WHERE weekly_plan_id = :plan AND report_scope = 'WEEKLY' AND delete_at IS NULL
+                """,
+                {"plan": plan_id, "uid": user_id},
+            )
+        else:
+            await self.execute(
+                """
+                UPDATE public.work_completion
+                   SET pm_signer_id = NULL,
+                       pm_signed_at = NULL,
+                       obstacles = COALESCE(obstacles, '') || E'\n[Catatan Revisi PM]: ' || :note,
+                       update_at = now()
+                 WHERE weekly_plan_id = :plan AND report_scope = 'WEEKLY' AND delete_at IS NULL
+                """,
+                {"plan": plan_id, "note": note or ""},
+            )

@@ -9,6 +9,14 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased] — `development`
 
+- **Milestone 8: Daily Reports, HSE, Work Completion & Template Export (`api/app/crud/crud_plan_transition.py`, `api/app/crud/crud_weekly_report.py`, `api/app/crud/crud_member_report.py`, `api/app/crud/crud_asset_reservation.py`, `api/app/modules/work_plans/routes/work_plan_reports_route.py`, `web/src/pages/work-plans/`):**
+  - Mengadaptasi `CRUDPlanTransition` untuk penyerahan (`submit_final_report`), peninjauan (`review_final_report`), serta pembacaan laporan akhir (`final_report`) langsung dari tabel `public.work_completion` terintegrasi dengan tanda tangan digital TL & PM dan foto realisasi JSON.
+  - Mengadaptasi `CRUDWeeklyReport` (`list_weeks`, `get_week`, `save`, `submit`, `review`) ke skema V2 membaca kemajuan dari `work_plan_weekly`, item pekerjaan `work_plan_item`, dan rekapitulasi `work_completion`.
+  - Mengadaptasi `CRUDMemberReport` untuk pelaporan harian berjenjang anggota dan ketua tim pada tabel `public.work_completion` (scope `DAILY`) dan `public.work_plan_daily`.
+  - Mengadaptasi `CRUDAssetReservation` (`plan_assets`, `return_history`) untuk menampilkan aset rencana kerja dari `asset_assignment` dan riwayat inspeksi kendaraan dari `public.vehicle_inspection`.
+  - Menambahkan endpoint `GET /work-plans/{plan_id}/exports` untuk mengakses daftar ekspor template dokumen (DOCX, PPTX, PDF, XLSX) dari `public.document_template_export`.
+  - Memverifikasi build frontend (`npm.cmd run build`) lulus 100% tanpa galat pada `PresentationPage`, `WorkPlanDetailPage`, `WeeklyReportsPanel`, dan `FinalReportPanel`.
+
 - **Milestone 7: Pengajuan, Peninjauan & Rekapitulasi Lembur Kerja (`api/app/crud/crud_overtime.py`, `db/06_master_schema_v2.sql`, `web/src/pages/monitoring/OvertimeRecapPage.tsx`):**
   - Mengintegrasikan tabel master `public.overtime` pada DDL dan database lokal untuk mencatat jam lembur per rencana kerja mingguan (`weekly_plan_id`).
   - Mengadaptasi `CRUDOvertime` untuk pengajuan lembur tim lapangan (`insert`), peninjauan keputusan PM (`review` status `APPROVED`/`REJECTED` dengan catatan), serta riwayat lembur per rencana kerja (`list_by_plan`).

@@ -165,15 +165,7 @@ class AuthService:
             user.id, client.fingerprint, client.user_agent, "Masuk ulang pada perangkat yang sama"
         )
 
-        active_devices = await self.sessions.count_active_devices(user.id)
-        if existing_family is None and active_devices >= 4:
-            raise AppError(
-                "MAX_DEVICES_REACHED",
-                "Batas maksimum 4 perangkat telah tercapai. "
-                "Silakan keluar dari salah satu perangkat Anda terlebih dahulu sebelum masuk di perangkat baru.",
-                status=403,
-                details={"max_devices": 4, "active_devices": active_devices},
-            )
+        await self.sessions.ensure_device_limit(user.id, limit=4)
 
         await self.sessions.record_login_attempt(login, client.ip, True)
         auth_time = int(utcnow().timestamp())

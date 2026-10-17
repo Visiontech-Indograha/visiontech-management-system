@@ -168,10 +168,37 @@ class CRUDSession(CRUDBase):
             or 0
         )
 
+    async def ensure_device_limit(self, user_id: UUID | str, limit: int = 4) -> None:
+        """Mencabut sesi terlama jika jumlah perangkat aktif telah mencapai batas."""
+        active = await self.count_active_devices(user_id)
+        if active >= limit:
+            oldest_family = await self.scalar(
+                """
+                SELECT token_family_id
+                FROM user_sessions
+                WHERE user_id = :uid AND is_revoked = FALSE AND expires_at > now() AND delete_at IS NULL
+                ORDER BY create_at ASC LIMIT 1
+                """,
+                {"uid": user_id},
+            )
+            if oldest_family:
+                await self.revoke_family(
+                    user_id, oldest_family, "Batas perangkat tercapai - sesi terlama dikeluarkan"
+                )
+
     async def find_active_family_by_fingerprint(
         self, user_id: UUID | str, fingerprint: str
     ) -> UUID | None:
-        return None
+        val = await self.scalar(
+            """
+            SELECT token_family_id
+            FROM user_sessions
+            WHERE user_id = :uid AND is_revoked = FALSE AND expires_at > now() AND delete_at IS NULL
+            ORDER BY update_at DESC LIMIT 1
+            """,
+            {"uid": user_id},
+        )
+        return UUID(str(val)) if val else None
 
     async def revoke_active_by_device(
         self, user_id: UUID | str, fingerprint: str | None, user_agent: str, reason: str
@@ -182,7 +209,11 @@ class CRUDSession(CRUDBase):
             SET is_revoked = TRUE, update_at = now()
             WHERE user_id = CAST(:uid AS uuid)
               AND is_revoked = FALSE
-              AND device_name = CAST(:agent AS varchar)
+              AND (
+                  device_name = :agent 
+                  OR device_name = 'Web Login'
+                  OR device_name = 'Aplikasi HP'
+              )
             RETURNING session_id
             """,
             {"uid": user_id, "agent": (user_agent or "Web")[:100]},

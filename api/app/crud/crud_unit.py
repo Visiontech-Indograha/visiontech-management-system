@@ -1,6 +1,6 @@
 """
 app/crud/crud_unit.py
-Unit bisnis organisasi (pilihan unit untuk mutasi/promosi, R-19).
+Divisi bisnis organisasi dari tabel division (Master Schema V2).
 """
 from __future__ import annotations
 
@@ -12,21 +12,32 @@ from .base import CRUDBase
 
 class CRUDUnit(CRUDBase):
     """
-    CRUD untuk mengelola data Unit Bisnis (Business Unit).
-    Menyediakan daftar unit untuk keperluan penempatan atau promosi karyawan (R-19).
+    CRUD untuk mengelola data Divisi Bisnis (division).
     """
 
     async def list_for_org(self, org_id: UUID | str) -> list[Any]:
         """
-        Mengambil daftar seluruh unit bisnis dalam satu organisasi.
-
-        Args:
-            org_id (UUID | str): ID organisasi.
-
-        Returns:
-            list[Any]: Daftar record unit bisnis berisi id, kode, dan nama unit.
+        Mengambil daftar seluruh divisi yang aktif dalam organisasi.
         """
-        # Mengambil daftar unit bisnis dan mengurutkannya secara alfabetis berdasarkan nama.
-        return list(await self.fetchall(
-            "SELECT id, code, name FROM vms.business_unit WHERE organization_id = :org ORDER BY name",
-            {"org": org_id}))
+        return list(
+            await self.fetchall(
+                """
+                SELECT 
+                    d.division_id AS id, 
+                    d.division_id,
+                    'DIV-' || UPPER(SUBSTRING(d.name FROM 1 FOR 3)) AS code, 
+                    d.name,
+                    d.status,
+                    d.om_id,
+                    d.pm_id,
+                    e_om.full_name AS om_name,
+                    e_pm.full_name AS pm_name
+                FROM division d
+                LEFT JOIN employee e_om ON e_om.employee_id = d.om_id
+                LEFT JOIN employee e_pm ON e_pm.employee_id = d.pm_id
+                WHERE d.delete_at IS NULL
+                ORDER BY d.name
+                """,
+                {"org": org_id},
+            )
+        )

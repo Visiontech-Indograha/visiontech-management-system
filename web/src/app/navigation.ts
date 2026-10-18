@@ -1,7 +1,6 @@
 import {
   Bed,
   BookUser,
-  Briefcase,
   CalendarRange,
   Clock,
   ChartColumn,
@@ -31,7 +30,6 @@ export interface NavItem {
 /** Menu web memakai izin yang dikirim /auth/me; API tetap menegakkan otorisasi. */
 export const NAV_ITEMS: NavItem[] = [
   { path: "/", label: "Beranda", icon: House },
-  { path: "/work-completions", label: "Order Klien (Proyek)", icon: Briefcase },
   { path: "/work-plans", label: "Work plan", icon: ClipboardList },
   { path: "/teams", label: "Tim Lapangan", icon: Users, requires: ["view:teams"] },
   { path: "/timeline", label: "Timeline tim", icon: CalendarRange, requires: ["view:timeline"] },

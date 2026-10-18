@@ -22,13 +22,22 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.enums import PlanStatus
 from app.core.errors import AppError, ConflictError, ForbiddenError, NotFoundError, trigger_rule_error
-from app.core.permissions import RoleCode
+from app.core.permissions import RoleCode, SystemRole
 from app.core.security import CurrentUser
 from app.crud.crud_asset_reservation import CRUDAssetReservation
 from app.crud.crud_plan_draft import CRUDPlanDraft
 from app.schemas.plan_draft import PlanDraftRequest
 from app.services.access_service import ensure_same_org
 from app.services.work_type_service import WorkTypeService
+
+PM_ROLES = (
+    RoleCode.PM,
+    RoleCode.OPS,
+    RoleCode.ADMIN,
+    SystemRole.PROJECT_MANAGER,
+    SystemRole.OPERATIONAL_MANAGER,
+    SystemRole.SUPER_ADMIN,
+)
 
 CATEGORIES = {
     "INSTALASI": "Instalasi",
@@ -413,9 +422,15 @@ class PlanDraftService:
         if plan is None:
             raise NotFoundError("Rencana Kerja")
         # Validasi status: DRAFT atau PM override saat ONGOING/APPROVED
-        is_pm = user.role in (RoleCode.PROJECT_MANAGER, RoleCode.OPERATIONAL_MANAGER, RoleCode.SUPER_ADMIN)
-        if plan.status != PlanStatus.DRAFT and not (is_pm and plan.status in (PlanStatus.APPROVED, PlanStatus.ONGOING)):
-            raise AppError("INVALID_STATE", "Isi rencana kerja hanya dapat diubah selama berstatus Draf atau oleh Project Manager saat berjalan.", status=409)
+        is_pm = user.role in PM_ROLES
+        if plan.status != PlanStatus.DRAFT and not (
+            is_pm and plan.status in (PlanStatus.ACCEPTED, PlanStatus.IN_PROGRESS, "APPROVED", "ONGOING")
+        ):
+            err_msg = (
+                "Isi rencana kerja hanya dapat diubah selama berstatus Draf atau "
+                "oleh Project Manager saat berjalan."
+            )
+            raise AppError("INVALID_STATE", err_msg, status=409)
         if data.row_version is None or plan.row_version != data.row_version:
             raise ConflictError()
         unit_id = str(plan.unit_id)

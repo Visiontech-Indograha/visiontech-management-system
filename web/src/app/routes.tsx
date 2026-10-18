@@ -87,6 +87,7 @@ export const routes: RouteObject[] = [
               <RequireAccess item={item}>{PAGES[item.path] ?? <ComingSoonPage title={item.label} />}</RequireAccess>
             ),
           })),
+          { path: "/work-completions", element: <WorkCompletionsPage /> },
           {
             path: "/directory/:id",
             element: (

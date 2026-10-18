@@ -1,0 +1,96 @@
+"""
+app/modules/work_completion/schemas/work_completion_schema.py
+
+Pydantic schemas untuk entitas Order Proyek Klien (Work Completion) VMS V3.
+"""
+
+from __future__ import annotations
+
+from typing import Any
+from uuid import UUID
+
+from pydantic import BaseModel, Field
+
+
+class WorkCompletionCreate(BaseModel):
+    """Schema input pembuatan Order Klien baru oleh PM / OM."""
+    division_id: UUID
+    pm_id: UUID | None = None
+    client_name: str = Field(..., min_length=2, max_length=150, description="Nama Klien/Perusahaan (misal: Pertamina)")
+    project_title: str = Field(..., min_length=3, max_length=255, description="Judul Pekerjaan/Proyek")
+    order_number: str | None = Field(None, max_length=50, description="Nomor SPK / PO / WO")
+    total_target_unit: int = Field(default=1, ge=1, description="Total target unit volume pekerjaan")
+    unit_measure: str = Field(default="Unit", max_length=50, description="Satuan unit (Unit, Titik, Meter, Gardu)")
+    order_status: str = Field(default="ONGOING", description="Status order (PENDING, ONGOING, URGENT, COMPLETED)")
+    priority_level: str = Field(default="NORMAL", description="Prioritas (LOW, NORMAL, HIGH, URGENT)")
+    site_address: str | None = None
+    site_lat: float | None = None
+    site_lng: float | None = None
+    summary_notes: str | None = None
+
+
+class WorkCompletionUpdate(BaseModel):
+    """Schema pembaruan detail Order Klien."""
+    client_name: str | None = None
+    project_title: str | None = None
+    order_number: str | None = None
+    total_target_unit: int | None = None
+    unit_measure: str | None = None
+    order_status: str | None = None
+    priority_level: str | None = None
+    site_address: str | None = None
+    site_lat: float | None = None
+    site_lng: float | None = None
+    summary_notes: str | None = None
+
+
+class WorkCompletionStatusUpdate(BaseModel):
+    """Schema khusus pembaruan status order oleh PM/OM."""
+    order_status: str = Field(..., description="PENDING, CANCELLED, ONGOING, URGENT, COMPLETED")
+    notes: str | None = None
+
+
+class WorkCompletionSignRequest(BaseModel):
+    """Schema tanda tangan digital Berita Acara Penyelesaian."""
+    signature_data_url: str = Field(..., description="Base64 PNG tanda tangan digital")
+    summary_notes: str | None = None
+    obstacles: str | None = None
+    realization_photos: list[str] = Field(default_factory=list, description="Array path foto dokumentasi hasil kerja")
+
+
+class WorkCompletionOut(BaseModel):
+    """Schema output representasi Order Proyek Klien."""
+    completion_id: UUID
+    division_id: UUID | None = None
+    division_name: str | None = None
+    pm_id: UUID | None = None
+    pm_name: str | None = None
+    client_name: str
+    project_title: str
+    order_number: str | None = None
+    total_target_unit: int
+    completed_target_unit: int = 0
+    unit_measure: str
+    order_status: str
+    priority_level: str
+    site_address: str | None = None
+    site_lat: float | None = None
+    site_lng: float | None = None
+    summary_notes: str | None = None
+    obstacles: str | None = None
+    realization_photos_json: list[str] = Field(default_factory=list)
+    leader_signer_id: UUID | None = None
+    leader_signer_name: str | None = None
+    leader_signed_at: Any | None = None
+    pm_signer_id: UUID | None = None
+    pm_signer_name: str | None = None
+    pm_signed_at: Any | None = None
+    signature_hash: str | None = None
+    create_at: Any | None = None
+    update_at: Any | None = None
+
+
+class WorkCompletionListOut(BaseModel):
+    """Schema pagination daftar Order Klien."""
+    items: list[WorkCompletionOut]
+    total: int

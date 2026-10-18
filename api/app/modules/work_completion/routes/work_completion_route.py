@@ -1,0 +1,106 @@
+"""
+app/modules/work_completion/routes/work_completion_route.py
+
+Definisi rute endpoint FastAPI untuk modul Order Proyek Klien (Work Completion) VMS V3.
+"""
+
+from __future__ import annotations
+
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, Query, status
+
+from app.api.deps import get_current_user
+from app.core.security import CurrentUser
+from app.modules.work_completion.controllers.work_completion_controller import WorkCompletionController
+from app.modules.work_completion.schemas.work_completion_schema import (
+    WorkCompletionCreate,
+    WorkCompletionListOut,
+    WorkCompletionOut,
+    WorkCompletionSignRequest,
+    WorkCompletionStatusUpdate,
+    WorkCompletionUpdate,
+)
+
+router = APIRouter(prefix="/work-completions", tags=["Work Completions (Order Klien)"])
+
+
+@router.get("", response_model=WorkCompletionListOut, summary="Daftar Order Proyek Klien")
+async def list_work_completions(
+    division_id: UUID | None = Query(None, description="Filter divisi"),
+    order_status: str | None = Query(None, description="Filter status (PENDING, ONGOING, URGENT, COMPLETED)"),
+    search: str | None = Query(None, description="Pencarian nama klien, judul proyek, atau nomor SPK"),
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    current_user: CurrentUser = Depends(get_current_user),
+    controller: WorkCompletionController = Depends(),
+) -> WorkCompletionListOut:
+    return await controller.list_orders(
+        current_user=current_user,
+        division_id=division_id,
+        status=order_status,
+        search=search,
+        limit=limit,
+        offset=offset,
+    )
+
+
+@router.post(
+    "",
+    response_model=WorkCompletionOut,
+    status_code=status.HTTP_201_CREATED,
+    summary="Buat Order Proyek Klien Baru",
+)
+async def create_work_completion(
+    body: WorkCompletionCreate,
+    current_user: CurrentUser = Depends(get_current_user),
+    controller: WorkCompletionController = Depends(),
+) -> WorkCompletionOut:
+    return await controller.create_order(body, current_user)
+
+
+@router.get("/{completion_id}", response_model=WorkCompletionOut, summary="Detail Order Proyek Klien")
+async def get_work_completion(
+    completion_id: UUID,
+    current_user: CurrentUser = Depends(get_current_user),
+    controller: WorkCompletionController = Depends(),
+) -> WorkCompletionOut:
+    return await controller.get_order(completion_id, current_user)
+
+
+@router.put("/{completion_id}", response_model=WorkCompletionOut, summary="Perbarui Data Order Proyek Klien")
+async def update_work_completion(
+    completion_id: UUID,
+    body: WorkCompletionUpdate,
+    current_user: CurrentUser = Depends(get_current_user),
+    controller: WorkCompletionController = Depends(),
+) -> WorkCompletionOut:
+    return await controller.update_order(completion_id, body, current_user)
+
+
+@router.patch(
+    "/{completion_id}/status",
+    response_model=WorkCompletionOut,
+    summary="Perbarui Status Order (PM Override)",
+)
+async def update_work_completion_status(
+    completion_id: UUID,
+    body: WorkCompletionStatusUpdate,
+    current_user: CurrentUser = Depends(get_current_user),
+    controller: WorkCompletionController = Depends(),
+) -> WorkCompletionOut:
+    return await controller.update_status(completion_id, body, current_user)
+
+
+@router.post(
+    "/{completion_id}/sign",
+    response_model=WorkCompletionOut,
+    summary="Tanda Tangan Digital Berita Acara Penyelesaian",
+)
+async def sign_work_completion(
+    completion_id: UUID,
+    body: WorkCompletionSignRequest,
+    current_user: CurrentUser = Depends(get_current_user),
+    controller: WorkCompletionController = Depends(),
+) -> WorkCompletionOut:
+    return await controller.sign_order(completion_id, body, current_user)

@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 class ImageRequirementCreate(BaseModel):
     work_type_id: UUID
     name: str = Field(..., min_length=2, max_length=150)
+    description: str | None = None
     path_image: str = Field(..., description="URL contoh foto/panduan")
     is_mandatory: bool = True
     sort_order: int = 1
@@ -20,6 +21,7 @@ class ImageRequirementCreate(BaseModel):
 
 class ImageRequirementUpdate(BaseModel):
     name: str | None = Field(None, min_length=2, max_length=150)
+    description: str | None = None
     path_image: str | None = None
     is_mandatory: bool | None = None
     sort_order: int | None = None
@@ -30,6 +32,7 @@ class ImageRequirementOut(BaseModel):
     work_type_id: UUID
     work_type_name: str | None = None
     name: str
+    description: str | None = None
     path_image: str
     is_mandatory: bool
     sort_order: int

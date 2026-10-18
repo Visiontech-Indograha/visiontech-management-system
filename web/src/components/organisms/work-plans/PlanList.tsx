@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { UseQueryResult } from "@tanstack/react-query";
 import { QueryState } from "@/components/molecules/QueryState";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
@@ -6,9 +7,11 @@ import type { WorkPlan } from "@/services/workPlanService";
 import { PlanArchivedCard } from "./PlanArchivedCard";
 import { PlanCreateButton } from "./PlanCreateButton";
 import { ActionButton } from "@/components/molecules/ActionButton";
+import { PlainAction } from "@/components/molecules/PlainAction";
 import { InlineLink } from "@/components/molecules/Links";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
+import { WorkTypeSopModal } from "./WorkTypeSopModal";
 
 /** Kartu rencana kerja (atau draf terarsip) dengan keadaan memuat/galat/kosong. */
 export function PlanList({ plans, archived, canManage, onCreate, onEdit }: {
@@ -19,7 +22,10 @@ export function PlanList({ plans, archived, canManage, onCreate, onEdit }: {
   /** Buka pratinjau draf untuk disunting. */
   onEdit: (plan: WorkPlan) => void;
 }) {
+  const [selectedWorkType, setSelectedWorkType] = useState<{ id: string; name: string } | null>(null);
+
   return (
+    <>
       <QueryState
         query={plans}
         errorText="Daftar work plan tidak dapat dimuat."
@@ -42,6 +48,33 @@ export function PlanList({ plans, archived, canManage, onCreate, onEdit }: {
                   <TextBlock as="span" className="font-medium text-lens">{p.title}</TextBlock>
                   <StatusBadge status={p.status} />
                 </div>
+
+                {/* Division & Work Type Badges */}
+                <div className="mb-2 flex flex-wrap items-center gap-1.5">
+                  {p.division_name && (
+                    <TextBlock as="span" className="inline-block rounded-control bg-emerald-500/10 px-2 py-0.5 text-xs font-semibold text-emerald-600">
+                      Divisi: {p.division_name}
+                    </TextBlock>
+                  )}
+                  {p.work_type_name && (
+                    <PlainAction
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (p.work_type_id) {
+                          setSelectedWorkType({ id: p.work_type_id, name: p.work_type_name ?? "SOP Pekerjaan" });
+                        }
+                      }}
+                      className="inline-flex items-center gap-1 rounded-control bg-sky-500/15 px-2 py-0.5 text-xs font-semibold text-sky-600 hover:bg-sky-500/25 transition-colors cursor-pointer"
+                      title="Klik untuk melihat Standarisasi SOP Foto"
+                    >
+                      <TextBlock as="span">📷</TextBlock>
+                      <TextBlock as="span" className="underline decoration-dotted">{p.work_type_name}</TextBlock>
+                    </PlainAction>
+                  )}
+                </div>
+
                 {p.is_out_of_town && (
                   <TextBlock className="mb-1 mr-1 inline-block rounded-control bg-accent px-2 py-0.5 text-sm font-medium text-lens">Luar kota</TextBlock>
                 )}
@@ -69,5 +102,14 @@ export function PlanList({ plans, archived, canManage, onCreate, onEdit }: {
           ))}
         </ListBlock>
       </QueryState>
+
+      {selectedWorkType && (
+        <WorkTypeSopModal
+          workTypeId={selectedWorkType.id}
+          workTypeName={selectedWorkType.name}
+          onClose={() => setSelectedWorkType(null)}
+        />
+      )}
+    </>
   );
 }

@@ -9,6 +9,14 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased] — `development`
 
+- **Implementasi Aksi Masif VMS V3: Multi-Format Exporter, SOP Foto, Order Klien & PM Override (`api/app/`, `web/src/`, `db/`):**
+  - **Sistem Dokumen & Media Fisik:** Menambahkan mount `/uploads` StaticFiles di FastAPI `app/main.py` dan `lifespan.py`, fallback resolver pada `files_controller.py`, serta skrip seeding otomatis `scripts/seed_media_assets.py` dari direktori `web/dist/foto_test/` dan `file_test/` ke subfolder storage lokal.
+  - **In-App Preview & Pembangkit Dokumen Multi-Format:** Mengembangkan `DocumentExportService` untuk menghasilkan 4 format dokumen operasional berstandar industri: PDF (WeasyPrint), Word/DOCX (python-docx), Excel/XLSX (openpyxl), dan Presentasi/PPTX (python-pptx). Menambahkan endpoint preview dan unduh pada rute mingguan dan harian.
+  - **UI Work Plan Weekly & Panduan SOP Foto:** Menampilkan badge Divisi dan tombol interaktif Tipe Pekerjaan pada tabel rencana kerja mingguan (`PlanList.tsx`), membangun modal dialog interaktif `WorkTypeSopModal.tsx` dengan checklist instruksi dan referensi gambar, serta menambahkan kolom `description` pada tabel `image_requirement`.
+  - **Restrukturisasi Order Proyek Klien (`Work Completion`):** Membangun modul lengkap `api/app/modules/work_completion` (routes, controllers, services, CRUD, schemas) sebagai entitas induk order proyek (misal Pertamina 13 CCTV, PLN Gate Portal), serta antarmuka web manajemen order `WorkCompletionsPage.tsx` di sidebar utama.
+  - **PM Full Override Authority:** Mengizinkan modifikasi jadwal dan penambahan hari kerja oleh PM/OM/Super Admin pada rencana kerja berstatus `APPROVED` dan `ONGOING` di `plan_draft_service.py` dan `plan_edit_service.py`, serta endpoint pemindahan tugas harian `reschedule_item`.
+  - **Verifikasi Mutu & Kepatuhan:** 5/5 unit test di `tests/test_v3_features.py` lulus 100%, linter `ruff check` 0 error (panjang baris ≤ 120), verifikasi tipe `mypy` 0 error, dan kompilasi build frontend `tsc -b && vite build` berhasil 100%.
+
 - **Pembaruan Skema Work Type per Divisi & Penegakan RBAC Master Schema V2 (`db/`, `api/app/`):**
   - Menambahkan kolom `division_id UUID NOT NULL REFERENCES division(division_id)` pada tabel `work_type` di DDL `db/06_master_schema_v2.sql` dan data seed `db/07_master_seed_v2.sql`, serta melakukan migrasi langsung pada basis data `test_migration` dan `vms_test`.
   - Menambahkan indeks unik majemuk `uq_work_type_division_name (division_id, lower(name)) WHERE delete_at IS NULL` yang mengizinkan jenis pekerjaan bernama sama di divisi berbeda sekaligus mencegah duplikasi dalam divisi yang sama.

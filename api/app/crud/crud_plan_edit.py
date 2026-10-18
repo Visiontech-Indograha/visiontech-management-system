@@ -215,3 +215,48 @@ class CRUDPlanEdit(CRUDBase):
                 """,
                 {"day": str(day_id), "wt": str(wt_id), "title": t},
             )
+
+    async def reschedule_item(
+        self,
+        item_id: UUID | str,
+        target_daily_plan_id: UUID | str,
+        *,
+        start_time: str | None = None,
+        end_time: str | None = None,
+        location_name: str | None = None,
+        site_lat: float | None = None,
+        site_lng: float | None = None,
+        assigned_employee_ids: str | None = None,
+    ) -> Any:
+        """Pindahkan item penugasan ke hari/slot lain oleh PM (PM Full Override)."""
+        return await self.fetchone(
+            """
+            UPDATE work_plan_item
+            SET
+                daily_plan_id = CAST(:target_day AS uuid),
+                weekly_plan_id = (
+                    SELECT weekly_plan_id FROM work_plan_daily
+                    WHERE daily_plan_id = CAST(:target_day AS uuid)
+                ),
+                start_time = COALESCE(CAST(:start_time AS time), start_time),
+                end_time = COALESCE(CAST(:end_time AS time), end_time),
+                location_name = COALESCE(:location_name, location_name),
+                site_lat = COALESCE(:site_lat, site_lat),
+                site_lng = COALESCE(:site_lng, site_lng),
+                assigned_employee_ids = COALESCE(CAST(:emp_ids AS jsonb), assigned_employee_ids),
+                update_at = NOW()
+            WHERE item_id = CAST(:item_id AS uuid) AND delete_at IS NULL
+            RETURNING item_id, daily_plan_id, weekly_plan_id, title, start_time, end_time, location_name, status
+            """,
+            {
+                "item_id": str(item_id),
+                "target_day": str(target_daily_plan_id),
+                "start_time": start_time,
+                "end_time": end_time,
+                "location_name": location_name,
+                "site_lat": site_lat,
+                "site_lng": site_lng,
+                "emp_ids": assigned_employee_ids,
+            },
+        )
+

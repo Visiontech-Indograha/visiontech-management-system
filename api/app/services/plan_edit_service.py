@@ -15,12 +15,22 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.enums import PlanStatus
 from app.core.errors import ValidationError, trigger_rule_error
+from app.core.permissions import RoleCode, SystemRole
 from app.core.security import CurrentUser
 from app.crud.crud_plan_access import CRUDPlanAccess
 from app.crud.crud_plan_edit import CRUDPlanEdit
 from app.schemas.plan import WorkPlanCreate, WorkPlanUpdate
 from app.services.access_service import PlanAccess, check_unit_manager, ensure_same_org, require_plan_status
 from app.services.plan_assignment_service import PlanAssignmentService
+
+PM_ROLES = (
+    RoleCode.PM,
+    RoleCode.OPS,
+    RoleCode.ADMIN,
+    SystemRole.PROJECT_MANAGER,
+    SystemRole.OPERATIONAL_MANAGER,
+    SystemRole.SUPER_ADMIN,
+)
 
 
 def _db_error(e: Exception) -> HTTPException:
@@ -85,10 +95,12 @@ class PlanEditService:
         row = await self.repo.draft_state(plan_id, user.organization_id)
         if not row:
             raise HTTPException(status_code=404, detail="Rencana Kerja tidak ditemukan.")
-        if row.status != "DRAFT":
+        is_pm = user.role in PM_ROLES
+        if row.status != "DRAFT" and not (is_pm and row.status in ("APPROVED", "ONGOING")):
+            err_msg = "Hanya rencana kerja berstatus Draf atau yang sedang berjalan yang dapat diubah oleh PM."
             raise HTTPException(
                 status_code=400,
-                detail={"code": "NOT_DRAFT", "message": "Hanya rencana kerja berstatus Draf yang dapat diubah."},
+                detail={"code": "NOT_DRAFT", "message": err_msg},
             )
         if row.row_version != data.row_version:
             raise HTTPException(
@@ -139,8 +151,12 @@ class PlanEditService:
     ) -> Any:
         """Tambah hari pada draf. → id hari."""
         status = await self.repo.plan_status(plan_id, access.user.organization_id)
-        if not status or status != "DRAFT":
-            raise HTTPException(status_code=400, detail="Tidak dapat menambah hari. Status rencana kerja bukan DRAFT.")
+        is_pm = access.user.role in PM_ROLES
+        if not status or (status != "DRAFT" and not (is_pm and status in ("APPROVED", "ONGOING"))):
+            raise HTTPException(
+                status_code=400,
+                detail="Tidak dapat menambah hari. Status rencana kerja bukan DRAFT atau ONGOING.",
+            )
         try:
             return await self.repo.insert_day(plan_id, work_date, title, sort_order)
         except SQLAlchemyError:
@@ -156,8 +172,10 @@ class PlanEditService:
     async def save_day(
         self, access: PlanAccess, day_id: UUID, title: str, task_titles: list[str]
     ) -> tuple[str, list[str]]:
-        """domain.js SAVE_DAY (V-23): selagi draf, 1–30 tugas, judul hari & tugas wajib. → (judul, tugas)."""
-        require_plan_status(access, PlanStatus.DRAFT)
+        """domain.js SAVE_DAY (V-23): selagi draf atau oleh PM saat ongoing (1–30 tugas). → (judul, tugas)."""
+        is_pm = access.user.role in PM_ROLES
+        if not (is_pm and access.plan.status in ("APPROVED", "ONGOING")):
+            require_plan_status(access, PlanStatus.DRAFT)
         if not 1 <= len(task_titles) <= 30:
             raise ValidationError("Isi antara 1 sampai 30 tugas per hari.")
         titles = [t.strip() for t in task_titles]
@@ -165,3 +183,33 @@ class PlanEditService:
             raise ValidationError("Judul hari dan setiap tugas wajib diisi.")
         await self.repo.replace_day_plan(day_id, title.strip(), titles)
         return title.strip(), titles
+
+    async def reschedule_item(
+        self,
+        user: CurrentUser,
+        item_id: UUID,
+        target_daily_plan_id: UUID,
+        *,
+        start_time: str | None = None,
+        end_time: str | None = None,
+        location_name: str | None = None,
+        site_lat: float | None = None,
+        site_lng: float | None = None,
+        assigned_employee_ids: list[str] | None = None,
+    ) -> Any:
+        """domain.js RESCHEDULE_TASK (PM Full Override): Pindahkan item penugasan ke slot waktu/hari lain."""
+        import json
+        emp_json = json.dumps(assigned_employee_ids) if assigned_employee_ids else None
+        res = await self.repo.reschedule_item(
+            item_id,
+            target_daily_plan_id,
+            start_time=start_time,
+            end_time=end_time,
+            location_name=location_name,
+            site_lat=site_lat,
+            site_lng=site_lng,
+            assigned_employee_ids=emp_json,
+        )
+        if not res:
+            raise HTTPException(status_code=404, detail="Item tugas tidak ditemukan.")
+        return res

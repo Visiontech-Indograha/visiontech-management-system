@@ -856,5 +856,10 @@ CREATE TABLE IF NOT EXISTS work_plan_day_member (
   UNIQUE (work_plan_day_id, employee_id)
 );
 CREATE INDEX IF NOT EXISTS ix_work_plan_day_member_employee_id ON work_plan_day_member (employee_id);
-CREATE INDEX IF NOT EXISTS ix_work_plan_day_member_organization_id ON work_plan_day_member (organization_id);
 CREATE INDEX IF NOT EXISTS ix_work_plan_work_type_id ON work_plan (work_type_id);
+
+-- Penyelarasan VMS V3: photo_path, work_type_photo description, dan asset photo_path
+ALTER TABLE work_type_photo ADD COLUMN IF NOT EXISTS description TEXT NULL;
+ALTER TABLE asset ADD COLUMN IF NOT EXISTS photo_path VARCHAR(255) NULL;
+ALTER TABLE employee ADD COLUMN IF NOT EXISTS photo_path VARCHAR(255) NULL;
+

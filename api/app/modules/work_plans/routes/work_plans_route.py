@@ -9,7 +9,7 @@ from datetime import date
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, status
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, Response
 
 from app.api.deps import (
     get_current_user,
@@ -32,6 +32,8 @@ from app.modules.work_plans.schemas.work_plan_schema import (
     PlanFormOptions,
     PlanTaskCreate,
     PlanTaskResponse,
+    RescheduleItemRequest,
+    RescheduleItemResponse,
     WorkPlanCreate,
     WorkPlanResponse,
     WorkPlanUpdate,
@@ -139,6 +141,27 @@ async def preview_plan(
     return await controller.handle_preview_plan(plan_id)
 
 
+@router.get("/{plan_id}/export", response_class=Response)
+async def export_plan(
+    plan_id: UUID,
+    format: str = Query(default="pdf", pattern="^(pdf|docx|xlsx|pptx)$"),
+    access: PlanAccess = _VIEW_ACCESS,
+    controller: WorkPlanController = Depends(),
+) -> Response:
+    """Mengunduh rencana kerja dalam berbagai format: PDF, Word (DOCX), Excel (XLSX), PowerPoint (PPTX) (GET)."""
+    return await controller.handle_export_plan(plan_id, format, inline=False)
+
+
+@router.get("/{plan_id}/pdf", response_class=Response)
+async def preview_plan_pdf(
+    plan_id: UUID,
+    access: PlanAccess = _VIEW_ACCESS,
+    controller: WorkPlanController = Depends(),
+) -> Response:
+    """Pratinjau PDF langsung di browser (inline) (GET)."""
+    return await controller.handle_export_plan(plan_id, "pdf", inline=True)
+
+
 @router.post("", response_model=WorkPlanResponse, status_code=status.HTTP_201_CREATED)
 async def create_plan(
     data: WorkPlanCreate,
@@ -193,6 +216,17 @@ async def save_day(
 ) -> dict[str, object]:
     """Menyusun ulang judul & tugas satu hari selagi SK masih draf (PUT)."""
     return await controller.handle_save_day(access, day_id, data)
+
+
+@router.post("/items/{item_id}/reschedule", response_model=RescheduleItemResponse)
+async def reschedule_item(
+    item_id: UUID,
+    data: RescheduleItemRequest,
+    current_user: CurrentUser = Depends(require_permission(Permission.CREATE_PLAN)),
+    controller: WorkPlanController = Depends(),
+) -> RescheduleItemResponse:
+    """Memindahkan atau menjadwalkan ulang item tugas ke hari/slot lain oleh PM (PM Full Override) (POST)."""
+    return await controller.handle_reschedule_item(current_user, item_id, data)
 
 
 __all__ = ["router"]

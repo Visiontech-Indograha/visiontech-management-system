@@ -30,10 +30,14 @@ class CRUDPlanRevision(CRUDBase):
         """Menambah satu baris riwayat revisi ke app_activity_logs."""
         await self.execute(
             """
-            INSERT INTO app_activity_logs (user_id, action, target_table, target_id, details)
+            INSERT INTO app_activity_logs (
+                actor_user_id, actor_role, platform, action, entity_table, entity_id, changed_diff
+            )
             VALUES (
                 COALESCE((SELECT user_id FROM users WHERE employee_id = CAST(:by AS uuid) LIMIT 1),
                          (SELECT user_id FROM users LIMIT 1)),
+                'PROJECT_MANAGER',
+                'web_react',
                 'REVISION',
                 'work_plan_weekly',
                 CAST(:plan AS uuid),
@@ -55,18 +59,18 @@ class CRUDPlanRevision(CRUDBase):
             await self.fetchall(
                 """
             SELECT l.log_id AS id,
-                   COALESCE((l.details->>'revision')::int, 1) AS revision,
-                   e.full_name AS revised_by_name,
-                   COALESCE(l.details->>'reason', 'Revisi Rencana Kerja') AS reason,
-                   COALESCE(l.details->'diff', '[]'::jsonb) AS diff,
-                   l.create_at AS created_at
+                   COALESCE((l.changed_diff->>'revision')::int, 1) AS revision,
+                   COALESCE(e.full_name, 'Admin') AS revised_by_name,
+                   COALESCE(l.changed_diff->>'reason', 'Revisi Rencana Kerja') AS reason,
+                   COALESCE(l.changed_diff->'diff', '[]'::jsonb) AS diff,
+                   l.created_at AS created_at
             FROM app_activity_logs l
-            JOIN users u ON u.user_id = l.user_id
-            JOIN employee e ON e.employee_id = u.employee_id
-            WHERE l.target_table = 'work_plan_weekly'
-              AND l.target_id = CAST(:plan AS uuid)
+            LEFT JOIN users u ON u.user_id = l.actor_user_id
+            LEFT JOIN employee e ON e.employee_id = u.employee_id
+            WHERE l.entity_table = 'work_plan_weekly'
+              AND l.entity_id = CAST(:plan AS uuid)
               AND l.action = 'REVISION'
-            ORDER BY l.create_at DESC
+            ORDER BY l.created_at DESC
             """,
                 {"plan": str(plan_id)},
             )

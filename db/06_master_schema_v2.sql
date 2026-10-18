@@ -89,6 +89,7 @@ CREATE TABLE IF NOT EXISTS employee (
     join_date TIMESTAMPTZ NOT NULL,
     pkwt_end_date TIMESTAMPTZ NULL,
     profile_photo_path VARCHAR(255) NULL,
+    photo_path VARCHAR(255) NULL,
     face_embedding JSONB NULL, -- Vektor biometrik wajah
     offboarding_status offboarding_status_enum NOT NULL DEFAULT 'active',
     create_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -211,6 +212,7 @@ CREATE TABLE IF NOT EXISTS tool (
     category tool_category_enum NOT NULL,
     name VARCHAR(100) NOT NULL,
     tool_code VARCHAR(50) NOT NULL,
+    photo_path VARCHAR(255) NULL,
     status asset_status_enum NOT NULL DEFAULT 'ready',
     create_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     update_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -227,6 +229,7 @@ CREATE TABLE IF NOT EXISTS vehicle (
     vehicle_type vehicle_type_enum NOT NULL,
     name TEXT NOT NULL,
     number_plate VARCHAR(20) NOT NULL,
+    photo_path VARCHAR(255) NULL,
     status asset_status_enum NOT NULL DEFAULT 'ready',
     create_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     update_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -280,6 +283,7 @@ CREATE TABLE IF NOT EXISTS image_requirement (
     image_requirement_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     work_type_id UUID NOT NULL REFERENCES work_type(work_type_id),
     name VARCHAR(100) NOT NULL,
+    description TEXT NULL,
     path_image VARCHAR(255) NOT NULL, -- Contoh gambar panduan SOP (2A)
     is_mandatory BOOLEAN NOT NULL DEFAULT TRUE,
     sort_order SMALLINT NOT NULL DEFAULT 1,
@@ -328,6 +332,13 @@ CREATE TABLE IF NOT EXISTS work_plan_item (
     daily_plan_id UUID NOT NULL REFERENCES work_plan_daily(daily_plan_id),
     weekly_plan_id UUID NOT NULL REFERENCES work_plan_weekly(weekly_plan_id),
     work_type_id UUID NOT NULL REFERENCES work_type(work_type_id),
+    completion_id UUID NULL, -- Di-link ke work_completion
+    start_time TIME NULL DEFAULT '08:00:00',
+    end_time TIME NULL DEFAULT '17:00:00',
+    location_name VARCHAR(150) NULL,
+    site_lat NUMERIC(10,7) NULL,
+    site_lng NUMERIC(10,7) NULL,
+    assigned_employee_ids JSONB NULL,
     title VARCHAR(200) NOT NULL,
     target_qty NUMERIC(10,2) NOT NULL DEFAULT 100.00,
     completed_qty NUMERIC(10,2) NOT NULL DEFAULT 0.00,
@@ -438,30 +449,64 @@ CREATE TABLE IF NOT EXISTS attendance (
     delete_at TIMESTAMPTZ NULL
 );
 
--- 24. Tabel work_completion & document_template_export (Konfirmasi 6A & 6C: TTD Leader + PM & Eksport Template)
+-- 23b. Tabel attendance_site_visit (Check-In multi-lokasi penugasan harian)
+CREATE TABLE IF NOT EXISTS attendance_site_visit (
+    visit_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    attendance_id UUID NOT NULL REFERENCES attendance(attendance_id) ON DELETE CASCADE,
+    item_id UUID NOT NULL REFERENCES work_plan_item(item_id),
+    check_in_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    visit_lat NUMERIC(10,7) NOT NULL,
+    visit_lng NUMERIC(10,7) NOT NULL,
+    photo_path VARCHAR(255) NOT NULL,
+    distance_to_target_m INT NOT NULL,
+    is_within_radius BOOLEAN NOT NULL DEFAULT TRUE,
+    notes TEXT NULL,
+    create_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_site_visit_attendance ON attendance_site_visit(attendance_id);
+CREATE INDEX IF NOT EXISTS idx_site_visit_item ON attendance_site_visit(item_id);
+
+-- 24. Tabel work_completion (Parent Client Order / Proyek Klien)
 CREATE TABLE IF NOT EXISTS work_completion (
     completion_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    report_scope VARCHAR(15) NOT NULL, -- 'DAILY' atau 'WEEKLY'
+    division_id UUID NULL REFERENCES division(division_id),
+    pm_id UUID NULL REFERENCES employee(employee_id),
+    client_name VARCHAR(150) NOT NULL DEFAULT 'Klien Umum',
+    project_title VARCHAR(255) NOT NULL DEFAULT 'Pekerjaan Lapangan',
+    order_number VARCHAR(50) NULL,
+    total_target_unit INT NOT NULL DEFAULT 1,
+    unit_measure VARCHAR(50) NOT NULL DEFAULT 'Unit',
+    order_status VARCHAR(30) NOT NULL DEFAULT 'ONGOING', -- 'PENDING','CANCELLED','ONGOING','URGENT','COMPLETED'
+    priority_level VARCHAR(20) NOT NULL DEFAULT 'NORMAL', -- 'LOW','NORMAL','HIGH','URGENT'
+    site_address TEXT NULL,
+    site_lat NUMERIC(10,7) NULL,
+    site_lng NUMERIC(10,7) NULL,
+    report_scope VARCHAR(15) NULL, -- 'DAILY' atau 'WEEKLY'
     daily_plan_id UUID NULL REFERENCES work_plan_daily(daily_plan_id),
-    weekly_plan_id UUID NOT NULL REFERENCES work_plan_weekly(weekly_plan_id),
-    summary_notes TEXT NOT NULL,
+    weekly_plan_id UUID NULL REFERENCES work_plan_weekly(weekly_plan_id),
+    summary_notes TEXT NULL,
     obstacles TEXT NULL,
-    realization_photos_json JSONB NOT NULL,
-    leader_signer_id UUID NOT NULL REFERENCES employee(employee_id),
-    leader_signature_path VARCHAR(255) NOT NULL,
-    leader_signed_at TIMESTAMPTZ NOT NULL,
+    realization_photos_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+    leader_signer_id UUID NULL REFERENCES employee(employee_id),
+    leader_signature_path VARCHAR(255) NULL,
+    leader_signed_at TIMESTAMPTZ NULL,
     pm_signer_id UUID NULL REFERENCES employee(employee_id),
     pm_signature_path VARCHAR(255) NULL,
     pm_signed_at TIMESTAMPTZ NULL,
-    signature_hash CHAR(64) NOT NULL,
+    signature_hash CHAR(64) NULL,
     create_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     update_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     delete_at TIMESTAMPTZ NULL
 );
 
+-- 24b. Tabel document_template_export (Ekspor Berkas Multi-Format & Preview)
 CREATE TABLE IF NOT EXISTS document_template_export (
     export_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    completion_id UUID NOT NULL REFERENCES work_completion(completion_id),
+    source_type VARCHAR(30) NOT NULL DEFAULT 'WORK_COMPLETION', -- 'WORK_COMPLETION', 'WORK_PLAN_WEEKLY', 'WORK_PLAN_DAILY'
+    completion_id UUID NULL REFERENCES work_completion(completion_id),
+    weekly_plan_id UUID NULL REFERENCES work_plan_weekly(weekly_plan_id),
+    daily_plan_id UUID NULL REFERENCES work_plan_daily(daily_plan_id),
     template_type VARCHAR(40) NOT NULL, -- 'DAILY_TEMPLATE', 'WEEKLY_TEMPLATE'
     master_template_path VARCHAR(255) NOT NULL, -- File template baku perusahaan (6C)
     export_format export_format_enum NOT NULL,

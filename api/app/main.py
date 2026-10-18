@@ -5,9 +5,12 @@ Modul ini bertanggung jawab untuk inisialisasi aplikasi, middleware,
 logging terstruktur, serta rute-rute dasar (health, ready) dan router utama.
 """
 import logging
+from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.core.config import settings
 from app.core.exception_handlers import register_exception_handlers
@@ -21,7 +24,6 @@ logger = logging.getLogger(__name__)
 # Basis semua rute aplikasi (dok 05). /health dan /ready tetap di akar untuk Caddy & pemantauan.
 API_PREFIX = "/api/v1"
 
-
 def create_app() -> FastAPI:
     """
     Fungsi pembuat instance FastAPI utama (factory method).
@@ -29,11 +31,25 @@ def create_app() -> FastAPI:
     """
     app = FastAPI(title=settings.PROJECT_NAME, lifespan=lifespan)
 
-    # Daftarkan middleware
+    # Daftarkan middleware CORS
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+    # Daftarkan middleware RequestID
     app.add_middleware(RequestIDMiddleware)
 
     # Daftarkan penanganan galat aplikasi (error handlers)
     register_exception_handlers(app)
+
+    # Mount direktori uploads fisik untuk akses foto & dokumen
+    uploads_dir = Path(__file__).resolve().parent.parent / "uploads"
+    uploads_dir.mkdir(parents=True, exist_ok=True)
+    app.mount("/uploads", StaticFiles(directory=str(uploads_dir)), name="uploads")
 
     @app.get("/health")
     async def health_check() -> dict[str, str]:

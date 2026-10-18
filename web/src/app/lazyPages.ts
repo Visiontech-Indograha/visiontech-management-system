@@ -22,3 +22,4 @@ export const PresentationPage = lazy(() => import("@/pages/work-plans/Presentati
 export const TeamsPage = lazy(() => import("@/pages/teams/TeamsPage").then((m) => ({ default: m.TeamsPage })));
 export const MessPage = lazy(() => import("@/pages/mess/MessPage").then((m) => ({ default: m.MessPage })));
 export const OffboardingPage = lazy(() => import("@/pages/offboarding/OffboardingPage").then((m) => ({ default: m.OffboardingPage })));
+export const WorkCompletionsPage = lazy(() => import("@/pages/work-completions/WorkCompletionsPage").then((m) => ({ default: m.WorkCompletionsPage })));

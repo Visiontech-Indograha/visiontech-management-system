@@ -25,6 +25,7 @@ class ImageRequirementRepository(CRUDBase):
                 r.image_requirement_id,
                 r.work_type_id,
                 r.name,
+                r.description,
                 r.path_image,
                 r.is_mandatory,
                 r.sort_order,
@@ -43,6 +44,7 @@ class ImageRequirementRepository(CRUDBase):
                 r.image_requirement_id,
                 r.work_type_id,
                 r.name,
+                r.description,
                 r.path_image,
                 r.is_mandatory,
                 r.sort_order,
@@ -58,10 +60,10 @@ class ImageRequirementRepository(CRUDBase):
         req_id = uuid.uuid4()
         sql = """
             INSERT INTO image_requirement (
-                image_requirement_id, work_type_id, name, path_image,
+                image_requirement_id, work_type_id, name, description, path_image,
                 is_mandatory, sort_order, create_at, update_at
             ) VALUES (
-                :id, :wt_id, :name, :path,
+                :id, :wt_id, :name, :description, :path,
                 :mandatory, :sort, NOW(), NOW()
             )
             RETURNING image_requirement_id
@@ -70,6 +72,7 @@ class ImageRequirementRepository(CRUDBase):
             "id": req_id,
             "wt_id": data.work_type_id,
             "name": data.name,
+            "description": data.description,
             "path": data.path_image,
             "mandatory": data.is_mandatory,
             "sort": data.sort_order,
@@ -82,6 +85,9 @@ class ImageRequirementRepository(CRUDBase):
         if data.name is not None:
             updates.append("name = :name")
             params["name"] = data.name
+        if data.description is not None:
+            updates.append("description = :description")
+            params["description"] = data.description
         if data.path_image is not None:
             updates.append("path_image = :path")
             params["path"] = data.path_image

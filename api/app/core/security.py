@@ -200,3 +200,4 @@ class CurrentUser(BaseModel):
     roles: list[str]
     session_id: str
     permissions: list[str]
+    employee_id: str | None = None

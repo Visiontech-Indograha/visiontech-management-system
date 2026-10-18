@@ -24,6 +24,7 @@ _STANDING = """
     SELECT
         w.weekly_plan_id AS id,
         w.division_id AS unit_id,
+        div.name AS division_name,
         o.office_id AS site_id,
         'SK/W' || w.week_number || '/' || w.year AS number,
         'Rencana Kerja Mingguan W' || w.week_number || ' - ' || t.name AS title,
@@ -41,6 +42,7 @@ _STANDING = """
         'INSTALASI' AS category,
         FALSE AS is_out_of_town,
         item.work_type_id,
+        COALESCE(item.work_type_name, 'Instalasi & Maintenance') AS work_type_name,
         EXISTS (
             SELECT 1 FROM work_plan_item wpi
             WHERE wpi.weekly_plan_id = w.weekly_plan_id
@@ -73,8 +75,9 @@ _STANDING = """
         LIMIT 1
     ) today_d ON TRUE
     LEFT JOIN LATERAL (
-        SELECT wpi.work_type_id
+        SELECT wpi.work_type_id, wt.name AS work_type_name
         FROM work_plan_item wpi
+        LEFT JOIN work_type wt ON wt.work_type_id = wpi.work_type_id
         WHERE wpi.weekly_plan_id = w.weekly_plan_id AND wpi.delete_at IS NULL
         LIMIT 1
     ) item ON TRUE

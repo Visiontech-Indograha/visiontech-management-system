@@ -143,6 +143,7 @@ async def get_current_user(
         roles=roles,
         session_id=session_id,
         permissions=permissions_for_roles(roles or [NO_GLOBAL_ROLE]),
+        employee_id=str(identity.employee_id) if getattr(identity, "employee_id", None) else None,
     )
 
 

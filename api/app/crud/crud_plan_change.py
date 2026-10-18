@@ -34,13 +34,13 @@ class CRUDPlanChange(CRUDBase):
         return await self.fetchone(
             """
             SELECT l.log_id AS id,
-                   CAST(l.target_id AS text) AS work_plan_id,
+                   CAST(l.entity_id AS text) AS work_plan_id,
                    'EXTENSION' AS change_type,
                    CAST(wp.rollover_approval AS text) AS status,
-                   COALESCE(l.details->>'reason', wp.notes) AS reason,
-                   l.details->>'decision_reason' AS decision_reason
+                   COALESCE(l.changed_diff->>'reason', wp.notes) AS reason,
+                   l.changed_diff->>'decision_reason' AS decision_reason
             FROM app_activity_logs l
-            JOIN work_plan_weekly wp ON wp.weekly_plan_id = l.target_id
+            JOIN work_plan_weekly wp ON wp.weekly_plan_id = l.entity_id
             WHERE l.log_id = CAST(:id AS uuid)
             """,
             {"id": str(change_id)},
@@ -103,10 +103,14 @@ class CRUDPlanChange(CRUDBase):
         )
         row = await self.fetchone(
             """
-            INSERT INTO app_activity_logs (user_id, action, target_table, target_id, details)
+            INSERT INTO app_activity_logs (
+                actor_user_id, actor_role, platform, action, entity_table, entity_id, changed_diff
+            )
             VALUES (
                 COALESCE((SELECT user_id FROM users WHERE employee_id = CAST(:by AS uuid) LIMIT 1),
                          (SELECT user_id FROM users LIMIT 1)),
+                'TEAM_LEADER',
+                'web_react',
                 'CHANGE_REQUEST',
                 'work_plan_weekly',
                 CAST(:plan AS uuid),

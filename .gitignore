@@ -60,6 +60,10 @@ yarn-error.log
 dist/
 dist-ssr/
 *.local
+uploads/*
+!uploads/.gitkeep
+api/uploads/*
+!api/uploads/.gitkeep
 
 # Flutter/Dart
 .dart_tool/

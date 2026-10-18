@@ -4,7 +4,7 @@ import { useHtmlDocument } from "@/services/workPlanService";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { Modal, ModalContent, ModalFooter, ModalHeader, ModalTitle } from "@/components/molecules/Modal";
 import { LoadingBar } from "@/components/molecules/LoadingBar";
-import { InlineLink } from "@/components/molecules/Links";
+import { ExternalLink, InlineLink } from "@/components/molecules/Links";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { FrameView } from "@/components/molecules/FrameView";
 
@@ -44,18 +44,60 @@ export function PlanPreviewDialog({
             />
           )}
         </div>
-        <ModalFooter className="gap-2">
-          <ActionButton variant="outline" onClick={onClose}>
-            Tutup
-          </ActionButton>
-          <ActionButton variant="outline" disabled={!doc.data} onClick={() => frame.current?.contentWindow?.print()}>
-            Cetak
-          </ActionButton>
-          {editTo && (
-            <ActionButton asChild>
-              <InlineLink to={editTo}>Ubah isi</InlineLink>
+        <ModalFooter className="flex-wrap items-center justify-between gap-2 border-t border-line pt-3">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <TextBlock as="span" className="text-xs font-semibold text-mist mr-1">Unduh Dokumen:</TextBlock>
+            <ExternalLink
+              href={path.replace("/preview", "/export?format=pdf")}
+              target="_blank"
+              rel="noreferrer"
+              download
+              className="inline-flex items-center gap-1 rounded-control border border-line bg-surface px-2.5 py-1 text-xs font-medium text-lens hover:bg-hover hover:border-primary transition-colors"
+            >
+              <TextBlock as="span">📕</TextBlock> <TextBlock as="span">PDF</TextBlock>
+            </ExternalLink>
+            <ExternalLink
+              href={path.replace("/preview", "/export?format=docx")}
+              target="_blank"
+              rel="noreferrer"
+              download
+              className="inline-flex items-center gap-1 rounded-control border border-line bg-surface px-2.5 py-1 text-xs font-medium text-lens hover:bg-hover hover:border-primary transition-colors"
+            >
+              <TextBlock as="span">📘</TextBlock> <TextBlock as="span">Word (.docx)</TextBlock>
+            </ExternalLink>
+            <ExternalLink
+              href={path.replace("/preview", "/export?format=xlsx")}
+              target="_blank"
+              rel="noreferrer"
+              download
+              className="inline-flex items-center gap-1 rounded-control border border-line bg-surface px-2.5 py-1 text-xs font-medium text-lens hover:bg-hover hover:border-primary transition-colors"
+            >
+              <TextBlock as="span">📗</TextBlock> <TextBlock as="span">Excel (.xlsx)</TextBlock>
+            </ExternalLink>
+            <ExternalLink
+              href={path.replace("/preview", "/export?format=pptx")}
+              target="_blank"
+              rel="noreferrer"
+              download
+              className="inline-flex items-center gap-1 rounded-control border border-line bg-surface px-2.5 py-1 text-xs font-medium text-lens hover:bg-hover hover:border-primary transition-colors"
+            >
+              <TextBlock as="span">📙</TextBlock> <TextBlock as="span">PPTX</TextBlock>
+            </ExternalLink>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <ActionButton variant="outline" disabled={!doc.data} onClick={() => frame.current?.contentWindow?.print()}>
+              Cetak
             </ActionButton>
-          )}
+            {editTo && (
+              <ActionButton asChild>
+                <InlineLink to={editTo}>Ubah isi</InlineLink>
+              </ActionButton>
+            )}
+            <ActionButton variant="default" onClick={onClose}>
+              Tutup
+            </ActionButton>
+          </div>
         </ModalFooter>
       </ModalContent>
     </Modal>

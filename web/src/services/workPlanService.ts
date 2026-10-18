@@ -3,7 +3,10 @@ import { api } from "@/lib/apiClient";
 import type { components } from "@/lib/apiTypes";
 
 type S = components["schemas"];
-export type WorkPlan = S["WorkPlanResponse"];
+export type WorkPlan = S["WorkPlanResponse"] & {
+  division_name?: string | null;
+  work_type_name?: string | null;
+};
 export type WorkPlanCreate = S["WorkPlanCreate"];
 export type WorkPlanUpdate = S["WorkPlanUpdate"];
 export type DayPlanRequest = S["DayPlanRequest"];
@@ -220,3 +223,42 @@ export async function fetchCompletionPdf(planId: string): Promise<Blob> {
 export async function rejectRevisionRequest(planId: string, changeId: string, reason: string): Promise<unknown> {
   return (await api.post(`/work-plans/${planId}/amendments/${changeId}/reject`, { reason })).data;
 }
+
+/** URL unduh dokumen rencana kerja multi-format (PDF, DOCX, XLSX, PPTX). */
+export function getWorkPlanExportUrl(planId: string, format: "pdf" | "docx" | "xlsx" | "pptx"): string {
+  return `/api/v1/work-plans/${planId}/export?format=${format}`;
+}
+
+/** URL pratinjau PDF langsung di browser (inline). */
+export function getWorkPlanPdfUrl(planId: string): string {
+  return `/api/v1/work-plans/${planId}/pdf`;
+}
+
+/** URL unduh dokumen rencana kerja harian multi-format. */
+export function getDailyPlanExportUrl(planId: string, dayId: string, format: "pdf" | "docx" | "xlsx" | "pptx"): string {
+  return `/api/v1/work-plans/${planId}/days/${dayId}/export?format=${format}`;
+}
+
+export interface ImageRequirement {
+  image_requirement_id: string;
+  work_type_id: string;
+  work_type_name?: string | null;
+  name: string;
+  description?: string | null;
+  path_image: string;
+  is_mandatory: boolean;
+  sort_order: number;
+}
+
+export function useImageRequirements(workTypeId: string) {
+  return useQuery({
+    queryKey: ["image-requirements", workTypeId],
+    queryFn: async () => {
+      const res = await api.get<ImageRequirement[]>(`/image-requirements/by-work-type/${workTypeId}`);
+      return res.data;
+    },
+    enabled: Boolean(workTypeId),
+  });
+}
+
+

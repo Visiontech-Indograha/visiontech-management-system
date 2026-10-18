@@ -412,9 +412,10 @@ class PlanDraftService:
         plan = await self.repo.lock_draft(plan_id, user.organization_id)
         if plan is None:
             raise NotFoundError("Rencana Kerja")
-        # Validasi status harus DRAFT
-        if plan.status != PlanStatus.DRAFT:
-            raise AppError("INVALID_STATE", "Isi rencana kerja hanya dapat diubah selama berstatus Draf.", status=409)
+        # Validasi status: DRAFT atau PM override saat ONGOING/APPROVED
+        is_pm = user.role in (RoleCode.PROJECT_MANAGER, RoleCode.OPERATIONAL_MANAGER, RoleCode.SUPER_ADMIN)
+        if plan.status != PlanStatus.DRAFT and not (is_pm and plan.status in (PlanStatus.APPROVED, PlanStatus.ONGOING)):
+            raise AppError("INVALID_STATE", "Isi rencana kerja hanya dapat diubah selama berstatus Draf atau oleh Project Manager saat berjalan.", status=409)
         if data.row_version is None or plan.row_version != data.row_version:
             raise ConflictError()
         unit_id = str(plan.unit_id)

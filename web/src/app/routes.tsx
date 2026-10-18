@@ -30,6 +30,7 @@ import {
   WorkPlanDetailPage,
   WorkPlansPage,
   WorkTypesPage,
+  WorkCompletionsPage,
 } from "./lazyPages";
 import { VerifyPage } from "@/pages/verify/VerifyPage";
 import { ChangePasswordPage } from "@/pages/auth/ChangePasswordPage";
@@ -43,6 +44,7 @@ const PAGES: Record<string, ReactNode> = {
   "/sites": <SitesPage />,
   "/work-types": <WorkTypesPage />,
   "/work-plans": <WorkPlansPage />,
+  "/work-completions": <WorkCompletionsPage />,
   "/teams": <TeamsPage />,
   "/mess": <MessPage />,
   "/offboarding": <OffboardingPage />,

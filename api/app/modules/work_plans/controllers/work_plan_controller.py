@@ -11,7 +11,7 @@ from datetime import date
 from uuid import UUID
 
 from fastapi import Depends
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, Response
 
 from app.api.deps import (
     get_plan_assignment_service,
@@ -19,6 +19,7 @@ from app.api.deps import (
     get_plan_edit_service,
     get_plan_transition_service,
 )
+from app.core.errors import AppError
 from app.core.security import CurrentUser
 from app.modules.work_plans.schemas.work_plan_schema import (
     AssignmentEmployeeOption,
@@ -34,6 +35,8 @@ from app.modules.work_plans.schemas.work_plan_schema import (
     PlanFormOptions,
     PlanTaskCreate,
     PlanTaskResponse,
+    RescheduleItemRequest,
+    RescheduleItemResponse,
     WorkPlanCreate,
     WorkPlanResponse,
     WorkPlanUpdate,
@@ -46,6 +49,7 @@ from app.modules.work_plans.services.work_plan_service import (
     render_plan_preview_html,
 )
 from app.services.access_service import PlanAccess
+from app.services.document_export_service import DocumentExportService
 
 
 class WorkPlanController:
@@ -157,6 +161,45 @@ class WorkPlanController:
         """Menghasilkan pratinjau dokumen A4 HTML rencana kerja."""
         return HTMLResponse(render_plan_preview_html(await self.draft_service.detail(plan_id)))
 
+    async def handle_export_plan(
+        self,
+        plan_id: UUID,
+        format_type: str,
+        inline: bool = False,
+    ) -> Response:
+        """Mengunduh atau menampilkan dokumen rencana kerja dalam format pilihan (PDF, DOCX, XLSX, PPTX)."""
+        detail = await self.draft_service.detail(plan_id)
+        number = (detail.get("plan", {}).get("number") or f"PLAN-{str(plan_id)[:8]}").replace("/", "-")
+
+        fmt = format_type.lower()
+        if fmt == "pdf":
+            content = DocumentExportService.export_pdf(detail)
+            media_type = "application/pdf"
+            ext = "pdf"
+        elif fmt == "docx":
+            content = DocumentExportService.export_docx(detail)
+            media_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            ext = "docx"
+        elif fmt == "xlsx":
+            content = DocumentExportService.export_xlsx(detail)
+            media_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            ext = "xlsx"
+        elif fmt == "pptx":
+            content = DocumentExportService.export_pptx(detail)
+            media_type = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+            ext = "pptx"
+        else:
+            raise AppError("INVALID_FORMAT", f"Format {format_type} tidak didukung.", status=400)
+
+        disposition = "inline" if inline else "attachment"
+        filename = f"{number}.{ext}"
+
+        return Response(
+            content=content,
+            media_type=media_type,
+            headers={"Content-Disposition": f'{disposition}; filename="{filename}"'},
+        )
+
     async def handle_create_plan(
         self,
         current_user: CurrentUser,
@@ -212,6 +255,35 @@ class WorkPlanController:
         """Menyusun ulang judul dan daftar tugas hari kerja secara menyeluruh."""
         title, tasks = await self.edit_service.save_day(access, day_id, data.title, [t.title for t in data.tasks])
         return {"id": str(day_id), "title": title, "tasks": tasks}
+
+    async def handle_reschedule_item(
+        self,
+        current_user: CurrentUser,
+        item_id: UUID,
+        data: RescheduleItemRequest,
+    ) -> RescheduleItemResponse:
+        """Memindahkan / reschedule item penugasan ke slot waktu/hari lain (PM Full Override)."""
+        res = await self.edit_service.reschedule_item(
+            current_user,
+            item_id,
+            data.target_daily_plan_id,
+            start_time=data.start_time,
+            end_time=data.end_time,
+            location_name=data.location_name,
+            site_lat=data.site_lat,
+            site_lng=data.site_lng,
+            assigned_employee_ids=data.assigned_employee_ids,
+        )
+        return RescheduleItemResponse(
+            item_id=res.item_id,
+            daily_plan_id=res.daily_plan_id,
+            weekly_plan_id=res.weekly_plan_id,
+            title=res.title,
+            start_time=str(res.start_time) if res.start_time else None,
+            end_time=str(res.end_time) if res.end_time else None,
+            location_name=res.location_name,
+            status=res.status,
+        )
 
 
 __all__ = ["WorkPlanController"]

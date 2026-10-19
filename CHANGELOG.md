@@ -7,6 +7,12 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ---
 
+- **Penyederhanaan Desain Form & Antarmuka Work Plan V2 (`web/src/`):**
+  - **Formulir Stepper 3 Langkah Terarah (`PlanEditorV2Form.tsx`):** Mengganti formulir monolitik yang membingungkan menjadi alur bertahap: (1) Identitas & Tim, (2) Jadwal Harian & Tugas, dan (3) Armada & Peralatan (Opsional).
+  - **Fokus Satu Hari Aktif (Single-Day Focus Tab Bar):** Menggantikan tampilan 7 kartu hari bertumpuk menjadi pemilih hari tab horizontal yang rapi; menyembunyikan input desimal koordinat GPS & radius di balik toggle opsional agar tidak mengintimidasi pengguna.
+  - **Fitur Cerdas Salin Jadwal Antar Hari (Copy Schedule Modal):** Menyediakan opsi 1-klik untuk menyalin lokasi site, jam kerja, dan seluruh butir tugas dari hari aktif ke seluruh hari kerja lainnya.
+  - **Penyelarasan Atomic Design & Pembersihan Lint (`DailyScheduleSlotsCards.tsx`, `Icon.tsx`, `Glyphs.tsx`):** Mengganti seluruh elemen atom langsung dan raw HTML tags dengan molekul berstandar `docs/33 §2`, mencapai 0 lint error dan typecheck bersih.
+
 - **Penyempurnaan BoM Proyek, Kunci Prasyarat & Pengesahan Dokumen BAST Work Completion (`api/app/`, `web/src/`, `db/`):**
   - **Template BoM 1:N per Jenis Pekerjaan (`work_type_default_materials`):** Membangun skema template kebutuhan material per tipe pekerjaan yang terisolasi per divisi, lengkap dengan endpoint `GET/POST /work-types/{id}/materials`, `PUT/DELETE /work-types/materials/{id}`, dan dialog antarmuka `WorkTypeMaterialsDialog.tsx`.
   - **Bill of Materials Riil Order Klien (`work_completion_bom`):** Menambahkan pencatatan estimasi vs realisasi material aktual lapangan (misal kabel FO 69m pada survei Minas), endpoint `GET/POST /work-completions/{id}/bom`, `PUT/DELETE /work-completions/bom/{id}`, serta sinkronisasi otomatis 1-klik `POST /work-completions/{id}/sync-bom`.

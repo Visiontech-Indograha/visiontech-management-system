@@ -28,6 +28,7 @@ import { getDailyScheduleDetail } from "@/services/planItemService";
 import { DailyPlanFormDialog } from "./DailyPlanFormDialog";
 import { PlanItemFormDialog } from "./PlanItemFormDialog";
 import { useDeleteDailyPlanV2, useWorkPlanFormOptionsV2 } from "@/services/workPlanV2Service";
+import { VmsDialog } from "@/components/molecules/VmsDialog";
 
 type Day = PlanDay;
 type Task = DayTask;
@@ -129,7 +130,7 @@ function DayPanel({
   plan: WorkPlan;
   day: Day;
   availableDays?: Array<{ daily_plan_id: string; work_date: string; site_name?: string }>;
-  options?: any;
+  options?: ReturnType<typeof useWorkPlanFormOptionsV2>["data"];
 }) {
   const qc = useQueryClient();
   const { me } = useSession();
@@ -147,17 +148,17 @@ function DayPanel({
   const [viewing, setViewing] = useState(false);
   const [editingDay, setEditingDay] = useState(false);
   const [addingItem, setAddingItem] = useState(false);
+  const [confirmDeleteDay, setConfirmDeleteDay] = useState(false);
   const deleteDayMut = useDeleteDailyPlanV2();
 
-  const handleDeleteDay = async () => {
-    if (confirm(`Apakah Anda yakin ingin menghapus hari kerja ${formatDate(day.work_date)}?`)) {
-      try {
-        await deleteDayMut.mutateAsync({ id: day.id, weeklyPlanId: plan.id });
-        toast.success("Hari kerja berhasil dihapus!");
-        qc.invalidateQueries({ queryKey: daysKey(plan.id) });
-      } catch (err: unknown) {
-        toast.error(err instanceof Error ? err.message : "Gagal menghapus hari kerja.");
-      }
+  const handleConfirmDeleteDay = async () => {
+    try {
+      await deleteDayMut.mutateAsync({ id: day.id, weeklyPlanId: plan.id });
+      toast.success("Hari kerja berhasil dihapus!");
+      qc.invalidateQueries({ queryKey: daysKey(plan.id) });
+      setConfirmDeleteDay(false);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Gagal menghapus hari kerja.");
     }
   };
 
@@ -179,7 +180,7 @@ function DayPanel({
               <ActionButton variant="outline" size="sm" onClick={() => setEditingDay(true)}>
                 Ubah Hari
               </ActionButton>
-              <ActionButton variant="outline" size="sm" onClick={handleDeleteDay} className="hover:text-red-600">
+              <ActionButton variant="outline" size="sm" onClick={() => setConfirmDeleteDay(true)} className="hover:text-red-600">
                 Hapus
               </ActionButton>
             </>
@@ -251,6 +252,36 @@ function DayPanel({
             qc.invalidateQueries({ queryKey: ["daily-schedule-detail", day.id] });
           }}
         />
+      )}
+      {confirmDeleteDay && (
+        <VmsDialog
+          open={confirmDeleteDay}
+          onClose={() => setConfirmDeleteDay(false)}
+          title="Hapus Hari Kerja"
+        >
+          <div className="space-y-4">
+            <TextBlock className="text-sm text-slate-300">
+              Apakah Anda yakin ingin menghapus hari kerja {formatDate(day.work_date)}? Seluruh butir tugas pada hari ini juga akan dihapus.
+            </TextBlock>
+            <div className="flex justify-end gap-2 pt-2">
+              <ActionButton
+                type="button"
+                variant="outline"
+                onClick={() => setConfirmDeleteDay(false)}
+              >
+                Batal
+              </ActionButton>
+              <ActionButton
+                type="button"
+                variant="destructive"
+                onClick={handleConfirmDeleteDay}
+                disabled={deleteDayMut.isPending}
+              >
+                {deleteDayMut.isPending ? "Menghapus..." : "Ya, Hapus"}
+              </ActionButton>
+            </div>
+          </div>
+        </VmsDialog>
       )}
     </article>
   );

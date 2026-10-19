@@ -3,17 +3,16 @@
  * Komponen kartu multi-slot jadwal harian tugas rencana kerja (work_plan_item).
  * Menampilkan rincian slot jam kerja, SOP foto, order klien, progres capaian,
  * serta tombol aksi pelaporan progres, pengajuan rollover, dan PM override.
+ * Sesuai aturan Atomic Design (docs/33 §2): Menggunakan molekul tanpa impor atom/lucide langsung.
  */
 
 import React, { useState } from "react";
 import { useSession } from "@/stores/sessionStore";
-import { Button } from "@/components/atoms/Button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/atoms/Dialog";
+import { ActionButton } from "@/components/molecules/ActionButton";
+import { PlainAction } from "@/components/molecules/PlainAction";
+import { TextBlock } from "@/components/molecules/TextBlock";
+import { FormBlock, ControlLabel, ControlInput, ControlTextarea } from "@/components/molecules/FormBlock";
+import { VmsDialog } from "@/components/molecules/VmsDialog";
 import {
   Building,
   CalendarClock,
@@ -23,10 +22,12 @@ import {
   FileCheck2,
   GitFork,
   Layers,
+  Lock,
   MapPin,
   Send,
+  Trash2,
   Users,
-} from "lucide-react";
+} from "@/components/molecules/Glyphs";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -38,6 +39,7 @@ import {
   useDeletePlanItemV2,
   useWorkPlanFormOptionsV2,
 } from "@/services/workPlanV2Service";
+import type { PlanItemV2Value } from "@/schemas/workPlanV2Schema";
 import { RescheduleTaskModal } from "./RescheduleTaskModal";
 import { WorkTypeSopModal } from "./WorkTypeSopModal";
 import { PlanItemFormDialog } from "./PlanItemFormDialog";
@@ -99,19 +101,21 @@ export const DailyScheduleSlotsCards: React.FC<DailyScheduleSlotsCardsProps> = (
     me?.role === "SUPER_ADMIN" ||
     me?.role === "PM" ||
     me?.role === "ADMIN" ||
-    !!me?.permissions.includes("create:plan");
+    Boolean(me?.permissions.includes("create:plan"));
 
-  const handleDeleteSlot = async (itemId: string) => {
-    if (confirm("Apakah Anda yakin ingin menghapus butir tugas slot ini?")) {
-      try {
-        await deleteItemMut.mutateAsync({ id: itemId, dailyPlanId });
-        toast.success("Butir tugas berhasil dihapus!");
-        qc.invalidateQueries({ queryKey: ["daily-schedule-detail", dailyPlanId] });
-        qc.invalidateQueries({ queryKey: ["plan-days"] });
-        onRefresh?.();
-      } catch (err: unknown) {
-        toast.error(err instanceof Error ? err.message : "Gagal menghapus tugas.");
-      }
+  const [slotToDelete, setSlotToDelete] = useState<string | null>(null);
+
+  const handleConfirmDeleteSlot = async () => {
+    if (!slotToDelete) return;
+    try {
+      await deleteItemMut.mutateAsync({ id: slotToDelete, dailyPlanId });
+      toast.success("Butir tugas berhasil dihapus!");
+      qc.invalidateQueries({ queryKey: ["daily-schedule-detail", dailyPlanId] });
+      qc.invalidateQueries({ queryKey: ["plan-days"] });
+      onRefresh?.();
+      setSlotToDelete(null);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Gagal menghapus tugas.");
     }
   };
 
@@ -178,10 +182,10 @@ export const DailyScheduleSlotsCards: React.FC<DailyScheduleSlotsCardsProps> = (
     return (
       <div className="p-8 text-center bg-slate-900/60 border border-slate-800 rounded-xl text-slate-400">
         <Clock className="w-10 h-10 text-slate-600 mx-auto mb-2" />
-        <p className="text-sm font-medium">Belum ada slot penugasan untuk hari ini.</p>
-        <p className="text-xs text-slate-500 mt-1">
+        <TextBlock className="text-sm font-medium">Belum ada slot penugasan untuk hari ini.</TextBlock>
+        <TextBlock className="text-xs text-slate-500 mt-1">
           Gunakan tombol Tambah Tugas pada Rencana Kerja untuk mengisi jadwal multi-slot.
-        </p>
+        </TextBlock>
       </div>
     );
   }
@@ -208,12 +212,15 @@ export const DailyScheduleSlotsCards: React.FC<DailyScheduleSlotsCardsProps> = (
                 {/* Header Slot: Jam & Judul */}
                 <div className="space-y-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-xs font-semibold px-2 py-0.5 rounded bg-sky-950/80 text-sky-400 border border-sky-800/60 flex items-center gap-1">
+                    <TextBlock as="span" className="text-xs font-semibold px-2 py-0.5 rounded bg-sky-950/80 text-sky-400 border border-sky-800/60 flex items-center gap-1">
                       <Clock className="w-3 h-3" />
-                      Slot #{index + 1} ({slot.start_time?.slice(0, 5) || "08:00"} - {slot.end_time?.slice(0, 5) || "12:00"})
-                    </span>
+                      <TextBlock as="span">
+                        Slot #{index + 1} ({slot.start_time?.slice(0, 5) || "08:00"} - {slot.end_time?.slice(0, 5) || "12:00"})
+                      </TextBlock>
+                    </TextBlock>
 
-                    <span
+                    <TextBlock
+                      as="span"
                       className={`text-[11px] font-medium px-2 py-0.5 rounded border ${
                         isDone
                           ? "bg-emerald-950 text-emerald-400 border-emerald-800"
@@ -231,54 +238,63 @@ export const DailyScheduleSlotsCards: React.FC<DailyScheduleSlotsCardsProps> = (
                         : slot.status === "ALLOCATED_NEXT_WEEK"
                         ? "Dialokasikan ke Minggu Depan"
                         : slot.status}
-                    </span>
+                    </TextBlock>
 
                     {/* Badge Tahap Pekerjaan Multi-Minggu */}
                     {slot.task_phase && (
-                      <span
+                      <TextBlock
+                        as="span"
                         className={`text-[11px] font-medium px-2 py-0.5 rounded border ${
                           PHASE_LABELS[slot.task_phase]?.color || "bg-slate-800 text-slate-300 border-slate-700"
                         }`}
                       >
                         {PHASE_LABELS[slot.task_phase]?.label || slot.task_phase}
-                      </span>
+                      </TextBlock>
+                    )}
+
+                    {/* Badge Prasyarat Terkunci */}
+                    {slot.depends_on_item_id && (
+                      <TextBlock as="span" className="text-[11px] font-medium px-2 py-0.5 rounded bg-amber-950/80 text-amber-300 border border-amber-700 flex items-center gap-1 font-mono">
+                        <Lock className="w-3 h-3 text-amber-400" />
+                        <TextBlock as="span">Ada Prasyarat</TextBlock>
+                      </TextBlock>
                     )}
 
                     {/* Badge Deliverable Utama (BAST) vs Pendukung */}
                     {slot.is_main_deliverable === false ? (
-                      <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">
+                      <TextBlock as="span" className="text-[11px] font-medium px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">
                         Pendukung (Non-BAST)
-                      </span>
+                      </TextBlock>
                     ) : (
-                      <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-700">
+                      <TextBlock as="span" className="text-[11px] font-medium px-2 py-0.5 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-700">
                         Deliverable Utama (BAST)
-                      </span>
+                      </TextBlock>
                     )}
 
                     {/* Badge Foto Realisasi */}
                     {Boolean(slot.realization_photos_json && slot.realization_photos_json.length > 0) && (
-                      <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-indigo-950/80 text-indigo-300 border border-indigo-700 flex items-center gap-1 font-mono">
+                      <TextBlock as="span" className="text-[11px] font-medium px-2 py-0.5 rounded bg-indigo-950/80 text-indigo-300 border border-indigo-700 flex items-center gap-1 font-mono">
                         <Camera className="w-3 h-3 text-indigo-400" />
-                        {slot.realization_photos_json!.length} Foto
-                      </span>
+                        <TextBlock as="span">{slot.realization_photos_json!.length} Foto</TextBlock>
+                      </TextBlock>
                     )}
 
                     {slot.origin_item_id && (
-                      <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-purple-950/80 text-purple-300 border border-purple-800 flex items-center gap-1">
+                      <TextBlock as="span" className="text-[11px] font-medium px-2 py-0.5 rounded bg-purple-950/80 text-purple-300 border border-purple-800 flex items-center gap-1">
                         <GitFork className="w-3 h-3 text-purple-400" />
-                        Tugas Lanjutan
-                      </span>
+                        <TextBlock as="span">Tugas Lanjutan</TextBlock>
+                      </TextBlock>
                     )}
 
                     {slot.completion_id && (
-                      <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-700 flex items-center gap-1 font-mono">
+                      <TextBlock as="span" className="text-[11px] font-medium px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-700 flex items-center gap-1 font-mono">
                         <FileCheck2 className="w-3 h-3 text-emerald-400" />
-                        BA Terbit
-                      </span>
+                        <TextBlock as="span">BA Terbit</TextBlock>
+                      </TextBlock>
                     )}
 
                     {slot.work_type && (
-                      <button
+                      <PlainAction
                         type="button"
                         onClick={() =>
                           setSopModalData({
@@ -286,31 +302,32 @@ export const DailyScheduleSlotsCards: React.FC<DailyScheduleSlotsCardsProps> = (
                             name: slot.work_type!.name,
                           })
                         }
-                        className="text-[11px] font-medium px-2 py-0.5 rounded bg-violet-950/70 text-violet-300 border border-violet-800/60 hover:bg-violet-900 flex items-center gap-1 transition"
+                        className="text-[11px] font-medium px-2 py-0.5 rounded bg-violet-950/70 text-violet-300 border border-violet-800/60 hover:bg-violet-900 flex items-center gap-1 transition cursor-pointer"
                       >
                         <Camera className="w-3 h-3 text-violet-400" />
-                        SOP: {slot.work_type.name}
-                      </button>
+                        <TextBlock as="span">SOP: {slot.work_type.name}</TextBlock>
+                      </PlainAction>
                     )}
                   </div>
 
-                  <h4 className="text-base font-semibold text-white pt-1">
+                  <TextBlock as="h3" className="text-base font-semibold text-white pt-1">
                     {slot.title}
-                  </h4>
+                  </TextBlock>
 
                   {/* Lokasi Site */}
                   {slot.location_name && (
-                    <p className="text-xs text-slate-400 flex items-center gap-1">
+                    <TextBlock className="text-xs text-slate-400 flex items-center gap-1">
                       <MapPin className="w-3.5 h-3.5 text-rose-400 shrink-0" />
-                      <span>{slot.location_name}</span>
-                    </p>
+                      <TextBlock as="span">{slot.location_name}</TextBlock>
+                    </TextBlock>
                   )}
                 </div>
 
                 {/* Target & Realisasi Capaian */}
                 <div className="text-right space-y-1 min-w-[130px]">
                   <div className="text-xs text-slate-400">
-                    Progres: <span className="font-semibold text-white">{slot.progress_percent || 0}%</span>
+                    <TextBlock as="span">Progres: </TextBlock>
+                    <TextBlock as="span" className="font-semibold text-white">{slot.progress_percent || 0}%</TextBlock>
                   </div>
                   <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden border border-slate-700">
                     <div
@@ -321,7 +338,7 @@ export const DailyScheduleSlotsCards: React.FC<DailyScheduleSlotsCardsProps> = (
                     />
                   </div>
                   <div className="text-[11px] text-slate-400">
-                    {slot.completed_qty || 0} / {slot.target_qty || 0} unit
+                    <TextBlock as="span">{slot.completed_qty || 0} / {slot.target_qty || 0} unit</TextBlock>
                   </div>
                 </div>
               </div>
@@ -332,16 +349,16 @@ export const DailyScheduleSlotsCards: React.FC<DailyScheduleSlotsCardsProps> = (
                   <div className="flex items-center gap-2">
                     <Building className="w-4 h-4 text-emerald-400 shrink-0" />
                     <div>
-                      <span className="font-medium text-white">
+                      <TextBlock as="span" className="font-medium text-white">
                         {slot.work_completion_order.client_name}
-                      </span>
-                      <span className="text-slate-500 mx-1.5">•</span>
-                      <span>{slot.work_completion_order.project_title}</span>
+                      </TextBlock>
+                      <TextBlock as="span" className="text-slate-500 mx-1.5">•</TextBlock>
+                      <TextBlock as="span">{slot.work_completion_order.project_title}</TextBlock>
                     </div>
                   </div>
-                  <span className="text-[11px] font-mono text-sky-400 bg-sky-950/60 px-2 py-0.5 rounded border border-sky-800/40">
+                  <TextBlock as="span" className="text-[11px] font-mono text-sky-400 bg-sky-950/60 px-2 py-0.5 rounded border border-sky-800/40">
                     {slot.work_completion_order.order_number}
-                  </span>
+                  </TextBlock>
                 </div>
               )}
 
@@ -349,14 +366,14 @@ export const DailyScheduleSlotsCards: React.FC<DailyScheduleSlotsCardsProps> = (
               <div className="mt-4 pt-3 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-1.5 text-xs text-slate-400">
                   <Users className="w-3.5 h-3.5 text-sky-400" />
-                  <span>
+                  <TextBlock as="span">
                     {slot.assigned_employee_ids?.length || 0} Teknisi Ditugaskan
-                  </span>
+                  </TextBlock>
                 </div>
 
                 <div className="flex items-center gap-2">
                   {/* Tombol Rantai Tugas & Berita Acara */}
-                  <Button
+                  <ActionButton
                     size="sm"
                     variant="outline"
                     onClick={() => setChainDialogItemId(slot.item_id)}
@@ -364,23 +381,23 @@ export const DailyScheduleSlotsCards: React.FC<DailyScheduleSlotsCardsProps> = (
                     title="Lihat Silsilah Rantai Tugas & Terbitkan Berita Acara"
                   >
                     <Layers className="w-3.5 h-3.5 text-sky-400" />
-                    Rantai Tugas
-                  </Button>
+                    <TextBlock as="span">Rantai Tugas</TextBlock>
+                  </ActionButton>
 
                   {/* Tombol Update Progres */}
-                  <Button
+                  <ActionButton
                     size="sm"
                     variant="outline"
                     onClick={() => openProgressModal(slot)}
                     className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700 h-8 gap-1"
                   >
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                    Update Progres
-                  </Button>
+                    <TextBlock as="span">Update Progres</TextBlock>
+                  </ActionButton>
 
                   {/* Tombol Rollover Tugas (Langsung untuk PM, atau Pengajuan untuk Teknisi/Leader) */}
                   {!isDone && (
-                    <Button
+                    <ActionButton
                       size="sm"
                       variant="outline"
                       onClick={() =>
@@ -392,39 +409,40 @@ export const DailyScheduleSlotsCards: React.FC<DailyScheduleSlotsCardsProps> = (
                       title={isPmOrHigher ? "Eksekusi Rollover ke Hari Kerja Lain" : "Ajukan Rollover ke PM"}
                     >
                       <Send className="w-3.5 h-3.5 text-amber-400" />
-                      {isPmOrHigher ? "Rollover Tugas" : "Ajukan Rollover"}
-                    </Button>
+                      <TextBlock as="span">{isPmOrHigher ? "Rollover Tugas" : "Ajukan Rollover"}</TextBlock>
+                    </ActionButton>
                   )}
 
                   {/* Tombol PM Override Reschedule */}
                   {isPmOrHigher && (
                     <>
-                      <Button
+                      <ActionButton
                         size="sm"
                         variant="outline"
                         onClick={() => setEditingSlot(slot)}
                         className="text-xs bg-slate-800 hover:bg-slate-700 text-sky-300 border-slate-700 h-8 gap-1"
                         title="Ubah Rincian Tugas"
                       >
-                        ✏️ Edit
-                      </Button>
-                      <Button
+                        <TextBlock as="span">✏️ Edit</TextBlock>
+                      </ActionButton>
+                      <ActionButton
                         size="sm"
                         variant="outline"
-                        onClick={() => handleDeleteSlot(slot.item_id)}
+                        onClick={() => setSlotToDelete(slot.item_id)}
                         className="text-xs bg-slate-800 hover:bg-red-950/80 text-rose-300 border-slate-700 h-8 gap-1"
                         title="Hapus Tugas"
                       >
-                        🗑️ Hapus
-                      </Button>
-                      <Button
+                        <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                        <TextBlock as="span">Hapus</TextBlock>
+                      </ActionButton>
+                      <ActionButton
                         size="sm"
                         onClick={() => setSelectedSlotForReschedule(slot)}
                         className="text-xs bg-amber-600 hover:bg-amber-500 text-white font-medium h-8 gap-1 shadow"
                       >
                         <CalendarClock className="w-3.5 h-3.5" />
-                        PM Reschedule
-                      </Button>
+                        <TextBlock as="span">PM Reschedule</TextBlock>
+                      </ActionButton>
                     </>
                   )}
                 </div>
@@ -437,7 +455,7 @@ export const DailyScheduleSlotsCards: React.FC<DailyScheduleSlotsCardsProps> = (
       {/* Modal Reschedule PM */}
       {selectedSlotForReschedule && (
         <RescheduleTaskModal
-          isOpen={!!selectedSlotForReschedule}
+          isOpen={Boolean(selectedSlotForReschedule)}
           onClose={() => setSelectedSlotForReschedule(null)}
           item={selectedSlotForReschedule}
           currentDate={currentDate}
@@ -460,26 +478,25 @@ export const DailyScheduleSlotsCards: React.FC<DailyScheduleSlotsCardsProps> = (
 
       {/* Dialog Update Progres */}
       {progressSlot && (
-        <Dialog open={!!progressSlot} onOpenChange={(open) => !open && setProgressSlot(null)}>
-          <DialogContent className="max-w-md p-6 bg-slate-900 border-slate-800 text-white shadow-2xl rounded-xl">
-            <DialogHeader className="space-y-1">
-              <DialogTitle className="text-base font-semibold text-white">
-                Update Progres Lapangan
-              </DialogTitle>
-              <p className="text-xs text-slate-400 truncate">
-                Tugas: {progressSlot.title}
-              </p>
-            </DialogHeader>
+        <VmsDialog
+          open={Boolean(progressSlot)}
+          onClose={() => setProgressSlot(null)}
+          title="Update Progres Lapangan"
+        >
+          <div className="space-y-4 pt-1 text-xs">
+            <TextBlock className="text-mist truncate">
+              Tugas: {progressSlot.title}
+            </TextBlock>
 
-            <form onSubmit={handleSaveProgress} className="space-y-4 pt-2">
+            <FormBlock onSubmit={handleSaveProgress} className="space-y-4">
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-slate-300">
+                <ControlLabel className="text-xs font-medium">
                   Target Total ({progressSlot.target_qty || 0} unit)
-                </label>
-                <div className="text-xs text-slate-400">
+                </ControlLabel>
+                <TextBlock className="text-xs text-mist">
                   Masukkan jumlah unit aktual yang telah selesai dipasang/disurvei:
-                </div>
-                <input
+                </TextBlock>
+                <ControlInput
                   type="number"
                   step="0.01"
                   min="0"
@@ -493,118 +510,112 @@ export const DailyScheduleSlotsCards: React.FC<DailyScheduleSlotsCardsProps> = (
                       setProgressPercent(pct);
                     }
                   }}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-md px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                  className="w-full text-xs"
                   required
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-slate-300">
+                <ControlLabel className="text-xs font-medium">
                   Persentase Progres (%)
-                </label>
-                <input
+                </ControlLabel>
+                <ControlInput
                   type="number"
                   min="0"
                   max="100"
                   value={progressPercent}
                   onChange={(e) => setProgressPercent(parseInt(e.target.value, 10) || 0)}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-md px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                  className="w-full text-xs"
                   required
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
-                <Button
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-line">
+                <ActionButton
                   type="button"
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
                   onClick={() => setProgressSlot(null)}
                   disabled={updatingProgress}
-                  className="text-slate-400 hover:text-white text-xs h-9"
                 >
                   Batal
-                </Button>
-                <Button
+                </ActionButton>
+                <ActionButton
                   type="submit"
                   size="sm"
+                  variant="default"
                   disabled={updatingProgress}
-                  className="bg-sky-600 hover:bg-sky-500 text-white font-medium text-xs h-9 shadow"
                 >
                   {updatingProgress ? "Menyimpan..." : "Simpan Capaian"}
-                </Button>
+                </ActionButton>
               </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+            </FormBlock>
+          </div>
+        </VmsDialog>
       )}
 
       {/* Dialog Ajukan Rollover */}
       {rolloverSlot && (
-        <Dialog open={!!rolloverSlot} onOpenChange={(open) => !open && setRolloverSlot(null)}>
-          <DialogContent className="max-w-md p-6 bg-slate-900 border-slate-800 text-white shadow-2xl rounded-xl">
-            <DialogHeader className="space-y-1">
-              <div className="flex items-center gap-2">
-                <Send className="w-5 h-5 text-amber-400" />
-                <DialogTitle className="text-base font-semibold text-white">
-                  Ajukan Rollover Tugas
-                </DialogTitle>
-              </div>
-              <p className="text-xs text-slate-400 truncate">
-                Tugas: {rolloverSlot.title}
-              </p>
-            </DialogHeader>
+        <VmsDialog
+          open={Boolean(rolloverSlot)}
+          onClose={() => setRolloverSlot(null)}
+          title="Ajukan Rollover Tugas"
+        >
+          <div className="space-y-4 pt-1 text-xs">
+            <TextBlock className="text-mist truncate">
+              Tugas: {rolloverSlot.title}
+            </TextBlock>
 
-            <form onSubmit={handleSubmitRollover} className="space-y-4 pt-2">
-              <div className="p-3 bg-amber-950/40 border border-amber-800/60 rounded-lg text-xs text-amber-200 space-y-1">
-                <p className="font-medium">Ketentuan Rollover:</p>
-                <p className="text-[11px] text-slate-300">
-                  Tugas yang belum rampung hari ini akan dialihkan ke status <span className="font-mono text-amber-300">PENDING_ROLLOVER</span> dan menunggu verifikasi Project Manager (PM) untuk dijadwalkan ke hari kerja berikutnya.
-                </p>
+            <FormBlock onSubmit={handleSubmitRollover} className="space-y-4">
+              <div className="p-3 bg-amber-950/40 border border-amber-800/60 rounded-panel text-xs text-amber-200 space-y-1">
+                <TextBlock as="p" className="font-medium">Ketentuan Rollover:</TextBlock>
+                <TextBlock as="p" className="text-[11px] text-slate-300">
+                  Tugas yang belum rampung hari ini akan dialihkan ke status <TextBlock as="span" className="font-mono text-amber-300">PENDING_ROLLOVER</TextBlock> dan menunggu verifikasi Project Manager (PM) untuk dijadwalkan ke hari kerja berikutnya.
+                </TextBlock>
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-slate-300">
+                <ControlLabel className="text-xs font-medium">
                   Alasan Kendala Lapangan (Wajib)
-                </label>
-                <textarea
+                </ControlLabel>
+                <ControlTextarea
                   value={rolloverReason}
                   onChange={(e) => setRolloverReason(e.target.value)}
                   placeholder="Contoh: Hujan lebat disertai petir di lokasi tower BTS, instalasi kabel FO dihentikan demi keselamatan K3..."
                   rows={3}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-md px-3 py-2 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-amber-500 resize-none"
+                  className="w-full text-xs resize-none"
                   required
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
-                <Button
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-line">
+                <ActionButton
                   type="button"
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
                   onClick={() => setRolloverSlot(null)}
                   disabled={submittingRollover}
-                  className="text-slate-400 hover:text-white text-xs h-9"
                 >
                   Batal
-                </Button>
-                <Button
+                </ActionButton>
+                <ActionButton
                   type="submit"
                   size="sm"
+                  variant="default"
                   disabled={submittingRollover}
-                  className="bg-amber-600 hover:bg-amber-500 text-white font-medium text-xs h-9 shadow"
                 >
                   {submittingRollover ? "Mengirim..." : "Kirimkan ke PM"}
-                </Button>
+                </ActionButton>
               </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+            </FormBlock>
+          </div>
+        </VmsDialog>
       )}
 
       {/* Dialog Edit Slot Tugas */}
       {editingSlot && (
         <PlanItemFormDialog
-          open={!!editingSlot}
+          open={Boolean(editingSlot)}
           onClose={() => setEditingSlot(null)}
           dailyPlanId={dailyPlanId}
           initialData={{
@@ -619,7 +630,7 @@ export const DailyScheduleSlotsCards: React.FC<DailyScheduleSlotsCardsProps> = (
             end_time: editingSlot.end_time || undefined,
             location_name: editingSlot.location_name || undefined,
             assigned_employee_ids: editingSlot.assigned_employee_ids,
-            status: editingSlot.status as any,
+            status: editingSlot.status as PlanItemV2Value["status"],
           }}
           workTypes={optionsQuery.data?.work_types || []}
           completions={optionsQuery.data?.work_completions || []}
@@ -633,7 +644,7 @@ export const DailyScheduleSlotsCards: React.FC<DailyScheduleSlotsCardsProps> = (
       {/* Dialog Silsilah Rantai Tugas & Work Completion */}
       <TaskChainCompletionDialog
         itemId={chainDialogItemId}
-        isOpen={!!chainDialogItemId}
+        isOpen={Boolean(chainDialogItemId)}
         onClose={() => setChainDialogItemId(null)}
         onSuccess={() => {
           qc.invalidateQueries({ queryKey: ["daily-schedule-detail", dailyPlanId] });
@@ -644,7 +655,7 @@ export const DailyScheduleSlotsCards: React.FC<DailyScheduleSlotsCardsProps> = (
 
       {/* Dialog Eksekusi Rollover PM */}
       <PlanItemRolloverDialog
-        isOpen={!!rolloverDialogItem}
+        isOpen={Boolean(rolloverDialogItem)}
         onClose={() => setRolloverDialogItem(null)}
         item={rolloverDialogItem}
         dailyPlanId={dailyPlanId}
@@ -656,6 +667,35 @@ export const DailyScheduleSlotsCards: React.FC<DailyScheduleSlotsCardsProps> = (
           onRefresh?.();
         }}
       />
+      {/* Dialog Konfirmasi Hapus Tugas */}
+      <VmsDialog
+        open={Boolean(slotToDelete)}
+        onClose={() => setSlotToDelete(null)}
+        title="Hapus Butir Tugas"
+      >
+        <div className="space-y-4">
+          <TextBlock className="text-sm text-slate-300">
+            Apakah Anda yakin ingin menghapus butir tugas slot ini? Tindakan ini tidak dapat dibatalkan.
+          </TextBlock>
+          <div className="flex justify-end gap-2 pt-2">
+            <ActionButton
+              type="button"
+              variant="outline"
+              onClick={() => setSlotToDelete(null)}
+            >
+              Batal
+            </ActionButton>
+            <ActionButton
+              type="button"
+              variant="destructive"
+              onClick={handleConfirmDeleteSlot}
+              disabled={deleteItemMut.isPending}
+            >
+              {deleteItemMut.isPending ? "Menghapus..." : "Ya, Hapus"}
+            </ActionButton>
+          </div>
+        </div>
+      </VmsDialog>
     </div>
   );
 };

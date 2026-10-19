@@ -193,8 +193,8 @@ class PlanItemOut(BaseModel):
 # ── DAILY PLAN SCHEMAS (work_plan_daily) ──────────────────────
 
 class DailyPlanCreateIn(BaseModel):
-    division_id: UUID
-    team_id: UUID
+    division_id: UUID | None = None
+    team_id: UUID | None = None
     weekly_plan_id: UUID | None = None
     work_date: date
     site_name: str = Field(min_length=2, max_length=255)

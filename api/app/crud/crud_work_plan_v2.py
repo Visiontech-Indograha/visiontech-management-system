@@ -675,7 +675,7 @@ class CRUDWorkPlanV2(CRUDBase):
                 COUNT(DISTINCT wpd.daily_plan_id) AS total_days,
                 COUNT(wpi.item_id) AS total_items,
                 MIN(wpd.create_at) AS create_at,
-                MIN(wpd.daily_plan_id) AS first_daily_id
+                CAST(MIN(CAST(wpd.daily_plan_id AS text)) AS uuid) AS first_daily_id
             FROM work_plan_daily wpd
             JOIN division d ON d.division_id = wpd.division_id
             JOIN team t ON t.team_id = wpd.team_id

@@ -134,12 +134,12 @@ class CRUDPlanTransition(CRUDBase):
         """Memulai SK yang sudah Diterima dan tanggal mulainya sudah tiba hari ini."""
         rows = await self.fetchall(
             """
-            UPDATE public.work_plan_weekly
+            UPDATE public.work_plan_daily
                SET status = 'ONGOING', update_at = NOW()
              WHERE status = 'APPROVED'
-               AND start_date <= CAST(:today AS date)
+               AND work_date <= CAST(:today AS date)
                AND delete_at IS NULL
-            RETURNING CAST(weekly_plan_id AS text) AS id
+            RETURNING CAST(daily_plan_id AS text) AS id
             """,
             {"today": today},
         )

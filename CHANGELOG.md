@@ -7,6 +7,13 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ---
 
+- **Perbaikan Stabilitas API & Warning Antarmuka Work Plan V2 (`api/app/`, `web/src/`):**
+  - **Resolusi Galat 500 Endpoint Daftar Rencana Kerja (`/work-plans?archived=false`):** Memperbaiki kueri `_STANDING` dan `start_due` pada `crud_plan_access.py` dan `crud_plan_transition.py` yang sebelumnya merujuk ke tabel `work_plan_weekly` yang telah dihapus; kini mengagregasi kalender harian `work_plan_daily` secara dinamis.
+  - **Resolusi Galat 422 Pembuatan Rencana Kerja Mingguan (`POST /work-plans/weekly`):** Menjadikan `division_id` dan `team_id` pada `DailyPlanCreateIn` opsional (diisi otomatis dari parent) dan menambahkan sanitasi nilai kosong (`""` menjadi `null`) pada `onSubmit` `PlanEditorV2Form.tsx`.
+  - **Pembersihan Warning Hydration Form Bersarang (HTML `<form>` inside `<form>`):** Mengganti 14 pembungkus tata letak `<FormBlock>` internal di dalam `PlanEditorV2Form.tsx` dengan elemen kontainer `div` terstandar.
+  - **Penyelesaian Warning React Unique Key Prop pada Tim (`TeamList.tsx`):** Memperbaiki pemetaan elemen anak list menggunakan `key={t.team_id || t.id || t.name}` dan menyelaraskan antarmuka `Team` pada `teamService.ts`.
+  - **Verifikasi HTTP Komprehensif via Postman CLI:** Menguji dan memvalidasi 7 endpoint utama rencana kerja dan tim menggunakan `postman request` dengan status 200 OK dan 201 Created.
+
 - **Penyederhanaan Desain Form & Antarmuka Work Plan V2 (`web/src/`):**
   - **Formulir Stepper 3 Langkah Terarah (`PlanEditorV2Form.tsx`):** Mengganti formulir monolitik yang membingungkan menjadi alur bertahap: (1) Identitas & Tim, (2) Jadwal Harian & Tugas, dan (3) Armada & Peralatan (Opsional).
   - **Fokus Satu Hari Aktif (Single-Day Focus Tab Bar):** Menggantikan tampilan 7 kartu hari bertumpuk menjadi pemilih hari tab horizontal yang rapi; menyembunyikan input desimal koordinat GPS & radius di balik toggle opsional agar tidak mengintimidasi pengguna.

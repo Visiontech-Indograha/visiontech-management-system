@@ -8,7 +8,10 @@ export function TeamsPage() {
   const [adding, setAdding] = useState(false);
 
   const handleRemove = async (team: Team) => {
-    await deleteTeam.mutateAsync(team.id);
+    const targetId = team.team_id || team.id;
+    if (targetId) {
+      await deleteTeam.mutateAsync(targetId);
+    }
   };
 
   return (

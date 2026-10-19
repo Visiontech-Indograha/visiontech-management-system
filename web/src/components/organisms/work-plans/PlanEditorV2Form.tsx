@@ -353,12 +353,33 @@ export const PlanEditorV2Form: React.FC<PlanEditorV2FormProps> = ({ planId, init
   const onSubmit = handleSubmit(async (values) => {
     setFormError(null);
     try {
+      const sanitizedDays = (values.days || []).map((day) => ({
+        ...day,
+        division_id: day.division_id || values.division_id,
+        team_id: day.team_id || values.team_id,
+        items: (day.items || []).map((it) => ({
+          ...it,
+          completion_id: it.completion_id ? it.completion_id : null,
+          depends_on_item_id: it.depends_on_item_id ? it.depends_on_item_id : null,
+          start_time: it.start_time ? it.start_time : null,
+          end_time: it.end_time ? it.end_time : null,
+          location_name: it.location_name ? it.location_name : null,
+        })),
+      }));
+
+      const sanitizedPayload: WeeklyPlanV2Value = {
+        ...values,
+        vehicle_id: values.vehicle_id ? values.vehicle_id : null,
+        driver_employee_id: values.driver_employee_id ? values.driver_employee_id : null,
+        days: sanitizedDays,
+      };
+
       if (planId) {
-        await updateMut.mutateAsync(values);
+        await updateMut.mutateAsync(sanitizedPayload);
         toast.success("Rencana kerja mingguan berhasil diperbarui!");
         navigate(`/work-plans/${planId}`);
       } else {
-        const created = await createMut.mutateAsync(values);
+        const created = await createMut.mutateAsync(sanitizedPayload);
         toast.success("Rencana kerja mingguan baru berhasil diterbitkan!");
         const newId = created.weekly_plan_id || (created as unknown as { id: string }).id;
         navigate(newId ? `/work-plans/${newId}` : "/work-plans");
@@ -458,7 +479,7 @@ export const PlanEditorV2Form: React.FC<PlanEditorV2FormProps> = ({ planId, init
             </div>
 
             <div className="grid gap-6 md:grid-cols-2">
-              <FormBlock>
+              <div className="space-y-1.5">
                 <ControlLabel htmlFor="division_id">Divisi Operasional</ControlLabel>
                 <ControlSelect
                   id="division_id"
@@ -473,9 +494,9 @@ export const PlanEditorV2Form: React.FC<PlanEditorV2FormProps> = ({ planId, init
                   ))}
                 </ControlSelect>
                 {errors.division_id && <FormErrorText message={errors.division_id.message} />}
-              </FormBlock>
+              </div>
 
-              <FormBlock>
+              <div className="space-y-1.5">
                 <ControlLabel htmlFor="team_id">Tim Kerja Pelaksana</ControlLabel>
                 <ControlSelect
                   id="team_id"
@@ -490,7 +511,7 @@ export const PlanEditorV2Form: React.FC<PlanEditorV2FormProps> = ({ planId, init
                   ))}
                 </ControlSelect>
                 {errors.team_id && <FormErrorText message={errors.team_id.message} />}
-              </FormBlock>
+              </div>
             </div>
 
             {/* Banner Tim Terpilih */}
@@ -531,7 +552,7 @@ export const PlanEditorV2Form: React.FC<PlanEditorV2FormProps> = ({ planId, init
                 Periode Pelaksanaan
               </TextBlock>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <FormBlock>
+                <div className="space-y-1.5">
                   <ControlLabel htmlFor="year">Tahun</ControlLabel>
                   <ControlInput
                     id="year"
@@ -541,9 +562,9 @@ export const PlanEditorV2Form: React.FC<PlanEditorV2FormProps> = ({ planId, init
                     {...register("year", { valueAsNumber: true })}
                     onChange={(e) => handleWeekChange(weekNum, parseInt(e.target.value, 10) || currentIso.year)}
                   />
-                </FormBlock>
+                </div>
 
-                <FormBlock>
+                <div className="space-y-1.5">
                   <ControlLabel htmlFor="week_number">Minggu Ke-</ControlLabel>
                   <ControlInput
                     id="week_number"
@@ -553,19 +574,19 @@ export const PlanEditorV2Form: React.FC<PlanEditorV2FormProps> = ({ planId, init
                     {...register("week_number", { valueAsNumber: true })}
                     onChange={(e) => handleWeekChange(parseInt(e.target.value, 10) || 1, yearNum)}
                   />
-                </FormBlock>
+                </div>
 
-                <FormBlock>
+                <div className="space-y-1.5">
                   <ControlLabel htmlFor="start_date">Tanggal Mulai (Senin)</ControlLabel>
                   <ControlInput id="start_date" type="date" {...register("start_date")} />
                   {errors.start_date && <FormErrorText message={errors.start_date.message} />}
-                </FormBlock>
+                </div>
 
-                <FormBlock>
+                <div className="space-y-1.5">
                   <ControlLabel htmlFor="end_date">Tanggal Selesai (Minggu)</ControlLabel>
                   <ControlInput id="end_date" type="date" {...register("end_date")} />
                   {errors.end_date && <FormErrorText message={errors.end_date.message} />}
-                </FormBlock>
+                </div>
               </div>
             </div>
 
@@ -734,7 +755,7 @@ export const PlanEditorV2Form: React.FC<PlanEditorV2FormProps> = ({ planId, init
             </TextBlock>
 
             <div className="grid gap-6 md:grid-cols-2">
-              <FormBlock>
+              <div className="space-y-1.5">
                 <ControlLabel htmlFor="vehicle_id">Armada Operasional (Kendaraan)</ControlLabel>
                 <ControlSelect id="vehicle_id" {...register("vehicle_id")}>
                   <ControlOption value="">-- Tanpa Kendaraan Operasional --</ControlOption>
@@ -744,9 +765,9 @@ export const PlanEditorV2Form: React.FC<PlanEditorV2FormProps> = ({ planId, init
                     </ControlOption>
                   ))}
                 </ControlSelect>
-              </FormBlock>
+              </div>
 
-              <FormBlock>
+              <div className="space-y-1.5">
                 <ControlLabel htmlFor="driver_employee_id">Pengemudi / Driver Ditunjuk</ControlLabel>
                 <ControlSelect id="driver_employee_id" {...register("driver_employee_id")}>
                   <ControlOption value="">-- Pilih Anggota Tim sebagai Driver --</ControlOption>
@@ -756,7 +777,7 @@ export const PlanEditorV2Form: React.FC<PlanEditorV2FormProps> = ({ planId, init
                     </ControlOption>
                   ))}
                 </ControlSelect>
-              </FormBlock>
+              </div>
             </div>
 
             {opts?.tools && opts.tools.length > 0 && (
@@ -1067,7 +1088,7 @@ const SingleDayPlanCard: React.FC<SingleDayPlanCardProps> = ({
         <div className="space-y-5">
           {/* BARIS LOKASI & JAM KERJA RINGKAS */}
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <FormBlock>
+            <div className="space-y-1.5">
               <ControlLabel htmlFor={`days_${dayIndex}_preset`}>Preset Lokasi / Kantor</ControlLabel>
               <ControlSelect
                 id={`days_${dayIndex}_preset`}
@@ -1081,9 +1102,9 @@ const SingleDayPlanCard: React.FC<SingleDayPlanCardProps> = ({
                   </ControlOption>
                 ))}
               </ControlSelect>
-            </FormBlock>
+            </div>
 
-            <FormBlock>
+            <div className="space-y-1.5">
               <ControlLabel htmlFor={`days_${dayIndex}_site`}>Nama Site / Area Proyek</ControlLabel>
               <ControlInput
                 id={`days_${dayIndex}_site`}
@@ -1092,25 +1113,25 @@ const SingleDayPlanCard: React.FC<SingleDayPlanCardProps> = ({
                 {...register(`days.${dayIndex}.site_name`)}
                 required
               />
-            </FormBlock>
+            </div>
 
-            <FormBlock>
+            <div className="space-y-1.5">
               <ControlLabel htmlFor={`days_${dayIndex}_clock_in`}>Jam Masuk</ControlLabel>
               <ControlInput
                 id={`days_${dayIndex}_clock_in`}
                 type="time"
                 {...register(`days.${dayIndex}.clock_in_time`)}
               />
-            </FormBlock>
+            </div>
 
-            <FormBlock>
+            <div className="space-y-1.5">
               <ControlLabel htmlFor={`days_${dayIndex}_clock_out`}>Jam Pulang</ControlLabel>
               <ControlInput
                 id={`days_${dayIndex}_clock_out`}
                 type="time"
                 {...register(`days.${dayIndex}.clock_out_time`)}
               />
-            </FormBlock>
+            </div>
           </div>
 
           {/* TOGGLE PENGATURAN GPS OPSIONAL */}
@@ -1126,7 +1147,7 @@ const SingleDayPlanCard: React.FC<SingleDayPlanCardProps> = ({
 
             {showGps && (
               <div className="mt-3 grid grid-cols-3 gap-3 rounded-panel border border-line bg-canvas p-3">
-                <FormBlock>
+                <div className="space-y-1.5">
                   <ControlLabel htmlFor={`days_${dayIndex}_lat`} className="text-xs">Latitude GPS</ControlLabel>
                   <ControlInput
                     id={`days_${dayIndex}_lat`}
@@ -1135,9 +1156,9 @@ const SingleDayPlanCard: React.FC<SingleDayPlanCardProps> = ({
                     {...register(`days.${dayIndex}.site_lat`, { valueAsNumber: true })}
                     className="text-xs"
                   />
-                </FormBlock>
+                </div>
 
-                <FormBlock>
+                <div className="space-y-1.5">
                   <ControlLabel htmlFor={`days_${dayIndex}_lng`} className="text-xs">Longitude GPS</ControlLabel>
                   <ControlInput
                     id={`days_${dayIndex}_lng`}
@@ -1146,9 +1167,9 @@ const SingleDayPlanCard: React.FC<SingleDayPlanCardProps> = ({
                     {...register(`days.${dayIndex}.site_lng`, { valueAsNumber: true })}
                     className="text-xs"
                   />
-                </FormBlock>
+                </div>
 
-                <FormBlock>
+                <div className="space-y-1.5">
                   <ControlLabel htmlFor={`days_${dayIndex}_radius`} className="text-xs">Radius Presensi (Meter)</ControlLabel>
                   <ControlInput
                     id={`days_${dayIndex}_radius`}
@@ -1157,7 +1178,7 @@ const SingleDayPlanCard: React.FC<SingleDayPlanCardProps> = ({
                     {...register(`days.${dayIndex}.attendance_radius_m`, { valueAsNumber: true })}
                     className="text-xs"
                   />
-                </FormBlock>
+                </div>
               </div>
             )}
           </div>

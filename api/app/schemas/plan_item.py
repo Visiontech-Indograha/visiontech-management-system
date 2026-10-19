@@ -6,6 +6,7 @@ dan alur rollover / PM Full Override.
 """
 
 from datetime import date
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -75,7 +76,6 @@ class PmApproveOrMoveIn(BaseModel):
     action: str = Field(..., description="APPROVED | REJECTED | MOVE_SLOT")
     pm_override_reason: str = Field(..., min_length=2)
     target_daily_plan_id: UUID | None = None
-    target_weekly_plan_id: UUID | None = None
     target_start_time: str | None = None
     target_end_time: str | None = None
     new_status: str | None = None
@@ -97,14 +97,17 @@ class TaskChainItemDetailOut(BaseModel):
     item_id: UUID
     origin_item_id: UUID | None = None
     daily_plan_id: UUID
-    weekly_plan_id: UUID
     work_date: str | None = None
     title: str
+    task_phase: str = "MAIN_INSTALLATION"
+    is_main_deliverable: bool = True
+    depends_on_item_id: UUID | None = None
     target_qty: float
     completed_qty: float
     progress_percent: float
     status: str
     completion_id: UUID | None = None
+    realization_photos_json: list[dict[str, Any]] = Field(default_factory=list)
     create_at: str | None = None
 
 

@@ -62,6 +62,8 @@ export const PlanItemFormDialog: React.FC<PlanItemFormDialogProps> = ({
   const [startTime, setStartTime] = useState("08:00");
   const [endTime, setEndTime] = useState("12:00");
   const [locationName, setLocationName] = useState("");
+  const [taskPhase, setTaskPhase] = useState<PlanItemV2Value["task_phase"]>("MAIN_INSTALLATION");
+  const [isMainDeliverable, setIsMainDeliverable] = useState<boolean>(true);
   const [assignedEmployeeIds, setAssignedEmployeeIds] = useState<string[]>([]);
   const [status, setStatus] = useState<PlanItemV2Value["status"]>("PENDING");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -81,6 +83,8 @@ export const PlanItemFormDialog: React.FC<PlanItemFormDialogProps> = ({
       setStartTime(initialData.start_time ? initialData.start_time.slice(0, 5) : "08:00");
       setEndTime(initialData.end_time ? initialData.end_time.slice(0, 5) : "12:00");
       setLocationName(initialData.location_name || "");
+      setTaskPhase(initialData.task_phase || "MAIN_INSTALLATION");
+      setIsMainDeliverable(initialData.is_main_deliverable !== undefined ? initialData.is_main_deliverable : true);
       setAssignedEmployeeIds(initialData.assigned_employee_ids || []);
       setStatus(initialData.status || "PENDING");
     } else {
@@ -93,6 +97,8 @@ export const PlanItemFormDialog: React.FC<PlanItemFormDialogProps> = ({
       setStartTime("08:00");
       setEndTime("12:00");
       setLocationName("");
+      setTaskPhase("MAIN_INSTALLATION");
+      setIsMainDeliverable(true);
       setAssignedEmployeeIds([]);
       setStatus("PENDING");
     }
@@ -127,6 +133,8 @@ export const PlanItemFormDialog: React.FC<PlanItemFormDialogProps> = ({
       daily_plan_id: dailyPlanId,
       weekly_plan_id: weeklyPlanId,
       title: title.trim(),
+      task_phase: taskPhase,
+      is_main_deliverable: isMainDeliverable,
       work_type_id: workTypeId,
       completion_id: completionId ? completionId : null,
       target_qty: targetVal,
@@ -224,6 +232,35 @@ export const PlanItemFormDialog: React.FC<PlanItemFormDialogProps> = ({
             ))}
           </ControlSelect>
         </FormBlock>
+
+        <div className="grid grid-cols-2 gap-3">
+          <FormBlock>
+            <ControlLabel htmlFor="item_task_phase">Tahap Pekerjaan (Multi-Week Phase)</ControlLabel>
+            <ControlSelect
+              id="item_task_phase"
+              value={taskPhase}
+              onChange={(e) => setTaskPhase(e.target.value as PlanItemV2Value["task_phase"])}
+            >
+              <ControlOption value="SURVEY">1. Survei Lapangan & Jalur</ControlOption>
+              <ControlOption value="PREPARATION">2. Persiapan (Skafolding / Galian)</ControlOption>
+              <ControlOption value="MAIN_INSTALLATION">3. Instalasi Fisik Utama</ControlOption>
+              <ControlOption value="TESTING_COMMISSIONING">4. Pengujian & Komisioning</ControlOption>
+              <ControlOption value="FINISHING">5. Finishing & Dokumentasi</ControlOption>
+            </ControlSelect>
+          </FormBlock>
+
+          <FormBlock>
+            <ControlLabel htmlFor="item_is_deliverable">Klasifikasi Deliverable</ControlLabel>
+            <ControlSelect
+              id="item_is_deliverable"
+              value={isMainDeliverable ? "true" : "false"}
+              onChange={(e) => setIsMainDeliverable(e.target.value === "true")}
+            >
+              <ControlOption value="true">Deliverable Utama (Masuk BAST)</ControlOption>
+              <ControlOption value="false">Pekerjaan Pendukung (Non-BAST)</ControlOption>
+            </ControlSelect>
+          </FormBlock>
+        </div>
 
         <div className="grid grid-cols-2 gap-3">
           <FormBlock>

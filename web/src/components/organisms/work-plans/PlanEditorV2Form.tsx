@@ -224,6 +224,8 @@ export const PlanEditorV2Form: React.FC<PlanEditorV2FormProps> = ({ planId, init
       const defaultItem: PlanItemV2Value = {
         title: "Pekerjaan Lapangan",
         work_type_id: filteredWorkTypes[0]?.work_type_id || "",
+        task_phase: "MAIN_INSTALLATION",
+        is_main_deliverable: true,
         target_qty: 1,
         completed_qty: 0,
         progress_percent: 0,
@@ -607,6 +609,8 @@ const DailyPlanCardItem: React.FC<DailyPlanCardItemProps> = ({
     appendItem({
       title: "",
       work_type_id: workTypes[0]?.work_type_id || "",
+      task_phase: "MAIN_INSTALLATION",
+      is_main_deliverable: true,
       completion_id: null,
       target_qty: 1,
       completed_qty: 0,

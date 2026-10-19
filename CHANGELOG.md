@@ -7,7 +7,11 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ---
 
-## [Unreleased] — `development`
+- **Arsitektur Daily-First & Linimasa Proyek Multi-Minggu (`api/app/`, `web/src/`, `db/`):**
+  - **Penyederhanaan Skema 2-Tier Daily-First:** Menghapus tabel `work_plan_weekly` dari database PostgreSQL dan mempromosikan `work_plan_daily` menjadi entitas induk operasional dengan atribut `division_id`, `team_id`, dan otoritas persetujuan PM (`approved_by_pm_id`, `approved_at`).
+  - **Dukungan Proyek Multi-Minggu & Deliverables Isolation:** Menambahkan kolom `task_phase` (SURVEY, PREPARATION, MAIN_INSTALLATION, TESTING_COMMISSIONING, FINISHING), `is_main_deliverable`, `depends_on_item_id`, dan `realization_photos_json` pada `work_plan_item`. Memisahkan pekerjaan prasyarat pendukung dari unit fisik utama untuk memastikan perhitungan progres fisik 100% akurat tanpa distorsi persentase.
+  - **Matriks Kalender Mingguan Dinamis & PM Bulk Approval:** Menyediakan endpoint `GET /work-plans/matrix` (filter rentang tanggal bebas `start_date` s/d `end_date`), `POST /work-plans/matrix/bulk-approve` untuk persetujuan 1-klik seluruh hari kerja mingguan, serta endpoint rekapitulasi `GET /work-plans/project/{completion_id}/schedule` untuk linimasa BAST.
+  - **Penyelarasan Web Frontend (React + TypeScript):** Memperbarui skema validasi Zod (`workPlanV2Schema.ts`), query & mutation hooks TanStack Query (`workPlanV2Service.ts`), serta antarmuka slot tugas harian (`DailyScheduleSlotsCards.tsx`) dan form input (`PlanItemFormDialog.tsx`, `DailyPlanFormDialog.tsx`, `PlanEditorV2Form.tsx`) dengan badge fase kerja dan klasifikasi deliverable utama.
 
 - **Penyempurnaan Alur Work Plan V2 Menuju Work Completion & Task Chain Rollover (`api/app/`, `web/src/`):**
   - **Silsilah Rantai Tugas Rollover (Task Chain CTE):** Menerapkan pelacakan hierarki pohon tugas (`root_origin_id`) dengan recursive CTE di PostgreSQL, menghitung akumulasi capaian volume secara dinamis lintas hari (Kasus 6A: `SHIFTED_DAY`) dan lintas minggu (Kasus 6B: `ALLOCATED_NEXT_WEEK`).

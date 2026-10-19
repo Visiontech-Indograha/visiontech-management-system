@@ -9,8 +9,22 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/apiClient";
-import type { DailyPlanV2Value, PlanItemV2Value, WeeklyPlanV2Value } from "@/schemas/workPlanV2Schema";
-export type { DailyPlanV2Value, PlanItemV2Value, WeeklyPlanV2Value };
+import type {
+  DailyPlanV2Value,
+  PlanItemV2Value,
+  WeeklyPlanV2Value,
+  WeeklyCalendarMatrixValue,
+  ProjectScheduleValue,
+  BulkApproveDailyPlansValue,
+} from "@/schemas/workPlanV2Schema";
+export type {
+  DailyPlanV2Value,
+  PlanItemV2Value,
+  WeeklyPlanV2Value,
+  WeeklyCalendarMatrixValue,
+  ProjectScheduleValue,
+  BulkApproveDailyPlansValue,
+};
 
 export interface TeamMemberOption {
   employee_id: string;
@@ -102,6 +116,10 @@ export const planV2Keys = {
   dailyList: (weeklyId: string) => ["work-plans-v2", "daily-list", weeklyId] as const,
   dailyDetail: (dailyId: string) => ["work-plans-v2", "daily-detail", dailyId] as const,
   itemList: (dailyId: string) => ["work-plans-v2", "item-list", dailyId] as const,
+  matrix: (startDate: string, endDate: string, divisionId?: string, teamId?: string) =>
+    ["work-plans-v2", "matrix", startDate, endDate, divisionId || "all", teamId || "all"] as const,
+  projectSchedule: (completionId: string) =>
+    ["work-plans-v2", "project-schedule", completionId] as const,
 };
 
 /** Ambil seluruh data dropdown master untuk form Rencana Kerja V2 */
@@ -325,9 +343,74 @@ export function useGenerateWorkCompletion() {
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ["task-chain-status", vars.itemId] });
       qc.invalidateQueries({ queryKey: ["work-plans"] });
+      qc.invalidateQueries({ queryKey: ["work-plans-v2"] });
       qc.invalidateQueries({ queryKey: ["daily-schedule-detail"] });
       qc.invalidateQueries({ queryKey: ["plan-days"] });
     },
   });
 }
+
+// ── DYNAMIC WEEKLY MATRIX & MULTI-WEEK PROJECT SCHEDULE HOOKS ──
+
+/** Hook Query untuk kalender matriks mingguan dinamis (GET /work-plans/matrix) */
+export function useWorkPlanMatrix({
+  startDate,
+  endDate,
+  divisionId,
+  teamId,
+  enabled = true,
+}: {
+  startDate: string;
+  endDate: string;
+  divisionId?: string;
+  teamId?: string;
+  enabled?: boolean;
+}) {
+  return useQuery({
+    queryKey: planV2Keys.matrix(startDate, endDate, divisionId, teamId),
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        start_date: startDate,
+        end_date: endDate,
+      });
+      if (divisionId) params.append("division_id", divisionId);
+      if (teamId) params.append("team_id", teamId);
+      const res = await api.get<WeeklyCalendarMatrixValue>(`/work-plans/matrix?${params.toString()}`);
+      return res.data;
+    },
+    enabled: Boolean(startDate && endDate) && enabled,
+  });
+}
+
+/** Hook Mutasi PM untuk Menyetujui Seluruh Hari Kerja dalam Rentang Tanggal (POST /work-plans/matrix/bulk-approve) */
+export function useBulkApproveWeeklyMatrix() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: BulkApproveDailyPlansValue) => {
+      const res = await api.post<{ success: boolean; approved_count: number; message: string }>(
+        "/work-plans/matrix/bulk-approve",
+        payload
+      );
+      return res.data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["work-plans-v2"] });
+      qc.invalidateQueries({ queryKey: ["work-plans"] });
+    },
+  });
+}
+
+/** Hook Query untuk Linimasa & Akumulasi Proyek Multi-Minggu (GET /work-plans/project/{completionId}/schedule) */
+export function useProjectSchedule(completionId?: string | null) {
+  return useQuery({
+    queryKey: planV2Keys.projectSchedule(completionId || ""),
+    queryFn: async () => {
+      if (!completionId) return null;
+      const res = await api.get<ProjectScheduleValue>(`/work-plans/project/${completionId}/schedule`);
+      return res.data;
+    },
+    enabled: Boolean(completionId),
+  });
+}
+
 

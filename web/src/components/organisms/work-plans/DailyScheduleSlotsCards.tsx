@@ -52,6 +52,14 @@ interface DailyScheduleSlotsCardsProps {
   onRefresh?: () => void;
 }
 
+const PHASE_LABELS: Record<string, { label: string; color: string }> = {
+  SURVEY: { label: "Survei", color: "bg-amber-950/80 text-amber-300 border-amber-700" },
+  PREPARATION: { label: "Persiapan & Galian", color: "bg-cyan-950/80 text-cyan-300 border-cyan-700" },
+  MAIN_INSTALLATION: { label: "Instalasi Utama", color: "bg-blue-950/80 text-blue-300 border-blue-700" },
+  TESTING_COMMISSIONING: { label: "Testing & Komisi", color: "bg-purple-950/80 text-purple-300 border-purple-700" },
+  FINISHING: { label: "Finishing", color: "bg-teal-950/80 text-teal-300 border-teal-700" },
+};
+
 export const DailyScheduleSlotsCards: React.FC<DailyScheduleSlotsCardsProps> = ({
   slots = [],
   currentDate,
@@ -224,6 +232,36 @@ export const DailyScheduleSlotsCards: React.FC<DailyScheduleSlotsCardsProps> = (
                         ? "Dialokasikan ke Minggu Depan"
                         : slot.status}
                     </span>
+
+                    {/* Badge Tahap Pekerjaan Multi-Minggu */}
+                    {slot.task_phase && (
+                      <span
+                        className={`text-[11px] font-medium px-2 py-0.5 rounded border ${
+                          PHASE_LABELS[slot.task_phase]?.color || "bg-slate-800 text-slate-300 border-slate-700"
+                        }`}
+                      >
+                        {PHASE_LABELS[slot.task_phase]?.label || slot.task_phase}
+                      </span>
+                    )}
+
+                    {/* Badge Deliverable Utama (BAST) vs Pendukung */}
+                    {slot.is_main_deliverable === false ? (
+                      <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">
+                        Pendukung (Non-BAST)
+                      </span>
+                    ) : (
+                      <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-700">
+                        Deliverable Utama (BAST)
+                      </span>
+                    )}
+
+                    {/* Badge Foto Realisasi */}
+                    {Boolean(slot.realization_photos_json && slot.realization_photos_json.length > 0) && (
+                      <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-indigo-950/80 text-indigo-300 border border-indigo-700 flex items-center gap-1 font-mono">
+                        <Camera className="w-3 h-3 text-indigo-400" />
+                        {slot.realization_photos_json!.length} Foto
+                      </span>
+                    )}
 
                     {slot.origin_item_id && (
                       <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-purple-950/80 text-purple-300 border border-purple-800 flex items-center gap-1">

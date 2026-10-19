@@ -11,6 +11,7 @@ Mengikuti Standar Arsitektur API FastAPI Modular VMS & Master Schema V2.
 
 from __future__ import annotations
 
+from datetime import date
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, status
@@ -21,12 +22,16 @@ from app.core.errors import NotFoundError
 from app.core.security import CurrentUser
 from app.crud.crud_work_plan_v2 import CRUDWorkPlanV2
 from app.modules.work_plans.schemas.work_plan_v2_schema import (
+    BulkApproveDailyPlansIn,
+    BulkApproveDailyPlansOut,
     DailyPlanCreateIn,
     DailyPlanOut,
     DailyPlanUpdateIn,
     PlanItemCreateIn,
     PlanItemOut,
     PlanItemUpdateIn,
+    ProjectScheduleOut,
+    WeeklyCalendarMatrixOut,
     WeeklyPlanCreateIn,
     WeeklyPlanDetailOut,
     WeeklyPlanListOut,
@@ -52,6 +57,58 @@ async def get_work_plan_form_options_v2(
 ) -> WorkPlanFormOptionsV2Out:
     """Mengambil seluruh data referensi dropdown master untuk form Rencana Kerja V2."""
     return await crud.get_form_options_v2()
+
+
+# ── WEEKLY MATRIX & PROJECT SCHEDULE (DAILY-FIRST) ───────────
+
+
+@router.get("/work-plans/matrix", response_model=WeeklyCalendarMatrixOut)
+async def get_weekly_matrix(
+    start_date: date = Query(..., description="Tanggal awal rentang minggu (YYYY-MM-DD)"),
+    end_date: date = Query(..., description="Tanggal akhir rentang minggu (YYYY-MM-DD)"),
+    division_id: UUID | None = Query(None),
+    team_id: UUID | None = Query(None),
+    current_user: CurrentUser = Depends(get_current_user),
+    crud: CRUDWorkPlanV2 = Depends(get_crud_work_plan_v2),
+) -> WeeklyCalendarMatrixOut:
+    """Mengambil matriks kalender harian (Daily-First) untuk seluruh hari dalam rentang tanggal."""
+    return await crud.get_weekly_matrix(
+        start_date=start_date,
+        end_date=end_date,
+        division_id=division_id,
+        team_id=team_id,
+    )
+
+
+@router.post("/work-plans/matrix/bulk-approve", response_model=BulkApproveDailyPlansOut)
+async def bulk_approve_weekly_matrix(
+    payload: BulkApproveDailyPlansIn,
+    current_user: CurrentUser = Depends(get_current_user),
+    crud: CRUDWorkPlanV2 = Depends(get_crud_work_plan_v2),
+) -> BulkApproveDailyPlansOut:
+    """Persetujuan serentak oleh Project Manager untuk jadwal satu minggu kerja tim."""
+    pm_id = current_user.employee_id
+    if not pm_id:
+        pm_id = await crud.get_creator_employee_id(current_user.user_id)
+    return await crud.bulk_approve_days(
+        pm_employee_id=UUID(str(pm_id)),
+        start_date=payload.start_date,
+        end_date=payload.end_date,
+        team_id=payload.team_id,
+    )
+
+
+@router.get("/work-plans/project/{completion_id}/schedule", response_model=ProjectScheduleOut)
+async def get_project_schedule(
+    completion_id: UUID,
+    current_user: CurrentUser = Depends(get_current_user),
+    crud: CRUDWorkPlanV2 = Depends(get_crud_work_plan_v2),
+) -> ProjectScheduleOut:
+    """Mengambil linimasa jadwal proyek multi-minggu (CCTV Site A dsb.) beserta rekap tahapan dan deliverable."""
+    schedule = await crud.get_project_schedule(completion_id)
+    if not schedule:
+        raise NotFoundError("Data proyek work completion tidak ditemukan.")
+    return schedule
 
 
 # ── WEEKLY PLAN CRUD ─────────────────────────────────────────
@@ -158,8 +215,9 @@ async def create_daily_plan_v2(
     current_user: CurrentUser = Depends(get_current_user),
     crud: CRUDWorkPlanV2 = Depends(get_crud_work_plan_v2),
 ) -> DailyPlanOut:
-    """Menambahkan hari kerja baru ke dalam rencana mingguan."""
-    return await crud.create_daily_plan(payload)
+    """Menambahkan hari kerja baru langsung ke dalam sistem."""
+    creator_id = await crud.get_creator_employee_id(current_user.user_id)
+    return await crud.create_daily_plan(payload, creator_id)
 
 
 @router.put("/work-plans/daily/{daily_plan_id}", response_model=DailyPlanOut)

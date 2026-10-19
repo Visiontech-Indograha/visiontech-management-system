@@ -292,27 +292,11 @@ CREATE TABLE IF NOT EXISTS image_requirement (
     delete_at TIMESTAMPTZ NULL
 );
 
--- 16. Tabel work_plan_weekly (Konfirmasi 6A)
-CREATE TABLE IF NOT EXISTS work_plan_weekly (
-    weekly_plan_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    division_id UUID NOT NULL REFERENCES division(division_id),
-    team_id UUID NOT NULL REFERENCES team(team_id),
-    week_number SMALLINT NOT NULL,
-    year SMALLINT NOT NULL,
-    start_date DATE NOT NULL,
-    end_date DATE NOT NULL,
-    created_by_id UUID NOT NULL REFERENCES employee(employee_id),
-    approved_by_pm_id UUID NULL REFERENCES employee(employee_id),
-    status VARCHAR(30) NOT NULL DEFAULT 'APPROVED',
-    create_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    update_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    delete_at TIMESTAMPTZ NULL
-);
-
--- 17. Tabel work_plan_daily (Jadwal Lokasi Harian & Jam Kerja Proyek)
+-- 16. Tabel work_plan_daily (Entitas Induk Rencana Kerja Harian & Jam Operasional Proyek)
 CREATE TABLE IF NOT EXISTS work_plan_daily (
     daily_plan_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    weekly_plan_id UUID NOT NULL REFERENCES work_plan_weekly(weekly_plan_id),
+    division_id UUID NOT NULL REFERENCES division(division_id),
+    team_id UUID NOT NULL REFERENCES team(team_id),
     work_date DATE NOT NULL,
     site_name VARCHAR(150) NOT NULL,
     site_lat NUMERIC(10,7) NOT NULL,
@@ -320,17 +304,20 @@ CREATE TABLE IF NOT EXISTS work_plan_daily (
     attendance_radius_m INT NOT NULL DEFAULT 150,
     clock_in_time TIME NOT NULL DEFAULT '07:00:00',
     clock_out_time TIME NOT NULL DEFAULT '16:00:00',
-    status VARCHAR(30) NOT NULL DEFAULT 'ONGOING',
+    status VARCHAR(30) NOT NULL DEFAULT 'ONGOING', -- 'DRAFT','SUBMITTED','APPROVED','ONGOING','COMPLETED'
+    created_by_id UUID NOT NULL REFERENCES employee(employee_id),
+    approved_by_pm_id UUID NULL REFERENCES employee(employee_id),
+    approved_at TIMESTAMPTZ NULL,
+    rejection_reason TEXT NULL,
     create_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     update_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     delete_at TIMESTAMPTZ NULL
 );
 
--- 18. Tabel work_plan_item (Engine Geser Hari & Alokasi Minggu Depan - Konfirmasi 6B: Wajib Disetujui PM)
+-- 17. Tabel work_plan_item (Slot Penugasan Tugas Harian, Prasyarat, & Engine Rollover)
 CREATE TABLE IF NOT EXISTS work_plan_item (
     item_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     daily_plan_id UUID NOT NULL REFERENCES work_plan_daily(daily_plan_id),
-    weekly_plan_id UUID NOT NULL REFERENCES work_plan_weekly(weekly_plan_id),
     work_type_id UUID NOT NULL REFERENCES work_type(work_type_id),
     completion_id UUID NULL, -- Di-link ke work_completion
     start_time TIME NULL DEFAULT '08:00:00',
@@ -340,22 +327,25 @@ CREATE TABLE IF NOT EXISTS work_plan_item (
     site_lng NUMERIC(10,7) NULL,
     assigned_employee_ids JSONB NULL,
     title VARCHAR(200) NOT NULL,
+    task_phase VARCHAR(30) NOT NULL DEFAULT 'MAIN_INSTALLATION', -- 'SURVEY','PREPARATION','MAIN_INSTALLATION','TESTING_COMMISSIONING'
+    is_main_deliverable BOOLEAN NOT NULL DEFAULT TRUE,
+    depends_on_item_id UUID NULL REFERENCES work_plan_item(item_id),
     target_qty NUMERIC(10,2) NOT NULL DEFAULT 100.00,
     completed_qty NUMERIC(10,2) NOT NULL DEFAULT 0.00,
     progress_percent NUMERIC(5,2) NOT NULL DEFAULT 0.00,
-    status VARCHAR(30) NOT NULL DEFAULT 'IN_PROGRESS', -- 'TODO','IN_PROGRESS','DONE','PENDING_ROLLOVER','SHIFTED_DAY','ALLOCATED_NEXT_WEEK'
+    status VARCHAR(30) NOT NULL DEFAULT 'IN_PROGRESS', -- 'TODO','IN_PROGRESS','DONE','PENDING_ROLLOVER','SHIFTED_DAY'
     rollover_approval_status rollover_approval_enum NOT NULL DEFAULT 'NONE',
     approved_by_pm_id UUID NULL REFERENCES employee(employee_id),
     origin_item_id UUID NULL REFERENCES work_plan_item(item_id),
     shifted_to_daily_id UUID NULL REFERENCES work_plan_daily(daily_plan_id),
-    allocated_to_weekly_id UUID NULL REFERENCES work_plan_weekly(weekly_plan_id),
     delay_reason TEXT NULL,
+    realization_photos_json JSONB NOT NULL DEFAULT '[]'::jsonb,
     create_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     update_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     delete_at TIMESTAMPTZ NULL
 );
 
--- 19. Tabel company_mess_stay (Konfirmasi 5C: Hanya mencatat lokasi mes & siapa yang menginap)
+-- 18. Tabel company_mess_stay (Mencatat Lokasi Mess & Riwayat Inap Berbasis Tanggal Riil)
 CREATE TABLE IF NOT EXISTS company_mess_stay (
     mess_stay_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     mess_name VARCHAR(100) NOT NULL,
@@ -364,7 +354,6 @@ CREATE TABLE IF NOT EXISTS company_mess_stay (
     latitude NUMERIC(10,7) NOT NULL,
     longitude NUMERIC(10,7) NOT NULL,
     employee_id UUID NOT NULL REFERENCES employee(employee_id),
-    weekly_plan_id UUID NULL REFERENCES work_plan_weekly(weekly_plan_id),
     stay_start_date DATE NOT NULL,
     stay_end_date DATE NOT NULL,
     create_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -482,9 +471,10 @@ CREATE TABLE IF NOT EXISTS work_completion (
     site_address TEXT NULL,
     site_lat NUMERIC(10,7) NULL,
     site_lng NUMERIC(10,7) NULL,
-    report_scope VARCHAR(15) NULL, -- 'DAILY' atau 'WEEKLY'
+    report_scope VARCHAR(15) NULL, -- 'DAILY' atau 'PROJECT'
     daily_plan_id UUID NULL REFERENCES work_plan_daily(daily_plan_id),
-    weekly_plan_id UUID NULL REFERENCES work_plan_weekly(weekly_plan_id),
+    start_work_date DATE NULL,
+    end_work_date DATE NULL,
     summary_notes TEXT NULL,
     obstacles TEXT NULL,
     realization_photos_json JSONB NOT NULL DEFAULT '[]'::jsonb,
@@ -503,11 +493,12 @@ CREATE TABLE IF NOT EXISTS work_completion (
 -- 24b. Tabel document_template_export (Ekspor Berkas Multi-Format & Preview)
 CREATE TABLE IF NOT EXISTS document_template_export (
     export_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    source_type VARCHAR(30) NOT NULL DEFAULT 'WORK_COMPLETION', -- 'WORK_COMPLETION', 'WORK_PLAN_WEEKLY', 'WORK_PLAN_DAILY'
+    source_type VARCHAR(30) NOT NULL DEFAULT 'WORK_COMPLETION', -- 'WORK_COMPLETION', 'WORK_PLAN_PERIODIC', 'WORK_PLAN_DAILY'
     completion_id UUID NULL REFERENCES work_completion(completion_id),
-    weekly_plan_id UUID NULL REFERENCES work_plan_weekly(weekly_plan_id),
     daily_plan_id UUID NULL REFERENCES work_plan_daily(daily_plan_id),
-    template_type VARCHAR(40) NOT NULL, -- 'DAILY_TEMPLATE', 'WEEKLY_TEMPLATE'
+    period_start_date DATE NULL,
+    period_end_date DATE NULL,
+    template_type VARCHAR(40) NOT NULL, -- 'DAILY_TEMPLATE', 'PERIODIC_TEMPLATE'
     master_template_path VARCHAR(255) NOT NULL, -- File template baku perusahaan (6C)
     export_format export_format_enum NOT NULL,
     file_output_url VARCHAR(255) NOT NULL,
@@ -557,7 +548,7 @@ CREATE TABLE IF NOT EXISTS system_backup_registry (
 -- 27. Tabel overtime (Pengajuan & Persetujuan Lembur per Rencana Kerja)
 CREATE TABLE IF NOT EXISTS overtime (
     overtime_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    weekly_plan_id UUID NOT NULL REFERENCES work_plan_weekly(weekly_plan_id),
+    daily_plan_id UUID NULL REFERENCES work_plan_daily(daily_plan_id),
     employee_id UUID NOT NULL REFERENCES employee(employee_id),
     work_date DATE NOT NULL,
     hours NUMERIC(4,2) NOT NULL,
@@ -571,7 +562,7 @@ CREATE TABLE IF NOT EXISTS overtime (
     delete_at TIMESTAMPTZ NULL
 );
 
-CREATE INDEX IF NOT EXISTS idx_overtime_weekly_plan ON overtime (weekly_plan_id);
+CREATE INDEX IF NOT EXISTS idx_overtime_daily_plan ON overtime (daily_plan_id);
 CREATE INDEX IF NOT EXISTS idx_overtime_employee ON overtime (employee_id);
 
 -- Indeks Tambahan untuk Relasi Foreign Key & Filter Soft Delete
@@ -593,11 +584,12 @@ CREATE INDEX IF NOT EXISTS idx_vehicle_office ON vehicle (office_id) WHERE delet
 CREATE INDEX IF NOT EXISTS idx_vehicle_division ON vehicle (division_id) WHERE delete_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_vehicle_file_vehicle ON vehicle_file (vehicle_id) WHERE delete_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_vehicle_inspection_vehicle ON vehicle_inspection (vehicle_id) WHERE delete_at IS NULL;
-CREATE INDEX IF NOT EXISTS idx_work_plan_weekly_division ON work_plan_weekly (division_id) WHERE delete_at IS NULL;
-CREATE INDEX IF NOT EXISTS idx_work_plan_weekly_team ON work_plan_weekly (team_id) WHERE delete_at IS NULL;
-CREATE INDEX IF NOT EXISTS idx_work_plan_daily_weekly ON work_plan_daily (weekly_plan_id) WHERE delete_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_work_plan_daily_division ON work_plan_daily (division_id) WHERE delete_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_work_plan_daily_team ON work_plan_daily (team_id) WHERE delete_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_work_plan_daily_date ON work_plan_daily (work_date) WHERE delete_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_work_plan_item_daily ON work_plan_item (daily_plan_id) WHERE delete_at IS NULL;
-CREATE INDEX IF NOT EXISTS idx_work_plan_item_weekly ON work_plan_item (weekly_plan_id) WHERE delete_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_work_plan_item_phase ON work_plan_item (task_phase) WHERE delete_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_work_plan_item_deliverable ON work_plan_item (is_main_deliverable) WHERE delete_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_work_plan_item_work_type ON work_plan_item (work_type_id) WHERE delete_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_work_type_division ON work_type (division_id) WHERE delete_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_asset_assignment_tool ON asset_assignment (tool_id) WHERE delete_at IS NULL;

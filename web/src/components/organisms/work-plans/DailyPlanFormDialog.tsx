@@ -26,7 +26,9 @@ import {
 interface DailyPlanFormDialogProps {
   open: boolean;
   onClose: () => void;
-  weeklyPlanId: string;
+  weeklyPlanId?: string;
+  divisionId?: string;
+  teamId?: string;
   initialData?: Partial<DailyPlanV2Value> | null;
   offices?: OfficeSiteOption[];
   onSaved?: () => void;
@@ -36,6 +38,8 @@ export const DailyPlanFormDialog: React.FC<DailyPlanFormDialogProps> = ({
   open,
   onClose,
   weeklyPlanId,
+  divisionId,
+  teamId,
   initialData,
   offices = [],
   onSaved,
@@ -103,7 +107,10 @@ export const DailyPlanFormDialog: React.FC<DailyPlanFormDialogProps> = ({
     }
 
     const payload: DailyPlanV2Value = {
-      weekly_plan_id: weeklyPlanId,
+      daily_plan_id: initialData?.daily_plan_id,
+      weekly_plan_id: weeklyPlanId || undefined,
+      division_id: divisionId || initialData?.division_id,
+      team_id: teamId || initialData?.team_id,
       work_date: workDate,
       site_name: siteName.trim(),
       site_lat: parseFloat(siteLat) || 0,

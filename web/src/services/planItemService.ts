@@ -103,6 +103,10 @@ export interface ItemScheduleSlot {
   delay_reason?: string | null;
   rollover_approval_status?: string | null;
   completion_id?: string | null;
+  task_phase?: "SURVEY" | "PREPARATION" | "MAIN_INSTALLATION" | "TESTING_COMMISSIONING" | "FINISHING" | string | null;
+  is_main_deliverable?: boolean;
+  depends_on_item_id?: string | null;
+  realization_photos_json?: string[] | null;
   work_type?: {
     work_type_id: string;
     name: string;
@@ -123,9 +127,12 @@ export interface ItemScheduleSlot {
 
 export interface TaskChainItemDetail {
   item_id: string;
-  weekly_plan_id: string;
+  weekly_plan_id?: string | null;
+  daily_plan_id?: string | null;
   work_date?: string | null;
   title: string;
+  task_phase?: string | null;
+  is_main_deliverable?: boolean;
   target_qty: number;
   completed_qty: number;
   progress_percent: number;

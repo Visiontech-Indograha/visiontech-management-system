@@ -9,6 +9,7 @@ Skema Pydantic v2 untuk modul Rencana Kerja V2:
 
 from datetime import date, datetime, time
 from decimal import Decimal
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -111,6 +112,9 @@ class PlanItemCreateIn(BaseModel):
     weekly_plan_id: UUID | None = None
     work_type_id: UUID
     title: str = Field(min_length=3, max_length=255)
+    task_phase: str = "MAIN_INSTALLATION"
+    is_main_deliverable: bool = True
+    depends_on_item_id: UUID | None = None
     completion_id: UUID | None = None
     target_qty: Decimal = Field(gt=Decimal("0"))
     completed_qty: Decimal = Decimal("0.00")
@@ -124,10 +128,14 @@ class PlanItemCreateIn(BaseModel):
     status: str = "PENDING"
     rollover_approval_status: str = "NONE"
     delay_reason: str | None = None
+    realization_photos_json: list[dict[str, Any]] = []
 
 
 class PlanItemUpdateIn(BaseModel):
     title: str | None = None
+    task_phase: str | None = None
+    is_main_deliverable: bool | None = None
+    depends_on_item_id: UUID | None = None
     work_type_id: UUID | None = None
     completion_id: UUID | None = None
     target_qty: Decimal | None = None
@@ -142,6 +150,7 @@ class PlanItemUpdateIn(BaseModel):
     status: str | None = None
     rollover_approval_status: str | None = None
     delay_reason: str | None = None
+    realization_photos_json: list[dict[str, Any]] | None = None
 
 
 class PlanItemOut(BaseModel):
@@ -149,10 +158,13 @@ class PlanItemOut(BaseModel):
 
     item_id: UUID
     daily_plan_id: UUID
-    weekly_plan_id: UUID
+    weekly_plan_id: UUID | None = None
     work_type_id: UUID
     work_type_name: str | None = None
     title: str
+    task_phase: str = "MAIN_INSTALLATION"
+    is_main_deliverable: bool = True
+    depends_on_item_id: UUID | None = None
     target_qty: Decimal
     completed_qty: Decimal
     progress_percent: Decimal
@@ -163,6 +175,7 @@ class PlanItemOut(BaseModel):
     shifted_to_daily_id: UUID | None = None
     allocated_to_weekly_id: UUID | None = None
     delay_reason: str | None = None
+    realization_photos_json: list[dict[str, Any]] = []
     completion_id: UUID | None = None
     client_name: str | None = None
     project_title: str | None = None
@@ -180,6 +193,8 @@ class PlanItemOut(BaseModel):
 # ── DAILY PLAN SCHEMAS (work_plan_daily) ──────────────────────
 
 class DailyPlanCreateIn(BaseModel):
+    division_id: UUID
+    team_id: UUID
     weekly_plan_id: UUID | None = None
     work_date: date
     site_name: str = Field(min_length=2, max_length=255)
@@ -194,6 +209,8 @@ class DailyPlanCreateIn(BaseModel):
 
 
 class DailyPlanUpdateIn(BaseModel):
+    division_id: UUID | None = None
+    team_id: UUID | None = None
     work_date: date | None = None
     site_name: str | None = None
     site_lat: Decimal | None = None
@@ -203,13 +220,18 @@ class DailyPlanUpdateIn(BaseModel):
     clock_out_time: time | None = None
     status: str | None = None
     is_holiday: bool | None = None
+    rejection_reason: str | None = None
 
 
 class DailyPlanOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     daily_plan_id: UUID
-    weekly_plan_id: UUID
+    division_id: UUID
+    division_name: str | None = None
+    team_id: UUID
+    team_name: str | None = None
+    weekly_plan_id: UUID | None = None
     work_date: date
     site_name: str
     site_lat: Decimal
@@ -219,6 +241,12 @@ class DailyPlanOut(BaseModel):
     clock_out_time: time
     status: str
     is_holiday: bool = False
+    created_by_id: UUID | None = None
+    created_by_name: str | None = None
+    approved_by_pm_id: UUID | None = None
+    approved_by_pm_name: str | None = None
+    approved_at: datetime | None = None
+    rejection_reason: str | None = None
     items: list[PlanItemOut] = []
     create_at: datetime | None = None
     update_at: datetime | None = None
@@ -297,3 +325,84 @@ class WeeklyPlanListOut(BaseModel):
     total_days: int = 0
     total_items: int = 0
     create_at: datetime | None = None
+
+
+# ── WEEKLY CALENDAR MATRIX & PROJECT SCHEDULE SCHEMAS ─────────
+
+class WeeklyMatrixDayOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    date: date
+    day_name: str  # 'Senin', 'Selasa', dst
+    daily_plan_id: UUID | None = None
+    division_id: UUID | None = None
+    team_id: UUID | None = None
+    site_name: str | None = None
+    site_lat: Decimal | None = None
+    site_lng: Decimal | None = None
+    status: str | None = None  # 'DRAFT', 'SUBMITTED', 'APPROVED', 'ONGOING', 'COMPLETED'
+    approved_by_pm_id: UUID | None = None
+    approved_by_pm_name: str | None = None
+    approved_at: datetime | None = None
+    is_holiday: bool = False
+    items: list[PlanItemOut] = []
+    total_target_qty: Decimal = Decimal("0.00")
+    total_completed_qty: Decimal = Decimal("0.00")
+    progress_percent: Decimal = Decimal("0.00")
+
+
+class WeeklyCalendarMatrixOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    start_date: date
+    end_date: date
+    division_id: UUID | None = None
+    division_name: str | None = None
+    team_id: UUID | None = None
+    team_name: str | None = None
+    leader_name: str | None = None
+    total_days: int = 7
+    scheduled_days: int = 0
+    total_items: int = 0
+    all_approved: bool = False
+    days: list[WeeklyMatrixDayOut] = []
+
+
+class ProjectPhaseSummaryOut(BaseModel):
+    task_phase: str
+    phase_label: str
+    total_target_qty: Decimal
+    total_completed_qty: Decimal
+    progress_percent: Decimal
+    is_completed: bool
+    items_count: int
+
+
+class ProjectScheduleOut(BaseModel):
+    completion_id: UUID
+    client_name: str
+    project_title: str
+    order_number: str | None = None
+    division_id: UUID | None = None
+    division_name: str | None = None
+    order_status: str
+    start_work_date: date | None = None
+    end_work_date: date | None = None
+    total_target_deliverables: Decimal = Decimal("0.00")
+    total_completed_deliverables: Decimal = Decimal("0.00")
+    deliverables_progress_percent: Decimal = Decimal("0.00")
+    is_ready_for_completion: bool = False
+    phases: list[ProjectPhaseSummaryOut] = []
+    timeline_items: list[PlanItemOut] = []
+
+
+class BulkApproveDailyPlansIn(BaseModel):
+    team_id: UUID
+    start_date: date
+    end_date: date
+
+
+class BulkApproveDailyPlansOut(BaseModel):
+    success: bool
+    approved_count: int
+    message: str

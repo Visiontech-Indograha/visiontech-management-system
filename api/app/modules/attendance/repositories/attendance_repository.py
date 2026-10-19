@@ -1,29 +1,15 @@
 """
 app/modules/attendance/repositories/attendance_repository.py
-
-Repositori data absensi sesi kerja, event luring, dan pemantauan.
-Mengikuti Panduan Standar Arsitektur API FastAPI Modular §5.5.
 """
-
-from app.crud.crud_attendance_monitor import CRUDAttendanceMonitor
-from app.crud.crud_attendance_offline import CRUDAttendanceOffline
-from app.crud.crud_attendance_session import CRUDAttendanceSession
-
-
-class AttendanceSessionRepository(CRUDAttendanceSession):
-    """Repositori sesi absensi lapangan dan kantor."""
-
-
-class AttendanceOfflineRepository(CRUDAttendanceOffline):
-    """Repositori antrean event absensi luring."""
-
-
-class AttendanceMonitorRepository(CRUDAttendanceMonitor):
-    """Repositori pemantauan dan audit anomali absensi."""
-
+from .attendance_monitor_repository import AttendanceMonitorRepository, CRUDAttendanceMonitor
+from .attendance_offline_repository import AttendanceOfflineRepository, CRUDAttendanceOffline
+from .attendance_session_repository import AttendanceSessionRepository, CRUDAttendanceSession
 
 __all__ = [
     "AttendanceMonitorRepository",
     "AttendanceOfflineRepository",
     "AttendanceSessionRepository",
+    "CRUDAttendanceMonitor",
+    "CRUDAttendanceOffline",
+    "CRUDAttendanceSession",
 ]

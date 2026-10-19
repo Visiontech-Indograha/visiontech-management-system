@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, File, Form, UploadFile
 from app.api.deps import get_current_user
 from app.core.security import CurrentUser
 from app.modules.face.controllers.face_controller import FaceController
-from app.schemas.face import (
+from app.modules.face.schemas.face_schema import (
     ChallengeCheckResponse,
     ConsentRequest,
     EnrollResponse,

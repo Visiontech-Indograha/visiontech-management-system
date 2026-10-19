@@ -14,7 +14,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import DB_SCOPE, get_db
 from app.core.security import CurrentUser
-from app.modules.work_completion.crud.crud_work_completion import CRUDWorkCompletion
+from app.modules.work_completion.repositories.work_completion_repository import (
+    CRUDWorkCompletion,
+)
 from app.modules.work_completion.schemas.work_completion_schema import (
     WorkCompletionBomIn,
     WorkCompletionBomOut,

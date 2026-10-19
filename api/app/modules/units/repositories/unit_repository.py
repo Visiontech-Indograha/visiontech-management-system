@@ -1,14 +1,49 @@
 """
-app/modules/units/repositories/unit_repository.py
-
-Repository akses data persistensi untuk unit organisasi.
-Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.4.
+app/crud/crud_unit.py
+Divisi bisnis organisasi dari tabel division (Master Schema V2).
 """
 
-from app.crud.crud_unit import CRUDUnit
+from __future__ import annotations
+
+from typing import Any
+from uuid import UUID
+
+from app.core.repository import BaseRepository
 
 
-class UnitRepository(CRUDUnit):
+class UnitRepository(BaseRepository):
+    """Repositori akses data Divisi Bisnis (tabel division)."""
     """
-    Repository akses data tabel vms.unit.
+    CRUD untuk mengelola data Divisi Bisnis (division).
     """
+
+    async def list_for_org(self, org_id: UUID | str) -> list[Any]:
+        """
+        Mengambil daftar seluruh divisi yang aktif dalam organisasi.
+        """
+        return list(
+            await self.fetchall(
+                """
+                SELECT
+                    d.division_id AS id,
+                    d.division_id,
+                    'DIV-' || UPPER(SUBSTRING(d.name FROM 1 FOR 3)) AS code,
+                    d.name,
+                    d.status,
+                    d.om_id,
+                    d.pm_id,
+                    e_om.full_name AS om_name,
+                    e_pm.full_name AS pm_name
+                FROM division d
+                LEFT JOIN employee e_om ON e_om.employee_id = d.om_id
+                LEFT JOIN employee e_pm ON e_pm.employee_id = d.pm_id
+                WHERE d.delete_at IS NULL
+                ORDER BY d.name
+                """,
+                {"org": org_id},
+            )
+        )
+
+
+# Alias backward compatibility
+CRUDUnit = UnitRepository

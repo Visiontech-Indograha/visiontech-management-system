@@ -45,3 +45,109 @@ export function useDeactivateWorkType() {
     onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
   });
 }
+
+export interface DefaultMaterial {
+  default_material_id: string;
+  work_type_id: string;
+  material_code?: string | null;
+  material_name: string;
+  default_qty: number;
+  unit: string;
+  category?: string | null;
+  description?: string | null;
+  sort_order: number;
+  create_at?: string;
+  update_at?: string;
+}
+
+export interface CreateDefaultMaterialIn {
+  material_code?: string | null;
+  material_name: string;
+  default_qty: number;
+  unit: string;
+  category?: string | null;
+  description?: string | null;
+  sort_order?: number;
+}
+
+export interface UpdateDefaultMaterialIn {
+  material_code?: string | null;
+  material_name?: string | null;
+  default_qty?: number;
+  unit?: string;
+  category?: string | null;
+  description?: string | null;
+  sort_order?: number;
+}
+
+export function useWorkTypeMaterials(workTypeId: string) {
+  return useQuery({
+    queryKey: ["work-type-materials", workTypeId],
+    queryFn: async () => {
+      const res = await api.get<DefaultMaterial[]>(`/work-types/${workTypeId}/materials`);
+      return res.data;
+    },
+    enabled: !!workTypeId,
+  });
+}
+
+export function useCreateWorkTypeMaterial() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      workTypeId,
+      payload,
+    }: {
+      workTypeId: string;
+      payload: CreateDefaultMaterialIn;
+    }) => {
+      const res = await api.post<DefaultMaterial>(
+        `/work-types/${workTypeId}/materials`,
+        payload
+      );
+      return res.data;
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ["work-type-materials", vars.workTypeId] });
+      qc.invalidateQueries({ queryKey: KEY });
+    },
+  });
+}
+
+export function useUpdateWorkTypeMaterial() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (vars: {
+      materialId: string;
+      workTypeId: string;
+      payload: UpdateDefaultMaterialIn;
+    }) => {
+      const res = await api.put<DefaultMaterial>(
+        `/work-types/materials/${vars.materialId}`,
+        vars.payload
+      );
+      return res.data;
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ["work-type-materials", vars.workTypeId] });
+      qc.invalidateQueries({ queryKey: KEY });
+    },
+  });
+}
+
+export function useDeleteWorkTypeMaterial() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (vars: {
+      materialId: string;
+      workTypeId: string;
+    }) => {
+      await api.delete(`/work-types/materials/${vars.materialId}`);
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ["work-type-materials", vars.workTypeId] });
+      qc.invalidateQueries({ queryKey: KEY });
+    },
+  });
+}
+

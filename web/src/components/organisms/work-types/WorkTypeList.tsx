@@ -1,6 +1,8 @@
+import { useState } from "react";
 import type { UseQueryResult } from "@tanstack/react-query";
 import type { WorkType } from "@/services/workTypeService";
 import { WorkTypeAddButton } from "./WorkTypeAddButton";
+import { WorkTypeMaterialsDialog } from "./WorkTypeMaterialsDialog";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { LoadingBar } from "@/components/molecules/LoadingBar";
 import { TextBlock } from "@/components/molecules/TextBlock";
@@ -13,6 +15,7 @@ export function WorkTypeList({ types, onAdd, onEdit, onDeactivate }: {
   onEdit: (type: WorkType) => void;
   onDeactivate: (type: WorkType) => void;
 }) {
+  const [selectedForMaterials, setSelectedForMaterials] = useState<WorkType | null>(null);
   return (
     <>
       {types.isPending && (
@@ -71,6 +74,9 @@ export function WorkTypeList({ types, onAdd, onEdit, onDeactivate }: {
                 <ActionButton variant="outline" size="sm" onClick={() => onEdit(t)}>
                   Ubah
                 </ActionButton>
+                <ActionButton variant="secondary" size="sm" onClick={() => setSelectedForMaterials(t)}>
+                  BoM Standar
+                </ActionButton>
                 {t.is_active && (
                   <ActionButton variant="ghost" size="sm" onClick={() => onDeactivate(t)} aria-label={`Nonaktifkan ${t.name}`}>
                     Nonaktifkan
@@ -81,6 +87,11 @@ export function WorkTypeList({ types, onAdd, onEdit, onDeactivate }: {
           ))}
         </ListBlock>
       )}
+
+      <WorkTypeMaterialsDialog
+        workType={selectedForMaterials}
+        onClose={() => setSelectedForMaterials(null)}
+      />
     </>
   );
 }

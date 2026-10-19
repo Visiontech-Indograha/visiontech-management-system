@@ -7,6 +7,13 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ---
 
+- **Penyempurnaan BoM Proyek, Kunci Prasyarat & Pengesahan Dokumen BAST Work Completion (`api/app/`, `web/src/`, `db/`):**
+  - **Template BoM 1:N per Jenis Pekerjaan (`work_type_default_materials`):** Membangun skema template kebutuhan material per tipe pekerjaan yang terisolasi per divisi, lengkap dengan endpoint `GET/POST /work-types/{id}/materials`, `PUT/DELETE /work-types/materials/{id}`, dan dialog antarmuka `WorkTypeMaterialsDialog.tsx`.
+  - **Bill of Materials Riil Order Klien (`work_completion_bom`):** Menambahkan pencatatan estimasi vs realisasi material aktual lapangan (misal kabel FO 69m pada survei Minas), endpoint `GET/POST /work-completions/{id}/bom`, `PUT/DELETE /work-completions/bom/{id}`, serta sinkronisasi otomatis 1-klik `POST /work-completions/{id}/sync-bom`.
+  - **Prerequisite Locking Engine (`depends_on_item_id`):** Menerapkan validasi penolakan update progres tugas fisik instalasi (`PREREQUISITE_NOT_MET`) apabila tahapan prasyarat pendukung (survei, perijinan, galian parit) belum berstatus `DONE`/`COMPLETED`, disertai lencana indikator kunci gembok pada kartu jadwal harian `DailyScheduleSlotsCards.tsx`.
+  - **Ekspor Dokumen Berita Acara & BoM Word (.docx):** Mengembangkan generator berkas Word BAST resmi pada `DocumentExportService` lengkap dengan tabel rincian BoM, matriks teknis, verifikasi tanda tangan digital, dan hash integritas SHA-256 melalui endpoint `GET /work-completions/{id}/export`.
+  - **Antarmuka Web Komprehensif Order & BoM:** Membangun `WorkCompletionDetailModal.tsx` dengan sistem multi-tab (Ringkasan Realisasi Deliverable, Tabel BoM Dinamis `WorkCompletionBomTable.tsx`, dan Panel Pengesahan Digital/Unduh Dokumen Word), terintegrasi langsung pada daftar order `WorkCompletionList.tsx`.
+
 - **Arsitektur Daily-First & Linimasa Proyek Multi-Minggu (`api/app/`, `web/src/`, `db/`):**
   - **Penyederhanaan Skema 2-Tier Daily-First:** Menghapus tabel `work_plan_weekly` dari database PostgreSQL dan mempromosikan `work_plan_daily` menjadi entitas induk operasional dengan atribut `division_id`, `team_id`, dan otoritas persetujuan PM (`approved_by_pm_id`, `approved_at`).
   - **Dukungan Proyek Multi-Minggu & Deliverables Isolation:** Menambahkan kolom `task_phase` (SURVEY, PREPARATION, MAIN_INSTALLATION, TESTING_COMMISSIONING, FINISHING), `is_main_deliverable`, `depends_on_item_id`, dan `realization_photos_json` pada `work_plan_item`. Memisahkan pekerjaan prasyarat pendukung dari unit fisik utama untuk memastikan perhitungan progres fisik 100% akurat tanpa distorsi persentase.

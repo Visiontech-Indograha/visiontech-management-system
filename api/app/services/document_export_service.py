@@ -438,3 +438,147 @@ class DocumentExportService:
         buffer = io.BytesIO()
         prs.save(buffer)
         return buffer.getvalue()
+
+    @staticmethod
+    def export_completion_docx(detail: dict[str, Any]) -> bytes:
+        """Menghasilkan berkas Word DOCX Berita Acara Penyelesaian Pekerjaan (BAST) & Bill of Materials (BoM)."""
+        try:
+            import docx
+            from docx.enum.table import WD_TABLE_ALIGNMENT
+            from docx.enum.text import WD_ALIGN_PARAGRAPH
+            from docx.shared import Inches, Pt, RGBColor
+        except ImportError as err:
+            raise AppError("DEPENDENCY_MISSING", "Pustaka python-docx tidak tersedia.", status=503) from err
+
+        doc = docx.Document()
+
+        for section in doc.sections:
+            section.top_margin = Inches(0.8)
+            section.bottom_margin = Inches(0.8)
+            section.left_margin = Inches(0.8)
+            section.right_margin = Inches(0.8)
+
+        # Header Kop Perusahaan
+        title_p = doc.add_paragraph()
+        title_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        run_corp = title_p.add_run("PT VISIONTECH INDOGRAHA\n")
+        run_corp.bold = True
+        run_corp.font.size = Pt(14)
+        run_corp.font.color.rgb = RGBColor(30, 41, 59)
+
+        run_sub = title_p.add_run("BERITA ACARA SERAH TERIMA & REALISASI MATERIAL (BAST & BoM)\n")
+        run_sub.bold = True
+        run_sub.font.size = Pt(12)
+        run_sub.font.color.rgb = RGBColor(71, 85, 105)
+
+        order_no = detail.get("order_number") or detail.get("completion_id") or "DRAFT-COMPLETION"
+        run_num = title_p.add_run(f"Nomor Order / BAST: {order_no}\n")
+        run_num.font.size = Pt(10)
+        run_num.font.italic = True
+
+        doc.add_paragraph().paragraph_format.space_after = Pt(6)
+
+        # 1. Informasi Order & Pelaksanaan
+        doc.add_heading("1. Informasi Order Proyek & Kontrak", level=2)
+        info_table = doc.add_table(rows=6, cols=2)
+        info_table.alignment = WD_TABLE_ALIGNMENT.CENTER
+        info_table.autofit = True
+
+        dates_str = f"{detail.get('start_work_date') or '-'} s.d. {detail.get('end_work_date') or '-'}"
+        vol_str = (
+            f"{detail.get('completed_target_unit', 0)} / {detail.get('total_target_unit', 0)} "
+            f"{detail.get('unit_measure', 'Unit')}"
+        )
+
+        rows_data = [
+            ("Nama Klien / Perusahaan", detail.get("client_name") or "-"),
+            ("Judul Proyek / SPK", detail.get("project_title") or "-"),
+            ("Divisi Pelaksana / PM", f"{detail.get('division_name') or '-'} / {detail.get('pm_name') or '-'}"),
+            ("Lokasi Pelaksanaan", detail.get("site_address") or "-"),
+            ("Linimasa Pelaksanaan", dates_str),
+            ("Realisasi Volume Pekerjaan", f"{vol_str} ({detail.get('order_status', 'COMPLETED')})"),
+        ]
+
+        for i, (label, val) in enumerate(rows_data):
+            cell_lbl = info_table.rows[i].cells[0]
+            cell_val = info_table.rows[i].cells[1]
+            cell_lbl.text = label
+            cell_lbl.paragraphs[0].runs[0].bold = True
+            cell_val.text = str(val)
+
+        doc.add_paragraph().paragraph_format.space_after = Pt(6)
+
+        # 2. Bill of Materials (BoM)
+        doc.add_heading("2. Bill of Materials (BoM) Realisasi Pemakaian Material", level=2)
+        bom_items = detail.get("bom_items") or []
+        if bom_items:
+            bom_table = doc.add_table(rows=1, cols=6)
+            bom_table.alignment = WD_TABLE_ALIGNMENT.CENTER
+            bom_table.autofit = True
+
+            headers = ["No", "Kode", "Nama Material", "Estimasi", "Aktual", "Kategori / Catatan"]
+            hdr_cells = bom_table.rows[0].cells
+            for idx, h in enumerate(headers):
+                hdr_cells[idx].text = h
+                hdr_cells[idx].paragraphs[0].runs[0].bold = True
+
+            for idx, it in enumerate(bom_items, start=1):
+                row_cells = bom_table.add_row().cells
+                row_cells[0].text = str(idx)
+                row_cells[1].text = str(it.get("material_code") or "-")
+                row_cells[2].text = str(it.get("material_name") or "-")
+                row_cells[3].text = f"{it.get('estimated_qty', 0)} {it.get('unit', '')}"
+                row_cells[4].text = f"{it.get('actual_qty', 0)} {it.get('unit', '')}"
+                cat_notes = f"{it.get('category') or '-'}"
+                if it.get("notes"):
+                    cat_notes += f" ({it.get('notes')})"
+                row_cells[5].text = cat_notes
+        else:
+            p_empty = doc.add_paragraph()
+            run_empty = p_empty.add_run("Tidak ada daftar bon material (BoM) khusus yang terlampir.")
+            run_empty.italic = True
+
+        doc.add_paragraph().paragraph_format.space_after = Pt(6)
+
+        # 3. Catatan & Kendala Lapangan
+        doc.add_heading("3. Ringkasan Pekerjaan & Kendala Lapangan", level=2)
+        summary_txt = detail.get("summary_notes") or "Pekerjaan terlaksana sesuai spesifikasi teknis dan SOP."
+        doc.add_paragraph(f"Ringkasan: {summary_txt}")
+        if detail.get("obstacles"):
+            doc.add_paragraph(f"Kendala Lapangan: {detail.get('obstacles')}")
+
+        doc.add_paragraph().paragraph_format.space_after = Pt(6)
+
+        # 4. Lembar Pengesahan Tanda Tangan
+        doc.add_heading("4. Lembar Pengesahan & Validasi Integritas", level=2)
+        sig_table = doc.add_table(rows=3, cols=2)
+        sig_table.alignment = WD_TABLE_ALIGNMENT.CENTER
+        sig_table.autofit = True
+
+        cell_l_hdr = sig_table.rows[0].cells[0]
+        cell_r_hdr = sig_table.rows[0].cells[1]
+        cell_l_hdr.text = "Diselesaikan Oleh (Ketua Tim / Teknisi Lapangan):"
+        cell_l_hdr.paragraphs[0].runs[0].bold = True
+        cell_r_hdr.text = "Disetujui Oleh (Project Manager / OM):"
+        cell_r_hdr.paragraphs[0].runs[0].bold = True
+
+        ldr_signer = detail.get("leader_signer_name") or "( Belum Bertanda Tangan )"
+        pm_signer = detail.get("pm_signer_name") or "( Belum Bertanda Tangan )"
+
+        cell_l_body = sig_table.rows[1].cells[0]
+        cell_r_body = sig_table.rows[1].cells[1]
+        cell_l_body.text = f"\n\n\n\n{ldr_signer}\nTanggal: {detail.get('leader_signed_at') or '-'}"
+        cell_r_body.text = f"\n\n\n\n{pm_signer}\nTanggal: {detail.get('pm_signed_at') or '-'}"
+
+        cell_l_ftr = sig_table.rows[2].cells[0]
+        cell_r_ftr = sig_table.rows[2].cells[1]
+        sig_hash = detail.get("signature_hash") or "INTEGRITY-PENDING"
+        order_stat = detail.get("order_status", "COMPLETED")
+        cell_l_ftr.text = f"Status: TERVERIFIKASI SISTEM VMS\nHash: {str(sig_hash)[:16]}..."
+        cell_l_ftr.paragraphs[0].runs[0].font.size = Pt(8)
+        cell_r_ftr.text = f"Status Dokumen: RESMI ({order_stat})\nHash: {str(sig_hash)[:16]}..."
+        cell_r_ftr.paragraphs[0].runs[0].font.size = Pt(8)
+
+        buffer = io.BytesIO()
+        doc.save(buffer)
+        return buffer.getvalue()

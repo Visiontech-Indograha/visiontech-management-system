@@ -13,7 +13,14 @@ from uuid import UUID
 from fastapi import Depends
 
 from app.api.deps import get_work_type_service
-from app.modules.work_types.schemas.work_type_schema import WorkTypeIn, WorkTypeOut, WorkTypePhotoOut
+from app.modules.work_types.schemas.work_type_schema import (
+    DefaultMaterialIn,
+    DefaultMaterialOut,
+    DefaultMaterialUpdate,
+    WorkTypeIn,
+    WorkTypeOut,
+    WorkTypePhotoOut,
+)
 from app.modules.work_types.services.work_type_service import WorkTypeService
 
 
@@ -65,3 +72,39 @@ class WorkTypeController:
         """Mengambil template foto laporan rencana kerja."""
         rows = await self.service.template_of_plan(plan_id, day_id)
         return [WorkTypePhotoOut(**r._mapping) for r in rows]
+
+    async def handle_list_materials(self, organization_id: str, type_id: UUID) -> list[DefaultMaterialOut]:
+        """Mengambil daftar template material default untuk jenis pekerjaan tertentu."""
+        rows = await self.service.list_default_materials(organization_id, type_id)
+        return [DefaultMaterialOut(**r._mapping) for r in rows]
+
+    async def handle_create_material(
+        self,
+        organization_id: str,
+        type_id: UUID,
+        data: DefaultMaterialIn,
+        creator_division_id: UUID | None = None,
+    ) -> DefaultMaterialOut:
+        """Membuat template material default baru untuk jenis pekerjaan."""
+        row = await self.service.create_default_material(organization_id, type_id, data, creator_division_id)
+        return DefaultMaterialOut(**row._mapping)
+
+    async def handle_update_material(
+        self,
+        organization_id: str,
+        material_id: UUID,
+        data: DefaultMaterialUpdate,
+        creator_division_id: UUID | None = None,
+    ) -> DefaultMaterialOut:
+        """Mengubah template material default."""
+        row = await self.service.update_default_material(organization_id, material_id, data, creator_division_id)
+        return DefaultMaterialOut(**row._mapping)
+
+    async def handle_delete_material(
+        self,
+        organization_id: str,
+        material_id: UUID,
+        creator_division_id: UUID | None = None,
+    ) -> None:
+        """Menghapus template material default."""
+        await self.service.delete_default_material(organization_id, material_id, creator_division_id)

@@ -106,6 +106,24 @@ class CRUDPlanItem(CRUDBase):
         )
         return list(rows)
 
+    async def get_item_prerequisite(self, item_id: UUID) -> tuple[UUID | None, str | None, str | None]:
+        """Mengecek apakah item memiliki prasyarat dan status tugas prasyarat tersebut."""
+        sql = """
+        SELECT
+            p.item_id AS parent_id,
+            p.title AS parent_title,
+            p.status AS parent_status
+        FROM work_plan_item i
+        JOIN work_plan_item p ON p.item_id = i.depends_on_item_id
+        WHERE i.item_id = CAST(:item_id AS uuid)
+          AND i.delete_at IS NULL
+          AND p.delete_at IS NULL
+        """
+        row = await self.fetchone(sql, {"item_id": str(item_id)})
+        if not row:
+            return None, None, None
+        return row.parent_id, row.parent_title, str(row.parent_status)
+
     async def update_progress(
         self,
         item_id: UUID,
@@ -122,10 +140,10 @@ class CRUDPlanItem(CRUDBase):
             progress_percent = COALESCE(CAST(:progress_percent AS numeric), progress_percent),
             status = CASE
                 WHEN CAST(:progress_percent AS numeric) >= 100 THEN 'DONE'
-                WHEN :status IS NOT NULL THEN :status
+                WHEN CAST(:status AS varchar) IS NOT NULL THEN CAST(:status AS varchar)
                 ELSE status
             END,
-            delay_reason = COALESCE(:delay_reason, delay_reason),
+            delay_reason = COALESCE(CAST(:delay_reason AS text), delay_reason),
             update_at = NOW()
         WHERE item_id = CAST(:item_id AS uuid) AND delete_at IS NULL
         RETURNING item_id, completed_qty, progress_percent, status, delay_reason

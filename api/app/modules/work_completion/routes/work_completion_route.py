@@ -6,14 +6,19 @@ Definisi rute endpoint FastAPI untuk modul Order Proyek Klien (Work Completion) 
 
 from __future__ import annotations
 
+from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, Response, status
 
 from app.api.deps import get_current_user
 from app.core.security import CurrentUser
 from app.modules.work_completion.controllers.work_completion_controller import WorkCompletionController
 from app.modules.work_completion.schemas.work_completion_schema import (
+    SyncBomFromWorkTypesIn,
+    WorkCompletionBomIn,
+    WorkCompletionBomOut,
+    WorkCompletionBomUpdate,
     WorkCompletionCreate,
     WorkCompletionListOut,
     WorkCompletionOut,
@@ -104,3 +109,88 @@ async def sign_work_completion(
     controller: WorkCompletionController = Depends(),
 ) -> WorkCompletionOut:
     return await controller.sign_order(completion_id, body, current_user)
+
+
+@router.get(
+    "/{completion_id}/bom",
+    response_model=list[WorkCompletionBomOut],
+    summary="Daftar Item BoM Order Proyek Klien",
+)
+async def list_work_completion_bom(
+    completion_id: UUID,
+    current_user: CurrentUser = Depends(get_current_user),
+    controller: WorkCompletionController = Depends(),
+) -> list[WorkCompletionBomOut]:
+    return await controller.list_bom_items(completion_id, current_user)
+
+
+@router.post(
+    "/{completion_id}/bom",
+    response_model=WorkCompletionBomOut,
+    status_code=status.HTTP_201_CREATED,
+    summary="Tambah Item BoM ke Order Proyek Klien",
+)
+async def add_work_completion_bom(
+    completion_id: UUID,
+    body: WorkCompletionBomIn,
+    current_user: CurrentUser = Depends(get_current_user),
+    controller: WorkCompletionController = Depends(),
+) -> WorkCompletionBomOut:
+    return await controller.add_bom_item(completion_id, body, current_user)
+
+
+@router.put(
+    "/bom/{bom_id}",
+    response_model=WorkCompletionBomOut,
+    summary="Perbarui Item BoM (Realisasi Aktual Lapangan)",
+)
+async def update_work_completion_bom(
+    bom_id: UUID,
+    body: WorkCompletionBomUpdate,
+    current_user: CurrentUser = Depends(get_current_user),
+    controller: WorkCompletionController = Depends(),
+) -> WorkCompletionBomOut:
+    return await controller.update_bom_item(bom_id, body, current_user)
+
+
+@router.delete(
+    "/bom/{bom_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Hapus Item BoM",
+)
+async def delete_work_completion_bom(
+    bom_id: UUID,
+    current_user: CurrentUser = Depends(get_current_user),
+    controller: WorkCompletionController = Depends(),
+) -> Response:
+    await controller.delete_bom_item(bom_id, current_user)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post(
+    "/{completion_id}/sync-bom",
+    summary="Sinkronisasi Otomatis BoM dari Template Jenis Pekerjaan",
+)
+async def sync_bom_from_work_types(
+    completion_id: UUID,
+    body: SyncBomFromWorkTypesIn | None = None,
+    current_user: CurrentUser = Depends(get_current_user),
+    controller: WorkCompletionController = Depends(),
+) -> dict[str, Any]:
+    overwrite = body.overwrite_existing if body else False
+    return await controller.sync_bom(completion_id, overwrite, current_user)
+
+
+@router.get(
+    "/{completion_id}/export",
+    summary="Unduh Berita Acara & BoM Format Word DOCX",
+)
+async def export_work_completion_docx(
+    completion_id: UUID,
+    current_user: CurrentUser = Depends(get_current_user),
+    controller: WorkCompletionController = Depends(),
+) -> Response:
+    file_bytes, filename = await controller.export_docx(completion_id, current_user)
+    media_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
+    return Response(content=file_bytes, media_type=media_type, headers=headers)

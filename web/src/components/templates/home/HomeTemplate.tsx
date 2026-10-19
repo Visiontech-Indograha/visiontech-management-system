@@ -1,15 +1,15 @@
 import type { ComponentProps } from "react";
 import type { UseQueryResult } from "@tanstack/react-query";
 import { ExpiringDocumentsCard } from "@/components/organisms/home/ExpiringDocumentsCard";
-import { HomeActivePlansCard } from "@/components/organisms/home/HomeActivePlansCard";
 import { HomeGreeting } from "@/components/organisms/home/HomeGreeting";
 import { HomeStatGrid } from "@/components/organisms/home/HomeStatGrid";
+import { HomeBentoDashboard } from "@/components/organisms/home/HomeBentoDashboard";
 import { PendingDocumentsCard } from "@/components/organisms/home/PendingDocumentsCard";
 import type { ExpiringList, PendingList } from "@/services/homeService";
 import type { WorkPlan } from "@/services/workPlanService";
 
-/** Kerangka Beranda: sapaan, kartu angka, antrean dokumen (HR), rencana kerja aktif. */
-export function HomeTemplate({ today, name, stats, canVerifyDocs, pendingDocs, expiringDocs, plans, active }: {
+/** Kerangka Beranda: sapaan, Bento UI dashboard operasional, antrean dokumen (HR). */
+export function HomeTemplate({ today, name, stats, canVerifyDocs, pendingDocs, expiringDocs, plans }: {
   today: string;
   name: string | undefined;
   stats: ComponentProps<typeof HomeStatGrid>;
@@ -19,18 +19,26 @@ export function HomeTemplate({ today, name, stats, canVerifyDocs, pendingDocs, e
   plans: UseQueryResult<WorkPlan[]>;
   active: WorkPlan[];
 }) {
+  const planList = plans.data ?? [];
+
   return (
     <div className="space-y-6 md:space-y-8">
       <header>
         <HomeGreeting today={today} name={name} />
       </header>
 
-      <HomeStatGrid {...stats} />
+      {/* Bento UI Dashboard Eksekutif & Operasional */}
+      <HomeBentoDashboard
+        plans={planList}
+        runningCount={stats.running.value ?? 0}
+        waitingCount={stats.waiting.value ?? 0}
+        reviewAttendanceCount={stats.toReview.value ?? 0}
+        canCreatePlan={stats.canCreatePlan}
+      />
 
+      {/* Dokumen Menunggu Verifikasi & Kedaluwarsa (HR/Admin) */}
       {canVerifyDocs && !!pendingDocs?.length && <PendingDocumentsCard items={pendingDocs} />}
       {canVerifyDocs && !!expiringDocs?.length && <ExpiringDocumentsCard items={expiringDocs} />}
-
-      <HomeActivePlansCard plans={plans} active={active} />
     </div>
   );
 }

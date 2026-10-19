@@ -9,6 +9,14 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased] — `development`
 
+- **Implementasi Komprehensif VMS 2.0 (Master Schema V2 & Universal Media Viewer) (`api/app/`, `web/src/`):**
+  - **Universal Media & Document Viewer:** Membangun antarmuka pratinjau terpadu `UniversalMediaModal` yang mencakup PDF in-app embed reader (`PdfViewerModal`), Image Lightbox interaktif (`ImageLightboxModal`) dengan zoom, rotasi, dan metadata GPS/waktu, serta kartu unduh berkas Office (Word, Excel, PowerPoint) yang terhubung ke endpoint streaming `/api/v1/media/preview` dan `/api/v1/media/download`.
+  - **Alur Proyek End-to-End & PM Full Override:** Mengimplementasikan `PmOverrideToolbar` (bypass status terkunci, quick reschedule lintas hari/minggu) dan `DailyScheduleSlotsCards` (multi-slot timeline, deteksi konflik jadwal engineer/armada, update progres target, dan pengajuan rollover tugas harian).
+  - **Absensi GPS Pintar & Uang Makan Otomatis:** Mengintegrasikan kalkulasi Haversine jarak kantor utama (`city_boundary_radius_m`) untuk penetapan otomatis zona kota (`DALAM_KOTA` vs `LUAR_KOTA`) dan nominal uang makan (`in_city_meal_rate` vs `out_city_meal_rate`) pada `AttendanceList.tsx`.
+  - **Manajemen Aset & Clearance Offboarding:** Memisahkan tab armada kendaraan (`VEHICLE`) dan peralatan kerja (`TOOL`) dengan subfilter kepemilikan alat pribadi vs bersama, serta pratinjau bukti serah terima foto (`handover_photo_path`) pada modal clearance offboarding.
+  - **Ekspor Dokumen 4 Format & Bento UI Dashboard:** Menyediakan panel pembangkitan dokumen 4 format resmi (`PlanExportSection`: PDF, DOCX, XLSX, PPTX) serta dashboard eksekutif berbasis Bento UI (`HomeBentoDashboard`) dengan peta sebaran operasional Leaflet, pelacak jadwal berjalan, dan kartu KPI.
+  - **Audit Trail & Registry Backup:** Menambahkan tab penelusuran riwayat pencatatan snapshot backup PostgreSQL (`BackupRegistryTable`) lengkap dengan verifikasi checksum SHA-256 dan unduh langsung berkas arsip.
+
 - **Implementasi Aksi Masif VMS V3: Multi-Format Exporter, SOP Foto, Order Klien & PM Override (`api/app/`, `web/src/`, `db/`):**
   - **Sistem Dokumen & Media Fisik:** Menambahkan mount `/uploads` StaticFiles di FastAPI `app/main.py` dan `lifespan.py`, fallback resolver pada `files_controller.py`, serta skrip seeding otomatis `scripts/seed_media_assets.py` dari direktori `web/dist/foto_test/` dan `file_test/` ke subfolder storage lokal.
   - **In-App Preview & Pembangkit Dokumen Multi-Format:** Mengembangkan `DocumentExportService` untuk menghasilkan 4 format dokumen operasional berstandar industri: PDF (WeasyPrint), Word/DOCX (python-docx), Excel/XLSX (openpyxl), dan Presentasi/PPTX (python-pptx). Menambahkan endpoint preview dan unduh pada rute mingguan dan harian.

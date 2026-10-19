@@ -21,19 +21,25 @@ INSERT INTO employee (employee_id, office_id, full_name, employee_no, join_date,
 ('22222222-0000-4000-a000-000000000005', '11111111-0000-4000-a000-000000000001', 'Siti Aminah', 'VMS-EMP-005', '2024-05-10 08:00:00+07', NULL, '/uploads/profiles/siti.jpg', '[0.34, 0.12, -0.09, 0.82]', 'active'),
 ('22222222-0000-4000-a000-000000000006', '11111111-0000-4000-a000-000000000001', 'Agus Setiawan', 'VMS-EMP-006', '2025-01-15 08:00:00+07', '2027-01-15 17:00:00+07', '/uploads/profiles/agus.jpg', '[-0.45, 0.31, 0.22, 0.60]', 'active'),
 ('22222222-0000-4000-a000-000000000007', '11111111-0000-4000-a000-000000000002', 'Riko Saputra', 'VMS-EMP-007', '2025-02-01 08:00:00+07', '2027-02-01 17:00:00+07', '/uploads/profiles/riko.jpg', '[0.18, 0.64, -0.17, 0.49]', 'active'),
-('22222222-0000-4000-a000-000000000008', '11111111-0000-4000-a000-000000000001', 'Doni Firmansyah', 'VMS-EMP-008', '2025-10-20 08:00:00+07', '2026-10-20 17:00:00+07', '/uploads/profiles/doni.jpg', '[0.52, -0.19, 0.08, 0.71]', 'in_process')
+('22222222-0000-4000-a000-000000000008', '11111111-0000-4000-a000-000000000001', 'Doni Firmansyah', 'VMS-EMP-008', '2025-10-20 08:00:00+07', '2026-10-20 17:00:00+07', '/uploads/profiles/doni.jpg', '[0.52, -0.19, 0.08, 0.71]', 'active'),
+('22222222-0000-4000-a000-000000000009', '11111111-0000-4000-a000-000000000001', 'Fajar Ramadhan', 'VMS-EMP-009', '2025-01-01 08:00:00+07', '2028-01-01 17:00:00+07', '/uploads/profiles/fajar.jpg', '[0.15, 0.22, -0.10, 0.55]', 'active'),
+('22222222-0000-4000-a000-000000000010', '11111111-0000-4000-a000-000000000001', 'Bayu Pratama', 'VMS-EMP-010', '2025-01-01 08:00:00+07', '2028-01-01 17:00:00+07', '/uploads/profiles/bayu.jpg', '[-0.20, 0.35, 0.18, 0.62]', 'active'),
+('22222222-0000-4000-a000-000000000011', '11111111-0000-4000-a000-000000000002', 'Ilham Hidayat', 'VMS-EMP-011', '2025-01-01 08:00:00+07', '2028-01-01 17:00:00+07', '/uploads/profiles/ilham.jpg', '[0.28, -0.12, 0.40, 0.45]', 'active')
 ON CONFLICT (employee_id) DO NOTHING;
 
--- 3. Seed users (8 Akun Login terpisah dari tabel employee - Konfirmasi 1B)
+-- 3. Seed users (11 Akun Login terpisah dari tabel employee - Konfirmasi 1B)
 INSERT INTO users (user_id, employee_id, username, email, password_hash, system_role, is_active) VALUES
 ('29999999-0000-4000-a000-000000000001', '22222222-0000-4000-a000-000000000001', 'superadmin', 'admin@visiontech.co.id', '$argon2id$v=19$m=65536,t=3,p=4$ldNRoAZ1ZP85rMv/CvKC4w$0kNdrnB4fAtMMoGZYxxfJBape7gJskOsyMI2X9ZOwFY', 'SUPER_ADMIN', TRUE),
 ('29999999-0000-4000-a000-000000000002', '22222222-0000-4000-a000-000000000002', 'om_randi', 'randi.om@visiontech.co.id', '$argon2id$v=19$m=65536,t=3,p=4$ldNRoAZ1ZP85rMv/CvKC4w$0kNdrnB4fAtMMoGZYxxfJBape7gJskOsyMI2X9ZOwFY', 'OPERATIONAL_MANAGER', TRUE),
 ('29999999-0000-4000-a000-000000000003', '22222222-0000-4000-a000-000000000003', 'pm_hendrik', 'hendrik.pm@visiontech.co.id', '$argon2id$v=19$m=65536,t=3,p=4$ldNRoAZ1ZP85rMv/CvKC4w$0kNdrnB4fAtMMoGZYxxfJBape7gJskOsyMI2X9ZOwFY', 'PROJECT_MANAGER', TRUE),
 ('29999999-0000-4000-a000-000000000004', '22222222-0000-4000-a000-000000000004', 'pm_dian', 'dian.pm@visiontech.co.id', '$argon2id$v=19$m=65536,t=3,p=4$ldNRoAZ1ZP85rMv/CvKC4w$0kNdrnB4fAtMMoGZYxxfJBape7gJskOsyMI2X9ZOwFY', 'PROJECT_MANAGER', TRUE),
 ('29999999-0000-4000-a000-000000000005', '22222222-0000-4000-a000-000000000005', 'hr_siti', 'siti.hr@visiontech.co.id', '$argon2id$v=19$m=65536,t=3,p=4$ldNRoAZ1ZP85rMv/CvKC4w$0kNdrnB4fAtMMoGZYxxfJBape7gJskOsyMI2X9ZOwFY', 'ADMIN_HR_GA', TRUE),
-('29999999-0000-4000-a000-000000000006', '22222222-0000-4000-a000-000000000006', 'tl_agus', 'agus.tl@visiontech.co.id', '$argon2id$v=19$m=65536,t=3,p=4$ldNRoAZ1ZP85rMv/CvKC4w$0kNdrnB4fAtMMoGZYxxfJBape7gJskOsyMI2X9ZOwFY', 'TEAM_LEADER', TRUE),
-('29999999-0000-4000-a000-000000000007', '22222222-0000-4000-a000-000000000007', 'tech_riko', 'riko.tech@visiontech.co.id', '$argon2id$v=19$m=65536,t=3,p=4$ldNRoAZ1ZP85rMv/CvKC4w$0kNdrnB4fAtMMoGZYxxfJBape7gJskOsyMI2X9ZOwFY', 'EMPLOYEE', TRUE),
-('29999999-0000-4000-a000-000000000008', '22222222-0000-4000-a000-000000000008', 'tech_doni', 'doni.tech@visiontech.co.id', '$argon2id$v=19$m=65536,t=3,p=4$ldNRoAZ1ZP85rMv/CvKC4w$0kNdrnB4fAtMMoGZYxxfJBape7gJskOsyMI2X9ZOwFY', 'EMPLOYEE', TRUE)
+('29999999-0000-4000-a000-000000000006', '22222222-0000-4000-a000-000000000006', 'tl_agus', 'agus.tl@visiontech.co.id', '$argon2id$v=19$m=65536,t=3,p=4$1hnmHdLYAkFUULr1iVB03w$6c477pNeeXULiEUx4baVjhqrUOtzvB7QdM5kthD83ZE', 'TEAM_LEADER', TRUE),
+('29999999-0000-4000-a000-000000000007', '22222222-0000-4000-a000-000000000007', 'tech_riko', 'riko.tech@visiontech.co.id', '$argon2id$v=19$m=65536,t=3,p=4$1hnmHdLYAkFUULr1iVB03w$6c477pNeeXULiEUx4baVjhqrUOtzvB7QdM5kthD83ZE', 'EMPLOYEE', TRUE),
+('29999999-0000-4000-a000-000000000008', '22222222-0000-4000-a000-000000000008', 'tech_doni', 'doni.tech@visiontech.co.id', '$argon2id$v=19$m=65536,t=3,p=4$1hnmHdLYAkFUULr1iVB03w$6c477pNeeXULiEUx4baVjhqrUOtzvB7QdM5kthD83ZE', 'EMPLOYEE', TRUE),
+('29999999-0000-4000-a000-000000000009', '22222222-0000-4000-a000-000000000009', 'tech_fajar', 'fajar.tech@visiontech.co.id', '$argon2id$v=19$m=65536,t=3,p=4$1hnmHdLYAkFUULr1iVB03w$6c477pNeeXULiEUx4baVjhqrUOtzvB7QdM5kthD83ZE', 'EMPLOYEE', TRUE),
+('29999999-0000-4000-a000-000000000010', '22222222-0000-4000-a000-000000000010', 'tech_bayu', 'bayu.tech@visiontech.co.id', '$argon2id$v=19$m=65536,t=3,p=4$1hnmHdLYAkFUULr1iVB03w$6c477pNeeXULiEUx4baVjhqrUOtzvB7QdM5kthD83ZE', 'EMPLOYEE', TRUE),
+('29999999-0000-4000-a000-000000000011', '22222222-0000-4000-a000-000000000011', 'tech_ilham', 'ilham.tech@visiontech.co.id', '$argon2id$v=19$m=65536,t=3,p=4$1hnmHdLYAkFUULr1iVB03w$6c477pNeeXULiEUx4baVjhqrUOtzvB7QdM5kthD83ZE', 'EMPLOYEE', TRUE)
 ON CONFLICT (user_id) DO NOTHING;
 
 -- 4. Seed user_sessions (4 Sesi Aktif di Web React & Android Flutter)
@@ -51,8 +57,8 @@ INSERT INTO division (division_id, om_id, pm_id, name, status) VALUES
 ON CONFLICT (division_id) DO NOTHING;
 
 -- Update division_id pada employee
-UPDATE employee SET division_id = '33333333-0000-4000-a000-000000000001' WHERE employee_id IN ('22222222-0000-4000-a000-000000000003', '22222222-0000-4000-a000-000000000006', '22222222-0000-4000-a000-000000000007', '22222222-0000-4000-a000-000000000008');
-UPDATE employee SET division_id = '33333333-0000-4000-a000-000000000002' WHERE employee_id IN ('22222222-0000-4000-a000-000000000004');
+UPDATE employee SET division_id = '33333333-0000-4000-a000-000000000001' WHERE employee_id IN ('22222222-0000-4000-a000-000000000003', '22222222-0000-4000-a000-000000000006', '22222222-0000-4000-a000-000000000007', '22222222-0000-4000-a000-000000000008', '22222222-0000-4000-a000-000000000009', '22222222-0000-4000-a000-000000000010');
+UPDATE employee SET division_id = '33333333-0000-4000-a000-000000000002' WHERE employee_id IN ('22222222-0000-4000-a000-000000000004', '22222222-0000-4000-a000-000000000011');
 
 -- 6. Seed team (3 Tim di bawah Divisi Sipil & MEP yang tersebar di Kantor Utama & Kantor Cabang - Konfirmasi 4A)
 INSERT INTO team (team_id, office_id, division_id, leader_employee_id, name, status) VALUES
@@ -61,13 +67,16 @@ INSERT INTO team (team_id, office_id, division_id, leader_employee_id, name, sta
 ('44444444-0000-4000-a000-000000000003', '11111111-0000-4000-a000-000000000002', '33333333-0000-4000-a000-000000000002', '22222222-0000-4000-a000-000000000004', 'Tim Charlie MEP (Cabang Tebing Tinggi)', TRUE)
 ON CONFLICT (team_id) DO NOTHING;
 
--- 7. Seed member (5 Baris Keanggotaan Tim)
+-- 7. Seed member (8 Baris Keanggotaan Tim)
 INSERT INTO member (member_id, team_id, employee_id, is_active) VALUES
 ('49999999-0000-4000-a000-000000000001', '44444444-0000-4000-a000-000000000001', '22222222-0000-4000-a000-000000000006', TRUE),
 ('49999999-0000-4000-a000-000000000002', '44444444-0000-4000-a000-000000000001', '22222222-0000-4000-a000-000000000008', TRUE),
 ('49999999-0000-4000-a000-000000000003', '44444444-0000-4000-a000-000000000002', '22222222-0000-4000-a000-000000000006', TRUE),
 ('49999999-0000-4000-a000-000000000004', '44444444-0000-4000-a000-000000000002', '22222222-0000-4000-a000-000000000007', TRUE),
-('49999999-0000-4000-a000-000000000005', '44444444-0000-4000-a000-000000000003', '22222222-0000-4000-a000-000000000004', TRUE)
+('49999999-0000-4000-a000-000000000005', '44444444-0000-4000-a000-000000000003', '22222222-0000-4000-a000-000000000004', TRUE),
+('49999999-0000-4000-a000-000000000006', '44444444-0000-4000-a000-000000000001', '22222222-0000-4000-a000-000000000009', TRUE),
+('49999999-0000-4000-a000-000000000007', '44444444-0000-4000-a000-000000000001', '22222222-0000-4000-a000-000000000010', TRUE),
+('49999999-0000-4000-a000-000000000008', '44444444-0000-4000-a000-000000000003', '22222222-0000-4000-a000-000000000011', TRUE)
 ON CONFLICT (member_id) DO NOTHING;
 
 -- 8. Seed address (5 Alamat Domisili Karyawan)
@@ -79,13 +88,24 @@ INSERT INTO address (address_id, employee_id, address_line, city, postal_code) V
 ('51111111-0000-4000-a000-000000000005', '22222222-0000-4000-a000-000000000008', 'Jl. Denai No. 77', 'Medan', '20226')
 ON CONFLICT (address_id) DO NOTHING;
 
--- 9. Seed employee_file (5 Surat & Sertifikat Karyawan)
+-- 9. Seed employee_file (Surat & Dokumen SIM A dan C Karyawan)
 INSERT INTO employee_file (employee_file_id, employee_id, type, path_file, status, active_at, expired_at) VALUES
 ('52222222-0000-4000-a000-000000000001', '22222222-0000-4000-a000-000000000006', 'SERTIFIKAT_K3', '/files/emp/agus_k3.pdf', 'active', '2025-01-15 00:00:00+07', '2028-01-15 00:00:00+07'),
 ('52222222-0000-4000-a000-000000000002', '22222222-0000-4000-a000-000000000006', 'SIM_A', '/files/emp/agus_sima.pdf', 'active', '2024-06-01 00:00:00+07', '2029-06-01 00:00:00+07'),
+('52222222-0000-4000-a000-000000000010', '22222222-0000-4000-a000-000000000006', 'SIM_C', '/files/emp/agus_simc.pdf', 'active', '2024-06-01 00:00:00+07', '2029-06-01 00:00:00+07'),
 ('52222222-0000-4000-a000-000000000003', '22222222-0000-4000-a000-000000000007', 'SERTIFIKAT_TEKNIS', '/files/emp/riko_fiber.pdf', 'active', '2025-02-01 00:00:00+07', '2028-02-01 00:00:00+07'),
+('52222222-0000-4000-a000-000000000011', '22222222-0000-4000-a000-000000000007', 'SIM_A', '/files/emp/riko_sima.pdf', 'active', '2024-06-01 00:00:00+07', '2029-06-01 00:00:00+07'),
+('52222222-0000-4000-a000-000000000012', '22222222-0000-4000-a000-000000000007', 'SIM_C', '/files/emp/riko_simc.pdf', 'active', '2024-06-01 00:00:00+07', '2029-06-01 00:00:00+07'),
 ('52222222-0000-4000-a000-000000000004', '22222222-0000-4000-a000-000000000008', 'KONTRAK_PKWT', '/files/emp/doni_pkwt.pdf', 'active', '2025-10-20 00:00:00+07', '2026-10-20 00:00:00+07'),
-('52222222-0000-4000-a000-000000000005', '22222222-0000-4000-a000-000000000008', 'KTP', '/files/emp/doni_ktp.pdf', 'active', '2020-01-01 00:00:00+07', NULL)
+('52222222-0000-4000-a000-000000000005', '22222222-0000-4000-a000-000000000008', 'KTP', '/files/emp/doni_ktp.pdf', 'active', '2020-01-01 00:00:00+07', NULL),
+('52222222-0000-4000-a000-000000000013', '22222222-0000-4000-a000-000000000008', 'SIM_A', '/files/emp/doni_sima.pdf', 'active', '2024-06-01 00:00:00+07', '2029-06-01 00:00:00+07'),
+('52222222-0000-4000-a000-000000000014', '22222222-0000-4000-a000-000000000008', 'SIM_C', '/files/emp/doni_simc.pdf', 'active', '2024-06-01 00:00:00+07', '2029-06-01 00:00:00+07'),
+('52222222-0000-4000-a000-000000000015', '22222222-0000-4000-a000-000000000009', 'SIM_A', '/files/emp/fajar_sima.pdf', 'active', '2025-01-01 00:00:00+07', '2030-01-01 00:00:00+07'),
+('52222222-0000-4000-a000-000000000016', '22222222-0000-4000-a000-000000000009', 'SIM_C', '/files/emp/fajar_simc.pdf', 'active', '2025-01-01 00:00:00+07', '2030-01-01 00:00:00+07'),
+('52222222-0000-4000-a000-000000000017', '22222222-0000-4000-a000-000000000010', 'SIM_A', '/files/emp/bayu_sima.pdf', 'active', '2025-01-01 00:00:00+07', '2030-01-01 00:00:00+07'),
+('52222222-0000-4000-a000-000000000018', '22222222-0000-4000-a000-000000000010', 'SIM_C', '/files/emp/bayu_simc.pdf', 'active', '2025-01-01 00:00:00+07', '2030-01-01 00:00:00+07'),
+('52222222-0000-4000-a000-000000000019', '22222222-0000-4000-a000-000000000011', 'SIM_A', '/files/emp/ilham_sima.pdf', 'active', '2025-01-01 00:00:00+07', '2030-01-01 00:00:00+07'),
+('52222222-0000-4000-a000-000000000020', '22222222-0000-4000-a000-000000000011', 'SIM_C', '/files/emp/ilham_simc.pdf', 'active', '2025-01-01 00:00:00+07', '2030-01-01 00:00:00+07')
 ON CONFLICT (employee_file_id) DO NOTHING;
 
 -- 10. Seed tool (6 Alat Kantor: 4 Pribadi [Baju, Laptop, Sepatu] + 2 Umum [Bor, Tangga] - Konfirmasi 3B)
@@ -136,7 +156,13 @@ INSERT INTO image_requirement (image_requirement_id, work_type_id, name, path_im
 ('72222222-0000-4000-a000-000000000004', '71111111-0000-4000-a000-000000000002', 'Foto Sebelum (Lokasi Panel Kosong)', '/sop_examples/iot_before_sop.jpg', TRUE, 1),
 ('72222222-0000-4000-a000-000000000005', '71111111-0000-4000-a000-000000000002', 'Foto Sesudah (Wiring Rapi & Indikator Menyala)', '/sop_examples/iot_after_sop.jpg', TRUE, 2),
 ('72222222-0000-4000-a000-000000000006', '71111111-0000-4000-a000-000000000003', 'Foto Sebelum (Pembesian & Bekisting)', '/sop_examples/sipil_before_sop.jpg', TRUE, 1),
-('72222222-0000-4000-a000-000000000007', '71111111-0000-4000-a000-000000000003', 'Foto Sesudah Pengecoran Selesai', '/sop_examples/sipil_after_sop.jpg', TRUE, 2)
+('72222222-0000-4000-a000-000000000007', '71111111-0000-4000-a000-000000000003', 'Foto Sesudah Pengecoran Selesai', '/sop_examples/sipil_after_sop.jpg', TRUE, 2),
+('72222222-0000-4000-a000-000000000011', '71111111-0000-4000-a000-000000000011', 'Foto Sebelum Pemasangan (Kondisi Titik Awal)', 'image_requirements/sop_cctv_before.jpg', TRUE, 1),
+('72222222-0000-4000-a000-000000000012', '71111111-0000-4000-a000-000000000011', 'Foto Proses Penarikan Kabel & Crimping RJ45', 'image_requirements/sop_cctv_process.jpg', TRUE, 2),
+('72222222-0000-4000-a000-000000000013', '71111111-0000-4000-a000-000000000011', 'Foto Sesudah Kamera Terpasang & Sudut Pandang (FOV)', 'image_requirements/sop_cctv_after.jpg', TRUE, 3),
+('72222222-0000-4000-a000-000000000014', '71111111-0000-4000-a000-000000000012', 'Foto Titik Pondasi & Angkur Mesin Barrier Gate', 'image_requirements/sop_gate_before.jpg', TRUE, 1),
+('72222222-0000-4000-a000-000000000015', '71111111-0000-4000-a000-000000000012', 'Foto Wiring Board Controller & Loop Detector', 'image_requirements/sop_gate_process.jpg', TRUE, 2),
+('72222222-0000-4000-a000-000000000016', '71111111-0000-4000-a000-000000000012', 'Foto Palang Gate Terpasang Sempurna (Uji Buka/Tutup)', 'image_requirements/sop_gate_after.jpg', TRUE, 3)
 ON CONFLICT (image_requirement_id) DO NOTHING;
 
 -- 16. Seed work_plan_weekly (2 Work Plan Mingguan: Minggu ke-42 & Minggu ke-43 Tahun 2026)

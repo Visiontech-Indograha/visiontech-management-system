@@ -22,6 +22,8 @@ import { ControlInput, ControlLabel, ControlOption, FormBlock } from "@/componen
 import { DisclosureBlock, DisclosureTitle } from "@/components/molecules/DisclosureBlock";
 import { listMemberReports, listPlanDays, reviewDailyReport, saveDailyReport, submitDailyReport, toggleDayTask, type DailyReportInput, type DayTask, type PlanDay, type ReportReviewInput } from "@/services/dailyReportService";
 import { FormErrorText } from "@/components/molecules/FormErrorText";
+import { DailyScheduleSlotsCards } from "./DailyScheduleSlotsCards";
+import { getDailyScheduleDetail } from "@/services/planItemService";
 
 type Day = PlanDay;
 type Task = DayTask;
@@ -67,6 +69,13 @@ export function DailyReportsPanel({ plan }: { plan: WorkPlan }) {
     queryKey: daysKey(plan.id),
     queryFn: () => listPlanDays(plan.id),
   });
+
+  const availableDays = (days.data ?? []).map((d) => ({
+    daily_plan_id: d.id,
+    work_date: d.work_date,
+    site_name: d.site_name || d.title,
+  }));
+
   return (
     <section aria-label="Laporan harian" className="space-y-3">
       <TextBlock as="h2" className="text-base font-semibold">Laporan harian</TextBlock>
@@ -77,15 +86,28 @@ export function DailyReportsPanel({ plan }: { plan: WorkPlan }) {
         emptyText="Belum ada hari kerja."
       >
         {days.data?.map((d) => (
-          <DayPanel key={d.id} plan={plan} day={d} />
+          <DayPanel key={d.id} plan={plan} day={d} availableDays={availableDays} />
         ))}
       </QueryState>
     </section>
   );
 }
 
-function DayPanel({ plan, day }: { plan: WorkPlan; day: Day }) {
+function DayPanel({
+  plan,
+  day,
+  availableDays = [],
+}: {
+  plan: WorkPlan;
+  day: Day;
+  availableDays?: Array<{ daily_plan_id: string; work_date: string; site_name?: string }>;
+}) {
   const { me } = useSession();
+  const scheduleDetail = useQuery({
+    queryKey: ["daily-schedule-detail", day.id],
+    queryFn: () => getDailyScheduleDetail(day.id),
+  });
+
   const isPM = !!me?.permissions.includes("create:plan");
   // Alur rencana kerja v2: hanya ketua menurut rencana kerja yang mengisi laporan (di HP); PM tidak melihat form ketua (CELAH 7).
   const isLeader = !!me?.employee_id && me.employee_id === plan.leader_employee_id;
@@ -112,7 +134,19 @@ function DayPanel({ plan, day }: { plan: WorkPlan; day: Day }) {
           )}
         </div>
       </header>
-      <TaskList plan={plan} day={day} editable={editable} />
+      {scheduleDetail.data?.items_schedule_slots && scheduleDetail.data.items_schedule_slots.length > 0 ? (
+        <div className="mb-4">
+          <DailyScheduleSlotsCards
+            slots={scheduleDetail.data.items_schedule_slots}
+            currentDate={day.work_date}
+            dailyPlanId={day.id}
+            availableDays={availableDays}
+            onRefresh={() => scheduleDetail.refetch()}
+          />
+        </div>
+      ) : (
+        <TaskList plan={plan} day={day} editable={editable} />
+      )}
       {!reached ? (
         <TextBlock className="mt-3 text-sm text-mist">Laporan dapat diisi mulai {formatDate(day.work_date)}.</TextBlock>
       ) : editable ? (

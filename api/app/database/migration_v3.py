@@ -101,21 +101,60 @@ DDL_STATEMENTS = [
     );
     """,
     "CREATE INDEX IF NOT EXISTS idx_site_visit_attendance ON attendance_site_visit(attendance_id);",
-    "CREATE INDEX IF NOT EXISTS idx_site_visit_item ON attendance_site_visit(item_id);"
+    "CREATE INDEX IF NOT EXISTS idx_site_visit_item ON attendance_site_visit(item_id);",
+
+    # 7. File object metadata table
+    """
+    CREATE TABLE IF NOT EXISTS file_object (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        organization_id UUID NOT NULL,
+        storage_key TEXT NOT NULL UNIQUE,
+        file_name TEXT NOT NULL,
+        mime_type TEXT NOT NULL,
+        byte_size BIGINT NOT NULL,
+        sha256 BYTEA NOT NULL,
+        uploaded_by UUID NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        UNIQUE (organization_id, sha256)
+    );
+    """,
+    "CREATE INDEX IF NOT EXISTS idx_file_object_org_hash ON file_object(organization_id, sha256);",
+
+    # 8. Work plan attachment relation table
+    """
+    CREATE TABLE IF NOT EXISTS work_plan_attachment (
+        work_plan_id UUID NOT NULL,
+        file_id UUID NOT NULL REFERENCES file_object(id) ON DELETE CASCADE,
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY (work_plan_id, file_id)
+    );
+    """,
+    "CREATE INDEX IF NOT EXISTS idx_work_plan_attachment_plan ON work_plan_attachment(work_plan_id);"
 ]
 
 
 def sync_media_seed_files() -> list[str]:
-    """Menyalin berkas dari web/dist/foto_test dan web/dist/file_test ke direktori uploads/."""
+    """Menyalin berkas dari vms-photos/uploads atau web/dist ke direktori uploads/."""
     copied_files: list[str] = []
 
     # Path root proyek
     api_dir = Path(__file__).resolve().parent.parent.parent
     project_root = api_dir.parent
 
-    # Sumber data uji
-    foto_src = project_root / "web" / "dist" / "foto_test"
-    file_src = project_root / "web" / "dist" / "file_test"
+    # Sumber data uji (termasuk path foto dan uploads yang diberikan pengguna)
+    foto_candidates = [
+        Path("C:/Users/ageng/visiontect-vms/vms-photos"),
+        project_root / "web" / "dist" / "foto_test",
+        project_root.parent / "vms-photos",
+    ]
+    file_candidates = [
+        Path("C:/Users/ageng/visiontect-vms/uploads"),
+        project_root / "web" / "dist" / "file_test",
+        project_root.parent / "uploads",
+    ]
+
+    foto_src = next((p for p in foto_candidates if p.exists() and any(p.iterdir())), None)
+    file_src = next((p for p in file_candidates if p.exists() and any(p.iterdir())), None)
 
     # Tujuan uploads fisik
     uploads_dir = api_dir / "uploads"
@@ -123,23 +162,38 @@ def sync_media_seed_files() -> list[str]:
     for s in subdirs:
         (uploads_dir / s).mkdir(parents=True, exist_ok=True)
 
-    photos = list(foto_src.glob("*.*")) if foto_src.exists() else []
-    docs = list(file_src.glob("*.*")) if file_src.exists() else []
+    photos = list(foto_src.glob("*.*")) if foto_src else []
+    docs = list(file_src.rglob("*.*")) if file_src else []
 
-    # Jika file_test kosong, gunakan foto sebagai sample dummy file
     all_sample_files = photos + docs
     if not all_sample_files:
-        logger.warning("Tidak ditemukan file uji di %s atau %s", foto_src, file_src)
+        logger.warning(
+            "Tidak ditemukan file uji di kandidat foto (%s) atau file (%s)",
+            foto_candidates,
+            file_candidates,
+        )
         return copied_files
 
     # Salin foto ke masing-masing kategori
     for p in photos:
+        if not p.is_file():
+            continue
         target_name = p.name.replace(" ", "_")
         for s in ["employees", "vehicles", "inspections", "tools", "sop"]:
             dest = uploads_dir / s / target_name
             if not dest.exists():
                 shutil.copy2(p, dest)
                 copied_files.append(f"/uploads/{s}/{target_name}")
+
+    # Salin dokumen ke docs/
+    for d in docs:
+        if not d.is_file():
+            continue
+        doc_name = d.name.replace(" ", "_")
+        dest_doc = uploads_dir / "docs" / doc_name
+        if not dest_doc.exists():
+            shutil.copy2(d, dest_doc)
+            copied_files.append(f"/uploads/docs/{doc_name}")
 
     logger.info("Sinkronisasi media uji selesai: %d berkas tersalin ke %s", len(copied_files), uploads_dir)
     return copied_files
@@ -150,15 +204,15 @@ async def apply_v3_migrations() -> None:
     logger.info("Memulai eksekusi DDL Migration VMS V3...")
 
     # 1. Jalankan DDL
-    async with engine.begin() as conn:
-        for stmt in DDL_STATEMENTS:
-            clean_stmt = stmt.strip()
-            if not clean_stmt:
-                continue
-            try:
+    for stmt in DDL_STATEMENTS:
+        clean_stmt = stmt.strip()
+        if not clean_stmt:
+            continue
+        try:
+            async with engine.begin() as conn:
                 await conn.execute(text(clean_stmt))
-            except Exception as e:  # noqa: BLE001
-                logger.warning("DDL statement warning (mungkin sudah terpasang): %s - %s", clean_stmt[:40], e)
+        except Exception as e:  # noqa: BLE001
+            logger.warning("DDL statement warning (mungkin sudah terpasang): %s - %s", clean_stmt[:40], e)
 
     logger.info("DDL Migration VMS V3 berhasil diterapkan ke database!")
 

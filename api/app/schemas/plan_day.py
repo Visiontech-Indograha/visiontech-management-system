@@ -1,5 +1,6 @@
 """Skema permintaan & respons: plan day (dipindah dari api/v1/endpoints/work_plan_days.py, R-28 M2b)."""
 from datetime import date, datetime
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -41,3 +42,92 @@ class PlanDayOut(BaseModel):
     site_name: str | None = None  # Lokasi khusus hari itu (None = ikut lokasi rencana)
     work_type_name: str | None = None  # Jenis pekerjaan khusus hari itu (None = ikut jenis rencana)
     member_employee_ids: list[UUID] | None = None  # Yang bertugas hari itu, termasuk ketua (None = seluruh tim)
+
+
+class SopImageRequirementOut(BaseModel):
+    """Skema persyaratan foto SOP untuk tipe pekerjaan."""
+    title: str
+    description: str | None = None
+    path_image: str | None = None
+
+
+class WorkTypeWithSopOut(BaseModel):
+    """Skema tipe pekerjaan lengkap beserta persyaratan foto SOP."""
+    work_type_id: UUID
+    name: str
+    description: str | None = None
+    sop_image_requirements: list[SopImageRequirementOut] = []
+
+
+class WorkCompletionOrderSummaryOut(BaseModel):
+    """Ringkasan order klien (work completion) yang terhubung ke slot penugasan."""
+    completion_id: UUID
+    order_number: str
+    client_name: str
+    project_title: str
+    total_target_unit: float | None = None
+    unit_measure: str | None = None
+    order_status: str
+    priority_level: str | None = None
+
+
+class ItemScheduleSlotOut(BaseModel):
+    """Slot jadwal item tugas spesifik di hari kerja."""
+    item_id: UUID
+    start_time: str | None = None
+    end_time: str | None = None
+    title: str
+    location_name: str | None = None
+    site_lat: float | None = None
+    site_lng: float | None = None
+    target_qty: float = 0.0
+    completed_qty: float = 0.0
+    progress_percent: float = 0.0
+    status: str
+    assigned_employee_ids: list[Any] = []
+    work_type: WorkTypeWithSopOut | None = None
+    work_completion_order: WorkCompletionOrderSummaryOut | None = None
+
+
+class WeeklyContextDivisionOut(BaseModel):
+    """Konteks divisi untuk jadwal mingguan."""
+    division_id: UUID
+    name: str
+
+
+class WeeklyContextTeamOut(BaseModel):
+    """Konteks tim pelaksana untuk jadwal mingguan."""
+    team_id: UUID
+    name: str
+
+
+class WeeklyContextOut(BaseModel):
+    """Konteks jadwal mingguan induk."""
+    weekly_plan_id: UUID
+    week_number: int
+    year: int
+    division: WeeklyContextDivisionOut
+    team: WeeklyContextTeamOut
+
+
+class DefaultAttendanceSiteOut(BaseModel):
+    """Informasi lokasi absensi induk harian."""
+    site_name: str | None = None
+    site_lat: float | None = None
+    site_lng: float | None = None
+    attendance_radius_m: int | None = None
+    clock_in_time: str | None = None
+    clock_out_time: str | None = None
+
+
+class PlanDailyScheduleDetailOut(BaseModel):
+    """Respons detail rencana kerja harian lengkap multi-slot untuk web & mobile."""
+    daily_plan_id: UUID
+    work_date: date
+    status: str
+    can_pm_edit: bool = True
+    preview_pdf_url: str | None = None
+    weekly_context: WeeklyContextOut
+    default_attendance_site: DefaultAttendanceSiteOut
+    items_schedule_slots: list[ItemScheduleSlotOut] = []
+

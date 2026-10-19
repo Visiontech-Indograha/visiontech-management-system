@@ -36,10 +36,13 @@ class CRUDWorkType(CRUDBase):
         """Mendapatkan division_id karyawan dari user_id."""
         val = await self.scalar(
             """
-            SELECT e.division_id
+            SELECT CAST(COALESCE(e.division_id, d_pm.division_id, d_om.division_id) AS uuid) AS division_id
             FROM users u
-            JOIN employee e ON e.employee_id = u.employee_id
-            WHERE u.user_id = CAST(:uid AS uuid) AND u.delete_at IS NULL AND e.delete_at IS NULL
+            LEFT JOIN employee e ON e.employee_id = u.employee_id AND e.delete_at IS NULL
+            LEFT JOIN division d_pm ON (d_pm.pm_id = u.user_id OR d_pm.pm_id = u.employee_id) AND d_pm.delete_at IS NULL
+            LEFT JOIN division d_om ON (d_om.om_id = u.user_id OR d_om.om_id = u.employee_id) AND d_om.delete_at IS NULL
+            WHERE u.user_id = CAST(:uid AS uuid) AND u.delete_at IS NULL
+            LIMIT 1
             """,
             {"uid": str(user_id)},
         )

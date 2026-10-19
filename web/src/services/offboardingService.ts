@@ -10,6 +10,8 @@ export interface ClearanceItem {
   cleared_by?: string;
   cleared_at?: string;
   notes?: string;
+  handover_photo_path?: string;
+  return_condition?: string;
 }
 
 export interface Offboarding {

@@ -83,6 +83,7 @@ class AuthFlowService:
             permissions=profile.permissions,
             employee_id=profile.employee_id,
             attendance_mode=profile.attendance_mode,
+            division_id=profile.division_id,
         )
 
     async def active_sessions(self, user_id: str, current_session_id: str) -> list[SessionOut]:

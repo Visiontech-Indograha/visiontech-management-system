@@ -40,7 +40,17 @@ export function WorkTypeList({ types, onAdd, onEdit, onDeactivate }: {
           {types.data.map((t) => (
             <ListEntry key={t.id} className="rounded-panel border border-line bg-surface p-4 shadow-card">
               <div className="mb-2 flex items-start justify-between gap-2">
-                <TextBlock className="font-medium">{t.name}</TextBlock>
+                <div>
+                  <TextBlock className="font-medium">{t.name}</TextBlock>
+                  {t.division_name && (
+                    <TextBlock as="span" className="mt-1 inline-block rounded-control bg-hover px-2 py-0.5 text-xs font-medium text-foreground">
+                      {t.division_name}
+                    </TextBlock>
+                  )}
+                  {t.description && (
+                    <TextBlock className="mt-1 text-xs text-mist">{t.description}</TextBlock>
+                  )}
+                </div>
                 {!t.is_active && <TextBlock as="span" className="rounded-control bg-hover px-2 py-0.5 text-xs text-mist">Nonaktif</TextBlock>}
               </div>
               {t.photos.length === 0 ? (

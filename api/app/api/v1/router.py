@@ -25,6 +25,7 @@ from app.modules.system.routes import (
     app_releases_router,
     events_router,
     files_router,
+    media_router,
     monitoring_router,
     sync_router,
 )
@@ -38,6 +39,7 @@ from app.modules.work_plans.routes import (
     plan_attachments_router,
     plan_changes_router,
     plan_days_router,
+    plan_items_router,
     plan_location_router,
     plan_members_router,
     plan_reports_router,
@@ -59,6 +61,7 @@ api_router.include_router(backup_router)
 api_router.include_router(auth_router)
 api_router.include_router(audit_router)
 api_router.include_router(files_router)
+api_router.include_router(media_router)
 api_router.include_router(employees_router)
 api_router.include_router(documents_router)
 api_router.include_router(expiry_router)
@@ -76,6 +79,7 @@ api_router.include_router(weekly_reports_router)
 api_router.include_router(monitoring_router)
 api_router.include_router(plan_attachments_router)
 api_router.include_router(plan_days_router)
+api_router.include_router(plan_items_router)
 api_router.include_router(plan_documents_router)
 api_router.include_router(signatures_router)
 api_router.include_router(attendance_router)

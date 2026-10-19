@@ -45,6 +45,7 @@ class Profile:
     permissions: list[str]
     employee_id: str | None = None  # karyawan milik akun ("Berkas saya"); None = akun tanpa karyawan
     attendance_mode: str | None = None  # FIELD = absen di HP, OFFICE = absen di web; None = tanpa karyawan
+    division_id: str | None = None
 
 
 def _inactive() -> AppError:
@@ -283,6 +284,7 @@ class AuthService:
             permissions=permissions,
             employee_id=(str(emp) if (emp := await self.users.get_employee_id(user_id)) else None),
             attendance_mode=await self.users.get_attendance_mode(user_id),
+            division_id=await self.users.get_division_id(user_id),
         )
 
     async def change_password(

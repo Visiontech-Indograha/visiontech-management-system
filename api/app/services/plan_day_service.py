@@ -7,9 +7,11 @@ from __future__ import annotations
 
 import json
 from typing import Any
+from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.errors import AppError
 from app.crud.crud_plan_day import CRUDPlanDay
 from app.services.access_service import PlanAccess
 
@@ -54,3 +56,18 @@ class PlanDayService:
                 day["report"] = None
             days.append(day)
         return days
+
+    async def get_daily_schedule_detail(self, daily_plan_id: UUID | str) -> dict[str, Any]:
+        """
+        Mengambil detail jadwal harian multi-slot lengkap beserta SOP dan order klien.
+
+        Args:
+            daily_plan_id (UUID | str): ID unik jadwal harian (work_plan_daily).
+
+        Returns:
+            dict[str, Any]: Payload terstruktur rencana kerja harian.
+        """
+        data = await self.repo.get_daily_schedule_detail(daily_plan_id)
+        if not data:
+            raise AppError("NOT_FOUND", "Data rencana kerja harian tidak ditemukan.", status=404)
+        return data

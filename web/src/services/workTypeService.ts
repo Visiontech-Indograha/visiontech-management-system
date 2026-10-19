@@ -2,16 +2,28 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/apiClient";
 import type { components } from "@/lib/apiTypes";
 
-export type WorkType = components["schemas"]["WorkTypeOut"];
-export type WorkTypeInput = components["schemas"]["WorkTypeIn"];
+export type WorkType = components["schemas"]["WorkTypeOut"] & {
+  division_id?: string | null;
+  division_name?: string | null;
+  description?: string | null;
+};
+export type WorkTypeInput = components["schemas"]["WorkTypeIn"] & {
+  division_id?: string | null;
+  description?: string | null;
+};
 
 const KEY = ["work-types"] as const;
 
 /** GET /work-types — yang aktif; `all` (butuh izin create:plan) menyertakan yang nonaktif. */
-export const useWorkTypes = (all = false) =>
+export const useWorkTypes = (all = false, division_id?: string) =>
   useQuery({
-    queryKey: [...KEY, { all }],
-    queryFn: async () => (await api.get<WorkType[]>("/work-types", { params: all ? { all: true } : {} })).data,
+    queryKey: [...KEY, { all, division_id }],
+    queryFn: async () =>
+      (
+        await api.get<WorkType[]>("/work-types", {
+          params: { ...(all ? { all: true } : {}), ...(division_id ? { division_id } : {}) },
+        })
+      ).data,
   });
 
 export function useSaveWorkType(id?: string) {

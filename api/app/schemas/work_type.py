@@ -36,7 +36,7 @@ class WorkTypeIn(BaseModel):
 class WorkTypeOut(BaseModel):
     """Jenis pekerjaan beserta template fotonya."""
     id: UUID  # ID jenis
-    division_id: UUID  # ID Divisi pemilik
+    division_id: UUID | None = None  # ID Divisi pemilik
     division_name: str | None = None  # Nama Divisi
     name: str  # Nama jenis
     description: str | None = None  # Keterangan pekerjaan

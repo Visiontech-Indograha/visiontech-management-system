@@ -60,7 +60,11 @@ class WorkTypeService:
         await ensure_same_org(self.db, org_id, files=[p["example_file_id"] for p in photos])
 
     async def create(self, org_id: str, data: WorkTypeIn, creator_division_id: UUID | None = None) -> Any:
-        division_id = data.division_id or creator_division_id
+        division_id = creator_division_id or data.division_id
+        if creator_division_id is not None and data.division_id and str(data.division_id) != str(creator_division_id):
+            raise AppError(
+                "FORBIDDEN", "Anda tidak memiliki hak untuk membuat jenis pekerjaan di divisi lain.", status=403
+            )
         if division_id is None:
             raise ValidationError("Divisi wajib ditentukan untuk jenis pekerjaan ini.")
         name, photos = self._clean(data)
@@ -80,6 +84,10 @@ class WorkTypeService:
                 "FORBIDDEN", "Anda tidak memiliki hak untuk mengubah jenis pekerjaan divisi lain.", status=403
             )
         target_division = data.division_id or existing.division_id
+        if creator_division_id is not None and target_division and str(target_division) != str(creator_division_id):
+            raise AppError(
+                "FORBIDDEN", "Anda tidak memiliki hak untuk memindahkan jenis pekerjaan ke divisi lain.", status=403
+            )
         name, photos = self._clean(data)
         if await self.repo.name_taken(org_id, target_division, name, type_id):
             raise AppError("DUPLICATE", "Jenis pekerjaan dengan nama itu sudah ada di divisi ini.", status=409)

@@ -22,7 +22,43 @@ class CRUDFileAccess(CRUDBase):
         """
         Mendapatkan metadata tautan dan validasi hak akses berkas.
         """
-        # Kembalikan akses yang diizinkan untuk penyimpanan MinIO
+        row = await self.fetchone(
+            """
+            SELECT
+                f.storage_key,
+                f.mime_type,
+                f.file_name,
+                (f.uploaded_by = CAST(:uid AS uuid)) AS is_uploader,
+                FALSE AS personal_document,
+                FALSE AS own_document,
+                FALSE AS work_type_example,
+                FALSE AS selfie,
+                (EXISTS (
+                    SELECT 1 FROM employee e
+                    WHERE e.profile_photo_path = CAST(f.id AS text) AND e.delete_at IS NULL
+                )) AS profile_photo,
+                (EXISTS (
+                    SELECT 1 FROM employee e
+                    JOIN users u ON u.employee_id = e.employee_id
+                    WHERE e.profile_photo_path = CAST(f.id AS text)
+                      AND u.user_id = CAST(:uid AS uuid)
+                      AND e.delete_at IS NULL
+                )) AS own_profile_photo,
+                FALSE AS own_selfie,
+                FALSE AS selfie_viewable,
+                COALESCE((
+                    SELECT array_agg(CAST(wpa.work_plan_id AS text))
+                    FROM work_plan_attachment wpa
+                    WHERE wpa.file_id = f.id
+                ), ARRAY[]::text[]) AS plan_ids
+            FROM file_object f
+            WHERE f.id = CAST(:fid AS uuid)
+            """,
+            {"fid": str(file_id), "uid": str(user_id)},
+        )
+        if row:
+            return row
+
         return await self.fetchone(
             """
             SELECT CAST(:fid AS text) AS storage_key,
@@ -36,7 +72,9 @@ class CRUDFileAccess(CRUDBase):
                    FALSE AS profile_photo,
                    TRUE AS own_profile_photo,
                    TRUE AS own_selfie,
-                   '{}'::text[] AS plan_ids
+                   FALSE AS selfie_viewable,
+                   ARRAY[]::text[] AS plan_ids
             """,
             {"fid": str(file_id)},
         )
+

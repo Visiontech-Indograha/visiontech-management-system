@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { UseQueryResult } from "@tanstack/react-query";
 import type { Offboarding } from "@/services/offboardingService";
 import { OffboardingAddButton } from "./OffboardingAddButton";
@@ -7,6 +8,9 @@ import { TextBlock } from "@/components/molecules/TextBlock";
 import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
 import { RetryNotice } from "@/components/molecules/RetryNotice";
 import { FileCheck2, FileWarning, ShieldCheck } from "@/components/molecules/Glyphs";
+import { Button } from "@/components/atoms/Button";
+import { Camera } from "lucide-react";
+import { UniversalMediaModal } from "@/components/organisms/media";
 
 export function OffboardingList({
   offboardings,
@@ -19,6 +23,8 @@ export function OffboardingList({
   onVerifyClearance?: (itemId: string, isCleared: boolean) => void;
   onDecision?: (id: string, approved: boolean) => void;
 }) {
+  const [selectedMedia, setSelectedMedia] = useState<{ url: string; title: string } | null>(null);
+
   return (
     <>
       {offboardings.isPending && (
@@ -81,6 +87,18 @@ export function OffboardingList({
                           <TextBlock className="text-[10px] text-mist">{item.category}</TextBlock>
                         </div>
                         <div className="flex items-center gap-1">
+                          {item.handover_photo_path && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 px-1.5 text-xs text-sky-600 hover:text-sky-700"
+                              onClick={() => setSelectedMedia({ url: item.handover_photo_path!, title: `Bukti Serah Terima: ${item.item_name}` })}
+                              title="Lihat Foto Bukti Serah Terima"
+                            >
+                              <Camera className="w-3.5 h-3.5 mr-1" />
+                              Foto
+                            </Button>
+                          )}
                           {item.is_cleared ? (
                             <FileCheck2 className="text-emerald-500" size={16} />
                           ) : (
@@ -105,6 +123,15 @@ export function OffboardingList({
             </ListEntry>
           ))}
         </ListBlock>
+      )}
+
+      {selectedMedia && (
+        <UniversalMediaModal
+          isOpen={!!selectedMedia}
+          onClose={() => setSelectedMedia(null)}
+          filePath={selectedMedia.url}
+          title={selectedMedia.title}
+        />
       )}
     </>
   );

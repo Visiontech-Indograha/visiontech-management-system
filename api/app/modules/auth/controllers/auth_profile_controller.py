@@ -51,6 +51,7 @@ class AuthProfileController:
             permissions=res.permissions,
             employee_id=res.employee_id,
             attendance_mode=res.attendance_mode,
+            division_id=res.division_id,
         )
 
     async def handle_change_password(

@@ -194,6 +194,27 @@ class CRUDUser(CRUDBase):
         except SQLAlchemyError:
             return None
 
+    async def get_division_id(self, user_id: UUID | str) -> str | None:
+        """
+        Mendapatkan ID Divisi (division_id) yang menaungi pengguna atau karyawan pengguna ini.
+        Prioritas:
+        1. employee.division_id
+        2. division.division_id bila pengguna adalah PM divisi (division.pm_id = user_id atau employee_id)
+        3. division.division_id bila pengguna adalah OM divisi (division.om_id = user_id atau employee_id)
+        """
+        sql = """
+        SELECT CAST(COALESCE(e.division_id, d_pm.division_id, d_om.division_id) AS text) AS division_id
+        FROM users u
+        LEFT JOIN employee e ON e.employee_id = u.employee_id AND e.delete_at IS NULL
+        LEFT JOIN division d_pm ON (d_pm.pm_id = u.user_id OR d_pm.pm_id = u.employee_id) AND d_pm.delete_at IS NULL
+        LEFT JOIN division d_om ON (d_om.om_id = u.user_id OR d_om.om_id = u.employee_id) AND d_om.delete_at IS NULL
+        WHERE u.user_id = CAST(:uid AS uuid) AND u.delete_at IS NULL
+        LIMIT 1
+        """
+        div_id = await self.scalar(sql, {"uid": user_id})
+        return str(div_id) if div_id else None
+
+
     async def get_attendance_mode(self, user_id: UUID | str) -> str | None:
         """
         Mendapatkan mode absensi yang diberlakukan kepada pengguna:
@@ -287,3 +308,4 @@ class CRUDUser(CRUDBase):
             "UPDATE users SET is_active = :a, update_at = now() WHERE user_id = :id AND delete_at IS NULL",
             {"a": active, "id": user_id},
         )
+

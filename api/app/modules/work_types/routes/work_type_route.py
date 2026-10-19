@@ -58,6 +58,8 @@ async def create_work_type(
     """
     user_div = await controller.get_user_division(current_user.user_id)
     creator_div = user_div if current_user.role == "PROJECT_MANAGER" else None
+    if not data.division_id and user_div:
+        data.division_id = user_div
     return await controller.handle_create(current_user.organization_id, data, creator_div)
 
 
@@ -74,6 +76,8 @@ async def update_work_type(
     """
     user_div = await controller.get_user_division(current_user.user_id)
     creator_div = user_div if current_user.role == "PROJECT_MANAGER" else None
+    if not data.division_id and user_div:
+        data.division_id = user_div
     return await controller.handle_update(current_user.organization_id, type_id, data, creator_div)
 
 

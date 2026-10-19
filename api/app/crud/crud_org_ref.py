@@ -47,8 +47,13 @@ class CRUDOrgRef(CRUDBase):
                     SELECT vehicle_id AS id FROM vehicle
                     WHERE vehicle_id = ANY(CAST(:assets AS uuid[])) AND delete_at IS NULL
                 ) a) AS assets,
-                (SELECT count(*) FROM employee_file WHERE employee_file_id = ANY(CAST(:files AS uuid[]))
-                    AND delete_at IS NULL) AS files,
+                (SELECT count(*) FROM (
+                    SELECT employee_file_id AS id FROM employee_file
+                    WHERE employee_file_id = ANY(CAST(:files AS uuid[])) AND delete_at IS NULL
+                    UNION
+                    SELECT id FROM file_object
+                    WHERE id = ANY(CAST(:files AS uuid[]))
+                ) f) AS files,
                 (SELECT count(*) FROM employee WHERE employee_id = ANY(CAST(:employees AS uuid[]))
                     AND delete_at IS NULL) AS employees,
                 (SELECT count(*) FROM division WHERE division_id = ANY(CAST(:units AS uuid[]))

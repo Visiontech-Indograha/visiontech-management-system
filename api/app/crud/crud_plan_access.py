@@ -21,17 +21,40 @@ from .base import CRUDBase
 
 # `:plan` NULL → semua SK terlihat (daftar); terisi → satu SK (penjaga). `:status` NULL → semua status.
 _STANDING = """
+    WITH weekly_plans AS (
+        SELECT
+            CAST(MIN(CAST(wpd.daily_plan_id AS text)) AS uuid) AS id,
+            wpd.division_id,
+            wpd.team_id,
+            CAST(EXTRACT(WEEK FROM wpd.work_date) AS integer) AS week_number,
+            CAST(EXTRACT(YEAR FROM wpd.work_date) AS integer) AS year,
+            DATE_TRUNC('week', wpd.work_date)::date AS period_start,
+            (DATE_TRUNC('week', wpd.work_date) + interval '6 days')::date AS period_end,
+            CASE
+                WHEN bool_and(wpd.status = 'APPROVED') THEN 'APPROVED'
+                WHEN bool_or(wpd.status = 'ONGOING') THEN 'ONGOING'
+                ELSE 'SUBMITTED'
+            END AS status,
+            MIN(wpd.site_name) AS site_name,
+            CAST(MIN(CAST(wpd.approved_by_pm_id AS text)) AS uuid) AS approved_by_pm_id,
+            MIN(wpd.create_at) AS create_at
+        FROM work_plan_daily wpd
+        WHERE wpd.delete_at IS NULL
+        GROUP BY wpd.division_id, wpd.team_id,
+                 EXTRACT(YEAR FROM wpd.work_date), EXTRACT(WEEK FROM wpd.work_date),
+                 DATE_TRUNC('week', wpd.work_date)
+    )
     SELECT
-        w.weekly_plan_id AS id,
+        w.id AS id,
         w.division_id AS unit_id,
         div.name AS division_name,
         o.office_id AS site_id,
         'SK/W' || w.week_number || '/' || w.year AS number,
         'Rencana Kerja Mingguan W' || w.week_number || ' - ' || t.name AS title,
-        COALESCE(d.site_name, 'Site Operasional ' || t.name) AS location_text,
+        COALESCE(w.site_name, 'Site Operasional ' || t.name) AS location_text,
         'Rencana kerja mingguan terintegrasi tim ' || t.name AS description,
-        w.start_date AS period_start,
-        w.end_date AS period_end,
+        w.period_start,
+        w.period_end,
         w.status,
         COALESCE(w.approved_by_pm_id, div.pm_id) AS pm_employee_id,
         t.leader_employee_id,
@@ -41,11 +64,13 @@ _STANDING = """
         NULL::text AS appeal_reason,
         'INSTALASI' AS category,
         FALSE AS is_out_of_town,
-        item.work_type_id,
-        COALESCE(item.work_type_name, 'Instalasi & Maintenance') AS work_type_name,
+        CAST(MIN(CAST(item.work_type_id AS text)) AS uuid) AS work_type_id,
+        COALESCE(MIN(item.work_type_name), 'Instalasi & Maintenance') AS work_type_name,
         EXISTS (
             SELECT 1 FROM work_plan_item wpi
-            WHERE wpi.weekly_plan_id = w.weekly_plan_id
+            JOIN work_plan_daily d ON d.daily_plan_id = wpi.daily_plan_id
+            WHERE d.division_id = w.division_id AND d.team_id = w.team_id
+              AND d.work_date BETWEEN w.period_start AND w.period_end
               AND wpi.rollover_approval_status = 'WAITING_PM'
         ) AS pending_request,
         today_d.daily_plan_id AS today_site_id,
@@ -55,21 +80,14 @@ _STANDING = """
         (t.leader_employee_id = emp.employee_id) AS is_leader,
         EXISTS (SELECT 1 FROM member m WHERE m.team_id = w.team_id AND m.employee_id = emp.employee_id AND m.is_active = TRUE) AS is_member,
         TRUE AS visible
-    FROM work_plan_weekly w
+    FROM weekly_plans w
     JOIN division div ON div.division_id = w.division_id
     JOIN team t ON t.team_id = w.team_id
     LEFT JOIN office o ON o.office_id = t.office_id
     LEFT JOIN LATERAL (
-        SELECT wpd.site_name, wpd.daily_plan_id
-        FROM work_plan_daily wpd
-        WHERE wpd.weekly_plan_id = w.weekly_plan_id AND wpd.delete_at IS NULL
-        ORDER BY wpd.work_date ASC
-        LIMIT 1
-    ) d ON TRUE
-    LEFT JOIN LATERAL (
         SELECT wpd.daily_plan_id
         FROM work_plan_daily wpd
-        WHERE wpd.weekly_plan_id = w.weekly_plan_id
+        WHERE wpd.division_id = w.division_id AND wpd.team_id = w.team_id
           AND wpd.work_date = CURRENT_DATE
           AND wpd.delete_at IS NULL
         LIMIT 1
@@ -77,8 +95,11 @@ _STANDING = """
     LEFT JOIN LATERAL (
         SELECT wpi.work_type_id, wt.name AS work_type_name
         FROM work_plan_item wpi
+        JOIN work_plan_daily d ON d.daily_plan_id = wpi.daily_plan_id
         LEFT JOIN work_type wt ON wt.work_type_id = wpi.work_type_id
-        WHERE wpi.weekly_plan_id = w.weekly_plan_id AND wpi.delete_at IS NULL
+        WHERE d.division_id = w.division_id AND d.team_id = w.team_id
+          AND d.work_date BETWEEN w.period_start AND w.period_end
+          AND wpi.delete_at IS NULL
         LIMIT 1
     ) item ON TRUE
     LEFT JOIN LATERAL (
@@ -86,10 +107,12 @@ _STANDING = """
         FROM users u
         WHERE u.user_id = CAST(:user AS uuid)
     ) emp ON TRUE
-    WHERE w.delete_at IS NULL
-      AND (CAST(:plan AS uuid) IS NULL OR w.weekly_plan_id = CAST(:plan AS uuid))
+    WHERE (CAST(:plan AS uuid) IS NULL OR w.id = CAST(:plan AS uuid))
       AND (CAST(:status AS text) IS NULL OR w.status = CAST(:status AS text))
-    ORDER BY w.create_at DESC
+    GROUP BY w.id, w.division_id, div.name, div.pm_id, o.office_id, t.name, t.leader_employee_id, w.team_id,
+             w.week_number, w.year, w.period_start, w.period_end, w.status, w.site_name, w.approved_by_pm_id,
+             w.create_at, today_d.daily_plan_id, emp.employee_id
+    ORDER BY w.period_start DESC
 """
 
 

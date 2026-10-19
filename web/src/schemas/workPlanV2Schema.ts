@@ -35,14 +35,16 @@ export const planItemV2Schema = z.object({
   start_time: z
     .string()
     .regex(/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/, { message: "Format jam mulai tidak valid (HH:MM)" })
+    .nullable()
     .optional()
     .or(z.literal("")),
   end_time: z
     .string()
     .regex(/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/, { message: "Format jam selesai tidak valid (HH:MM)" })
+    .nullable()
     .optional()
     .or(z.literal("")),
-  location_name: z.string().max(255).optional().or(z.literal("")),
+  location_name: z.string().max(255).nullable().optional().or(z.literal("")),
   site_lat: z.number().min(-90).max(90).optional().nullable(),
   site_lng: z.number().min(-180).max(180).optional().nullable(),
   assigned_employee_ids: z.array(z.string().uuid()),
@@ -101,8 +103,8 @@ export const weeklyPlanV2Schema = z
     end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, { message: "Tanggal selesai harus YYYY-MM-DD" }),
     status: z.enum(["DRAFT", "SUBMITTED", "APPROVED", "ONGOING", "COMPLETED", "REJECTED"]),
     tool_ids: z.array(z.string().uuid()),
-    vehicle_id: z.string().uuid().optional().or(z.literal("")),
-    driver_employee_id: z.string().uuid().optional().or(z.literal("")),
+    vehicle_id: z.string().uuid().nullable().optional().or(z.literal("")),
+    driver_employee_id: z.string().uuid().nullable().optional().or(z.literal("")),
     days: z.array(dailyPlanV2Schema).min(1, { message: "Rencana kerja harus memiliki minimal 1 hari kerja" }),
   })
   .refine((data) => data.end_date >= data.start_date, {

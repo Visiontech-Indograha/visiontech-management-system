@@ -12,7 +12,8 @@ export interface TeamMember {
 }
 
 export interface Team {
-  id: string;
+  id?: string;
+  team_id?: string;
   name: string;
   leader_id: string;
   leader_name?: string;

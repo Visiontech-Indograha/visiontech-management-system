@@ -9,6 +9,11 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased] — `development`
 
+- **Penyempurnaan Alur Work Plan V2 Menuju Work Completion & Task Chain Rollover (`api/app/`, `web/src/`):**
+  - **Silsilah Rantai Tugas Rollover (Task Chain CTE):** Menerapkan pelacakan hierarki pohon tugas (`root_origin_id`) dengan recursive CTE di PostgreSQL, menghitung akumulasi capaian volume secara dinamis lintas hari (Kasus 6A: `SHIFTED_DAY`) dan lintas minggu (Kasus 6B: `ALLOCATED_NEXT_WEEK`).
+  - **Otomasi Penerbitan Berita Acara (Work Completion):** Menyediakan mekanisme kompilasi otomatis saat rantai tugas mencapai target akumulasi 100%, menautkan `completion_id` seragam ke seluruh mata rantai (`ITEM-1`, `ITEM-2`, dst.), dan mengaktifkan Berita Acara resmi dengan `report_scope = 'WEEKLY'`.
+  - **Antarmuka Interaktif Silsilah Rantai & Rollover (`TaskChainCompletionDialog`, `PlanItemRolloverDialog`):** Menyajikan visualisasi tahapan silsilah tugas, progress bar kumulatif, kartu kelayakan Berita Acara, form penerbitan 1-klik, serta tombol cepat rollover tugas harian di kartu multi-slot jadwal (`DailyScheduleSlotsCards.tsx`).
+
 - **Implementasi Komprehensif VMS 2.0 (Master Schema V2 & Universal Media Viewer) (`api/app/`, `web/src/`):**
   - **Universal Media & Document Viewer:** Membangun antarmuka pratinjau terpadu `UniversalMediaModal` yang mencakup PDF in-app embed reader (`PdfViewerModal`), Image Lightbox interaktif (`ImageLightboxModal`) dengan zoom, rotasi, dan metadata GPS/waktu, serta kartu unduh berkas Office (Word, Excel, PowerPoint) yang terhubung ke endpoint streaming `/api/v1/media/preview` dan `/api/v1/media/download`.
   - **Alur Proyek End-to-End & PM Full Override:** Mengimplementasikan `PmOverrideToolbar` (bypass status terkunci, quick reschedule lintas hari/minggu) dan `DailyScheduleSlotsCards` (multi-slot timeline, deteksi konflik jadwal engineer/armada, update progres target, dan pengajuan rollover tugas harian).

@@ -92,14 +92,63 @@ class PmApproveOrMoveOut(BaseModel):
     message: str
 
 
+class TaskChainItemDetailOut(BaseModel):
+    """Rincian satu item tugas dalam satu rantai rollover."""
+    item_id: UUID
+    origin_item_id: UUID | None = None
+    daily_plan_id: UUID
+    weekly_plan_id: UUID
+    work_date: str | None = None
+    title: str
+    target_qty: float
+    completed_qty: float
+    progress_percent: float
+    status: str
+    completion_id: UUID | None = None
+    create_at: str | None = None
+
+
+class TaskChainStatusOut(BaseModel):
+    """Status agregasi seluruh rantai tugas (task chain) lintas hari dan lintas minggu."""
+    root_item_id: UUID
+    initial_total_target: float
+    total_completed_across_weeks: float
+    total_progress_percent: float
+    is_eligible_for_completion: bool
+    status_label: str
+    existing_completion_id: UUID | None = None
+    all_linked_item_ids: list[UUID] = Field(default_factory=list)
+    items: list[TaskChainItemDetailOut] = Field(default_factory=list)
+
+
+class GenerateCompletionIn(BaseModel):
+    """Payload pembuatan Work Completion dari rantai tugas."""
+    client_name: str | None = None
+    project_title: str | None = None
+
+
+class GenerateCompletionOut(BaseModel):
+    """Respons hasil pembuatan / finalisasi Work Completion dari rantai tugas."""
+    success: bool
+    completion_id: UUID
+    message: str
+    total_target_unit: int
+    order_status: str
+
+
 __all__ = [
     "CheckConflictIn",
     "CheckConflictOut",
     "ConflictDetailOut",
+    "GenerateCompletionIn",
+    "GenerateCompletionOut",
     "PmApproveOrMoveIn",
     "PmApproveOrMoveOut",
     "RequestRolloverIn",
     "RequestRolloverOut",
+    "TaskChainItemDetailOut",
+    "TaskChainStatusOut",
     "UpdateItemProgressIn",
     "UpdateItemProgressOut",
 ]
+

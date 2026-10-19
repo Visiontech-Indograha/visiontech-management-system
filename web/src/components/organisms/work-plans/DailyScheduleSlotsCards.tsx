@@ -20,6 +20,9 @@ import {
   Camera,
   CheckCircle2,
   Clock,
+  FileCheck2,
+  GitFork,
+  Layers,
   MapPin,
   Send,
   Users,
@@ -31,8 +34,15 @@ import {
   updateItemProgress,
   type ItemScheduleSlot,
 } from "@/services/planItemService";
+import {
+  useDeletePlanItemV2,
+  useWorkPlanFormOptionsV2,
+} from "@/services/workPlanV2Service";
 import { RescheduleTaskModal } from "./RescheduleTaskModal";
 import { WorkTypeSopModal } from "./WorkTypeSopModal";
+import { PlanItemFormDialog } from "./PlanItemFormDialog";
+import { TaskChainCompletionDialog } from "./TaskChainCompletionDialog";
+import { PlanItemRolloverDialog } from "./PlanItemRolloverDialog";
 
 interface DailyScheduleSlotsCardsProps {
   slots: ItemScheduleSlot[];
@@ -66,6 +76,15 @@ export const DailyScheduleSlotsCards: React.FC<DailyScheduleSlotsCardsProps> = (
   const [rolloverReason, setRolloverReason] = useState<string>("");
   const [submittingRollover, setSubmittingRollover] = useState<boolean>(false);
 
+  // State Dialog Task Chain & Direct PM Rollover
+  const [chainDialogItemId, setChainDialogItemId] = useState<string | null>(null);
+  const [rolloverDialogItem, setRolloverDialogItem] = useState<ItemScheduleSlot | null>(null);
+
+  // State Dialog Edit Item Slot & Delete
+  const [editingSlot, setEditingSlot] = useState<ItemScheduleSlot | null>(null);
+  const deleteItemMut = useDeletePlanItemV2();
+  const optionsQuery = useWorkPlanFormOptionsV2();
+
   const isPmOrHigher =
     me?.role === "PROJECT_MANAGER" ||
     me?.role === "OPERATIONAL_MANAGER" ||
@@ -73,6 +92,20 @@ export const DailyScheduleSlotsCards: React.FC<DailyScheduleSlotsCardsProps> = (
     me?.role === "PM" ||
     me?.role === "ADMIN" ||
     !!me?.permissions.includes("create:plan");
+
+  const handleDeleteSlot = async (itemId: string) => {
+    if (confirm("Apakah Anda yakin ingin menghapus butir tugas slot ini?")) {
+      try {
+        await deleteItemMut.mutateAsync({ id: itemId, dailyPlanId });
+        toast.success("Butir tugas berhasil dihapus!");
+        qc.invalidateQueries({ queryKey: ["daily-schedule-detail", dailyPlanId] });
+        qc.invalidateQueries({ queryKey: ["plan-days"] });
+        onRefresh?.();
+      } catch (err: unknown) {
+        toast.error(err instanceof Error ? err.message : "Gagal menghapus tugas.");
+      }
+    }
+  };
 
   const openProgressModal = (slot: ItemScheduleSlot) => {
     setProgressSlot(slot);
@@ -178,11 +211,33 @@ export const DailyScheduleSlotsCards: React.FC<DailyScheduleSlotsCardsProps> = (
                           ? "bg-emerald-950 text-emerald-400 border-emerald-800"
                           : isRolloverPending
                           ? "bg-amber-950 text-amber-400 border-amber-800 animate-pulse"
+                          : slot.status === "SHIFTED_DAY"
+                          ? "bg-amber-950/90 text-amber-300 border-amber-700"
+                          : slot.status === "ALLOCATED_NEXT_WEEK"
+                          ? "bg-sky-950/90 text-sky-300 border-sky-700"
                           : "bg-slate-800 text-slate-300 border-slate-700"
                       }`}
                     >
-                      {slot.status}
+                      {slot.status === "SHIFTED_DAY"
+                        ? "Digeser ke Hari Lain"
+                        : slot.status === "ALLOCATED_NEXT_WEEK"
+                        ? "Dialokasikan ke Minggu Depan"
+                        : slot.status}
                     </span>
+
+                    {slot.origin_item_id && (
+                      <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-purple-950/80 text-purple-300 border border-purple-800 flex items-center gap-1">
+                        <GitFork className="w-3 h-3 text-purple-400" />
+                        Tugas Lanjutan
+                      </span>
+                    )}
+
+                    {slot.completion_id && (
+                      <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-700 flex items-center gap-1 font-mono">
+                        <FileCheck2 className="w-3 h-3 text-emerald-400" />
+                        BA Terbit
+                      </span>
+                    )}
 
                     {slot.work_type && (
                       <button
@@ -262,6 +317,18 @@ export const DailyScheduleSlotsCards: React.FC<DailyScheduleSlotsCardsProps> = (
                 </div>
 
                 <div className="flex items-center gap-2">
+                  {/* Tombol Rantai Tugas & Berita Acara */}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setChainDialogItemId(slot.item_id)}
+                    className="text-xs bg-slate-800 hover:bg-slate-700 text-sky-300 border-slate-700 h-8 gap-1"
+                    title="Lihat Silsilah Rantai Tugas & Terbitkan Berita Acara"
+                  >
+                    <Layers className="w-3.5 h-3.5 text-sky-400" />
+                    Rantai Tugas
+                  </Button>
+
                   {/* Tombol Update Progres */}
                   <Button
                     size="sm"
@@ -273,29 +340,54 @@ export const DailyScheduleSlotsCards: React.FC<DailyScheduleSlotsCardsProps> = (
                     Update Progres
                   </Button>
 
-                  {/* Tombol Ajukan Rollover (untuk Leader bila belum selesai) */}
+                  {/* Tombol Rollover Tugas (Langsung untuk PM, atau Pengajuan untuk Teknisi/Leader) */}
                   {!isDone && (
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => openRolloverModal(slot)}
+                      onClick={() =>
+                        isPmOrHigher
+                          ? setRolloverDialogItem(slot)
+                          : openRolloverModal(slot)
+                      }
                       className="text-xs bg-slate-800 hover:bg-slate-700 text-amber-300 border-slate-700 h-8 gap-1"
+                      title={isPmOrHigher ? "Eksekusi Rollover ke Hari Kerja Lain" : "Ajukan Rollover ke PM"}
                     >
                       <Send className="w-3.5 h-3.5 text-amber-400" />
-                      Ajukan Rollover
+                      {isPmOrHigher ? "Rollover Tugas" : "Ajukan Rollover"}
                     </Button>
                   )}
 
                   {/* Tombol PM Override Reschedule */}
                   {isPmOrHigher && (
-                    <Button
-                      size="sm"
-                      onClick={() => setSelectedSlotForReschedule(slot)}
-                      className="text-xs bg-amber-600 hover:bg-amber-500 text-white font-medium h-8 gap-1 shadow"
-                    >
-                      <CalendarClock className="w-3.5 h-3.5" />
-                      PM Reschedule
-                    </Button>
+                    <>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setEditingSlot(slot)}
+                        className="text-xs bg-slate-800 hover:bg-slate-700 text-sky-300 border-slate-700 h-8 gap-1"
+                        title="Ubah Rincian Tugas"
+                      >
+                        ✏️ Edit
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleDeleteSlot(slot.item_id)}
+                        className="text-xs bg-slate-800 hover:bg-red-950/80 text-rose-300 border-slate-700 h-8 gap-1"
+                        title="Hapus Tugas"
+                      >
+                        🗑️ Hapus
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => setSelectedSlotForReschedule(slot)}
+                        className="text-xs bg-amber-600 hover:bg-amber-500 text-white font-medium h-8 gap-1 shadow"
+                      >
+                        <CalendarClock className="w-3.5 h-3.5" />
+                        PM Reschedule
+                      </Button>
+                    </>
                   )}
                 </div>
               </div>
@@ -470,6 +562,62 @@ export const DailyScheduleSlotsCards: React.FC<DailyScheduleSlotsCardsProps> = (
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Dialog Edit Slot Tugas */}
+      {editingSlot && (
+        <PlanItemFormDialog
+          open={!!editingSlot}
+          onClose={() => setEditingSlot(null)}
+          dailyPlanId={dailyPlanId}
+          initialData={{
+            item_id: editingSlot.item_id,
+            title: editingSlot.title,
+            work_type_id: editingSlot.work_type?.work_type_id,
+            completion_id: editingSlot.work_completion_order?.completion_id,
+            target_qty: editingSlot.target_qty,
+            completed_qty: editingSlot.completed_qty,
+            progress_percent: editingSlot.progress_percent,
+            start_time: editingSlot.start_time || undefined,
+            end_time: editingSlot.end_time || undefined,
+            location_name: editingSlot.location_name || undefined,
+            assigned_employee_ids: editingSlot.assigned_employee_ids,
+            status: editingSlot.status as any,
+          }}
+          workTypes={optionsQuery.data?.work_types || []}
+          completions={optionsQuery.data?.work_completions || []}
+          onSaved={() => {
+            qc.invalidateQueries({ queryKey: ["daily-schedule-detail", dailyPlanId] });
+            onRefresh?.();
+          }}
+        />
+      )}
+
+      {/* Dialog Silsilah Rantai Tugas & Work Completion */}
+      <TaskChainCompletionDialog
+        itemId={chainDialogItemId}
+        isOpen={!!chainDialogItemId}
+        onClose={() => setChainDialogItemId(null)}
+        onSuccess={() => {
+          qc.invalidateQueries({ queryKey: ["daily-schedule-detail", dailyPlanId] });
+          qc.invalidateQueries({ queryKey: ["plan-days"] });
+          onRefresh?.();
+        }}
+      />
+
+      {/* Dialog Eksekusi Rollover PM */}
+      <PlanItemRolloverDialog
+        isOpen={!!rolloverDialogItem}
+        onClose={() => setRolloverDialogItem(null)}
+        item={rolloverDialogItem}
+        dailyPlanId={dailyPlanId}
+        currentDate={currentDate}
+        availableDays={availableDays}
+        onSuccess={() => {
+          qc.invalidateQueries({ queryKey: ["daily-schedule-detail", dailyPlanId] });
+          qc.invalidateQueries({ queryKey: ["plan-days"] });
+          onRefresh?.();
+        }}
+      />
     </div>
   );
 };

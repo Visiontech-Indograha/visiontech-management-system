@@ -97,6 +97,12 @@ export interface ItemScheduleSlot {
   progress_percent: number;
   status: string;
   assigned_employee_ids?: string[];
+  origin_item_id?: string | null;
+  shifted_to_daily_id?: string | null;
+  allocated_to_weekly_id?: string | null;
+  delay_reason?: string | null;
+  rollover_approval_status?: string | null;
+  completion_id?: string | null;
   work_type?: {
     work_type_id: string;
     name: string;
@@ -113,6 +119,44 @@ export interface ItemScheduleSlot {
     order_status: string;
     priority_level?: string | null;
   } | null;
+}
+
+export interface TaskChainItemDetail {
+  item_id: string;
+  weekly_plan_id: string;
+  work_date?: string | null;
+  title: string;
+  target_qty: number;
+  completed_qty: number;
+  progress_percent: number;
+  status: string;
+  completion_id?: string | null;
+  create_at?: string | null;
+}
+
+export interface TaskChainStatusOut {
+  root_item_id: string;
+  initial_total_target: number;
+  total_completed_across_weeks: number;
+  total_progress_percent: number;
+  is_eligible_for_completion: boolean;
+  status_label: string;
+  existing_completion_id?: string | null;
+  all_linked_item_ids: string[];
+  items: TaskChainItemDetail[];
+}
+
+export interface GenerateCompletionIn {
+  client_name?: string | null;
+  project_title?: string | null;
+}
+
+export interface GenerateCompletionOut {
+  success: boolean;
+  completion_id: string;
+  message: string;
+  total_target_unit: number;
+  order_status: string;
 }
 
 export interface DailyScheduleDetail {
@@ -160,6 +204,21 @@ export async function requestItemRollover(itemId: string, body: RequestRolloverI
 /** PM Full Override: menyetujui, menolak, atau memindahkan tugas secara paksa. */
 export async function pmApproveOrMoveItem(itemId: string, body: PmApproveOrMoveIn): Promise<PmApproveOrMoveOut> {
   const res = await api.post<PmApproveOrMoveOut>(`/work-plans/items/${itemId}/pm-approve-or-move`, body);
+  return res.data;
+}
+
+/** Mengambil status agregasi rantai tugas rollover (task chain) lintas hari/minggu. */
+export async function getTaskChainStatus(itemId: string): Promise<TaskChainStatusOut> {
+  const res = await api.get<TaskChainStatusOut>(`/work-plans/items/${itemId}/chain-status`);
+  return res.data;
+}
+
+/** Mengompilasi seluruh rantai tugas 100% tuntas menjadi Berita Acara Work Completion. */
+export async function generateCompletionFromChain(
+  itemId: string,
+  payload?: GenerateCompletionIn
+): Promise<GenerateCompletionOut> {
+  const res = await api.post<GenerateCompletionOut>(`/work-plans/items/${itemId}/generate-completion`, payload || {});
   return res.data;
 }
 

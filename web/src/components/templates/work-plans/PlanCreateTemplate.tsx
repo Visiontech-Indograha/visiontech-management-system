@@ -1,11 +1,11 @@
-import { PlanEditorForm } from "@/components/organisms/work-plans/PlanEditorForm";
+import { PlanEditorV2Form } from "@/components/organisms/work-plans/PlanEditorV2Form";
 import { PageTemplate } from "../PageTemplate";
 
-/** Kerangka "Buat rencana kerja": form editor kosong. */
+/** Kerangka "Buat rencana kerja": form editor terintegrasi V2 (Weekly, Daily, Multi-Slot Items). */
 export function PlanCreateTemplate() {
   return (
-      <PageTemplate title="Buat rencana kerja">
-        <PlanEditorForm />
-      </PageTemplate>
+    <PageTemplate title="Buat Rencana Kerja Mingguan (V2)">
+      <PlanEditorV2Form />
+    </PageTemplate>
   );
 }

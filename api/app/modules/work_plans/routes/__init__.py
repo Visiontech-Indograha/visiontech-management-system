@@ -35,6 +35,9 @@ from app.modules.work_plans.routes.work_plan_revisions_route import (
 from app.modules.work_plans.routes.work_plan_transitions_route import (
     router as transitions_router,
 )
+from app.modules.work_plans.routes.work_plan_v2_route import (
+    router as work_plan_v2_router,
+)
 from app.modules.work_plans.routes.work_plans_route import (
     router as plans_router,
 )
@@ -52,4 +55,6 @@ __all__ = [
     "plan_revisions_router",
     "plans_router",
     "transitions_router",
+    "work_plan_v2_router",
 ]
+

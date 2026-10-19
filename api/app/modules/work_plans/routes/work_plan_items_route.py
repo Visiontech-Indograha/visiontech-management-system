@@ -16,10 +16,13 @@ from app.core.security import CurrentUser
 from app.schemas.plan_item import (
     CheckConflictIn,
     CheckConflictOut,
+    GenerateCompletionIn,
+    GenerateCompletionOut,
     PmApproveOrMoveIn,
     PmApproveOrMoveOut,
     RequestRolloverIn,
     RequestRolloverOut,
+    TaskChainStatusOut,
     UpdateItemProgressIn,
     UpdateItemProgressOut,
 )
@@ -71,4 +74,33 @@ async def pm_approve_or_move(
     return await service.pm_override_or_approve(current_user, item_id, data)
 
 
+@router.get("/{item_id}/chain-status", response_model=TaskChainStatusOut)
+async def get_task_chain_status(
+    item_id: UUID,
+    current_user: CurrentUser = Depends(get_current_user),
+    service: PlanItemService = Depends(get_plan_item_service),
+) -> TaskChainStatusOut:
+    """Mengambil status agregasi rantai tugas rollover (task chain) dari awal hingga akhir (GET)."""
+    return await service.get_task_chain_status(item_id)
+
+
+@router.post("/{item_id}/generate-completion", response_model=GenerateCompletionOut)
+async def generate_completion_from_chain(
+    item_id: UUID,
+    payload: GenerateCompletionIn | None = None,
+    current_user: CurrentUser = Depends(get_current_user),
+    service: PlanItemService = Depends(get_plan_item_service),
+) -> GenerateCompletionOut:
+    """Mengompilasi seluruh rantai tugas 100% selesai menjadi Berita Acara Work Completion (POST)."""
+    c_name = payload.client_name if payload else None
+    p_title = payload.project_title if payload else None
+    return await service.generate_completion_from_chain(
+        item_id=item_id,
+        current_user=current_user,
+        client_name=c_name,
+        project_title=p_title,
+    )
+
+
 __all__ = ["router"]
+

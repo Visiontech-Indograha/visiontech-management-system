@@ -18,10 +18,13 @@ from app.schemas.plan_item import (
     CheckConflictIn,
     CheckConflictOut,
     ConflictDetailOut,
+    GenerateCompletionOut,
     PmApproveOrMoveIn,
     PmApproveOrMoveOut,
     RequestRolloverIn,
     RequestRolloverOut,
+    TaskChainItemDetailOut,
+    TaskChainStatusOut,
     UpdateItemProgressIn,
     UpdateItemProgressOut,
 )
@@ -143,14 +146,19 @@ class PlanItemService:
             if not res:
                 raise AppError("NOT_FOUND", "Item rencana kerja tidak ditemukan.", status=404)
 
+            is_cross = res.get("is_cross_week", False)
             return PmApproveOrMoveOut(
                 success=True,
                 action="APPROVED",
                 item_id=item_id,
                 new_item_id=res["new_item_id"],
-                status="SHIFTED_DAY",
+                status=res.get("status", "SHIFTED_DAY"),
                 rollover_approval_status="APPROVED_BY_PM",
-                message="Rollover tugas berhasil disetujui dan dijadwalkan ulang ke hari target.",
+                message=(
+                    "Rollover tugas berhasil disetujui (dialokasikan ke minggu berikutnya)."
+                    if is_cross
+                    else "Rollover tugas berhasil disetujui (digeser ke hari lain)."
+                ),
             )
 
         elif action == "REJECTED":
@@ -198,3 +206,48 @@ class PlanItemService:
         else:
             msg = f"Aksi '{data.action}' tidak valid. Pilihan: APPROVED, REJECTED, MOVE_SLOT"
             raise AppError("BAD_REQUEST", msg, status=400)
+
+    async def get_task_chain_status(self, item_id: UUID) -> TaskChainStatusOut:
+        """Mengambil data rantai tugas dari induk sampai cucu dan status kelayakan Work Completion."""
+        data = await self.repo.get_task_chain_status(item_id)
+        if not data:
+            raise AppError("NOT_FOUND", "Item rencana kerja tidak ditemukan.", status=404)
+
+        return TaskChainStatusOut(
+            root_item_id=data["root_item_id"],
+            initial_total_target=data["initial_total_target"],
+            total_completed_across_weeks=data["total_completed_across_weeks"],
+            total_progress_percent=data["total_progress_percent"],
+            is_eligible_for_completion=data["is_eligible_for_completion"],
+            status_label=data["status_label"],
+            existing_completion_id=data["existing_completion_id"],
+            all_linked_item_ids=data["all_linked_item_ids"],
+            items=[TaskChainItemDetailOut(**it) for it in data["items"]],
+        )
+
+    async def generate_completion_from_chain(
+        self,
+        item_id: UUID,
+        current_user: CurrentUser,
+        client_name: str | None = None,
+        project_title: str | None = None,
+    ) -> GenerateCompletionOut:
+        """Otomasi kompilasi rantai tugas 100% selesai ke dalam Work Completion."""
+        pm_emp_id = UUID(current_user.employee_id) if current_user.employee_id else None
+        res = await self.repo.generate_completion_from_chain(
+            item_id=item_id,
+            pm_employee_id=pm_emp_id,
+            client_name=client_name,
+            project_title=project_title,
+        )
+        if not res:
+            raise AppError("NOT_FOUND", "Gagal mengompilasi Work Completion. Rantai tugas tidak ditemukan.", status=404)
+
+        return GenerateCompletionOut(
+            success=res["success"],
+            completion_id=res["completion_id"],
+            message=res["message"],
+            total_target_unit=res["total_target_unit"],
+            order_status=res["order_status"],
+        )
+

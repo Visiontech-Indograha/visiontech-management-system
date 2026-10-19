@@ -25,6 +25,10 @@ import { FormErrorText } from "@/components/molecules/FormErrorText";
 import { DailyScheduleSlotsCards } from "./DailyScheduleSlotsCards";
 import { getDailyScheduleDetail } from "@/services/planItemService";
 
+import { DailyPlanFormDialog } from "./DailyPlanFormDialog";
+import { PlanItemFormDialog } from "./PlanItemFormDialog";
+import { useDeleteDailyPlanV2, useWorkPlanFormOptionsV2 } from "@/services/workPlanV2Service";
+
 type Day = PlanDay;
 type Task = DayTask;
 type ReportIn = DailyReportInput;
@@ -65,6 +69,12 @@ function evidenceBySlot(evidence: Evidence[] | undefined, ids: string[]): [strin
 }
 
 export function DailyReportsPanel({ plan }: { plan: WorkPlan }) {
+  const qc = useQueryClient();
+  const { me } = useSession();
+  const isPM = !!me?.permissions.includes("create:plan") || me?.role === "PROJECT_MANAGER" || me?.role === "SUPER_ADMIN";
+  const [addingDay, setAddingDay] = useState(false);
+  const optionsQuery = useWorkPlanFormOptionsV2();
+
   const days = useQuery({
     queryKey: daysKey(plan.id),
     queryFn: () => listPlanDays(plan.id),
@@ -78,7 +88,14 @@ export function DailyReportsPanel({ plan }: { plan: WorkPlan }) {
 
   return (
     <section aria-label="Laporan harian" className="space-y-3">
-      <TextBlock as="h2" className="text-base font-semibold">Laporan harian</TextBlock>
+      <div className="flex items-center justify-between">
+        <TextBlock as="h2" className="text-base font-semibold">Laporan Harian &amp; Jadwal Kerja</TextBlock>
+        {isPM && (
+          <ActionButton size="sm" variant="outline" onClick={() => setAddingDay(true)}>
+            + Tambah Hari Kerja
+          </ActionButton>
+        )}
+      </div>
       <QueryState
         query={days}
         errorText="Laporan harian tidak dapat dimuat."
@@ -86,9 +103,19 @@ export function DailyReportsPanel({ plan }: { plan: WorkPlan }) {
         emptyText="Belum ada hari kerja."
       >
         {days.data?.map((d) => (
-          <DayPanel key={d.id} plan={plan} day={d} availableDays={availableDays} />
+          <DayPanel key={d.id} plan={plan} day={d} availableDays={availableDays} options={optionsQuery.data} />
         ))}
       </QueryState>
+
+      {addingDay && (
+        <DailyPlanFormDialog
+          open={addingDay}
+          onClose={() => setAddingDay(false)}
+          weeklyPlanId={plan.id}
+          offices={optionsQuery.data?.offices}
+          onSaved={() => qc.invalidateQueries({ queryKey: daysKey(plan.id) })}
+        />
+      )}
     </section>
   );
 }
@@ -97,25 +124,43 @@ function DayPanel({
   plan,
   day,
   availableDays = [],
+  options,
 }: {
   plan: WorkPlan;
   day: Day;
   availableDays?: Array<{ daily_plan_id: string; work_date: string; site_name?: string }>;
+  options?: any;
 }) {
+  const qc = useQueryClient();
   const { me } = useSession();
   const scheduleDetail = useQuery({
     queryKey: ["daily-schedule-detail", day.id],
     queryFn: () => getDailyScheduleDetail(day.id),
   });
 
-  const isPM = !!me?.permissions.includes("create:plan");
-  // Alur rencana kerja v2: hanya ketua menurut rencana kerja yang mengisi laporan (di HP); PM tidak melihat form ketua (CELAH 7).
+  const isPM = !!me?.permissions.includes("create:plan") || me?.role === "PROJECT_MANAGER" || me?.role === "SUPER_ADMIN";
   const isLeader = !!me?.employee_id && me.employee_id === plan.leader_employee_id;
   const status = day.report?.status ?? "DRAFT";
   const badge = status === "SUBMITTED" && day.report?.resubmitted ? "RESUBMITTED" : status;
   const reached = day.work_date <= today();
   const editable = isLeader && plan.status === "IN_PROGRESS" && reached && !LOCKED.includes(status);
   const [viewing, setViewing] = useState(false);
+  const [editingDay, setEditingDay] = useState(false);
+  const [addingItem, setAddingItem] = useState(false);
+  const deleteDayMut = useDeleteDailyPlanV2();
+
+  const handleDeleteDay = async () => {
+    if (confirm(`Apakah Anda yakin ingin menghapus hari kerja ${formatDate(day.work_date)}?`)) {
+      try {
+        await deleteDayMut.mutateAsync({ id: day.id, weeklyPlanId: plan.id });
+        toast.success("Hari kerja berhasil dihapus!");
+        qc.invalidateQueries({ queryKey: daysKey(plan.id) });
+      } catch (err: unknown) {
+        toast.error(err instanceof Error ? err.message : "Gagal menghapus hari kerja.");
+      }
+    }
+  };
+
   const label = `${day.title || "Hari kerja"} — ${formatDate(day.work_date)}`;
 
   return (
@@ -125,7 +170,20 @@ function DayPanel({
           <TextBlock as="h3" className="font-medium">{day.title || "Hari kerja"}</TextBlock>
           <TextBlock className="text-sm text-mist">{formatDate(day.work_date)}</TextBlock>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {isPM && (
+            <>
+              <ActionButton variant="outline" size="sm" onClick={() => setAddingItem(true)}>
+                + Tambah Tugas
+              </ActionButton>
+              <ActionButton variant="outline" size="sm" onClick={() => setEditingDay(true)}>
+                Ubah Hari
+              </ActionButton>
+              <ActionButton variant="outline" size="sm" onClick={handleDeleteDay} className="hover:text-red-600">
+                Hapus
+              </ActionButton>
+            </>
+          )}
           {day.report ? <StatusBadge status={badge} /> : <TextBlock as="span" className="text-sm text-mist">Belum ada laporan</TextBlock>}
           {status === "APPROVED" && (
             <ActionButton variant="outline" size="sm" onClick={() => setViewing(true)}>
@@ -163,6 +221,35 @@ function DayPanel({
           title={`Laporan harian — ${formatDate(day.work_date)}`}
           path={`/work-plans/${plan.id}/days/${day.id}/report/html`}
           onClose={() => setViewing(false)}
+        />
+      )}
+      {editingDay && (
+        <DailyPlanFormDialog
+          open={editingDay}
+          onClose={() => setEditingDay(false)}
+          weeklyPlanId={plan.id}
+          initialData={{
+            daily_plan_id: day.id,
+            work_date: day.work_date,
+            site_name: day.site_name || day.title,
+            attendance_radius_m: 150,
+          }}
+          offices={options?.offices}
+          onSaved={() => qc.invalidateQueries({ queryKey: daysKey(plan.id) })}
+        />
+      )}
+      {addingItem && (
+        <PlanItemFormDialog
+          open={addingItem}
+          onClose={() => setAddingItem(false)}
+          dailyPlanId={day.id}
+          weeklyPlanId={plan.id}
+          workTypes={options?.work_types || []}
+          completions={options?.work_completions || []}
+          onSaved={() => {
+            qc.invalidateQueries({ queryKey: daysKey(plan.id) });
+            qc.invalidateQueries({ queryKey: ["daily-schedule-detail", day.id] });
+          }}
         />
       )}
     </article>

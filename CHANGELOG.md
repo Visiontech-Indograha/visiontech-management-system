@@ -7,6 +7,12 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ---
 
+- **Modularisasi Penuh Backend API FastAPI & Penyelarasan Repository (`api/app/`):**
+  - **Restrukturisasi Arsitektur Modular 24 Domain (`api/app/modules/<domain>/`):** Memindahkan seluruh repositori SQL statis, skema Pydantic, dan layanan domain dari direktori root (`api/app/crud/`, `api/app/schemas/`, `api/app/services/`) ke dalam modul domain terisolasi (`work_completion`, `work_plans`, `work_types`, `face`, `auth`, `sites`, `units`, `employees`, `accounts`, `assets`, `attendance`, `audit`, `hse`, `documents`, `notifications`, `overtime`, `reports`, `signatures`, `system`).
+  - **Penyelarasan Base Repository & Re-export Shims:** Mengonsolidasikan helper transaksi basis data asinkron pada `app.core.repository.BaseRepository` dan mempertahankan 100% backward-compatibility untuk suite uji di `api/tests/` melalui re-export shims.
+  - **Penyempurnaan Skema Order Klien (`WorkCompletionOut`):** Menyelaraskan atribut `realization_photos_json` untuk mendukung struktur kamus objek metadata foto (`list[dict[str, Any] | str]`) sehingga eliminasi total galat validasi Pydantic tercapai.
+  - **Verifikasi Lintas Modul 100% Lulus:** Menjalankan script pengujian menyeluruh pada 13 rute endpoint utama (Auth, Work Plans, Weekly Plans, 7-Day Matrix, Form Options, Teams, Work Types, Project Schedules, Work Completions, Employees, Units, Sites) dengan hasil 200 OK dan 0 lint error (`ruff check` bersih).
+
 - **Perbaikan Stabilitas API & Warning Antarmuka Work Plan V2 (`api/app/`, `web/src/`):**
   - **Resolusi Galat 500 Endpoint Daftar Rencana Kerja (`/work-plans?archived=false`):** Memperbaiki kueri `_STANDING` dan `start_due` pada `crud_plan_access.py` dan `crud_plan_transition.py` yang sebelumnya merujuk ke tabel `work_plan_weekly` yang telah dihapus; kini mengagregasi kalender harian `work_plan_daily` secara dinamis.
   - **Resolusi Galat 422 Pembuatan Rencana Kerja Mingguan (`POST /work-plans/weekly`):** Menjadikan `division_id` dan `team_id` pada `DailyPlanCreateIn` opsional (diisi otomatis dari parent) dan menambahkan sanitasi nilai kosong (`""` menjadi `null`) pada `onSubmit` `PlanEditorV2Form.tsx`.

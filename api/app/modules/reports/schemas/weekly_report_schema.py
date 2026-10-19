@@ -1,18 +1,27 @@
-"""
-app/modules/reports/schemas/weekly_report_schema.py
+"""Skema permintaan & respons: weekly report (dipindah dari api/v1/endpoints/weekly_reports.py, R-28 M2b)."""
+from datetime import date
 
-Skema validasi permintaan dan respons laporan mingguan pekerjaan.
-Mengikuti Panduan Standar Arsitektur API FastAPI Modular §5.4.
-"""
+from pydantic import BaseModel
 
-from app.schemas.weekly_report import (
-    WeeklyReportRequest,
-    WeeklyReportResponse,
-    WeeklyReviewRequest,
-)
 
-__all__ = [
-    "WeeklyReportRequest",
-    "WeeklyReportResponse",
-    "WeeklyReviewRequest",
-]
+class WeeklyReportRequest(BaseModel):
+    body: str
+    obstacle: str
+
+
+class WeeklyReviewRequest(BaseModel):
+    decision: str
+    note: str | None = None
+
+
+class WeeklyReportResponse(BaseModel):
+    week: int
+    name: str
+    starts_on: date
+    ends_on: date
+    status: str
+    body: str
+    obstacle: str
+    review_note: str | None
+    days_approved: bool
+    resubmitted: bool = False   # "Dikirim ulang" (alur SK v2)

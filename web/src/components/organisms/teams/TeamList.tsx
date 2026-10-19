@@ -38,8 +38,8 @@ export function TeamList({
       )}
       {teams.data && teams.data.length > 0 && (
         <ListBlock className="grid gap-3 md:grid-cols-2">
-          {teams.data.map((t) => (
-            <ListEntry key={t.team_id || t.id || t.name} className="flex items-start gap-3 rounded-panel border border-line bg-surface shadow-card p-4">
+          {teams.data.map((t, idx) => (
+            <ListEntry key={t.team_id || t.id || `${t.name || "team"}-${idx}`} className="flex items-start gap-3 rounded-panel border border-line bg-surface shadow-card p-4">
               <User className="mt-0.5 shrink-0 text-lens" size={20} aria-hidden />
               <div className="min-w-0 flex-1">
                 <TextBlock className="font-medium text-ink">{t.name}</TextBlock>

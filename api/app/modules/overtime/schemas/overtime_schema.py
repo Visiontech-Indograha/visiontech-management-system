@@ -1,20 +1,66 @@
 """
-app/modules/overtime/schemas/overtime_schema.py
+app/schemas/overtime.py
 
-Skema validasi permintaan dan respons pengajuan lembur dan rekap lembur.
-Mengikuti Panduan Standar Arsitektur API FastAPI Modular §5.4.
+Request and response schemas for overtime reporting and reviewing (V-28).
+Corresponding to domain transactions: REPORT_OVERTIME and REVIEW_OVERTIME.
 """
+from datetime import date, datetime
+from uuid import UUID
 
-from app.schemas.overtime import (
-    OvertimeCreate,
-    OvertimeRecapRow,
-    OvertimeResponse,
-    OvertimeReview,
-)
+from pydantic import BaseModel
 
-__all__ = [
-    "OvertimeCreate",
-    "OvertimeRecapRow",
-    "OvertimeResponse",
-    "OvertimeReview",
-]
+
+class OvertimeCreate(BaseModel):
+    """
+    Schema for reporting overtime (domain.js REPORT_OVERTIME).
+
+    Aturan validasi seperti jam 0–12 dan alasan yang wajib diisi akan
+    diperiksa secara terpusat di OvertimeService. Hal ini dilakukan
+    agar urutan dan pesan kesalahan yang muncul sama persis dengan prototipe.
+    """
+    work_plan_id: UUID
+    hours: float
+    reason: str
+
+
+class OvertimeReview(BaseModel):
+    """
+    Schema for reviewing an overtime request (domain.js REVIEW_OVERTIME).
+
+    Status keputusan (decision) berupa APPROVED atau REJECTED, dan akan
+    diperiksa serta diproses di dalam service.
+    """
+    decision: str
+    note: str | None = None
+
+
+class OvertimeResponse(BaseModel):
+    """
+    Schema for a detailed overtime record response.
+    """
+    id: UUID
+    work_plan_id: UUID
+    plan_document_id: UUID | None
+    employee_id: UUID
+    work_date: date
+    hours: float
+    reason: str
+    status: str
+    reviewed_by: UUID | None
+    reviewed_at: datetime | None
+    review_note: str | None
+    created_at: datetime
+
+
+class OvertimeRecapRow(BaseModel):
+    """
+    Schema for a summarized overtime record from the recap view.
+    Satu baris rekap yang diambil dari `v_overtime_recap`
+    (direkapitulasi per karyawan per bulan).
+    """
+    employee_id: UUID
+    employee_name: str
+    period_month: date
+    approved_entries: int
+    pending_entries: int
+    approved_hours: float

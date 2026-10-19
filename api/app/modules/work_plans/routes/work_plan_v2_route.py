@@ -20,7 +20,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user, get_db
 from app.core.errors import NotFoundError
 from app.core.security import CurrentUser
-from app.crud.crud_work_plan_v2 import CRUDWorkPlanV2
+from app.modules.work_plans.repositories.work_plan_v2_repository import (
+    CRUDWorkPlanV2,
+)
 from app.modules.work_plans.schemas.work_plan_v2_schema import (
     BulkApproveDailyPlansIn,
     BulkApproveDailyPlansOut,

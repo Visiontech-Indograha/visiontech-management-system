@@ -13,7 +13,9 @@ from uuid import UUID
 
 from app.core.errors import AppError, ForbiddenError, NotFoundError
 from app.core.security import CurrentUser
-from app.modules.work_completion.crud.crud_work_completion import CRUDWorkCompletion
+from app.modules.work_completion.repositories.work_completion_repository import (
+    CRUDWorkCompletion,
+)
 from app.services.document_export_service import DocumentExportService
 
 

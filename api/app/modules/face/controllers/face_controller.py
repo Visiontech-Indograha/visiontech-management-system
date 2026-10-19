@@ -13,7 +13,7 @@ from app.api.deps import get_face_service
 from app.core.errors import AppError, ValidationError
 from app.core.permissions import RoleCode, SystemRole
 from app.core.security import CurrentUser
-from app.schemas.face import (
+from app.modules.face.schemas.face_schema import (
     ChallengeCheckResponse,
     ConsentRequest,
     EnrollResponse,
@@ -23,7 +23,7 @@ from app.schemas.face import (
     ProbeResponse,
     TemplateResponse,
 )
-from app.services.face_service import ENROLL_MAX, MAX_IMAGE_BYTES, FaceService
+from app.modules.face.services.face_service import ENROLL_MAX, MAX_IMAGE_BYTES, FaceService
 
 
 async def _read_image(upload: UploadFile) -> bytes:

@@ -128,7 +128,7 @@ class WorkCompletionOut(BaseModel):
     site_lng: float | None = None
     summary_notes: str | None = None
     obstacles: str | None = None
-    realization_photos_json: list[str] = Field(default_factory=list)
+    realization_photos_json: list[dict[str, Any] | str] = Field(default_factory=list)
     bom_items: list[WorkCompletionBomOut] = Field(default_factory=list)
     leader_signer_id: UUID | None = None
     leader_signer_name: str | None = None

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { UseQueryResult } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { QueryState } from "@/components/molecules/QueryState";
@@ -5,6 +6,7 @@ import { TextBlock } from "@/components/molecules/TextBlock";
 import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { WorkCompletionAddButton } from "./WorkCompletionAddButton";
+import { WorkCompletionDetailModal } from "./WorkCompletionDetailModal";
 import {
   type WorkCompletion,
   type WorkCompletionListResponse,
@@ -20,6 +22,7 @@ export function WorkCompletionList({
   canManage: boolean;
   onAdd: () => void;
 }) {
+  const [selectedCompletionId, setSelectedCompletionId] = useState<string | null>(null);
   const updateStatusMutation = useUpdateWorkCompletionStatus();
 
   const handleStatusChange = async (completionId: string, status: string) => {
@@ -112,11 +115,23 @@ export function WorkCompletionList({
                       Lokasi: {order.site_address}
                     </TextBlock>
                   )}
+
+                  {/* Kelola BoM & BAST Action */}
+                  <div className="mt-3 pt-3 border-t border-line/60">
+                    <ActionButton
+                      variant="default"
+                      size="sm"
+                      onClick={() => setSelectedCompletionId(order.completion_id)}
+                      className="w-full justify-center"
+                    >
+                      Kelola BoM & BAST
+                    </ActionButton>
+                  </div>
                 </div>
 
                 {/* PM Status Override Controls */}
                 {canManage && (
-                  <div className="mt-4 border-t border-line/60 pt-3">
+                  <div className="mt-3 border-t border-line/60 pt-2.5">
                     <TextBlock className="mb-1.5 text-2xs font-semibold uppercase tracking-wider text-mist">
                       Kontrol Status PM (Override)
                     </TextBlock>
@@ -156,6 +171,12 @@ export function WorkCompletionList({
           );
         })}
       </ListBlock>
+
+      <WorkCompletionDetailModal
+        completionId={selectedCompletionId}
+        onClose={() => setSelectedCompletionId(null)}
+        canManage={canManage}
+      />
     </QueryState>
   );
 }

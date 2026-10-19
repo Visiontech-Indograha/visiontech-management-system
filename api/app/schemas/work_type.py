@@ -25,6 +25,41 @@ class WorkTypePhotoOut(BaseModel):
     example_file_id: str | None = None  # Foto contoh dari PM (None = tanpa contoh atau path)
 
 
+class DefaultMaterialIn(BaseModel):
+    """Schema input template material default untuk jenis pekerjaan."""
+    material_code: str | None = Field(None, max_length=50)
+    material_name: str = Field(..., min_length=1, max_length=255)
+    default_qty: float = Field(default=1.0, ge=0.0)
+    unit: str = Field(default="Unit", max_length=50)
+    category: str | None = Field(None, max_length=100)
+    description: str | None = None
+    sort_order: int = 0
+
+
+class DefaultMaterialUpdate(BaseModel):
+    """Schema perbaikan template material default."""
+    material_code: str | None = Field(None, max_length=50)
+    material_name: str | None = Field(None, min_length=1, max_length=255)
+    default_qty: float | None = Field(None, ge=0.0)
+    unit: str | None = Field(None, max_length=50)
+    category: str | None = Field(None, max_length=100)
+    description: str | None = None
+    sort_order: int | None = None
+
+
+class DefaultMaterialOut(BaseModel):
+    """Schema output template material default jenis pekerjaan."""
+    default_material_id: UUID
+    work_type_id: UUID
+    material_code: str | None = None
+    material_name: str
+    default_qty: float
+    unit: str
+    category: str | None = None
+    description: str | None = None
+    sort_order: int = 0
+
+
 class WorkTypeIn(BaseModel):
     """Membuat/mengubah jenis pekerjaan; `photos` mengganti seluruh daftar slot."""
     name: str = Field(..., min_length=1, max_length=100)  # Nama jenis, mis. "Replacement"
@@ -34,7 +69,7 @@ class WorkTypeIn(BaseModel):
 
 
 class WorkTypeOut(BaseModel):
-    """Jenis pekerjaan beserta template fotonya."""
+    """Jenis pekerjaan beserta template foto dan template material default."""
     id: UUID  # ID jenis
     division_id: UUID | None = None  # ID Divisi pemilik
     division_name: str | None = None  # Nama Divisi
@@ -42,6 +77,7 @@ class WorkTypeOut(BaseModel):
     description: str | None = None  # Keterangan pekerjaan
     is_active: bool = True  # Nonaktif = tidak ditawarkan lagi, rencana kerja lama tetap utuh
     photos: list[WorkTypePhotoOut] = []  # Template foto
+    default_materials: list[DefaultMaterialOut] = []  # Template material default BoM
 
 
 class EvidenceIn(BaseModel):

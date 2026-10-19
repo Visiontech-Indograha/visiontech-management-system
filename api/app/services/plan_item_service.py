@@ -89,6 +89,21 @@ class PlanItemService:
 
     async def update_progress(self, item_id: UUID, data: UpdateItemProgressIn) -> UpdateItemProgressOut:
         """Memperbarui capaian aktual dan persentase progres tugas."""
+        is_advancing = (
+            (data.completed_qty is not None and data.completed_qty > 0)
+            or (data.progress_percent is not None and data.progress_percent > 0)
+            or (data.status is not None and data.status in ("IN_PROGRESS", "DONE"))
+        )
+        if is_advancing:
+            parent_id, parent_title, parent_status = await self.repo.get_item_prerequisite(item_id)
+            if parent_id and parent_status not in ("DONE", "COMPLETED"):
+                raise AppError(
+                    "PREREQUISITE_NOT_MET",
+                    f"Tugas ini memiliki prasyarat '{parent_title}' yang belum selesai (status: {parent_status}). "
+                    "Selesaikan tahapan prasyarat terlebih dahulu sebelum memulai atau mengisi progres.",
+                    status=400,
+                )
+
         row = await self.repo.update_progress(
             item_id=item_id,
             completed_qty=data.completed_qty,
@@ -132,6 +147,10 @@ class PlanItemService:
         data: PmApproveOrMoveIn,
     ) -> PmApproveOrMoveOut:
         """Eksekusi kewenangan penuh PM (PM Full Override) untuk memindahkan tugas atau menyetujui rollover."""
+        if not current_user.employee_id:
+            raise AppError("FORBIDDEN", "Akun pengguna tidak memiliki data employee_id yang valid.", status=403)
+        pm_employee_id = UUID(str(current_user.employee_id))
+
         action = data.action.upper()
 
         if action == "APPROVED":
@@ -139,7 +158,7 @@ class PlanItemService:
                 raise AppError("BAD_REQUEST", "Hari tujuan pemindahan tugas wajib ditentukan.", status=400)
             res = await self.repo.approve_rollover(
                 item_id=item_id,
-                pm_employee_id=current_user.employee_id,
+                pm_employee_id=pm_employee_id,
                 pm_override_reason=data.pm_override_reason,
                 target_daily_plan_id=data.target_daily_plan_id,
             )
@@ -164,7 +183,7 @@ class PlanItemService:
         elif action == "REJECTED":
             res = await self.repo.reject_rollover(
                 item_id=item_id,
-                pm_employee_id=current_user.employee_id,
+                pm_employee_id=pm_employee_id,
                 pm_override_reason=data.pm_override_reason,
             )
             if not res:
@@ -183,7 +202,7 @@ class PlanItemService:
         elif action == "MOVE_SLOT":
             res = await self.repo.move_slot(
                 item_id=item_id,
-                pm_employee_id=current_user.employee_id,
+                pm_employee_id=pm_employee_id,
                 pm_override_reason=data.pm_override_reason,
                 target_daily_plan_id=data.target_daily_plan_id,
                 target_start_time=data.target_start_time,

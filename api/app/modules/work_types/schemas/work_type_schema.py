@@ -6,6 +6,9 @@ Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.5.
 """
 
 from app.schemas.work_type import (
+    DefaultMaterialIn,
+    DefaultMaterialOut,
+    DefaultMaterialUpdate,
     EvidenceIn,
     EvidenceOut,
     EvidenceSource,
@@ -17,6 +20,9 @@ from app.schemas.work_type import (
 )
 
 __all__ = [
+    "DefaultMaterialIn",
+    "DefaultMaterialOut",
+    "DefaultMaterialUpdate",
     "EvidenceIn",
     "EvidenceOut",
     "EvidenceSource",

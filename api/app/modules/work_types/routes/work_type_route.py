@@ -13,7 +13,14 @@ from app.api.deps import get_current_user, plan_access, require_permission
 from app.core.permissions import Permission
 from app.core.security import CurrentUser
 from app.modules.work_types.controllers.work_type_controller import WorkTypeController
-from app.modules.work_types.schemas.work_type_schema import WorkTypeIn, WorkTypeOut, WorkTypePhotoOut
+from app.modules.work_types.schemas.work_type_schema import (
+    DefaultMaterialIn,
+    DefaultMaterialOut,
+    DefaultMaterialUpdate,
+    WorkTypeIn,
+    WorkTypeOut,
+    WorkTypePhotoOut,
+)
 from app.services.access_service import PlanAccess, PlanNeed
 
 router = APIRouter(tags=["Work Types"])
@@ -108,3 +115,64 @@ async def plan_photo_template(
     Template foto laporan rencana kerja.
     """
     return await controller.handle_template_of_plan(plan_id, day_id)
+
+
+@router.get("/work-types/{type_id}/materials", response_model=list[DefaultMaterialOut])
+async def list_work_type_materials(
+    type_id: UUID,
+    current_user: CurrentUser = Depends(get_current_user),
+    controller: WorkTypeController = Depends(),
+) -> list[DefaultMaterialOut]:
+    """
+    Daftar template material default untuk jenis pekerjaan tertentu.
+    """
+    return await controller.handle_list_materials(current_user.organization_id, type_id)
+
+
+@router.post(
+    "/work-types/{type_id}/materials",
+    response_model=DefaultMaterialOut,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_work_type_material(
+    type_id: UUID,
+    data: DefaultMaterialIn,
+    current_user: CurrentUser = _MANAGE,
+    controller: WorkTypeController = Depends(),
+) -> DefaultMaterialOut:
+    """
+    Menambahkan template material default baru ke jenis pekerjaan.
+    """
+    user_div = await controller.get_user_division(current_user.user_id)
+    creator_div = user_div if current_user.role == "PROJECT_MANAGER" else None
+    return await controller.handle_create_material(current_user.organization_id, type_id, data, creator_div)
+
+
+@router.put("/work-types/materials/{material_id}", response_model=DefaultMaterialOut)
+async def update_work_type_material(
+    material_id: UUID,
+    data: DefaultMaterialUpdate,
+    current_user: CurrentUser = _MANAGE,
+    controller: WorkTypeController = Depends(),
+) -> DefaultMaterialOut:
+    """
+    Mengubah template material default.
+    """
+    user_div = await controller.get_user_division(current_user.user_id)
+    creator_div = user_div if current_user.role == "PROJECT_MANAGER" else None
+    return await controller.handle_update_material(current_user.organization_id, material_id, data, creator_div)
+
+
+@router.delete("/work-types/materials/{material_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_work_type_material(
+    material_id: UUID,
+    current_user: CurrentUser = _MANAGE,
+    controller: WorkTypeController = Depends(),
+) -> Response:
+    """
+    Menghapus template material default dari jenis pekerjaan.
+    """
+    user_div = await controller.get_user_division(current_user.user_id)
+    creator_div = user_div if current_user.role == "PROJECT_MANAGER" else None
+    await controller.handle_delete_material(current_user.organization_id, material_id, creator_div)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

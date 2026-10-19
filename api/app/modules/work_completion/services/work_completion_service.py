@@ -14,6 +14,7 @@ from uuid import UUID
 from app.core.errors import AppError, ForbiddenError, NotFoundError
 from app.core.security import CurrentUser
 from app.modules.work_completion.crud.crud_work_completion import CRUDWorkCompletion
+from app.services.document_export_service import DocumentExportService
 
 
 class WorkCompletionService:
@@ -155,3 +156,54 @@ class WorkCompletionService:
 
         signed = await self.crud.get_completion(completion_id)
         return signed or existing
+
+    async def list_bom_items(self, current_user: CurrentUser, completion_id: UUID) -> list[dict[str, Any]]:
+        """Membaca daftar item BoM untuk satu order proyek klien."""
+        await self.get_order_detail(current_user, completion_id)
+        return await self.crud.list_bom_items(completion_id)
+
+    async def add_bom_item(
+        self, current_user: CurrentUser, completion_id: UUID, data: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Menambahkan item BoM baru."""
+        await self.get_order_detail(current_user, completion_id)
+        bom_id = await self.crud.add_bom_item(completion_id, data)
+        item = await self.crud.get_bom_item(UUID(bom_id))
+        if not item:
+            raise AppError("CREATE_FAILED", "Gagal mengambil data item BoM yang baru dibuat.")
+        return item
+
+    async def update_bom_item(
+        self, current_user: CurrentUser, bom_id: UUID, data: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Memperbarui item BoM (misal realisasi actual_qty di lapangan)."""
+        existing = await self.crud.get_bom_item(bom_id)
+        if not existing:
+            raise NotFoundError("Item Bill of Materials")
+        await self.get_order_detail(current_user, UUID(str(existing["completion_id"])))
+        await self.crud.update_bom_item(bom_id, data)
+        updated = await self.crud.get_bom_item(bom_id)
+        return updated or existing
+
+    async def delete_bom_item(self, current_user: CurrentUser, bom_id: UUID) -> None:
+        """Menghapus item BoM."""
+        existing = await self.crud.get_bom_item(bom_id)
+        if not existing:
+            raise NotFoundError("Item Bill of Materials")
+        await self.get_order_detail(current_user, UUID(str(existing["completion_id"])))
+        await self.crud.delete_bom_item(bom_id)
+
+    async def sync_bom_from_work_types(
+        self, current_user: CurrentUser, completion_id: UUID, overwrite_existing: bool = False
+    ) -> int:
+        """Sinkronisasi otomatis template default materials dari jenis pekerjaan."""
+        await self.get_order_detail(current_user, completion_id)
+        return await self.crud.sync_bom_from_work_types(completion_id, overwrite_existing=overwrite_existing)
+
+    async def export_completion_docx(self, current_user: CurrentUser, completion_id: UUID) -> tuple[bytes, str]:
+        """Ekspor Berita Acara & BoM ke dalam format Microsoft Word (.docx)."""
+        detail = await self.get_order_detail(current_user, completion_id)
+        docx_bytes = DocumentExportService.export_completion_docx(detail)
+        client_clean = "".join(c for c in (detail.get("client_name") or "Order") if c.isalnum() or c in ("-", "_"))
+        filename = f"BAST_BoM_{client_clean}_{str(completion_id)[:8]}.docx"
+        return docx_bytes, filename

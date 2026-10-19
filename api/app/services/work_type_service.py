@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import AppError, NotFoundError, ValidationError
 from app.crud.crud_work_type import CRUDWorkType
-from app.schemas.work_type import WorkTypeIn
+from app.schemas.work_type import DefaultMaterialIn, DefaultMaterialUpdate, WorkTypeIn
 from app.services.access_service import ensure_same_org
 
 
@@ -139,3 +139,60 @@ class WorkTypeService:
     def _raise_missing(missing: list[str]) -> None:
         if missing:
             raise ValidationError(f"Foto wajib belum lengkap: {', '.join(missing)}.")
+
+    async def list_default_materials(self, org_id: str, type_id: UUID) -> list[Any]:
+        """Daftar template material default untuk satu jenis pekerjaan."""
+        await self.get(org_id, type_id)
+        return await self.repo.list_default_materials(type_id)
+
+    async def create_default_material(
+        self,
+        org_id: str,
+        type_id: UUID,
+        data: DefaultMaterialIn,
+        creator_division_id: UUID | None = None,
+    ) -> Any:
+        """Membuat item template material default."""
+        existing = await self.get(org_id, type_id)
+        if creator_division_id is not None and str(existing.division_id) != str(creator_division_id):
+            raise AppError(
+                "FORBIDDEN", "Anda tidak memiliki hak untuk mengelola template material divisi lain.", status=403
+            )
+        mat_id = await self.repo.create_default_material(type_id, data.model_dump())
+        return await self.repo.get_default_material(UUID(mat_id))
+
+    async def update_default_material(
+        self,
+        org_id: str,
+        material_id: UUID,
+        data: DefaultMaterialUpdate,
+        creator_division_id: UUID | None = None,
+    ) -> Any:
+        """Mengubah item template material default."""
+        mat = await self.repo.get_default_material(material_id)
+        if not mat:
+            raise NotFoundError("Template Material")
+        existing_wt = await self.get(org_id, UUID(str(mat.work_type_id)))
+        if creator_division_id is not None and str(existing_wt.division_id) != str(creator_division_id):
+            raise AppError(
+                "FORBIDDEN", "Anda tidak memiliki hak untuk mengelola template material divisi lain.", status=403
+            )
+        await self.repo.update_default_material(material_id, data.model_dump(exclude_unset=True))
+        return await self.repo.get_default_material(material_id)
+
+    async def delete_default_material(
+        self,
+        org_id: str,
+        material_id: UUID,
+        creator_division_id: UUID | None = None,
+    ) -> None:
+        """Menghapus item template material default."""
+        mat = await self.repo.get_default_material(material_id)
+        if not mat:
+            raise NotFoundError("Template Material")
+        existing_wt = await self.get(org_id, UUID(str(mat.work_type_id)))
+        if creator_division_id is not None and str(existing_wt.division_id) != str(creator_division_id):
+            raise AppError(
+                "FORBIDDEN", "Anda tidak memiliki hak untuk mengelola template material divisi lain.", status=403
+            )
+        await self.repo.delete_default_material(material_id)

@@ -38,6 +38,58 @@ export interface WorkCompletionCreate {
   site_lng?: number | null;
 }
 
+export interface WorkCompletionBom {
+  bom_id: string;
+  completion_id: string;
+  work_plan_item_id?: string | null;
+  material_code?: string | null;
+  material_name: string;
+  estimated_qty: number;
+  actual_qty: number;
+  unit: string;
+  category?: string | null;
+  notes?: string | null;
+  sort_order: number;
+  create_at?: string;
+  update_at?: string;
+}
+
+export interface WorkCompletionDetail extends WorkCompletionOrder {
+  completed_target_unit: number;
+  start_work_date?: string | null;
+  end_work_date?: string | null;
+  obstacles?: string | null;
+  summary_notes?: string | null;
+  leader_signer_id?: string | null;
+  leader_signed_at?: string | null;
+  pm_signer_id?: string | null;
+  pm_signer_name?: string | null;
+  pm_signed_at?: string | null;
+  signature_hash?: string | null;
+  bom_items?: WorkCompletionBom[];
+}
+
+export interface CreateWorkCompletionBomIn {
+  work_plan_item_id?: string | null;
+  material_code?: string | null;
+  material_name: string;
+  estimated_qty: number;
+  actual_qty?: number;
+  unit?: string;
+  category?: string | null;
+  notes?: string | null;
+  sort_order?: number;
+}
+
+export interface UpdateWorkCompletionBomIn {
+  estimated_qty?: number;
+  actual_qty?: number;
+  unit?: string;
+  category?: string | null;
+  notes?: string | null;
+  sort_order?: number;
+}
+
 export const completionKey = (id: string) => ["work-completion", id] as const;
 
 export function useWorkCompletions(filters?: {
@@ -60,7 +112,7 @@ export function useWorkCompletion(id: string) {
   return useQuery({
     queryKey: completionKey(id),
     queryFn: async () => {
-      const res = await api.get<WorkCompletionOrder>(`/work-completions/${id}`);
+      const res = await api.get<WorkCompletionDetail>(`/work-completions/${id}`);
       return res.data;
     },
     enabled: !!id,
@@ -92,4 +144,118 @@ export function useUpdateWorkCompletionStatus() {
       qc.invalidateQueries({ queryKey: completionKey(vars.id) });
     },
   });
+}
+
+export function useWorkCompletionBom(completionId: string) {
+  return useQuery({
+    queryKey: ["work-completion-bom", completionId],
+    queryFn: async () => {
+      const res = await api.get<WorkCompletionBom[]>(`/work-completions/${completionId}/bom`);
+      return res.data;
+    },
+    enabled: !!completionId,
+  });
+}
+
+export function useCreateWorkCompletionBom() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      completionId,
+      payload,
+    }: {
+      completionId: string;
+      payload: CreateWorkCompletionBomIn;
+    }) => {
+      const res = await api.post<WorkCompletionBom>(
+        `/work-completions/${completionId}/bom`,
+        payload
+      );
+      return res.data;
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ["work-completion-bom", vars.completionId] });
+      qc.invalidateQueries({ queryKey: completionKey(vars.completionId) });
+    },
+  });
+}
+
+export function useUpdateWorkCompletionBom() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (vars: {
+      bomId: string;
+      completionId: string;
+      payload: UpdateWorkCompletionBomIn;
+    }) => {
+      const res = await api.put<WorkCompletionBom>(
+        `/work-completions/bom/${vars.bomId}`,
+        vars.payload
+      );
+      return res.data;
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ["work-completion-bom", vars.completionId] });
+      qc.invalidateQueries({ queryKey: completionKey(vars.completionId) });
+    },
+  });
+}
+
+export function useDeleteWorkCompletionBom() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (vars: {
+      bomId: string;
+      completionId: string;
+    }) => {
+      await api.delete(`/work-completions/bom/${vars.bomId}`);
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ["work-completion-bom", vars.completionId] });
+      qc.invalidateQueries({ queryKey: completionKey(vars.completionId) });
+    },
+  });
+}
+
+export function useSyncBomFromWorkTypes() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      completionId,
+      overwrite_existing = false,
+    }: {
+      completionId: string;
+      overwrite_existing?: boolean;
+    }) => {
+      const res = await api.post<{ synced_count: number; message: string }>(
+        `/work-completions/${completionId}/sync-bom`,
+        { overwrite_existing }
+      );
+      return res.data;
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ["work-completion-bom", vars.completionId] });
+      qc.invalidateQueries({ queryKey: completionKey(vars.completionId) });
+    },
+  });
+}
+
+export async function downloadWorkCompletionDocx(completionId: string, filename?: string): Promise<void> {
+  const res = await api.get(`/work-completions/${completionId}/export`, {
+    responseType: "blob",
+  });
+  const blob = new Blob([res.data], {
+    type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  });
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.setAttribute(
+    "download",
+    filename || `BAST_Work_Completion_${completionId.slice(0, 8)}.docx`
+  );
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
 }

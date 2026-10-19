@@ -13,6 +13,16 @@ from uuid import UUID
 from app.crud.base import CRUDBase
 
 
+def _row_to_dict(row: Any) -> dict[str, Any]:
+    if row is None:
+        return {}
+    if hasattr(row, "_mapping"):
+        return dict(row._mapping)
+    if isinstance(row, dict):
+        return row
+    return dict(row)
+
+
 class CRUDWorkCompletion(CRUDBase):
     """CRUD untuk pengelolaan Order Proyek Klien."""
 
@@ -65,11 +75,25 @@ class CRUDWorkCompletion(CRUDBase):
                 COALESCE((
                     SELECT SUM(wpi.completed_qty)::int
                     FROM work_plan_item wpi
-                    WHERE wpi.completion_id = wc.completion_id AND wpi.delete_at IS NULL
+                    WHERE wpi.completion_id = wc.completion_id
+                      AND wpi.is_main_deliverable = TRUE
+                      AND wpi.delete_at IS NULL
                 ), 0) AS completed_target_unit,
                 wc.unit_measure,
                 wc.order_status,
                 wc.priority_level,
+                COALESCE(wc.start_work_date, (
+                    SELECT MIN(wpd.work_date)
+                    FROM work_plan_item wpi
+                    JOIN work_plan_daily wpd ON wpd.daily_plan_id = wpi.daily_plan_id
+                    WHERE wpi.completion_id = wc.completion_id AND wpi.delete_at IS NULL AND wpd.delete_at IS NULL
+                )) AS start_work_date,
+                COALESCE(wc.end_work_date, (
+                    SELECT MAX(wpd.work_date)
+                    FROM work_plan_item wpi
+                    JOIN work_plan_daily wpd ON wpd.daily_plan_id = wpi.daily_plan_id
+                    WHERE wpi.completion_id = wc.completion_id AND wpi.delete_at IS NULL AND wpd.delete_at IS NULL
+                )) AS end_work_date,
                 wc.site_address,
                 wc.site_lat::float AS site_lat,
                 wc.site_lng::float AS site_lng,
@@ -102,7 +126,7 @@ class CRUDWorkCompletion(CRUDBase):
             LIMIT :limit OFFSET :offset
         """
         rows = await self.fetchall(sql, params)
-        return [dict(r) for r in rows]
+        return [_row_to_dict(r) for r in rows]
 
     async def count_completions(
         self,
@@ -156,17 +180,50 @@ class CRUDWorkCompletion(CRUDBase):
                 COALESCE((
                     SELECT SUM(wpi.completed_qty)::int
                     FROM work_plan_item wpi
-                    WHERE wpi.completion_id = wc.completion_id AND wpi.delete_at IS NULL
+                    WHERE wpi.completion_id = wc.completion_id
+                      AND wpi.is_main_deliverable = TRUE
+                      AND wpi.delete_at IS NULL
                 ), 0) AS completed_target_unit,
                 wc.unit_measure,
                 wc.order_status,
                 wc.priority_level,
+                COALESCE(wc.start_work_date, (
+                    SELECT MIN(wpd.work_date)
+                    FROM work_plan_item wpi
+                    JOIN work_plan_daily wpd ON wpd.daily_plan_id = wpi.daily_plan_id
+                    WHERE wpi.completion_id = wc.completion_id AND wpi.delete_at IS NULL AND wpd.delete_at IS NULL
+                )) AS start_work_date,
+                COALESCE(wc.end_work_date, (
+                    SELECT MAX(wpd.work_date)
+                    FROM work_plan_item wpi
+                    JOIN work_plan_daily wpd ON wpd.daily_plan_id = wpi.daily_plan_id
+                    WHERE wpi.completion_id = wc.completion_id AND wpi.delete_at IS NULL AND wpd.delete_at IS NULL
+                )) AS end_work_date,
                 wc.site_address,
                 wc.site_lat::float AS site_lat,
                 wc.site_lng::float AS site_lng,
                 wc.summary_notes,
                 wc.obstacles,
                 wc.realization_photos_json,
+                COALESCE((
+                    SELECT jsonb_agg(jsonb_build_object(
+                        'bom_id', b.bom_id,
+                        'completion_id', b.completion_id,
+                        'work_plan_item_id', b.work_plan_item_id,
+                        'material_code', b.material_code,
+                        'material_name', b.material_name,
+                        'estimated_qty', b.estimated_qty::float,
+                        'actual_qty', b.actual_qty::float,
+                        'unit', b.unit,
+                        'category', b.category,
+                        'notes', b.notes,
+                        'sort_order', b.sort_order,
+                        'create_at', b.create_at,
+                        'update_at', b.update_at
+                    ) ORDER BY b.sort_order, b.material_name)
+                    FROM work_completion_bom b
+                    WHERE b.completion_id = wc.completion_id AND b.delete_at IS NULL
+                ), '[]'::jsonb) AS bom_items,
                 wc.leader_signer_id,
                 e_ldr.full_name AS leader_signer_name,
                 wc.leader_signed_at,
@@ -184,16 +241,17 @@ class CRUDWorkCompletion(CRUDBase):
             WHERE wc.completion_id = CAST(:id AS uuid) AND wc.delete_at IS NULL
         """
         row = await self.fetchone(sql, {"id": str(completion_id)})
-        return dict(row) if row else None
+        return _row_to_dict(row) if row else None
 
     async def create_completion(self, data: dict[str, Any]) -> str:
         """Membuat order proyek baru."""
         sql = """
             INSERT INTO work_completion (
-                division_id, pm_id, client_name, project_title, order_number,
+                report_scope, division_id, pm_id, client_name, project_title, order_number,
                 total_target_unit, unit_measure, order_status, priority_level,
                 site_address, site_lat, site_lng, summary_notes, realization_photos_json
             ) VALUES (
+                COALESCE(:report_scope, 'PROJECT'),
                 CAST(:division_id AS uuid),
                 CAST(:pm_id AS uuid),
                 :client_name,
@@ -215,6 +273,7 @@ class CRUDWorkCompletion(CRUDBase):
         res = await self.scalar(
             sql,
             {
+                "report_scope": data.get("report_scope", "PROJECT"),
                 "division_id": str(data["division_id"]),
                 "pm_id": str(data["pm_id"]) if data.get("pm_id") else None,
                 "client_name": data["client_name"],
@@ -316,3 +375,212 @@ class CRUDWorkCompletion(CRUDBase):
                 "sig_hash": signature_hash,
             },
         )
+
+    async def list_bom_items(self, completion_id: UUID | str) -> list[dict[str, Any]]:
+        """Daftar item BoM riil untuk satu order proyek klien."""
+        sql = """
+            SELECT
+                bom_id,
+                completion_id,
+                work_plan_item_id,
+                material_code,
+                material_name,
+                estimated_qty::float AS estimated_qty,
+                actual_qty::float AS actual_qty,
+                unit,
+                category,
+                notes,
+                sort_order,
+                create_at,
+                update_at
+            FROM work_completion_bom
+            WHERE completion_id = CAST(:cid AS uuid) AND delete_at IS NULL
+            ORDER BY sort_order, material_name
+        """
+        rows = await self.fetchall(sql, {"cid": str(completion_id)})
+        return [_row_to_dict(r) for r in rows]
+
+    async def get_bom_item(self, bom_id: UUID | str) -> dict[str, Any] | None:
+        """Satu item BoM."""
+        sql = """
+            SELECT
+                bom_id,
+                completion_id,
+                work_plan_item_id,
+                material_code,
+                material_name,
+                estimated_qty::float AS estimated_qty,
+                actual_qty::float AS actual_qty,
+                unit,
+                category,
+                notes,
+                sort_order,
+                create_at,
+                update_at
+            FROM work_completion_bom
+            WHERE bom_id = CAST(:id AS uuid) AND delete_at IS NULL
+        """
+        row = await self.fetchone(sql, {"id": str(bom_id)})
+        return _row_to_dict(row) if row else None
+
+    async def add_bom_item(self, completion_id: UUID | str, data: dict[str, Any]) -> str:
+        """Menambahkan item BoM baru ke order proyek klien."""
+        sql = """
+            INSERT INTO work_completion_bom (
+                completion_id, work_plan_item_id, material_code, material_name,
+                estimated_qty, actual_qty, unit, category, notes, sort_order
+            )
+            VALUES (
+                CAST(:cid AS uuid),
+                CAST(:item_id AS uuid),
+                :code,
+                :name,
+                CAST(:est_qty AS numeric),
+                CAST(:act_qty AS numeric),
+                :unit,
+                :category,
+                :notes,
+                CAST(:sort AS smallint)
+            )
+            RETURNING bom_id
+        """
+        res = await self.scalar(
+            sql,
+            {
+                "cid": str(completion_id),
+                "item_id": str(data["work_plan_item_id"]) if data.get("work_plan_item_id") else None,
+                "code": data.get("material_code"),
+                "name": data["material_name"],
+                "est_qty": data.get("estimated_qty", 0.0),
+                "act_qty": data.get("actual_qty", 0.0),
+                "unit": data.get("unit", "Unit"),
+                "category": data.get("category"),
+                "notes": data.get("notes"),
+                "sort": data.get("sort_order", 0),
+            },
+        )
+        return str(res)
+
+    async def update_bom_item(self, bom_id: UUID | str, data: dict[str, Any]) -> None:
+        """Memperbarui item BoM (misal: pengisian pemakaian aktual di lapangan)."""
+        updates: list[str] = ["update_at = NOW()"]
+        params: dict[str, Any] = {"id": str(bom_id)}
+
+        if "work_plan_item_id" in data:
+            updates.append("work_plan_item_id = CAST(:item_id AS uuid)")
+            params["item_id"] = str(data["work_plan_item_id"]) if data["work_plan_item_id"] else None
+        if "material_code" in data:
+            updates.append("material_code = :code")
+            params["code"] = data["material_code"]
+        if "material_name" in data and data["material_name"] is not None:
+            updates.append("material_name = :name")
+            params["name"] = data["material_name"]
+        if "estimated_qty" in data and data["estimated_qty"] is not None:
+            updates.append("estimated_qty = CAST(:est_qty AS numeric)")
+            params["est_qty"] = data["estimated_qty"]
+        if "actual_qty" in data and data["actual_qty"] is not None:
+            updates.append("actual_qty = CAST(:act_qty AS numeric)")
+            params["act_qty"] = data["actual_qty"]
+        if "unit" in data and data["unit"] is not None:
+            updates.append("unit = :unit")
+            params["unit"] = data["unit"]
+        if "category" in data:
+            updates.append("category = :category")
+            params["category"] = data["category"]
+        if "notes" in data:
+            updates.append("notes = :notes")
+            params["notes"] = data["notes"]
+        if "sort_order" in data and data["sort_order"] is not None:
+            updates.append("sort_order = CAST(:sort AS smallint)")
+            params["sort"] = data["sort_order"]
+
+        set_clause = ", ".join(updates)
+        sql = f"UPDATE work_completion_bom SET {set_clause} WHERE bom_id = CAST(:id AS uuid) AND delete_at IS NULL"
+        await self.execute(sql, params)
+
+    async def delete_bom_item(self, bom_id: UUID | str) -> None:
+        """Soft delete item BoM."""
+        sql = """
+            UPDATE work_completion_bom
+            SET delete_at = NOW(), update_at = NOW()
+            WHERE bom_id = CAST(:id AS uuid) AND delete_at IS NULL
+        """
+        await self.execute(sql, {"id": str(bom_id)})
+
+    async def sync_bom_from_work_types(self, completion_id: UUID | str, overwrite_existing: bool = False) -> int:
+        """
+        Menyalin template material default dari jenis pekerjaan (work_type) seluruh item tugas
+        yang terhubung ke order klien ini ke dalam work_completion_bom.
+        """
+        if overwrite_existing:
+            await self.execute(
+                """
+                UPDATE work_completion_bom
+                SET delete_at = NOW(), update_at = NOW()
+                WHERE completion_id = CAST(:cid AS uuid) AND delete_at IS NULL
+                """,
+                {"cid": str(completion_id)},
+            )
+
+        sql_fetch_defaults = """
+            SELECT DISTINCT ON (COALESCE(dm.material_code, dm.material_name))
+                dm.material_code,
+                dm.material_name,
+                dm.default_qty,
+                dm.unit,
+                dm.category,
+                dm.description,
+                dm.sort_order,
+                wpi.item_id AS linked_item_id
+            FROM work_plan_item wpi
+            JOIN work_type_default_materials dm ON dm.work_type_id = wpi.work_type_id
+            WHERE wpi.completion_id = CAST(:cid AS uuid)
+              AND wpi.delete_at IS NULL
+              AND dm.delete_at IS NULL
+              AND NOT EXISTS (
+                  SELECT 1 FROM work_completion_bom b
+                  WHERE b.completion_id = CAST(:cid AS uuid)
+                    AND b.delete_at IS NULL
+                    AND (
+                        (b.material_code IS NOT NULL AND b.material_code = dm.material_code)
+                        OR lower(b.material_name) = lower(dm.material_name)
+                    )
+              )
+            ORDER BY COALESCE(dm.material_code, dm.material_name), dm.sort_order
+        """
+        rows = await self.fetchall(sql_fetch_defaults, {"cid": str(completion_id)})
+        count = 0
+        for r in rows:
+            await self.execute(
+                """
+                INSERT INTO work_completion_bom (
+                    completion_id, work_plan_item_id, material_code, material_name,
+                    estimated_qty, actual_qty, unit, category, notes, sort_order
+                )
+                VALUES (
+                    CAST(:cid AS uuid),
+                    CAST(:item_id AS uuid),
+                    :code,
+                    :name,
+                    CAST(:qty AS numeric),
+                    0.0,
+                    :unit,
+                    :category,
+                    :notes,
+                    CAST(:sort AS smallint)
+                )
+                """,
+                {
+                    "cid": str(completion_id),
+                    "item_id": str(r.linked_item_id) if r.linked_item_id else None,
+                    "code": r.material_code,
+                    "name": r.material_name,
+                    "qty": float(r.default_qty or 1.0),
+                    "unit": r.unit or "Unit",
+                    "category": r.category,
+                    "notes": r.description,
+                    "sort": int(r.sort_order or 0),
+                },
+            )
+            count += 1
+        return count

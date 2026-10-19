@@ -6,6 +6,7 @@ Controller HTTP untuk orkestrasi endpoint Order Proyek Klien (Work Completion) V
 
 from __future__ import annotations
 
+from typing import Any
 from uuid import UUID
 
 from fastapi import Depends
@@ -15,6 +16,9 @@ from app.api.deps import DB_SCOPE, get_db
 from app.core.security import CurrentUser
 from app.modules.work_completion.crud.crud_work_completion import CRUDWorkCompletion
 from app.modules.work_completion.schemas.work_completion_schema import (
+    WorkCompletionBomIn,
+    WorkCompletionBomOut,
+    WorkCompletionBomUpdate,
     WorkCompletionCreate,
     WorkCompletionListOut,
     WorkCompletionOut,
@@ -119,3 +123,65 @@ class WorkCompletionController:
             realization_photos=body.realization_photos,
         )
         return WorkCompletionOut(**data)
+
+    async def list_bom_items(
+        self,
+        completion_id: UUID,
+        current_user: CurrentUser,
+    ) -> list[WorkCompletionBomOut]:
+        """Daftar item BoM suatu order klien."""
+        rows = await self.service.list_bom_items(current_user, completion_id)
+        return [WorkCompletionBomOut(**r) for r in rows]
+
+    async def add_bom_item(
+        self,
+        completion_id: UUID,
+        body: WorkCompletionBomIn,
+        current_user: CurrentUser,
+    ) -> WorkCompletionBomOut:
+        """Menambahkan item BoM baru ke order klien."""
+        row = await self.service.add_bom_item(current_user, completion_id, body.model_dump())
+        return WorkCompletionBomOut(**row)
+
+    async def update_bom_item(
+        self,
+        bom_id: UUID,
+        body: WorkCompletionBomUpdate,
+        current_user: CurrentUser,
+    ) -> WorkCompletionBomOut:
+        """Memperbarui item BoM (misal: pengisian realisasi pemakaian aktual di lapangan)."""
+        row = await self.service.update_bom_item(current_user, bom_id, body.model_dump(exclude_unset=True))
+        return WorkCompletionBomOut(**row)
+
+    async def delete_bom_item(
+        self,
+        bom_id: UUID,
+        current_user: CurrentUser,
+    ) -> None:
+        """Menghapus item BoM."""
+        await self.service.delete_bom_item(current_user, bom_id)
+
+    async def sync_bom(
+        self,
+        completion_id: UUID,
+        overwrite_existing: bool,
+        current_user: CurrentUser,
+    ) -> dict[str, Any]:
+        """Sinkronisasi otomatis template BoM dari jenis pekerjaan."""
+        synced_count = await self.service.sync_bom_from_work_types(
+            current_user, completion_id, overwrite_existing=overwrite_existing
+        )
+        return {
+            "success": True,
+            "completion_id": completion_id,
+            "synced_materials_count": synced_count,
+            "message": f"Berhasil menyinkronkan {synced_count} material dari template jenis pekerjaan.",
+        }
+
+    async def export_docx(
+        self,
+        completion_id: UUID,
+        current_user: CurrentUser,
+    ) -> tuple[bytes, str]:
+        """Ekspor dokumen Berita Acara & BoM dalam format Word (.docx)."""
+        return await self.service.export_completion_docx(current_user, completion_id)

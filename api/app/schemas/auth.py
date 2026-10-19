@@ -37,6 +37,7 @@ class UserMeResponse(BaseModel):
     # FIELD = absen lewat aplikasi HP, OFFICE = absen lewat web.
     # None = akun tanpa karyawan yang terkait.
     attendance_mode: str | None = None
+    division_id: str | None = None
 
 
 class ChangePasswordRequest(BaseModel):

@@ -147,16 +147,24 @@ class CRUDPlanDraft(CRUDBase):
         ids = [str(v) for v in employee_ids]
         if not ids:
             return set()
+        lic = licence.upper().replace(" ", "_")
+        if "C" in lic:
+            allowed_types = ["SIM_C", "SIM C"]
+        elif "A" in lic:
+            allowed_types = ["SIM_A", "SIM A", "SIM_B", "SIM B", "SIM B I", "SIM B II"]
+        else:
+            allowed_types = [licence, lic]
         rows = await self.fetchall(
             """
             SELECT ef.employee_id::text AS employee_id
             FROM employee_file ef
             WHERE ef.employee_id = ANY(CAST(:ids AS uuid[]))
-              AND ef.type IN ('SIM_A', 'SIM_B')
+              AND (ef.type = ANY(CAST(:types AS text[])) OR UPPER(REPLACE(ef.type, ' ', '_')) = ANY(CAST(:types AS text[])))
               AND ef.status = 'active'
+              AND (ef.expired_at IS NULL OR ef.expired_at::date >= :until)
               AND ef.delete_at IS NULL
             """,
-            {"ids": ids},
+            {"ids": ids, "types": allowed_types, "until": until},
         )
         return {str(r.employee_id) for r in rows}
 

@@ -25,7 +25,7 @@ from app.schemas.plan_change import (
     ChangeResponse,
     DecisionRequest,
 )
-from app.schemas.plan_day import PlanDayOut
+from app.schemas.plan_day import PlanDailyScheduleDetailOut, PlanDayOut
 from app.schemas.plan_draft import (
     AmendmentReasonIn,
     FormAsset,
@@ -68,6 +68,7 @@ __all__ = [
     "MemberReportOut",
     "PlanAssignmentOptions",
     "PlanChangeOut",
+    "PlanDailyScheduleDetailOut",
     "PlanDayCreate",
     "PlanDayOut",
     "PlanDayResponse",

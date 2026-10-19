@@ -3,6 +3,8 @@ import { z } from "zod";
 /** Validasi form jenis pekerjaan + template foto laporan (label slot unik). */
 export const workTypeSchema = z.object({
   name: z.string().trim().min(1, "Nama jenis pekerjaan wajib diisi."),
+  division_id: z.string().trim().optional().nullable(),
+  description: z.string().trim().optional().nullable(),
   photos: z
     .array(
       z.object({

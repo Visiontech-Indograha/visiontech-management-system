@@ -15,7 +15,10 @@ from fastapi.responses import HTMLResponse, Response
 
 from app.api.deps import get_plan_day_service, get_plan_draft_service
 from app.core.errors import AppError
-from app.modules.work_plans.schemas.work_plan_schema import PlanDayOut
+from app.modules.work_plans.schemas.work_plan_schema import (
+    PlanDailyScheduleDetailOut,
+    PlanDayOut,
+)
 from app.modules.work_plans.services.work_plan_service import PlanDayService, PlanDraftService
 from app.services.access_service import PlanAccess
 from app.services.document_export_service import DocumentExportService
@@ -94,6 +97,14 @@ class WorkPlanDaysController:
             media_type=media_type,
             headers={"Content-Disposition": f'{disposition}; filename="{filename_base}.{ext}"'},
         )
+
+    async def handle_get_daily_detail(
+        self,
+        daily_plan_id: UUID,
+    ) -> PlanDailyScheduleDetailOut:
+        """Mengambil detail jadwal harian multi-slot lengkap beserta SOP dan order klien."""
+        data = await self.service.get_daily_schedule_detail(daily_plan_id)
+        return PlanDailyScheduleDetailOut(**data)
 
 
 __all__ = ["WorkPlanDaysController"]

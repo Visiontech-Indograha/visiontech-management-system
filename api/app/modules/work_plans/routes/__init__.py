@@ -17,6 +17,9 @@ from app.modules.work_plans.routes.work_plan_changes_route import (
 from app.modules.work_plans.routes.work_plan_days_route import (
     router as plan_days_router,
 )
+from app.modules.work_plans.routes.work_plan_items_route import (
+    router as plan_items_router,
+)
 from app.modules.work_plans.routes.work_plan_location_route import (
     router as plan_location_router,
 )
@@ -42,6 +45,7 @@ __all__ = [
     "plan_attachments_router",
     "plan_changes_router",
     "plan_days_router",
+    "plan_items_router",
     "plan_location_router",
     "plan_members_router",
     "plan_reports_router",

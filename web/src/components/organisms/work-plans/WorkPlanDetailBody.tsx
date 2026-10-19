@@ -7,8 +7,10 @@ import { PlanActionsPanel } from "./PlanActionsPanel";
 import { PlanAttachmentsPanel } from "./PlanAttachmentsPanel";
 import { PlanDetailCard } from "./PlanDetailCard";
 import { PlanDocumentsPanel } from "./PlanDocumentsPanel";
+import { PlanExportSection } from "./PlanExportSection";
 import { PlanLocationCard } from "./PlanLocationCard";
 import { PlanSummaryCard } from "./PlanSummaryCard";
+import { PmOverrideToolbar } from "./PmOverrideToolbar";
 import { WeeklyReportsPanel } from "./WeeklyReportsPanel";
 
 /** Isi halaman detail rencana kerja sesuai status: rincian + tindakan, tim, laporan akhir, lokasi, lampiran, dokumen, laporan. */
@@ -20,6 +22,13 @@ export function WorkPlanDetailBody({ plan, employees }: {
   return (
       <QueryState query={plan} errorText="Work plan tidak ditemukan atau Anda tidak berwenang melihatnya.">
         {p && (
+          <PmOverrideToolbar
+            planId={p.id}
+            currentStatus={p.status}
+            className="mb-4"
+          />
+        )}
+        {p && (
           <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
             <PlanSummaryCard plan={p} employees={employees} />
             <PlanActionsPanel plan={p} />
@@ -29,6 +38,7 @@ export function WorkPlanDetailBody({ plan, employees }: {
         {p && ["IN_PROGRESS", "COMPLETION_REVIEW", "COMPLETED"].includes(p.status) && <FinalReportPanel plan={p} />}
         {p && <PlanLocationCard plan={p} />}
         {p && <PlanAttachmentsPanel plan={p} />}
+        {p && <PlanExportSection plan={p} />}
         {p && p.status !== "DRAFT" && <PlanDocumentsPanel plan={p} />}
         {p && ["IN_PROGRESS", "COMPLETION_REVIEW", "COMPLETED"].includes(p.status) && (
           <div className="mt-6 space-y-6">

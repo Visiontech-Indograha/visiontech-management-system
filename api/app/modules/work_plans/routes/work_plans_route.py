@@ -22,9 +22,13 @@ from app.core.security import CurrentUser
 from app.modules.work_plans.controllers.work_plan_controller import (
     WorkPlanController,
 )
+from app.modules.work_plans.controllers.work_plan_days_controller import (
+    WorkPlanDaysController,
+)
 from app.modules.work_plans.schemas.work_plan_schema import (
     DayPlanRequest,
     PlanAssignmentOptions,
+    PlanDailyScheduleDetailOut,
     PlanDayCreate,
     PlanDayResponse,
     PlanDetailOut,
@@ -227,6 +231,16 @@ async def reschedule_item(
 ) -> RescheduleItemResponse:
     """Memindahkan atau menjadwalkan ulang item tugas ke hari/slot lain oleh PM (PM Full Override) (POST)."""
     return await controller.handle_reschedule_item(current_user, item_id, data)
+
+
+@router.get("/daily/{daily_plan_id}", response_model=PlanDailyScheduleDetailOut)
+async def get_daily_schedule_detail(
+    daily_plan_id: UUID,
+    current_user: CurrentUser = Depends(get_current_user),
+    days_controller: WorkPlanDaysController = Depends(),
+) -> PlanDailyScheduleDetailOut:
+    """Mengambil rincian jadwal harian multi-slot tugas beserta SOP foto dan order klien (GET)."""
+    return await days_controller.handle_get_daily_detail(daily_plan_id)
 
 
 __all__ = ["router"]

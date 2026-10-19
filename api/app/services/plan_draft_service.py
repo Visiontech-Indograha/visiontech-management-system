@@ -65,7 +65,7 @@ def _invalid(message: str) -> AppError:
 
 def licence_for(vehicle_type: str | None) -> str:
     """Sama dengan trigger tg_vehicle_driver_licence: roda dua → SIM C, selain itu SIM A."""
-    return "SIM C" if vehicle_type == "MOTORCYCLE" else "SIM A"
+    return "SIM C" if (vehicle_type or "").strip().upper() == "MOTORCYCLE" else "SIM A"
 
 
 class PlanDraftService:

@@ -673,6 +673,8 @@ class CRUDAttendanceSession(CRUDBase):
                    NULL::uuid AS check_out_selfie_file_id,
                    NULL::text AS check_out_explanation,
                    a.city_zone_status::text AS city_category,
+                   a.meal_allowance_amount::float AS meal_allowance_amount,
+                   a.is_within_attendance_radius AS is_within_attendance_radius,
                    (
                        EXISTS (
                            SELECT 1 FROM users u

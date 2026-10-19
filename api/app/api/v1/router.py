@@ -46,11 +46,13 @@ from app.modules.work_plans.routes import (
     plan_revisions_router,
     plans_router,
     transitions_router,
+    work_plan_v2_router,
 )
 from app.modules.work_types.routes import router as work_types_router
 
 api_router = APIRouter()
 
+api_router.include_router(work_plan_v2_router)
 api_router.include_router(work_completion_router)
 api_router.include_router(teams_router)
 api_router.include_router(mess_router)
@@ -66,6 +68,7 @@ api_router.include_router(employees_router)
 api_router.include_router(documents_router)
 api_router.include_router(expiry_router)
 api_router.include_router(plans_router)
+
 api_router.include_router(plan_members_router)
 api_router.include_router(transitions_router)
 api_router.include_router(plan_changes_router)

@@ -176,37 +176,80 @@ class CRUDPlanItem(CRUDBase):
         pm_override_reason: str,
         target_daily_plan_id: UUID,
     ) -> Any:
-        """Menyetujui pemindahan tugas dan membuat tugas lanjutan otomatis di hari tujuan."""
-        # 1. Update tugas asal menjadi SHIFTED_DAY
+        """Menyetujui pemindahan tugas dan membuat tugas lanjutan otomatis di hari tujuan (Kasus 6A / 6B)."""
+        # 1. Ambil data asli tugas
+        orig = await self.fetchone(
+            """
+            SELECT item_id, weekly_plan_id, work_type_id, title, target_qty, completed_qty,
+                   origin_item_id, completion_id, start_time, end_time, location_name,
+                   site_lat, site_lng, assigned_employee_ids
+            FROM work_plan_item
+            WHERE item_id = CAST(:item_id AS uuid) AND delete_at IS NULL
+            """,
+            {"item_id": str(item_id)},
+        )
+        if not orig:
+            return None
+
+        # 2. Ambil weekly_plan_id dari hari tujuan untuk cek apakah lintas minggu (Kasus 6B)
+        target_day = await self.fetchone(
+            """
+            SELECT daily_plan_id, weekly_plan_id
+            FROM work_plan_daily
+            WHERE daily_plan_id = CAST(:target_daily_id AS uuid) AND delete_at IS NULL
+            """,
+            {"target_daily_id": str(target_daily_plan_id)},
+        )
+        if not target_day:
+            return None
+
+        is_cross_week = str(orig.weekly_plan_id) != str(target_day.weekly_plan_id)
+        new_status = "ALLOCATED_NEXT_WEEK" if is_cross_week else "SHIFTED_DAY"
+        allocated_weekly_id = str(target_day.weekly_plan_id) if is_cross_week else None
+
+        # 3. Update tugas asal
         update_query = """
         UPDATE work_plan_item
         SET
-            status = 'SHIFTED_DAY',
+            status = CAST(:status AS varchar),
             rollover_approval_status = 'APPROVED_BY_PM'::rollover_approval_enum,
             approved_by_pm_id = CAST(:pm_id AS uuid),
             shifted_to_daily_id = CAST(:target_daily_id AS uuid),
+            allocated_to_weekly_id = CAST(:allocated_weekly_id AS uuid),
             delay_reason = :pm_reason,
             update_at = NOW()
         WHERE item_id = CAST(:item_id AS uuid) AND delete_at IS NULL
-        RETURNING item_id, weekly_plan_id, work_type_id, title, target_qty, completed_qty,
-                  completion_id, start_time, end_time, location_name, site_lat, site_lng, assigned_employee_ids
+        RETURNING item_id, weekly_plan_id, status, rollover_approval_status::text AS rollover_approval_status
         """
-        original = await self.fetchone(
+        updated_orig = await self.fetchone(
             update_query,
             {
                 "item_id": str(item_id),
+                "status": new_status,
                 "pm_id": str(pm_employee_id),
                 "target_daily_id": str(target_daily_plan_id),
+                "allocated_weekly_id": allocated_weekly_id,
                 "pm_reason": pm_override_reason,
             },
         )
-        if not original:
+        if not updated_orig:
             return None
 
-        # 2. Sisipkan klon tugas ke hari tujuan dengan sisa volume
-        rem_qty = max(0.0, float(original.target_qty or 0) - float(original.completed_qty or 0))
+        # 4. Sisipkan klon tugas ke hari tujuan dengan sisa volume
+        rem_qty = max(0.0, float(orig.target_qty or 0) - float(orig.completed_qty or 0))
         if rem_qty <= 0:
-            rem_qty = float(original.target_qty or 1.0)
+            rem_qty = float(orig.target_qty or 1.0)
+
+        # Root origin ID: pastikan selalu menunjuk ke akar tugas pertama (root item)
+        root_origin_id = orig.origin_item_id or orig.item_id
+
+        clean_title = orig.title
+        new_title = (
+            f"[Lanjutan] {clean_title}"
+            if not clean_title.startswith("[Lanjutan]")
+            else clean_title
+        )
+
 
         insert_query = """
         INSERT INTO work_plan_item (
@@ -217,7 +260,7 @@ class CRUDPlanItem(CRUDBase):
         )
         VALUES (
             CAST(:target_daily_id AS uuid),
-            (SELECT weekly_plan_id FROM work_plan_daily WHERE daily_plan_id = CAST(:target_daily_id AS uuid)),
+            CAST(:target_weekly_id AS uuid),
             CAST(:work_type_id AS uuid),
             :title,
             CAST(:rem_qty AS numeric),
@@ -237,28 +280,260 @@ class CRUDPlanItem(CRUDBase):
         RETURNING item_id
         """
         emp_ids_json = (
-            json.dumps(original.assigned_employee_ids)
-            if original.assigned_employee_ids
+            json.dumps(orig.assigned_employee_ids)
+            if orig.assigned_employee_ids
             else None
         )
+        start_t = orig.start_time
+        if isinstance(start_t, str):
+            from datetime import time as dt_time
+            start_t = dt_time.fromisoformat(start_t)
+        end_t = orig.end_time
+        if isinstance(end_t, str):
+            from datetime import time as dt_time
+            end_t = dt_time.fromisoformat(end_t)
+
         new_row = await self.fetchone(
             insert_query,
             {
                 "target_daily_id": str(target_daily_plan_id),
-                "work_type_id": str(original.work_type_id),
-                "title": f"[Lanjutan] {original.title}",
+                "target_weekly_id": str(target_day.weekly_plan_id),
+                "work_type_id": str(orig.work_type_id),
+                "title": new_title,
                 "rem_qty": rem_qty,
-                "origin_id": str(item_id),
-                "completion_id": str(original.completion_id) if original.completion_id else None,
-                "start_time": str(original.start_time) if original.start_time else None,
-                "end_time": str(original.end_time) if original.end_time else None,
-                "location_name": original.location_name,
-                "site_lat": original.site_lat,
-                "site_lng": original.site_lng,
+                "origin_id": str(root_origin_id),
+                "completion_id": str(orig.completion_id) if orig.completion_id else None,
+                "start_time": start_t,
+                "end_time": end_t,
+                "location_name": orig.location_name,
+                "site_lat": orig.site_lat,
+                "site_lng": orig.site_lng,
                 "assigned_emp_ids": emp_ids_json,
             },
         )
-        return {"original": original, "new_item_id": new_row.item_id if new_row else None}
+        return {
+            "original": orig,
+            "new_item_id": new_row.item_id if new_row else None,
+            "status": new_status,
+            "is_cross_week": is_cross_week,
+        }
+
+    async def get_task_chain_status(self, item_id: UUID) -> dict[str, Any] | None:
+        """Mengambil status agregasi rantai tugas (task chain) dari tugas induk dan seluruh item turunannya."""
+        # Cari root item id
+        root_query = """
+        WITH RECURSIVE item_ancestor AS (
+            SELECT item_id, origin_item_id, 1 AS depth
+            FROM work_plan_item
+            WHERE item_id = CAST(:item_id AS uuid) AND delete_at IS NULL
+            UNION ALL
+            SELECT p.item_id, p.origin_item_id, a.depth + 1
+            FROM work_plan_item p
+            JOIN item_ancestor a ON a.origin_item_id = p.item_id
+            WHERE p.delete_at IS NULL
+        )
+        SELECT item_id AS root_id
+        FROM item_ancestor
+        WHERE origin_item_id IS NULL
+        LIMIT 1
+        """
+        root_res = await self.fetchone(root_query, {"item_id": str(item_id)})
+        root_id = root_res.root_id if root_res else item_id
+
+        # Ambil seluruh keluarga rantai tugas
+        chain_query = """
+        WITH RECURSIVE item_family AS (
+            SELECT wpi.item_id, wpi.origin_item_id, wpi.daily_plan_id, wpi.weekly_plan_id,
+                   wpd.work_date, wpi.title, wpi.target_qty, wpi.completed_qty,
+                   wpi.progress_percent, wpi.status, wpi.completion_id,
+                   wpi.create_at, 1 AS lvl
+            FROM work_plan_item wpi
+            LEFT JOIN work_plan_daily wpd ON wpd.daily_plan_id = wpi.daily_plan_id
+            WHERE wpi.item_id = CAST(:root_id AS uuid) AND wpi.delete_at IS NULL
+            UNION ALL
+            SELECT c.item_id, c.origin_item_id, c.daily_plan_id, c.weekly_plan_id,
+                   d.work_date, c.title, c.target_qty, c.completed_qty,
+                   c.progress_percent, c.status, c.completion_id,
+                   c.create_at, f.lvl + 1
+            FROM work_plan_item c
+            LEFT JOIN work_plan_daily d ON d.daily_plan_id = c.daily_plan_id
+            JOIN item_family f ON c.origin_item_id = f.item_id
+            WHERE c.delete_at IS NULL
+        )
+        SELECT * FROM item_family ORDER BY lvl ASC, create_at ASC
+        """
+        family_rows = await self.fetchall(chain_query, {"root_id": str(root_id)})
+        if not family_rows:
+            return None
+
+        root_row = family_rows[0]
+        initial_target = float(root_row.target_qty or 0.0)
+        total_completed = sum(float(r.completed_qty or 0.0) for r in family_rows)
+        progress_pct = round((total_completed / initial_target * 100.0), 2) if initial_target > 0 else 0.0
+
+        # Item aktif adalah item terakhir yang bukan SHIFTED_DAY / ALLOCATED_NEXT_WEEK
+        active_items = [r for r in family_rows if r.status not in ("SHIFTED_DAY", "ALLOCATED_NEXT_WEEK")]
+        is_all_active_done = bool(active_items and all(r.status == "DONE" for r in active_items))
+        is_eligible = bool(total_completed >= initial_target and is_all_active_done)
+
+        status_label = (
+            "SIAP DIBUAT WORK COMPLETION (100% SELESAI)"
+            if is_eligible
+            else "MASIH BERJALAN / BELUM SELESAI"
+        )
+        existing_comp = next((r.completion_id for r in family_rows if r.completion_id is not None), None)
+
+        items_out = [
+            {
+                "item_id": r.item_id,
+                "origin_item_id": r.origin_item_id,
+                "daily_plan_id": r.daily_plan_id,
+                "weekly_plan_id": r.weekly_plan_id,
+                "work_date": str(r.work_date) if r.work_date else None,
+                "title": r.title,
+                "target_qty": float(r.target_qty or 0.0),
+                "completed_qty": float(r.completed_qty or 0.0),
+                "progress_percent": float(r.progress_percent or 0.0),
+                "status": str(r.status),
+                "completion_id": r.completion_id,
+                "create_at": str(r.create_at) if r.create_at else None,
+            }
+            for r in family_rows
+        ]
+
+        return {
+            "root_item_id": root_id,
+            "initial_total_target": initial_target,
+            "total_completed_across_weeks": total_completed,
+            "total_progress_percent": progress_pct,
+            "is_eligible_for_completion": is_eligible,
+            "status_label": status_label,
+            "existing_completion_id": existing_comp,
+            "all_linked_item_ids": [r.item_id for r in family_rows],
+            "items": items_out,
+        }
+
+    async def generate_completion_from_chain(
+        self,
+        item_id: UUID,
+        pm_employee_id: UUID,
+        client_name: str | None = None,
+        project_title: str | None = None,
+    ) -> dict[str, Any] | None:
+        """Mengompilasi seluruh rantai tugas yang telah selesai 100% ke dalam dokumen work_completion."""
+        chain = await self.get_task_chain_status(item_id)
+        if not chain:
+            return None
+
+        all_ids = chain["all_linked_item_ids"]
+        root_id = chain["root_item_id"]
+        total_target = int(chain["initial_total_target"])
+        total_completed = int(chain["total_completed_across_weeks"])
+
+        meta = await self.fetchone(
+            """
+            SELECT wpi.title, wpi.completion_id, wpw.division_id, wpw.weekly_plan_id,
+                   wpd.daily_plan_id, d.pm_id
+            FROM work_plan_item wpi
+            JOIN work_plan_daily wpd ON wpd.daily_plan_id = wpi.daily_plan_id
+            JOIN work_plan_weekly wpw ON wpw.weekly_plan_id = wpd.weekly_plan_id
+            JOIN division d ON d.division_id = wpw.division_id
+            WHERE wpi.item_id = CAST(:root_id AS uuid)
+            """,
+            {"root_id": str(root_id)},
+        )
+        if not meta:
+            return None
+
+        if chain["existing_completion_id"]:
+            comp_id = chain["existing_completion_id"]
+            await self.execute(
+                """
+                UPDATE work_completion
+                SET total_target_unit = CAST(:target AS integer),
+                    order_status = 'COMPLETED',
+                    summary_notes = :notes,
+                    update_at = NOW()
+                WHERE completion_id = CAST(:cid AS uuid) AND delete_at IS NULL
+                """,
+                {
+                    "cid": str(comp_id),
+                    "target": total_target,
+                    "notes": (
+                        f"Penyelesaian akumulasi tugas lintas jadwal "
+                        f"({total_completed}/{total_target} unit tuntas 100%)."
+                    ),
+
+                },
+            )
+        else:
+            c_name = client_name or "Klien Visiontech"
+            p_title = project_title or meta.title
+            notes = (
+                f"Penyelesaian akumulasi tugas lintas jadwal ({total_completed}/{total_target} unit tuntas 100%) "
+                f"melalui {len(all_ids)} tahapan kerja."
+            )
+
+            insert_comp = """
+            INSERT INTO work_completion (
+                report_scope, division_id, pm_id, client_name, project_title, order_number,
+                total_target_unit, unit_measure, order_status, priority_level,
+                summary_notes, obstacles, realization_photos_json,
+                weekly_plan_id, daily_plan_id
+            )
+            VALUES (
+                'WEEKLY',
+                CAST(:div_id AS uuid),
+                CAST(:pm_id AS uuid),
+                :client_name,
+                :project_title,
+                NULL,
+                CAST(:target AS integer),
+                'Unit',
+                'COMPLETED',
+                'NORMAL',
+                :notes,
+                NULL,
+                '[]'::jsonb,
+                CAST(:weekly_id AS uuid),
+                CAST(:daily_id AS uuid)
+            )
+            RETURNING completion_id
+            """
+            comp_row = await self.fetchone(
+                insert_comp,
+                {
+                    "div_id": str(meta.division_id),
+                    "pm_id": str(pm_employee_id or meta.pm_id),
+                    "client_name": c_name,
+                    "project_title": p_title,
+                    "target": total_target,
+                    "notes": notes,
+                    "weekly_id": str(meta.weekly_plan_id),
+                    "daily_id": str(meta.daily_plan_id),
+                },
+            )
+            comp_id = comp_row.completion_id
+
+        for i_id in all_ids:
+            await self.execute(
+                """
+                UPDATE work_plan_item
+                SET completion_id = CAST(:cid AS uuid),
+                    update_at = NOW()
+                WHERE item_id = CAST(:iid AS uuid) AND delete_at IS NULL
+                """,
+                {"cid": str(comp_id), "iid": str(i_id)},
+            )
+
+        return {
+            "success": True,
+            "completion_id": comp_id,
+            "total_target_unit": total_target,
+            "order_status": "COMPLETED",
+            "message": f"Work Completion ({comp_id}) berhasil dibuat dan ditautkan ke {len(all_ids)} item tugas.",
+        }
+
 
     async def reject_rollover(
         self,

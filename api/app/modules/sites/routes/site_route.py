@@ -1,7 +1,7 @@
 """
 app/modules/sites/routes/site_route.py
 
-Rute endpoint HTTP untuk lokasi kerja (/sites).
+Rute endpoint HTTP master kantor pusat & cabang (/sites, tabel office).
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.1.
 """
 
@@ -13,7 +13,7 @@ from app.api.deps import get_current_user, require_permission
 from app.core.permissions import Permission
 from app.core.security import CurrentUser
 from app.modules.sites.controllers.site_controller import SiteController
-from app.modules.sites.schemas.site_schema import SiteCreate, SiteResponse
+from app.modules.sites.schemas.site_schema import SiteCreate, SiteResponse, SiteUpdate
 
 router = APIRouter(prefix="/sites", tags=["Sites"])
 
@@ -25,7 +25,7 @@ async def get_sites(
     controller: SiteController = Depends(),
 ) -> list[SiteResponse]:
     """
-    Mengambil daftar lokasi kerja (GET).
+    Daftar kantor aktif (GET). Terbuka untuk semua pengguna; `can_manage` menandai hak kelola.
     """
     return await controller.handle_list_sites(current_user, for_attendance)
 
@@ -37,9 +37,22 @@ async def create_site(
     controller: SiteController = Depends(),
 ) -> SiteResponse:
     """
-    Membuat lokasi kerja baru (POST).
+    Membuat kantor baru (POST) — izin manage:sites.
     """
     return await controller.handle_create_site(current_user, data)
+
+
+@router.put("/{site_id}", response_model=SiteResponse)
+async def update_site(
+    site_id: UUID,
+    data: SiteUpdate,
+    current_user: CurrentUser = Depends(require_permission(Permission.MANAGE_SITES)),
+    controller: SiteController = Depends(),
+) -> SiteResponse:
+    """
+    Mengubah data kantor (PUT, sebagian) — izin manage:sites.
+    """
+    return await controller.handle_update_site(current_user, site_id, data)
 
 
 @router.delete("/{site_id}")
@@ -49,6 +62,6 @@ async def delete_site(
     controller: SiteController = Depends(),
 ) -> dict[str, str]:
     """
-    Menghapus lokasi kerja berdasarkan ID-nya (DELETE).
+    Menghapus (arsip) kantor cabang (DELETE) — izin manage:sites.
     """
     return await controller.handle_delete_site(current_user, site_id)

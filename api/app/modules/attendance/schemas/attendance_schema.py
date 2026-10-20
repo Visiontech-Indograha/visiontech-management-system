@@ -19,26 +19,6 @@ class GeoPoint(BaseModel):
     lng: float = Field(..., ge=-180, le=180)
 
 
-class SiteCreate(BaseModel):
-    """
-    Schema for creating a new work site.
-    """
-    name: str
-    address: str | None = None
-    location: GeoPoint
-    radius_m: int = Field(50, ge=10)
-
-
-class SiteResponse(SiteCreate):
-    """
-    Schema representing a work site in the system.
-    """
-    id: UUID
-    # None = lokasi kantor; terisi = lokasi proyek unit itu (R-33)
-    unit_id: UUID | None = None
-    # Menandakan apakah peminta boleh mengelola atau menghapus lokasi ini
-    can_manage: bool = False
-
 AttendanceChannel = Literal["MOBILE", "WEB"]
 
 

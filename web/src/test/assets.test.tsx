@@ -2,105 +2,89 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { apiError, mockApi, renderRoute } from "./utils";
 
-const asset = (over: Record<string, unknown> = {}) => ({
-  id: "a1",
-  kind: "VEHICLE",
-  vehicle_type: "Pick-up",
-  code: "KDR-01",
-  name: "L300 Putih",
-  condition: "Baik",
-  status: "AVAILABLE",
+const vehicle = (over: Record<string, unknown> = {}) => ({
+  vehicle_id: "v1",
+  office_id: "o1",
+  office_name: "Kantor Utama",
+  division_id: "d1",
+  division_name: "Divisi Sipil",
+  vehicle_type: "Car",
+  name: "Avanza Operasional",
+  number_plate: "BK 1452 ZN",
+  status: "ready",
+  stnk_expired_at: "2031-01-01",
+  kir_expired_at: null,
   ...over,
 });
-const plan = { id: "p1", title: "Instalasi CCTV", number: "Rencana Kerja/001", status: "IN_PROGRESS" };
-const employees = { items: [{ id: "e1", full_name: "Budi Supir", position: "Driver", employee_no: "1", join_date: "2024-01-01", is_active: true }], total: 1, page: 1, size: 100 };
+const tool = (over: Record<string, unknown> = {}) => ({
+  tool_id: "t1",
+  office_id: "o1",
+  office_name: "Kantor Utama",
+  division_id: null,
+  division_name: null,
+  ownership_type: "SHARED_TOOL",
+  category: "BOR",
+  name: "Bor Bosch",
+  tool_code: "TL-BOR-001",
+  status: "ready",
+  ...over,
+});
+const loan = {
+  assignment_id: "l1", asset_type: "TOOL", asset_id: "t2", asset_name: "Laptop", asset_code: "TL-LPT-001",
+  employee_id: "e1", employee_name: "Doni", daily_plan_id: null, work_date: null, assignment_status: "loaned",
+  loaned_at: "2026-10-01T02:00:00Z", returned_at: null,
+};
+const employees = { items: [{ id: "e1", full_name: "Doni", employee_no: "VT-08", join_date: "2024-01-01", is_active: true }], total: 1, page: 1, size: 25 };
 
-const setup = (assets: unknown[], extra?: (url: string) => { status?: number; data?: unknown } | undefined) =>
+const setup = (extra?: (url: string, method: string) => { status?: number; data?: unknown } | undefined) =>
   mockApi((c) => {
-    const hit = extra?.(c.url ?? "");
+    const hit = extra?.(c.url ?? "", c.method ?? "get");
     if (hit) return hit;
-    if (c.url === "/assets") return { data: assets };
-    if (c.url === "/work-plans") return { data: [plan, { ...plan, id: "p2", title: "Draf", status: "DRAFT" }] };
+    if (c.url === "/assets/vehicles") return { data: [vehicle(), vehicle({ vehicle_id: "v2", name: "L300", vehicle_type: "Truck", number_plate: "BK 8821 XA" })] };
+    if (c.url === "/assets/tools") return { data: [tool()] };
+    if (c.url === "/assets/loans") return { data: [loan] };
     if (c.url === "/employees") return { data: employees };
   });
 
-describe("Kendaraan & alat", () => {
-  it("daftar, kosong, galat", async () => {
-    setup([asset()]);
-    const first = renderRoute("/assets", { role: "field" });
-    expect(await screen.findByText("L300 Putih")).toBeInTheDocument();
-    expect(screen.getByText("Tersedia")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Alokasikan" })).toBeNull();
-    first.unmount();
+describe("Kendaraan & alat (M4)", () => {
+  it("kendaraan: status & masa berkas; truk tanpa KIR ditandai; lapangan tanpa tombol kelola", async () => {
+    setup();
+    renderRoute("/assets", { role: "field" });
+    expect(await screen.findByText("Avanza Operasional")).toBeInTheDocument();
+    expect(screen.getAllByText("Siap").length).toBeGreaterThan(0);
+    expect(screen.getByText("KIR belum ada")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Serahkan" })).toBeNull();
+  });
+
+  it("galat memuat menampilkan Coba lagi", async () => {
     mockApi(() => apiError(500, "INTERNAL_ERROR", "x"));
     renderRoute("/assets", { role: "ASSET" });
-    expect(await screen.findByRole("button", { name: "Coba lagi" })).toBeInTheDocument();
+    expect((await screen.findAllByRole("button", { name: "Coba lagi" })).length).toBeGreaterThan(0);
   });
 
-  it("alokasi kendaraan wajib pengemudi; hanya rencana kerja aktif ditawarkan", async () => {
-    const calls = setup([asset()], (url) =>
-      url === "/assets/a1/reserve"
-        ? { data: { id: "al1", asset_id: "a1", work_plan_id: "p1", driver_employee_id: "e1", allocated_by: "u", allocated_at: "2026-10-01T00:00:00Z", released_at: null } }
-        : undefined,
-    );
+  it("pengelola menyerahkan alat ke karyawan", async () => {
+    const calls = setup((url, method) => (url === "/assets/loans" && method === "post" ? { status: 201, data: loan } : undefined));
     renderRoute("/assets", { role: "ASSET" });
-    fireEvent.click(await screen.findByRole("button", { name: "Alokasikan" }));
-    const dialog = screen.getByRole("dialog", { name: "Alokasikan L300 Putih" });
-    await within(dialog).findByRole("option", { name: "Rencana Kerja/001 · Instalasi CCTV" });
-    expect(within(dialog).queryByRole("option", { name: /Draf/ })).toBeNull();
-    fireEvent.change(within(dialog).getByLabelText("Work plan"), { target: { value: "p1" } });
-    fireEvent.click(within(dialog).getByRole("button", { name: "Alokasikan" }));
-    expect(await within(dialog).findByText("Pilih pengemudi untuk aset kendaraan.")).toBeInTheDocument();
-    await within(dialog).findByRole("option", { name: "Budi Supir" });
-    fireEvent.change(within(dialog).getByLabelText("Pengemudi"), { target: { value: "e1" } });
-    fireEvent.click(within(dialog).getByRole("button", { name: "Alokasikan" }));
-    await waitFor(() => expect(calls.some((c) => c.url === "/assets/a1/reserve")).toBe(true));
-    expect(calls.find((c) => c.url === "/assets/a1/reserve")!.data).toEqual({ work_plan_id: "p1", driver_employee_id: "e1" });
-  });
-
-  it("pengemudi mengajukan banding kelayakan dengan alasan", async () => {
-    const calls = setup([asset({ status: "RESERVED" })], (url) =>
-      url === "/assets/a1/check" ? { data: { asset_id: "a1", status: "AVAILABLE" } } : undefined,
-    );
-    renderRoute("/assets", { role: "field" });
-    fireEvent.click(await screen.findByRole("button", { name: "Periksa Kendaraan" }));
-    const dialog = screen.getByRole("dialog", { name: "Periksa Kendaraan" });
-    fireEvent.change(within(dialog).getByLabelText("Hasil pemeriksaan"), { target: { value: "APPEAL" } });
-    fireEvent.click(within(dialog).getByRole("button", { name: "Simpan hasil" }));
-    expect(await within(dialog).findByText("Alasan banding kelayakan wajib diisi.")).toBeInTheDocument();
-    fireEvent.change(within(dialog).getByLabelText("Alasan (wajib jika banding)"), { target: { value: "Rem blong" } });
-    fireEvent.click(within(dialog).getByRole("button", { name: "Simpan hasil" }));
-    await waitFor(() => expect(calls.some((c) => c.url === "/assets/a1/check")).toBe(true));
-    expect(calls.find((c) => c.url === "/assets/a1/check")!.data).toEqual({ decision: "APPEAL", reason: "Rem blong" });
-  });
-
-  it("petugas aset menambah alat dengan vehicle_type null", async () => {
-    const calls = mockApi((c) => {
-      if (c.url === "/assets" && c.method === "post") return { status: 201, data: asset({ id: "a2", kind: "TOOL" }) };
-      if (c.url === "/assets") return { data: [] };
+    fireEvent.click(await screen.findByRole("button", { name: /^Alat/ }));
+    fireEvent.click(await screen.findByRole("button", { name: "Serahkan" }));
+    const dialog = screen.getByRole("dialog", { name: "Serahkan Bor Bosch" });
+    await within(dialog).findByRole("option", { name: /Doni/ });
+    fireEvent.change(within(dialog).getByLabelText("Karyawan penerima"), { target: { value: "e1" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Serahkan" }));
+    await waitFor(() => expect(calls.some((c) => c.method === "post" && c.url === "/assets/loans")).toBe(true));
+    expect(calls.find((c) => c.method === "post" && c.url === "/assets/loans")!.data).toEqual({
+      asset_type: "TOOL", tool_id: "t1", employee_id: "e1", handover_file_id: null,
     });
-    renderRoute("/assets", { role: "ASSET" });
-    fireEvent.click(await screen.findByRole("button", { name: "Tambah aset" }));
-    const dialog = screen.getByRole("dialog", { name: "Tambah aset" });
-    fireEvent.change(within(dialog).getByLabelText("Jenis aset"), { target: { value: "TOOL" } });
-    fireEvent.change(within(dialog).getByLabelText("Kode aset"), { target: { value: "ALT-1" } });
-    fireEvent.change(within(dialog).getByLabelText("Nama aset"), { target: { value: "Bor" } });
-    fireEvent.click(within(dialog).getByRole("button", { name: "Simpan" }));
-    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-    expect(calls.find((c) => c.method === "post")!.data).toEqual({ kind: "TOOL", vehicle_type: null, code: "ALT-1", name: "Bor", condition: "Baik" });
   });
 
-  it("melepas reservasi mengirim work_plan_id", async () => {
-    const calls = setup([asset({ status: "RESERVED" })], (url) =>
-      url === "/assets/a1/release" ? { data: { asset_id: "a1", status: "AVAILABLE" } } : undefined,
-    );
-    renderRoute("/assets", { role: "PM" });
-    fireEvent.click(await screen.findByRole("button", { name: "Lepas reservasi" }));
-    const dialog = screen.getByRole("dialog", { name: "Lepas reservasi L300 Putih" });
-    await within(dialog).findByRole("option", { name: "Rencana Kerja/001 · Instalasi CCTV" });
-    fireEvent.change(within(dialog).getByLabelText("Work plan"), { target: { value: "p1" } });
-    fireEvent.click(within(dialog).getByRole("button", { name: "Lepas reservasi" }));
-    await waitFor(() => expect(calls.some((c) => c.url === "/assets/a1/release")).toBe(true));
-    expect(calls.find((c) => c.url === "/assets/a1/release")!.data).toEqual({ work_plan_id: "p1" });
+  it("pengelola menerima pengembalian dengan kondisi rusak", async () => {
+    const calls = setup((url) => (url === "/assets/loans/l1/return" ? { data: { ...loan, returned_at: "x" } } : undefined));
+    renderRoute("/assets", { role: "ASSET" });
+    fireEvent.click(await screen.findByRole("button", { name: /^Sedang dipinjam/ }));
+    fireEvent.click(await screen.findByRole("button", { name: "Terima kembali" }));
+    const dialog = screen.getByRole("dialog");
+    fireEvent.change(within(dialog).getByLabelText("Kondisi saat dikembalikan"), { target: { value: "damaged" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Terima pengembalian" }));
+    await waitFor(() => expect(calls.find((c) => c.url === "/assets/loans/l1/return")?.data).toEqual({ condition: "damaged" }));
   });
 });

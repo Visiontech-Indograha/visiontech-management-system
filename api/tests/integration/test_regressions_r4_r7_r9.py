@@ -3,7 +3,7 @@ V-13 · Regresi wajib tersisa (dok 07 §3).
 - R4: dokumen terbit tidak berubah — setiap kolom isi `plan_document` ditolak saat UPDATE; yang boleh
   berubah hanya siklusnya (status) dan pencatatan penerimaan, sekali tulis.
 - R7: bentrok personel benar-benar ditandai.
-- R9: siklus aset pesan → kembali → (tolak → kembali lagi) → verifikasi selesai tanpa jalan buntu.
+- R9 (siklus aset) dipindah ke tests/modules/assets/test_asset_loans.py — alur V2 serah terima/pengembalian.
 """
 from __future__ import annotations
 
@@ -88,74 +88,3 @@ def test_r7_conflicting_member_is_flagged(client, world):
     assert overlapping["conflicts"] == [{"id": plan_id, "number": number, "title": "Instalasi CCTV gudang"}]
     assert conflicts(today + timedelta(days=30), today + timedelta(days=31))["has_conflict"] is False
     assert conflicts(today, today + timedelta(days=5), exclude=plan_id)["has_conflict"] is False
-
-
-# ── R9 ────────────────────────────────────────────────────────────────────────────────────────
-def test_r9_asset_cycle_has_no_dead_end(client, world):
-    plan_id, _ = run_plan_to_in_progress(client, world)
-    officer, leader = world.headers(client, "asset"), world.headers(client, "leader")
-    asset = client.post("/assets", headers=officer,
-                        json={"kind": "TOOL", "code": "TL-R9", "name": "Tangga lipat", "condition": "BAIK"})
-    asset_id = asset.json()["id"]
-
-    def allocate():
-        return client.post(f"/assets/{asset_id}/reserve", headers=officer, json={"work_plan_id": plan_id})
-
-    def request_return():
-        return client.post(f"/assets/allocations/{alloc_id}/return", headers=leader,
-                           json={"condition_on_return": "BAIK", "note": "Selesai dipakai"})
-
-    def verify(return_id, accepted, note):
-        return client.post(f"/assets/returns/{return_id}/verify", headers=officer,
-                           json={"is_accepted": accepted, "note": note})
-
-    def asset_status():
-        return sync_query("SELECT status::text FROM vms.asset WHERE id = %s", (asset_id,))[0][0]
-
-    allocated = allocate()
-    assert allocated.status_code == 200, allocated.text
-    alloc_id = allocated.json()["id"]
-
-    first = request_return()
-    assert first.status_code == 200, first.text
-    assert asset_status() == "RETURN_PENDING"
-    duplicate = request_return()
-    assert duplicate.status_code == 409 and duplicate.json()["error"]["message"] == \
-        "Aset belum dipinjam atau sudah menunggu verifikasi."
-
-    rejected = verify(first.json()["id"], False, "Anak tangga retak")
-    assert rejected.status_code == 200, rejected.text
-    assert asset_status() == "IN_USE"                                 # kembali ke tim, bukan buntu
-    again = verify(first.json()["id"], True, "coba lagi")
-    assert again.status_code == 409 and again.json()["error"]["message"] == \
-        "Aset belum menunggu verifikasi pengembalian."
-
-    second = request_return()
-    assert second.status_code == 200, second.text
-    accepted = verify(second.json()["id"], True, "Sudah diperbaiki")
-    assert accepted.status_code == 200, accepted.text
-    assert asset_status() == "AVAILABLE"
-    assert sync_query("SELECT released_at IS NOT NULL FROM vms.asset_allocation WHERE id = %s", (alloc_id,)) \
-        == [(True,)]
-    assert request_return().status_code == 409                        # alokasi sudah dilepas
-
-    reallocated = allocate()                                          # aset benar-benar bisa dipakai lagi
-    assert reallocated.status_code == 200, reallocated.text
-
-
-def test_asset_return_of_another_organisation_cannot_be_verified(client, world, other_world):
-    """Jalur ber-id `return_id` dibatasi organisasi (celah V-09 yang tersisa)."""
-    plan_id, _ = run_plan_to_in_progress(client, world)
-    officer = world.headers(client, "asset")
-    asset_id = client.post("/assets", headers=officer, json={
-        "kind": "TOOL", "code": "TL-ASING", "name": "Bor", "condition": "BAIK"}).json()["id"]
-    alloc_id = client.post(f"/assets/{asset_id}/reserve", headers=officer,
-                           json={"work_plan_id": plan_id}).json()["id"]
-    return_id = client.post(f"/assets/allocations/{alloc_id}/return", headers=world.headers(client, "leader"),
-                            json={"condition_on_return": "BAIK"}).json()["id"]
-
-    response = client.post(f"/assets/returns/{return_id}/verify", headers=other_world.headers(client, "asset"),
-                           json={"is_accepted": True, "note": "bukan milik saya"})
-
-    assert response.status_code == 404, response.text
-    assert sync_query("SELECT verified_at IS NULL FROM vms.asset_return WHERE id = %s", (return_id,)) == [(True,)]

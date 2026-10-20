@@ -1,153 +1,215 @@
 """
-app/schemas/asset.py
-
-Request and response schemas for assets and their allocations.
+app/modules/assets/schemas/asset_schema.py
+Skema inventaris aset V2 (Milestone 4): alat (tool), kendaraan (vehicle) beserta berkas & inspeksinya,
+dan peminjaman (asset_assignment). Berkas/foto dirujuk lewat `file_id` (file_object); kolom `*_path`
+menyimpan `file_object.storage_key`.
 """
-from datetime import datetime
+from __future__ import annotations
+
+import re
+from datetime import date, datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator, model_validator
+
+Ownership = Literal["PERSONAL_LOAN", "SHARED_TOOL"]
+ToolCategory = Literal["BAJU", "LAPTOP", "SEPATU", "BOR", "TANGGA", "LAINNYA"]
+VehicleType = Literal["Motorcycle", "Car", "Truck"]
+AssetStatus = Literal["ready", "allocated", "loaned", "damaged", "lost", "pension"]
+# Status yang boleh diubah manual; allocated/loaned hanya lewat peminjaman.
+ManualStatus = Literal["ready", "damaged", "lost", "pension"]
+ReturnCondition = Literal["ready", "damaged", "lost"]
+VehicleFileType = Literal["STNK", "BPKB", "KIR"]
+InspectionType = Literal["day", "month", "year", "repair", "profile"]
+AssetType = Literal["TOOL", "VEHICLE"]
 
 
-class AssetCreate(BaseModel):
-    """
-    Schema for creating a new asset.
-    """
-    # Kategori aset, wajib dipilih dari enum DB (kendaraan atau perkakas)
-    kind: Literal["VEHICLE", "TOOL"]
-    vehicle_type: str | None = None
-    code: str
+def normalise_plate(value: str) -> str:
+    """'bk1452zn' / 'BK  1452 ZN' → 'BK 1452 ZN'."""
+    text = re.sub(r"[^A-Z0-9]", "", value.upper())
+    m = re.fullmatch(r"([A-Z]{1,2})(\d{1,4})([A-Z]{0,3})", text)
+    return " ".join(p for p in m.groups() if p) if m else " ".join(value.upper().split())
+
+
+# ── Alat ───────────────────────────────────────────────────────────────────────
+class ToolCreate(BaseModel):
+    office_id: UUID
+    division_id: UUID | None = None
+    ownership_type: Ownership
+    category: ToolCategory
+    name: str = Field(min_length=2, max_length=100)
+    tool_code: str = Field(min_length=2, max_length=50)
+    photo_file_id: UUID | None = None
+
+    @field_validator("tool_code")
+    @classmethod
+    def _code(cls, value: str) -> str:
+        return value.strip().upper()
+
+
+class ToolUpdate(BaseModel):
+    office_id: UUID | None = None
+    division_id: UUID | None = None
+    ownership_type: Ownership | None = None
+    category: ToolCategory | None = None
+    name: str | None = Field(default=None, min_length=2, max_length=100)
+    tool_code: str | None = Field(default=None, min_length=2, max_length=50)
+    photo_file_id: UUID | None = None
+
+    @field_validator("tool_code")
+    @classmethod
+    def _code(cls, value: str | None) -> str | None:
+        return value.strip().upper() if value else value
+
+
+class AssetHolder(BaseModel):
+    """Peminjaman yang sedang berjalan atas aset ini (returned_at IS NULL)."""
+
+    assignment_id: UUID | None = None
+    holder_employee_id: UUID | None = None
+    holder_name: str | None = None
+    daily_plan_id: UUID | None = None
+
+
+class ToolOut(AssetHolder):
+    tool_id: UUID
+    office_id: UUID
+    office_name: str
+    division_id: UUID | None = None
+    division_name: str | None = None
+    ownership_type: Ownership
+    category: ToolCategory
     name: str
-    condition: str = "Baik"
+    tool_code: str
+    status: AssetStatus
+    photo_file_id: UUID | None = None
 
 
-class AssetResponse(AssetCreate):
-    """
-    Schema for asset responses, adding system properties like ID and status.
-    """
-    id: UUID
-    status: str
+# ── Kendaraan ──────────────────────────────────────────────────────────────────
+class VehicleCreate(BaseModel):
+    office_id: UUID
+    division_id: UUID
+    vehicle_type: VehicleType
+    name: str = Field(min_length=2, max_length=150)
+    number_plate: str = Field(min_length=3, max_length=20)
+    photo_file_id: UUID | None = None
+
+    @field_validator("number_plate")
+    @classmethod
+    def _plate(cls, value: str) -> str:
+        return normalise_plate(value)
 
 
-class AssetListItem(AssetResponse):
-    """
-    Schema for an asset listed with its current allocation and pending return requests.
-    Aset + alokasi berjalan + pengajuan pengembalian yang menunggu (R-19, M6).
-    """
-    allocation_id: UUID | None = None
-    work_plan_id: UUID | None = None
-    plan_number: str | None = None
-    leader_employee_id: UUID | None = None
-    pending_return_id: UUID | None = None
-    return_condition: str | None = None
-    return_note: str | None = None
-    return_requested_by_name: str | None = None
+class VehicleUpdate(BaseModel):
+    office_id: UUID | None = None
+    division_id: UUID | None = None
+    vehicle_type: VehicleType | None = None
+    name: str | None = Field(default=None, min_length=2, max_length=150)
+    number_plate: str | None = Field(default=None, min_length=3, max_length=20)
+    photo_file_id: UUID | None = None
+
+    @field_validator("number_plate")
+    @classmethod
+    def _plate(cls, value: str | None) -> str | None:
+        return normalise_plate(value) if value else value
 
 
-class PlanAssetItem(BaseModel):
-    """
-    Schema for an asset associated with a specific work plan.
-    """
-    id: UUID
+class VehicleOut(AssetHolder):
+    vehicle_id: UUID
+    office_id: UUID
+    office_name: str
+    division_id: UUID
+    division_name: str
+    vehicle_type: VehicleType
     name: str
-    code: str
-    kind: str
-    vehicle_type: str | None
-    driver_name: str | None
-    allocated_at: datetime
-    released_at: datetime | None
-    returned_condition: str | None
-    return_accepted: bool | None
-    # Alur SK v2: tombol "Kembalikan" di HP ketua
-    allocation_id: UUID | None = None
-    asset_status: str | None = None
+    number_plate: str
+    status: AssetStatus
+    photo_file_id: UUID | None = None
+    stnk_expired_at: date | None = None
+    kir_expired_at: date | None = None
 
 
-class AssetReturnHistoryItem(BaseModel):
-    """
-    Schema representing the historical record of an asset return.
-    """
-    id: UUID
-    plan_number: str | None
-    requested_by_name: str
-    requested_at: datetime
-    condition_on_return: str | None
-    note: str | None
-    verified_by_name: str | None
-    verified_at: datetime | None
-    is_accepted: bool | None
+class AssetStatusUpdate(BaseModel):
+    status: ManualStatus
 
 
-class AssetReserveRequest(BaseModel):
-    """
-    Schema for requesting to reserve an asset.
-    """
-    work_plan_id: UUID
-    driver_employee_id: UUID | None = None
+# ── Berkas & inspeksi kendaraan ───────────────────────────────────────────────
+class VehicleFileCreate(BaseModel):
+    type: VehicleFileType
+    file_id: UUID
+    active_at: date | None = None  # default: hari ini (WIB)
+    expired_at: date
+
+    @model_validator(mode="after")
+    def _period(self) -> VehicleFileCreate:
+        if self.active_at and self.expired_at < self.active_at:
+            raise ValueError("Tanggal kedaluwarsa tidak boleh sebelum tanggal berlaku.")
+        return self
 
 
-class AssetReleaseRequest(BaseModel):
-    """
-    Schema for requesting to release a reserved asset.
-    """
-    work_plan_id: UUID
+class VehicleFileOut(BaseModel):
+    vehicle_file_id: UUID
+    vehicle_id: UUID
+    type: VehicleFileType
+    status: Literal["active", "not_active", "extended"]
+    active_at: date
+    expired_at: date
+    file_id: UUID | None = None
+    created_at: datetime
 
 
-class AssetCheckRequest(BaseModel):
-    """
-    Schema for asset return check decision.
-    """
-    decision: Literal["ACCEPT", "APPEAL"]
-    reason: str | None = None
+class InspectionCreate(BaseModel):
+    type: InspectionType
+    file_id: UUID
 
 
-class AssetStatusResponse(BaseModel):
-    """
-    Schema for reporting an asset's status.
-    """
+class InspectionOut(BaseModel):
+    vehicle_inspection_id: UUID
+    vehicle_id: UUID
+    type: InspectionType
+    inspector_employee_id: UUID | None = None
+    inspector_name: str | None = None
+    file_id: UUID | None = None
+    created_at: datetime
+
+
+# ── Peminjaman ────────────────────────────────────────────────────────────────
+class LoanCreate(BaseModel):
+    """Serah terima aset ke karyawan; `daily_plan_id` mengaitkannya ke jadwal harian tim (opsional)."""
+
+    asset_type: AssetType
+    tool_id: UUID | None = None
+    vehicle_id: UUID | None = None
+    employee_id: UUID
+    daily_plan_id: UUID | None = None
+    handover_file_id: UUID | None = None
+
+    @model_validator(mode="after")
+    def _one_asset(self) -> LoanCreate:
+        tool = self.asset_type == "TOOL"
+        wanted, other = (self.tool_id, self.vehicle_id) if tool else (self.vehicle_id, self.tool_id)
+        if wanted is None or other is not None:
+            field = "tool_id" if self.asset_type == "TOOL" else "vehicle_id"
+            raise ValueError(f"Isi {field} saja sesuai jenis aset {self.asset_type}.")
+        return self
+
+
+class LoanReturn(BaseModel):
+    condition: ReturnCondition = "ready"
+
+
+class LoanOut(BaseModel):
+    assignment_id: UUID
+    asset_type: AssetType
     asset_id: UUID
-    status: str
-
-
-class AssetAllocationResponse(BaseModel):
-    """
-    Schema detailing a specific asset allocation to a work plan.
-    """
-    id: UUID
-    asset_id: UUID
-    work_plan_id: UUID
-    driver_employee_id: UUID | None
-    allocated_by: UUID
-    allocated_at: datetime
-    released_at: datetime | None
-
-
-class AssetReturnCreate(BaseModel):
-    """
-    Schema for requesting an asset return.
-    """
-    condition_on_return: str
-    note: str | None = None
-
-
-class AssetReturnVerify(BaseModel):
-    """
-    Schema for verifying and accepting or rejecting an asset return.
-    """
-    is_accepted: bool
-    note: str | None = None
-
-
-class AssetReturnResponse(BaseModel):
-    """
-    Schema detailing the outcome of an asset return process.
-    """
-    id: UUID
-    asset_allocation_id: UUID
-    requested_by: UUID
-    requested_at: datetime
-    verified_by: UUID | None
-    verified_at: datetime | None
-    condition_on_return: str | None
-    is_accepted: bool | None
+    asset_name: str
+    asset_code: str
+    employee_id: UUID
+    employee_name: str
+    daily_plan_id: UUID | None = None
+    work_date: date | None = None
+    assignment_status: AssetStatus
+    loaned_at: datetime
+    returned_at: datetime | None = None
+    handover_file_id: UUID | None = None

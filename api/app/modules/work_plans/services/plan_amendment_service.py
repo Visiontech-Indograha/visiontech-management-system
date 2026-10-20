@@ -17,7 +17,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.enums import ChangeStatus, ChangeType, DocumentKind, DocumentStatus, PlanStatus
 from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationError, trigger_rule_error
 from app.core.time import jakarta_now
-from app.modules.assets.repositories.asset_repository import CRUDAssetReservation
 from app.modules.notifications.services.notification_service import NotificationService
 from app.modules.signatures.services.signature_service import ACCEPTOR, ISSUER, SignatureService
 from app.modules.work_plans.repositories.plan_amendment_repository import CRUDPlanAmendment
@@ -47,7 +46,6 @@ class PlanAmendmentService:
         self.changes = CRUDPlanChange(db)
         self.plans = CRUDPlanTransition(db)
         self.drafts = CRUDPlanDraft(db)
-        self.assets = CRUDAssetReservation(db)
         self.notify = NotificationService(db)
 
     async def list_changes(self, plan_id: UUID) -> list[Any]:
@@ -198,11 +196,7 @@ class PlanAmendmentService:
                 await self.repo.close_member(plan.id, removed, today)
             for added in wanted_members - current_members:
                 await self.drafts.insert_member(plan.id, added, "MEMBER", max(today, plan.period_start))
-            allocated = await self.repo.allocated_asset_ids(plan.id)
-            for tool in data.tool_ids:
-                if str(tool) not in allocated:
-                    await self.assets.insert_allocation(tool, plan.id, None, access.user.user_id)
-                    await self.assets.set_asset_status(tool, "IN_USE")
+            # Alat untuk tim kini dipinjamkan lewat serah terima aset (POST /assets/loans, Milestone 4).
         except IntegrityError as exc:
             raise (trigger_rule_error(exc) or _state("Jadwal bentrok dengan rencana kerja lain.")) from None
 

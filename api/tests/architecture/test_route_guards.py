@@ -41,9 +41,12 @@ SELF_SERVICE = {
     ("GET", "/events"): "aliran peristiwa milik sendiri; token JWT divalidasi sekali saat menyambung (T8)",
     ("GET", "/work-types"): "daftar jenis pekerjaan organisasi sendiri; yang nonaktif hanya untuk pengelola (T9)",
     ("GET", "/units"): "daftar unit organisasi sendiri (pilihan mutasi/promosi, R-19)",
-    ("GET", "/assets/{asset_id}/returns"): "riwayat pengembalian aset organisasi sendiri; asing → 404 (diuji)",
-    ("GET", "/assets/returns/{return_id}/pdf"): "BAST pengembalian organisasi sendiri; asing → 404 (diuji)",
-    ("GET", "/assets"): "daftar aset organisasi (CHECK_ASSET oleh tim)",
+    ("GET", "/assets/tools"): "inventaris alat (baca saja) untuk perencanaan & HP tim (M4)",
+    ("GET", "/assets/vehicles"): "inventaris kendaraan + masa STNK/KIR (baca saja, M4)",
+    ("GET", "/assets/vehicles/{vehicle_id}/files"): "berkas kendaraan (baca saja, M4)",
+    ("GET", "/assets/vehicles/{vehicle_id}/inspections"): "riwayat inspeksi kendaraan (baca saja, M4)",
+    ("GET", "/assets/loans"): "pengelola aset/peran kantor semua; pekerja lapangan hanya miliknya (M4, diuji)",
+    ("GET", "/work-plans/daily/{daily_plan_id}/assets"): "aset jadwal harian: anggota tim semua, lainnya miliknya",
     ("GET", "/attendance"): "R-33: milik sendiri; PM + bawahan lapangan unitnya; FINANCE/OPS seluruh organisasi (diuji)",
     ("POST", "/attendance/check-in"): "absensi sendiri",
     ("POST", "/attendance/check-out"): "absensi sendiri",
@@ -72,10 +75,8 @@ GUARDED_IN_HANDLER = {
     ("POST", "/changes/{change_id}/accept"): "PlanChangeService: ketua (EXTEND) / ketua baru (PERSONNEL)",
     ("POST", "/changes/{change_id}/reject"): "PlanChangeService: ketua/PM (EXTEND) / ketua baru (PERSONNEL)",
     ("POST", "/changes/{change_id}/withdraw"): "PlanChangeService: PM unit/OPS, hanya PERSONNEL",
-    # V-27: SK ada di badan permintaan; pengemudi ditentukan alokasi aset.
-    ("POST", "/assets/{asset_id}/reserve"): "AssetReservationService: manage:assets atau PM unit/OPS SK (diuji)",
-    ("POST", "/assets/{asset_id}/release"): "AssetReservationService: manage:assets atau PM unit/OPS SK (diuji)",
-    ("POST", "/assets/{asset_id}/check"): "AssetReservationService: hanya pengemudi yang ditunjuk (diuji)",
+    # M4: inspeksi oleh pengelola aset ATAU pemegang kendaraan saat itu (ditentukan peminjaman berjalan).
+    ("POST", "/assets/vehicles/{vehicle_id}/inspections"): "AssetService: manage:assets atau pemegang (diuji)",
     # V-28: SK ada di badan/kueri atau ditentukan baris lembur.
     ("POST", "/overtime"): "OvertimeService: SK terlihat + ketua/anggota (diuji)",
     ("GET", "/overtime"): "OvertimeService: check_plan_access(VIEW) untuk work_plan_id (diuji)",

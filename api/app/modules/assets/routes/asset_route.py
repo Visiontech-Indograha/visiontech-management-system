@@ -1,127 +1,193 @@
 """
 app/modules/assets/routes/asset_route.py
 
-Rute endpoint HTTP untuk manajemen aset (/assets).
+Rute endpoint HTTP inventaris aset (/assets): alat, kendaraan (+ berkas & inspeksi), peminjaman.
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.1.
 """
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, Depends, Query, status
 
-from app.api.deps import allocation_plan_access, get_current_user, require_permission
+from app.api.deps import get_current_user, require_permission
 from app.core.permissions import Permission
 from app.core.security import CurrentUser
 from app.modules.assets.controllers.asset_controller import AssetController
 from app.modules.assets.schemas.asset_schema import (
-    AssetAllocationResponse,
-    AssetCheckRequest,
-    AssetCreate,
-    AssetListItem,
-    AssetReleaseRequest,
-    AssetReserveRequest,
-    AssetResponse,
-    AssetReturnCreate,
-    AssetReturnHistoryItem,
-    AssetReturnResponse,
-    AssetReturnVerify,
-    AssetStatusResponse,
+    AssetStatus,
+    AssetStatusUpdate,
+    InspectionCreate,
+    InspectionOut,
+    LoanCreate,
+    LoanOut,
+    LoanReturn,
+    ToolCreate,
+    ToolOut,
+    ToolUpdate,
+    VehicleCreate,
+    VehicleFileCreate,
+    VehicleFileOut,
+    VehicleOut,
+    VehicleUpdate,
 )
-from app.shared.access.access_service import PlanAccess, PlanNeed
 
 router = APIRouter(prefix="/assets", tags=["Assets"])
-_ALLOCATION_LEADER_ACCESS = Depends(allocation_plan_access(PlanNeed.LEADER))
+_MANAGE = Depends(require_permission(Permission.MANAGE_ASSETS))
+_LOGIN = Depends(get_current_user)
 
 
-@router.post("", response_model=AssetResponse, status_code=status.HTTP_201_CREATED)
-async def create_asset(
-    data: AssetCreate,
-    current_user: CurrentUser = Depends(require_permission(Permission.MANAGE_ASSETS)),
+# ── Alat ───────────────────────────────────────────────────────────────────────
+@router.get("/tools", response_model=list[ToolOut])
+async def list_tools(
+    office_id: UUID | None = None,
+    asset_status: AssetStatus | None = Query(None, alias="status"),
+    current_user: CurrentUser = _LOGIN,
     controller: AssetController = Depends(),
-) -> AssetResponse:
-    """Membuat aset baru."""
-    return await controller.handle_create_asset(current_user, data)
+) -> list[ToolOut]:
+    """Daftar alat (pribadi & umum) beserta pemegangnya saat ini."""
+    return await controller.handle_list_tools(office_id, asset_status)
 
 
-@router.get("", response_model=list[AssetListItem])
-async def get_assets(
-    current_user: CurrentUser = Depends(get_current_user),
+@router.post("/tools", response_model=ToolOut, status_code=status.HTTP_201_CREATED)
+async def create_tool(
+    data: ToolCreate, current_user: CurrentUser = _MANAGE, controller: AssetController = Depends()
+) -> ToolOut:
+    """Mendaftarkan alat baru (kode alat unik)."""
+    return await controller.handle_create_tool(data)
+
+
+@router.put("/tools/{tool_id}", response_model=ToolOut)
+async def update_tool(
+    tool_id: UUID, data: ToolUpdate, current_user: CurrentUser = _MANAGE, controller: AssetController = Depends()
+) -> ToolOut:
+    """Mengubah data alat (sebagian)."""
+    return await controller.handle_update_tool(tool_id, data)
+
+
+@router.post("/tools/{tool_id}/status", response_model=ToolOut)
+async def set_tool_status(
+    tool_id: UUID, data: AssetStatusUpdate, current_user: CurrentUser = _MANAGE,
     controller: AssetController = Depends(),
-) -> list[AssetListItem]:
-    """Aset organisasi + alokasi berjalan + pengajuan pengembalian yang menunggu."""
-    return await controller.handle_list_assets(current_user)
+) -> ToolOut:
+    """Menandai alat siap/rusak/hilang/pensiun (tidak saat sedang dipinjam)."""
+    return await controller.handle_tool_status(tool_id, data.status)
 
 
-@router.get("/{asset_id}/returns", response_model=list[AssetReturnHistoryItem])
-async def get_asset_returns(
-    asset_id: UUID,
-    current_user: CurrentUser = Depends(get_current_user),
+@router.delete("/tools/{tool_id}")
+async def delete_tool(
+    tool_id: UUID, current_user: CurrentUser = _MANAGE, controller: AssetController = Depends()
+) -> dict[str, str]:
+    """Menghapus (soft delete) alat yang tidak sedang dipinjam."""
+    return await controller.handle_delete("TOOL", tool_id)
+
+
+# ── Kendaraan ──────────────────────────────────────────────────────────────────
+@router.get("/vehicles", response_model=list[VehicleOut])
+async def list_vehicles(
+    office_id: UUID | None = None,
+    asset_status: AssetStatus | None = Query(None, alias="status"),
+    current_user: CurrentUser = _LOGIN,
     controller: AssetController = Depends(),
-) -> list[AssetReturnHistoryItem]:
-    """Riwayat pengembalian aset (terbaru dulu)."""
-    return await controller.handle_return_history(current_user, asset_id)
+) -> list[VehicleOut]:
+    """Daftar kendaraan beserta masa berlaku STNK/KIR dan pemegangnya saat ini."""
+    return await controller.handle_list_vehicles(office_id, asset_status)
 
 
-@router.get("/returns/{return_id}/pdf", response_class=Response)
-async def get_bast_pdf(
-    return_id: UUID,
-    current_user: CurrentUser = Depends(get_current_user),
+@router.post("/vehicles", response_model=VehicleOut, status_code=status.HTTP_201_CREATED)
+async def create_vehicle(
+    data: VehicleCreate, current_user: CurrentUser = _MANAGE, controller: AssetController = Depends()
+) -> VehicleOut:
+    """Mendaftarkan kendaraan baru (nomor polisi unik)."""
+    return await controller.handle_create_vehicle(data)
+
+
+@router.put("/vehicles/{vehicle_id}", response_model=VehicleOut)
+async def update_vehicle(
+    vehicle_id: UUID, data: VehicleUpdate, current_user: CurrentUser = _MANAGE,
     controller: AssetController = Depends(),
-) -> Response:
-    """Berita acara serah terima (BAST) untuk pengembalian yang sudah diperiksa."""
-    return await controller.handle_bast_pdf(current_user, return_id)
+) -> VehicleOut:
+    """Mengubah data kendaraan (sebagian)."""
+    return await controller.handle_update_vehicle(vehicle_id, data)
 
 
-@router.post("/{asset_id}/reserve", response_model=AssetAllocationResponse)
-async def reserve_asset(
-    asset_id: UUID,
-    data: AssetReserveRequest,
-    current_user: CurrentUser = Depends(get_current_user),
+@router.post("/vehicles/{vehicle_id}/status", response_model=VehicleOut)
+async def set_vehicle_status(
+    vehicle_id: UUID, data: AssetStatusUpdate, current_user: CurrentUser = _MANAGE,
     controller: AssetController = Depends(),
-) -> AssetAllocationResponse:
-    """Petugas aset atau PM unit/OPS memesan aset untuk SK aktif."""
-    return await controller.handle_reserve(current_user, asset_id, data)
+) -> VehicleOut:
+    """Menandai kendaraan siap/rusak/hilang/pensiun (tidak saat sedang dipinjam)."""
+    return await controller.handle_vehicle_status(vehicle_id, data.status)
 
 
-@router.post("/{asset_id}/release", response_model=AssetStatusResponse)
-async def release_asset(
-    asset_id: UUID,
-    data: AssetReleaseRequest,
-    current_user: CurrentUser = Depends(get_current_user),
+@router.delete("/vehicles/{vehicle_id}")
+async def delete_vehicle(
+    vehicle_id: UUID, current_user: CurrentUser = _MANAGE, controller: AssetController = Depends()
+) -> dict[str, str]:
+    """Menghapus (soft delete) kendaraan yang tidak sedang dipinjam."""
+    return await controller.handle_delete("VEHICLE", vehicle_id)
+
+
+@router.get("/vehicles/{vehicle_id}/files", response_model=list[VehicleFileOut])
+async def list_vehicle_files(
+    vehicle_id: UUID, current_user: CurrentUser = _LOGIN, controller: AssetController = Depends()
+) -> list[VehicleFileOut]:
+    """Berkas kendaraan (STNK, BPKB, KIR)."""
+    return await controller.handle_vehicle_files(vehicle_id)
+
+
+@router.post("/vehicles/{vehicle_id}/files", response_model=list[VehicleFileOut], status_code=201)
+async def add_vehicle_file(
+    vehicle_id: UUID, data: VehicleFileCreate, current_user: CurrentUser = _MANAGE,
     controller: AssetController = Depends(),
-) -> AssetStatusResponse:
-    """Reservasi yang belum dipakai dilepas."""
-    return await controller.handle_release(current_user, asset_id, data)
+) -> list[VehicleFileOut]:
+    """Mencatat berkas kendaraan; berkas sejenis yang lama menjadi `extended`."""
+    return await controller.handle_add_vehicle_file(vehicle_id, data)
 
 
-@router.post("/{asset_id}/check", response_model=AssetStatusResponse)
-async def check_asset(
-    asset_id: UUID,
-    data: AssetCheckRequest,
-    current_user: CurrentUser = Depends(get_current_user),
+@router.get("/vehicles/{vehicle_id}/inspections", response_model=list[InspectionOut])
+async def list_inspections(
+    vehicle_id: UUID, current_user: CurrentUser = _LOGIN, controller: AssetController = Depends()
+) -> list[InspectionOut]:
+    """Riwayat inspeksi kendaraan (terbaru dulu)."""
+    return await controller.handle_inspections(vehicle_id)
+
+
+@router.post("/vehicles/{vehicle_id}/inspections", response_model=list[InspectionOut], status_code=201)
+async def add_inspection(
+    vehicle_id: UUID, data: InspectionCreate, current_user: CurrentUser = _LOGIN,
     controller: AssetController = Depends(),
-) -> AssetStatusResponse:
-    """Pengemudi yang ditunjuk menyatakan kendaraan layak atau banding."""
-    return await controller.handle_check(current_user, asset_id, data)
+) -> list[InspectionOut]:
+    """Mencatat inspeksi kendaraan — pengelola aset atau pemegang kendaraan saat ini."""
+    return await controller.handle_add_inspection(current_user, vehicle_id, data)
 
 
-@router.post("/allocations/{alloc_id}/return", response_model=AssetReturnResponse)
-async def request_asset_return(
-    alloc_id: UUID,
-    data: AssetReturnCreate,
-    access: PlanAccess = _ALLOCATION_LEADER_ACCESS,
+# ── Peminjaman ────────────────────────────────────────────────────────────────
+@router.get("/loans", response_model=list[LoanOut])
+async def list_loans(
+    open_only: bool = Query(True, alias="open"),
+    employee_id: UUID | None = None,
+    daily_plan_id: UUID | None = None,
+    current_user: CurrentUser = _LOGIN,
     controller: AssetController = Depends(),
-) -> AssetReturnResponse:
-    """Formulir BAST pengembalian aset — diajukan ketua tim menurut SK peminjam."""
-    return await controller.handle_request_return(access, alloc_id, data)
+) -> list[LoanOut]:
+    """Peminjaman aset (default: yang belum dikembalikan). Pekerja lapangan hanya melihat miliknya."""
+    return await controller.handle_loans(
+        current_user, open_only=open_only, employee_id=employee_id, daily_plan_id=daily_plan_id
+    )
 
 
-@router.post("/returns/{return_id}/verify", response_model=AssetReturnResponse)
-async def verify_asset_return(
-    return_id: UUID,
-    data: AssetReturnVerify,
-    current_user: CurrentUser = Depends(require_permission(Permission.MANAGE_ASSETS)),
+@router.post("/loans", response_model=LoanOut, status_code=status.HTTP_201_CREATED)
+async def lend_asset(
+    data: LoanCreate, current_user: CurrentUser = _MANAGE, controller: AssetController = Depends()
+) -> LoanOut:
+    """Serah terima aset ke karyawan (opsional dikaitkan ke jadwal harian tim)."""
+    return await controller.handle_lend(data)
+
+
+@router.post("/loans/{assignment_id}/return", response_model=LoanOut)
+async def return_asset(
+    assignment_id: UUID, data: LoanReturn, current_user: CurrentUser = _MANAGE,
     controller: AssetController = Depends(),
-) -> AssetReturnResponse:
-    """Verifikasi BAST pengembalian aset oleh petugas OPS/Aset."""
-    return await controller.handle_verify_return(current_user, return_id, data)
+) -> LoanOut:
+    """Pengembalian aset dengan kondisinya (ready/damaged/lost)."""
+    return await controller.handle_return(assignment_id, data.condition)

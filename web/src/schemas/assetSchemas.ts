@@ -1,31 +1,23 @@
 import { z } from "zod";
 
-/** Validasi form aset: tambah aset, lepas reservasi, periksa kendaraan, ajukan & periksa pengembalian. */
-export const createSchema = z
-  .object({
-    kind: z.enum(["VEHICLE", "TOOL"]),
-    vehicle_type: z.string().trim(),
-    code: z.string().trim().min(1, "Kode aset wajib diisi."),
-    name: z.string().trim().min(1, "Nama aset wajib diisi."),
-    condition: z.string().trim().min(1, "Kondisi wajib diisi."),
-  })
-  .refine((v) => v.kind === "TOOL" || v.vehicle_type.length > 0, { path: ["vehicle_type"], message: "Jenis kendaraan wajib diisi." });
-export type CreateValues = z.infer<typeof createSchema>;
+/** Validasi form aset V2: tambah alat/kendaraan, (serah terima & berkas divalidasi di dialognya). */
+const required = (label: string) => z.string().trim().min(1, `${label} wajib diisi.`);
 
-export const releaseSchema = z.object({ work_plan_id: z.string().min(1, "Pilih work plan.") });
-
-export const checkSchema = z
-  .object({ decision: z.enum(["ACCEPT", "APPEAL"]), reason: z.string().trim() })
-  .refine((v) => v.decision === "ACCEPT" || v.reason.length > 0, { path: ["reason"], message: "Alasan banding kelayakan wajib diisi." });
-export type CheckValues = z.infer<typeof checkSchema>;
-
-export const returnSchema = z.object({
-  condition_on_return: z.string().trim().min(1, "Kondisi saat dikembalikan wajib diisi."),
-  note: z.string().trim(),
+export const toolSchema = z.object({
+  office_id: required("Kantor"),
+  division_id: z.string(),
+  ownership_type: z.enum(["PERSONAL_LOAN", "SHARED_TOOL"]),
+  category: z.enum(["BAJU", "LAPTOP", "SEPATU", "BOR", "TANGGA", "LAINNYA"]),
+  name: z.string().trim().min(2, "Nama alat minimal 2 karakter."),
+  tool_code: z.string().trim().min(2, "Kode alat minimal 2 karakter."),
 });
-export type ReturnValues = z.infer<typeof returnSchema>;
+export type ToolValues = z.infer<typeof toolSchema>;
 
-export const verifySchema = z
-  .object({ decision: z.enum(["ACCEPT", "REJECT"]), note: z.string().trim() })
-  .refine((v) => v.decision === "ACCEPT" || v.note.length > 0, { path: ["note"], message: "Alasan penolakan wajib diisi." });
-export type VerifyValues = z.infer<typeof verifySchema>;
+export const vehicleSchema = z.object({
+  office_id: required("Kantor"),
+  division_id: required("Divisi"),
+  vehicle_type: z.enum(["Motorcycle", "Car", "Truck"]),
+  name: z.string().trim().min(2, "Nama kendaraan minimal 2 karakter."),
+  number_plate: z.string().trim().min(3, "Nomor polisi wajib diisi."),
+});
+export type VehicleValues = z.infer<typeof vehicleSchema>;

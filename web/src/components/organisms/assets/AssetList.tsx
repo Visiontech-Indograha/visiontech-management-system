@@ -1,251 +1,173 @@
 /**
  * web/src/components/organisms/assets/AssetList.tsx
- * Komponen daftar kendaraan dan peralatan kerja dengan tab terpisah,
- * filter kepemilikan alat (Personal Loan vs Shared Tool), dan penanganan status alokasi.
+ * Inventaris aset V2: tab Kendaraan / Alat / Sedang dipinjam. Pemegang & masa STNK/KIR dari API;
+ * tindakan (serahkan, terima kembali, status, berkas) hanya untuk pengelola aset.
  */
 
 import { useState } from "react";
-import type { UseQueryResult } from "@tanstack/react-query";
+import { ActionButton } from "@/components/molecules/ActionButton";
+import { ListBlock, ListEntry, ListPair } from "@/components/molecules/ListBlock";
+import { Pill } from "@/components/molecules/Pill";
 import { QueryState } from "@/components/molecules/QueryState";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
-import type { Asset } from "@/services/assetService";
-import { ActionButton } from "@/components/molecules/ActionButton";
 import { TextBlock } from "@/components/molecules/TextBlock";
-import { ListBlock, ListEntry, ListPair } from "@/components/molecules/ListBlock";
-import { Button } from "@/components/atoms/Button";
-import {
-  Car,
-  HardHat,
-  Truck,
-  Wrench,
-} from "lucide-react";
+import { formatDate } from "@/lib/format";
+import { useLoans, useTools, useVehicles, type AssetKind, type Loan, type Tool, type Vehicle } from "@/services/assetService";
 
-/** Dialog aset yang dibuka dari kartu. */
-export type AssetAction = {
-  kind: "reserve" | "release" | "check" | "return" | "verify" | "history";
-  asset: Asset;
-};
+/** Dialog yang dibuka dari kartu aset. */
+export type AssetAction =
+  | { kind: "lend"; asset: AssetKind; id: string; name: string }
+  | { kind: "status"; asset: AssetKind; id: string; name: string; status: string }
+  | { kind: "files"; vehicle: Vehicle }
+  | { kind: "return"; loan: Loan };
 
-export function AssetList({
-  assets,
-  canManage,
-  canReserve,
-  isBorrowingLeader,
-  onOpen,
-}: {
-  assets: UseQueryResult<Asset[]>;
-  canManage: boolean;
-  canReserve: boolean;
-  isBorrowingLeader: (asset: Asset) => boolean;
-  onOpen: (action: AssetAction) => void;
-}) {
-  const [activeTab, setActiveTab] = useState<"VEHICLE" | "TOOL">("VEHICLE");
-  const [toolOwnershipFilter, setToolOwnershipFilter] = useState<"ALL" | "PERSONAL" | "SHARED">("ALL");
+type Tab = "VEHICLE" | "TOOL" | "LOANS";
+const VEHICLE_TYPE: Record<string, string> = { Motorcycle: "Motor", Car: "Mobil", Truck: "Truk / pick-up" };
+const OWNERSHIP: Record<string, string> = { PERSONAL_LOAN: "Alat pribadi", SHARED_TOOL: "Alat bersama" };
 
-  const allAssets = assets.data ?? [];
-  const vehicles = allAssets.filter((a) => a.kind === "VEHICLE");
-  const tools = allAssets.filter((a) => a.kind === "TOOL");
+function today(): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(new Date());
+}
 
-  const filteredTools = tools.filter((t) => {
-    if (toolOwnershipFilter === "ALL") return true;
-    const lowerName = (t.name || "").toLowerCase();
-    const isPersonal = lowerName.includes("baju") || lowerName.includes("sepatu") || lowerName.includes("laptop") || lowerName.includes("helm");
-    if (toolOwnershipFilter === "PERSONAL") return isPersonal;
-    if (toolOwnershipFilter === "SHARED") return !isPersonal;
-    return true;
-  });
+function PaperPill({ label, date, required }: { label: string; date?: string | null; required: boolean }) {
+  if (!date) return required ? <Pill tone="danger">{`${label} belum ada`}</Pill> : null;
+  if (date < today()) return <Pill tone="danger">{`${label} kedaluwarsa`}</Pill>;
+  return <Pill tone="neutral">{`${label} s.d. ${formatDate(date)}`}</Pill>;
+}
 
-  const displayedAssets = activeTab === "VEHICLE" ? vehicles : filteredTools;
+function Holder({ name }: { name?: string | null }) {
+  return name ? <ListPair>Dipegang: <TextBlock as="span" className="text-ink">{name}</TextBlock></ListPair> : null;
+}
+
+function TabButton({ active, onClick, label, count }: { active: boolean; onClick: () => void; label: string; count?: number }) {
+  return (
+    <ActionButton variant={active ? "default" : "outline"} size="sm" onClick={onClick} className="h-9 text-xs">
+      {count !== undefined ? `${label} (${count})` : label}
+    </ActionButton>
+  );
+}
+
+export function AssetList({ canManage, onOpen }: { canManage: boolean; onOpen: (action: AssetAction) => void }) {
+  const [tab, setTab] = useState<Tab>("VEHICLE");
+  const vehicles = useVehicles();
+  const tools = useTools();
+  const loans = useLoans(true);
 
   return (
     <div className="space-y-4">
-      {/* Tab Navigasi Utama: Kendaraan vs Peralatan */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-3">
-        <div className="flex items-center gap-2">
-          <Button
-            variant={activeTab === "VEHICLE" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setActiveTab("VEHICLE")}
-            className="text-xs h-9 gap-2"
-          >
-            <Truck className="w-4 h-4 text-sky-400" />
-            <span>Armada Kendaraan</span>
-            <span className="ml-1 text-[11px] px-1.5 py-0.2 rounded-full bg-slate-800 text-slate-300">
-              {vehicles.length}
-            </span>
-          </Button>
-
-          <Button
-            variant={activeTab === "TOOL" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setActiveTab("TOOL")}
-            className="text-xs h-9 gap-2"
-          >
-            <Wrench className="w-4 h-4 text-amber-400" />
-            <span>Peralatan Kerja</span>
-            <span className="ml-1 text-[11px] px-1.5 py-0.2 rounded-full bg-slate-800 text-slate-300">
-              {tools.length}
-            </span>
-          </Button>
-        </div>
-
-        {/* Sub-filter untuk Tab Peralatan */}
-        {activeTab === "TOOL" && (
-          <div className="flex items-center gap-1.5 text-xs">
-            <button
-              type="button"
-              onClick={() => setToolOwnershipFilter("ALL")}
-              className={`px-2.5 py-1 rounded-md border text-xs transition ${
-                toolOwnershipFilter === "ALL"
-                  ? "bg-amber-600 text-white border-amber-600 font-medium"
-                  : "bg-surface text-mist border-line hover:text-foreground"
-              }`}
-            >
-              Semua ({tools.length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setToolOwnershipFilter("PERSONAL")}
-              className={`px-2.5 py-1 rounded-md border text-xs flex items-center gap-1 transition ${
-                toolOwnershipFilter === "PERSONAL"
-                  ? "bg-amber-600 text-white border-amber-600 font-medium"
-                  : "bg-surface text-mist border-line hover:text-foreground"
-              }`}
-            >
-              <HardHat className="w-3 h-3" />
-              Pinjaman Pribadi
-            </button>
-            <button
-              type="button"
-              onClick={() => setToolOwnershipFilter("SHARED")}
-              className={`px-2.5 py-1 rounded-md border text-xs flex items-center gap-1 transition ${
-                toolOwnershipFilter === "SHARED"
-                  ? "bg-amber-600 text-white border-amber-600 font-medium"
-                  : "bg-surface text-mist border-line hover:text-foreground"
-              }`}
-            >
-              <Wrench className="w-3 h-3" />
-              Peralatan Bersama
-            </button>
-          </div>
-        )}
+      <div className="flex flex-wrap gap-2 border-b border-line pb-3">
+        <TabButton active={tab === "VEHICLE"} onClick={() => setTab("VEHICLE")} label="Kendaraan" count={vehicles.data?.length} />
+        <TabButton active={tab === "TOOL"} onClick={() => setTab("TOOL")} label="Alat" count={tools.data?.length} />
+        <TabButton active={tab === "LOANS"} onClick={() => setTab("LOANS")} label="Sedang dipinjam" count={loans.data?.length} />
       </div>
 
-      {/* Konten Daftar Aset */}
-      <QueryState
-        query={assets}
-        errorText="Daftar aset tidak dapat dimuat."
-        empty={displayedAssets.length === 0}
-        emptyText={
-          activeTab === "VEHICLE"
-            ? "Belum ada kendaraan operasional yang terdaftar."
-            : "Tidak ada peralatan kerja yang sesuai dengan filter."
-        }
-      >
-        <ListBlock className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {displayedAssets.map((a) => {
-            const isVehicle = a.kind === "VEHICLE";
-
-            return (
-              <ListEntry
-                key={a.id}
-                className="flex flex-col gap-2 rounded-panel border border-line bg-surface shadow-card p-4 hover:border-slate-700 transition"
-              >
+      {tab === "VEHICLE" && (
+        <QueryState query={vehicles} errorText="Daftar kendaraan tidak dapat dimuat." empty={vehicles.data?.length === 0} emptyText="Belum ada kendaraan.">
+          <ListBlock className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {vehicles.data?.map((v) => (
+              <ListEntry key={v.vehicle_id} className="flex flex-col gap-2 rounded-panel border border-line bg-surface p-4 shadow-card">
                 <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-1.5 text-xs font-semibold tracking-wide text-mist">
-                    {isVehicle ? (
-                      <>
-                        <Car className="w-3.5 h-3.5 text-sky-400" />
-                        <span>KENDARAAN</span>
-                      </>
-                    ) : (
-                      <>
-                        <Wrench className="w-3.5 h-3.5 text-amber-400" />
-                        <span>PERALATAN</span>
-                      </>
-                    )}
-                  </div>
-                  <StatusBadge status={a.status} />
+                  <TextBlock as="span" className="font-mono text-sm">{v.number_plate}</TextBlock>
+                  <StatusBadge status={v.status} />
                 </div>
-
-                <TextBlock as="h2" className="font-medium text-base text-white">
-                  {a.name}
-                </TextBlock>
-
-                <ListBlock as="dl" className="text-xs text-mist space-y-1">
-                  <ListPair>Kode / Plat: <span className="font-mono text-slate-200">{a.code}</span></ListPair>
-                  <ListPair>Kondisi: <span className="text-slate-200">{a.condition}</span></ListPair>
-                  {a.vehicle_type && <ListPair>Kategori: {a.vehicle_type}</ListPair>}
-                  {a.plan_number && (
-                    <ListPair className="text-sky-400 font-medium">
-                      Alokasi: Rencana Kerja #{a.plan_number}
-                    </ListPair>
-                  )}
-                  {a.pending_return_id && (
-                    <ListPair className="mt-1 text-warning bg-amber-950/40 p-2 rounded border border-amber-800/40">
-                      Pengembalian diajukan oleh {a.return_requested_by_name ?? "ketua tim"} · kondisi {a.return_condition}
-                      {a.return_note ? ` — "${a.return_note}"` : ""}
-                    </ListPair>
-                  )}
+                <TextBlock as="h2" className="text-base font-medium">{v.name}</TextBlock>
+                <ListBlock as="dl" className="space-y-1 text-xs text-mist">
+                  <ListPair>{VEHICLE_TYPE[v.vehicle_type]} · {v.division_name} · {v.office_name}</ListPair>
+                  <Holder name={v.holder_name} />
                 </ListBlock>
-
-                <div className="mt-auto pt-2 border-t border-line/60 flex flex-wrap gap-2">
-                  {canReserve && a.status === "AVAILABLE" && (
-                    <ActionButton size="sm" onClick={() => onOpen({ kind: "reserve", asset: a })}>
-                      Alokasikan
-                    </ActionButton>
-                  )}
-                  {canReserve && a.status === "RESERVED" && (
-                    <ActionButton
-                      size="sm"
-                      variant="outline"
-                      onClick={() => onOpen({ kind: "release", asset: a })}
-                    >
-                      Lepas reservasi
-                    </ActionButton>
-                  )}
-                  {isBorrowingLeader(a) &&
-                    a.allocation_id &&
-                    !a.pending_return_id &&
-                    ["IN_USE", "RESERVED"].includes(a.status) && (
-                      <ActionButton
-                        size="sm"
-                        variant="outline"
-                        onClick={() => onOpen({ kind: "return", asset: a })}
-                      >
-                        Ajukan pengembalian
-                      </ActionButton>
-                    )}
-                  {canManage && a.status === "RETURN_PENDING" && a.pending_return_id && (
-                    <ActionButton
-                      size="sm"
-                      onClick={() => onOpen({ kind: "verify", asset: a })}
-                    >
-                      Periksa pengembalian
-                    </ActionButton>
-                  )}
-                  <ActionButton
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => onOpen({ kind: "history", asset: a })}
-                  >
-                    Riwayat
-                  </ActionButton>
-                  {isVehicle && a.status === "RESERVED" && (
-                    <ActionButton
-                      size="sm"
-                      variant="outline"
-                      onClick={() => onOpen({ kind: "check", asset: a })}
-                    >
-                      Inspeksi Fisik
-                    </ActionButton>
-                  )}
+                <div className="flex flex-wrap gap-1">
+                  <PaperPill label="STNK" date={v.stnk_expired_at} required />
+                  <PaperPill label="KIR" date={v.kir_expired_at} required={v.vehicle_type === "Truck"} />
                 </div>
+                <VehicleActions vehicle={v} canManage={canManage} onOpen={onOpen} />
               </ListEntry>
-            );
-          })}
-        </ListBlock>
-      </QueryState>
+            ))}
+          </ListBlock>
+        </QueryState>
+      )}
+
+      {tab === "TOOL" && (
+        <QueryState query={tools} errorText="Daftar alat tidak dapat dimuat." empty={tools.data?.length === 0} emptyText="Belum ada alat.">
+          <ListBlock className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {tools.data?.map((t) => (
+              <ListEntry key={t.tool_id} className="flex flex-col gap-2 rounded-panel border border-line bg-surface p-4 shadow-card">
+                <div className="flex items-center justify-between gap-2">
+                  <TextBlock as="span" className="font-mono text-sm">{t.tool_code}</TextBlock>
+                  <StatusBadge status={t.status} />
+                </div>
+                <TextBlock as="h2" className="text-base font-medium">{t.name}</TextBlock>
+                <ListBlock as="dl" className="space-y-1 text-xs text-mist">
+                  <ListPair>{OWNERSHIP[t.ownership_type]} · {t.division_name ?? "Semua divisi"} · {t.office_name}</ListPair>
+                  <Holder name={t.holder_name} />
+                </ListBlock>
+                <ToolActions tool={t} canManage={canManage} onOpen={onOpen} />
+              </ListEntry>
+            ))}
+          </ListBlock>
+        </QueryState>
+      )}
+
+      {tab === "LOANS" && (
+        <QueryState query={loans} errorText="Daftar peminjaman tidak dapat dimuat." empty={loans.data?.length === 0} emptyText="Tidak ada aset yang sedang dipinjam.">
+          <ListBlock className="divide-y divide-line rounded-panel border border-line bg-surface shadow-card">
+            {loans.data?.map((l) => (
+              <ListEntry key={l.assignment_id} className="flex flex-wrap items-center gap-3 px-4 py-3 text-sm">
+                <div className="min-w-0 flex-1">
+                  <TextBlock className="font-medium">{l.asset_name} · {l.asset_code}</TextBlock>
+                  <TextBlock className="text-xs text-mist">
+                    {l.employee_name} · sejak {formatDate(l.loaned_at)}
+                    {l.work_date ? ` · jadwal ${formatDate(l.work_date)}` : ""}
+                  </TextBlock>
+                </div>
+                <StatusBadge status={l.assignment_status} />
+                {canManage && (
+                  <ActionButton size="sm" variant="outline" onClick={() => onOpen({ kind: "return", loan: l })}>
+                    Terima kembali
+                  </ActionButton>
+                )}
+              </ListEntry>
+            ))}
+          </ListBlock>
+        </QueryState>
+      )}
+    </div>
+  );
+}
+
+function VehicleActions({ vehicle: v, canManage, onOpen }: { vehicle: Vehicle; canManage: boolean; onOpen: (a: AssetAction) => void }) {
+  return (
+    <div className="mt-auto flex flex-wrap gap-2 border-t border-line/60 pt-2">
+      {canManage && v.status === "ready" && (
+        <ActionButton size="sm" onClick={() => onOpen({ kind: "lend", asset: "VEHICLE", id: v.vehicle_id, name: v.name })}>
+          Serahkan
+        </ActionButton>
+      )}
+      <ActionButton size="sm" variant="outline" onClick={() => onOpen({ kind: "files", vehicle: v })}>
+        Berkas
+      </ActionButton>
+      {canManage && !v.assignment_id && (
+        <ActionButton size="sm" variant="ghost" onClick={() => onOpen({ kind: "status", asset: "VEHICLE", id: v.vehicle_id, name: v.name, status: v.status })}>
+          Status
+        </ActionButton>
+      )}
+    </div>
+  );
+}
+
+function ToolActions({ tool: t, canManage, onOpen }: { tool: Tool; canManage: boolean; onOpen: (a: AssetAction) => void }) {
+  if (!canManage) return null;
+  return (
+    <div className="mt-auto flex flex-wrap gap-2 border-t border-line/60 pt-2">
+      {t.status === "ready" && (
+        <ActionButton size="sm" onClick={() => onOpen({ kind: "lend", asset: "TOOL", id: t.tool_id, name: t.name })}>
+          Serahkan
+        </ActionButton>
+      )}
+      {!t.assignment_id && (
+        <ActionButton size="sm" variant="ghost" onClick={() => onOpen({ kind: "status", asset: "TOOL", id: t.tool_id, name: t.name, status: t.status })}>
+          Status
+        </ActionButton>
+      )}
     </div>
   );
 }

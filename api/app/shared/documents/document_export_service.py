@@ -165,6 +165,8 @@ class DocumentExportService:
 
         wb = openpyxl.Workbook()
         ws_info = wb.active
+        if ws_info is None:  # Workbook() baru selalu punya satu sheet aktif
+            raise AppError("EXPORT_FAILED", "Lembar kerja Excel tidak dapat dibuat.", status=500)
         ws_info.title = "Ringkasan Rencana"
 
         plan = detail.get("plan", {})
@@ -268,9 +270,9 @@ class DocumentExportService:
 
         # Auto-adjust column widths
         for sheet in wb.worksheets:
-            for col in sheet.columns:
+            for col_idx, col in enumerate(sheet.columns, start=sheet.min_column):
                 max_len = max(len(str(cell.value or "")) for cell in col)
-                col_letter = get_column_letter(col[0].column)
+                col_letter = get_column_letter(col_idx)
                 sheet.column_dimensions[col_letter].width = min(max(max_len + 3, 12), 45)
 
         buffer = io.BytesIO()

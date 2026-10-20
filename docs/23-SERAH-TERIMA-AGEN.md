@@ -26,7 +26,7 @@ setiap kali Anda menutup sesi dengan perubahan berarti.
   - Akun lokal: `.local_tests/real-logins.txt`.
   - Keduanya git-ignored.
   - URL webhook Discord juga tidak boleh dicetak.
-- Jangan ubah pengaturan perangkat HP. (`prototype/` sudah dihapus 2026-10-20; baca lewat `git show 84008895:prototype/<path>`.)
+- Jangan ubah pengaturan perangkat HP. (`prototype/` sudah dihapus 2026-10-20; baca lewat `git show f3a519f0:prototype/<path>`.)
 - Aksi yang merusak atau yang dijalankan di server: minta konfirmasi dan buat backup dulu.
 - Prioritas: fitur MVP.
 

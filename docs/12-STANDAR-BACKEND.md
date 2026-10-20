@@ -92,7 +92,7 @@ def get_unit_service(db: AsyncSession = Depends(get_db_with_user)) -> UnitServic
 
 ### Service — `modules/<m>/services/<entitas>_service.py`
 **Tempat aturan bisnis.** Nama metode = transaksi di `domain.js` prototipe (`publish`, `accept`, …; prototipe
-dibaca lewat `git show 84008895:prototype/js/domain.js`). Tidak menulis SQL, tidak tahu HTTP/JSON, melempar
+dibaca lewat `git show f3a519f0:prototype/js/domain.js`). Tidak menulis SQL, tidak tahu HTTP/JSON, melempar
 `AppError` berpesan Indonesia (galat DB: `raise db_error(e) from e`).
 
 ```python

@@ -13,7 +13,7 @@ import pytest
 from app.core.errors import AppError
 from app.core.events import broker
 from app.core.security import create_jwt_token, verify_jwt_token
-from app.services.auth_service import AuthService, ClientInfo
+from app.modules.auth.services.auth_service import AuthService, ClientInfo
 
 
 def test_jwt_contains_auth_time_claim():
@@ -66,7 +66,7 @@ async def test_max_4_devices_limit_enforced():
 
     client = ClientInfo(ip="192.168.1.10", user_agent="Mozilla/5.0", device_label="Device 5", fingerprint="fp-5")
 
-    with patch("app.services.auth_service.verify_password", return_value=True):
+    with patch("app.modules.auth.services.auth_service.verify_password", return_value=True):
         with pytest.raises(AppError) as exc_info:
             await service.login("staf@example.com", "Secret123!", client, platform="mobile")
         assert exc_info.value.code == "MAX_DEVICES_REACHED"
@@ -79,7 +79,7 @@ async def test_max_4_devices_limit_enforced():
     service.sessions.record_login_attempt = AsyncMock()
     service._start_session = AsyncMock(return_value=MagicMock(access_token="tok", refresh_token="ref"))
 
-    with patch("app.services.auth_service.verify_password", return_value=True):
+    with patch("app.modules.auth.services.auth_service.verify_password", return_value=True):
         tokens = await service.login("staf@example.com", "Secret123!", client, platform="mobile")
         assert tokens.access_token == "tok"
         service.sessions.revoke_family.assert_awaited_once_with(
@@ -111,7 +111,7 @@ async def test_security_login_event_broadcast():
     published_events = []
     with (
         patch.object(broker, "publish", side_effect=lambda users, ev: published_events.append((users, ev))),
-        patch("app.services.auth_service.verify_password", return_value=True),
+        patch("app.modules.auth.services.auth_service.verify_password", return_value=True),
     ):
         client = ClientInfo(ip="10.0.0.1", user_agent="Chrome", device_label="Laptop Baru")
         await service.login("admin@example.com", "Secret123!", client, platform="web")
@@ -136,7 +136,7 @@ async def test_refresh_token_expired_does_not_trigger_discord_alert():
 
     client = ClientInfo(ip="192.168.1.1", user_agent="Mozilla")
 
-    with patch("app.services.auth_service.send_security_alert") as mock_alert:
+    with patch("app.modules.auth.services.auth_service.send_security_alert") as mock_alert:
         with pytest.raises(AppError) as exc_info:
             await service.refresh("expired-token", client)
         assert exc_info.value.code == "INVALID_TOKEN"

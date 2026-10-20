@@ -60,7 +60,7 @@ def _cycle(client, world: World) -> tuple[str, str]:
 
 
 def test_return_history_and_bast_pdf(client, world: World, other_world, monkeypatch):
-    import app.api.v1.endpoints.assets as assets_api
+    import app.modules.assets.controllers.asset_controller as assets_api
 
     asset_id, return_id = _cycle(client, world)
     history = client.get(f"/assets/{asset_id}/returns", headers=world.headers(client, "member"))

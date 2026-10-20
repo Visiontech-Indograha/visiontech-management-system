@@ -24,10 +24,10 @@ from app.core.enums import PlanStatus
 from app.core.errors import AppError, ConflictError, ForbiddenError, NotFoundError, trigger_rule_error
 from app.core.permissions import RoleCode, SystemRole
 from app.core.security import CurrentUser
-from app.crud.crud_asset_reservation import CRUDAssetReservation
+from app.modules.assets.repositories.asset_repository import CRUDAssetReservation
 from app.modules.work_plans.repositories.plan_draft_repository import CRUDPlanDraft
 from app.modules.work_plans.schemas.plan_draft_schema import PlanDraftRequest
-from app.services.work_type_service import WorkTypeService
+from app.modules.work_types.services.work_type_service import WorkTypeService
 from app.shared.access.access_service import ensure_same_org
 
 PM_ROLES = (

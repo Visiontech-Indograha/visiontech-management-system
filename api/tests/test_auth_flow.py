@@ -186,7 +186,7 @@ def test_unknown_login_still_runs_password_hash(monkeypatch):
     email mana yang terdaftar."""
     import asyncio
 
-    from app.services import auth_service as svc
+    from app.modules.auth.services import auth_service as svc
 
     calls: list[str] = []
     monkeypatch.setattr(svc, "verify_password", lambda pw, h: calls.append(h) or False)

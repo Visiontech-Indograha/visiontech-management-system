@@ -28,6 +28,9 @@ from app.modules.signatures.schemas.signature_schema import (
 from app.modules.signatures.services.signature_service import SignatureService
 from app.shared.documents.pdf_service import html_to_pdf, render_plan_document_html
 
+# Batas verifikasi publik per IP: VERIFY_LIMIT permintaan dalam VERIFY_WINDOW detik.
+VERIFY_LIMIT = 30
+VERIFY_WINDOW = 60.0
 _verify_hits: dict[str, deque[float]] = defaultdict(deque)
 
 
@@ -91,14 +94,10 @@ class PublicSignatureController:
 
     async def handle_verify(self, token: str, client_ip: str) -> VerifyOut:
         """Verifikasi keabsahan tanda tangan secara publik dari hasil pindai QR."""
-        limit = 30
-        window = 60.0
-        hits_dict = _verify_hits
-
-        now, hits = time.monotonic(), hits_dict[client_ip]
-        while hits and now - hits[0] > window:
+        now, hits = time.monotonic(), _verify_hits[client_ip]
+        while hits and now - hits[0] > VERIFY_WINDOW:
             hits.popleft()
-        if len(hits) >= limit:
+        if len(hits) >= VERIFY_LIMIT:
             raise AppError("TOO_MANY_REQUESTS", "Terlalu sering memeriksa. Coba lagi sebentar lagi.", status=429)
         hits.append(now)
 

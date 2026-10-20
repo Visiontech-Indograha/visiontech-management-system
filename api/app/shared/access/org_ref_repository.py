@@ -1,6 +1,7 @@
 """
 app/shared/access/org_ref_repository.py
-Kepemilikan rujukan di badan permintaan Master Schema V2.
+Kepemilikan rujukan di badan permintaan Master Schema V2. Rencana kerja = `work_plan_daily` (model daily-first;
+`work_plan_weekly` tidak ada lagi di test_migration).
 """
 
 from __future__ import annotations
@@ -31,7 +32,7 @@ class CRUDOrgRef(CRUDBase):
         return await self.fetchone(
             """
             SELECT
-                (SELECT count(*) FROM work_plan_weekly WHERE weekly_plan_id = ANY(CAST(:work_plans AS uuid[]))
+                (SELECT count(*) FROM work_plan_daily WHERE daily_plan_id = ANY(CAST(:work_plans AS uuid[]))
                     AND delete_at IS NULL) AS work_plans,
                 (SELECT count(*) FROM (
                     SELECT office_id AS id FROM office

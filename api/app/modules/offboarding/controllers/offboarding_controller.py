@@ -9,6 +9,7 @@ from uuid import UUID
 from fastapi import Depends
 
 from app.core.security import CurrentUser
+from app.modules.offboarding.dependencies import get_offboarding_service
 from app.modules.offboarding.schemas.offboarding_schema import (
     ClearanceItemVerify,
     OffboardingApprove,
@@ -22,7 +23,7 @@ from app.modules.offboarding.services.offboarding_service import OffboardingServ
 class OffboardingController:
     """Controller use case proses pengunduran diri/offboarding dan serah terima aset."""
 
-    def __init__(self, offboarding_service: OffboardingService = Depends()) -> None:
+    def __init__(self, offboarding_service: OffboardingService = Depends(get_offboarding_service)) -> None:
         self.service = offboarding_service
 
     async def handle_list_offboardings(

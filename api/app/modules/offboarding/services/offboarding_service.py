@@ -8,10 +8,8 @@ from collections.abc import Sequence
 from typing import Any
 from uuid import UUID
 
-from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_db_with_user
 from app.core.errors import NotFoundError, ValidationError
 from app.modules.offboarding.repositories.offboarding_repository import OffboardingRepository
 from app.modules.offboarding.schemas.offboarding_schema import (
@@ -24,7 +22,7 @@ from app.modules.offboarding.schemas.offboarding_schema import (
 class OffboardingService:
     """Service use case offboarding dan clearance aset."""
 
-    def __init__(self, db: AsyncSession = Depends(get_db_with_user)) -> None:
+    def __init__(self, db: AsyncSession) -> None:
         self.repo = OffboardingRepository(db)
 
     async def list_offboardings(self, status: str | None = None) -> Sequence[Any]:

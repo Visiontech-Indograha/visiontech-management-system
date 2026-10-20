@@ -8,10 +8,8 @@ from collections.abc import Sequence
 from typing import Any
 from uuid import UUID
 
-from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_db_with_user
 from app.core.errors import NotFoundError
 from app.modules.teams.repositories.team_repository import TeamRepository
 from app.modules.teams.schemas.team_schema import TeamCreate, TeamUpdate
@@ -20,7 +18,7 @@ from app.modules.teams.schemas.team_schema import TeamCreate, TeamUpdate
 class TeamService:
     """Service use case tim dan anggota."""
 
-    def __init__(self, db: AsyncSession = Depends(get_db_with_user)) -> None:
+    def __init__(self, db: AsyncSession) -> None:
         self.repo = TeamRepository(db)
 
     async def list_teams(self, division_id: UUID | None = None) -> Sequence[Any]:

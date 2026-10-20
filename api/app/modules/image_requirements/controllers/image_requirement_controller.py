@@ -9,6 +9,7 @@ from uuid import UUID
 from fastapi import Depends
 
 from app.core.security import CurrentUser
+from app.modules.image_requirements.dependencies import get_image_requirement_service
 from app.modules.image_requirements.schemas.image_requirement_schema import (
     ImageRequirementCreate,
     ImageRequirementOut,
@@ -20,7 +21,7 @@ from app.modules.image_requirements.services.image_requirement_service import Im
 class ImageRequirementController:
     """Controller pengelolaan persyaratan foto dokumentasi jenis pekerjaan."""
 
-    def __init__(self, service: ImageRequirementService = Depends()) -> None:
+    def __init__(self, service: ImageRequirementService = Depends(get_image_requirement_service)) -> None:
         self.service = service
 
     async def handle_list_by_work_type(

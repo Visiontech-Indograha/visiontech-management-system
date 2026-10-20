@@ -9,6 +9,7 @@ from uuid import UUID
 from fastapi import Depends
 
 from app.core.security import CurrentUser
+from app.modules.teams.dependencies import get_team_service
 from app.modules.teams.schemas.team_schema import (
     MemberAdd,
     TeamCreate,
@@ -22,7 +23,7 @@ from app.modules.teams.services.team_service import TeamService
 class TeamController:
     """Controller pengelolaan tim kerja dan anggota tim."""
 
-    def __init__(self, team_service: TeamService = Depends()) -> None:
+    def __init__(self, team_service: TeamService = Depends(get_team_service)) -> None:
         self.service = team_service
 
     async def handle_list_teams(

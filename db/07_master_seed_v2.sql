@@ -28,18 +28,19 @@ INSERT INTO employee (employee_id, office_id, full_name, employee_no, join_date,
 ON CONFLICT (employee_id) DO NOTHING;
 
 -- 3. Seed users (11 Akun Login terpisah dari tabel employee - Konfirmasi 1B)
+-- Kata sandi uji semua akun seed: Admin123! (argon2id; dipakai koleksi Postman postman/collections/)
 INSERT INTO users (user_id, employee_id, username, email, password_hash, system_role, is_active) VALUES
-('29999999-0000-4000-a000-000000000001', '22222222-0000-4000-a000-000000000001', 'superadmin', 'admin@visiontech.co.id', '$argon2id$v=19$m=65536,t=3,p=4$ldNRoAZ1ZP85rMv/CvKC4w$0kNdrnB4fAtMMoGZYxxfJBape7gJskOsyMI2X9ZOwFY', 'SUPER_ADMIN', TRUE),
-('29999999-0000-4000-a000-000000000002', '22222222-0000-4000-a000-000000000002', 'om_randi', 'randi.om@visiontech.co.id', '$argon2id$v=19$m=65536,t=3,p=4$ldNRoAZ1ZP85rMv/CvKC4w$0kNdrnB4fAtMMoGZYxxfJBape7gJskOsyMI2X9ZOwFY', 'OPERATIONAL_MANAGER', TRUE),
-('29999999-0000-4000-a000-000000000003', '22222222-0000-4000-a000-000000000003', 'pm_hendrik', 'hendrik.pm@visiontech.co.id', '$argon2id$v=19$m=65536,t=3,p=4$ldNRoAZ1ZP85rMv/CvKC4w$0kNdrnB4fAtMMoGZYxxfJBape7gJskOsyMI2X9ZOwFY', 'PROJECT_MANAGER', TRUE),
-('29999999-0000-4000-a000-000000000004', '22222222-0000-4000-a000-000000000004', 'pm_dian', 'dian.pm@visiontech.co.id', '$argon2id$v=19$m=65536,t=3,p=4$ldNRoAZ1ZP85rMv/CvKC4w$0kNdrnB4fAtMMoGZYxxfJBape7gJskOsyMI2X9ZOwFY', 'PROJECT_MANAGER', TRUE),
-('29999999-0000-4000-a000-000000000005', '22222222-0000-4000-a000-000000000005', 'hr_siti', 'siti.hr@visiontech.co.id', '$argon2id$v=19$m=65536,t=3,p=4$ldNRoAZ1ZP85rMv/CvKC4w$0kNdrnB4fAtMMoGZYxxfJBape7gJskOsyMI2X9ZOwFY', 'ADMIN_HR_GA', TRUE),
-('29999999-0000-4000-a000-000000000006', '22222222-0000-4000-a000-000000000006', 'tl_agus', 'agus.tl@visiontech.co.id', '$argon2id$v=19$m=65536,t=3,p=4$1hnmHdLYAkFUULr1iVB03w$6c477pNeeXULiEUx4baVjhqrUOtzvB7QdM5kthD83ZE', 'TEAM_LEADER', TRUE),
-('29999999-0000-4000-a000-000000000007', '22222222-0000-4000-a000-000000000007', 'tech_riko', 'riko.tech@visiontech.co.id', '$argon2id$v=19$m=65536,t=3,p=4$1hnmHdLYAkFUULr1iVB03w$6c477pNeeXULiEUx4baVjhqrUOtzvB7QdM5kthD83ZE', 'EMPLOYEE', TRUE),
-('29999999-0000-4000-a000-000000000008', '22222222-0000-4000-a000-000000000008', 'tech_doni', 'doni.tech@visiontech.co.id', '$argon2id$v=19$m=65536,t=3,p=4$1hnmHdLYAkFUULr1iVB03w$6c477pNeeXULiEUx4baVjhqrUOtzvB7QdM5kthD83ZE', 'EMPLOYEE', TRUE),
-('29999999-0000-4000-a000-000000000009', '22222222-0000-4000-a000-000000000009', 'tech_fajar', 'fajar.tech@visiontech.co.id', '$argon2id$v=19$m=65536,t=3,p=4$1hnmHdLYAkFUULr1iVB03w$6c477pNeeXULiEUx4baVjhqrUOtzvB7QdM5kthD83ZE', 'EMPLOYEE', TRUE),
-('29999999-0000-4000-a000-000000000010', '22222222-0000-4000-a000-000000000010', 'tech_bayu', 'bayu.tech@visiontech.co.id', '$argon2id$v=19$m=65536,t=3,p=4$1hnmHdLYAkFUULr1iVB03w$6c477pNeeXULiEUx4baVjhqrUOtzvB7QdM5kthD83ZE', 'EMPLOYEE', TRUE),
-('29999999-0000-4000-a000-000000000011', '22222222-0000-4000-a000-000000000011', 'tech_ilham', 'ilham.tech@visiontech.co.id', '$argon2id$v=19$m=65536,t=3,p=4$1hnmHdLYAkFUULr1iVB03w$6c477pNeeXULiEUx4baVjhqrUOtzvB7QdM5kthD83ZE', 'EMPLOYEE', TRUE)
+('29999999-0000-4000-a000-000000000001', '22222222-0000-4000-a000-000000000001', 'superadmin', 'admin@visiontech.co.id', '$argon2id$v=19$m=65536,t=3,p=4$6FvAbtr5zTnOHFT/OWNz2w$Pd20PZh4UFEIam1yHNZ/NezRwrGlrW3UOATVN1+KOJA', 'SUPER_ADMIN', TRUE),
+('29999999-0000-4000-a000-000000000002', '22222222-0000-4000-a000-000000000002', 'om_randi', 'randi.om@visiontech.co.id', '$argon2id$v=19$m=65536,t=3,p=4$6FvAbtr5zTnOHFT/OWNz2w$Pd20PZh4UFEIam1yHNZ/NezRwrGlrW3UOATVN1+KOJA', 'OPERATIONAL_MANAGER', TRUE),
+('29999999-0000-4000-a000-000000000003', '22222222-0000-4000-a000-000000000003', 'pm_hendrik', 'hendrik.pm@visiontech.co.id', '$argon2id$v=19$m=65536,t=3,p=4$6FvAbtr5zTnOHFT/OWNz2w$Pd20PZh4UFEIam1yHNZ/NezRwrGlrW3UOATVN1+KOJA', 'PROJECT_MANAGER', TRUE),
+('29999999-0000-4000-a000-000000000004', '22222222-0000-4000-a000-000000000004', 'pm_dian', 'dian.pm@visiontech.co.id', '$argon2id$v=19$m=65536,t=3,p=4$6FvAbtr5zTnOHFT/OWNz2w$Pd20PZh4UFEIam1yHNZ/NezRwrGlrW3UOATVN1+KOJA', 'PROJECT_MANAGER', TRUE),
+('29999999-0000-4000-a000-000000000005', '22222222-0000-4000-a000-000000000005', 'hr_siti', 'siti.hr@visiontech.co.id', '$argon2id$v=19$m=65536,t=3,p=4$6FvAbtr5zTnOHFT/OWNz2w$Pd20PZh4UFEIam1yHNZ/NezRwrGlrW3UOATVN1+KOJA', 'ADMIN_HR_GA', TRUE),
+('29999999-0000-4000-a000-000000000006', '22222222-0000-4000-a000-000000000006', 'tl_agus', 'agus.tl@visiontech.co.id', '$argon2id$v=19$m=65536,t=3,p=4$6FvAbtr5zTnOHFT/OWNz2w$Pd20PZh4UFEIam1yHNZ/NezRwrGlrW3UOATVN1+KOJA', 'TEAM_LEADER', TRUE),
+('29999999-0000-4000-a000-000000000007', '22222222-0000-4000-a000-000000000007', 'tech_riko', 'riko.tech@visiontech.co.id', '$argon2id$v=19$m=65536,t=3,p=4$6FvAbtr5zTnOHFT/OWNz2w$Pd20PZh4UFEIam1yHNZ/NezRwrGlrW3UOATVN1+KOJA', 'EMPLOYEE', TRUE),
+('29999999-0000-4000-a000-000000000008', '22222222-0000-4000-a000-000000000008', 'tech_doni', 'doni.tech@visiontech.co.id', '$argon2id$v=19$m=65536,t=3,p=4$6FvAbtr5zTnOHFT/OWNz2w$Pd20PZh4UFEIam1yHNZ/NezRwrGlrW3UOATVN1+KOJA', 'EMPLOYEE', TRUE),
+('29999999-0000-4000-a000-000000000009', '22222222-0000-4000-a000-000000000009', 'tech_fajar', 'fajar.tech@visiontech.co.id', '$argon2id$v=19$m=65536,t=3,p=4$6FvAbtr5zTnOHFT/OWNz2w$Pd20PZh4UFEIam1yHNZ/NezRwrGlrW3UOATVN1+KOJA', 'EMPLOYEE', TRUE),
+('29999999-0000-4000-a000-000000000010', '22222222-0000-4000-a000-000000000010', 'tech_bayu', 'bayu.tech@visiontech.co.id', '$argon2id$v=19$m=65536,t=3,p=4$6FvAbtr5zTnOHFT/OWNz2w$Pd20PZh4UFEIam1yHNZ/NezRwrGlrW3UOATVN1+KOJA', 'EMPLOYEE', TRUE),
+('29999999-0000-4000-a000-000000000011', '22222222-0000-4000-a000-000000000011', 'tech_ilham', 'ilham.tech@visiontech.co.id', '$argon2id$v=19$m=65536,t=3,p=4$6FvAbtr5zTnOHFT/OWNz2w$Pd20PZh4UFEIam1yHNZ/NezRwrGlrW3UOATVN1+KOJA', 'EMPLOYEE', TRUE)
 ON CONFLICT (user_id) DO NOTHING;
 
 -- 4. Seed user_sessions (4 Sesi Aktif di Web React & Android Flutter)

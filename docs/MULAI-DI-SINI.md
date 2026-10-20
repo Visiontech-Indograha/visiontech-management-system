@@ -102,7 +102,7 @@ vms/
 ├── CLAUDE.md               ← salin dari dokumen 15 di folder ini
 ├── docs/                   ← salin SELURUH isi folder rencana ini
 ├── db/                     ← salin dari prototipe: 5 berkas SQL
-├── (prototype/ dihapus 2026-10-20 — baca lewat `git show 84008895:prototype/<path>`)
+├── (prototype/ dihapus 2026-10-20 — baca lewat `git show f3a519f0:prototype/<path>`)
 ├── api/                    FastAPI (struktur di dokumen 12)
 ├── web/                    React (struktur di dokumen 11)
 ├── mobile/                 Flutter

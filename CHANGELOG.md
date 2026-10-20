@@ -13,7 +13,7 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
   - **`api/deps.py` dipecah:** tinggal dependency lintas-domain; 24 modul punya `dependencies.py` sendiri. Service tidak lagi memakai `Depends(get_db_with_user)` di konstruktor.
   - **Lapisan dirapikan:** SQL `/work-plans/{id}/exports` & foto profil `/auth/me` pindah ke repository; rute Rencana Kerja V2 lewat `WorkPlanV2Controller` → `WorkPlanV2Service`; `HTTPException` di service diganti `AppError`/`core.errors.db_error` (respons identik). Batas verifikasi tanda tangan publik kini konstanta `VERIFY_LIMIT`/`VERIFY_WINDOW`.
   - **Penjaga diperbarui:** `tests/test_structure.py` menegakkan lapisan modul & arah impor; `test_router_layering`, `test_no_dead_modules`, `test_sql_rules` memindai lokasi modul; target monkeypatch tes diarahkan ke modul tempat simbol dipakai.
-  - **Root repo:** `prototype/` dihapus (keputusan pemilik; baca lewat `git show 84008895:prototype/<path>`), skrip sekali-pakai di `scripts/` dan alias `api/main.py` dihapus.
+  - **Root repo:** `prototype/` dihapus (keputusan pemilik; baca lewat `git show f3a519f0:prototype/<path>`), skrip sekali-pakai di `scripts/` dan alias `api/main.py` dihapus.
   - **Kontrak API tidak berubah:** OpenAPI (195 jalur) identik dengan sebelum migrasi; `ruff check` bersih.
 
 - **Validasi Komprehensif Skema Master Database V2 & API Modular Menggunakan Postman CLI:**

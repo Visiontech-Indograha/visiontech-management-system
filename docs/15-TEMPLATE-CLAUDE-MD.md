@@ -46,7 +46,7 @@ web/            React — components/{ui,molecules,organisms,templates} + featur
 mobile/         Flutter — core/, shared/, features/
 face-service/   layanan wajah (fase 8)
 db/             5 berkas SQL, fondasi skema
-(prototype/ dihapus 2026-10-20 — rujukan V2 dibaca dari riwayat git: `git show 84008895:prototype/<path>`)
+(prototype/ dihapus 2026-10-20 — rujukan V2 dibaca dari riwayat git: `git show f3a519f0:prototype/<path>`)
 docs/           seluruh rencana dan standar
 ```
 

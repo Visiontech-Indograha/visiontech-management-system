@@ -20,7 +20,6 @@ export function EmployeeDetailTemplate(props: {
   unitName: string | null;
   canEdit: boolean;
   canManageDocs: boolean;
-  canVerifyDocs: boolean;
   canSeePrivate: boolean;
   editing: boolean;
   promoting: boolean;
@@ -32,7 +31,7 @@ export function EmployeeDetailTemplate(props: {
   onClosePromote: () => void;
   onCloseOffboard: () => void;
 }) {
-  const { errorMessage, employee: e, unitName, canEdit, canManageDocs, canVerifyDocs, canSeePrivate, editing, promoting, offboarding } = props;
+  const { errorMessage, employee: e, unitName, canEdit, canManageDocs, canSeePrivate, editing, promoting, offboarding } = props;
   if (errorMessage !== null) return <EmployeeLoadError message={errorMessage} />;
 
   if (!e) return <EmployeeDetailSkeleton />;
@@ -60,7 +59,7 @@ export function EmployeeDetailTemplate(props: {
       {canEdit && <AccountCard employee={e} />}
       <AssignmentHistory employee={e} />
       {canEdit && !e.is_active && <EmployeeArchivePanel employee={e} />}
-      {canManageDocs && <DocumentsPanel employeeId={e.id} canManage canVerify={canVerifyDocs} />}
+      {canManageDocs && <DocumentsPanel employeeId={e.id} canManage />}
       {editing && <EmployeeProfileDialog employee={e} onClose={props.onCloseEdit} />}
       {promoting && <EmployeePromoteDialog employee={e} onClose={props.onClosePromote} />}
       {offboarding && <EmployeeOffboardDialog employee={e} onClose={props.onCloseOffboard} />}

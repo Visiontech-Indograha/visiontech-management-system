@@ -90,12 +90,21 @@ export function useCreateDocument(employeeId: string) {
   });
 }
 
-/** HR memverifikasi/menolak berkas; hanya berkas terverifikasi yang berlaku (mis. SIM untuk pengemudi). */
-export function useVerifyDocument(employeeId: string) {
+/** HR/GA menonaktifkan dokumen (dicabut / tidak berlaku lagi). */
+export function useDeactivateDocument(employeeId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ docId, ...body }: { docId: string; is_approved: boolean; review_note?: string | null }) =>
-      (await api.post<EmployeeDocument>(`/employees/${employeeId}/documents/${docId}/verify`, body)).data,
+    mutationFn: async (docId: string) =>
+      (await api.post<EmployeeDocument>(`/employees/${employeeId}/documents/${docId}/deactivate`)).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["employee-documents", employeeId] }),
+  });
+}
+
+/** HR/GA menghapus dokumen yang salah unggah. */
+export function useDeleteDocument(employeeId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (docId: string) => (await api.delete(`/employees/${employeeId}/documents/${docId}`)).data,
     onSuccess: () => qc.invalidateQueries({ queryKey: ["employee-documents", employeeId] }),
   });
 }

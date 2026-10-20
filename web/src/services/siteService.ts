@@ -3,7 +3,9 @@ import { api } from "@/lib/apiClient";
 import type { components } from "@/lib/apiTypes";
 
 export type Site = components["schemas"]["SiteResponse"];
-export type SiteCreate = components["schemas"]["SiteCreate"];
+type SiteCreateSchema = components["schemas"]["SiteCreate"];
+/** Kolom ber-default di API (jam kerja, uang makan, radius kota) boleh dikosongkan saat membuat kantor. */
+export type SiteCreate = Pick<SiteCreateSchema, "name" | "location"> & Partial<Omit<SiteCreateSchema, "name" | "location">>;
 
 const KEY = ["sites"] as const;
 

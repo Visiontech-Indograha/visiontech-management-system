@@ -45,6 +45,234 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/work-plans/form-options-v2": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Work Plan Form Options V2
+         * @description Mengambil seluruh data referensi dropdown master untuk form Rencana Kerja V2.
+         */
+        get: operations["get_work_plan_form_options_v2_api_v1_work_plans_form_options_v2_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-plans/matrix": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Weekly Matrix
+         * @description Mengambil matriks kalender harian (Daily-First) untuk seluruh hari dalam rentang tanggal.
+         */
+        get: operations["get_weekly_matrix_api_v1_work_plans_matrix_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-plans/matrix/bulk-approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Bulk Approve Weekly Matrix
+         * @description Persetujuan serentak oleh Project Manager untuk jadwal satu minggu kerja tim.
+         */
+        post: operations["bulk_approve_weekly_matrix_api_v1_work_plans_matrix_bulk_approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-plans/project/{completion_id}/schedule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Project Schedule
+         * @description Mengambil linimasa jadwal proyek multi-minggu (CCTV Site A dsb.) beserta rekap tahapan dan deliverable.
+         */
+        get: operations["get_project_schedule_api_v1_work_plans_project__completion_id__schedule_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-plans/weekly": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Weekly Plans V2
+         * @description Mengambil daftar ringkas rencana kerja mingguan dengan filter.
+         */
+        get: operations["list_weekly_plans_v2_api_v1_work_plans_weekly_get"];
+        put?: never;
+        /**
+         * Create Weekly Plan V2
+         * @description Membuat rencana kerja mingguan baru (dapat mencakup hari & butir tugas bertingkat).
+         */
+        post: operations["create_weekly_plan_v2_api_v1_work_plans_weekly_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-plans/weekly/{weekly_plan_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Weekly Plan Detail V2
+         * @description Mengambil rincian lengkap rencana kerja mingguan beserta hari dan item tugas.
+         */
+        get: operations["get_weekly_plan_detail_v2_api_v1_work_plans_weekly__weekly_plan_id__get"];
+        /**
+         * Update Weekly Plan V2
+         * @description Memperbarui rencana kerja mingguan.
+         */
+        put: operations["update_weekly_plan_v2_api_v1_work_plans_weekly__weekly_plan_id__put"];
+        post?: never;
+        /**
+         * Delete Weekly Plan V2
+         * @description Menghapus (soft delete) rencana kerja mingguan beserta seluruh hari dan tugas terkait.
+         */
+        delete: operations["delete_weekly_plan_v2_api_v1_work_plans_weekly__weekly_plan_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-plans/daily/{daily_plan_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Daily Schedule Detail
+         * @description Mengambil rincian jadwal harian multi-slot tugas beserta SOP foto dan order klien (GET).
+         */
+        get: operations["get_daily_schedule_detail_api_v1_work_plans_daily__daily_plan_id__get"];
+        /**
+         * Update Daily Plan V2
+         * @description Memperbarui informasi hari kerja (lokasi, jam kerja, radius absensi, hari libur).
+         */
+        put: operations["update_daily_plan_v2_api_v1_work_plans_daily__daily_plan_id__put"];
+        post?: never;
+        /**
+         * Delete Daily Plan V2
+         * @description Menghapus (soft delete) hari kerja beserta tugas-tugas di dalamnya.
+         */
+        delete: operations["delete_daily_plan_v2_api_v1_work_plans_daily__daily_plan_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-plans/daily": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Daily Plan V2
+         * @description Menambahkan hari kerja baru langsung ke dalam sistem.
+         */
+        post: operations["create_daily_plan_v2_api_v1_work_plans_daily_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-plans/items/{item_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Plan Item V2
+         * @description Mengambil rincian data satu butir tugas pekerjaan.
+         */
+        get: operations["get_plan_item_v2_api_v1_work_plans_items__item_id__get"];
+        /**
+         * Update Plan Item V2
+         * @description Memperbarui informasi butir tugas (volume, jam slot, status, teknisi pelaksana).
+         */
+        put: operations["update_plan_item_v2_api_v1_work_plans_items__item_id__put"];
+        post?: never;
+        /**
+         * Delete Plan Item V2
+         * @description Menghapus (soft delete) satu butir tugas dari jadwal hari kerja.
+         */
+        delete: operations["delete_plan_item_v2_api_v1_work_plans_items__item_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-plans/items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Plan Item V2
+         * @description Menambahkan slot butir tugas baru ke dalam hari kerja tertentu.
+         */
+        post: operations["create_plan_item_v2_api_v1_work_plans_items_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/work-completions": {
         parameters: {
             query?: never;
@@ -109,6 +337,76 @@ export interface paths {
         put?: never;
         /** Tanda Tangan Digital Berita Acara Penyelesaian */
         post: operations["sign_work_completion_api_v1_work_completions__completion_id__sign_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-completions/{completion_id}/bom": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Daftar Item BoM Order Proyek Klien */
+        get: operations["list_work_completion_bom_api_v1_work_completions__completion_id__bom_get"];
+        put?: never;
+        /** Tambah Item BoM ke Order Proyek Klien */
+        post: operations["add_work_completion_bom_api_v1_work_completions__completion_id__bom_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-completions/bom/{bom_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Perbarui Item BoM (Realisasi Aktual Lapangan) */
+        put: operations["update_work_completion_bom_api_v1_work_completions_bom__bom_id__put"];
+        post?: never;
+        /** Hapus Item BoM */
+        delete: operations["delete_work_completion_bom_api_v1_work_completions_bom__bom_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-completions/{completion_id}/sync-bom": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sinkronisasi Otomatis BoM dari Template Jenis Pekerjaan */
+        post: operations["sync_bom_from_work_types_api_v1_work_completions__completion_id__sync_bom_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-completions/{completion_id}/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Unduh Berita Acara & BoM Format Word DOCX */
+        get: operations["export_work_completion_docx_api_v1_work_completions__completion_id__export_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1005,13 +1303,13 @@ export interface paths {
         };
         /**
          * Get Employee Documents
-         * @description Mendapatkan daftar dokumen pribadi karyawan.
+         * @description Daftar dokumen karyawan (milik sendiri, atau semua bagi pengelola dokumen).
          */
         get: operations["get_employee_documents_api_v1_employees__emp_id__documents_get"];
         put?: never;
         /**
          * Upload Document
-         * @description Mengunggah dokumen baru untuk karyawan.
+         * @description Mencatat dokumen baru dari berkas yang sudah diunggah; dokumen sejenis yang lama menjadi `extended`.
          */
         post: operations["upload_document_api_v1_employees__emp_id__documents_post"];
         delete?: never;
@@ -1020,7 +1318,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/employees/{emp_id}/documents/{doc_id}/verify": {
+    "/api/v1/employees/{emp_id}/documents/{doc_id}/deactivate": {
         parameters: {
             query?: never;
             header?: never;
@@ -1030,11 +1328,31 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Verify Document
-         * @description Memverifikasi (menyetujui atau menolak) dokumen karyawan.
+         * Deactivate Document
+         * @description Menonaktifkan dokumen (mis. dicabut atau tidak lagi berlaku).
          */
-        post: operations["verify_document_api_v1_employees__emp_id__documents__doc_id__verify_post"];
+        post: operations["deactivate_document_api_v1_employees__emp_id__documents__doc_id__deactivate_post"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/employees/{emp_id}/documents/{doc_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Document
+         * @description Menghapus (soft delete) dokumen yang salah unggah.
+         */
+        delete: operations["delete_document_api_v1_employees__emp_id__documents__doc_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1049,29 +1367,9 @@ export interface paths {
         };
         /**
          * Get Expiring Documents
-         * @description Mengambil daftar dokumen yang akan kedaluwarsa atau sudah kedaluwarsa.
+         * @description Dokumen berlaku yang sudah lewat (EXPIRED), ≤7 hari (CRITICAL), atau ≤30 hari (WARNING).
          */
         get: operations["get_expiring_documents_api_v1_documents_expiring_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/documents/pending": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Pending Documents
-         * @description Antrean verifikasi HR untuk dokumen pribadi berstatus PENDING.
-         */
-        get: operations["get_pending_documents_api_v1_documents_pending_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1091,7 +1389,7 @@ export interface paths {
         put?: never;
         /**
          * Cron Expire Documents
-         * @description Tugas penjadwal untuk menandai dokumen kedaluwarsa menjadi EXPIRED.
+         * @description Pekerjaan berkala: dokumen yang lewat tanggal kedaluwarsa → not_active.
          */
         post: operations["cron_expire_documents_api_v1_documents_cron_expire_documents_post"];
         delete?: never;
@@ -1406,26 +1704,6 @@ export interface paths {
          * @description Memindahkan atau menjadwalkan ulang item tugas ke hari/slot lain oleh PM (PM Full Override) (POST).
          */
         post: operations["reschedule_item_api_v1_work_plans_items__item_id__reschedule_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/work-plans/daily/{daily_plan_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Daily Schedule Detail
-         * @description Mengambil rincian jadwal harian multi-slot tugas beserta SOP foto dan order klien (GET).
-         */
-        get: operations["get_daily_schedule_detail_api_v1_work_plans_daily__daily_plan_id__get"];
-        put?: never;
-        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1849,13 +2127,13 @@ export interface paths {
         };
         /**
          * Get Sites
-         * @description Mengambil daftar lokasi kerja (GET).
+         * @description Daftar kantor aktif (GET). Terbuka untuk semua pengguna; `can_manage` menandai hak kelola.
          */
         get: operations["get_sites_api_v1_sites_get"];
         put?: never;
         /**
          * Create Site
-         * @description Membuat lokasi kerja baru (POST).
+         * @description Membuat kantor baru (POST) — izin manage:sites.
          */
         post: operations["create_site_api_v1_sites_post"];
         delete?: never;
@@ -1872,11 +2150,15 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        put?: never;
+        /**
+         * Update Site
+         * @description Mengubah data kantor (PUT, sebagian) — izin manage:sites.
+         */
+        put: operations["update_site_api_v1_sites__site_id__put"];
         post?: never;
         /**
          * Delete Site
-         * @description Menghapus lokasi kerja berdasarkan ID-nya (DELETE).
+         * @description Menghapus (arsip) kantor cabang (DELETE) — izin manage:sites.
          */
         delete: operations["delete_site_api_v1_sites__site_id__delete"];
         options?: never;
@@ -1893,12 +2175,40 @@ export interface paths {
         };
         /**
          * List Units
-         * @description Mengambil daftar unit milik organisasi pengguna saat ini.
+         * @description Daftar divisi aktif beserta OM, PM, dan jumlah timnya (GET).
          */
         get: operations["list_units_api_v1_units_get"];
         put?: never;
-        post?: never;
+        /**
+         * Create Unit
+         * @description Membuat divisi baru dengan OM & PM-nya (POST) — izin manage:divisions.
+         */
+        post: operations["create_unit_api_v1_units_post"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/units/{unit_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Update Unit
+         * @description Mengubah divisi (PUT, sebagian) — izin manage:divisions.
+         */
+        put: operations["update_unit_api_v1_units__unit_id__put"];
+        post?: never;
+        /**
+         * Delete Unit
+         * @description Menghapus (arsip) divisi yang tidak lagi dipakai (DELETE) — izin manage:divisions.
+         */
+        delete: operations["delete_unit_api_v1_units__unit_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2350,6 +2660,46 @@ export interface paths {
          * @description PM Full Override: Menyetujui rollover, menolak, atau memindahkan slot tugas lintas hari/minggu (POST).
          */
         post: operations["pm_approve_or_move_api_v1_work_plans_items__item_id__pm_approve_or_move_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-plans/items/{item_id}/chain-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Task Chain Status
+         * @description Mengambil status agregasi rantai tugas rollover (task chain) dari awal hingga akhir (GET).
+         */
+        get: operations["get_task_chain_status_api_v1_work_plans_items__item_id__chain_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-plans/items/{item_id}/generate-completion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Generate Completion From Chain
+         * @description Mengompilasi seluruh rantai tugas 100% selesai menjadi Berita Acara Work Completion (POST).
+         */
+        post: operations["generate_completion_from_chain_api_v1_work_plans_items__item_id__generate_completion_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3669,6 +4019,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/work-types/{type_id}/materials": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Work Type Materials
+         * @description Daftar template material default untuk jenis pekerjaan tertentu.
+         */
+        get: operations["list_work_type_materials_api_v1_work_types__type_id__materials_get"];
+        put?: never;
+        /**
+         * Create Work Type Material
+         * @description Menambahkan template material default baru ke jenis pekerjaan.
+         */
+        post: operations["create_work_type_material_api_v1_work_types__type_id__materials_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-types/materials/{material_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Update Work Type Material
+         * @description Mengubah template material default.
+         */
+        put: operations["update_work_type_material_api_v1_work_types_materials__material_id__put"];
+        post?: never;
+        /**
+         * Delete Work Type Material
+         * @description Menghapus template material default dari jenis pekerjaan.
+         */
+        delete: operations["delete_work_type_material_api_v1_work_types_materials__material_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/app/android/update": {
         parameters: {
             query?: never;
@@ -3735,7 +4133,7 @@ export interface components {
     schemas: {
         /**
          * AccountCreate
-         * @description Skema data input untuk pembuatan akun karyawan baru.
+         * @description Schema for creating a new user account.
          */
         AccountCreate: {
             /** Login */
@@ -3743,7 +4141,7 @@ export interface components {
         };
         /**
          * AccountOut
-         * @description Skema data output akun, mendetailkan status autentikasi pengguna.
+         * @description Schema for account output data, detailing user authentication and status.
          */
         AccountOut: {
             /** Exists */
@@ -3766,7 +4164,7 @@ export interface components {
         };
         /**
          * AccountWithPassword
-         * @description Skema respons pembuatan/reset akun yang menyertakan kata sandi sementara.
+         * @description Schema for account creation response, including the generated temporary password.
          */
         AccountWithPassword: {
             /** Exists */
@@ -4560,6 +4958,33 @@ export interface components {
              */
             module_category: string;
         };
+        /** BulkApproveDailyPlansIn */
+        BulkApproveDailyPlansIn: {
+            /**
+             * Team Id
+             * Format: uuid
+             */
+            team_id: string;
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /**
+             * End Date
+             * Format: date
+             */
+            end_date: string;
+        };
+        /** BulkApproveDailyPlansOut */
+        BulkApproveDailyPlansOut: {
+            /** Success */
+            success: boolean;
+            /** Approved Count */
+            approved_count: number;
+            /** Message */
+            message: string;
+        };
         /** ChallengeCheckResponse */
         ChallengeCheckResponse: {
             /**
@@ -4820,6 +5245,166 @@ export interface components {
             /** Policy Version */
             policy_version: string;
         };
+        /** DailyPlanCreateIn */
+        DailyPlanCreateIn: {
+            /** Division Id */
+            division_id?: string | null;
+            /** Team Id */
+            team_id?: string | null;
+            /** Weekly Plan Id */
+            weekly_plan_id?: string | null;
+            /**
+             * Work Date
+             * Format: date
+             */
+            work_date: string;
+            /** Site Name */
+            site_name: string;
+            /**
+             * Site Lat
+             * @default 3.5952
+             */
+            site_lat: number | string;
+            /**
+             * Site Lng
+             * @default 98.6722
+             */
+            site_lng: number | string;
+            /**
+             * Attendance Radius M
+             * @default 150
+             */
+            attendance_radius_m: number;
+            /**
+             * Clock In Time
+             * Format: time
+             * @default 08:00:00
+             */
+            clock_in_time: string;
+            /**
+             * Clock Out Time
+             * Format: time
+             * @default 17:00:00
+             */
+            clock_out_time: string;
+            /**
+             * Status
+             * @default SCHEDULED
+             */
+            status: string;
+            /**
+             * Is Holiday
+             * @default false
+             */
+            is_holiday: boolean;
+            /**
+             * Items
+             * @default []
+             */
+            items: components["schemas"]["PlanItemCreateIn"][];
+        };
+        /** DailyPlanOut */
+        DailyPlanOut: {
+            /**
+             * Daily Plan Id
+             * Format: uuid
+             */
+            daily_plan_id: string;
+            /**
+             * Division Id
+             * Format: uuid
+             */
+            division_id: string;
+            /** Division Name */
+            division_name?: string | null;
+            /**
+             * Team Id
+             * Format: uuid
+             */
+            team_id: string;
+            /** Team Name */
+            team_name?: string | null;
+            /** Weekly Plan Id */
+            weekly_plan_id?: string | null;
+            /**
+             * Work Date
+             * Format: date
+             */
+            work_date: string;
+            /** Site Name */
+            site_name: string;
+            /** Site Lat */
+            site_lat: string;
+            /** Site Lng */
+            site_lng: string;
+            /** Attendance Radius M */
+            attendance_radius_m: number;
+            /**
+             * Clock In Time
+             * Format: time
+             */
+            clock_in_time: string;
+            /**
+             * Clock Out Time
+             * Format: time
+             */
+            clock_out_time: string;
+            /** Status */
+            status: string;
+            /**
+             * Is Holiday
+             * @default false
+             */
+            is_holiday: boolean;
+            /** Created By Id */
+            created_by_id?: string | null;
+            /** Created By Name */
+            created_by_name?: string | null;
+            /** Approved By Pm Id */
+            approved_by_pm_id?: string | null;
+            /** Approved By Pm Name */
+            approved_by_pm_name?: string | null;
+            /** Approved At */
+            approved_at?: string | null;
+            /** Rejection Reason */
+            rejection_reason?: string | null;
+            /**
+             * Items
+             * @default []
+             */
+            items: components["schemas"]["PlanItemOut"][];
+            /** Create At */
+            create_at?: string | null;
+            /** Update At */
+            update_at?: string | null;
+        };
+        /** DailyPlanUpdateIn */
+        DailyPlanUpdateIn: {
+            /** Division Id */
+            division_id?: string | null;
+            /** Team Id */
+            team_id?: string | null;
+            /** Work Date */
+            work_date?: string | null;
+            /** Site Name */
+            site_name?: string | null;
+            /** Site Lat */
+            site_lat?: number | string | null;
+            /** Site Lng */
+            site_lng?: number | string | null;
+            /** Attendance Radius M */
+            attendance_radius_m?: number | null;
+            /** Clock In Time */
+            clock_in_time?: string | null;
+            /** Clock Out Time */
+            clock_out_time?: string | null;
+            /** Status */
+            status?: string | null;
+            /** Is Holiday */
+            is_holiday?: boolean | null;
+            /** Rejection Reason */
+            rejection_reason?: string | null;
+        };
         /**
          * DailyReportCreate
          * @description Schema for submitting a daily HSE or operational report.
@@ -4962,6 +5547,88 @@ export interface components {
             clock_out_time?: string | null;
         };
         /**
+         * DefaultMaterialIn
+         * @description Schema input template material default untuk jenis pekerjaan.
+         */
+        DefaultMaterialIn: {
+            /** Material Code */
+            material_code?: string | null;
+            /** Material Name */
+            material_name: string;
+            /**
+             * Default Qty
+             * @default 1
+             */
+            default_qty: number;
+            /**
+             * Unit
+             * @default Unit
+             */
+            unit: string;
+            /** Category */
+            category?: string | null;
+            /** Description */
+            description?: string | null;
+            /**
+             * Sort Order
+             * @default 0
+             */
+            sort_order: number;
+        };
+        /**
+         * DefaultMaterialOut
+         * @description Schema output template material default jenis pekerjaan.
+         */
+        DefaultMaterialOut: {
+            /**
+             * Default Material Id
+             * Format: uuid
+             */
+            default_material_id: string;
+            /**
+             * Work Type Id
+             * Format: uuid
+             */
+            work_type_id: string;
+            /** Material Code */
+            material_code?: string | null;
+            /** Material Name */
+            material_name: string;
+            /** Default Qty */
+            default_qty: number;
+            /** Unit */
+            unit: string;
+            /** Category */
+            category?: string | null;
+            /** Description */
+            description?: string | null;
+            /**
+             * Sort Order
+             * @default 0
+             */
+            sort_order: number;
+        };
+        /**
+         * DefaultMaterialUpdate
+         * @description Schema perbaikan template material default.
+         */
+        DefaultMaterialUpdate: {
+            /** Material Code */
+            material_code?: string | null;
+            /** Material Name */
+            material_name?: string | null;
+            /** Default Qty */
+            default_qty?: number | null;
+            /** Unit */
+            unit?: string | null;
+            /** Category */
+            category?: string | null;
+            /** Description */
+            description?: string | null;
+            /** Sort Order */
+            sort_order?: number | null;
+        };
+        /**
          * DeviceKeyRequest
          * @description Schema for registering a device public key.
          *     Kunci publik EC P-256 (X.509 SubjectPublicKeyInfo DER, base64) dari Android Keystore.
@@ -4972,10 +5639,17 @@ export interface components {
             /** Public Key */
             public_key: string;
         };
-        /**
-         * DocumentListResponse
-         * @description Schema for a list of employee documents.
-         */
+        /** DivisionOptionOut */
+        DivisionOptionOut: {
+            /**
+             * Division Id
+             * Format: uuid
+             */
+            division_id: string;
+            /** Name */
+            name: string;
+        };
+        /** DocumentListResponse */
         DocumentListResponse: {
             /** Items */
             items: components["schemas"]["EmployeeDocumentResponse"][];
@@ -5192,27 +5866,22 @@ export interface components {
         };
         /**
          * EmployeeDocumentCreate
-         * @description Schema for creating or uploading a new employee document.
+         * @description Unggah dokumen: berkas diunggah dulu ke /files, lalu dirujuk lewat `file_id`.
          */
         EmployeeDocumentCreate: {
             /** Doc Type */
             doc_type: string;
-            /** Number */
-            number: string;
-            /** Expiry Date */
-            expiry_date?: string | null;
             /**
              * File Id
              * Format: uuid
              */
             file_id: string;
-            /** Supersedes Id */
-            supersedes_id?: string | null;
+            /** Active At */
+            active_at?: string | null;
+            /** Expired At */
+            expired_at?: string | null;
         };
-        /**
-         * EmployeeDocumentResponse
-         * @description Schema detailing an employee document's properties.
-         */
+        /** EmployeeDocumentResponse */
         EmployeeDocumentResponse: {
             /**
              * Id
@@ -5226,45 +5895,25 @@ export interface components {
             employee_id: string;
             /** Doc Type */
             doc_type: string;
-            /** Number Masked */
-            number_masked: string;
-            /** Expiry Date */
-            expiry_date: string | null;
-            /** Status */
-            status: string;
-            /** Lifecycle */
-            lifecycle: string;
             /**
-             * File Id
-             * Format: uuid
+             * Status
+             * @enum {string}
              */
-            file_id: string;
+            status: "active" | "not_active" | "extended";
             /**
-             * Uploaded By
-             * Format: uuid
+             * Active At
+             * Format: date
              */
-            uploaded_by: string;
-            /** Verified By */
-            verified_by?: string | null;
-            /** Verified At */
-            verified_at?: string | null;
-            /** Review Note */
-            review_note?: string | null;
+            active_at: string;
+            /** Expired At */
+            expired_at?: string | null;
+            /** File Id */
+            file_id?: string | null;
             /**
              * Created At
              * Format: date-time
              */
             created_at: string;
-        };
-        /**
-         * EmployeeDocumentVerify
-         * @description Schema for verifying an uploaded employee document.
-         */
-        EmployeeDocumentVerify: {
-            /** Is Approved */
-            is_approved: boolean;
-            /** Review Note */
-            review_note?: string | null;
         };
         /**
          * EmployeeListResponse
@@ -5275,9 +5924,15 @@ export interface components {
             items: components["schemas"]["EmployeeResponse"][];
             /** Total */
             total: number;
-            /** Page */
+            /**
+             * Page
+             * @default 1
+             */
             page: number;
-            /** Size */
+            /**
+             * Size
+             * @default 50
+             */
             size: number;
         };
         /**
@@ -5333,6 +5988,17 @@ export interface components {
             offboarded_at?: string | null;
             /** Offboarding Reason */
             offboarding_reason?: string | null;
+            /** User Id */
+            user_id?: string | null;
+            /** Created At */
+            created_at?: string | null;
+            /** Updated At */
+            updated_at?: string | null;
+            /**
+             * Emergency Contacts
+             * @default []
+             */
+            emergency_contacts: components["schemas"]["EmergencyContactResponse"][];
         };
         /**
          * EmployeeUpdate
@@ -5353,6 +6019,8 @@ export interface components {
             address?: string | null;
             /** Photo File Id */
             photo_file_id?: string | null;
+            /** Is Active */
+            is_active?: boolean | null;
         };
         /** EnrollResponse */
         EnrollResponse: {
@@ -5403,18 +6071,12 @@ export interface components {
              */
             source: "CAMERA" | "GALLERY";
         };
-        /**
-         * ExpiringDocumentList
-         * @description Schema for a list of expiring documents.
-         */
+        /** ExpiringDocumentList */
         ExpiringDocumentList: {
             /** Items */
             items: components["schemas"]["ExpiringDocumentResponse"][];
         };
-        /**
-         * ExpiringDocumentResponse
-         * @description Schema for a document that is approaching its expiry date.
-         */
+        /** ExpiringDocumentResponse */
         ExpiringDocumentResponse: {
             /**
              * Id
@@ -5437,8 +6099,11 @@ export interface components {
             expiry_date: string;
             /** Days Left */
             days_left: number;
-            /** Urgency */
-            urgency: string;
+            /**
+             * Urgency
+             * @enum {string}
+             */
+            urgency: "EXPIRED" | "CRITICAL" | "WARNING";
         };
         /**
          * ExplanationRequest
@@ -5609,6 +6274,35 @@ export interface components {
             lat: number;
             /** Lng */
             lng: number;
+        };
+        /**
+         * GenerateCompletionIn
+         * @description Payload pembuatan Work Completion dari rantai tugas.
+         */
+        GenerateCompletionIn: {
+            /** Client Name */
+            client_name?: string | null;
+            /** Project Title */
+            project_title?: string | null;
+        };
+        /**
+         * GenerateCompletionOut
+         * @description Respons hasil pembuatan / finalisasi Work Completion dari rantai tugas.
+         */
+        GenerateCompletionOut: {
+            /** Success */
+            success: boolean;
+            /**
+             * Completion Id
+             * Format: uuid
+             */
+            completion_id: string;
+            /** Message */
+            message: string;
+            /** Total Target Unit */
+            total_target_unit: number;
+            /** Order Status */
+            order_status: string;
         };
         /**
          * GeoPoint
@@ -5871,6 +6565,8 @@ export interface components {
             full_name?: string | null;
             /** Employee No */
             employee_no?: string | null;
+            /** System Role */
+            system_role?: string | null;
             /** Is Active */
             is_active: boolean;
             /**
@@ -6232,6 +6928,27 @@ export interface components {
          * @enum {string}
          */
         OffboardingReason: "PKWT_EXPIRED" | "RESIGN" | "TERMINATED" | "RETIRED";
+        /** OfficeSiteOptionOut */
+        OfficeSiteOptionOut: {
+            /**
+             * Office Id
+             * Format: uuid
+             */
+            office_id: string;
+            /** Name */
+            name: string;
+            /** Address */
+            address?: string | null;
+            /** Latitude */
+            latitude: number;
+            /** Longitude */
+            longitude: number;
+            /**
+             * Radius M
+             * @default 150
+             */
+            radius_m: number;
+        };
         /**
          * OfflineAttendanceEvent
          * @description Schema representing a signed offline attendance event.
@@ -6440,47 +7157,6 @@ export interface components {
             decision: string;
             /** Note */
             note?: string | null;
-        };
-        /**
-         * PendingDocument
-         * @description Schema for a document pending review.
-         */
-        PendingDocument: {
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /**
-             * Employee Id
-             * Format: uuid
-             */
-            employee_id: string;
-            /** Full Name */
-            full_name: string;
-            /** Doc Type */
-            doc_type: string;
-            /** Number Masked */
-            number_masked: string | null;
-            /** Expiry Date */
-            expiry_date: string | null;
-            /** File Id */
-            file_id: string | null;
-            /**
-             * Uploaded At
-             * Format: date-time
-             */
-            uploaded_at: string;
-            /** Uploaded By Me */
-            uploaded_by_me: boolean;
-        };
-        /**
-         * PendingDocumentList
-         * @description Schema for a list of pending documents.
-         */
-        PendingDocumentList: {
-            /** Items */
-            items: components["schemas"]["PendingDocument"][];
         };
         /**
          * PlanAssetItem
@@ -6810,6 +7486,213 @@ export interface components {
             /** Vehicles */
             vehicles: components["schemas"]["FormAsset"][];
         };
+        /** PlanItemCreateIn */
+        PlanItemCreateIn: {
+            /** Daily Plan Id */
+            daily_plan_id?: string | null;
+            /** Weekly Plan Id */
+            weekly_plan_id?: string | null;
+            /**
+             * Work Type Id
+             * Format: uuid
+             */
+            work_type_id: string;
+            /** Title */
+            title: string;
+            /**
+             * Task Phase
+             * @default MAIN_INSTALLATION
+             */
+            task_phase: string;
+            /**
+             * Is Main Deliverable
+             * @default true
+             */
+            is_main_deliverable: boolean;
+            /** Depends On Item Id */
+            depends_on_item_id?: string | null;
+            /** Completion Id */
+            completion_id?: string | null;
+            /** Target Qty */
+            target_qty: number | string;
+            /**
+             * Completed Qty
+             * @default 0.00
+             */
+            completed_qty: number | string;
+            /**
+             * Progress Percent
+             * @default 0.00
+             */
+            progress_percent: number | string;
+            /** Start Time */
+            start_time?: string | null;
+            /** End Time */
+            end_time?: string | null;
+            /** Location Name */
+            location_name?: string | null;
+            /** Site Lat */
+            site_lat?: number | string | null;
+            /** Site Lng */
+            site_lng?: number | string | null;
+            /**
+             * Assigned Employee Ids
+             * @default []
+             */
+            assigned_employee_ids: string[];
+            /**
+             * Status
+             * @default PENDING
+             */
+            status: string;
+            /**
+             * Rollover Approval Status
+             * @default NONE
+             */
+            rollover_approval_status: string;
+            /** Delay Reason */
+            delay_reason?: string | null;
+            /**
+             * Realization Photos Json
+             * @default []
+             */
+            realization_photos_json: {
+                [key: string]: unknown;
+            }[];
+        };
+        /** PlanItemOut */
+        PlanItemOut: {
+            /**
+             * Item Id
+             * Format: uuid
+             */
+            item_id: string;
+            /**
+             * Daily Plan Id
+             * Format: uuid
+             */
+            daily_plan_id: string;
+            /** Weekly Plan Id */
+            weekly_plan_id?: string | null;
+            /**
+             * Work Type Id
+             * Format: uuid
+             */
+            work_type_id: string;
+            /** Work Type Name */
+            work_type_name?: string | null;
+            /** Title */
+            title: string;
+            /**
+             * Task Phase
+             * @default MAIN_INSTALLATION
+             */
+            task_phase: string;
+            /**
+             * Is Main Deliverable
+             * @default true
+             */
+            is_main_deliverable: boolean;
+            /** Depends On Item Id */
+            depends_on_item_id?: string | null;
+            /** Target Qty */
+            target_qty: string;
+            /** Completed Qty */
+            completed_qty: string;
+            /** Progress Percent */
+            progress_percent: string;
+            /** Status */
+            status: string;
+            /** Rollover Approval Status */
+            rollover_approval_status: string;
+            /** Approved By Pm Id */
+            approved_by_pm_id?: string | null;
+            /** Origin Item Id */
+            origin_item_id?: string | null;
+            /** Shifted To Daily Id */
+            shifted_to_daily_id?: string | null;
+            /** Allocated To Weekly Id */
+            allocated_to_weekly_id?: string | null;
+            /** Delay Reason */
+            delay_reason?: string | null;
+            /**
+             * Realization Photos Json
+             * @default []
+             */
+            realization_photos_json: {
+                [key: string]: unknown;
+            }[];
+            /** Completion Id */
+            completion_id?: string | null;
+            /** Client Name */
+            client_name?: string | null;
+            /** Project Title */
+            project_title?: string | null;
+            /** Order Number */
+            order_number?: string | null;
+            /** Start Time */
+            start_time?: string | null;
+            /** End Time */
+            end_time?: string | null;
+            /** Location Name */
+            location_name?: string | null;
+            /** Site Lat */
+            site_lat?: string | null;
+            /** Site Lng */
+            site_lng?: string | null;
+            /**
+             * Assigned Employee Ids
+             * @default []
+             */
+            assigned_employee_ids: string[];
+            /** Create At */
+            create_at?: string | null;
+            /** Update At */
+            update_at?: string | null;
+        };
+        /** PlanItemUpdateIn */
+        PlanItemUpdateIn: {
+            /** Title */
+            title?: string | null;
+            /** Task Phase */
+            task_phase?: string | null;
+            /** Is Main Deliverable */
+            is_main_deliverable?: boolean | null;
+            /** Depends On Item Id */
+            depends_on_item_id?: string | null;
+            /** Work Type Id */
+            work_type_id?: string | null;
+            /** Completion Id */
+            completion_id?: string | null;
+            /** Target Qty */
+            target_qty?: number | string | null;
+            /** Completed Qty */
+            completed_qty?: number | string | null;
+            /** Progress Percent */
+            progress_percent?: number | string | null;
+            /** Start Time */
+            start_time?: string | null;
+            /** End Time */
+            end_time?: string | null;
+            /** Location Name */
+            location_name?: string | null;
+            /** Site Lat */
+            site_lat?: number | string | null;
+            /** Site Lng */
+            site_lng?: number | string | null;
+            /** Assigned Employee Ids */
+            assigned_employee_ids?: string[] | null;
+            /** Status */
+            status?: string | null;
+            /** Rollover Approval Status */
+            rollover_approval_status?: string | null;
+            /** Delay Reason */
+            delay_reason?: string | null;
+            /** Realization Photos Json */
+            realization_photos_json?: {
+                [key: string]: unknown;
+            }[] | null;
+        };
         /**
          * PlanLocationIn
          * @description Permintaan penambahan atau pengubahan lokasi untuk Rencana Kerja.
@@ -6992,8 +7875,6 @@ export interface components {
             pm_override_reason: string;
             /** Target Daily Plan Id */
             target_daily_plan_id?: string | null;
-            /** Target Weekly Plan Id */
-            target_weekly_plan_id?: string | null;
             /** Target Start Time */
             target_start_time?: string | null;
             /** Target End Time */
@@ -7043,6 +7924,77 @@ export interface components {
              * Format: date-time
              */
             expires_at: string;
+        };
+        /** ProjectPhaseSummaryOut */
+        ProjectPhaseSummaryOut: {
+            /** Task Phase */
+            task_phase: string;
+            /** Phase Label */
+            phase_label: string;
+            /** Total Target Qty */
+            total_target_qty: string;
+            /** Total Completed Qty */
+            total_completed_qty: string;
+            /** Progress Percent */
+            progress_percent: string;
+            /** Is Completed */
+            is_completed: boolean;
+            /** Items Count */
+            items_count: number;
+        };
+        /** ProjectScheduleOut */
+        ProjectScheduleOut: {
+            /**
+             * Completion Id
+             * Format: uuid
+             */
+            completion_id: string;
+            /** Client Name */
+            client_name: string;
+            /** Project Title */
+            project_title: string;
+            /** Order Number */
+            order_number?: string | null;
+            /** Division Id */
+            division_id?: string | null;
+            /** Division Name */
+            division_name?: string | null;
+            /** Order Status */
+            order_status: string;
+            /** Start Work Date */
+            start_work_date?: string | null;
+            /** End Work Date */
+            end_work_date?: string | null;
+            /**
+             * Total Target Deliverables
+             * @default 0.00
+             */
+            total_target_deliverables: string;
+            /**
+             * Total Completed Deliverables
+             * @default 0.00
+             */
+            total_completed_deliverables: string;
+            /**
+             * Deliverables Progress Percent
+             * @default 0.00
+             */
+            deliverables_progress_percent: string;
+            /**
+             * Is Ready For Completion
+             * @default false
+             */
+            is_ready_for_completion: boolean;
+            /**
+             * Phases
+             * @default []
+             */
+            phases: components["schemas"]["ProjectPhaseSummaryOut"][];
+            /**
+             * Timeline Items
+             * @default []
+             */
+            timeline_items: components["schemas"]["PlanItemOut"][];
         };
         /**
          * ReleaseFileOut
@@ -7201,7 +8153,7 @@ export interface components {
         };
         /**
          * SiteCreate
-         * @description Schema for creating a new work site.
+         * @description Kantor baru (pusat/cabang).
          */
         SiteCreate: {
             /** Name */
@@ -7211,13 +8163,45 @@ export interface components {
             location: components["schemas"]["GeoPoint"];
             /**
              * Radius M
-             * @default 50
+             * @default 100
              */
             radius_m: number;
+            /**
+             * City Boundary Radius M
+             * @default 15000
+             */
+            city_boundary_radius_m: number;
+            /**
+             * Clock In Time
+             * Format: time
+             * @default 07:00:00
+             */
+            clock_in_time: string;
+            /**
+             * Clock Out Time
+             * Format: time
+             * @default 16:00:00
+             */
+            clock_out_time: string;
+            /**
+             * In City Meal Rate
+             * @default 35000.00
+             */
+            in_city_meal_rate: number | string;
+            /**
+             * Out City Meal Rate
+             * @default 65000.00
+             */
+            out_city_meal_rate: number | string;
+            /**
+             * Is Main Office
+             * @default false
+             */
+            is_main_office: boolean;
         };
         /**
          * SiteResponse
-         * @description Schema representing a work site in the system.
+         * @description Kantor sebagaimana tersimpan.
          */
         SiteResponse: {
             /** Name */
@@ -7227,9 +8211,41 @@ export interface components {
             location: components["schemas"]["GeoPoint"];
             /**
              * Radius M
-             * @default 50
+             * @default 100
              */
             radius_m: number;
+            /**
+             * City Boundary Radius M
+             * @default 15000
+             */
+            city_boundary_radius_m: number;
+            /**
+             * Clock In Time
+             * Format: time
+             * @default 07:00:00
+             */
+            clock_in_time: string;
+            /**
+             * Clock Out Time
+             * Format: time
+             * @default 16:00:00
+             */
+            clock_out_time: string;
+            /**
+             * In City Meal Rate
+             * @default 35000.00
+             */
+            in_city_meal_rate: string;
+            /**
+             * Out City Meal Rate
+             * @default 65000.00
+             */
+            out_city_meal_rate: string;
+            /**
+             * Is Main Office
+             * @default false
+             */
+            is_main_office: boolean;
             /**
              * Id
              * Format: uuid
@@ -7244,6 +8260,31 @@ export interface components {
             can_manage: boolean;
         };
         /**
+         * SiteUpdate
+         * @description Perubahan sebagian data kantor; field kosong tidak diubah.
+         */
+        SiteUpdate: {
+            /** Name */
+            name?: string | null;
+            /** Address */
+            address?: string | null;
+            location?: components["schemas"]["GeoPoint"] | null;
+            /** Radius M */
+            radius_m?: number | null;
+            /** City Boundary Radius M */
+            city_boundary_radius_m?: number | null;
+            /** Clock In Time */
+            clock_in_time?: string | null;
+            /** Clock Out Time */
+            clock_out_time?: string | null;
+            /** In City Meal Rate */
+            in_city_meal_rate?: number | string | null;
+            /** Out City Meal Rate */
+            out_city_meal_rate?: number | string | null;
+            /** Is Main Office */
+            is_main_office?: boolean | null;
+        };
+        /**
          * SopImageRequirementOut
          * @description Skema persyaratan foto SOP untuk tipe pekerjaan.
          */
@@ -7254,6 +8295,17 @@ export interface components {
             description?: string | null;
             /** Path Image */
             path_image?: string | null;
+        };
+        /**
+         * SyncBomFromWorkTypesIn
+         * @description Schema permintaan sinkronisasi otomatis BoM dari template jenis pekerjaan.
+         */
+        SyncBomFromWorkTypesIn: {
+            /**
+             * Overwrite Existing
+             * @default false
+             */
+            overwrite_existing: boolean;
         };
         /** SyncRequest */
         SyncRequest: {
@@ -7266,6 +8318,83 @@ export interface components {
         SyncResponse: {
             /** Results */
             results: components["schemas"]["OperationResult"][];
+        };
+        /**
+         * TaskChainItemDetailOut
+         * @description Rincian satu item tugas dalam satu rantai rollover.
+         */
+        TaskChainItemDetailOut: {
+            /**
+             * Item Id
+             * Format: uuid
+             */
+            item_id: string;
+            /** Origin Item Id */
+            origin_item_id?: string | null;
+            /**
+             * Daily Plan Id
+             * Format: uuid
+             */
+            daily_plan_id: string;
+            /** Work Date */
+            work_date?: string | null;
+            /** Title */
+            title: string;
+            /**
+             * Task Phase
+             * @default MAIN_INSTALLATION
+             */
+            task_phase: string;
+            /**
+             * Is Main Deliverable
+             * @default true
+             */
+            is_main_deliverable: boolean;
+            /** Depends On Item Id */
+            depends_on_item_id?: string | null;
+            /** Target Qty */
+            target_qty: number;
+            /** Completed Qty */
+            completed_qty: number;
+            /** Progress Percent */
+            progress_percent: number;
+            /** Status */
+            status: string;
+            /** Completion Id */
+            completion_id?: string | null;
+            /** Realization Photos Json */
+            realization_photos_json?: {
+                [key: string]: unknown;
+            }[];
+            /** Create At */
+            create_at?: string | null;
+        };
+        /**
+         * TaskChainStatusOut
+         * @description Status agregasi seluruh rantai tugas (task chain) lintas hari dan lintas minggu.
+         */
+        TaskChainStatusOut: {
+            /**
+             * Root Item Id
+             * Format: uuid
+             */
+            root_item_id: string;
+            /** Initial Total Target */
+            initial_total_target: number;
+            /** Total Completed Across Weeks */
+            total_completed_across_weeks: number;
+            /** Total Progress Percent */
+            total_progress_percent: number;
+            /** Is Eligible For Completion */
+            is_eligible_for_completion: boolean;
+            /** Status Label */
+            status_label: string;
+            /** Existing Completion Id */
+            existing_completion_id?: string | null;
+            /** All Linked Item Ids */
+            all_linked_item_ids?: string[];
+            /** Items */
+            items?: components["schemas"]["TaskChainItemDetailOut"][];
         };
         /** TeamCreate */
         TeamCreate: {
@@ -7383,6 +8512,18 @@ export interface components {
              */
             create_at: string;
         };
+        /** TeamMemberOptionOut */
+        TeamMemberOptionOut: {
+            /**
+             * Employee Id
+             * Format: uuid
+             */
+            employee_id: string;
+            /** Full Name */
+            full_name: string;
+            /** Position */
+            position: string;
+        };
         /**
          * TeamMemberOut
          * @description Respons detail dari anggota tim dalam suatu Rencana Kerja.
@@ -7398,6 +8539,35 @@ export interface components {
             role_in_plan: string;
             /** Valid From */
             valid_from: string | null;
+        };
+        /** TeamOptionOut */
+        TeamOptionOut: {
+            /**
+             * Team Id
+             * Format: uuid
+             */
+            team_id: string;
+            /** Name */
+            name: string;
+            /**
+             * Division Id
+             * Format: uuid
+             */
+            division_id: string;
+            /**
+             * Leader Employee Id
+             * Format: uuid
+             */
+            leader_employee_id: string;
+            /** Leader Name */
+            leader_name?: string | null;
+            /** Leader Position */
+            leader_position?: string | null;
+            /**
+             * Members
+             * @default []
+             */
+            members: components["schemas"]["TeamMemberOptionOut"][];
         };
         /**
          * TeamRequest
@@ -7519,6 +8689,22 @@ export interface components {
             /** Full Name */
             full_name: string | null;
         };
+        /** ToolOptionOut */
+        ToolOptionOut: {
+            /**
+             * Tool Id
+             * Format: uuid
+             */
+            tool_id: string;
+            /** Name */
+            name: string;
+            /** Tool Code */
+            tool_code: string;
+            /** Division Id */
+            division_id?: string | null;
+            /** Category */
+            category?: string | null;
+        };
         /** TransitionRequest */
         TransitionRequest: {
             /** Row Version */
@@ -7530,8 +8716,26 @@ export interface components {
             reason: string;
         };
         /**
+         * UnitCreate
+         * @description Divisi baru.
+         */
+        UnitCreate: {
+            /** Name */
+            name: string;
+            /**
+             * Om Id
+             * Format: uuid
+             */
+            om_id: string;
+            /**
+             * Pm Id
+             * Format: uuid
+             */
+            pm_id: string;
+        };
+        /**
          * UnitOut
-         * @description Skema data representasi unit kerja organisasi.
+         * @description Divisi aktif beserta OM & PM-nya.
          */
         UnitOut: {
             /**
@@ -7543,6 +8747,38 @@ export interface components {
             code: string;
             /** Name */
             name: string;
+            /**
+             * Status
+             * @default true
+             */
+            status: boolean;
+            /** Om Id */
+            om_id?: string | null;
+            /** Pm Id */
+            pm_id?: string | null;
+            /** Om Name */
+            om_name?: string | null;
+            /** Pm Name */
+            pm_name?: string | null;
+            /**
+             * Team Count
+             * @default 0
+             */
+            team_count: number;
+        };
+        /**
+         * UnitUpdate
+         * @description Perubahan sebagian divisi; field kosong tidak diubah.
+         */
+        UnitUpdate: {
+            /** Name */
+            name?: string | null;
+            /** Om Id */
+            om_id?: string | null;
+            /** Pm Id */
+            pm_id?: string | null;
+            /** Status */
+            status?: boolean | null;
         };
         /**
          * UpdateItemProgressIn
@@ -7590,6 +8826,22 @@ export interface components {
             /** Context */
             ctx?: Record<string, never>;
         };
+        /** VehicleOptionOut */
+        VehicleOptionOut: {
+            /**
+             * Vehicle Id
+             * Format: uuid
+             */
+            vehicle_id: string;
+            /** Name */
+            name: string;
+            /** Number Plate */
+            number_plate: string;
+            /** Vehicle Type */
+            vehicle_type: string;
+            /** Division Id */
+            division_id?: string | null;
+        };
         /** VerifyOut */
         VerifyOut: {
             /** State */
@@ -7618,6 +8870,54 @@ export interface components {
             document_sha256_hex: string | null;
             /** Note */
             note: string | null;
+        };
+        /** WeeklyCalendarMatrixOut */
+        WeeklyCalendarMatrixOut: {
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /**
+             * End Date
+             * Format: date
+             */
+            end_date: string;
+            /** Division Id */
+            division_id?: string | null;
+            /** Division Name */
+            division_name?: string | null;
+            /** Team Id */
+            team_id?: string | null;
+            /** Team Name */
+            team_name?: string | null;
+            /** Leader Name */
+            leader_name?: string | null;
+            /**
+             * Total Days
+             * @default 7
+             */
+            total_days: number;
+            /**
+             * Scheduled Days
+             * @default 0
+             */
+            scheduled_days: number;
+            /**
+             * Total Items
+             * @default 0
+             */
+            total_items: number;
+            /**
+             * All Approved
+             * @default false
+             */
+            all_approved: boolean;
+            /**
+             * Days
+             * @default []
+             */
+            days: components["schemas"]["WeeklyMatrixDayOut"][];
         };
         /**
          * WeeklyContextDivisionOut
@@ -7661,6 +8961,253 @@ export interface components {
             team_id: string;
             /** Name */
             name: string;
+        };
+        /** WeeklyMatrixDayOut */
+        WeeklyMatrixDayOut: {
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /** Day Name */
+            day_name: string;
+            /** Daily Plan Id */
+            daily_plan_id?: string | null;
+            /** Division Id */
+            division_id?: string | null;
+            /** Team Id */
+            team_id?: string | null;
+            /** Site Name */
+            site_name?: string | null;
+            /** Site Lat */
+            site_lat?: string | null;
+            /** Site Lng */
+            site_lng?: string | null;
+            /** Status */
+            status?: string | null;
+            /** Approved By Pm Id */
+            approved_by_pm_id?: string | null;
+            /** Approved By Pm Name */
+            approved_by_pm_name?: string | null;
+            /** Approved At */
+            approved_at?: string | null;
+            /**
+             * Is Holiday
+             * @default false
+             */
+            is_holiday: boolean;
+            /**
+             * Items
+             * @default []
+             */
+            items: components["schemas"]["PlanItemOut"][];
+            /**
+             * Total Target Qty
+             * @default 0.00
+             */
+            total_target_qty: string;
+            /**
+             * Total Completed Qty
+             * @default 0.00
+             */
+            total_completed_qty: string;
+            /**
+             * Progress Percent
+             * @default 0.00
+             */
+            progress_percent: string;
+        };
+        /** WeeklyPlanCreateIn */
+        WeeklyPlanCreateIn: {
+            /**
+             * Division Id
+             * Format: uuid
+             */
+            division_id: string;
+            /**
+             * Team Id
+             * Format: uuid
+             */
+            team_id: string;
+            /** Week Number */
+            week_number: number;
+            /** Year */
+            year: number;
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /**
+             * End Date
+             * Format: date
+             */
+            end_date: string;
+            /**
+             * Status
+             * @default APPROVED
+             */
+            status: string;
+            /**
+             * Tool Ids
+             * @default []
+             */
+            tool_ids: string[];
+            /** Vehicle Id */
+            vehicle_id?: string | null;
+            /** Driver Employee Id */
+            driver_employee_id?: string | null;
+            /**
+             * Days
+             * @default []
+             */
+            days: components["schemas"]["DailyPlanCreateIn"][];
+        };
+        /** WeeklyPlanDetailOut */
+        WeeklyPlanDetailOut: {
+            /**
+             * Weekly Plan Id
+             * Format: uuid
+             */
+            weekly_plan_id: string;
+            /**
+             * Division Id
+             * Format: uuid
+             */
+            division_id: string;
+            /** Division Name */
+            division_name: string;
+            /**
+             * Team Id
+             * Format: uuid
+             */
+            team_id: string;
+            /** Team Name */
+            team_name: string;
+            /** Leader Name */
+            leader_name?: string | null;
+            /** Leader Employee Id */
+            leader_employee_id?: string | null;
+            /** Week Number */
+            week_number: number;
+            /** Year */
+            year: number;
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /**
+             * End Date
+             * Format: date
+             */
+            end_date: string;
+            /**
+             * Created By Id
+             * Format: uuid
+             */
+            created_by_id: string;
+            /** Created By Name */
+            created_by_name?: string | null;
+            /** Approved By Pm Id */
+            approved_by_pm_id?: string | null;
+            /** Approved By Pm Name */
+            approved_by_pm_name?: string | null;
+            /** Status */
+            status: string;
+            /**
+             * Tool Ids
+             * @default []
+             */
+            tool_ids: string[];
+            /** Vehicle Id */
+            vehicle_id?: string | null;
+            /** Driver Employee Id */
+            driver_employee_id?: string | null;
+            /**
+             * Days
+             * @default []
+             */
+            days: components["schemas"]["DailyPlanOut"][];
+            /** Create At */
+            create_at?: string | null;
+            /** Update At */
+            update_at?: string | null;
+        };
+        /** WeeklyPlanListOut */
+        WeeklyPlanListOut: {
+            /**
+             * Weekly Plan Id
+             * Format: uuid
+             */
+            weekly_plan_id: string;
+            /**
+             * Division Id
+             * Format: uuid
+             */
+            division_id: string;
+            /** Division Name */
+            division_name: string;
+            /**
+             * Team Id
+             * Format: uuid
+             */
+            team_id: string;
+            /** Team Name */
+            team_name: string;
+            /** Week Number */
+            week_number: number;
+            /** Year */
+            year: number;
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /**
+             * End Date
+             * Format: date
+             */
+            end_date: string;
+            /** Status */
+            status: string;
+            /**
+             * Total Days
+             * @default 0
+             */
+            total_days: number;
+            /**
+             * Total Items
+             * @default 0
+             */
+            total_items: number;
+            /** Create At */
+            create_at?: string | null;
+        };
+        /** WeeklyPlanUpdateIn */
+        WeeklyPlanUpdateIn: {
+            /** Division Id */
+            division_id?: string | null;
+            /** Team Id */
+            team_id?: string | null;
+            /** Week Number */
+            week_number?: number | null;
+            /** Year */
+            year?: number | null;
+            /** Start Date */
+            start_date?: string | null;
+            /** End Date */
+            end_date?: string | null;
+            /** Status */
+            status?: string | null;
+            /** Tool Ids */
+            tool_ids?: string[] | null;
+            /** Vehicle Id */
+            vehicle_id?: string | null;
+            /** Driver Employee Id */
+            driver_employee_id?: string | null;
+            /** Days */
+            days?: components["schemas"]["DailyPlanCreateIn"][] | null;
         };
         /** WeeklyReportRequest */
         WeeklyReportRequest: {
@@ -7707,6 +9254,107 @@ export interface components {
             decision: string;
             /** Note */
             note?: string | null;
+        };
+        /**
+         * WorkCompletionBomIn
+         * @description Schema input item Bon Material (BoM) untuk order proyek klien.
+         */
+        WorkCompletionBomIn: {
+            /** Work Plan Item Id */
+            work_plan_item_id?: string | null;
+            /** Material Code */
+            material_code?: string | null;
+            /** Material Name */
+            material_name: string;
+            /**
+             * Estimated Qty
+             * @default 0
+             */
+            estimated_qty: number;
+            /**
+             * Actual Qty
+             * @default 0
+             */
+            actual_qty: number;
+            /**
+             * Unit
+             * @default Unit
+             */
+            unit: string;
+            /** Category */
+            category?: string | null;
+            /** Notes */
+            notes?: string | null;
+            /**
+             * Sort Order
+             * @default 0
+             */
+            sort_order: number;
+        };
+        /**
+         * WorkCompletionBomOut
+         * @description Schema output representasi item BoM.
+         */
+        WorkCompletionBomOut: {
+            /**
+             * Bom Id
+             * Format: uuid
+             */
+            bom_id: string;
+            /**
+             * Completion Id
+             * Format: uuid
+             */
+            completion_id: string;
+            /** Work Plan Item Id */
+            work_plan_item_id?: string | null;
+            /** Material Code */
+            material_code?: string | null;
+            /** Material Name */
+            material_name: string;
+            /** Estimated Qty */
+            estimated_qty: number;
+            /** Actual Qty */
+            actual_qty: number;
+            /** Unit */
+            unit: string;
+            /** Category */
+            category?: string | null;
+            /** Notes */
+            notes?: string | null;
+            /**
+             * Sort Order
+             * @default 0
+             */
+            sort_order: number;
+            /** Create At */
+            create_at?: unknown | null;
+            /** Update At */
+            update_at?: unknown | null;
+        };
+        /**
+         * WorkCompletionBomUpdate
+         * @description Schema perbaikan item BoM (misal: input pemakaian riil actual_qty di lapangan).
+         */
+        WorkCompletionBomUpdate: {
+            /** Work Plan Item Id */
+            work_plan_item_id?: string | null;
+            /** Material Code */
+            material_code?: string | null;
+            /** Material Name */
+            material_name?: string | null;
+            /** Estimated Qty */
+            estimated_qty?: number | null;
+            /** Actual Qty */
+            actual_qty?: number | null;
+            /** Unit */
+            unit?: string | null;
+            /** Category */
+            category?: string | null;
+            /** Notes */
+            notes?: string | null;
+            /** Sort Order */
+            sort_order?: number | null;
         };
         /**
          * WorkCompletionCreate
@@ -7778,6 +9426,24 @@ export interface components {
             /** Total */
             total: number;
         };
+        /** WorkCompletionOptionOut */
+        WorkCompletionOptionOut: {
+            /**
+             * Completion Id
+             * Format: uuid
+             */
+            completion_id: string;
+            /** Client Name */
+            client_name: string;
+            /** Project Title */
+            project_title: string;
+            /** Order Number */
+            order_number?: string | null;
+            /** Division Id */
+            division_id?: string | null;
+            /** Order Status */
+            order_status: string;
+        };
         /**
          * WorkCompletionOrderSummaryOut
          * @description Ringkasan order klien (work completion) yang terhubung ke slot penugasan.
@@ -7840,6 +9506,10 @@ export interface components {
             order_status: string;
             /** Priority Level */
             priority_level: string;
+            /** Start Work Date */
+            start_work_date?: unknown | null;
+            /** End Work Date */
+            end_work_date?: unknown | null;
             /** Site Address */
             site_address?: string | null;
             /** Site Lat */
@@ -7851,7 +9521,11 @@ export interface components {
             /** Obstacles */
             obstacles?: string | null;
             /** Realization Photos Json */
-            realization_photos_json?: string[];
+            realization_photos_json?: ({
+                [key: string]: unknown;
+            } | string)[];
+            /** Bom Items */
+            bom_items?: components["schemas"]["WorkCompletionBomOut"][];
             /** Leader Signer Id */
             leader_signer_id?: string | null;
             /** Leader Signer Name */
@@ -7967,6 +9641,44 @@ export interface components {
             pm_employee_id: string;
             /** Leader Employee Id */
             leader_employee_id?: string | null;
+        };
+        /** WorkPlanFormOptionsV2Out */
+        WorkPlanFormOptionsV2Out: {
+            /**
+             * Divisions
+             * @default []
+             */
+            divisions: components["schemas"]["DivisionOptionOut"][];
+            /**
+             * Teams
+             * @default []
+             */
+            teams: components["schemas"]["TeamOptionOut"][];
+            /**
+             * Work Types
+             * @default []
+             */
+            work_types: components["schemas"]["WorkTypeOptionOut"][];
+            /**
+             * Work Completions
+             * @default []
+             */
+            work_completions: components["schemas"]["WorkCompletionOptionOut"][];
+            /**
+             * Offices
+             * @default []
+             */
+            offices: components["schemas"]["OfficeSiteOptionOut"][];
+            /**
+             * Tools
+             * @default []
+             */
+            tools: components["schemas"]["ToolOptionOut"][];
+            /**
+             * Vehicles
+             * @default []
+             */
+            vehicles: components["schemas"]["VehicleOptionOut"][];
         };
         /**
          * WorkPlanResponse
@@ -8084,9 +9796,31 @@ export interface components {
              */
             photos: components["schemas"]["WorkTypePhotoIn"][];
         };
+        /** WorkTypeOptionOut */
+        WorkTypeOptionOut: {
+            /**
+             * Work Type Id
+             * Format: uuid
+             */
+            work_type_id: string;
+            /** Name */
+            name: string;
+            /**
+             * Division Id
+             * Format: uuid
+             */
+            division_id: string;
+            /** Description */
+            description?: string | null;
+            /**
+             * Image Requirements Count
+             * @default 0
+             */
+            image_requirements_count: number;
+        };
         /**
          * WorkTypeOut
-         * @description Jenis pekerjaan beserta template fotonya.
+         * @description Jenis pekerjaan beserta template foto dan template material default.
          */
         WorkTypeOut: {
             /**
@@ -8112,6 +9846,11 @@ export interface components {
              * @default []
              */
             photos: components["schemas"]["WorkTypePhotoOut"][];
+            /**
+             * Default Materials
+             * @default []
+             */
+            default_materials: components["schemas"]["DefaultMaterialOut"][];
         };
         /**
          * WorkTypePhotoIn
@@ -8221,6 +9960,557 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+        };
+    };
+    get_work_plan_form_options_v2_api_v1_work_plans_form_options_v2_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkPlanFormOptionsV2Out"];
+                };
+            };
+        };
+    };
+    get_weekly_matrix_api_v1_work_plans_matrix_get: {
+        parameters: {
+            query: {
+                /** @description Tanggal awal rentang minggu (YYYY-MM-DD) */
+                start_date: string;
+                /** @description Tanggal akhir rentang minggu (YYYY-MM-DD) */
+                end_date: string;
+                division_id?: string | null;
+                team_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WeeklyCalendarMatrixOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    bulk_approve_weekly_matrix_api_v1_work_plans_matrix_bulk_approve_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkApproveDailyPlansIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BulkApproveDailyPlansOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_project_schedule_api_v1_work_plans_project__completion_id__schedule_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                completion_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectScheduleOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_weekly_plans_v2_api_v1_work_plans_weekly_get: {
+        parameters: {
+            query?: {
+                status?: string | null;
+                division_id?: string | null;
+                team_id?: string | null;
+                year?: number | null;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WeeklyPlanListOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_weekly_plan_v2_api_v1_work_plans_weekly_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WeeklyPlanCreateIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WeeklyPlanDetailOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_weekly_plan_detail_v2_api_v1_work_plans_weekly__weekly_plan_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                weekly_plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WeeklyPlanDetailOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_weekly_plan_v2_api_v1_work_plans_weekly__weekly_plan_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                weekly_plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WeeklyPlanUpdateIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WeeklyPlanDetailOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_weekly_plan_v2_api_v1_work_plans_weekly__weekly_plan_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                weekly_plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_daily_schedule_detail_api_v1_work_plans_daily__daily_plan_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                daily_plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanDailyScheduleDetailOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_daily_plan_v2_api_v1_work_plans_daily__daily_plan_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                daily_plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DailyPlanUpdateIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DailyPlanOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_daily_plan_v2_api_v1_work_plans_daily__daily_plan_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                daily_plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_daily_plan_v2_api_v1_work_plans_daily_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DailyPlanCreateIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DailyPlanOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_plan_item_v2_api_v1_work_plans_items__item_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanItemOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_plan_item_v2_api_v1_work_plans_items__item_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlanItemUpdateIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanItemOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_plan_item_v2_api_v1_work_plans_items__item_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_plan_item_v2_api_v1_work_plans_items_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlanItemCreateIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanItemOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -8419,6 +10709,204 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorkCompletionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_work_completion_bom_api_v1_work_completions__completion_id__bom_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                completion_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkCompletionBomOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_work_completion_bom_api_v1_work_completions__completion_id__bom_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                completion_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkCompletionBomIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkCompletionBomOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_work_completion_bom_api_v1_work_completions_bom__bom_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bom_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkCompletionBomUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkCompletionBomOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_work_completion_bom_api_v1_work_completions_bom__bom_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bom_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sync_bom_from_work_types_api_v1_work_completions__completion_id__sync_bom_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                completion_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["SyncBomFromWorkTypesIn"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_work_completion_docx_api_v1_work_completions__completion_id__export_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                completion_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */
@@ -10256,7 +12744,7 @@ export interface operations {
             };
         };
     };
-    verify_document_api_v1_employees__emp_id__documents__doc_id__verify_post: {
+    deactivate_document_api_v1_employees__emp_id__documents__doc_id__deactivate_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -10266,11 +12754,7 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["EmployeeDocumentVerify"];
-            };
-        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {
@@ -10292,10 +12776,44 @@ export interface operations {
             };
         };
     };
+    delete_document_api_v1_employees__emp_id__documents__doc_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                emp_id: string;
+                doc_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_expiring_documents_api_v1_documents_expiring_get: {
         parameters: {
             query?: {
-                urgency?: string | null;
+                urgency?: ("EXPIRED" | "CRITICAL" | "WARNING") | null;
             };
             header?: never;
             path?: never;
@@ -10319,26 +12837,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_pending_documents_api_v1_documents_pending_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PendingDocumentList"];
                 };
             };
         };
@@ -10945,37 +13443,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RescheduleItemResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_daily_schedule_detail_api_v1_work_plans_daily__daily_plan_id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                daily_plan_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PlanDailyScheduleDetailOut"];
                 };
             };
             /** @description Validation Error */
@@ -11801,6 +14268,41 @@ export interface operations {
             };
         };
     };
+    update_site_api_v1_sites__site_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                site_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SiteUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SiteResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     delete_site_api_v1_sites__site_id__delete: {
         parameters: {
             query?: never;
@@ -11850,6 +14352,107 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UnitOut"][];
+                };
+            };
+        };
+    };
+    create_unit_api_v1_units_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UnitCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnitOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_unit_api_v1_units__unit_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                unit_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UnitUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnitOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_unit_api_v1_units__unit_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                unit_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -12657,6 +15260,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PmApproveOrMoveOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_task_chain_status_api_v1_work_plans_items__item_id__chain_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskChainStatusOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    generate_completion_from_chain_api_v1_work_plans_items__item_id__generate_completion_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["GenerateCompletionIn"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GenerateCompletionOut"];
                 };
             };
             /** @description Validation Error */
@@ -14858,6 +17527,136 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["WorkTypePhotoOut"][];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_work_type_materials_api_v1_work_types__type_id__materials_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                type_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DefaultMaterialOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_work_type_material_api_v1_work_types__type_id__materials_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                type_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DefaultMaterialIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DefaultMaterialOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_work_type_material_api_v1_work_types_materials__material_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                material_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DefaultMaterialUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DefaultMaterialOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_work_type_material_api_v1_work_types_materials__material_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                material_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

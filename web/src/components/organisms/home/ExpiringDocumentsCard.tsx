@@ -6,9 +6,9 @@ import { TextBlock } from "@/components/molecules/TextBlock";
 import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
 
 const URGENCY: Record<string, { label: string; tone: string }> = {
-  KEDALUWARSA: { label: "Kedaluwarsa", tone: "bg-danger-bg text-danger" },
-  KURANG_DARI_7_HARI: { label: "< 7 hari", tone: "bg-warning-bg text-warning" },
-  KURANG_DARI_30_HARI: { label: "< 30 hari", tone: "bg-info-bg text-info" },
+  EXPIRED: { label: "Kedaluwarsa", tone: "bg-danger-bg text-danger" },
+  CRITICAL: { label: "≤ 7 hari", tone: "bg-warning-bg text-warning" },
+  WARNING: { label: "≤ 30 hari", tone: "bg-info-bg text-info" },
 };
 
 /** M2: dokumen pribadi kedaluwarsa atau berakhir ≤ 30 hari (8 teratas). */
@@ -17,7 +17,7 @@ export function ExpiringDocumentsCard({ items }: { items: ExpiringList["items"] 
     <Panel className="gap-4">
       <PanelHeader>
         <PanelTitle className="text-heading">Dokumen mendekati kedaluwarsa</PanelTitle>
-        <PanelDescription>Berakhir dalam 30 hari atau sudah lewat — minta karyawan memperpanjang.</PanelDescription>
+        <PanelDescription>Berakhir dalam 30 hari atau sudah lewat — unggah dokumen penggantinya.</PanelDescription>
       </PanelHeader>
       <PanelContent className="px-3 md:px-4">
         <ListBlock className="divide-y divide-line">

@@ -27,7 +27,6 @@ export function EmployeeDetailPage() {
       unitName={e ? (units.data?.find((u) => u.id === e.unit_id)?.name ?? null) : null}
       canEdit={canEdit}
       canManageDocs={canManageDocs}
-      canVerifyDocs={!!me?.permissions.includes("verify:documents")}
       canSeePrivate={canSeePrivate}
       editing={editing}
       promoting={promoting}

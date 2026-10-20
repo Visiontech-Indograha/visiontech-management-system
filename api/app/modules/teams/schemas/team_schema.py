@@ -10,11 +10,6 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 
-class MemberBase(BaseModel):
-    employee_id: UUID
-    is_active: bool = True
-
-
 class MemberAdd(BaseModel):
     employee_id: UUID
 
@@ -25,6 +20,7 @@ class MemberOut(BaseModel):
     employee_id: UUID
     full_name: str | None = None
     employee_no: str | None = None
+    system_role: str | None = None
     is_active: bool
     create_at: datetime
 

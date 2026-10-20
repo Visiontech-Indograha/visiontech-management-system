@@ -33,7 +33,6 @@ MODULE_FILES = {"__init__.py", "dependencies.py"}
 
 # "berkas -> pelanggaran"; hanya boleh menyusut. Butuh API service di modul pemilik (lihat docs/26).
 KNOWN_VIOLATIONS: set[str] = {
-    "modules/accounts/repositories/account_repository.py -> app.modules.auth.repositories.auth_user_repository",
     "modules/accounts/services/account_service.py -> app.modules.auth.repositories.auth_session_repository",
     "modules/accounts/services/account_service.py -> app.modules.auth.repositories.auth_user_repository",
     "modules/accounts/services/account_service.py -> app.modules.employees.repositories.employee_repository",

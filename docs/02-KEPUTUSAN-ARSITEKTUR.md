@@ -305,7 +305,7 @@ vms/
 ├── face-service/   layanan pengenalan wajah
 ├── db/             berkas SQL (dipindahkan dari prototipe)
 ├── docs/           dokumen ini + spesifikasi
-└── prototype/      prototipe V2, dibekukan sebagai rujukan
+└── (prototype/ dihapus 2026-10-20 — riwayat git 84008895)
 ```
 
 **Alasan.** Perubahan kontrak API hampir selalu menyentuh dua komponen sekaligus. Monorepo

@@ -34,7 +34,7 @@ bersama `src/components/molecules/` (mis. `FilePreview`). Fitur per folder `src/
 Perintah: `npm run lint` · `npm run typecheck` · `npm test`.
 
 ## Aturan bisnis
-`prototype/js/domain.js` — sumber kebenaran. Cari dengan `grep -n "case 'NAMA_TRANSAKSI'"`; jangan baca utuh.
+`prototype/js/domain.js` — sumber kebenaran (dihapus dari repo 2026-10-20; baca lewat `git show 84008895:prototype/js/domain.js`). Cari dengan `grep -n "case 'NAMA_TRANSAKSI'"`; jangan baca utuh.
 Rencana kerja aktif: `docs/PLAN-VERIFIKASI-MODUL-RINCI.md` (W6 = transaksi yang belum ada).
 
 ## Verifikasi branch (Claude)

@@ -121,9 +121,6 @@ MEMORY.md
 memory.md
 CLAUDE.md
 GEMINI.md
-prototype/GEMINI.md
-prototype/agent.md
-prototype/coordination/
 *.agent.md
 
 !web/src/lib/

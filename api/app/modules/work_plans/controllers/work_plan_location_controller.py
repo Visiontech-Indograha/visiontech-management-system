@@ -15,10 +15,8 @@ from app.modules.work_plans.schemas.work_plan_schema import (
     PlanLocationIn,
     PlanLocationOut,
 )
-from app.modules.work_plans.services.work_plan_service import (
-    GeocodeService,
-    PlanLocationService,
-)
+from app.modules.work_plans.services.geocode_service import GeocodeService
+from app.modules.work_plans.services.plan_location_service import PlanLocationService
 from app.shared.access.access_service import PlanAccess
 
 

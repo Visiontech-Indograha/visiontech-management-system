@@ -42,7 +42,7 @@ from app.modules.face.schemas.face_schema import (
     ProbeResponse,
     TemplateResponse,
 )
-from app.services.face_embed_client import EmbedResult, FaceEmbedClient, FaceServiceUnavailable
+from app.modules.face.services.face_embed_client import EmbedResult, FaceEmbedClient, FaceServiceUnavailable
 
 logger = logging.getLogger(__name__)
 

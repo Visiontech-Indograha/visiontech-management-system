@@ -1,0 +1,117 @@
+"""
+app/modules/work_plans/services/plan_location_service.py
+Titik lokasi penugasan SK (revisi PM 2026-09-26, dok 10). PM unit menetapkan titik koordinat &
+radius absensi untuk SK draf maupun yang sedang berjalan. Teks lokasi di dokumen SK tidak diubah
+(aturan 2: dokumen terbit tidak berubah) — yang berubah hanya titik geofence, tercatat di audit.
+"""
+
+from __future__ import annotations
+
+from typing import Any
+
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.errors import AppError, ValidationError
+from app.modules.work_plans.repositories.plan_location_repository import CRUDPlanLocation
+from app.modules.work_plans.services.plan_revision_service import PlanRevisionService
+from app.shared.access.access_service import PlanAccess
+
+CLOSED = ("COMPLETED", "CANCELLED")
+ISSUED = ("PUBLISHED", "APPEALED", "ACCEPTED", "IN_PROGRESS")  # dokumen sudah terbit → perubahan = revisi
+CLOSED_MESSAGE = "Titik lokasi tidak dapat diubah pada rencana kerja yang sudah selesai atau dibatalkan."
+MIN_RADIUS, MAX_RADIUS = 10, 5000
+
+
+class PlanLocationService:
+    """
+    Layanan untuk mengelola titik lokasi penugasan sebuah SK.
+    Menangani penetapan titik koordinat dan radius absensi untuk SK.
+    """
+
+    def __init__(self, db: AsyncSession) -> None:
+        """
+        Inisialisasi PlanLocationService.
+
+        Args:
+            db (AsyncSession): Sesi database asinkron.
+        """
+        self.repo = CRUDPlanLocation(db)
+        self.revisions = PlanRevisionService(db)
+
+    async def location(self, access: PlanAccess) -> dict[str, Any] | None:
+        """
+        Mengambil detail lokasi saat ini dari sebuah SK.
+
+        Args:
+            access (PlanAccess): Objek akses SK.
+
+        Returns:
+            dict[str, Any] | None: Detail lokasi (site) jika ada, atau None.
+        """
+        site_id = access.plan.site_id
+        if site_id is None:
+            return None
+        # Mengambil data site dari repositori berdasarkan site_id dan ID organisasi pengguna
+        row = await self.repo.site(site_id, access.user.organization_id)
+        return None if row is None else dict(row._mapping)
+
+    async def set_location(
+        self,
+        access: PlanAccess,
+        *,
+        name: str,
+        address: str | None,
+        lat: float,
+        lng: float,
+        radius_m: int,
+        reason: str | None = None,
+    ) -> dict[str, Any]:
+        """
+        Menetapkan atau memperbarui titik koordinat dan radius absensi untuk SK.
+        Aturan bisnis memastikan dokumen fisik (teks lokasi) tidak berubah, hanya geofence yang diperbarui.
+
+        Args:
+            access (PlanAccess): Akses terhadap SK.
+            name (str): Nama lokasi.
+            address (str | None): Alamat lokasi.
+            lat (float): Latitude.
+            lng (float): Longitude.
+            radius_m (int): Radius absensi dalam meter.
+
+        Returns:
+            dict[str, Any]: Data lokasi (site) yang baru atau yang sudah ada.
+        """
+        plan = access.plan
+        # Validasi status SK: tidak boleh mengubah lokasi jika SK sudah selesai atau dibatalkan
+        if plan.status in CLOSED:
+            raise AppError("PLAN_CLOSED", CLOSED_MESSAGE, status=409)
+        # Validasi batas nilai radius absensi
+        if not MIN_RADIUS <= radius_m <= MAX_RADIUS:
+            raise ValidationError(f"Radius absensi harus {MIN_RADIUS}–{MAX_RADIUS} meter.")
+        issued = plan.status in ISSUED
+        reason = (reason or "").strip()
+        if issued and not reason:
+            raise ValidationError("Alasan perubahan lokasi wajib diisi karena rencana kerja sudah terbit.")
+        before = await self.revisions.snapshot_of(plan.id) if issued else None
+        label = (" ".join(name.split()) or str(plan.location_text))[:190]
+        org_id = access.user.organization_id
+        # Titik yang sama disimpan lagi (nama + titik ≤ 5 m + radius sama) → pakai site yang ada,
+        # agar daftar lokasi tidak menumpuk "Gudang Dumai (2)", "(3)", …
+        same = await self.repo.same_site(org_id, label, lat, lng, radius_m)
+        if same is not None:
+            site_id = same.id
+        else:
+            # Titik/radius berubah → `site` baru (site lama tetap: riwayat absensi sah), padahal nama
+            # unik per organisasi: nama yang sudah dipakai diberi nomor, mis. "Gudang Dumai (2)".
+            taken = await self.repo.names_like(org_id, label)
+            n = 2
+            unique = label
+            while unique in taken:
+                unique, n = f"{label} ({n})", n + 1
+            site_id = (await self.repo.create_site(org_id, unique, address, lat, lng, radius_m)).id
+        # Menautkan SK dengan site_id yang sudah divalidasi/dibuat
+        await self.repo.set_plan_site(plan.id, site_id)
+        if before is not None:  # dokumen versi baru bertanda tangan PM + riwayat revisi + pemberitahuan
+            await self.revisions.after_change(access, before, reason)
+        row = await self.repo.site(site_id, org_id)
+        return dict(row._mapping)

@@ -6,7 +6,7 @@ Revisi PM 2026-09-26 · Lokasi penugasan SK lewat titik koordinat.
 """
 from __future__ import annotations
 
-import app.services.geocode_service as geocode
+import app.modules.work_plans.services.geocode_service as geocode
 from tests.conftest import World, requires_db, sync_query
 from tests.test_flow_plans import create_draft_plan, run_plan_to_in_progress
 

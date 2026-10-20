@@ -16,7 +16,7 @@ from app.modules.work_completion.schemas.work_completion_schema import (
     WorkCompletionCreate,
     WorkCompletionStatusUpdate,
 )
-from app.schemas.plan import RescheduleItemRequest, WorkPlanResponse
+from app.modules.work_plans.schemas.plan_schema import RescheduleItemRequest, WorkPlanResponse
 from app.shared.documents.document_export_service import DocumentExportService
 
 

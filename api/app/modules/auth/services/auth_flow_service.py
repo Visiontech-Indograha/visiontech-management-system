@@ -10,8 +10,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database.session import unit_of_work
 from app.modules.auth.repositories.auth_session_repository import CRUDSession
 from app.modules.auth.repositories.auth_user_repository import CRUDUser
+from app.modules.auth.schemas.auth_schema import SessionOut, UserMeResponse
 from app.modules.auth.services.auth_service import AuthService, ClientInfo, IssuedTokens
-from app.schemas.auth import SessionOut, UserMeResponse
 
 
 class AuthFlowService:

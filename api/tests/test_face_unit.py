@@ -12,13 +12,13 @@ import pytest
 
 from app.core.errors import ValidationError
 from app.crud.crud_face import parse_vector
+from app.modules.face.services.face_embed_client import FaceEmbedClient
 from app.schemas.face import (
     ConsentRequest,
     FaceLiveness,
     FacePolicy,
     TemplateResponse,
 )
-from app.services.face_embed_client import FaceEmbedClient
 from app.services.face_service import POLICY_TEXT, POLICY_VERSION, FaceService, _cosine, _normalize
 
 

@@ -17,7 +17,7 @@ from fastapi.testclient import TestClient
 
 from app.api.deps import get_app_release_service
 from app.main import app
-from app.services.app_release_service import AppReleaseService
+from app.modules.system.services.app_release_service import AppReleaseService
 
 APK = b"PK\x03\x04 bukan apk sungguhan" * 64
 BASE = "/api/v1/app/android"

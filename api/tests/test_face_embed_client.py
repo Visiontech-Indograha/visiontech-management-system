@@ -1,5 +1,6 @@
 """
-Klien HTTP face-service (app/services/face_embed_client.py) — tanpa jaringan: httpx dialihkan ke MockTransport.
+Klien HTTP face-service (app/modules/face/services/face_embed_client.py) — tanpa jaringan:
+httpx dialihkan ke MockTransport.
 Aturan inti: layanan mati/menolak token/error server → FaceServiceUnavailable (absen tetap jalan, hasil SKIPPED);
 gambar ditolak (400/413) → ValueError (kesalahan pemanggil); tidak pernah 'sukses' tanpa jawaban layanan.
 """
@@ -8,8 +9,8 @@ from __future__ import annotations
 import httpx
 import pytest
 
-from app.services import face_embed_client as fec
-from app.services.face_embed_client import FaceEmbedClient, FaceServiceUnavailable
+from app.modules.face.services import face_embed_client as fec
+from app.modules.face.services.face_embed_client import FaceEmbedClient, FaceServiceUnavailable
 
 pytestmark = pytest.mark.anyio
 REAL_CLIENT = httpx.AsyncClient   # asli, diambil sekali: tiap panggilan client_with() memasang pengalih baru

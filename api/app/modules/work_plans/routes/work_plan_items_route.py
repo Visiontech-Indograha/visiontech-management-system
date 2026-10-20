@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends
 
 from app.api.deps import get_current_user, get_plan_item_service
 from app.core.security import CurrentUser
-from app.schemas.plan_item import (
+from app.modules.work_plans.schemas.plan_item_schema import (
     CheckConflictIn,
     CheckConflictOut,
     GenerateCompletionIn,
@@ -26,7 +26,7 @@ from app.schemas.plan_item import (
     UpdateItemProgressIn,
     UpdateItemProgressOut,
 )
-from app.services.plan_item_service import PlanItemService
+from app.modules.work_plans.services.plan_item_service import PlanItemService
 
 router = APIRouter(prefix="/work-plans/items", tags=["Work Plan Items & PM Override"])
 

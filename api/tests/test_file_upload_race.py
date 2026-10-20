@@ -10,7 +10,7 @@ import io
 import pytest
 from PIL import Image
 
-from app.services.file_service import FileService
+from app.modules.system.services.file_service import FileService
 from tests.conftest import World, requires_db, sync_query
 
 pytestmark = [requires_db, pytest.mark.usefixtures("fake_storage")]

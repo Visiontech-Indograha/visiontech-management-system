@@ -17,9 +17,7 @@ from app.modules.work_plans.schemas.work_plan_schema import (
     AttachmentResponse,
     AttachmentsRequest,
 )
-from app.modules.work_plans.services.work_plan_service import (
-    PlanAttachmentService,
-)
+from app.modules.work_plans.services.plan_attachment_service import PlanAttachmentService
 from app.shared.access.access_service import PlanAccess, ensure_same_org
 
 

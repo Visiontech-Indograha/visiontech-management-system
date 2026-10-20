@@ -17,9 +17,7 @@ from app.modules.work_plans.schemas.work_plan_schema import (
     PlanRevisionIn,
     PlanRevisionOut,
 )
-from app.modules.work_plans.services.work_plan_service import (
-    PlanRevisionService,
-)
+from app.modules.work_plans.services.plan_revision_service import PlanRevisionService
 from app.shared.access.access_service import PlanAccess
 
 

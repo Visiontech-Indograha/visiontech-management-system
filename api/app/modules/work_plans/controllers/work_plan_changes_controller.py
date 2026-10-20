@@ -19,7 +19,7 @@ from app.modules.work_plans.schemas.work_plan_schema import (
     ChangeResponse,
     DecisionRequest,
 )
-from app.modules.work_plans.services.work_plan_service import PlanChangeService
+from app.modules.work_plans.services.plan_change_service import PlanChangeService
 
 
 async def _read(service: PlanChangeService, change_id: Any) -> ChangeResponse:

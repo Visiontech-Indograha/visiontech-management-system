@@ -13,11 +13,11 @@ from zoneinfo import ZoneInfo
 from app.core.alerts import send_business_alert
 from app.core.config import settings
 from app.core.time import jakarta_now
-from app.crud.crud_attendance_session import CRUDAttendanceSession
 from app.modules.attendance.repositories.attendance_monitor_repository import (
     CRUDAttendanceMonitor,
 )
-from app.services.notification_service import NotificationService
+from app.modules.attendance.repositories.attendance_session_repository import CRUDAttendanceSession
+from app.modules.notifications.services.notification_service import NotificationService
 
 WIB = ZoneInfo("Asia/Jakarta")
 CHECK_IN_DEADLINE = time(9, 0)

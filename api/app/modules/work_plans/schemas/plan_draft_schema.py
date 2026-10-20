@@ -5,7 +5,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-from app.schemas.work_type import EvidenceIn, EvidenceOut
+from app.modules.work_types.schemas.work_type_schema import EvidenceIn, EvidenceOut
 
 PlanCategory = Literal["INSTALASI", "PEMELIHARAAN", "PERBAIKAN", "SURVEI", "LAINNYA"]
 

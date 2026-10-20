@@ -15,12 +15,12 @@ from app.core.enums import PlanStatus
 from app.core.errors import AppError, ConflictError, ForbiddenError, NotFoundError
 from app.core.signing import canonical
 from app.core.time import jakarta_now
-from app.crud.crud_weekly_report import CRUDWeeklyReport
+from app.modules.notifications.services.notification_service import NotificationService
+from app.modules.reports.repositories.weekly_report_repository import CRUDWeeklyReport
+from app.modules.signatures.services.signature_service import ACCEPTOR, APPROVER, ISSUER, SignatureService
 from app.modules.work_plans.repositories.plan_amendment_repository import CRUDPlanAmendment
 from app.modules.work_plans.repositories.plan_member_repository import CRUDPlanMember
 from app.modules.work_plans.repositories.plan_transition_repository import CRUDPlanTransition
-from app.services.notification_service import NotificationService
-from app.services.signature_service import ACCEPTOR, APPROVER, ISSUER, SignatureService
 
 # domain.js CANCEL_PLAN requireStatus
 CANCELLABLE = {

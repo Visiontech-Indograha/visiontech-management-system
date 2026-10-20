@@ -11,15 +11,15 @@ from uuid import uuid4
 import pytest
 
 from app.core.errors import ValidationError
-from app.crud.crud_face import parse_vector
-from app.modules.face.services.face_embed_client import FaceEmbedClient
-from app.schemas.face import (
+from app.modules.face.repositories.face_repository import parse_vector
+from app.modules.face.schemas.face_schema import (
     ConsentRequest,
     FaceLiveness,
     FacePolicy,
     TemplateResponse,
 )
-from app.services.face_service import POLICY_TEXT, POLICY_VERSION, FaceService, _cosine, _normalize
+from app.modules.face.services.face_embed_client import FaceEmbedClient
+from app.modules.face.services.face_service import POLICY_TEXT, POLICY_VERSION, FaceService, _cosine, _normalize
 
 
 def test_face_service_math():

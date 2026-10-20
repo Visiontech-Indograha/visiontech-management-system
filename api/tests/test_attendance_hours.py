@@ -18,8 +18,10 @@ from uuid import uuid4
 import pytest
 
 from app.core.errors import AppError
-from app.services.attendance_monitor_service import AttendanceMonitorService
-from app.services.attendance_session_service import AttendanceSessionService
+from app.modules.attendance.services.attendance_monitor_service import AttendanceMonitorService
+from app.modules.attendance.services.attendance_session_service import AttendanceSessionService
+
+MONITOR = "app.modules.attendance.services.attendance_monitor_service"
 
 
 def test_check_in_before_0700_is_rejected():
@@ -183,7 +185,7 @@ def test_check_out_full_hours_gives_encouragement_message():
         repo.close.return_value = closed_row_mock
         repo.reviewer_employee_ids.return_value = []
 
-        with patch("app.services.attendance_session_service.NotificationService") as mock_notif_cls:
+        with patch("app.modules.attendance.services.attendance_session_service.NotificationService") as mock_notif_cls:
             mock_notif = mock_notif_cls.return_value
             mock_notif.attendance_encouragement = AsyncMock()
             res = await service.check_out(user_id, channel="WEB", org_id=org_id)
@@ -206,9 +208,9 @@ def test_auto_checkout_unclosed_sessions():
         org_id = str(uuid4())
         closed_mock = [MagicMock(employee_id=uuid4(), site_label="Kantor Pusat")]
 
-        with patch("app.services.attendance_monitor_service.CRUDAttendanceSession") as mock_session_cls, \
-             patch("app.services.attendance_monitor_service.NotificationService") as mock_notif_cls, \
-             patch("app.services.attendance_monitor_service.jakarta_now") as mock_now:
+        with patch(f"{MONITOR}.CRUDAttendanceSession") as mock_session_cls, \
+             patch(f"{MONITOR}.NotificationService") as mock_notif_cls, \
+             patch(f"{MONITOR}.jakarta_now") as mock_now:
 
             mock_now.return_value = datetime(2026, 10, 14, 19, 5, tzinfo=UTC)
             mock_session = mock_session_cls.return_value

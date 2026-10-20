@@ -17,10 +17,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import AppError, NotFoundError
 from app.core.security import CurrentUser
-from app.crud.crud_sync import CRUDSync
-from app.schemas.hse import DailyReportCreate, IncidentCreate
-from app.services.hse_service import HseService
-from app.services.overtime_service import OvertimeService
+from app.modules.hse.schemas.hse_schema import DailyReportCreate, IncidentCreate
+from app.modules.hse.services.hse_service import HseService
+from app.modules.overtime.services.overtime_service import OvertimeService
+from app.modules.system.repositories.sync_repository import CRUDSync
 from app.shared.access.access_service import PlanAccess, PlanNeed, check_plan_access, ensure_same_org
 from app.shared.access.plan_access_repository import CRUDPlanAccess
 

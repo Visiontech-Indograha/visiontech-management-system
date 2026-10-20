@@ -12,8 +12,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.enums import PlanStatus
 from app.core.errors import AppError, NotFoundError, ValidationError
+from app.modules.notifications.services.notification_service import NotificationService
 from app.modules.reports.repositories.weekly_report_repository import CRUDWeeklyReport
-from app.services.notification_service import NotificationService
 from app.shared.access.access_service import PlanAccess, require_plan_status
 
 EDITABLE = ("DRAFT", "CHANGES_REQUESTED")

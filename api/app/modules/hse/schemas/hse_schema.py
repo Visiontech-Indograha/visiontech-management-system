@@ -10,7 +10,7 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
-from app.schemas.work_type import EvidenceIn
+from app.modules.work_types.schemas.work_type_schema import EvidenceIn
 
 
 class IncidentCreate(BaseModel):

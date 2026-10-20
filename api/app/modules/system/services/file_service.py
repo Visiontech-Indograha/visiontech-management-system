@@ -9,7 +9,7 @@ from typing import Any
 from uuid import UUID
 
 from app.core.security import CurrentUser
-from app.crud.crud_file import CRUDFile
+from app.modules.system.repositories.file_repository import CRUDFile
 from app.shared.access.access_service import check_file_access
 
 

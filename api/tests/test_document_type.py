@@ -4,7 +4,7 @@ ketikan bebas ("sim a", "SIMA", "Sim  A")."""
 import pytest
 from pydantic import ValidationError
 
-from app.schemas.document import EmployeeDocumentCreate
+from app.modules.documents.schemas.document_schema import EmployeeDocumentCreate
 
 FILE_ID = "01a0dd8d-b442-7c07-91b8-5d8ac8f059fb"
 

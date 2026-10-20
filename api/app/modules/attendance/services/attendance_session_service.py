@@ -21,8 +21,8 @@ from app.core.events import queue_event
 from app.modules.attendance.repositories.attendance_session_repository import (
     CRUDAttendanceSession,
 )
-from app.services.face_service import FaceOutcome, FaceService
-from app.services.notification_service import NotificationService
+from app.modules.face.services.face_service import FaceOutcome, FaceService
+from app.modules.notifications.services.notification_service import NotificationService
 from app.shared.access.access_service import ensure_same_org
 from app.shared.org_clock import CRUDOrgClock
 

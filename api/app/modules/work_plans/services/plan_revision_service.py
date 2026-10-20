@@ -23,14 +23,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.enums import ChangeStatus, DocumentStatus, PlanStatus
 from app.core.errors import AppError, NotFoundError, ValidationError, trigger_rule_error
 from app.core.time import jakarta_now
+from app.modules.notifications.services.notification_service import NotificationService
+from app.modules.signatures.services.signature_service import ISSUER, SignatureService
 from app.modules.work_plans.repositories.plan_change_repository import CRUDPlanChange
 from app.modules.work_plans.repositories.plan_revision_repository import CRUDPlanRevision
 from app.modules.work_plans.repositories.plan_transition_repository import CRUDPlanTransition
 from app.modules.work_plans.schemas.plan_revision_schema import PlanRevisionIn
 from app.modules.work_plans.services.plan_amendment_service import PlanAmendmentService
 from app.modules.work_plans.services.plan_draft_service import PlanDraftService
-from app.services.notification_service import NotificationService
-from app.services.signature_service import ISSUER, SignatureService
 from app.shared.access.access_service import PlanAccess
 
 REVISABLE = (PlanStatus.PUBLISHED, PlanStatus.APPEALED, PlanStatus.ACCEPTED, PlanStatus.IN_PROGRESS)

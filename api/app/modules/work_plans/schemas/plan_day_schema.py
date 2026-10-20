@@ -5,7 +5,7 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
-from app.schemas.work_type import EvidenceOut
+from app.modules.work_types.schemas.work_type_schema import EvidenceOut
 
 
 class DayTaskOut(BaseModel):

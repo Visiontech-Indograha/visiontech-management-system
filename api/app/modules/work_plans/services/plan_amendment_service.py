@@ -17,15 +17,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.enums import ChangeStatus, ChangeType, DocumentKind, DocumentStatus, PlanStatus
 from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationError, trigger_rule_error
 from app.core.time import jakarta_now
-from app.crud.crud_asset_reservation import CRUDAssetReservation
+from app.modules.assets.repositories.asset_repository import CRUDAssetReservation
+from app.modules.notifications.services.notification_service import NotificationService
+from app.modules.signatures.services.signature_service import ACCEPTOR, ISSUER, SignatureService
 from app.modules.work_plans.repositories.plan_amendment_repository import CRUDPlanAmendment
 from app.modules.work_plans.repositories.plan_change_repository import CRUDPlanChange
 from app.modules.work_plans.repositories.plan_draft_repository import CRUDPlanDraft
 from app.modules.work_plans.repositories.plan_transition_repository import CRUDPlanTransition
 from app.modules.work_plans.schemas.plan_draft_schema import PlanDraftRequest
 from app.modules.work_plans.services.plan_draft_service import PlanDraftService, _day_roster
-from app.services.notification_service import NotificationService
-from app.services.signature_service import ACCEPTOR, ISSUER, SignatureService
 from app.shared.access.access_service import PlanAccess, require_plan_status
 
 LOCKED_REPORTS = ("SUBMITTED", "APPROVED")

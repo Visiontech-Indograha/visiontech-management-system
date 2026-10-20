@@ -11,7 +11,7 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
-from app.services import attendance_monitor_service as monitor
+from app.modules.attendance.services import attendance_monitor_service as monitor
 from tests.conftest import login_headers, requires_db
 
 pytestmark = requires_db

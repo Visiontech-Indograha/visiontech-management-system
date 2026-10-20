@@ -2,7 +2,7 @@
 O-02 (docs/20 §5, R-25) · Router tidak pernah menyentuh basis data (CLAUDE.md, docs/12 §2).
 Router hanya: jalur, metode, status, model respons, dependency; SQL tinggal di crud.
 
-Pemeriksaan statis (AST) atas `app/api/v1/endpoints/*.py`: router tidak boleh mengimpor pembangun kueri
+Pemeriksaan statis (AST) atas `app/modules/*/routes/*.py`: router tidak boleh mengimpor pembangun kueri
 SQLAlchemy (`text`, `select`, `insert`, `update`, `delete`) dan tidak boleh memanggil metode sesi
 (`db.execute`, `db.scalar`, …). `LEGACY` hanya boleh MENYUSUT: router baru yang melanggar langsung
 merah, dan router di daftar yang sudah bersih juga merah (hapus barisnya).
@@ -12,7 +12,7 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
-API_DIR = Path(__file__).resolve().parents[1] / "app" / "api" / "v1" / "endpoints"
+MODULES_DIR = Path(__file__).resolve().parents[1] / "app" / "modules"
 
 # Bukan router: dependency sesi yang MEMANG menyetel konteks transaksi (`set_config`, dok 12 §3).
 NOT_ROUTERS = {"deps.py"}
@@ -46,7 +46,7 @@ def _violations(path: Path) -> list[str]:
 def _all() -> dict[str, list[str]]:
     return {
         p.name: v
-        for p in sorted(API_DIR.glob("*.py"))
+        for p in sorted(MODULES_DIR.glob("*/routes/*.py"))
         if p.name not in NOT_ROUTERS and (v := _violations(p))
     }
 

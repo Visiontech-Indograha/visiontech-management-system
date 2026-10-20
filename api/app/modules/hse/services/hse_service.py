@@ -17,9 +17,9 @@ from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationE
 from app.core.permissions import RoleCode
 from app.core.security import CurrentUser
 from app.modules.hse.repositories.hse_repository import CRUDHse
-from app.schemas.work_type import EvidenceIn, merge_evidence
-from app.services.notification_service import NotificationService
-from app.services.work_type_service import WorkTypeService
+from app.modules.notifications.services.notification_service import NotificationService
+from app.modules.work_types.schemas.work_type_schema import EvidenceIn, merge_evidence
+from app.modules.work_types.services.work_type_service import WorkTypeService
 from app.shared.access.access_service import (
     PlanAccess,
     PlanNeed,

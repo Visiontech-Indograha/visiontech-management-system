@@ -22,10 +22,10 @@ import pytest
 from PIL import Image
 
 from app.api.deps import get_face_embed_client
-from app.crud.crud_face import vector_literal
 from app.main import app
+from app.modules.face.repositories.face_repository import vector_literal
+from app.modules.face.services import face_service as fs
 from app.modules.face.services.face_embed_client import EmbedResult, FaceServiceUnavailable
-from app.services import face_service as fs
 from tests.conftest import World, _sync_conn, requires_db, sync_query
 from tests.test_attendance_offline import INSIDE, Phone
 

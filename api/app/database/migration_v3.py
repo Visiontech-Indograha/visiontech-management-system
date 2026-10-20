@@ -15,10 +15,12 @@ from __future__ import annotations
 
 import logging
 import shutil
+from datetime import date
 from pathlib import Path
 
 from sqlalchemy import text
 
+from app.core.time import jakarta_now
 from app.database.session import engine
 
 logger = logging.getLogger(__name__)
@@ -199,9 +201,40 @@ def sync_media_seed_files() -> list[str]:
     return copied_files
 
 
+def _activity_log_partition_ddl(today: date, months_ahead: int = 2) -> list[str]:
+    """DDL partisi bulanan `app_activity_logs` (bulan ini + `months_ahead` bulan) dan partisi DEFAULT.
+
+    Batas memakai WIB (+07) seperti partisi bawaan Master Schema V2. Tanpa partisi untuk bulan berjalan,
+    setiap INSERT jejak audit (login, sinkron luring, dll.) gagal; DEFAULT menampung bila startup terlewat.
+    """
+    statements = []
+    year, month = today.year, today.month
+    for _ in range(months_ahead + 1):
+        nxt_year, nxt_month = (year + 1, 1) if month == 12 else (year, month + 1)
+        statements.append(
+            f"CREATE TABLE IF NOT EXISTS app_activity_logs_{year:04d}_{month:02d} PARTITION OF app_activity_logs "
+            f"FOR VALUES FROM ('{year:04d}-{month:02d}-01 00:00:00+07') "
+            f"TO ('{nxt_year:04d}-{nxt_month:02d}-01 00:00:00+07');"
+        )
+        year, month = nxt_year, nxt_month
+    statements.append("CREATE TABLE IF NOT EXISTS app_activity_logs_default PARTITION OF app_activity_logs DEFAULT;")
+    return statements
+
+
+async def ensure_activity_log_partitions(months_ahead: int = 2) -> None:
+    """Pastikan partisi jejak audit tersedia (idempoten; dijalankan setiap startup)."""
+    for stmt in _activity_log_partition_ddl(jakarta_now().date(), months_ahead):
+        try:
+            async with engine.begin() as conn:
+                await conn.execute(text(stmt))
+        except Exception as e:  # noqa: BLE001
+            logger.warning("Partisi app_activity_logs tidak dibuat: %s - %s", stmt[:70], e)
+
+
 async def apply_v3_migrations() -> None:
     """Menjalankan migrasi DDL dan sinkronisasi media uji ke PostgreSQL."""
     logger.info("Memulai eksekusi DDL Migration VMS V3...")
+    await ensure_activity_log_partitions()
 
     # 1. Jalankan DDL
     for stmt in DDL_STATEMENTS:

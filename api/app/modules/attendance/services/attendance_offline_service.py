@@ -1,5 +1,5 @@
 """
-app/services/attendance_offline_service.py
+app/modules/attendance/services/attendance_offline_service.py
 Absensi lapangan luring (R-34, keputusan pemilik 2026-10-02 — mengubah K-13).
 
 HP merekam absen masuk/pulang saat tanpa sinyal, menandatanganinya dengan kunci Android Keystore (tidak bisa

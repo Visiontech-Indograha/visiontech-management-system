@@ -1,5 +1,5 @@
 """
-app/services/attendance_session_service.py
+app/modules/attendance/services/attendance_session_service.py
 Aturan absensi (V-12) — padanan `domain.js` CHECK_IN, CHECK_OUT, EXPLAIN_ATTENDANCE, REVIEW_ATTENDANCE.
 Tanggal & jam dari server menurut zona waktu organisasi (V-10); jarak/status/terlambat/pulang cepat
 diputuskan trigger basis data, dan hasil simpanan itulah yang dikembalikan ke klien.
@@ -196,6 +196,9 @@ class AttendanceSessionService:
         worker = await self._employee_for_channel(user_id, channel)
         await self._require_enrolled(user_id, worker, channel, online)
         employee_id = worker.employee_id
+        # docs/35 §5: absen selalu disertai swafoto wajah (attendance.face_photo_path wajib).
+        if selfie_file_id is None:
+            raise ValidationError("Ambil swafoto wajah Anda untuk absen.")
         # K-12: titik GPS yang terlalu kabur tidak bisa membuktikan kehadiran — tolak dengan alasan.
         if channel == "WEB":
             if accuracy_m is not None and accuracy_m > MAX_WEB_ACCURACY_M:

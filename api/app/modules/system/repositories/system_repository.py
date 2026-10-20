@@ -1,8 +1,8 @@
 """
 app/modules/system/repositories/system_repository.py
 """
-from app.crud.crud_file_access import CRUDFileAccess
-from app.crud.crud_monitoring import CRUDMonitoring
+from app.modules.system.repositories.monitoring_repository import CRUDMonitoring
+from app.shared.access.file_access_repository import CRUDFileAccess
 
 from .file_repository import CRUDFile, FileRepository
 from .sync_repository import CRUDSync, SyncRepository

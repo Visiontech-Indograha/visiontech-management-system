@@ -19,7 +19,8 @@ from app.modules.work_plans.schemas.work_plan_schema import (
     PlanDailyScheduleDetailOut,
     PlanDayOut,
 )
-from app.modules.work_plans.services.work_plan_service import PlanDayService, PlanDraftService
+from app.modules.work_plans.services.plan_day_service import PlanDayService
+from app.modules.work_plans.services.plan_draft_service import PlanDraftService
 from app.shared.access.access_service import PlanAccess
 from app.shared.documents.document_export_service import DocumentExportService
 from app.shared.documents.pdf_service import render_plan_preview_html

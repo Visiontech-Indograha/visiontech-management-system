@@ -1,5 +1,5 @@
 """
-app/modules/work_completion/crud/crud_work_completion.py
+app/modules/work_completion/repositories/work_completion_repository.py
 
 Akses data database untuk entitas Work Completion (Order Klien) Master V3.
 """

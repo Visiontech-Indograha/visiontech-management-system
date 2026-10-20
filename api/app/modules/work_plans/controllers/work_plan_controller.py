@@ -41,15 +41,13 @@ from app.modules.work_plans.schemas.work_plan_schema import (
     WorkPlanResponse,
     WorkPlanUpdate,
 )
-from app.modules.work_plans.services.work_plan_service import (
-    PlanAssignmentService,
-    PlanDraftService,
-    PlanEditService,
-    PlanTransitionService,
-    render_plan_preview_html,
-)
+from app.modules.work_plans.services.plan_assignment_service import PlanAssignmentService
+from app.modules.work_plans.services.plan_draft_service import PlanDraftService
+from app.modules.work_plans.services.plan_edit_service import PlanEditService
+from app.modules.work_plans.services.plan_transition_service import PlanTransitionService
 from app.shared.access.access_service import PlanAccess
 from app.shared.documents.document_export_service import DocumentExportService
+from app.shared.documents.pdf_service import render_plan_preview_html
 
 
 class WorkPlanController:

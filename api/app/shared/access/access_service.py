@@ -20,8 +20,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.errors import AppError, ForbiddenError, NotFoundError
 from app.core.permissions import Permission, RoleCode
 from app.core.security import CurrentUser
-from app.crud.crud_file_access import CRUDFileAccess
-from app.crud.crud_org_ref import CRUDOrgRef
+from app.shared.access.file_access_repository import CRUDFileAccess
+from app.shared.access.org_ref_repository import CRUDOrgRef
 from app.shared.access.plan_access_repository import CRUDPlanAccess
 
 

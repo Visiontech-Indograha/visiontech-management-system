@@ -19,6 +19,7 @@ from app.api.deps import (
     get_plan_transition_service,
     get_signature_service,
 )
+from app.modules.signatures.services.signature_service import SignatureService
 from app.modules.work_plans.schemas.work_plan_schema import (
     CompletionRequest,
     FinalReportOut,
@@ -26,13 +27,9 @@ from app.modules.work_plans.schemas.work_plan_schema import (
     TransitionRequest,
     WorkPlanResponse,
 )
-from app.modules.work_plans.services.work_plan_service import (
-    PlanTransitionService,
-    SignatureService,
-    html_to_pdf,
-    render_final_report_html,
-)
+from app.modules.work_plans.services.plan_transition_service import PlanTransitionService
 from app.shared.access.access_service import PlanAccess, ensure_same_org
+from app.shared.documents.pdf_service import html_to_pdf, render_final_report_html
 
 
 def _response(row: Any) -> WorkPlanResponse:

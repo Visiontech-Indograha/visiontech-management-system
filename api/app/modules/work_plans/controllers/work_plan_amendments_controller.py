@@ -13,18 +13,16 @@ from fastapi import Depends
 from fastapi.responses import HTMLResponse
 
 from app.api.deps import get_plan_amendment_service, get_signature_service
+from app.modules.signatures.services.signature_service import SignatureService
 from app.modules.work_plans.schemas.work_plan_schema import (
     AmendmentReasonIn,
     PlanChangeOut,
     PlanDetailOut,
     PlanDraftRequest,
 )
-from app.modules.work_plans.services.work_plan_service import (
-    PlanAmendmentService,
-    SignatureService,
-    render_final_report_html,
-)
+from app.modules.work_plans.services.plan_amendment_service import PlanAmendmentService
 from app.shared.access.access_service import PlanAccess
+from app.shared.documents.pdf_service import render_final_report_html
 
 
 class WorkPlanAmendmentsController:

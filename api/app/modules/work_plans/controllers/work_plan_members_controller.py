@@ -17,7 +17,7 @@ from app.modules.work_plans.schemas.work_plan_schema import (
     TeamRequest,
     TeamResponse,
 )
-from app.modules.work_plans.services.work_plan_service import PlanMemberService
+from app.modules.work_plans.services.plan_member_service import PlanMemberService
 from app.shared.access.access_service import PlanAccess
 
 

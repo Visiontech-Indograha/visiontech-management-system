@@ -1,78 +1,77 @@
 """
-Penghapusan organisasi uji beserta seluruh barisnya.
+Penghapusan data uji Master Schema V2 beserta seluruh baris turunannya.
 
-Beberapa FK tidak cascade (mis. `employee_assignment.unit_id`, `asset_allocation.allocated_by`,
-`daily_report.submitted_by`), dan `tg_audit_row()` butuh konteks `app.organization_id` untuk tabel
-tanpa kolom organisasi (`asset_allocation`). Karena itu: satu koneksi, konteks disetel, dan baris
-penahan dihapus berulang sampai organisasinya bisa dihapus.
+Tidak ada daftar tabel manual: anak-anak sebuah baris ditemukan lewat katalog FK PostgreSQL lalu dihapus
+lebih dulu (berjenjang), sehingga tabel baru otomatis ikut terbersihkan. Satu-satunya siklus FK di skema
+(`employee.division_id` ↔ `division.om_id/pm_id`) diputus dulu dengan mengosongkan `employee.division_id`.
 """
 from __future__ import annotations
 
-import re
+from typing import Any
 
 import psycopg2
 
-# kolom rujukan → subkueri id milik organisasi %(org)s
-_OWNED_IDS = {
-    "user_id": "SELECT id FROM vms.app_user WHERE organization_id = %(org)s",
-    "employee_id": "SELECT id FROM vms.employee WHERE organization_id = %(org)s",
-    "work_plan_id": "SELECT id FROM vms.work_plan WHERE organization_id = %(org)s",
-    "asset_id": "SELECT id FROM vms.asset WHERE organization_id = %(org)s",
-    "work_plan_day_id": "SELECT d.id FROM vms.work_plan_day d JOIN vms.work_plan w ON w.id = d.work_plan_id "
-                        "WHERE w.organization_id = %(org)s",
-    "asset_allocation_id": "SELECT a.id FROM vms.asset_allocation a JOIN vms.asset s ON s.id = a.asset_id "
-                           "WHERE s.organization_id = %(org)s",
-    "daily_report_id": "SELECT r.id FROM vms.daily_report r JOIN vms.work_plan_day d ON d.id = r.work_plan_day_id "
-                       "JOIN vms.work_plan w ON w.id = d.work_plan_id WHERE w.organization_id = %(org)s",
-    "incident_id": "SELECT id FROM vms.incident_report WHERE organization_id = %(org)s",
-    # cadangan untuk tabel tautan berkas (bukti insiden/laporan, dst.) yang menahan file_object
-    "file_id": "SELECT id FROM vms.file_object WHERE organization_id = %(org)s",
-}
-_BLOCKER = re.compile(r'on table "(\w+)"\s*DETAIL')
+_FK_SQL = """
+    SELECT child.relname, child_col.attname, parent_col.attname
+    FROM pg_constraint c
+    JOIN pg_class child ON child.oid = c.conrelid
+    JOIN pg_class parent ON parent.oid = c.confrelid
+    JOIN pg_namespace n ON n.oid = child.relnamespace
+    JOIN pg_attribute child_col ON child_col.attrelid = c.conrelid AND child_col.attnum = c.conkey[1]
+    JOIN pg_attribute parent_col ON parent_col.attrelid = c.confrelid AND parent_col.attnum = c.confkey[1]
+    WHERE c.contype = 'f' AND n.nspname = 'public' AND parent.relname = %s AND NOT child.relispartition
+"""
+_PK_SQL = """
+    SELECT a.attname FROM pg_index i
+    JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = i.indkey[0]
+    WHERE i.indrelid = %s::regclass AND i.indisprimary
+"""
 
 
-def purge_organization(conn: psycopg2.extensions.connection, org_id: str, max_rounds: int = 40) -> None:
-    for _ in range(max_rounds):
-        cur = conn.cursor()
-        try:
-            cur.execute("SELECT set_config('app.organization_id', %s, true), "
-                        "set_config('app.actor_label', 'pembersihan-uji', true)", (org_id,))
-            cur.execute("DELETE FROM vms.attendance WHERE organization_id = %s", (org_id,))
-            cur.execute("DELETE FROM vms.organization WHERE id = %s", (org_id,))
-            conn.commit()
-            return
-        except psycopg2.errors.ForeignKeyViolation as exc:
-            conn.rollback()
-            match = _BLOCKER.search(str(exc))
-            if not match:
-                raise
-            _delete_blocker(conn, org_id, match.group(1), max_rounds)
-    raise RuntimeError(f"Organisasi uji {org_id} tidak dapat dihapus setelah {max_rounds} putaran")
+def _pk(cur: Any, table: str) -> str | None:
+    cur.execute(_PK_SQL, (f"public.{table}",))
+    row = cur.fetchone()
+    return row[0] if row else None
 
 
-def _delete_blocker(conn: psycopg2.extensions.connection, org_id: str, blocker: str, depth: int) -> None:
-    """Hapus baris penahan milik organisasi. Bila penahan itu sendiri ditahan tabel lain (mis.
-    plan_change.document_id → plan_document → employee), urai lebih dulu penahannya — berjenjang."""
-    for _ in range(depth):
-        cur = conn.cursor()
-        cur.execute("SELECT set_config('app.organization_id', %s, true)", (org_id,))
-        cur.execute("SELECT column_name FROM information_schema.columns "
-                    "WHERE table_schema = 'vms' AND table_name = %s", (blocker,))
-        columns = {c for (c,) in cur.fetchall()}
-        try:
-            if "organization_id" in columns:
-                cur.execute(f"DELETE FROM vms.{blocker} WHERE organization_id = %s", (org_id,))
-            else:
-                ref = next((c for c in _OWNED_IDS if c in columns), None)
-                if ref is None:
-                    raise RuntimeError(f"Tidak tahu cara menghapus penahan {blocker} (kolom: {sorted(columns)})")
-                cur.execute(f"DELETE FROM vms.{blocker} WHERE {ref} IN ({_OWNED_IDS[ref]})", {"org": org_id})
-            conn.commit()
-            return
-        except psycopg2.errors.ForeignKeyViolation as exc:
-            conn.rollback()
-            match = _BLOCKER.search(str(exc))
-            if not match:
-                raise
-            _delete_blocker(conn, org_id, match.group(1), depth - 1)
-    raise RuntimeError(f"Penahan {blocker} tidak dapat dihapus")
+def purge_rows(cur: Any, table: str, column: str, values: list[Any], _depth: int = 0) -> None:
+    """Hapus baris `table` dengan `column` ∈ `values`, setelah semua baris yang merujuknya dihapus."""
+    if not values or _depth > 25:
+        return
+    values = [str(v) for v in values]
+    cur.execute(f'SELECT DISTINCT "{column}" FROM public."{table}" WHERE "{column}"::text = ANY(%s)', (values,))
+    keys = [str(r[0]) for r in cur.fetchall()]
+    if not keys:
+        return
+
+    cur.execute(_FK_SQL, (table,))
+    for child, child_col, parent_col in cur.fetchall():
+        if child == table:
+            continue
+        if parent_col == column:
+            refs = keys
+        else:
+            cur.execute(f'SELECT "{parent_col}" FROM public."{table}" WHERE "{column}"::text = ANY(%s)', (keys,))
+            refs = [str(r[0]) for r in cur.fetchall() if r[0] is not None]
+        child_pk = _pk(cur, child)
+        if child_pk:
+            cur.execute(f'SELECT "{child_pk}" FROM public."{child}" WHERE "{child_col}"::text = ANY(%s)', (refs,))
+            purge_rows(cur, child, child_pk, [r[0] for r in cur.fetchall()], _depth + 1)
+        else:
+            cur.execute(f'DELETE FROM public."{child}" WHERE "{child_col}"::text = ANY(%s)', (refs,))
+    cur.execute(f'DELETE FROM public."{table}" WHERE "{column}"::text = ANY(%s)', (keys,))
+
+
+def purge_office(conn: psycopg2.extensions.connection, office_id: str) -> None:
+    """Hapus kantor uji beserta karyawan, akun, divisi, tim, rencana kerja, absensi, dst. miliknya."""
+    with conn.cursor() as cur:
+        cur.execute("UPDATE public.employee SET division_id = NULL WHERE office_id = %s", (office_id,))
+        purge_rows(cur, "office", "office_id", [office_id])
+    conn.commit()
+
+
+def purge_users(conn: psycopg2.extensions.connection, user_ids: list[str]) -> None:
+    """Hapus akun uji tanpa karyawan (beserta sesi & turunannya)."""
+    with conn.cursor() as cur:
+        purge_rows(cur, "users", "user_id", user_ids)
+    conn.commit()

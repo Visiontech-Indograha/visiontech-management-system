@@ -10,6 +10,7 @@ from tests.db_guard import unsafe_test_database, unsafe_test_storage
     "postgresql+asyncpg://postgres:x@localhost:5432/visiontech_db",       # CI (layanan lokal)
     "postgresql+asyncpg://postgres:x@127.0.0.1:5432/vms",
     "postgresql+asyncpg://vms_app:x@100.117.92.14:5434/vms_test",         # DB uji server (T0)
+    "postgresql+asyncpg://vms_app:x@192.168.88.160:5434/test_migration",  # DB uji Master Schema V2
 ])
 def test_local_and_test_databases_are_allowed(url):
     assert unsafe_test_database(url) is None

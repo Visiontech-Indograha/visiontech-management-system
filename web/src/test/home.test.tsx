@@ -52,7 +52,7 @@ describe("beranda", () => {
     expect(screen.queryByText("Belum ada rencana kerja aktif.")).toBeNull();
   });
 
-  it("HR: dokumen mendekati kedaluwarsa (≤ 30 hari / lewat) tampil, yang aman tidak", async () => {
+  it("HR: dokumen mendekati kedaluwarsa (≤ 30 hari / lewat) tampil", async () => {
     const doc = (id: string, urgency: string, days: number) => ({
       id, employee_id: `emp-${id}`, full_name: `Karyawan ${id}`, doc_type: "SIM A",
       expiry_date: "2026-10-01", days_left: days, urgency,
@@ -60,7 +60,7 @@ describe("beranda", () => {
     const calls = mockApi((c) => {
       if (c.url === "/work-plans") return { data: [] };
       if (c.url === "/documents/expiring")
-        return { data: { items: [doc("a", "KEDALUWARSA", -2), doc("b", "KURANG_DARI_7_HARI", 3), doc("c", "KURANG_DARI_30_HARI", 20), doc("d", "AMAN", 200)] } };
+        return { data: { items: [doc("a", "EXPIRED", -2), doc("b", "CRITICAL", 3), doc("c", "WARNING", 20)] } };
     });
     renderRoute("/", { role: "HR" });
 
@@ -70,40 +70,15 @@ describe("beranda", () => {
     expect(await within(statLink).findByText("3")).toBeInTheDocument();
     expect(within(card).getByRole("link", { name: /Karyawan a/ })).toHaveAttribute("href", "/directory/emp-a");
     expect(within(card).getByText("Kedaluwarsa")).toBeInTheDocument();
-    expect(within(card).getByText("< 7 hari")).toBeInTheDocument();
-    expect(within(card).queryByText("Karyawan d")).toBeNull();
+    expect(within(card).getByText("≤ 7 hari")).toBeInTheDocument();
     expect(calls.some((c) => c.url === "/documents/expiring")).toBe(true);
   });
 
-  it("tanpa izin verifikasi dokumen: tidak memanggil /documents/expiring", async () => {
+  it("tanpa izin kelola dokumen: tidak memanggil /documents/expiring", async () => {
     const calls = mockApi((c) => (c.url === "/work-plans" ? { data: [] } : undefined));
     renderRoute("/", { role: "PM" });
     await screen.findByText("Belum ada rencana kerja aktif.");
     expect(calls.some((c) => c.url === "/documents/expiring")).toBe(false);
-  });
-
-  it("HR: antrean dokumen menunggu verifikasi, terlama dulu, menuju halaman karyawan", async () => {
-    mockApi((c) => {
-      if (c.url === "/work-plans") return { data: [] };
-      if (c.url === "/documents/expiring") return { data: { items: [] } };
-      if (c.url === "/documents/pending")
-        return {
-          data: {
-            items: [
-              { id: "p1", employee_id: "emp-1", full_name: "Asrul Mulya", doc_type: "MCU", number_masked: "***1",
-                expiry_date: null, file_id: "f1", uploaded_at: "2026-09-20T02:00:00Z", uploaded_by_me: false },
-              { id: "p2", employee_id: "emp-2", full_name: "Aris Setyawan", doc_type: "SIM A", number_masked: "***2",
-                expiry_date: "2031-01-01", file_id: "f2", uploaded_at: "2026-09-21T02:00:00Z", uploaded_by_me: true },
-            ],
-          },
-        };
-    });
-    renderRoute("/", { role: "HR" });
-    const statLink = await screen.findByRole("link", { name: /Dokumen menunggu verifikasi/ });
-    expect(await within(statLink).findByText("2")).toBeInTheDocument();
-    const card = (await screen.findByText("Dokumen menunggu verifikasi", { selector: "[data-slot=card-title]" })).closest("[data-slot=card]") as HTMLElement;
-    expect(within(card).getByRole("link", { name: /Asrul Mulya/ })).toHaveAttribute("href", "/directory/emp-1");
-    expect(within(card).getByText("Unggahan Anda")).toBeInTheDocument();
   });
 });
 

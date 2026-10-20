@@ -17,12 +17,10 @@ const doc = (overrides: Record<string, unknown> = {}) => ({
   id: "d1",
   employee_id: "e1",
   doc_type: "KTP",
-  number_masked: "123***",
-  expiry_date: "2025-01-01",
-  status: "VALID",
-  lifecycle: "ACTIVE",
+  status: "active",
+  active_at: "2024-01-01",
+  expired_at: "2025-01-01",
   file_id: "f1",
-  uploaded_by: "u1",
   created_at: "2024-01-01T00:00:00Z",
   ...overrides,
 });
@@ -158,52 +156,53 @@ describe("halaman detail karyawan (HR)", () => {
   });
 });
 
-describe("R8 · perpanjang berkas dari daftar (termasuk Berkas saya)", () => {
-  it("karyawan memperpanjang SIM dari profilnya: jenis tetap, supersedes_id terkirim", async () => {
+describe("berkas karyawan dikelola HR/GA (M3, employee_file)", () => {
+  it("HR memperbarui SIM dari daftar: jenis tetap, tanpa nomor/supersedes", async () => {
     const calls = mockApi((c) => {
-      if (c.url === "/employees/e-lead/documents" && c.method === "get")
+      if (c.url === "/employees/e1") return { data: employee() };
+      if (c.url === "/employees/e1/documents" && c.method === "get")
         return {
           data: {
             items: [
-              doc({ id: "d1", employee_id: "e-lead", doc_type: "SIM A", status: "VERIFIED", lifecycle: "CURRENT" }),
-              doc({ id: "d2", employee_id: "e-lead", doc_type: "MCU", status: "PENDING", lifecycle: "PENDING" }),
+              doc({ id: "d1", doc_type: "SIM_A", status: "active" }),
+              doc({ id: "d2", doc_type: "MCU", status: "extended" }),
             ],
             total: 2,
           },
         };
       if (c.url === "/files/upload") return { data: { file_id: "f9", message: "ok" } };
-      if (c.url === "/employees/e-lead/documents" && c.method === "post") return { status: 201, data: doc({ id: "d3" }) };
+      if (c.url === "/employees/e1/documents" && c.method === "post") return { status: 201, data: doc({ id: "d3" }) };
     });
-    renderRoute("/my-documents", { role: "field" });
+    renderRoute("/directory/e1", { role: "HR" });
 
-    fireEvent.click(await screen.findByRole("button", { name: "Perpanjang SIM A" }));
-    expect(screen.queryByRole("button", { name: "Perpanjang MCU" })).toBeNull(); // belum terverifikasi
-    const dialog = screen.getByRole("dialog", { name: "Perpanjang berkas" });
-    expect(within(dialog).queryByRole("combobox", { name: /Jenis dokumen/ })).toBeNull(); // jenis tidak bisa diganti
-    fireEvent.change(within(dialog).getByLabelText(/Nomor dokumen/), { target: { value: "987654321" } });
+    fireEvent.click(await screen.findByRole("button", { name: "Perbarui SIM A" }));
+    expect(screen.queryByRole("button", { name: "Perbarui Medical check-up" })).toBeNull(); // sudah diganti
+    const dialog = screen.getByRole("dialog", { name: "Perbarui berkas" });
+    expect(within(dialog).queryByRole("combobox", { name: /Jenis dokumen/ })).toBeNull();
     fireEvent.change(within(dialog).getByLabelText(/Tanggal kedaluwarsa/), { target: { value: "2031-01-01" } });
     const fileInput = within(dialog).getByLabelText(/File/);
     Object.defineProperty(fileInput, "files", { value: [new File(["x"], "sim.png", { type: "image/png" })] });
     fireEvent.change(fileInput);
     fireEvent.click(within(dialog).getByRole("button", { name: "Simpan" }));
 
-    await waitFor(() => expect(calls.some((c) => c.method === "post" && c.url === "/employees/e-lead/documents")).toBe(true));
-    expect(calls.find((c) => c.method === "post" && c.url === "/employees/e-lead/documents")!.data).toEqual({
-      doc_type: "SIM A",
-      number: "987654321",
-      expiry_date: "2031-01-01",
+    await waitFor(() => expect(calls.some((c) => c.method === "post" && c.url === "/employees/e1/documents")).toBe(true));
+    expect(calls.find((c) => c.method === "post" && c.url === "/employees/e1/documents")!.data).toEqual({
+      doc_type: "SIM_A",
       file_id: "f9",
-      supersedes_id: "d1",
+      active_at: null,
+      expired_at: "2031-01-01",
     });
   });
 
-  it("HR juga melihat Perpanjang di daftar berkas karyawan", async () => {
-    mockApi((c) => {
+  it("HR menonaktifkan dokumen yang berlaku", async () => {
+    const calls = mockApi((c) => {
       if (c.url === "/employees/e1") return { data: employee() };
-      if (c.url === "/employees/e1/documents") return { data: { items: [doc({ status: "VERIFIED", lifecycle: "EXPIRED" })], total: 1 } };
+      if (c.url === "/employees/e1/documents") return { data: { items: [doc()], total: 1 } };
+      if (c.url === "/employees/e1/documents/d1/deactivate") return { data: doc({ status: "not_active" }) };
     });
     renderRoute("/directory/e1", { role: "HR" });
-    expect(await screen.findByRole("button", { name: "Perpanjang KTP" })).toBeInTheDocument();
+    fireEvent.click(await screen.findByRole("button", { name: "Nonaktifkan" }));
+    await waitFor(() => expect(calls.some((c) => c.method === "post" && c.url === "/employees/e1/documents/d1/deactivate")).toBe(true));
   });
 });
 
@@ -274,30 +273,19 @@ describe("mutasi / promosi & riwayat jabatan (M2, domain.js PROMOTE)", () => {
   });
 });
 
-describe("Berkas saya: karyawan mengajukan dokumen sendiri (M2)", () => {
-  it("tombol Tambah berkas tersedia dan dokumen dikirim atas nama karyawan sendiri", async () => {
-    const calls = mockApi((c) => {
-      if (c.url === "/employees/e-lead/documents" && c.method === "get") return { data: { items: [], total: 0 } };
-      if (c.url === "/files/upload") return { data: { file_id: "f7", message: "ok" } };
-      if (c.url === "/employees/e-lead/documents" && c.method === "post") return { status: 201, data: doc({ id: "d9" }) };
-    });
+describe("Berkas saya: karyawan hanya melihat (M3)", () => {
+  it("tanpa tombol Tambah/Perbarui; dokumennya sendiri tampil", async () => {
+    mockApi((c) =>
+      c.url === "/employees/e-lead/documents" ? { data: { items: [doc({ doc_type: "SIM_C" })], total: 1 } } : undefined,
+    );
     renderRoute("/my-documents", { role: "field" });
-    fireEvent.click(await screen.findByRole("button", { name: "Tambah berkas" }));
-    const dialog = screen.getByRole("dialog", { name: "Tambah berkas" });
-    fireEvent.change(within(dialog).getByLabelText(/Jenis dokumen/), { target: { value: "MCU" } });
-    fireEvent.change(within(dialog).getByLabelText(/Nomor dokumen/), { target: { value: "MCU-2026-01" } });
-    const fileInput = within(dialog).getByLabelText(/File/);
-    Object.defineProperty(fileInput, "files", { value: [new File(["x"], "mcu.pdf", { type: "application/pdf" })] });
-    fireEvent.change(fileInput);
-    fireEvent.click(within(dialog).getByRole("button", { name: "Simpan" }));
-    await waitFor(() => expect(calls.some((c) => c.method === "post" && c.url === "/employees/e-lead/documents")).toBe(true));
-    expect(calls.find((c) => c.method === "post" && c.url === "/employees/e-lead/documents")!.data).toMatchObject({
-      doc_type: "MCU", number: "MCU-2026-01", file_id: "f7",
-    });
+    expect(await screen.findByText("SIM C")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Tambah berkas" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Perbarui/ })).toBeNull();
   });
 });
 
-describe("peringatan masa berlaku di daftar berkas (M2)", () => {
+describe("peringatan masa berlaku di daftar berkas (M3)", () => {
   it("≤ 30 hari dan kedaluwarsa ditandai; yang masih lama tidak", async () => {
     const inDays = (n: number) => {
       const d = new Date(Date.now() + n * 86_400_000);
@@ -308,9 +296,9 @@ describe("peringatan masa berlaku di daftar berkas (M2)", () => {
         ? {
             data: {
               items: [
-                doc({ id: "a", doc_type: "SIM A", status: "VERIFIED", lifecycle: "CURRENT", expiry_date: inDays(10) }),
-                doc({ id: "b", doc_type: "MCU", status: "VERIFIED", lifecycle: "EXPIRED", expiry_date: inDays(-3) }),
-                doc({ id: "c", doc_type: "KTP", status: "VERIFIED", lifecycle: "CURRENT", expiry_date: inDays(400) }),
+                doc({ id: "a", doc_type: "SIM_A", expired_at: inDays(10) }),
+                doc({ id: "b", doc_type: "MCU", expired_at: inDays(-3) }),
+                doc({ id: "c", doc_type: "KTP", expired_at: inDays(400) }),
               ],
               total: 3,
             },
@@ -319,7 +307,7 @@ describe("peringatan masa berlaku di daftar berkas (M2)", () => {
     );
     renderRoute("/my-documents", { role: "field" });
     expect(await screen.findByText("10 hari lagi")).toBeInTheDocument();
-    const mcuRow = screen.getByText("MCU").closest("tr") as HTMLElement;
+    const mcuRow = screen.getByText("Medical check-up").closest("tr") as HTMLElement;
     expect(within(mcuRow).getByText("Kedaluwarsa")).toBeInTheDocument();
     expect(screen.queryByText(/400 hari/)).toBeNull();
   });

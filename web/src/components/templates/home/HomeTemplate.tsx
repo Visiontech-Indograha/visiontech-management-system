@@ -4,17 +4,15 @@ import { ExpiringDocumentsCard } from "@/components/organisms/home/ExpiringDocum
 import { HomeGreeting } from "@/components/organisms/home/HomeGreeting";
 import { HomeStatGrid } from "@/components/organisms/home/HomeStatGrid";
 import { HomeBentoDashboard } from "@/components/organisms/home/HomeBentoDashboard";
-import { PendingDocumentsCard } from "@/components/organisms/home/PendingDocumentsCard";
-import type { ExpiringList, PendingList } from "@/services/homeService";
+import type { ExpiringList } from "@/services/homeService";
 import type { WorkPlan } from "@/services/workPlanService";
 
-/** Kerangka Beranda: sapaan, Bento UI dashboard operasional, antrean dokumen (HR). */
-export function HomeTemplate({ today, name, stats, canVerifyDocs, pendingDocs, expiringDocs, plans }: {
+/** Kerangka Beranda: sapaan, Bento UI dashboard operasional, dokumen kedaluwarsa (HR/GA). */
+export function HomeTemplate({ today, name, stats, canManageDocs, expiringDocs, plans }: {
   today: string;
   name: string | undefined;
   stats: ComponentProps<typeof HomeStatGrid>;
-  canVerifyDocs: boolean;
-  pendingDocs: PendingList["items"] | undefined;
+  canManageDocs: boolean;
   expiringDocs: ExpiringList["items"] | undefined;
   plans: UseQueryResult<WorkPlan[]>;
   active: WorkPlan[];
@@ -36,9 +34,8 @@ export function HomeTemplate({ today, name, stats, canVerifyDocs, pendingDocs, e
         canCreatePlan={stats.canCreatePlan}
       />
 
-      {/* Dokumen Menunggu Verifikasi & Kedaluwarsa (HR/Admin) */}
-      {canVerifyDocs && !!pendingDocs?.length && <PendingDocumentsCard items={pendingDocs} />}
-      {canVerifyDocs && !!expiringDocs?.length && <ExpiringDocumentsCard items={expiringDocs} />}
+      {/* Dokumen karyawan kedaluwarsa (HR/GA) */}
+      {canManageDocs && !!expiringDocs?.length && <ExpiringDocumentsCard items={expiringDocs} />}
     </div>
   );
 }

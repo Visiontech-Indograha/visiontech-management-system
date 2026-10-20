@@ -1,5 +1,4 @@
-"""Jenis dokumen dirapikan agar aturan SIM di trigger (`doc_type = 'SIM A'`) tidak gagal karena
-ketikan bebas ("sim a", "SIMA", "Sim  A")."""
+"""Jenis dokumen disimpan sebagai kode baku (seed V2: SIM_A, SERTIFIKAT_K3, …) apa pun ketikannya."""
 
 import pytest
 from pydantic import ValidationError
@@ -12,22 +11,27 @@ FILE_ID = "01a0dd8d-b442-7c07-91b8-5d8ac8f059fb"
 @pytest.mark.parametrize(
     ("typed", "stored"),
     [
-        ("sim a", "SIM A"),
-        ("SIMA", "SIM A"),
-        ("  Sim   A ", "SIM A"),
-        ("sim c", "SIM C"),
-        ("SIM B1", "SIM B I"),
-        ("sim bii", "SIM B II"),
+        ("sim a", "SIM_A"),
+        ("SIMA", "SIM_A"),
+        ("  Sim   A ", "SIM_A"),
+        ("sim-c", "SIM_C"),
+        ("SIM B1", "SIM_B1"),
+        ("sim b ii", "SIM_B2"),
         ("ktp", "KTP"),
-        ("mcu", "MCU"),
-        ("Sertifikat  K3 Umum", "Sertifikat K3 Umum"),
+        ("Sertifikat  K3", "SERTIFIKAT_K3"),
+        ("kontrak pkwt", "KONTRAK_PKWT"),
     ],
 )
 def test_doc_type_is_normalised(typed: str, stored: str) -> None:
-    doc = EmployeeDocumentCreate(doc_type=typed, number="123", file_id=FILE_ID)
-    assert doc.doc_type == stored
+    assert EmployeeDocumentCreate(doc_type=typed, file_id=FILE_ID).doc_type == stored
 
 
-def test_blank_doc_type_is_rejected() -> None:
+@pytest.mark.parametrize("typed", ["   ", "x", "KTP/SIM"])
+def test_invalid_doc_type_is_rejected(typed: str) -> None:
     with pytest.raises(ValidationError):
-        EmployeeDocumentCreate(doc_type="   ", number="123", file_id=FILE_ID)
+        EmployeeDocumentCreate(doc_type=typed, file_id=FILE_ID)
+
+
+def test_expiry_cannot_precede_start() -> None:
+    with pytest.raises(ValidationError):
+        EmployeeDocumentCreate(doc_type="SIM A", file_id=FILE_ID, active_at="2026-05-01", expired_at="2026-04-30")

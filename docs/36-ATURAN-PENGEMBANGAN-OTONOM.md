@@ -19,7 +19,12 @@ Status per 2026-10-20 (API + uji Postman; UI web/HP belum disesuaikan sehingga b
 
 - [ ] **Milestone 1**: Auth, Sesi & Profil Pengguna (`users`, `employee`, `user_sessions`, `address`) — API ✔, Postman ✔
 - [ ] **Milestone 2**: Master Kantor & Divisi Operasional (`office`, `division`) — API ✔, Postman ✔
-- [ ] **Milestone 3**: Manajemen Tim & Personel Lapangan (`team`, `member`, `employee_file`)
+- [ ] **Milestone 3**: Manajemen Tim & Personel Lapangan (`team`, `member`, `employee_file`) — API ✔, Postman ✔, web
+      (berkas karyawan) ✔. Aturan: ketua wajib TEAM_LEADER & otomatis anggota; anggota hanya peran lapangan; PM
+      hanya mengelola tim di divisinya (`division.pm_id`); nama tim unik per divisi; tim yang dirujuk
+      `work_plan_daily` tidak bisa dihapus. `employee_file`: HR/GA mencatat dari `file_object` (`path_file` =
+      `storage_key`), dokumen sejenis yang baru → lama `extended`, lewat tanggal → `not_active`; tanpa alur
+      verifikasi/nomor dokumen (tidak ada kolomnya di V2).
 - [ ] **Milestone 4**: Inventaris Aset (Alat Pribadi/Umum & Kendaraan) (`tool`, `vehicle`, `asset_assignment`)
 - [ ] **Milestone 5**: Order Klien & Perencanaan Harian Daily-First (`work_completion` sebagai order, `work_plan_daily`,
       `company_mess_stay`) — **tanpa** `work_plan_weekly`

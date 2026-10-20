@@ -17,10 +17,10 @@ from app.modules.documents.schemas.document_schema import (
     DocumentListResponse,
     EmployeeDocumentCreate,
     EmployeeDocumentResponse,
-    EmployeeDocumentVerify,
 )
 
 router = APIRouter(prefix="/employees/{emp_id}/documents", tags=["Employee Documents"])
+_MANAGE = Depends(require_permission(Permission.MANAGE_EMPLOYEE_DOCUMENTS))
 
 
 @router.get("", response_model=DocumentListResponse)
@@ -29,7 +29,7 @@ async def get_employee_documents(
     current_user: CurrentUser = Depends(require_permission(Permission.VIEW_DOCUMENTS)),
     controller: DocumentController = Depends(),
 ) -> DocumentListResponse:
-    """Mendapatkan daftar dokumen pribadi karyawan."""
+    """Daftar dokumen karyawan (milik sendiri, atau semua bagi pengelola dokumen)."""
     return await controller.handle_get_employee_documents(current_user, emp_id)
 
 
@@ -37,20 +37,30 @@ async def get_employee_documents(
 async def upload_document(
     emp_id: UUID,
     data: EmployeeDocumentCreate,
-    current_user: CurrentUser = Depends(require_permission(Permission.UPLOAD_DOCUMENTS)),
+    current_user: CurrentUser = _MANAGE,
     controller: DocumentController = Depends(),
 ) -> EmployeeDocumentResponse:
-    """Mengunggah dokumen baru untuk karyawan."""
+    """Mencatat dokumen baru dari berkas yang sudah diunggah; dokumen sejenis yang lama menjadi `extended`."""
     return await controller.handle_upload_document(current_user, emp_id, data)
 
 
-@router.post("/{doc_id}/verify", response_model=EmployeeDocumentResponse)
-async def verify_document(
+@router.post("/{doc_id}/deactivate", response_model=EmployeeDocumentResponse)
+async def deactivate_document(
     emp_id: UUID,
     doc_id: UUID,
-    data: EmployeeDocumentVerify,
-    current_user: CurrentUser = Depends(require_permission(Permission.VERIFY_DOCUMENTS)),
+    current_user: CurrentUser = _MANAGE,
     controller: DocumentController = Depends(),
 ) -> EmployeeDocumentResponse:
-    """Memverifikasi (menyetujui atau menolak) dokumen karyawan."""
-    return await controller.handle_verify_document(current_user, emp_id, doc_id, data)
+    """Menonaktifkan dokumen (mis. dicabut atau tidak lagi berlaku)."""
+    return await controller.handle_deactivate_document(current_user, emp_id, doc_id)
+
+
+@router.delete("/{doc_id}")
+async def delete_document(
+    emp_id: UUID,
+    doc_id: UUID,
+    current_user: CurrentUser = _MANAGE,
+    controller: DocumentController = Depends(),
+) -> dict[str, str]:
+    """Menghapus (soft delete) dokumen yang salah unggah."""
+    return await controller.handle_delete_document(current_user, emp_id, doc_id)

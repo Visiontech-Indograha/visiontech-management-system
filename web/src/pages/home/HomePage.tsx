@@ -1,6 +1,6 @@
 import { useSession } from "@/stores/sessionStore";
 import { HomeTemplate } from "@/components/templates/home/HomeTemplate";
-import { useAttendanceToReview, useExpiringDocuments, usePendingDocuments } from "@/services/homeService";
+import { useAttendanceToReview, useExpiringDocuments } from "@/services/homeService";
 import { useWorkPlans } from "@/services/workPlanService";
 
 const WAITING = ["DRAFT", "PUBLISHED", "ACCEPTED", "APPEALED", "COMPLETION_REVIEW"];
@@ -12,9 +12,8 @@ export function HomePage() {
   const canReview = perms.includes("review:attendance");
   const plans = useWorkPlans({ status: "", archived: false });
   const toReview = useAttendanceToReview(canReview);
-  const canVerifyDocs = perms.includes("verify:documents");
-  const expiring = useExpiringDocuments(canVerifyDocs);
-  const pending = usePendingDocuments(canVerifyDocs);
+  const canManageDocs = perms.includes("manage:employee_documents");
+  const expiring = useExpiringDocuments(canManageDocs);
 
   const list = plans.data ?? [];
   const running = list.filter((p) => p.status === "IN_PROGRESS");
@@ -32,14 +31,12 @@ export function HomePage() {
         waiting: { value: waiting.length, loading: plans.isPending },
         requests: { value: requests.length, loading: plans.isPending },
         toReview: { value: toReview.data, loading: toReview.isPending },
-        pending: { value: pending.data?.length, loading: pending.isPending },
         expiring: { value: expiring.data?.length, loading: expiring.isPending },
         canCreatePlan: perms.includes("create:plan"),
         canReview,
-        canVerifyDocs,
+        canManageDocs,
       }}
-      canVerifyDocs={canVerifyDocs}
-      pendingDocs={pending.data}
+      canManageDocs={canManageDocs}
       expiringDocs={expiring.data}
       plans={plans}
       active={active}

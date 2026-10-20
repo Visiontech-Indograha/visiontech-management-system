@@ -142,6 +142,13 @@ _INTERNAL = ("INTERNAL_ERROR", "Terjadi gangguan pada sistem. Coba lagi beberapa
 _DB_ERROR_MESSAGE = "Data tidak dapat disimpan karena bertentangan dengan data lain. Periksa isian lalu coba lagi."
 
 
+def db_error(exc: BaseException) -> AppError:
+    """Galat DB untuk service: isi asli hanya ke log (baris pertama — sisanya memuat SQL & data pribadi,
+    dok 08), klien menerima pesan umum dengan kode DB_ERROR (400)."""
+    logger.error("DB_ERROR: %s", str(exc).split("\n", 1)[0])
+    return AppError("DB_ERROR", _DB_ERROR_MESSAGE, status=400)
+
+
 def _defaults_for(status: int) -> tuple[str, str]:
     if status >= 500:
         return _INTERNAL

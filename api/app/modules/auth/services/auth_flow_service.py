@@ -22,7 +22,8 @@ class AuthFlowService:
 
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
-        self.service = AuthService(CRUDUser(db), CRUDSession(db))
+        self.users = CRUDUser(db)
+        self.service = AuthService(self.users, CRUDSession(db))
 
     async def login(self, login: str, password: str, client: ClientInfo, platform: str = "web") -> IssuedTokens:
         """
@@ -85,6 +86,10 @@ class AuthFlowService:
             attendance_mode=profile.attendance_mode,
             division_id=profile.division_id,
         )
+
+    async def profile_photo_file_id(self, user_id: str) -> str | None:
+        """ID berkas foto profil karyawan milik pengguna (None bila belum ada)."""
+        return await self.users.profile_photo_file_id(user_id)
 
     async def active_sessions(self, user_id: str, current_session_id: str) -> list[SessionOut]:
         """

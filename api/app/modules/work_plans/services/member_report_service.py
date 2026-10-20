@@ -213,3 +213,7 @@ class MemberReportService:
             raise NotFoundError("Laporan mingguan")
         header = await self.repo.plan_header(access.plan.id)
         return render_report_html(report.name, header, report, period=(report.starts_on, report.ends_on), members=[])
+
+    async def list_exports(self, plan_id: UUID) -> list[dict[str, Any]]:
+        """Daftar ekspor template dokumen (DOCX, PPTX, PDF, XLSX) untuk SK ini."""
+        return [dict(r._mapping) for r in await self.repo.plan_exports(plan_id)]

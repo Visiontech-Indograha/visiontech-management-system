@@ -8,10 +8,8 @@ Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.2.
 from __future__ import annotations
 
 from fastapi import Depends, Request, Response
-from sqlalchemy import text
 
 from app.core.security import CurrentUser
-from app.database.session import AsyncSessionLocal
 from app.modules.auth.controllers.auth_login_controller import AuthLoginController
 from app.modules.auth.dependencies import get_auth_flow_service
 from app.modules.auth.schemas.auth_login_response_schema import AuthLoginResponseSchema
@@ -35,14 +33,7 @@ class AuthProfileController:
         res = await self.flow_service.me(current_user.user_id, current_user.permissions)
         # Foto profil karyawan: /auth/me hanya mengembalikan id berkasnya; URL
         # bertanda tangan diambil klien lewat GET /files/{id}/url.
-        sql = (
-            "SELECT profile_photo_path FROM employee "
-            "WHERE employee_id = (SELECT employee_id FROM users WHERE user_id = :uid) LIMIT 1"
-        )
-        async with AsyncSessionLocal() as db:
-            result = await db.execute(text(sql), {"uid": current_user.user_id})
-            row = result.fetchone()
-            photo_file_id = str(row[0]) if row and row[0] else None
+        photo_file_id = await self.flow_service.profile_photo_file_id(current_user.user_id)
         return AuthUserMeResponseSchema(
             photo_file_id=photo_file_id,
             user_id=res.user_id,

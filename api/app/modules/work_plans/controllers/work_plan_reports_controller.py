@@ -7,6 +7,7 @@ Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.2.
 
 from __future__ import annotations
 
+from typing import Any
 from uuid import UUID
 
 from fastapi import Depends
@@ -88,6 +89,10 @@ class WorkPlanReportsController:
     ) -> HTMLResponse:
         """Menghasilkan representasi HTML format cetak A4 laporan mingguan."""
         return HTMLResponse(await self.service.weekly_report_html(access, f"Laporan Mingguan {week}"))
+
+    async def handle_list_exports(self, plan_id: UUID) -> list[dict[str, Any]]:
+        """Daftar ekspor template dokumen (DOCX, PPTX, PDF, XLSX) dari public.document_template_export."""
+        return await self.service.list_exports(plan_id)
 
 
 __all__ = ["WorkPlanReportsController"]

@@ -6,6 +6,7 @@ Laporan harian dan dokumen penyelesaian pekerjaan untuk Master Schema V2.
 from __future__ import annotations
 
 import json
+from collections.abc import Sequence
 from typing import Any
 from uuid import UUID
 
@@ -287,6 +288,30 @@ class CRUDMemberReport(CRUDBase):
             LEFT JOIN public.employee re ON re.employee_id = c.pm_signer_id
             WHERE wr.weekly_plan_id = :plan
             ORDER BY c.create_at DESC LIMIT 1
+            """,
+            {"plan": plan_id},
+        )
+
+    async def plan_exports(self, plan_id: UUID | str) -> Sequence[Any]:
+        """
+        Daftar ekspor template dokumen (DOCX, PPTX, PDF, XLSX) milik SK/penyelesaian ini.
+        """
+        return await self.fetchall(
+            """
+            SELECT
+                dte.export_id,
+                dte.completion_id,
+                dte.template_type,
+                dte.master_template_path,
+                dte.export_format,
+                dte.file_output_url,
+                dte.generated_by_id,
+                dte.create_at
+            FROM public.document_template_export dte
+            JOIN public.work_completion wc ON wc.completion_id = dte.completion_id
+            WHERE (wc.weekly_plan_id = :plan OR wc.daily_plan_id = :plan OR dte.completion_id = :plan)
+              AND dte.delete_at IS NULL
+            ORDER BY dte.create_at DESC
             """,
             {"plan": plan_id},
         )

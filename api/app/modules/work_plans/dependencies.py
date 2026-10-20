@@ -7,10 +7,11 @@ Getter memakai dependency sesi yang SAMA dengan handler sehingga satu permintaan
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_db_with_user
+from app.api.deps import get_db, get_db_with_user
 from app.modules.work_plans.repositories.plan_assignment_repository import CRUDPlanAssignment
 from app.modules.work_plans.repositories.plan_member_repository import CRUDPlanMember
 from app.modules.work_plans.repositories.plan_transition_repository import CRUDPlanTransition
+from app.modules.work_plans.repositories.work_plan_v2_repository import CRUDWorkPlanV2
 from app.modules.work_plans.services.member_report_service import MemberReportService
 from app.modules.work_plans.services.plan_amendment_service import PlanAmendmentService
 from app.modules.work_plans.services.plan_assignment_service import PlanAssignmentService
@@ -24,6 +25,7 @@ from app.modules.work_plans.services.plan_location_service import PlanLocationSe
 from app.modules.work_plans.services.plan_member_service import PlanMemberService
 from app.modules.work_plans.services.plan_revision_service import PlanRevisionService
 from app.modules.work_plans.services.plan_transition_service import PlanTransitionService
+from app.modules.work_plans.services.work_plan_v2_service import WorkPlanV2Service
 
 
 def get_plan_assignment_service(db: AsyncSession = Depends(get_db_with_user)) -> PlanAssignmentService:
@@ -76,3 +78,8 @@ def get_plan_member_service(db: AsyncSession = Depends(get_db_with_user)) -> Pla
 
 def get_plan_transition_service(db: AsyncSession = Depends(get_db_with_user)) -> PlanTransitionService:
     return PlanTransitionService(CRUDPlanTransition(db), CRUDPlanMember(db))
+
+
+def get_work_plan_v2_service(db: AsyncSession = Depends(get_db)) -> WorkPlanV2Service:
+    # Sesi tanpa konteks pengguna (`get_db`) — sama seperti perilaku rute V2 sebelum dipindah.
+    return WorkPlanV2Service(CRUDWorkPlanV2(db))

@@ -11,7 +11,7 @@ import uuid
 from sqlalchemy import text
 from sqlalchemy.pool import NullPool
 
-from app.db.session import make_engine, set_request_context
+from app.database.session import make_engine, set_request_context
 from tests.conftest import requires_db
 
 pytestmark = requires_db

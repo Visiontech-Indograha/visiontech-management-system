@@ -9,7 +9,7 @@ from __future__ import annotations
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
-import app.db.session as db_session
+import app.database.session as db_session
 from app.database.session import engine
 
 

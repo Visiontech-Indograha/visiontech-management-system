@@ -38,7 +38,7 @@ from app.crud.crud_session import CRUDSession
 from app.crud.crud_site import CRUDSite
 from app.crud.crud_unit import CRUDUnit
 from app.crud.crud_user import CRUDUser
-from app.db.session import AsyncSessionLocal, set_request_context, unit_of_work
+from app.database.session import AsyncSessionLocal, set_request_context, unit_of_work
 from app.services.access_service import PlanAccess, PlanNeed, check_plan_access
 from app.services.account_service import AccountService
 from app.services.app_release_service import AppReleaseService

@@ -13,7 +13,7 @@ from sqlalchemy import text
 
 from app.core.config import settings
 from app.core.security import hash_password
-from app.db.session import make_engine
+from app.database.session import make_engine
 
 
 def _operator_url() -> str:

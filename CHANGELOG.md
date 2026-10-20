@@ -7,6 +7,12 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ---
 
+- **Penyederhanaan UI & Alur Cepat Form Rencana Kerja V2 (`PlanEditorV2Form.tsx`):**
+  - **Desain 1-Halaman Terpadu & Bebas Stepper Rumit:** Mengubah antarmuka pembuatan rencana kerja mingguan menjadi 1 alur natural (Tim & Periode -> Template Otomatis -> Tinjauan 7 Hari -> Logistik Opsional) sehingga pengguna tidak tersesat atau cemas kehilangan data saat navigasi.
+  - **Fitur Cerdas Template Mingguan 1-Klik (Smart Autofill):** Menambahkan blok preset cepat di mana PM cukup memilih site, tipe pekerjaan, dan judul tugas, lalu 1-klik "⚡ Terapkan ke Senin - Jumat" otomatis menyetel seluruh hari kerja dengan jam 08:00 - 17:00 dan libur akhir pekan.
+  - **Tinjauan 7 Hari Kartu Harian Ringkas:** Mengganti tab bar horizontal dengan list kartu harian yang memiliki ringkasan jelas, toggle libur 1-klik, dan panel accordion detail per hari jika ingin menyesuaikan tugas khusus.
+  - **Pencegahan Total DOM Nesting `<form>` & Penegakan Standar Atom:** Menggunakan `<FormBlock>` murni di root dan molekul kontrol standar proyek, menghapus potensi hidrasi ganda dan menghasilkan 0 kesalahan typecheck (`tsc`) dan linting (`eslint`).
+
 - **Modularisasi Penuh Backend API FastAPI & Penyelarasan Repository (`api/app/`):**
   - **Restrukturisasi Arsitektur Modular 24 Domain (`api/app/modules/<domain>/`):** Memindahkan seluruh repositori SQL statis, skema Pydantic, dan layanan domain dari direktori root (`api/app/crud/`, `api/app/schemas/`, `api/app/services/`) ke dalam modul domain terisolasi (`work_completion`, `work_plans`, `work_types`, `face`, `auth`, `sites`, `units`, `employees`, `accounts`, `assets`, `attendance`, `audit`, `hse`, `documents`, `notifications`, `overtime`, `reports`, `signatures`, `system`).
   - **Penyelarasan Base Repository & Re-export Shims:** Mengonsolidasikan helper transaksi basis data asinkron pada `app.core.repository.BaseRepository` dan mempertahankan 100% backward-compatibility untuk suite uji di `api/tests/` melalui re-export shims.

@@ -41,7 +41,7 @@ api/
 └── ruff.toml · mypy.ini
 ```
 
-**Aturan penulisan & arah impor** (ditegakkan `tests/test_structure.py`, `tests/test_router_layering.py`)
+**Aturan penulisan & arah impor** (ditegakkan `tests/architecture/test_structure.py`, `tests/architecture/test_router_layering.py`)
 
 | Lapisan | Boleh | Tidak boleh |
 |---|---|---|
@@ -54,7 +54,7 @@ api/
 
 - Antarmodul hanya lewat `services`/`schemas`/`dependencies` modul lain — **tidak** ke `repositories`,
   `controllers`, atau `routes` modul lain. Sisa pelanggaran lama tercatat di `KNOWN_VIOLATIONS`
-  (`tests/test_structure.py`) dan hanya boleh menyusut.
+  (`tests/architecture/test_structure.py`) dan hanya boleh menyusut.
 - Nama berkas: `<entitas>_route.py`, `<entitas>_controller.py`, `<entitas>_service.py`,
   `<entitas>_repository.py`, `<entitas>_schema.py`.
 
@@ -276,6 +276,21 @@ yang berani ubah.
 | Integrasi | Repository, trigger, RLS, constraint | pytest + PostgreSQL nyata |
 | API | Endpoint + matriks RBAC | `fastapi.testclient.TestClient` (`tests/conftest.py`) |
 
+**Letak berkas uji** (dijaga `tests/architecture/test_structure.py`):
+
+```
+api/tests/
+├── conftest.py · db_guard.py · cleanup.py · route_inventory.py · sql_inventory.py   fixture & helper bersama
+├── architecture/      penjaga struktur, lapisan, aturan SQL, kode mati, snapshot OpenAPI, smoke semua rute
+├── core/              config, keamanan/JWT, galat, waktu, sesi DB, RLS, izin
+├── shared/            app/shared (akses SK, rujukan organisasi, PDF)
+├── integration/       regresi lintas modul
+└── modules/<modul>/   uji per modul — nama folder = nama modul di app/modules/
+```
+
+Uji baru untuk modul `<m>` → `tests/modules/<m>/test_<fitur>.py`. Helper alur yang dipakai bersama diimpor
+dengan jalur penuh (`from tests.modules.work_plans.test_flow_plans import run_plan_to_in_progress`).
+
 - **PostgreSQL sungguhan**, bukan SQLite: separuh aturan sistem ini hidup di trigger, RLS,
   dan exclusion constraint yang tidak dimiliki SQLite.
 - Setiap uji berjalan dalam transaksi yang di-*rollback*, atau memakai basis data sekali
@@ -367,7 +382,7 @@ class AppUpdateOut(BaseModel):
 - Kolom sensitif (`password_hash`, `embedding`, token) tidak pernah ada di skema keluaran.
 
 ### Perubahan skema = perubahan API
-Setiap perubahan skema mengubah OpenAPI: jalankan `UPDATE_OPENAPI_SNAPSHOT=1 pytest tests/test_openapi_snapshot.py`,
+Setiap perubahan skema mengubah OpenAPI: jalankan `UPDATE_OPENAPI_SNAPSHOT=1 pytest tests/architecture/test_openapi_snapshot.py`,
 tinjau diff-nya, lalu `npm run gen:api:export && npm run gen:api` di `web/` bila web memakai skema itu.
 
 ---

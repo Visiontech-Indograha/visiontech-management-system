@@ -1,23 +1,33 @@
 """
-app/crud/crud_session.py
-Sesi login dan percobaan masuk menggunakan tabel user_sessions (Master Schema V2).
+app/modules/auth/repositories/auth_session_repository.py
+Sesi login (`user_sessions`) dan percobaan masuk (`app_activity_logs`) — Master Schema V2.
 Refresh token mentah tidak pernah disimpan; basis data hanya menyimpan SHA-256-nya.
+
+Percobaan masuk dicatat sebagai baris audit `action = LOGIN_FAILED | LOGIN_SUCCESS`, `entity_table = 'users'`,
+`entity_id = uuid5(email)`: login terdaftar maupun tidak dihitung sama (tidak membocorkan keberadaan akun),
+email mentah tidak disimpan, dan hitungan memakai indeks `idx_activity_logs_entity` yang sudah ada.
 """
 
 from __future__ import annotations
 
 import hashlib
+import json
+import logging
 import secrets
 from collections import namedtuple
 from datetime import timedelta
 from typing import Any
-from uuid import UUID, uuid4
+from uuid import NAMESPACE_URL, UUID, uuid4, uuid5
+
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.core.repository import BaseRepository
 from app.core.time import utcnow
 
+logger = logging.getLogger(__name__)
+
 MAX_LOGIN_FAILURES = 5
-LOCK_WINDOW = "15 minutes"
+LOCK_MINUTES = 15
 
 LoginState = namedtuple("LoginState", ["failures", "locked_until", "retry_after_seconds"])
 SessionIssueResult = namedtuple("SessionIssueResult", ["session_id", "family_id", "refresh_token", "expires_at"])
@@ -32,14 +42,70 @@ class AuthSessionRepository(BaseRepository):
     CRUD untuk mengelola sesi otentikasi pengguna pada tabel user_sessions.
     """
 
-    async def failed_logins(self, login: str) -> Any:
-        return LoginState(failures=0, locked_until=None, retry_after_seconds=0)
+    @staticmethod
+    def login_key(login: str) -> UUID:
+        """Kunci stabil untuk satu identitas login (email/username) tanpa menyimpan teksnya."""
+        return uuid5(NAMESPACE_URL, f"vms-login:{login.strip().lower()}")
+
+    async def failed_logins(self, login: str) -> LoginState:
+        """Kegagalan beruntun dalam LOCK_MINUTES terakhir sejak login sukses / buka kunci terakhir; ≥ MAX → terkunci."""
+        row = await self.fetchone(
+            """
+            WITH recent AS (
+                SELECT action, created_at
+                FROM app_activity_logs
+                WHERE entity_table = 'users' AND entity_id = :key
+                  AND action IN ('LOGIN_FAILED', 'LOGIN_SUCCESS', 'LOGIN_UNLOCKED')
+                  AND created_at > now() - make_interval(mins => :mins)
+            ), last_ok AS (
+                SELECT max(created_at) AS at FROM recent WHERE action <> 'LOGIN_FAILED'
+            )
+            SELECT count(*)::int AS failures, max(r.created_at) AS last_failed_at
+            FROM recent r, last_ok
+            WHERE r.action = 'LOGIN_FAILED' AND (last_ok.at IS NULL OR r.created_at > last_ok.at)
+            """,
+            {"key": self.login_key(login), "mins": LOCK_MINUTES},
+        )
+        failures = int(row.failures) if row else 0
+        if failures < MAX_LOGIN_FAILURES or row is None or row.last_failed_at is None:
+            return LoginState(failures=failures, locked_until=None, retry_after_seconds=0)
+        locked_until = row.last_failed_at + timedelta(minutes=LOCK_MINUTES)
+        retry = max(0, int((locked_until - utcnow()).total_seconds()))
+        return LoginState(failures=failures, locked_until=locked_until if retry else None, retry_after_seconds=retry)
 
     async def record_login_attempt(
-        self, login: str, ip: str | None, successful: bool, reason: str | None = None
+        self, login: str, ip: str | None, successful: bool, reason: str | None = None,
+        *, user_id: UUID | str | None = None, role: str | None = None, platform: str = "web",
+        action: str | None = None,
     ) -> None:
-        # Percobaan login
-        pass
+        """Catat percobaan masuk ke jejak audit. Gagal mencatat tidak boleh menggagalkan login (SAVEPOINT).
+        `action="LOGIN_UNLOCKED"`: buka kunci oleh HR/admin (mis. reset kata sandi)."""
+        plat = "android_flutter" if platform == "mobile" else "web_react"
+        try:
+            async with self.db.begin_nested():
+                await self.execute(
+                    """
+                    INSERT INTO app_activity_logs (
+                        actor_user_id, actor_role, platform, action, entity_table, entity_id,
+                        changed_diff, ip_address
+                    ) VALUES (
+                        CAST(:uid AS uuid), :role, CAST(:plat AS client_platform_enum), :action, 'users', :key,
+                        CAST(:diff AS jsonb), CAST(:ip AS inet)
+                    )
+                    """,
+                    {
+                        "uid": str(user_id) if user_id else None,
+                        "role": (role or "ANONYMOUS")[:30],
+                        "plat": plat,
+                        "action": action or ("LOGIN_SUCCESS" if successful else "LOGIN_FAILED"),
+                        "key": self.login_key(login),
+                        "diff": json.dumps({"reason": reason} if reason else {}),
+                        "ip": ip,
+                    },
+                )
+        except SQLAlchemyError:
+            # mis. partisi app_activity_logs bulan berjalan belum dibuat — catat, jangan blokir login.
+            logger.exception("Percobaan login tidak dapat dicatat ke app_activity_logs")
 
     async def issue(
         self,
@@ -57,9 +123,8 @@ class AuthSessionRepository(BaseRepository):
         token_hash = hashlib.sha256(raw_refresh_token.encode("utf-8")).hexdigest()
         expires_at = utcnow() + timedelta(days=7)
 
-        # Map platform string to client_platform_enum
         plat = "android_flutter" if "android" in platform.lower() or "mobile" in platform.lower() else "web_react"
-        device_name = (device_label or user_agent or "Web Browser")[:100]
+        device_name = (device_label or user_agent or "Perangkat tanpa nama")[:100]
 
         await self.execute(
             """
@@ -173,53 +238,19 @@ class AuthSessionRepository(BaseRepository):
             or 0
         )
 
-    async def ensure_device_limit(self, user_id: UUID | str, limit: int = 4) -> None:
-        """Mencabut sesi terlama jika jumlah perangkat aktif telah mencapai batas."""
-        active = await self.count_active_devices(user_id)
-        if active >= limit:
-            oldest_family = await self.scalar(
-                """
-                SELECT token_family_id
-                FROM user_sessions
-                WHERE user_id = :uid AND is_revoked = FALSE AND expires_at > now() AND delete_at IS NULL
-                ORDER BY create_at ASC LIMIT 1
-                """,
-                {"uid": user_id},
-            )
-            if oldest_family:
-                await self.revoke_family(user_id, oldest_family, "Batas perangkat tercapai - sesi terlama dikeluarkan")
-
-    async def find_active_family_by_fingerprint(self, user_id: UUID | str, fingerprint: str) -> UUID | None:
+    async def find_active_family_by_device(self, user_id: UUID | str, device_name: str) -> UUID | None:
+        """Rantai sesi aktif milik perangkat yang sama (device_name sama) — untuk masuk ulang tanpa ganda."""
         val = await self.scalar(
             """
             SELECT token_family_id
             FROM user_sessions
-            WHERE user_id = :uid AND is_revoked = FALSE AND expires_at > now() AND delete_at IS NULL
+            WHERE user_id = CAST(:uid AS uuid) AND device_name = :device
+              AND is_revoked = FALSE AND expires_at > now() AND delete_at IS NULL
             ORDER BY update_at DESC LIMIT 1
             """,
-            {"uid": user_id},
+            {"uid": user_id, "device": device_name[:100]},
         )
         return UUID(str(val)) if val else None
-
-    async def revoke_active_by_device(
-        self, user_id: UUID | str, fingerprint: str | None, user_agent: str, reason: str
-    ) -> int:
-        rows = await self.fetchall(
-            """
-            UPDATE user_sessions
-            SET is_revoked = TRUE, update_at = now()
-            WHERE user_id = CAST(:uid AS uuid)
-              AND is_revoked = FALSE
-              AND (
-                  device_name = :agent
-                  OR device_name = 'Web Login'
-                  OR device_name = 'Aplikasi HP'
-              )
-            RETURNING session_id
-            """,
-            {"uid": user_id, "agent": (user_agent or "Web")[:100]},
-        )
-        return len(rows)
 
     async def revoke_family(self, user_id: UUID | str, family_id: UUID | str, reason: str) -> None:
         await self.execute(

@@ -1,5 +1,5 @@
 """
-app/services/account_service.py
+app/modules/accounts/services/account_service.py
 Akun login karyawan (M1-01, R-20): HR/admin membuat akun, mereset password, menonaktifkan & mengaktifkan.
 Izin manage:users dijaga router; batas organisasi & aturan di sini. Password sementara hanya dikembalikan
 sekali dan tidak pernah disimpan selain hash argon2.
@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import secrets
 import string
+from types import SimpleNamespace
 from typing import Any
 
 from app.core.errors import AppError, NotFoundError
@@ -50,6 +51,13 @@ class AccountService:
             raise NotFoundError("Akun")
         return account
 
+    async def _with_login_state(self, account: Any) -> Any:
+        """Akun + status percobaan masuknya (kegagalan beruntun & kunci) dari jejak audit login."""
+        if account is None:
+            return None
+        state = await self.sessions.failed_logins(str(account.login))
+        return SimpleNamespace(**account._mapping, failures=state.failures, locked_until=state.locked_until)
+
     async def account(self, employee_id: Any, org_id: str) -> Any:
         """
         Mengambil detail akun dari karyawan.
@@ -62,7 +70,7 @@ class AccountService:
             Data akun karyawan terkait jika ada.
         """
         await self._employee(employee_id, org_id)
-        return await self.users.account_of_employee(employee_id)
+        return await self._with_login_state(await self.users.account_of_employee(employee_id))
 
     async def create(self, employee_id: Any, org_id: str, login: str) -> tuple[Any, str]:
         """
@@ -107,6 +115,10 @@ class AccountService:
         await self.users.update_password_hash(account.id, hash_password(password))
         # Menghentikan paksa (revoke) semua sesi terbuka agar pemilik tidak menggunakan sesi yang rentan (compromised).
         await self.sessions.revoke_all_for_user(account.id, "PASSWORD_RESET")
+        # Reset oleh HR/admin sekaligus membuka kunci kegagalan login.
+        await self.sessions.record_login_attempt(
+            str(account.login), None, True, "PASSWORD_RESET", user_id=account.id, action="LOGIN_UNLOCKED"
+        )
         return account, password
 
     async def set_active(self, employee_id: Any, org_id: str, active: bool) -> Any:
@@ -131,4 +143,4 @@ class AccountService:
         if not active:
             # Mencabut semua sesi terbuka sebagai konsekuensi keamanan penonaktifan akun.
             await self.sessions.revoke_all_for_user(account.id, "ACCOUNT_DEACTIVATED")
-        return await self.users.account_of_employee(employee_id)
+        return await self._with_login_state(await self.users.account_of_employee(employee_id))

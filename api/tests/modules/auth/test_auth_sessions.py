@@ -51,7 +51,8 @@ def test_revoke_others_keeps_this_device_and_blocks_their_refresh(seeded_user):
     assert phone.post("/auth/refresh").status_code == 401           # perangkat lain harus masuk lagi
     assert laptop.post("/auth/refresh").status_code == 200          # perangkat ini tetap
     assert seeded_user.query(
-        "SELECT count(*) FROM vms.user_session WHERE user_id = %s AND state = 'ACTIVE'", (seeded_user.user_id,)
+        "SELECT count(DISTINCT token_family_id) FROM user_sessions "
+        "WHERE user_id = %s AND NOT is_revoked AND delete_at IS NULL", (seeded_user.user_id,)
     ) == [(1,)]
     laptop.close()
     phone.close()

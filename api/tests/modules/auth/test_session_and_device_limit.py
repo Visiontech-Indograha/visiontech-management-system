@@ -1,5 +1,6 @@
 """
-Uji unit untuk batas sesi 24 jam, batas 4 perangkat, notifikasi login baru, dan logout aman.
+Uji unit untuk batas sesi 24 jam, batas 4 perangkat (satu perangkat = satu device_name),
+notifikasi login baru, dan logout aman.
 """
 from __future__ import annotations
 
@@ -53,15 +54,14 @@ async def test_max_4_devices_limit_enforced():
     user.organization_id = uuid4()
     user.is_active = True
     user.password_hash = "$argon2id$mock"
-    user.role = "field"
+    user.role = "EMPLOYEE"  # peran lapangan → aplikasi HP (docs/35 §1)
 
     service.sessions.failed_logins = AsyncMock(return_value=MagicMock(locked_until=None))
     service.users.find_by_login = AsyncMock(return_value=user)
-    service.users.get_attendance_mode = AsyncMock(return_value="FIELD")
     service._act_as = AsyncMock()
 
-    # Skenario 1: Sudah ada 4 perangkat aktif, login dari perangkat baru (fingerprint beda)
-    service.sessions.find_active_family_by_fingerprint = AsyncMock(return_value=None)
+    # Skenario 1: Sudah ada 4 perangkat aktif, login dari perangkat baru (device_name beda)
+    service.sessions.find_active_family_by_device = AsyncMock(return_value=None)
     service.sessions.count_active_devices = AsyncMock(return_value=4)
 
     client = ClientInfo(ip="192.168.1.10", user_agent="Mozilla/5.0", device_label="Device 5", fingerprint="fp-5")
@@ -72,9 +72,9 @@ async def test_max_4_devices_limit_enforced():
         assert exc_info.value.code == "MAX_DEVICES_REACHED"
         assert exc_info.value.status == 403
 
-    # Skenario 2: Sudah ada 4 perangkat aktif, tetapi login ulang dari perangkat yang sama (fingerprint sama)
+    # Skenario 2: Sudah ada 4 perangkat aktif, tetapi login ulang dari perangkat yang sama (device_name sama)
     old_family = uuid4()
-    service.sessions.find_active_family_by_fingerprint = AsyncMock(return_value=old_family)
+    service.sessions.find_active_family_by_device = AsyncMock(return_value=old_family)
     service.sessions.revoke_family = AsyncMock()
     service.sessions.record_login_attempt = AsyncMock()
     service._start_session = AsyncMock(return_value=MagicMock(access_token="tok", refresh_token="ref"))
@@ -97,13 +97,12 @@ async def test_security_login_event_broadcast():
     user.organization_id = uuid4()
     user.is_active = True
     user.password_hash = "$argon2id$mock"
-    user.role = "ADMIN"
+    user.role = "SUPER_ADMIN"
 
     service.sessions.failed_logins = AsyncMock(return_value=MagicMock(locked_until=None))
     service.users.find_by_login = AsyncMock(return_value=user)
-    service.users.get_attendance_mode = AsyncMock(return_value=None)
     service._act_as = AsyncMock()
-    service.sessions.find_active_family_by_fingerprint = AsyncMock(return_value=None)
+    service.sessions.find_active_family_by_device = AsyncMock(return_value=None)
     service.sessions.count_active_devices = AsyncMock(return_value=1)
     service.sessions.record_login_attempt = AsyncMock()
     service._start_session = AsyncMock(return_value=MagicMock(access_token="tok", refresh_token="ref"))

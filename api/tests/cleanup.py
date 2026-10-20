@@ -75,3 +75,14 @@ def purge_users(conn: psycopg2.extensions.connection, user_ids: list[str]) -> No
     with conn.cursor() as cur:
         purge_rows(cur, "users", "user_id", user_ids)
     conn.commit()
+
+
+def purge_login_logs(conn: psycopg2.extensions.connection, logins: list[str]) -> None:
+    """Hapus jejak percobaan masuk akun uji (app_activity_logs tidak ber-FK ke users)."""
+    from app.modules.auth.repositories.auth_session_repository import AuthSessionRepository
+
+    keys = [str(AuthSessionRepository.login_key(login)) for login in logins]
+    with conn.cursor() as cur:
+        cur.execute("DELETE FROM public.app_activity_logs WHERE entity_table = 'users' AND entity_id::text = ANY(%s)",
+                    (keys,))
+    conn.commit()

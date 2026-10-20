@@ -56,9 +56,7 @@ class AuthLoginController:
             import hashlib
 
             fingerprint = hashlib.sha256(user_agent.encode()).hexdigest()[:32]
-        device_label = request.headers.get("x-device-label") or (
-            "Aplikasi HP" if request.headers.get("x-device-id") else "Web Login"
-        )
+        device_label = request.headers.get("x-device-label")
         return ClientInfo(
             ip=ip,
             user_agent=user_agent,

@@ -88,19 +88,23 @@ class AuthUserRepository(BaseRepository):
                     )
                     ON CONFLICT (user_id) DO NOTHING
                 """
+                # SAVEPOINT: sinkronisasi boleh gagal (mis. employee_id lama belum ada di public.employee),
+                # tetapi tidak boleh membatalkan seluruh transaksi login — tanpa ini kueri berikutnya
+                # gagal "current transaction is aborted" dan login ditolak sebagai kata sandi salah.
                 with contextlib.suppress(SQLAlchemyError):
-                    await self.execute(
-                        sync_sql,
-                        {
-                            "uid": legacy.id,
-                            "emp": legacy.employee_id,
-                            "uname": str(legacy.login).split("@")[0],
-                            "email": legacy.login,
-                            "phash": legacy.password_hash,
-                            "role": mapped_role,
-                            "active": bool(legacy.is_active),
-                        },
-                    )
+                    async with self.db.begin_nested():
+                        await self.execute(
+                            sync_sql,
+                            {
+                                "uid": legacy.id,
+                                "emp": legacy.employee_id,
+                                "uname": str(legacy.login).split("@")[0],
+                                "email": legacy.login,
+                                "phash": legacy.password_hash,
+                                "role": mapped_role,
+                                "active": bool(legacy.is_active),
+                            },
+                        )
                 return await self.fetchone(
                     f"{_USER_WITH_ROLE} WHERE u.user_id = CAST(:uid AS uuid) AND u.delete_at IS NULL",
                     {"uid": legacy.id},

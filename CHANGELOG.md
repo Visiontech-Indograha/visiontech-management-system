@@ -7,6 +7,12 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ---
 
+- **Validasi Komprehensif Skema Master Database V2 & API Modular Menggunakan Postman CLI:**
+  - **Otomasi Postman Test Runner Terisolasi (scripts/run_postman_validation.py):** Membangun runner otomatis yang mengelola siklus hidup server FastAPI uvicorn, memonitor readiness probe /ready hingga HTTP 200, mengeksekusi Postman CLI runner, dan mematikan subproses secara bersih tanpa port hanging.
+  - **Koleksi Validasi Alur Fitur Master V2 (postman/collections/vms-feature-validation.collection.json):** Menyusun 7 folder pengujian terstruktur mencakup 18 request end-to-end (Auth PM Hendrik, Master Work Types & BoM Templates 1:N, Order Klien Ticket V3, Sinkronisasi BoM Riil, Daily-First Work Plan, Mesin Kunci Prasyarat Prerequisite Locking, serta Pengesahan Tanda Tangan Digital & Ekspor BAST Word docx).
+  - **Perbaikan Kueri Identitas Pengguna (AuthUserRepository.find_identity):** Menambahkan u.employee_id ke dalam kueri SELECT ind_identity sehingga token JWT yang diautentikasi memuat referensi employee_id yang valid, menuntaskan kegagalan foreign key constraint pada pengesahan Berita Acara penyelesaian.
+  - **Hasil Uji 100% Lulus (Exit Code 0):** Seluruh 18 request dan 35 assertions berhasil lulus tanpa ada kegagalan (0 failed) dengan rata-rata response time 91 ms, serta verifikasi uff check app tests bersih.
+
 - **Penyederhanaan UI & Alur Cepat Form Rencana Kerja V2 (`PlanEditorV2Form.tsx`):**
   - **Desain 1-Halaman Terpadu & Bebas Stepper Rumit:** Mengubah antarmuka pembuatan rencana kerja mingguan menjadi 1 alur natural (Tim & Periode -> Template Otomatis -> Tinjauan 7 Hari -> Logistik Opsional) sehingga pengguna tidak tersesat atau cemas kehilangan data saat navigasi.
   - **Fitur Cerdas Template Mingguan 1-Klik (Smart Autofill):** Menambahkan blok preset cepat di mana PM cukup memilih site, tipe pekerjaan, dan judul tugas, lalu 1-klik "⚡ Terapkan ke Senin - Jumat" otomatis menyetel seluruh hari kerja dengan jam 08:00 - 17:00 dan libur akhir pekan.

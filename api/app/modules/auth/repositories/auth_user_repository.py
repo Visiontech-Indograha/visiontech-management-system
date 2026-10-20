@@ -136,6 +136,7 @@ class AuthUserRepository(BaseRepository):
             """
             SELECT
                 u.user_id AS id,
+                u.employee_id,
                 u.email AS login,
                 u.email,
                 u.is_active,
@@ -155,6 +156,7 @@ class AuthUserRepository(BaseRepository):
                 """
                 SELECT
                     u.id,
+                    u.employee_id,
                     u.login,
                     u.login AS email,
                     u.is_active,
@@ -256,6 +258,7 @@ class AuthUserRepository(BaseRepository):
             """
             SELECT
                 u.user_id AS id,
+                u.employee_id,
                 u.email AS login,
                 u.username,
                 u.system_role::text AS role,

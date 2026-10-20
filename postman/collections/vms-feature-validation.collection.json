@@ -1,0 +1,871 @@
+{
+  "info": {
+    "_postman_id": "7b8e1a23-4567-4890-a123-abcdef012345",
+    "name": "VMS Feature & Schema Validation Suite",
+    "description": "Suite validasi komprehensif untuk skema PostgreSQL terbaru dan backend FastAPI modular VMS (Auth, Work Types & BoM Template 1:N, Client Order Ticket, BoM Riil Proyek, Daily-First, Prerequisite Locking, dan Pengesahan BAST Word).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "01 - Autentikasi & Health",
+      "item": [
+        {
+          "name": "01.1 - Health & Ready Probe",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://127.0.0.1:8000/ready",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "8000",
+              "path": [
+                "ready"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Database status is ready', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.status).to.eql('ready');",
+                  "    pm.expect(json.db).to.eql('ok');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "01.2 - Login PM Hendrik",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"hendrik.pm@visiontech.co.id\",\n  \"password\": \"Admin123!\",\n  \"platform\": \"web\",\n  \"device_name\": \"Postman CLI Validation\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Login Berhasil (200 OK)', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.test('Access token diterima', function () {",
+                  "    pm.expect(json.access_token).to.be.a('string');",
+                  "    pm.environment.set('bearer_token', json.access_token);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02 - Master Work Types & BoM Templates",
+      "item": [
+        {
+          "name": "02.1 - List Work Types",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearer_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/work-types?all=true",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "work-types"
+              ],
+              "query": [
+                {
+                  "key": "all",
+                  "value": "true"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Daftar work types berhasil diambil (200 OK)', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.test('Memiliki master jenis pekerjaan', function () {",
+                  "    pm.expect(json).to.be.an('array');",
+                  "    pm.expect(json.length).to.be.at.least(1);",
+                  "    var wtId = json[0].id || json[0].work_type_id;",
+                  "    pm.environment.set('work_type_id', wtId);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "02.2 - Get Default BoM Materials for Work Type",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearer_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/work-types/{{work_type_id}}/materials",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "work-types",
+                "{{work_type_id}}",
+                "materials"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Template BoM 1:N berhasil diakses (200 OK)', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.test('Format respon adalah list material', function () {",
+                  "    pm.expect(json).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "03 - Order Klien (Work Completion)",
+      "item": [
+        {
+          "name": "03.1 - Create Client Order Ticket",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearer_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"division_id\": \"{{division_id}}\",\n  \"client_name\": \"PT Pertamina Hulu Rokan (PHR)\",\n  \"project_title\": \"Instalasi 13 Unit CCTV & Sensor Minas (Validation)\",\n  \"order_number\": \"PO-PHR-TEST-2026\",\n  \"total_target_unit\": 13,\n  \"unit_measure\": \"Titik\",\n  \"order_status\": \"ONGOING\",\n  \"priority_level\": \"NORMAL\",\n  \"site_address\": \"Area Kilang Minas GS-3, Riau\",\n  \"site_lat\": 0.7812,\n  \"site_lng\": 101.4412,\n  \"summary_notes\": \"Tiket order klien dibuat otomatis melalui Postman CLI validation suite.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/work-completions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "work-completions"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Tiket order klien dibuat (201 Created)', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.test('Skema kolom baru work_completion valid', function () {",
+                  "    pm.expect(json.completion_id).to.be.a('string');",
+                  "    pm.expect(json.total_target_unit).to.eql(13);",
+                  "    pm.expect(json.unit_measure).to.eql('Titik');",
+                  "    pm.expect(json.order_status).to.eql('ONGOING');",
+                  "    pm.environment.set('test_completion_id', json.completion_id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "03.2 - Get Order Detail & Realization",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearer_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/work-completions/{{test_completion_id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "work-completions",
+                "{{test_completion_id}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Detail order klien berhasil diambil (200 OK)', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.test('Order memiliki status dan target valid', function () {",
+                  "    pm.expect(json.completion_id).to.eql(pm.environment.get('test_completion_id'));",
+                  "    pm.expect(json.client_name).to.include('Pertamina');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "04 - Sinkronisasi BoM Proyek",
+      "item": [
+        {
+          "name": "04.1 - Sync BoM Template to Real Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearer_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"overwrite_existing\": false}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/work-completions/{{test_completion_id}}/sync-bom",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "work-completions",
+                "{{test_completion_id}}",
+                "sync-bom"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Sinkronisasi template BoM berhasil (200 OK)', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "04.2 - Add BoM Item Riil (Kabel Minas 69m)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearer_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"material_code\": \"FO-MN-69M\",\n  \"material_name\": \"Kabel Fiber Optik Drop Core 12 Core\",\n  \"estimated_qty\": 100,\n  \"actual_qty\": 69,\n  \"unit\": \"Meter\",\n  \"category\": \"Kabel\",\n  \"notes\": \"Pengukuran riil lapangan Minas STO ke Kilang\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/work-completions/{{test_completion_id}}/bom",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "work-completions",
+                "{{test_completion_id}}",
+                "bom"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Item BoM riil berhasil ditambahkan (201 Created)', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.test('Item BoM memiliki actual_qty 69', function () {",
+                  "    pm.expect(json.actual_qty).to.eql(69);",
+                  "    pm.expect(json.bom_id).to.be.a('string');",
+                  "    pm.environment.set('bom_id', json.bom_id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "04.3 - List BoM Items for Order",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearer_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/work-completions/{{test_completion_id}}/bom",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "work-completions",
+                "{{test_completion_id}}",
+                "bom"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Daftar BoM riil berhasil diambil (200 OK)', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.test('Item BoM tercatat di database', function () {",
+                  "    pm.expect(json).to.be.an('array');",
+                  "    pm.expect(json.length).to.be.at.least(1);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "05 - Perencanaan Harian Daily-First",
+      "item": [
+        {
+          "name": "05.1 - Get Form Options V2",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearer_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/work-plans/form-options-v2",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "work-plans",
+                "form-options-v2"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Form options V2 dimuat (200 OK)', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.test('Memiliki opsi divisions, teams, work_types', function () {",
+                  "    pm.expect(json.divisions).to.be.an('array');",
+                  "    pm.expect(json.teams).to.be.an('array');",
+                  "    pm.expect(json.work_types).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "05.2 - Create Daily Plan (Hari Kerja Lapangan)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearer_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"division_id\": \"{{division_id}}\",\n  \"team_id\": \"{{team_id}}\",\n  \"work_date\": \"2026-10-25\",\n  \"site_name\": \"Area Kilang Minas GS-3\",\n  \"site_lat\": 0.7812,\n  \"site_lng\": 101.4412,\n  \"attendance_radius_m\": 150,\n  \"clock_in_time\": \"08:00:00\",\n  \"clock_out_time\": \"17:00:00\",\n  \"status\": \"SCHEDULED\",\n  \"is_holiday\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/work-plans/daily",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "work-plans",
+                "daily"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Hari kerja harian berhasil dibuat (201 Created)', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.test('Tersimpan di tabel work_plan_daily', function () {",
+                  "    pm.expect(json.daily_plan_id).to.be.a('string');",
+                  "    pm.expect(json.site_name).to.eql('Area Kilang Minas GS-3');",
+                  "    pm.environment.set('test_daily_plan_id', json.daily_plan_id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "05.3 - Create Prerequisite Item (Survei Jalur)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearer_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"daily_plan_id\": \"{{test_daily_plan_id}}\",\n  \"work_type_id\": \"{{work_type_id}}\",\n  \"completion_id\": \"{{test_completion_id}}\",\n  \"title\": \"Survei & Pemasangan Skafolding Jalur CCTV (Prerequisite)\",\n  \"task_phase\": \"SURVEY\",\n  \"is_main_deliverable\": false,\n  \"target_qty\": 1,\n  \"completed_qty\": 0,\n  \"progress_percent\": 0,\n  \"start_time\": \"08:00:00\",\n  \"end_time\": \"12:00:00\",\n  \"status\": \"PENDING\",\n  \"rollover_approval_status\": \"NONE\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/work-plans/items",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "work-plans",
+                "items"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Item survei prasyarat dibuat (201 Created)', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.test('task_phase SURVEY & deliverable false tersimpan', function () {",
+                  "    pm.expect(json.task_phase).to.eql('SURVEY');",
+                  "    pm.expect(json.is_main_deliverable).to.eql(false);",
+                  "    pm.expect(json.item_id).to.be.a('string');",
+                  "    pm.environment.set('test_prereq_item_id', json.item_id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "05.4 - Create Main Item with Depends On",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearer_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"daily_plan_id\": \"{{test_daily_plan_id}}\",\n  \"work_type_id\": \"{{work_type_id}}\",\n  \"completion_id\": \"{{test_completion_id}}\",\n  \"depends_on_item_id\": \"{{test_prereq_item_id}}\",\n  \"title\": \"Instalasi Kamera CCTV & Integrasi NVR (Main Task)\",\n  \"task_phase\": \"MAIN_INSTALLATION\",\n  \"is_main_deliverable\": true,\n  \"target_qty\": 2,\n  \"completed_qty\": 0,\n  \"progress_percent\": 0,\n  \"start_time\": \"13:00:00\",\n  \"end_time\": \"17:00:00\",\n  \"status\": \"PENDING\",\n  \"rollover_approval_status\": \"NONE\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/work-plans/items",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "work-plans",
+                "items"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Item instalasi utama dibuat dengan depends_on (201 Created)', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.test('Relasi depends_on_item_id tercatat', function () {",
+                  "    pm.expect(json.depends_on_item_id).to.eql(pm.environment.get('test_prereq_item_id'));",
+                  "    pm.expect(json.is_main_deliverable).to.eql(true);",
+                  "    pm.environment.set('test_main_item_id', json.item_id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "06 - Mesin Kunci Prasyarat (Prerequisite Engine)",
+      "item": [
+        {
+          "name": "06.1 - Negative Test: Update Progress Blocked by Prerequisite",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearer_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"progress_percent\": 50,\n  \"status\": \"IN_PROGRESS\",\n  \"completed_qty\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/work-plans/items/{{test_main_item_id}}/progress",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "work-plans",
+                "items",
+                "{{test_main_item_id}}",
+                "progress"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Update ditolak karena prasyarat belum selesai (400 Bad Request)', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([400, 422]);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.test('Pesan galat menyebutkan prasyarat pekerjaan', function () {",
+                  "    var msg = (json.error && json.error.message) || json.detail || json.message || '';",
+                  "    pm.expect(msg.toLowerCase()).to.include('prasyarat');",
+                  "    if (json.error && json.error.code) {",
+                  "        pm.expect(json.error.code).to.eql('PREREQUISITE_NOT_MET');",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "06.2 - Complete Prerequisite Survey Task",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearer_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"DONE\",\n  \"progress_percent\": 100,\n  \"completed_qty\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/work-plans/items/{{test_prereq_item_id}}/progress",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "work-plans",
+                "items",
+                "{{test_prereq_item_id}}",
+                "progress"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Tugas prasyarat berhasil diselesaikan (200 OK)', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.test('Status survei menjadi COMPLETED/DONE', function () {",
+                  "    pm.expect(['DONE', 'COMPLETED']).to.include(json.status);",
+                  "    pm.expect(json.progress_percent).to.eql(100);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "06.3 - Positive Test: Update Main Task Now Allowed",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearer_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"DONE\",\n  \"progress_percent\": 100,\n  \"completed_qty\": 2\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/work-plans/items/{{test_main_item_id}}/progress",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "work-plans",
+                "items",
+                "{{test_main_item_id}}",
+                "progress"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Update tugas utama berhasil setelah prasyarat selesai (200 OK)', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.test('Progres tugas utama berhasil 100%', function () {",
+                  "    pm.expect(['DONE', 'COMPLETED']).to.include(json.status);",
+                  "    pm.expect(json.progress_percent).to.eql(100);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "07 - Pengesahan Digital & Ekspor BAST Word",
+      "item": [
+        {
+          "name": "07.1 - Digital Signature Leader & PM",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearer_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"signature_data_url\": \"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==\",\n  \"summary_notes\": \"Pemasangan 13 titik CCTV dan penarikan FO telah selesai dan tuntas diuji.\",\n  \"obstacles\": \"Pekerjaan terlaksana tanpa kendala keselamatan kerja (Zero Accident).\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/work-completions/{{test_completion_id}}/sign",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "work-completions",
+                "{{test_completion_id}}",
+                "sign"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Pengesahan Berita Acara berhasil (200 OK)', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.test('Memiliki hash integritas tanda tangan digital SHA-256', function () {",
+                  "    pm.expect(json.signature_hash).to.be.a('string');",
+                  "    pm.expect(json.signature_hash.length).to.be.at.least(32);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "07.2 - Export BAST Document Word (.docx)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearer_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/work-completions/{{test_completion_id}}/export",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "work-completions",
+                "{{test_completion_id}}",
+                "export"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Ekspor Berita Acara Word berhasil diunduh (200 OK)', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Header Content-Type sesuai spesifikasi Word Docx', function () {",
+                  "    var ct = pm.response.headers.get('Content-Type') || '';",
+                  "    pm.expect(ct).to.include('application/vnd.openxmlformats-officedocument.wordprocessingml.document');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

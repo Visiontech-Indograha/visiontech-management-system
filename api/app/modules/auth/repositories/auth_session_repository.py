@@ -60,18 +60,24 @@ class AuthSessionRepository(BaseRepository):
             ), last_ok AS (
                 SELECT max(created_at) AS at FROM recent WHERE action <> 'LOGIN_FAILED'
             )
-            SELECT count(*)::int AS failures, max(r.created_at) AS last_failed_at
-            FROM recent r, last_ok
-            WHERE r.action = 'LOGIN_FAILED' AND (last_ok.at IS NULL OR r.created_at > last_ok.at)
+            SELECT failures, locked_until,
+                   GREATEST(0, CEIL(EXTRACT(EPOCH FROM locked_until - now())))::int AS retry_after_seconds
+            FROM (
+                SELECT count(*)::int AS failures,
+                       CASE WHEN count(*) >= :max THEN max(r.created_at) + make_interval(mins => :mins) END
+                           AS locked_until
+                FROM recent r, last_ok
+                WHERE r.action = 'LOGIN_FAILED' AND (last_ok.at IS NULL OR r.created_at > last_ok.at)
+            ) s
             """,
-            {"key": self.login_key(login), "mins": LOCK_MINUTES},
+            {"key": self.login_key(login), "mins": LOCK_MINUTES, "max": MAX_LOGIN_FAILURES},
         )
-        failures = int(row.failures) if row else 0
-        if failures < MAX_LOGIN_FAILURES or row is None or row.last_failed_at is None:
-            return LoginState(failures=failures, locked_until=None, retry_after_seconds=0)
-        locked_until = row.last_failed_at + timedelta(minutes=LOCK_MINUTES)
-        retry = max(0, int((locked_until - utcnow()).total_seconds()))
-        return LoginState(failures=failures, locked_until=locked_until if retry else None, retry_after_seconds=retry)
+        # Semua waktu dihitung jam DB (now()) — jam aplikasi bisa selisih beberapa detik dari server DB.
+        if row is None or row.locked_until is None or row.retry_after_seconds <= 0:
+            return LoginState(failures=int(row.failures) if row else 0, locked_until=None, retry_after_seconds=0)
+        return LoginState(
+            failures=int(row.failures), locked_until=row.locked_until, retry_after_seconds=int(row.retry_after_seconds)
+        )
 
     async def record_login_attempt(
         self, login: str, ip: str | None, successful: bool, reason: str | None = None,

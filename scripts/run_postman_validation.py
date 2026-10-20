@@ -9,6 +9,7 @@ Skrip ini:
 import os
 import subprocess
 import sys
+import tempfile
 import time
 import urllib.error
 import urllib.request
@@ -55,6 +56,7 @@ def main() -> int:
 
     already_running = is_server_ready()
     server_process = None
+    server_log = None
 
     if already_running:
         print("[INFO] Server FastAPI uvicorn sudah berjalan pada http://127.0.0.1:8000/ready.")
@@ -74,14 +76,16 @@ def main() -> int:
             "8000",
         ]
         
+        # Log server ke berkas, bukan PIPE: pipa yang tidak dibaca akan penuh dan membuat uvicorn macet.
+        server_log_path = Path(tempfile.gettempdir()) / "vms-postman-uvicorn.log"
+        server_log = open(server_log_path, "w", encoding="utf-8")  # noqa: SIM115 - ditutup di finally
+        print(f"[INFO] Log server: {server_log_path}")
         server_process = subprocess.Popen(
             server_cmd,
             cwd=str(API_DIR),
             env=env,
-            stdout=subprocess.PIPE,
+            stdout=server_log,
             stderr=subprocess.STDOUT,
-            text=True,
-            encoding="utf-8",
         )
         
         print("[INFO] Menunggu server siap (health check /ready)...")
@@ -126,6 +130,8 @@ def main() -> int:
             print(f"\n[INFO] Menghentikan server uvicorn (PID: {server_process.pid})...")
             kill_process_tree(server_process.pid)
             print("[INFO] Server uvicorn berhasil dimatikan secara bersih.")
+        if server_log:
+            server_log.close()
 
     return exit_code
 

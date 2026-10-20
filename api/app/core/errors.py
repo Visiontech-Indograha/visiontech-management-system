@@ -15,6 +15,7 @@ from typing import Any
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from sqlalchemy.exc import IntegrityError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 logger = logging.getLogger(__name__)
@@ -183,6 +184,27 @@ async def validation_error_handler(request: Request, exc: RequestValidationError
     return _error_response(422, "VALIDATION_ERROR", _STATUS_DEFAULTS[422][1], {"fields": fields})
 
 
+_REFERENCE_MESSAGE = "Data rujukan tidak ditemukan atau sudah dihapus. Periksa pilihan Anda lalu coba lagi."
+_DUPLICATE_MESSAGE = "Data yang sama sudah ada. Periksa isian lalu coba lagi."
+
+
+async def integrity_error_handler(request: Request, exc: IntegrityError) -> JSONResponse:
+    """Pelanggaran constraint yang lolos dari service bukan galat server: FK → 422, unik → 409.
+    Pesan trigger kita tetap diteruskan apa adanya; nama constraint & isi SQL hanya ke log."""
+    rule = trigger_rule_error(exc)
+    if rule is not None:
+        return _error_response(rule.status, rule.code, rule.message, rule.details)
+    cause = getattr(getattr(exc, "orig", None), "__cause__", None)
+    sqlstate = getattr(cause, "sqlstate", None) or getattr(getattr(exc, "orig", None), "sqlstate", None)
+    logger.warning("IntegrityError %s: %s", sqlstate, str(getattr(cause, "constraint_name", "") or ""))
+    if sqlstate == "23503":
+        return _error_response(422, "REFERENCE_NOT_FOUND", _REFERENCE_MESSAGE)
+    if sqlstate == "23505":
+        return _error_response(409, "CONFLICT", _DUPLICATE_MESSAGE)
+    logger.error("Unhandled integrity error: %s", exc, exc_info=exc)
+    return _error_response(500, *_INTERNAL)
+
+
 async def unhandled_error_handler(request: Request, exc: Exception) -> JSONResponse:
     logger.error("Unhandled error: %s", exc, exc_info=exc)
     return _error_response(500, *_INTERNAL)
@@ -192,4 +214,5 @@ def register_error_handlers(app: FastAPI) -> None:
     app.add_exception_handler(AppError, app_error_handler)  # type: ignore[arg-type]
     app.add_exception_handler(StarletteHTTPException, http_error_handler)  # type: ignore[arg-type]
     app.add_exception_handler(RequestValidationError, validation_error_handler)  # type: ignore[arg-type]
+    app.add_exception_handler(IntegrityError, integrity_error_handler)  # type: ignore[arg-type]
     app.add_exception_handler(Exception, unhandled_error_handler)

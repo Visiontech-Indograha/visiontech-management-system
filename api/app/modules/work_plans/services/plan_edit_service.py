@@ -9,12 +9,11 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
-from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.enums import PlanStatus
-from app.core.errors import ValidationError, trigger_rule_error
+from app.core.errors import AppError, ValidationError, db_error, trigger_rule_error
 from app.core.permissions import RoleCode, SystemRole
 from app.core.security import CurrentUser
 from app.modules.work_plans.repositories.plan_edit_repository import CRUDPlanEdit
@@ -31,11 +30,6 @@ PM_ROLES = (
     SystemRole.OPERATIONAL_MANAGER,
     SystemRole.SUPER_ADMIN,
 )
-
-
-def _db_error(e: Exception) -> HTTPException:
-    # Pesan DB_ERROR diganti teks umum oleh handler galat; isi aslinya hanya ke log (T-06).
-    return HTTPException(status_code=400, detail={"code": "DB_ERROR", "message": str(e)})
 
 
 class PlanEditService:
@@ -83,9 +77,9 @@ class PlanEditService:
             rule = trigger_rule_error(e)
             if rule:
                 raise rule from None
-            raise _db_error(e) from e
+            raise db_error(e) from e
         except Exception as e:
-            raise _db_error(e) from e
+            raise db_error(e) from e
         return row
 
     async def update(self, access: PlanAccess, plan_id: UUID, data: WorkPlanUpdate) -> Any:
@@ -94,21 +88,16 @@ class PlanEditService:
         await ensure_same_org(self.db, user.organization_id, sites=[data.site_id], employees=[data.leader_employee_id])
         row = await self.repo.draft_state(plan_id, user.organization_id)
         if not row:
-            raise HTTPException(status_code=404, detail="Rencana Kerja tidak ditemukan.")
+            raise AppError("NOT_FOUND", "Rencana Kerja tidak ditemukan.", status=404)
         is_pm = user.role in PM_ROLES
         if row.status != "DRAFT" and not (is_pm and row.status in ("APPROVED", "ONGOING")):
             err_msg = "Hanya rencana kerja berstatus Draf atau yang sedang berjalan yang dapat diubah oleh PM."
-            raise HTTPException(
-                status_code=400,
-                detail={"code": "NOT_DRAFT", "message": err_msg},
-            )
+            raise AppError("NOT_DRAFT", err_msg)
         if row.row_version != data.row_version:
-            raise HTTPException(
-                status_code=409,
-                detail={
-                    "code": "CONFLICT",
-                    "message": "Dokumen ini telah diubah oleh orang lain. Silakan muat ulang halaman.",
-                },
+            raise AppError(
+                "CONFLICT",
+                "Dokumen ini telah diubah oleh orang lain. Silakan muat ulang halaman.",
+                status=409,
             )
 
         sets: list[str] = []
@@ -140,10 +129,7 @@ class PlanEditService:
 
         updated = await self.repo.update_plan(plan_id, user.organization_id, data.row_version, sets, params)
         if not updated:
-            raise HTTPException(
-                status_code=409,
-                detail={"code": "CONFLICT", "message": "Gagal update, kemungkinan data diubah secara bersamaan."},
-            )
+            raise AppError("CONFLICT", "Gagal update, kemungkinan data diubah secara bersamaan.", status=409)
         return updated
 
     async def add_day(
@@ -153,17 +139,11 @@ class PlanEditService:
         status = await self.repo.plan_status(plan_id, access.user.organization_id)
         is_pm = access.user.role in PM_ROLES
         if not status or (status != "DRAFT" and not (is_pm and status in ("APPROVED", "ONGOING"))):
-            raise HTTPException(
-                status_code=400,
-                detail="Tidak dapat menambah hari. Status rencana kerja bukan DRAFT atau ONGOING.",
-            )
+            raise AppError("BAD_REQUEST", "Tidak dapat menambah hari. Status rencana kerja bukan DRAFT atau ONGOING.")
         try:
             return await self.repo.insert_day(plan_id, work_date, title, sort_order)
         except SQLAlchemyError:
-            raise HTTPException(
-                status_code=400,
-                detail={"code": "DB_ERROR", "message": "Gagal menambahkan hari (mungkin tanggal bentrok)."},
-            ) from None
+            raise db_error(Exception("Gagal menambahkan hari (mungkin tanggal bentrok).")) from None
 
     async def add_task(self, day_id: UUID, title: str, sort_order: int) -> Any:
         """Tambah tugas pada hari. → id tugas."""
@@ -211,5 +191,5 @@ class PlanEditService:
             assigned_employee_ids=emp_json,
         )
         if not res:
-            raise HTTPException(status_code=404, detail="Item tugas tidak ditemukan.")
+            raise AppError("NOT_FOUND", "Item tugas tidak ditemukan.", status=404)
         return res

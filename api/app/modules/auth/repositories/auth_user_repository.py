@@ -197,6 +197,17 @@ class AuthUserRepository(BaseRepository):
         except SQLAlchemyError:
             return None
 
+    async def profile_photo_file_id(self, user_id: UUID | str) -> str | None:
+        """
+        ID berkas foto profil karyawan yang tertaut ke akun ini (URL bertanda tangan diambil klien terpisah).
+        """
+        photo = await self.scalar(
+            "SELECT profile_photo_path FROM employee "
+            "WHERE employee_id = (SELECT employee_id FROM users WHERE user_id = :uid) LIMIT 1",
+            {"uid": user_id},
+        )
+        return str(photo) if photo else None
+
     async def get_division_id(self, user_id: UUID | str) -> str | None:
         """
         Mendapatkan ID Divisi (division_id) yang menaungi pengguna atau karyawan pengguna ini.

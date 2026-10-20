@@ -1,5 +1,5 @@
 """
-app/services/hse_service.py
+app/modules/hse/services/hse_service.py
 domain.js REPORT/RESOLVE_INCIDENT, SAVE/SUBMIT/REVIEW_REPORT, TOGGLE_TASK. Akses SK diperiksa dependency
 (`plan_day_access`, `incident_plan_access`) atau `check_plan_access`; aturan status & tanggal di sini.
 """
@@ -9,11 +9,10 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
-from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.enums import PlanStatus
-from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationError
+from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationError, db_error
 from app.core.permissions import RoleCode
 from app.core.security import CurrentUser
 from app.modules.hse.repositories.hse_repository import CRUDHse
@@ -80,7 +79,7 @@ class HseService:
         employee_id = await self.repo.employee_of_user(user.user_id)
         row = await self.repo.resolve_incident(incident_id, user.organization_id, employee_id, note)
         if not row:
-            raise HTTPException(status_code=404, detail="Insiden tidak ditemukan.")
+            raise NotFoundError("Insiden")
         return row
 
     async def save_daily_report(
@@ -117,8 +116,8 @@ class HseService:
             report = await self.repo.submit_daily_report(day_id, employee_id)
         except Exception as e:
             if "check" in str(e).lower():
-                raise HTTPException(status_code=400, detail="Laporan terlalu singkat (minimal 10 karakter).") from e
-            raise HTTPException(status_code=400, detail={"code": "DB_ERROR", "message": str(e)}) from e
+                raise AppError("BAD_REQUEST", "Laporan terlalu singkat (minimal 10 karakter).") from e
+            raise db_error(e) from e
         if not report:
             raise AppError("INVALID_STATE", "Laporan sudah diserahkan atau belum dibuat.", status=409)
         await self.notifications.report_submitted(access.plan.id, "Laporan harian", bool(report.resubmitted))

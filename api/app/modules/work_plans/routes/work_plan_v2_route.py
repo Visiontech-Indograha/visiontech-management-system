@@ -15,14 +15,10 @@ from datetime import date
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, status
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user, get_db
-from app.core.errors import NotFoundError
+from app.api.deps import get_current_user
 from app.core.security import CurrentUser
-from app.modules.work_plans.repositories.work_plan_v2_repository import (
-    CRUDWorkPlanV2,
-)
+from app.modules.work_plans.controllers.work_plan_v2_controller import WorkPlanV2Controller
 from app.modules.work_plans.schemas.work_plan_v2_schema import (
     BulkApproveDailyPlansIn,
     BulkApproveDailyPlansOut,
@@ -44,21 +40,16 @@ from app.modules.work_plans.schemas.work_plan_v2_schema import (
 router = APIRouter(tags=["Work Plan V2"])
 
 
-async def get_crud_work_plan_v2(db: AsyncSession = Depends(get_db)) -> CRUDWorkPlanV2:
-    """Dependency injection untuk instance CRUDWorkPlanV2."""
-    return CRUDWorkPlanV2(db)
-
-
 # ── FORM OPTIONS V2 ──────────────────────────────────────────
 
 
 @router.get("/work-plans/form-options-v2", response_model=WorkPlanFormOptionsV2Out)
 async def get_work_plan_form_options_v2(
     current_user: CurrentUser = Depends(get_current_user),
-    crud: CRUDWorkPlanV2 = Depends(get_crud_work_plan_v2),
+    controller: WorkPlanV2Controller = Depends(),
 ) -> WorkPlanFormOptionsV2Out:
     """Mengambil seluruh data referensi dropdown master untuk form Rencana Kerja V2."""
-    return await crud.get_form_options_v2()
+    return await controller.handle_form_options()
 
 
 # ── WEEKLY MATRIX & PROJECT SCHEDULE (DAILY-FIRST) ───────────
@@ -71,46 +62,30 @@ async def get_weekly_matrix(
     division_id: UUID | None = Query(None),
     team_id: UUID | None = Query(None),
     current_user: CurrentUser = Depends(get_current_user),
-    crud: CRUDWorkPlanV2 = Depends(get_crud_work_plan_v2),
+    controller: WorkPlanV2Controller = Depends(),
 ) -> WeeklyCalendarMatrixOut:
     """Mengambil matriks kalender harian (Daily-First) untuk seluruh hari dalam rentang tanggal."""
-    return await crud.get_weekly_matrix(
-        start_date=start_date,
-        end_date=end_date,
-        division_id=division_id,
-        team_id=team_id,
-    )
+    return await controller.handle_weekly_matrix(start_date, end_date, division_id, team_id)
 
 
 @router.post("/work-plans/matrix/bulk-approve", response_model=BulkApproveDailyPlansOut)
 async def bulk_approve_weekly_matrix(
     payload: BulkApproveDailyPlansIn,
     current_user: CurrentUser = Depends(get_current_user),
-    crud: CRUDWorkPlanV2 = Depends(get_crud_work_plan_v2),
+    controller: WorkPlanV2Controller = Depends(),
 ) -> BulkApproveDailyPlansOut:
     """Persetujuan serentak oleh Project Manager untuk jadwal satu minggu kerja tim."""
-    pm_id = current_user.employee_id
-    if not pm_id:
-        pm_id = await crud.get_creator_employee_id(current_user.user_id)
-    return await crud.bulk_approve_days(
-        pm_employee_id=UUID(str(pm_id)),
-        start_date=payload.start_date,
-        end_date=payload.end_date,
-        team_id=payload.team_id,
-    )
+    return await controller.handle_bulk_approve(current_user, payload)
 
 
 @router.get("/work-plans/project/{completion_id}/schedule", response_model=ProjectScheduleOut)
 async def get_project_schedule(
     completion_id: UUID,
     current_user: CurrentUser = Depends(get_current_user),
-    crud: CRUDWorkPlanV2 = Depends(get_crud_work_plan_v2),
+    controller: WorkPlanV2Controller = Depends(),
 ) -> ProjectScheduleOut:
     """Mengambil linimasa jadwal proyek multi-minggu (CCTV Site A dsb.) beserta rekap tahapan dan deliverable."""
-    schedule = await crud.get_project_schedule(completion_id)
-    if not schedule:
-        raise NotFoundError("Data proyek work completion tidak ditemukan.")
-    return schedule
+    return await controller.handle_project_schedule(completion_id)
 
 
 # ── WEEKLY PLAN CRUD ─────────────────────────────────────────
@@ -124,29 +99,20 @@ async def list_weekly_plans_v2(
     year: int | None = Query(None),
     limit: int = Query(50, ge=1, le=200),
     current_user: CurrentUser = Depends(get_current_user),
-    crud: CRUDWorkPlanV2 = Depends(get_crud_work_plan_v2),
+    controller: WorkPlanV2Controller = Depends(),
 ) -> list[WeeklyPlanListOut]:
     """Mengambil daftar ringkas rencana kerja mingguan dengan filter."""
-    return await crud.list_weekly_plans(
-        status_filter=status_filter,
-        division_id=division_id,
-        team_id=team_id,
-        year=year,
-        limit=limit,
-    )
+    return await controller.handle_list_weekly(status_filter, division_id, team_id, year, limit)
 
 
 @router.get("/work-plans/weekly/{weekly_plan_id}", response_model=WeeklyPlanDetailOut)
 async def get_weekly_plan_detail_v2(
     weekly_plan_id: UUID,
     current_user: CurrentUser = Depends(get_current_user),
-    crud: CRUDWorkPlanV2 = Depends(get_crud_work_plan_v2),
+    controller: WorkPlanV2Controller = Depends(),
 ) -> WeeklyPlanDetailOut:
     """Mengambil rincian lengkap rencana kerja mingguan beserta hari dan item tugas."""
-    plan = await crud.get_weekly_plan_detail(weekly_plan_id)
-    if not plan:
-        raise NotFoundError("Rencana kerja mingguan tidak ditemukan.")
-    return plan
+    return await controller.handle_weekly_detail(weekly_plan_id)
 
 
 @router.post(
@@ -157,11 +123,10 @@ async def get_weekly_plan_detail_v2(
 async def create_weekly_plan_v2(
     payload: WeeklyPlanCreateIn,
     current_user: CurrentUser = Depends(get_current_user),
-    crud: CRUDWorkPlanV2 = Depends(get_crud_work_plan_v2),
+    controller: WorkPlanV2Controller = Depends(),
 ) -> WeeklyPlanDetailOut:
     """Membuat rencana kerja mingguan baru (dapat mencakup hari & butir tugas bertingkat)."""
-    creator_id = await crud.get_creator_employee_id(current_user.user_id)
-    return await crud.create_weekly_plan(creator_id, payload)
+    return await controller.handle_create_weekly(current_user, payload)
 
 
 @router.put("/work-plans/weekly/{weekly_plan_id}", response_model=WeeklyPlanDetailOut)
@@ -169,26 +134,20 @@ async def update_weekly_plan_v2(
     weekly_plan_id: UUID,
     payload: WeeklyPlanUpdateIn,
     current_user: CurrentUser = Depends(get_current_user),
-    crud: CRUDWorkPlanV2 = Depends(get_crud_work_plan_v2),
+    controller: WorkPlanV2Controller = Depends(),
 ) -> WeeklyPlanDetailOut:
     """Memperbarui rencana kerja mingguan."""
-    plan = await crud.update_weekly_plan(weekly_plan_id, payload)
-    if not plan:
-        raise NotFoundError("Rencana kerja mingguan tidak ditemukan.")
-    return plan
+    return await controller.handle_update_weekly(weekly_plan_id, payload)
 
 
 @router.delete("/work-plans/weekly/{weekly_plan_id}")
 async def delete_weekly_plan_v2(
     weekly_plan_id: UUID,
     current_user: CurrentUser = Depends(get_current_user),
-    crud: CRUDWorkPlanV2 = Depends(get_crud_work_plan_v2),
+    controller: WorkPlanV2Controller = Depends(),
 ) -> dict[str, str]:
     """Menghapus (soft delete) rencana kerja mingguan beserta seluruh hari dan tugas terkait."""
-    deleted = await crud.delete_weekly_plan(weekly_plan_id)
-    if not deleted:
-        raise NotFoundError("Rencana kerja mingguan tidak ditemukan atau telah dihapus.")
-    return {"message": "Rencana kerja mingguan berhasil dihapus."}
+    return await controller.handle_delete_weekly(weekly_plan_id)
 
 
 # ── DAILY PLAN CRUD ──────────────────────────────────────────
@@ -198,13 +157,10 @@ async def delete_weekly_plan_v2(
 async def get_daily_plan_v2(
     daily_plan_id: UUID,
     current_user: CurrentUser = Depends(get_current_user),
-    crud: CRUDWorkPlanV2 = Depends(get_crud_work_plan_v2),
+    controller: WorkPlanV2Controller = Depends(),
 ) -> DailyPlanOut:
     """Mengambil data hari kerja beserta seluruh slot tugas pada tanggal tersebut."""
-    day = await crud.get_daily_plan(daily_plan_id)
-    if not day:
-        raise NotFoundError("Hari kerja tidak ditemukan.")
-    return day
+    return await controller.handle_daily(daily_plan_id)
 
 
 @router.post(
@@ -215,11 +171,10 @@ async def get_daily_plan_v2(
 async def create_daily_plan_v2(
     payload: DailyPlanCreateIn,
     current_user: CurrentUser = Depends(get_current_user),
-    crud: CRUDWorkPlanV2 = Depends(get_crud_work_plan_v2),
+    controller: WorkPlanV2Controller = Depends(),
 ) -> DailyPlanOut:
     """Menambahkan hari kerja baru langsung ke dalam sistem."""
-    creator_id = await crud.get_creator_employee_id(current_user.user_id)
-    return await crud.create_daily_plan(payload, creator_id)
+    return await controller.handle_create_daily(current_user, payload)
 
 
 @router.put("/work-plans/daily/{daily_plan_id}", response_model=DailyPlanOut)
@@ -227,26 +182,20 @@ async def update_daily_plan_v2(
     daily_plan_id: UUID,
     payload: DailyPlanUpdateIn,
     current_user: CurrentUser = Depends(get_current_user),
-    crud: CRUDWorkPlanV2 = Depends(get_crud_work_plan_v2),
+    controller: WorkPlanV2Controller = Depends(),
 ) -> DailyPlanOut:
     """Memperbarui informasi hari kerja (lokasi, jam kerja, radius absensi, hari libur)."""
-    day = await crud.update_daily_plan(daily_plan_id, payload)
-    if not day:
-        raise NotFoundError("Hari kerja tidak ditemukan.")
-    return day
+    return await controller.handle_update_daily(daily_plan_id, payload)
 
 
 @router.delete("/work-plans/daily/{daily_plan_id}")
 async def delete_daily_plan_v2(
     daily_plan_id: UUID,
     current_user: CurrentUser = Depends(get_current_user),
-    crud: CRUDWorkPlanV2 = Depends(get_crud_work_plan_v2),
+    controller: WorkPlanV2Controller = Depends(),
 ) -> dict[str, str]:
     """Menghapus (soft delete) hari kerja beserta tugas-tugas di dalamnya."""
-    deleted = await crud.delete_daily_plan(daily_plan_id)
-    if not deleted:
-        raise NotFoundError("Hari kerja tidak ditemukan atau telah dihapus.")
-    return {"message": "Hari kerja berhasil dihapus."}
+    return await controller.handle_delete_daily(daily_plan_id)
 
 
 # ── PLAN ITEM CRUD ───────────────────────────────────────────
@@ -256,13 +205,10 @@ async def delete_daily_plan_v2(
 async def get_plan_item_v2(
     item_id: UUID,
     current_user: CurrentUser = Depends(get_current_user),
-    crud: CRUDWorkPlanV2 = Depends(get_crud_work_plan_v2),
+    controller: WorkPlanV2Controller = Depends(),
 ) -> PlanItemOut:
     """Mengambil rincian data satu butir tugas pekerjaan."""
-    item = await crud.get_plan_item(item_id)
-    if not item:
-        raise NotFoundError("Butir tugas tidak ditemukan.")
-    return item
+    return await controller.handle_item(item_id)
 
 
 @router.post(
@@ -273,10 +219,10 @@ async def get_plan_item_v2(
 async def create_plan_item_v2(
     payload: PlanItemCreateIn,
     current_user: CurrentUser = Depends(get_current_user),
-    crud: CRUDWorkPlanV2 = Depends(get_crud_work_plan_v2),
+    controller: WorkPlanV2Controller = Depends(),
 ) -> PlanItemOut:
     """Menambahkan slot butir tugas baru ke dalam hari kerja tertentu."""
-    return await crud.create_plan_item(payload)
+    return await controller.handle_create_item(payload)
 
 
 @router.put("/work-plans/items/{item_id}", response_model=PlanItemOut)
@@ -284,23 +230,17 @@ async def update_plan_item_v2(
     item_id: UUID,
     payload: PlanItemUpdateIn,
     current_user: CurrentUser = Depends(get_current_user),
-    crud: CRUDWorkPlanV2 = Depends(get_crud_work_plan_v2),
+    controller: WorkPlanV2Controller = Depends(),
 ) -> PlanItemOut:
     """Memperbarui informasi butir tugas (volume, jam slot, status, teknisi pelaksana)."""
-    item = await crud.update_plan_item(item_id, payload)
-    if not item:
-        raise NotFoundError("Butir tugas tidak ditemukan.")
-    return item
+    return await controller.handle_update_item(item_id, payload)
 
 
 @router.delete("/work-plans/items/{item_id}")
 async def delete_plan_item_v2(
     item_id: UUID,
     current_user: CurrentUser = Depends(get_current_user),
-    crud: CRUDWorkPlanV2 = Depends(get_crud_work_plan_v2),
+    controller: WorkPlanV2Controller = Depends(),
 ) -> dict[str, str]:
     """Menghapus (soft delete) satu butir tugas dari jadwal hari kerja."""
-    deleted = await crud.delete_plan_item(item_id)
-    if not deleted:
-        raise NotFoundError("Butir tugas tidak ditemukan atau telah dihapus.")
-    return {"message": "Butir tugas berhasil dihapus."}
+    return await controller.handle_delete_item(item_id)

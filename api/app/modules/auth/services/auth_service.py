@@ -15,7 +15,7 @@ from app.core.errors import AppError, NotFoundError
 from app.core.events import broker
 from app.core.security import create_jwt_token, hash_password, verify_password
 from app.core.time import utcnow
-from app.db.session import set_request_context
+from app.database.session import set_request_context
 from app.modules.auth.repositories.auth_session_repository import (
     MAX_LOGIN_FAILURES,
     CRUDSession,

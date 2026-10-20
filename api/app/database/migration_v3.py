@@ -19,7 +19,7 @@ from pathlib import Path
 
 from sqlalchemy import text
 
-from app.db.session import engine
+from app.database.session import engine
 
 logger = logging.getLogger(__name__)
 

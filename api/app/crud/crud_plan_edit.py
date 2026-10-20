@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
-from .base import CRUDBase
+from app.core.repository import CRUDBase
 
 _PLAN_COLUMNS = """wp.weekly_plan_id AS id, wp.division_id AS unit_id, NULL AS site_id,
                    'SK/W' || wp.week_number || '/' || wp.year AS number,

@@ -48,8 +48,8 @@ from app.modules.work_plans.services.work_plan_service import (
     PlanTransitionService,
     render_plan_preview_html,
 )
-from app.services.access_service import PlanAccess
-from app.services.document_export_service import DocumentExportService
+from app.shared.access.access_service import PlanAccess
+from app.shared.documents.document_export_service import DocumentExportService
 
 
 class WorkPlanController:

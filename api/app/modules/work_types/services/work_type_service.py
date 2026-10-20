@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.errors import AppError, NotFoundError, ValidationError
 from app.modules.work_types.repositories.work_type_repository import CRUDWorkType
 from app.modules.work_types.schemas.work_type_schema import DefaultMaterialIn, DefaultMaterialUpdate, WorkTypeIn
-from app.services.access_service import ensure_same_org
+from app.shared.access.access_service import ensure_same_org
 
 
 class WorkTypeService:

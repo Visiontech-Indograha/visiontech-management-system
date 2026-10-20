@@ -18,10 +18,10 @@ from app.core.enums import PlanStatus
 from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationError
 from app.core.permissions import Permission, RoleCode
 from app.core.security import CurrentUser
-from app.crud.crud_org_clock import CRUDOrgClock
-from app.crud.crud_plan_access import CRUDPlanAccess
 from app.modules.overtime.repositories.overtime_repository import CRUDOvertime
-from app.services.access_service import PlanNeed, check_plan_access
+from app.shared.access.access_service import PlanNeed, check_plan_access
+from app.shared.access.plan_access_repository import CRUDPlanAccess
+from app.shared.org_clock import CRUDOrgClock
 
 
 def _state(msg: str) -> AppError:

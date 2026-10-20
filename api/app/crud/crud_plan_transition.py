@@ -9,8 +9,7 @@ from typing import Any
 from uuid import UUID
 
 from app.core.enums import PlanStatus
-
-from .base import CRUDBase
+from app.core.repository import CRUDBase
 
 # Daftar kolom ditulis ulang di setiap kueri (bukan disambung) agar tiap kueri tetap literal statis
 # yang diperiksa terhadap skema oleh tests/test_sql_matches_schema.py.

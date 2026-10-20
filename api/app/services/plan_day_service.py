@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import AppError
 from app.crud.crud_plan_day import CRUDPlanDay
-from app.services.access_service import PlanAccess
+from app.shared.access.access_service import PlanAccess
 
 
 class PlanDayService:

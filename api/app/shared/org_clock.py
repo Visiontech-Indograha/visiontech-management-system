@@ -1,5 +1,5 @@
 """
-app/crud/crud_org_clock.py
+app/shared/org_clock.py
 Waktu server lokal berbasis zona waktu Asia/Jakarta (WIB) Master Schema V2.
 """
 
@@ -8,7 +8,7 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
-from .base import CRUDBase
+from app.core.repository import CRUDBase
 
 
 class CRUDOrgClock(CRUDBase):

@@ -12,7 +12,7 @@ from datetime import date
 from typing import Any
 from uuid import UUID
 
-from app.crud.base import CRUDBase
+from app.core.repository import CRUDBase
 
 
 class CRUDPlanItem(CRUDBase):

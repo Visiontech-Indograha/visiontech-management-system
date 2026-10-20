@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
-from .base import CRUDBase
+from app.core.repository import CRUDBase
 
 
 class CRUDPlanLocation(CRUDBase):

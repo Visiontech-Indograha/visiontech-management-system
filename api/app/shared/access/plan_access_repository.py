@@ -1,5 +1,5 @@
 """
-app/crud/crud_plan_access.py
+app/shared/access/plan_access_repository.py
 Kedudukan pengguna terhadap SK (V-07): siapa yang boleh melihat dan mengelola, dan apakah ia ketua
 atau anggota menurut SK yang berlaku. Satu kueri dipakai penjaga `plan_access` dan daftar SK agar
 aturan "terlihat" hanya ditulis sekali.
@@ -17,7 +17,7 @@ from collections.abc import Sequence
 from typing import Any
 from uuid import UUID
 
-from .base import CRUDBase
+from app.core.repository import CRUDBase
 
 # `:plan` NULL → semua SK terlihat (daftar); terisi → satu SK (penjaga). `:status` NULL → semua status.
 _STANDING = """

@@ -16,7 +16,7 @@ from app.core.security import CurrentUser
 from app.modules.work_completion.repositories.work_completion_repository import (
     CRUDWorkCompletion,
 )
-from app.services.document_export_service import DocumentExportService
+from app.shared.documents.document_export_service import DocumentExportService
 
 
 class WorkCompletionService:

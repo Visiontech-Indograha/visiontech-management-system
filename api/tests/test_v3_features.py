@@ -17,7 +17,7 @@ from app.modules.work_completion.schemas.work_completion_schema import (
     WorkCompletionStatusUpdate,
 )
 from app.schemas.plan import RescheduleItemRequest, WorkPlanResponse
-from app.services.document_export_service import DocumentExportService
+from app.shared.documents.document_export_service import DocumentExportService
 
 
 def test_document_export_service_docx_xlsx_pptx() -> None:

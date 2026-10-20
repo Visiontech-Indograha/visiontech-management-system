@@ -20,7 +20,7 @@ from app.modules.work_plans.schemas.work_plan_schema import (
 from app.modules.work_plans.services.work_plan_service import (
     PlanRevisionService,
 )
-from app.services.access_service import PlanAccess
+from app.shared.access.access_service import PlanAccess
 
 
 class WorkPlanRevisionsController:

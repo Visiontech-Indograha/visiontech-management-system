@@ -20,7 +20,7 @@ from app.modules.work_plans.schemas.work_plan_schema import (
 from app.modules.work_plans.services.work_plan_service import (
     PlanAttachmentService,
 )
-from app.services.access_service import PlanAccess, ensure_same_org
+from app.shared.access.access_service import PlanAccess, ensure_same_org
 
 
 def _out(rows: list[Any]) -> list[AttachmentResponse]:

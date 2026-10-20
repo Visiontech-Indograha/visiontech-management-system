@@ -17,8 +17,8 @@ from app.core.errors import ValidationError
 from app.core.permissions import Permission
 from app.core.security import CurrentUser
 from app.crud.crud_monitoring import CRUDMonitoring
-from app.crud.crud_org_clock import CRUDOrgClock
-from app.crud.crud_plan_access import CRUDPlanAccess
+from app.shared.access.plan_access_repository import CRUDPlanAccess
+from app.shared.org_clock import CRUDOrgClock
 
 HIDDEN = (PlanStatus.CANCELLED, PlanStatus.COMPLETED)  # operations.js timeline()
 REPORTED = ("APPROVED", "SUBMITTED", "CHANGES_REQUESTED")

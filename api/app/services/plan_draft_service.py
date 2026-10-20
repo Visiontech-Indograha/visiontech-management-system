@@ -27,8 +27,8 @@ from app.core.security import CurrentUser
 from app.crud.crud_asset_reservation import CRUDAssetReservation
 from app.crud.crud_plan_draft import CRUDPlanDraft
 from app.schemas.plan_draft import PlanDraftRequest
-from app.services.access_service import ensure_same_org
 from app.services.work_type_service import WorkTypeService
+from app.shared.access.access_service import ensure_same_org
 
 PM_ROLES = (
     RoleCode.PM,

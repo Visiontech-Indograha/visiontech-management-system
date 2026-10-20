@@ -16,12 +16,18 @@ from app.core.enums import PlanStatus
 from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationError
 from app.core.permissions import RoleCode
 from app.core.security import CurrentUser
-from app.crud.crud_org_clock import CRUDOrgClock
 from app.modules.hse.repositories.hse_repository import CRUDHse
 from app.schemas.work_type import EvidenceIn, merge_evidence
-from app.services.access_service import PlanAccess, PlanNeed, check_plan_access, ensure_same_org, require_plan_status
 from app.services.notification_service import NotificationService
 from app.services.work_type_service import WorkTypeService
+from app.shared.access.access_service import (
+    PlanAccess,
+    PlanNeed,
+    check_plan_access,
+    ensure_same_org,
+    require_plan_status,
+)
+from app.shared.org_clock import CRUDOrgClock
 
 
 class HseService:

@@ -9,11 +9,6 @@ from app.services.geocode_service import GeocodeService
 from app.services.member_report_service import (
     MemberReportService as BaseMemberReportService,
 )
-from app.services.pdf_service import (
-    html_to_pdf,
-    render_final_report_html,
-    render_plan_preview_html,
-)
 from app.services.plan_amendment_service import (
     PlanAmendmentService as BasePlanAmendmentService,
 )
@@ -48,6 +43,11 @@ from app.services.plan_transition_service import (
     PlanTransitionService as BasePlanTransitionService,
 )
 from app.services.signature_service import SignatureService
+from app.shared.documents.pdf_service import (
+    html_to_pdf,
+    render_final_report_html,
+    render_plan_preview_html,
+)
 
 
 class PlanAssignmentService(BasePlanAssignmentService):

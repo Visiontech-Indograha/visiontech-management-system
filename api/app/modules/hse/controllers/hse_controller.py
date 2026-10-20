@@ -22,7 +22,7 @@ from app.modules.hse.schemas.hse_schema import (
     ReportReviewRequest,
 )
 from app.modules.hse.services.hse_service import HseService
-from app.services.access_service import PlanAccess
+from app.shared.access.access_service import PlanAccess
 
 
 class HseController:

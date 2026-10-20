@@ -18,7 +18,7 @@ from app.modules.work_plans.schemas.work_plan_schema import (
     PlanLocationIn,
     PlanLocationOut,
 )
-from app.services.access_service import PlanAccess, PlanNeed
+from app.shared.access.access_service import PlanAccess, PlanNeed
 
 router = APIRouter(tags=["Plan Location"])
 _VIEW = Depends(plan_access(PlanNeed.VIEW))

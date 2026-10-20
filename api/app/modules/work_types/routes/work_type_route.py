@@ -21,7 +21,7 @@ from app.modules.work_types.schemas.work_type_schema import (
     WorkTypeOut,
     WorkTypePhotoOut,
 )
-from app.services.access_service import PlanAccess, PlanNeed
+from app.shared.access.access_service import PlanAccess, PlanNeed
 
 router = APIRouter(tags=["Work Types"])
 _MANAGE = Depends(require_permission(Permission.CREATE_PLAN))

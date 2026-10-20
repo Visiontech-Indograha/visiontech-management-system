@@ -10,7 +10,7 @@ from datetime import date
 from typing import Any
 from uuid import UUID
 
-from .base import CRUDBase
+from app.core.repository import CRUDBase
 
 
 class CRUDPlanMember(CRUDBase):

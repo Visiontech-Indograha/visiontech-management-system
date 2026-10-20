@@ -10,8 +10,7 @@ from typing import Any
 from uuid import UUID
 
 from app.core.enums import DocumentStatus
-
-from .base import CRUDBase
+from app.core.repository import CRUDBase
 
 
 class CRUDPlanRevision(CRUDBase):

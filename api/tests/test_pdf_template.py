@@ -6,7 +6,7 @@ import base64
 from datetime import UTC, datetime
 from types import SimpleNamespace
 
-from app.services.pdf_service import render_plan_document_html
+from app.shared.documents.pdf_service import render_plan_document_html
 
 
 def _doc() -> SimpleNamespace:

@@ -20,7 +20,7 @@ from app.modules.work_plans.schemas.work_plan_schema import (
     TransitionRequest,
     WorkPlanResponse,
 )
-from app.services.access_service import PlanAccess, PlanNeed
+from app.shared.access.access_service import PlanAccess, PlanNeed
 
 router = APIRouter(prefix="/work-plans/{plan_id}", tags=["Work Plan Transitions"])
 _LEADER_ACCESS = Depends(plan_access(PlanNeed.LEADER))

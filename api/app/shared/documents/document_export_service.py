@@ -1,5 +1,5 @@
 """
-app/services/document_export_service.py
+app/shared/documents/document_export_service.py
 Layanan pembangkit dan ekspor dokumen multi-format untuk Rencana Kerja (Weekly & Daily Plan).
 Mendukung 4 format standar: PDF, Word (DOCX), Excel (XLSX), dan PowerPoint (PPTX).
 """
@@ -10,7 +10,7 @@ import io
 from typing import Any
 
 from app.core.errors import AppError
-from app.services.pdf_service import html_to_pdf, render_plan_preview_html
+from app.shared.documents.pdf_service import html_to_pdf, render_plan_preview_html
 
 
 class DocumentExportService:

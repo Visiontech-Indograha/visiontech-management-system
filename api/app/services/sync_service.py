@@ -17,12 +17,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import AppError, NotFoundError
 from app.core.security import CurrentUser
-from app.crud.crud_plan_access import CRUDPlanAccess
 from app.crud.crud_sync import CRUDSync
 from app.schemas.hse import DailyReportCreate, IncidentCreate
-from app.services.access_service import PlanAccess, PlanNeed, check_plan_access, ensure_same_org
 from app.services.hse_service import HseService
 from app.services.overtime_service import OvertimeService
+from app.shared.access.access_service import PlanAccess, PlanNeed, check_plan_access, ensure_same_org
+from app.shared.access.plan_access_repository import CRUDPlanAccess
 
 OFFLINE_ALLOWED = ("DAILY_REPORT_SAVE", "DAILY_REPORT_SUBMIT", "TASK_TOGGLE", "INCIDENT_REPORT", "OVERTIME_REPORT")
 NOT_OFFLINE = "Aksi ini tidak dapat dikirim saat luring."

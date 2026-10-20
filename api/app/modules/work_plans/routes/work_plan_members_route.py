@@ -18,7 +18,7 @@ from app.modules.work_plans.schemas.work_plan_schema import (
     TeamRequest,
     TeamResponse,
 )
-from app.services.access_service import PlanAccess, PlanNeed
+from app.shared.access.access_service import PlanAccess, PlanNeed
 
 router = APIRouter(prefix="/work-plans/{plan_id}", tags=["Plan Members"])
 _PM_UNIT_ACCESS = Depends(plan_access(PlanNeed.PM_UNIT))

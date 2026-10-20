@@ -15,7 +15,7 @@ from app.modules.work_plans.schemas.work_plan_schema import (
     AttachmentResponse,
     AttachmentsRequest,
 )
-from app.services.access_service import PlanAccess, PlanNeed
+from app.shared.access.access_service import PlanAccess, PlanNeed
 
 router = APIRouter(prefix="/work-plans/{plan_id}/attachments", tags=["Work Plans"])
 _VIEW_ACCESS = Depends(plan_access(PlanNeed.VIEW))

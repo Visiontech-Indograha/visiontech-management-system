@@ -15,7 +15,7 @@ from app.modules.work_plans.controllers.work_plan_days_controller import (
     WorkPlanDaysController,
 )
 from app.modules.work_plans.schemas.work_plan_schema import PlanDayOut
-from app.services.access_service import PlanAccess, PlanNeed
+from app.shared.access.access_service import PlanAccess, PlanNeed
 
 router = APIRouter(prefix="/work-plans/{plan_id}/days", tags=["Daily Reports"])
 _VIEW_ACCESS = Depends(plan_access(PlanNeed.VIEW))

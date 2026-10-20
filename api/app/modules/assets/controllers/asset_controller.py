@@ -30,8 +30,8 @@ from app.modules.assets.schemas.asset_schema import (
     PlanAssetItem,
 )
 from app.modules.assets.services.asset_service import AssetReservationService
-from app.services.access_service import PlanAccess
-from app.services.pdf_service import html_to_pdf, render_bast_html
+from app.shared.access.access_service import PlanAccess
+from app.shared.documents.pdf_service import html_to_pdf, render_bast_html
 
 
 class AssetController:

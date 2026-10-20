@@ -16,7 +16,7 @@ from app.modules.hse.schemas.hse_schema import (
     DailyReportResponse,
     ReportReviewRequest,
 )
-from app.services.access_service import PlanAccess, PlanNeed
+from app.shared.access.access_service import PlanAccess, PlanNeed
 
 days_router = APIRouter(prefix="/work-plans/{plan_id}/days", tags=["Daily Reports"])
 _DAY_LEADER_ACCESS = Depends(plan_day_access(PlanNeed.LEADER))

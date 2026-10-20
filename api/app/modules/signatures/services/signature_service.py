@@ -21,7 +21,7 @@ from app.core.errors import AppError, NotFoundError, ValidationError
 from app.core.security import CurrentUser
 from app.core.signing import canonical, get_document_signer
 from app.modules.signatures.repositories.signature_repository import CRUDSignature
-from app.services.access_service import PlanNeed, check_plan_access
+from app.shared.access.access_service import PlanNeed, check_plan_access
 
 ISSUER = "ISSUER"
 ACCEPTOR = "ACCEPTOR"

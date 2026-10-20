@@ -17,11 +17,11 @@ from app.core.enums import PlanStatus
 from app.core.errors import ValidationError, trigger_rule_error
 from app.core.permissions import RoleCode, SystemRole
 from app.core.security import CurrentUser
-from app.crud.crud_plan_access import CRUDPlanAccess
 from app.crud.crud_plan_edit import CRUDPlanEdit
 from app.schemas.plan import WorkPlanCreate, WorkPlanUpdate
-from app.services.access_service import PlanAccess, check_unit_manager, ensure_same_org, require_plan_status
 from app.services.plan_assignment_service import PlanAssignmentService
+from app.shared.access.access_service import PlanAccess, check_unit_manager, ensure_same_org, require_plan_status
+from app.shared.access.plan_access_repository import CRUDPlanAccess
 
 PM_ROLES = (
     RoleCode.PM,

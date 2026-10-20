@@ -18,7 +18,7 @@ from app.modules.reports.schemas.weekly_report_schema import (
     WeeklyReviewRequest,
 )
 from app.modules.reports.services.weekly_report_service import WeeklyReportService
-from app.services.access_service import PlanAccess
+from app.shared.access.access_service import PlanAccess
 
 
 def _out(row: Any) -> WeeklyReportResponse:

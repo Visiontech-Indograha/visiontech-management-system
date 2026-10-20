@@ -1,135 +1,97 @@
 """
 app/modules/mess/repositories/mess_repository.py
-Repository akses basis data untuk tabel company_mess_stay.
+Hunian mess karyawan (company_mess_stay N─1 employee), berbasis rentang tanggal riil (daily-first: tanpa tautan
+ke rencana mingguan).
 """
 from __future__ import annotations
 
-import uuid
-from collections.abc import Sequence
+from datetime import date
 from typing import Any
 from uuid import UUID
 
-from app.core.repository import CRUDBase
-from app.modules.mess.schemas.mess_schema import MessStayCreate, MessStayUpdate
+from app.core.repository import BaseRepository
+
+_SELECT = """
+    SELECT m.mess_stay_id, m.mess_name, m.city, m.address, m.latitude, m.longitude, m.employee_id,
+           e.full_name AS employee_name, e.employee_no, m.stay_start_date, m.stay_end_date, m.create_at
+    FROM company_mess_stay m
+    JOIN employee e ON e.employee_id = m.employee_id
+"""
 
 
-class MessRepository(CRUDBase):
-    """Akses query untuk data hunian mess karyawan."""
+class MessRepository(BaseRepository):
+    """Query company_mess_stay."""
 
-    async def list_stays(self, employee_id: UUID | None = None, weekly_plan_id: UUID | None = None) -> Sequence[Any]:
-        sql = """
-            SELECT
-                m.mess_stay_id,
-                m.mess_name,
-                m.city,
-                m.address,
-                m.latitude,
-                m.longitude,
-                m.employee_id,
-                m.weekly_plan_id,
-                m.stay_start_date,
-                m.stay_end_date,
-                m.create_at,
-                e.full_name AS employee_name,
-                e.employee_no
-            FROM company_mess_stay m
-            JOIN employee e ON e.employee_id = m.employee_id
+    async def list_stays(self, employee_id: UUID | None, start: date | None, end: date | None) -> list[Any]:
+        """Hunian yang beririsan dengan rentang [start, end] (mis. minggu jadwal)."""
+        return list(await self.fetchall(
+            _SELECT + """
             WHERE m.delete_at IS NULL
-        """
-        params: dict[str, Any] = {}
-        if employee_id:
-            sql += " AND m.employee_id = :emp_id"
-            params["emp_id"] = employee_id
-        if weekly_plan_id:
-            sql += " AND m.weekly_plan_id = :wp_id"
-            params["wp_id"] = weekly_plan_id
-        sql += " ORDER BY m.stay_start_date DESC"
-        return await self.fetchall(sql, params)
+              AND (CAST(:emp AS uuid) IS NULL OR m.employee_id = CAST(:emp AS uuid))
+              AND (CAST(:end AS date) IS NULL OR m.stay_start_date <= CAST(:end AS date))
+              AND (CAST(:start AS date) IS NULL OR m.stay_end_date >= CAST(:start AS date))
+            ORDER BY m.stay_start_date DESC, e.full_name
+            """,
+            {"emp": str(employee_id) if employee_id else None, "start": start, "end": end},
+        ))
 
-    async def get_stay_by_id(self, mess_stay_id: UUID) -> Any | None:
-        sql = """
-            SELECT
-                m.mess_stay_id,
-                m.mess_name,
-                m.city,
-                m.address,
-                m.latitude,
-                m.longitude,
-                m.employee_id,
-                m.weekly_plan_id,
-                m.stay_start_date,
-                m.stay_end_date,
-                m.create_at,
-                e.full_name AS employee_name,
-                e.employee_no
-            FROM company_mess_stay m
-            JOIN employee e ON e.employee_id = m.employee_id
-            WHERE m.mess_stay_id = :mess_stay_id AND m.delete_at IS NULL
-        """
-        return await self.fetchone(sql, {"mess_stay_id": mess_stay_id})
-
-    async def create_stay(self, data: MessStayCreate) -> Any:
-        stay_id = uuid.uuid4()
-        sql = """
-            INSERT INTO company_mess_stay (
-                mess_stay_id, mess_name, city, address, latitude, longitude,
-                employee_id, weekly_plan_id, stay_start_date, stay_end_date,
-                create_at, update_at
-            ) VALUES (
-                :stay_id, :mess_name, :city, :address, :lat, :lng,
-                :emp_id, :wp_id, :start_date, :end_date,
-                NOW(), NOW()
-            )
-            RETURNING mess_stay_id
-        """
-        await self.execute(sql, {
-            "stay_id": stay_id,
-            "mess_name": data.mess_name,
-            "city": data.city,
-            "address": data.address,
-            "lat": data.latitude,
-            "lng": data.longitude,
-            "emp_id": data.employee_id,
-            "wp_id": data.weekly_plan_id,
-            "start_date": data.stay_start_date,
-            "end_date": data.stay_end_date,
-        })
-        return await self.get_stay_by_id(stay_id)
-
-    async def update_stay(self, mess_stay_id: UUID, data: MessStayUpdate) -> Any | None:
-        updates: list[str] = ["update_at = NOW()"]
-        params: dict[str, Any] = {"mess_stay_id": mess_stay_id}
-        if data.mess_name is not None:
-            updates.append("mess_name = :mess_name")
-            params["mess_name"] = data.mess_name
-        if data.city is not None:
-            updates.append("city = :city")
-            params["city"] = data.city
-        if data.address is not None:
-            updates.append("address = :address")
-            params["address"] = data.address
-        if data.latitude is not None:
-            updates.append("latitude = :lat")
-            params["lat"] = data.latitude
-        if data.longitude is not None:
-            updates.append("longitude = :lng")
-            params["lng"] = data.longitude
-        if data.stay_start_date is not None:
-            updates.append("stay_start_date = :start_date")
-            params["start_date"] = data.stay_start_date
-        if data.stay_end_date is not None:
-            updates.append("stay_end_date = :end_date")
-            params["end_date"] = data.stay_end_date
-
-        set_clause = ", ".join(updates)
-        sql = (
-            f"UPDATE company_mess_stay SET {set_clause} "
-            "WHERE mess_stay_id = :mess_stay_id AND delete_at IS NULL"
+    async def get(self, mess_stay_id: UUID | str) -> Any:
+        return await self.fetchone(
+            _SELECT + " WHERE m.mess_stay_id = CAST(:id AS uuid) AND m.delete_at IS NULL", {"id": str(mess_stay_id)}
         )
-        await self.execute(sql, params)
-        return await self.get_stay_by_id(mess_stay_id)
 
-    async def delete_stay(self, mess_stay_id: UUID) -> bool:
-        sql = "UPDATE company_mess_stay SET delete_at = NOW() WHERE mess_stay_id = :mess_stay_id AND delete_at IS NULL"
-        await self.execute(sql, {"mess_stay_id": mess_stay_id})
-        return True
+    async def employee_active(self, employee_id: UUID | str) -> bool:
+        return bool(await self.scalar(
+            "SELECT EXISTS (SELECT 1 FROM employee WHERE employee_id = CAST(:id AS uuid) AND delete_at IS NULL "
+            "AND offboarding_status = 'active')",
+            {"id": str(employee_id)},
+        ))
+
+    async def overlaps(
+        self, employee_id: UUID | str, start: date, end: date, exclude: UUID | str | None = None
+    ) -> bool:
+        """Satu karyawan tidak menginap di dua mess pada tanggal yang sama."""
+        return bool(await self.scalar(
+            """
+            SELECT EXISTS (SELECT 1 FROM company_mess_stay WHERE employee_id = CAST(:emp AS uuid)
+                           AND delete_at IS NULL AND stay_start_date <= :end AND stay_end_date >= :start
+                           AND (CAST(:ex AS uuid) IS NULL OR mess_stay_id <> CAST(:ex AS uuid)))
+            """,
+            {"emp": str(employee_id), "start": start, "end": end, "ex": str(exclude) if exclude else None},
+        ))
+
+    async def insert(self, fields: dict[str, Any]) -> UUID:
+        stay_id: UUID = await self.scalar(
+            """
+            INSERT INTO company_mess_stay (mess_name, city, address, latitude, longitude, employee_id,
+                                           stay_start_date, stay_end_date)
+            VALUES (:mess_name, :city, :address, :latitude, :longitude, CAST(:employee_id AS uuid),
+                    :stay_start_date, :stay_end_date)
+            RETURNING mess_stay_id
+            """,
+            fields,
+        )
+        return stay_id
+
+    async def update(self, mess_stay_id: UUID | str, fields: dict[str, Any]) -> None:
+        await self.execute(
+            """
+            UPDATE company_mess_stay SET
+                mess_name = COALESCE(:mess_name, mess_name), city = COALESCE(:city, city),
+                address = COALESCE(:address, address),
+                latitude = COALESCE(CAST(:latitude AS numeric), latitude),
+                longitude = COALESCE(CAST(:longitude AS numeric), longitude),
+                stay_start_date = COALESCE(CAST(:stay_start_date AS date), stay_start_date),
+                stay_end_date = COALESCE(CAST(:stay_end_date AS date), stay_end_date),
+                update_at = now()
+            WHERE mess_stay_id = CAST(:id AS uuid) AND delete_at IS NULL
+            """,
+            {**fields, "id": str(mess_stay_id)},
+        )
+
+    async def archive(self, mess_stay_id: UUID | str) -> None:
+        await self.execute(
+            "UPDATE company_mess_stay SET delete_at = now(), update_at = now() "
+            "WHERE mess_stay_id = CAST(:id AS uuid) AND delete_at IS NULL",
+            {"id": str(mess_stay_id)},
+        )

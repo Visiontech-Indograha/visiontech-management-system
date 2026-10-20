@@ -11,7 +11,8 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Response, status
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, require_permission
+from app.core.permissions import Permission
 from app.core.security import CurrentUser
 from app.modules.work_completion.controllers.work_completion_controller import WorkCompletionController
 from app.modules.work_completion.schemas.work_completion_schema import (
@@ -27,6 +28,7 @@ from app.modules.work_completion.schemas.work_completion_schema import (
     WorkCompletionUpdate,
 )
 
+_PLANNER = Depends(require_permission(Permission.CREATE_PLAN))
 router = APIRouter(prefix="/work-completions", tags=["Work Completions (Order Klien)"])
 
 
@@ -58,7 +60,7 @@ async def list_work_completions(
 )
 async def create_work_completion(
     body: WorkCompletionCreate,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = _PLANNER,
     controller: WorkCompletionController = Depends(),
 ) -> WorkCompletionOut:
     return await controller.create_order(body, current_user)
@@ -77,7 +79,7 @@ async def get_work_completion(
 async def update_work_completion(
     completion_id: UUID,
     body: WorkCompletionUpdate,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = _PLANNER,
     controller: WorkCompletionController = Depends(),
 ) -> WorkCompletionOut:
     return await controller.update_order(completion_id, body, current_user)
@@ -91,7 +93,7 @@ async def update_work_completion(
 async def update_work_completion_status(
     completion_id: UUID,
     body: WorkCompletionStatusUpdate,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = _PLANNER,
     controller: WorkCompletionController = Depends(),
 ) -> WorkCompletionOut:
     return await controller.update_status(completion_id, body, current_user)
@@ -133,7 +135,7 @@ async def list_work_completion_bom(
 async def add_work_completion_bom(
     completion_id: UUID,
     body: WorkCompletionBomIn,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = _PLANNER,
     controller: WorkCompletionController = Depends(),
 ) -> WorkCompletionBomOut:
     return await controller.add_bom_item(completion_id, body, current_user)
@@ -147,7 +149,7 @@ async def add_work_completion_bom(
 async def update_work_completion_bom(
     bom_id: UUID,
     body: WorkCompletionBomUpdate,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = _PLANNER,
     controller: WorkCompletionController = Depends(),
 ) -> WorkCompletionBomOut:
     return await controller.update_bom_item(bom_id, body, current_user)
@@ -160,7 +162,7 @@ async def update_work_completion_bom(
 )
 async def delete_work_completion_bom(
     bom_id: UUID,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = _PLANNER,
     controller: WorkCompletionController = Depends(),
 ) -> Response:
     await controller.delete_bom_item(bom_id, current_user)
@@ -174,7 +176,7 @@ async def delete_work_completion_bom(
 async def sync_bom_from_work_types(
     completion_id: UUID,
     body: SyncBomFromWorkTypesIn | None = None,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = _PLANNER,
     controller: WorkCompletionController = Depends(),
 ) -> dict[str, Any]:
     overwrite = body.overwrite_existing if body else False

@@ -21,6 +21,8 @@ export function AssetStatusDialog({ kind, id, name, status, onClose }: {
   const remove = useDeleteAsset();
   const [value, setValue] = useState<ManualStatus>(MANUAL.includes(status as ManualStatus) ? (status as ManualStatus) : "ready");
   const [formError, setFormError] = useState<string | null>(null);
+  // Hapus dua langkah (tanpa dialog bawaan peramban, R1).
+  const [confirming, setConfirming] = useState(false);
 
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -34,7 +36,7 @@ export function AssetStatusDialog({ kind, id, name, status, onClose }: {
     }
   };
   const onDelete = async () => {
-    if (!window.confirm(`Hapus ${name} dari inventaris?`)) return;
+    if (!confirming) return setConfirming(true);
     try {
       await remove.mutateAsync({ kind, id });
       toast.success(`${name} dihapus.`);
@@ -53,7 +55,7 @@ export function AssetStatusDialog({ kind, id, name, status, onClose }: {
         <ControlOption value="pension">Pensiun (tidak dipakai lagi)</ControlOption>
       </SelectField>
       <ActionButton variant="outline" size="sm" onClick={onDelete} disabled={remove.isPending}>
-        Hapus dari inventaris
+        {confirming ? `Yakin hapus ${name}?` : "Hapus dari inventaris"}
       </ActionButton>
     </AssetFormDialog>
   );

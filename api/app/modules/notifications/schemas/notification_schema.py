@@ -1,10 +1,25 @@
 """
 app/modules/notifications/schemas/notification_schema.py
 
-Skema validasi permintaan dan respons notifikasi pengguna.
+Skema respons notifikasi pengguna.
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §5.4.
 """
+from datetime import datetime
+from uuid import UUID
 
-from app.modules.work_plans.schemas.plan_draft_schema import NotificationList, NotificationOut
+from pydantic import BaseModel
 
-__all__ = ["NotificationList", "NotificationOut"]
+
+class NotificationOut(BaseModel):
+    id: UUID
+    kind: str
+    title: str
+    body: str
+    daily_plan_id: UUID | None = None
+    created_at: datetime
+    read_at: datetime | None = None
+
+
+class NotificationList(BaseModel):
+    unread: int
+    items: list[NotificationOut]

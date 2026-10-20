@@ -1,60 +1,7 @@
 """
-Paket routing untuk modul work_plans.
+Paket routing untuk modul work_plans (jadwal harian daily-first).
 """
 
-from app.modules.work_plans.routes.work_plan_amendments_route import (
-    router as plan_amendments_router,
-)
-from app.modules.work_plans.routes.work_plan_attachments_route import (
-    router as plan_attachments_router,
-)
-from app.modules.work_plans.routes.work_plan_changes_route import (
-    plan_router as plan_changes_router,
-)
-from app.modules.work_plans.routes.work_plan_changes_route import (
-    router as changes_router,
-)
-from app.modules.work_plans.routes.work_plan_days_route import (
-    router as plan_days_router,
-)
-from app.modules.work_plans.routes.work_plan_items_route import (
-    router as plan_items_router,
-)
-from app.modules.work_plans.routes.work_plan_location_route import (
-    router as plan_location_router,
-)
-from app.modules.work_plans.routes.work_plan_members_route import (
-    router as plan_members_router,
-)
-from app.modules.work_plans.routes.work_plan_reports_route import (
-    router as plan_reports_router,
-)
-from app.modules.work_plans.routes.work_plan_revisions_route import (
-    router as plan_revisions_router,
-)
-from app.modules.work_plans.routes.work_plan_transitions_route import (
-    router as transitions_router,
-)
-from app.modules.work_plans.routes.work_plan_v2_route import (
-    router as work_plan_v2_router,
-)
-from app.modules.work_plans.routes.work_plans_route import (
-    router as plans_router,
-)
+from app.modules.work_plans.routes.daily_plan_route import router as daily_plans_router
 
-__all__ = [
-    "changes_router",
-    "plan_amendments_router",
-    "plan_attachments_router",
-    "plan_changes_router",
-    "plan_days_router",
-    "plan_items_router",
-    "plan_location_router",
-    "plan_members_router",
-    "plan_reports_router",
-    "plan_revisions_router",
-    "plans_router",
-    "transitions_router",
-    "work_plan_v2_router",
-]
-
+__all__ = ["daily_plans_router"]

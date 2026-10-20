@@ -15,7 +15,6 @@ import io
 import re
 from datetime import timedelta
 
-import pytest
 from fastapi.routing import APIRoute
 from PIL import Image
 
@@ -23,7 +22,6 @@ from app.core.time import jakarta_now
 from app.main import app
 from tests.architecture.test_route_smoke import PUBLIC_ROUTES
 from tests.conftest import World, requires_db, sync_query
-from tests.modules.work_plans.test_flow_plans import run_plan_to_in_progress
 
 # Boleh dipanggil setiap pengguna yang login; data tetap dibatasi organisasi / milik sendiri.
 SELF_SERVICE = {
@@ -33,13 +31,18 @@ SELF_SERVICE = {
     ("POST", "/auth/sessions/{session_id}/revoke"): "hanya sesi milik sendiri; milik orang lain → 404 (diuji)",
     ("POST", "/auth/change-password"): "kata sandi sendiri",
     ("POST", "/files/upload"): "setiap karyawan mengunggah bukti/dokumen sendiri",
-    ("GET", "/work-plans"): "hanya SK yang terlihat (V-07)",
     ("GET", "/notifications"): "notifikasi milik sendiri (alur SK v2)",
     ("POST", "/notifications/read-all"): "menandai notifikasi milik sendiri",
     ("POST", "/notifications/{notification_id}/read"): "hanya notifikasi milik sendiri; milik orang lain tidak berubah",
     ("GET", "/sites"): "daftar lokasi organisasi untuk check-in",
     ("GET", "/events"): "aliran peristiwa milik sendiri; token JWT divalidasi sekali saat menyambung (T8)",
     ("GET", "/work-types"): "daftar jenis pekerjaan organisasi sendiri; yang nonaktif hanya untuk pengelola (T9)",
+    ("GET", "/work-plans/daily"): "jadwal harian: PM/OM divisinya, lapangan timnya yang dirilis (M5, diuji)",
+    ("GET", "/work-plans/orders/{completion_id}/schedule"): "hanya jadwal yang terlihat pengguna (M5)",
+    ("GET", "/work-completions"): "order: pengelola divisinya; lapangan order tim jadwalnya (M5)",
+    ("GET", "/image-requirements/by-work-type/{work_type_id}"): "template foto SOP (baca saja) untuk lapangan",
+    ("GET", "/image-requirements/{requirement_id}"): "detail template foto SOP (baca saja)",
+    ("GET", "/work-types/{type_id}/materials"): "BoM bawaan jenis pekerjaan (baca saja)",
     ("GET", "/units"): "daftar unit organisasi sendiri (pilihan mutasi/promosi, R-19)",
     ("GET", "/assets/tools"): "inventaris alat (baca saja) untuk perencanaan & HP tim (M4)",
     ("GET", "/assets/vehicles"): "inventaris kendaraan + masa STNK/KIR (baca saja, M4)",
@@ -66,31 +69,23 @@ SELF_SERVICE = {
 }
 # Kewenangan bergantung pada isi permintaan (SK di badan) atau tautan berkas → dijaga di handler.
 GUARDED_IN_HANDLER = {
-    ("POST", "/hse/incidents"): "check_plan_access(LEADER_OR_MEMBER) untuk work_plan_id di badan",
+    # M5 daily-first: kedudukan pada jadwal/order dibaca di service (check_daily_access / standing order).
+    ("POST", "/work-plans/daily/{daily_plan_id}/start"): "DailyPlanService: hanya ketua tim jadwal (diuji)",
+    ("POST", "/work-plans/daily/{daily_plan_id}/complete"): "DailyPlanService: ketua tim atau PM/OM divisi",
+    ("GET", "/work-completions/{completion_id}"): "WorkCompletionService: pengelola/HR/anggota tim, lain 404",
+    ("GET", "/work-completions/{completion_id}/bom"): "WorkCompletionService: sama dengan detail order",
+    ("GET", "/work-completions/{completion_id}/export"): "WorkCompletionService: sama dengan detail order",
+    ("POST", "/work-completions/{completion_id}/sign"): "WorkCompletionService: ketua tim order / pengelola",
     ("GET", "/files/{file_id}/url"): "check_file_access (V-17): pemilik/HR/peninjau/penglihat SK, selain itu 404",
     ("GET", "/files/{file_id}"): "check_file_access (V-17): isi berkas disajikan setelah otorisasi; tidak berhak → 404",
-    # V-22: kewenangan bergantung jenis usulan; ketua baru adendum personel belum tentu anggota SK.
-    ("POST", "/work-plans/{plan_id}/changes"): "PlanChangeService: EXTEND=ketua, PERSONNEL=PM unit/OPS",
-    ("POST", "/changes/{change_id}/approve"): "PlanChangeService: PM unit/OPS",
-    ("POST", "/changes/{change_id}/accept"): "PlanChangeService: ketua (EXTEND) / ketua baru (PERSONNEL)",
-    ("POST", "/changes/{change_id}/reject"): "PlanChangeService: ketua/PM (EXTEND) / ketua baru (PERSONNEL)",
-    ("POST", "/changes/{change_id}/withdraw"): "PlanChangeService: PM unit/OPS, hanya PERSONNEL",
     # M4: inspeksi oleh pengelola aset ATAU pemegang kendaraan saat itu (ditentukan peminjaman berjalan).
     ("POST", "/assets/vehicles/{vehicle_id}/inspections"): "AssetService: manage:assets atau pemegang (diuji)",
-    # V-28: SK ada di badan/kueri atau ditentukan baris lembur.
-    ("POST", "/overtime"): "OvertimeService: SK terlihat + ketua/anggota (diuji)",
-    ("GET", "/overtime"): "OvertimeService: check_plan_access(VIEW) untuk work_plan_id (diuji)",
-    ("GET", "/hse/incidents"): "check_plan_access(VIEW) untuk plan_id (diuji di test_flow_plans)",
-    ("POST", "/overtime/{ot_id}/review"): "OvertimeService: PM unit/OPS SK, bukan pengaju (diuji)",
+    ("POST", "/overtime"): "OvertimeService: ketua/anggota tim jadwal ONGOING (diuji)",
+    ("GET", "/overtime"): "OvertimeService: check_daily_access(VIEW) untuk daily_plan_id (diuji)",
+    ("POST", "/overtime/{ot_id}/review"): "OvertimeService: PM/OM divisi jadwal, bukan pengaju (diuji)",
     ("GET", "/recaps/overtime"): "OvertimeService: izin review:overtime (Finance/OPS/Admin) (diuji)",
-    # Fase 6: dokumen ditentukan id di jalur → SK-nya dicek check_plan_access di service.
-    ("GET", "/documents/{document_id}/signatures"): "SignatureService: SK dokumen terlihat (VIEW), selain itu 404",
-    ("GET", "/documents/{document_id}/pdf"): "SignatureService: SK dokumen terlihat (VIEW), selain itu 404",
-    ("GET", "/documents/{document_id}/html"): "SignatureService: SK dokumen terlihat (VIEW), selain itu 404",
-    ("POST", "/signatures/{signature_id}/revoke"): "SignatureService: PM unit/OPS SK (PM_UNIT)",
 }
-_GUARDS = ("permission_checker", "plan_access.", "plan_day_access.", "allocation_plan_access.",
-           "incident_plan_access.")
+_GUARDS = ("permission_checker", "daily_access.")
 
 
 def _dependency_names(dependant) -> list[str]:
@@ -156,91 +151,12 @@ def _incident(client, world: World, plan_id: str, who: str):
 
 
 # ── Insiden ───────────────────────────────────────────────────────────────────────────────────
-@requires_db
-@pytest.mark.parametrize(("who", "expected"), [
-    ("leader", 201), ("member", 201),
-    ("pm", 403), ("ops", 403), ("asset", 403),      # terlihat, tetapi bukan tim
-    ("pm_other", 404), ("hr", 404),                   # tidak terlihat
-])
-def test_only_the_team_reports_incidents(client, world, who, expected):
-    _other_unit_pm(world)
-    plan_id, _ = run_plan_to_in_progress(client, world)
-
-    response = _incident(client, world, plan_id, who)
-
-    assert response.status_code == expected, response.text
-    assert sync_query("SELECT count(*) FROM vms.incident_report WHERE work_plan_id = %s", (plan_id,)) \
-        == [(1 if expected == 201 else 0,)]
-
-
-@requires_db
-@pytest.mark.parametrize(("who", "expected"), [
-    ("pm", 200), ("ops", 200), ("asset", 200),
-    ("leader", 403), ("member", 403),
-    ("pm_other", 404),                                # R2: PM unit lain tidak melihat insiden unit ini
-    ("hr", 404),
-])
-def test_incident_is_resolved_by_unit_managers_or_asset_officers(client, world, who, expected):
-    _other_unit_pm(world)
-    plan_id, _ = run_plan_to_in_progress(client, world)
-    incident = _incident(client, world, plan_id, "member")
-    assert incident.status_code == 201, incident.text
-    inc_id = incident.json()["id"]
-
-    response = client.post(f"/hse/incidents/{inc_id}/resolve", headers=world.headers(client, who),
-                           json={"resolution_note": "Dipasang karpet anti selip"})
-
-    assert response.status_code == expected, response.text
-    assert sync_query("SELECT status::text FROM vms.incident_report WHERE id = %s", (inc_id,)) \
-        == [("RESOLVED" if expected == 200 else "OPEN",)]
 
 
 # ── Laporan harian ────────────────────────────────────────────────────────────────────────────
-@requires_db
-@pytest.mark.parametrize(("who", "expected"), [
-    ("leader", 200), ("member", 403), ("pm", 403), ("pm_other", 404), ("hr", 404),
-])
-def test_only_the_leader_writes_and_submits_daily_reports(client, world, who, expected):
-    _other_unit_pm(world)
-    plan_id, day_ids = run_plan_to_in_progress(client, world)
-    headers = world.headers(client, who)
-
-    saved = client.put(f"/work-plans/{plan_id}/days/{day_ids[0]}", headers=headers,
-                        json={"body": "Kamera 1-4 terpasang dan diuji", "obstacle": "Tidak ada"})
-    submitted = client.post(f"/work-plans/{plan_id}/days/{day_ids[0]}/submit", headers=headers)
-
-    assert saved.status_code == expected, saved.text
-    assert submitted.status_code == expected, submitted.text
-    assert sync_query("SELECT count(*) FROM vms.daily_report WHERE work_plan_day_id = %s", (day_ids[0],)) \
-        == [(1 if expected == 200 else 0,)]
 
 
 # ── Pengembalian aset ─────────────────────────────────────────────────────────────────────────
-@requires_db
-@pytest.mark.parametrize(("who", "expected"), [
-    ("leader", 200),
-    ("asset", 403),                                    # domain.js RETURN_ASSET: bukan petugas aset
-    ("member", 403), ("pm", 403),
-    ("pm_other", 404), ("hr", 404),
-])
-def test_only_the_leader_requests_an_asset_return(client, world, who, expected):
-    _other_unit_pm(world)
-    plan_id, _ = run_plan_to_in_progress(client, world)
-    officer = world.headers(client, "asset")
-    asset = client.post("/assets", headers=officer,
-                        json={"kind": "TOOL", "code": "TL-UJI", "name": "Tangga lipat", "condition": "BAIK"})
-    assert asset.status_code == 201, asset.text
-    allocated = client.post(f"/assets/{asset.json()['id']}/reserve", headers=officer,
-                            json={"work_plan_id": plan_id})
-    assert allocated.status_code == 200, allocated.text
-    alloc_id = allocated.json()["id"]
-
-    response = client.post(f"/assets/allocations/{alloc_id}/return", headers=world.headers(client, who),
-                           json={"condition_on_return": "BAIK", "note": "Lengkap"})
-
-    assert response.status_code == expected, response.text
-    assert sync_query("SELECT count(*) FROM vms.asset_return WHERE asset_allocation_id = %s", (alloc_id,)) \
-        == [(1 if expected == 200 else 0,)]
 
 
 # ── Penjelasan absensi ────────────────────────────────────────────────────────────────────────

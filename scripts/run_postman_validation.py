@@ -1,7 +1,9 @@
 """
 Runner otomatis untuk validasi skema database dan backend API menggunakan Postman CLI.
 Skrip ini:
-1. Memastikan port 8000 bersih dan menyalakan FastAPI uvicorn secara terisolasi.
+1. Menyalakan FastAPI uvicorn worktree ini secara terisolasi di port VMS_POSTMAN_PORT (default 8000).
+   Bila port sudah dipakai server lain, runner berhenti (kecuali VMS_POSTMAN_REUSE=1) — agar tidak
+   diam-diam menguji kode checkout lain.
 2. Memeriksa kesiapan sistem melalui probe /ready hingga HTTP 200.
 3. Menjalankan suite pengujian Postman CLI (postman collection run).
 4. Membersihkan proses server uvicorn secara andal.
@@ -20,8 +22,10 @@ API_DIR = ROOT_DIR / "api"
 PYTHON_BIN = API_DIR / ".venv" / "Scripts" / "python.exe"
 COLLECTION_PATH = ROOT_DIR / "postman" / "collections" / "vms-feature-validation.collection.json"
 ENVIRONMENT_PATH = ROOT_DIR / "postman" / "environments" / "vms-local.environment.json"
+PORT = os.environ.get("VMS_POSTMAN_PORT", "8000")
+ROOT_URL = f"http://127.0.0.1:{PORT}"
 
-def is_server_ready(url: str = "http://127.0.0.1:8000/ready") -> bool:
+def is_server_ready(url: str = f"{ROOT_URL}/ready") -> bool:
     try:
         with urllib.request.urlopen(url, timeout=2) as resp:
             return resp.status == 200
@@ -59,7 +63,11 @@ def main() -> int:
     server_log = None
 
     if already_running:
-        print("[INFO] Server FastAPI uvicorn sudah berjalan pada http://127.0.0.1:8000/ready.")
+        if os.environ.get("VMS_POSTMAN_REUSE") != "1":
+            print(f"[ERROR] Port {PORT} sudah dipakai server lain. Pakai VMS_POSTMAN_PORT=<port lain>, "
+                  "atau VMS_POSTMAN_REUSE=1 bila server itu memang dari worktree ini.")
+            return 1
+        print(f"[INFO] Memakai server yang sudah berjalan di {ROOT_URL}/ready.")
     else:
         print("[INFO] Memulai server FastAPI uvicorn di latar belakang...")
         env = os.environ.copy()
@@ -73,7 +81,7 @@ def main() -> int:
             "--host",
             "127.0.0.1",
             "--port",
-            "8000",
+            PORT,
         ]
         
         # Log server ke berkas, bukan PIPE: pipa yang tidak dibaca akan penuh dan membuat uvicorn macet.
@@ -113,7 +121,10 @@ def main() -> int:
     exit_code = 0
     try:
         print("\n[INFO] Menjalankan Postman CLI runner...")
-        postman_cmd = f'postman.cmd collection run "{COLLECTION_PATH}" -e "{ENVIRONMENT_PATH}"'
+        postman_cmd = (
+            f'postman.cmd collection run "{COLLECTION_PATH}" -e "{ENVIRONMENT_PATH}" '
+            f'--env-var "baseUrl={ROOT_URL}/api/v1" --env-var "rootUrl={ROOT_URL}"'
+        )
         print(f"[CMD] {postman_cmd}\n")
         
         res = subprocess.run(

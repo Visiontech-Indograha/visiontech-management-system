@@ -1,6 +1,6 @@
 """
 Router API v1 (docs/12 §1): menggabungkan semua endpoint. `main.py` memasangnya di bawah `/api/v1`.
-Urutan include disalin apa adanya dari `main.py` lama (R-28 M2) — urutan memengaruhi OpenAPI.
+Urutan include memengaruhi OpenAPI. Alur SK V1 dipensiunkan pada Milestone 5 (daily-first).
 """
 from fastapi import APIRouter
 
@@ -12,14 +12,11 @@ from app.modules.auth.routes import router as auth_router
 from app.modules.documents.routes import documents_router, expiry_router
 from app.modules.employees.routes import router as employees_router
 from app.modules.face.routes import router as face_router
-from app.modules.hse.routes import daily_report_router, hse_router
 from app.modules.image_requirements.routes import router as image_requirements_router
 from app.modules.mess.routes import router as mess_router
 from app.modules.notifications.routes import notifications_router
 from app.modules.offboarding.routes import router as offboarding_router
 from app.modules.overtime.routes import overtime_recaps_router, overtime_router
-from app.modules.reports.routes import weekly_reports_router
-from app.modules.signatures.routes import plan_documents_router, signatures_router
 from app.modules.sites.routes import router as sites_router
 from app.modules.system.routes import (
     app_releases_router,
@@ -33,26 +30,12 @@ from app.modules.system_backup.routes import router as backup_router
 from app.modules.teams.routes import router as teams_router
 from app.modules.units.routes import router as units_router
 from app.modules.work_completion.routes import router as work_completion_router
-from app.modules.work_plans.routes import (
-    changes_router,
-    plan_amendments_router,
-    plan_attachments_router,
-    plan_changes_router,
-    plan_days_router,
-    plan_items_router,
-    plan_location_router,
-    plan_members_router,
-    plan_reports_router,
-    plan_revisions_router,
-    plans_router,
-    transitions_router,
-    work_plan_v2_router,
-)
+from app.modules.work_plans.routes import daily_plans_router
 from app.modules.work_types.routes import router as work_types_router
 
 api_router = APIRouter()
 
-api_router.include_router(work_plan_v2_router)
+api_router.include_router(daily_plans_router)
 api_router.include_router(work_completion_router)
 api_router.include_router(teams_router)
 api_router.include_router(mess_router)
@@ -67,37 +50,20 @@ api_router.include_router(media_router)
 api_router.include_router(employees_router)
 api_router.include_router(documents_router)
 api_router.include_router(expiry_router)
-api_router.include_router(plans_router)
 
-api_router.include_router(plan_members_router)
-api_router.include_router(transitions_router)
-api_router.include_router(plan_changes_router)
-api_router.include_router(changes_router)
 api_router.include_router(sites_router)
 api_router.include_router(units_router)
 api_router.include_router(accounts_router)
 api_router.include_router(sync_router)
-api_router.include_router(plan_location_router)
-api_router.include_router(weekly_reports_router)
 api_router.include_router(monitoring_router)
-api_router.include_router(plan_attachments_router)
-api_router.include_router(plan_days_router)
-api_router.include_router(plan_items_router)
-api_router.include_router(plan_documents_router)
-api_router.include_router(signatures_router)
 api_router.include_router(attendance_router)
 api_router.include_router(face_router)
 api_router.include_router(attendance_cron_router)
-api_router.include_router(hse_router)
-api_router.include_router(daily_report_router)
 api_router.include_router(assets_router)
 api_router.include_router(plan_assets_router)
 api_router.include_router(overtime_router)
 api_router.include_router(overtime_recaps_router)
 api_router.include_router(notifications_router)
-api_router.include_router(plan_reports_router)
-api_router.include_router(plan_amendments_router)
-api_router.include_router(plan_revisions_router)
 api_router.include_router(events_router)
 api_router.include_router(work_types_router)
 api_router.include_router(app_releases_router)

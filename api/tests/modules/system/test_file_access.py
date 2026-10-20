@@ -2,7 +2,7 @@
 V-17 · Kebijakan akses berkas. URL bertanda tangan dibuat hanya setelah otorisasi per berkas
 (dok 13 §7); berkas yang tidak boleh dilihat → 404, bukan 403 (dok 08). Dokumen pribadi hanya
 pemilik & HR (dok 08 ancaman "mengintip data rekan"); swafoto hanya pemilik & peninjau absensi;
-bukti pekerjaan mengikuti siapa yang melihat SK-nya (V-07).
+lampiran jadwal harian mengikuti siapa yang melihat jadwal itu (daily-first).
 """
 from __future__ import annotations
 
@@ -13,9 +13,7 @@ from urllib.parse import urlsplit
 import pytest
 from PIL import Image
 
-from app.core.time import jakarta_now
 from tests.conftest import World, requires_db, sync_query
-from tests.modules.work_plans.test_flow_plans import run_plan_to_in_progress
 
 pytestmark = requires_db
 
@@ -61,18 +59,17 @@ def test_attendance_selfie_is_only_for_its_owner_and_reviewers(client, world, fa
             denied={"leader", "hr", "asset"})
 
 
-def test_incident_evidence_follows_plan_visibility(client, world, fake_storage):
-    unit = world.add_unit("WALL_DISPLAY")
-    world.add_person("pm_other", "PM", unit, per_unit=True)
-    plan_id, _ = run_plan_to_in_progress(client, world)
-    file_id = _upload(client, world, "member", (70, 80, 90))
-    incident = client.post("/hse/incidents", headers=world.headers(client, "member"), json={
-        "work_plan_id": plan_id, "occurred_on": jakarta_now().date().isoformat(), "category": "K3_RINGAN",
-        "severity": "RENDAH", "description": "Tangga licin di area kerja", "evidence_file_ids": [file_id]})
-    assert incident.status_code == 201, incident.text
+def test_daily_plan_attachment_follows_plan_visibility(client, world, other_world, fake_storage):
+    """Lampiran jadwal harian: siapa pun yang boleh melihat jadwal itu (lapangan setelah disetujui)."""
+    from tests.daily import make_daily_plan
 
-    _expect(client, world, file_id, allowed={"member", "leader", "pm", "ops", "admin", "asset"},
-            denied={"pm_other", "hr", "finance"})
+    plan_id = make_daily_plan(world, status="APPROVED", days_from_today=1)
+    file_id = _upload(client, world, "pm", (9, 99, 199))
+    attached = client.put(f"/work-plans/daily/{plan_id}/attachments", headers=world.headers(client, "pm"),
+                          json={"file_ids": [file_id]})
+    assert attached.status_code == 200, attached.text
+    _expect(client, world, file_id, allowed={"pm", "leader", "member", "hr"}, denied=set())
+    assert _status(client, other_world, "member", file_id) == 404
 
 
 def test_unattached_upload_is_only_for_its_uploader(client, world, other_world, fake_storage):

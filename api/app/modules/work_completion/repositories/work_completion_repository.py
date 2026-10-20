@@ -23,9 +23,43 @@ def _row_to_dict(row: Any) -> dict[str, Any]:
     return dict(row)
 
 
+# Pekerja lapangan melihat order yang itemnya ada di jadwal tim mereka yang sudah disetujui.
+FIELD_SCOPE = """EXISTS (
+    SELECT 1 FROM work_plan_item fi
+    JOIN work_plan_daily fd ON fd.daily_plan_id = fi.daily_plan_id AND fd.delete_at IS NULL
+         AND fd.status IN ('APPROVED', 'ONGOING', 'COMPLETED')
+    JOIN member fm ON fm.team_id = fd.team_id AND fm.is_active AND fm.delete_at IS NULL
+    WHERE fi.completion_id = wc.completion_id AND fi.delete_at IS NULL AND fm.employee_id = CAST(:field AS uuid)
+)"""
+
+
 class WorkCompletionRepository(BaseRepository):
-    """Akses data dan kueri SQL statis untuk Order Proyek Klien (Work Completion)."""
-    """CRUD untuk pengelolaan Order Proyek Klien."""
+    """Akses data Order Proyek Klien (work_completion N─1 division, N─1 employee pm; 1─N work_plan_item)."""
+
+    async def standing(self, completion_id: UUID | str, employee_id: UUID | str | None) -> Any:
+        """Kedudukan pengguna atas order: pengelola (PM order / PM-OM divisi) atau anggota tim jadwalnya."""
+        return await self.fetchone(
+            f"""
+            SELECT wc.completion_id,
+                   (CAST(:emp AS uuid) IS NOT NULL AND (wc.pm_id = CAST(:emp AS uuid) OR EXISTS (
+                        SELECT 1 FROM division sd WHERE sd.division_id = wc.division_id
+                        AND CAST(:emp AS uuid) IN (sd.pm_id, sd.om_id)))) AS manages,
+                   (CAST(:emp AS uuid) IS NOT NULL AND {FIELD_SCOPE.replace(":field", ":emp")}) AS on_team
+            FROM work_completion wc
+            WHERE wc.completion_id = CAST(:id AS uuid) AND wc.delete_at IS NULL
+            """,
+            {"id": str(completion_id), "emp": str(employee_id) if employee_id else None},
+        )
+
+    async def employee_role(self, employee_id: UUID | str) -> str | None:
+        role: str | None = await self.scalar(
+            "SELECT u.system_role::text FROM employee e JOIN users u ON u.employee_id = e.employee_id "
+            "AND u.delete_at IS NULL AND u.is_active WHERE e.employee_id = CAST(:id AS uuid) "
+            "AND e.delete_at IS NULL AND e.offboarding_status = 'active'",
+            {"id": str(employee_id)},
+        )
+        return role
+
 
     async def list_completions(
         self,
@@ -34,6 +68,7 @@ class WorkCompletionRepository(BaseRepository):
         status: str | None = None,
         search: str | None = None,
         pm_id: UUID | str | None = None,
+        field_employee: UUID | str | None = None,
         limit: int = 50,
         offset: int = 0,
     ) -> list[dict[str, Any]]:
@@ -50,8 +85,15 @@ class WorkCompletionRepository(BaseRepository):
             params["status"] = status
 
         if pm_id:
-            filters.append("wc.pm_id = CAST(:pm_id AS uuid)")
+            filters.append(
+                "(wc.pm_id = CAST(:pm_id AS uuid) OR EXISTS (SELECT 1 FROM division sd WHERE sd.division_id = "
+                "wc.division_id AND CAST(:pm_id AS uuid) IN (sd.pm_id, sd.om_id)))"
+            )
             params["pm_id"] = str(pm_id)
+
+        if field_employee:
+            filters.append(FIELD_SCOPE)
+            params["field"] = str(field_employee)
 
         if search:
             search_clause = (
@@ -136,6 +178,7 @@ class WorkCompletionRepository(BaseRepository):
         status: str | None = None,
         search: str | None = None,
         pm_id: UUID | str | None = None,
+        field_employee: UUID | str | None = None,
     ) -> int:
         """Menghitung total baris order proyek untuk pagination."""
         filters = ["wc.delete_at IS NULL"]
@@ -150,8 +193,15 @@ class WorkCompletionRepository(BaseRepository):
             params["status"] = status
 
         if pm_id:
-            filters.append("wc.pm_id = CAST(:pm_id AS uuid)")
+            filters.append(
+                "(wc.pm_id = CAST(:pm_id AS uuid) OR EXISTS (SELECT 1 FROM division sd WHERE sd.division_id = "
+                "wc.division_id AND CAST(:pm_id AS uuid) IN (sd.pm_id, sd.om_id)))"
+            )
             params["pm_id"] = str(pm_id)
+
+        if field_employee:
+            filters.append(FIELD_SCOPE)
+            params["field"] = str(field_employee)
 
         if search:
             search_clause = (

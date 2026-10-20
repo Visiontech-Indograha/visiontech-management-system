@@ -1,6 +1,6 @@
 """
-app/crud/crud_notification.py
-Notifikasi dalam aplikasi untuk Master Schema V2.
+app/modules/notifications/repositories/notification_repository.py
+Notifikasi realtime (event SSE) Master Schema V2 — tanpa tabel kotak masuk.
 """
 
 from __future__ import annotations
@@ -14,32 +14,24 @@ from app.core.repository import BaseRepository
 
 
 class NotificationRepository(BaseRepository):
-    """Repositori notifikasi pengguna dan sistem pesan."""
-    """
-    Kelas CRUD untuk mengelola data notifikasi dan event realtime.
-    """
+    """Penerima notifikasi & penyiaran event realtime."""
 
-    async def plan_people(self, plan_id: UUID | str) -> Any:
-        """PM, ketua, dan anggota sebuah SK mingguan."""
+    async def daily_people(self, daily_plan_id: UUID | str) -> Any:
+        """PM/OM divisi, pembuat, ketua, dan anggota aktif sebuah jadwal harian (employee_id teks)."""
         return await self.fetchone(
             """
-            SELECT t.office_id AS organization_id,
-                   'SK/W' || wp.week_number || '/' || wp.year AS number,
-                   'Rencana Kerja Mingguan W' || wp.week_number || ' - ' || t.name AS title,
-                   CAST(COALESCE(wp.approved_by_pm_id, div.pm_id) AS text) AS pm,
-                   CAST(t.leader_employee_id AS text) AS leader,
-                   wp.start_date AS period_start,
-                   wp.end_date AS period_end,
-                   COALESCE(ARRAY(
-                       SELECT CAST(m.employee_id AS text) FROM member m
-                       WHERE m.team_id = wp.team_id AND m.is_active = TRUE AND m.delete_at IS NULL
-                   ), '{}') AS members
-            FROM work_plan_weekly wp
-            JOIN division div ON div.division_id = wp.division_id
-            JOIN team t ON t.team_id = wp.team_id
-            WHERE wp.weekly_plan_id = CAST(:plan AS uuid)
+            SELECT t.office_id, t.name AS team_name, wpd.work_date, wpd.site_name,
+                   CAST(d.pm_id AS text) AS pm, CAST(d.om_id AS text) AS om,
+                   CAST(wpd.created_by_id AS text) AS creator, CAST(t.leader_employee_id AS text) AS leader,
+                   COALESCE(ARRAY(SELECT CAST(m.employee_id AS text) FROM member m
+                                  WHERE m.team_id = wpd.team_id AND m.is_active AND m.delete_at IS NULL), '{}')
+                       AS members
+            FROM work_plan_daily wpd
+            JOIN division d ON d.division_id = wpd.division_id
+            JOIN team t ON t.team_id = wpd.team_id
+            WHERE wpd.daily_plan_id = CAST(:id AS uuid)
             """,
-            {"plan": str(plan_id)},
+            {"id": str(daily_plan_id)},
         )
 
     async def insert_many(
@@ -68,10 +60,10 @@ class NotificationRepository(BaseRepository):
                 self.db,
                 users,
                 "notification",
-                {"kind": kind, "title": title, "body": body, "plan_id": str(plan_id) if plan_id else None},
+                {"kind": kind, "title": title, "body": body, "daily_plan_id": str(plan_id) if plan_id else None},
             )
             if plan_id:
-                queue_event(self.db, users, "plan", {"plan_id": str(plan_id)})
+                queue_event(self.db, users, "plan", {"daily_plan_id": str(plan_id)})
 
     async def list_for(self, user_id: UUID | str, unread_only: bool, limit: int) -> list[Any]:
         """Mengambil daftar notifikasi untuk pengguna tertentu."""
@@ -85,6 +77,3 @@ class NotificationRepository(BaseRepository):
         """Tandai notifikasi sebagai dibaca."""
         return 0
 
-
-# Alias backward compatibility
-CRUDNotification = NotificationRepository

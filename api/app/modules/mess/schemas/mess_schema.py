@@ -15,10 +15,9 @@ class MessStayCreate(BaseModel):
     mess_name: str = Field(..., min_length=2, max_length=150)
     city: str = Field(..., min_length=2, max_length=100)
     address: str
-    latitude: Decimal
-    longitude: Decimal
+    latitude: Decimal = Field(ge=-90, le=90)
+    longitude: Decimal = Field(ge=-180, le=180)
     employee_id: UUID
-    weekly_plan_id: UUID | None = None
     stay_start_date: date
     stay_end_date: date
 
@@ -43,7 +42,6 @@ class MessStayOut(BaseModel):
     employee_id: UUID
     employee_name: str | None = None
     employee_no: str | None = None
-    weekly_plan_id: UUID | None = None
     stay_start_date: date
     stay_end_date: date
     create_at: datetime

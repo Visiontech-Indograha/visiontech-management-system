@@ -3,6 +3,7 @@ app/modules/system/services/sync_service.py
 Sinkronisasi luring (M12; dok 02 A-08, dok 04 §7). Tiap operasi dijalankan dalam SAVEPOINT memakai
 logika yang sama dengan jalur daring, lalu ditandai APPLIED / REJECTED (alasan disimpan, tidak dibuang).
 Hanya aksi lapangan yang boleh luring; absensi, penerbitan & persetujuan wajib daring (waktu & geofence server).
+Daily-first (Milestone 5): laporan harian & insiden SK V1 dipensiunkan — yang tersisa lembur per jadwal harian.
 """
 
 from __future__ import annotations
@@ -15,16 +16,12 @@ from fastapi import HTTPException
 from pydantic import ValidationError as PydanticValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.errors import AppError, NotFoundError
+from app.core.errors import AppError
 from app.core.security import CurrentUser
-from app.modules.hse.schemas.hse_schema import DailyReportCreate, IncidentCreate
-from app.modules.hse.services.hse_service import HseService
 from app.modules.overtime.services.overtime_service import OvertimeService
 from app.modules.system.repositories.sync_repository import CRUDSync
-from app.shared.access.access_service import PlanAccess, PlanNeed, check_plan_access, ensure_same_org
-from app.shared.access.plan_access_repository import CRUDPlanAccess
 
-OFFLINE_ALLOWED = ("DAILY_REPORT_SAVE", "DAILY_REPORT_SUBMIT", "TASK_TOGGLE", "INCIDENT_REPORT", "OVERTIME_REPORT")
+OFFLINE_ALLOWED = ("OVERTIME_REPORT",)
 NOT_OFFLINE = "Aksi ini tidak dapat dikirim saat luring."
 INVALID = "Data operasi tidak valid."
 
@@ -54,23 +51,6 @@ class SyncService:
         self.db = db
         self.repo = CRUDSync(db)
 
-    async def _day_access(self, user: CurrentUser, plan_id: UUID, day_id: UUID) -> PlanAccess:
-        """
-        Memverifikasi hak akses pengguna (sebagai Leader) untuk memodifikasi laporan harian.
-
-        Args:
-            user (CurrentUser): Pengguna.
-            plan_id (UUID): ID SK.
-            day_id (UUID): ID hari kerja.
-
-        Returns:
-            PlanAccess: Obyek akses SK.
-        """
-        access = await check_plan_access(self.db, plan_id, user, PlanNeed.LEADER)
-        if str(await CRUDPlanAccess(self.db).plan_of_day(day_id)) != str(plan_id):
-            raise NotFoundError("Hari kerja")
-        return access
-
     async def _apply(self, user: CurrentUser, op_type: str, p: dict[str, Any]) -> None:
         """
         Menerapkan satu buah operasi (payload) ke dalam sistem dengan menggunakan fungsi yang sama
@@ -81,39 +61,9 @@ class SyncService:
             op_type (str): Tipe operasi (mis. DAILY_REPORT_SAVE).
             p (dict[str, Any]): Payload / data dari operasi.
         """
-        hse = HseService(self.db)
-        if op_type in ("DAILY_REPORT_SAVE", "DAILY_REPORT_SUBMIT", "TASK_TOGGLE"):
-            plan_id, day_id = UUID(str(p["plan_id"])), UUID(str(p["day_id"]))
-            access = await self._day_access(user, plan_id, day_id)
-            if op_type == "DAILY_REPORT_SAVE":
-                data = DailyReportCreate(
-                    body=p["body"],
-                    obstacle=p["obstacle"],
-                    evidence_file_ids=p.get("evidence_file_ids", []),
-                    evidence=p.get("evidence", []),
-                )
-                await hse.save_daily_report(
-                    access, day_id, data.body, data.obstacle, data.evidence_file_ids, data.evidence
-                )
-            elif op_type == "DAILY_REPORT_SUBMIT":
-                await hse.submit_daily_report(access, day_id)
-            else:
-                await hse.toggle_task(access, day_id, UUID(str(p["task_id"])))
-        elif op_type == "INCIDENT_REPORT":
-            incident = IncidentCreate(**p)
-            await hse.report_incident(
-                user,
-                incident.work_plan_id,
-                incident.category,
-                incident.severity,
-                incident.description,
-                incident.evidence_file_ids,
-            )
-        elif op_type == "OVERTIME_REPORT":
-            plan_id = UUID(str(p["work_plan_id"]))
-            # Memastikan pengguna dan SK berada dalam organisasi yang sama
-            await ensure_same_org(self.db, user.organization_id, work_plans=[plan_id])
-            await OvertimeService(self.db).report(user, plan_id, float(p["hours"]), str(p["reason"]))
+        if op_type == "OVERTIME_REPORT":
+            daily_plan_id = UUID(str(p["daily_plan_id"]))
+            await OvertimeService(self.db).report(user, daily_plan_id, float(p["hours"]), str(p["reason"]))
 
     async def apply_operations(self, user: CurrentUser, device_id: str, operations: list[Any]) -> list[dict[str, Any]]:
         """

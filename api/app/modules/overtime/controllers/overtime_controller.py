@@ -11,9 +11,7 @@ from datetime import date
 from uuid import UUID
 
 from fastapi import Depends
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_db_with_user
 from app.core.security import CurrentUser
 from app.modules.overtime.dependencies import get_overtime_service
 from app.modules.overtime.schemas.overtime_schema import (
@@ -23,7 +21,6 @@ from app.modules.overtime.schemas.overtime_schema import (
     OvertimeReview,
 )
 from app.modules.overtime.services.overtime_service import OvertimeService
-from app.shared.access.access_service import ensure_same_org
 
 
 class OvertimeController:
@@ -34,20 +31,17 @@ class OvertimeController:
     def __init__(
         self,
         overtime_service: OvertimeService = Depends(get_overtime_service),
-        db: AsyncSession = Depends(get_db_with_user),
     ) -> None:
         self.overtime_service = overtime_service
-        self.db = db
 
     async def handle_report(self, current_user: CurrentUser, data: OvertimeCreate) -> OvertimeResponse:
         """Mengajukan lembur pada work plan yang aktif."""
-        await ensure_same_org(self.db, current_user.organization_id, work_plans=[data.work_plan_id])
-        row = await self.overtime_service.report(current_user, data.work_plan_id, data.hours, data.reason)
+        row = await self.overtime_service.report(current_user, data.daily_plan_id, data.hours, data.reason)
         return OvertimeResponse(**row._mapping)
 
-    async def handle_list_by_plan(self, current_user: CurrentUser, work_plan_id: UUID) -> list[OvertimeResponse]:
+    async def handle_list_by_plan(self, current_user: CurrentUser, daily_plan_id: UUID) -> list[OvertimeResponse]:
         """Mengambil daftar lembur untuk satu work plan."""
-        rows = await self.overtime_service.list_by_plan(current_user, work_plan_id)
+        rows = await self.overtime_service.list_by_plan(current_user, daily_plan_id)
         return [OvertimeResponse(**r._mapping) for r in rows]
 
     async def handle_review(self, current_user: CurrentUser, ot_id: UUID, data: OvertimeReview) -> OvertimeResponse:

@@ -36,10 +36,6 @@ KNOWN_VIOLATIONS: set[str] = {
     "modules/accounts/services/account_service.py -> app.modules.auth.repositories.auth_session_repository",
     "modules/accounts/services/account_service.py -> app.modules.auth.repositories.auth_user_repository",
     "modules/accounts/services/account_service.py -> app.modules.employees.repositories.employee_repository",
-    "modules/work_plans/services/plan_amendment_service.py -> app.modules.assets.repositories.asset_repository",
-    "modules/work_plans/services/plan_draft_service.py -> app.modules.assets.repositories.asset_repository",
-    "modules/work_plans/services/plan_transition_service.py"
-    " -> app.modules.reports.repositories.weekly_report_repository",
 }
 
 

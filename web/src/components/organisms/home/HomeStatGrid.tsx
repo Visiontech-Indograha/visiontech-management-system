@@ -26,10 +26,10 @@ function Stat({ label, value, icon, to, loading }: { label: string; value: numbe
 }
 
 /** Kartu angka ringkasan Beranda; kartu yang butuh izin hanya tampil bila diizinkan. */
-export function HomeStatGrid({ running, waiting, requests, toReview, expiring, canCreatePlan, canReview, canManageDocs }: {
+export function HomeStatGrid({ running, waiting, today, toReview, expiring, canCreatePlan, canReview, canManageDocs }: {
   running: Count;
   waiting: Count;
-  requests: Count;
+  today: Count;
   toReview: Count;
   expiring: Count;
   canCreatePlan: boolean;
@@ -38,10 +38,10 @@ export function HomeStatGrid({ running, waiting, requests, toReview, expiring, c
 }) {
   return (
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <Stat label="Rencana Kerja berjalan" value={running.value} loading={running.loading} icon={<CalendarClock size={20} />} to="/work-plans" />
-        <Stat label="Rencana Kerja menunggu tindakan" value={waiting.value} loading={waiting.loading} icon={<FileClock size={20} />} to="/work-plans" />
+        <Stat label="Jadwal hari ini" value={today.value} loading={today.loading} icon={<CalendarClock size={20} />} to="/work-plans" />
+        <Stat label="Jadwal sedang berjalan" value={running.value} loading={running.loading} icon={<CalendarClock size={20} />} to="/work-plans" />
         {canCreatePlan && (
-          <Stat label="Permintaan revisi dari ketua" value={requests.value} loading={requests.loading} icon={<FileClock size={20} />} to="/work-plans" />
+          <Stat label="Jadwal menunggu persetujuan" value={waiting.value} loading={waiting.loading} icon={<FileClock size={20} />} to="/work-plans" />
         )}
         {canReview && (
           <Stat label="Absensi perlu diperiksa" value={toReview.value} loading={toReview.loading} icon={<ClipboardCheck size={20} />} to="/attendance" />

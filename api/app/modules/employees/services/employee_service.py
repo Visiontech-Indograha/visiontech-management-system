@@ -68,7 +68,7 @@ class EmployeeService:
     async def conflicts(
         self, employee_id: UUID, org_id: str, start: date, end: date, exclude_plan: UUID | None
     ) -> list[Any]:
-        """Bentrok jadwal untuk penyusun SK (V-09); karyawan/SK organisasi lain → 404."""
+        """Bentrok jadwal harian untuk penyusun jadwal; karyawan/jadwal tak dikenal → 404."""
         await ensure_same_org(self.db, org_id, employees=[employee_id], work_plans=[exclude_plan])
         return await self.repo.conflicts(employee_id, start, end, exclude_plan)
 

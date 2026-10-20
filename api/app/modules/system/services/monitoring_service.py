@@ -12,15 +12,12 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.enums import PlanStatus
 from app.core.errors import ValidationError
 from app.core.permissions import Permission
 from app.core.security import CurrentUser
 from app.modules.system.repositories.monitoring_repository import CRUDMonitoring
-from app.shared.access.plan_access_repository import CRUDPlanAccess
 from app.shared.org_clock import CRUDOrgClock
 
-HIDDEN = (PlanStatus.CANCELLED, PlanStatus.COMPLETED)  # operations.js timeline()
 REPORTED = ("APPROVED", "SUBMITTED", "CHANGES_REQUESTED")
 
 
@@ -88,68 +85,6 @@ class MonitoringService:
         """
         today: date = (await CRUDOrgClock(self.db).local_now(org_id)).today
         return today
-
-    async def timeline(self, user: CurrentUser, date_from: date | None, date_to: date | None) -> list[dict[str, Any]]:
-        """
-        Membangun lini masa (timeline) dari seluruh SK yang visibel bagi pengguna.
-
-        Mencakup jadwal harian dan status tiap hari, dengan menyaring SK yang dibatalkan
-        atau sudah selesai sesuai filter periode.
-
-        Args:
-            user: Informasi pengguna yang sedang mengakses.
-            date_from: Filter tanggal mulai (opsional).
-            date_to: Filter tanggal selesai (opsional).
-
-        Returns:
-            list[dict[str, Any]]: Daftar pekerjaan (SK) dengan data jadwal hariannya.
-        """
-        # Ambil SK yang boleh dilihat pengguna sesuai hak aksesnya (V-07)
-        plans = [
-            p
-            for p in await CRUDPlanAccess(self.db).visible_plans(user.organization_id, user.user_id, None)
-            if p.status not in HIDDEN
-            and (date_from is None or p.period_end >= date_from)
-            and (date_to is None or p.period_start <= date_to)
-        ]
-        plans.sort(key=lambda p: (p.period_start, p.title))
-        ids = [str(p.id) for p in plans]
-        days: dict[str, list[Any]] = {plan_id: [] for plan_id in ids}
-        for day in await self.repo.plan_days(ids):
-            days[day.work_plan_id].append(day)
-        leaders = await self.repo.names([str(p.leader_employee_id) for p in plans if p.leader_employee_id])
-        today = await self._today(user.organization_id)
-
-        groups = []
-        for plan in plans:
-            rows = [
-                {
-                    "id": str(d.id),
-                    "work_date": d.work_date,
-                    "title": d.title,
-                    "state": _day_state(d.work_date, d.report_status, today),
-                }
-                for d in days[str(plan.id)]
-            ]
-            leader = str(plan.leader_employee_id) if plan.leader_employee_id else None
-            groups.append(
-                {
-                    "id": str(plan.id),
-                    "number": plan.number,
-                    "title": plan.title,
-                    "status": plan.status,
-                    "unit_id": plan.unit_id,
-                    "location_text": plan.location_text,
-                    "period_start": plan.period_start,
-                    "period_end": plan.period_end,
-                    "leader": {"employee_id": leader, "full_name": leaders.get(leader or "")} if leader else None,
-                    "total_days": len(rows),
-                    "approved_days": sum(1 for r in rows if r["state"] == "APPROVED"),
-                    "late_days": sum(1 for r in rows if r["state"] == "LATE"),
-                    "days": rows,
-                }
-            )
-        return groups
 
     async def attendance_recap(self, user: CurrentUser, month: str | None) -> dict[str, Any]:
         """

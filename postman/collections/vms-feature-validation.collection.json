@@ -866,6 +866,1788 @@
           ]
         }
       ]
+    },
+    {
+      "name": "08 - Milestone 1: Auth, Sesi & Platform (V2)",
+      "item": [
+        {
+          "name": "08.01 - Login SUPER_ADMIN via web",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"login admin@visiontech.co.id via web = 200\", () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set(\"tok_admin\", pm.response.json().access_token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@visiontech.co.id\",\n  \"password\": \"Admin123!\",\n  \"platform\": \"web\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "08.02 - Login OM via web",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"login randi.om@visiontech.co.id via web = 200\", () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set(\"tok_om\", pm.response.json().access_token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"randi.om@visiontech.co.id\",\n  \"password\": \"Admin123!\",\n  \"platform\": \"web\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "08.03 - Login PM via web",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"login hendrik.pm@visiontech.co.id via web = 200\", () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set(\"tok_pm\", pm.response.json().access_token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"hendrik.pm@visiontech.co.id\",\n  \"password\": \"Admin123!\",\n  \"platform\": \"web\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "08.04 - Login TEAM_LEADER via mobile",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"login agus.tl@visiontech.co.id via mobile = 200\", () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set(\"tok_tl\", pm.response.json().access_token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"agus.tl@visiontech.co.id\",\n  \"password\": \"Admin123!\",\n  \"platform\": \"mobile\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "08.05 - Login EMPLOYEE via mobile",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"login riko.tech@visiontech.co.id via mobile = 200\", () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set(\"tok_emp\", pm.response.json().access_token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"riko.tech@visiontech.co.id\",\n  \"password\": \"Admin123!\",\n  \"platform\": \"mobile\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "08.05b - Login HR via web",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"login siti.hr@visiontech.co.id via web = 200\", () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set(\"tok_hr\", pm.response.json().access_token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"siti.hr@visiontech.co.id\",\n  \"password\": \"Admin123!\",\n  \"platform\": \"web\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "08.06 - TEAM_LEADER via web ditolak",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"docs/35 §1: agus.tl@visiontech.co.id via web ditolak 403 NOT_OFFICE_ACCOUNT\", () => {",
+                  "    pm.response.to.have.status(403);",
+                  "    pm.expect(pm.response.json().error.code).to.eql(\"NOT_OFFICE_ACCOUNT\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"agus.tl@visiontech.co.id\",\n  \"password\": \"Admin123!\",\n  \"platform\": \"web\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "08.07 - EMPLOYEE via web ditolak",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"docs/35 §1: riko.tech@visiontech.co.id via web ditolak 403 NOT_OFFICE_ACCOUNT\", () => {",
+                  "    pm.response.to.have.status(403);",
+                  "    pm.expect(pm.response.json().error.code).to.eql(\"NOT_OFFICE_ACCOUNT\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"riko.tech@visiontech.co.id\",\n  \"password\": \"Admin123!\",\n  \"platform\": \"web\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "08.08 - SUPER_ADMIN via mobile ditolak",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"docs/35 §1: admin@visiontech.co.id via mobile ditolak 403 NOT_FIELD_STAFF\", () => {",
+                  "    pm.response.to.have.status(403);",
+                  "    pm.expect(pm.response.json().error.code).to.eql(\"NOT_FIELD_STAFF\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@visiontech.co.id\",\n  \"password\": \"Admin123!\",\n  \"platform\": \"mobile\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "08.09 - PM via mobile ditolak",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"docs/35 §1: hendrik.pm@visiontech.co.id via mobile ditolak 403 NOT_FIELD_STAFF\", () => {",
+                  "    pm.response.to.have.status(403);",
+                  "    pm.expect(pm.response.json().error.code).to.eql(\"NOT_FIELD_STAFF\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"hendrik.pm@visiontech.co.id\",\n  \"password\": \"Admin123!\",\n  \"platform\": \"mobile\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "08.10 - /auth/me PM: peran & mode V2",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "const me = pm.response.json();",
+                  "pm.test(\"role PROJECT_MANAGER\", () => pm.expect(me.role).to.eql(\"PROJECT_MANAGER\"));",
+                  "pm.test(\"attendance_mode OFFICE (peran kantor)\", () => pm.expect(me.attendance_mode).to.eql(\"OFFICE\"));",
+                  "pm.test(\"PM tidak lagi punya manage:sites\", () => pm.expect(me.permissions).to.not.include(\"manage:sites\"));",
+                  "pm.collectionVariables.set(\"pm_employee_id\", me.employee_id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            }
+          }
+        },
+        {
+          "name": "08.11 - /auth/me OM: izin master kantor & divisi",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "const me = pm.response.json();",
+                  "pm.test(\"role OPERATIONAL_MANAGER\", () => pm.expect(me.role).to.eql(\"OPERATIONAL_MANAGER\"));",
+                  "pm.test(\"izin manage:sites & manage:divisions\", () => {",
+                  "    pm.expect(me.permissions).to.include(\"manage:sites\");",
+                  "    pm.expect(me.permissions).to.include(\"manage:divisions\");",
+                  "});",
+                  "pm.collectionVariables.set(\"om_employee_id\", me.employee_id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_om}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            }
+          }
+        },
+        {
+          "name": "08.12 - /auth/me EMPLOYEE: mode FIELD",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"attendance_mode FIELD (peran lapangan)\", () => pm.expect(pm.response.json().attendance_mode).to.eql(\"FIELD\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_emp}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            }
+          }
+        },
+        {
+          "name": "08.13 - Gagal login 1: sisa percobaan 4",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set(\"ghost_email\", `ghost-${Date.now()}@contoh.test`);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"400 INVALID_CREDENTIALS\", () => {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(pm.response.json().error.code).to.eql(\"INVALID_CREDENTIALS\");",
+                  "});",
+                  "pm.test(\"sisa 4 (email tak terdaftar dihitung sama)\", () =>",
+                  "    pm.expect(pm.response.json().error.details.remaining_attempts).to.eql(4));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{ghost_email}}\",\n  \"password\": \"salah\",\n  \"platform\": \"web\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "08.14 - Gagal login 2",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"400, sisa 3\", () => {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(pm.response.json().error.details.remaining_attempts).to.eql(3);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{ghost_email}}\",\n  \"password\": \"salah\",\n  \"platform\": \"web\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "08.15 - Gagal login 3",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"400, sisa 2\", () => {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(pm.response.json().error.details.remaining_attempts).to.eql(2);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{ghost_email}}\",\n  \"password\": \"salah\",\n  \"platform\": \"web\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "08.16 - Gagal login 4",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"400, sisa 1\", () => {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(pm.response.json().error.details.remaining_attempts).to.eql(1);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{ghost_email}}\",\n  \"password\": \"salah\",\n  \"platform\": \"web\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "08.17 - Gagal login 5: akun terkunci",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"403 LOCKED\", () => {",
+                  "    pm.response.to.have.status(403);",
+                  "    pm.expect(pm.response.json().error.code).to.eql(\"LOCKED\");",
+                  "});",
+                  "pm.test(\"cooldown ~15 menit\", () => {",
+                  "    const s = pm.response.json().error.details.retry_after_seconds;",
+                  "    pm.expect(s).to.be.above(14 * 60).and.at.most(15 * 60);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{ghost_email}}\",\n  \"password\": \"salah\",\n  \"platform\": \"web\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "08.18 - Daftar sesi aktif SUPER_ADMIN",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "const rows = pm.response.json();",
+                  "pm.test(\"ada tepat satu sesi 'current'\", () => pm.expect(rows.filter(r => r.current).length).to.eql(1));",
+                  "pm.test(\"device_label terisi (bukan 'Web Login' generik)\", () => rows.forEach(r => pm.expect(r.device_label).to.be.a(\"string\").and.not.empty));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/sessions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "sessions"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "09 - Milestone 2: Master Kantor & Divisi (V2)",
+      "item": [
+        {
+          "name": "09.01 - Daftar kantor",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "const rows = pm.response.json();",
+                  "pm.test(\"tepat satu kantor utama\", () => pm.expect(rows.filter(r => r.is_main_office).length).to.eql(1));",
+                  "pm.test(\"kolom master office ada\", () => {",
+                  "    const r = rows[0];",
+                  "    [\"clock_in_time\", \"clock_out_time\", \"city_boundary_radius_m\", \"in_city_meal_rate\", \"out_city_meal_rate\"]",
+                  "        .forEach(k => pm.expect(r).to.have.property(k));",
+                  "});",
+                  "pm.test(\"PM tidak bisa mengelola kantor\", () => rows.forEach(r => pm.expect(r.can_manage).to.eql(false)));",
+                  "pm.collectionVariables.set(\"main_office_id\", rows.find(r => r.is_main_office).id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sites",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sites"
+              ]
+            }
+          }
+        },
+        {
+          "name": "09.02 - PM membuat kantor ditolak",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sites",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sites"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Kantor Uji PM\",\n  \"location\": {\n    \"lat\": 3.6,\n    \"lng\": 98.7\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "09.03 - OM membuat kantor cabang",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201\", () => pm.response.to.have.status(201));",
+                  "const r = pm.response.json();",
+                  "pm.test(\"tersimpan sebagai cabang\", () => pm.expect(r.is_main_office).to.eql(false));",
+                  "pm.test(\"radius & jam sesuai kiriman\", () => {",
+                  "    pm.expect(r.radius_m).to.eql(120);",
+                  "    pm.expect(r.clock_in_time).to.eql(\"08:00:00\");",
+                  "    pm.expect(r.clock_out_time).to.eql(\"17:00:00\");",
+                  "});",
+                  "pm.test(\"tarif uang makan bawaan\", () => {",
+                  "    pm.expect(Number(r.in_city_meal_rate)).to.eql(35000);",
+                  "    pm.expect(Number(r.out_city_meal_rate)).to.eql(65000);",
+                  "});",
+                  "pm.collectionVariables.set(\"test_office_id\", r.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_om}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sites",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sites"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Kantor Uji Postman\",\n  \"address\": \"Jl. Uji No. 9\",\n  \"location\": {\n    \"lat\": 3.58,\n    \"lng\": 98.66\n  },\n  \"radius_m\": 120,\n  \"clock_in_time\": \"08:00:00\",\n  \"clock_out_time\": \"17:00:00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "09.04 - Ubah kantor (sebagian)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "const r = pm.response.json();",
+                  "pm.test(\"field dikirim berubah\", () => {",
+                  "    pm.expect(r.radius_m).to.eql(200);",
+                  "    pm.expect(Number(r.out_city_meal_rate)).to.eql(70000);",
+                  "});",
+                  "pm.test(\"field lain tetap\", () => {",
+                  "    pm.expect(r.name).to.eql(\"Kantor Uji Postman\");",
+                  "    pm.expect(r.clock_in_time).to.eql(\"08:00:00\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_om}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sites/{{test_office_id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sites",
+                "{{test_office_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"radius_m\": 200,\n  \"out_city_meal_rate\": 70000\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "09.05 - Jam pulang sebelum jam masuk ditolak",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"422 OFFICE_INVALID\", () => {",
+                  "    pm.response.to.have.status(422);",
+                  "    pm.expect(pm.response.json().error.code).to.eql(\"OFFICE_INVALID\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_om}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sites/{{test_office_id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sites",
+                "{{test_office_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clock_out_time\": \"07:00:00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "09.06 - Kantor utama tidak bisa dilepas",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"409 MAIN_OFFICE_REQUIRED\", () => {",
+                  "    pm.response.to.have.status(409);",
+                  "    pm.expect(pm.response.json().error.code).to.eql(\"MAIN_OFFICE_REQUIRED\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_om}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sites/{{main_office_id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sites",
+                "{{main_office_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"is_main_office\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "09.07 - Kantor utama tidak bisa dihapus",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"409 MAIN_OFFICE_REQUIRED\", () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_om}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sites/{{main_office_id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sites",
+                "{{main_office_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "09.08 - Hapus kantor cabang uji",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_om}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sites/{{test_office_id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sites",
+                "{{test_office_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "09.09 - Kantor terhapus tidak tampil",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "const id = pm.collectionVariables.get(\"test_office_id\");",
+                  "pm.test(\"kantor uji tidak ada lagi\", () => pm.expect(pm.response.json().map(r => r.id)).to.not.include(id));",
+                  "pm.test(\"OM dapat mengelola\", () => pm.response.json().forEach(r => pm.expect(r.can_manage).to.eql(true)));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_om}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sites",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sites"
+              ]
+            }
+          }
+        },
+        {
+          "name": "09.10 - Daftar divisi",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "const rows = pm.response.json();",
+                  "pm.test(\"ada divisi dengan OM & PM\", () => {",
+                  "    pm.expect(rows.length).to.be.above(0);",
+                  "    pm.expect(rows[0]).to.have.property(\"om_name\");",
+                  "    pm.expect(rows[0]).to.have.property(\"pm_name\");",
+                  "    pm.expect(rows[0]).to.have.property(\"team_count\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/units",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "units"
+              ]
+            }
+          }
+        },
+        {
+          "name": "09.11 - Divisi dengan OM berperan salah ditolak",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"422 VALIDATION_ERROR\", () => {",
+                  "    pm.response.to.have.status(422);",
+                  "    pm.expect(pm.response.json().error.message).to.include(\"Operational Manager\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_om}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/units",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "units"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Divisi Uji Salah\",\n  \"om_id\": \"{{pm_employee_id}}\",\n  \"pm_id\": \"{{pm_employee_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "09.12 - PM membuat divisi ditolak",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/units",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "units"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Divisi Uji PM\",\n  \"om_id\": \"{{om_employee_id}}\",\n  \"pm_id\": \"{{pm_employee_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "09.13 - OM membuat divisi",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201\", () => pm.response.to.have.status(201));",
+                  "const r = pm.response.json();",
+                  "pm.test(\"OM & PM tertaut\", () => {",
+                  "    pm.expect(r.om_id).to.eql(pm.collectionVariables.get(\"om_employee_id\"));",
+                  "    pm.expect(r.pm_id).to.eql(pm.collectionVariables.get(\"pm_employee_id\"));",
+                  "    pm.expect(r.team_count).to.eql(0);",
+                  "});",
+                  "pm.collectionVariables.set(\"test_division_id\", r.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_om}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/units",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "units"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Divisi Uji Postman\",\n  \"om_id\": \"{{om_employee_id}}\",\n  \"pm_id\": \"{{pm_employee_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "09.14 - Ubah nama & nonaktifkan divisi",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"berubah\", () => {",
+                  "    pm.expect(pm.response.json().name).to.eql(\"Divisi Uji Postman 2\");",
+                  "    pm.expect(pm.response.json().status).to.eql(false);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_om}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/units/{{test_division_id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "units",
+                "{{test_division_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Divisi Uji Postman 2\",\n  \"status\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "09.15 - Hapus divisi uji",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_om}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/units/{{test_division_id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "units",
+                "{{test_division_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "09.16 - Divisi seed yang punya tim tidak bisa dihapus",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"409 DIVISION_IN_USE\", () => {",
+                  "    pm.response.to.have.status(409);",
+                  "    pm.expect(pm.response.json().error.code).to.eql(\"DIVISION_IN_USE\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_om}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/units/{{division_id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "units",
+                "{{division_id}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "10 - Absensi (docs/35 §5)",
+      "item": [
+        {
+          "name": "10.01 - Check-in tanpa swafoto ditolak",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"422 swafoto wajib\", () => {",
+                  "    pm.response.to.have.status(422);",
+                  "    pm.expect(pm.response.json().error.message.toLowerCase()).to.include(\"swafoto\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_emp}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/attendance/check-in",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "attendance",
+                "check-in"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"site_id\": \"{{main_office_id}}\",\n  \"channel\": \"MOBILE\",\n  \"location\": {\n    \"lat\": 3.5952,\n    \"lng\": 98.6722\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "10.02 - Pekerja lapangan via kanal web ditolak",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"403 WRONG_ATTENDANCE_CHANNEL\", () => {",
+                  "    pm.response.to.have.status(403);",
+                  "    pm.expect(pm.response.json().error.code).to.eql(\"WRONG_ATTENDANCE_CHANNEL\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_emp}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/attendance/check-in",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "attendance",
+                "check-in"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"site_id\": \"{{main_office_id}}\",\n  \"channel\": \"WEB\",\n  \"location\": {\n    \"lat\": 3.5952,\n    \"lng\": 98.6722\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "10.03 - Staf kantor (HR) via kanal HP ditolak",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"403 WRONG_ATTENDANCE_CHANNEL\", () => {",
+                  "    pm.response.to.have.status(403);",
+                  "    pm.expect(pm.response.json().error.code).to.eql(\"WRONG_ATTENDANCE_CHANNEL\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/attendance/check-in",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "attendance",
+                "check-in"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"site_id\": \"{{main_office_id}}\",\n  \"channel\": \"MOBILE\",\n  \"location\": {\n    \"lat\": 3.5952,\n    \"lng\": 98.6722\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "tok_admin",
+      "value": ""
+    },
+    {
+      "key": "tok_om",
+      "value": ""
+    },
+    {
+      "key": "tok_pm",
+      "value": ""
+    },
+    {
+      "key": "tok_tl",
+      "value": ""
+    },
+    {
+      "key": "tok_emp",
+      "value": ""
+    },
+    {
+      "key": "tok_hr",
+      "value": ""
+    },
+    {
+      "key": "ghost_email",
+      "value": ""
+    },
+    {
+      "key": "pm_employee_id",
+      "value": ""
+    },
+    {
+      "key": "om_employee_id",
+      "value": ""
+    },
+    {
+      "key": "main_office_id",
+      "value": ""
+    },
+    {
+      "key": "test_office_id",
+      "value": ""
+    },
+    {
+      "key": "test_division_id",
+      "value": ""
     }
   ]
 }

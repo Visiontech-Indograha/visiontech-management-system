@@ -47,7 +47,6 @@ DDL_STATEMENTS = [
     "ALTER TABLE work_completion ADD COLUMN IF NOT EXISTS site_lng NUMERIC(10,7) NULL;",
 
     # Nullable columns for draft/ongoing work_completion
-    "ALTER TABLE work_completion ALTER COLUMN weekly_plan_id DROP NOT NULL;",
     "ALTER TABLE work_completion ALTER COLUMN daily_plan_id DROP NOT NULL;",
     "ALTER TABLE work_completion ALTER COLUMN leader_signer_id DROP NOT NULL;",
     "ALTER TABLE work_completion ALTER COLUMN leader_signature_path DROP NOT NULL;",
@@ -70,10 +69,6 @@ DDL_STATEMENTS = [
     (
         "ALTER TABLE document_template_export ADD COLUMN IF NOT EXISTS source_type "
         "VARCHAR(30) NOT NULL DEFAULT 'WORK_COMPLETION';"
-    ),
-    (
-        "ALTER TABLE document_template_export ADD COLUMN IF NOT EXISTS weekly_plan_id "
-        "UUID NULL REFERENCES work_plan_weekly(weekly_plan_id);"
     ),
     (
         "ALTER TABLE document_template_export ADD COLUMN IF NOT EXISTS daily_plan_id "
@@ -105,33 +100,7 @@ DDL_STATEMENTS = [
     "CREATE INDEX IF NOT EXISTS idx_site_visit_attendance ON attendance_site_visit(attendance_id);",
     "CREATE INDEX IF NOT EXISTS idx_site_visit_item ON attendance_site_visit(item_id);",
 
-    # 7. File object metadata table
-    """
-    CREATE TABLE IF NOT EXISTS file_object (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        organization_id UUID NOT NULL,
-        storage_key TEXT NOT NULL UNIQUE,
-        file_name TEXT NOT NULL,
-        mime_type TEXT NOT NULL,
-        byte_size BIGINT NOT NULL,
-        sha256 BYTEA NOT NULL,
-        uploaded_by UUID NULL,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-        UNIQUE (organization_id, sha256)
-    );
-    """,
-    "CREATE INDEX IF NOT EXISTS idx_file_object_org_hash ON file_object(organization_id, sha256);",
-
-    # 8. Work plan attachment relation table
-    """
-    CREATE TABLE IF NOT EXISTS work_plan_attachment (
-        work_plan_id UUID NOT NULL,
-        file_id UUID NOT NULL REFERENCES file_object(id) ON DELETE CASCADE,
-        sort_order INTEGER NOT NULL DEFAULT 0,
-        PRIMARY KEY (work_plan_id, file_id)
-    );
-    """,
-    "CREATE INDEX IF NOT EXISTS idx_work_plan_attachment_plan ON work_plan_attachment(work_plan_id);"
+    # file_object & work_plan_attachment kini bagian DDL 06 (db/migration_m5_daily_refs.sql).
 ]
 
 

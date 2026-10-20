@@ -19,26 +19,6 @@ class CRUDMonitoring(CRUDBase):
     dan riwayat absensi terperinci dengan pembatasan hak akses (scope).
     """
 
-    async def plan_days(self, plan_ids: list[str]) -> list[Any]:
-        """
-        Mengambil daftar hari kerja (work_plan_daily) beserta status pelaksanaannya.
-        """
-        return list(
-            await self.fetchall(
-                """
-            SELECT CAST(wpd.weekly_plan_id AS text) AS work_plan_id,
-                   CAST(wpd.daily_plan_id AS text) AS id,
-                   wpd.work_date,
-                   'Rencana Hari ' || to_char(wpd.work_date, 'DD/MM') AS title,
-                   wpd.status AS report_status
-            FROM work_plan_daily wpd
-            WHERE wpd.weekly_plan_id = ANY(CAST(:plans AS uuid[])) AND wpd.delete_at IS NULL
-            ORDER BY wpd.work_date
-            """,
-                {"plans": plan_ids},
-            )
-        )
-
     async def names(self, employee_ids: list[str]) -> dict[str, str]:
         """
         Mendapatkan pemetaan (mapping) antara ID karyawan dan nama lengkapnya.

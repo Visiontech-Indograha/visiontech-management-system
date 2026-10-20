@@ -21,7 +21,7 @@ class FileRepository(BaseRepository):
             """
             SELECT CAST(id AS text) AS id, storage_key, file_name, mime_type, byte_size
             FROM file_object
-            WHERE organization_id = CAST(:org AS uuid) AND sha256 = :hash
+            WHERE office_id = CAST(:org AS uuid) AND sha256 = :hash
             LIMIT 1
             """,
             {"org": org_id, "hash": sha256},
@@ -43,13 +43,13 @@ class FileRepository(BaseRepository):
         row = await self.fetchone(
             """
             INSERT INTO file_object (
-                id, organization_id, storage_key, file_name, mime_type, byte_size, sha256, uploaded_by
+                id, office_id, storage_key, file_name, mime_type, byte_size, sha256, uploaded_by
             )
             VALUES (
                 CAST(:fid AS uuid), CAST(:org AS uuid), :storage_key,
                 :file_name, :mime_type, :byte_size, :sha256, CAST(:uid AS uuid)
             )
-            ON CONFLICT (organization_id, sha256) DO UPDATE
+            ON CONFLICT (office_id, sha256) DO UPDATE
             SET file_name = EXCLUDED.file_name
             RETURNING CAST(id AS text) AS id
             """,

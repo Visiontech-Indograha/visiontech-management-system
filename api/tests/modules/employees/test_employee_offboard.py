@@ -6,7 +6,7 @@ akun dicabut. POST /employees/{id}/offboard {reason}
 from __future__ import annotations
 
 from tests.conftest import World, requires_db, sync_query
-from tests.modules.work_plans.test_flow_plans import run_plan_to_in_progress
+from tests.daily import run_daily_to_ongoing
 
 pytestmark = requires_db
 
@@ -17,13 +17,14 @@ def _offboard(client, world: World, employee_id: str, reason: str = "Kontrak sel
 
 
 def test_employee_on_a_running_plan_cannot_be_offboarded(client, world: World):
-    run_plan_to_in_progress(client, world)
+    run_daily_to_ongoing(world)
 
     blocked = _offboard(client, world, world.employees["member"])
 
     assert blocked.status_code == 409, blocked.text
     assert blocked.json()["error"]["message"] == "Selesaikan atau serahterimakan penugasan aktif sebelum mengakhiri masa kerja."
-    assert sync_query("SELECT is_active FROM vms.employee WHERE id = %s", (world.employees["member"],)) == [(True,)]
+    assert sync_query("SELECT offboarding_status::text FROM employee WHERE employee_id = %s",
+                      (world.employees["member"],)) == [("active",)]
 
 
 def test_hr_offboards_an_employee_and_closes_open_assignments(client, world: World, other_world: World):

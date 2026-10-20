@@ -320,7 +320,8 @@ CREATE TABLE IF NOT EXISTS work_plan_daily (
     attendance_radius_m INT NOT NULL DEFAULT 150,
     clock_in_time TIME NOT NULL DEFAULT '07:00:00',
     clock_out_time TIME NOT NULL DEFAULT '16:00:00',
-    status VARCHAR(30) NOT NULL DEFAULT 'ONGOING', -- 'DRAFT','SUBMITTED','APPROVED','ONGOING','COMPLETED'
+    status VARCHAR(30) NOT NULL DEFAULT 'DRAFT'
+        CONSTRAINT ck_work_plan_daily_status CHECK (status IN ('DRAFT','SUBMITTED','APPROVED','ONGOING','COMPLETED')),
     created_by_id UUID NOT NULL REFERENCES employee(employee_id),
     approved_by_pm_id UUID NULL REFERENCES employee(employee_id),
     approved_at TIMESTAMPTZ NULL,
@@ -343,7 +344,8 @@ CREATE TABLE IF NOT EXISTS work_plan_item (
     site_lng NUMERIC(10,7) NULL,
     assigned_employee_ids JSONB NULL,
     title VARCHAR(200) NOT NULL,
-    task_phase VARCHAR(30) NOT NULL DEFAULT 'MAIN_INSTALLATION', -- 'SURVEY','PREPARATION','MAIN_INSTALLATION','TESTING_COMMISSIONING'
+    task_phase VARCHAR(30) NOT NULL DEFAULT 'INSTALLATION'
+        CONSTRAINT ck_work_plan_item_phase CHECK (task_phase IN ('SURVEY','PREPARATION','INSTALLATION','REPLACEMENT','MAINTENANCE')),
     is_main_deliverable BOOLEAN NOT NULL DEFAULT TRUE,
     depends_on_item_id UUID NULL REFERENCES work_plan_item(item_id),
     target_qty NUMERIC(10,2) NOT NULL DEFAULT 100.00,
@@ -355,6 +357,7 @@ CREATE TABLE IF NOT EXISTS work_plan_item (
     origin_item_id UUID NULL REFERENCES work_plan_item(item_id),
     shifted_to_daily_id UUID NULL REFERENCES work_plan_daily(daily_plan_id),
     delay_reason TEXT NULL,
+    notes TEXT NULL, -- remark titik (hasil survei), docs/35 §3
     realization_photos_json JSONB NOT NULL DEFAULT '[]'::jsonb,
     create_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     update_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -598,6 +601,31 @@ CREATE TABLE IF NOT EXISTS overtime (
 
 CREATE INDEX IF NOT EXISTS idx_overtime_daily_plan ON overtime (daily_plan_id);
 CREATE INDEX IF NOT EXISTS idx_overtime_employee ON overtime (employee_id);
+
+-- 28. Tabel file_object (metadata berkas MinIO; kolom *_path / path_file tabel lain = storage_key)
+CREATE TABLE IF NOT EXISTS file_object (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    office_id UUID NOT NULL CONSTRAINT fk_file_object_office REFERENCES office(office_id),
+    storage_key TEXT NOT NULL UNIQUE,
+    file_name TEXT NOT NULL,
+    mime_type TEXT NOT NULL,
+    byte_size BIGINT NOT NULL,
+    sha256 BYTEA NOT NULL,
+    uploaded_by UUID NULL CONSTRAINT fk_file_object_uploader REFERENCES users(user_id),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (office_id, sha256)
+);
+
+-- 29. Tabel work_plan_attachment (lampiran jadwal harian, N─N work_plan_daily ↔ file_object)
+CREATE TABLE IF NOT EXISTS work_plan_attachment (
+    daily_plan_id UUID NOT NULL CONSTRAINT fk_work_plan_attachment_daily
+        REFERENCES work_plan_daily(daily_plan_id) ON DELETE CASCADE,
+    file_id UUID NOT NULL REFERENCES file_object(id) ON DELETE CASCADE,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (daily_plan_id, file_id)
+);
+CREATE INDEX IF NOT EXISTS idx_work_plan_attachment_daily ON work_plan_attachment (daily_plan_id);
+
 
 -- Indeks Tambahan untuk Relasi Foreign Key & Filter Soft Delete
 CREATE INDEX IF NOT EXISTS idx_employee_office ON employee (office_id) WHERE delete_at IS NULL;

@@ -16,7 +16,6 @@ from app.modules.work_completion.schemas.work_completion_schema import (
     WorkCompletionCreate,
     WorkCompletionStatusUpdate,
 )
-from app.modules.work_plans.schemas.plan_schema import RescheduleItemRequest, WorkPlanResponse
 from app.shared.documents.document_export_service import DocumentExportService
 
 
@@ -86,31 +85,6 @@ def test_document_export_service_docx_xlsx_pptx() -> None:
     assert pptx_bytes[:4] == b"PK\x03\x04"  # Zip header for pptx
 
 
-def test_work_plan_response_schema_fields() -> None:
-    """Memastikan skema WorkPlanResponse memiliki field division_name dan work_type_name."""
-    pid = uuid4()
-    uid = uuid4()
-    pm_id = uuid4()
-
-    resp = WorkPlanResponse(
-        id=pid,
-        title="Rencana Kerja Mingguan",
-        unit_id=uid,
-        location_text="Site Medan",
-        period_start=datetime.now(UTC).date(),
-        period_end=datetime.now(UTC).date(),
-        pm_employee_id=pm_id,
-        status="ONGOING",
-        revision=1,
-        row_version=1,
-        division_name="Divisi Security & CCTV",
-        work_type_name="Instalasi CCTV",
-    )
-
-    assert resp.division_name == "Divisi Security & CCTV"
-    assert resp.work_type_name == "Instalasi CCTV"
-
-
 def test_image_requirement_schema_description() -> None:
     """Memastikan ImageRequirementOut mendukung kolom description opsional."""
     req_id = uuid4()
@@ -152,15 +126,3 @@ def test_work_completion_client_order_schemas() -> None:
     assert status_update.order_status == "URGENT"
 
 
-def test_reschedule_item_schemas() -> None:
-    """Memastikan skema pemindahan tugas (Reschedule) valid."""
-    target_day = uuid4()
-    req = RescheduleItemRequest(
-        target_daily_plan_id=target_day,
-        start_time="08:00:00",
-        end_time="12:00:00",
-        location_name="Site Pertamina",
-        assigned_employee_ids=["emp-001", "emp-002"],
-    )
-    assert req.target_daily_plan_id == target_day
-    assert req.start_time == "08:00:00"

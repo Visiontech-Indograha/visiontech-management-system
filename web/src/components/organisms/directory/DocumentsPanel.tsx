@@ -69,6 +69,8 @@ export function DocumentsPanel({ employeeId, canManage }: { employeeId: string; 
   const remove = useDeleteDocument(employeeId);
   const [editing, setEditing] = useState(false);
   const [renewing, setRenewing] = useState<EmployeeDocument | null>(null);
+  // Hapus dua langkah (tanpa dialog bawaan peramban, R1): klik pertama minta konfirmasi.
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const columns = canManage ? 6 : 5;
 
   const act = (run: Promise<unknown>, done: string) =>
@@ -164,12 +166,12 @@ export function DocumentsPanel({ employeeId, canManage }: { employeeId: string; 
                         variant="outline"
                         disabled={remove.isPending}
                         onClick={() => {
-                          if (window.confirm(`Hapus ${docLabel(d.doc_type)}? Pakai ini hanya untuk berkas yang salah unggah.`)) {
-                            void act(remove.mutateAsync(d.id), `${docLabel(d.doc_type)} dihapus.`);
-                          }
+                          if (confirmDelete !== d.id) return setConfirmDelete(d.id);
+                          setConfirmDelete(null);
+                          void act(remove.mutateAsync(d.id), `${docLabel(d.doc_type)} dihapus.`);
                         }}
                       >
-                        Hapus
+                        {confirmDelete === d.id ? "Yakin hapus? (salah unggah)" : "Hapus"}
                       </ActionButton>
                     </TextBlock>
                   </TableBlockCell>

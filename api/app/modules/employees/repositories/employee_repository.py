@@ -1,5 +1,5 @@
 """
-app/crud/crud_employee.py
+app/modules/employees/repositories/employee_repository.py
 Kueri direktori karyawan, penempatan, alamat, dan siklus offboarding (Master Schema V2).
 Tabel yang dikelola: employee, address, users, office, division.
 """
@@ -119,22 +119,22 @@ class EmployeeRepository(BaseRepository):
         )
 
     async def on_running_plan(self, employee_id: UUID | str) -> bool:
-        """Cek apakah karyawan terlibat dalam rencana kerja yang sedang berjalan."""
+        """Masih terikat jadwal harian yang belum selesai (hari ini/ke depan, disetujui atau berjalan) — sebagai
+        anggota/ketua tim jadwal itu atau PM/OM divisinya."""
         return bool(
             await self.scalar(
                 """
             SELECT EXISTS (
-                SELECT 1 FROM work_plan wp
-                WHERE wp.delete_at IS NULL AND wp.status NOT IN ('DRAFT', 'COMPLETED', 'CANCELLED')
-                  AND (wp.pm_id = CAST(:emp AS uuid)
-                       OR EXISTS (
-                           SELECT 1 FROM work_plan_team wpt
-                           JOIN member m ON m.team_id = wpt.team_id
-                           WHERE wpt.work_plan_id = wp.work_plan_id AND m.employee_id = CAST(:emp AS uuid)
-                       ))
+                SELECT 1 FROM work_plan_daily wpd
+                JOIN division d ON d.division_id = wpd.division_id
+                WHERE wpd.delete_at IS NULL AND wpd.status IN ('APPROVED', 'ONGOING')
+                  AND wpd.work_date >= (now() AT TIME ZONE 'Asia/Jakarta')::date
+                  AND (CAST(:emp AS uuid) IN (d.pm_id, d.om_id)
+                       OR EXISTS (SELECT 1 FROM member m WHERE m.team_id = wpd.team_id
+                                  AND m.employee_id = CAST(:emp AS uuid) AND m.is_active AND m.delete_at IS NULL))
             )
             """,
-                {"emp": employee_id},
+                {"emp": str(employee_id)},
             )
         )
 
@@ -294,8 +294,25 @@ class EmployeeRepository(BaseRepository):
     async def conflicts(
         self, employee_id: UUID | str, start: Any, end: Any, exclude_plan: UUID | str | None
     ) -> list[Any]:
-        """Bentrok jadwal tugas pada work_plan."""
-        return []
+        """Jadwal harian lain dalam rentang tanggal yang sudah mengikat karyawan (anggota tim jadwal itu)."""
+        return list(
+            await self.fetchall(
+                """
+            SELECT wpd.daily_plan_id AS work_plan_id, to_char(wpd.work_date, 'DD/MM/YYYY') AS number,
+                   t.name || ' · ' || wpd.site_name AS title
+            FROM work_plan_daily wpd
+            JOIN team t ON t.team_id = wpd.team_id
+            JOIN member m ON m.team_id = wpd.team_id AND m.employee_id = CAST(:emp AS uuid)
+                         AND m.is_active AND m.delete_at IS NULL
+            WHERE wpd.delete_at IS NULL AND wpd.status <> 'COMPLETED'
+              AND wpd.work_date BETWEEN :start AND :end
+              AND (CAST(:ex AS uuid) IS NULL OR wpd.daily_plan_id <> CAST(:ex AS uuid))
+            ORDER BY wpd.work_date
+            """,
+                {"emp": str(employee_id), "start": start, "end": end,
+                 "ex": str(exclude_plan) if exclude_plan else None},
+            )
+        )
 
 
 # Alias backward compatibility

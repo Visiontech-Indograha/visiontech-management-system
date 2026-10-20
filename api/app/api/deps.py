@@ -16,14 +16,13 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.alerts import send_security_alert
-from app.core.errors import AppError, NotFoundError
+from app.core.errors import AppError
 from app.core.permissions import NO_GLOBAL_ROLE, Permission, RoleCode, permissions_for_roles
 from app.core.security import CurrentUser, verify_file_access_ticket, verify_jwt_token
 from app.core.time import utcnow
 from app.database.session import AsyncSessionLocal, set_request_context, unit_of_work
 from app.modules.auth.repositories.auth_user_repository import CRUDUser
-from app.shared.access.access_service import PlanAccess, PlanNeed, check_plan_access
-from app.shared.access.plan_access_repository import CRUDPlanAccess
+from app.shared.access.access_service import DailyAccess, DailyNeed, check_daily_access
 
 logger = logging.getLogger(__name__)
 # Keamanan dengan skema Bearer token
@@ -216,59 +215,15 @@ async def get_db_with_user(
     return db
 
 
-def plan_access(need: PlanNeed, archived: bool | None = False) -> Callable[..., Awaitable[PlanAccess]]:
-    """Dependency untuk rute ber-`{plan_id}`. `archived=None`: SK aktif maupun draf terarsip
-    (pemulihan) — terarsip tetap hanya terlihat oleh pengelola."""
+def daily_access(need: DailyNeed) -> Callable[..., Awaitable[DailyAccess]]:
+    """Dependency untuk rute ber-`{daily_plan_id}`: kedudukan pada jadwal harian (docs/35 §3).
+    Tidak terlihat → 404, terlihat tetapi tidak berwenang → 403."""
     async def guard(
-        plan_id: UUID,
+        daily_plan_id: UUID,
         current_user: CurrentUser = Depends(get_current_user),
         db: AsyncSession = Depends(get_db_with_user),
-    ) -> PlanAccess:
-        return await check_plan_access(db, plan_id, current_user, need, archived)
-    return guard
-
-
-def allocation_plan_access(need: PlanNeed) -> Callable[..., Awaitable[PlanAccess]]:
-    """Dependency untuk rute ber-`{alloc_id}` — kewenangan mengikuti SK peminjam aset."""
-    async def guard(
-        alloc_id: UUID,
-        current_user: CurrentUser = Depends(get_current_user),
-        db: AsyncSession = Depends(get_db_with_user),
-    ) -> PlanAccess:
-        plan_id = await CRUDPlanAccess(db).plan_of_allocation(alloc_id)
-        if plan_id is None:
-            raise NotFoundError("Alokasi aset")
-        return await check_plan_access(db, plan_id, current_user, need)
-    return guard
-
-
-def incident_plan_access(need: PlanNeed) -> Callable[..., Awaitable[PlanAccess]]:
-    """Dependency untuk rute ber-`{inc_id}` — kewenangan mengikuti SK tempat insiden terjadi."""
-    async def guard(
-        inc_id: UUID,
-        current_user: CurrentUser = Depends(get_current_user),
-        db: AsyncSession = Depends(get_db_with_user),
-    ) -> PlanAccess:
-        plan_id = await CRUDPlanAccess(db).plan_of_incident(inc_id, current_user.organization_id)
-        if plan_id is None:
-            raise NotFoundError("Insiden")
-        return await check_plan_access(db, plan_id, current_user, need)
-    return guard
-
-
-def plan_day_access(need: PlanNeed) -> Callable[..., Awaitable[PlanAccess]]:
-    """Dependency untuk rute `/work-plans/{plan_id}/days/{day_id}` (V-16, dok 05 §3.6): kewenangan
-    atas SK, dan hari harus milik SK itu — hari SK lain → 404."""
-    async def guard(
-        plan_id: UUID,
-        day_id: UUID,
-        current_user: CurrentUser = Depends(get_current_user),
-        db: AsyncSession = Depends(get_db_with_user),
-    ) -> PlanAccess:
-        access = await check_plan_access(db, plan_id, current_user, need)
-        if str(await CRUDPlanAccess(db).plan_of_day(day_id)) != str(plan_id):
-            raise NotFoundError("Hari kerja")
-        return access
+    ) -> DailyAccess:
+        return await check_daily_access(db, daily_plan_id, current_user, need)
     return guard
 
 

@@ -7,15 +7,9 @@ export const DEFAULT_TITLE = `${APP_NAME} — Manajemen Pekerjaan Lapangan`;
 const PATTERNS: [RegExp, string][] = [
   [/^\/login$/, "Masuk"],
   [/^\/admin-login$/, "Masuk administrator"],
-  [/^\/verify(\/.*)?$/, "Verifikasi dokumen"],
   [/^\/change-password$/, "Ganti password"],
   [/^\/account$/, "Akun & keamanan"],
   [/^\/forbidden$/, "Tidak berwenang"],
-  [/^\/work-plans\/new$/, "Buat rencana kerja"],
-  [/^\/work-plans\/[^/]+\/edit$/, "Sunting rencana kerja"],
-  [/^\/work-plans\/[^/]+\/amend\/[^/]+$/, "Revisi rencana kerja"],
-  [/^\/work-plans\/[^/]+\/presentation$/, "Presentasi laporan"],
-  [/^\/work-plans\/[^/]+$/, "Detail rencana kerja"],
   [/^\/directory\/[^/]+$/, "Detail karyawan"],
 ];
 

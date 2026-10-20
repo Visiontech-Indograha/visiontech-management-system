@@ -4,6 +4,7 @@ Controller orkestrasi use case hunian mess karyawan.
 """
 from __future__ import annotations
 
+from datetime import date
 from uuid import UUID
 
 from fastapi import Depends
@@ -28,9 +29,10 @@ class MessController:
         self,
         current_user: CurrentUser,
         employee_id: UUID | None = None,
-        weekly_plan_id: UUID | None = None,
+        start: date | None = None,
+        end: date | None = None,
     ) -> list[MessStayOut]:
-        rows = await self.service.list_stays(employee_id, weekly_plan_id)
+        rows = await self.service.list_stays(employee_id, start, end)
         return [MessStayOut(**dict(r._mapping)) for r in rows]
 
     async def handle_get_stay(

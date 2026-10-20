@@ -68,9 +68,9 @@ class WorkTypeController:
         """Menonaktifkan jenis pekerjaan."""
         await self.service.deactivate(organization_id, type_id, creator_division_id)
 
-    async def handle_template_of_plan(self, plan_id: UUID, day_id: UUID | None) -> list[WorkTypePhotoOut]:
-        """Mengambil template foto laporan rencana kerja."""
-        rows = await self.service.template_of_plan(plan_id, day_id)
+    async def handle_template_of_daily(self, daily_plan_id: UUID) -> list[WorkTypePhotoOut]:
+        """Template foto SOP untuk item-item jadwal harian."""
+        rows = await self.service.template_of_daily(daily_plan_id)
         return [WorkTypePhotoOut(**r._mapping) for r in rows]
 
     async def handle_list_materials(self, organization_id: str, type_id: UUID) -> list[DefaultMaterialOut]:

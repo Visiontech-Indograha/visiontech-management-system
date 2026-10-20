@@ -76,6 +76,11 @@ flowchart TD
 - Satu titik = satu item (`location_name`, `site_lat/lng`) agar proyek multi-minggu terlacak per titik
   (mis. minggu ke-3 titik 1–2, minggu ke-4 titik 8).
 - Fase baku `task_phase`: `SURVEY`, `PREPARATION`, `INSTALLATION`, `REPLACEMENT`, `MAINTENANCE`; dipilih per item.
+- Siklus jadwal harian (`work_plan_daily.status`, Milestone 5): `DRAFT` → (PM/OM ajukan) `SUBMITTED` → (PM/OM divisi
+  setujui; per hari atau sekaligus lewat matriks minggu) `APPROVED` → (ketua mulai pada tanggalnya) `ONGOING` →
+  (ketua/PM tutup) `COMPLETED`. Dikembalikan PM: `SUBMITTED/APPROVED` → `DRAFT` + `rejection_reason`. Satu jadwal
+  per tim per tanggal; jadwal bisa disalin ke tanggal lain (draf). Tim lapangan hanya melihat jadwal yang sudah
+  disetujui; lembur diajukan atas jadwal `ONGOING`.
 
 ---
 

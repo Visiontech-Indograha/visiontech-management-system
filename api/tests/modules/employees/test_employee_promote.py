@@ -8,7 +8,7 @@ R-19 · Mutasi/promosi karyawan (domain.js PROMOTE, M2) + riwayat penempatan + d
 from __future__ import annotations
 
 from tests.conftest import World, requires_db, sync_query
-from tests.modules.work_plans.test_flow_plans import run_plan_to_accepted
+from tests.daily import make_daily_plan
 
 pytestmark = requires_db
 
@@ -40,7 +40,7 @@ def test_promotion_keeps_the_unit_when_none_is_given_and_is_listed_in_history(cl
 
 
 def test_cross_unit_move_is_blocked_while_on_an_active_plan(client, world):
-    run_plan_to_accepted(client, world)                              # member bertugas di SK ACCEPTED
+    make_daily_plan(world, status="APPROVED", days_from_today=1)     # member bertugas di jadwal disetujui
     other_unit = world.add_unit("WALLD")
 
     blocked = _promote(client, world, "member", unit_id=other_unit)

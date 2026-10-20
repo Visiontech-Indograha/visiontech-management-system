@@ -1,8 +1,6 @@
 """
-app/crud/crud_overtime.py
-Kueri lembur Master Schema V2.
-Mendukung pengajuan lembur per rencana kerja mingguan (work_plan_weekly)
-serta rekapitulasi bulanan per karyawan.
+app/modules/overtime/repositories/overtime_repository.py
+Lembur Master Schema V2: overtime N─1 employee, N─1 work_plan_daily (daily-first), rekap bulanan per karyawan.
 """
 
 from __future__ import annotations
@@ -14,153 +12,82 @@ from uuid import UUID
 
 from app.core.repository import BaseRepository
 
+_COLUMNS = """
+    o.overtime_id AS id, o.daily_plan_id, o.employee_id, e.full_name AS employee_name, o.work_date,
+    o.hours::float AS hours, o.reason, o.status, o.reviewed_by_id AS reviewed_by, o.reviewed_at, o.review_note,
+    o.create_at AS created_at
+"""
+
 
 class OvertimeRepository(BaseRepository):
-    """Repositori pengajuan dan rekap lembur karyawan."""
-    """
-    Kelas CRUD untuk mengelola pencatatan dan peninjauan lembur karyawan (overtime).
-    """
+    """Query pengajuan & rekap lembur."""
 
-    async def employee_of(self, user_id: UUID | str) -> str | None:
-        """UUID karyawan yang terhubung ke akun pengguna."""
-        employee: str | None = await self.scalar(
-            "SELECT CAST(employee_id AS text) FROM users WHERE user_id = CAST(:uid AS uuid) AND delete_at IS NULL",
-            {"uid": str(user_id)},
-        )
-        return employee
-
-    async def effective_document_id(self, plan_id: UUID | str) -> str | None:
-        """Di Master Schema V2, ID dokumen mereferensikan weekly_plan_id secara langsung."""
-        return str(plan_id)
+    async def duplicate(self, daily_plan_id: UUID | str, employee_id: str) -> bool:
+        """Satu pengajuan yang belum ditolak per karyawan per jadwal."""
+        return bool(await self.scalar(
+            "SELECT EXISTS (SELECT 1 FROM overtime WHERE daily_plan_id = CAST(:p AS uuid) "
+            "AND employee_id = CAST(:e AS uuid) AND status <> 'REJECTED' AND delete_at IS NULL)",
+            {"p": str(daily_plan_id), "e": employee_id},
+        ))
 
     async def insert(
-        self,
-        org_id: str,
-        plan_id: UUID | str,
-        doc_id: str | None,
-        employee_id: str,
-        work_date: Any,
-        hours: float,
-        reason: str,
-    ) -> Any:
-        """Menyisipkan baris pengajuan lembur baru."""
-        return await self.fetchone(
+        self, daily_plan_id: UUID | str, employee_id: str, work_date: date, hours: float, reason: str
+    ) -> UUID:
+        overtime_id: UUID = await self.scalar(
             """
-            INSERT INTO overtime (
-                weekly_plan_id, employee_id, work_date, hours, reason, status
-            ) VALUES (
-                CAST(:plan AS uuid), CAST(:emp AS uuid), CAST(:date AS date),
-                CAST(:hours AS numeric), :reason, 'PENDING_PM'
-            )
-            RETURNING overtime_id AS id, weekly_plan_id AS work_plan_id, NULL::uuid AS plan_document_id,
-                      employee_id, work_date, hours::float AS hours, reason, status,
-                      reviewed_by_id AS reviewed_by, reviewed_at, review_note, create_at AS created_at
+            INSERT INTO overtime (daily_plan_id, employee_id, work_date, hours, reason, status)
+            VALUES (CAST(:p AS uuid), CAST(:e AS uuid), :d, CAST(:h AS numeric), :r, 'PENDING_PM')
+            RETURNING overtime_id
             """,
-            {
-                "plan": str(plan_id),
-                "emp": str(employee_id),
-                "date": work_date,
-                "hours": hours,
-                "reason": reason,
-            },
+            {"p": str(daily_plan_id), "e": employee_id, "d": work_date, "h": hours, "r": reason},
+        )
+        return overtime_id
+
+    async def get(self, overtime_id: UUID | str) -> Any:
+        return await self.fetchone(
+            f"SELECT {_COLUMNS} FROM overtime o JOIN employee e ON e.employee_id = o.employee_id "
+            "WHERE o.overtime_id = CAST(:id AS uuid) AND o.delete_at IS NULL",
+            {"id": str(overtime_id)},
         )
 
-    async def get_for_review(self, overtime_id: UUID | str, org_id: str) -> Any:
-        """Ambil data lembur untuk pemeriksaan kewenangan PM/OM."""
-        return await self.fetchone(
+    async def review(self, overtime_id: UUID | str, reviewer: str, decision: str, note: str | None) -> bool:
+        updated = await self.scalar(
             """
-            SELECT o.overtime_id AS id,
-                   o.weekly_plan_id AS work_plan_id,
-                   o.employee_id,
-                   o.work_date,
-                   o.hours::float AS hours,
-                   o.reason,
-                   o.status,
-                   o.reviewed_by_id AS reviewed_by,
-                   o.reviewed_at,
-                   o.review_note,
-                   o.create_at AS created_at,
-                   NULL::uuid AS plan_document_id,
-                   wp.division_id AS unit_id
-            FROM overtime o
-            JOIN work_plan_weekly wp ON wp.weekly_plan_id = o.weekly_plan_id
-            WHERE o.overtime_id = CAST(:ot AS uuid) AND o.delete_at IS NULL
+            UPDATE overtime SET status = :decision, reviewed_by_id = CAST(:emp AS uuid), reviewed_at = now(),
+                                review_note = :note, update_at = now()
+            WHERE overtime_id = CAST(:id AS uuid) AND status = 'PENDING_PM' AND delete_at IS NULL
+            RETURNING overtime_id
             """,
-            {"ot": str(overtime_id)},
+            {"id": str(overtime_id), "decision": decision, "emp": reviewer, "note": note},
+        )
+        return updated is not None
+
+    async def list_by_plan(self, daily_plan_id: UUID | str) -> Sequence[Any]:
+        return await self.fetchall(
+            f"SELECT {_COLUMNS} FROM overtime o JOIN employee e ON e.employee_id = o.employee_id "
+            "WHERE o.daily_plan_id = CAST(:p AS uuid) AND o.delete_at IS NULL ORDER BY o.create_at DESC",
+            {"p": str(daily_plan_id)},
         )
 
-    async def review(
-        self,
-        overtime_id: UUID | str,
-        reviewer_emp: str,
-        decision: str,
-        note: str | None,
-    ) -> Any:
-        """Setujui atau tolak pengajuan lembur yang berstatus PENDING_PM."""
-        return await self.fetchone(
-            """
-            UPDATE overtime
-               SET status         = :decision,
-                   reviewed_by_id = CAST(:emp AS uuid),
-                   reviewed_at    = NOW(),
-                   review_note    = :note,
-                   update_at      = NOW()
-             WHERE overtime_id = CAST(:ot AS uuid)
-               AND status = 'PENDING_PM'
-               AND delete_at IS NULL
-            RETURNING overtime_id AS id, weekly_plan_id AS work_plan_id, NULL::uuid AS plan_document_id,
-                      employee_id, work_date, hours::float AS hours, reason, status,
-                      reviewed_by_id AS reviewed_by, reviewed_at, review_note, create_at AS created_at
-            """,
-            {"ot": str(overtime_id), "decision": decision, "emp": str(reviewer_emp), "note": note},
-        )
-
-    async def list_by_plan(self, plan_id: UUID | str, org_id: str) -> Sequence[Any]:
-        """Daftar riwayat lembur per rencana kerja mingguan."""
+    async def recap(self, month: date | None, managed_by: str | None) -> Sequence[Any]:
+        """Rekap per karyawan per bulan; `managed_by` = hanya jadwal di divisi yang PM/OM-nya karyawan ini."""
         return await self.fetchall(
             """
-            SELECT o.overtime_id AS id,
-                   o.weekly_plan_id AS work_plan_id,
-                   NULL::uuid AS plan_document_id,
-                   o.employee_id,
-                   o.work_date,
-                   o.hours::float AS hours,
-                   o.reason,
-                   o.status,
-                   o.reviewed_by_id AS reviewed_by,
-                   o.reviewed_at,
-                   o.review_note,
-                   o.create_at AS created_at
-            FROM overtime o
-            WHERE o.weekly_plan_id = CAST(:plan AS uuid)
-              AND o.delete_at IS NULL
-            ORDER BY o.create_at DESC
-            """,
-            {"plan": str(plan_id)},
-        )
-
-    async def recap(self, org_id: str, month: date | None, pm_user_id: str | None) -> Sequence[Any]:
-        """Rekap lembur per karyawan per bulan."""
-        return await self.fetchall(
-            """
-            SELECT CAST(date_trunc('month', o.work_date) AS date) AS period_month,
-                   o.employee_id,
+            SELECT CAST(date_trunc('month', o.work_date) AS date) AS period_month, o.employee_id,
                    e.full_name AS employee_name,
                    count(*) FILTER (WHERE o.status = 'APPROVED') AS approved_entries,
                    count(*) FILTER (WHERE o.status = 'PENDING_PM') AS pending_entries,
                    COALESCE(sum(o.hours) FILTER (WHERE o.status = 'APPROVED'), 0)::float AS approved_hours
             FROM overtime o
             JOIN employee e ON e.employee_id = o.employee_id
-            JOIN work_plan_weekly wp ON wp.weekly_plan_id = o.weekly_plan_id
+            LEFT JOIN work_plan_daily wpd ON wpd.daily_plan_id = o.daily_plan_id
+            LEFT JOIN division d ON d.division_id = wpd.division_id
             WHERE o.delete_at IS NULL
               AND (CAST(:month AS date) IS NULL
                    OR CAST(date_trunc('month', o.work_date) AS date) = CAST(:month AS date))
+              AND (CAST(:mgr AS uuid) IS NULL OR CAST(:mgr AS uuid) IN (d.pm_id, d.om_id))
             GROUP BY period_month, o.employee_id, e.full_name
-            ORDER BY period_month DESC, employee_name ASC
+            ORDER BY period_month DESC, employee_name
             """,
-            {"month": month},
+            {"month": month, "mgr": managed_by},
         )
-
-
-# Alias backward compatibility
-CRUDOvertime = OvertimeRepository

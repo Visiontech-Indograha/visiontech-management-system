@@ -27,18 +27,18 @@ async def report_overtime(
     current_user: CurrentUser = Depends(get_current_user),
     controller: OvertimeController = Depends(),
 ) -> OvertimeResponse:
-    """Mengajukan permohonan lembur pada work plan yang aktif."""
+    """Mengajukan lembur atas jadwal harian yang sedang berjalan (ketua/anggota tim)."""
     return await controller.handle_report(current_user, data)
 
 
 @router.get("", response_model=list[OvertimeResponse])
 async def list_overtime(
-    work_plan_id: UUID,
+    daily_plan_id: UUID,
     current_user: CurrentUser = Depends(get_current_user),
     controller: OvertimeController = Depends(),
 ) -> list[OvertimeResponse]:
-    """Mendapatkan daftar lembur untuk satu work plan."""
-    return await controller.handle_list_by_plan(current_user, work_plan_id)
+    """Daftar lembur untuk satu jadwal harian."""
+    return await controller.handle_list_by_plan(current_user, daily_plan_id)
 
 
 @router.post("/{ot_id}/review", response_model=OvertimeResponse)

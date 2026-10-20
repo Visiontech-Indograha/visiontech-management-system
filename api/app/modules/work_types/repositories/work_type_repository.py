@@ -169,75 +169,21 @@ class WorkTypeRepository(BaseRepository):
             )
         )
 
-    async def plan_type(self, plan_id: UUID | str) -> str | None:
-        """Jenis pekerjaan yang terpasang pada item rencana kerja."""
-        value = await self.scalar(
-            """
-            SELECT CAST(wi.work_type_id AS text)
-            FROM work_plan_item wi
-            JOIN work_plan_daily wd ON wd.daily_plan_id = wi.daily_plan_id
-            WHERE wd.weekly_plan_id = CAST(:id AS uuid) AND wi.delete_at IS NULL
-            LIMIT 1
-            """,
-            {"id": str(plan_id)},
-        )
-        return str(value) if value else None
-
-    async def template_of_plan(self, plan_id: UUID | str, day_id: UUID | str | None = None) -> list[Any]:
-        """Slot template foto SOP dari jenis pekerjaan pada rencana kerja."""
+    async def template_of_daily(self, daily_plan_id: UUID | str) -> list[Any]:
+        """Slot template foto SOP (image_requirement) dari jenis pekerjaan item jadwal harian ini."""
         return list(
             await self.fetchall(
                 """
-            SELECT p.image_requirement_id AS id, p.sort_order, p.name AS label,
+            SELECT DISTINCT p.image_requirement_id AS id, p.sort_order, p.name AS label,
                    p.path_image AS hint, p.is_mandatory AS required, p.path_image AS example_file_id
             FROM image_requirement p
             JOIN work_plan_item wi ON wi.work_type_id = p.work_type_id
-            JOIN work_plan_daily wd ON wd.daily_plan_id = wi.daily_plan_id
-            WHERE wd.weekly_plan_id = CAST(:plan AS uuid)
-              AND (CAST(:day AS uuid) IS NULL OR wd.daily_plan_id = CAST(:day AS uuid))
-              AND p.delete_at IS NULL AND wi.delete_at IS NULL
+            WHERE wi.daily_plan_id = CAST(:day AS uuid) AND p.delete_at IS NULL AND wi.delete_at IS NULL
             ORDER BY p.sort_order
             """,
-                {"plan": str(plan_id), "day": str(day_id) if day_id else None},
+                {"day": str(daily_plan_id)},
             )
         )
-
-    async def type_in_plan(self, plan_id: UUID | str, type_id: UUID | str) -> bool:
-        """Jenis ini sudah terpasang pada rencana kerja?"""
-        return bool(
-            await self.scalar(
-                """
-            SELECT EXISTS (
-                SELECT 1 FROM work_plan_item wi
-                JOIN work_plan_daily wd ON wd.daily_plan_id = wi.daily_plan_id
-                WHERE wd.weekly_plan_id = CAST(:plan AS uuid) AND wi.work_type_id = CAST(:wt AS uuid)
-                  AND wi.delete_at IS NULL AND wd.delete_at IS NULL
-            )
-            """,
-                {"plan": str(plan_id), "wt": str(type_id)},
-            )
-        )
-
-    async def missing_required_daily(self, plan_id: UUID | str, day_id: UUID | str) -> list[str]:
-        """Label slot wajib yang belum punya foto."""
-        rows = await self.fetchall(
-            """
-            SELECT p.name AS label
-            FROM image_requirement p
-            JOIN work_plan_item wi ON wi.work_type_id = p.work_type_id
-            WHERE wi.daily_plan_id = CAST(:day AS uuid)
-              AND p.is_mandatory = TRUE
-              AND p.delete_at IS NULL
-              AND (wi.photo_urls IS NULL OR jsonb_array_length(wi.photo_urls) = 0)
-            ORDER BY p.sort_order
-            """,
-            {"day": str(day_id)},
-        )
-        return [str(r.label) for r in rows]
-
-    async def missing_required_member(self, plan_id: UUID | str, report_id: UUID | str) -> list[str]:
-        """Label slot wajib yang belum punya foto pada laporan."""
-        return await self.missing_required_daily(plan_id, report_id)
 
     async def list_default_materials(self, work_type_id: UUID | str) -> list[Any]:
         """Daftar template material default untuk jenis pekerjaan tertentu."""

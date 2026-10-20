@@ -15,15 +15,10 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "http://127.0.0.1:8000/ready",
-              "protocol": "http",
+              "raw": "{{rootUrl}}/ready",
               "host": [
-                "127",
-                "0",
-                "0",
-                "1"
+                "{{rootUrl}}"
               ],
-              "port": "8000",
               "path": [
                 "ready"
               ]
@@ -413,358 +408,6 @@
                   "pm.test('Item BoM tercatat di database', function () {",
                   "    pm.expect(json).to.be.an('array');",
                   "    pm.expect(json.length).to.be.at.least(1);",
-                  "});"
-                ]
-              }
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "name": "05 - Perencanaan Harian Daily-First",
-      "item": [
-        {
-          "name": "05.1 - Get Form Options V2",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{bearer_token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/work-plans/form-options-v2",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "work-plans",
-                "form-options-v2"
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Form options V2 dimuat (200 OK)', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "var json = pm.response.json();",
-                  "pm.test('Memiliki opsi divisions, teams, work_types', function () {",
-                  "    pm.expect(json.divisions).to.be.an('array');",
-                  "    pm.expect(json.teams).to.be.an('array');",
-                  "    pm.expect(json.work_types).to.be.an('array');",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "05.2 - Create Daily Plan (Hari Kerja Lapangan)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{bearer_token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"division_id\": \"{{division_id}}\",\n  \"team_id\": \"{{team_id}}\",\n  \"work_date\": \"2026-10-25\",\n  \"site_name\": \"Area Kilang Minas GS-3\",\n  \"site_lat\": 0.7812,\n  \"site_lng\": 101.4412,\n  \"attendance_radius_m\": 150,\n  \"clock_in_time\": \"08:00:00\",\n  \"clock_out_time\": \"17:00:00\",\n  \"status\": \"SCHEDULED\",\n  \"is_holiday\": false\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/work-plans/daily",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "work-plans",
-                "daily"
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Hari kerja harian berhasil dibuat (201 Created)', function () {",
-                  "    pm.response.to.have.status(201);",
-                  "});",
-                  "var json = pm.response.json();",
-                  "pm.test('Tersimpan di tabel work_plan_daily', function () {",
-                  "    pm.expect(json.daily_plan_id).to.be.a('string');",
-                  "    pm.expect(json.site_name).to.eql('Area Kilang Minas GS-3');",
-                  "    pm.environment.set('test_daily_plan_id', json.daily_plan_id);",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "05.3 - Create Prerequisite Item (Survei Jalur)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{bearer_token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"daily_plan_id\": \"{{test_daily_plan_id}}\",\n  \"work_type_id\": \"{{work_type_id}}\",\n  \"completion_id\": \"{{test_completion_id}}\",\n  \"title\": \"Survei & Pemasangan Skafolding Jalur CCTV (Prerequisite)\",\n  \"task_phase\": \"SURVEY\",\n  \"is_main_deliverable\": false,\n  \"target_qty\": 1,\n  \"completed_qty\": 0,\n  \"progress_percent\": 0,\n  \"start_time\": \"08:00:00\",\n  \"end_time\": \"12:00:00\",\n  \"status\": \"PENDING\",\n  \"rollover_approval_status\": \"NONE\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/work-plans/items",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "work-plans",
-                "items"
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Item survei prasyarat dibuat (201 Created)', function () {",
-                  "    pm.response.to.have.status(201);",
-                  "});",
-                  "var json = pm.response.json();",
-                  "pm.test('task_phase SURVEY & deliverable false tersimpan', function () {",
-                  "    pm.expect(json.task_phase).to.eql('SURVEY');",
-                  "    pm.expect(json.is_main_deliverable).to.eql(false);",
-                  "    pm.expect(json.item_id).to.be.a('string');",
-                  "    pm.environment.set('test_prereq_item_id', json.item_id);",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "05.4 - Create Main Item with Depends On",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{bearer_token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"daily_plan_id\": \"{{test_daily_plan_id}}\",\n  \"work_type_id\": \"{{work_type_id}}\",\n  \"completion_id\": \"{{test_completion_id}}\",\n  \"depends_on_item_id\": \"{{test_prereq_item_id}}\",\n  \"title\": \"Instalasi Kamera CCTV & Integrasi NVR (Main Task)\",\n  \"task_phase\": \"MAIN_INSTALLATION\",\n  \"is_main_deliverable\": true,\n  \"target_qty\": 2,\n  \"completed_qty\": 0,\n  \"progress_percent\": 0,\n  \"start_time\": \"13:00:00\",\n  \"end_time\": \"17:00:00\",\n  \"status\": \"PENDING\",\n  \"rollover_approval_status\": \"NONE\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/work-plans/items",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "work-plans",
-                "items"
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Item instalasi utama dibuat dengan depends_on (201 Created)', function () {",
-                  "    pm.response.to.have.status(201);",
-                  "});",
-                  "var json = pm.response.json();",
-                  "pm.test('Relasi depends_on_item_id tercatat', function () {",
-                  "    pm.expect(json.depends_on_item_id).to.eql(pm.environment.get('test_prereq_item_id'));",
-                  "    pm.expect(json.is_main_deliverable).to.eql(true);",
-                  "    pm.environment.set('test_main_item_id', json.item_id);",
-                  "});"
-                ]
-              }
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "name": "06 - Mesin Kunci Prasyarat (Prerequisite Engine)",
-      "item": [
-        {
-          "name": "06.1 - Negative Test: Update Progress Blocked by Prerequisite",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{bearer_token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"progress_percent\": 50,\n  \"status\": \"IN_PROGRESS\",\n  \"completed_qty\": 1\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/work-plans/items/{{test_main_item_id}}/progress",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "work-plans",
-                "items",
-                "{{test_main_item_id}}",
-                "progress"
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Update ditolak karena prasyarat belum selesai (400 Bad Request)', function () {",
-                  "    pm.expect(pm.response.code).to.be.oneOf([400, 422]);",
-                  "});",
-                  "var json = pm.response.json();",
-                  "pm.test('Pesan galat menyebutkan prasyarat pekerjaan', function () {",
-                  "    var msg = (json.error && json.error.message) || json.detail || json.message || '';",
-                  "    pm.expect(msg.toLowerCase()).to.include('prasyarat');",
-                  "    if (json.error && json.error.code) {",
-                  "        pm.expect(json.error.code).to.eql('PREREQUISITE_NOT_MET');",
-                  "    }",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "06.2 - Complete Prerequisite Survey Task",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{bearer_token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"status\": \"DONE\",\n  \"progress_percent\": 100,\n  \"completed_qty\": 1\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/work-plans/items/{{test_prereq_item_id}}/progress",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "work-plans",
-                "items",
-                "{{test_prereq_item_id}}",
-                "progress"
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Tugas prasyarat berhasil diselesaikan (200 OK)', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "var json = pm.response.json();",
-                  "pm.test('Status survei menjadi COMPLETED/DONE', function () {",
-                  "    pm.expect(['DONE', 'COMPLETED']).to.include(json.status);",
-                  "    pm.expect(json.progress_percent).to.eql(100);",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "06.3 - Positive Test: Update Main Task Now Allowed",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{bearer_token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"status\": \"DONE\",\n  \"progress_percent\": 100,\n  \"completed_qty\": 2\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/work-plans/items/{{test_main_item_id}}/progress",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "work-plans",
-                "items",
-                "{{test_main_item_id}}",
-                "progress"
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Update tugas utama berhasil setelah prasyarat selesai (200 OK)', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "var json = pm.response.json();",
-                  "pm.test('Progres tugas utama berhasil 100%', function () {",
-                  "    pm.expect(['DONE', 'COMPLETED']).to.include(json.status);",
-                  "    pm.expect(json.progress_percent).to.eql(100);",
                   "});"
                 ]
               }
@@ -2600,6 +2243,981 @@
       ]
     },
     {
+      "name": "12 - Milestone 4: Inventaris Aset & Serah Terima (V2)",
+      "item": [
+        {
+          "name": "12.01 - Daftar kendaraan (pekerja lapangan boleh lihat)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"ada kolom STNK/KIR & pemegang\", () => {",
+                  "    const v = pm.response.json()[0];",
+                  "    pm.expect(v).to.have.property(\"stnk_expired_at\");",
+                  "    pm.expect(v).to.have.property(\"holder_name\");",
+                  "});",
+                  "pm.collectionVariables.set(\"m4_tag\", String(1000 + Date.now() % 9000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_emp}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/assets/vehicles",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assets",
+                "vehicles"
+              ]
+            }
+          }
+        },
+        {
+          "name": "12.02 - HR menambah alat bersama",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201\", () => pm.response.to.have.status(201));",
+                  "const t = pm.response.json();",
+                  "pm.test(\"kode dirapikan huruf besar\", () => pm.expect(t.tool_code).to.eql(\"PM-BOR-\" + pm.collectionVariables.get(\"m4_tag\")));",
+                  "pm.test(\"status ready\", () => pm.expect(t.status).to.eql(\"ready\"));",
+                  "pm.collectionVariables.set(\"m4_tool_id\", t.tool_id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/assets/tools",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assets",
+                "tools"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"office_id\": \"11111111-0000-4000-a000-000000000001\",\n  \"division_id\": \"33333333-0000-4000-a000-000000000001\",\n  \"ownership_type\": \"SHARED_TOOL\",\n  \"category\": \"BOR\",\n  \"name\": \"Bor uji Postman\",\n  \"tool_code\": \"pm-bor-{{m4_tag}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "12.03 - Kode alat kembar ditolak",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"409 TOOL_CODE_TAKEN\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"kode TOOL_CODE_TAKEN\", () => pm.expect(pm.response.json().error.code).to.eql(\"TOOL_CODE_TAKEN\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/assets/tools",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assets",
+                "tools"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"office_id\": \"11111111-0000-4000-a000-000000000001\",\n  \"ownership_type\": \"SHARED_TOOL\",\n  \"category\": \"BOR\",\n  \"name\": \"Bor kembar\",\n  \"tool_code\": \"PM-BOR-{{m4_tag}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "12.04 - PM tidak boleh mengelola master aset",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/assets/tools",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assets",
+                "tools"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"office_id\": \"11111111-0000-4000-a000-000000000001\",\n  \"ownership_type\": \"SHARED_TOOL\",\n  \"category\": \"BOR\",\n  \"name\": \"Bor PM\",\n  \"tool_code\": \"PM-X-{{m4_tag}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "12.05 - HR menambah truk (nopol dirapikan)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201\", () => pm.response.to.have.status(201));",
+                  "const v = pm.response.json();",
+                  "pm.test(\"nopol BK nnnn PM\", () => pm.expect(v.number_plate).to.eql(\"BK \" + Number(pm.collectionVariables.get(\"m4_tag\")) + \" PM\"));",
+                  "pm.collectionVariables.set(\"m4_vehicle_id\", v.vehicle_id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/assets/vehicles",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assets",
+                "vehicles"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"office_id\": \"11111111-0000-4000-a000-000000000001\",\n  \"division_id\": \"33333333-0000-4000-a000-000000000001\",\n  \"vehicle_type\": \"Truck\",\n  \"name\": \"Truk uji Postman\",\n  \"number_plate\": \"bk{{m4_tag}}pm\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "12.06 - Serah terima tanpa STNK ditolak",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"422 VEHICLE_PAPERS_EXPIRED\", () => pm.response.to.have.status(422));",
+                  "pm.test(\"kode VEHICLE_PAPERS_EXPIRED\", () => pm.expect(pm.response.json().error.code).to.eql(\"VEHICLE_PAPERS_EXPIRED\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/assets/loans",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assets",
+                "loans"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"asset_type\": \"VEHICLE\",\n  \"vehicle_id\": \"{{m4_vehicle_id}}\",\n  \"employee_id\": \"22222222-0000-4000-a000-000000000007\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "12.07 - Unggah berkas kendaraan",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set(\"m4_file_id\", pm.response.json().file_id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/files/upload",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "files",
+                "upload"
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "postman/fixtures/dokumen-uji.png"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "12.08 - Catat STNK",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201\", () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/assets/vehicles/{{m4_vehicle_id}}/files",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assets",
+                "vehicles",
+                "{{m4_vehicle_id}}",
+                "files"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"STNK\",\n  \"file_id\": \"{{m4_file_id}}\",\n  \"expired_at\": \"2031-12-31\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "12.09 - Truk tanpa KIR ditolak",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"422 VEHICLE_PAPERS_EXPIRED\", () => {",
+                  "    pm.response.to.have.status(422);",
+                  "    pm.expect(pm.response.json().error.code).to.eql(\"VEHICLE_PAPERS_EXPIRED\");",
+                  "    pm.expect(pm.response.json().error.message).to.include(\"KIR\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/assets/loans",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assets",
+                "loans"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"asset_type\": \"VEHICLE\",\n  \"vehicle_id\": \"{{m4_vehicle_id}}\",\n  \"employee_id\": \"22222222-0000-4000-a000-000000000007\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "12.10 - Catat KIR",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"STNK & KIR aktif\", () => pm.expect(pm.response.json().map(f => f.type).sort()).to.eql([\"KIR\", \"STNK\"]));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/assets/vehicles/{{m4_vehicle_id}}/files",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assets",
+                "vehicles",
+                "{{m4_vehicle_id}}",
+                "files"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"KIR\",\n  \"file_id\": \"{{m4_file_id}}\",\n  \"expired_at\": \"2027-06-30\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "12.11 - Serah terima truk ke Riko (SIM A berlaku)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201\", () => pm.response.to.have.status(201));",
+                  "const l = pm.response.json();",
+                  "pm.test(\"pinjaman pribadi = loaned\", () => pm.expect(l.assignment_status).to.eql(\"loaned\"));",
+                  "pm.collectionVariables.set(\"m4_loan_id\", l.assignment_id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/assets/loans",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assets",
+                "loans"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"asset_type\": \"VEHICLE\",\n  \"vehicle_id\": \"{{m4_vehicle_id}}\",\n  \"employee_id\": \"22222222-0000-4000-a000-000000000007\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "12.12 - Aset yang sedang dipinjam tidak bisa diserahkan lagi",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"409 ASSET_NOT_AVAILABLE\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"kode ASSET_NOT_AVAILABLE\", () => pm.expect(pm.response.json().error.code).to.eql(\"ASSET_NOT_AVAILABLE\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/assets/loans",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assets",
+                "loans"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"asset_type\": \"VEHICLE\",\n  \"vehicle_id\": \"{{m4_vehicle_id}}\",\n  \"employee_id\": \"22222222-0000-4000-a000-000000000007\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "12.13 - Status manual saat dipinjam ditolak",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"409 ASSET_IN_USE\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"kode ASSET_IN_USE\", () => pm.expect(pm.response.json().error.code).to.eql(\"ASSET_IN_USE\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/assets/vehicles/{{m4_vehicle_id}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assets",
+                "vehicles",
+                "{{m4_vehicle_id}}",
+                "status"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"damaged\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "12.14 - Pemegang (Riko) mencatat inspeksi harian",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"inspektur Riko\", () => pm.expect(pm.response.json()[0].inspector_employee_id).to.eql(\"22222222-0000-4000-a000-000000000007\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_emp}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/assets/vehicles/{{m4_vehicle_id}}/inspections",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assets",
+                "vehicles",
+                "{{m4_vehicle_id}}",
+                "inspections"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"day\",\n  \"file_id\": \"{{m4_file_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "12.15 - Bukan pemegang (TL) tidak boleh inspeksi",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_tl}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/assets/vehicles/{{m4_vehicle_id}}/inspections",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assets",
+                "vehicles",
+                "{{m4_vehicle_id}}",
+                "inspections"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"day\",\n  \"file_id\": \"{{m4_file_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "12.16 - Pekerja lapangan hanya melihat pinjamannya",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"semua milik Riko\", () => pm.response.json().forEach(l => pm.expect(l.employee_id).to.eql(\"22222222-0000-4000-a000-000000000007\")));",
+                  "pm.test(\"truk uji ada\", () => pm.expect(pm.response.json().map(l => l.assignment_id)).to.include(pm.collectionVariables.get(\"m4_loan_id\")));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_emp}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/assets/loans",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assets",
+                "loans"
+              ]
+            }
+          }
+        },
+        {
+          "name": "12.17 - Pengembalian truk (kondisi baik)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"returned_at terisi\", () => pm.expect(pm.response.json().returned_at).to.be.a(\"string\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/assets/loans/{{m4_loan_id}}/return",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assets",
+                "loans",
+                "{{m4_loan_id}}",
+                "return"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"condition\": \"ready\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "12.18 - Pengembalian ganda ditolak",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"409 ALREADY_RETURNED\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"kode ALREADY_RETURNED\", () => pm.expect(pm.response.json().error.code).to.eql(\"ALREADY_RETURNED\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/assets/loans/{{m4_loan_id}}/return",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assets",
+                "loans",
+                "{{m4_loan_id}}",
+                "return"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"condition\": \"ready\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "12.19 - Truk kembali siap",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"truk uji ready tanpa pemegang\", () => {",
+                  "    const v = pm.response.json().find(x => x.vehicle_id === pm.collectionVariables.get(\"m4_vehicle_id\"));",
+                  "    pm.expect(v).to.be.an(\"object\");",
+                  "    pm.expect(v.holder_employee_id).to.eql(null);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/assets/vehicles?status=ready",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assets",
+                "vehicles?status=ready"
+              ]
+            }
+          }
+        },
+        {
+          "name": "12.20 - Hapus truk uji (bersih-bersih)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/assets/vehicles/{{m4_vehicle_id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assets",
+                "vehicles",
+                "{{m4_vehicle_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "12.21 - Hapus alat uji (bersih-bersih)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/assets/tools/{{m4_tool_id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assets",
+                "tools",
+                "{{m4_tool_id}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "11 - Milestone 3: Tim, Anggota & Dokumen Karyawan (V2)",
       "item": [
         {
@@ -3843,10 +4461,10 @@
       ]
     },
     {
-      "name": "12 - Milestone 4: Inventaris Aset & Serah Terima (V2)",
+      "name": "13 - Milestone 5: Jadwal Harian Daily-First, Lembur & Mess (V2)",
       "item": [
         {
-          "name": "12.01 - Daftar kendaraan (pekerja lapangan boleh lihat)",
+          "name": "13.01 - PM Sipil: pilihan formulir hanya divisinya",
           "event": [
             {
               "listen": "test",
@@ -3854,12 +4472,15 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"200\", () => pm.response.to.have.status(200));",
-                  "pm.test(\"ada kolom STNK/KIR & pemegang\", () => {",
-                  "    const v = pm.response.json()[0];",
-                  "    pm.expect(v).to.have.property(\"stnk_expired_at\");",
-                  "    pm.expect(v).to.have.property(\"holder_name\");",
-                  "});",
-                  "pm.collectionVariables.set(\"m4_tag\", String(1000 + Date.now() % 9000));"
+                  "const o = pm.response.json();",
+                  "pm.test(\"divisi = Sipil saja\", () => pm.expect(o.divisions.map(d => d.division_id)).to.eql([\"33333333-0000-4000-a000-000000000001\"]));",
+                  "pm.test(\"tim Charlie ada\", () => pm.expect(o.teams.map(t => t.team_id)).to.include(\"9915df77-9e7c-4459-9f64-ba441c446587\"));",
+                  "// Tanggal uji jauh di depan agar tidak bentrok dengan data lain (satu jadwal per tim per hari).",
+                  "const d = new Date(Date.now() + (200 + Math.floor(Math.random() * 300)) * 86400000);",
+                  "const iso = x => x.toISOString().slice(0, 10);",
+                  "pm.collectionVariables.set(\"m5_date\", iso(d));",
+                  "pm.collectionVariables.set(\"m5_date2\", iso(new Date(d.getTime() + 86400000)));",
+                  "pm.collectionVariables.set(\"m5_date3\", iso(new Date(d.getTime() + 2 * 86400000)));"
                 ]
               }
             }
@@ -3873,23 +4494,23 @@
               },
               {
                 "key": "Authorization",
-                "value": "Bearer {{tok_emp}}"
+                "value": "Bearer {{tok_pm}}"
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/assets/vehicles",
+              "raw": "{{baseUrl}}/work-plans/form-options",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "assets",
-                "vehicles"
+                "work-plans",
+                "form-options"
               ]
             }
           }
         },
         {
-          "name": "12.02 - HR menambah alat bersama",
+          "name": "13.02 - PM membuat jadwal (DRAFT)",
           "event": [
             {
               "listen": "test",
@@ -3897,103 +4518,9 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"201\", () => pm.response.to.have.status(201));",
-                  "const t = pm.response.json();",
-                  "pm.test(\"kode dirapikan huruf besar\", () => pm.expect(t.tool_code).to.eql(\"PM-BOR-\" + pm.collectionVariables.get(\"m4_tag\")));",
-                  "pm.test(\"status ready\", () => pm.expect(t.status).to.eql(\"ready\"));",
-                  "pm.collectionVariables.set(\"m4_tool_id\", t.tool_id);"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{tok_hr}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/assets/tools",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "assets",
-                "tools"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"office_id\": \"11111111-0000-4000-a000-000000000001\",\n  \"division_id\": \"33333333-0000-4000-a000-000000000001\",\n  \"ownership_type\": \"SHARED_TOOL\",\n  \"category\": \"BOR\",\n  \"name\": \"Bor uji Postman\",\n  \"tool_code\": \"pm-bor-{{m4_tag}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "12.03 - Kode alat kembar ditolak",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"409 TOOL_CODE_TAKEN\", () => pm.response.to.have.status(409));",
-                  "pm.test(\"kode TOOL_CODE_TAKEN\", () => pm.expect(pm.response.json().error.code).to.eql(\"TOOL_CODE_TAKEN\"));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{tok_hr}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/assets/tools",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "assets",
-                "tools"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"office_id\": \"11111111-0000-4000-a000-000000000001\",\n  \"ownership_type\": \"SHARED_TOOL\",\n  \"category\": \"BOR\",\n  \"name\": \"Bor kembar\",\n  \"tool_code\": \"PM-BOR-{{m4_tag}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "12.04 - PM tidak boleh mengelola master aset",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"403\", () => pm.response.to.have.status(403));"
+                  "const p = pm.response.json();",
+                  "pm.test(\"DRAFT, ketua Agus\", () => { pm.expect(p.status).to.eql(\"DRAFT\"); pm.expect(p.leader_name).to.include(\"Agus\"); });",
+                  "pm.collectionVariables.set(\"m5_plan\", p.daily_plan_id);"
                 ]
               }
             }
@@ -4011,18 +4538,18 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/assets/tools",
+              "raw": "{{baseUrl}}/work-plans/daily",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "assets",
-                "tools"
+                "work-plans",
+                "daily"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"office_id\": \"11111111-0000-4000-a000-000000000001\",\n  \"ownership_type\": \"SHARED_TOOL\",\n  \"category\": \"BOR\",\n  \"name\": \"Bor PM\",\n  \"tool_code\": \"PM-X-{{m4_tag}}\"\n}",
+              "raw": "{\n  \"division_id\": \"33333333-0000-4000-a000-000000000001\",\n  \"team_id\": \"9915df77-9e7c-4459-9f64-ba441c446587\",\n  \"work_date\": \"{{m5_date}}\",\n  \"site_name\": \"Gardu Induk Minas (uji)\",\n  \"site_lat\": \"1.4700000\",\n  \"site_lng\": \"101.4500000\",\n  \"attendance_radius_m\": 200,\n  \"clock_in_time\": \"07:30\",\n  \"clock_out_time\": \"16:30\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -4032,17 +4559,15 @@
           }
         },
         {
-          "name": "12.05 - HR menambah truk (nopol dirapikan)",
+          "name": "13.03 - Satu jadwal per tim per tanggal",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"201\", () => pm.response.to.have.status(201));",
-                  "const v = pm.response.json();",
-                  "pm.test(\"nopol BK nnnn PM\", () => pm.expect(v.number_plate).to.eql(\"BK \" + Number(pm.collectionVariables.get(\"m4_tag\")) + \" PM\"));",
-                  "pm.collectionVariables.set(\"m4_vehicle_id\", v.vehicle_id);"
+                  "pm.test(\"409 TEAM_DAY_TAKEN\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"kode TEAM_DAY_TAKEN\", () => pm.expect(pm.response.json().error.code).to.eql(\"TEAM_DAY_TAKEN\"));"
                 ]
               }
             }
@@ -4056,22 +4581,22 @@
               },
               {
                 "key": "Authorization",
-                "value": "Bearer {{tok_hr}}"
+                "value": "Bearer {{tok_pm}}"
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/assets/vehicles",
+              "raw": "{{baseUrl}}/work-plans/daily",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "assets",
-                "vehicles"
+                "work-plans",
+                "daily"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"office_id\": \"11111111-0000-4000-a000-000000000001\",\n  \"division_id\": \"33333333-0000-4000-a000-000000000001\",\n  \"vehicle_type\": \"Truck\",\n  \"name\": \"Truk uji Postman\",\n  \"number_plate\": \"bk{{m4_tag}}pm\"\n}",
+              "raw": "{\n  \"division_id\": \"33333333-0000-4000-a000-000000000001\",\n  \"team_id\": \"9915df77-9e7c-4459-9f64-ba441c446587\",\n  \"work_date\": \"{{m5_date}}\",\n  \"site_name\": \"Gardu Induk Minas (uji)\",\n  \"site_lat\": \"1.4700000\",\n  \"site_lng\": \"101.4500000\",\n  \"attendance_radius_m\": 200,\n  \"clock_in_time\": \"07:30\",\n  \"clock_out_time\": \"16:30\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -4081,15 +4606,15 @@
           }
         },
         {
-          "name": "12.06 - Serah terima tanpa STNK ditolak",
+          "name": "13.04 - Tanggal lampau ditolak",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"422 VEHICLE_PAPERS_EXPIRED\", () => pm.response.to.have.status(422));",
-                  "pm.test(\"kode VEHICLE_PAPERS_EXPIRED\", () => pm.expect(pm.response.json().error.code).to.eql(\"VEHICLE_PAPERS_EXPIRED\"));"
+                  "pm.test(\"422 VALIDATION_ERROR\", () => pm.response.to.have.status(422));",
+                  "pm.test(\"kode VALIDATION_ERROR\", () => pm.expect(pm.response.json().error.code).to.eql(\"VALIDATION_ERROR\"));"
                 ]
               }
             }
@@ -4103,22 +4628,22 @@
               },
               {
                 "key": "Authorization",
-                "value": "Bearer {{tok_hr}}"
+                "value": "Bearer {{tok_pm}}"
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/assets/loans",
+              "raw": "{{baseUrl}}/work-plans/daily",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "assets",
-                "loans"
+                "work-plans",
+                "daily"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"asset_type\": \"VEHICLE\",\n  \"vehicle_id\": \"{{m4_vehicle_id}}\",\n  \"employee_id\": \"22222222-0000-4000-a000-000000000007\"\n}",
+              "raw": "{\n  \"division_id\": \"33333333-0000-4000-a000-000000000001\",\n  \"team_id\": \"9915df77-9e7c-4459-9f64-ba441c446587\",\n  \"work_date\": \"2020-01-01\",\n  \"site_name\": \"Gardu Induk Minas (uji)\",\n  \"site_lat\": \"1.4700000\",\n  \"site_lng\": \"101.4500000\",\n  \"attendance_radius_m\": 200,\n  \"clock_in_time\": \"07:30\",\n  \"clock_out_time\": \"16:30\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -4128,58 +4653,14 @@
           }
         },
         {
-          "name": "12.07 - Unggah berkas kendaraan",
+          "name": "13.05 - Jam pulang sebelum jam masuk ditolak",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
-                  "pm.collectionVariables.set(\"m4_file_id\", pm.response.json().file_id);"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{tok_hr}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/files/upload",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "files",
-                "upload"
-              ]
-            },
-            "body": {
-              "mode": "formdata",
-              "formdata": [
-                {
-                  "key": "file",
-                  "type": "file",
-                  "src": "postman/fixtures/dokumen-uji.png"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "12.08 - Catat STNK",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"201\", () => pm.response.to.have.status(201));"
+                  "pm.test(\"422\", () => pm.response.to.have.status(422));"
                 ]
               }
             }
@@ -4193,24 +4674,22 @@
               },
               {
                 "key": "Authorization",
-                "value": "Bearer {{tok_hr}}"
+                "value": "Bearer {{tok_pm}}"
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/assets/vehicles/{{m4_vehicle_id}}/files",
+              "raw": "{{baseUrl}}/work-plans/daily",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "assets",
-                "vehicles",
-                "{{m4_vehicle_id}}",
-                "files"
+                "work-plans",
+                "daily"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"type\": \"STNK\",\n  \"file_id\": \"{{m4_file_id}}\",\n  \"expired_at\": \"2031-12-31\"\n}",
+              "raw": "{\n  \"division_id\": \"33333333-0000-4000-a000-000000000001\",\n  \"team_id\": \"9915df77-9e7c-4459-9f64-ba441c446587\",\n  \"work_date\": \"{{m5_date2}}\",\n  \"site_name\": \"Gardu Induk Minas (uji)\",\n  \"site_lat\": \"1.4700000\",\n  \"site_lng\": \"101.4500000\",\n  \"attendance_radius_m\": 200,\n  \"clock_in_time\": \"16:00\",\n  \"clock_out_time\": \"08:00\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -4220,300 +4699,7 @@
           }
         },
         {
-          "name": "12.09 - Truk tanpa KIR ditolak",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"422 VEHICLE_PAPERS_EXPIRED\", () => {",
-                  "    pm.response.to.have.status(422);",
-                  "    pm.expect(pm.response.json().error.code).to.eql(\"VEHICLE_PAPERS_EXPIRED\");",
-                  "    pm.expect(pm.response.json().error.message).to.include(\"KIR\");",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{tok_hr}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/assets/loans",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "assets",
-                "loans"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"asset_type\": \"VEHICLE\",\n  \"vehicle_id\": \"{{m4_vehicle_id}}\",\n  \"employee_id\": \"22222222-0000-4000-a000-000000000007\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "12.10 - Catat KIR",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"201\", () => pm.response.to.have.status(201));",
-                  "pm.test(\"STNK & KIR aktif\", () => pm.expect(pm.response.json().map(f => f.type).sort()).to.eql([\"KIR\", \"STNK\"]));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{tok_hr}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/assets/vehicles/{{m4_vehicle_id}}/files",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "assets",
-                "vehicles",
-                "{{m4_vehicle_id}}",
-                "files"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"type\": \"KIR\",\n  \"file_id\": \"{{m4_file_id}}\",\n  \"expired_at\": \"2027-06-30\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "12.11 - Serah terima truk ke Riko (SIM A berlaku)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"201\", () => pm.response.to.have.status(201));",
-                  "const l = pm.response.json();",
-                  "pm.test(\"pinjaman pribadi = loaned\", () => pm.expect(l.assignment_status).to.eql(\"loaned\"));",
-                  "pm.collectionVariables.set(\"m4_loan_id\", l.assignment_id);"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{tok_hr}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/assets/loans",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "assets",
-                "loans"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"asset_type\": \"VEHICLE\",\n  \"vehicle_id\": \"{{m4_vehicle_id}}\",\n  \"employee_id\": \"22222222-0000-4000-a000-000000000007\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "12.12 - Aset yang sedang dipinjam tidak bisa diserahkan lagi",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"409 ASSET_NOT_AVAILABLE\", () => pm.response.to.have.status(409));",
-                  "pm.test(\"kode ASSET_NOT_AVAILABLE\", () => pm.expect(pm.response.json().error.code).to.eql(\"ASSET_NOT_AVAILABLE\"));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{tok_hr}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/assets/loans",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "assets",
-                "loans"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"asset_type\": \"VEHICLE\",\n  \"vehicle_id\": \"{{m4_vehicle_id}}\",\n  \"employee_id\": \"22222222-0000-4000-a000-000000000007\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "12.13 - Status manual saat dipinjam ditolak",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"409 ASSET_IN_USE\", () => pm.response.to.have.status(409));",
-                  "pm.test(\"kode ASSET_IN_USE\", () => pm.expect(pm.response.json().error.code).to.eql(\"ASSET_IN_USE\"));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{tok_hr}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/assets/vehicles/{{m4_vehicle_id}}/status",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "assets",
-                "vehicles",
-                "{{m4_vehicle_id}}",
-                "status"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"status\": \"damaged\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "12.14 - Pemegang (Riko) mencatat inspeksi harian",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"201\", () => pm.response.to.have.status(201));",
-                  "pm.test(\"inspektur Riko\", () => pm.expect(pm.response.json()[0].inspector_employee_id).to.eql(\"22222222-0000-4000-a000-000000000007\"));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{tok_emp}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/assets/vehicles/{{m4_vehicle_id}}/inspections",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "assets",
-                "vehicles",
-                "{{m4_vehicle_id}}",
-                "inspections"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"type\": \"day\",\n  \"file_id\": \"{{m4_file_id}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "12.15 - Bukan pemegang (TL) tidak boleh inspeksi",
+          "name": "13.06 - PM divisi lain tidak boleh menjadwalkan tim Sipil",
           "event": [
             {
               "listen": "test",
@@ -4534,24 +4720,22 @@
               },
               {
                 "key": "Authorization",
-                "value": "Bearer {{tok_tl}}"
+                "value": "Bearer {{tok_pm2}}"
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/assets/vehicles/{{m4_vehicle_id}}/inspections",
+              "raw": "{{baseUrl}}/work-plans/daily",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "assets",
-                "vehicles",
-                "{{m4_vehicle_id}}",
-                "inspections"
+                "work-plans",
+                "daily"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"type\": \"day\",\n  \"file_id\": \"{{m4_file_id}}\"\n}",
+              "raw": "{\n  \"division_id\": \"33333333-0000-4000-a000-000000000001\",\n  \"team_id\": \"9915df77-9e7c-4459-9f64-ba441c446587\",\n  \"work_date\": \"{{m5_date2}}\",\n  \"site_name\": \"Gardu Induk Minas (uji)\",\n  \"site_lat\": \"1.4700000\",\n  \"site_lng\": \"101.4500000\",\n  \"attendance_radius_m\": 200,\n  \"clock_in_time\": \"07:30\",\n  \"clock_out_time\": \"16:30\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -4561,16 +4745,14 @@
           }
         },
         {
-          "name": "12.16 - Pekerja lapangan hanya melihat pinjamannya",
+          "name": "13.07 - Ketua belum melihat jadwal DRAFT",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
-                  "pm.test(\"semua milik Riko\", () => pm.response.json().forEach(l => pm.expect(l.employee_id).to.eql(\"22222222-0000-4000-a000-000000000007\")));",
-                  "pm.test(\"truk uji ada\", () => pm.expect(pm.response.json().map(l => l.assignment_id)).to.include(pm.collectionVariables.get(\"m4_loan_id\")));"
+                  "pm.test(\"404\", () => pm.response.to.have.status(404));"
                 ]
               }
             }
@@ -4584,31 +4766,31 @@
               },
               {
                 "key": "Authorization",
-                "value": "Bearer {{tok_emp}}"
+                "value": "Bearer {{tok_tl}}"
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/assets/loans",
+              "raw": "{{baseUrl}}/work-plans/daily/{{m5_plan}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "assets",
-                "loans"
+                "work-plans",
+                "daily",
+                "{{m5_plan}}"
               ]
             }
           }
         },
         {
-          "name": "12.17 - Pengembalian truk (kondisi baik)",
+          "name": "13.08 - Ajukan",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
-                  "pm.test(\"returned_at terisi\", () => pm.expect(pm.response.json().returned_at).to.be.a(\"string\"));"
+                  "pm.test(\"SUBMITTED\", () => pm.expect(pm.response.json().status).to.eql(\"SUBMITTED\"));"
                 ]
               }
             }
@@ -4622,100 +4804,662 @@
               },
               {
                 "key": "Authorization",
-                "value": "Bearer {{tok_hr}}"
+                "value": "Bearer {{tok_pm}}"
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/assets/loans/{{m4_loan_id}}/return",
+              "raw": "{{baseUrl}}/work-plans/daily/{{m5_plan}}/submit",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "assets",
-                "loans",
-                "{{m4_loan_id}}",
-                "return"
+                "work-plans",
+                "daily",
+                "{{m5_plan}}",
+                "submit"
               ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"condition\": \"ready\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
             }
           }
         },
         {
-          "name": "12.18 - Pengembalian ganda ditolak",
+          "name": "13.09 - Kembalikan dengan alasan",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"409 ALREADY_RETURNED\", () => pm.response.to.have.status(409));",
-                  "pm.test(\"kode ALREADY_RETURNED\", () => pm.expect(pm.response.json().error.code).to.eql(\"ALREADY_RETURNED\"));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{tok_hr}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/assets/loans/{{m4_loan_id}}/return",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "assets",
-                "loans",
-                "{{m4_loan_id}}",
-                "return"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"condition\": \"ready\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "12.19 - Truk kembali siap",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
-                  "pm.test(\"truk uji ready tanpa pemegang\", () => {",
-                  "    const v = pm.response.json().find(x => x.vehicle_id === pm.collectionVariables.get(\"m4_vehicle_id\"));",
-                  "    pm.expect(v).to.be.an(\"object\");",
-                  "    pm.expect(v.holder_employee_id).to.eql(null);",
+                  "pm.test(\"DRAFT + alasan\", () => {",
+                  "    pm.expect(pm.response.json().status).to.eql(\"DRAFT\");",
+                  "    pm.expect(pm.response.json().rejection_reason).to.eql(\"Titik kumpul belum pasti\");",
                   "});"
                 ]
               }
             }
           ],
           "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/work-plans/daily/{{m5_plan}}/reject",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "work-plans",
+                "daily",
+                "{{m5_plan}}",
+                "reject"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Titik kumpul belum pasti\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "13.10 - Ubah saat DRAFT",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"lokasi berubah\", () => pm.expect(pm.response.json().site_name).to.include(\"Blok B\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/work-plans/daily/{{m5_plan}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "work-plans",
+                "daily",
+                "{{m5_plan}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"site_name\": \"Gardu Induk Minas Blok B (uji)\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "13.11 - Setujui (langsung dari DRAFT)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"APPROVED + penyetuju\", () => {",
+                  "    pm.expect(pm.response.json().status).to.eql(\"APPROVED\");",
+                  "    pm.expect(pm.response.json().approved_by_pm_id).to.eql(pm.collectionVariables.get(\"pm_employee_id\"));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/work-plans/daily/{{m5_plan}}/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "work-plans",
+                "daily",
+                "{{m5_plan}}",
+                "approve"
+              ]
+            }
+          }
+        },
+        {
+          "name": "13.12 - Ketua kini melihat jadwalnya",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"detail memuat items & lampiran\", () => { pm.expect(pm.response.json()).to.have.property(\"items\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_tl}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/work-plans/daily/{{m5_plan}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "work-plans",
+                "daily",
+                "{{m5_plan}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "13.13 - Belum tanggalnya: ketua belum bisa mulai",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"422 VALIDATION_ERROR\", () => pm.response.to.have.status(422));",
+                  "pm.test(\"kode VALIDATION_ERROR\", () => pm.expect(pm.response.json().error.code).to.eql(\"VALIDATION_ERROR\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_tl}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/work-plans/daily/{{m5_plan}}/start",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "work-plans",
+                "daily",
+                "{{m5_plan}}",
+                "start"
+              ]
+            }
+          }
+        },
+        {
+          "name": "13.14 - Jadwal disetujui tidak bisa diubah",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"409 INVALID_STATE\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"kode INVALID_STATE\", () => pm.expect(pm.response.json().error.code).to.eql(\"INVALID_STATE\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/work-plans/daily/{{m5_plan}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "work-plans",
+                "daily",
+                "{{m5_plan}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"site_name\": \"X Site\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "13.15 - Lembur hanya untuk jadwal berjalan",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"409 INVALID_STATE\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"kode INVALID_STATE\", () => pm.expect(pm.response.json().error.code).to.eql(\"INVALID_STATE\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_tl}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/overtime",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "overtime"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"daily_plan_id\": \"{{m5_plan}}\",\n  \"hours\": 2,\n  \"reason\": \"Tarik kabel\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "13.16 - Salin ke 2 hari berikutnya (DRAFT)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201\", () => pm.response.to.have.status(201));",
+                  "const ids = pm.response.json().map(p => p.daily_plan_id);",
+                  "pm.test(\"2 draf\", () => { pm.expect(ids.length).to.eql(2); pm.response.json().forEach(p => pm.expect(p.status).to.eql(\"DRAFT\")); });",
+                  "pm.collectionVariables.set(\"m5_copy1\", ids[0]);",
+                  "pm.collectionVariables.set(\"m5_copy2\", ids[1]);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/work-plans/daily/{{m5_plan}}/copy",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "work-plans",
+                "daily",
+                "{{m5_plan}}",
+                "copy"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"work_dates\": [\n    \"{{m5_date2}}\",\n    \"{{m5_date3}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "13.17 - Persetujuan matriks: yang sudah APPROVED dilewati",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "const r = pm.response.json();",
+                  "pm.test(\"2 disetujui, 1 dilewati\", () => {",
+                  "    pm.expect(r.approved.length).to.eql(2);",
+                  "    pm.expect(r.skipped).to.eql([pm.collectionVariables.get(\"m5_plan\")]);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/work-plans/daily/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "work-plans",
+                "daily",
+                "approve"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"daily_plan_ids\": [\n    \"{{m5_copy1}}\",\n    \"{{m5_copy2}}\",\n    \"{{m5_plan}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "13.18 - Daftar rentang tanggal (PM)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "const mine = pm.response.json().filter(p => p.team_id === \"9915df77-9e7c-4459-9f64-ba441c446587\");",
+                  "pm.test(\"3 jadwal Charlie\", () => pm.expect(mine.length).to.eql(3));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/work-plans/daily?start={{m5_date}}&end={{m5_date3}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "work-plans",
+                "daily?start={{m5_date}}&end={{m5_date3}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "13.19 - PM divisi lain tidak melihatnya",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"tidak ada jadwal Charlie\", () => pm.expect(pm.response.json().filter(p => p.team_id === \"9915df77-9e7c-4459-9f64-ba441c446587\").length).to.eql(0));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm2}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/work-plans/daily?start={{m5_date}}&end={{m5_date3}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "work-plans",
+                "daily?start={{m5_date}}&end={{m5_date3}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "13.20 - Rentang > 62 hari ditolak",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"422\", () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/work-plans/daily?start=2026-01-01&end=2026-12-31",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "work-plans",
+                "daily?start=2026-01-01&end=2026-12-31"
+              ]
+            }
+          }
+        },
+        {
+          "name": "13.21 - HR mencatat hunian mess Riko",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"m5_mess\", pm.response.json().mess_stay_id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mess",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mess"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mess_name\": \"Mess Minas (uji)\",\n  \"city\": \"Minas\",\n  \"address\": \"Jl. Uji Mess\",\n  \"latitude\": \"1.47\",\n  \"longitude\": \"101.45\",\n  \"employee_id\": \"22222222-0000-4000-a000-000000000007\",\n  \"stay_start_date\": \"{{m5_date}}\",\n  \"stay_end_date\": \"{{m5_date3}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "13.22 - Hunian tumpang tindih ditolak",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"409 MESS_OVERLAP\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"kode MESS_OVERLAP\", () => pm.expect(pm.response.json().error.code).to.eql(\"MESS_OVERLAP\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mess",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mess"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mess_name\": \"Mess lain (uji)\",\n  \"city\": \"Minas\",\n  \"address\": \"Jl. Uji\",\n  \"latitude\": \"1.47\",\n  \"longitude\": \"101.45\",\n  \"employee_id\": \"22222222-0000-4000-a000-000000000007\",\n  \"stay_start_date\": \"{{m5_date2}}\",\n  \"stay_end_date\": \"{{m5_date2}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "13.23 - Daftar mess beririsan minggu jadwal",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"hunian uji ada\", () => pm.expect(pm.response.json().map(m => m.mess_stay_id)).to.include(pm.collectionVariables.get(\"m5_mess\")));"
+                ]
+              }
+            }
+          ],
+          "request": {
             "method": "GET",
             "header": [
               {
@@ -4728,19 +5472,18 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/assets/vehicles?status=ready",
+              "raw": "{{baseUrl}}/mess?start={{m5_date2}}&end={{m5_date2}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "assets",
-                "vehicles?status=ready"
+                "mess?start={{m5_date2}}&end={{m5_date2}}"
               ]
             }
           }
         },
         {
-          "name": "12.20 - Hapus truk uji (bersih-bersih)",
+          "name": "13.24 - Hapus mess uji (bersih-bersih)",
           "event": [
             {
               "listen": "test",
@@ -4765,20 +5508,67 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/assets/vehicles/{{m4_vehicle_id}}",
+              "raw": "{{baseUrl}}/mess/{{m5_mess}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "assets",
-                "vehicles",
-                "{{m4_vehicle_id}}"
+                "mess",
+                "{{m5_mess}}"
               ]
             }
           }
         },
         {
-          "name": "12.21 - Hapus alat uji (bersih-bersih)",
+          "name": "13.25a - Kembalikan m5_plan ke draf (bersih-bersih)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/work-plans/daily/{{m5_plan}}/reject",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "work-plans",
+                "daily",
+                "{{m5_plan}}",
+                "reject"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Bersih-bersih uji Postman\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "13.25b - Hapus m5_plan (bersih-bersih)",
           "event": [
             {
               "listen": "test",
@@ -4799,18 +5589,190 @@
               },
               {
                 "key": "Authorization",
-                "value": "Bearer {{tok_hr}}"
+                "value": "Bearer {{tok_pm}}"
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/assets/tools/{{m4_tool_id}}",
+              "raw": "{{baseUrl}}/work-plans/daily/{{m5_plan}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "assets",
-                "tools",
-                "{{m4_tool_id}}"
+                "work-plans",
+                "daily",
+                "{{m5_plan}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "13.26a - Kembalikan m5_copy1 ke draf (bersih-bersih)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/work-plans/daily/{{m5_copy1}}/reject",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "work-plans",
+                "daily",
+                "{{m5_copy1}}",
+                "reject"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Bersih-bersih uji Postman\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "13.26b - Hapus m5_copy1 (bersih-bersih)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/work-plans/daily/{{m5_copy1}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "work-plans",
+                "daily",
+                "{{m5_copy1}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "13.27a - Kembalikan m5_copy2 ke draf (bersih-bersih)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/work-plans/daily/{{m5_copy2}}/reject",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "work-plans",
+                "daily",
+                "{{m5_copy2}}",
+                "reject"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Bersih-bersih uji Postman\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "13.27b - Hapus m5_copy2 (bersih-bersih)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/work-plans/daily/{{m5_copy2}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "work-plans",
+                "daily",
+                "{{m5_copy2}}"
               ]
             }
           }
@@ -4914,6 +5876,38 @@
     {
       "key": "m4_loan_id",
       "value": ""
+    },
+    {
+      "key": "m5_date",
+      "value": ""
+    },
+    {
+      "key": "m5_date2",
+      "value": ""
+    },
+    {
+      "key": "m5_date3",
+      "value": ""
+    },
+    {
+      "key": "m5_plan",
+      "value": ""
+    },
+    {
+      "key": "m5_copy1",
+      "value": ""
+    },
+    {
+      "key": "m5_copy2",
+      "value": ""
+    },
+    {
+      "key": "m5_mess",
+      "value": ""
+    },
+    {
+      "key": "rootUrl",
+      "value": "http://127.0.0.1:8000"
     }
   ]
 }

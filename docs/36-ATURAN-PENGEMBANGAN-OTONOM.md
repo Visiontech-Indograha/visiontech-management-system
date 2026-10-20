@@ -30,7 +30,12 @@ Status per 2026-10-20 (API + uji Postman; UI web/HP belum disesuaikan sehingga b
       anggota timnya; kendaraan wajib STNK berlaku (KIR untuk Truck) + SIM sesuai jenis. Jadwal → `allocated`,
       pribadi → `loaned`; kembali → ready/damaged/lost. Inspeksi oleh pengelola aset atau pemegang.
 - [ ] **Milestone 5**: Order Klien & Perencanaan Harian Daily-First (`work_completion` sebagai order, `work_plan_daily`,
-      `company_mess_stay`) — **tanpa** `work_plan_weekly`
+      `company_mess_stay`) — **tanpa** `work_plan_weekly` — API ✔, Postman ✔, web ✔, **HP belum** (butuh Flutter SDK).
+      Alur SK V1 (draf/terbit/terima/banding/adendum/revisi/laporan akhir/dokumen SK, insiden & laporan harian SK,
+      lini masa per SK) **dipensiunkan** (keputusan pemilik 2026-10-21). Jadwal: DRAFT → SUBMITTED → APPROVED →
+      ONGOING → COMPLETED; satu jadwal per tim per tanggal; PM/OM divisi mengelola; lapangan melihat setelah
+      disetujui. Migrasi `db/migration_m5_daily_refs.sql`: overtime/lampiran → `daily_plan_id` (FK), `file_object`
+      → `office_id` (FK) + `uploaded_by` (FK), `work_plan_item.notes`, CHECK fase & status.
 - [ ] **Milestone 6**: Item Pekerjaan per Titik, Fase & Rollover (`work_plan_item`, `work_type`, `image_requirement`,
       `work_type_default_materials`, `work_completion_bom`)
 - [ ] **Milestone 7**: Presensi Biometrik Wajah & Otomasi Uang Makan (`attendance`, `employee.face_embedding`)

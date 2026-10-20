@@ -4,6 +4,7 @@ Rute API HTTP untuk entitas hunian mess karyawan (company_mess_stay).
 """
 from __future__ import annotations
 
+from datetime import date
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
@@ -26,12 +27,13 @@ _MANAGE = Depends(require_permission(Permission.MANAGE_MESS))
 @router.get("", response_model=list[MessStayOut])
 async def list_stays(
     employee_id: UUID | None = Query(None, description="Filter berdasarkan ID karyawan"),
-    weekly_plan_id: UUID | None = Query(None, description="Filter berdasarkan ID rencana mingguan"),
+    start: date | None = Query(None, description="Hunian yang beririsan sejak tanggal ini"),
+    end: date | None = Query(None, description="Hunian yang beririsan sampai tanggal ini"),
     current_user: CurrentUser = _VIEW,
     controller: MessController = Depends(),
 ) -> list[MessStayOut]:
     """Mengambil daftar riwayat dan jadwal hunian mess karyawan."""
-    return await controller.handle_list_stays(current_user, employee_id, weekly_plan_id)
+    return await controller.handle_list_stays(current_user, employee_id, start, end)
 
 
 @router.get("/{mess_stay_id}", response_model=MessStayOut)

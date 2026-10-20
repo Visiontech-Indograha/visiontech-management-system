@@ -9,7 +9,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Response, status
 
-from app.api.deps import get_current_user, plan_access, require_permission
+from app.api.deps import daily_access, get_current_user, require_permission
 from app.core.permissions import Permission
 from app.core.security import CurrentUser
 from app.modules.work_types.controllers.work_type_controller import WorkTypeController
@@ -21,11 +21,11 @@ from app.modules.work_types.schemas.work_type_schema import (
     WorkTypeOut,
     WorkTypePhotoOut,
 )
-from app.shared.access.access_service import PlanAccess, PlanNeed
+from app.shared.access.access_service import DailyAccess, DailyNeed
 
 router = APIRouter(tags=["Work Types"])
 _MANAGE = Depends(require_permission(Permission.CREATE_PLAN))
-_VIEW = Depends(plan_access(PlanNeed.VIEW))
+_VIEW = Depends(daily_access(DailyNeed.VIEW))
 
 
 @router.get("/work-types", response_model=list[WorkTypeOut])
@@ -104,17 +104,16 @@ async def deactivate_work_type(
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@router.get("/work-plans/{plan_id}/photo-template", response_model=list[WorkTypePhotoOut])
+@router.get("/work-plans/daily/{daily_plan_id}/photo-template", response_model=list[WorkTypePhotoOut])
 async def plan_photo_template(
-    plan_id: UUID,
-    day_id: UUID | None = None,
-    access: PlanAccess = _VIEW,
+    daily_plan_id: UUID,
+    access: DailyAccess = _VIEW,
     controller: WorkTypeController = Depends(),
 ) -> list[WorkTypePhotoOut]:
     """
-    Template foto laporan rencana kerja.
+    Template foto SOP untuk item-item jadwal harian ini.
     """
-    return await controller.handle_template_of_plan(plan_id, day_id)
+    return await controller.handle_template_of_daily(daily_plan_id)
 
 
 @router.get("/work-types/{type_id}/materials", response_model=list[DefaultMaterialOut])

@@ -109,36 +109,9 @@ class WorkTypeService:
         if type_id is not None and not await self.repo.type_is_usable(org_id, type_id):
             raise ValidationError("Jenis pekerjaan tidak ditemukan atau sudah dinonaktifkan.")
 
-    async def ensure_plan_type(self, org_id: str, plan_id: UUID | None, type_id: UUID | None) -> None:
-        """Jenis pada rencana kerja: harus aktif bila baru dipilih; yang sudah terpasang boleh tetap walau nonaktif."""
-        if type_id is None:
-            return
-        if plan_id is not None and await self.repo.plan_type(plan_id) == str(type_id):
-            return
-        await self.ensure_usable(org_id, type_id)
-
-    async def ensure_day_types(self, org_id: str, plan_id: UUID | None, type_ids: set[UUID]) -> None:
-        """Jenis khusus per hari: aktif bila baru dipilih; yang sudah terpasang di rencana boleh tetap."""
-        for type_id in type_ids:
-            if plan_id is not None and await self.repo.type_in_plan(plan_id, type_id):
-                continue
-            await self.ensure_usable(org_id, type_id)
-
-    async def template_of_plan(self, plan_id: UUID, day_id: UUID | None = None) -> list[Any]:
-        return await self.repo.template_of_plan(plan_id, day_id)
-
-    async def ensure_daily_complete(self, plan_id: UUID, day_id: UUID) -> None:
-        """Saat laporan harian ketua dikirim: setiap slot wajib punya ≥ 1 foto."""
-        self._raise_missing(await self.repo.missing_required_daily(plan_id, day_id))
-
-    async def ensure_member_complete(self, plan_id: UUID, report_id: UUID | str) -> None:
-        """Saat laporan anggota dikirim: setiap slot wajib punya ≥ 1 foto."""
-        self._raise_missing(await self.repo.missing_required_member(plan_id, report_id))
-
-    @staticmethod
-    def _raise_missing(missing: list[str]) -> None:
-        if missing:
-            raise ValidationError(f"Foto wajib belum lengkap: {', '.join(missing)}.")
+    async def template_of_daily(self, daily_plan_id: UUID) -> list[Any]:
+        """Slot foto SOP dari jenis pekerjaan item-item jadwal harian ini."""
+        return await self.repo.template_of_daily(daily_plan_id)
 
     async def list_default_materials(self, org_id: str, type_id: UUID) -> list[Any]:
         """Daftar template material default untuk satu jenis pekerjaan."""

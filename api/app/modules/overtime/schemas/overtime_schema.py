@@ -18,7 +18,7 @@ class OvertimeCreate(BaseModel):
     diperiksa secara terpusat di OvertimeService. Hal ini dilakukan
     agar urutan dan pesan kesalahan yang muncul sama persis dengan prototipe.
     """
-    work_plan_id: UUID
+    daily_plan_id: UUID
     hours: float
     reason: str
 
@@ -39,9 +39,9 @@ class OvertimeResponse(BaseModel):
     Schema for a detailed overtime record response.
     """
     id: UUID
-    work_plan_id: UUID
-    plan_document_id: UUID | None
+    daily_plan_id: UUID | None
     employee_id: UUID
+    employee_name: str
     work_date: date
     hours: float
     reason: str

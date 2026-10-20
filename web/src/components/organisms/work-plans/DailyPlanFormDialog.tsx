@@ -1,290 +1,133 @@
-/**
- * web/src/components/organisms/work-plans/DailyPlanFormDialog.tsx
- * Dialog modal untuk Menambah atau Mengubah Rencana Harian (work_plan_daily):
- * - Tanggal kerja (work_date)
- * - Nama site / lokasi kerja (site_name) dengan preset kantor/site
- * - Koordinat GPS (site_lat, site_lng)
- * - Radius absensi presensi (attendance_radius_m, default 150m)
- * - Jam kerja (clock_in_time, clock_out_time)
- * - Status harian (SCHEDULED, ONGOING, COMPLETED, HOLIDAY)
- */
-
-import React, { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
-import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { ActionButton } from "@/components/molecules/ActionButton";
-import { TextBlock } from "@/components/molecules/TextBlock";
-import { FormBlock, ControlLabel, ControlInput, ControlSelect, ControlOption } from "@/components/molecules/FormBlock";
+import { DialogActions } from "@/components/molecules/DialogActions";
+import { SelectField, TextField } from "@/components/molecules/Field";
+import { ControlOption, FormBlock } from "@/components/molecules/FormBlock";
 import { FormErrorText } from "@/components/molecules/FormErrorText";
+import { VmsDialog } from "@/components/molecules/VmsDialog";
+import { ApiError } from "@/lib/apiClient";
 import {
-  useCreateDailyPlanV2,
-  useUpdateDailyPlanV2,
-  type DailyPlanV2Value,
-  type OfficeSiteOption,
-} from "@/services/workPlanV2Service";
+  geoSearch,
+  useCreateDailyPlan,
+  useUpdateDailyPlan,
+  type DailyFormOptions,
+  type DailyPlan,
+  type GeoResult,
+} from "@/services/dailyPlanService";
 
-interface DailyPlanFormDialogProps {
-  open: boolean;
+type Errors = Record<string, string>;
+
+/** Buat/ubah jadwal harian: tim & tanggal, lokasi site (cari di peta), radius absen, jam kerja. */
+export function DailyPlanFormDialog({ options, initial, plan, onClose }: {
+  options: DailyFormOptions;
+  /** Prefill dari sel matriks (tim & tanggal) saat membuat. */
+  initial?: { team_id: string; work_date: string };
+  /** Jadwal yang diubah (DRAFT/SUBMITTED). */
+  plan?: DailyPlan;
   onClose: () => void;
-  weeklyPlanId?: string;
-  divisionId?: string;
-  teamId?: string;
-  initialData?: Partial<DailyPlanV2Value> | null;
-  offices?: OfficeSiteOption[];
-  onSaved?: () => void;
-}
+}) {
+  const create = useCreateDailyPlan();
+  const update = useUpdateDailyPlan(plan?.daily_plan_id ?? "");
+  const [teamId, setTeamId] = useState(plan?.team_id ?? initial?.team_id ?? "");
+  const [siteName, setSiteName] = useState(plan?.site_name ?? "");
+  const [lat, setLat] = useState(plan ? String(plan.site_lat) : "");
+  const [lng, setLng] = useState(plan ? String(plan.site_lng) : "");
+  const [hits, setHits] = useState<GeoResult[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [errors, setErrors] = useState<Errors>({});
+  const [formError, setFormError] = useState<string | null>(null);
+  const busy = create.isPending || update.isPending;
 
-export const DailyPlanFormDialog: React.FC<DailyPlanFormDialogProps> = ({
-  open,
-  onClose,
-  weeklyPlanId,
-  divisionId,
-  teamId,
-  initialData,
-  offices = [],
-  onSaved,
-}) => {
-  const isEditing = Boolean(initialData?.daily_plan_id);
-
-  const [workDate, setWorkDate] = useState("");
-  const [siteName, setSiteName] = useState("");
-  const [siteLat, setSiteLat] = useState("3.5952");
-  const [siteLng, setSiteLng] = useState("98.6722");
-  const [attendanceRadiusM, setAttendanceRadiusM] = useState("150");
-  const [clockInTime, setClockInTime] = useState("08:00");
-  const [clockOutTime, setClockOutTime] = useState("17:00");
-  const [status, setStatus] = useState<DailyPlanV2Value["status"]>("SCHEDULED");
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
-  const createMut = useCreateDailyPlanV2();
-  const updateMut = useUpdateDailyPlanV2();
-  const isPending = createMut.isPending || updateMut.isPending;
-
-  useEffect(() => {
-    if (initialData) {
-      setWorkDate(initialData.work_date || "");
-      setSiteName(initialData.site_name || "");
-      setSiteLat(String(initialData.site_lat ?? "3.5952"));
-      setSiteLng(String(initialData.site_lng ?? "98.6722"));
-      setAttendanceRadiusM(String(initialData.attendance_radius_m ?? "150"));
-      setClockInTime(initialData.clock_in_time ? initialData.clock_in_time.slice(0, 5) : "08:00");
-      setClockOutTime(initialData.clock_out_time ? initialData.clock_out_time.slice(0, 5) : "17:00");
-      setStatus(initialData.status || "SCHEDULED");
-    } else {
-      setWorkDate(new Date().toISOString().slice(0, 10));
-      setSiteName("");
-      setSiteLat("3.5952");
-      setSiteLng("98.6722");
-      setAttendanceRadiusM("150");
-      setClockInTime("08:00");
-      setClockOutTime("17:00");
-      setStatus("SCHEDULED");
-    }
-    setErrorMsg(null);
-  }, [initialData, open]);
-
-  const handleSelectPresetOffice = (officeId: string) => {
-    const found = offices.find((o) => o.office_id === officeId);
-    if (found) {
-      setSiteName(found.name);
-      setSiteLat(String(found.latitude));
-      setSiteLng(String(found.longitude));
-      if (found.radius_m) setAttendanceRadiusM(String(found.radius_m));
+  const search = async () => {
+    setFormError(null);
+    setSearching(true);
+    try {
+      setHits((await geoSearch(siteName)).slice(0, 5));
+    } catch (err) {
+      setFormError(err instanceof ApiError ? err.message : "Pencarian lokasi gagal.");
+    } finally {
+      setSearching(false);
     }
   };
 
-  const handleSave = async (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setErrorMsg(null);
-
-    if (!workDate) {
-      setErrorMsg("Tanggal kerja wajib diisi.");
-      return;
-    }
-    if (!siteName.trim()) {
-      setErrorMsg("Nama site/lokasi kerja wajib diisi.");
-      return;
-    }
-
-    const payload: DailyPlanV2Value = {
-      daily_plan_id: initialData?.daily_plan_id,
-      weekly_plan_id: weeklyPlanId || undefined,
-      division_id: divisionId || initialData?.division_id,
-      team_id: teamId || initialData?.team_id,
-      work_date: workDate,
+    const f = new FormData(e.currentTarget);
+    const team = options.teams.find((t) => t.team_id === teamId);
+    const value = (k: string) => String(f.get(k) ?? "").trim();
+    setErrors({});
+    setFormError(null);
+    if (!team) return setErrors({ team_id: "Pilih tim." });
+    if (siteName.trim().length < 2) return setErrors({ site_name: "Nama lokasi wajib diisi." });
+    if (!lat || !lng || Number.isNaN(Number(lat)) || Number.isNaN(Number(lng))) return setErrors({ site_lat: "Isi koordinat atau pilih dari pencarian." });
+    const body = {
       site_name: siteName.trim(),
-      site_lat: parseFloat(siteLat) || 0,
-      site_lng: parseFloat(siteLng) || 0,
-      attendance_radius_m: parseInt(attendanceRadiusM, 10) || 150,
-      clock_in_time: clockInTime.length === 5 ? `${clockInTime}:00` : clockInTime,
-      clock_out_time: clockOutTime.length === 5 ? `${clockOutTime}:00` : clockOutTime,
-      status,
-      is_holiday: status === "HOLIDAY",
-      items: initialData?.items || [],
+      site_lat: lat,
+      site_lng: lng,
+      attendance_radius_m: Number(value("attendance_radius_m") || 150),
+      clock_in_time: value("clock_in_time") || "07:00",
+      clock_out_time: value("clock_out_time") || "16:00",
     };
-
     try {
-      if (isEditing && initialData?.daily_plan_id) {
-        await updateMut.mutateAsync({
-          id: initialData.daily_plan_id,
-          data: payload,
-        });
-        toast.success("Hari kerja berhasil diperbarui!");
+      if (plan) {
+        await update.mutateAsync({ ...body, team_id: team.team_id, work_date: value("work_date") || plan.work_date });
+        toast.success("Jadwal diperbarui.");
       } else {
-        await createMut.mutateAsync(payload);
-        toast.success("Hari kerja baru berhasil ditambahkan!");
+        await create.mutateAsync({ ...body, division_id: team.division_id, team_id: team.team_id, work_date: value("work_date") });
+        toast.success("Jadwal dibuat sebagai draf.");
       }
-      onSaved?.();
       onClose();
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Gagal menyimpan hari kerja.";
-      setErrorMsg(msg);
-      toast.error(msg);
+    } catch (err) {
+      if (err instanceof ApiError && err.details.fields) setErrors(err.details.fields as Errors);
+      else setFormError(err instanceof ApiError ? err.message : "Terjadi kesalahan. Coba lagi.");
     }
   };
 
   return (
-    <VmsDialog
-      open={open}
-      title={isEditing ? "Ubah Rencana Harian" : "Tambah Hari Kerja Baru"}
-      onClose={onClose}
-      footer={
-        <div className="flex w-full items-center justify-end gap-2">
-          <ActionButton type="button" variant="outline" onClick={onClose} disabled={isPending}>
-            Batal
+    <VmsDialog open title={plan ? "Ubah jadwal harian" : "Buat jadwal harian"} onClose={onClose} footer={<DialogActions onCancel={onClose} busy={busy} formId="daily-plan-form" />}>
+      <FormBlock id="daily-plan-form" onSubmit={submit} noValidate>
+        <FormErrorText message={formError} />
+        <SelectField label="Tim" value={teamId} onChange={(e) => setTeamId(e.target.value)} error={errors.team_id}>
+          <ControlOption value="">Pilih tim</ControlOption>
+          {options.teams.map((t) => (
+            <ControlOption key={t.team_id} value={t.team_id}>
+              {t.name} · ketua {t.leader_name}
+            </ControlOption>
+          ))}
+        </SelectField>
+        <TextField name="work_date" label="Tanggal" type="date" defaultValue={plan?.work_date ?? initial?.work_date} error={errors.work_date} />
+        <TextField label="Lokasi site" value={siteName} onChange={(e) => setSiteName(e.target.value)} error={errors.site_name} hint="Nama site/titik kumpul tim (dipakai untuk absen)." />
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <ActionButton type="button" size="sm" variant="outline" disabled={searching || siteName.trim().length < 3} onClick={search}>
+            {searching ? "Mencari…" : "Cari koordinat"}
           </ActionButton>
-          <ActionButton type="button" variant="default" onClick={handleSave} disabled={isPending}>
-            {isPending ? "Menyimpan..." : isEditing ? "Perbarui Hari" : "Tambah Hari"}
-          </ActionButton>
-        </div>
-      }
-    >
-      <form onSubmit={handleSave} className="space-y-4">
-        <FormErrorText message={errorMsg} />
-
-        <FormBlock>
-          <ControlLabel htmlFor="daily_work_date">Tanggal Kerja</ControlLabel>
-          <ControlInput
-            id="daily_work_date"
-            type="date"
-            value={workDate}
-            onChange={(e) => setWorkDate(e.target.value)}
-            required
-          />
-        </FormBlock>
-
-        {offices.length > 0 && (
-          <FormBlock>
-            <ControlLabel htmlFor="office_preset">Preset Lokasi Kantor / Site</ControlLabel>
-            <ControlSelect
-              id="office_preset"
-              defaultValue=""
-              onChange={(e) => handleSelectPresetOffice(e.target.value)}
+          {hits.map((h) => (
+            <ActionButton
+              key={`${h.lat},${h.lng}`}
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                setLat(h.lat.toFixed(7));
+                setLng(h.lng.toFixed(7));
+                setHits([]);
+              }}
             >
-              <ControlOption value="">-- Pilih preset kantor/site (opsional) --</ControlOption>
-              {offices.map((o) => (
-                <ControlOption key={o.office_id} value={o.office_id}>
-                  {o.name} {o.address ? `(${o.address})` : ""}
-                </ControlOption>
-              ))}
-            </ControlSelect>
-          </FormBlock>
-        )}
-
-        <FormBlock>
-          <ControlLabel htmlFor="daily_site_name">Nama Site / Lokasi Kerja</ControlLabel>
-          <ControlInput
-            id="daily_site_name"
-            type="text"
-            placeholder="Contoh: Site STO Medan Kota / Cluster Tanjung Morawa"
-            value={siteName}
-            onChange={(e) => setSiteName(e.target.value)}
-            required
-          />
-        </FormBlock>
-
-        <div className="grid grid-cols-2 gap-3">
-          <FormBlock>
-            <ControlLabel htmlFor="daily_site_lat">Latitude GPS</ControlLabel>
-            <ControlInput
-              id="daily_site_lat"
-              type="number"
-              step="any"
-              value={siteLat}
-              onChange={(e) => setSiteLat(e.target.value)}
-              required
-            />
-          </FormBlock>
-
-          <FormBlock>
-            <ControlLabel htmlFor="daily_site_lng">Longitude GPS</ControlLabel>
-            <ControlInput
-              id="daily_site_lng"
-              type="number"
-              step="any"
-              value={siteLng}
-              onChange={(e) => setSiteLng(e.target.value)}
-              required
-            />
-          </FormBlock>
+              {h.name.split(",").slice(0, 2).join(",")}
+            </ActionButton>
+          ))}
         </div>
-
-        <FormBlock>
-          <ControlLabel htmlFor="daily_radius">Radius Absensi Presensi (Meter)</ControlLabel>
-          <ControlInput
-            id="daily_radius"
-            type="number"
-            min={10}
-            max={50000}
-            value={attendanceRadiusM}
-            onChange={(e) => setAttendanceRadiusM(e.target.value)}
-            required
-          />
-          <TextBlock className="mt-1 text-xs text-mist">
-            Default 150 meter. Gunakan 15000 meter bila tugas proyek berstatus luar kota/area luas.
-          </TextBlock>
-        </FormBlock>
-
-        <div className="grid grid-cols-2 gap-3">
-          <FormBlock>
-            <ControlLabel htmlFor="daily_clock_in">Jam Masuk (Jadwal)</ControlLabel>
-            <ControlInput
-              id="daily_clock_in"
-              type="time"
-              value={clockInTime}
-              onChange={(e) => setClockInTime(e.target.value)}
-              required
-            />
-          </FormBlock>
-
-          <FormBlock>
-            <ControlLabel htmlFor="daily_clock_out">Jam Pulang (Jadwal)</ControlLabel>
-            <ControlInput
-              id="daily_clock_out"
-              type="time"
-              value={clockOutTime}
-              onChange={(e) => setClockOutTime(e.target.value)}
-              required
-            />
-          </FormBlock>
+        <div className="grid gap-x-3 md:grid-cols-2">
+          <TextField label="Lintang (lat)" inputMode="decimal" value={lat} onChange={(e) => setLat(e.target.value)} error={errors.site_lat} />
+          <TextField label="Bujur (lng)" inputMode="decimal" value={lng} onChange={(e) => setLng(e.target.value)} error={errors.site_lng} />
         </div>
-
-        <FormBlock>
-          <ControlLabel htmlFor="daily_status">Status Hari Kerja</ControlLabel>
-          <ControlSelect
-            id="daily_status"
-            value={status}
-            onChange={(e) => setStatus(e.target.value as DailyPlanV2Value["status"])}
-          >
-            <ControlOption value="SCHEDULED">SCHEDULED (Terjadwal)</ControlOption>
-            <ControlOption value="ONGOING">ONGOING (Sedang Berjalan)</ControlOption>
-            <ControlOption value="PARTIAL">PARTIAL (Selesai Sebagian)</ControlOption>
-            <ControlOption value="COMPLETED">COMPLETED (Selesai)</ControlOption>
-            <ControlOption value="HOLIDAY">HOLIDAY (Hari Libur)</ControlOption>
-            <ControlOption value="CANCELLED">CANCELLED (Dibatalkan)</ControlOption>
-          </ControlSelect>
-        </FormBlock>
-      </form>
+        <div className="grid gap-x-3 md:grid-cols-3">
+          <TextField name="attendance_radius_m" label="Radius absen (m)" inputMode="numeric" defaultValue={String(plan?.attendance_radius_m ?? 150)} error={errors.attendance_radius_m} />
+          <TextField name="clock_in_time" label="Jam masuk" type="time" defaultValue={(plan?.clock_in_time ?? "07:00").slice(0, 5)} />
+          <TextField name="clock_out_time" label="Jam pulang" type="time" defaultValue={(plan?.clock_out_time ?? "16:00").slice(0, 5)} error={errors.clock_out_time} />
+        </div>
+      </FormBlock>
     </VmsDialog>
   );
-};
+}

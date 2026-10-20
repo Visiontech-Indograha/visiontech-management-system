@@ -12,7 +12,8 @@ export const STATUS_LABEL: Record<string, string> = {
   COMPLETION_REVIEW: "Pengajuan penutupan",
   COMPLETED: "Selesai",
   CANCELLED: "Dibatalkan",
-  SUBMITTED: "Dikirim",
+  SUBMITTED: "Menunggu persetujuan",
+  ONGOING: "Berjalan",
   RESUBMITTED: "Dikirim ulang",
   APPROVED: "Disetujui",
   CHANGES_REQUESTED: "Perlu perbaikan",
@@ -50,7 +51,7 @@ export type StatusTone = "success" | "warning" | "danger" | "info" | "neutral";
 
 const GREEN = ["COMPLETED", "APPROVED", "ACCEPTED", "EFFECTIVE", "ACTIVE", "VERIFIED", "CURRENT", "AVAILABLE", "AUTO_VALID", "RESOLVED", "ready"];
 const RED = ["REJECTED", "CANCELLED", "INACTIVE", "damaged", "lost"];
-const BLUE = ["IN_PROGRESS", "PUBLISHED", "IN_USE", "allocated", "loaned"];
+const BLUE = ["IN_PROGRESS", "PUBLISHED", "IN_USE", "allocated", "loaned", "ONGOING"];
 const GREY = ["DRAFT", "SUPERSEDED", "WITHDRAWN", "pension"];
 
 /** Warna badge mengikuti prototype/js/ui.js `badge`. */

@@ -11,8 +11,8 @@ from typing import Any
 
 from fastapi import Depends
 
-from app.api.deps import get_audit_service
 from app.core.security import CurrentUser
+from app.modules.audit.dependencies import get_audit_service
 from app.modules.audit.schemas.audit_schema import AuditEventListResponse
 from app.modules.audit.services.audit_service import AuditService
 

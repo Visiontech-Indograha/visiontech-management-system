@@ -13,8 +13,9 @@ from uuid import UUID
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_db_with_user, get_overtime_service
+from app.api.deps import get_db_with_user
 from app.core.security import CurrentUser
+from app.modules.overtime.dependencies import get_overtime_service
 from app.modules.overtime.schemas.overtime_schema import (
     OvertimeCreate,
     OvertimeRecapRow,

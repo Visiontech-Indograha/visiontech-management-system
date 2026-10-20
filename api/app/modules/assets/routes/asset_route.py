@@ -9,11 +9,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Response, status
 
-from app.api.deps import (
-    allocation_plan_access,
-    get_current_user,
-    require_permission,
-)
+from app.api.deps import allocation_plan_access, get_current_user, require_permission
 from app.core.permissions import Permission
 from app.core.security import CurrentUser
 from app.modules.assets.controllers.asset_controller import AssetController

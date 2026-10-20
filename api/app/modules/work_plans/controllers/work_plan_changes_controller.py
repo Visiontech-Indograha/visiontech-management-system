@@ -12,8 +12,8 @@ from uuid import UUID
 
 from fastapi import Depends
 
-from app.api.deps import get_plan_change_service
 from app.core.security import CurrentUser
+from app.modules.work_plans.dependencies import get_plan_change_service
 from app.modules.work_plans.schemas.work_plan_schema import (
     ChangeRequest,
     ChangeResponse,

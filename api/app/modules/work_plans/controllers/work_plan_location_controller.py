@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from fastapi import Depends
 
-from app.api.deps import get_plan_location_service
+from app.modules.work_plans.dependencies import get_plan_location_service
 from app.modules.work_plans.schemas.work_plan_schema import (
     GeoResult,
     PlanLocationIn,

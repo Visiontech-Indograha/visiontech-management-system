@@ -9,10 +9,10 @@ import json
 
 from fastapi import Depends, UploadFile
 
-from app.api.deps import get_face_service
 from app.core.errors import AppError, ValidationError
 from app.core.permissions import RoleCode, SystemRole
 from app.core.security import CurrentUser
+from app.modules.face.dependencies import get_face_service
 from app.modules.face.schemas.face_schema import (
     ChallengeCheckResponse,
     ConsentRequest,

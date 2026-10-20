@@ -12,8 +12,9 @@ from uuid import UUID
 from fastapi import Depends
 from fastapi.responses import HTMLResponse
 
-from app.api.deps import get_plan_amendment_service, get_signature_service
+from app.modules.signatures.dependencies import get_signature_service
 from app.modules.signatures.services.signature_service import SignatureService
+from app.modules.work_plans.dependencies import get_plan_amendment_service
 from app.modules.work_plans.schemas.work_plan_schema import (
     AmendmentReasonIn,
     PlanChangeOut,

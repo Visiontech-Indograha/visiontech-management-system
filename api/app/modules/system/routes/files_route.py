@@ -10,9 +10,10 @@ import uuid
 from fastapi import APIRouter, Depends, File, UploadFile
 from fastapi.responses import Response
 
-from app.api.deps import get_current_user, get_file_viewer, get_file_viewer_service
+from app.api.deps import get_current_user, get_file_viewer
 from app.core.security import CurrentUser
 from app.modules.system.controllers.files_controller import FilesController
+from app.modules.system.dependencies import get_file_viewer_service
 from app.modules.system.services.system_service import FileService
 
 router = APIRouter(prefix="/files", tags=["Files"])

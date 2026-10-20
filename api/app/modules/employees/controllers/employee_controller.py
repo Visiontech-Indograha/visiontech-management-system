@@ -13,10 +13,10 @@ from uuid import UUID
 
 from fastapi import Depends, HTTPException
 
-from app.api.deps import get_employee_service
 from app.core.errors import AppError
 from app.core.permissions import Permission
 from app.core.security import CurrentUser
+from app.modules.employees.dependencies import get_employee_service
 from app.modules.employees.schemas.employee_schema import (
     EmergencyContactCreate,
     EmergencyContactResponse,

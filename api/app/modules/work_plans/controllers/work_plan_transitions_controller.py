@@ -14,12 +14,10 @@ from fastapi import Depends, Response
 from fastapi.concurrency import run_in_threadpool
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import (
-    get_db_with_user,
-    get_plan_transition_service,
-    get_signature_service,
-)
+from app.api.deps import get_db_with_user
+from app.modules.signatures.dependencies import get_signature_service
 from app.modules.signatures.services.signature_service import SignatureService
+from app.modules.work_plans.dependencies import get_plan_transition_service
 from app.modules.work_plans.schemas.work_plan_schema import (
     CompletionRequest,
     FinalReportOut,

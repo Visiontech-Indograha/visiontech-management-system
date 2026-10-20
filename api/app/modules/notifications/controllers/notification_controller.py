@@ -11,8 +11,8 @@ from uuid import UUID
 
 from fastapi import Depends
 
-from app.api.deps import get_notification_service
 from app.core.security import CurrentUser
+from app.modules.notifications.dependencies import get_notification_service
 from app.modules.notifications.schemas.notification_schema import NotificationList, NotificationOut
 from app.modules.notifications.services.notification_service import NotificationService
 

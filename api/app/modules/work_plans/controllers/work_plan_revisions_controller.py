@@ -11,7 +11,7 @@ from uuid import UUID
 
 from fastapi import Depends
 
-from app.api.deps import get_plan_revision_service
+from app.modules.work_plans.dependencies import get_plan_revision_service
 from app.modules.work_plans.schemas.work_plan_schema import (
     PlanDetailOut,
     PlanRevisionIn,

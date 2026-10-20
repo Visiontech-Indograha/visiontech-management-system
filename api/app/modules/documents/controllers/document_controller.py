@@ -12,8 +12,9 @@ from uuid import UUID
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_db_with_user, get_document_service
+from app.api.deps import get_db_with_user
 from app.core.security import CurrentUser
+from app.modules.documents.dependencies import get_document_service
 from app.modules.documents.schemas.document_schema import (
     DocumentListResponse,
     EmployeeDocumentCreate,

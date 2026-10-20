@@ -12,7 +12,7 @@ from uuid import UUID
 from fastapi import Depends
 from fastapi.responses import HTMLResponse
 
-from app.api.deps import get_member_report_service
+from app.modules.work_plans.dependencies import get_member_report_service
 from app.modules.work_plans.schemas.work_plan_schema import (
     MemberReportIn,
     MemberReportOut,

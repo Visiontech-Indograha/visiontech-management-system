@@ -11,12 +11,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query, status
 from fastapi.responses import HTMLResponse, Response
 
-from app.api.deps import (
-    get_current_user,
-    plan_access,
-    plan_day_access,
-    require_permission,
-)
+from app.api.deps import get_current_user, plan_access, plan_day_access, require_permission
 from app.core.permissions import Permission
 from app.core.security import CurrentUser
 from app.modules.work_plans.controllers.work_plan_controller import (

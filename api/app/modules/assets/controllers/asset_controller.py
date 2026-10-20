@@ -12,8 +12,8 @@ from uuid import UUID
 from fastapi import Depends, HTTPException, Response
 from fastapi.concurrency import run_in_threadpool
 
-from app.api.deps import get_asset_reservation_service
 from app.core.security import CurrentUser
+from app.modules.assets.dependencies import get_asset_reservation_service
 from app.modules.assets.schemas.asset_schema import (
     AssetAllocationResponse,
     AssetCheckRequest,

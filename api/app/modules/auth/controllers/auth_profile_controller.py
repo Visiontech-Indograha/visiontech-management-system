@@ -10,10 +10,10 @@ from __future__ import annotations
 from fastapi import Depends, Request, Response
 from sqlalchemy import text
 
-from app.api.deps import get_auth_flow_service
 from app.core.security import CurrentUser
 from app.database.session import AsyncSessionLocal
 from app.modules.auth.controllers.auth_login_controller import AuthLoginController
+from app.modules.auth.dependencies import get_auth_flow_service
 from app.modules.auth.schemas.auth_login_response_schema import AuthLoginResponseSchema
 from app.modules.auth.schemas.auth_profile_schema import (
     AuthChangePasswordRequestSchema,

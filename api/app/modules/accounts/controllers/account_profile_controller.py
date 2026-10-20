@@ -12,7 +12,7 @@ from uuid import UUID
 
 from fastapi import Depends
 
-from app.api.deps import get_account_service
+from app.modules.accounts.dependencies import get_account_service
 from app.modules.accounts.schemas.account_schema import AccountCreate, AccountOut, AccountWithPassword
 from app.modules.accounts.services.account_service import AccountService
 

@@ -15,8 +15,8 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from app.api.deps import get_app_release_service
 from app.main import app
+from app.modules.system.dependencies import get_app_release_service
 from app.modules.system.services.app_release_service import AppReleaseService
 
 APK = b"PK\x03\x04 bukan apk sungguhan" * 64

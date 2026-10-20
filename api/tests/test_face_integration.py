@@ -21,8 +21,8 @@ import psycopg2
 import pytest
 from PIL import Image
 
-from app.api.deps import get_face_embed_client
 from app.main import app
+from app.modules.face.dependencies import get_face_embed_client
 from app.modules.face.repositories.face_repository import vector_literal
 from app.modules.face.services import face_service as fs
 from app.modules.face.services.face_embed_client import EmbedResult, FaceServiceUnavailable

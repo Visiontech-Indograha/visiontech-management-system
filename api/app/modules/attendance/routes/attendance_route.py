@@ -11,10 +11,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import PlainTextResponse
 
-from app.api.deps import (
-    get_current_user,
-    require_permission,
-)
+from app.api.deps import get_current_user, require_permission
 from app.core.permissions import Permission
 from app.core.security import CurrentUser
 from app.modules.attendance.controllers.attendance_controller import AttendanceController

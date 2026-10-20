@@ -16,66 +16,14 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.alerts import send_security_alert
-from app.core.config import settings
 from app.core.errors import AppError, NotFoundError
 from app.core.permissions import NO_GLOBAL_ROLE, Permission, RoleCode, permissions_for_roles
 from app.core.security import CurrentUser, verify_file_access_ticket, verify_jwt_token
 from app.core.time import utcnow
 from app.database.session import AsyncSessionLocal, set_request_context, unit_of_work
-from app.modules.accounts.services.account_service import AccountService
-from app.modules.assets.services.asset_service import AssetReservationService
-from app.modules.attendance.repositories.attendance_monitor_repository import CRUDAttendanceMonitor
-from app.modules.attendance.repositories.attendance_offline_repository import CRUDAttendanceOffline
-from app.modules.attendance.repositories.attendance_session_repository import CRUDAttendanceSession
-from app.modules.attendance.services.attendance_monitor_service import AttendanceMonitorService
-from app.modules.attendance.services.attendance_offline_service import AttendanceOfflineService
-from app.modules.attendance.services.attendance_session_service import AttendanceSessionService
-from app.modules.audit.repositories.audit_repository import CRUDAudit
-from app.modules.audit.services.audit_service import AuditService
-from app.modules.auth.repositories.auth_session_repository import CRUDSession
 from app.modules.auth.repositories.auth_user_repository import CRUDUser
-from app.modules.auth.services.auth_flow_service import AuthFlowService
-from app.modules.documents.repositories.document_repository import CRUDDocument
-from app.modules.documents.services.document_service import DocumentService
-from app.modules.employees.repositories.employee_repository import CRUDEmployee
-from app.modules.employees.services.employee_service import EmployeeService
-from app.modules.face.repositories.face_repository import CRUDFace
-from app.modules.face.services.face_embed_client import FaceEmbedClient
-from app.modules.face.services.face_service import FaceService
-from app.modules.hse.services.hse_service import HseService
-from app.modules.notifications.services.notification_service import NotificationService
-from app.modules.overtime.services.overtime_service import OvertimeService
-from app.modules.reports.services.weekly_report_service import WeeklyReportService
-from app.modules.signatures.services.signature_service import SignatureService
-from app.modules.sites.repositories.site_repository import CRUDSite
-from app.modules.sites.services.site_service import SiteService
-from app.modules.system.repositories.file_repository import CRUDFile
-from app.modules.system.services.app_release_service import AppReleaseService
-from app.modules.system.services.file_service import FileService
-from app.modules.system.services.monitoring_service import MonitoringService
-from app.modules.system.services.sync_service import SyncService
-from app.modules.units.repositories.unit_repository import CRUDUnit
-from app.modules.units.services.unit_service import UnitService
-from app.modules.work_plans.repositories.plan_assignment_repository import CRUDPlanAssignment
-from app.modules.work_plans.repositories.plan_member_repository import CRUDPlanMember
-from app.modules.work_plans.repositories.plan_transition_repository import CRUDPlanTransition
-from app.modules.work_plans.services.member_report_service import MemberReportService
-from app.modules.work_plans.services.plan_amendment_service import PlanAmendmentService
-from app.modules.work_plans.services.plan_assignment_service import PlanAssignmentService
-from app.modules.work_plans.services.plan_attachment_service import PlanAttachmentService
-from app.modules.work_plans.services.plan_change_service import PlanChangeService
-from app.modules.work_plans.services.plan_day_service import PlanDayService
-from app.modules.work_plans.services.plan_draft_service import PlanDraftService
-from app.modules.work_plans.services.plan_edit_service import PlanEditService
-from app.modules.work_plans.services.plan_item_service import PlanItemService
-from app.modules.work_plans.services.plan_location_service import PlanLocationService
-from app.modules.work_plans.services.plan_member_service import PlanMemberService
-from app.modules.work_plans.services.plan_revision_service import PlanRevisionService
-from app.modules.work_plans.services.plan_transition_service import PlanTransitionService
-from app.modules.work_types.services.work_type_service import WorkTypeService
 from app.shared.access.access_service import PlanAccess, PlanNeed, check_plan_access
 from app.shared.access.plan_access_repository import CRUDPlanAccess
-from app.shared.org_clock import CRUDOrgClock
 
 logger = logging.getLogger(__name__)
 # Keamanan dengan skema Bearer token
@@ -329,60 +277,6 @@ def plan_day_access(need: PlanNeed) -> Callable[..., Awaitable[PlanAccess]]:
 # `get_db` + `DB_SCOPE` untuk auth), sehingga FastAPI memakai ulang satu sesi = satu transaksi per permintaan.
 
 
-def get_account_service(db: AsyncSession = Depends(get_db_with_user)) -> AccountService:
-    return AccountService(CRUDUser(db), CRUDEmployee(db), CRUDSession(db))
-
-
-def get_audit_service(db: AsyncSession = Depends(get_db_with_user)) -> AuditService:
-    return AuditService(CRUDAudit(db))
-
-
-def get_asset_reservation_service(db: AsyncSession = Depends(get_db_with_user)) -> AssetReservationService:
-    return AssetReservationService(db)
-
-
-def get_attendance_monitor_service(db: AsyncSession = Depends(get_db_with_user)) -> AttendanceMonitorService:
-    return AttendanceMonitorService(CRUDAttendanceMonitor(db))
-
-
-def get_face_embed_client() -> FaceEmbedClient:
-    """Klien face-service. Dependency tersendiri agar uji dapat menggantinya dengan tiruan."""
-    return FaceEmbedClient()
-
-
-def get_face_service(db: AsyncSession = Depends(get_db_with_user),
-                     client: FaceEmbedClient = Depends(get_face_embed_client)) -> FaceService:
-    return FaceService(CRUDFace(db), client)
-
-
-def get_attendance_session_service(db: AsyncSession = Depends(get_db_with_user),
-                                   client: FaceEmbedClient = Depends(get_face_embed_client)) -> AttendanceSessionService:
-    return AttendanceSessionService(CRUDAttendanceSession(db), CRUDOrgClock(db), FaceService(CRUDFace(db), client))
-
-
-def get_site_service(db: AsyncSession = Depends(get_db_with_user)) -> SiteService:
-    return SiteService(CRUDSite(db))
-
-
-def get_attendance_offline_service(db: AsyncSession = Depends(get_db_with_user),
-                                   client: FaceEmbedClient = Depends(get_face_embed_client)) -> AttendanceOfflineService:
-    faces = FaceService(CRUDFace(db), client)
-    return AttendanceOfflineService(CRUDAttendanceOffline(db),
-                                    AttendanceSessionService(CRUDAttendanceSession(db), CRUDOrgClock(db), faces))
-
-
-def get_document_service(db: AsyncSession = Depends(get_db_with_user)) -> DocumentService:
-    return DocumentService(CRUDDocument(db))
-
-
-def get_employee_service(db: AsyncSession = Depends(get_db_with_user)) -> EmployeeService:
-    return EmployeeService(db)
-
-
-def get_file_service(db: AsyncSession = Depends(get_db_with_user)) -> FileService:
-    return FileService(CRUDFile(db))
-
-
 async def get_file_viewer_db(
     db: AsyncSession = Depends(get_db, scope=DB_SCOPE),
     current_user: CurrentUser = Depends(get_file_viewer),
@@ -406,108 +300,3 @@ async def get_file_viewer_db(
             status=500,
         ) from None
     return db
-
-
-def get_file_viewer_service(db: AsyncSession = Depends(get_file_viewer_db)) -> FileService:
-    return FileService(CRUDFile(db))
-
-
-def get_hse_service(db: AsyncSession = Depends(get_db_with_user)) -> HseService:
-    return HseService(db)
-
-
-def get_monitoring_service(db: AsyncSession = Depends(get_db_with_user)) -> MonitoringService:
-    return MonitoringService(db)
-
-
-def get_overtime_service(db: AsyncSession = Depends(get_db_with_user)) -> OvertimeService:
-    return OvertimeService(db)
-
-
-def get_plan_assignment_service(db: AsyncSession = Depends(get_db_with_user)) -> PlanAssignmentService:
-    return PlanAssignmentService(CRUDPlanAssignment(db))
-
-
-def get_plan_attachment_service(db: AsyncSession = Depends(get_db_with_user)) -> PlanAttachmentService:
-    return PlanAttachmentService(db)
-
-
-def get_plan_change_service(db: AsyncSession = Depends(get_db_with_user)) -> PlanChangeService:
-    return PlanChangeService(db)
-
-
-def get_plan_day_service(db: AsyncSession = Depends(get_db_with_user)) -> PlanDayService:
-    return PlanDayService(db)
-
-
-def get_plan_amendment_service(db: AsyncSession = Depends(get_db_with_user)) -> PlanAmendmentService:
-    return PlanAmendmentService(db)
-
-
-def get_work_type_service(db: AsyncSession = Depends(get_db_with_user)) -> WorkTypeService:
-    return WorkTypeService(db)
-
-
-def get_plan_revision_service(db: AsyncSession = Depends(get_db_with_user)) -> PlanRevisionService:
-    return PlanRevisionService(db)
-
-
-def get_plan_draft_service(db: AsyncSession = Depends(get_db_with_user)) -> PlanDraftService:
-    return PlanDraftService(db)
-
-
-def get_member_report_service(db: AsyncSession = Depends(get_db_with_user)) -> MemberReportService:
-    return MemberReportService(db)
-
-
-def get_notification_service(db: AsyncSession = Depends(get_db_with_user)) -> NotificationService:
-    return NotificationService(db)
-
-
-def get_plan_edit_service(db: AsyncSession = Depends(get_db_with_user)) -> PlanEditService:
-    return PlanEditService(db, PlanAssignmentService(CRUDPlanAssignment(db)))
-
-
-def get_plan_item_service(db: AsyncSession = Depends(get_db_with_user)) -> PlanItemService:
-    return PlanItemService(db)
-
-
-def get_plan_location_service(db: AsyncSession = Depends(get_db_with_user)) -> PlanLocationService:
-    return PlanLocationService(db)
-
-
-def get_plan_member_service(db: AsyncSession = Depends(get_db_with_user)) -> PlanMemberService:
-    return PlanMemberService(CRUDPlanMember(db))
-
-
-def get_plan_transition_service(db: AsyncSession = Depends(get_db_with_user)) -> PlanTransitionService:
-    return PlanTransitionService(CRUDPlanTransition(db), CRUDPlanMember(db))
-
-
-def get_signature_service(db: AsyncSession = Depends(get_db_with_user)) -> SignatureService:
-    return SignatureService(db)
-
-
-def get_sync_service(db: AsyncSession = Depends(get_db_with_user)) -> SyncService:
-    return SyncService(db)
-
-
-def get_app_release_service() -> AppReleaseService:
-    """Rilis APK dibaca dari folder berkas (publik, tanpa sesi DB) — docs/32."""
-    return AppReleaseService(settings.APP_RELEASE_DIR)
-
-
-def get_unit_service(db: AsyncSession = Depends(get_db_with_user)) -> UnitService:
-    return UnitService(CRUDUnit(db))
-
-
-def get_weekly_report_service(db: AsyncSession = Depends(get_db_with_user)) -> WeeklyReportService:
-    return WeeklyReportService(db)
-
-
-def get_public_signature_service(db: AsyncSession = Depends(get_db)) -> SignatureService:
-    return SignatureService(db)
-
-
-def get_auth_flow_service(db: AsyncSession = Depends(get_db, scope=DB_SCOPE)) -> AuthFlowService:
-    return AuthFlowService(db)

@@ -12,7 +12,7 @@ from uuid import UUID
 
 from fastapi import Depends
 
-from app.api.deps import get_work_type_service
+from app.modules.work_types.dependencies import get_work_type_service
 from app.modules.work_types.schemas.work_type_schema import (
     DefaultMaterialIn,
     DefaultMaterialOut,

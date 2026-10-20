@@ -16,9 +16,9 @@ from fastapi import Depends
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import HTMLResponse, Response
 
-from app.api.deps import get_public_signature_service, get_signature_service
 from app.core.errors import AppError
 from app.core.security import CurrentUser
+from app.modules.signatures.dependencies import get_public_signature_service, get_signature_service
 from app.modules.signatures.schemas.signature_schema import (
     PlanDocumentOut,
     RevokeRequest,

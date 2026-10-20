@@ -11,8 +11,8 @@ from uuid import UUID
 
 from fastapi import Depends
 
-from app.api.deps import get_hse_service
 from app.core.security import CurrentUser
+from app.modules.hse.dependencies import get_hse_service
 from app.modules.hse.schemas.hse_schema import (
     DailyReportCreate,
     DailyReportResponse,

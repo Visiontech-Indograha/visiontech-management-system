@@ -11,7 +11,7 @@ from uuid import UUID
 
 from fastapi import Depends
 
-from app.api.deps import get_plan_member_service
+from app.modules.work_plans.dependencies import get_plan_member_service
 from app.modules.work_plans.schemas.work_plan_schema import (
     TeamMemberOut,
     TeamRequest,

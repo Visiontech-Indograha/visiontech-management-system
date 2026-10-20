@@ -12,7 +12,8 @@ from typing import Any
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_db_with_user, get_plan_attachment_service
+from app.api.deps import get_db_with_user
+from app.modules.work_plans.dependencies import get_plan_attachment_service
 from app.modules.work_plans.schemas.work_plan_schema import (
     AttachmentResponse,
     AttachmentsRequest,

@@ -22,7 +22,7 @@ from app.modules.overtime.schemas.overtime_schema import (
     OvertimeReview,
 )
 from app.modules.overtime.services.overtime_service import OvertimeService
-from app.services.access_service import ensure_same_org
+from app.shared.access.access_service import ensure_same_org
 
 
 class OvertimeController:

@@ -22,7 +22,7 @@ from app.core.permissions import Permission, RoleCode
 from app.core.security import CurrentUser
 from app.crud.crud_file_access import CRUDFileAccess
 from app.crud.crud_org_ref import CRUDOrgRef
-from app.crud.crud_plan_access import CRUDPlanAccess
+from app.shared.access.plan_access_repository import CRUDPlanAccess
 
 
 class PlanNeed(StrEnum):

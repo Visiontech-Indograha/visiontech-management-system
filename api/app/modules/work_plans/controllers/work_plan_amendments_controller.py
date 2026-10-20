@@ -24,7 +24,7 @@ from app.modules.work_plans.services.work_plan_service import (
     SignatureService,
     render_final_report_html,
 )
-from app.services.access_service import PlanAccess
+from app.shared.access.access_service import PlanAccess
 
 
 class WorkPlanAmendmentsController:

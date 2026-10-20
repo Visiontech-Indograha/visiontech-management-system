@@ -17,7 +17,7 @@ from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationE
 from app.core.permissions import Permission, RoleCode
 from app.core.security import CurrentUser
 from app.modules.assets.repositories.asset_repository import CRUDAssetReservation
-from app.services.access_service import PlanNeed, check_plan_access, ensure_same_org
+from app.shared.access.access_service import PlanNeed, check_plan_access, ensure_same_org
 
 RUNNING = (PlanStatus.IN_PROGRESS, PlanStatus.COMPLETION_REVIEW)
 

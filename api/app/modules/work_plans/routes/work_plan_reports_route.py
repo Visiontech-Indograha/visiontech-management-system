@@ -21,7 +21,7 @@ from app.modules.work_plans.schemas.work_plan_schema import (
     MemberReportIn,
     MemberReportOut,
 )
-from app.services.access_service import PlanAccess, PlanNeed
+from app.shared.access.access_service import PlanAccess, PlanNeed
 
 router = APIRouter(prefix="/work-plans/{plan_id}", tags=["Daily Reports"])
 _DAY_VIEW = Depends(plan_day_access(PlanNeed.VIEW))

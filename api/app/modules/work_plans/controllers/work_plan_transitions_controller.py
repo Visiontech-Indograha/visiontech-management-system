@@ -32,7 +32,7 @@ from app.modules.work_plans.services.work_plan_service import (
     html_to_pdf,
     render_final_report_html,
 )
-from app.services.access_service import PlanAccess, ensure_same_org
+from app.shared.access.access_service import PlanAccess, ensure_same_org
 
 
 def _response(row: Any) -> WorkPlanResponse:

@@ -13,8 +13,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import AppError, ValidationError
 from app.crud.crud_plan_location import CRUDPlanLocation
-from app.services.access_service import PlanAccess
 from app.services.plan_revision_service import PlanRevisionService
+from app.shared.access.access_service import PlanAccess
 
 CLOSED = ("COMPLETED", "CANCELLED")
 ISSUED = ("PUBLISHED", "APPEALED", "ACCEPTED", "IN_PROGRESS")  # dokumen sudah terbit → perubahan = revisi

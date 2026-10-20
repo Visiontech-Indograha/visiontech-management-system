@@ -17,7 +17,7 @@ from app.modules.hse.schemas.hse_schema import (
     IncidentResolve,
     IncidentResponse,
 )
-from app.services.access_service import PlanAccess, PlanNeed
+from app.shared.access.access_service import PlanAccess, PlanNeed
 
 router = APIRouter(prefix="/hse", tags=["HSE & Reports"])
 _INCIDENT_VIEW_ACCESS = Depends(incident_plan_access(PlanNeed.VIEW))

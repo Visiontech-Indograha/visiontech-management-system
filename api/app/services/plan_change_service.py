@@ -22,8 +22,8 @@ from app.crud.crud_plan_assignment import CRUDPlanAssignment
 from app.crud.crud_plan_change import CRUDPlanChange
 from app.crud.crud_plan_member import CRUDPlanMember
 from app.crud.crud_plan_transition import CRUDPlanTransition
-from app.services.access_service import PlanNeed, check_plan_access
 from app.services.plan_assignment_service import PlanAssignmentService
+from app.shared.access.access_service import PlanNeed, check_plan_access
 
 ACTIVE = (PlanStatus.ACCEPTED, PlanStatus.IN_PROGRESS)  # domain.js requireStatus(['ACCEPTED','IN_PROGRESS'])
 OPEN = (ChangeStatus.PENDING_PM, ChangeStatus.AWAITING_LEADER_ACCEPTANCE)

@@ -18,13 +18,13 @@ from sqlalchemy.exc import IntegrityError
 from app.core.config import settings
 from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationError, trigger_rule_message
 from app.core.events import queue_event
-from app.crud.crud_org_clock import CRUDOrgClock
 from app.modules.attendance.repositories.attendance_session_repository import (
     CRUDAttendanceSession,
 )
-from app.services.access_service import ensure_same_org
 from app.services.face_service import FaceOutcome, FaceService
 from app.services.notification_service import NotificationService
+from app.shared.access.access_service import ensure_same_org
+from app.shared.org_clock import CRUDOrgClock
 
 
 class AttendanceRowWithEncouragement:

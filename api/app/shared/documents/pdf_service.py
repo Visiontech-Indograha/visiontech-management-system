@@ -1,5 +1,5 @@
 """
-app/services/pdf_service.py
+app/shared/documents/pdf_service.py
 Render dokumen SK: HTML (Jinja2) → PDF (WeasyPrint), dok 02 A-13. PDF hanya tampilan; sumber kebenaran
 adalah snapshot + tanda tangannya (A-09). WeasyPrint butuh pustaka sistem (Pango) — tersedia di image
 Linux/Docker; bila tidak ada, galat 503 yang jelas (bukan 500).
@@ -18,7 +18,7 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 from app.core.errors import AppError
 from app.core.time import wib_text
 
-_TEMPLATES = Path(__file__).resolve().parent.parent / "templates"
+_TEMPLATES = Path(__file__).resolve().parent / "templates"
 _ENV = Environment(loader=FileSystemLoader(_TEMPLATES), autoescape=select_autoescape(["html"]))
 _ENV.filters["wib"] = wib_text
 _MONTHS = [

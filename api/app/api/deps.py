@@ -29,8 +29,6 @@ from app.crud.crud_document import CRUDDocument
 from app.crud.crud_employee import CRUDEmployee
 from app.crud.crud_face import CRUDFace
 from app.crud.crud_file import CRUDFile
-from app.crud.crud_org_clock import CRUDOrgClock
-from app.crud.crud_plan_access import CRUDPlanAccess
 from app.crud.crud_plan_assignment import CRUDPlanAssignment
 from app.crud.crud_plan_member import CRUDPlanMember
 from app.crud.crud_plan_transition import CRUDPlanTransition
@@ -39,7 +37,6 @@ from app.crud.crud_site import CRUDSite
 from app.crud.crud_unit import CRUDUnit
 from app.crud.crud_user import CRUDUser
 from app.database.session import AsyncSessionLocal, set_request_context, unit_of_work
-from app.services.access_service import PlanAccess, PlanNeed, check_plan_access
 from app.services.account_service import AccountService
 from app.services.app_release_service import AppReleaseService
 from app.services.asset_reservation_service import AssetReservationService
@@ -76,6 +73,9 @@ from app.services.sync_service import SyncService
 from app.services.unit_service import UnitService
 from app.services.weekly_report_service import WeeklyReportService
 from app.services.work_type_service import WorkTypeService
+from app.shared.access.access_service import PlanAccess, PlanNeed, check_plan_access
+from app.shared.access.plan_access_repository import CRUDPlanAccess
+from app.shared.org_clock import CRUDOrgClock
 
 logger = logging.getLogger(__name__)
 # Keamanan dengan skema Bearer token

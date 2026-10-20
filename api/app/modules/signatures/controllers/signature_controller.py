@@ -26,7 +26,7 @@ from app.modules.signatures.schemas.signature_schema import (
     VerifyOut,
 )
 from app.modules.signatures.services.signature_service import SignatureService
-from app.services.pdf_service import html_to_pdf, render_plan_document_html
+from app.shared.documents.pdf_service import html_to_pdf, render_plan_document_html
 
 _verify_hits: dict[str, deque[float]] = defaultdict(deque)
 

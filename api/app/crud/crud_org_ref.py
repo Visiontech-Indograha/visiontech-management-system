@@ -8,7 +8,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from .base import CRUDBase
+from app.core.repository import CRUDBase
 
 
 class CRUDOrgRef(CRUDBase):

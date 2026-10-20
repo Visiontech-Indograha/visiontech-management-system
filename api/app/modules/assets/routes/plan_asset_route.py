@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends
 from app.api.deps import plan_access
 from app.modules.assets.controllers.asset_controller import AssetController
 from app.modules.assets.schemas.asset_schema import PlanAssetItem
-from app.services.access_service import PlanAccess, PlanNeed
+from app.shared.access.access_service import PlanAccess, PlanNeed
 
 plan_assets_router = APIRouter(prefix="/work-plans/{plan_id}", tags=["Assets"])
 _PLAN_VIEW_ACCESS = Depends(plan_access(PlanNeed.VIEW))

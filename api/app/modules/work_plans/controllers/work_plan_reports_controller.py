@@ -18,7 +18,7 @@ from app.modules.work_plans.schemas.work_plan_schema import (
     MemberReportOut,
 )
 from app.modules.work_plans.services.work_plan_service import MemberReportService
-from app.services.access_service import PlanAccess
+from app.shared.access.access_service import PlanAccess
 
 
 class WorkPlanReportsController:

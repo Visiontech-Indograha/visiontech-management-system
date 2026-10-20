@@ -25,7 +25,7 @@ from app.modules.documents.schemas.document_schema import (
     PendingDocumentList,
 )
 from app.modules.documents.services.document_service import DocumentService
-from app.services.access_service import ensure_same_org
+from app.shared.access.access_service import ensure_same_org
 
 
 class DocumentController:

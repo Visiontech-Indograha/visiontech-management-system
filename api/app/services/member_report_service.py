@@ -14,12 +14,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.enums import PlanStatus
 from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationError
 from app.crud.crud_member_report import CRUDMemberReport
-from app.crud.crud_org_clock import CRUDOrgClock
 from app.schemas.work_type import EvidenceIn, merge_evidence
-from app.services.access_service import PlanAccess, ensure_same_org, require_plan_status
 from app.services.notification_service import NotificationService
-from app.services.pdf_service import render_report_html
 from app.services.work_type_service import WorkTypeService
+from app.shared.access.access_service import PlanAccess, ensure_same_org, require_plan_status
+from app.shared.documents.pdf_service import render_report_html
+from app.shared.org_clock import CRUDOrgClock
 
 
 class MemberReportService:

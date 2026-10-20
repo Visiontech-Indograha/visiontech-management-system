@@ -9,7 +9,7 @@ from collections.abc import Sequence
 from typing import Any
 from uuid import UUID
 
-from app.crud.base import CRUDBase
+from app.core.repository import CRUDBase
 from app.modules.image_requirements.schemas.image_requirement_schema import (
     ImageRequirementCreate,
     ImageRequirementUpdate,

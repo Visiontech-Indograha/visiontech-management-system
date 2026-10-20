@@ -27,11 +27,11 @@ from app.crud.crud_plan_change import CRUDPlanChange
 from app.crud.crud_plan_revision import CRUDPlanRevision
 from app.crud.crud_plan_transition import CRUDPlanTransition
 from app.schemas.plan_revision import PlanRevisionIn
-from app.services.access_service import PlanAccess
 from app.services.notification_service import NotificationService
 from app.services.plan_amendment_service import PlanAmendmentService
 from app.services.plan_draft_service import PlanDraftService
 from app.services.signature_service import ISSUER, SignatureService
+from app.shared.access.access_service import PlanAccess
 
 REVISABLE = (PlanStatus.PUBLISHED, PlanStatus.APPEALED, PlanStatus.ACCEPTED, PlanStatus.IN_PROGRESS)
 NOT_ACCEPTED_YET = (PlanStatus.PUBLISHED, PlanStatus.APPEALED)

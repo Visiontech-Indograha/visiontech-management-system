@@ -15,9 +15,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.errors import AppError, NotFoundError, ValidationError
 from app.core.permissions import Permission
 from app.crud.crud_emergency_contact import CRUDEmergencyContact
-from app.crud.crud_org_clock import CRUDOrgClock
 from app.modules.employees.repositories.employee_repository import CRUDEmployee
-from app.services.access_service import ensure_same_org
+from app.shared.access.access_service import ensure_same_org
+from app.shared.org_clock import CRUDOrgClock
 
 RESTORED = "Data dipulihkan sebagai nonaktif. Akses lama tetap dicabut."
 ARCHIVED = "Karyawan dihapus. Data historis tetap tersimpan."

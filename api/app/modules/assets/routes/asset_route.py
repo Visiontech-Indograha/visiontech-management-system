@@ -31,7 +31,7 @@ from app.modules.assets.schemas.asset_schema import (
     AssetReturnVerify,
     AssetStatusResponse,
 )
-from app.services.access_service import PlanAccess, PlanNeed
+from app.shared.access.access_service import PlanAccess, PlanNeed
 
 router = APIRouter(prefix="/assets", tags=["Assets"])
 _ALLOCATION_LEADER_ACCESS = Depends(allocation_plan_access(PlanNeed.LEADER))

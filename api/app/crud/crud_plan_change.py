@@ -10,8 +10,7 @@ from typing import Any
 from uuid import UUID
 
 from app.core.enums import ChangeStatus, ChangeType, DocumentKind, DocumentStatus
-
-from .base import CRUDBase
+from app.core.repository import CRUDBase
 
 _DAY_TITLES = ("Persiapan & survei lokasi", "Instalasi & konfigurasi", "Pengujian & serah terima")
 _DAY_TASKS = ("Briefing keselamatan dan pemeriksaan area", "Pelaksanaan pekerjaan sesuai rencana")

@@ -6,7 +6,6 @@ Mengikuti Panduan Standar Arsitektur API FastAPI Modular §5.5.
 """
 
 from app.crud.crud_member_report import CRUDMemberReport
-from app.crud.crud_plan_access import CRUDPlanAccess
 from app.crud.crud_plan_amendment import CRUDPlanAmendment
 from app.crud.crud_plan_assignment import CRUDPlanAssignment
 from app.crud.crud_plan_attachment import CRUDPlanAttachment
@@ -18,6 +17,7 @@ from app.crud.crud_plan_location import CRUDPlanLocation
 from app.crud.crud_plan_member import CRUDPlanMember
 from app.crud.crud_plan_revision import CRUDPlanRevision
 from app.crud.crud_plan_transition import CRUDPlanTransition
+from app.shared.access.plan_access_repository import CRUDPlanAccess
 
 
 class PlanAssignmentRepository(CRUDPlanAssignment):

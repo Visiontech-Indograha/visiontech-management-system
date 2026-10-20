@@ -23,10 +23,10 @@ from app.crud.crud_plan_change import CRUDPlanChange
 from app.crud.crud_plan_draft import CRUDPlanDraft
 from app.crud.crud_plan_transition import CRUDPlanTransition
 from app.schemas.plan_draft import PlanDraftRequest
-from app.services.access_service import PlanAccess, require_plan_status
 from app.services.notification_service import NotificationService
 from app.services.plan_draft_service import PlanDraftService, _day_roster
 from app.services.signature_service import ACCEPTOR, ISSUER, SignatureService
+from app.shared.access.access_service import PlanAccess, require_plan_status
 
 LOCKED_REPORTS = ("SUBMITTED", "APPROVED")
 

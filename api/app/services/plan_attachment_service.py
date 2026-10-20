@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.enums import PlanStatus
 from app.core.errors import ValidationError
 from app.crud.crud_plan_attachment import CRUDPlanAttachment
-from app.services.access_service import PlanAccess, require_plan_status
+from app.shared.access.access_service import PlanAccess, require_plan_status
 
 
 class PlanAttachmentService:

@@ -16,7 +16,7 @@ from app.modules.reports.schemas.weekly_report_schema import (
     WeeklyReportResponse,
     WeeklyReviewRequest,
 )
-from app.services.access_service import PlanAccess, PlanNeed
+from app.shared.access.access_service import PlanAccess, PlanNeed
 
 router = APIRouter(prefix="/work-plans/{plan_id}/weekly", tags=["Weekly Reports"])
 _VIEW_ACCESS = Depends(plan_access(PlanNeed.VIEW))

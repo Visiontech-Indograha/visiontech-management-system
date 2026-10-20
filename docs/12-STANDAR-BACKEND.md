@@ -5,79 +5,67 @@ PostgreSQL 18 (PostGIS + pgvector), MinIO.
 
 ---
 
-## 1. Struktur folder (WAJIB — keputusan pemilik 2026-10-11 R-35)
+## 1. Struktur folder (WAJIB — keputusan pemilik 2026-10-11 R-35, migrasi tuntas 2026-10-20)
 
-> **Kritis.** Arsitektur backend secara resmi dimodernisasi dan dikunci ke pola **modular domain**
-> (`feature/arsitektur-api-modular`, R-35). Struktur ini mengelompokkan kode per domain bisnis
-> di bawah `app/modules/`, didukung infrastruktur basis data di `app/database/`, modul utilitas di
-> `app/shared/`, serta `app/core/` untuk startup lifespan dan konfigurasi keamanan.
-> Lapisan transisi (`crud/`, `models/`, `schemas/`, `services/`, `db/`) tetap dipertahankan
-> untuk kompatibilitas penuh dan seluruh struktur ini dikunci serta dijaga oleh `api/tests/test_structure.py`.
+> **Kritis.** Backend memakai pola **modular domain**: seluruh kode fitur ada di `app/modules/<modul>/`.
+> Folder lama (`services/`, `crud/`, `schemas/`, `db/`, `templates/`, `api/v1/endpoints/`) **sudah dihapus**
+> dan tidak boleh muncul lagi. Struktur & arah impor dijaga `api/tests/test_structure.py`.
 
 ```
 api/
 ├── alembic/                  migrasi database (Alembic)
-├── app/                      kode sumber aplikasi
-│   ├── modules/              modul fitur/domain mandiri (routes.py, skema/komponen domain)
-│   │   ├── accounts/ · assets/ · attendance/ · audit/ · auth/ · documents/
-│   │   ├── employees/ · hse/ · notifications/ · overtime/ · reports/
-│   │   └── signatures/ · sites/ · system/ · units/ · work_plans/ · work_types/
-│   ├── database/             manajemen koneksi, sesi DB, dan health check
-│   │   ├── session.py        engine async, session factory, transaksi RLS
-│   │   └── health_check.py   verifikasi koneksi DB
-│   ├── shared/               utilitas, dependensi bersama, dan konstanta lintas modul
-│   ├── core/                 konfigurasi inti, lifespan, keamanan & error handling
-│   │   ├── config.py         pengaturan env via pydantic-settings
-│   │   ├── security.py       hashing password, JWT, identitas CurrentUser
-│   │   ├── lifespan.py       startup & shutdown lifespan context manager
-│   │   └── exception_handlers.py penanganan AppError dan HttpException global
-│   ├── api/                  routing API v1 & dependency injection
-│   │   ├── v1/
-│   │   │   └── router.py     menggabungkan semua router modul ke dalam prefix /api/v1
-│   │   └── deps.py           dependency injection auth, sesi DB, penjaga RBAC
-│   ├── crud/ · models/ · schemas/ · services/ · db/  lapisan domain & kompatibilitas
-│   ├── templates/            Jinja2 untuk PDF dokumen
+├── app/
+│   ├── modules/<modul>/      satu domain bisnis, mandiri
+│   │   ├── routes/           APIRouter: jalur, metode, status, response_model, dependency → controller
+│   │   ├── controllers/      orkestrasi use case: panggil service, bentuk schema respons
+│   │   ├── services/         aturan bisnis; melempar AppError (app.core.errors)
+│   │   ├── repositories/     satu-satunya tempat SQL (CRUD<Entitas>(CRUDBase))
+│   │   ├── schemas/          Pydantic permintaan & respons
+│   │   └── dependencies.py   perakitan service: get_<x>_service(db=Depends(get_db_with_user))
+│   │   (accounts · assets · attendance · audit · auth · documents · employees · face · hse ·
+│   │    image_requirements · mess · notifications · offboarding · overtime · reports · signatures ·
+│   │    sites · system · system_backup · teams · units · work_completion · work_plans · work_types)
+│   ├── shared/               kode yang dipakai ≥2 modul dan bukan milik satu domain
+│   │   ├── access/           PlanNeed/PlanAccess/check_plan_access + repositori akses (SK, berkas, org)
+│   │   ├── documents/        pdf_service, document_export_service, templates/ (Jinja2 PDF)
+│   │   └── org_clock.py      jam lokal organisasi
+│   ├── database/             session.py (engine, sesi, RLS, unit_of_work), health_check.py, migration_v3.py
+│   ├── core/                 config, security, errors, permissions, repository (CRUDBase), time, storage, …
+│   ├── api/
+│   │   ├── v1/router.py      menggabungkan router semua modul di bawah /api/v1
+│   │   └── deps.py           HANYA dependency lintas domain: get_db, get_db_with_user, get_current_user,
+│   │                         get_file_viewer, require_permission, plan_access, plan_day_access, …
 │   ├── cli.py                perintah CLI (seed, create-admin)
-│   └── main.py               titik masuk FastAPI aplikasi
-├── tests/                    pytest: conftest.py, test_<fitur>.py
-├── .env                      variabel lingkungan lokal (tidak di-commit)
-├── Dockerfile
-├── requirements*.txt        dependensi (versi dikunci)
-└── ruff.toml · mypy.ini      konfigurasi lint & tipe (§5)
+│   └── main.py               create_app()
+├── tests/                    pytest
+└── ruff.toml · mypy.ini
 ```
 
-Tambahan proyek yang dipertahankan (tidak ada di contoh, dibutuhkan produk): `app/core/` berisi juga
-`errors.py`, `permissions.py`, `time.py`, `storage.py`, dsb. (fondasi tanpa domain); `app/templates/`
-(Jinja2 untuk PDF); `app/cli.py` (seed, create-admin).
-
-**Aturan penulisan**
+**Aturan penulisan & arah impor** (ditegakkan `tests/test_structure.py`, `tests/test_router_layering.py`)
 
 | Lapisan | Boleh | Tidak boleh |
 |---|---|---|
-| `api/v1/endpoints/*` | `Depends(...)` dari `api/deps.py`, panggil **service**, kembalikan **schema** | SQL, `text()`, `db.execute`, aturan bisnis, `HTTPException` (pakai `AppError`) |
-| `api/deps.py` | sesi DB, autentikasi, izin, penjaga akses, perakitan service | kueri di luar `crud` |
-| `services/*` | aturan bisnis, memanggil **crud**, melempar `AppError` | SQL, objek `Request`/`Response`, impor `app.api` |
-| `crud/*` | kueri SQL/SQLModel, mengembalikan baris/model | aturan bisnis, `AppError` bisnis |
-| `models/*` / `schemas/*` | definisi bentuk data | logika |
-| `db/*` | engine, sesi, transaksi, basis model | kueri domain |
+| `routes/` | `Depends(...)` dari `api/deps.py`, controller modulnya | `sqlalchemy`, `repositories`, aturan bisnis |
+| `controllers/` | service (lewat `dependencies.py`), schema | `repositories`, SQL |
+| `services/` | aturan bisnis, repository modulnya, service/schema modul lain, `app.shared`, `AppError` | `app.api`, controllers/routes, `raise HTTPException`, SQL |
+| `repositories/` | SQL berparameter (`:nama`) lewat `CRUDBase` | aturan bisnis, `app.api`, `raise HTTPException` |
+| `dependencies.py` | merakit service + repository (boleh repository modul lain) | logika |
+| `core/`, `database/`, `shared/` | fondasi tanpa domain | impor `app.modules` atau `app.api` |
 
-- Nama berkas: endpoint = jamak modul (`work_plans.py`), crud = `crud_<entitas tunggal>.py`,
-  service = `<entitas>_service.py`, schema/model = `<entitas>.py`.
-- Satu arah impor: `endpoints → services → crud → models`; `core` dan `db` tidak mengimpor lapisan domain.
-  Dijaga uji `tests/test_structure.py` (docs/26 M0).
-- Folder teratas di `app/` dikunci sesuai arsitektur modular R-35: `modules`, `database`, `shared`, `core`, `api`, `templates`, serta folder transisi `crud`, `models`, `schemas`, `services`, `db` (ditegakkan `tests/test_structure.py`).
+- Antarmodul hanya lewat `services`/`schemas`/`dependencies` modul lain — **tidak** ke `repositories`,
+  `controllers`, atau `routes` modul lain. Sisa pelanggaran lama tercatat di `KNOWN_VIOLATIONS`
+  (`tests/test_structure.py`) dan hanya boleh menyusut.
+- Nama berkas: `<entitas>_route.py`, `<entitas>_controller.py`, `<entitas>_service.py`,
+  `<entitas>_repository.py`, `<entitas>_schema.py`.
 
 ---
 
 ## 2. Tanggung jawab tiap lapisan
 
-Alur satu permintaan: **endpoint → service → crud**. Tidak ada lapisan lain (`routes/`, `controllers/`,
-`repositories/` tidak ada — versi lama dokumen ini menyebutnya; dikoreksi 2026-10-07).
+Alur satu permintaan: **route → controller → service → repository**.
 
-### Endpoint — `api/v1/endpoints/<modul>.py`
-Tipis. Hanya: jalur, metode, status, `response_model`, dependency, lalu memanggil **service** dan
-membentuk **schema** respons. Tidak ada aturan bisnis dan tidak menyentuh basis data
-(dijaga `tests/test_router_layering.py`).
+### Route — `modules/<m>/routes/<entitas>_route.py`
+Tipis. Hanya jalur, metode, status, `response_model`, dependency, lalu memanggil **controller**.
 
 ```python
 router = APIRouter(prefix="/units", tags=["Units"])
@@ -85,23 +73,27 @@ router = APIRouter(prefix="/units", tags=["Units"])
 @router.get("", response_model=list[UnitOut])
 async def list_units(
     current_user: CurrentUser = Depends(get_current_user),
-    unit_service: UnitService = Depends(get_unit_service),
+    controller: UnitController = Depends(),
 ) -> list[UnitOut]:
-    """Unit milik organisasi pengguna saja (V-09)."""
-    return [UnitOut(**r._mapping) for r in await unit_service.list_units(current_user.organization_id)]
+    return await controller.handle_list_units(current_user.organization_id)
 ```
 
-### Perakitan — `api/deps.py`
-Satu fungsi `get_<nama>_service` per service: membuka sesi ber-RLS (`get_db_with_user`) dan menyuntikkan crud.
+### Controller — `modules/<m>/controllers/<entitas>_controller.py`
+Menerima service lewat `Depends(get_<x>_service)`, memanggilnya, dan membentuk **schema** respons.
+
+### Perakitan — `modules/<m>/dependencies.py`
+Satu fungsi `get_<nama>_service` per service: membuka sesi ber-RLS (`get_db_with_user`) dan menyuntikkan
+repository. FastAPI memakai ulang satu sesi per permintaan = satu transaksi.
 
 ```python
 def get_unit_service(db: AsyncSession = Depends(get_db_with_user)) -> UnitService:
     return UnitService(CRUDUnit(db))
 ```
 
-### Service — `services/<entitas>_service.py`
-**Tempat aturan bisnis.** Nama metode = transaksi di `prototype/js/domain.js` (`publish`, `accept`, …).
-Tidak menulis SQL, tidak tahu HTTP/JSON, melempar `AppError` berpesan Indonesia.
+### Service — `modules/<m>/services/<entitas>_service.py`
+**Tempat aturan bisnis.** Nama metode = transaksi di `domain.js` prototipe (`publish`, `accept`, …; prototipe
+dibaca lewat `git show 84008895:prototype/js/domain.js`). Tidak menulis SQL, tidak tahu HTTP/JSON, melempar
+`AppError` berpesan Indonesia (galat DB: `raise db_error(e) from e`).
 
 ```python
 class PlanTransitionService:
@@ -112,9 +104,9 @@ class PlanTransitionService:
         ...
 ```
 
-### CRUD — `crud/crud_<entitas>.py`
+### Repository — `modules/<m>/repositories/<entitas>_repository.py`
 **Satu-satunya tempat SQL.** Kelas `CRUD<Entitas>(CRUDBase)` dengan helper `execute`/`fetchone`/`fetchall`
-dari `crud/base.py`; SQL mentah berparameter (`:nama`), tanpa `SELECT *` (dijaga `test_no_select_star.py`).
+dari `app/core/repository.py`; SQL mentah berparameter (`:nama`), tanpa `SELECT *` (dijaga `test_sql_rules.py`).
 
 ```python
 class CRUDUnit(CRUDBase):
@@ -125,7 +117,7 @@ class CRUDUnit(CRUDBase):
         ))
 ```
 
-### Schema — `schemas/<entitas>.py`
+### Schema — `modules/<m>/schemas/<entitas>_schema.py`
 Bentuk permintaan & respons (Pydantic). Aturan lengkap: §10. Baris DB / model **tidak pernah** menjadi
 respons langsung — kolom baru (mis. `password_hash`, `embedding`) akan ikut terkirim tanpa disadari.
 
@@ -224,9 +216,9 @@ Handler global mengubahnya menjadi bentuk baku di dokumen 05. Aturan:
 | Lint | `ruff check app tests` — set aturan di `api/ruff.toml` (`E,W,F,I,UP,B,RUF,DTZ,BLE,ASYNC,SIM,C4,PIE`), baris ≤ **120**. Mengubah set aturan = keputusan pemilik |
 | Utang lint lama | `[lint.per-file-ignores]` di `ruff.toml` **hanya boleh menyusut**. Berkas baru tidak boleh masuk daftar; menyentuh berkas lama → rapikan baris panjangnya lalu hapus `E501`-nya |
 | Tipe | `mypy` strict untuk seluruh `app/`; tidak ada `Any` tanpa alasan tertulis |
-| Penamaan berkas | endpoint `<modul jamak>.py`, service `<entitas>_service.py`, crud `crud_<entitas>.py`, schema `<entitas>.py` |
+| Penamaan berkas | `<entitas>_route.py`, `<entitas>_controller.py`, `<entitas>_service.py`, `<entitas>_repository.py`, `<entitas>_schema.py` di `modules/<m>/<lapisan>/` |
 | Penamaan fungsi servis | Sama dengan transaksi prototipe: `publish`, `accept`, `request_personnel_change` |
-| Impor | Absolut (`app.services.x`); di dalam `crud/` boleh `from .base import CRUDBase` |
+| Impor | Absolut (`app.modules.<m>.services.x`, `app.core.repository import CRUDBase`) |
 | Async | Semua I/O `async`; kerja CPU berat (kompresi gambar, render PDF) → `run_in_threadpool` |
 | Rahasia | Hanya lewat `core/config.py`; tidak ada `os.getenv` tersebar |
 | Waktu | Hanya lewat `core/time.py` (`utcnow`, `jakarta_now`) |
@@ -246,14 +238,14 @@ mengunggah foto besar.
 
 | Hal | Di mana |
 |---|---|
-| Helper SQL dasar | `crud/base.py` (`CRUDBase`) |
+| Helper SQL dasar | `core/repository.py` (`CRUDBase`) |
 | Pagination, penyaringan, pengurutan | `core/pagination.py` |
 | Pemeriksaan izin | `core/permissions.py` + `require_permission` di `api/deps.py` — **tidak pernah** ditulis ulang di endpoint |
-| Penjaga akses SK | `core/plan_auth.py` + `plan_access(...)` di `api/deps.py` |
+| Penjaga akses SK | `shared/access/access_service.py` + `plan_access(...)` di `api/deps.py` |
 | Pemetaan galat | `core/errors.py` |
 | Kompresi gambar | `core/image.py` |
 | Penyimpanan berkas | `core/storage.py` |
-| Snapshot & hash dokumen | `services/document_service.py` |
+| Snapshot & hash dokumen | `modules/documents/services/document_service.py` |
 | Waktu | `core/time.py` |
 
 **Yang sengaja tidak dipaksakan sama:** aturan bisnis tiap modul. Absensi dan lembur
@@ -280,8 +272,8 @@ yang berani ubah.
 
 | Jenis | Isi | Alat |
 |---|---|---|
-| Unit | Servis, dengan crud tiruan | pytest |
-| Integrasi | CRUD, trigger, RLS, constraint | pytest + PostgreSQL nyata |
+| Unit | Servis, dengan repository tiruan | pytest |
+| Integrasi | Repository, trigger, RLS, constraint | pytest + PostgreSQL nyata |
 | API | Endpoint + matriks RBAC | `fastapi.testclient.TestClient` (`tests/conftest.py`) |
 
 - **PostgreSQL sungguhan**, bukan SQLite: separuh aturan sistem ini hidup di trigger, RLS,
@@ -291,7 +283,7 @@ yang berani ubah.
 - Waktu dibekukan lewat `core/time.py`.
 - **Matriks RBAC dibangkitkan**: setiap endpoint × 8 peran. Endpoint baru tanpa baris di
   matriks → CI gagal.
-- Target: 100% cabang pada `services/`; endpoint minimal jalur berhasil + jalur ditolak.
+- Target: 100% cabang pada `modules/*/services/`; endpoint minimal jalur berhasil + jalur ditolak.
 
 ---
 
@@ -316,7 +308,7 @@ Kelas skema lama **tidak diganti namanya**: nama kelas menjadi nama komponen Ope
 
 | Hal | Aturan | Contoh |
 |---|---|---|
-| Berkas | `app/schemas/<entitas>.py`, satu entitas/modul per berkas; docstring modul 1 baris | `schemas/app_release.py` |
+| Berkas | `app/modules/<m>/schemas/<entitas>_schema.py`, satu entitas per berkas; docstring modul 1 baris | `modules/system/schemas/app_release_schema.py` |
 | Masukan | `<Entitas>In` (buat), `<Entitas>Update` (ubah sebagian), `<Aksi>In` untuk aksi | `MemberReportIn`, `AmendmentReasonIn` |
 | Keluaran | `<Entitas>Out`; daftar berhalaman `<Entitas>ListOut` (`items`, `total`, …) | `NotificationOut` |
 | Bagian bersarang | kata benda tanpa akhiran In/Out bila dipakai dua arah | `GeoPoint`, `DayTaskOut` |
@@ -382,22 +374,23 @@ tinjau diff-nya, lalu `npm run gen:api:export && npm run gen:api` di `web/` bila
 
 ## 11. Templat fitur backend (salin untuk modul baru)
 
-Urutan berkas untuk modul `<modul>` (entitas `<entitas>`):
+Urutan berkas untuk modul `<modul>` (entitas `<entitas>`), semua di `app/modules/<modul>/`:
 
-1. `app/schemas/<entitas>.py` — `<Entitas>In` / `<Entitas>Out` (§10).
-2. `app/crud/crud_<entitas>.py` — `class CRUD<Entitas>(CRUDBase)`, SQL berparameter, kolom disebut satu per satu.
-3. `app/services/<entitas>_service.py` — `class <Entitas>Service`, konstruktor menerima crud, nama metode = transaksi
+1. `schemas/<entitas>_schema.py` — `<Entitas>In` / `<Entitas>Out` (§10).
+2. `repositories/<entitas>_repository.py` — `class CRUD<Entitas>(CRUDBase)`, SQL berparameter, kolom disebut satu per satu.
+3. `services/<entitas>_service.py` — `class <Entitas>Service`, konstruktor menerima repository, nama metode = transaksi
    `domain.js`, galat `AppError`.
-4. `app/api/deps.py` — `def get_<entitas>_service(db = Depends(get_db_with_user)) -> <Entitas>Service`.
-5. `app/api/v1/endpoints/<modul>.py` — `router = APIRouter(prefix="/<modul>", tags=["<Modul>"])`, tiap rute memakai
-   `require_permission(...)`, penjaga SK, atau terdaftar di `SELF_SERVICE`/`PUBLIC_ROUTES` beserta alasannya.
-6. `app/api/v1/router.py` — `api_router.include_router(...)` (urutan memengaruhi OpenAPI; tambahkan di akhir).
-7. Uji: `tests/test_<fitur>.py` — jalur berhasil (tulis → baca ulang), jalur ditolak, peran lain; snapshot OpenAPI.
-8. Skema DB berubah → migrasi Alembic baru **dan** `db/*.sql` disamakan di commit yang sama; migrasi yang sudah
+4. `dependencies.py` — `def get_<entitas>_service(db = Depends(get_db_with_user)) -> <Entitas>Service`.
+5. `controllers/<entitas>_controller.py` — `class <Entitas>Controller`, menerima service lewat `Depends(get_<entitas>_service)`.
+6. `routes/<entitas>_route.py` — `router = APIRouter(prefix="/<modul>", tags=["<Modul>"])`, tiap rute memakai
+   `require_permission(...)`, penjaga SK, atau terdaftar di `SELF_SERVICE`/`PUBLIC_ROUTES` beserta alasannya;
+   ekspor di `routes/__init__.py`.
+7. `app/api/v1/router.py` — `api_router.include_router(...)` (urutan memengaruhi OpenAPI; tambahkan di akhir).
+8. Uji: `tests/test_<fitur>.py` — jalur berhasil (tulis → baca ulang), jalur ditolak, peran lain; snapshot OpenAPI.
+9. Skema DB berubah → migrasi Alembic baru **dan** `db/*.sql` disamakan di commit yang sama; migrasi yang sudah
    di produksi tidak pernah diubah.
 
-Contoh lengkap yang kecil dan bersih untuk ditiru: `units` (`endpoints/units.py`, `services/unit_service.py`,
-`crud/crud_unit.py`, `schemas/unit.py`).
+Contoh lengkap yang kecil dan bersih untuk ditiru: `app/modules/units/`.
 
 ---
 

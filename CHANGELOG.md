@@ -7,6 +7,15 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ---
 
+- **Migrasi API Modular Tuntas & Pembersihan Kode Lama (`api/app/`, root repo):**
+  - **Folder legacy dihapus:** `app/services/`, `app/crud/`, `app/schemas/`, `app/db/`, `app/templates/`, `app/api/v1/endpoints/`, dan isi lama `app/shared/`. Kode asli yang masih tersisa (`plan_*` service/crud/schema, sync, monitoring, file, app_release, face_embed_client, emergency_contact) dipindah ke modul pemiliknya; shim re-export dihapus dan semua impor (app, tes, skrip) diarahkan ke `app.modules.*`.
+  - **Kode lintas-modul ke `app/shared/`:** `access/` (access_service + repositori akses SK/berkas/org), `documents/` (pdf_service, document_export_service, templates Jinja2), `org_clock.py`. Sesi DB satu pintu di `app/database/session.py`.
+  - **`api/deps.py` dipecah:** tinggal dependency lintas-domain; 24 modul punya `dependencies.py` sendiri. Service tidak lagi memakai `Depends(get_db_with_user)` di konstruktor.
+  - **Lapisan dirapikan:** SQL `/work-plans/{id}/exports` & foto profil `/auth/me` pindah ke repository; rute Rencana Kerja V2 lewat `WorkPlanV2Controller` → `WorkPlanV2Service`; `HTTPException` di service diganti `AppError`/`core.errors.db_error` (respons identik). Batas verifikasi tanda tangan publik kini konstanta `VERIFY_LIMIT`/`VERIFY_WINDOW`.
+  - **Penjaga diperbarui:** `tests/test_structure.py` menegakkan lapisan modul & arah impor; `test_router_layering`, `test_no_dead_modules`, `test_sql_rules` memindai lokasi modul; target monkeypatch tes diarahkan ke modul tempat simbol dipakai.
+  - **Root repo:** `prototype/` dihapus (keputusan pemilik; baca lewat `git show 84008895:prototype/<path>`), skrip sekali-pakai di `scripts/` dan alias `api/main.py` dihapus.
+  - **Kontrak API tidak berubah:** OpenAPI (195 jalur) identik dengan sebelum migrasi; `ruff check` bersih.
+
 - **Validasi Komprehensif Skema Master Database V2 & API Modular Menggunakan Postman CLI:**
   - **Otomasi Postman Test Runner Terisolasi (scripts/run_postman_validation.py):** Membangun runner otomatis yang mengelola siklus hidup server FastAPI uvicorn, memonitor readiness probe /ready hingga HTTP 200, mengeksekusi Postman CLI runner, dan mematikan subproses secara bersih tanpa port hanging.
   - **Koleksi Validasi Alur Fitur Master V2 (postman/collections/vms-feature-validation.collection.json):** Menyusun 7 folder pengujian terstruktur mencakup 18 request end-to-end (Auth PM Hendrik, Master Work Types & BoM Templates 1:N, Order Klien Ticket V3, Sinkronisasi BoM Riil, Daily-First Work Plan, Mesin Kunci Prasyarat Prerequisite Locking, serta Pengesahan Tanda Tangan Digital & Ekspor BAST Word docx).

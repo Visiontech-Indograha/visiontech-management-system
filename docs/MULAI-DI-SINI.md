@@ -102,7 +102,7 @@ vms/
 ├── CLAUDE.md               ← salin dari dokumen 15 di folder ini
 ├── docs/                   ← salin SELURUH isi folder rencana ini
 ├── db/                     ← salin dari prototipe: 5 berkas SQL
-├── prototype/              ← salin prototipe V2, DIBEKUKAN sebagai rujukan
+├── (prototype/ dihapus 2026-10-20 — baca lewat `git show 84008895:prototype/<path>`)
 ├── api/                    FastAPI (struktur di dokumen 12)
 ├── web/                    React (struktur di dokumen 11)
 ├── mobile/                 Flutter
@@ -250,7 +250,6 @@ mana yang benar-benar selesai.
 
 ## 11. Yang tidak boleh dilakukan
 
-- ❌ Mengubah prototipe di `prototype/`. Itu rujukan, bukan kode hidup.
 - ❌ Memakai `alert()`, `confirm()`, `prompt()` bawaan browser. Memblokir halaman dan
   membekukan otomasi uji.
 - ❌ Menulis aturan bisnis di router atau di frontend.

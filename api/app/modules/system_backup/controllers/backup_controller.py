@@ -9,6 +9,7 @@ from uuid import UUID
 from fastapi import Depends
 
 from app.core.security import CurrentUser
+from app.modules.system_backup.dependencies import get_backup_service
 from app.modules.system_backup.schemas.backup_schema import BackupCreate, BackupOut
 from app.modules.system_backup.services.backup_service import BackupService
 
@@ -16,7 +17,7 @@ from app.modules.system_backup.services.backup_service import BackupService
 class BackupController:
     """Controller pengelolaan registry backup sistem (Super Admin)."""
 
-    def __init__(self, service: BackupService = Depends()) -> None:
+    def __init__(self, service: BackupService = Depends(get_backup_service)) -> None:
         self.service = service
 
     async def handle_list_backups(

@@ -8,10 +8,8 @@ from collections.abc import Sequence
 from typing import Any
 from uuid import UUID
 
-from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_db_with_user
 from app.core.errors import NotFoundError
 from app.modules.image_requirements.repositories.image_requirement_repository import ImageRequirementRepository
 from app.modules.image_requirements.schemas.image_requirement_schema import (
@@ -23,7 +21,7 @@ from app.modules.image_requirements.schemas.image_requirement_schema import (
 class ImageRequirementService:
     """Service use case persyaratan foto lapangan."""
 
-    def __init__(self, db: AsyncSession = Depends(get_db_with_user)) -> None:
+    def __init__(self, db: AsyncSession) -> None:
         self.repo = ImageRequirementRepository(db)
 
     async def list_by_work_type(self, work_type_id: UUID) -> Sequence[Any]:

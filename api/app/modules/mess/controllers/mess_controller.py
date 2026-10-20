@@ -9,6 +9,7 @@ from uuid import UUID
 from fastapi import Depends
 
 from app.core.security import CurrentUser
+from app.modules.mess.dependencies import get_mess_service
 from app.modules.mess.schemas.mess_schema import (
     MessStayCreate,
     MessStayOut,
@@ -20,7 +21,7 @@ from app.modules.mess.services.mess_service import MessService
 class MessController:
     """Controller pengelolaan akomodasi mess karyawan."""
 
-    def __init__(self, mess_service: MessService = Depends()) -> None:
+    def __init__(self, mess_service: MessService = Depends(get_mess_service)) -> None:
         self.service = mess_service
 
     async def handle_list_stays(

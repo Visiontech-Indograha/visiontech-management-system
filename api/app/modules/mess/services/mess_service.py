@@ -8,10 +8,8 @@ from collections.abc import Sequence
 from typing import Any
 from uuid import UUID
 
-from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_db_with_user
 from app.core.errors import NotFoundError, ValidationError
 from app.modules.mess.repositories.mess_repository import MessRepository
 from app.modules.mess.schemas.mess_schema import MessStayCreate, MessStayUpdate
@@ -20,7 +18,7 @@ from app.modules.mess.schemas.mess_schema import MessStayCreate, MessStayUpdate
 class MessService:
     """Service use case akomodasi mess karyawan."""
 
-    def __init__(self, db: AsyncSession = Depends(get_db_with_user)) -> None:
+    def __init__(self, db: AsyncSession) -> None:
         self.repo = MessRepository(db)
 
     async def list_stays(self, employee_id: UUID | None = None, weekly_plan_id: UUID | None = None) -> Sequence[Any]:

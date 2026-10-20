@@ -50,44 +50,57 @@ flowchart TD
 
 ---
 
-## 3. Alur Perencanaan Kerja Mingguan & Harian (Work Plan)
+## 3. Alur Perencanaan Kerja Daily-First (Order Klien → Survei → Persiapan → Instalasi)
+
+> Keputusan pemilik 2026-10-19/20: **tidak ada tabel minggu** (`work_plan_weekly` dihapus, `db/migration_daily_first.sql`).
+> Minggu = rentang tanggal `work_date BETWEEN awal AND akhir`. Visiontech adalah subkontraktor: PM menerima order
+> dari klien (mis. PT Pertamina Hulu Rokan) lalu menyusun rencana kerja per tahap.
 
 ```mermaid
 flowchart TD
-    StartPlan(["PM Buka Menu Work Plan"]) --> NewWeekly["PM Buat Work Plan Weekly (Tabel work_plan_weekly)"]
-    NewWeekly --> FillWeekly["Pilih Divisi, Tim Pelaksana, Minggu ke-n, & Periode"]
-    FillWeekly --> AddDaily["PM Tambahkan Jadwal Harian (Tabel work_plan_daily)"]
-    AddDaily --> SetSite["Set Titik Lokasi Site (Latitude, Longitude, Radius Presensi, Jam Kerja)"]
-    SetSite --> AddItems["PM Tambahkan Daftar Tugas (Tabel work_plan_item)"]
-    AddItems --> AssignType["Pilih work_type & Syarat Foto SOP (image_requirement)"]
-    AssignType --> PubPlan["PM Terbitkan SK (Status: APPROVED / ONGOING)"]
-    PubPlan --> NotifyTL(["Team Leader & Teknisi Melihat Jadwal di Mobile"])
+    Order(["Order Klien (work_completion): klien, judul proyek, lokasi, divisi, PM"]) --> Daily["PM buat Jadwal Harian (work_plan_daily): tanggal, tim, lokasi site, radius, jam"]
+    Daily --> Survey["Item SURVEY per titik (work_plan_item, task_phase = SURVEY)"]
+    Survey --> Template["Template per divisi (work_type): syarat foto (image_requirement) + BoM bawaan (work_type_default_materials)"]
+    Template --> Findings["Hasil survei per titik: foto posisi & view, remark (notes), kebutuhan alat"]
+    Findings --> Need{"Perlu persiapan lapangan?"}
+    Need -- "Ya" --> Prep["Item PREPARATION: galian parit, skafolding, grounding, box panel (depends_on_item_id → titik survei)"]
+    Need -- "Tidak" --> Main
+    Prep --> Main["Item utama per titik: INSTALLATION / REPLACEMENT / MAINTENANCE (is_main_deliverable = TRUE)"]
+    Main --> BoM["BoM riil order (work_completion_bom) dari template + hitungan survei"]
+    Main --> Approve["PM setujui jadwal (per hari atau sekaligus satu minggu: matriks)"]
+    Approve --> Field(["Ketua & teknisi melihat jadwal di aplikasi HP"])
 ```
+
+- Template berbeda per divisi: "Survei CCTV" (divisi ME & IoT) ≠ "Survei Wall Display" walau namanya mirip
+  (`work_type.division_id`, unik per divisi + nama).
+- Satu titik = satu item (`location_name`, `site_lat/lng`) agar proyek multi-minggu terlacak per titik
+  (mis. minggu ke-3 titik 1–2, minggu ke-4 titik 8).
+- Fase baku `task_phase`: `SURVEY`, `PREPARATION`, `INSTALLATION`, `REPLACEMENT`, `MAINTENANCE`; dipilih per item.
 
 ---
 
-## 4. Alur Engine Rollover & Geser Hari Tugas Lapangan
+## 4. Alur Rollover: Geser Tugas ke Hari / Minggu Berikutnya
 
 ```mermaid
 flowchart TD
-    TLStart(["Leader & Tim Tiba di Lokasi"]) --> ExecItem["Pengerjaan Item Tugas (work_plan_item)"]
-    ExecItem --> CheckFinish{"Tugas Selesai Sesuai Target?"}
-    
-    CheckFinish -- "Ya (100%)" --> MarkDone["Update status = 'DONE', completed_qty = target_qty"]
-    MarkDone --> UploadProof["Unggah Foto SOP (image_requirement)"]
-    
-    CheckFinish -- "Tidak (Terkendala Hujan/Izin)" --> RequestRoll["Leader Ajukan Geser Hari (status = 'PENDING_ROLLOVER')"]
-    RequestRoll --> InputReason["Isi delay_reason & completed_qty parsial"]
-    InputReason --> SetWait["Set rollover_approval_status = 'WAITING_PM'"]
-    
-    SetWait --> PMReview{"Persetujuan PM"}
-    PMReview -- "Ditolak" --> PMReject["Status kembali IN_PROGRESS / Penyesuaian"]
-    PMReview -- "Disetujui Geser Besok" --> PMSApproveDay["Set status = 'SHIFTED_DAY'"]
-    PMSApproveDay --> CreateNextDayItem["Sistem Buat Item Baru di Jadwal Besok (origin_item_id = item lama)"]
-    
-    PMReview -- "Disetujui Minggu Depan" --> PMApproveWeek["Set status = 'ALLOCATED_NEXT_WEEK'"]
-    PMApproveWeek --> LinkNextWeek["Hubungkan ke allocated_to_weekly_id"]
+    TLStart(["Ketua & tim di lokasi"]) --> ExecItem["Kerjakan item (work_plan_item)"]
+    ExecItem --> CheckFinish{"Selesai sesuai target?"}
+    CheckFinish -- "Ya" --> MarkDone["status = DONE, completed_qty = target_qty, unggah foto SOP"]
+    CheckFinish -- "Tidak (hujan, izin, material)" --> Request["Ketua ajukan geser: status = PENDING_ROLLOVER, rollover_approval_status = WAITING_PM, delay_reason, completed_qty parsial"]
+    Request --> PMReview{"Keputusan PM"}
+    PMReview -- "Tolak" --> Reject["REJECTED_BY_PM → item kembali dikerjakan"]
+    PMReview -- "Setujui" --> Target{"Tujuan"}
+    Target -- "Hari yang sudah ada" --> Shift
+    Target -- "Tanggal baru (besok / minggu depan / 2 minggu lagi)" --> AutoDay["Sistem buat work_plan_daily di tanggal itu (salin divisi, tim, lokasi, jam)"]
+    AutoDay --> Shift["Item asal: SHIFTED_DAY + shifted_to_daily_id; item baru: origin_item_id = item asal, target_qty = sisa volume"]
+    Shift --> Audit["Catatan PM → app_activity_logs (delay_reason ketua tidak ditimpa)"]
 ```
+
+Aturan (keputusan pemilik 2026-10-20):
+1. Tanggal tujuan **harus setelah** tanggal asal.
+2. Tim & divisi tujuan **sama** dengan hari asal (pindah tim = penugasan ulang, bukan rollover).
+3. **Sisa volume terbawa**: item baru `target_qty = target − completed_qty`; item asal tercatat parsial.
+4. **Satu rantai aktif**: item yang sudah `SHIFTED_DAY` tidak bisa digeser lagi — yang digeser item lanjutannya.
 
 ---
 
@@ -177,7 +190,7 @@ flowchart TD
     GenHash --> SaveComp["Simpan ke tabel work_completion"]
     
     SaveComp --> ExportChoice{"Pilih Format Ekspor (export_format_enum)"}
-    ExportChoice -- "WORD_DOCX" --> GenDocx["Isi Template Baku DOCX Berlogo"]
+    ExportChoice -- "WORD_DOCX" --> GenDocx["Isi Template Baku DOCX Berlogo (BAST & Survey Report)"]
     ExportChoice -- "PPTX" --> GenPptx["Generate Slide Presentasi Mingguan PPTX"]
     ExportChoice -- "PDF" --> GenPdf["Generate PDF Resmi dengan QR Verifikasi"]
     ExportChoice -- "EXCEL_XLSX" --> GenExcel["Generate Rekap BOQ & Uang Makan XLSX"]
@@ -185,3 +198,8 @@ flowchart TD
     GenDocx & GenPptx & GenPdf & GenExcel --> SaveRegistry["Catat ke document_template_export"]
     SaveRegistry --> ReadyDownload(["Dokumen Siap Diunduh oleh Manajemen"])
 ```
+
+**Survey Report (.docx)** — acuan format: laporan "Survey Report New CCTV MGT Minas" (2026-09): kop Visiontech & klien,
+tanggal/lokasi/tujuan, tabel jadwal, uraian aktivitas & tim, layout, hitungan instalasi FO per titik, dokumentasi per titik
+(foto posisi + view + remark), Bill of Material estimasi, penutup & penanda tangan. Data: order (`work_completion`),
+item `SURVEY` per titik (`notes`, `realization_photos_json`), `work_completion_bom`. Dibangun di Milestone 8.

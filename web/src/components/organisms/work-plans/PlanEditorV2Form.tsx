@@ -1,11 +1,10 @@
 /**
  * web/src/components/organisms/work-plans/PlanEditorV2Form.tsx
- * Formulir Rencana Kerja V2 Modern, Ringkas, dan Bersahabat (Daily-First Architecture):
- * - Stepper 3 Langkah Terarah: (1) Identitas & Tim -> (2) Jadwal Harian & Tugas -> (3) Armada & Alat (Opsional)
- * - Pemilih Hari Tab Horizontal: Hanya menampilkan 1 hari aktif agar pengguna tidak pusing/terintimidasi
- * - Fitur Cerdas Salin Hari: Cukup 1 klik untuk menyalin jadwal & tugas ke hari-hari kerja berikutnya
- * - GPS & Radius Opsional: Nilai default koordinat tersimpan otomatis tanpa harus diketik manual
- * - Manajemen Slot Tugas Ramah: Judul tugas, jenis pekerjaan, target unit, dan chip penugasan teknisi yang mudah diklik
+ * Formulir Rencana Kerja V2 Sederhana, Intuitif, dan Cepat (Daily-First Architecture):
+ * - Alur 1-Halaman Terarah: Tanpa stepper rumit yang membingungkan
+ * - Pola Template 1-Klik: Terapkan lokasi & aktivitas utama ke Senin-Jumat secara otomatis
+ * - Tinjauan 7 Hari Bersih: Kartu harian ringkas dengan toggle libur cepat & accordion detail
+ * - Bebas Galat DOM Nesting: Menggunakan elemen form native standar tanpa form bersarang
  */
 
 import React, { useEffect, useMemo, useState } from "react";
@@ -30,7 +29,6 @@ import {
   useCreateWeeklyPlanV2,
   useUpdateWeeklyPlanV2,
   useWorkPlanFormOptionsV2,
-  type OfficeSiteOption,
   type TeamMemberOption,
   type WeeklyPlanDetailResponse,
   type WorkCompletionOption,
@@ -42,22 +40,18 @@ import { TextBlock } from "@/components/molecules/TextBlock";
 import { FormBlock, ControlLabel, ControlInput, ControlSelect, ControlOption } from "@/components/molecules/FormBlock";
 import { FormErrorText } from "@/components/molecules/FormErrorText";
 import { QueryState } from "@/components/molecules/QueryState";
-import { VmsDialog } from "@/components/molecules/VmsDialog";
 import {
-  ArrowLeft,
-  ArrowRight,
+  Calendar,
   CalendarClock,
   Check,
   CheckCircle2,
   ChevronDown,
   ChevronUp,
-  Copy,
-  MapPin,
   Plus,
   Sparkles,
-  Timer,
   Trash2,
   User,
+  Users,
   Wrench,
 } from "@/components/molecules/Glyphs";
 import { weekday } from "@/lib/weekday";
@@ -115,17 +109,37 @@ export const PlanEditorV2Form: React.FC<PlanEditorV2FormProps> = ({ planId, init
   const optionsQuery = useWorkPlanFormOptionsV2();
   const opts = optionsQuery.data;
 
-  // Stepper: 1 = Info & Tim, 2 = Jadwal & Tugas, 3 = Armada & Alat
-  const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
-  const [activeDayIndex, setActiveDayIndex] = useState<number>(0);
-  const [isCopyModalOpen, setIsCopyModalOpen] = useState<boolean>(false);
-  const [selectedTargetDates, setSelectedTargetDates] = useState<string[]>([]);
-
   const currentIso = useMemo(() => getCurrentIsoWeek(), []);
   const defaultWeekRange = useMemo(
     () => getIsoWeekRange(currentIso.year, currentIso.week),
     [currentIso]
   );
+
+  const nextIso = useMemo(() => {
+    const nextWeek = currentIso.week + 1 > 52 ? 1 : currentIso.week + 1;
+    const nextYear = currentIso.week + 1 > 52 ? currentIso.year + 1 : currentIso.year;
+    return { year: nextYear, week: nextWeek };
+  }, [currentIso]);
+
+  const nextWeekRange = useMemo(
+    () => getIsoWeekRange(nextIso.year, nextIso.week),
+    [nextIso]
+  );
+
+  // State untuk preset cepat pengisian
+  const [quickSitePreset, setQuickSitePreset] = useState<string>("");
+  const [quickWorkTypeId, setQuickWorkTypeId] = useState<string>("");
+  const [quickTitle, setQuickTitle] = useState<string>("Pekerjaan Pemeliharaan & Instalasi Lapangan");
+  const [quickCompletionId, setQuickCompletionId] = useState<string>("");
+
+  // Accordion state untuk hari yang dibuka detailnya (null = tertutup semua)
+  const [expandedDayIndex, setExpandedDayIndex] = useState<number | null>(0);
+
+  // Toggle bagian logistik & alat kerja opsional
+  const [showLogistics, setShowLogistics] = useState<boolean>(false);
+
+  // Mode pemilih pekan: "current" | "next" | "custom"
+  const [weekSelectionMode, setWeekSelectionMode] = useState<"current" | "next" | "custom">("current");
 
   const {
     register,
@@ -160,8 +174,6 @@ export const PlanEditorV2Form: React.FC<PlanEditorV2FormProps> = ({ planId, init
   const selectedTeamId = useWatch({ control, name: "team_id" });
   const startDate = useWatch({ control, name: "start_date" });
   const endDate = useWatch({ control, name: "end_date" });
-  const weekNum = useWatch({ control, name: "week_number" });
-  const yearNum = useWatch({ control, name: "year" });
   const watchedDays = useWatch({ control, name: "days" }) || [];
 
   const [formError, setFormError] = useState<string | null>(null);
@@ -231,14 +243,7 @@ export const PlanEditorV2Form: React.FC<PlanEditorV2FormProps> = ({ planId, init
     }
   }, [selectedDivisionId, filteredTeams, setValue, getValues]);
 
-  // Perubahan minggu/tahun -> auto update start_date dan end_date
-  const handleWeekChange = (w: number, y: number) => {
-    setValue("week_number", w);
-    setValue("year", y);
-    const range = getIsoWeekRange(y, w);
-    setValue("start_date", range.start);
-    setValue("end_date", range.end);
-  };
+  const selectedQuickWorkTypeId = quickWorkTypeId || filteredWorkTypes[0]?.work_type_id || "";
 
   // Sinkronisasi hari-hari kerja saat start_date atau end_date berubah
   useEffect(() => {
@@ -299,51 +304,114 @@ export const PlanEditorV2Form: React.FC<PlanEditorV2FormProps> = ({ planId, init
     }
   }, [startDate, endDate, filteredWorkTypes, activeTeam, opts?.offices, replaceDays, getValues]);
 
-  // Buka modal salin jadwal hari aktif ke hari-hari lain
-  const openCopyScheduleModal = () => {
-    const current = getValues("days");
-    if (!current || current.length <= 1) return;
-    // Default centang semua hari selain hari aktif yang bukan hari libur
-    const targets = current
-      .filter((d, idx) => idx !== activeDayIndex && !d.is_holiday)
-      .map((d) => d.work_date);
-    setSelectedTargetDates(targets);
-    setIsCopyModalOpen(true);
+  // Handler pemilihan mode pekan (Pekan Ini vs Pekan Depan)
+  const handleSelectWeekMode = (mode: "current" | "next" | "custom") => {
+    setWeekSelectionMode(mode);
+    if (mode === "current") {
+      setValue("week_number", currentIso.week);
+      setValue("year", currentIso.year);
+      setValue("start_date", defaultWeekRange.start);
+      setValue("end_date", defaultWeekRange.end);
+    } else if (mode === "next") {
+      setValue("week_number", nextIso.week);
+      setValue("year", nextIso.year);
+      setValue("start_date", nextWeekRange.start);
+      setValue("end_date", nextWeekRange.end);
+    }
   };
 
-  // Eksekusi penyalinan jadwal hari aktif ke target yang dipilih
-  const executeCopySchedule = () => {
+  // ⚡ SMART AUTOFILL: Terapkan template dasar ke seluruh hari kerja (Senin s/d Jumat)
+  const handleApplyTemplateToWorkdays = () => {
     const current = getValues("days");
-    if (!current || activeDayIndex < 0 || activeDayIndex >= current.length) return;
-    const sourceDay = current[activeDayIndex];
-    if (!sourceDay) return;
+    if (!current || current.length === 0) return;
 
-    const targetSet = new Set(selectedTargetDates);
+    const selectedOffice = opts?.offices.find((o) => o.office_id === quickSitePreset);
+    const siteName = selectedOffice?.name || "Site Area Proyek";
+    const siteLat = selectedOffice?.latitude || 3.5952;
+    const siteLng = selectedOffice?.longitude || 98.6722;
+    const radius = selectedOffice?.radius_m || 150;
+    const wtId = selectedQuickWorkTypeId;
+    const compId = quickCompletionId ? quickCompletionId : null;
+    const assignedIds = activeTeam?.members.map((m) => m.employee_id) || [];
+    if (activeTeam?.leader_employee_id && !assignedIds.includes(activeTeam.leader_employee_id)) {
+      assignedIds.unshift(activeTeam.leader_employee_id);
+    }
+
     const updated = current.map((day) => {
-      if (!targetSet.has(day.work_date)) return day;
+      const dObj = new Date(`${day.work_date}T00:00:00Z`);
+      const isWeekend = dObj.getUTCDay() === 0 || dObj.getUTCDay() === 6;
+
+      if (isWeekend) {
+        return {
+          ...day,
+          status: "HOLIDAY" as const,
+          is_holiday: true,
+          items: [],
+        };
+      }
+
+      const templateItem: PlanItemV2Value = {
+        title: quickTitle || "Pekerjaan Lapangan",
+        work_type_id: wtId,
+        task_phase: "MAIN_INSTALLATION",
+        is_main_deliverable: true,
+        completion_id: compId,
+        target_qty: 1,
+        completed_qty: 0,
+        progress_percent: 0,
+        start_time: "08:00:00",
+        end_time: "17:00:00",
+        status: "PENDING",
+        rollover_approval_status: "NONE",
+        assigned_employee_ids: assignedIds,
+      };
+
       return {
         ...day,
-        site_name: sourceDay.site_name,
-        site_lat: sourceDay.site_lat,
-        site_lng: sourceDay.site_lng,
-        attendance_radius_m: sourceDay.attendance_radius_m,
-        clock_in_time: sourceDay.clock_in_time,
-        clock_out_time: sourceDay.clock_out_time,
+        site_name: siteName,
+        site_lat: siteLat,
+        site_lng: siteLng,
+        attendance_radius_m: radius,
+        clock_in_time: "08:00:00",
+        clock_out_time: "17:00:00",
         status: "SCHEDULED" as const,
         is_holiday: false,
-        items: sourceDay.items.map((it) => ({
-          ...it,
-          item_id: undefined,
-          completed_qty: 0,
-          progress_percent: 0,
-          status: "PENDING" as const,
-        })),
+        items: [templateItem],
       };
     });
 
     replaceDays(updated);
-    setIsCopyModalOpen(false);
-    toast.success(`Jadwal & tugas berhasil disalin ke ${targetSet.size} hari terpilih!`);
+    toast.success("⚡ Berhasil menerapkan template pekerjaan ke seluruh hari kerja (Senin - Jumat)!");
+  };
+
+  // Toggle libur untuk 1 hari tertentu
+  const handleToggleDayHoliday = (dayIdx: number) => {
+    const current = getValues("days");
+    if (!current || !current[dayIdx]) return;
+    const day = current[dayIdx];
+    const nextIsHoliday = !day.is_holiday;
+
+    setValue(`days.${dayIdx}.is_holiday`, nextIsHoliday);
+    setValue(`days.${dayIdx}.status`, nextIsHoliday ? "HOLIDAY" : "SCHEDULED");
+
+    if (!nextIsHoliday && (!day.items || day.items.length === 0)) {
+      setValue(`days.${dayIdx}.items`, [
+        {
+          title: "Pekerjaan Lapangan",
+          work_type_id: filteredWorkTypes[0]?.work_type_id || "",
+          task_phase: "MAIN_INSTALLATION",
+          is_main_deliverable: true,
+          target_qty: 1,
+          completed_qty: 0,
+          progress_percent: 0,
+          start_time: "08:00:00",
+          end_time: "17:00:00",
+          status: "PENDING",
+          rollover_approval_status: "NONE",
+          assigned_employee_ids: availableTechnicians.map((t) => t.employee_id),
+        },
+      ]);
+    }
   };
 
   const createMut = useCreateWeeklyPlanV2();
@@ -396,575 +464,569 @@ export const PlanEditorV2Form: React.FC<PlanEditorV2FormProps> = ({ planId, init
       <FormBlock onSubmit={onSubmit} className="space-y-6">
         <FormErrorText message={formError} />
 
-        {/* ── STEPPER NAVIGASI 3 LANGKAH ────────────────────────────── */}
-        <nav aria-label="Tahapan formulir" className="grid grid-cols-3 gap-2 border-b border-line pb-4">
-          <PlainAction
-            type="button"
-            onClick={() => setCurrentStep(1)}
-            className={`flex items-center gap-2.5 p-3 rounded-panel border text-left transition-all ${
-              currentStep === 1
-                ? "border-primary bg-primary/10 text-primary font-semibold shadow-sm"
-                : "border-line bg-surface text-mist hover:text-ink hover:bg-canvas"
-            }`}
-          >
-            <div
-              className={`size-7 rounded-full flex items-center justify-center text-xs font-bold ${
-                currentStep === 1 ? "bg-primary text-white" : "bg-line text-mist"
-              }`}
-            >
-              <TextBlock as="span">1</TextBlock>
+        {/* ── KARTU 1: TIM PELAKSANA & PERIODE PEKAN ─────────────────── */}
+        <section
+          aria-label="Identitas Tim & Periode"
+          className="rounded-panel border border-line bg-surface p-5 shadow-card space-y-4"
+        >
+          <div className="flex items-center gap-2.5 border-b border-line pb-3">
+            <div className="size-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+              <Users className="h-4 w-4" />
             </div>
             <div>
-              <TextBlock as="p" className="font-semibold text-xs sm:text-sm">Identitas &amp; Tim</TextBlock>
-              <TextBlock as="p" className="text-[11px] text-mist hidden sm:block">Divisi, Tim &amp; Periode</TextBlock>
+              <TextBlock as="h2" className="text-sm sm:text-base font-semibold text-ink">
+                1. Tim Pelaksana &amp; Periode Kerja
+              </TextBlock>
+              <TextBlock className="text-xs text-mist">
+                Tentukan divisi, tim teknisi lapangan, dan rentang pekan kerja rencana ini.
+              </TextBlock>
             </div>
-          </PlainAction>
+          </div>
 
-          <PlainAction
-            type="button"
-            onClick={() => setCurrentStep(2)}
-            className={`flex items-center gap-2.5 p-3 rounded-panel border text-left transition-all ${
-              currentStep === 2
-                ? "border-primary bg-primary/10 text-primary font-semibold shadow-sm"
-                : "border-line bg-surface text-mist hover:text-ink hover:bg-canvas"
-            }`}
-          >
-            <div
-              className={`size-7 rounded-full flex items-center justify-center text-xs font-bold ${
-                currentStep === 2 ? "bg-primary text-white" : "bg-line text-mist"
-              }`}
-            >
-              <TextBlock as="span">2</TextBlock>
-            </div>
-            <div>
-              <TextBlock as="p" className="font-semibold text-xs sm:text-sm">Jadwal &amp; Tugas</TextBlock>
-              <TextBlock as="p" className="text-[11px] text-mist hidden sm:block">Hari &amp; Slot Tugas</TextBlock>
-            </div>
-          </PlainAction>
-
-          <PlainAction
-            type="button"
-            onClick={() => setCurrentStep(3)}
-            className={`flex items-center gap-2.5 p-3 rounded-panel border text-left transition-all ${
-              currentStep === 3
-                ? "border-primary bg-primary/10 text-primary font-semibold shadow-sm"
-                : "border-line bg-surface text-mist hover:text-ink hover:bg-canvas"
-            }`}
-          >
-            <div
-              className={`size-7 rounded-full flex items-center justify-center text-xs font-bold ${
-                currentStep === 3 ? "bg-primary text-white" : "bg-line text-mist"
-              }`}
-            >
-              <TextBlock as="span">3</TextBlock>
-            </div>
-            <div>
-              <TextBlock as="p" className="font-semibold text-xs sm:text-sm">Armada &amp; Alat</TextBlock>
-              <TextBlock as="p" className="text-[11px] text-mist hidden sm:block">Opsional</TextBlock>
-            </div>
-          </PlainAction>
-        </nav>
-
-        {/* ── LANGKAH 1: IDENTITAS & TIM ───────────────────────────── */}
-        {currentStep === 1 && (
-          <section aria-label="Identitas & Tim Kerja" className="rounded-panel border border-line bg-surface p-6 shadow-card space-y-6">
-            <div className="flex items-center justify-between border-b border-line pb-4">
-              <div className="flex items-center gap-2">
-                <CalendarClock className="h-5 w-5 text-primary" />
-                <TextBlock as="h2" className="text-base font-semibold">
-                  Langkah 1: Identitas &amp; Tim Pelaksana
-                </TextBlock>
-              </div>
-              <TextBlock as="span" className="text-xs text-mist">Langkah 1 dari 3</TextBlock>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <ControlLabel htmlFor="division_id">Divisi Operasional</ControlLabel>
+              <ControlSelect
+                id="division_id"
+                {...register("division_id")}
+                aria-invalid={!!errors.division_id}
+              >
+                <ControlOption value="">-- Pilih Divisi --</ControlOption>
+                {opts?.divisions.map((d) => (
+                  <ControlOption key={d.division_id} value={d.division_id}>
+                    {d.name}
+                  </ControlOption>
+                ))}
+              </ControlSelect>
+              {errors.division_id && <FormErrorText message={errors.division_id.message} />}
             </div>
 
-            <div className="grid gap-6 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <ControlLabel htmlFor="division_id">Divisi Operasional</ControlLabel>
-                <ControlSelect
-                  id="division_id"
-                  {...register("division_id")}
-                  aria-invalid={!!errors.division_id}
-                >
-                  <ControlOption value="">-- Pilih Divisi --</ControlOption>
-                  {opts?.divisions.map((d) => (
-                    <ControlOption key={d.division_id} value={d.division_id}>
-                      {d.name}
-                    </ControlOption>
-                  ))}
-                </ControlSelect>
-                {errors.division_id && <FormErrorText message={errors.division_id.message} />}
-              </div>
-
-              <div className="space-y-1.5">
-                <ControlLabel htmlFor="team_id">Tim Kerja Pelaksana</ControlLabel>
-                <ControlSelect
-                  id="team_id"
-                  {...register("team_id")}
-                  aria-invalid={!!errors.team_id}
-                >
-                  <ControlOption value="">-- Pilih Tim --</ControlOption>
-                  {filteredTeams.map((t) => (
-                    <ControlOption key={t.team_id} value={t.team_id}>
-                      {t.name}
-                    </ControlOption>
-                  ))}
-                </ControlSelect>
-                {errors.team_id && <FormErrorText message={errors.team_id.message} />}
-              </div>
+            <div className="space-y-1.5">
+              <ControlLabel htmlFor="team_id">Tim Kerja Lapangan</ControlLabel>
+              <ControlSelect
+                id="team_id"
+                {...register("team_id")}
+                aria-invalid={!!errors.team_id}
+              >
+                <ControlOption value="">-- Pilih Tim --</ControlOption>
+                {filteredTeams.map((t) => (
+                  <ControlOption key={t.team_id} value={t.team_id}>
+                    {t.name}
+                  </ControlOption>
+                ))}
+              </ControlSelect>
+              {errors.team_id && <FormErrorText message={errors.team_id.message} />}
             </div>
+          </div>
 
-            {/* Banner Tim Terpilih */}
-            {activeTeam && (
-              <div className="rounded-panel border border-primary/20 bg-primary/5 p-4 space-y-3">
-                <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <TextBlock className="text-xs font-semibold uppercase tracking-wider text-primary">
-                      Tim Lapangan: {activeTeam.name}
-                    </TextBlock>
-                    <TextBlock className="font-semibold text-ink text-sm">
-                      Ketua Tim: {activeTeam.leader_name || "Belum ditentukan"} ({activeTeam.leader_position || "Team Leader"})
-                    </TextBlock>
-                  </div>
-                  <TextBlock as="p" className="text-xs text-mist">
-                    {activeTeam.members.length} Teknisi Terdaftar
+          {/* Banner Tim Terpilih */}
+          {activeTeam && (
+            <div className="rounded-panel border border-primary/20 bg-primary/5 p-3.5 space-y-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <User className="h-4 w-4 text-primary" />
+                  <TextBlock className="text-xs font-semibold text-ink">
+                    Ketua Tim: {activeTeam.leader_name || "Belum ditentukan"}
+                  </TextBlock>
+                  <TextBlock as="span" className="text-[10px] text-mist">
+                    ({activeTeam.leader_position || "Team Leader"})
                   </TextBlock>
                 </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {activeTeam.members.map((m) => (
-                    <TextBlock
-                      as="span"
-                      key={m.employee_id}
-                      className="inline-flex items-center gap-1 rounded-md border border-line bg-surface px-2.5 py-1 text-xs font-medium text-ink shadow-sm"
-                    >
-                      <User className="h-3 w-3 text-mist" />
-                      <TextBlock as="span">{m.full_name}</TextBlock>
-                      <TextBlock as="span" className="text-[10px] text-mist">({m.position})</TextBlock>
-                    </TextBlock>
-                  ))}
-                </div>
+                <TextBlock className="text-xs font-medium text-primary">
+                  {activeTeam.members.length} Teknisi Lapangan Terdaftar
+                </TextBlock>
               </div>
-            )}
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {activeTeam.members.map((m) => (
+                  <TextBlock
+                    as="span"
+                    key={m.employee_id}
+                    className="inline-flex items-center gap-1 rounded bg-surface border border-line px-2 py-0.5 text-xs text-ink shadow-xs"
+                  >
+                    <TextBlock as="span">{m.full_name}</TextBlock>
+                    <TextBlock as="span" className="text-[10px] text-mist">({m.position})</TextBlock>
+                  </TextBlock>
+                ))}
+              </div>
+            </div>
+          )}
 
-            {/* Periode Kerja */}
-            <div className="border-t border-line pt-4">
-              <TextBlock className="text-xs font-semibold uppercase tracking-wider text-mist mb-3">
-                Periode Pelaksanaan
-              </TextBlock>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <div className="space-y-1.5">
-                  <ControlLabel htmlFor="year">Tahun</ControlLabel>
-                  <ControlInput
-                    id="year"
-                    type="number"
-                    min={2020}
-                    max={2100}
-                    {...register("year", { valueAsNumber: true })}
-                    onChange={(e) => handleWeekChange(weekNum, parseInt(e.target.value, 10) || currentIso.year)}
-                  />
-                </div>
+          {/* Pemilihan Pekan Cepat & Mudah */}
+          <div className="border-t border-line pt-3 space-y-2.5">
+            <ControlLabel>Periode Pelaksanaan Pekerjaan</ControlLabel>
+            <div className="flex flex-wrap items-center gap-2">
+              <PlainAction
+                type="button"
+                onClick={() => handleSelectWeekMode("current")}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-panel border text-xs font-medium transition-colors ${
+                  weekSelectionMode === "current"
+                    ? "border-primary bg-primary text-white shadow-xs"
+                    : "border-line bg-canvas text-mist hover:text-ink hover:bg-surface"
+                }`}
+              >
+                <CalendarClock className="h-3.5 w-3.5" />
+                <TextBlock as="span">
+                  Pekan Ini ({formatDate(defaultWeekRange.start)} - {formatDate(defaultWeekRange.end)})
+                </TextBlock>
+              </PlainAction>
 
-                <div className="space-y-1.5">
-                  <ControlLabel htmlFor="week_number">Minggu Ke-</ControlLabel>
-                  <ControlInput
-                    id="week_number"
-                    type="number"
-                    min={1}
-                    max={53}
-                    {...register("week_number", { valueAsNumber: true })}
-                    onChange={(e) => handleWeekChange(parseInt(e.target.value, 10) || 1, yearNum)}
-                  />
-                </div>
+              <PlainAction
+                type="button"
+                onClick={() => handleSelectWeekMode("next")}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-panel border text-xs font-medium transition-colors ${
+                  weekSelectionMode === "next"
+                    ? "border-primary bg-primary text-white shadow-xs"
+                    : "border-line bg-canvas text-mist hover:text-ink hover:bg-surface"
+                }`}
+              >
+                <Calendar className="h-3.5 w-3.5" />
+                <TextBlock as="span">
+                  Pekan Depan ({formatDate(nextWeekRange.start)} - {formatDate(nextWeekRange.end)})
+                </TextBlock>
+              </PlainAction>
 
-                <div className="space-y-1.5">
-                  <ControlLabel htmlFor="start_date">Tanggal Mulai (Senin)</ControlLabel>
-                  <ControlInput id="start_date" type="date" {...register("start_date")} />
+              <PlainAction
+                type="button"
+                onClick={() => handleSelectWeekMode("custom")}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-panel border text-xs font-medium transition-colors ${
+                  weekSelectionMode === "custom"
+                    ? "border-primary bg-primary text-white shadow-xs"
+                    : "border-line bg-canvas text-mist hover:text-ink hover:bg-surface"
+                }`}
+              >
+                <TextBlock as="span">Pilih Tanggal Manual...</TextBlock>
+              </PlainAction>
+            </div>
+
+            {/* Jika mode kustom dipilih */}
+            {weekSelectionMode === "custom" && (
+              <div className="mt-3 grid gap-3 sm:grid-cols-2 rounded-panel border border-line bg-canvas p-3">
+                <div className="space-y-1">
+                  <ControlLabel htmlFor="start_date" className="text-xs">Tanggal Mulai (Senin)</ControlLabel>
+                  <ControlInput id="start_date" type="date" {...register("start_date")} className="text-xs" />
                   {errors.start_date && <FormErrorText message={errors.start_date.message} />}
                 </div>
-
-                <div className="space-y-1.5">
-                  <ControlLabel htmlFor="end_date">Tanggal Selesai (Minggu)</ControlLabel>
-                  <ControlInput id="end_date" type="date" {...register("end_date")} />
+                <div className="space-y-1">
+                  <ControlLabel htmlFor="end_date" className="text-xs">Tanggal Selesai (Minggu)</ControlLabel>
+                  <ControlInput id="end_date" type="date" {...register("end_date")} className="text-xs" />
                   {errors.end_date && <FormErrorText message={errors.end_date.message} />}
                 </div>
               </div>
-            </div>
+            )}
+          </div>
+        </section>
 
-            <div className="flex items-center justify-between border-t border-line pt-4">
-              <ActionButton
-                type="button"
-                variant="outline"
-                onClick={() => navigate("/work-plans")}
-              >
-                Batal
-              </ActionButton>
-              <ActionButton
-                type="button"
-                variant="default"
-                onClick={() => setCurrentStep(2)}
-                className="gap-2"
-              >
-                <TextBlock as="span">Lanjut ke Jadwal Harian</TextBlock>
-                <ArrowRight className="h-4 w-4" />
-              </ActionButton>
-            </div>
-          </section>
-        )}
-
-        {/* ── LANGKAH 2: JADWAL & TUGAS HARIAN ──────────────────────── */}
-        {currentStep === 2 && (
-          <section aria-label="Jadwal & Tugas Harian" className="space-y-4">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-line pb-3">
+        {/* ── KARTU 2: POLA PEKERJAAN & TEMPLATE OTOMATIS (SMART AUTOFILL) ─ */}
+        <section
+          aria-label="Pengaturan Cepat Pola Kerja"
+          className="rounded-panel border border-primary/30 bg-primary/5 p-5 shadow-sm space-y-4"
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-primary/20 pb-3">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
               <div>
-                <TextBlock as="h2" className="text-base font-semibold flex items-center gap-2">
-                  <MapPin className="h-5 w-5 text-primary" />
-                  <TextBlock as="span">Langkah 2: Jadwal Harian &amp; Butir Tugas</TextBlock>
+                <TextBlock as="h2" className="text-sm sm:text-base font-semibold text-ink">
+                  2. Atur Cepat Jadwal Mingguan (Template Otomatis)
                 </TextBlock>
                 <TextBlock className="text-xs text-mist">
-                  Pilih hari di bawah untuk mengatur lokasi dan tugas pada hari tersebut.
+                  Tentukan lokasi &amp; tugas utama di bawah, lalu klik tombol petir untuk mengisi Senin s/d Jumat sekaligus.
                 </TextBlock>
               </div>
-              <div className="flex items-center gap-2">
-                {dayFields.length > 1 && (
-                  <ActionButton
-                    type="button"
-                    variant="outline"
-                    onClick={openCopyScheduleModal}
-                    className="text-xs gap-1.5"
-                  >
-                    <Copy className="h-3.5 w-3.5 text-primary" />
-                    <TextBlock as="span">Salin Jadwal Hari Ini ke Hari Lain</TextBlock>
-                  </ActionButton>
-                )}
-              </div>
+            </div>
+            <ActionButton
+              type="button"
+              variant="default"
+              size="sm"
+              onClick={handleApplyTemplateToWorkdays}
+              className="gap-2 shadow-xs shrink-0"
+            >
+              <Sparkles className="h-4 w-4" />
+              <TextBlock as="span">⚡ Terapkan ke Senin - Jumat</TextBlock>
+            </ActionButton>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="space-y-1">
+              <ControlLabel className="text-xs font-medium">Lokasi Site / Kantor</ControlLabel>
+              <ControlSelect
+                value={quickSitePreset}
+                onChange={(e) => setQuickSitePreset(e.target.value)}
+                className="text-xs bg-surface"
+              >
+                <ControlOption value="">-- Pilih Kantor / Site Preset --</ControlOption>
+                {opts?.offices.map((o) => (
+                  <ControlOption key={o.office_id} value={o.office_id}>
+                    {o.name}
+                  </ControlOption>
+                ))}
+              </ControlSelect>
             </div>
 
-            {/* TAB BAR PEMILIH HARI HORIZONTAL */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-2">
-              {dayFields.map((field, idx) => {
-                const dayData = watchedDays[idx];
-                const isActive = idx === activeDayIndex;
-                const isHol = dayData?.is_holiday || dayData?.status === "HOLIDAY";
-                const itemCount = dayData?.items?.length || 0;
-
-                return (
-                  <PlainAction
-                    key={field.id}
-                    type="button"
-                    onClick={() => setActiveDayIndex(idx)}
-                    className={`flex flex-col items-center justify-center min-w-[110px] px-3 py-2 rounded-panel border text-xs transition-all ${
-                      isActive
-                        ? "border-primary bg-primary text-white font-semibold shadow-sm"
-                        : isHol
-                        ? "border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-300"
-                        : "border-line bg-surface text-ink hover:bg-canvas"
-                    }`}
-                  >
-                    <TextBlock as="span" className="font-semibold text-xs">
-                      {dayData?.work_date ? weekday(dayData.work_date) : `Hari ${idx + 1}`}
-                    </TextBlock>
-                    <TextBlock as="span" className="text-[11px] opacity-80 mt-0.5">
-                      {dayData?.work_date ? formatDate(dayData.work_date).slice(0, 10) : "-"}
-                    </TextBlock>
-                    <TextBlock
-                      as="span"
-                      className={`mt-1.5 text-[10px] px-1.5 py-0.5 rounded-full ${
-                        isActive
-                          ? "bg-white/20 text-white font-medium"
-                          : isHol
-                          ? "bg-amber-200 text-amber-900 dark:bg-amber-900/60 dark:text-amber-200"
-                          : "bg-canvas text-mist border border-line"
-                      }`}
-                    >
-                      {isHol ? "Libur" : `${itemCount} Tugas`}
-                    </TextBlock>
-                  </PlainAction>
-                );
-              })}
+            <div className="space-y-1">
+              <ControlLabel className="text-xs font-medium">Jenis Pekerjaan Utama</ControlLabel>
+              <ControlSelect
+                value={selectedQuickWorkTypeId}
+                onChange={(e) => setQuickWorkTypeId(e.target.value)}
+                className="text-xs bg-surface"
+              >
+                {filteredWorkTypes.map((wt) => (
+                  <ControlOption key={wt.work_type_id} value={wt.work_type_id}>
+                    {wt.name}
+                  </ControlOption>
+                ))}
+              </ControlSelect>
             </div>
 
-            {/* EDITOR SATU HARI AKTIF (SINGLE DAY FOCUS) */}
-            {dayFields.length > 0 && activeDayIndex < dayFields.length && (
-              <SingleDayPlanCard
-                dayIndex={activeDayIndex}
-                totalDays={dayFields.length}
-                control={control}
-                register={register}
-                setValue={setValue}
-                offices={opts?.offices || []}
-                workTypes={filteredWorkTypes}
-                completions={filteredCompletions}
-                technicians={availableTechnicians}
-                onPrevDay={() => setActiveDayIndex((prev) => Math.max(0, prev - 1))}
-                onNextDay={() => setActiveDayIndex((prev) => Math.min(dayFields.length - 1, prev + 1))}
-                onOpenCopyModal={openCopyScheduleModal}
+            <div className="space-y-1">
+              <ControlLabel className="text-xs font-medium">Aktivitas Pekerjaan</ControlLabel>
+              <ControlInput
+                type="text"
+                value={quickTitle}
+                onChange={(e) => setQuickTitle(e.target.value)}
+                placeholder="Misal: Penarikan FO & Pemasangan ODP"
+                className="text-xs bg-surface"
               />
-            )}
-
-            {/* NAVIGASI LANGKAH 2 */}
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
-              <ActionButton
-                type="button"
-                variant="outline"
-                onClick={() => setCurrentStep(1)}
-                className="gap-2"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                <TextBlock as="span">Kembali ke Tim</TextBlock>
-              </ActionButton>
-
-              <div className="flex items-center gap-3">
-                <ActionButton
-                  type="submit"
-                  variant="outline"
-                  disabled={isPending}
-                  className="gap-1.5 border-primary/40 text-primary hover:bg-primary/5"
-                >
-                  <Sparkles className="h-4 w-4 text-primary" />
-                  <TextBlock as="span">{isPending ? "Menyimpan..." : "Simpan Rencana Kerja"}</TextBlock>
-                </ActionButton>
-                <ActionButton
-                  type="button"
-                  variant="default"
-                  onClick={() => setCurrentStep(3)}
-                  className="gap-2"
-                >
-                  <TextBlock as="span">Lanjut ke Armada &amp; Alat</TextBlock>
-                  <ArrowRight className="h-4 w-4" />
-                </ActionButton>
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* ── LANGKAH 3: ARMADA & ALAT (OPSIONAL) ───────────────────── */}
-        {currentStep === 3 && (
-          <section aria-label="Armada & Alat Kerja" className="rounded-panel border border-line bg-surface p-6 shadow-card space-y-6">
-            <div className="flex items-center justify-between border-b border-line pb-4">
-              <div className="flex items-center gap-2">
-                <Wrench className="h-5 w-5 text-primary" />
-                <TextBlock as="h2" className="text-base font-semibold">
-                  Langkah 3: Alokasi Armada Kendaraan &amp; Peralatan (Opsional)
-                </TextBlock>
-              </div>
-              <TextBlock as="span" className="text-xs text-mist">Langkah 3 dari 3</TextBlock>
             </div>
 
-            <TextBlock className="rounded-panel border border-line bg-canvas p-3 text-xs text-mist">
-              💡 Bagian ini opsional. Jika tim tidak memerlukan kendaraan operasional atau alat khusus dari gudang, Anda dapat langsung menekan tombol &quot;Terbitkan Rencana Kerja&quot;.
-            </TextBlock>
-
-            <div className="grid gap-6 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <ControlLabel htmlFor="vehicle_id">Armada Operasional (Kendaraan)</ControlLabel>
-                <ControlSelect id="vehicle_id" {...register("vehicle_id")}>
-                  <ControlOption value="">-- Tanpa Kendaraan Operasional --</ControlOption>
-                  {opts?.vehicles.map((v) => (
-                    <ControlOption key={v.vehicle_id} value={v.vehicle_id}>
-                      [{v.vehicle_type}] {v.name} ({v.number_plate})
-                    </ControlOption>
-                  ))}
-                </ControlSelect>
-              </div>
-
-              <div className="space-y-1.5">
-                <ControlLabel htmlFor="driver_employee_id">Pengemudi / Driver Ditunjuk</ControlLabel>
-                <ControlSelect id="driver_employee_id" {...register("driver_employee_id")}>
-                  <ControlOption value="">-- Pilih Anggota Tim sebagai Driver --</ControlOption>
-                  {availableTechnicians.map((t) => (
-                    <ControlOption key={t.employee_id} value={t.employee_id}>
-                      {t.full_name}
-                    </ControlOption>
-                  ))}
-                </ControlSelect>
-              </div>
-            </div>
-
-            {opts?.tools && opts.tools.length > 0 && (
-              <div className="border-t border-line pt-4">
-                <ControlLabel>Peralatan Kerja dari Gudang (Centang yang dibawa)</ControlLabel>
-                <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
-                  {opts.tools.map((tool) => (
-                    <ControlLabel
-                      key={tool.tool_id}
-                      className="flex cursor-pointer items-center gap-2 rounded-md border border-line p-2 text-xs hover:bg-canvas transition-colors"
-                    >
-                      <ControlInput
-                        type="checkbox"
-                        value={tool.tool_id}
-                        {...register("tool_ids")}
-                        className="rounded border-line text-primary focus:ring-primary size-4"
-                      />
-                      <TextBlock as="span" className="truncate font-medium">{tool.name}</TextBlock>
-                      <TextBlock as="span" className="text-[10px] text-mist">({tool.tool_code})</TextBlock>
-                    </ControlLabel>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="flex items-center justify-between border-t border-line pt-6">
-              <ActionButton
-                type="button"
-                variant="outline"
-                onClick={() => setCurrentStep(2)}
-                className="gap-2"
+            <div className="space-y-1">
+              <ControlLabel className="text-xs font-medium">Kaitan Order Klien (Opsional)</ControlLabel>
+              <ControlSelect
+                value={quickCompletionId}
+                onChange={(e) => setQuickCompletionId(e.target.value)}
+                className="text-xs bg-surface"
               >
-                <ArrowLeft className="h-4 w-4" />
-                <TextBlock as="span">Kembali ke Jadwal</TextBlock>
-              </ActionButton>
-              <ActionButton type="submit" variant="default" disabled={isPending} className="gap-2">
-                <CheckCircle2 className="h-4 w-4" />
-                <TextBlock as="span">
-                  {isPending
-                    ? "Menyimpan Data..."
-                    : planId
-                    ? "Perbarui Rencana Kerja"
-                    : "Terbitkan Rencana Kerja Mingguan"}
-                </TextBlock>
-              </ActionButton>
-            </div>
-          </section>
-        )}
-
-        {/* ── MODAL SALIN JADWAL KE HARI LAIN ───────────────────────── */}
-        <VmsDialog
-          open={isCopyModalOpen}
-          onClose={() => setIsCopyModalOpen(false)}
-          title="Salin Jadwal & Tugas ke Hari Lain"
-        >
-          <div className="space-y-4 text-xs">
-            <TextBlock className="text-mist">
-              Lokasi, jam kerja, dan butir tugas dari hari{" "}
-              <TextBlock as="strong" className="text-ink">
-                {watchedDays[activeDayIndex]?.work_date
-                  ? `${weekday(watchedDays[activeDayIndex].work_date)}, ${formatDate(
-                      watchedDays[activeDayIndex].work_date
-                    )}`
-                  : `Hari ${activeDayIndex + 1}`}
-              </TextBlock>{" "}
-              akan disalin ke hari-hari terpilih di bawah ini:
-            </TextBlock>
-
-            <div className="flex gap-2">
-              <ActionButton
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  const targets = watchedDays
-                    .filter((d, idx) => idx !== activeDayIndex && !d.is_holiday)
-                    .map((d) => d.work_date);
-                  setSelectedTargetDates(targets);
-                }}
-              >
-                Pilih Semua Hari Kerja
-              </ActionButton>
-              <ActionButton
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  const targets = watchedDays
-                    .filter((_, idx) => idx !== activeDayIndex)
-                    .map((d) => d.work_date);
-                  setSelectedTargetDates(targets);
-                }}
-              >
-                Pilih Seluruh Hari
-              </ActionButton>
-            </div>
-
-            <div className="space-y-1.5 max-h-60 overflow-y-auto border border-line rounded-md p-2">
-              {watchedDays.map((d, idx) => {
-                if (idx === activeDayIndex) return null;
-                const isSelected = selectedTargetDates.includes(d.work_date);
-                return (
-                  <ControlLabel
-                    key={d.work_date}
-                    className="flex items-center gap-2.5 p-2 rounded hover:bg-canvas cursor-pointer transition-colors"
-                  >
-                    <ControlInput
-                      type="checkbox"
-                      checked={isSelected}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedTargetDates((prev) => [...prev, d.work_date]);
-                        } else {
-                          setSelectedTargetDates((prev) => prev.filter((x) => x !== d.work_date));
-                        }
-                      }}
-                      className="rounded border-line text-primary focus:ring-primary size-4"
-                    />
-                    <TextBlock as="span" className="font-semibold text-ink">{weekday(d.work_date)}</TextBlock>
-                    <TextBlock as="span" className="text-mist">({formatDate(d.work_date)})</TextBlock>
-                    {d.is_holiday && <TextBlock as="span" className="text-[10px] text-amber-600 font-medium">[Libur]</TextBlock>}
-                  </ControlLabel>
-                );
-              })}
-            </div>
-
-            <div className="flex justify-end gap-2 border-t border-line pt-3">
-              <ActionButton
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setIsCopyModalOpen(false)}
-              >
-                Batal
-              </ActionButton>
-              <ActionButton
-                type="button"
-                variant="default"
-                size="sm"
-                disabled={selectedTargetDates.length === 0}
-                onClick={executeCopySchedule}
-              >
-                Terapkan Salinan ({selectedTargetDates.length} Hari)
-              </ActionButton>
+                <ControlOption value="">-- Tanpa Order Spesifik --</ControlOption>
+                {filteredCompletions.map((c) => (
+                  <ControlOption key={c.completion_id} value={c.completion_id}>
+                    [{c.client_name}] {c.project_title}
+                  </ControlOption>
+                ))}
+              </ControlSelect>
             </div>
           </div>
-        </VmsDialog>
+        </section>
+
+        {/* ── KARTU 3: RINCIAN JADWAL 7 HARI (BERSIH & INTUITIF) ─────── */}
+        <section
+          aria-label="Rincian 7 Hari Kerja"
+          className="rounded-panel border border-line bg-surface p-5 shadow-card space-y-4"
+        >
+          <div className="flex items-center justify-between border-b border-line pb-3">
+            <div className="flex items-center gap-2.5">
+              <div className="size-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                <Calendar className="h-4 w-4" />
+              </div>
+              <div>
+                <TextBlock as="h2" className="text-sm sm:text-base font-semibold text-ink">
+                  3. Rincian Jadwal 7 Hari ({watchedDays.length} Hari)
+                </TextBlock>
+                <TextBlock className="text-xs text-mist">
+                  Senin s/d Jumat aktif sebagai hari kerja. Anda bebas meliburkan hari atau menyesuaikan tugas khusus per hari.
+                </TextBlock>
+              </div>
+            </div>
+            <TextBlock as="span" className="text-xs text-mist hidden sm:block">
+              {watchedDays.filter((d) => !d.is_holiday).length} Hari Kerja • {watchedDays.filter((d) => d.is_holiday).length} Hari Libur
+            </TextBlock>
+          </div>
+
+          <div className="space-y-3">
+            {dayFields.map((field, dayIdx) => {
+              const day = watchedDays[dayIdx];
+              const isHoliday = day?.is_holiday || day?.status === "HOLIDAY";
+              const isExpanded = expandedDayIndex === dayIdx;
+              const itemCount = day?.items?.length || 0;
+
+              return (
+                <div
+                  key={field.id}
+                  className={`rounded-panel border transition-all ${
+                    isHoliday
+                      ? "border-amber-200 bg-amber-50/40 dark:border-amber-900/30 dark:bg-amber-950/20"
+                      : isExpanded
+                      ? "border-primary/50 bg-canvas shadow-xs"
+                      : "border-line bg-surface hover:border-line/80"
+                  }`}
+                >
+                  {/* BARIS RINGKASAN HARI */}
+                  <div className="flex flex-wrap items-center justify-between gap-3 p-3.5">
+                    {/* Kolom 1: Tanggal & Nama Hari */}
+                    <div className="flex items-center gap-3 min-w-[180px]">
+                      <div
+                        className={`size-9 rounded-md flex flex-col items-center justify-center text-center font-bold text-xs ${
+                          isHoliday
+                            ? "bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300"
+                            : "bg-primary text-white"
+                        }`}
+                      >
+                        <TextBlock as="span" className="text-[10px] uppercase font-bold leading-none">
+                          {day?.work_date ? weekday(day.work_date).slice(0, 3) : "H"}
+                        </TextBlock>
+                        <TextBlock as="span" className="text-xs leading-none mt-0.5">
+                          {day?.work_date ? day.work_date.slice(8, 10) : "-"}
+                        </TextBlock>
+                      </div>
+
+                      <div>
+                        <TextBlock className="font-semibold text-xs sm:text-sm text-ink">
+                          {day?.work_date ? `${weekday(day.work_date)}, ${formatDate(day.work_date)}` : `Hari ${dayIdx + 1}`}
+                        </TextBlock>
+                        <TextBlock className="text-[11px] text-mist">
+                          {isHoliday
+                            ? "🌴 Libur Operasional"
+                            : `${day?.site_name || "Site Belum Diatur"} • ${day?.clock_in_time?.slice(0, 5) || "08:00"} - ${
+                                day?.clock_out_time?.slice(0, 5) || "17:00"
+                              }`}
+                        </TextBlock>
+                      </div>
+                    </div>
+
+                    {/* Kolom 2: Ringkasan Tugas */}
+                    <div className="flex-1 min-w-[200px] text-xs">
+                      {isHoliday ? (
+                        <TextBlock as="span" className="text-amber-700 dark:text-amber-300 text-xs italic">
+                          Tidak ada penugasan atau kewajiban presensi GPS.
+                        </TextBlock>
+                      ) : (
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <TextBlock
+                            as="span"
+                            className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-primary/10 text-primary"
+                          >
+                            {itemCount} Tugas Terjadwal
+                          </TextBlock>
+                          {day?.items?.[0] && (
+                            <TextBlock as="span" className="text-mist truncate max-w-xs">
+                              {day.items[0].title}
+                            </TextBlock>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Kolom 3: Aksi Cepat */}
+                    <div className="flex items-center gap-2">
+                      <ActionButton
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleToggleDayHoliday(dayIdx)}
+                        className={`text-xs h-8 px-2.5 ${
+                          isHoliday
+                            ? "border-primary text-primary hover:bg-primary/10"
+                            : "border-line text-mist hover:text-amber-700 hover:bg-amber-50"
+                        }`}
+                      >
+                        {isHoliday ? "✓ Jadikan Kerja" : "Liburkan"}
+                      </ActionButton>
+
+                      {!isHoliday && (
+                        <ActionButton
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setExpandedDayIndex(isExpanded ? null : dayIdx)}
+                          className="text-xs h-8 px-2.5 gap-1 text-ink"
+                        >
+                          <TextBlock as="span">{isExpanded ? "Tutup" : "Sesuaikan"}</TextBlock>
+                          {isExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                        </ActionButton>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* DETAIL HARI (ACCORDION) */}
+                  {isExpanded && !isHoliday && (
+                    <div className="border-t border-line/80 bg-surface/80 p-4 space-y-4">
+                      {/* Baris Site & Jam Kerja */}
+                      <div className="grid gap-3 sm:grid-cols-3">
+                        <div className="space-y-1">
+                          <ControlLabel htmlFor={`days_${dayIdx}_site`} className="text-xs">
+                            Nama Site / Lokasi Proyek
+                          </ControlLabel>
+                          <ControlInput
+                            id={`days_${dayIdx}_site`}
+                            type="text"
+                            placeholder="Misal: STO Minas"
+                            {...register(`days.${dayIdx}.site_name`)}
+                            className="text-xs"
+                            required
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <ControlLabel htmlFor={`days_${dayIdx}_in`} className="text-xs">
+                            Jam Masuk
+                          </ControlLabel>
+                          <ControlInput
+                            id={`days_${dayIdx}_in`}
+                            type="time"
+                            {...register(`days.${dayIdx}.clock_in_time`)}
+                            className="text-xs"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <ControlLabel htmlFor={`days_${dayIdx}_out`} className="text-xs">
+                            Jam Pulang
+                          </ControlLabel>
+                          <ControlInput
+                            id={`days_${dayIdx}_out`}
+                            type="time"
+                            {...register(`days.${dayIdx}.clock_out_time`)}
+                            className="text-xs"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Sub-form Butir Tugas Hari Ini */}
+                      <DayItemsSubList
+                        dayIndex={dayIdx}
+                        control={control}
+                        register={register}
+                        setValue={setValue}
+                        workTypes={filteredWorkTypes}
+                        completions={filteredCompletions}
+                        technicians={availableTechnicians}
+                      />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* ── KARTU 4: KENDARAAN & ALAT GUDANG (OPSIONAL) ───────────── */}
+        <section
+          aria-label="Armada & Alat Kerja"
+          className="rounded-panel border border-line bg-surface p-5 shadow-card space-y-3"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="size-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                <Wrench className="h-4 w-4" />
+              </div>
+              <div>
+                <TextBlock as="h2" className="text-sm sm:text-base font-semibold text-ink">
+                  4. Kendaraan &amp; Peralatan Kerja (Opsional)
+                </TextBlock>
+                <TextBlock className="text-xs text-mist">
+                  Bawa kendaraan operasional atau alat khusus dari gudang.
+                </TextBlock>
+              </div>
+            </div>
+
+            <PlainAction
+              type="button"
+              onClick={() => setShowLogistics(!showLogistics)}
+              className="text-xs text-primary font-medium hover:underline flex items-center gap-1"
+            >
+              <TextBlock as="span">{showLogistics ? "Sembunyikan" : "Buka Pilihan Logistik"}</TextBlock>
+              {showLogistics ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+            </PlainAction>
+          </div>
+
+          {showLogistics && (
+            <div className="pt-3 border-t border-line space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <ControlLabel htmlFor="vehicle_id">Armada Operasional</ControlLabel>
+                  <ControlSelect id="vehicle_id" {...register("vehicle_id")} className="text-xs">
+                    <ControlOption value="">-- Tanpa Kendaraan Operasional --</ControlOption>
+                    {opts?.vehicles.map((v) => (
+                      <ControlOption key={v.vehicle_id} value={v.vehicle_id}>
+                        [{v.vehicle_type}] {v.name} ({v.number_plate})
+                      </ControlOption>
+                    ))}
+                  </ControlSelect>
+                </div>
+
+                <div className="space-y-1.5">
+                  <ControlLabel htmlFor="driver_employee_id">Pengemudi Ditunjuk</ControlLabel>
+                  <ControlSelect id="driver_employee_id" {...register("driver_employee_id")} className="text-xs">
+                    <ControlOption value="">-- Pilih Anggota Tim sebagai Driver --</ControlOption>
+                    {availableTechnicians.map((t) => (
+                      <ControlOption key={t.employee_id} value={t.employee_id}>
+                        {t.full_name}
+                      </ControlOption>
+                    ))}
+                  </ControlSelect>
+                </div>
+              </div>
+
+              {opts?.tools && opts.tools.length > 0 && (
+                <div className="space-y-2">
+                  <ControlLabel className="text-xs">Peralatan Kerja dari Gudang</ControlLabel>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
+                    {opts.tools.map((tool) => (
+                      <ControlLabel
+                        key={tool.tool_id}
+                        className="flex cursor-pointer items-center gap-2 rounded border border-line bg-canvas p-2 text-xs hover:bg-surface transition-colors"
+                      >
+                        <ControlInput
+                          type="checkbox"
+                          value={tool.tool_id}
+                          {...register("tool_ids")}
+                          className="rounded border-line text-primary focus:ring-primary size-4"
+                        />
+                        <TextBlock as="span" className="truncate font-medium">{tool.name}</TextBlock>
+                      </ControlLabel>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </section>
+
+        {/* ── FOOTER AKSI SUBMIT ────────────────────────────────────── */}
+        <div className="flex items-center justify-between border-t border-line pt-4">
+          <ActionButton
+            type="button"
+            variant="outline"
+            onClick={() => navigate("/work-plans")}
+          >
+            Batal
+          </ActionButton>
+
+          <ActionButton type="submit" variant="default" disabled={isPending} className="gap-2">
+            <CheckCircle2 className="h-4 w-4" />
+            <TextBlock as="span">
+              {isPending
+                ? "Menyimpan Rencana Kerja..."
+                : planId
+                ? "Simpan Perubahan Rencana Kerja"
+                : "Terbitkan Rencana Kerja Mingguan"}
+            </TextBlock>
+          </ActionButton>
+        </div>
       </FormBlock>
     </QueryState>
   );
 };
 
-// ── SUB-KOMPONEN SINGLE DAY FOCUS EDITOR ──────────────────────
+// ── SUB-KOMPONEN DAFTAR TUGAS HARIAN ──────────────────────────
 
-interface SingleDayPlanCardProps {
+interface DayItemsSubListProps {
   dayIndex: number;
-  totalDays: number;
   control: Control<WeeklyPlanV2Value>;
   register: UseFormRegister<WeeklyPlanV2Value>;
   setValue: UseFormSetValue<WeeklyPlanV2Value>;
-  offices: OfficeSiteOption[];
   workTypes: WorkTypeOption[];
   completions: WorkCompletionOption[];
   technicians: TeamMemberOption[];
-  onPrevDay: () => void;
-  onNextDay: () => void;
-  onOpenCopyModal: () => void;
 }
 
-const SingleDayPlanCard: React.FC<SingleDayPlanCardProps> = ({
+const DayItemsSubList: React.FC<DayItemsSubListProps> = ({
   dayIndex,
-  totalDays,
   control,
   register,
   setValue,
-  offices,
   workTypes,
   completions,
   technicians,
-  onPrevDay,
-  onNextDay,
-  onOpenCopyModal,
 }) => {
-  const [showGps, setShowGps] = useState<boolean>(false);
-  const dayValue = useWatch({ control, name: `days.${dayIndex}` });
-  const isHoliday = dayValue?.is_holiday || dayValue?.status === "HOLIDAY";
-
   const {
     fields: itemFields,
     append: appendItem,
@@ -974,28 +1036,9 @@ const SingleDayPlanCard: React.FC<SingleDayPlanCardProps> = ({
     name: `days.${dayIndex}.items`,
   });
 
-  const handleSelectOffice = (officeId: string) => {
-    const found = offices.find((o) => o.office_id === officeId);
-    if (found) {
-      setValue(`days.${dayIndex}.site_name`, found.name);
-      setValue(`days.${dayIndex}.site_lat`, found.latitude);
-      setValue(`days.${dayIndex}.site_lng`, found.longitude);
-      if (found.radius_m) {
-        setValue(`days.${dayIndex}.attendance_radius_m`, found.radius_m);
-      }
-      toast.success(`Lokasi site diatur ke: ${found.name}`);
-    }
-  };
-
-  const toggleHoliday = () => {
-    const next = !isHoliday;
-    setValue(`days.${dayIndex}.is_holiday`, next);
-    setValue(`days.${dayIndex}.status`, next ? "HOLIDAY" : "SCHEDULED");
-  };
-
-  const addItemSlot = () => {
+  const addItem = () => {
     appendItem({
-      title: "",
+      title: "Pekerjaan Lapangan",
       work_type_id: workTypes[0]?.work_type_id || "",
       task_phase: "MAIN_INSTALLATION",
       is_main_deliverable: true,
@@ -1005,268 +1048,59 @@ const SingleDayPlanCard: React.FC<SingleDayPlanCardProps> = ({
       progress_percent: 0,
       start_time: "08:00:00",
       end_time: "17:00:00",
-      location_name: "",
       status: "PENDING",
       rollover_approval_status: "NONE",
-      assigned_employee_ids: technicians.length > 0 ? [technicians[0].employee_id] : [],
+      assigned_employee_ids: technicians.map((t) => t.employee_id),
     });
   };
 
   return (
-    <div
-      className={`rounded-panel border p-5 shadow-card transition-all space-y-5 ${
-        isHoliday
-          ? "border-amber-300 bg-amber-50/50 dark:border-amber-900/40 dark:bg-amber-950/20"
-          : "border-line bg-surface"
-      }`}
-    >
-      {/* HEADER HARI AKTIF */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-3">
-        <div className="flex items-center gap-3">
-          <div className="rounded-panel bg-canvas px-3.5 py-1.5 text-center border border-line">
-            <TextBlock as="span" className="block text-xs font-semibold uppercase text-primary">
-              {dayValue?.work_date ? weekday(dayValue.work_date) : "Hari"}
-            </TextBlock>
-            <TextBlock as="span" className="block text-sm font-bold text-ink">
-              {dayValue?.work_date ? formatDate(dayValue.work_date) : "-"}
-            </TextBlock>
-          </div>
-
-          <div>
-            <TextBlock className="font-semibold text-ink text-sm sm:text-base">
-              {isHoliday ? "Hari Libur Operasional" : dayValue?.site_name || "Lokasi Belum Diatur"}
-            </TextBlock>
-            <TextBlock className="text-xs text-mist">
-              {isHoliday
-                ? "Tidak ada jadwal kerja atau presensi di hari ini."
-                : `Jam Kerja: ${dayValue?.clock_in_time?.slice(0, 5) || "08:00"} - ${
-                    dayValue?.clock_out_time?.slice(0, 5) || "17:00"
-                  } • Radius Presensi: ${dayValue?.attendance_radius_m || 150}m`}
-            </TextBlock>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <ActionButton
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={toggleHoliday}
-            className={`text-xs ${isHoliday ? "border-amber-500 bg-amber-100 text-amber-800" : ""}`}
-          >
-            {isHoliday ? "✓ Jadikan Hari Kerja" : "Liburkan Hari Ini"}
-          </ActionButton>
-
-          {!isHoliday && (
-            <ActionButton
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={onOpenCopyModal}
-              className="text-xs gap-1"
-            >
-              <Copy className="h-3 w-3 text-primary" />
-              <TextBlock as="span">Salin</TextBlock>
-            </ActionButton>
-          )}
-        </div>
+    <div className="rounded-panel border border-line bg-canvas p-3 space-y-3">
+      <div className="flex items-center justify-between border-b border-line pb-2">
+        <TextBlock className="text-xs font-semibold text-ink">
+          Daftar Tugas / Aktivitas ({itemFields.length} Tugas)
+        </TextBlock>
+        <ActionButton
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={addItem}
+          className="text-xs h-7 px-2 gap-1"
+        >
+          <Plus className="h-3 w-3" />
+          <TextBlock as="span">Tambah Tugas</TextBlock>
+        </ActionButton>
       </div>
 
-      {/* JIKA LIBUR */}
-      {isHoliday ? (
-        <div className="py-8 text-center space-y-3">
-          <TextBlock as="span" className="text-3xl">🌴</TextBlock>
-          <TextBlock className="text-sm font-semibold text-amber-800 dark:text-amber-300">
-            Hari ini ditandai sebagai Hari Libur
+      <div className="space-y-2.5">
+        {itemFields.map((field, itemIdx) => (
+          <DayItemRow
+            key={field.id}
+            dayIndex={dayIndex}
+            itemIndex={itemIdx}
+            control={control}
+            register={register}
+            setValue={setValue}
+            workTypes={workTypes}
+            completions={completions}
+            technicians={technicians}
+            onRemove={() => removeItem(itemIdx)}
+          />
+        ))}
+
+        {itemFields.length === 0 && (
+          <TextBlock className="text-center py-4 text-xs text-mist border border-dashed border-line rounded">
+            Belum ada tugas di hari ini. Klik &quot;+ Tambah Tugas&quot; di atas.
           </TextBlock>
-          <TextBlock className="text-xs text-mist max-w-md mx-auto">
-            Tim lapangan tidak memiliki kewajiban absensi GPS atau pelaksanaan tugas di hari ini. Jika ingin menjadwalkan pekerjaan, klik tombol &quot;Jadikan Hari Kerja&quot; di atas.
-          </TextBlock>
-        </div>
-      ) : (
-        /* JIKA HARI KERJA */
-        <div className="space-y-5">
-          {/* BARIS LOKASI & JAM KERJA RINGKAS */}
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="space-y-1.5">
-              <ControlLabel htmlFor={`days_${dayIndex}_preset`}>Preset Lokasi / Kantor</ControlLabel>
-              <ControlSelect
-                id={`days_${dayIndex}_preset`}
-                defaultValue=""
-                onChange={(e) => handleSelectOffice(e.target.value)}
-              >
-                <ControlOption value="">-- Pilih Lokasi Preset --</ControlOption>
-                {offices.map((o) => (
-                  <ControlOption key={o.office_id} value={o.office_id}>
-                    {o.name}
-                  </ControlOption>
-                ))}
-              </ControlSelect>
-            </div>
-
-            <div className="space-y-1.5">
-              <ControlLabel htmlFor={`days_${dayIndex}_site`}>Nama Site / Area Proyek</ControlLabel>
-              <ControlInput
-                id={`days_${dayIndex}_site`}
-                type="text"
-                placeholder="Contoh: Site STO Telkom Minas"
-                {...register(`days.${dayIndex}.site_name`)}
-                required
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <ControlLabel htmlFor={`days_${dayIndex}_clock_in`}>Jam Masuk</ControlLabel>
-              <ControlInput
-                id={`days_${dayIndex}_clock_in`}
-                type="time"
-                {...register(`days.${dayIndex}.clock_in_time`)}
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <ControlLabel htmlFor={`days_${dayIndex}_clock_out`}>Jam Pulang</ControlLabel>
-              <ControlInput
-                id={`days_${dayIndex}_clock_out`}
-                type="time"
-                {...register(`days.${dayIndex}.clock_out_time`)}
-              />
-            </div>
-          </div>
-
-          {/* TOGGLE PENGATURAN GPS OPSIONAL */}
-          <div>
-            <PlainAction
-              type="button"
-              onClick={() => setShowGps(!showGps)}
-              className="text-xs text-primary font-medium flex items-center gap-1 hover:underline"
-            >
-              {showGps ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-              <TextBlock as="span">{showGps ? "Sembunyikan Pengaturan GPS" : "⚙️ Pengaturan GPS & Radius Presensi (Opsional)"}</TextBlock>
-            </PlainAction>
-
-            {showGps && (
-              <div className="mt-3 grid grid-cols-3 gap-3 rounded-panel border border-line bg-canvas p-3">
-                <div className="space-y-1.5">
-                  <ControlLabel htmlFor={`days_${dayIndex}_lat`} className="text-xs">Latitude GPS</ControlLabel>
-                  <ControlInput
-                    id={`days_${dayIndex}_lat`}
-                    type="number"
-                    step="any"
-                    {...register(`days.${dayIndex}.site_lat`, { valueAsNumber: true })}
-                    className="text-xs"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <ControlLabel htmlFor={`days_${dayIndex}_lng`} className="text-xs">Longitude GPS</ControlLabel>
-                  <ControlInput
-                    id={`days_${dayIndex}_lng`}
-                    type="number"
-                    step="any"
-                    {...register(`days.${dayIndex}.site_lng`, { valueAsNumber: true })}
-                    className="text-xs"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <ControlLabel htmlFor={`days_${dayIndex}_radius`} className="text-xs">Radius Presensi (Meter)</ControlLabel>
-                  <ControlInput
-                    id={`days_${dayIndex}_radius`}
-                    type="number"
-                    min={10}
-                    {...register(`days.${dayIndex}.attendance_radius_m`, { valueAsNumber: true })}
-                    className="text-xs"
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* SUB-SECTION: DAFTAR BUTIR TUGAS */}
-          <div className="rounded-panel border border-line bg-canvas p-4 space-y-3">
-            <div className="flex items-center justify-between border-b border-line pb-2">
-              <div className="flex items-center gap-2">
-                <Timer className="h-4 w-4 text-primary" />
-                <TextBlock className="text-sm font-semibold text-ink">
-                  Daftar Tugas Lapangan ({itemFields.length} Tugas)
-                </TextBlock>
-              </div>
-              <ActionButton
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={addItemSlot}
-                className="text-xs font-medium gap-1"
-              >
-                <Plus className="h-3 w-3" />
-                <TextBlock as="span">Tambah Tugas</TextBlock>
-              </ActionButton>
-            </div>
-
-            <div className="space-y-3">
-              {itemFields.map((itemField, itemIndex) => (
-                <SingleItemSlotRow
-                  key={itemField.id}
-                  dayIndex={dayIndex}
-                  itemIndex={itemIndex}
-                  control={control}
-                  register={register}
-                  setValue={setValue}
-                  workTypes={workTypes}
-                  completions={completions}
-                  technicians={technicians}
-                  onRemove={() => removeItem(itemIndex)}
-                />
-              ))}
-
-              {itemFields.length === 0 && (
-                <TextBlock className="py-6 text-center text-xs text-mist border border-dashed border-line rounded-panel">
-                  Belum ada tugas lapangan yang dijadwalkan di hari ini. Klik &quot;+ Tambah Tugas&quot; di atas.
-                </TextBlock>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* NAVIGASI PINDAH HARI SEBELUMNYA / BERIKUTNYA */}
-      <div className="flex items-center justify-between border-t border-line pt-3 text-xs">
-        <ActionButton
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={dayIndex === 0}
-          onClick={onPrevDay}
-          className="gap-1"
-        >
-          <ArrowLeft className="h-3 w-3" />
-          <TextBlock as="span">Hari Sebelumnya</TextBlock>
-        </ActionButton>
-
-        <TextBlock as="span" className="text-mist">
-          Hari ke-{dayIndex + 1} dari {totalDays}
-        </TextBlock>
-
-        <ActionButton
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={dayIndex >= totalDays - 1}
-          onClick={onNextDay}
-          className="gap-1"
-        >
-          <TextBlock as="span">Hari Berikutnya</TextBlock>
-          <ArrowRight className="h-3 w-3" />
-        </ActionButton>
+        )}
       </div>
     </div>
   );
 };
 
-// ── BARIS ITEM SLOT TUGAS BERSIH & INTUITIF ─────────────────
+// ── BARIS BUTIR TUGAS INDIVIDUAL ──────────────────────────────
 
-interface SingleItemSlotRowProps {
+interface DayItemRowProps {
   dayIndex: number;
   itemIndex: number;
   control: Control<WeeklyPlanV2Value>;
@@ -1278,7 +1112,7 @@ interface SingleItemSlotRowProps {
   onRemove: () => void;
 }
 
-const SingleItemSlotRow: React.FC<SingleItemSlotRowProps> = ({
+const DayItemRow: React.FC<DayItemRowProps> = ({
   dayIndex,
   itemIndex,
   control,
@@ -1289,7 +1123,6 @@ const SingleItemSlotRow: React.FC<SingleItemSlotRowProps> = ({
   technicians,
   onRemove,
 }) => {
-  const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
   const currentAssigned =
     useWatch({
       control,
@@ -1304,40 +1137,36 @@ const SingleItemSlotRow: React.FC<SingleItemSlotRowProps> = ({
   };
 
   return (
-    <div className="rounded-panel border border-line bg-surface p-4 shadow-sm transition-all hover:border-primary/40 space-y-3">
-      {/* HEADER TUGAS & JUDUL */}
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <TextBlock as="span" className="text-[11px] font-bold text-primary uppercase">
-              Tugas #{itemIndex + 1}
-            </TextBlock>
-          </div>
+    <div className="rounded border border-line bg-surface p-3 space-y-2.5 text-xs shadow-xs">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5 flex-1">
+          <TextBlock as="span" className="font-bold text-primary">
+            #{itemIndex + 1}
+          </TextBlock>
           <ControlInput
             type="text"
-            placeholder="Aktivitas tugas, misal: Penarikan Drop Core 12 Core Sektor Timur"
+            placeholder="Aktivitas tugas, misal: Penarikan Drop Core Sektor Barat"
             {...register(`days.${dayIndex}.items.${itemIndex}.title`)}
-            className="text-xs font-medium"
+            className="text-xs h-8 flex-1"
             required
           />
         </div>
         <PlainAction
           type="button"
           onClick={onRemove}
-          className="rounded p-1.5 text-mist hover:bg-red-50 hover:text-red-600 transition-colors mt-4"
+          className="p-1.5 text-mist hover:text-red-600 rounded"
           title="Hapus tugas ini"
         >
-          <Trash2 className="h-4 w-4" />
+          <Trash2 className="h-3.5 w-3.5" />
         </PlainAction>
       </div>
 
-      {/* BARIS UTAMA: JENIS PEKERJAAN, TARGET UNIT & ORDER KLIEN */}
-      <div className="grid gap-3 sm:grid-cols-12">
+      <div className="grid gap-2 sm:grid-cols-12">
         <div className="sm:col-span-5">
-          <ControlLabel className="text-xs">Jenis Pekerjaan (Work Type)</ControlLabel>
+          <ControlLabel className="text-[11px]">Jenis Pekerjaan</ControlLabel>
           <ControlSelect
             {...register(`days.${dayIndex}.items.${itemIndex}.work_type_id`)}
-            className="text-xs"
+            className="text-xs h-8"
             required
           >
             {workTypes.map((wt) => (
@@ -1349,22 +1178,22 @@ const SingleItemSlotRow: React.FC<SingleItemSlotRowProps> = ({
         </div>
 
         <div className="sm:col-span-2">
-          <ControlLabel className="text-xs">Target Unit</ControlLabel>
+          <ControlLabel className="text-[11px]">Target Unit</ControlLabel>
           <ControlInput
             type="number"
             step="any"
             min="0.01"
             {...register(`days.${dayIndex}.items.${itemIndex}.target_qty`, { valueAsNumber: true })}
-            className="text-xs"
+            className="text-xs h-8"
             required
           />
         </div>
 
         <div className="sm:col-span-5">
-          <ControlLabel className="text-xs">Kaitan Order Klien (Opsional)</ControlLabel>
+          <ControlLabel className="text-[11px]">Order Klien (Opsional)</ControlLabel>
           <ControlSelect
             {...register(`days.${dayIndex}.items.${itemIndex}.completion_id`)}
-            className="text-xs"
+            className="text-xs h-8"
           >
             <ControlOption value="">-- Tanpa Order Spesifik --</ControlOption>
             {completions.map((c) => (
@@ -1376,13 +1205,13 @@ const SingleItemSlotRow: React.FC<SingleItemSlotRowProps> = ({
         </div>
       </div>
 
-      {/* PENUGASAN TEKNISI CHIP BUTTONS */}
+      {/* Teknisi Pelaksana (Chip) */}
       {technicians.length > 0 && (
         <div className="border-t border-line/60 pt-2">
-          <TextBlock as="span" className="text-[11px] font-medium text-mist block mb-1.5">
-            Pilih Teknisi Pelaksana di Tugas Ini:
+          <TextBlock as="span" className="text-[10px] text-mist block mb-1">
+            Teknisi yang bertugas:
           </TextBlock>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-1">
             {technicians.map((t) => {
               const isSelected = currentAssigned.includes(t.employee_id);
               return (
@@ -1390,13 +1219,13 @@ const SingleItemSlotRow: React.FC<SingleItemSlotRowProps> = ({
                   key={t.employee_id}
                   type="button"
                   onClick={() => toggleTech(t.employee_id)}
-                  className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors ${
+                  className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-[10px] transition-colors ${
                     isSelected
-                      ? "border-primary bg-primary text-white font-semibold shadow-xs"
-                      : "border-line bg-canvas text-mist hover:text-ink hover:border-line/80"
+                      ? "bg-primary text-white font-medium"
+                      : "bg-canvas text-mist hover:text-ink border border-line"
                   }`}
                 >
-                  {isSelected ? <Check className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
+                  {isSelected && <Check className="h-2.5 w-2.5" />}
                   <TextBlock as="span">{t.full_name}</TextBlock>
                 </PlainAction>
               );
@@ -1404,48 +1233,6 @@ const SingleItemSlotRow: React.FC<SingleItemSlotRowProps> = ({
           </div>
         </div>
       )}
-
-      {/* TOGGLE WAKTU SLOT & TITIK SPESIFIK */}
-      <div>
-        <PlainAction
-          type="button"
-          onClick={() => setShowAdvanced(!showAdvanced)}
-          className="text-[11px] text-mist hover:text-primary flex items-center gap-1"
-        >
-          {showAdvanced ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-          <TextBlock as="span">{showAdvanced ? "Sembunyikan Jam & Posisi" : "⚙️ Jam Slot & Posisi Tiang (Opsional)"}</TextBlock>
-        </PlainAction>
-
-        {showAdvanced && (
-          <div className="mt-2 grid gap-2 sm:grid-cols-3 rounded-md border border-line bg-canvas p-2.5 text-xs">
-            <div>
-              <ControlLabel className="text-[11px]">Jam Mulai Slot</ControlLabel>
-              <ControlInput
-                type="time"
-                {...register(`days.${dayIndex}.items.${itemIndex}.start_time`)}
-                className="text-xs"
-              />
-            </div>
-            <div>
-              <ControlLabel className="text-[11px]">Jam Selesai Slot</ControlLabel>
-              <ControlInput
-                type="time"
-                {...register(`days.${dayIndex}.items.${itemIndex}.end_time`)}
-                className="text-xs"
-              />
-            </div>
-            <div>
-              <ControlLabel className="text-[11px]">Titik / Posisi Tiang</ControlLabel>
-              <ControlInput
-                type="text"
-                placeholder="Contoh: ODP-MDN-01"
-                {...register(`days.${dayIndex}.items.${itemIndex}.location_name`)}
-                className="text-xs"
-              />
-            </div>
-          </div>
-        )}
-      </div>
     </div>
   );
 };

@@ -24,7 +24,6 @@ from app.core.enums import PlanStatus
 from app.core.errors import AppError, ConflictError, ForbiddenError, NotFoundError, trigger_rule_error
 from app.core.permissions import RoleCode, SystemRole
 from app.core.security import CurrentUser
-from app.modules.assets.repositories.asset_repository import CRUDAssetReservation
 from app.modules.work_plans.repositories.plan_draft_repository import CRUDPlanDraft
 from app.modules.work_plans.schemas.plan_draft_schema import PlanDraftRequest
 from app.modules.work_types.services.work_type_service import WorkTypeService
@@ -83,7 +82,6 @@ class PlanDraftService:
         """
         self.db = db
         self.repo = CRUDPlanDraft(db)
-        self.assets = CRUDAssetReservation(db)
 
     async def _creator(self, user: CurrentUser) -> Any:
         """
@@ -355,12 +353,7 @@ class PlanDraftService:
             await self.repo.insert_member(plan_id, data.leader_employee_id, "LEADER", data.period_start)
             for member in data.member_employee_ids:
                 await self.repo.insert_member(plan_id, member, "MEMBER", data.period_start)
-            for tool in data.tool_ids:
-                await self.assets.insert_allocation(tool, plan_id, None, user.user_id)
-                await self.assets.set_asset_status(tool, "RESERVED")
-            if data.vehicle_id is not None:
-                await self.assets.insert_allocation(data.vehicle_id, plan_id, data.driver_employee_id, user.user_id)
-                await self.assets.set_asset_status(data.vehicle_id, "RESERVED")
+            # Alat & kendaraan untuk tim kini lewat serah terima aset (POST /assets/loans, Milestone 4).
         except IntegrityError as exc:
             rule = trigger_rule_error(exc)
             raise (

@@ -3841,6 +3841,981 @@
           }
         }
       ]
+    },
+    {
+      "name": "12 - Milestone 4: Inventaris Aset & Serah Terima (V2)",
+      "item": [
+        {
+          "name": "12.01 - Daftar kendaraan (pekerja lapangan boleh lihat)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"ada kolom STNK/KIR & pemegang\", () => {",
+                  "    const v = pm.response.json()[0];",
+                  "    pm.expect(v).to.have.property(\"stnk_expired_at\");",
+                  "    pm.expect(v).to.have.property(\"holder_name\");",
+                  "});",
+                  "pm.collectionVariables.set(\"m4_tag\", String(1000 + Date.now() % 9000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_emp}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/assets/vehicles",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assets",
+                "vehicles"
+              ]
+            }
+          }
+        },
+        {
+          "name": "12.02 - HR menambah alat bersama",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201\", () => pm.response.to.have.status(201));",
+                  "const t = pm.response.json();",
+                  "pm.test(\"kode dirapikan huruf besar\", () => pm.expect(t.tool_code).to.eql(\"PM-BOR-\" + pm.collectionVariables.get(\"m4_tag\")));",
+                  "pm.test(\"status ready\", () => pm.expect(t.status).to.eql(\"ready\"));",
+                  "pm.collectionVariables.set(\"m4_tool_id\", t.tool_id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/assets/tools",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assets",
+                "tools"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"office_id\": \"11111111-0000-4000-a000-000000000001\",\n  \"division_id\": \"33333333-0000-4000-a000-000000000001\",\n  \"ownership_type\": \"SHARED_TOOL\",\n  \"category\": \"BOR\",\n  \"name\": \"Bor uji Postman\",\n  \"tool_code\": \"pm-bor-{{m4_tag}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "12.03 - Kode alat kembar ditolak",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"409 TOOL_CODE_TAKEN\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"kode TOOL_CODE_TAKEN\", () => pm.expect(pm.response.json().error.code).to.eql(\"TOOL_CODE_TAKEN\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/assets/tools",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assets",
+                "tools"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"office_id\": \"11111111-0000-4000-a000-000000000001\",\n  \"ownership_type\": \"SHARED_TOOL\",\n  \"category\": \"BOR\",\n  \"name\": \"Bor kembar\",\n  \"tool_code\": \"PM-BOR-{{m4_tag}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "12.04 - PM tidak boleh mengelola master aset",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/assets/tools",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assets",
+                "tools"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"office_id\": \"11111111-0000-4000-a000-000000000001\",\n  \"ownership_type\": \"SHARED_TOOL\",\n  \"category\": \"BOR\",\n  \"name\": \"Bor PM\",\n  \"tool_code\": \"PM-X-{{m4_tag}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "12.05 - HR menambah truk (nopol dirapikan)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201\", () => pm.response.to.have.status(201));",
+                  "const v = pm.response.json();",
+                  "pm.test(\"nopol BK nnnn PM\", () => pm.expect(v.number_plate).to.eql(\"BK \" + Number(pm.collectionVariables.get(\"m4_tag\")) + \" PM\"));",
+                  "pm.collectionVariables.set(\"m4_vehicle_id\", v.vehicle_id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/assets/vehicles",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assets",
+                "vehicles"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"office_id\": \"11111111-0000-4000-a000-000000000001\",\n  \"division_id\": \"33333333-0000-4000-a000-000000000001\",\n  \"vehicle_type\": \"Truck\",\n  \"name\": \"Truk uji Postman\",\n  \"number_plate\": \"bk{{m4_tag}}pm\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "12.06 - Serah terima tanpa STNK ditolak",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"422 VEHICLE_PAPERS_EXPIRED\", () => pm.response.to.have.status(422));",
+                  "pm.test(\"kode VEHICLE_PAPERS_EXPIRED\", () => pm.expect(pm.response.json().error.code).to.eql(\"VEHICLE_PAPERS_EXPIRED\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/assets/loans",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assets",
+                "loans"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"asset_type\": \"VEHICLE\",\n  \"vehicle_id\": \"{{m4_vehicle_id}}\",\n  \"employee_id\": \"22222222-0000-4000-a000-000000000007\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "12.07 - Unggah berkas kendaraan",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set(\"m4_file_id\", pm.response.json().file_id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/files/upload",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "files",
+                "upload"
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "postman/fixtures/dokumen-uji.png"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "12.08 - Catat STNK",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201\", () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/assets/vehicles/{{m4_vehicle_id}}/files",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assets",
+                "vehicles",
+                "{{m4_vehicle_id}}",
+                "files"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"STNK\",\n  \"file_id\": \"{{m4_file_id}}\",\n  \"expired_at\": \"2031-12-31\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "12.09 - Truk tanpa KIR ditolak",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"422 VEHICLE_PAPERS_EXPIRED\", () => {",
+                  "    pm.response.to.have.status(422);",
+                  "    pm.expect(pm.response.json().error.code).to.eql(\"VEHICLE_PAPERS_EXPIRED\");",
+                  "    pm.expect(pm.response.json().error.message).to.include(\"KIR\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/assets/loans",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assets",
+                "loans"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"asset_type\": \"VEHICLE\",\n  \"vehicle_id\": \"{{m4_vehicle_id}}\",\n  \"employee_id\": \"22222222-0000-4000-a000-000000000007\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "12.10 - Catat KIR",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"STNK & KIR aktif\", () => pm.expect(pm.response.json().map(f => f.type).sort()).to.eql([\"KIR\", \"STNK\"]));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/assets/vehicles/{{m4_vehicle_id}}/files",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assets",
+                "vehicles",
+                "{{m4_vehicle_id}}",
+                "files"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"KIR\",\n  \"file_id\": \"{{m4_file_id}}\",\n  \"expired_at\": \"2027-06-30\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "12.11 - Serah terima truk ke Riko (SIM A berlaku)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201\", () => pm.response.to.have.status(201));",
+                  "const l = pm.response.json();",
+                  "pm.test(\"pinjaman pribadi = loaned\", () => pm.expect(l.assignment_status).to.eql(\"loaned\"));",
+                  "pm.collectionVariables.set(\"m4_loan_id\", l.assignment_id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/assets/loans",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assets",
+                "loans"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"asset_type\": \"VEHICLE\",\n  \"vehicle_id\": \"{{m4_vehicle_id}}\",\n  \"employee_id\": \"22222222-0000-4000-a000-000000000007\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "12.12 - Aset yang sedang dipinjam tidak bisa diserahkan lagi",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"409 ASSET_NOT_AVAILABLE\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"kode ASSET_NOT_AVAILABLE\", () => pm.expect(pm.response.json().error.code).to.eql(\"ASSET_NOT_AVAILABLE\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/assets/loans",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assets",
+                "loans"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"asset_type\": \"VEHICLE\",\n  \"vehicle_id\": \"{{m4_vehicle_id}}\",\n  \"employee_id\": \"22222222-0000-4000-a000-000000000007\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "12.13 - Status manual saat dipinjam ditolak",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"409 ASSET_IN_USE\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"kode ASSET_IN_USE\", () => pm.expect(pm.response.json().error.code).to.eql(\"ASSET_IN_USE\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/assets/vehicles/{{m4_vehicle_id}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assets",
+                "vehicles",
+                "{{m4_vehicle_id}}",
+                "status"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"damaged\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "12.14 - Pemegang (Riko) mencatat inspeksi harian",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"inspektur Riko\", () => pm.expect(pm.response.json()[0].inspector_employee_id).to.eql(\"22222222-0000-4000-a000-000000000007\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_emp}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/assets/vehicles/{{m4_vehicle_id}}/inspections",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assets",
+                "vehicles",
+                "{{m4_vehicle_id}}",
+                "inspections"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"day\",\n  \"file_id\": \"{{m4_file_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "12.15 - Bukan pemegang (TL) tidak boleh inspeksi",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_tl}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/assets/vehicles/{{m4_vehicle_id}}/inspections",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assets",
+                "vehicles",
+                "{{m4_vehicle_id}}",
+                "inspections"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"day\",\n  \"file_id\": \"{{m4_file_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "12.16 - Pekerja lapangan hanya melihat pinjamannya",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"semua milik Riko\", () => pm.response.json().forEach(l => pm.expect(l.employee_id).to.eql(\"22222222-0000-4000-a000-000000000007\")));",
+                  "pm.test(\"truk uji ada\", () => pm.expect(pm.response.json().map(l => l.assignment_id)).to.include(pm.collectionVariables.get(\"m4_loan_id\")));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_emp}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/assets/loans",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assets",
+                "loans"
+              ]
+            }
+          }
+        },
+        {
+          "name": "12.17 - Pengembalian truk (kondisi baik)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"returned_at terisi\", () => pm.expect(pm.response.json().returned_at).to.be.a(\"string\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/assets/loans/{{m4_loan_id}}/return",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assets",
+                "loans",
+                "{{m4_loan_id}}",
+                "return"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"condition\": \"ready\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "12.18 - Pengembalian ganda ditolak",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"409 ALREADY_RETURNED\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"kode ALREADY_RETURNED\", () => pm.expect(pm.response.json().error.code).to.eql(\"ALREADY_RETURNED\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/assets/loans/{{m4_loan_id}}/return",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assets",
+                "loans",
+                "{{m4_loan_id}}",
+                "return"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"condition\": \"ready\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "12.19 - Truk kembali siap",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"truk uji ready tanpa pemegang\", () => {",
+                  "    const v = pm.response.json().find(x => x.vehicle_id === pm.collectionVariables.get(\"m4_vehicle_id\"));",
+                  "    pm.expect(v).to.be.an(\"object\");",
+                  "    pm.expect(v.holder_employee_id).to.eql(null);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/assets/vehicles?status=ready",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assets",
+                "vehicles?status=ready"
+              ]
+            }
+          }
+        },
+        {
+          "name": "12.20 - Hapus truk uji (bersih-bersih)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/assets/vehicles/{{m4_vehicle_id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assets",
+                "vehicles",
+                "{{m4_vehicle_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "12.21 - Hapus alat uji (bersih-bersih)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/assets/tools/{{m4_tool_id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assets",
+                "tools",
+                "{{m4_tool_id}}"
+              ]
+            }
+          }
+        }
+      ]
     }
   ],
   "variable": [
@@ -3918,6 +4893,26 @@
     },
     {
       "key": "m3_doc2",
+      "value": ""
+    },
+    {
+      "key": "m4_tag",
+      "value": ""
+    },
+    {
+      "key": "m4_tool_id",
+      "value": ""
+    },
+    {
+      "key": "m4_vehicle_id",
+      "value": ""
+    },
+    {
+      "key": "m4_file_id",
+      "value": ""
+    },
+    {
+      "key": "m4_loan_id",
       "value": ""
     }
   ]

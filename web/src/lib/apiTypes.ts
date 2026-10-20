@@ -3355,7 +3355,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/assets": {
+    "/api/v1/assets/tools": {
         parameters: {
             query?: never;
             header?: never;
@@ -3363,43 +3363,67 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get Assets
-         * @description Aset organisasi + alokasi berjalan + pengajuan pengembalian yang menunggu.
+         * List Tools
+         * @description Daftar alat (pribadi & umum) beserta pemegangnya saat ini.
          */
-        get: operations["get_assets_api_v1_assets_get"];
+        get: operations["list_tools_api_v1_assets_tools_get"];
         put?: never;
         /**
-         * Create Asset
-         * @description Membuat aset baru.
+         * Create Tool
+         * @description Mendaftarkan alat baru (kode alat unik).
          */
-        post: operations["create_asset_api_v1_assets_post"];
+        post: operations["create_tool_api_v1_assets_tools_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/assets/{asset_id}/returns": {
+    "/api/v1/assets/tools/{tool_id}": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
+        get?: never;
         /**
-         * Get Asset Returns
-         * @description Riwayat pengembalian aset (terbaru dulu).
+         * Update Tool
+         * @description Mengubah data alat (sebagian).
          */
-        get: operations["get_asset_returns_api_v1_assets__asset_id__returns_get"];
-        put?: never;
+        put: operations["update_tool_api_v1_assets_tools__tool_id__put"];
         post?: never;
+        /**
+         * Delete Tool
+         * @description Menghapus (soft delete) alat yang tidak sedang dipinjam.
+         */
+        delete: operations["delete_tool_api_v1_assets_tools__tool_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assets/tools/{tool_id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Set Tool Status
+         * @description Menandai alat siap/rusak/hilang/pensiun (tidak saat sedang dipinjam).
+         */
+        post: operations["set_tool_status_api_v1_assets_tools__tool_id__status_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/assets/returns/{return_id}/pdf": {
+    "/api/v1/assets/vehicles": {
         parameters: {
             query?: never;
             header?: never;
@@ -3407,19 +3431,47 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get Bast Pdf
-         * @description Berita acara serah terima (BAST) untuk pengembalian yang sudah diperiksa.
+         * List Vehicles
+         * @description Daftar kendaraan beserta masa berlaku STNK/KIR dan pemegangnya saat ini.
          */
-        get: operations["get_bast_pdf_api_v1_assets_returns__return_id__pdf_get"];
+        get: operations["list_vehicles_api_v1_assets_vehicles_get"];
         put?: never;
+        /**
+         * Create Vehicle
+         * @description Mendaftarkan kendaraan baru (nomor polisi unik).
+         */
+        post: operations["create_vehicle_api_v1_assets_vehicles_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assets/vehicles/{vehicle_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Update Vehicle
+         * @description Mengubah data kendaraan (sebagian).
+         */
+        put: operations["update_vehicle_api_v1_assets_vehicles__vehicle_id__put"];
         post?: never;
-        delete?: never;
+        /**
+         * Delete Vehicle
+         * @description Menghapus (soft delete) kendaraan yang tidak sedang dipinjam.
+         */
+        delete: operations["delete_vehicle_api_v1_assets_vehicles__vehicle_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/assets/{asset_id}/reserve": {
+    "/api/v1/assets/vehicles/{vehicle_id}/status": {
         parameters: {
             query?: never;
             header?: never;
@@ -3429,17 +3481,89 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Reserve Asset
-         * @description Petugas aset atau PM unit/OPS memesan aset untuk SK aktif.
+         * Set Vehicle Status
+         * @description Menandai kendaraan siap/rusak/hilang/pensiun (tidak saat sedang dipinjam).
          */
-        post: operations["reserve_asset_api_v1_assets__asset_id__reserve_post"];
+        post: operations["set_vehicle_status_api_v1_assets_vehicles__vehicle_id__status_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/assets/{asset_id}/release": {
+    "/api/v1/assets/vehicles/{vehicle_id}/files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Vehicle Files
+         * @description Berkas kendaraan (STNK, BPKB, KIR).
+         */
+        get: operations["list_vehicle_files_api_v1_assets_vehicles__vehicle_id__files_get"];
+        put?: never;
+        /**
+         * Add Vehicle File
+         * @description Mencatat berkas kendaraan; berkas sejenis yang lama menjadi `extended`.
+         */
+        post: operations["add_vehicle_file_api_v1_assets_vehicles__vehicle_id__files_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assets/vehicles/{vehicle_id}/inspections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Inspections
+         * @description Riwayat inspeksi kendaraan (terbaru dulu).
+         */
+        get: operations["list_inspections_api_v1_assets_vehicles__vehicle_id__inspections_get"];
+        put?: never;
+        /**
+         * Add Inspection
+         * @description Mencatat inspeksi kendaraan — pengelola aset atau pemegang kendaraan saat ini.
+         */
+        post: operations["add_inspection_api_v1_assets_vehicles__vehicle_id__inspections_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assets/loans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Loans
+         * @description Peminjaman aset (default: yang belum dikembalikan). Pekerja lapangan hanya melihat miliknya.
+         */
+        get: operations["list_loans_api_v1_assets_loans_get"];
+        put?: never;
+        /**
+         * Lend Asset
+         * @description Serah terima aset ke karyawan (opsional dikaitkan ke jadwal harian tim).
+         */
+        post: operations["lend_asset_api_v1_assets_loans_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assets/loans/{assignment_id}/return": {
         parameters: {
             query?: never;
             header?: never;
@@ -3449,77 +3573,17 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Release Asset
-         * @description Reservasi yang belum dipakai dilepas.
+         * Return Asset
+         * @description Pengembalian aset dengan kondisinya (ready/damaged/lost).
          */
-        post: operations["release_asset_api_v1_assets__asset_id__release_post"];
+        post: operations["return_asset_api_v1_assets_loans__assignment_id__return_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/assets/{asset_id}/check": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Check Asset
-         * @description Pengemudi yang ditunjuk menyatakan kendaraan layak atau banding.
-         */
-        post: operations["check_asset_api_v1_assets__asset_id__check_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/assets/allocations/{alloc_id}/return": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Request Asset Return
-         * @description Formulir BAST pengembalian aset — diajukan ketua tim menurut SK peminjam.
-         */
-        post: operations["request_asset_return_api_v1_assets_allocations__alloc_id__return_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/assets/returns/{return_id}/verify": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Verify Asset Return
-         * @description Verifikasi BAST pengembalian aset oleh petugas OPS/Aset.
-         */
-        post: operations["verify_asset_return_api_v1_assets_returns__return_id__verify_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/work-plans/{plan_id}/assets": {
+    "/api/v1/work-plans/daily/{daily_plan_id}/assets": {
         parameters: {
             query?: never;
             header?: never;
@@ -3528,9 +3592,9 @@ export interface paths {
         };
         /**
          * Get Plan Assets
-         * @description Aset yang dipakai SK beserta kondisi saat dikembalikan.
+         * @description Peminjaman aset yang dikaitkan ke jadwal harian ini (anggota tim melihat semuanya).
          */
-        get: operations["get_plan_assets_api_v1_work_plans__plan_id__assets_get"];
+        get: operations["get_plan_assets_api_v1_work_plans_daily__daily_plan_id__assets_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4222,271 +4286,13 @@ export interface components {
             notes: string[];
             download?: components["schemas"]["ReleaseFileOut"] | null;
         };
-        /**
-         * AssetAllocationResponse
-         * @description Schema detailing a specific asset allocation to a work plan.
-         */
-        AssetAllocationResponse: {
+        /** AssetStatusUpdate */
+        AssetStatusUpdate: {
             /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /**
-             * Asset Id
-             * Format: uuid
-             */
-            asset_id: string;
-            /**
-             * Work Plan Id
-             * Format: uuid
-             */
-            work_plan_id: string;
-            /** Driver Employee Id */
-            driver_employee_id: string | null;
-            /**
-             * Allocated By
-             * Format: uuid
-             */
-            allocated_by: string;
-            /**
-             * Allocated At
-             * Format: date-time
-             */
-            allocated_at: string;
-            /** Released At */
-            released_at: string | null;
-        };
-        /**
-         * AssetCheckRequest
-         * @description Schema for asset return check decision.
-         */
-        AssetCheckRequest: {
-            /**
-             * Decision
+             * Status
              * @enum {string}
              */
-            decision: "ACCEPT" | "APPEAL";
-            /** Reason */
-            reason?: string | null;
-        };
-        /**
-         * AssetCreate
-         * @description Schema for creating a new asset.
-         */
-        AssetCreate: {
-            /**
-             * Kind
-             * @enum {string}
-             */
-            kind: "VEHICLE" | "TOOL";
-            /** Vehicle Type */
-            vehicle_type?: string | null;
-            /** Code */
-            code: string;
-            /** Name */
-            name: string;
-            /**
-             * Condition
-             * @default Baik
-             */
-            condition: string;
-        };
-        /**
-         * AssetListItem
-         * @description Schema for an asset listed with its current allocation and pending return requests.
-         *     Aset + alokasi berjalan + pengajuan pengembalian yang menunggu (R-19, M6).
-         */
-        AssetListItem: {
-            /**
-             * Kind
-             * @enum {string}
-             */
-            kind: "VEHICLE" | "TOOL";
-            /** Vehicle Type */
-            vehicle_type?: string | null;
-            /** Code */
-            code: string;
-            /** Name */
-            name: string;
-            /**
-             * Condition
-             * @default Baik
-             */
-            condition: string;
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /** Status */
-            status: string;
-            /** Allocation Id */
-            allocation_id?: string | null;
-            /** Work Plan Id */
-            work_plan_id?: string | null;
-            /** Plan Number */
-            plan_number?: string | null;
-            /** Leader Employee Id */
-            leader_employee_id?: string | null;
-            /** Pending Return Id */
-            pending_return_id?: string | null;
-            /** Return Condition */
-            return_condition?: string | null;
-            /** Return Note */
-            return_note?: string | null;
-            /** Return Requested By Name */
-            return_requested_by_name?: string | null;
-        };
-        /**
-         * AssetReleaseRequest
-         * @description Schema for requesting to release a reserved asset.
-         */
-        AssetReleaseRequest: {
-            /**
-             * Work Plan Id
-             * Format: uuid
-             */
-            work_plan_id: string;
-        };
-        /**
-         * AssetReserveRequest
-         * @description Schema for requesting to reserve an asset.
-         */
-        AssetReserveRequest: {
-            /**
-             * Work Plan Id
-             * Format: uuid
-             */
-            work_plan_id: string;
-            /** Driver Employee Id */
-            driver_employee_id?: string | null;
-        };
-        /**
-         * AssetResponse
-         * @description Schema for asset responses, adding system properties like ID and status.
-         */
-        AssetResponse: {
-            /**
-             * Kind
-             * @enum {string}
-             */
-            kind: "VEHICLE" | "TOOL";
-            /** Vehicle Type */
-            vehicle_type?: string | null;
-            /** Code */
-            code: string;
-            /** Name */
-            name: string;
-            /**
-             * Condition
-             * @default Baik
-             */
-            condition: string;
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /** Status */
-            status: string;
-        };
-        /**
-         * AssetReturnCreate
-         * @description Schema for requesting an asset return.
-         */
-        AssetReturnCreate: {
-            /** Condition On Return */
-            condition_on_return: string;
-            /** Note */
-            note?: string | null;
-        };
-        /**
-         * AssetReturnHistoryItem
-         * @description Schema representing the historical record of an asset return.
-         */
-        AssetReturnHistoryItem: {
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /** Plan Number */
-            plan_number: string | null;
-            /** Requested By Name */
-            requested_by_name: string;
-            /**
-             * Requested At
-             * Format: date-time
-             */
-            requested_at: string;
-            /** Condition On Return */
-            condition_on_return: string | null;
-            /** Note */
-            note: string | null;
-            /** Verified By Name */
-            verified_by_name: string | null;
-            /** Verified At */
-            verified_at: string | null;
-            /** Is Accepted */
-            is_accepted: boolean | null;
-        };
-        /**
-         * AssetReturnResponse
-         * @description Schema detailing the outcome of an asset return process.
-         */
-        AssetReturnResponse: {
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /**
-             * Asset Allocation Id
-             * Format: uuid
-             */
-            asset_allocation_id: string;
-            /**
-             * Requested By
-             * Format: uuid
-             */
-            requested_by: string;
-            /**
-             * Requested At
-             * Format: date-time
-             */
-            requested_at: string;
-            /** Verified By */
-            verified_by: string | null;
-            /** Verified At */
-            verified_at: string | null;
-            /** Condition On Return */
-            condition_on_return: string | null;
-            /** Is Accepted */
-            is_accepted: boolean | null;
-        };
-        /**
-         * AssetReturnVerify
-         * @description Schema for verifying and accepting or rejecting an asset return.
-         */
-        AssetReturnVerify: {
-            /** Is Accepted */
-            is_accepted: boolean;
-            /** Note */
-            note?: string | null;
-        };
-        /**
-         * AssetStatusResponse
-         * @description Schema for reporting an asset's status.
-         */
-        AssetStatusResponse: {
-            /**
-             * Asset Id
-             * Format: uuid
-             */
-            asset_id: string;
-            /** Status */
-            status: string;
+            status: "ready" | "damaged" | "lost" | "pension";
         };
         /**
          * AssignmentEmployeeOption
@@ -6489,6 +6295,48 @@ export interface components {
              */
             evidence_file_ids: string[];
         };
+        /** InspectionCreate */
+        InspectionCreate: {
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "day" | "month" | "year" | "repair" | "profile";
+            /**
+             * File Id
+             * Format: uuid
+             */
+            file_id: string;
+        };
+        /** InspectionOut */
+        InspectionOut: {
+            /**
+             * Vehicle Inspection Id
+             * Format: uuid
+             */
+            vehicle_inspection_id: string;
+            /**
+             * Vehicle Id
+             * Format: uuid
+             */
+            vehicle_id: string;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "day" | "month" | "year" | "repair" | "profile";
+            /** Inspector Employee Id */
+            inspector_employee_id?: string | null;
+            /** Inspector Name */
+            inspector_name?: string | null;
+            /** File Id */
+            file_id?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
         /**
          * ItemScheduleSlotOut
          * @description Slot jadwal item tugas spesifik di hari kerja.
@@ -6535,6 +6383,86 @@ export interface components {
             assigned_employee_ids: unknown[];
             work_type?: components["schemas"]["WorkTypeWithSopOut"] | null;
             work_completion_order?: components["schemas"]["WorkCompletionOrderSummaryOut"] | null;
+        };
+        /**
+         * LoanCreate
+         * @description Serah terima aset ke karyawan; `daily_plan_id` mengaitkannya ke jadwal harian tim (opsional).
+         */
+        LoanCreate: {
+            /**
+             * Asset Type
+             * @enum {string}
+             */
+            asset_type: "TOOL" | "VEHICLE";
+            /** Tool Id */
+            tool_id?: string | null;
+            /** Vehicle Id */
+            vehicle_id?: string | null;
+            /**
+             * Employee Id
+             * Format: uuid
+             */
+            employee_id: string;
+            /** Daily Plan Id */
+            daily_plan_id?: string | null;
+            /** Handover File Id */
+            handover_file_id?: string | null;
+        };
+        /** LoanOut */
+        LoanOut: {
+            /**
+             * Assignment Id
+             * Format: uuid
+             */
+            assignment_id: string;
+            /**
+             * Asset Type
+             * @enum {string}
+             */
+            asset_type: "TOOL" | "VEHICLE";
+            /**
+             * Asset Id
+             * Format: uuid
+             */
+            asset_id: string;
+            /** Asset Name */
+            asset_name: string;
+            /** Asset Code */
+            asset_code: string;
+            /**
+             * Employee Id
+             * Format: uuid
+             */
+            employee_id: string;
+            /** Employee Name */
+            employee_name: string;
+            /** Daily Plan Id */
+            daily_plan_id?: string | null;
+            /** Work Date */
+            work_date?: string | null;
+            /**
+             * Assignment Status
+             * @enum {string}
+             */
+            assignment_status: "ready" | "allocated" | "loaned" | "damaged" | "lost" | "pension";
+            /**
+             * Loaned At
+             * Format: date-time
+             */
+            loaned_at: string;
+            /** Returned At */
+            returned_at?: string | null;
+            /** Handover File Id */
+            handover_file_id?: string | null;
+        };
+        /** LoanReturn */
+        LoanReturn: {
+            /**
+             * Condition
+             * @default ready
+             * @enum {string}
+             */
+            condition: "ready" | "damaged" | "lost";
         };
         /** MemberAdd */
         MemberAdd: {
@@ -7157,42 +7085,6 @@ export interface components {
             decision: string;
             /** Note */
             note?: string | null;
-        };
-        /**
-         * PlanAssetItem
-         * @description Schema for an asset associated with a specific work plan.
-         */
-        PlanAssetItem: {
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /** Name */
-            name: string;
-            /** Code */
-            code: string;
-            /** Kind */
-            kind: string;
-            /** Vehicle Type */
-            vehicle_type: string | null;
-            /** Driver Name */
-            driver_name: string | null;
-            /**
-             * Allocated At
-             * Format: date-time
-             */
-            allocated_at: string;
-            /** Released At */
-            released_at: string | null;
-            /** Returned Condition */
-            returned_condition: string | null;
-            /** Return Accepted */
-            return_accepted: boolean | null;
-            /** Allocation Id */
-            allocation_id?: string | null;
-            /** Asset Status */
-            asset_status?: string | null;
         };
         /**
          * PlanAssignmentOptions
@@ -8689,6 +8581,32 @@ export interface components {
             /** Full Name */
             full_name: string | null;
         };
+        /** ToolCreate */
+        ToolCreate: {
+            /**
+             * Office Id
+             * Format: uuid
+             */
+            office_id: string;
+            /** Division Id */
+            division_id?: string | null;
+            /**
+             * Ownership Type
+             * @enum {string}
+             */
+            ownership_type: "PERSONAL_LOAN" | "SHARED_TOOL";
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "BAJU" | "LAPTOP" | "SEPATU" | "BOR" | "TANGGA" | "LAINNYA";
+            /** Name */
+            name: string;
+            /** Tool Code */
+            tool_code: string;
+            /** Photo File Id */
+            photo_file_id?: string | null;
+        };
         /** ToolOptionOut */
         ToolOptionOut: {
             /**
@@ -8704,6 +8622,71 @@ export interface components {
             division_id?: string | null;
             /** Category */
             category?: string | null;
+        };
+        /** ToolOut */
+        ToolOut: {
+            /** Assignment Id */
+            assignment_id?: string | null;
+            /** Holder Employee Id */
+            holder_employee_id?: string | null;
+            /** Holder Name */
+            holder_name?: string | null;
+            /** Daily Plan Id */
+            daily_plan_id?: string | null;
+            /**
+             * Tool Id
+             * Format: uuid
+             */
+            tool_id: string;
+            /**
+             * Office Id
+             * Format: uuid
+             */
+            office_id: string;
+            /** Office Name */
+            office_name: string;
+            /** Division Id */
+            division_id?: string | null;
+            /** Division Name */
+            division_name?: string | null;
+            /**
+             * Ownership Type
+             * @enum {string}
+             */
+            ownership_type: "PERSONAL_LOAN" | "SHARED_TOOL";
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "BAJU" | "LAPTOP" | "SEPATU" | "BOR" | "TANGGA" | "LAINNYA";
+            /** Name */
+            name: string;
+            /** Tool Code */
+            tool_code: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ready" | "allocated" | "loaned" | "damaged" | "lost" | "pension";
+            /** Photo File Id */
+            photo_file_id?: string | null;
+        };
+        /** ToolUpdate */
+        ToolUpdate: {
+            /** Office Id */
+            office_id?: string | null;
+            /** Division Id */
+            division_id?: string | null;
+            /** Ownership Type */
+            ownership_type?: ("PERSONAL_LOAN" | "SHARED_TOOL") | null;
+            /** Category */
+            category?: ("BAJU" | "LAPTOP" | "SEPATU" | "BOR" | "TANGGA" | "LAINNYA") | null;
+            /** Name */
+            name?: string | null;
+            /** Tool Code */
+            tool_code?: string | null;
+            /** Photo File Id */
+            photo_file_id?: string | null;
         };
         /** TransitionRequest */
         TransitionRequest: {
@@ -8826,6 +8809,90 @@ export interface components {
             /** Context */
             ctx?: Record<string, never>;
         };
+        /** VehicleCreate */
+        VehicleCreate: {
+            /**
+             * Office Id
+             * Format: uuid
+             */
+            office_id: string;
+            /**
+             * Division Id
+             * Format: uuid
+             */
+            division_id: string;
+            /**
+             * Vehicle Type
+             * @enum {string}
+             */
+            vehicle_type: "Motorcycle" | "Car" | "Truck";
+            /** Name */
+            name: string;
+            /** Number Plate */
+            number_plate: string;
+            /** Photo File Id */
+            photo_file_id?: string | null;
+        };
+        /** VehicleFileCreate */
+        VehicleFileCreate: {
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "STNK" | "BPKB" | "KIR";
+            /**
+             * File Id
+             * Format: uuid
+             */
+            file_id: string;
+            /** Active At */
+            active_at?: string | null;
+            /**
+             * Expired At
+             * Format: date
+             */
+            expired_at: string;
+        };
+        /** VehicleFileOut */
+        VehicleFileOut: {
+            /**
+             * Vehicle File Id
+             * Format: uuid
+             */
+            vehicle_file_id: string;
+            /**
+             * Vehicle Id
+             * Format: uuid
+             */
+            vehicle_id: string;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "STNK" | "BPKB" | "KIR";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "active" | "not_active" | "extended";
+            /**
+             * Active At
+             * Format: date
+             */
+            active_at: string;
+            /**
+             * Expired At
+             * Format: date
+             */
+            expired_at: string;
+            /** File Id */
+            file_id?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
         /** VehicleOptionOut */
         VehicleOptionOut: {
             /**
@@ -8841,6 +8908,71 @@ export interface components {
             vehicle_type: string;
             /** Division Id */
             division_id?: string | null;
+        };
+        /** VehicleOut */
+        VehicleOut: {
+            /** Assignment Id */
+            assignment_id?: string | null;
+            /** Holder Employee Id */
+            holder_employee_id?: string | null;
+            /** Holder Name */
+            holder_name?: string | null;
+            /** Daily Plan Id */
+            daily_plan_id?: string | null;
+            /**
+             * Vehicle Id
+             * Format: uuid
+             */
+            vehicle_id: string;
+            /**
+             * Office Id
+             * Format: uuid
+             */
+            office_id: string;
+            /** Office Name */
+            office_name: string;
+            /**
+             * Division Id
+             * Format: uuid
+             */
+            division_id: string;
+            /** Division Name */
+            division_name: string;
+            /**
+             * Vehicle Type
+             * @enum {string}
+             */
+            vehicle_type: "Motorcycle" | "Car" | "Truck";
+            /** Name */
+            name: string;
+            /** Number Plate */
+            number_plate: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ready" | "allocated" | "loaned" | "damaged" | "lost" | "pension";
+            /** Photo File Id */
+            photo_file_id?: string | null;
+            /** Stnk Expired At */
+            stnk_expired_at?: string | null;
+            /** Kir Expired At */
+            kir_expired_at?: string | null;
+        };
+        /** VehicleUpdate */
+        VehicleUpdate: {
+            /** Office Id */
+            office_id?: string | null;
+            /** Division Id */
+            division_id?: string | null;
+            /** Vehicle Type */
+            vehicle_type?: ("Motorcycle" | "Car" | "Truck") | null;
+            /** Name */
+            name?: string | null;
+            /** Number Plate */
+            number_plate?: string | null;
+            /** Photo File Id */
+            photo_file_id?: string | null;
         };
         /** VerifyOut */
         VerifyOut: {
@@ -16355,9 +16487,12 @@ export interface operations {
             };
         };
     };
-    get_assets_api_v1_assets_get: {
+    list_tools_api_v1_assets_tools_get: {
         parameters: {
-            query?: never;
+            query?: {
+                office_id?: string | null;
+                status?: ("ready" | "allocated" | "loaned" | "damaged" | "lost" | "pension") | null;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -16370,12 +16505,21 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AssetListItem"][];
+                    "application/json": components["schemas"]["ToolOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
     };
-    create_asset_api_v1_assets_post: {
+    create_tool_api_v1_assets_tools_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -16384,7 +16528,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["AssetCreate"];
+                "application/json": components["schemas"]["ToolCreate"];
             };
         };
         responses: {
@@ -16394,7 +16538,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AssetResponse"];
+                    "application/json": components["schemas"]["ToolOut"];
                 };
             };
             /** @description Validation Error */
@@ -16408,12 +16552,47 @@ export interface operations {
             };
         };
     };
-    get_asset_returns_api_v1_assets__asset_id__returns_get: {
+    update_tool_api_v1_assets_tools__tool_id__put: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                asset_id: string;
+                tool_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ToolUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ToolOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_tool_api_v1_assets_tools__tool_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tool_id: string;
             };
             cookie?: never;
         };
@@ -16425,7 +16604,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AssetReturnHistoryItem"][];
+                    "application/json": {
+                        [key: string]: string;
+                    };
                 };
             };
             /** @description Validation Error */
@@ -16439,13 +16620,49 @@ export interface operations {
             };
         };
     };
-    get_bast_pdf_api_v1_assets_returns__return_id__pdf_get: {
+    set_tool_status_api_v1_assets_tools__tool_id__status_post: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                return_id: string;
+                tool_id: string;
             };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssetStatusUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ToolOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_vehicles_api_v1_assets_vehicles_get: {
+        parameters: {
+            query?: {
+                office_id?: string | null;
+                status?: ("ready" | "allocated" | "loaned" | "damaged" | "lost" | "pension") | null;
+            };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -16455,7 +16672,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["VehicleOut"][];
+                };
             };
             /** @description Validation Error */
             422: {
@@ -16468,18 +16687,51 @@ export interface operations {
             };
         };
     };
-    reserve_asset_api_v1_assets__asset_id__reserve_post: {
+    create_vehicle_api_v1_assets_vehicles_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VehicleCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VehicleOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_vehicle_api_v1_assets_vehicles__vehicle_id__put: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                asset_id: string;
+                vehicle_id: string;
             };
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["AssetReserveRequest"];
+                "application/json": components["schemas"]["VehicleUpdate"];
             };
         };
         responses: {
@@ -16489,7 +16741,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AssetAllocationResponse"];
+                    "application/json": components["schemas"]["VehicleOut"];
                 };
             };
             /** @description Validation Error */
@@ -16503,152 +16755,12 @@ export interface operations {
             };
         };
     };
-    release_asset_api_v1_assets__asset_id__release_post: {
+    delete_vehicle_api_v1_assets_vehicles__vehicle_id__delete: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                asset_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AssetReleaseRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AssetStatusResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    check_asset_api_v1_assets__asset_id__check_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                asset_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AssetCheckRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AssetStatusResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    request_asset_return_api_v1_assets_allocations__alloc_id__return_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                alloc_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AssetReturnCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AssetReturnResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    verify_asset_return_api_v1_assets_returns__return_id__verify_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                return_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AssetReturnVerify"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AssetReturnResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_plan_assets_api_v1_work_plans__plan_id__assets_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                plan_id: string;
+                vehicle_id: string;
             };
             cookie?: never;
         };
@@ -16660,7 +16772,308 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PlanAssetItem"][];
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_vehicle_status_api_v1_assets_vehicles__vehicle_id__status_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vehicle_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssetStatusUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VehicleOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_vehicle_files_api_v1_assets_vehicles__vehicle_id__files_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vehicle_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VehicleFileOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_vehicle_file_api_v1_assets_vehicles__vehicle_id__files_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vehicle_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VehicleFileCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VehicleFileOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_inspections_api_v1_assets_vehicles__vehicle_id__inspections_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vehicle_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InspectionOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_inspection_api_v1_assets_vehicles__vehicle_id__inspections_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vehicle_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InspectionCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InspectionOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_loans_api_v1_assets_loans_get: {
+        parameters: {
+            query?: {
+                open?: boolean;
+                employee_id?: string | null;
+                daily_plan_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoanOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    lend_asset_api_v1_assets_loans_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoanCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoanOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    return_asset_api_v1_assets_loans__assignment_id__return_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assignment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoanReturn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoanOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_plan_assets_api_v1_work_plans_daily__daily_plan_id__assets_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                daily_plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoanOut"][];
                 };
             };
             /** @description Validation Error */

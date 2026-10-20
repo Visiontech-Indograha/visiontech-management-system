@@ -37,14 +37,21 @@ export const STATUS_LABEL: Record<string, string> = {
   IN_REVIEW: "Ditinjau",
   RESOLVED: "Selesai",
   WITHDRAWN: "Ditarik PM",
+  // Aset V2 (asset_status_enum)
+  ready: "Siap",
+  allocated: "Dialokasikan",
+  loaned: "Dipinjam",
+  damaged: "Rusak",
+  lost: "Hilang",
+  pension: "Pensiun",
 };
 
 export type StatusTone = "success" | "warning" | "danger" | "info" | "neutral";
 
-const GREEN = ["COMPLETED", "APPROVED", "ACCEPTED", "EFFECTIVE", "ACTIVE", "VERIFIED", "CURRENT", "AVAILABLE", "AUTO_VALID", "RESOLVED"];
-const RED = ["REJECTED", "CANCELLED", "INACTIVE"];
-const BLUE = ["IN_PROGRESS", "PUBLISHED", "IN_USE"];
-const GREY = ["DRAFT", "SUPERSEDED", "WITHDRAWN"];
+const GREEN = ["COMPLETED", "APPROVED", "ACCEPTED", "EFFECTIVE", "ACTIVE", "VERIFIED", "CURRENT", "AVAILABLE", "AUTO_VALID", "RESOLVED", "ready"];
+const RED = ["REJECTED", "CANCELLED", "INACTIVE", "damaged", "lost"];
+const BLUE = ["IN_PROGRESS", "PUBLISHED", "IN_USE", "allocated", "loaned"];
+const GREY = ["DRAFT", "SUPERSEDED", "WITHDRAWN", "pension"];
 
 /** Warna badge mengikuti prototype/js/ui.js `badge`. */
 export function statusTone(status: string): StatusTone {

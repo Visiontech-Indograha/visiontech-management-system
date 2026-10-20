@@ -21,13 +21,13 @@ export const useFinalReport = (planId: string, enabled = true) =>
     queryFn: async () => (await api.get<FinalReport | null>(`/work-plans/${planId}/completion`)).data,
   });
 
-export type PlanAsset = components["schemas"]["PlanAssetItem"];
+export type PlanAsset = components["schemas"]["LoanOut"];
 
-/** Aset yang dipakai rencana kerja + kondisi saat dikembalikan (GET /work-plans/{id}/assets) — mode presentasi. */
+/** Aset yang dipinjam untuk jadwal harian + kondisi saat dikembalikan (GET /work-plans/daily/{id}/assets). */
 export const usePlanAssets = (planId: string, enabled = true) =>
   useQuery({
     queryKey: [...planKey(planId), "assets"],
     enabled,
-    queryFn: async () => (await api.get<PlanAsset[]>(`/work-plans/${planId}/assets`)).data,
+    queryFn: async () => (await api.get<PlanAsset[]>(`/work-plans/daily/${planId}/assets`)).data,
   });
 

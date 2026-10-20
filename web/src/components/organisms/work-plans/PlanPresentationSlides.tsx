@@ -1,3 +1,4 @@
+import { statusLabel } from "@/lib/labels";
 import type { ReactNode } from "react";
 import logo from "@/assets/brand/logo-visiontech.png";
 import { FilePreview } from "@/components/molecules/FilePreview";
@@ -78,10 +79,10 @@ export function PlanPresentationSlides({ plan: p, report: r, team, incidents, as
             <TextBlock className="mb-3 font-semibold text-brand-700">Aset yang digunakan</TextBlock>
             <ListBlock className="space-y-2 text-lg md:text-xl">
               {(assets ?? []).map((a) => (
-                <ListEntry key={`${a.id}-${a.allocated_at}`}>
-                  {a.name} ({a.code})
-                  {a.driver_name && <TextBlock as="span" className="text-mist"> · pengemudi {a.driver_name}</TextBlock>}
-                  {a.returned_condition && <TextBlock as="span" className="text-mist"> · dikembalikan {a.returned_condition}</TextBlock>}
+                <ListEntry key={a.assignment_id}>
+                  {a.asset_name} ({a.asset_code})
+                  <TextBlock as="span" className="text-mist"> · {a.employee_name}</TextBlock>
+                  {a.returned_at && <TextBlock as="span" className="text-mist"> · dikembalikan {statusLabel(a.assignment_status)}</TextBlock>}
                 </ListEntry>
               ))}
               {!assets?.length && <ListEntry className="text-mist">Tidak ada aset.</ListEntry>}

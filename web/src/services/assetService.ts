@@ -3,22 +3,38 @@ import { api } from "@/lib/apiClient";
 import type { components } from "@/lib/apiTypes";
 
 type S = components["schemas"];
-/** Aset + alokasi berjalan + pengajuan pengembalian yang menunggu (GET /assets, R-19). */
-export type Asset = S["AssetListItem"];
-export type AssetCreate = S["AssetCreate"];
-type WorkPlan = S["WorkPlanResponse"];
+/** Inventaris aset V2 (Milestone 4): alat, kendaraan (+ berkas STNK/BPKB/KIR), peminjaman. */
+export type Tool = S["ToolOut"];
+export type Vehicle = S["VehicleOut"];
+export type Loan = S["LoanOut"];
+export type VehicleFile = S["VehicleFileOut"];
+export type ToolCreate = S["ToolCreate"];
+export type VehicleCreate = S["VehicleCreate"];
+export type LoanCreate = S["LoanCreate"];
+export type VehicleFileCreate = S["VehicleFileCreate"];
+export type AssetKind = "TOOL" | "VEHICLE";
+export type ManualStatus = S["AssetStatusUpdate"]["status"];
+export type ReturnCondition = NonNullable<S["LoanReturn"]["condition"]>;
 
 const KEY = ["assets"] as const;
 
-export const useAssets = () => useQuery({ queryKey: KEY, queryFn: async () => (await api.get<Asset[]>("/assets")).data });
+export const useTools = () =>
+  useQuery({ queryKey: [...KEY, "tools"], queryFn: async () => (await api.get<Tool[]>("/assets/tools")).data });
 
-/** rencana kerja aktif yang terlihat pengguna, untuk pilihan alokasi / pelepasan. */
-const ACTIVE = ["PUBLISHED", "ACCEPTED", "IN_PROGRESS"];
-export const useActivePlans = () =>
+export const useVehicles = () =>
+  useQuery({ queryKey: [...KEY, "vehicles"], queryFn: async () => (await api.get<Vehicle[]>("/assets/vehicles")).data });
+
+/** Peminjaman berjalan (default) atau seluruh riwayat. */
+export const useLoans = (open = true) =>
   useQuery({
-    queryKey: ["work-plans", { status: "", archived: false }],
-    queryFn: async () => (await api.get<WorkPlan[]>("/work-plans", { params: { archived: false } })).data,
-    select: (plans) => plans.filter((p) => ACTIVE.includes(p.status)),
+    queryKey: [...KEY, "loans", { open }],
+    queryFn: async () => (await api.get<Loan[]>("/assets/loans", { params: { open } })).data,
+  });
+
+export const useVehicleFiles = (vehicleId: string) =>
+  useQuery({
+    queryKey: [...KEY, "vehicle-files", vehicleId],
+    queryFn: async () => (await api.get<VehicleFile[]>(`/assets/vehicles/${vehicleId}/files`)).data,
   });
 
 function useAssetMutation<V, D>(fn: (v: V) => Promise<D>) {
@@ -26,46 +42,31 @@ function useAssetMutation<V, D>(fn: (v: V) => Promise<D>) {
   return useMutation({ mutationFn: fn, onSuccess: () => qc.invalidateQueries({ queryKey: KEY }) });
 }
 
-export const useCreateAsset = () =>
-  useAssetMutation(async (body: AssetCreate) => (await api.post<Asset>("/assets", body)).data);
+const path = (kind: AssetKind) => (kind === "TOOL" ? "tools" : "vehicles");
 
-export const useReserveAsset = () =>
-  useAssetMutation(async ({ id, ...body }: { id: string } & S["AssetReserveRequest"]) =>
-    (await api.post<S["AssetAllocationResponse"]>(`/assets/${id}/reserve`, body)).data,
-  );
+export const useCreateTool = () =>
+  useAssetMutation(async (body: ToolCreate) => (await api.post<Tool>("/assets/tools", body)).data);
 
-export const useReleaseAsset = () =>
-  useAssetMutation(async ({ id, ...body }: { id: string } & S["AssetReleaseRequest"]) =>
-    (await api.post<S["AssetStatusResponse"]>(`/assets/${id}/release`, body)).data,
-  );
+export const useCreateVehicle = () =>
+  useAssetMutation(async (body: VehicleCreate) => (await api.post<Vehicle>("/assets/vehicles", body)).data);
 
-/** Ketua rencana kerja peminjam mengajukan pengembalian (domain.js RETURN_ASSET). */
-export const useRequestReturn = () =>
-  useAssetMutation(async ({ allocation_id, ...body }: { allocation_id: string } & S["AssetReturnCreate"]) =>
-    (await api.post<S["AssetReturnResponse"]>(`/assets/allocations/${allocation_id}/return`, body)).data,
-  );
+/** Status manual (siap/rusak/hilang/pensiun) — ditolak API bila aset sedang dipinjam. */
+export const useSetAssetStatus = () =>
+  useAssetMutation(async ({ kind, id, status }: { kind: AssetKind; id: string; status: ManualStatus }) =>
+    (await api.post(`/assets/${path(kind)}/${id}/status`, { status })).data);
 
-/** Petugas aset memeriksa pengembalian: terima (aset tersedia lagi) / tolak (kembali ke tim) — VERIFY_RETURN. */
-export const useVerifyReturn = () =>
-  useAssetMutation(async ({ return_id, ...body }: { return_id: string } & S["AssetReturnVerify"]) =>
-    (await api.post<S["AssetReturnResponse"]>(`/assets/returns/${return_id}/verify`, body)).data,
-  );
+export const useDeleteAsset = () =>
+  useAssetMutation(async ({ kind, id }: { kind: AssetKind; id: string }) =>
+    (await api.delete(`/assets/${path(kind)}/${id}`)).data);
 
-export type AssetReturnItem = S["AssetReturnHistoryItem"];
+export const useAddVehicleFile = (vehicleId: string) =>
+  useAssetMutation(async (body: VehicleFileCreate) =>
+    (await api.post<VehicleFile[]>(`/assets/vehicles/${vehicleId}/files`, body)).data);
 
-/** Riwayat pengembalian aset (GET /assets/{id}/returns) — dasar BAST. */
-export const useAssetReturns = (assetId: string) =>
-  useQuery({
-    queryKey: [...KEY, assetId, "returns"],
-    queryFn: async () => (await api.get<AssetReturnItem[]>(`/assets/${assetId}/returns`)).data,
-  });
+/** Serah terima aset ke karyawan. */
+export const useLend = () =>
+  useAssetMutation(async (body: LoanCreate) => (await api.post<Loan>("/assets/loans", body)).data);
 
-export const useCheckAsset = () =>
-  useAssetMutation(async ({ id, ...body }: { id: string } & S["AssetCheckRequest"]) =>
-    (await api.post<S["AssetStatusResponse"]>(`/assets/${id}/check`, body)).data,
-  );
-
-/** GET /assets/returns/{id}/pdf — berita acara serah terima (BAST) sebagai Blob. */
-export async function fetchAssetReturnPdf(returnId: string): Promise<Blob> {
-  return (await api.get<Blob>(`/assets/returns/${returnId}/pdf`, { responseType: "blob" })).data;
-}
+export const useReturnLoan = () =>
+  useAssetMutation(async ({ assignmentId, condition }: { assignmentId: string; condition: ReturnCondition }) =>
+    (await api.post<Loan>(`/assets/loans/${assignmentId}/return`, { condition })).data);

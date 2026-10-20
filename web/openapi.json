@@ -10826,52 +10826,110 @@
     }
    }
   },
-  "/api/v1/assets": {
+  "/api/v1/assets/tools": {
    "get": {
     "tags": [
      "Assets"
     ],
-    "summary": "Get Assets",
-    "description": "Aset organisasi + alokasi berjalan + pengajuan pengembalian yang menunggu.",
-    "operationId": "get_assets_api_v1_assets_get",
+    "summary": "List Tools",
+    "description": "Daftar alat (pribadi & umum) beserta pemegangnya saat ini.",
+    "operationId": "list_tools_api_v1_assets_tools_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "office_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "uuid"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Office Id"
+      }
+     },
+     {
+      "name": "status",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "enum": [
+          "ready",
+          "allocated",
+          "loaned",
+          "damaged",
+          "lost",
+          "pension"
+         ],
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Status"
+      }
+     }
+    ],
     "responses": {
      "200": {
       "description": "Successful Response",
       "content": {
        "application/json": {
         "schema": {
-         "items": {
-          "$ref": "#/components/schemas/AssetListItem"
-         },
          "type": "array",
-         "title": "Response Get Assets Api V1 Assets Get"
+         "items": {
+          "$ref": "#/components/schemas/ToolOut"
+         },
+         "title": "Response List Tools Api V1 Assets Tools Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
         }
        }
       }
      }
-    },
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ]
+    }
    },
    "post": {
     "tags": [
      "Assets"
     ],
-    "summary": "Create Asset",
-    "description": "Membuat aset baru.",
-    "operationId": "create_asset_api_v1_assets_post",
+    "summary": "Create Tool",
+    "description": "Mendaftarkan alat baru (kode alat unik).",
+    "operationId": "create_tool_api_v1_assets_tools_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
     "requestBody": {
+     "required": true,
      "content": {
       "application/json": {
        "schema": {
-        "$ref": "#/components/schemas/AssetCreate"
+        "$ref": "#/components/schemas/ToolCreate"
        }
       }
-     },
-     "required": true
+     }
     },
     "responses": {
      "201": {
@@ -10879,7 +10937,7 @@
       "content": {
        "application/json": {
         "schema": {
-         "$ref": "#/components/schemas/AssetResponse"
+         "$ref": "#/components/schemas/ToolOut"
         }
        }
       }
@@ -10894,22 +10952,17 @@
        }
       }
      }
-    },
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ]
+    }
    }
   },
-  "/api/v1/assets/{asset_id}/returns": {
-   "get": {
+  "/api/v1/assets/tools/{tool_id}": {
+   "put": {
     "tags": [
      "Assets"
     ],
-    "summary": "Get Asset Returns",
-    "description": "Riwayat pengembalian aset (terbaru dulu).",
-    "operationId": "get_asset_returns_api_v1_assets__asset_id__returns_get",
+    "summary": "Update Tool",
+    "description": "Mengubah data alat (sebagian).",
+    "operationId": "update_tool_api_v1_assets_tools__tool_id__put",
     "security": [
      {
       "HTTPBearer": []
@@ -10917,13 +10970,213 @@
     ],
     "parameters": [
      {
-      "name": "asset_id",
+      "name": "tool_id",
       "in": "path",
       "required": true,
       "schema": {
        "type": "string",
        "format": "uuid",
-       "title": "Asset Id"
+       "title": "Tool Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ToolUpdate"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ToolOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "tags": [
+     "Assets"
+    ],
+    "summary": "Delete Tool",
+    "description": "Menghapus (soft delete) alat yang tidak sedang dipinjam.",
+    "operationId": "delete_tool_api_v1_assets_tools__tool_id__delete",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "tool_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Tool Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": {
+          "type": "string"
+         },
+         "title": "Response Delete Tool Api V1 Assets Tools  Tool Id  Delete"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/assets/tools/{tool_id}/status": {
+   "post": {
+    "tags": [
+     "Assets"
+    ],
+    "summary": "Set Tool Status",
+    "description": "Menandai alat siap/rusak/hilang/pensiun (tidak saat sedang dipinjam).",
+    "operationId": "set_tool_status_api_v1_assets_tools__tool_id__status_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "tool_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Tool Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/AssetStatusUpdate"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ToolOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/assets/vehicles": {
+   "get": {
+    "tags": [
+     "Assets"
+    ],
+    "summary": "List Vehicles",
+    "description": "Daftar kendaraan beserta masa berlaku STNK/KIR dan pemegangnya saat ini.",
+    "operationId": "list_vehicles_api_v1_assets_vehicles_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "office_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "uuid"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Office Id"
+      }
+     },
+     {
+      "name": "status",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "enum": [
+          "ready",
+          "allocated",
+          "loaned",
+          "damaged",
+          "lost",
+          "pension"
+         ],
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Status"
       }
      }
     ],
@@ -10935,9 +11188,54 @@
         "schema": {
          "type": "array",
          "items": {
-          "$ref": "#/components/schemas/AssetReturnHistoryItem"
+          "$ref": "#/components/schemas/VehicleOut"
          },
-         "title": "Response Get Asset Returns Api V1 Assets  Asset Id  Returns Get"
+         "title": "Response List Vehicles Api V1 Assets Vehicles Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "post": {
+    "tags": [
+     "Assets"
+    ],
+    "summary": "Create Vehicle",
+    "description": "Mendaftarkan kendaraan baru (nomor polisi unik).",
+    "operationId": "create_vehicle_api_v1_assets_vehicles_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/VehicleCreate"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/VehicleOut"
         }
        }
       }
@@ -10955,14 +11253,183 @@
     }
    }
   },
-  "/api/v1/assets/returns/{return_id}/pdf": {
+  "/api/v1/assets/vehicles/{vehicle_id}": {
+   "put": {
+    "tags": [
+     "Assets"
+    ],
+    "summary": "Update Vehicle",
+    "description": "Mengubah data kendaraan (sebagian).",
+    "operationId": "update_vehicle_api_v1_assets_vehicles__vehicle_id__put",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "vehicle_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Vehicle Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/VehicleUpdate"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/VehicleOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "tags": [
+     "Assets"
+    ],
+    "summary": "Delete Vehicle",
+    "description": "Menghapus (soft delete) kendaraan yang tidak sedang dipinjam.",
+    "operationId": "delete_vehicle_api_v1_assets_vehicles__vehicle_id__delete",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "vehicle_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Vehicle Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": {
+          "type": "string"
+         },
+         "title": "Response Delete Vehicle Api V1 Assets Vehicles  Vehicle Id  Delete"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/assets/vehicles/{vehicle_id}/status": {
+   "post": {
+    "tags": [
+     "Assets"
+    ],
+    "summary": "Set Vehicle Status",
+    "description": "Menandai kendaraan siap/rusak/hilang/pensiun (tidak saat sedang dipinjam).",
+    "operationId": "set_vehicle_status_api_v1_assets_vehicles__vehicle_id__status_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "vehicle_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Vehicle Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/AssetStatusUpdate"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/VehicleOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/assets/vehicles/{vehicle_id}/files": {
    "get": {
     "tags": [
      "Assets"
     ],
-    "summary": "Get Bast Pdf",
-    "description": "Berita acara serah terima (BAST) untuk pengembalian yang sudah diperiksa.",
-    "operationId": "get_bast_pdf_api_v1_assets_returns__return_id__pdf_get",
+    "summary": "List Vehicle Files",
+    "description": "Berkas kendaraan (STNK, BPKB, KIR).",
+    "operationId": "list_vehicle_files_api_v1_assets_vehicles__vehicle_id__files_get",
     "security": [
      {
       "HTTPBearer": []
@@ -10970,19 +11437,91 @@
     ],
     "parameters": [
      {
-      "name": "return_id",
+      "name": "vehicle_id",
       "in": "path",
       "required": true,
       "schema": {
        "type": "string",
        "format": "uuid",
-       "title": "Return Id"
+       "title": "Vehicle Id"
       }
      }
     ],
     "responses": {
      "200": {
-      "description": "Successful Response"
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/VehicleFileOut"
+         },
+         "title": "Response List Vehicle Files Api V1 Assets Vehicles  Vehicle Id  Files Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "post": {
+    "tags": [
+     "Assets"
+    ],
+    "summary": "Add Vehicle File",
+    "description": "Mencatat berkas kendaraan; berkas sejenis yang lama menjadi `extended`.",
+    "operationId": "add_vehicle_file_api_v1_assets_vehicles__vehicle_id__files_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "vehicle_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Vehicle Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/VehicleFileCreate"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/VehicleFileOut"
+         },
+         "title": "Response Add Vehicle File Api V1 Assets Vehicles  Vehicle Id  Files Post"
+        }
+       }
+      }
      },
      "422": {
       "description": "Validation Error",
@@ -10997,14 +11536,14 @@
     }
    }
   },
-  "/api/v1/assets/{asset_id}/reserve": {
-   "post": {
+  "/api/v1/assets/vehicles/{vehicle_id}/inspections": {
+   "get": {
     "tags": [
      "Assets"
     ],
-    "summary": "Reserve Asset",
-    "description": "Petugas aset atau PM unit/OPS memesan aset untuk SK aktif.",
-    "operationId": "reserve_asset_api_v1_assets__asset_id__reserve_post",
+    "summary": "List Inspections",
+    "description": "Riwayat inspeksi kendaraan (terbaru dulu).",
+    "operationId": "list_inspections_api_v1_assets_vehicles__vehicle_id__inspections_get",
     "security": [
      {
       "HTTPBearer": []
@@ -11012,13 +11551,64 @@
     ],
     "parameters": [
      {
-      "name": "asset_id",
+      "name": "vehicle_id",
       "in": "path",
       "required": true,
       "schema": {
        "type": "string",
        "format": "uuid",
-       "title": "Asset Id"
+       "title": "Vehicle Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/InspectionOut"
+         },
+         "title": "Response List Inspections Api V1 Assets Vehicles  Vehicle Id  Inspections Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "post": {
+    "tags": [
+     "Assets"
+    ],
+    "summary": "Add Inspection",
+    "description": "Mencatat inspeksi kendaraan — pengelola aset atau pemegang kendaraan saat ini.",
+    "operationId": "add_inspection_api_v1_assets_vehicles__vehicle_id__inspections_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "vehicle_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Vehicle Id"
       }
      }
     ],
@@ -11027,7 +11617,202 @@
      "content": {
       "application/json": {
        "schema": {
-        "$ref": "#/components/schemas/AssetReserveRequest"
+        "$ref": "#/components/schemas/InspectionCreate"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/InspectionOut"
+         },
+         "title": "Response Add Inspection Api V1 Assets Vehicles  Vehicle Id  Inspections Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/assets/loans": {
+   "get": {
+    "tags": [
+     "Assets"
+    ],
+    "summary": "List Loans",
+    "description": "Peminjaman aset (default: yang belum dikembalikan). Pekerja lapangan hanya melihat miliknya.",
+    "operationId": "list_loans_api_v1_assets_loans_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "open",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "boolean",
+       "default": true,
+       "title": "Open"
+      }
+     },
+     {
+      "name": "employee_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "uuid"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Employee Id"
+      }
+     },
+     {
+      "name": "daily_plan_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "uuid"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Daily Plan Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/LoanOut"
+         },
+         "title": "Response List Loans Api V1 Assets Loans Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "post": {
+    "tags": [
+     "Assets"
+    ],
+    "summary": "Lend Asset",
+    "description": "Serah terima aset ke karyawan (opsional dikaitkan ke jadwal harian tim).",
+    "operationId": "lend_asset_api_v1_assets_loans_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/LoanCreate"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/LoanOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/assets/loans/{assignment_id}/return": {
+   "post": {
+    "tags": [
+     "Assets"
+    ],
+    "summary": "Return Asset",
+    "description": "Pengembalian aset dengan kondisinya (ready/damaged/lost).",
+    "operationId": "return_asset_api_v1_assets_loans__assignment_id__return_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "assignment_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Assignment Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/LoanReturn"
        }
       }
      }
@@ -11038,7 +11823,7 @@
       "content": {
        "application/json": {
         "schema": {
-         "$ref": "#/components/schemas/AssetAllocationResponse"
+         "$ref": "#/components/schemas/LoanOut"
         }
        }
       }
@@ -11056,250 +11841,14 @@
     }
    }
   },
-  "/api/v1/assets/{asset_id}/release": {
-   "post": {
-    "tags": [
-     "Assets"
-    ],
-    "summary": "Release Asset",
-    "description": "Reservasi yang belum dipakai dilepas.",
-    "operationId": "release_asset_api_v1_assets__asset_id__release_post",
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ],
-    "parameters": [
-     {
-      "name": "asset_id",
-      "in": "path",
-      "required": true,
-      "schema": {
-       "type": "string",
-       "format": "uuid",
-       "title": "Asset Id"
-      }
-     }
-    ],
-    "requestBody": {
-     "required": true,
-     "content": {
-      "application/json": {
-       "schema": {
-        "$ref": "#/components/schemas/AssetReleaseRequest"
-       }
-      }
-     }
-    },
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/AssetStatusResponse"
-        }
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    }
-   }
-  },
-  "/api/v1/assets/{asset_id}/check": {
-   "post": {
-    "tags": [
-     "Assets"
-    ],
-    "summary": "Check Asset",
-    "description": "Pengemudi yang ditunjuk menyatakan kendaraan layak atau banding.",
-    "operationId": "check_asset_api_v1_assets__asset_id__check_post",
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ],
-    "parameters": [
-     {
-      "name": "asset_id",
-      "in": "path",
-      "required": true,
-      "schema": {
-       "type": "string",
-       "format": "uuid",
-       "title": "Asset Id"
-      }
-     }
-    ],
-    "requestBody": {
-     "required": true,
-     "content": {
-      "application/json": {
-       "schema": {
-        "$ref": "#/components/schemas/AssetCheckRequest"
-       }
-      }
-     }
-    },
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/AssetStatusResponse"
-        }
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    }
-   }
-  },
-  "/api/v1/assets/allocations/{alloc_id}/return": {
-   "post": {
-    "tags": [
-     "Assets"
-    ],
-    "summary": "Request Asset Return",
-    "description": "Formulir BAST pengembalian aset — diajukan ketua tim menurut SK peminjam.",
-    "operationId": "request_asset_return_api_v1_assets_allocations__alloc_id__return_post",
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ],
-    "parameters": [
-     {
-      "name": "alloc_id",
-      "in": "path",
-      "required": true,
-      "schema": {
-       "type": "string",
-       "format": "uuid",
-       "title": "Alloc Id"
-      }
-     }
-    ],
-    "requestBody": {
-     "required": true,
-     "content": {
-      "application/json": {
-       "schema": {
-        "$ref": "#/components/schemas/AssetReturnCreate"
-       }
-      }
-     }
-    },
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/AssetReturnResponse"
-        }
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    }
-   }
-  },
-  "/api/v1/assets/returns/{return_id}/verify": {
-   "post": {
-    "tags": [
-     "Assets"
-    ],
-    "summary": "Verify Asset Return",
-    "description": "Verifikasi BAST pengembalian aset oleh petugas OPS/Aset.",
-    "operationId": "verify_asset_return_api_v1_assets_returns__return_id__verify_post",
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ],
-    "parameters": [
-     {
-      "name": "return_id",
-      "in": "path",
-      "required": true,
-      "schema": {
-       "type": "string",
-       "format": "uuid",
-       "title": "Return Id"
-      }
-     }
-    ],
-    "requestBody": {
-     "required": true,
-     "content": {
-      "application/json": {
-       "schema": {
-        "$ref": "#/components/schemas/AssetReturnVerify"
-       }
-      }
-     }
-    },
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/AssetReturnResponse"
-        }
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    }
-   }
-  },
-  "/api/v1/work-plans/{plan_id}/assets": {
+  "/api/v1/work-plans/daily/{daily_plan_id}/assets": {
    "get": {
     "tags": [
      "Assets"
     ],
     "summary": "Get Plan Assets",
-    "description": "Aset yang dipakai SK beserta kondisi saat dikembalikan.",
-    "operationId": "get_plan_assets_api_v1_work_plans__plan_id__assets_get",
+    "description": "Peminjaman aset yang dikaitkan ke jadwal harian ini (anggota tim melihat semuanya).",
+    "operationId": "get_plan_assets_api_v1_work_plans_daily__daily_plan_id__assets_get",
     "security": [
      {
       "HTTPBearer": []
@@ -11307,13 +11856,13 @@
     ],
     "parameters": [
      {
-      "name": "plan_id",
+      "name": "daily_plan_id",
       "in": "path",
       "required": true,
       "schema": {
        "type": "string",
        "format": "uuid",
-       "title": "Plan Id"
+       "title": "Daily Plan Id"
       }
      }
     ],
@@ -11325,9 +11874,9 @@
         "schema": {
          "type": "array",
          "items": {
-          "$ref": "#/components/schemas/PlanAssetItem"
+          "$ref": "#/components/schemas/LoanOut"
          },
-         "title": "Response Get Plan Assets Api V1 Work Plans  Plan Id  Assets Get"
+         "title": "Response Get Plan Assets Api V1 Work Plans Daily  Daily Plan Id  Assets Get"
         }
        }
       }
@@ -13500,639 +14049,24 @@
     "title": "AppUpdateOut",
     "description": "Jawaban pemeriksaan pembaruan untuk satu HP."
    },
-   "AssetAllocationResponse": {
+   "AssetStatusUpdate": {
     "properties": {
-     "id": {
-      "type": "string",
-      "format": "uuid",
-      "title": "Id"
-     },
-     "asset_id": {
-      "type": "string",
-      "format": "uuid",
-      "title": "Asset Id"
-     },
-     "work_plan_id": {
-      "type": "string",
-      "format": "uuid",
-      "title": "Work Plan Id"
-     },
-     "driver_employee_id": {
-      "anyOf": [
-       {
-        "type": "string",
-        "format": "uuid"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Driver Employee Id"
-     },
-     "allocated_by": {
-      "type": "string",
-      "format": "uuid",
-      "title": "Allocated By"
-     },
-     "allocated_at": {
-      "type": "string",
-      "format": "date-time",
-      "title": "Allocated At"
-     },
-     "released_at": {
-      "anyOf": [
-       {
-        "type": "string",
-        "format": "date-time"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Released At"
-     }
-    },
-    "type": "object",
-    "required": [
-     "id",
-     "asset_id",
-     "work_plan_id",
-     "driver_employee_id",
-     "allocated_by",
-     "allocated_at",
-     "released_at"
-    ],
-    "title": "AssetAllocationResponse",
-    "description": "Schema detailing a specific asset allocation to a work plan."
-   },
-   "AssetCheckRequest": {
-    "properties": {
-     "decision": {
-      "type": "string",
-      "enum": [
-       "ACCEPT",
-       "APPEAL"
-      ],
-      "title": "Decision"
-     },
-     "reason": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Reason"
-     }
-    },
-    "type": "object",
-    "required": [
-     "decision"
-    ],
-    "title": "AssetCheckRequest",
-    "description": "Schema for asset return check decision."
-   },
-   "AssetCreate": {
-    "properties": {
-     "kind": {
-      "type": "string",
-      "enum": [
-       "VEHICLE",
-       "TOOL"
-      ],
-      "title": "Kind"
-     },
-     "vehicle_type": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Vehicle Type"
-     },
-     "code": {
-      "type": "string",
-      "title": "Code"
-     },
-     "name": {
-      "type": "string",
-      "title": "Name"
-     },
-     "condition": {
-      "type": "string",
-      "title": "Condition",
-      "default": "Baik"
-     }
-    },
-    "type": "object",
-    "required": [
-     "kind",
-     "code",
-     "name"
-    ],
-    "title": "AssetCreate",
-    "description": "Schema for creating a new asset."
-   },
-   "AssetListItem": {
-    "properties": {
-     "kind": {
-      "type": "string",
-      "enum": [
-       "VEHICLE",
-       "TOOL"
-      ],
-      "title": "Kind"
-     },
-     "vehicle_type": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Vehicle Type"
-     },
-     "code": {
-      "type": "string",
-      "title": "Code"
-     },
-     "name": {
-      "type": "string",
-      "title": "Name"
-     },
-     "condition": {
-      "type": "string",
-      "title": "Condition",
-      "default": "Baik"
-     },
-     "id": {
-      "type": "string",
-      "format": "uuid",
-      "title": "Id"
-     },
      "status": {
       "type": "string",
-      "title": "Status"
-     },
-     "allocation_id": {
-      "anyOf": [
-       {
-        "type": "string",
-        "format": "uuid"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Allocation Id"
-     },
-     "work_plan_id": {
-      "anyOf": [
-       {
-        "type": "string",
-        "format": "uuid"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Work Plan Id"
-     },
-     "plan_number": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Plan Number"
-     },
-     "leader_employee_id": {
-      "anyOf": [
-       {
-        "type": "string",
-        "format": "uuid"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Leader Employee Id"
-     },
-     "pending_return_id": {
-      "anyOf": [
-       {
-        "type": "string",
-        "format": "uuid"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Pending Return Id"
-     },
-     "return_condition": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Return Condition"
-     },
-     "return_note": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Return Note"
-     },
-     "return_requested_by_name": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Return Requested By Name"
-     }
-    },
-    "type": "object",
-    "required": [
-     "kind",
-     "code",
-     "name",
-     "id",
-     "status"
-    ],
-    "title": "AssetListItem",
-    "description": "Schema for an asset listed with its current allocation and pending return requests.\nAset + alokasi berjalan + pengajuan pengembalian yang menunggu (R-19, M6)."
-   },
-   "AssetReleaseRequest": {
-    "properties": {
-     "work_plan_id": {
-      "type": "string",
-      "format": "uuid",
-      "title": "Work Plan Id"
-     }
-    },
-    "type": "object",
-    "required": [
-     "work_plan_id"
-    ],
-    "title": "AssetReleaseRequest",
-    "description": "Schema for requesting to release a reserved asset."
-   },
-   "AssetReserveRequest": {
-    "properties": {
-     "work_plan_id": {
-      "type": "string",
-      "format": "uuid",
-      "title": "Work Plan Id"
-     },
-     "driver_employee_id": {
-      "anyOf": [
-       {
-        "type": "string",
-        "format": "uuid"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Driver Employee Id"
-     }
-    },
-    "type": "object",
-    "required": [
-     "work_plan_id"
-    ],
-    "title": "AssetReserveRequest",
-    "description": "Schema for requesting to reserve an asset."
-   },
-   "AssetResponse": {
-    "properties": {
-     "kind": {
-      "type": "string",
       "enum": [
-       "VEHICLE",
-       "TOOL"
+       "ready",
+       "damaged",
+       "lost",
+       "pension"
       ],
-      "title": "Kind"
-     },
-     "vehicle_type": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Vehicle Type"
-     },
-     "code": {
-      "type": "string",
-      "title": "Code"
-     },
-     "name": {
-      "type": "string",
-      "title": "Name"
-     },
-     "condition": {
-      "type": "string",
-      "title": "Condition",
-      "default": "Baik"
-     },
-     "id": {
-      "type": "string",
-      "format": "uuid",
-      "title": "Id"
-     },
-     "status": {
-      "type": "string",
       "title": "Status"
      }
     },
     "type": "object",
     "required": [
-     "kind",
-     "code",
-     "name",
-     "id",
      "status"
     ],
-    "title": "AssetResponse",
-    "description": "Schema for asset responses, adding system properties like ID and status."
-   },
-   "AssetReturnCreate": {
-    "properties": {
-     "condition_on_return": {
-      "type": "string",
-      "title": "Condition On Return"
-     },
-     "note": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Note"
-     }
-    },
-    "type": "object",
-    "required": [
-     "condition_on_return"
-    ],
-    "title": "AssetReturnCreate",
-    "description": "Schema for requesting an asset return."
-   },
-   "AssetReturnHistoryItem": {
-    "properties": {
-     "id": {
-      "type": "string",
-      "format": "uuid",
-      "title": "Id"
-     },
-     "plan_number": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Plan Number"
-     },
-     "requested_by_name": {
-      "type": "string",
-      "title": "Requested By Name"
-     },
-     "requested_at": {
-      "type": "string",
-      "format": "date-time",
-      "title": "Requested At"
-     },
-     "condition_on_return": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Condition On Return"
-     },
-     "note": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Note"
-     },
-     "verified_by_name": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Verified By Name"
-     },
-     "verified_at": {
-      "anyOf": [
-       {
-        "type": "string",
-        "format": "date-time"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Verified At"
-     },
-     "is_accepted": {
-      "anyOf": [
-       {
-        "type": "boolean"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Is Accepted"
-     }
-    },
-    "type": "object",
-    "required": [
-     "id",
-     "plan_number",
-     "requested_by_name",
-     "requested_at",
-     "condition_on_return",
-     "note",
-     "verified_by_name",
-     "verified_at",
-     "is_accepted"
-    ],
-    "title": "AssetReturnHistoryItem",
-    "description": "Schema representing the historical record of an asset return."
-   },
-   "AssetReturnResponse": {
-    "properties": {
-     "id": {
-      "type": "string",
-      "format": "uuid",
-      "title": "Id"
-     },
-     "asset_allocation_id": {
-      "type": "string",
-      "format": "uuid",
-      "title": "Asset Allocation Id"
-     },
-     "requested_by": {
-      "type": "string",
-      "format": "uuid",
-      "title": "Requested By"
-     },
-     "requested_at": {
-      "type": "string",
-      "format": "date-time",
-      "title": "Requested At"
-     },
-     "verified_by": {
-      "anyOf": [
-       {
-        "type": "string",
-        "format": "uuid"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Verified By"
-     },
-     "verified_at": {
-      "anyOf": [
-       {
-        "type": "string",
-        "format": "date-time"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Verified At"
-     },
-     "condition_on_return": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Condition On Return"
-     },
-     "is_accepted": {
-      "anyOf": [
-       {
-        "type": "boolean"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Is Accepted"
-     }
-    },
-    "type": "object",
-    "required": [
-     "id",
-     "asset_allocation_id",
-     "requested_by",
-     "requested_at",
-     "verified_by",
-     "verified_at",
-     "condition_on_return",
-     "is_accepted"
-    ],
-    "title": "AssetReturnResponse",
-    "description": "Schema detailing the outcome of an asset return process."
-   },
-   "AssetReturnVerify": {
-    "properties": {
-     "is_accepted": {
-      "type": "boolean",
-      "title": "Is Accepted"
-     },
-     "note": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Note"
-     }
-    },
-    "type": "object",
-    "required": [
-     "is_accepted"
-    ],
-    "title": "AssetReturnVerify",
-    "description": "Schema for verifying and accepting or rejecting an asset return."
-   },
-   "AssetStatusResponse": {
-    "properties": {
-     "asset_id": {
-      "type": "string",
-      "format": "uuid",
-      "title": "Asset Id"
-     },
-     "status": {
-      "type": "string",
-      "title": "Status"
-     }
-    },
-    "type": "object",
-    "required": [
-     "asset_id",
-     "status"
-    ],
-    "title": "AssetStatusResponse",
-    "description": "Schema for reporting an asset's status."
+    "title": "AssetStatusUpdate"
    },
    "AssignmentEmployeeOption": {
     "properties": {
@@ -19268,6 +19202,105 @@
     "title": "IncidentResponse",
     "description": "Schema for a detailed incident report response."
    },
+   "InspectionCreate": {
+    "properties": {
+     "type": {
+      "type": "string",
+      "enum": [
+       "day",
+       "month",
+       "year",
+       "repair",
+       "profile"
+      ],
+      "title": "Type"
+     },
+     "file_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "File Id"
+     }
+    },
+    "type": "object",
+    "required": [
+     "type",
+     "file_id"
+    ],
+    "title": "InspectionCreate"
+   },
+   "InspectionOut": {
+    "properties": {
+     "vehicle_inspection_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Vehicle Inspection Id"
+     },
+     "vehicle_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Vehicle Id"
+     },
+     "type": {
+      "type": "string",
+      "enum": [
+       "day",
+       "month",
+       "year",
+       "repair",
+       "profile"
+      ],
+      "title": "Type"
+     },
+     "inspector_employee_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Inspector Employee Id"
+     },
+     "inspector_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Inspector Name"
+     },
+     "file_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "File Id"
+     },
+     "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Created At"
+     }
+    },
+    "type": "object",
+    "required": [
+     "vehicle_inspection_id",
+     "vehicle_id",
+     "type",
+     "created_at"
+    ],
+    "title": "InspectionOut"
+   },
    "ItemScheduleSlotOut": {
     "properties": {
      "item_id": {
@@ -19388,6 +19421,211 @@
     ],
     "title": "ItemScheduleSlotOut",
     "description": "Slot jadwal item tugas spesifik di hari kerja."
+   },
+   "LoanCreate": {
+    "properties": {
+     "asset_type": {
+      "type": "string",
+      "enum": [
+       "TOOL",
+       "VEHICLE"
+      ],
+      "title": "Asset Type"
+     },
+     "tool_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Tool Id"
+     },
+     "vehicle_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Vehicle Id"
+     },
+     "employee_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Employee Id"
+     },
+     "daily_plan_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Daily Plan Id"
+     },
+     "handover_file_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Handover File Id"
+     }
+    },
+    "type": "object",
+    "required": [
+     "asset_type",
+     "employee_id"
+    ],
+    "title": "LoanCreate",
+    "description": "Serah terima aset ke karyawan; `daily_plan_id` mengaitkannya ke jadwal harian tim (opsional)."
+   },
+   "LoanOut": {
+    "properties": {
+     "assignment_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Assignment Id"
+     },
+     "asset_type": {
+      "type": "string",
+      "enum": [
+       "TOOL",
+       "VEHICLE"
+      ],
+      "title": "Asset Type"
+     },
+     "asset_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Asset Id"
+     },
+     "asset_name": {
+      "type": "string",
+      "title": "Asset Name"
+     },
+     "asset_code": {
+      "type": "string",
+      "title": "Asset Code"
+     },
+     "employee_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Employee Id"
+     },
+     "employee_name": {
+      "type": "string",
+      "title": "Employee Name"
+     },
+     "daily_plan_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Daily Plan Id"
+     },
+     "work_date": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Work Date"
+     },
+     "assignment_status": {
+      "type": "string",
+      "enum": [
+       "ready",
+       "allocated",
+       "loaned",
+       "damaged",
+       "lost",
+       "pension"
+      ],
+      "title": "Assignment Status"
+     },
+     "loaned_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Loaned At"
+     },
+     "returned_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Returned At"
+     },
+     "handover_file_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Handover File Id"
+     }
+    },
+    "type": "object",
+    "required": [
+     "assignment_id",
+     "asset_type",
+     "asset_id",
+     "asset_name",
+     "asset_code",
+     "employee_id",
+     "employee_name",
+     "assignment_status",
+     "loaned_at"
+    ],
+    "title": "LoanOut"
+   },
+   "LoanReturn": {
+    "properties": {
+     "condition": {
+      "type": "string",
+      "enum": [
+       "ready",
+       "damaged",
+       "lost"
+      ],
+      "title": "Condition",
+      "default": "ready"
+     }
+    },
+    "type": "object",
+    "title": "LoanReturn"
    },
    "MemberAdd": {
     "properties": {
@@ -20845,126 +21083,6 @@
     ],
     "title": "OvertimeReview",
     "description": "Schema for reviewing an overtime request (domain.js REVIEW_OVERTIME).\n\nStatus keputusan (decision) berupa APPROVED atau REJECTED, dan akan\ndiperiksa serta diproses di dalam service."
-   },
-   "PlanAssetItem": {
-    "properties": {
-     "id": {
-      "type": "string",
-      "format": "uuid",
-      "title": "Id"
-     },
-     "name": {
-      "type": "string",
-      "title": "Name"
-     },
-     "code": {
-      "type": "string",
-      "title": "Code"
-     },
-     "kind": {
-      "type": "string",
-      "title": "Kind"
-     },
-     "vehicle_type": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Vehicle Type"
-     },
-     "driver_name": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Driver Name"
-     },
-     "allocated_at": {
-      "type": "string",
-      "format": "date-time",
-      "title": "Allocated At"
-     },
-     "released_at": {
-      "anyOf": [
-       {
-        "type": "string",
-        "format": "date-time"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Released At"
-     },
-     "returned_condition": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Returned Condition"
-     },
-     "return_accepted": {
-      "anyOf": [
-       {
-        "type": "boolean"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Return Accepted"
-     },
-     "allocation_id": {
-      "anyOf": [
-       {
-        "type": "string",
-        "format": "uuid"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Allocation Id"
-     },
-     "asset_status": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Asset Status"
-     }
-    },
-    "type": "object",
-    "required": [
-     "id",
-     "name",
-     "code",
-     "kind",
-     "vehicle_type",
-     "driver_name",
-     "allocated_at",
-     "released_at",
-     "returned_condition",
-     "return_accepted"
-    ],
-    "title": "PlanAssetItem",
-    "description": "Schema for an asset associated with a specific work plan."
    },
    "PlanAssignmentOptions": {
     "properties": {
@@ -24842,6 +24960,80 @@
     "title": "TimelineLeader",
     "description": "Schema for the leader information within a timeline."
    },
+   "ToolCreate": {
+    "properties": {
+     "office_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Office Id"
+     },
+     "division_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Division Id"
+     },
+     "ownership_type": {
+      "type": "string",
+      "enum": [
+       "PERSONAL_LOAN",
+       "SHARED_TOOL"
+      ],
+      "title": "Ownership Type"
+     },
+     "category": {
+      "type": "string",
+      "enum": [
+       "BAJU",
+       "LAPTOP",
+       "SEPATU",
+       "BOR",
+       "TANGGA",
+       "LAINNYA"
+      ],
+      "title": "Category"
+     },
+     "name": {
+      "type": "string",
+      "maxLength": 100,
+      "minLength": 2,
+      "title": "Name"
+     },
+     "tool_code": {
+      "type": "string",
+      "maxLength": 50,
+      "minLength": 2,
+      "title": "Tool Code"
+     },
+     "photo_file_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Photo File Id"
+     }
+    },
+    "type": "object",
+    "required": [
+     "office_id",
+     "ownership_type",
+     "category",
+     "name",
+     "tool_code"
+    ],
+    "title": "ToolCreate"
+   },
    "ToolOptionOut": {
     "properties": {
      "tool_id": {
@@ -24888,6 +25080,260 @@
      "tool_code"
     ],
     "title": "ToolOptionOut"
+   },
+   "ToolOut": {
+    "properties": {
+     "assignment_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Assignment Id"
+     },
+     "holder_employee_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Holder Employee Id"
+     },
+     "holder_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Holder Name"
+     },
+     "daily_plan_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Daily Plan Id"
+     },
+     "tool_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Tool Id"
+     },
+     "office_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Office Id"
+     },
+     "office_name": {
+      "type": "string",
+      "title": "Office Name"
+     },
+     "division_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Division Id"
+     },
+     "division_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Division Name"
+     },
+     "ownership_type": {
+      "type": "string",
+      "enum": [
+       "PERSONAL_LOAN",
+       "SHARED_TOOL"
+      ],
+      "title": "Ownership Type"
+     },
+     "category": {
+      "type": "string",
+      "enum": [
+       "BAJU",
+       "LAPTOP",
+       "SEPATU",
+       "BOR",
+       "TANGGA",
+       "LAINNYA"
+      ],
+      "title": "Category"
+     },
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "tool_code": {
+      "type": "string",
+      "title": "Tool Code"
+     },
+     "status": {
+      "type": "string",
+      "enum": [
+       "ready",
+       "allocated",
+       "loaned",
+       "damaged",
+       "lost",
+       "pension"
+      ],
+      "title": "Status"
+     },
+     "photo_file_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Photo File Id"
+     }
+    },
+    "type": "object",
+    "required": [
+     "tool_id",
+     "office_id",
+     "office_name",
+     "ownership_type",
+     "category",
+     "name",
+     "tool_code",
+     "status"
+    ],
+    "title": "ToolOut"
+   },
+   "ToolUpdate": {
+    "properties": {
+     "office_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Office Id"
+     },
+     "division_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Division Id"
+     },
+     "ownership_type": {
+      "anyOf": [
+       {
+        "type": "string",
+        "enum": [
+         "PERSONAL_LOAN",
+         "SHARED_TOOL"
+        ]
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Ownership Type"
+     },
+     "category": {
+      "anyOf": [
+       {
+        "type": "string",
+        "enum": [
+         "BAJU",
+         "LAPTOP",
+         "SEPATU",
+         "BOR",
+         "TANGGA",
+         "LAINNYA"
+        ]
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Category"
+     },
+     "name": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 100,
+        "minLength": 2
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Name"
+     },
+     "tool_code": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 50,
+        "minLength": 2
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Tool Code"
+     },
+     "photo_file_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Photo File Id"
+     }
+    },
+    "type": "object",
+    "title": "ToolUpdate"
    },
    "TransitionRequest": {
     "properties": {
@@ -25203,6 +25649,174 @@
     ],
     "title": "ValidationError"
    },
+   "VehicleCreate": {
+    "properties": {
+     "office_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Office Id"
+     },
+     "division_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Division Id"
+     },
+     "vehicle_type": {
+      "type": "string",
+      "enum": [
+       "Motorcycle",
+       "Car",
+       "Truck"
+      ],
+      "title": "Vehicle Type"
+     },
+     "name": {
+      "type": "string",
+      "maxLength": 150,
+      "minLength": 2,
+      "title": "Name"
+     },
+     "number_plate": {
+      "type": "string",
+      "maxLength": 20,
+      "minLength": 3,
+      "title": "Number Plate"
+     },
+     "photo_file_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Photo File Id"
+     }
+    },
+    "type": "object",
+    "required": [
+     "office_id",
+     "division_id",
+     "vehicle_type",
+     "name",
+     "number_plate"
+    ],
+    "title": "VehicleCreate"
+   },
+   "VehicleFileCreate": {
+    "properties": {
+     "type": {
+      "type": "string",
+      "enum": [
+       "STNK",
+       "BPKB",
+       "KIR"
+      ],
+      "title": "Type"
+     },
+     "file_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "File Id"
+     },
+     "active_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Active At"
+     },
+     "expired_at": {
+      "type": "string",
+      "format": "date",
+      "title": "Expired At"
+     }
+    },
+    "type": "object",
+    "required": [
+     "type",
+     "file_id",
+     "expired_at"
+    ],
+    "title": "VehicleFileCreate"
+   },
+   "VehicleFileOut": {
+    "properties": {
+     "vehicle_file_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Vehicle File Id"
+     },
+     "vehicle_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Vehicle Id"
+     },
+     "type": {
+      "type": "string",
+      "enum": [
+       "STNK",
+       "BPKB",
+       "KIR"
+      ],
+      "title": "Type"
+     },
+     "status": {
+      "type": "string",
+      "enum": [
+       "active",
+       "not_active",
+       "extended"
+      ],
+      "title": "Status"
+     },
+     "active_at": {
+      "type": "string",
+      "format": "date",
+      "title": "Active At"
+     },
+     "expired_at": {
+      "type": "string",
+      "format": "date",
+      "title": "Expired At"
+     },
+     "file_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "File Id"
+     },
+     "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Created At"
+     }
+    },
+    "type": "object",
+    "required": [
+     "vehicle_file_id",
+     "vehicle_id",
+     "type",
+     "status",
+     "active_at",
+     "expired_at",
+     "created_at"
+    ],
+    "title": "VehicleFileOut"
+   },
    "VehicleOptionOut": {
     "properties": {
      "vehicle_id": {
@@ -25243,6 +25857,242 @@
      "vehicle_type"
     ],
     "title": "VehicleOptionOut"
+   },
+   "VehicleOut": {
+    "properties": {
+     "assignment_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Assignment Id"
+     },
+     "holder_employee_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Holder Employee Id"
+     },
+     "holder_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Holder Name"
+     },
+     "daily_plan_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Daily Plan Id"
+     },
+     "vehicle_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Vehicle Id"
+     },
+     "office_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Office Id"
+     },
+     "office_name": {
+      "type": "string",
+      "title": "Office Name"
+     },
+     "division_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Division Id"
+     },
+     "division_name": {
+      "type": "string",
+      "title": "Division Name"
+     },
+     "vehicle_type": {
+      "type": "string",
+      "enum": [
+       "Motorcycle",
+       "Car",
+       "Truck"
+      ],
+      "title": "Vehicle Type"
+     },
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "number_plate": {
+      "type": "string",
+      "title": "Number Plate"
+     },
+     "status": {
+      "type": "string",
+      "enum": [
+       "ready",
+       "allocated",
+       "loaned",
+       "damaged",
+       "lost",
+       "pension"
+      ],
+      "title": "Status"
+     },
+     "photo_file_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Photo File Id"
+     },
+     "stnk_expired_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Stnk Expired At"
+     },
+     "kir_expired_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Kir Expired At"
+     }
+    },
+    "type": "object",
+    "required": [
+     "vehicle_id",
+     "office_id",
+     "office_name",
+     "division_id",
+     "division_name",
+     "vehicle_type",
+     "name",
+     "number_plate",
+     "status"
+    ],
+    "title": "VehicleOut"
+   },
+   "VehicleUpdate": {
+    "properties": {
+     "office_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Office Id"
+     },
+     "division_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Division Id"
+     },
+     "vehicle_type": {
+      "anyOf": [
+       {
+        "type": "string",
+        "enum": [
+         "Motorcycle",
+         "Car",
+         "Truck"
+        ]
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Vehicle Type"
+     },
+     "name": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 150,
+        "minLength": 2
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Name"
+     },
+     "number_plate": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 20,
+        "minLength": 3
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Number Plate"
+     },
+     "photo_file_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Photo File Id"
+     }
+    },
+    "type": "object",
+    "title": "VehicleUpdate"
    },
    "VerifyOut": {
     "properties": {

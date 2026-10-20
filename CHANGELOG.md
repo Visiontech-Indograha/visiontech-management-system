@@ -7,6 +7,11 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ---
 
+- **Milestone 4 — Inventaris Aset & Serah Terima V2 (`api/app/modules/assets`, `web/`):**
+  - Modul aset V1 (method kosong, status `in_use` yang tidak ada di enum, kolom `assigned_at` fiktif) ditulis ulang: master `tool`/`vehicle` (kode alat & nopol unik dan dirapikan), berkas kendaraan STNK/BPKB/KIR (yang lama → `extended`), inspeksi kendaraan, peminjaman `asset_assignment` dengan validasi STNK/KIR/SIM, keanggotaan tim jadwal, dan status `allocated`/`loaned`/kondisi kembali.
+  - Rute baru `/assets/tools|vehicles|loans`, `/work-plans/daily/{id}/assets`; rute V1 reserve/release/check/returns dihapus. Panggilan alokasi aset V1 di layanan draf/adendum SK dihapus.
+  - Web "Kendaraan & alat" ditulis ulang (tab Kendaraan/Alat/Sedang dipinjam; Serahkan, Terima kembali, Status, Berkas). Tes pytest & web ditulis ulang (belum dijalankan). Postman folder 12: seluruh koleksi 106 request / 178 assertion lulus.
+
 - **Milestone 3 — Tim, Anggota & Dokumen Karyawan V2 (`api/app/modules/teams`, `documents`, `web/`):**
   - **Tim (`team`/`member`):** repository ditulis ulang (BaseRepository, relasi FK office/division/leader). Ketua wajib karyawan aktif ber-peran TEAM_LEADER dan otomatis menjadi anggota; anggota hanya TEAM_LEADER/EMPLOYEE (`MEMBER_EXISTS` bila ganda, satu baris member per tim–karyawan dihidupkan ulang); ketua tidak bisa dikeluarkan (`LEADER_REQUIRED`); nama unik per divisi (`TEAM_NAME_TAKEN`); PM hanya melihat & mengelola tim di divisinya; tim yang dirujuk `work_plan_daily` tidak bisa dihapus (`TEAM_IN_USE`), hapus = arsip tim + anggotanya.
   - **Dokumen karyawan (`employee_file`):** service lama memanggil 6 method repository yang tidak ada dan alur verifikasi/nomor V1 tanpa kolom di V2 — ditulis ulang. HR/GA (`manage:employee_documents`) mencatat dokumen dari berkas `/files/upload` (`path_file` = `file_object.storage_key`, `file_id` dikembalikan lewat join); jenis dirapikan ke kode baku (`sim b i` → `SIM_B1`); dokumen sejenis baru → lama `extended`; `POST …/{doc_id}/deactivate`, `DELETE …/{doc_id}` baru; `/documents/expiring` (EXPIRED/CRITICAL/WARNING, tanggal WIB) dan cron kedaluwarsa → `not_active`. Dihapus: `/documents/pending`, `…/verify`.

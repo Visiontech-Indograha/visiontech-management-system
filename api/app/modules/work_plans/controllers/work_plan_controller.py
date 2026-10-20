@@ -13,14 +13,14 @@ from uuid import UUID
 from fastapi import Depends
 from fastapi.responses import HTMLResponse, Response
 
-from app.api.deps import (
+from app.core.errors import AppError
+from app.core.security import CurrentUser
+from app.modules.work_plans.dependencies import (
     get_plan_assignment_service,
     get_plan_draft_service,
     get_plan_edit_service,
     get_plan_transition_service,
 )
-from app.core.errors import AppError
-from app.core.security import CurrentUser
 from app.modules.work_plans.schemas.work_plan_schema import (
     AssignmentEmployeeOption,
     DayPlanRequest,

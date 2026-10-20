@@ -11,8 +11,8 @@ from uuid import UUID
 
 from fastapi import Depends
 
-from app.api.deps import get_auth_flow_service
 from app.core.security import CurrentUser
+from app.modules.auth.dependencies import get_auth_flow_service
 from app.modules.auth.schemas.auth_profile_schema import AuthMessageResponseSchema
 from app.modules.auth.schemas.auth_session_schema import (
     AuthRevokeOthersResponseSchema,

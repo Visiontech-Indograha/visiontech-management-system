@@ -7,7 +7,7 @@ Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.2.
 
 from fastapi import Depends
 
-from app.api.deps import get_unit_service
+from app.modules.units.dependencies import get_unit_service
 from app.modules.units.schemas.unit_schema import UnitOut
 from app.modules.units.services.unit_service import UnitService
 

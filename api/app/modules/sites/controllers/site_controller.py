@@ -12,8 +12,8 @@ from uuid import UUID
 
 from fastapi import Depends
 
-from app.api.deps import get_site_service
 from app.core.security import CurrentUser
+from app.modules.sites.dependencies import get_site_service
 from app.modules.sites.schemas.site_schema import GeoPoint, SiteCreate, SiteResponse
 from app.modules.sites.services.site_service import SiteService
 

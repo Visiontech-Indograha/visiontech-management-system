@@ -11,7 +11,7 @@ import ipaddress
 
 from fastapi import Depends, Request, Response
 
-from app.api.deps import get_auth_flow_service
+from app.modules.auth.dependencies import get_auth_flow_service
 from app.modules.auth.schemas.auth_login_request_schema import AuthLoginRequestSchema
 from app.modules.auth.schemas.auth_login_response_schema import AuthLoginResponseSchema
 from app.modules.auth.schemas.auth_profile_schema import AuthMessageResponseSchema

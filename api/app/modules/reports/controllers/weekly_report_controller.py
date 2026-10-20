@@ -11,7 +11,7 @@ from typing import Any
 
 from fastapi import Depends
 
-from app.api.deps import get_weekly_report_service
+from app.modules.reports.dependencies import get_weekly_report_service
 from app.modules.reports.schemas.weekly_report_schema import (
     WeeklyReportRequest,
     WeeklyReportResponse,

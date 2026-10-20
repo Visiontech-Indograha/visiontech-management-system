@@ -13,12 +13,9 @@ from uuid import UUID
 
 from fastapi import Depends
 
-from app.api.deps import (
-    get_attendance_offline_service,
-    get_attendance_session_service,
-)
 from app.core.permissions import Permission
 from app.core.security import CurrentUser, create_time_anchor
+from app.modules.attendance.dependencies import get_attendance_offline_service, get_attendance_session_service
 from app.modules.attendance.schemas.attendance_schema import (
     AttendanceListResponse,
     AttendanceResponse,

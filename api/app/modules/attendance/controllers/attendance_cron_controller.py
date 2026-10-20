@@ -9,11 +9,8 @@ from __future__ import annotations
 
 from fastapi import Depends
 
-from app.api.deps import (
-    get_attendance_monitor_service,
-    get_attendance_session_service,
-)
 from app.core.security import CurrentUser
+from app.modules.attendance.dependencies import get_attendance_monitor_service, get_attendance_session_service
 from app.modules.attendance.schemas.attendance_schema import (
     MissingCheckInResponse,
     NeedsReviewResponse,

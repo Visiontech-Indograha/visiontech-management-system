@@ -15,11 +15,11 @@ import filetype
 from fastapi import Depends, HTTPException, UploadFile
 from fastapi.responses import Response
 
-from app.api.deps import get_file_service
 from app.core.errors import AppError, NotFoundError
 from app.core.image import compress_image
 from app.core.security import CurrentUser, create_file_access_ticket
 from app.core.storage import get_object_bytes, upload_file
+from app.modules.system.dependencies import get_file_service
 from app.modules.system.services.system_service import FileService
 
 MAX_FILE_SIZE = 10 * 1024 * 1024

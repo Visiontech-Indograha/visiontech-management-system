@@ -10,7 +10,7 @@ from __future__ import annotations
 from fastapi import Depends, Response
 from fastapi.responses import FileResponse, RedirectResponse
 
-from app.api.deps import get_app_release_service
+from app.modules.system.dependencies import get_app_release_service
 from app.modules.system.schemas.system_schema import AppUpdateOut
 from app.modules.system.services.system_service import (
     FILES_PATH,

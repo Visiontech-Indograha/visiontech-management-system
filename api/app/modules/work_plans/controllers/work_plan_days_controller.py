@@ -13,8 +13,8 @@ from uuid import UUID
 from fastapi import Depends
 from fastapi.responses import HTMLResponse, Response
 
-from app.api.deps import get_plan_day_service, get_plan_draft_service
 from app.core.errors import AppError
+from app.modules.work_plans.dependencies import get_plan_day_service, get_plan_draft_service
 from app.modules.work_plans.schemas.work_plan_schema import (
     PlanDailyScheduleDetailOut,
     PlanDayOut,

@@ -11,8 +11,9 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends
 
-from app.api.deps import get_current_user, get_plan_item_service
+from app.api.deps import get_current_user
 from app.core.security import CurrentUser
+from app.modules.work_plans.dependencies import get_plan_item_service
 from app.modules.work_plans.schemas.plan_item_schema import (
     CheckConflictIn,
     CheckConflictOut,

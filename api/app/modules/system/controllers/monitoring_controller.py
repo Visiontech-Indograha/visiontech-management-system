@@ -11,8 +11,8 @@ from datetime import date
 
 from fastapi import Depends
 
-from app.api.deps import get_monitoring_service
 from app.core.security import CurrentUser
+from app.modules.system.dependencies import get_monitoring_service
 from app.modules.system.schemas.system_schema import (
     AttendanceRecap,
     TimelineGroup,

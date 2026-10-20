@@ -1,9 +1,11 @@
 """
-app/services/site_service.py
-Lokasi kerja (R-33, keputusan pemilik 2026-10-02):
-- PM membuat lokasi proyek untuk unitnya — berlaku hanya untuk bawahannya (pekerja lapangan di unit itu).
-- Finance membuat lokasi kantor (tanpa unit) — berlaku untuk semua pekerja kantor.
-- Yang terlihat: lapangan → lokasi unitnya; kantor → lokasi kantor; PM → kantor + unitnya; OPS → semua.
+app/modules/sites/services/site_service.py
+Master kantor (Milestone 2, docs/36): kantor utama & cabang.
+
+- Semua pengguna melihat daftar kantor aktif (target absen kantor, docs/35 §5).
+- Kelola (buat/ubah/hapus) butuh izin `manage:sites` (SUPER_ADMIN, OPERATIONAL_MANAGER).
+- Tepat satu kantor utama: zona kota & uang makan dihitung dari koordinatnya.
+- Kantor yang masih punya karyawan aktif atau kantor utama tidak dapat dihapus.
 """
 
 from __future__ import annotations
@@ -13,136 +15,93 @@ from uuid import UUID
 
 from sqlalchemy.exc import IntegrityError
 
-from app.core.errors import AppError, ForbiddenError, NotFoundError
-from app.core.permissions import RoleCode
+from app.core.errors import AppError, NotFoundError
+from app.core.permissions import Permission
 from app.core.security import CurrentUser
 from app.modules.sites.repositories.site_repository import CRUDSite
+from app.modules.sites.schemas.site_schema import SiteCreate, SiteUpdate
+
+
+def _fields(data: SiteCreate | SiteUpdate) -> dict[str, Any]:
+    """Skema → parameter kolom office (lokasi dipecah ke lat/lng; alamat kosong → '')."""
+    loc = data.location
+    return {
+        "name": data.name.strip() if data.name else None,
+        "address": data.address.strip() if data.address is not None else None,
+        "lat": loc.lat if loc else None,
+        "lng": loc.lng if loc else None,
+        "radius_m": data.radius_m,
+        "city_boundary_radius_m": data.city_boundary_radius_m,
+        "clock_in_time": data.clock_in_time,
+        "clock_out_time": data.clock_out_time,
+        "in_city_meal_rate": data.in_city_meal_rate,
+        "out_city_meal_rate": data.out_city_meal_rate,
+    }
 
 
 class SiteService:
-    """
-    Layanan untuk mengelola data master lokasi kerja (site).
-    PM dapat membuat lokasi proyek; Finance membuat lokasi kantor.
-    Hak akses melihat dibedakan antara pekerja lapangan, kantor, PM, dan OPS.
-    """
+    """Layanan master kantor."""
 
     def __init__(self, repo: CRUDSite) -> None:
-        """
-        Inisialisasi SiteService.
-
-        Args:
-            repo (CRUDSite): Repositori untuk operasi CRUD site.
-        """
         self.repo = repo
 
+    @staticmethod
+    def can_manage(user: CurrentUser) -> bool:
+        return Permission.MANAGE_SITES.value in user.permissions
+
     async def list_sites(self, user: CurrentUser, *, for_attendance: bool = False) -> list[Any]:
-        """
-        `for_attendance`: jika True, hanya lokasi yang sah untuk absen
-        (kantor untuk staf kantor; lokasi unit + kantor pusat untuk staf lapangan).
+        """Kantor aktif. `for_attendance` dipertahankan untuk klien lama: absen sah di kantor mana pun."""
+        return await self.repo.list_active()
 
-        Args:
-            user (CurrentUser): Pengguna yang meminta daftar lokasi.
-            for_attendance (bool): Filter khusus untuk absensi.
+    @staticmethod
+    def _check_hours(clock_in: Any, clock_out: Any) -> None:
+        if clock_in is not None and clock_out is not None and clock_out <= clock_in:
+            raise AppError("OFFICE_INVALID", "Jam pulang harus setelah jam masuk.", status=422)
 
-        Returns:
-            list[Any]: Daftar lokasi (site) yang terlihat oleh user.
-        """
-        viewer = await self.repo.viewer(user.user_id)
-        mode = viewer.attendance_mode if viewer else None
-        if for_attendance:
-            field = mode == "FIELD"
-            unit = viewer.employee_unit_id if viewer and field else None
-            # Staf kantor: lokasi kantor. Pekerja lapangan: lokasi unitnya + kantor pusat (tanpa SK tetap bisa absen).
-            return await self.repo.list_visible(user.organization_id, all_sites=False, office=True, unit_id=unit)
-        # ADMIN, SUPER_ADMIN, OPERATIONAL_MANAGER, OPS, ADMIN_HR_GA dapat melihat semua lokasi kantor
-        if any(r in ("ADMIN", "SUPER_ADMIN", "OPERATIONAL_MANAGER", "OPS", "ADMIN_HR_GA") for r in user.roles):
-            return await self.repo.list_visible(user.organization_id, all_sites=True, office=True, unit_id=None)
-
-        # PM melihat lokasi kantor + unitnya. Staf lapangan: lokasi unitnya + kantor
-        unit = (
-            viewer.pm_unit_id
-            if viewer and viewer.pm_unit_id
-            else (viewer.employee_unit_id if viewer and mode == "FIELD" else None)
-        )
-        return await self.repo.list_visible(user.organization_id, all_sites=False, office=True, unit_id=unit)
-
-    async def manageable(self, user: CurrentUser) -> tuple[bool, UUID | None]:
-        """
-        Memeriksa apakah pengguna memiliki hak untuk mengelola (membuat/menghapus) lokasi.
-        Digunakan untuk penanda `can_manage` per lokasi.
-        """
-        if any(r in ("ADMIN", "SUPER_ADMIN", "OPERATIONAL_MANAGER", "ADMIN_HR_GA") for r in user.roles):
-            return True, None
+    async def create_site(self, user: CurrentUser, data: SiteCreate) -> Any:
+        self._check_hours(data.clock_in_time, data.clock_out_time)
+        values = _fields(data)
+        values["address"] = values["address"] or ""
         try:
-            return True, await self._managed_unit(user)
-        except ForbiddenError:
-            return False, None
-
-    async def _managed_unit(self, user: CurrentUser) -> UUID | None:
-        """
-        Menentukan unit yang boleh dikelola oleh pengguna: PM -> unitnya; Admin/OM/HR -> None (kantor umum).
-        """
-        if any(r in ("ADMIN", "SUPER_ADMIN", "OPERATIONAL_MANAGER", "ADMIN_HR_GA") for r in user.roles):
-            return None
-        if "PM" in user.roles or "PROJECT_MANAGER" in user.roles:
-            viewer = await self.repo.viewer(user.user_id)
-            if viewer is None or viewer.pm_unit_id is None:
-                return None
-            return viewer.pm_unit_id
-        if "FINANCE" in user.roles:
-            return None
-        raise ForbiddenError(
-            "Lokasi kerja hanya dapat dikelola oleh Admin, Operational Manager, Project Manager, atau HR."
-        )
-
-    async def create_site(
-        self, user: CurrentUser, *, name: str, address: str | None, radius_m: int, lat: float, lng: float
-    ) -> Any:
-        """
-        Membuat lokasi kerja baru.
-
-        Args:
-            user (CurrentUser): Pengguna pembuat.
-            name (str): Nama lokasi.
-            address (str | None): Alamat lengkap lokasi.
-            radius_m (int): Radius absensi.
-            lat (float): Latitude.
-            lng (float): Longitude.
-
-        Returns:
-            Any: Data lokasi (site) yang baru dibuat.
-        """
-        unit = await self._managed_unit(user)
-        try:
-            return await self.repo.insert(
-                user.organization_id,
-                name=name.strip(),
-                address=address,
-                radius_m=radius_m,
-                lat=lat,
-                lng=lng,
-                unit_id=unit,
-            )
+            row = await self.repo.insert(values)
         except IntegrityError as exc:
-            # Menangkap galat jika nama lokasi sudah digunakan (unique constraint)
+            raise AppError("OFFICE_INVALID", "Kantor tidak dapat disimpan. Periksa isian lalu coba lagi.",
+                           status=409) from exc
+        if data.is_main_office:
+            await self.repo.set_main(row.id)
+            row = await self.repo.get(row.id)
+        return row
+
+    async def update_site(self, user: CurrentUser, site_id: UUID, data: SiteUpdate) -> Any:
+        current = await self.repo.get(site_id)
+        if current is None:
+            raise NotFoundError("Kantor")
+        self._check_hours(
+            data.clock_in_time or current.clock_in_time, data.clock_out_time or current.clock_out_time
+        )
+        if data.is_main_office is False and current.is_main_office:
             raise AppError(
-                "SITE_INVALID", "Lokasi tidak dapat disimpan. Nama mungkin sudah dipakai.", status=409
-            ) from exc
+                "MAIN_OFFICE_REQUIRED",
+                "Harus ada satu kantor utama. Tetapkan kantor lain sebagai kantor utama.",
+                status=409,
+            )
+        row = await self.repo.update(site_id, _fields(data))
+        if data.is_main_office and not current.is_main_office:
+            await self.repo.set_main(site_id)
+            row = await self.repo.get(site_id)
+        return row
 
     async def delete_site(self, user: CurrentUser, site_id: UUID) -> None:
-        """
-        Menghapus lokasi kerja (dengan cara diarsipkan/soft delete).
-
-        Args:
-            user (CurrentUser): Pengguna yang menghapus.
-            site_id (UUID): ID lokasi yang akan dihapus.
-        """
-        unit = await self._managed_unit(user)
-        site = await self.repo.get(site_id, user.organization_id)
+        site = await self.repo.get(site_id)
         if site is None:
-            raise NotFoundError("Lokasi")
-        is_admin = "ADMIN" in user.roles or RoleCode.ADMIN in user.roles
-        # Tidak membocorkan eksistensi lokasi di luar unit kelolaan (memulangkan 404), kecuali Admin
-        if not is_admin and site.unit_id != unit:
-            raise NotFoundError("Lokasi")
+            raise NotFoundError("Kantor")
+        if site.is_main_office:
+            raise AppError("MAIN_OFFICE_REQUIRED", "Kantor utama tidak dapat dihapus.", status=409)
+        employees = await self.repo.active_employee_count(site_id)
+        if employees:
+            raise AppError(
+                "OFFICE_IN_USE",
+                f"Kantor ini masih menjadi kantor {employees} karyawan aktif. Pindahkan karyawan lebih dulu.",
+                status=409,
+            )
         await self.repo.archive(site_id)

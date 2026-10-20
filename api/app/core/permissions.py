@@ -59,8 +59,9 @@ class Permission(StrEnum):
     EXPORT_ATTENDANCE = "export:attendance"  # ekspor CSV — Finance
     REVIEW_OVERTIME = "review:overtime"
 
-    # Lokasi kerja: PM → lokasi proyek unitnya, Finance → lokasi kantor (R-33)
+    # Master kantor (office) & divisi operasional (division) — Milestone 2 (docs/36)
     MANAGE_SITES = "manage:sites"
+    MANAGE_DIVISIONS = "manage:divisions"
 
     # Aset
     MANAGE_ASSETS = "manage:assets"
@@ -123,13 +124,15 @@ _ROLE_EXTRA: dict[RoleCode, frozenset[Permission]] = {
 # Izin tambahan per peran Master Schema V2 (system_role_enum)
 _SYSTEM_ROLE_EXTRA: dict[SystemRole, frozenset[Permission]] = {
     SystemRole.SUPER_ADMIN: frozenset(Permission),
+    # OM membawahi divisi & PM (docs/35 §2): kelola master kantor dan divisi.
     SystemRole.OPERATIONAL_MANAGER: frozenset({
         P.CREATE_PLAN, P.PUBLISH_PLAN, P.REVIEW_OVERTIME, P.VIEW_ALL_ATTENDANCE,
         P.REVIEW_ATTENDANCE, P.VIEW_TIMELINE, P.VIEW_AUDIT, P.VIEW_TEAMS,
-        P.VIEW_MESS, P.VIEW_OFFBOARDING,
+        P.VIEW_MESS, P.VIEW_OFFBOARDING, P.MANAGE_SITES, P.MANAGE_DIVISIONS,
     }),
+    # Lokasi proyek PM ada di work_plan_daily (bukan master kantor) — tanpa MANAGE_SITES di V2.
     SystemRole.PROJECT_MANAGER: frozenset({
-        P.CREATE_PLAN, P.PUBLISH_PLAN, P.VIEW_TIMELINE, P.REVIEW_ATTENDANCE, P.MANAGE_SITES,
+        P.CREATE_PLAN, P.PUBLISH_PLAN, P.VIEW_TIMELINE, P.REVIEW_ATTENDANCE,
         P.MANAGE_TEAMS, P.VIEW_TEAMS, P.VIEW_MESS, P.VIEW_OFFBOARDING, P.MANAGE_IMAGE_REQUIREMENTS,
     }),
     SystemRole.ADMIN_HR_GA: frozenset({

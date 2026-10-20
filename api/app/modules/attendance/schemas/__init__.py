@@ -16,8 +16,6 @@ from app.modules.attendance.schemas.attendance_schema import (
     OfflineAttendanceEvent,
     OfflineAttendanceResult,
     ReviewRequest,
-    SiteCreate,
-    SiteResponse,
 )
 
 __all__ = [
@@ -34,6 +32,4 @@ __all__ = [
     "OfflineAttendanceEvent",
     "OfflineAttendanceResult",
     "ReviewRequest",
-    "SiteCreate",
-    "SiteResponse",
 ]

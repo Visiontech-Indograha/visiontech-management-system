@@ -1,7 +1,9 @@
 """
-app/crud/crud_site.py
-Master Kantor Pusat & Kantor Cabang dari tabel office (Master Schema V2).
-Koordinat disimpan langsung dalam latitude dan longitude numerik standar.
+app/modules/sites/repositories/site_repository.py
+Master kantor pusat & cabang (tabel `office`, Master Schema V2).
+
+Relasi: office 1─N employee, team, tool, vehicle, attendance. Kantor utama tunggal dijaga indeks unik
+`uq_single_main_office`. Penghapusan = soft delete (`delete_at`).
 """
 
 from __future__ import annotations
@@ -11,140 +13,111 @@ from uuid import UUID
 
 from app.core.repository import BaseRepository
 
+_COLUMNS = """
+    o.office_id AS id,
+    o.name,
+    o.address,
+    o.attendance_radius_m AS radius_m,
+    NULL::uuid AS unit_id,
+    o.latitude::float AS lat,
+    o.longitude::float AS lng,
+    o.is_main_office,
+    o.city_boundary_radius_m,
+    o.clock_in_time,
+    o.clock_out_time,
+    o.in_city_meal_rate,
+    o.out_city_meal_rate
+"""
+
 
 class SiteRepository(BaseRepository):
-    """Repositori akses data lokasi kantor dan site operasional (tabel office)."""
-    """
-    CRUD untuk mengelola master lokasi kantor dan site operasional (tabel office).
-    """
+    """Repositori master kantor (tabel `office`)."""
 
-    async def viewer(self, user_id: UUID | str) -> Any:
-        """
-        Mengambil profil pengguna, kantor asal, dan divisi yang dipimpin (jika user adalah Project Manager).
-        """
-        return await self.fetchone(
-            """
-            SELECT
-                u.system_role::text AS role,
-                e.office_id AS employee_unit_id,
-                d.division_id AS pm_unit_id,
-                CASE
-                    WHEN u.system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'ADMIN_HR_GA') THEN 'OFFICE'
-                    ELSE 'BOTH'
-                END AS attendance_mode
-            FROM users u
-            LEFT JOIN employee e ON e.employee_id = u.employee_id AND e.delete_at IS NULL
-            LEFT JOIN division d ON d.pm_id = e.employee_id AND d.delete_at IS NULL
-            WHERE u.user_id = CAST(:uid AS uuid) AND u.delete_at IS NULL
-            """,
-            {"uid": str(user_id)},
-        )
-
-    async def list_visible(
-        self,
-        org_id: UUID | str,
-        *,
-        all_sites: bool = True,
-        office: bool = True,
-        unit_id: UUID | str | None = None,
-    ) -> list[Any]:
-        """
-        Mengambil daftar kantor dan site aktif dari tabel office.
-        """
+    async def list_active(self) -> list[Any]:
+        """Semua kantor aktif, kantor utama lebih dulu."""
         return list(
             await self.fetchall(
-                """
-                SELECT
-                    o.office_id AS id,
-                    o.name,
-                    o.address,
-                    o.attendance_radius_m AS radius_m,
-                    NULL::uuid AS unit_id,
-                    o.latitude::float AS lat,
-                    o.longitude::float AS lng,
-                    o.is_main_office,
-                    o.city_boundary_radius_m,
-                    o.clock_in_time,
-                    o.clock_out_time,
-                    o.in_city_meal_rate,
-                    o.out_city_meal_rate
-                FROM office o
-                WHERE o.delete_at IS NULL
-                ORDER BY o.is_main_office DESC, o.name ASC
-                """,
-                {},
+                f"SELECT {_COLUMNS} FROM office o WHERE o.delete_at IS NULL "
+                "ORDER BY o.is_main_office DESC, o.name ASC"
             )
         )
 
-    async def insert(
-        self,
-        org_id: UUID | str,
-        *,
-        name: str,
-        address: str | None,
-        radius_m: int,
-        lat: float,
-        lng: float,
-        unit_id: UUID | str | None = None,
-    ) -> Any:
-        """
-        Membuat kantor cabang / lokasi kerja baru.
-        """
+    async def get(self, site_id: UUID | str, org_id: UUID | str | None = None) -> Any:
+        """Satu kantor aktif."""
         return await self.fetchone(
+            f"SELECT {_COLUMNS} FROM office o WHERE o.office_id = CAST(:id AS uuid) AND o.delete_at IS NULL",
+            {"id": str(site_id)},
+        )
+
+    async def insert(self, data: dict[str, Any]) -> Any:
+        """Kantor baru (selalu cabang; penetapan kantor utama lewat `set_main`)."""
+        row = await self.fetchone(
             """
             INSERT INTO office (
-                name, address, attendance_radius_m, latitude, longitude, is_main_office
+                name, address, latitude, longitude, attendance_radius_m, city_boundary_radius_m,
+                clock_in_time, clock_out_time, in_city_meal_rate, out_city_meal_rate, is_main_office
+            ) VALUES (
+                :name, :address, :lat, :lng, :radius_m, :city_boundary_radius_m,
+                :clock_in_time, :clock_out_time, :in_city_meal_rate, :out_city_meal_rate, FALSE
             )
-            VALUES (
-                :name, :addr, :rad, :lat, :lng, FALSE
-            )
-            RETURNING
-                office_id AS id, name, address, attendance_radius_m AS radius_m,
-                latitude::float AS lat, longitude::float AS lng, NULL::uuid AS unit_id
+            RETURNING office_id
             """,
-            {
-                "name": name,
-                "addr": address or "",
-                "rad": radius_m,
-                "lat": lat,
-                "lng": lng,
-            },
+            data,
+        )
+        return await self.get(row.office_id)
+
+    async def update(self, site_id: UUID | str, data: dict[str, Any]) -> Any:
+        """Ubah sebagian kolom kantor; nilai None = tidak diubah."""
+        await self.execute(
+            """
+            UPDATE office SET
+                name = COALESCE(:name, name),
+                address = COALESCE(:address, address),
+                latitude = COALESCE(:lat, latitude),
+                longitude = COALESCE(:lng, longitude),
+                attendance_radius_m = COALESCE(:radius_m, attendance_radius_m),
+                city_boundary_radius_m = COALESCE(:city_boundary_radius_m, city_boundary_radius_m),
+                clock_in_time = COALESCE(:clock_in_time, clock_in_time),
+                clock_out_time = COALESCE(:clock_out_time, clock_out_time),
+                in_city_meal_rate = COALESCE(:in_city_meal_rate, in_city_meal_rate),
+                out_city_meal_rate = COALESCE(:out_city_meal_rate, out_city_meal_rate),
+                update_at = now()
+            WHERE office_id = CAST(:id AS uuid) AND delete_at IS NULL
+            """,
+            {**data, "id": str(site_id)},
+        )
+        return await self.get(site_id)
+
+    async def set_main(self, site_id: UUID | str) -> None:
+        """Jadikan kantor ini kantor utama (yang lama dilepas lebih dulu — uq_single_main_office)."""
+        await self.execute(
+            "UPDATE office SET is_main_office = FALSE, update_at = now() "
+            "WHERE is_main_office AND office_id <> CAST(:id AS uuid)",
+            {"id": str(site_id)},
+        )
+        await self.execute(
+            "UPDATE office SET is_main_office = TRUE, update_at = now() "
+            "WHERE office_id = CAST(:id AS uuid) AND delete_at IS NULL",
+            {"id": str(site_id)},
         )
 
-    async def get(self, site_id: UUID | str, org_id: UUID | str) -> Any:
-        """
-        Mengambil detail satu lokasi kantor berdasarkan office_id.
-        """
-        return await self.fetchone(
-            """
-            SELECT
-                o.office_id AS id,
-                o.name,
-                o.address,
-                o.attendance_radius_m AS radius_m,
-                NULL::uuid AS unit_id,
-                o.latitude::float AS lat,
-                o.longitude::float AS lng,
-                o.is_main_office
-            FROM office o
-            WHERE o.office_id = CAST(:id AS uuid) AND o.delete_at IS NULL
-            """,
-            {"id": str(site_id)},
+    async def active_employee_count(self, site_id: UUID | str) -> int:
+        """Karyawan aktif yang masih berkantor di sini (FK employee.office_id)."""
+        return int(
+            await self.scalar(
+                "SELECT count(*) FROM employee WHERE office_id = CAST(:id AS uuid) AND delete_at IS NULL",
+                {"id": str(site_id)},
+            )
+            or 0
         )
 
     async def archive(self, site_id: UUID | str) -> None:
-        """
-        Melakukan soft-delete (arsip) terhadap kantor cabang (kantor utama dilindungi).
-        """
+        """Soft delete kantor cabang (kantor utama tidak pernah diarsipkan)."""
         await self.execute(
-            """
-            UPDATE office
-            SET delete_at = now()
-            WHERE office_id = CAST(:id AS uuid) AND is_main_office = FALSE AND delete_at IS NULL
-            """,
+            "UPDATE office SET delete_at = now(), update_at = now() "
+            "WHERE office_id = CAST(:id AS uuid) AND is_main_office = FALSE AND delete_at IS NULL",
             {"id": str(site_id)},
         )
 
 
-# Alias backward compatibility
 CRUDSite = SiteRepository

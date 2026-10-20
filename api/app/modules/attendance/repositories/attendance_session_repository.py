@@ -1,5 +1,5 @@
 """
-app/crud/crud_attendance_session.py
+app/modules/attendance/repositories/attendance_session_repository.py
 Sesi absensi VMS Master Schema V2.
 Mendukung validasi koordinat GPS (Haversine), radius toleransi, validasi wajah,
 status persetujuan OM ('AUTO_VALID', 'PENDING_OM', 'APPROVED_BY_OM', 'REJECTED_BY_OM'),
@@ -42,14 +42,16 @@ class AttendanceSessionRepository(BaseRepository):
 
     async def attendance_mode_of(self, user_id: UUID | str) -> Any:
         """
-        Mengambil profil karyawan dan kewenangan akun.
+        Karyawan milik akun + jenis pekerjanya menurut peran (docs/35 §1): peran kantor absen lewat web
+        (OFFICE), peran lapangan lewat aplikasi HP (FIELD). SUPER_ADMIN boleh dari keduanya.
         """
         return await self.fetchone(
             """
             SELECT e.employee_id,
-                   'FIELD' AS attendance_mode,
+                   CASE WHEN u.system_role IN ('TEAM_LEADER', 'EMPLOYEE') THEN 'FIELD' ELSE 'OFFICE' END
+                       AS attendance_mode,
                    e.division_id AS unit_id,
-                   (u.system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'ADMIN_HR_GA')) AS is_admin
+                   (u.system_role = 'SUPER_ADMIN') AS is_admin
             FROM users u
             JOIN employee e ON e.employee_id = u.employee_id
             WHERE u.user_id = CAST(:uid AS uuid)
@@ -85,7 +87,8 @@ class AttendanceSessionRepository(BaseRepository):
                    a.out_of_radius_note AS explanation,
                    a.update_at AS reviewed_at,
                    NULL::uuid AS selfie_file_id,
-                   CASE WHEN a.face_match_score >= 80.0 THEN 'MATCH' ELSE 'MISMATCH' END AS face_result,
+                   CASE WHEN a.face_match_score = 0 THEN 'SKIPPED' WHEN a.face_match_score >= 80.0 THEN 'MATCH'
+                           ELSE 'MISMATCH' END AS face_result,
                    (a.face_match_score / 100.0)::float AS face_similarity,
                    NULL::text AS check_out_face_result,
                    NULL::float AS check_out_face_similarity
@@ -163,12 +166,15 @@ class AttendanceSessionRepository(BaseRepository):
         )
 
     async def site_for_check_in(self, site_id: UUID | str, org_id: UUID | str, lng: float, lat: float) -> Any:
-        """Mendapatkan data lokasi (office atau work_plan_daily) dan menghitung jaraknya."""
+        """Target absen (docs/35 §5): kantor (`office`) atau lokasi tugas harian (`work_plan_daily`) beserta jaraknya,
+        radius presensi, dan jam kerja terjadwalnya. `office_id` NULL untuk lokasi tugas (diisi kantor karyawan)."""
         return await self.fetchone(
             """
             SELECT o.office_id AS id,
                    o.name,
                    NULL::uuid AS unit_id,
+                   'OFFICE' AS kind,
+                   o.office_id,
                    ROUND(
                        6371000 * 2 * ASIN(
                            SQRT(
@@ -178,13 +184,17 @@ class AttendanceSessionRepository(BaseRepository):
                            )
                        )
                    )::numeric AS distance_m,
-                   o.attendance_radius_m AS radius_m
+                   o.attendance_radius_m AS radius_m,
+                   o.clock_in_time AS clock_in,
+                   o.clock_out_time AS clock_out
             FROM office o
             WHERE o.office_id = CAST(:site AS uuid) AND o.delete_at IS NULL
             UNION ALL
             SELECT wpd.daily_plan_id AS id,
                    wpd.site_name AS name,
                    NULL::uuid AS unit_id,
+                   'WORK_PLAN_DAILY' AS kind,
+                   NULL::uuid AS office_id,
                    ROUND(
                        6371000 * 2 * ASIN(
                            SQRT(
@@ -194,7 +204,9 @@ class AttendanceSessionRepository(BaseRepository):
                            )
                        )
                    )::numeric AS distance_m,
-                   wpd.attendance_radius_m AS radius_m
+                   wpd.attendance_radius_m AS radius_m,
+                   wpd.clock_in_time AS clock_in,
+                   wpd.clock_out_time AS clock_out
             FROM work_plan_daily wpd
             WHERE wpd.daily_plan_id = CAST(:site AS uuid) AND wpd.delete_at IS NULL
             LIMIT 1
@@ -210,13 +222,18 @@ class AttendanceSessionRepository(BaseRepository):
         lng: float,
         lat: float,
     ) -> Any:
-        """Mencari lokasi sah terdekat (kantor cabang/pusat terdekat)."""
+        """Kantor terdekat (pusat/cabang) diukur dari tepi radius presensinya — absen sah otomatis bila berada
+        dalam radius kantor mana pun (keputusan pemilik 2026-10-09)."""
         return await self.fetchone(
             """
-            SELECT o.office_id AS id,
-                   o.name,
-                   NULL::uuid AS unit_id,
-                   ROUND(
+            SELECT id, name, unit_id, kind, office_id, distance_m, radius_m, clock_in, clock_out
+            FROM (
+                SELECT o.office_id AS id,
+                       o.name,
+                       NULL::uuid AS unit_id,
+                       'OFFICE' AS kind,
+                       o.office_id,
+                       ROUND(
                        6371000 * 2 * ASIN(
                            SQRT(
                                POWER(SIN(RADIANS(:lat - o.latitude) / 2), 2) +
@@ -225,10 +242,13 @@ class AttendanceSessionRepository(BaseRepository):
                            )
                        )
                    )::numeric AS distance_m,
-                   o.attendance_radius_m AS radius_m
-            FROM office o
-            WHERE o.delete_at IS NULL
-            ORDER BY distance_m - o.attendance_radius_m ASC
+                       o.attendance_radius_m AS radius_m,
+                       o.clock_in_time AS clock_in,
+                       o.clock_out_time AS clock_out
+                FROM office o
+                WHERE o.delete_at IS NULL
+            ) offices
+            ORDER BY distance_m - radius_m ASC
             LIMIT 1
             """,
             {"lat": lat, "lng": lng},
@@ -256,70 +276,49 @@ class AttendanceSessionRepository(BaseRepository):
         Membuat rekaman absensi masuk (check-in) baru pada tabel attendance Master Schema V2.
         Menghitung radius, jarak kantor utama, status zona kota, uang makan, dan status OM.
         """
-        # 1. Dapatkan info lokasi target (office atau daily plan)
+        # 1. Target absen (kantor atau lokasi tugas harian) + jarak & radius presensinya.
         target = await self.site_for_check_in(site_id, org_id, lng, lat)
-        distance_to_target = int(float(target.distance_m)) if target else 0
-        radius_m = int(target.radius_m) if target else 100
-        is_within_radius = distance_to_target <= radius_m
+        if target is None:
+            raise LookupError("target absen tidak ditemukan")
+        distance_to_target = int(float(target.distance_m))
+        is_within_radius = distance_to_target <= int(target.radius_m)
 
-        # 2. Dapatkan kantor utama untuk kalkulasi zona kota & uang makan
+        # 2. Kantor utama → zona kota & uang makan (docs/35 §5: radius batas kota kantor utama).
         main_office = await self.fetchone(
             """
-            SELECT office_id, latitude, longitude, city_boundary_radius_m, in_city_meal_rate, out_city_meal_rate,
-                   clock_in_time, clock_out_time
+            SELECT office_id, latitude, longitude, city_boundary_radius_m, in_city_meal_rate, out_city_meal_rate
             FROM office
             WHERE is_main_office = TRUE AND delete_at IS NULL
             LIMIT 1
             """
         )
-        if not main_office:
-            main_office = await self.fetchone(
-                """
-                SELECT office_id, latitude, longitude, city_boundary_radius_m, in_city_meal_rate, out_city_meal_rate,
-                       clock_in_time, clock_out_time
-                FROM office
-                WHERE delete_at IS NULL
-                ORDER BY create_at ASC
-                LIMIT 1
-                """
-            )
+        if main_office is None:
+            raise LookupError("kantor utama belum ditetapkan (office.is_main_office)")
+        dist_main = _haversine_distance(lat, lng, float(main_office.latitude), float(main_office.longitude))
+        in_city = dist_main <= int(main_office.city_boundary_radius_m)
+        city_zone = "DALAM_KOTA" if in_city else "LUAR_KOTA"
+        meal_rate = float(main_office.in_city_meal_rate if in_city else main_office.out_city_meal_rate)
 
-        if main_office:
-            dist_main = _haversine_distance(lat, lng, float(main_office.latitude), float(main_office.longitude))
-            boundary_m = int(main_office.city_boundary_radius_m)
-            sched_in = main_office.clock_in_time
-            sched_out = main_office.clock_out_time
-            if dist_main <= boundary_m:
-                city_zone = "DALAM_KOTA"
-                meal_rate = float(main_office.in_city_meal_rate)
-            else:
-                city_zone = "LUAR_KOTA"
-                meal_rate = float(main_office.out_city_meal_rate)
-            resolved_office_id = main_office.office_id
-        else:
-            dist_main = distance_to_target
-            city_zone = "DALAM_KOTA"
-            meal_rate = 35000.00
-            sched_in = "07:00:00"
-            sched_out = "16:00:00"
-            resolved_office_id = site_id
-
-        # Tentukan target_location_type dan daily_plan_id
-        is_daily_plan = bool(
-            await self.scalar(
-                "SELECT 1 FROM work_plan_daily WHERE daily_plan_id = CAST(:sid AS uuid)",
-                {"sid": str(site_id)},
-            )
+        # 3. office_id: kantor yang dituju, atau kantor karyawan bila absen di lokasi tugas harian.
+        office_id = target.office_id or await self.scalar(
+            "SELECT office_id FROM employee WHERE employee_id = CAST(:emp AS uuid)", {"emp": str(employee_id)}
         )
-        if is_daily_plan:
-            target_type = "WORK_PLAN_DAILY"
-            daily_plan_id = site_id
-        else:
-            target_type = "OFFICE"
-            daily_plan_id = None
+        daily_plan_id = target.id if target.kind == "WORK_PLAN_DAILY" else None
+
+        # 4. Swafoto yang benar-benar diunggah (file_object); juga bukti foto bila di luar radius.
+        photo_path = (
+            await self.scalar(
+                "SELECT storage_key FROM file_object WHERE id = CAST(:fid AS uuid)", {"fid": str(selfie_file_id)}
+            )
+            if selfie_file_id
+            else None
+        )
+        if photo_path is None:
+            raise LookupError("swafoto absen tidak ditemukan")
 
         om_status = "AUTO_VALID" if is_within_radius else "PENDING_OM"
-        face_score = float(face_similarity * 100.0) if face_similarity is not None else 95.00
+        # Skor 0 = wajah belum diperiksa (bukan "cocok"); hasil pencocokan disimpan kemudian oleh set_face.
+        face_score = float(face_similarity * 100.0) if face_similarity is not None else 0.0
 
         return await self.fetchone(
             """
@@ -332,7 +331,7 @@ class AttendanceSessionRepository(BaseRepository):
                 meal_allowance_amount
             ) VALUES (
                 CAST(:emp AS uuid), :work_date, :target_type, CAST(:office_id AS uuid), CAST(:daily_id AS uuid),
-                CAST(:sched_in AS time), CAST(:sched_out AS time), COALESCE(CAST(:at AS timestamptz), NOW()),
+                :sched_in, :sched_out, COALESCE(CAST(:at AS timestamptz), NOW()),
                 :in_lat, :in_lng,
                 :face_score, :photo_path, :dist_target,
                 :in_radius, :out_photo, :note,
@@ -353,26 +352,27 @@ class AttendanceSessionRepository(BaseRepository):
                       END AS status,
                       out_of_radius_note AS explanation, update_at AS reviewed_at,
                       NULL::uuid AS selfie_file_id,
-                      CASE WHEN face_match_score >= 80.0 THEN 'MATCH' ELSE 'MISMATCH' END AS face_result,
+                      CASE WHEN face_match_score = 0 THEN 'SKIPPED' WHEN face_match_score >= 80.0 THEN 'MATCH'
+                           ELSE 'MISMATCH' END AS face_result,
                       (face_match_score / 100.0)::float AS face_similarity,
                       NULL::text AS check_out_face_result, NULL::float AS check_out_face_similarity
             """,
             {
                 "emp": str(employee_id),
                 "work_date": work_date,
-                "target_type": target_type,
-                "office_id": str(resolved_office_id),
+                "target_type": target.kind,
+                "office_id": str(office_id),
                 "daily_id": str(daily_plan_id) if daily_plan_id else None,
-                "sched_in": sched_in,
-                "sched_out": sched_out,
+                "sched_in": target.clock_in,
+                "sched_out": target.clock_out,
                 "at": at,
                 "in_lat": lat,
                 "in_lng": lng,
                 "face_score": face_score,
-                "photo_path": f"/uploads/att/{employee_id}_{work_date}.jpg",
+                "photo_path": photo_path,
                 "dist_target": distance_to_target,
                 "in_radius": is_within_radius,
-                "out_photo": f"/uploads/att/out_{employee_id}.jpg" if not is_within_radius else None,
+                "out_photo": photo_path if not is_within_radius else None,
                 "note": explanation,
                 "om_status": om_status,
                 "dist_main": dist_main,
@@ -413,7 +413,8 @@ class AttendanceSessionRepository(BaseRepository):
                       END AS status,
                       out_of_radius_note AS explanation, update_at AS reviewed_at,
                       NULL::uuid AS selfie_file_id,
-                      CASE WHEN face_match_score >= 80.0 THEN 'MATCH' ELSE 'MISMATCH' END AS face_result,
+                      CASE WHEN face_match_score = 0 THEN 'SKIPPED' WHEN face_match_score >= 80.0 THEN 'MATCH'
+                           ELSE 'MISMATCH' END AS face_result,
                       (face_match_score / 100.0)::float AS face_similarity,
                       NULL::text AS check_out_face_result, NULL::float AS check_out_face_similarity,
                       NULL::float AS check_out_distance_m, FALSE AS check_out_outside,
@@ -480,7 +481,8 @@ class AttendanceSessionRepository(BaseRepository):
                       END AS status,
                       out_of_radius_note AS explanation, update_at AS reviewed_at,
                       NULL::uuid AS selfie_file_id,
-                      CASE WHEN face_match_score >= 80.0 THEN 'MATCH' ELSE 'MISMATCH' END AS face_result,
+                      CASE WHEN face_match_score = 0 THEN 'SKIPPED' WHEN face_match_score >= 80.0 THEN 'MATCH'
+                           ELSE 'MISMATCH' END AS face_result,
                       (face_match_score / 100.0)::float AS face_similarity,
                       NULL::text AS check_out_face_result, NULL::float AS check_out_face_similarity
             """,
@@ -498,7 +500,7 @@ class AttendanceSessionRepository(BaseRepository):
         flag_review: bool,
     ) -> Any:
         """Menyimpan hasil pengenalan wajah pada absen masuk/pulang."""
-        score = float(similarity * 100.0) if similarity is not None else 95.0
+        score = float(similarity * 100.0) if similarity is not None else 0.0
         return await self.fetchone(
             """
             UPDATE attendance
@@ -524,7 +526,8 @@ class AttendanceSessionRepository(BaseRepository):
                       END AS status,
                       out_of_radius_note AS explanation, update_at AS reviewed_at,
                       NULL::uuid AS selfie_file_id,
-                      CASE WHEN face_match_score >= 80.0 THEN 'MATCH' ELSE 'MISMATCH' END AS face_result,
+                      CASE WHEN face_match_score = 0 THEN 'SKIPPED' WHEN face_match_score >= 80.0 THEN 'MATCH'
+                           ELSE 'MISMATCH' END AS face_result,
                       (face_match_score / 100.0)::float AS face_similarity,
                       NULL::text AS check_out_face_result, NULL::float AS check_out_face_similarity
             """,
@@ -554,7 +557,8 @@ class AttendanceSessionRepository(BaseRepository):
                    a.out_of_radius_note AS explanation,
                    a.update_at AS reviewed_at,
                    NULL::uuid AS selfie_file_id,
-                   CASE WHEN a.face_match_score >= 80.0 THEN 'MATCH' ELSE 'MISMATCH' END AS face_result,
+                   CASE WHEN a.face_match_score = 0 THEN 'SKIPPED' WHEN a.face_match_score >= 80.0 THEN 'MATCH'
+                           ELSE 'MISMATCH' END AS face_result,
                    (a.face_match_score / 100.0)::float AS face_similarity,
                    NULL::text AS check_out_face_result,
                    NULL::float AS check_out_face_similarity
@@ -669,7 +673,8 @@ class AttendanceSessionRepository(BaseRepository):
                    NULL::uuid AS selfie_file_id,
                    a.out_of_radius_note AS review_note,
                    e.full_name AS employee_name,
-                   CASE WHEN a.face_match_score >= 80.0 THEN 'MATCH' ELSE 'MISMATCH' END AS face_result,
+                   CASE WHEN a.face_match_score = 0 THEN 'SKIPPED' WHEN a.face_match_score >= 80.0 THEN 'MATCH'
+                           ELSE 'MISMATCH' END AS face_result,
                    (a.face_match_score / 100.0)::float AS face_similarity,
                    NULL::text AS check_out_face_result,
                    NULL::float AS check_out_face_similarity,

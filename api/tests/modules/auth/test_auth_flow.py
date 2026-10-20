@@ -1,12 +1,15 @@
 """
-Alur autentikasi ujung ke ujung terhadap PostgreSQL sungguhan (P1-1, P1-2, DoD fase 1).
-Bentuk respons dan kode galat dijaga sama dengan perilaku sebelum refactor A-2.
+Alur autentikasi ujung ke ujung terhadap PostgreSQL sungguhan — Master Schema V2.
+
+Sesi = `user_sessions` (rotasi: baris lama `is_revoked = TRUE`, satu `token_family_id` per perangkat);
+percobaan masuk = `app_activity_logs` (`entity_table = 'users'`, `entity_id = login_key(email)`).
 """
 from __future__ import annotations
 
 import pytest
 from fastapi.testclient import TestClient
 
+from app.modules.auth.repositories.auth_session_repository import AuthSessionRepository
 from tests.conftest import SeededUser, requires_db
 
 pytestmark = requires_db
@@ -21,6 +24,19 @@ def _refresh(client: TestClient, token: str):
     return client.post("/auth/refresh")
 
 
+def _attempts(user: SeededUser) -> list[str]:
+    key = str(AuthSessionRepository.login_key(user.login))
+    return [a for (a,) in user.query(
+        "SELECT action FROM app_activity_logs WHERE entity_table = 'users' AND entity_id = %s ORDER BY created_at",
+        (key,))]
+
+
+def _active_sessions(user: SeededUser) -> int:
+    return user.query(
+        "SELECT count(*) FROM user_sessions WHERE user_id = %s AND NOT is_revoked AND delete_at IS NULL",
+        (user.user_id,))[0][0]
+
+
 def test_login_issues_persisted_session_and_records_attempt(client, seeded_user):
     response = _login(client, seeded_user)
 
@@ -28,12 +44,8 @@ def test_login_issues_persisted_session_and_records_attempt(client, seeded_user)
     assert response.json()["token_type"] == "bearer"
     assert response.json()["access_token"]
     assert response.cookies.get("refresh_token")
-    assert seeded_user.query(
-        "SELECT state FROM vms.user_session WHERE user_id = %s", (seeded_user.user_id,)
-    ) == [("ACTIVE",)]
-    assert seeded_user.query(
-        "SELECT successful FROM vms.login_attempt WHERE login = %s", (seeded_user.login,)
-    ) == [(True,)]
+    assert _active_sessions(seeded_user) == 1
+    assert _attempts(seeded_user) == ["LOGIN_SUCCESS"]
 
 
 def test_wrong_password_is_rejected_and_failure_is_persisted(client, seeded_user):
@@ -41,9 +53,16 @@ def test_wrong_password_is_rejected_and_failure_is_persisted(client, seeded_user
 
     assert response.status_code == 400
     assert response.json()["error"]["code"] == "INVALID_CREDENTIALS"
-    assert seeded_user.query(
-        "SELECT successful FROM vms.login_attempt WHERE login = %s", (seeded_user.login,)
-    ) == [(False,)]
+    assert _attempts(seeded_user) == ["LOGIN_FAILED"]
+
+
+def test_attempt_log_never_stores_the_login_text(client, seeded_user):
+    _login(client, seeded_user, "salah")
+
+    rows = seeded_user.query(
+        "SELECT changed_diff::text FROM app_activity_logs WHERE entity_id = %s",
+        (str(AuthSessionRepository.login_key(seeded_user.login)),))
+    assert rows and all(seeded_user.login not in diff for (diff,) in rows)
 
 
 def test_five_failures_lock_the_login(client, seeded_user):
@@ -61,20 +80,42 @@ def test_five_failures_lock_the_login(client, seeded_user):
     assert "15 menit" in error["message"]
 
 
-def test_cooldown_ends_when_the_oldest_counted_failure_leaves_the_window(client, seeded_user):
+def test_unknown_login_is_counted_the_same_way(client):
+    """Email tak terdaftar juga terkunci setelah 5 gagal — sisa percobaan tidak membocorkan keberadaan akun."""
+    ghost = SeededUser("", "", "tidak-terdaftar-uji@contoh.test", "salah")
+    errors = [_login(client, ghost).json()["error"] for _ in range(5)]
+    try:
+        assert [e["details"].get("remaining_attempts") for e in errors[:4]] == [4, 3, 2, 1]
+        assert errors[4]["code"] == "LOCKED"
+    finally:
+        ghost.query("DELETE FROM app_activity_logs WHERE entity_table = 'users' AND entity_id = %s",
+                    (str(AuthSessionRepository.login_key(ghost.login)),))
+
+
+def test_cooldown_ends_when_the_failures_leave_the_window(client, seeded_user):
     for _ in range(5):
         _login(client, seeded_user, "salah")
     # Mundurkan kegagalan seolah terjadi 20 menit lalu → di luar jendela 15 menit.
     seeded_user.query(
-        "UPDATE vms.login_attempt SET attempted_at = now() - interval '20 minutes' WHERE login = %s",
-        (seeded_user.login,),
-    )
+        "UPDATE app_activity_logs SET created_at = now() - interval '20 minutes' "
+        "WHERE entity_table = 'users' AND entity_id = %s",
+        (str(AuthSessionRepository.login_key(seeded_user.login)),))
 
     assert _login(client, seeded_user).status_code == 200
 
 
+def test_successful_login_resets_the_failure_count(client, seeded_user):
+    for _ in range(3):
+        _login(client, seeded_user, "salah")
+    assert _login(client, seeded_user).status_code == 200
+
+    error = _login(client, seeded_user, "salah").json()["error"]
+
+    assert error["details"]["remaining_attempts"] == 4
+
+
 def test_inactive_account_cannot_log_in(client, seeded_user):
-    seeded_user.query("UPDATE vms.app_user SET is_active = false WHERE id = %s", (seeded_user.user_id,))
+    seeded_user.query("UPDATE users SET is_active = false WHERE user_id = %s", (seeded_user.user_id,))
 
     response = _login(client, seeded_user)
 
@@ -90,10 +131,11 @@ def test_refresh_rotates_token(client, seeded_user):
     assert response.status_code == 200
     assert response.json()["access_token"]
     assert response.cookies["refresh_token"] != first
-    states = sorted(s for (s,) in seeded_user.query(
-        "SELECT state::text FROM vms.user_session WHERE user_id = %s", (seeded_user.user_id,)
-    ))
-    assert states == ["ACTIVE", "ROTATED"]
+    rows = seeded_user.query(
+        "SELECT is_revoked, token_family_id FROM user_sessions WHERE user_id = %s ORDER BY create_at",
+        (seeded_user.user_id,))
+    assert [revoked for revoked, _ in rows] == [True, False]   # lama dicabut, baru aktif
+    assert len({family for _, family in rows}) == 1             # satu rantai (perangkat) yang sama
 
 
 def test_reusing_rotated_token_revokes_whole_family(client, seeded_user):
@@ -105,9 +147,7 @@ def test_reusing_rotated_token_revokes_whole_family(client, seeded_user):
     assert reuse.status_code == 401
     assert reuse.json()["error"]["code"] == "SESSION_REVOKED"
     assert _refresh(client, second).status_code == 401
-    assert seeded_user.query(
-        "SELECT count(*) FROM vms.user_session WHERE user_id = %s AND state = 'ACTIVE'", (seeded_user.user_id,)
-    ) == [(0,)]
+    assert _active_sessions(seeded_user) == 0
 
 
 def test_refresh_without_cookie_is_401(client):
@@ -119,15 +159,13 @@ def test_refresh_without_cookie_is_401(client):
 
 def test_deactivated_user_cannot_refresh_and_sessions_end(client, seeded_user):
     token = _login(client, seeded_user).cookies["refresh_token"]
-    seeded_user.query("UPDATE vms.app_user SET is_active = false WHERE id = %s", (seeded_user.user_id,))
+    seeded_user.query("UPDATE users SET is_active = false WHERE user_id = %s", (seeded_user.user_id,))
 
     response = _refresh(client, token)
 
     assert response.status_code == 403
     assert response.json()["error"]["code"] == "INACTIVE"
-    assert seeded_user.query(
-        "SELECT count(*) FROM vms.user_session WHERE user_id = %s AND state = 'ACTIVE'", (seeded_user.user_id,)
-    ) == [(0,)]
+    assert _active_sessions(seeded_user) == 0
 
 
 def test_logout_revokes_session(client, seeded_user):
@@ -147,7 +185,8 @@ def test_me_returns_current_user(client, seeded_user):
     body = response.json()
     assert body["user_id"] == seeded_user.user_id
     assert body["email"] == seeded_user.login
-    assert body["role"] == "ADMIN"
+    assert body["role"] == "SUPER_ADMIN"
+    assert body["attendance_mode"] == "OFFICE"
     assert isinstance(body["permissions"], list)
 
 

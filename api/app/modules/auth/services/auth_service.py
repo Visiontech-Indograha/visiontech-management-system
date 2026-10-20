@@ -20,18 +20,26 @@ from app.modules.auth.repositories.auth_session_repository import (
     MAX_LOGIN_FAILURES,
     CRUDSession,
 )
-from app.modules.auth.repositories.auth_user_repository import CRUDUser
+from app.modules.auth.repositories.auth_user_repository import FIELD_ROLES, OFFICE_ROLES, CRUDUser
 
 ACCESS_TOKEN_TTL = timedelta(minutes=15)
 DEFAULT_ROLE = "field"
+
+
+MAX_DEVICES = 4  # perangkat aktif per akun (CHANGELOG 2026-10-14)
 
 
 @dataclass(frozen=True)
 class ClientInfo:
     ip: str | None
     user_agent: str
-    device_label: str = "Web Login"
+    device_label: str | None = None  # header X-Device-Label; tanpa itu perangkat dikenali dari User-Agent
     fingerprint: str | None = None
+
+    @property
+    def device_name(self) -> str:
+        """Nama perangkat di user_sessions.device_name — sekaligus identitas "perangkat yang sama"."""
+        return (self.device_label or self.user_agent or "Perangkat tanpa nama")[:100]
 
 
 @dataclass(frozen=True)
@@ -133,7 +141,10 @@ class AuthService:
         # Melakukan hashing buatan (dummy_hash) jika akun tidak ditemukan agar waktu respons seragam.
         stored_hash = user.password_hash if user and user.password_hash else _dummy_hash()
         if not verify_password(password, stored_hash) or not user or not user.password_hash:
-            await self.sessions.record_login_attempt(login, client.ip, False, "Invalid credentials")
+            await self.sessions.record_login_attempt(
+                login, client.ip, False, "Invalid credentials",
+                user_id=user.id if user else None, role=user.role if user else None, platform=platform,
+            )
             # Sisa percobaan & cooldown dihitung sama untuk login terdaftar maupun tidak (tak membocorkan akun).
             after = await self.sessions.failed_logins(login)
             if after.locked_until:
@@ -151,45 +162,40 @@ class AuthService:
             raise _inactive()
         await self._act_as(user)
 
-        # R-33: aplikasi HP hanya untuk staf lapangan, web hanya untuk akun kantor (attendance_mode).
-        # Pengecualian (keputusan pemilik 2026-10-06): ADMINISTRATOR boleh masuk dari web DAN HP, baik tanpa karyawan
-        # maupun yang tertaut ke data karyawan (jenis absennya tidak membatasi login). Akun tanpa karyawan (mode None)
-        # juga boleh keduanya. Kredensial sudah benar, jadi penolakan tidak dihitung sebagai gagal login.
-        mode = await self.users.get_attendance_mode(user.id)
-        if (user.role or "") not in ("ADMIN", "SUPER_ADMIN"):
-            if platform == "mobile" and mode not in ("FIELD", "BOTH", None):
-                raise AppError(
-                    "NOT_FIELD_STAFF",
-                    "Akun Anda tidak termasuk kategori staf lapangan. Silakan masuk lewat web.",
-                    status=403,
-                )
-            if platform != "mobile" and mode not in ("OFFICE", "BOTH", None):
-                raise AppError(
-                    "NOT_OFFICE_ACCOUNT",
-                    "Akun Anda bukan kategori akun kantor. Silakan gunakan aplikasi HP Visiontech.",
-                    status=403,
-                )
+        # docs/35 §1: web hanya untuk peran kantor, aplikasi HP hanya untuk peran lapangan. Kredensial sudah
+        # benar, jadi penolakan platform tidak dihitung sebagai gagal login.
+        role = user.role or ""
+        if platform == "mobile" and role not in FIELD_ROLES:
+            raise AppError(
+                "NOT_FIELD_STAFF",
+                "Akun kantor tidak dapat masuk lewat aplikasi HP. Silakan masuk lewat web.",
+                status=403,
+            )
+        if platform != "mobile" and role not in OFFICE_ROLES:
+            raise AppError(
+                "NOT_OFFICE_ACCOUNT",
+                "Akun lapangan masuk lewat aplikasi HP Visiontech, bukan web.",
+                status=403,
+            )
 
-        # Batas maksimal 4 perangkat aktif per akun
-        existing_family = None
-        if client.fingerprint:
-            existing_family = await self.sessions.find_active_family_by_fingerprint(user.id, client.fingerprint)
-
+        # Satu perangkat = satu rantai sesi (token_family_id) dengan device_name yang sama. Masuk ulang dari
+        # perangkat yang sama mengganti rantai lamanya; perangkat baru ditolak bila sudah ada MAX_DEVICES aktif.
+        existing_family = await self.sessions.find_active_family_by_device(user.id, client.device_name)
         if existing_family is not None:
-            # Perangkat yang sama masuk ulang: cabut rantai sesi lama agar tidak tercatat ganda di vms.user_session
             await self.sessions.revoke_family(user.id, existing_family, "Masuk ulang pada perangkat yang sama")
+        elif await self.sessions.count_active_devices(user.id) >= MAX_DEVICES:
+            raise AppError(
+                "MAX_DEVICES_REACHED",
+                f"Akun ini sudah aktif di {MAX_DEVICES} perangkat. Keluarkan salah satu perangkat lewat menu "
+                "Sesi Aktif, lalu coba lagi.",
+                status=403,
+            )
 
-        # Pastikan seluruh sesi aktif lama pada perangkat yang sama
-        # (baik via fingerprint maupun user-agent) dicabut bersih
-        await self.sessions.revoke_active_by_device(
-            user.id, client.fingerprint, client.user_agent, "Masuk ulang pada perangkat yang sama"
+        await self.sessions.record_login_attempt(
+            login, client.ip, True, user_id=user.id, role=user.role, platform=platform
         )
-
-        await self.sessions.ensure_device_limit(user.id, limit=4)
-
-        await self.sessions.record_login_attempt(login, client.ip, True)
         auth_time = int(utcnow().timestamp())
-        tokens = await self._start_session(user, client, auth_time=auth_time)
+        tokens = await self._start_session(user, client, auth_time=auth_time, platform=platform)
 
         # Siarkan peristiwa keamanan ke semua perangkat aktif pengguna
         broker.publish(
@@ -200,10 +206,10 @@ class AuthService:
                     "type": "SECURITY_LOGIN",
                     "title": "Masuk dari Perangkat Baru",
                     "body": (
-                        f"Akun Anda baru saja masuk dari {client.device_label or 'perangkat baru'} "
+                        f"Akun Anda baru saja masuk dari {client.device_name} "
                         f"(IP: {client.ip or 'tidak diketahui'})."
                     ),
-                    "device_label": client.device_label or "Perangkat",
+                    "device_label": client.device_name,
                     "ip": client.ip or "-",
                     "time": auth_time,
                 },
@@ -310,15 +316,19 @@ class AuthService:
         await self.sessions.revoke_all_for_user(user_id, "Kata sandi diganti")
         return await self._start_session(user, client)
 
-    async def _start_session(self, user: Any, client: ClientInfo, auth_time: int | None = None) -> IssuedTokens:
-        """Membuat sesi baru dalam database dan mengeluarkan sepasang access/refresh token."""
+    async def _start_session(
+        self, user: Any, client: ClientInfo, auth_time: int | None = None, platform: str | None = None
+    ) -> IssuedTokens:
+        """Membuat sesi baru dalam database dan mengeluarkan sepasang access/refresh token.
+        Platform sesi = platform login; tanpa itu (mis. ganti kata sandi) diturunkan dari peran (docs/35 §1)."""
         session = await self.sessions.issue(
             user.organization_id,
             user.id,
-            client.device_label,
+            client.device_name,
             client.fingerprint,
             client.ip,
             client.user_agent,
+            platform=platform or ("mobile" if (user.role or "") in FIELD_ROLES else "web"),
         )
         return IssuedTokens(
             access_token=self._access_token(user, session.session_id, auth_time=auth_time),

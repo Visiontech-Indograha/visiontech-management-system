@@ -118,9 +118,10 @@ def make_user() -> Iterator[Callable[..., SeededUser]]:
     Pabrik akun sekali pakai tanpa karyawan: `make_user("HR")`, `make_user(None)` (karyawan biasa).
     Peran memakai kode lama (ADMIN/HR/PM/OPS/LEADER) atau langsung system_role V2. Dihapus bersih setelah uji.
     """
-    from tests.cleanup import purge_users
+    from tests.cleanup import purge_login_logs, purge_users
 
     created: list[str] = []
+    logins: list[str] = []
 
     def _make(role: str | None = "ADMIN") -> SeededUser:
         login = f"uji-{uuid.uuid4().hex[:12]}@contoh.test"
@@ -131,6 +132,7 @@ def make_user() -> Iterator[Callable[..., SeededUser]]:
             "VALUES (%s, %s, %s, %s::system_role_enum) RETURNING user_id",
             (login.split("@")[0], login, hash_password(password), system_role))[0][0])
         created.append(user_id)
+        logins.append(login)
         return SeededUser(MAIN_OFFICE_ID, user_id, login, password)
 
     try:
@@ -139,6 +141,7 @@ def make_user() -> Iterator[Callable[..., SeededUser]]:
         conn = _sync_conn()
         try:
             purge_users(conn, created)
+            purge_login_logs(conn, logins)
         finally:
             conn.close()
 
@@ -149,8 +152,10 @@ def seeded_user(make_user: Callable[..., SeededUser]) -> SeededUser:
 
 
 def login_platform(login: str) -> str:
-    """R-33 di V2: semua system_role boleh masuk lewat web (OFFICE atau BOTH)."""
-    return "web"
+    """docs/35 §1: peran lapangan (TEAM_LEADER, EMPLOYEE) masuk lewat aplikasi HP, peran kantor lewat web —
+    uji login lewat klien yang sesuai, seperti aplikasi sungguhan."""
+    rows = sync_query("SELECT system_role::text FROM users WHERE email = %s AND delete_at IS NULL", (login,))
+    return "mobile" if rows and rows[0][0] in ("TEAM_LEADER", "EMPLOYEE") else "web"
 
 
 def login_headers(client: TestClient, user: SeededUser) -> dict[str, str]:
@@ -233,7 +238,7 @@ _WORLD_PEOPLE = {
 
 @contextlib.contextmanager
 def _build_world() -> Iterator[World]:
-    from tests.cleanup import purge_office
+    from tests.cleanup import purge_login_logs, purge_office
 
     tag = uuid.uuid4().hex[:8]
     org_id = str(sync_query(
@@ -258,6 +263,7 @@ def _build_world() -> Iterator[World]:
         conn = _sync_conn()
         try:
             purge_office(conn, org_id)
+            purge_login_logs(conn, list(built.logins.values()) if "built" in locals() else [])
         finally:
             conn.close()
 

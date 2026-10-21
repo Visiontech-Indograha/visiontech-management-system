@@ -75,6 +75,7 @@ GUARDED_IN_HANDLER = {
     ("POST", "/work-plans/daily/{daily_plan_id}/complete"): "DailyPlanService: ketua tim atau PM/OM divisi",
     ("GET", "/work-completions/{completion_id}"): "WorkCompletionService: pengelola/HR/anggota tim, lain 404",
     ("GET", "/work-completions/{completion_id}/bom"): "WorkCompletionService: sama dengan detail order",
+    ("GET", "/attendance/meal-allowance"): "AttendanceSessionService: export:attendance semua; PM divisinya; lain 403",
     # M8: ekspor/riwayat/unduh ulang dokumen order = hak lihat order (WorkCompletionService), lain 404.
     ("POST", "/exports/work-completions/{completion_id}"): "ExportService: sama dengan detail order",
     ("GET", "/exports/work-completions/{completion_id}"): "ExportService: sama dengan detail order",

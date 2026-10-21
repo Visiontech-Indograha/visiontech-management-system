@@ -185,9 +185,9 @@ class AttendanceController:
         return await self.session_service.export_csv(current_user.organization_id, start_date, end_date)
 
     async def handle_meal_allowance(
-        self, start_date: date, end_date: date, division_id: UUID | None
+        self, current_user: CurrentUser, start_date: date, end_date: date, division_id: UUID | None
     ) -> list[MealAllowanceRow]:
-        rows = await self.session_service.meal_allowance(start_date, end_date, division_id)
+        rows = await self.session_service.meal_allowance(current_user, start_date, end_date, division_id)
         return [MealAllowanceRow(**dict(r._mapping)) for r in rows]
 
 

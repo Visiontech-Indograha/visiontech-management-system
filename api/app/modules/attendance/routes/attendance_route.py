@@ -153,11 +153,11 @@ async def meal_allowance_recap(
     start_date: date,
     end_date: date,
     division_id: UUID | None = None,
-    current_user: CurrentUser = Depends(require_permission(Permission.EXPORT_ATTENDANCE)),
+    current_user: CurrentUser = Depends(get_current_user),
     controller: AttendanceController = Depends(),
 ) -> list[MealAllowanceRow]:
-    """Rekap uang makan per karyawan (dalam/luar kota) dari absensi sah, untuk Finance."""
-    return await controller.handle_meal_allowance(start_date, end_date, division_id)
+    """Rekap uang makan per karyawan dari absensi sah: pengelola absensi semua divisi, PM divisinya."""
+    return await controller.handle_meal_allowance(current_user, start_date, end_date, division_id)
 
 
 __all__ = ["router"]

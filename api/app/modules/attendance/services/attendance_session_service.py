@@ -145,8 +145,21 @@ class AttendanceSessionService:
             )
         return out.getvalue()
 
-    async def meal_allowance(self, start: Any, end: Any, division_id: UUID | None = None) -> list[Any]:
-        """Rekap uang makan untuk Finance (docs/35 §5)."""
+    async def meal_allowance(self, user: Any, start: Any, end: Any, division_id: UUID | None = None) -> list[Any]:
+        """Rekap uang makan (docs/35 §5): pemegang export:attendance semua divisi; PM hanya divisi yang dipimpinnya
+        (keputusan pemilik 2026-10-21). Lainnya → 403."""
+        if "export:attendance" not in user.permissions:
+            if user.role != "PROJECT_MANAGER" or not user.employee_id:
+                raise ForbiddenError("Rekap uang makan hanya untuk PM divisi atau pengelola absensi.")
+            own = await self.repo.scalar(
+                "SELECT division_id FROM division WHERE pm_id = CAST(:e AS uuid) AND delete_at IS NULL LIMIT 1",
+                {"e": user.employee_id},
+            )
+            if own is None:
+                raise ForbiddenError("Anda belum memimpin divisi mana pun.")
+            if division_id is not None and str(division_id) != str(own):
+                raise ForbiddenError("PM hanya dapat melihat rekap uang makan divisinya.")
+            division_id = own
         if end < start:
             raise ValidationError("Tanggal akhir harus sama atau setelah tanggal awal.")
         if (end - start).days > 62:

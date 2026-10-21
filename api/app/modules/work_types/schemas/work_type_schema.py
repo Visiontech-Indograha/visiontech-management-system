@@ -5,6 +5,8 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 EvidenceSource = Literal["CAMERA", "GALLERY"]
+# WORK = pekerjaan biasa; SURVEY_TASK = paket survei di jadwal; SURVEY_POINT = jenis titik survei (docs/37 §9)
+WorkTypeKind = Literal["WORK", "SURVEY_TASK", "SURVEY_POINT"]
 
 
 class WorkTypePhotoIn(BaseModel):
@@ -66,6 +68,8 @@ class WorkTypeIn(BaseModel):
     division_id: UUID | None = None  # ID Divisi pemilik work type
     description: str | None = Field(None, max_length=255)  # Keterangan pekerjaan
     photos: list[WorkTypePhotoIn] = []  # Template foto, urut sesuai daftar
+    kind: WorkTypeKind = "WORK"
+    follow_up_work_type_id: UUID | None = None  # SURVEY_POINT → jenis pekerjaan pemasangannya (rencana dari survei)
 
 
 class WorkTypeOut(BaseModel):
@@ -76,6 +80,9 @@ class WorkTypeOut(BaseModel):
     name: str  # Nama jenis
     description: str | None = None  # Keterangan pekerjaan
     is_active: bool = True  # Nonaktif = tidak ditawarkan lagi, rencana kerja lama tetap utuh
+    kind: WorkTypeKind = "WORK"
+    follow_up_work_type_id: UUID | None = None
+    follow_up_name: str | None = None
     photos: list[WorkTypePhotoOut] = []  # Template foto
     default_materials: list[DefaultMaterialOut] = []  # Template material default BoM
 

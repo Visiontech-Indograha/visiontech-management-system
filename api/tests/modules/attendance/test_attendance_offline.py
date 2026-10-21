@@ -1,5 +1,5 @@
 """
-R-34 · Absen lapangan luring (keputusan pemilik 2026-10-02 — mengubah K-13), alur disetujui setelah uji nyata
+R-34 · Absen lapangan offline (keputusan pemilik 2026-10-02 — mengubah K-13), alur disetujui setelah uji nyata
 di HP & web. HP merekam absen tanpa sinyal, menandatanganinya dengan kunci Android Keystore, lalu mengirimnya
 otomatis saat online. Uji ini memerankan HP: kunci EC P-256, payload JSON bertanda tangan, jangkar jam server.
 
@@ -7,7 +7,7 @@ Yang dijaga:
 - data yang diubah setelah direkam (lokasi/jam/swafoto) ditolak `OFFLINE_TAMPERED`;
 - jam absen = jangkar server + penghitung waktu internal, BUKAN jam HP;
 - valid otomatis hanya bila semua cek lolos; selain itu Perlu review dengan catatan server;
-- absen pulang luring: masuk valid → langsung tercatat; Perlu review → ditahan, berlaku saat disetujui,
+- absen pulang offline: masuk valid → langsung tercatat; Perlu review → ditahan, berlaku saat disetujui,
   gugur saat ditolak;
 - kirim ulang tidak menggandakan (idempoten per `client_op_id`).
 """
@@ -36,7 +36,7 @@ ANCHOR_ELAPSED = 5_000_000  # penghitung waktu internal HP saat jangkar disimpan
 
 
 class Phone:
-    """HP lapangan tiruan: kunci Keystore, jangkar jam dari server, dan absen luring bertanda tangan."""
+    """HP lapangan tiruan: kunci Keystore, jangkar jam dari server, dan absen offline bertanda tangan."""
 
     def __init__(self, client, world: World, who: str = "member"):
         self.client, self.world, self.who = client, world, who
@@ -63,7 +63,7 @@ class Phone:
     def record(self, kind: str, *, at=INSIDE, after_ms: int = 2_000, boot: tuple[int, int] = (7, 7),
                gps_shift_ms: int = 0, mocked: bool = False, explanation: str | None = None,
                selfie_sha: str | None = None, anchor: str | None = None, extra: dict | None = None) -> dict:
-        """Absen luring yang direkam `after_ms` setelah jangkar. Jam HP sengaja dimajukan 3 jam."""
+        """Absen offline yang direkam `after_ms` setelah jangkar. Jam HP sengaja dimajukan 3 jam."""
         anchor_token = anchor if anchor is not None else self.anchor
         anchor_ms = security.verify_time_anchor(anchor_token or "", self._user_id()) or int(time.time() * 1000)
         op = str(uuid.uuid4())
@@ -133,7 +133,7 @@ def test_offline_event_from_unregistered_device_is_refused(client, world):
     assert _count(world) == 0
 
 
-# ── Absen masuk luring ────────────────────────────────────────────────────────────────────────
+# ── Absen masuk offline ────────────────────────────────────────────────────────────────────────
 def test_genuine_offline_check_in_is_auto_valid_and_uses_anchor_time_not_phone_clock(client, world):
     phone = Phone(client, world)
     phone.go_online()
@@ -209,7 +209,7 @@ def test_phone_restarted_while_offline_uses_gps_time_and_needs_review(client, wo
     assert accepted.status_code == 200, accepted.text
     body = accepted.json()
     assert body["result"] == "NEEDS_REVIEW" and body["time_trusted"] is False
-    assert _row(body["attendance_id"])[2] == "jam hanya dari satelit GPS (HP dinyalakan ulang saat luring)"
+    assert _row(body["attendance_id"])[2] == "jam hanya dari satelit GPS (HP dinyalakan ulang saat offline)"
 
 
 def test_clock_not_matching_gps_or_mock_location_needs_review(client, world, other_world):
@@ -257,7 +257,7 @@ def test_office_account_cannot_send_offline_attendance(client, world):
     assert refused_out.status_code == 403 and refused_out.json()["error"]["code"] == "WRONG_ATTENDANCE_CHANNEL"
 
 
-# ── Absen pulang luring ───────────────────────────────────────────────────────────────────────
+# ── Absen pulang offline ───────────────────────────────────────────────────────────────────────
 def test_offline_check_out_after_valid_check_in_is_recorded_at_its_own_time(client, world):
     phone = Phone(client, world)
     phone.go_online()
@@ -288,7 +288,7 @@ def test_check_out_on_review_is_held_then_applied_when_approved(client, world, f
     _, _, _, _, check_out_at, requested_at, _ = _row(att_id)
     assert check_out_at is None and requested_at is not None
 
-    # Peninjau melihat tanda luring & jam pulang yang ditahan di daftar absensi.
+    # Peninjau melihat tanda offline & jam pulang yang ditahan di daftar absensi.
     listed = client.get("/attendance", headers=world.headers(client, "pm")).json()["items"]
     item = next(i for i in listed if i["id"] == att_id)
     assert item["offline"] is True and item["check_out_requested_at"] is not None and item["can_review"] is True

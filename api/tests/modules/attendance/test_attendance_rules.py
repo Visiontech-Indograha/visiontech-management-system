@@ -219,7 +219,7 @@ def test_poor_gps_accuracy_is_rejected_with_a_reason(client, world):
 
 
 def test_gps_accuracy_at_the_limit_or_unknown_is_accepted(client, world):
-    """Tepat 100 m masih diterima; klien lama / antrean luring tanpa `accuracy_m` tidak ditolak."""
+    """Tepat 100 m masih diterima; klien lama / antrean offline tanpa `accuracy_m` tidak ditolak."""
     at_limit = _check_in(client, world, accuracy_m=100.0)
     assert at_limit.status_code == 200, at_limit.text
     assert _check_out(client, world).status_code == 200

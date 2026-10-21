@@ -6,7 +6,7 @@ Definisi rute endpoint FastAPI untuk modul Order Proyek Klien (Work Completion) 
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Response, status
@@ -74,6 +74,30 @@ async def get_work_completion(
     controller: WorkCompletionController = Depends(),
 ) -> WorkCompletionOut:
     return await controller.get_order(completion_id, current_user)
+
+
+@router.delete("/{completion_id}/photos/{file_id}", response_model=WorkCompletionOut,
+               summary="Hapus Foto Realisasi BAST")
+async def delete_work_completion_photo(
+    completion_id: UUID,
+    file_id: UUID,
+    current_user: CurrentUser = Depends(get_current_user),
+    controller: WorkCompletionController = Depends(),
+) -> WorkCompletionOut:
+    """Ketua tim/PM menghapus satu foto realisasi selama BAST belum disahkan PM (langsung tersimpan)."""
+    return await controller.remove_photo(completion_id, file_id, current_user)
+
+
+@router.get("/{completion_id}/signatures/{role}", response_class=Response, summary="Gambar Tanda Tangan BAST",
+            responses={200: {"content": {"image/png": {}}}})
+async def get_work_completion_signature(
+    completion_id: UUID,
+    role: Literal["leader", "pm"],
+    current_user: CurrentUser = Depends(get_current_user),
+    controller: WorkCompletionController = Depends(),
+) -> Response:
+    """Tanda tangan ketua/PM yang sudah tersimpan (ditampilkan kembali di layar BAST)."""
+    return await controller.signature(completion_id, role, current_user)
 
 
 @router.put("/{completion_id}", response_model=WorkCompletionOut, summary="Perbarui Data Order Proyek Klien")

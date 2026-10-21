@@ -53,7 +53,7 @@ class TeamRepository(BaseRepository):
             await self.fetchall(
                 """
                 SELECT m.member_id, m.team_id, m.employee_id, m.is_active, m.create_at,
-                       e.full_name, e.employee_no, u.system_role::text AS system_role
+                       e.full_name, e.employee_no, e.phone_number, u.system_role::text AS system_role
                 FROM member m
                 JOIN employee e ON e.employee_id = m.employee_id
                 LEFT JOIN users u ON u.employee_id = e.employee_id AND u.delete_at IS NULL

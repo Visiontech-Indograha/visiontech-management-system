@@ -37,36 +37,36 @@ class WorkTypeController:
         """Memetakan hasil query ke model WorkTypeOut."""
         return WorkTypeOut(**row._mapping)
 
-    async def get_user_division(self, user_id: UUID | str) -> UUID | None:
+    async def get_user_divisions(self, user_id: UUID | str) -> list[UUID]:
         """Mendapatkan divisi karyawan yang terikat pada akun pengguna."""
-        return await self.service.repo.get_user_division(user_id)
+        return await self.service.repo.get_user_divisions(user_id)
 
     async def handle_list_types(
-        self, organization_id: str, include_inactive: bool, division_id: UUID | None = None
+        self, organization_id: str, include_inactive: bool, division_ids: list[UUID] | None = None
     ) -> list[WorkTypeOut]:
         """Mengambil seluruh jenis pekerjaan milik organisasi atau divisi tertentu."""
-        rows = await self.service.list_types(organization_id, include_inactive, division_id)
+        rows = await self.service.list_types(organization_id, include_inactive, division_ids)
         return [self.map_row_to_out(r) for r in rows]
 
     async def handle_create(
-        self, organization_id: str, data: WorkTypeIn, creator_division_id: UUID | None = None
+        self, organization_id: str, data: WorkTypeIn, allowed_divisions: list[UUID] | None = None
     ) -> WorkTypeOut:
         """Membuat jenis pekerjaan baru beserta template foto."""
-        row = await self.service.create(organization_id, data, creator_division_id)
+        row = await self.service.create(organization_id, data, allowed_divisions)
         return self.map_row_to_out(row)
 
     async def handle_update(
-        self, organization_id: str, type_id: UUID, data: WorkTypeIn, creator_division_id: UUID | None = None
+        self, organization_id: str, type_id: UUID, data: WorkTypeIn, allowed_divisions: list[UUID] | None = None
     ) -> WorkTypeOut:
         """Mengubah jenis pekerjaan dan memperbarui slot foto."""
-        row = await self.service.update(organization_id, type_id, data, creator_division_id)
+        row = await self.service.update(organization_id, type_id, data, allowed_divisions)
         return self.map_row_to_out(row)
 
     async def handle_deactivate(
-        self, organization_id: str, type_id: UUID, creator_division_id: UUID | None = None
+        self, organization_id: str, type_id: UUID, allowed_divisions: list[UUID] | None = None
     ) -> None:
         """Menonaktifkan jenis pekerjaan."""
-        await self.service.deactivate(organization_id, type_id, creator_division_id)
+        await self.service.deactivate(organization_id, type_id, allowed_divisions)
 
     async def handle_template_of_daily(self, daily_plan_id: UUID) -> list[WorkTypePhotoOut]:
         """Template foto SOP untuk item-item jadwal harian."""
@@ -83,10 +83,10 @@ class WorkTypeController:
         organization_id: str,
         type_id: UUID,
         data: DefaultMaterialIn,
-        creator_division_id: UUID | None = None,
+        allowed_divisions: list[UUID] | None = None,
     ) -> DefaultMaterialOut:
         """Membuat template material default baru untuk jenis pekerjaan."""
-        row = await self.service.create_default_material(organization_id, type_id, data, creator_division_id)
+        row = await self.service.create_default_material(organization_id, type_id, data, allowed_divisions)
         return DefaultMaterialOut(**row._mapping)
 
     async def handle_update_material(
@@ -94,17 +94,17 @@ class WorkTypeController:
         organization_id: str,
         material_id: UUID,
         data: DefaultMaterialUpdate,
-        creator_division_id: UUID | None = None,
+        allowed_divisions: list[UUID] | None = None,
     ) -> DefaultMaterialOut:
         """Mengubah template material default."""
-        row = await self.service.update_default_material(organization_id, material_id, data, creator_division_id)
+        row = await self.service.update_default_material(organization_id, material_id, data, allowed_divisions)
         return DefaultMaterialOut(**row._mapping)
 
     async def handle_delete_material(
         self,
         organization_id: str,
         material_id: UUID,
-        creator_division_id: UUID | None = None,
+        allowed_divisions: list[UUID] | None = None,
     ) -> None:
         """Menghapus template material default."""
-        await self.service.delete_default_material(organization_id, material_id, creator_division_id)
+        await self.service.delete_default_material(organization_id, material_id, allowed_divisions)

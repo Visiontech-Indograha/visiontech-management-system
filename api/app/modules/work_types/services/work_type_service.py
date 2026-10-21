@@ -24,9 +24,9 @@ class WorkTypeService:
         self.repo = CRUDWorkType(db)
 
     async def list_types(
-        self, org_id: str, include_inactive: bool, division_id: UUID | None = None
+        self, org_id: str, include_inactive: bool, division_ids: list[UUID] | None = None
     ) -> list[Any]:
-        return await self.repo.list_types(org_id, include_inactive, division_id)
+        return await self.repo.list_types(org_id, include_inactive, division_ids)
 
     async def get(self, org_id: str, type_id: UUID) -> Any:
         row = await self.repo.get_type(org_id, type_id)
@@ -59,9 +59,11 @@ class WorkTypeService:
         """Foto contoh harus berkas milik organisasi ini (V-08)."""
         await ensure_same_org(self.db, org_id, files=[p["example_file_id"] for p in photos])
 
-    async def create(self, org_id: str, data: WorkTypeIn, creator_division_id: UUID | None = None) -> Any:
-        division_id = creator_division_id or data.division_id
-        if creator_division_id is not None and data.division_id and str(data.division_id) != str(creator_division_id):
+    async def create(self, org_id: str, data: WorkTypeIn, allowed_divisions: list[UUID] | None = None) -> Any:
+        division_id = data.division_id or (
+            allowed_divisions[0] if allowed_divisions is not None and len(allowed_divisions) == 1 else None)
+        if allowed_divisions is not None and data.division_id and str(data.division_id) not in {
+            str(d) for d in allowed_divisions}:
             raise AppError(
                 "FORBIDDEN", "Anda tidak memiliki hak untuk membuat jenis pekerjaan di divisi lain.", status=403
             )
@@ -71,20 +73,22 @@ class WorkTypeService:
         if await self.repo.name_taken(org_id, division_id, name, None):
             raise AppError("DUPLICATE", "Jenis pekerjaan dengan nama itu sudah ada di divisi ini.", status=409)
         await self._check_examples(org_id, photos)
-        type_id = await self.repo.insert_type(org_id, division_id, name, data.description)
+        follow_up = await self._check_kind(data, str(division_id), None)
+        type_id = await self.repo.insert_type(org_id, division_id, name, data.description, data.kind, follow_up)
         await self.repo.replace_photos(org_id, type_id, photos)
         return await self.get(org_id, UUID(type_id))
 
     async def update(
-        self, org_id: str, type_id: UUID, data: WorkTypeIn, creator_division_id: UUID | None = None
+        self, org_id: str, type_id: UUID, data: WorkTypeIn, allowed_divisions: list[UUID] | None = None
     ) -> Any:
         existing = await self.get(org_id, type_id)
-        if creator_division_id is not None and str(existing.division_id) != str(creator_division_id):
+        if allowed_divisions is not None and str(existing.division_id) not in {str(d) for d in allowed_divisions}:
             raise AppError(
                 "FORBIDDEN", "Anda tidak memiliki hak untuk mengubah jenis pekerjaan divisi lain.", status=403
             )
         target_division = data.division_id or existing.division_id
-        if creator_division_id is not None and target_division and str(target_division) != str(creator_division_id):
+        if allowed_divisions is not None and target_division and str(target_division) not in {
+            str(d) for d in allowed_divisions}:
             raise AppError(
                 "FORBIDDEN", "Anda tidak memiliki hak untuk memindahkan jenis pekerjaan ke divisi lain.", status=403
             )
@@ -93,21 +97,28 @@ class WorkTypeService:
             raise AppError("DUPLICATE", "Jenis pekerjaan dengan nama itu sudah ada di divisi ini.", status=409)
         await self._check_examples(org_id, photos)
         await self.repo.update_type(type_id, name, target_division, data.description, True)
+        await self.repo.set_kind(type_id, data.kind, await self._check_kind(data, str(target_division), type_id))
         await self.repo.replace_photos(org_id, type_id, photos)
         return await self.get(org_id, type_id)
 
-    async def deactivate(self, org_id: str, type_id: UUID, creator_division_id: UUID | None = None) -> None:
+    async def _check_kind(self, data: WorkTypeIn, division_id: str, self_id: UUID | None) -> UUID | None:
+        """Pemasangan lanjutan hanya untuk jenis titik survei, dan harus pekerjaan biasa di divisi yang sama."""
+        if data.kind != "SURVEY_POINT" or data.follow_up_work_type_id is None:
+            return None
+        if self_id and str(data.follow_up_work_type_id) == str(self_id):
+            raise ValidationError("Pemasangan lanjutan tidak boleh jenis titik itu sendiri.")
+        target = await self.repo.kind_of(data.follow_up_work_type_id)
+        if target is None or target[0] != "WORK" or target[1] != division_id:
+            raise ValidationError("Pemasangan lanjutan harus jenis pekerjaan biasa (bukan survei) di divisi yang sama.")
+        return data.follow_up_work_type_id
+
+    async def deactivate(self, org_id: str, type_id: UUID, allowed_divisions: list[UUID] | None = None) -> None:
         existing = await self.get(org_id, type_id)
-        if creator_division_id is not None and str(existing.division_id) != str(creator_division_id):
+        if allowed_divisions is not None and str(existing.division_id) not in {str(d) for d in allowed_divisions}:
             raise AppError(
                 "FORBIDDEN", "Anda tidak memiliki hak untuk menonaktifkan jenis pekerjaan divisi lain.", status=403
             )
         await self.repo.update_type(type_id, existing.name, is_active=False)
-
-    async def ensure_usable(self, org_id: str, type_id: UUID | None) -> None:
-        """Jenis yang dipilih rencana kerja harus ada di organisasi ini dan aktif."""
-        if type_id is not None and not await self.repo.type_is_usable(org_id, type_id):
-            raise ValidationError("Jenis pekerjaan tidak ditemukan atau sudah dinonaktifkan.")
 
     async def template_of_daily(self, daily_plan_id: UUID) -> list[Any]:
         """Slot foto SOP dari jenis pekerjaan item-item jadwal harian ini."""
@@ -123,11 +134,11 @@ class WorkTypeService:
         org_id: str,
         type_id: UUID,
         data: DefaultMaterialIn,
-        creator_division_id: UUID | None = None,
+        allowed_divisions: list[UUID] | None = None,
     ) -> Any:
         """Membuat item template material default."""
         existing = await self.get(org_id, type_id)
-        if creator_division_id is not None and str(existing.division_id) != str(creator_division_id):
+        if allowed_divisions is not None and str(existing.division_id) not in {str(d) for d in allowed_divisions}:
             raise AppError(
                 "FORBIDDEN", "Anda tidak memiliki hak untuk mengelola template material divisi lain.", status=403
             )
@@ -139,14 +150,14 @@ class WorkTypeService:
         org_id: str,
         material_id: UUID,
         data: DefaultMaterialUpdate,
-        creator_division_id: UUID | None = None,
+        allowed_divisions: list[UUID] | None = None,
     ) -> Any:
         """Mengubah item template material default."""
         mat = await self.repo.get_default_material(material_id)
         if not mat:
             raise NotFoundError("Template Material")
         existing_wt = await self.get(org_id, UUID(str(mat.work_type_id)))
-        if creator_division_id is not None and str(existing_wt.division_id) != str(creator_division_id):
+        if allowed_divisions is not None and str(existing_wt.division_id) not in {str(d) for d in allowed_divisions}:
             raise AppError(
                 "FORBIDDEN", "Anda tidak memiliki hak untuk mengelola template material divisi lain.", status=403
             )
@@ -157,14 +168,14 @@ class WorkTypeService:
         self,
         org_id: str,
         material_id: UUID,
-        creator_division_id: UUID | None = None,
+        allowed_divisions: list[UUID] | None = None,
     ) -> None:
         """Menghapus item template material default."""
         mat = await self.repo.get_default_material(material_id)
         if not mat:
             raise NotFoundError("Template Material")
         existing_wt = await self.get(org_id, UUID(str(mat.work_type_id)))
-        if creator_division_id is not None and str(existing_wt.division_id) != str(creator_division_id):
+        if allowed_divisions is not None and str(existing_wt.division_id) not in {str(d) for d in allowed_divisions}:
             raise AppError(
                 "FORBIDDEN", "Anda tidak memiliki hak untuk mengelola template material divisi lain.", status=403
             )

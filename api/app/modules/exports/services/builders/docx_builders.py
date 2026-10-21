@@ -129,7 +129,7 @@ def survey_report_docx(r: CompletionReport) -> bytes:
         kit.para(doc, f"6.{i} {p.title}" + (f" — {p.location}" if p.location else ""))
         if p.photos:
             kit.picture_pair(doc, [(ph.label, ph.image) for ph in p.photos])
-        kit.para(doc, f"Remark: {p.notes or '-'}", size=9.5)
+        kit.para(doc, f"Keterangan: {p.notes or '-'}", size=9.5)
 
     kit.heading(doc, "7. Bill of Material (Estimasi)")
     if r.bom:

@@ -20,6 +20,7 @@ class MemberOut(BaseModel):
     employee_id: UUID
     full_name: str | None = None
     employee_no: str | None = None
+    phone_number: str | None = None
     system_role: str | None = None
     is_active: bool
     create_at: datetime

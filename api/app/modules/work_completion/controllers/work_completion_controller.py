@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
-from fastapi import Depends
+from fastapi import Depends, Response
 
 from app.core.security import CurrentUser
 from app.modules.work_completion.dependencies import get_work_completion_service
@@ -56,6 +56,13 @@ class WorkCompletionController:
             items=[WorkCompletionOut(**it) for it in items],
             total=total,
         )
+
+    async def remove_photo(self, completion_id: UUID, file_id: UUID, current_user: CurrentUser) -> WorkCompletionOut:
+        return WorkCompletionOut(**await self.service.remove_photo(current_user, completion_id, file_id))
+
+    async def signature(self, completion_id: UUID, role: str, current_user: CurrentUser) -> Response:
+        png = await self.service.signature_png(current_user, completion_id, role)
+        return Response(png, media_type="image/png", headers={"Cache-Control": "no-store"})
 
     async def get_order(
         self,

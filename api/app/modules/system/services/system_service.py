@@ -23,7 +23,7 @@ class AppReleaseService(BaseAppReleaseService):
 
 
 class SyncService(BaseSyncService):
-    """Layanan orkestrasi operasi sinkronisasi data luring."""
+    """Layanan orkestrasi operasi sinkronisasi data offline."""
 
 
 class MonitoringService(BaseMonitoringService):

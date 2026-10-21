@@ -1,9 +1,9 @@
 """
 app/modules/attendance/repositories/attendance_offline_repository.py
-Absensi lapangan luring — Master Schema V2, tanpa tabel tambahan.
+Absensi lapangan offline — Master Schema V2, tanpa tabel tambahan.
 
-- Data absen tetap di `attendance` (sama dengan daring).
-- Kunci publik perangkat & event luring adalah jejak audit di `app_activity_logs` (relasi lewat
+- Data absen tetap di `attendance` (sama dengan online).
+- Kunci publik perangkat & event offline adalah jejak audit di `app_activity_logs` (relasi lewat
   `entity_table`/`entity_id`, indeks `idx_activity_logs_entity`):
     * `DEVICE_KEY_REGISTERED` — entity `users`/user_id, `changed_diff` = {device_id, public_key}
     * `OFFLINE_ATTENDANCE`    — entity `attendance_offline`/client_op_id (idempotensi kiriman ulang),
@@ -31,7 +31,7 @@ _STATUS = """
 
 
 class AttendanceOfflineRepository(BaseRepository):
-    """Repositori absensi luring (perangkat terdaftar, event idempoten, penutupan sesi)."""
+    """Repositori absensi offline (perangkat terdaftar, event idempoten, penutupan sesi)."""
 
     async def device_key(self, user_id: UUID | str, device_id: str) -> str | None:
         """Kunci publik terbaru yang didaftarkan perangkat ini untuk akun ini."""
@@ -66,7 +66,7 @@ class AttendanceOfflineRepository(BaseRepository):
         )
 
     async def event(self, client_op_id: UUID | str) -> Any:
-        """Event luring yang sudah diproses (untuk kiriman ulang) → user_id, result, attendance_id; None bila baru."""
+        """Event offline yang sudah diproses (untuk kiriman ulang) → user_id, result, attendance_id; None bila baru."""
         return await self.fetchone(
             """
             SELECT actor_user_id AS user_id,
@@ -93,7 +93,7 @@ class AttendanceOfflineRepository(BaseRepository):
         time_trusted: bool,
         result: str,
     ) -> None:
-        """Catat hasil pemrosesan event luring (dasar idempotensi)."""
+        """Catat hasil pemrosesan event offline (dasar idempotensi)."""
         await self.execute(
             """
             INSERT INTO app_activity_logs (
@@ -133,7 +133,7 @@ class AttendanceOfflineRepository(BaseRepository):
         )
 
     async def mark_offline(self, attendance_id: UUID | str, note: str | None, force_review: bool) -> Any:
-        """Tandai absen hasil sinkron luring: catatan alasan + naik ke antrean OM bila ada kejanggalan."""
+        """Tandai absen hasil sinkron offline: catatan alasan + naik ke antrean OM bila ada kejanggalan."""
         return await self.fetchone(
             f"""
             UPDATE attendance
@@ -150,7 +150,7 @@ class AttendanceOfflineRepository(BaseRepository):
         )
 
     async def open_before(self, employee_id: UUID | str, at: datetime) -> Any:
-        """Absen masuk yang belum ditutup dan terjadi sebelum `at` (target absen pulang luring)."""
+        """Absen masuk yang belum ditutup dan terjadi sebelum `at` (target absen pulang offline)."""
         return await self.fetchone(
             f"""
             SELECT attendance_id AS id, {_STATUS} AS status, clock_in_at AS check_in_at
@@ -167,7 +167,7 @@ class AttendanceOfflineRepository(BaseRepository):
     async def close_at(
         self, attendance_id: UUID | str, at: datetime, *, lat: float | None = None, lng: float | None = None
     ) -> None:
-        """Tutup sesi pada jam peristiwa luring (V2 tidak menyimpan koordinat pulang)."""
+        """Tutup sesi pada jam peristiwa offline (V2 tidak menyimpan koordinat pulang)."""
         await self.execute(
             "UPDATE attendance SET clock_out_at = :at, update_at = now() "
             "WHERE attendance_id = CAST(:id AS uuid) AND delete_at IS NULL",

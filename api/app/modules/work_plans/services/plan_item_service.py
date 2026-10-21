@@ -4,7 +4,9 @@ Item per titik, prasyarat, progres, dan rollover (Milestone 6, docs/35 §3–4; 
 
 Susun item (PM/OM divisi, jadwal DRAFT/SUBMITTED):
 - jenis pekerjaan (template) milik divisi jadwal; order klien (bila ada) di divisi yang sama & masih terbuka;
-- prasyarat (`depends_on_item_id`) = item lain pada order yang sama, tim yang sama, tanggal ≤ jadwal ini;
+- prasyarat (`depends_on_item_id`) = item lain pada tanggal ≤ jadwal ini: tim yang sama & order yang sama, ATAU
+  lintas tim/divisi di lokasi yang sama (nama lokasi jadwal & klien order sama) — mis. kabel ACS menunggu galian
+  parit tim CCTV; tim lain hanya melihat statusnya;
 - penugasan (`assigned_employee_ids`) hanya anggota aktif tim jadwal.
 Progres (tim, jadwal ONGOING): tidak boleh melebihi target; prasyarat harus DONE dulu; DONE butuh semua foto wajib
 (image_requirement jenis pekerjaan) terpenuhi.
@@ -69,6 +71,11 @@ class PlanItemService:
         await self._item(user, item_id, DailyNeed.VIEW)
         return await self.repo.chain(item_id)
 
+    async def prerequisite_options(self, user: CurrentUser, daily_plan_id: UUID) -> list[Any]:
+        """Calon prasyarat untuk item baru di jadwal ini (pengelola jadwal)."""
+        await check_daily_access(self.db, daily_plan_id, user, DailyNeed.MANAGE)
+        return await self.repo.prerequisite_options(daily_plan_id)
+
     # ── Susun ─────────────────────────────────────────────────────────────────
     async def _validate(self, access: DailyAccess, fields: dict[str, Any], item_id: UUID | None = None) -> None:
         plan = access.plan
@@ -84,13 +91,21 @@ class PlanItemService:
         dep_id = fields.get("depends_on_item_id")
         if dep_id:
             if item_id and str(dep_id) == str(item_id):
-                raise ValidationError("Item tidak boleh menjadi prasyarat dirinya sendiri.")
+                raise ValidationError("Pekerjaan tidak boleh menunggu dirinya sendiri.")
             dep = await self.repo.prerequisite(dep_id)
-            if dep is None or str(dep.team_id) != str(plan.team_id) or dep.work_date > plan.work_date:
-                raise ValidationError("Prasyarat harus item tim yang sama pada tanggal ini atau sebelumnya.")
+            if dep is None or dep.work_date > plan.work_date:
+                raise ValidationError("Pekerjaan yang ditunggu harus di tanggal ini atau sebelumnya.")
             order_id = fields.get("completion_id")
-            if order_id and dep.completion_id and str(dep.completion_id) != str(order_id):
-                raise ValidationError("Prasyarat harus item pada order klien yang sama.")
+            if str(dep.team_id) == str(plan.team_id):
+                if order_id and dep.completion_id and str(dep.completion_id) != str(order_id):
+                    raise ValidationError("Pekerjaan yang ditunggu harus dari pekerjaan klien yang sama.")
+            else:
+                # Lintas tim/divisi: hanya di lokasi yang sama untuk klien yang sama.
+                site = (await self.repo.plan_site(plan.daily_plan_id) or "").strip().lower()
+                client = (await self.repo.order_client(order_id) or "").strip().lower() if order_id else ""
+                if not site or site != (dep.site_name or "").strip().lower() or (
+                        client and client != (dep.client_name or "").strip().lower()):
+                    raise ValidationError("Pekerjaan tim lain yang ditunggu harus di lokasi & klien yang sama.")
         assigned = fields.get("assigned_employee_ids")
         if assigned:
             members = await self.repo.team_members(plan.team_id)
@@ -123,7 +138,7 @@ class PlanItemService:
         _, access = await self._item(user, item_id, DailyNeed.MANAGE)
         require_daily_status(access, *EDITABLE)
         if await self.repo.dependents(item_id):
-            raise AppError("ITEM_IS_PREREQUISITE", "Item ini masih menjadi prasyarat item lain.", status=409)
+            raise AppError("ITEM_IS_PREREQUISITE", "Pekerjaan ini masih ditunggu pekerjaan lain.", status=409)
         await self.repo.archive(item_id)
 
     # ── Lapangan ──────────────────────────────────────────────────────────────
@@ -131,14 +146,15 @@ class PlanItemService:
         item, access = await self._item(user, item_id, DailyNeed.TEAM)
         require_daily_status(access, "ONGOING")
         if item.status in ("PENDING_ROLLOVER", "SHIFTED_DAY"):
-            raise _state("Item sedang/sudah digeser; progres dicatat di item lanjutannya.")
+            raise _state("Pekerjaan ini sudah dipindah ke hari lain; catat hasilnya di hari baru.")
         if data.completed_qty > item.target_qty:
             raise ValidationError("Volume selesai melebihi target item.")
         if item.depends_on_item_id and data.completed_qty > 0:
             dep = await self.repo.prerequisite(item.depends_on_item_id)
-            if dep is not None and dep.status != "DONE":
+            if dep is not None and not dep.done:
+                owner = f" — dikerjakan {dep.team_name}" if str(dep.team_id) != str(access.plan.team_id) else ""
                 raise AppError("PREREQUISITE_NOT_DONE",
-                               f"Selesaikan dulu prasyaratnya: {item.depends_on_title}.", status=409)
+                               f"Tunggu dulu sampai selesai: {item.depends_on_title}{owner}.", status=409)
         photos = None
         if data.photos is not None:
             ids = [str(p.file_id) for p in data.photos]
@@ -160,9 +176,9 @@ class PlanItemService:
         item, access = await self._item(user, item_id, DailyNeed.LEADER)
         require_daily_status(access, *FIELD_ACTIVE)
         if item.status in ("DONE", "SHIFTED_DAY", "PENDING_ROLLOVER"):
-            raise _state("Hanya item yang belum selesai dan belum diajukan yang bisa digeser.")
+            raise _state("Hanya pekerjaan yang belum selesai dan belum diajukan yang bisa dipindah hari.")
         if data.completed_qty >= item.target_qty:
-            raise ValidationError("Volume selesai sudah mencapai target — tandai selesai, bukan digeser.")
+            raise ValidationError("Jumlah selesai sudah mencapai target — tandai selesai, tidak perlu pindah hari.")
         await self.repo.request_rollover(item_id, data.delay_reason.strip(), data.completed_qty)
         return await self.repo.get(item_id)
 
@@ -170,7 +186,7 @@ class PlanItemService:
         item, access = await self._item(user, item_id, DailyNeed.MANAGE)
         locked = await self.repo.lock(item_id)
         if locked is None or locked.rollover_approval_status != "WAITING_PM":
-            raise _state("Item ini tidak sedang menunggu keputusan geser.")
+            raise _state("Pekerjaan ini tidak sedang menunggu keputusan pindah hari.")
         log = {"decision": "APPROVED" if data.approve else "REJECTED", "note": (data.note or "").strip() or None,
                "delay_reason": item.delay_reason, "from_daily_plan_id": str(item.daily_plan_id)}
         if not data.approve:

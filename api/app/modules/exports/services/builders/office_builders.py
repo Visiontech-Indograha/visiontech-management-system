@@ -12,12 +12,17 @@ from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.worksheet import Worksheet
-from pptx import Presentation
 from pptx.presentation import Presentation as PptxPresentation
-from pptx.util import Cm, Pt
 
-from app.modules.exports.services.builders.model import COMPANY, CompletionReport, PeriodicReport, qty, tgl
-from app.shared.documents.docx_kit import LOGO
+from app.modules.exports.services.builders import pptx_theme as theme
+from app.modules.exports.services.builders.model import (
+    COMPANY,
+    CompletionReport,
+    PeriodicReport,
+    TeamWeekReport,
+    qty,
+    tgl,
+)
 
 _HEAD = PatternFill("solid", fgColor="1E293B")
 
@@ -64,7 +69,7 @@ def completion_xlsx(r: CompletionReport) -> bytes:
 
 
 def periodic_xlsx(r: PeriodicReport) -> bytes:
-    sub = f"Divisi {r.division_name} · {tgl(r.start)} s.d. {tgl(r.end)}"
+    sub = f"{r.division_name} · {tgl(r.start)} s.d. {tgl(r.end)}"
     wb = Workbook()
     _sheet(wb.active, "Rekap Jadwal Harian", sub,
            ["Tanggal", "Tim", "Lokasi", "Status", "Item", "Selesai", "Digeser", "Rata-rata progres %", "Pekerjaan"],
@@ -87,102 +92,121 @@ def periodic_xlsx(r: PeriodicReport) -> bytes:
     return _xlsx(wb)
 
 
-# ── PowerPoint ──────────────────────────────────────────────────────────────
-def _deck() -> PptxPresentation:
-    prs = Presentation()
-    prs.slide_width, prs.slide_height = Cm(33.867), Cm(19.05)  # 16:9
-    return prs
+# ── PowerPoint (tema: pptx_theme) ────────────────────────────────────────────
+def _status_pct(points: Sequence[Any]) -> int:
+    if not points:
+        return 0
+    return round(100 * sum(1.0 if p.status == "DONE" else min(1.0, (p.completed or 0) / (p.target or 1))
+                           for p in points) / len(points))
 
 
-def _title_slide(prs: PptxPresentation, title: str, subtitle: str) -> None:
-    slide = prs.slides.add_slide(prs.slide_layouts[0])
-    slide.shapes.title.text = title
-    slide.placeholders[1].text = subtitle
-    if LOGO.exists():
-        slide.shapes.add_picture(str(LOGO), Cm(1.2), Cm(1.0), height=Cm(2.0))
+def _phase_rows(points: Sequence[Any]) -> list[tuple[str, int, str]]:
+    counts: dict[str, int] = {}
+    labels: dict[str, str] = {}
+    for p in points:
+        counts[p.phase] = counts.get(p.phase, 0) + 1
+        labels[p.phase] = p.phase_label
+    return [(labels[ph], n, theme.PHASE_COLOR.get(ph, (theme.NAVY, ""))[0]) for ph, n in counts.items()]
 
 
-def _bullets(prs: PptxPresentation, title: str, lines: Sequence[str]) -> Any:
-    slide = prs.slides.add_slide(prs.slide_layouts[1])
-    slide.shapes.title.text = title
-    body = slide.placeholders[1].text_frame
-    body.clear()
-    for i, line in enumerate(lines or ["-"]):
-        p = body.paragraphs[0] if i == 0 else body.add_paragraph()
-        p.text = line
-        p.font.size = Pt(16)
-    return slide
+def _points_table(prs: PptxPresentation, title: str, kicker: str, points: Sequence[Any], footer: str) -> None:
+    for start in range(0, len(points), 12):
+        chunk = points[start:start + 12]
+        slide = theme.page(prs, title, kicker, footer=footer)
+        theme.table(slide, ["Tanggal", "Pekerjaan", "Jenis", "Dikerjakan", "Status"],
+                    [(tgl(p.work_date), p.title, p.phase_label, f"{qty(p.completed)} / {qty(p.target)}",
+                      p.status_label) for p in chunk],
+                    [4.6, 13.5, 4.2, 3.8, 5.2], status_col=4, statuses=[p.status for p in chunk])
 
 
-def _table(prs: PptxPresentation, title: str, headers: Sequence[str], rows: Sequence[Sequence[Any]]) -> None:
-    slide = prs.slides.add_slide(prs.slide_layouts[5])
-    slide.shapes.title.text = title
-    shape = slide.shapes.add_table(len(rows) + 1, len(headers), Cm(1.2), Cm(4.0), Cm(31.4), Cm(1.0 * (len(rows) + 1)))
-    table = shape.table
-    for c, h in enumerate(headers):
-        table.cell(0, c).text = h
-    for r_i, row in enumerate(rows, start=1):
-        for c, v in enumerate(row):
-            table.cell(r_i, c).text = "-" if v in (None, "") else str(v)
-    for row in table.rows:
-        for cell in row.cells:
-            for p in cell.text_frame.paragraphs:
-                p.font.size = Pt(11)
+def _work_slides(prs: PptxPresentation, points: Sequence[Any], footer: str) -> None:
+    for p in points:
+        theme.work_slide(
+            prs, kicker=f"{tgl(p.work_date)} · {p.location}", title=p.title, phase=p.phase,
+            phase_label=p.phase_label, status=p.status, status_label=p.status_label, note=p.notes or "",
+            progress=f"Dikerjakan {qty(p.completed)} dari {qty(p.target)}",
+            photos=[(ph.label, ph.image) for ph in p.photos], footer=footer,
+        )
 
 
-def _pptx(prs: PptxPresentation) -> bytes:
-    buf = io.BytesIO()
-    prs.save(buf)
-    return buf.getvalue()
+def _summary(prs: PptxPresentation, points: Sequence[Any], kicker: str, footer: str, side_title: str,
+             side_text: str) -> None:
+    done = sum(1 for p in points if p.status == "DONE")
+    slide = theme.page(prs, "Ringkasan", kicker, footer=footer)
+    theme.kpis(slide, [
+        (f"{_status_pct(points)}%", "Kemajuan keseluruhan", theme.NAVY),
+        (f"{done}/{len(points)}", "Pekerjaan selesai", "1E6B43"),
+        (str(len({p.work_date for p in points})), "Hari kerja", "3569A0"),
+        (str(sum(len(p.photos) for p in points)), "Foto dokumentasi", "C7892A"),
+    ])
+    theme.text(slide, 1.3, 8.5, 15, 0.8, "Jenis pekerjaan", size=13, color=theme.NAVY, bold=True)
+    theme.bars(slide, _phase_rows(points), x=1.3, y=9.4, w=15.0)
+    theme.text(slide, 17.5, 8.5, 15, 0.8, side_title, size=13, color=theme.NAVY, bold=True)
+    theme.text(slide, 17.5, 9.4, 15.1, 7.5, side_text, size=12, color=theme.INK)
 
 
 def completion_pptx(r: CompletionReport) -> bytes:
     o = r.order
-    prs = _deck()
-    _title_slide(prs, o.get("project_title") or "Laporan Pekerjaan",
-                 f"{COMPANY} · {o.get('client_name') or '-'} · {r.number}")
-    done = sum(1 for p in r.points if p.status == "DONE")
-    _bullets(prs, "Ringkasan", [
-        f"Periode: {tgl(o.get('start_work_date'))} s.d. {tgl(o.get('end_work_date'))}",
-        f"Titik selesai: {done} dari {len(r.points)}",
-        f"Volume: {qty(o.get('completed_target_unit'))} / {qty(o.get('total_target_unit'))} "
-        f"{o.get('unit_measure') or ''}",
-        f"Ringkasan: {o.get('summary_notes') or '-'}",
-        *([f"Kendala: {o['obstacles']}"] if o.get("obstacles") else []),
-    ])
-    for start in range(0, len(r.points), 10):
-        _table(prs, "Progres per Titik", ["Tanggal", "Titik", "Fase", "Realisasi", "Status"], [
-            (tgl(p.work_date), p.title, p.phase_label, f"{qty(p.completed)} / {qty(p.target)}", p.status_label)
-            for p in r.points[start:start + 10]
-        ])
-    for p in r.points:
-        if not p.photos:
-            continue
-        slide = _bullets(prs, p.title, [f"{p.phase_label} · {p.status_label}", f"Remark: {p.notes or '-'}"])
-        for i, ph in enumerate(p.photos[:2]):
-            slide.shapes.add_picture(io.BytesIO(ph.image), Cm(14.5 + i * 9.6), Cm(5.0), width=Cm(9.0))
-    if r.bom:
-        _table(prs, "Material (BoM)", ["Material", "Estimasi", "Aktual", "Satuan"], [
-            (b.get("material_name"), qty(b.get("estimated_qty")), qty(b.get("actual_qty")), b.get("unit"))
-            for b in r.bom[:12]
-        ])
-    return _pptx(prs)
+    prs = theme.deck()
+    footer = f"{o.get('project_title') or 'Laporan pekerjaan'} · {o.get('client_name') or ''}"
+    theme.cover(prs, o.get("project_title") or "Laporan Pekerjaan",
+                f"{o.get('client_name') or '-'} · {tgl(o.get('start_work_date'))} s.d. {tgl(o.get('end_work_date'))}",
+                f"{COMPANY} · No. {r.number}", badge="Laporan pekerjaan klien")
+    note = f"{o.get('summary_notes') or '-'}"
+    if o.get("obstacles"):
+        note += f"\n\nKendala: {o['obstacles']}"
+    _summary(prs, r.points, o.get("client_name") or "", footer, "Ringkasan & kendala", note)
+    _points_table(prs, "Kemajuan per pekerjaan", "Daftar pekerjaan", r.points, footer)
+    _work_slides(prs, [p for p in r.points if p.photos], footer)
+    for start in range(0, len(r.bom), 12):
+        slide = theme.page(prs, "Daftar material", "Material terpakai", footer=footer)
+        theme.table(slide, ["Material", "Rencana", "Terpakai", "Satuan"],
+                    [(b.get("material_name"), qty(b.get("estimated_qty")), qty(b.get("actual_qty")), b.get("unit"))
+                     for b in r.bom[start:start + 12]], [16.0, 5.0, 5.0, 5.3])
+    theme.closing(prs, f"{COMPANY} · {o.get('client_name') or ''}")
+    return theme.save(prs)
 
 
 def periodic_pptx(r: PeriodicReport) -> bytes:
-    prs = _deck()
-    _title_slide(prs, f"Laporan Mingguan Divisi {r.division_name}", f"{COMPANY} · {tgl(r.start)} s.d. {tgl(r.end)}")
+    prs = theme.deck()
+    footer = f"Laporan mingguan {r.division_name} · {tgl(r.start)} s.d. {tgl(r.end)}"
+    theme.cover(prs, f"Laporan Mingguan\n{r.division_name}", f"{tgl(r.start)} s.d. {tgl(r.end)}", COMPANY,
+                badge="Rekap divisi")
     total = sum(d.items for d in r.days)
     done = sum(d.items_done for d in r.days)
-    _bullets(prs, "Ringkasan", [
-        f"Jadwal harian: {len(r.days)}",
-        f"Item selesai: {done} dari {total}",
-        f"Item digeser / menunggu geser: {sum(d.items_shifted for d in r.days)}",
-        f"Uang makan (absensi sah): Rp {sum(m.total_amount for m in r.meal):,.0f}".replace(",", "."),
+    slide = theme.page(prs, "Ringkasan minggu ini", "Divisi", footer=footer)
+    theme.kpis(slide, [
+        (str(len(r.days)), "Jadwal tim", theme.NAVY),
+        (f"{done}/{total}", "Pekerjaan selesai", "1E6B43"),
+        (str(sum(d.items_shifted for d in r.days)), "Pindah hari", "C7892A"),
+        (f"Rp {sum(m.total_amount for m in r.meal):,.0f}".replace(",", "."), "Uang makan", "3569A0"),
     ])
-    for start in range(0, len(r.days), 10):
-        _table(prs, "Jadwal per Hari", ["Tanggal", "Tim", "Lokasi", "Status", "Selesai / Item", "Progres %"], [
-            (tgl(d.work_date), d.team_name, d.site_name, d.status, f"{d.items_done} / {d.items}", d.avg_progress)
-            for d in r.days[start:start + 10]
-        ])
-    return _pptx(prs)
+    for start in range(0, len(r.days), 12):
+        slide = theme.page(prs, "Jadwal per hari", "Semua tim", footer=footer)
+        theme.table(slide, ["Tanggal", "Tim", "Lokasi", "Selesai", "Kemajuan"],
+                    [(tgl(d.work_date), d.team_name, d.site_name, f"{d.items_done} / {d.items}", f"{d.avg_progress}%")
+                     for d in r.days[start:start + 12]], [4.6, 7.5, 11.0, 4.0, 4.2])
+    for start in range(0, len(r.boq), 12):
+        slide = theme.page(prs, "Material per pekerjaan klien", "Rekap material", footer=footer)
+        theme.table(slide, ["No. kerja", "Pekerjaan", "Material", "Rencana", "Satuan"],
+                    [(b.order_number or "-", b.project_title, b.material_name, qty(b.estimated_qty), b.unit)
+                     for b in r.boq[start:start + 12]], [4.6, 10.0, 10.0, 3.6, 3.1])
+    theme.closing(prs, f"{COMPANY} · {r.division_name}")
+    return theme.save(prs)
+
+
+def team_week_pptx(r: TeamWeekReport) -> bytes:
+    """Laporan mingguan tim: sampul, ringkasan (kartu angka + jenis), tabel semua pekerjaan, satu slide per
+    pekerjaan (foto, keterangan, status), penutup."""
+    prs = theme.deck()
+    footer = f"{r.team_name} · {tgl(r.start)} s.d. {tgl(r.end)}"
+    leader = next((m.full_name for m in r.roster if m.is_leader), "-")
+    members = [m.full_name for m in r.roster if not m.is_leader]
+    theme.cover(prs, f"Laporan Mingguan\n{r.team_name}", f"{tgl(r.start)} s.d. {tgl(r.end)} · {r.division_name}",
+                f"{COMPANY} · Ketua tim: {leader}", badge="Laporan tim", emblem=r.team_name)
+    _summary(prs, r.points, r.division_name, footer, "Anggota tim",
+             "\n".join([f"Ketua: {leader}", *[f"• {m}" for m in members]]))
+    _points_table(prs, "Semua pekerjaan minggu ini", r.team_name, r.points, footer)
+    _work_slides(prs, r.points, footer)
+    theme.closing(prs, f"{r.team_name} · {COMPANY}")
+    return theme.save(prs)

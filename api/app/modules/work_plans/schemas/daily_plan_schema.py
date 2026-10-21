@@ -88,6 +88,7 @@ class DailyItemBrief(BaseModel):
     work_type_id: UUID
     work_type_name: str | None = None
     completion_id: UUID | None = None
+    depends_on_item_id: UUID | None = None  # titik survei → tugas survei induknya
     location_name: str | None = None
     target_qty: Decimal
     completed_qty: Decimal
@@ -106,6 +107,9 @@ class DailyPlanOut(BaseModel):
     team_name: str
     leader_employee_id: UUID
     leader_name: str
+    leader_phone: str | None = None
+    pm_name: str | None = None  # PM divisi — kontak ketua tim
+    pm_phone: str | None = None
     work_date: date
     site_name: str
     site_lat: Decimal
@@ -120,6 +124,8 @@ class DailyPlanOut(BaseModel):
     rejection_reason: str | None = None
     item_count: int = 0
     done_count: int = 0
+    progress_pct: int = 0  # rata-rata jumlah dikerjakan/target, 0–100
+    phases: list[str] = []  # SURVEY/PREPARATION/INSTALLATION/REPLACEMENT/MAINTENANCE
 
 
 class DailyPlanDetail(DailyPlanOut):

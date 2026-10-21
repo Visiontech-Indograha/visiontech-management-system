@@ -85,6 +85,7 @@ CREATE TABLE IF NOT EXISTS employee (
     office_id UUID NOT NULL REFERENCES office(office_id),
     division_id UUID NULL, -- Di-link lewat ALTER TABLE setelah tabel division dibuat
     full_name VARCHAR(150) NOT NULL,
+    phone_number VARCHAR(20) NULL,  -- kontak telepon/WhatsApp (PM ↔ tim)
     employee_no VARCHAR(50) NOT NULL,
     join_date TIMESTAMPTZ NOT NULL,
     pkwt_end_date TIMESTAMPTZ NULL,
@@ -270,6 +271,9 @@ CREATE TABLE IF NOT EXISTS work_type (
     division_id UUID NOT NULL REFERENCES division(division_id),
     name VARCHAR(100) NOT NULL,
     description TEXT NULL,
+    -- WORK = pekerjaan biasa; SURVEY_TASK = paket survei di jadwal; SURVEY_POINT = jenis titik survei (docs/37 §9)
+    kind VARCHAR(20) NOT NULL DEFAULT 'WORK' CHECK (kind IN ('WORK', 'SURVEY_TASK', 'SURVEY_POINT')),
+    follow_up_work_type_id UUID NULL REFERENCES work_type(work_type_id) ON DELETE SET NULL,  -- pemasangan lanjutan
     create_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     update_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     delete_at TIMESTAMPTZ NULL
@@ -348,6 +352,7 @@ CREATE TABLE IF NOT EXISTS work_plan_item (
         CONSTRAINT ck_work_plan_item_phase CHECK (task_phase IN ('SURVEY','PREPARATION','INSTALLATION','REPLACEMENT','MAINTENANCE')),
     is_main_deliverable BOOLEAN NOT NULL DEFAULT TRUE,
     depends_on_item_id UUID NULL REFERENCES work_plan_item(item_id),
+    point_status VARCHAR(10) NULL CHECK (point_status IN ('EXISTING', 'PROPOSED')),  -- titik survei: sudah terpasang / usulan baru
     target_qty NUMERIC(10,2) NOT NULL DEFAULT 100.00,
     completed_qty NUMERIC(10,2) NOT NULL DEFAULT 0.00,
     progress_percent NUMERIC(5,2) NOT NULL DEFAULT 0.00,

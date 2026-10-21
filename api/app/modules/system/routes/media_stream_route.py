@@ -19,6 +19,8 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import FileResponse, Response
 
+from app.shared.content_disposition import content_disposition
+
 router = APIRouter(prefix="/media", tags=["Media Streaming"])
 
 UPLOADS_DIR = (Path(__file__).resolve().parents[4] / "uploads").resolve()  # api/uploads
@@ -68,7 +70,7 @@ def _serve(path: str, disposition: str) -> Response:
     return FileResponse(
         path=str(resolved),
         media_type=mime_type,
-        headers={"Content-Disposition": f'{disposition}; filename="{resolved.name}"',
+        headers={"Content-Disposition": content_disposition(disposition, resolved.name),
                  "Cache-Control": "public, max-age=3600", "X-Content-Type-Options": "nosniff"},
     )
 

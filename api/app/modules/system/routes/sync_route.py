@@ -1,7 +1,7 @@
 """
 app/modules/system/routes/sync_route.py
 
-Rute endpoint HTTP untuk sinkronisasi luring (/sync).
+Rute endpoint HTTP untuk sinkronisasi offline (/sync).
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.1.
 """
 

@@ -32,7 +32,7 @@ from app.modules.work_completion.repositories.work_completion_repository import 
 
 FIELD_ROLES = ("TEAM_LEADER", "EMPLOYEE")
 SIGNATURE_MAX_BYTES = 300_000
-ORDER_LOCKED = "Berita acara sudah disahkan PM; order tidak dapat diubah lagi."
+ORDER_LOCKED = "Serah terima sudah disetujui PM; pekerjaan klien ini tidak bisa diubah lagi."
 
 
 def _iso(value: Any) -> str | None:
@@ -152,6 +152,26 @@ class WorkCompletionService:
             raise AppError("ORDER_LOCKED", ORDER_LOCKED, status=409)
         return order
 
+    async def remove_photo(self, current_user: CurrentUser, completion_id: UUID, file_id: UUID) -> dict[str, Any]:
+        """Hapus satu foto realisasi: ketua tim order ini atau pengelolanya, selama BAST belum disahkan PM."""
+        order = await self._access(current_user, completion_id, manage=False)
+        on_team = order.pop("_on_team", False)
+        if order.get("pm_signed_at"):
+            raise AppError("ORDER_LOCKED", ORDER_LOCKED, status=409)
+        if not (current_user.role == "TEAM_LEADER" and on_team):
+            await self._access(current_user, completion_id, manage=True)
+        if not await self.crud.remove_photo(completion_id, str(file_id)):
+            raise NotFoundError("Foto hasil kerja")
+        return await self.get_order_detail(current_user, completion_id)
+
+    async def signature_png(self, current_user: CurrentUser, completion_id: UUID, role: str) -> bytes:
+        """Gambar tanda tangan tersimpan (ketua/PM) untuk ditampilkan kembali; hanya bagi yang boleh melihat order."""
+        order = await self.get_order_detail(current_user, completion_id)
+        png = storage.get_image_bytes(order.get(f"{role}_signature_path") or "")
+        if not png:
+            raise NotFoundError("Tanda tangan")
+        return png
+
     async def get_order_detail(self, current_user: CurrentUser, completion_id: UUID) -> dict[str, Any]:
         """Mengambil rincian order proyek (yang terlihat oleh pengguna)."""
         order = await self._access(current_user, completion_id, manage=False)
@@ -242,9 +262,9 @@ class WorkCompletionService:
                 raise ValidationError("Isi ringkasan pekerjaan sebelum menandatangani.")
             photo_ids = [str(p) for p in dict.fromkeys(realization_photos)]
             if photo_ids and await self.crud.existing_images(photo_ids) != len(photo_ids):
-                raise ValidationError("Ada foto realisasi yang belum diunggah atau bukan gambar.")
+                raise ValidationError("Ada foto hasil kerja yang belum diunggah atau bukan gambar.")
         elif current_user.role in FIELD_ROLES or current_user.role == "ADMIN_HR_GA":
-            raise ForbiddenError("Peran Anda tidak diizinkan menandatangani Berita Acara.")
+            raise ForbiddenError("Peran Anda tidak diizinkan menandatangani serah terima.")
         else:
             await self._access(current_user, completion_id, manage=True)
             if not existing.get("leader_signed_at"):
@@ -270,7 +290,7 @@ class WorkCompletionService:
         if not signed:
             raise NotFoundError("Order Proyek Klien")
         if not as_leader:
-            leader_png = storage.get_object_bytes(signed["leader_signature_path"] or "")
+            leader_png = storage.get_image_bytes(signed["leader_signature_path"] or "")
             signed["signature_hash"] = completion_fingerprint(signed, leader_png, png)
             await self.crud.set_signature_hash(completion_id, signed["signature_hash"])
         return signed
@@ -281,8 +301,8 @@ class WorkCompletionService:
         order = await self.crud.get_completion(completion_id)
         if not order or not order.get("signature_hash") or order["signature_hash"] != signature_hash.lower():
             raise NotFoundError("Dokumen")
-        leader_png = storage.get_object_bytes(order["leader_signature_path"] or "")
-        pm_png = storage.get_object_bytes(order["pm_signature_path"] or "")
+        leader_png = storage.get_image_bytes(order["leader_signature_path"] or "")
+        pm_png = storage.get_image_bytes(order["pm_signature_path"] or "")
         return {
             "completion_id": order["completion_id"],
             "order_number": order.get("order_number"),
@@ -309,7 +329,7 @@ class WorkCompletionService:
         bom_id = await self.crud.add_bom_item(completion_id, data)
         item = await self.crud.get_bom_item(UUID(bom_id))
         if not item:
-            raise AppError("CREATE_FAILED", "Gagal mengambil data item BoM yang baru dibuat.")
+            raise AppError("CREATE_FAILED", "Gagal mengambil data material yang baru dibuat.")
         return item
 
     async def update_bom_item(

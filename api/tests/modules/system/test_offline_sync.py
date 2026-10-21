@@ -1,8 +1,8 @@
 """
-M12 · Sinkronisasi luring (dok 02 A-08, dok 04 §7), daily-first (Milestone 5).
+M12 · Sinkronisasi offline (dok 02 A-08, dok 04 §7), daily-first (Milestone 5).
 POST /sync/operations {device_id, operations:[{client_op_id, op_type, payload, client_created_at}]}
-- Boleh luring: OVERTIME_REPORT (lembur atas jadwal harian ONGOING). Laporan harian & insiden SK V1 dipensiunkan.
-- Tidak boleh luring (absensi, persetujuan, operasi lama) → REJECTED dengan alasan.
+- Boleh offline: OVERTIME_REPORT (lembur atas jadwal harian ONGOING). Laporan harian & insiden SK V1 dipensiunkan.
+- Tidak boleh offline (absensi, persetujuan, operasi lama) → REJECTED dengan alasan.
 - Idempoten per (pengguna, client_op_id): kirim ulang mengembalikan hasil pertama, tidak menggandakan.
 - Satu operasi gagal tidak menggagalkan yang lain; penolakan disimpan (GET /sync/status).
 """
@@ -16,7 +16,7 @@ from tests.daily import make_daily_plan, run_daily_to_ongoing
 
 pytestmark = requires_db
 
-NOT_OFFLINE = "Aksi ini tidak dapat dikirim saat luring."
+NOT_OFFLINE = "Aksi ini tidak dapat dikirim saat offline."
 
 
 def _op(op_type: str, payload: dict) -> dict:

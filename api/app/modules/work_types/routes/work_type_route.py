@@ -40,17 +40,18 @@ async def list_work_types(
     Jika pengguna adalah Project Manager, daftar otomatis difilter ke divisi miliknya.
     """
     include_inactive = all and Permission.CREATE_PLAN in current_user.permissions
-    user_div = await controller.get_user_division(current_user.user_id)
+    user_divs = await controller.get_user_divisions(current_user.user_id)
 
-    # Pembatasan: PM hanya melihat work types di divisinya
+    # Pembatasan: PM (dan peran lapangan berdivisi) hanya melihat work type di divisi-divisinya.
+    targets: list[UUID] | None
     if current_user.role == "PROJECT_MANAGER" or (
-        user_div and current_user.role not in ("SUPER_ADMIN", "ADMIN", "OPERATIONAL_MANAGER")
+        user_divs and current_user.role not in ("SUPER_ADMIN", "ADMIN", "OPERATIONAL_MANAGER")
     ):
-        target_div = user_div
+        targets = [d for d in user_divs if division_id is None or d == division_id]
     else:
-        target_div = division_id
+        targets = [division_id] if division_id else None
 
-    return await controller.handle_list_types(current_user.organization_id, include_inactive, target_div)
+    return await controller.handle_list_types(current_user.organization_id, include_inactive, targets)
 
 
 @router.post("/work-types", response_model=WorkTypeOut, status_code=status.HTTP_201_CREATED)
@@ -63,10 +64,10 @@ async def create_work_type(
     Membuat jenis pekerjaan baru beserta template foto.
     PM hanya dapat membuat work type di dalam divisinya sendiri.
     """
-    user_div = await controller.get_user_division(current_user.user_id)
-    creator_div = user_div if current_user.role == "PROJECT_MANAGER" else None
-    if not data.division_id and user_div:
-        data.division_id = user_div
+    user_divs = await controller.get_user_divisions(current_user.user_id)
+    creator_div = user_divs if current_user.role == "PROJECT_MANAGER" else None
+    if not data.division_id and len(user_divs) == 1:
+        data.division_id = user_divs[0]
     return await controller.handle_create(current_user.organization_id, data, creator_div)
 
 
@@ -81,10 +82,10 @@ async def update_work_type(
     Mengubah nama dan mengganti seluruh daftar slot foto jenis pekerjaan.
     PM hanya dapat mengubah work type di dalam divisinya sendiri.
     """
-    user_div = await controller.get_user_division(current_user.user_id)
-    creator_div = user_div if current_user.role == "PROJECT_MANAGER" else None
-    if not data.division_id and user_div:
-        data.division_id = user_div
+    user_divs = await controller.get_user_divisions(current_user.user_id)
+    creator_div = user_divs if current_user.role == "PROJECT_MANAGER" else None
+    if not data.division_id and len(user_divs) == 1:
+        data.division_id = user_divs[0]
     return await controller.handle_update(current_user.organization_id, type_id, data, creator_div)
 
 
@@ -98,8 +99,8 @@ async def deactivate_work_type(
     Menonaktifkan jenis pekerjaan.
     PM hanya dapat menonaktifkan work type di dalam divisinya sendiri.
     """
-    user_div = await controller.get_user_division(current_user.user_id)
-    creator_div = user_div if current_user.role == "PROJECT_MANAGER" else None
+    user_divs = await controller.get_user_divisions(current_user.user_id)
+    creator_div = user_divs if current_user.role == "PROJECT_MANAGER" else None
     await controller.handle_deactivate(current_user.organization_id, type_id, creator_div)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
@@ -142,8 +143,8 @@ async def create_work_type_material(
     """
     Menambahkan template material default baru ke jenis pekerjaan.
     """
-    user_div = await controller.get_user_division(current_user.user_id)
-    creator_div = user_div if current_user.role == "PROJECT_MANAGER" else None
+    user_divs = await controller.get_user_divisions(current_user.user_id)
+    creator_div = user_divs if current_user.role == "PROJECT_MANAGER" else None
     return await controller.handle_create_material(current_user.organization_id, type_id, data, creator_div)
 
 
@@ -157,8 +158,8 @@ async def update_work_type_material(
     """
     Mengubah template material default.
     """
-    user_div = await controller.get_user_division(current_user.user_id)
-    creator_div = user_div if current_user.role == "PROJECT_MANAGER" else None
+    user_divs = await controller.get_user_divisions(current_user.user_id)
+    creator_div = user_divs if current_user.role == "PROJECT_MANAGER" else None
     return await controller.handle_update_material(current_user.organization_id, material_id, data, creator_div)
 
 
@@ -171,7 +172,7 @@ async def delete_work_type_material(
     """
     Menghapus template material default dari jenis pekerjaan.
     """
-    user_div = await controller.get_user_division(current_user.user_id)
-    creator_div = user_div if current_user.role == "PROJECT_MANAGER" else None
+    user_divs = await controller.get_user_divisions(current_user.user_id)
+    creator_div = user_divs if current_user.role == "PROJECT_MANAGER" else None
     await controller.handle_delete_material(current_user.organization_id, material_id, creator_div)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

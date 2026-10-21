@@ -1,7 +1,7 @@
 """
 app/modules/system/controllers/sync_controller.py
 
-Controller orkestrasi use case sinkronisasi luring (kirim antrean & periksa status).
+Controller orkestrasi use case sinkronisasi offline (kirim antrean & periksa status).
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.2.
 """
 
@@ -23,7 +23,7 @@ from app.modules.system.services.system_service import SyncService
 
 
 class SyncController:
-    """Controller eksekusi antrean operasi dan pemantauan status sinkronisasi luring."""
+    """Controller eksekusi antrean operasi dan pemantauan status sinkronisasi offline."""
 
     def __init__(
         self,

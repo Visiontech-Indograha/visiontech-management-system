@@ -12,14 +12,16 @@ from app.core.repository import BaseRepository
 
 _SELECT = """
     SELECT wt.work_type_id AS id, wt.division_id, d.name AS division_name,
-           wt.name, wt.description, (wt.delete_at IS NULL) AS is_active,
+           wt.name, wt.description, (wt.delete_at IS NULL) AS is_active, wt.kind, wt.follow_up_work_type_id,
+           (SELECT f.name FROM work_type f WHERE f.work_type_id = wt.follow_up_work_type_id) AS follow_up_name,
            COALESCE((SELECT jsonb_agg(jsonb_build_object(
                                          'id', p.image_requirement_id,
                                          'sort_order', p.sort_order,
                                          'label', p.name,
-                                         'hint', p.path_image,
+                                         'hint', p.description,
                                          'required', p.is_mandatory,
-                                         'example_file_id', p.path_image)
+                                         'example_file_id',
+                                         CASE WHEN p.path_image ~ '^[0-9a-f-]{36}$' THEN p.path_image END)
                                       ORDER BY p.sort_order)
                      FROM image_requirement p
                      WHERE p.work_type_id = wt.work_type_id AND p.delete_at IS NULL), '[]'::jsonb) AS photos,
@@ -46,31 +48,29 @@ class WorkTypeRepository(BaseRepository):
     """Akses data Master Schema V2 work_type, image_requirement, dan default_materials."""
     """Akses data Master Schema V2 `work_type` dan `image_requirement`."""
 
-    async def get_user_division(self, user_id: UUID | str) -> UUID | None:
-        """Mendapatkan division_id karyawan dari user_id."""
-        val = await self.scalar(
+    async def get_user_divisions(self, user_id: UUID | str) -> list[UUID]:
+        """Divisi pengguna: divisi karyawannya + semua divisi yang ia pimpin sebagai PM/OM."""
+        rows = await self.fetchall(
             """
-            SELECT CAST(COALESCE(e.division_id, d_pm.division_id, d_om.division_id) AS uuid) AS division_id
-            FROM users u
-            LEFT JOIN employee e ON e.employee_id = u.employee_id AND e.delete_at IS NULL
-            LEFT JOIN division d_pm ON (d_pm.pm_id = u.user_id OR d_pm.pm_id = u.employee_id) AND d_pm.delete_at IS NULL
-            LEFT JOIN division d_om ON (d_om.om_id = u.user_id OR d_om.om_id = u.employee_id) AND d_om.delete_at IS NULL
+            SELECT DISTINCT d.division_id FROM users u
+            JOIN employee e ON e.employee_id = u.employee_id
+            JOIN division d ON d.delete_at IS NULL
+                 AND (d.division_id = e.division_id OR d.pm_id = e.employee_id OR d.om_id = e.employee_id)
             WHERE u.user_id = CAST(:uid AS uuid) AND u.delete_at IS NULL
-            LIMIT 1
             """,
             {"uid": str(user_id)},
         )
-        return UUID(str(val)) if val else None
+        return [UUID(str(r.division_id)) for r in rows]
 
     async def list_types(
-        self, org_id: UUID | str, include_inactive: bool, division_id: UUID | str | None = None
+        self, org_id: UUID | str, include_inactive: bool, division_ids: list[UUID] | None = None
     ) -> list[Any]:
-        """Daftar jenis pekerjaan beserta slot fotonya, urut nama."""
+        """Daftar jenis pekerjaan beserta slot fotonya, urut nama; `division_ids` = batasi ke divisi ini."""
         query = _SELECT
         params: dict[str, Any] = {"org": str(org_id), "all": include_inactive}
-        if division_id is not None:
-            query += " AND wt.division_id = CAST(:div_id AS uuid)"
-            params["div_id"] = str(division_id)
+        if division_ids is not None:
+            query += " AND wt.division_id = ANY(CAST(:div_ids AS uuid[]))"
+            params["div_ids"] = [str(d) for d in division_ids]
         query += " ORDER BY lower(wt.name)"
         return list(await self.fetchall(query, params))
 
@@ -94,16 +94,31 @@ class WorkTypeRepository(BaseRepository):
         )
 
     async def insert_type(
-        self, org_id: UUID | str, division_id: UUID | str, name: str, description: str | None = None
+        self, org_id: UUID | str, division_id: UUID | str, name: str, description: str | None = None,
+        kind: str = "WORK", follow_up: UUID | str | None = None,
     ) -> str:
         """Jenis baru → id."""
         return str(
             await self.scalar(
-                "INSERT INTO work_type (division_id, name, description) "
-                "VALUES (CAST(:div_id AS uuid), :name, :desc) RETURNING work_type_id",
-                {"div_id": str(division_id), "name": name, "desc": description},
+                "INSERT INTO work_type (division_id, name, description, kind, follow_up_work_type_id) "
+                "VALUES (CAST(:div_id AS uuid), :name, :desc, :kind, CAST(:fu AS uuid)) RETURNING work_type_id",
+                {"div_id": str(division_id), "name": name, "desc": description, "kind": kind,
+                 "fu": str(follow_up) if follow_up else None},
             )
         )
+
+    async def kind_of(self, type_id: UUID | str) -> tuple[str, str] | None:
+        """(kind, division_id) jenis aktif; None bila tidak ada."""
+        row = await self.fetchone(
+            "SELECT kind, CAST(division_id AS text) AS division_id FROM work_type "
+            "WHERE work_type_id = CAST(:id AS uuid) AND delete_at IS NULL", {"id": str(type_id)})
+        return (row.kind, row.division_id) if row else None
+
+    async def set_kind(self, type_id: UUID | str, kind: str, follow_up: UUID | str | None) -> None:
+        await self.execute(
+            "UPDATE work_type SET kind = :kind, follow_up_work_type_id = CAST(:fu AS uuid), update_at = NOW() "
+            "WHERE work_type_id = CAST(:id AS uuid)",
+            {"id": str(type_id), "kind": kind, "fu": str(follow_up) if follow_up else None})
 
     async def update_type(
         self,
@@ -136,38 +151,46 @@ class WorkTypeRepository(BaseRepository):
 
 
     async def replace_photos(self, org_id: UUID | str, type_id: UUID | str, photos: list[dict[str, Any]]) -> None:
-        """Ganti seluruh daftar slot foto SOP (urutan = urutan daftar)."""
-        await self.execute(
-            """
-            UPDATE image_requirement
-            SET delete_at = NOW()
-            WHERE work_type_id = CAST(:id AS uuid) AND delete_at IS NULL
-            """,
+        """Samakan daftar slot foto SOP (urutan = urutan daftar). Slot dicocokkan per nama: slot yang tetap ada
+        MEMPERTAHANKAN id-nya (foto lapangan merujuk `requirement_id`), yang hilang diarsipkan, yang baru ditambah."""
+        rows = await self.fetchall(
+            "SELECT image_requirement_id AS id, lower(name) AS key FROM image_requirement "
+            "WHERE work_type_id = CAST(:id AS uuid) AND delete_at IS NULL",
             {"id": str(type_id)},
         )
+        existing = {r.key: str(r.id) for r in rows}
+        kept: set[str] = set()
         for order, photo in enumerate(photos, start=1):
+            params = {
+                "id": str(type_id),
+                "name": photo["label"],
+                # Petunjuk → description; foto contoh (file_id) → path_image (placeholder bila tanpa contoh).
+                "path": photo.get("example_file_id") or "sop/placeholder.jpg",
+                "hint": photo.get("hint") or None,
+                "req": bool(photo.get("required", True)),
+                "ord": order,
+            }
+            current = existing.get(photo["label"].strip().lower())
+            if current:
+                kept.add(current)
+                await self.execute(
+                    "UPDATE image_requirement SET name = :name, path_image = :path, description = :hint, "
+                    "is_mandatory = :req, "
+                    "sort_order = :ord, update_at = NOW() WHERE image_requirement_id = CAST(:rid AS uuid)",
+                    {**params, "rid": current},
+                )
+            else:
+                await self.execute(
+                    "INSERT INTO image_requirement (work_type_id, name, path_image, description, is_mandatory, "
+                    "sort_order) VALUES (CAST(:id AS uuid), :name, :path, :hint, :req, :ord)",
+                    params,
+                )
+        gone = [rid for rid in existing.values() if rid not in kept]
+        if gone:
             await self.execute(
-                """
-                INSERT INTO image_requirement (work_type_id, name, path_image, is_mandatory, sort_order)
-                VALUES (CAST(:id AS uuid), :name, :path, :req, :ord)
-                """,
-                {
-                    "id": str(type_id),
-                    "name": photo["label"],
-                    "path": photo.get("hint") or photo.get("example_file_id") or "sop/placeholder.jpg",
-                    "req": bool(photo.get("required", True)),
-                    "ord": order,
-                },
+                "UPDATE image_requirement SET delete_at = NOW() WHERE image_requirement_id = ANY(CAST(:ids AS uuid[]))",
+                {"ids": gone},
             )
-
-    async def type_is_usable(self, org_id: UUID | str, type_id: UUID | str) -> bool:
-        """Jenis ada dan aktif?"""
-        return bool(
-            await self.scalar(
-                "SELECT EXISTS (SELECT 1 FROM work_type WHERE work_type_id = CAST(:id AS uuid) AND delete_at IS NULL)",
-                {"id": str(type_id)},
-            )
-        )
 
     async def template_of_daily(self, daily_plan_id: UUID | str) -> list[Any]:
         """Slot template foto SOP (image_requirement) dari jenis pekerjaan item jadwal harian ini."""
@@ -175,7 +198,8 @@ class WorkTypeRepository(BaseRepository):
             await self.fetchall(
                 """
             SELECT DISTINCT p.image_requirement_id AS id, p.sort_order, p.name AS label,
-                   p.path_image AS hint, p.is_mandatory AS required, p.path_image AS example_file_id
+                   p.description AS hint, p.is_mandatory AS required,
+                   CASE WHEN p.path_image ~ '^[0-9a-f-]{36}$' THEN p.path_image END AS example_file_id
             FROM image_requirement p
             JOIN work_plan_item wi ON wi.work_type_id = p.work_type_id
             WHERE wi.daily_plan_id = CAST(:day AS uuid) AND p.delete_at IS NULL AND wi.delete_at IS NULL

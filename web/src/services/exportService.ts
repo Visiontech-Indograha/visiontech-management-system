@@ -10,15 +10,17 @@ export type CompletionVerification = components["schemas"]["WorkCompletionVerify
 /** Dokumen per order (docs/35 §8). `needsSignature`: hanya setelah disahkan PM. */
 export const COMPLETION_TEMPLATES: { template: CompletionTemplate; label: string; needsSignature?: boolean }[] = [
   { template: "BAST", label: "Serah terima (.docx)" },
-  { template: "SURVEY_REPORT", label: "Survey Report (.docx)" },
+  { template: "SURVEY_REPORT", label: "Laporan survei (.docx)" },
   { template: "BAST_PDF", label: "Serah terima resmi (.pdf)", needsSignature: true },
   { template: "BOQ", label: "Rekap material (.xlsx)" },
-  { template: "PROGRESS_SLIDES", label: "Slide progres (.pptx)" },
+  { template: "PROGRESS_SLIDES", label: "Laporan slide berfoto (.pptx)" },
 ];
 
 /** Simpan Blob dari API sebagai unduhan; nama berkas dari Content-Disposition server. */
 function saveBlob(data: Blob, disposition: string | undefined, fallback: string) {
-  const name = /filename="([^"]+)"/.exec(disposition ?? "")?.[1] ?? fallback;
+  // Utamakan nama asli UTF-8 (filename*), cadangan ASCII (filename).
+  const utf8 = /filename\*=UTF-8''([^;]+)/i.exec(disposition ?? "")?.[1];
+  const name = (utf8 && decodeURIComponent(utf8)) || /filename="([^"]+)"/.exec(disposition ?? "")?.[1] || fallback;
   const url = window.URL.createObjectURL(data);
   const link = document.createElement("a");
   link.href = url;

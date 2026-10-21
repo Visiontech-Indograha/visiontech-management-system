@@ -51,15 +51,15 @@ export function WeekRecapButtons({ divisionId, start, end }: { divisionId: strin
       { onSuccess: () => toast.success("Rekap minggu berhasil dibuat."), onError: (err) => toast.error(errorMessage(err)) },
     );
   if (!divisionId) {
-    return <TextBlock as="span" className="text-xs text-mist">Pilih satu divisi untuk mengunduh rekap minggu.</TextBlock>;
+    return <TextBlock as="span" className="text-xs text-mist">Pilih satu divisi untuk mengunduh rekap minggu ini.</TextBlock>;
   }
   return (
     <div className="flex gap-2">
       <ActionButton variant="outline" size="sm" disabled={exporter.isPending} onClick={() => run("EXCEL_XLSX")}>
-        Rekap minggu (.xlsx)
+        Rekap minggu ini (.xlsx)
       </ActionButton>
       <ActionButton variant="outline" size="sm" disabled={exporter.isPending} onClick={() => run("PPTX")}>
-        Slide minggu (.pptx)
+        Laporan slide minggu ini (.pptx)
       </ActionButton>
     </div>
   );

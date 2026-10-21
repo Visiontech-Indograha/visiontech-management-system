@@ -34,7 +34,9 @@ export function SurveyList({ query, state, onState }: {
   state: SurveyState | undefined;
   onState: (s: SurveyState | undefined) => void;
 }) {
-  const rows = query.data ?? [];
+  const all = query.data ?? [];
+  const rows = state ? all.filter((s) => s.state === state) : all;
+  const count = (st: SurveyState | undefined) => (st ? all.filter((s) => s.state === st).length : all.length);
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2" role="group" aria-label="Saring status survei">
@@ -45,7 +47,7 @@ export function SurveyList({ query, state, onState }: {
             variant={state === f.state ? "default" : "outline"}
             onClick={() => onState(f.state)}
           >
-            {f.label}
+            {`${f.label} (${count(f.state)})`}
           </ActionButton>
         ))}
       </div>
@@ -68,7 +70,7 @@ export function SurveyList({ query, state, onState }: {
             </TableBlockHead>
             <TableBlockBody>
               {rows.map((s) => (
-                <TableBlockRow key={s.task_id} className="border-b border-line last:border-0 hover:bg-hover">
+                <TableBlockRow key={s.task_id} className={`border-b border-line last:border-0 hover:bg-hover ${s.state === "SUBMITTED" ? "bg-warning-bg/40" : ""}`}>
                   <TableBlockCell className="px-4 py-3">
                     <InlineLink to={`/surveys/${s.task_id}`} className="font-medium text-lens hover:underline">
                       {s.title}

@@ -206,6 +206,7 @@ class _BastSignScreenState extends ConsumerState<BastSignScreen> {
                         const SizedBox(height: 8),
                         NoticeBanner(
                           icon: Icons.verified_rounded,
+                          accent: locked ? Accent.emerald : Accent.amber,
                           text: locked
                               ? 'Sudah disetujui PM — tidak bisa diubah lagi.'
                               : 'Sudah Anda tandatangani; menandatangani ulang menggantikan yang lama.',

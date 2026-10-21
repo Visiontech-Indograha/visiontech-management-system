@@ -399,7 +399,7 @@ class VmsApi {
   Future<Map<String, dynamic>> deleteSurveyPoint(String pointId) async =>
       _map((await _dio.delete('$_p/work-plans/surveys/points/$pointId')).data);
 
-  /// Pindahkan titik di peta layout (layout laporan dibuat otomatis dari koordinat titik).
+  /// Pindahkan titik di peta titik (layout laporan dibuat otomatis dari koordinat titik).
   Future<Map<String, dynamic>> moveSurveyPoint(
     String pointId,
     double lat,

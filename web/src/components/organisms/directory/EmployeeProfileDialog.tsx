@@ -2,38 +2,25 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useRef, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
-import { z } from "zod";
-import { SelectField, TextAreaField, TextField } from "@/components/molecules/Field";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { ApiError } from "@/lib/apiClient";
 import { errorMessage } from "@/lib/errors";
-import { ATTENDANCE_MODE_LABEL } from "@/lib/attendanceModeLabels";
 import { useUpdateEmployee, type Employee, type EmployeeUpdate } from "@/services/employeeService";
 import { oversize, uploadForm } from "@/services/uploadService";
 import { useFileUrl } from "@/hooks/useFileUrl";
-import { ControlInput, ControlOption, FormBlock } from "@/components/molecules/FormBlock";
+import { ControlInput, FormBlock } from "@/components/molecules/FormBlock";
 import { DialogActions } from "@/components/molecules/DialogActions";
 import { FormErrorText } from "@/components/molecules/FormErrorText";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { Camera, Trash2, User } from "@/components/molecules/Glyphs";
+import { EmployeeFormFields } from "./EmployeeFormFields";
+import { EMPLOYEE_FORM_FIELDS as FIELDS, employeeFormSchema, type EmployeeFormValues } from "@/lib/employeeForm";
 import { AvatarBlock, AvatarBlockFallback, AvatarBlockImage } from "@/components/molecules/AvatarBlock";
 
-const optional = z.string().trim();
-const profileSchema = z.object({
-  full_name: z.string().trim().min(1, "Nama wajib diisi."),
-  email: z.union([z.literal(""), z.string().trim().email("Format email tidak valid.")]),
-  phone: optional.max(30, "No. telepon maksimal 30 karakter."),
-  birth_date: optional,
-  address: optional,
-  attendance_mode: z.enum(["FIELD", "OFFICE"], "Pilih cara absen."),
-});
-type ProfileValues = z.infer<typeof profileSchema>;
-const FIELDS = ["full_name", "email", "phone", "birth_date", "address", "attendance_mode"] as const;
-
-/** Dialog "Ubah profil" karyawan (PATCH/PUT /employees/{id}). */
+/** Dialog ubah data kerja karyawan (PUT /employees/{id}); alamat dikelola di panel Alamat. */
 export function EmployeeProfileDialog({ employee, onClose }: { employee: Employee; onClose: () => void }) {
-  const update = useUpdateEmployee(employee.id);
+  const update = useUpdateEmployee(employee.employee_id);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { data: currentPhotoUrl } = useFileUrl(employee.photo_file_id, "view");
 
@@ -49,15 +36,16 @@ export function EmployeeProfileDialog({ employee, onClose }: { employee: Employe
     setError,
     control,
     formState: { errors, isSubmitting },
-  } = useForm<ProfileValues>({
-    resolver: zodResolver(profileSchema),
+  } = useForm<EmployeeFormValues>({
+    resolver: zodResolver(employeeFormSchema),
     defaultValues: {
+      employee_no: employee.employee_no,
       full_name: employee.full_name,
-      email: employee.email ?? "",
-      phone: employee.phone ?? "",
-      birth_date: employee.birth_date ?? "",
-      address: employee.address ?? "",
-      attendance_mode: employee.attendance_mode ?? "FIELD",
+      office_id: employee.office_id,
+      division_id: employee.division_id ?? "",
+      position_id: employee.position_id ?? "",
+      join_date: employee.join_date,
+      pkwt_end_date: employee.pkwt_end_date ?? "",
     },
   });
 
@@ -115,12 +103,13 @@ export function EmployeeProfileDialog({ employee, onClose }: { employee: Employe
       }
 
       const body: EmployeeUpdate = {
+        employee_no: v.employee_no,
         full_name: v.full_name,
-        email: v.email || null,
-        phone: v.phone || null,
-        birth_date: v.birth_date || null,
-        address: v.address || null,
-        attendance_mode: v.attendance_mode,
+        office_id: v.office_id,
+        division_id: v.division_id || null,
+        position_id: v.position_id || null,
+        join_date: v.join_date,
+        pkwt_end_date: v.pkwt_end_date || null,
         ...(finalPhotoId !== undefined ? { photo_file_id: finalPhotoId } : {}),
       };
 
@@ -143,7 +132,7 @@ export function EmployeeProfileDialog({ employee, onClose }: { employee: Employe
   return (
     <VmsDialog
       open
-      title="Ubah profil"
+      title="Ubah data karyawan"
       onClose={onClose}
       footer={<DialogActions onCancel={onClose} busy={isBusy} formId="profile-form" />}
     >
@@ -202,15 +191,7 @@ export function EmployeeProfileDialog({ employee, onClose }: { employee: Employe
           </div>
         </div>
 
-        <TextField label="Nama lengkap" error={errors.full_name?.message} {...register("full_name")} />
-        <TextField label="Email" type="email" error={errors.email?.message} {...register("email")} />
-        <TextField label="No. telepon" error={errors.phone?.message} {...register("phone")} />
-        <TextField label="Tanggal lahir" type="date" error={errors.birth_date?.message} {...register("birth_date")} />
-        <TextAreaField label="Alamat" error={errors.address?.message} {...register("address")} />
-        <SelectField label="Absen lewat" error={errors.attendance_mode?.message} {...register("attendance_mode")}>
-          <ControlOption value="FIELD">{ATTENDANCE_MODE_LABEL.FIELD}</ControlOption>
-          <ControlOption value="OFFICE">{ATTENDANCE_MODE_LABEL.OFFICE}</ControlOption>
-        </SelectField>
+        <EmployeeFormFields register={register} errors={errors} control={control} />
       </FormBlock>
     </VmsDialog>
   );

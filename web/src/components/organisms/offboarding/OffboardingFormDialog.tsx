@@ -70,7 +70,7 @@ export function OffboardingFormDialog({ employee, onClose }: {
           <SelectField label="Karyawan" value={employeeId} onChange={(e) => setEmployeeId(e.target.value)}>
             <ControlOption value="">Pilih karyawan…</ControlOption>
             {(employees.data?.items ?? []).map((e) => (
-              <ControlOption key={e.id} value={e.id}>{`${e.full_name} (${e.employee_no})`}</ControlOption>
+              <ControlOption key={e.employee_id} value={e.employee_id}>{`${e.full_name} (${e.employee_no})`}</ControlOption>
             ))}
           </SelectField>
         )}

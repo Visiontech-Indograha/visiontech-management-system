@@ -170,11 +170,11 @@ def test_field_worker_without_sk_can_check_in_at_head_office_and_sees_it(client,
         "INSERT INTO vms.site (organization_id, name, location, radius_m) "
         "VALUES (%s, 'Kantor Pusat uji', ST_GeogFromText('POINT(106.8 -6.2)'), 100) RETURNING id",
         (world.org_id,))[0][0])
-    sites = client.get("/sites", headers=world.headers(client, "member"), params={"for_attendance": "true"})
+    sites = client.get("/offices", headers=world.headers(client, "member"), params={"for_attendance": "true"})
     assert sites.status_code == 200, sites.text
     assert office in {s["id"] for s in sites.json()}
-    # APK lama memanggil /sites tanpa for_attendance — kantor pusat juga harus ada.
-    old_apk = client.get("/sites", headers=world.headers(client, "member")).json()
+    # APK lama memanggil /offices tanpa for_attendance — kantor pusat juga harus ada.
+    old_apk = client.get("/offices", headers=world.headers(client, "member")).json()
     assert office in {s["id"] for s in old_apk}
     res = _check_in(client, world, "member", "MOBILE", site_id=office)
     assert res.status_code == 200, res.text
@@ -188,7 +188,7 @@ def test_field_worker_can_choose_between_several_offices(client, world):
         "VALUES (%s, %s, ST_GeogFromText(%s), 100) RETURNING id",
         (world.org_id, name, point))[0][0])
         for name, point in (("Kantor A uji", "POINT(106.8 -6.2)"), ("Kantor B uji", "POINT(101.4 0.5)"))]
-    listed = {s["id"] for s in client.get("/sites", headers=world.headers(client, "member"),
+    listed = {s["id"] for s in client.get("/offices", headers=world.headers(client, "member"),
                                           params={"for_attendance": "true"}).json()}
     assert set(offices) <= listed and world.site_id in listed      # kantor + lokasi proyek unitnya
     res = _check_in(client, world, "member", "MOBILE", site_id=offices[1], location={"lat": 0.5, "lng": 101.4})

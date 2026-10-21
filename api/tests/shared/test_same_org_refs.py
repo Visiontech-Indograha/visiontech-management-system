@@ -10,7 +10,6 @@ import io
 import pytest
 from PIL import Image
 
-from app.core.time import jakarta_now
 from tests.conftest import World, requires_db, sync_query
 
 pytestmark = requires_db
@@ -76,25 +75,13 @@ def test_document_for_an_employee_of_another_organisation_is_rejected(client, wo
 
 
 # ── Karyawan ──────────────────────────────────────────────────────────────────────────────────
-def test_employee_in_a_unit_of_another_organisation_is_rejected(client, world, other_world):
+def test_employee_in_a_division_of_another_organisation_is_rejected(client, world, other_world):
     response = client.post("/employees", headers=world.headers(client, "hr"), json={
-        "employee_no": "ASING-01", "full_name": "Karyawan unit asing", "position": "Teknisi",
-        "unit_id": other_world.unit_id, "join_date": "2026-01-05"})
+        "employee_no": "ASING-01", "full_name": "Karyawan divisi asing", "office_id": world.org_id,
+        "division_id": other_world.unit_id, "join_date": "2026-01-05"})
 
-    _not_found(response)
-    assert _count("SELECT count(*) FROM vms.employee WHERE organization_id = %s AND employee_no = 'ASING-01'",
-                  world.org_id) == 0
-
-
-def test_assignment_to_a_unit_of_another_organisation_is_rejected(client, world, other_world):
-    emp = world.employees["member"]
-    before = _count("SELECT count(*) FROM vms.employee_assignment WHERE employee_id = %s", emp)
-
-    response = client.post(f"/employees/{emp}/assignments", headers=world.headers(client, "hr"), json={
-        "position": "Supervisor", "unit_id": other_world.unit_id, "valid_from": jakarta_now().date().isoformat()})
-
-    _not_found(response)
-    assert _count("SELECT count(*) FROM vms.employee_assignment WHERE employee_id = %s", emp) == before
+    assert response.status_code in (404, 422), response.text
+    assert _count("SELECT count(*) FROM employee WHERE employee_no = 'ASING-01'") == 0
 
 
 # ── SK ────────────────────────────────────────────────────────────────────────────────────────

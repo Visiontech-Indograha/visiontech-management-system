@@ -7,7 +7,7 @@ import { ControlOption } from "@/components/molecules/FormBlock";
 import { errorMessage } from "@/lib/errors";
 import { toolSchema, vehicleSchema, type ToolValues, type VehicleValues } from "@/schemas/assetSchemas";
 import { useCreateTool, useCreateVehicle, type AssetKind } from "@/services/assetService";
-import { useUnits } from "@/services/employeeService";
+import { useDivisions } from "@/services/employeeService";
 import { useSites } from "@/services/siteService";
 import { AssetFormDialog } from "./AssetFormDialog";
 
@@ -23,7 +23,7 @@ function PlaceFields<T extends Place>({ register, errors, divisionRequired }: {
   divisionRequired: boolean;
 }) {
   const sites = useSites();
-  const units = useUnits();
+  const units = useDivisions();
   const reg = register as unknown as UseFormRegister<Place>;
   return (
     <>

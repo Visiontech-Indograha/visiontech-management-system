@@ -23,26 +23,25 @@ def test_employee_lifecycle(client, world):
     admin = world.headers(client, "admin")
 
     created = client.post("/employees", headers=admin, json={
-        "employee_no": "UJI-BARU", "full_name": "Karyawan Baru", "position": "Teknisi",
-        "unit_id": world.unit_id, "join_date": "2026-02-01"})
+        "employee_no": "UJI-BARU", "full_name": "Karyawan Baru", "office_id": world.org_id,
+        "division_id": world.unit_id, "join_date": "2026-02-01",
+        "address": {"address_line": "Jl. Uji Baru 1", "city": "Pekanbaru", "postal_code": "28111"}})
     assert created.status_code == 201, created.text
-    emp_id = created.json()["id"]
-    assert sync_query("SELECT full_name FROM vms.employee WHERE id = %s", (emp_id,)) == [("Karyawan Baru",)]
+    emp_id = created.json()["employee_id"]
+    assert created.json()["addresses"][0]["city"] == "Pekanbaru"
+    assert sync_query("SELECT full_name FROM employee WHERE employee_id = %s", (emp_id,)) == [("Karyawan Baru",)]
 
-    assert client.put(f"/employees/{emp_id}", headers=admin, json={"phone": "081200000000"}).status_code == 200
-    assert sync_query("SELECT phone FROM vms.employee WHERE id = %s", (emp_id,)) == [("081200000000",)]
+    updated = client.put(f"/employees/{emp_id}", headers=admin, json={"pkwt_end_date": "2027-02-01"})
+    assert updated.status_code == 200, updated.text
+    assert updated.json()["pkwt_end_date"] == "2027-02-01"
 
-    promoted = client.post(f"/employees/{emp_id}/assignments", headers=admin,
-                           json={"position": "Supervisor", "valid_from": "2026-09-01"})
-    assert promoted.status_code == 200, promoted.text
-    # Jabatan perdana (saat dibuat) ditutup, jabatan baru terbuka — riwayat tetap utuh.
-    assert sync_query("SELECT count(*) FROM vms.employee_assignment WHERE employee_id = %s", (emp_id,)) == [(2,)]
-    assert sync_query("SELECT position FROM vms.employee_assignment WHERE employee_id = %s AND valid_to IS NULL",
-                      (emp_id,)) == [("Supervisor",)]
+    address = client.post(f"/employees/{emp_id}/addresses", headers=admin,
+                          json={"address_line": "Jl. Kedua 2", "city": "Duri", "postal_code": "28884"})
+    assert address.status_code == 201, address.text
+    assert len(client.get(f"/employees/{emp_id}", headers=admin).json()["addresses"]) == 2
 
-    listed = client.get("/employees", headers=admin).json()
-    assert emp_id in {e["id"] for e in listed["items"]}
-
+    listed = client.get("/employees", headers=admin, params={"status": "active"}).json()
+    assert emp_id in {e["employee_id"] for e in listed["items"]}
 
 
 def test_personal_document_upload_and_hr_verification(client, world, fake_storage):
@@ -74,7 +73,7 @@ def test_site_and_attendance_day(client, world, fake_storage):
     member = world.headers(client, "member")
 
     # R-33: lokasi proyek dibuat PM untuk unitnya (bawahannya).
-    site = client.post("/sites", headers=pm, json={
+    site = client.post("/offices", headers=pm, json={
         "name": "Gedung uji", "location": {"lat": -6.21, "lng": 106.81}, "radius_m": 150})
     assert site.status_code == 201, site.text
     assert sync_query("SELECT radius_m FROM vms.site WHERE id = %s", (site.json()["id"],)) == [(150,)]

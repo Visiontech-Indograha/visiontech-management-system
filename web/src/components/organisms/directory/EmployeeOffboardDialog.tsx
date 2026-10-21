@@ -6,5 +6,5 @@ import type { Employee } from "@/services/employeeService";
  * clearance aset lengkap, PM & HR menyetujui, dan tanggal efektif tiba — dikelola di menu Offboarding.
  */
 export function EmployeeOffboardDialog({ employee, onClose }: { employee: Employee; onClose: () => void }) {
-  return <OffboardingFormDialog employee={{ id: employee.id, name: employee.full_name }} onClose={onClose} />;
+  return <OffboardingFormDialog employee={{ id: employee.employee_id, name: employee.full_name }} onClose={onClose} />;
 }

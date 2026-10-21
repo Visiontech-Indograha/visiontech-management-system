@@ -100,7 +100,7 @@ void main() {
     backend.routes['/work-plans/daily/d1/items'] = (_) => [
       {'item_id': 'i1'},
     ];
-    backend.routes['/sites'] = (_) => [
+    backend.routes['/offices'] = (_) => [
       {'id': 's1'},
     ];
     backend.routes['/overtime'] = (_) => <Object>[];

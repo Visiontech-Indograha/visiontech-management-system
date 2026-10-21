@@ -1,9 +1,8 @@
 """
 app/modules/employees/repositories/employee_repository.py
-Kueri direktori karyawan, penempatan, alamat, dan siklus offboarding (Master Schema V2).
-Tabel yang dikelola: employee, address, users, office, division.
+Karyawan V2. Relasi: employee N─1 office, N─1 division (opsional), N─1 job_position (opsional), 1─N address,
+1─1 users. Foto = file_object.storage_key di `photo_path` (dikembalikan sebagai id file_object).
 """
-
 from __future__ import annotations
 
 from typing import Any
@@ -11,287 +10,186 @@ from uuid import UUID
 
 from app.core.repository import BaseRepository
 
+_SELECT = """
+    SELECT e.employee_id, e.employee_no, e.full_name, e.office_id, o.name AS office_name,
+           e.division_id, d.name AS division_name, e.position_id, jp.code AS position_code, jp.name AS position_name,
+           e.join_date::date AS join_date, e.pkwt_end_date::date AS pkwt_end_date,
+           (SELECT f.id FROM file_object f WHERE f.storage_key = e.photo_path LIMIT 1) AS photo_file_id,
+           (e.face_embedding IS NOT NULL) AS face_enrolled, e.offboarding_status::text AS offboarding_status,
+           (e.delete_at IS NOT NULL) AS archived,
+           u.user_id, u.email, u.system_role::text AS system_role, u.is_active AS account_active,
+           (SELECT a.city FROM address a WHERE a.employee_id = e.employee_id AND a.delete_at IS NULL
+            ORDER BY a.create_at LIMIT 1) AS city,
+           e.create_at, e.update_at
+    FROM employee e
+    JOIN office o ON o.office_id = e.office_id
+    LEFT JOIN division d ON d.division_id = e.division_id
+    LEFT JOIN job_position jp ON jp.position_id = e.position_id
+    LEFT JOIN users u ON u.employee_id = e.employee_id AND u.delete_at IS NULL
+"""
+_FILTER = """
+    WHERE (CASE WHEN CAST(:status AS varchar) = 'archived' THEN e.delete_at IS NOT NULL ELSE e.delete_at IS NULL END)
+      AND (CAST(:status AS varchar) IS NULL OR CAST(:status AS varchar) IN ('all', 'archived')
+           OR e.offboarding_status::text = CAST(:status AS varchar))
+      AND (CAST(:div AS uuid) IS NULL OR e.division_id = CAST(:div AS uuid))
+      AND (CAST(:office AS uuid) IS NULL OR e.office_id = CAST(:office AS uuid))
+      AND (CAST(:pos AS uuid) IS NULL OR e.position_id = CAST(:pos AS uuid))
+      AND (CAST(:q AS varchar) IS NULL OR e.full_name ILIKE '%' || CAST(:q AS varchar) || '%'
+           OR e.employee_no ILIKE '%' || CAST(:q AS varchar) || '%' OR u.email ILIKE '%' || CAST(:q AS varchar) || '%')
+"""
+_UUIDS = ("office_id", "division_id", "position_id")
+
 
 class EmployeeRepository(BaseRepository):
-    """Repositori akses data profil karyawan dan alamat (tabel employee, address)."""
-    """
-    Operasi data karyawan untuk Master Schema V2.
-    """
+    """Query karyawan V2."""
 
     async def employee_of_user(self, user_id: UUID | str) -> UUID | None:
-        """Mendapatkan employee_id dari user_id."""
-        val = await self.scalar(
+        emp: UUID | None = await self.scalar(
             "SELECT employee_id FROM users WHERE user_id = CAST(:uid AS uuid) AND delete_at IS NULL",
-            {"uid": user_id},
+            {"uid": str(user_id)},
         )
-        return UUID(str(val)) if val else None
+        return emp
 
-    async def lock(self, employee_id: UUID | str, org_id: UUID | str) -> Any:
-        """Mengunci baris karyawan untuk transaksi aman."""
+    async def lock(self, employee_id: UUID | str, org_id: UUID | str | None = None) -> Any:
+        """Baris karyawan untuk transaksi (dipakai juga modul accounts)."""
         return await self.fetchone(
             """
             SELECT employee_id AS id, delete_at IS NOT NULL AS deleted,
-                   (offboarding_status != 'offboarded') AS is_active,
-                   CAST(division_id AS text) AS unit_id
-            FROM employee
-            WHERE employee_id = CAST(:id AS uuid)
-            FOR UPDATE
+                   (offboarding_status <> 'offboarded') AS is_active, offboarding_status::text AS offboarding_status
+            FROM employee WHERE employee_id = CAST(:id AS uuid) FOR UPDATE
             """,
-            {"id": employee_id},
+            {"id": str(employee_id)},
         )
 
-    async def restore(self, employee_id: UUID | str) -> None:
-        """Memulihkan karyawan dari status offboarded."""
-        await self.execute(
-            """
-            UPDATE employee
-            SET offboarding_status = 'active', delete_at = NULL, update_at = now()
-            WHERE employee_id = CAST(:id AS uuid)
-            """,
-            {"id": employee_id},
-        )
-        await self.execute(
-            "UPDATE users SET is_active = true, update_at = now() WHERE employee_id = CAST(:id AS uuid)",
-            {"id": employee_id},
-        )
+    def _params(self, *, status: str | None, division_id: UUID | None, office_id: UUID | None,
+                position_id: UUID | None, q: str | None) -> dict[str, Any]:
+        return {"status": status, "div": str(division_id) if division_id else None,
+                "office": str(office_id) if office_id else None, "pos": str(position_id) if position_id else None,
+                "q": q}
 
-    async def archive(self, employee_id: UUID | str) -> None:
-        """Soft delete karyawan."""
-        await self.execute(
-            """
-            UPDATE employee
-            SET delete_at = now(), offboarding_status = 'offboarded', update_at = now()
-            WHERE employee_id = CAST(:id AS uuid)
-            """,
-            {"id": employee_id},
-        )
-        await self.execute(
-            "UPDATE users SET is_active = false, delete_at = now(), update_at = now() "
-            "WHERE employee_id = CAST(:id AS uuid)",
-            {"id": employee_id},
-        )
+    async def count(self, **filters: Any) -> int:
+        n = await self.scalar(
+            "SELECT COUNT(*) FROM employee e LEFT JOIN users u ON u.employee_id = e.employee_id "
+            "AND u.delete_at IS NULL" + _FILTER, self._params(**filters))
+        return int(n or 0)
 
-    async def assignments(self, employee_id: UUID | str, org_id: UUID | str) -> list[Any] | None:
-        """Riwayat penempatan divisi/kantor karyawan."""
-        row = await self.fetchone(
-            """
-            SELECT
-                e.employee_id AS id,
-                e.employee_id,
-                COALESCE(u.system_role::text, 'EMPLOYEE') AS position,
-                e.division_id AS unit_id,
-                d.name AS unit_name,
-                e.join_date::date AS valid_from,
-                e.pkwt_end_date::date AS valid_to
-            FROM employee e
-            LEFT JOIN division d ON d.division_id = e.division_id
-            LEFT JOIN users u ON u.employee_id = e.employee_id
-            WHERE e.employee_id = CAST(:id AS uuid) AND e.delete_at IS NULL
-            """,
-            {"id": employee_id},
-        )
-        return [row] if row else []
+    async def page(self, limit: int, offset: int, **filters: Any) -> list[Any]:
+        return list(await self.fetchall(
+            _SELECT + _FILTER + " ORDER BY e.full_name LIMIT :limit OFFSET :offset",
+            {**self._params(**filters), "limit": limit, "offset": offset},
+        ))
 
-    async def last_assignment_start(self, employee_id: UUID | str) -> Any:
-        return await self.scalar(
-            "SELECT join_date::date FROM employee WHERE employee_id = CAST(:id AS uuid)",
-            {"id": employee_id},
-        )
+    async def get(self, employee_id: UUID | str) -> Any:
+        return await self.fetchone(_SELECT + " WHERE e.employee_id = CAST(:id AS uuid)", {"id": str(employee_id)})
 
-    async def promote(self, employee_id: UUID | str, position: str, unit_id: str | None, valid_from: Any) -> Any:
-        """Memutasi karyawan ke divisi baru."""
-        await self.execute(
-            """
-            UPDATE employee
-            SET division_id = CAST(:unit AS uuid), update_at = now()
-            WHERE employee_id = CAST(:id AS uuid)
-            """,
-            {"id": employee_id, "unit": unit_id},
-        )
+    async def addresses(self, employee_id: UUID | str) -> list[Any]:
+        return list(await self.fetchall(
+            "SELECT address_id, address_line, city, postal_code FROM address "
+            "WHERE employee_id = CAST(:id AS uuid) AND delete_at IS NULL ORDER BY create_at",
+            {"id": str(employee_id)},
+        ))
+
+    # ── Validasi referensi ────────────────────────────────────────────────────
+    async def employee_no_taken(self, employee_no: str, exclude: UUID | None = None) -> bool:
+        return bool(await self.scalar(
+            "SELECT EXISTS (SELECT 1 FROM employee WHERE employee_no = :no AND delete_at IS NULL "
+            "AND (CAST(:ex AS uuid) IS NULL OR employee_id <> CAST(:ex AS uuid)))",
+            {"no": employee_no, "ex": str(exclude) if exclude else None},
+        ))
+
+    async def refs(self, office_id: UUID | None, division_id: UUID | None, position_id: UUID | None) -> Any:
+        """Kantor ada? divisi aktif? jabatan aktif & divisinya (NULL = lintas divisi)?"""
         return await self.fetchone(
             """
-            SELECT
-                e.employee_id AS id, e.employee_id, :pos AS position, e.division_id AS unit_id,
-                :start AS valid_from, e.pkwt_end_date::date AS valid_to
-            FROM employee e WHERE e.employee_id = CAST(:id AS uuid)
+            SELECT (CAST(:office AS uuid) IS NULL OR EXISTS (SELECT 1 FROM office
+                    WHERE office_id = CAST(:office AS uuid)
+                    AND delete_at IS NULL)) AS office_ok,
+                   (CAST(:div AS uuid) IS NULL OR EXISTS (SELECT 1 FROM division WHERE division_id = CAST(:div AS uuid)
+                    AND delete_at IS NULL AND status)) AS division_ok,
+                   (CAST(:pos AS uuid) IS NULL OR EXISTS (SELECT 1 FROM job_position
+                    WHERE position_id = CAST(:pos AS uuid) AND delete_at IS NULL AND status)) AS position_ok,
+                   (SELECT division_id FROM job_position WHERE position_id = CAST(:pos AS uuid)) AS position_division
             """,
-            {"id": employee_id, "pos": position, "start": valid_from},
+            {"office": str(office_id) if office_id else None, "div": str(division_id) if division_id else None,
+             "pos": str(position_id) if position_id else None},
         )
 
-    async def on_running_plan(self, employee_id: UUID | str) -> bool:
-        """Masih terikat jadwal harian yang belum selesai (hari ini/ke depan, disetujui atau berjalan) — sebagai
-        anggota/ketua tim jadwal itu atau PM/OM divisinya."""
-        return bool(
-            await self.scalar(
-                """
-            SELECT EXISTS (
-                SELECT 1 FROM work_plan_daily wpd
-                JOIN division d ON d.division_id = wpd.division_id
-                WHERE wpd.delete_at IS NULL AND wpd.status IN ('APPROVED', 'ONGOING')
-                  AND wpd.work_date >= (now() AT TIME ZONE 'Asia/Jakarta')::date
-                  AND (CAST(:emp AS uuid) IN (d.pm_id, d.om_id)
-                       OR EXISTS (SELECT 1 FROM member m WHERE m.team_id = wpd.team_id
-                                  AND m.employee_id = CAST(:emp AS uuid) AND m.is_active AND m.delete_at IS NULL))
-            )
-            """,
-                {"emp": str(employee_id)},
-            )
+    async def image_key(self, file_id: UUID) -> str | None:
+        key: str | None = await self.scalar(
+            "SELECT storage_key FROM file_object WHERE id = CAST(:id AS uuid) AND mime_type LIKE 'image/%'",
+            {"id": str(file_id)},
         )
+        return key
 
-    _SELECT_FIELDS = """
-        e.employee_id AS id,
-        e.employee_no,
-        e.full_name,
-        COALESCE(u.system_role::text, 'EMPLOYEE') AS position,
-        e.division_id AS unit_id,
-        u.email,
-        NULL::text AS phone,
-        e.join_date::date AS join_date,
-        NULL::date AS birth_date,
-        addr.full_address AS address,
-        CASE
-            WHEN u.system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'ADMIN_HR_GA') THEN 'OFFICE'
-            ELSE 'FIELD'
-        END AS attendance_mode,
-        (e.offboarding_status != 'offboarded') AS is_active,
-        CASE WHEN e.offboarding_status = 'offboarded' THEN e.update_at ELSE NULL END AS offboarded_at,
-        CASE WHEN e.offboarding_status != 'active' THEN e.offboarding_status::text ELSE NULL END AS offboarding_reason,
-        NULL::uuid AS photo_file_id
-    """
-
-    @staticmethod
-    def _filter(is_active: bool | None, q: str | None) -> tuple[str, dict[str, Any]]:
-        where = ["e.delete_at IS NULL"]
-        params: dict[str, Any] = {}
-        if is_active is True:
-            where.append("e.offboarding_status != 'offboarded'")
-        elif is_active is False:
-            where.append("e.offboarding_status = 'offboarded'")
-        if q:
-            where.append("(e.full_name ILIKE :q OR e.employee_no ILIKE :q OR u.email ILIKE :q)")
-            params["q"] = f"%{q}%"
-        return " AND ".join(where), params
-
-    async def count_in_org(self, org_id: UUID | str, is_active: bool | None, q: str | None) -> int:
-        where_sql, params = self._filter(is_active, q)
-        sql = f"""
-            SELECT COUNT(*) AS n
-            FROM employee e
-            LEFT JOIN users u ON u.employee_id = e.employee_id AND u.delete_at IS NULL
-            WHERE {where_sql}
-        """
-        row = await self.fetchone(sql, params)
-        return int(row.n) if row else 0
-
-    async def page_in_org(
-        self, org_id: UUID | str, is_active: bool | None, q: str | None, limit: int, offset: int
-    ) -> list[Any]:
-        where_sql, params = self._filter(is_active, q)
-        sql = f"""
-            SELECT {self._SELECT_FIELDS}
-            FROM employee e
-            LEFT JOIN users u ON u.employee_id = e.employee_id AND u.delete_at IS NULL
-            LEFT JOIN LATERAL (
-                SELECT string_agg(a.address_line || ', ' || a.city, '; ') AS full_address
-                FROM address a
-                WHERE a.employee_id = e.employee_id AND a.delete_at IS NULL
-            ) addr ON true
-            WHERE {where_sql}
-            ORDER BY e.full_name ASC
-            LIMIT :limit OFFSET :offset
-        """
-        return list(await self.fetchall(sql, {**params, "limit": limit, "offset": offset}))
-
-    async def get_in_org(self, employee_id: UUID | str, org_id: UUID | str) -> Any:
-        sql = f"""
-            SELECT {self._SELECT_FIELDS}
-            FROM employee e
-            LEFT JOIN users u ON u.employee_id = e.employee_id AND u.delete_at IS NULL
-            LEFT JOIN LATERAL (
-                SELECT string_agg(a.address_line || ', ' || a.city, '; ') AS full_address
-                FROM address a
-                WHERE a.employee_id = e.employee_id AND a.delete_at IS NULL
-            ) addr ON true
-            WHERE e.employee_id = CAST(:id AS uuid) AND e.delete_at IS NULL
-        """
-        return await self.fetchone(sql, {"id": employee_id})
-
-    async def insert(self, org_id: UUID | str, data: dict[str, Any]) -> Any:
-        """Membuat karyawan baru."""
-        row = await self.fetchone(
+    # ── Tulis ─────────────────────────────────────────────────────────────────
+    async def insert(self, data: dict[str, Any]) -> UUID:
+        new_id: UUID = await self.scalar(
             """
-            INSERT INTO employee (
-                office_id, division_id, full_name, employee_no, join_date, offboarding_status
-            )
-            VALUES (
-                COALESCE(CAST(:office_id AS uuid), '11111111-0000-4000-a000-000000000001'::uuid),
-                CAST(:unit_id AS uuid),
-                :full_name,
-                :employee_no,
-                CAST(:join_date AS timestamptz),
-                'active'
-            )
-            RETURNING employee_id AS id, full_name, employee_no, join_date, offboarding_status
+            INSERT INTO employee (office_id, division_id, position_id, full_name, employee_no, join_date,
+                                  pkwt_end_date, photo_path, profile_photo_path)
+            VALUES (CAST(:office_id AS uuid), CAST(:division_id AS uuid), CAST(:position_id AS uuid), :full_name,
+                    :employee_no, CAST(:join_date AS timestamptz), CAST(:pkwt_end_date AS timestamptz),
+                    :photo_path, :photo_path)
+            RETURNING employee_id
             """,
-            {
-                "office_id": data.get("office_id"),
-                "unit_id": data.get("unit_id"),
-                "full_name": data["full_name"],
-                "employee_no": data["employee_no"],
-                "join_date": data["join_date"],
-            },
+            {**data, **{k: str(data[k]) if data.get(k) else None for k in _UUIDS}},
         )
-        if data.get("address"):
-            await self.execute(
-                """
-                INSERT INTO address (employee_id, address_line, city, postal_code)
-                VALUES (:emp, :addr, 'Medan', '20111')
-                """,
-                {"emp": row.id, "addr": data["address"]},
-            )
-        return await self.get_in_org(row.id, org_id)
+        return new_id
 
-    async def update_fields(self, employee_id: UUID | str, org_id: UUID | str, fields: dict[str, Any]) -> Any:
-        """Update atribut karyawan."""
-        if "full_name" in fields:
-            await self.execute(
-                "UPDATE employee SET full_name = :name, update_at = now() WHERE employee_id = CAST(:id AS uuid)",
-                {"id": employee_id, "name": fields["full_name"]},
-            )
-        if "address" in fields:
-            await self.execute(
-                """
-                INSERT INTO address (employee_id, address_line, city, postal_code)
-                VALUES (CAST(:id AS uuid), :addr, 'Medan', '20111')
-                ON CONFLICT DO NOTHING
-                """,
-                {"id": employee_id, "addr": fields["address"]},
-            )
-        return await self.get_in_org(employee_id, org_id)
-
-    async def conflicts(
-        self, employee_id: UUID | str, start: Any, end: Any, exclude_plan: UUID | str | None
-    ) -> list[Any]:
-        """Jadwal harian lain dalam rentang tanggal yang sudah mengikat karyawan (anggota tim jadwal itu)."""
-        return list(
-            await self.fetchall(
-                """
-            SELECT wpd.daily_plan_id AS work_plan_id, to_char(wpd.work_date, 'DD/MM/YYYY') AS number,
-                   t.name || ' · ' || wpd.site_name AS title
-            FROM work_plan_daily wpd
-            JOIN team t ON t.team_id = wpd.team_id
-            JOIN member m ON m.team_id = wpd.team_id AND m.employee_id = CAST(:emp AS uuid)
-                         AND m.is_active AND m.delete_at IS NULL
-            WHERE wpd.delete_at IS NULL AND wpd.status <> 'COMPLETED'
-              AND wpd.work_date BETWEEN :start AND :end
-              AND (CAST(:ex AS uuid) IS NULL OR wpd.daily_plan_id <> CAST(:ex AS uuid))
-            ORDER BY wpd.work_date
-            """,
-                {"emp": str(employee_id), "start": start, "end": end,
-                 "ex": str(exclude_plan) if exclude_plan else None},
-            )
+    async def update(self, employee_id: UUID, fields: dict[str, Any]) -> None:
+        if not fields:
+            return
+        casts = {**dict.fromkeys(_UUIDS, "uuid"), "join_date": "timestamptz", "pkwt_end_date": "timestamptz"}
+        sets = []
+        for k in fields:
+            col = k
+            sets.append(f"{col} = CAST(:{k} AS {casts[k]})" if k in casts else f"{col} = :{k}")
+            if k == "photo_path":
+                sets.append("profile_photo_path = :photo_path")
+        await self.execute(
+            f"UPDATE employee SET {', '.join(sets)}, update_at = now() WHERE employee_id = CAST(:id AS uuid)",
+            {**{k: (str(v) if k in _UUIDS and v else v) for k, v in fields.items()}, "id": str(employee_id)},
         )
 
+    async def add_address(self, employee_id: UUID | str, data: dict[str, Any]) -> Any:
+        return await self.fetchone(
+            "INSERT INTO address (employee_id, address_line, city, postal_code) "
+            "VALUES (CAST(:emp AS uuid), :address_line, :city, :postal_code) "
+            "RETURNING address_id, address_line, city, postal_code",
+            {**data, "emp": str(employee_id)},
+        )
 
-# Alias backward compatibility
+    async def update_address(self, employee_id: UUID, address_id: UUID, data: dict[str, Any]) -> Any:
+        return await self.fetchone(
+            "UPDATE address SET address_line = :address_line, city = :city, postal_code = :postal_code, "
+            "update_at = now() WHERE address_id = CAST(:id AS uuid) AND employee_id = CAST(:emp AS uuid) "
+            "AND delete_at IS NULL RETURNING address_id, address_line, city, postal_code",
+            {**data, "id": str(address_id), "emp": str(employee_id)},
+        )
+
+    async def delete_address(self, employee_id: UUID, address_id: UUID) -> bool:
+        done = await self.scalar(
+            "UPDATE address SET delete_at = now(), update_at = now() WHERE address_id = CAST(:id AS uuid) "
+            "AND employee_id = CAST(:emp AS uuid) AND delete_at IS NULL RETURNING address_id",
+            {"id": str(address_id), "emp": str(employee_id)},
+        )
+        return done is not None
+
+    async def archive(self, employee_id: UUID) -> None:
+        """Arsip (soft delete) karyawan yang sudah offboarded; akun ikut diarsipkan."""
+        params = {"id": str(employee_id)}
+        await self.execute("UPDATE employee SET delete_at = now(), update_at = now() "
+                           "WHERE employee_id = CAST(:id AS uuid)", params)
+        await self.execute("UPDATE users SET is_active = FALSE, delete_at = now(), update_at = now() "
+                           "WHERE employee_id = CAST(:id AS uuid)", params)
+
+    async def restore(self, employee_id: UUID) -> None:
+        """Batal arsip: data kembali terlihat, status tetap offboarded (akses baru lewat HR)."""
+        params = {"id": str(employee_id)}
+        await self.execute("UPDATE employee SET delete_at = NULL, update_at = now() "
+                           "WHERE employee_id = CAST(:id AS uuid)", params)
+        await self.execute("UPDATE users SET delete_at = NULL, update_at = now() "
+                           "WHERE employee_id = CAST(:id AS uuid)", params)
+
+
 CRUDEmployee = EmployeeRepository

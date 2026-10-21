@@ -10,6 +10,7 @@ WeasyPrint==70.0
 pydyf==0.12.1  # dikunci bersama WeasyPrint (62.x rusak dengan pydyf >= 0.11; 70.0 butuh versi baru)
 Jinja2==3.1.6
 argon2-cffi==23.1.0
+bcrypt==4.2.1  # verifikasi hash $2b$ dari seed DB V2 (login), hash baru tetap argon2
 PyJWT==2.14.0
 cryptography==50.0.1
 minio==7.2.5

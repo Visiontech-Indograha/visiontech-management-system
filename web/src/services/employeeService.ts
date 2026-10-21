@@ -3,14 +3,18 @@ import { api } from "@/lib/apiClient";
 import type { components } from "@/lib/apiTypes";
 
 type S = components["schemas"];
-export type Employee = S["EmployeeResponse"];
+export type Employee = S["EmployeeOut"] & Partial<Pick<S["EmployeeDetail"], "addresses">>;
+export type EmployeeDetail = S["EmployeeDetail"];
 export type EmployeeList = S["EmployeeListResponse"];
+export type EmployeeCreate = S["EmployeeCreate"];
 export type EmployeeUpdate = S["EmployeeUpdate"];
+export type Address = S["AddressOut"];
+export type AddressIn = S["AddressIn"];
+export type Division = S["DivisionOut"];
+export type Office = S["OfficeResponse"];
+export type JobPosition = S["JobPositionOut"];
 export type EmployeeDocument = S["EmployeeDocumentResponse"];
 export type EmployeeDocumentCreate = S["EmployeeDocumentCreate"];
-export type EmergencyContact = S["EmergencyContactResponse"];
-export type EmergencyContactCreate = S["EmergencyContactCreate"];
-export type EmergencyContactUpdate = S["EmergencyContactUpdate"];
 type DocumentList = S["DocumentListResponse"];
 
 /** POST /files/upload belum punya skema respons di OpenAPI; bentuknya dari api/app/api/files.py. */
@@ -23,19 +27,21 @@ export const PAGE_SIZE = 25;
 
 export interface EmployeeFilters {
   q?: string;
+  /** "" = semua yang belum diarsipkan; active | in_process | offboarded | archived. */
   status: string;
   page: number;
+  division_id?: string;
 }
 
 export function useEmployees(f: EmployeeFilters) {
   return useQuery({
     queryKey: ["employees", f],
     queryFn: async () => {
-      const is_active = f.status === "active" ? true : f.status === "inactive" ? false : undefined;
       const params = {
         page: f.page,
         size: PAGE_SIZE,
-        ...(is_active !== undefined ? { is_active } : {}),
+        ...(f.status ? { status: f.status } : {}),
+        ...(f.division_id ? { division_id: f.division_id } : {}),
         ...(f.q ? { q: f.q } : {}),
       };
       return (await api.get<EmployeeList>("/employees", { params })).data;
@@ -44,20 +50,12 @@ export function useEmployees(f: EmployeeFilters) {
   });
 }
 
-/** Detail karyawan: baris dari daftar/cache bila ada, selain itu GET /employees/{id} (tautan langsung). */
+/** Detail karyawan + alamat (GET /employees/{id}); baris daftar dipakai sebagai tampilan awal. */
 export function useEmployee(id: string, fromList?: Employee) {
-  const qc = useQueryClient();
   return useQuery({
     queryKey: ["employee", id],
-    queryFn: async () => {
-      const cached = qc
-        .getQueriesData<EmployeeList>({ queryKey: ["employees"] })
-        .flatMap(([, data]) => data?.items ?? [])
-        .find((e) => e.id === id);
-      return cached ?? (await api.get<Employee>(`/employees/${id}`)).data;
-    },
-    initialData: fromList,
-    staleTime: Infinity,
+    queryFn: async (): Promise<Employee> => (await api.get<EmployeeDetail>(`/employees/${id}`)).data,
+    placeholderData: fromList,
     retry: false,
   });
 }
@@ -73,7 +71,7 @@ export function useEmployeeDocuments(employeeId: string, enabled = true) {
 export function useUpdateEmployee(id: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (body: EmployeeUpdate) => (await api.put<Employee>(`/employees/${id}`, body)).data,
+    mutationFn: async (body: EmployeeUpdate) => (await api.put<EmployeeDetail>(`/employees/${id}`, body)).data,
     onSuccess: async (employee) => {
       qc.setQueryData(["employee", id], employee);
       await qc.invalidateQueries({ queryKey: ["employees"] });
@@ -132,31 +130,31 @@ export function useRestoreEmployee(id: string) {
   });
 }
 
-export type Assignment = S["EmployeeAssignmentResponse"];
-export type Unit = S["UnitOut"];
+/** Master V2 (Milestone 10): kantor, divisi, jabatan — pilihan form karyawan. */
+export const useOffices = () =>
+  useQuery({ queryKey: ["offices"], staleTime: 5 * 60_000, queryFn: async () => (await api.get<Office[]>("/offices")).data });
 
-/** Unit organisasi (GET /units) — pilihan unit mutasi/promosi & nama unit karyawan. */
-export const useUnits = () =>
-  useQuery({ queryKey: ["units"], staleTime: 5 * 60_000, queryFn: async () => (await api.get<Unit[]>("/units")).data });
+export const useDivisions = () =>
+  useQuery({ queryKey: ["divisions"], staleTime: 5 * 60_000, queryFn: async () => (await api.get<Division[]>("/divisions")).data });
 
-/** Riwayat jabatan/penempatan, terbaru dulu (GET /employees/{id}/assignments). */
-export const useAssignments = (employeeId: string) =>
+export const useJobPositions = () =>
   useQuery({
-    queryKey: ["employee-assignments", employeeId],
-    queryFn: async () => (await api.get<Assignment[]>(`/employees/${employeeId}/assignments`)).data,
+    queryKey: ["job-positions"],
+    staleTime: 5 * 60_000,
+    queryFn: async () => (await api.get<JobPosition[]>("/job-positions")).data,
   });
 
-/** HR: mutasi/promosi (POST /employees/{id}/assignments, domain.js PROMOTE). */
-export function usePromoteEmployee(employeeId: string) {
+/** Alamat karyawan (HR): tambah / ubah / hapus. */
+export function useAddressAction(employeeId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (body: S["EmployeeAssignmentCreate"]) =>
-      (await api.post<Assignment>(`/employees/${employeeId}/assignments`, body)).data,
-    onSuccess: async () => {
-      await qc.invalidateQueries({ queryKey: ["employee", employeeId] });
-      await qc.invalidateQueries({ queryKey: ["employee-assignments", employeeId] });
-      await qc.invalidateQueries({ queryKey: ["employees"] });
+    mutationFn: async (a: { kind: "add"; body: AddressIn } | { kind: "update"; id: string; body: AddressIn } | { kind: "delete"; id: string }) => {
+      const base = `/employees/${employeeId}/addresses`;
+      if (a.kind === "add") return (await api.post<Address>(base, a.body)).data;
+      if (a.kind === "update") return (await api.put<Address>(`${base}/${a.id}`, a.body)).data;
+      return (await api.delete(`${base}/${a.id}`)).data;
     },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["employee", employeeId] }),
   });
 }
 
@@ -164,7 +162,7 @@ export function usePromoteEmployee(employeeId: string) {
 export function useCreateEmployee() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (body: S["EmployeeCreate"]) => (await api.post<Employee>("/employees", body)).data,
+    mutationFn: async (body: EmployeeCreate) => (await api.post<EmployeeDetail>("/employees", body)).data,
     onSuccess: () => qc.invalidateQueries({ queryKey: ["employees"] }),
   });
 }
@@ -192,46 +190,3 @@ export function useAccountAction(employeeId: string) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["employee-account", employeeId] }),
   });
 }
-
-/** Kontak darurat karyawan (GET /employees/{id}/emergency-contacts). */
-export function useEmergencyContacts(employeeId: string) {
-  return useQuery({
-    queryKey: ["employee-emergency-contacts", employeeId],
-    queryFn: async () =>
-      (await api.get<EmergencyContact[]>(`/employees/${employeeId}/emergency-contacts`)).data,
-  });
-}
-
-/** Tambah kontak darurat (POST /employees/{id}/emergency-contacts). */
-export function useCreateEmergencyContact(employeeId: string) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (body: EmergencyContactCreate) =>
-      (await api.post<EmergencyContact>(`/employees/${employeeId}/emergency-contacts`, body)).data,
-    onSuccess: () =>
-      qc.invalidateQueries({ queryKey: ["employee-emergency-contacts", employeeId] }),
-  });
-}
-
-/** Ubah kontak darurat (PUT /employees/{id}/emergency-contacts/{contactId}). */
-export function useUpdateEmergencyContact(employeeId: string) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async ({ contactId, ...body }: { contactId: string } & EmergencyContactUpdate) =>
-      (await api.put<EmergencyContact>(`/employees/${employeeId}/emergency-contacts/${contactId}`, body)).data,
-    onSuccess: () =>
-      qc.invalidateQueries({ queryKey: ["employee-emergency-contacts", employeeId] }),
-  });
-}
-
-/** Hapus kontak darurat (DELETE /employees/{id}/emergency-contacts/{contactId}). */
-export function useDeleteEmergencyContact(employeeId: string) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (contactId: string) =>
-      (await api.delete<{ message: string }>(`/employees/${employeeId}/emergency-contacts/${contactId}`)).data,
-    onSuccess: () =>
-      qc.invalidateQueries({ queryKey: ["employee-emergency-contacts", employeeId] }),
-  });
-}
-

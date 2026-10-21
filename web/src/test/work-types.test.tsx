@@ -30,7 +30,7 @@ describe("Jenis Pekerjaan (/work-types)", () => {
   it("menampilkan daftar jenis pekerjaan dengan badge divisi", async () => {
     mockApi((c) => {
       if (c.url === "/work-types") return { data: [mockWorkType] };
-      if (c.url === "/units") return { data: mockUnits };
+      if (c.url === "/divisions") return { data: mockUnits };
     });
 
     renderRoute("/work-types", { role: "PM" });
@@ -43,7 +43,7 @@ describe("Jenis Pekerjaan (/work-types)", () => {
   it("dialog tambah: otomatis mengisi division_id dari user login", async () => {
     const calls = mockApi((c) => {
       if (c.url === "/work-types" && c.method === "get") return { data: [] };
-      if (c.url === "/units") return { data: mockUnits };
+      if (c.url === "/divisions") return { data: mockUnits };
       if (c.url === "/work-types" && c.method === "post") {
         return { status: 201, data: { ...mockWorkType, id: "wt-new", name: "Penarikan Kabel" } };
       }
@@ -85,7 +85,7 @@ describe("Jenis Pekerjaan (/work-types)", () => {
   it("dialog ubah: mempertahankan division_id jenis pekerjaan dan dapat diperbarui", async () => {
     const calls = mockApi((c) => {
       if (c.url === "/work-types" && c.method === "get") return { data: [mockWorkType] };
-      if (c.url === "/units") return { data: mockUnits };
+      if (c.url === "/divisions") return { data: mockUnits };
       if (c.url === "/work-types/wt-01" && c.method === "put") {
         return { status: 200, data: mockWorkType };
       }

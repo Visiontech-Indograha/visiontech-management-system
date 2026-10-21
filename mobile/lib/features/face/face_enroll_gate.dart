@@ -7,11 +7,11 @@ import '../auth/auth_controller.dart';
 import 'face_flow.dart';
 
 /// Status wajah akun ini. Galat (mis. tanpa sinyal) TIDAK memblokir: pekerja lapangan harus tetap bisa masuk saat
-/// luring; gerbang hanya menutup bila server SECARA EKSPLISIT menyatakan `enrollment_required`.
+/// luring; gerbang hanya menutup bila server SECARA EKSPLISIT menyatakan wajib (`required`) dan belum terdaftar.
 final faceGateProvider = FutureProvider.autoDispose<bool>((ref) async {
   try {
     final st = await ref.read(syncEngineProvider).api.faceStatus();
-    return st['enrollment_required'] == true;
+    return st['required'] == true && st['enrolled'] != true;
   } catch (_) {
     return false;
   }
@@ -47,20 +47,6 @@ class _EnrollRequiredScreenState extends ConsumerState<_EnrollRequiredScreen> {
   Future<void> _start() async {
     setState(() => _busy = true);
     try {
-      final api = ref.read(syncEngineProvider).api;
-      final st = await api.faceStatus();
-      if (st['consent'] != 'GRANTED') {
-        final policy = await api.facePolicy();
-        if (!mounted) return;
-        final ok = await showFaceConsentDialog(
-          context,
-          text: '${policy['text']}',
-          version: '${policy['version']}',
-        );
-        if (!ok) return;
-        await api.setFaceConsent('GRANTED', policyVersion: '${policy['version']}');
-      }
-      if (!mounted) return;
       final out = await runFaceEnrollment(context, ref);
       if (!mounted) return;
       if (out.message != null) {
@@ -92,7 +78,7 @@ class _EnrollRequiredScreenState extends ConsumerState<_EnrollRequiredScreen> {
               const SizedBox(height: 8),
               Text(
                 'Absensi memakai pengenalan wajah. Pendaftaran wajib dilakukan sekali sebelum Anda dapat membuka menu '
-                'lainnya. Siapkan tempat dengan cahaya cukup, lalu ikuti petunjuk gerakan di kamera.',
+                'lainnya. Siapkan tempat dengan cahaya cukup, lalu ikuti petunjuk pose di kamera.',
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodyMedium,
               ),

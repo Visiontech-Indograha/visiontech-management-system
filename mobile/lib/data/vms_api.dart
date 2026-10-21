@@ -1,6 +1,4 @@
-import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 
@@ -19,140 +17,84 @@ class VmsApi {
   List<Map<String, dynamic>> _list(dynamic data) =>
       (data as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
 
-  // --- SK / rencana kerja -------------------------------------------------
-  Future<List<Map<String, dynamic>>> workPlans() async =>
-      _list((await _dio.get('$_p/work-plans')).data);
+  Map<String, dynamic> _map(dynamic data) => Map<String, dynamic>.from(data as Map);
 
-  Future<Map<String, dynamic>> workPlan(String planId) async =>
-      Map<String, dynamic>.from(
-        (await _dio.get('$_p/work-plans/$planId')).data as Map,
-      );
+  // --- Jadwal harian (Milestone 5–6, daily-first) -------------------------
+  /// Jadwal tim saya dalam rentang tanggal (lapangan hanya melihat yang sudah disetujui).
+  Future<List<Map<String, dynamic>>> dailyPlans({required String start, required String end}) async =>
+      _list((await _dio.get('$_p/work-plans/daily', queryParameters: {'start': start, 'end': end})).data);
 
-  Future<List<Map<String, dynamic>>> planDays(String planId) async =>
-      _list((await _dio.get('$_p/work-plans/$planId/days')).data);
+  Future<Map<String, dynamic>> dailyPlan(String id) async => _map((await _dio.get('$_p/work-plans/daily/$id')).data);
 
-  /// Penerimaan SK wajib daring karena menandatangani dokumen di server.
-  Future<Map<String, dynamic>> acceptPlan(
-    String planId, {
-    required int rowVersion,
-  }) async => Map<String, dynamic>.from(
-    (await _dio.post(
-          '$_p/work-plans/$planId/accept',
-          data: {'row_version': rowVersion, 'reason': ''},
-        )).data
-        as Map,
-  );
+  /// Ketua tim memulai hari kerja (APPROVED → ONGOING) / menutupnya (→ COMPLETED).
+  Future<Map<String, dynamic>> startDay(String id) async =>
+      _map((await _dio.post('$_p/work-plans/daily/$id/start')).data);
 
-  /// Alur SK v2: isi lengkap SK (tim, alat & kendaraan, detail pekerjaan per hari).
-  Future<Map<String, dynamic>> planDetail(String planId) async =>
-      Map<String, dynamic>.from(
-        (await _dio.get('$_p/work-plans/$planId/detail')).data as Map,
-      );
+  Future<Map<String, dynamic>> completeDay(String id) async =>
+      _map((await _dio.post('$_p/work-plans/daily/$id/complete')).data);
 
-  /// Dokumen SK (versi terbit, revisi, adendum), urut versi naik — yang terbaru di posisi terakhir.
-  Future<List<Map<String, dynamic>>> planDocuments(String planId) async =>
-      _list((await _dio.get('$_p/work-plans/$planId/documents')).data);
+  Future<List<Map<String, dynamic>>> dayItems(String dayId) async =>
+      _list((await _dio.get('$_p/work-plans/daily/$dayId/items')).data);
 
-  /// HTML A4 yang sama persis dengan PDF (isi + tanda tangan + QR) untuk "Tinjau SK".
-  Future<String> documentHtml(String documentId) async =>
-      (await _dio.get<String>(
-        '$_p/documents/$documentId/html',
-        options: Options(responseType: ResponseType.plain),
-      )).data ??
-      '';
+  Future<Map<String, dynamic>> planItem(String itemId) async =>
+      _map((await _dio.get('$_p/work-plans/items/$itemId')).data);
 
-  /// "Ajukan adendum" ketua atas SK terbit (alasan wajib) — status menjadi Adendum diminta.
-  Future<Map<String, dynamic>> requestAmendment(
-    String planId, {
-    required int rowVersion,
+  /// Progres titik (jadwal ONGOING): `photos` = [{file_id, requirement_id?}] menggantikan foto sebelumnya.
+  Future<Map<String, dynamic>> updateProgress(
+    String itemId, {
+    required num completedQty,
+    List<Map<String, String?>>? photos,
+    String? notes,
+  }) async => _map((await _dio.patch(
+    '$_p/work-plans/items/$itemId/progress',
+    data: {'completed_qty': completedQty, 'photos': ?photos, 'notes': ?notes},
+  )).data);
+
+  /// Ketua: pekerjaan belum selesai → minta digeser (diputus PM).
+  Future<Map<String, dynamic>> requestRollover(String itemId, {required String reason, required num completedQty}) async =>
+      _map((await _dio.post(
+        '$_p/work-plans/items/$itemId/request-rollover',
+        data: {'delay_reason': reason, 'completed_qty': completedQty},
+      )).data);
+
+  /// Syarat foto (slot) jenis pekerjaan item.
+  Future<List<Map<String, dynamic>>> imageRequirements(String workTypeId) async =>
+      _list((await _dio.get('$_p/image-requirements/by-work-type/$workTypeId')).data);
+
+  /// Aset yang dialokasikan ke jadwal tim (Milestone 4).
+  Future<List<Map<String, dynamic>>> dayAssets(String dayId) async =>
+      _list((await _dio.get('$_p/work-plans/daily/$dayId/assets')).data);
+
+  // --- Order klien & BAST (Milestone 8) ------------------------------------
+  Future<Map<String, dynamic>> workCompletion(String id) async =>
+      _map((await _dio.get('$_p/work-completions/$id')).data);
+
+  /// Ketua tim menandatangani BAST lebih dulu (ringkasan wajib, foto realisasi = id file), lalu PM mengesahkan.
+  Future<Map<String, dynamic>> signCompletion(
+    String id, {
+    required String signaturePng,
+    required String summary,
+    String? obstacles,
+    List<String> photoFileIds = const [],
+  }) async => _map((await _dio.post(
+    '$_p/work-completions/$id/sign',
+    data: {
+      'signature_data_url': 'data:image/png;base64,$signaturePng',
+      'summary_notes': summary,
+      'obstacles': ?obstacles,
+      'realization_photos': photoFileIds,
+    },
+  )).data);
+
+  // --- Lembur (jadwal ONGOING) ---------------------------------------------
+  Future<Map<String, dynamic>> requestOvertime({
+    required String dayId,
+    required num hours,
     required String reason,
-  }) async => Map<String, dynamic>.from(
-    (await _dio.post(
-          '$_p/work-plans/$planId/appeal',
-          data: {'row_version': rowVersion, 'reason': reason},
-        )).data
-        as Map,
-  );
-
-  /// HTML A4 sembarang dari API (laporan harian/mingguan yang disetujui).
-  Future<String> html(String path) async =>
-      (await _dio.get<String>(
-        '$_p$path',
-        options: Options(responseType: ResponseType.plain),
-      )).data ??
-      '';
-
-  // --- Laporan berjenjang (alur SK v2 PR2) --------------------------------
-  Future<List<Map<String, dynamic>>> memberReports(
-    String planId,
-    String dayId,
-  ) async => _list(
-    (await _dio.get('$_p/work-plans/$planId/days/$dayId/member-reports')).data,
-  );
-
-  Future<Map<String, dynamic>?> myMemberReport(
-    String planId,
-    String dayId,
-  ) async {
-    final data = (await _dio.get(
-      '$_p/work-plans/$planId/days/$dayId/member-report',
-    )).data;
-    return data == null ? null : Map<String, dynamic>.from(data as Map);
-  }
-
-  Future<Map<String, dynamic>> saveMemberReport(
-    String planId,
-    String dayId, {
-    required String body,
-    required String obstacle,
-    required List<String> evidenceFileIds,
-    List<Map<String, dynamic>> evidence = const [],
-  }) async => Map<String, dynamic>.from(
-    (await _dio.put(
-          '$_p/work-plans/$planId/days/$dayId/member-report',
-          data: {
-            'body': body,
-            'obstacle': obstacle,
-            'evidence_file_ids': evidenceFileIds,
-            'evidence': evidence,
-          },
-        )).data
-        as Map,
-  );
-
-  Future<Map<String, dynamic>> sendMemberReport(
-    String planId,
-    String dayId,
-  ) async => Map<String, dynamic>.from(
-    (await _dio.post('$_p/work-plans/$planId/days/$dayId/member-report/send'))
-            .data
-        as Map,
-  );
-
-  Future<List<Map<String, dynamic>>> weeklyReports(String planId) async =>
-      _list((await _dio.get('$_p/work-plans/$planId/weekly')).data);
-
-  Future<void> saveWeekly(
-    String planId,
-    int week, {
-    required String body,
-    required String obstacle,
-  }) async => _dio.put(
-    '$_p/work-plans/$planId/weekly/$week',
-    data: {'body': body, 'obstacle': obstacle},
-  );
-
-  Future<void> submitWeekly(String planId, int week) async =>
-      _dio.post('$_p/work-plans/$planId/weekly/$week/submit');
-
-  // --- Adendum saat berjalan, aset, laporan akhir (alur SK v2 PR3) ----------
-  /// Template foto laporan rencana kerja (T9): slot `{label, hint, required}`; kosong bila tanpa jenis pekerjaan.
-  Future<List<Map<String, dynamic>>> photoTemplate(String planId, {String? dayId}) async => _list(
-    (await _dio.get(
-      '$_p/work-plans/$planId/photo-template',
-      queryParameters: {'day_id': ?dayId},
-    )).data,
-  );
+  }) async => _map((await _dio.post(
+    '$_p/overtime',
+    data: {'daily_plan_id': dayId, 'hours': hours, 'reason': reason},
+  )).data);
 
   /// URL sementara (presigned) sebuah berkas gambar, mis. foto contoh template. `variant`: thumb | view | full.
   Future<String> fileUrl(String fileId, {String variant = 'view'}) async {
@@ -173,51 +115,6 @@ class VmsApi {
     );
     return res.data!;
   }
-
-  /// Riwayat revisi rencana kerja oleh PM (T6), terbaru dulu.
-  Future<List<Map<String, dynamic>>> planRevisions(String planId) async =>
-      _list((await _dio.get('$_p/work-plans/$planId/revisions')).data);
-
-  Future<List<Map<String, dynamic>>> planChanges(String planId) async =>
-      _list((await _dio.get('$_p/work-plans/$planId/changes')).data);
-
-  Future<void> requestRunningAmendment(String planId, String reason) async =>
-      _dio.post('$_p/work-plans/$planId/amendments', data: {'reason': reason});
-
-  Future<void> acceptAmendment(String planId, String changeId) async =>
-      _dio.post('$_p/work-plans/$planId/amendments/$changeId/accept');
-
-  Future<List<Map<String, dynamic>>> planAssets(String planId) async =>
-      _list((await _dio.get('$_p/work-plans/$planId/assets')).data);
-
-  Future<void> returnAsset(
-    String allocationId, {
-    String condition = 'Baik',
-  }) async => _dio.post(
-    '$_p/assets/allocations/$allocationId/return',
-    data: {'condition_on_return': condition, 'note': null},
-  );
-
-  Future<Map<String, dynamic>?> finalReport(String planId) async {
-    final data = (await _dio.get('$_p/work-plans/$planId/completion')).data;
-    return data == null ? null : Map<String, dynamic>.from(data as Map);
-  }
-
-  Future<void> requestCompletion(
-    String planId, {
-    required int rowVersion,
-    required String body,
-    required String obstacle,
-    required List<String> evidenceFileIds,
-  }) async => _dio.post(
-    '$_p/work-plans/$planId/request-completion',
-    data: {
-      'row_version': rowVersion,
-      'body': body,
-      'obstacle': obstacle,
-      'evidence_file_ids': evidenceFileIds,
-    },
-  );
 
   // --- Notifikasi dalam aplikasi (alur SK v2) -----------------------------
   Future<({int unread, List<Map<String, dynamic>> items})>
@@ -270,7 +167,6 @@ class VmsApi {
     required double lng,
     double? accuracyM,
     String? selfieFileId,
-    String? faceProbeId,
     String? explanation,
   }) async {
     final res = await _dio.post(
@@ -282,8 +178,6 @@ class VmsApi {
         'location_origin': 'GPS',
         'accuracy_m': ?accuracyM,
         'selfie_file_id': ?selfieFileId,
-        if (selfieFileId != null) 'face_result': 'SKIPPED',
-        'face_probe_id': ?faceProbeId,
         'explanation': ?explanation,
       },
     );
@@ -294,7 +188,6 @@ class VmsApi {
     required double lat,
     required double lng,
     double? accuracyM,
-    String? faceProbeId,
     String? selfieFileId,
     String? explanation,
   }) async {
@@ -305,7 +198,6 @@ class VmsApi {
         'location': {'lat': lat, 'lng': lng},
         'location_origin': 'GPS',
         'accuracy_m': ?accuracyM,
-        'face_probe_id': ?faceProbeId,
         'selfie_file_id': ?selfieFileId,
         'explanation': ?explanation,
       },
@@ -336,60 +228,13 @@ class VmsApi {
     return Map<String, dynamic>.from(res.data as Map);
   }
 
-  Future<void> setFaceConsent(
-    String state, {
-    required String policyVersion,
-  }) async => _dio.post(
-    '$_p/face/consent',
-    data: {'state': state, 'policy_version': policyVersion},
-  );
-
-  /// Memeriksa satu bingkai kamera terhadap tantangan liveness (online). Bila gerakan terlihat, server
-  /// mengembalikan `proof` bertanda tangan yang nanti dikirim kembali di `liveness.proofs`.
-  Future<Map<String, dynamic>> faceChallengeCheck(
-    Uint8List jpeg,
-    String challenge,
-  ) async {
+  /// Wajah V2: 3–5 foto milik sendiri → `employee.face_embedding` (server memeriksa kualitas & duplikat).
+  Future<Map<String, dynamic>> enrollFace(List<File> photos) async {
     final form = FormData.fromMap({
-      'file': MultipartFile.fromBytes(jpeg, filename: 'frame.jpg'),
-      'challenge': challenge,
-    });
-    final res = await _dio.post('$_p/face/challenge-check', data: form);
-    return Map<String, dynamic>.from(res.data as Map);
-  }
-
-  /// Unggah gambar wajah sementara (bukan foto absensi) beserta hasil tantangan; → `probe_id` untuk absen.
-  Future<String> createFaceProbe(
-    File photo, {
-    required Map<String, dynamic> liveness,
-  }) async {
-    final form = FormData.fromMap({
-      'file': await MultipartFile.fromFile(
-        photo.path,
-        filename: photo.uri.pathSegments.last,
-      ),
-      'liveness': jsonEncode(liveness),
-    });
-    final res = await _dio.post('$_p/face/probe', data: form);
-    return (res.data as Map)['probe_id'] as String;
-  }
-
-  Future<Map<String, dynamic>> enrollFace(
-    List<File> photos, {
-    required Map<String, dynamic> liveness,
-  }) async {
-    final fileParts = <MultipartFile>[];
-    for (final photo in photos) {
-      fileParts.add(
-        await MultipartFile.fromFile(
-          photo.path,
-          filename: photo.uri.pathSegments.last,
-        ),
-      );
-    }
-    final form = FormData.fromMap({
-      'files': fileParts,
-      'liveness': jsonEncode(liveness),
+      'files': [
+        for (final photo in photos)
+          await MultipartFile.fromFile(photo.path, filename: photo.uri.pathSegments.last),
+      ],
     });
     final res = await _dio.post('$_p/face/enroll', data: form);
     return Map<String, dynamic>.from(res.data as Map);

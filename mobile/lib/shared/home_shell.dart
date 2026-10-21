@@ -8,8 +8,7 @@ import '../core/live_events.dart';
 import '../core/providers.dart';
 import '../features/auth/auth_controller.dart';
 import '../features/face/face_enroll_gate.dart';
-import '../features/plans/revision_history_screen.dart';
-import '../features/plans/work_plans_screen.dart';
+import '../features/plans/daily_plan_screen.dart';
 import '../features/update/update_ui.dart';
 import 'sync_status_banner.dart';
 import 'ui/floating_nav.dart';
@@ -59,7 +58,7 @@ class _HomeShellState extends ConsumerState<HomeShell>
         if (!mounted) return;
         ref.read(liveEventTickProvider.notifier).bump();
         if (event.topic == 'notification') {
-          final planId = event.data['plan_id'] ?? '';
+          final planId = event.data['daily_plan_id'] ?? '';
           unawaited(notifier.show(
             title: '${event.data['title'] ?? 'Notifikasi baru'}',
             body: '${event.data['body'] ?? ''}',
@@ -76,23 +75,11 @@ class _HomeShellState extends ConsumerState<HomeShell>
     )..start();
   }
 
-  /// Ketukan notifikasi sistem: rencana kerja terkait, atau riwayat revisi untuk PLAN_REVISED.
+  /// Ketukan notifikasi sistem: buka jadwal harian terkait.
   Future<void> _openFromNotification(String payload) async {
-    final parts = payload.split('|');
-    final planId = parts.first;
-    if (planId.isEmpty || !mounted) return;
-    final nav = Navigator.of(context);
-    if (parts.length > 1 && parts[1] == 'PLAN_REVISED') {
-      await nav.push(MaterialPageRoute(builder: (_) => RevisionHistoryScreen(planId: planId)));
-      return;
-    }
-    try {
-      final plan = await ref.read(syncEngineProvider).api.workPlan(planId);
-      if (!mounted) return;
-      await nav.push(MaterialPageRoute(builder: (_) => PlanDetailScreen(plan: plan)));
-    } catch (_) {
-      // Tanpa sinyal / tidak berwenang: abaikan, daftar notifikasi tetap bisa dibuka manual.
-    }
+    final planId = payload.split('|').first;
+    if (planId.isEmpty || planId == 'security' || !mounted) return;
+    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => DailyPlanScreen(dailyPlanId: planId)));
   }
 
   @override

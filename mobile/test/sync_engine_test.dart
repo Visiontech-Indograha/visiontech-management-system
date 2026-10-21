@@ -206,27 +206,27 @@ void main() {
   });
 
   group('syncAll — tarik data', () {
-    test('menyimpan daftar SK ke cache work_plans', () async {
-      backend.routes['/work-plans'] = (_) => [
-        {'id': 'p-1', 'title': 'Pasang CCTV'},
+    test('menyimpan jadwal harian hari ini ke cache daily_today', () async {
+      backend.routes['/work-plans/daily'] = (_) => [
+        {'daily_plan_id': 'd-1', 'site_name': 'Minas'},
       ];
 
       final summary = await engine.syncAll();
 
       expect(summary.hasErrors, isFalse);
-      expect((await engine.cacheGet('work_plans')).data, [
-        {'id': 'p-1', 'title': 'Pasang CCTV'},
+      expect((await engine.cacheGet('daily_today')).data, [
+        {'daily_plan_id': 'd-1', 'site_name': 'Minas'},
       ]);
     });
 
     test('galat tarik dilaporkan terpisah dari galat kirim', () async {
-      backend.routes['/work-plans'] = (o) =>
+      backend.routes['/work-plans/daily'] = (o) =>
           throw httpError(o, 500, {'detail': 'DB mati'});
 
       final summary = await engine.syncAll();
 
       expect(summary.pushErrors, isEmpty);
-      expect(summary.pullErrors, ['Rencana Kerja: DB mati']);
+      expect(summary.pullErrors, ['Jadwal harian: DB mati']);
     });
 
     test('luring total: dua-duanya melapor tidak ada koneksi', () async {

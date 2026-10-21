@@ -20,7 +20,7 @@ import '../auth/auth_controller.dart';
 import '../auth/auth_state.dart';
 import '../face/face_enroll_gate.dart';
 
-/// Absensi (M5, dok 05 §3.5). Wajib daring: waktu & geofence ditentukan server.
+/// Absensi (M5, dok 05 §3.5). Wajib online: waktu & geofence ditentukan server.
 /// Di luar radius lokasi, server mewajibkan swafoto — aplikasi memintanya lebih dulu.
 class AttendanceScreen extends ConsumerStatefulWidget {
   const AttendanceScreen({super.key});
@@ -31,7 +31,7 @@ class AttendanceScreen extends ConsumerStatefulWidget {
 
 class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
   List<Map<String, dynamic>> _records = [];
-  // R-34: absen luring yang belum terkirim (antrean bertanda tangan di HP).
+  // R-34: absen offline yang belum terkirim (antrean bertanda tangan di HP).
   List<Map<String, dynamic>> _offline = [];
   String? _serverToday;
   List<Map<String, dynamic>> _sites = [];
@@ -53,9 +53,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     _load();
   }
 
-  String _siteName(String id) =>
-      (_sites.where((s) => s['id'] == id).firstOrNull?['name'] as String?) ??
-      'penugasan';
+  String _siteName(String id) => (_sites.where((s) => s['id'] == id).firstOrNull?['name'] as String?) ?? 'penugasan';
 
   String get _employeeId {
     final auth = ref.read(authControllerProvider);
@@ -78,7 +76,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
         anchor = res.timeAnchor;
         return res.items;
       });
-      // R-34: saat online, simpan jangkar jam server & daftarkan kunci Keystore untuk absen luring.
+      // R-34: saat online, simpan jangkar jam server & daftarkan kunci Keystore untuk absen offline.
       if (anchor != null) {
         await offline.saveAnchor(anchor);
         final auth = ref.read(authControllerProvider);
@@ -103,10 +101,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
             {
               'id': p['daily_plan_id'],
               'name': 'Lokasi tugas: ${p['site_name']}',
-              'location': {
-                'lat': num.parse('${p['site_lat']}'),
-                'lng': num.parse('${p['site_lng']}'),
-              },
+              'location': {'lat': num.parse('${p['site_lat']}'), 'lng': num.parse('${p['site_lng']}')},
               'radius_m': p['attendance_radius_m'],
             },
       ];
@@ -116,7 +111,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
         _records = att.items;
         _runningSites = runningSites;
         _sites = [...daySites, ...sites.items];
-        // Luring & belum pernah termuat → pesan jelas, bukan "data terakhir 1 Jan 1970".
+        // Offline & belum pernah termuat → pesan jelas, bukan "data terakhir 1 Jan 1970".
         final never = SyncEngine.neverCached(att.cachedAt);
         _cachedAt = never ? null : att.cachedAt;
         _error = never ? SyncEngine.offlineNoDataMessage : null;
@@ -138,18 +133,12 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
 
   /// Kartu "Absensi hari ini" (O-10). Sesi yang masih terbuka didahulukan: server menolak absen
   /// masuk selama ada sesi terbuka, jadi tombol absen pulang harus tetap muncul lewat tengah malam.
-  /// Selain itu pakai tanggal dari server (zona waktu organisasi); jam HP hanya cadangan saat luring.
+  /// Selain itu pakai tanggal dari server (zona waktu organisasi); jam HP hanya cadangan saat offline.
   Map<String, dynamic>? get _today {
-    // R-34: absen luring yang belum terkirim tampil sebagai absensi hari ini.
-    final offIn = _offline
-        .where((o) => o['kind'] == 'CHECK_IN' && o['dead'] != true)
-        .lastOrNull;
-    final offOut = _offline
-        .where((o) => o['kind'] == 'CHECK_OUT' && o['dead'] != true)
-        .lastOrNull;
-    String iso(Map o) =>
-        DateTime.fromMillisecondsSinceEpoch(o['device_time_ms'] as int)
-            .toIso8601String();
+    // R-34: absen offline yang belum terkirim tampil sebagai absensi hari ini.
+    final offIn = _offline.where((o) => o['kind'] == 'CHECK_IN' && o['dead'] != true).lastOrNull;
+    final offOut = _offline.where((o) => o['kind'] == 'CHECK_OUT' && o['dead'] != true).lastOrNull;
+    String iso(Map o) => DateTime.fromMillisecondsSinceEpoch(o['device_time_ms'] as int).toIso8601String();
     if (offIn != null) {
       return {
         'site_label': offIn['site_name'],
@@ -164,15 +153,14 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       if (r['check_in_at'] != null &&
           r['check_out_at'] == null &&
           (r['status'] == 'AUTO_VALID' || r['status'] == 'APPROVED')) {
-        // Absen pulang luring yang belum terkirim: tampilkan jamnya & jangan tawarkan pulang lagi.
+        // Absen pulang offline yang belum terkirim: tampilkan jamnya & jangan tawarkan pulang lagi.
         if (offOut != null) {
           return {...r, 'check_out_at': iso(offOut), 'checkout_offline': true};
         }
         return r;
       }
     }
-    final today =
-        _serverToday ?? DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final today = _serverToday ?? DateFormat('yyyy-MM-dd').format(DateTime.now());
     for (final r in _records) {
       if (r['work_date'] == today) return r;
     }
@@ -184,15 +172,11 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
   static const _maxAttemptsPerDay = 2;
 
   int get _rejectedToday {
-    final today =
-        _serverToday ?? DateFormat('yyyy-MM-dd').format(DateTime.now());
-    return _records
-        .where((r) => r['work_date'] == today && r['status'] == 'REJECTED')
-        .length;
+    final today = _serverToday ?? DateFormat('yyyy-MM-dd').format(DateTime.now());
+    return _records.where((r) => r['work_date'] == today && r['status'] == 'REJECTED').length;
   }
 
-  void _snack(String msg) =>
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  void _snack(String msg) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
 
   Future<Position?> _position() async {
     final loc = await getCurrentPositionSafely();
@@ -278,7 +262,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
         _snack('Absen masuk tercatat.');
       } on DioException catch (e) {
         if (!isNetworkFailure(e)) rethrow;
-        // R-34: tanpa sinyal — rekam luring bertanda tangan, kirim otomatis saat online.
+        // R-34: tanpa sinyal — rekam offline bertanda tangan, kirim otomatis saat online.
         await ref
             .read(syncEngineProvider)
             .offlineAttendance
@@ -293,9 +277,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
               explanation: explanation,
               selfie: selfieFile,
             );
-        _snack(
-          'Tidak ada sinyal — absen masuk tersimpan luring dan dikirim otomatis saat online.',
-        );
+        _snack('Tidak ada sinyal — absen masuk tersimpan offline dan dikirim otomatis saat online.');
       }
       await _load();
     } catch (e) {
@@ -308,9 +290,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
   Future<void> _checkOut() async {
     final now = DateTime.now();
     if (now.hour >= 19) {
-      _snack(
-        'Batas waktu absensi pulang mandiri telah ditutup pada pukul 19:00 WIB (Sistem auto check-out aktif).',
-      );
+      _snack('Batas waktu absensi pulang mandiri telah ditutup pada pukul 19:00 WIB (Sistem auto check-out aktif).');
       return;
     }
 
@@ -335,14 +315,8 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                 'Yakin ingin tetap absen pulang?',
               ),
               actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx, false),
-                  child: const Text('Batal'),
-                ),
-                FilledButton(
-                  onPressed: () => Navigator.pop(ctx, true),
-                  child: const Text('Lanjutkan Pulang Cepat'),
-                ),
+                TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+                FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Lanjutkan Pulang Cepat')),
               ],
             ),
           );
@@ -387,9 +361,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
           );
       if (_today?['status'] == 'OFFLINE') {
         await recordOffline();
-        _snack(
-          'Absen pulang tersimpan luring dan dikirim otomatis saat online.',
-        );
+        _snack('Absen pulang tersimpan offline dan dikirim otomatis saat online.');
       } else {
         try {
           final res = await ref
@@ -399,9 +371,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                 lat: pos.latitude,
                 lng: pos.longitude,
                 accuracyM: pos.accuracy,
-                selfieFileId: outSelfie == null
-                    ? null
-                    : await ref.read(syncEngineProvider).api.uploadFile(outSelfie),
+                selfieFileId: outSelfie == null ? null : await ref.read(syncEngineProvider).api.uploadFile(outSelfie),
               );
           final encouragement = res['encouragement_message'] as String?;
           if (encouragement != null && encouragement.isNotEmpty && mounted) {
@@ -420,18 +390,11 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                     const SizedBox(height: 8),
                     const Center(child: Text('🌟💪', style: TextStyle(fontSize: 40))),
                     const SizedBox(height: 16),
-                    Text(
-                      encouragement,
-                      style: const TextStyle(fontSize: 14, height: 1.4),
-                      textAlign: TextAlign.center,
-                    ),
+                    Text(encouragement, style: const TextStyle(fontSize: 14, height: 1.4), textAlign: TextAlign.center),
                   ],
                 ),
                 actions: [
-                  FilledButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    child: const Text('Tutup & Selamat Beristirahat'),
-                  ),
+                  FilledButton(onPressed: () => Navigator.pop(ctx), child: const Text('Tutup & Selamat Beristirahat')),
                 ],
               ),
             );
@@ -441,9 +404,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
         } on DioException catch (e) {
           if (!isNetworkFailure(e)) rethrow;
           await recordOffline();
-          _snack(
-            'Tidak ada sinyal — absen pulang tersimpan luring dan dikirim otomatis saat online.',
-          );
+          _snack('Tidak ada sinyal — absen pulang tersimpan offline dan dikirim otomatis saat online.');
         }
       }
       await _load();
@@ -462,12 +423,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       builder: (ctx) => AlertDialog(
         title: const Text('Wajah belum terdaftar'),
         content: Text(apiErrorMessage(e)),
-        actions: [
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Daftarkan wajah'),
-          ),
-        ],
+        actions: [FilledButton(onPressed: () => Navigator.pop(ctx), child: const Text('Daftarkan wajah'))],
       ),
     );
     ref.invalidate(faceGateProvider);
@@ -476,11 +432,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
 
   /// Dialog penjelasan wajib: Kirim dengan isian kosong menampilkan pesan, bukan menutup diam-diam.
   /// Mengembalikan teks (sudah di-trim) atau null bila dibatalkan.
-  Future<String?> _askExplanation({
-    required String title,
-    String? info,
-    String initial = '',
-  }) {
+  Future<String?> _askExplanation({required String title, String? info, String initial = ''}) {
     final controller = TextEditingController(text: initial);
     String? error;
     return showDialog<String>(
@@ -492,28 +444,19 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (info != null) ...[
-                Text(info, style: VmsTextStyles.bodySm),
-                const SizedBox(height: 12),
-              ],
+              if (info != null) ...[Text(info, style: VmsTextStyles.bodySm), const SizedBox(height: 12)],
               TextField(
                 key: const Key('explanation-field'),
                 controller: controller,
                 autofocus: true,
                 maxLines: 4,
                 maxLength: 1000,
-                decoration: InputDecoration(
-                  hintText: 'Mis. ban bocor di jalan menuju lokasi',
-                  errorText: error,
-                ),
+                decoration: InputDecoration(hintText: 'Mis. ban bocor di jalan menuju lokasi', errorText: error),
               ),
             ],
           ),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Batal'),
-            ),
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
             FilledButton(
               onPressed: () {
                 final text = controller.text.trim();
@@ -532,16 +475,10 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
   }
 
   Future<void> _explain(Map<String, dynamic> record) async {
-    final text = await _askExplanation(
-      title: 'Beri penjelasan',
-      initial: record['explanation'] as String? ?? '',
-    );
+    final text = await _askExplanation(title: 'Beri penjelasan', initial: record['explanation'] as String? ?? '');
     if (text == null) return;
     try {
-      await ref
-          .read(syncEngineProvider)
-          .api
-          .explainAttendance(record['id'] as String, text);
+      await ref.read(syncEngineProvider).api.explainAttendance(record['id'] as String, text);
       _snack('Penjelasan terkirim.');
       await _load();
     } catch (e) {
@@ -549,71 +486,52 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     }
   }
 
-  String _hhmm(dynamic iso) => iso == null
-      ? '--:--'
-      : _time.format(DateTime.parse(iso as String).toLocal());
+  String _hhmm(dynamic iso) => iso == null ? '--:--' : _time.format(DateTime.parse(iso as String).toLocal());
 
-  Widget _timeTile(String label, String value, IconData icon, Accent accent) =>
-      Expanded(
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
-          ),
-          child: Row(
+  Widget _timeTile(String label, String value, IconData icon, Accent accent) => Expanded(
+    child: Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: VmsColors.gold, size: 22),
+          const SizedBox(width: 10),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(icon, color: VmsColors.gold, size: 22),
-              const SizedBox(width: 10),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    style: VmsTextStyles.caption.copyWith(
-                      color: Colors.white.withValues(alpha: 0.7),
-                    ),
-                  ),
-                  Text(
-                    value,
-                    style: VmsTextStyles.title.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ],
+              Text(label, style: VmsTextStyles.caption.copyWith(color: Colors.white.withValues(alpha: 0.7))),
+              Text(
+                value,
+                style: VmsTextStyles.title.copyWith(color: Colors.white, fontWeight: FontWeight.w800),
               ),
             ],
           ),
-        ),
-      );
+        ],
+      ),
+    ),
+  );
 
   Widget _flag(String text, Accent accent) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-    decoration: BoxDecoration(
-      color: accent.soft,
-      borderRadius: BorderRadius.circular(99),
-    ),
+    decoration: BoxDecoration(color: accent.soft, borderRadius: BorderRadius.circular(99)),
     child: Text(
       text,
-      style: VmsTextStyles.caption.copyWith(
-        color: accent.strong,
-        fontWeight: FontWeight.w700,
-      ),
+      style: VmsTextStyles.caption.copyWith(color: accent.strong, fontWeight: FontWeight.w700),
     ),
   );
 
   @override
   Widget build(BuildContext context) {
-    // Sinkron latar selesai (mis. absen luring baru terkirim) → muat ulang kartu & riwayat.
+    // Sinkron latar selesai (mis. absen offline baru terkirim) → muat ulang kartu & riwayat.
     ref.listen(syncTickProvider, (_, _) => _load());
-    ref.listen(liveEventTickProvider, (_, _) => _load());   // T8: peristiwa waktu nyata
+    ref.listen(liveEventTickProvider, (_, _) => _load()); // T8: peristiwa waktu nyata
     final today = _today;
     final auth = ref.watch(authControllerProvider);
-    final name = auth is AuthAuthenticated
-        ? auth.user.username.split('@').first
-        : '';
+    final name = auth is AuthAuthenticated ? auth.user.username.split('@').first : '';
     final lewatWeb = auth is AuthAuthenticated && auth.user.absensiLewatWeb;
     final hour = DateTime.now().hour;
     final greet = hour < 11
@@ -624,13 +542,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
         ? 'Selamat sore'
         : 'Selamat malam';
     return Scaffold(
-      appBar: VmsTopBar(
-        trailing: HeaderAction(
-          icon: Icons.refresh_rounded,
-          tooltip: 'Muat ulang',
-          onTap: _load,
-        ),
-      ),
+      appBar: const VmsTopBar(),
       body: RefreshIndicator(
         onRefresh: _load,
         edgeOffset: 120,
@@ -650,15 +562,10 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                   if (_cachedAt != null)
                     NoticeBanner(
                       icon: Icons.cloud_off_rounded,
-                      text:
-                          'Luring — data terakhir ${DateFormat('d MMM HH:mm', 'id_ID').format(_cachedAt!)}',
+                      text: 'Offline — data terakhir ${DateFormat('d MMM HH:mm', 'id_ID').format(_cachedAt!)}',
                     ),
                   if (_error != null)
-                    NoticeBanner(
-                      icon: Icons.error_outline_rounded,
-                      text: _error!,
-                      accent: Accent.rose,
-                    ),
+                    NoticeBanner(icon: Icons.error_outline_rounded, text: _error!, accent: Accent.rose),
                   FadeSlideIn(
                     child: SurfaceCard(
                       highlight: true,
@@ -668,10 +575,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                         children: [
                           Row(
                             children: [
-                              const IconTile(
-                                icon: Icons.fingerprint_rounded,
-                                accent: Accent.indigo,
-                              ),
+                              const IconTile(icon: Icons.fingerprint_rounded, accent: Accent.indigo),
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Column(
@@ -689,37 +593,22 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                                           ? 'Belum absen masuk'
                                           : '${today['site_label']} · '
                                                 '${today['city_category'] == 'LUAR_KOTA' ? 'Luar kota' : 'Dalam kota'}',
-                                      style: VmsTextStyles.bodySm.copyWith(
-                                        color: Colors.white.withValues(
-                                          alpha: 0.75,
-                                        ),
-                                      ),
+                                      style: VmsTextStyles.bodySm.copyWith(color: Colors.white.withValues(alpha: 0.75)),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ],
                                 ),
                               ),
-                              if (today != null)
-                                StatusPill(today['status'] as String?),
+                              if (today != null) StatusPill(today['status'] as String?),
                             ],
                           ),
                           const SizedBox(height: 16),
                           Row(
                             children: [
-                              _timeTile(
-                                'Masuk',
-                                _hhmm(today?['check_in_at']),
-                                Icons.login_rounded,
-                                Accent.emerald,
-                              ),
+                              _timeTile('Masuk', _hhmm(today?['check_in_at']), Icons.login_rounded, Accent.emerald),
                               const SizedBox(width: 10),
-                              _timeTile(
-                                'Pulang',
-                                _hhmm(today?['check_out_at']),
-                                Icons.logout_rounded,
-                                Accent.rose,
-                              ),
+                              _timeTile('Pulang', _hhmm(today?['check_out_at']), Icons.logout_rounded, Accent.rose),
                             ],
                           ),
                           const SizedBox(height: 16),
@@ -734,8 +623,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                                   'terlihat di sini.',
                             )
                           else if (today == null ||
-                              (today['status'] == 'REJECTED' &&
-                                  _rejectedToday < _maxAttemptsPerDay)) ...[
+                              (today['status'] == 'REJECTED' && _rejectedToday < _maxAttemptsPerDay)) ...[
                             if (today != null) ...[
                               NoticeBanner(
                                 key: const Key('absen-ditolak-bisa-ulang'),
@@ -762,21 +650,13 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                                 label: 'Lokasi kerja',
                                 icon: Icons.place_rounded,
                                 value: _siteId,
-                                options: [
-                                  for (final s in _sites)
-                                    VmsOption(
-                                      s['id'] as String,
-                                      s['name'] as String,
-                                    ),
-                                ],
+                                options: [for (final s in _sites) VmsOption(s['id'] as String, s['name'] as String)],
                                 onChanged: (v) => setState(() => _siteId = v),
                               ),
                               const SizedBox(height: 14),
                               // Ada jadwal tugas hari ini tetapi memilih lokasi lain (mis. kantor): hanya peringatan,
                               // absen tetap boleh (keputusan pemilik 2026-10-07).
-                              if (_runningSites.isNotEmpty &&
-                                  _siteId != null &&
-                                  !_runningSites.contains(_siteId)) ...[
+                              if (_runningSites.isNotEmpty && _siteId != null && !_runningSites.contains(_siteId)) ...[
                                 NoticeBanner(
                                   key: const Key('peringatan-bukan-lokasi-sk'),
                                   icon: Icons.warning_amber_rounded,
@@ -788,27 +668,22 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                               ],
                             ],
                             PrimaryAction(
-                              label: today == null
-                                  ? 'Absen masuk'
-                                  : 'Ajukan absen ulang',
+                              label: today == null ? 'Absen masuk' : 'Ajukan absen ulang',
                               icon: Icons.login_rounded,
                               gold: true,
                               busy: _busy,
-                              onTap: _loading || _sites.isEmpty
-                                  ? null
-                                  : _checkIn,
+                              onTap: _loading || _sites.isEmpty ? null : _checkIn,
                             ),
-                          ] else if ((today['status'] == 'OFFLINE' ||
-                                  today['checkout_offline'] == true) &&
+                          ] else if ((today['status'] == 'OFFLINE' || today['checkout_offline'] == true) &&
                               today['check_out_at'] != null)
                             NoticeBanner(
-                              key: const Key('absen-luring-lengkap'),
+                              key: const Key('absen-offline-lengkap'),
                               icon: Icons.cloud_upload_rounded,
                               accent: Accent.indigo,
                               text: today['status'] == 'OFFLINE'
-                                  ? 'Absen masuk & pulang tersimpan luring. Dikirim '
+                                  ? 'Absen masuk & pulang tersimpan offline. Dikirim '
                                         'otomatis saat ada sinyal.'
-                                  : 'Absen pulang tersimpan luring. Dikirim '
+                                  : 'Absen pulang tersimpan offline. Dikirim '
                                         'otomatis saat ada sinyal.',
                             )
                           else if (today['status'] == 'REJECTED')
@@ -820,8 +695,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                                   'Absensi hari ini ditolak $_rejectedToday kali dan '
                                   'tidak dapat diajukan lagi. Hari ini tercatat ditolak.',
                             )
-                          else if (today['check_out_at'] == null &&
-                              today['status'] == 'NEEDS_REVIEW')
+                          else if (today['check_out_at'] == null && today['status'] == 'NEEDS_REVIEW')
                             const NoticeBanner(
                               key: Key('pulang-menunggu-review'),
                               icon: Icons.hourglass_top_rounded,
@@ -854,10 +728,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                       child: Center(child: CircularProgressIndicator()),
                     ),
                   if (!_loading && _records.isEmpty && _error == null)
-                    const EmptyState(
-                      icon: Icons.event_available_rounded,
-                      title: 'Belum ada riwayat absensi',
-                    ),
+                    const EmptyState(icon: Icons.event_available_rounded, title: 'Belum ada riwayat absensi'),
                   for (final (i, r) in _records.indexed)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 10),
@@ -869,9 +740,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                             children: [
                               IconTile(
                                 icon: Icons.calendar_today_rounded,
-                                accent:
-                                    r['is_late'] == true ||
-                                        r['is_early_leave'] == true
+                                accent: r['is_late'] == true || r['is_early_leave'] == true
                                     ? Accent.amber
                                     : Accent.blue,
                                 size: 40,
@@ -882,11 +751,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      _day.format(
-                                        DateTime.parse(
-                                          r['work_date'] as String,
-                                        ),
-                                      ),
+                                      _day.format(DateTime.parse(r['work_date'] as String)),
                                       style: VmsTextStyles.bodySm.copyWith(
                                         fontWeight: FontWeight.w700,
                                         color: VmsColors.neutral900,
@@ -895,21 +760,16 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                                     const SizedBox(height: 2),
                                     Text(
                                       '${_hhmm(r['check_in_at'])} – ${_hhmm(r['check_out_at'])}',
-                                      style: VmsTextStyles.bodySm.copyWith(
-                                        color: VmsColors.neutral500,
-                                      ),
+                                      style: VmsTextStyles.bodySm.copyWith(color: VmsColors.neutral500),
                                     ),
                                     const SizedBox(height: 6),
                                     Wrap(
                                       spacing: 6,
                                       runSpacing: 4,
                                       children: [
-                                        if (r['is_late'] == true)
-                                          _flag('Terlambat', Accent.amber),
-                                        if (r['is_early_leave'] == true)
-                                          _flag('Pulang awal', Accent.rose),
-                                        if (r['explanation'] != null)
-                                          _flag('Dijelaskan', Accent.indigo),
+                                        if (r['is_late'] == true) _flag('Terlambat', Accent.amber),
+                                        if (r['is_early_leave'] == true) _flag('Pulang awal', Accent.rose),
+                                        if (r['explanation'] != null) _flag('Dijelaskan', Accent.indigo),
                                         StatusPill(r['status'] as String?),
                                       ],
                                     ),
@@ -921,11 +781,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                               if (r['status'] == 'NEEDS_REVIEW')
                                 TextButton(
                                   onPressed: () => _explain(r),
-                                  child: Text(
-                                    r['explanation'] == null
-                                        ? 'Jelaskan'
-                                        : 'Ubah penjelasan',
-                                  ),
+                                  child: Text(r['explanation'] == null ? 'Jelaskan' : 'Ubah penjelasan'),
                                 ),
                             ],
                           ),

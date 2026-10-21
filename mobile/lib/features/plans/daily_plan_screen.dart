@@ -9,13 +9,14 @@ import '../auth/auth_controller.dart';
 import '../auth/auth_state.dart';
 import 'bast_sign_screen.dart';
 import 'item_progress_screen.dart';
+import 'survey_screen.dart';
 
 const phaseLabel = {
   'SURVEY': 'Survei',
   'PREPARATION': 'Persiapan',
   'INSTALLATION': 'Instalasi',
-  'REPLACEMENT': 'Penggantian',
-  'MAINTENANCE': 'Pemeliharaan',
+  'REPLACEMENT': 'Replacement',
+  'MAINTENANCE': 'Maintenance',
 };
 
 String qtyText(Object? v) {
@@ -53,15 +54,18 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
 
   Future<void> _load() async {
     try {
-      final plan = await ref.read(syncEngineProvider).api.dailyPlan(widget.dailyPlanId);
+      final engine = ref.read(syncEngineProvider);
+      final plan = await engine.fetchMap(
+        'daily_plan_${widget.dailyPlanId}',
+        () => engine.api.dailyPlan(widget.dailyPlanId),
+      );
       if (mounted) setState(() => (_plan = plan, _error = null));
     } catch (e) {
       if (mounted) setState(() => _error = apiErrorMessage(e));
     }
   }
 
-  void _snack(String text) =>
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+  void _snack(String text, {bool error = false}) => showVmsToast(context, text, error: error);
 
   Future<void> _run(Future<void> Function() action, String done) async {
     setState(() => _busy = true);
@@ -70,7 +74,7 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
       _snack(done);
       await _load();
     } catch (e) {
-      _snack(apiErrorMessage(e));
+      _snack(apiErrorMessage(e), error: true);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -91,7 +95,10 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               decoration: const InputDecoration(labelText: 'Jam lembur (maks. 12)'),
             ),
-            TextField(controller: reason, decoration: const InputDecoration(labelText: 'Alasan')),
+            TextField(
+              controller: reason,
+              decoration: const InputDecoration(labelText: 'Alasan'),
+            ),
           ],
         ),
         actions: [
@@ -104,23 +111,37 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
     final h = num.tryParse(hours.text.replaceAll(',', '.'));
     if (h == null) return _snack('Isi jam lembur dengan angka.');
     await _run(
-      () => ref.read(syncEngineProvider).api.requestOvertime(
-            dayId: widget.dailyPlanId,
-            hours: h,
-            reason: reason.text.trim(),
-          ),
+      () => ref
+          .read(syncEngineProvider)
+          .api
+          .requestOvertime(dayId: widget.dailyPlanId, hours: h, reason: reason.text.trim()),
       'Pengajuan lembur terkirim ke PM.',
     );
   }
 
+  /// Tugas survei (fase SURVEY, menempel pada order) dibuka di layar survei berformat baku (docs/37).
+  static bool isSurveyTask(Map<String, dynamic> item) =>
+      item['task_phase'] == 'SURVEY' && item['depends_on_item_id'] == null && item['completion_id'] != null;
+
+  /// Titik survei buatan ketua tim (anak tugas survei) dikelola di layar survei, tidak di daftar jadwal.
+  static bool isSurveyPoint(Map<String, dynamic> item) =>
+      item['task_phase'] == 'SURVEY' && item['depends_on_item_id'] != null;
+
   Future<void> _openItem(Map<String, dynamic> item) async {
-    await Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => ItemProgressScreen(
-        itemId: item['item_id'] as String,
-        dayStatus: '${_plan!['status']}',
-        isLeader: _isLeader,
+    if (isSurveyTask(item)) {
+      await Navigator.of(context).push(MaterialPageRoute(builder: (_) => SurveyScreen(taskId: '${item['item_id']}')));
+      await _load();
+      return;
+    }
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ItemProgressScreen(
+          itemId: item['item_id'] as String,
+          dayStatus: '${_plan!['status']}',
+          isLeader: _isLeader,
+        ),
       ),
-    ));
+    );
     await _load();
   }
 
@@ -134,7 +155,10 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
           ? Center(
               child: _error == null
                   ? const CircularProgressIndicator()
-                  : Padding(padding: const EdgeInsets.all(16), child: NoticeBanner(icon: Icons.error_outline, text: _error!)),
+                  : Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: NoticeBanner(icon: Icons.error_outline, text: _error!),
+                    ),
             )
           : RefreshIndicator(
               onRefresh: _load,
@@ -157,14 +181,25 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
                           ],
                         ),
                         const SizedBox(height: 10),
-                        InfoRow(icon: Icons.place_outlined, text: '${plan['site_name']} (radius absen ${plan['attendance_radius_m']} m)'),
+                        InfoRow(
+                          icon: Icons.place_outlined,
+                          text: '${plan['site_name']} (radius absen ${plan['attendance_radius_m']} m)',
+                        ),
                         const SizedBox(height: 4),
                         InfoRow(
                           icon: Icons.schedule_rounded,
-                          text: 'Jam kerja ${'${plan['clock_in_time']}'.substring(0, 5)}–${'${plan['clock_out_time']}'.substring(0, 5)}',
+                          text:
+                              'Jam kerja ${'${plan['clock_in_time']}'.substring(0, 5)}–${'${plan['clock_out_time']}'.substring(0, 5)}',
                         ),
                         const SizedBox(height: 4),
-                        InfoRow(icon: Icons.groups_2_outlined, text: '${plan['team_name']} · ketua ${plan['leader_name']}'),
+                        InfoRow(
+                          icon: Icons.groups_2_outlined,
+                          text: '${plan['team_name']} · ketua ${plan['leader_name']}',
+                        ),
+                        if (plan['pm_name'] != null) ...[
+                          const SizedBox(height: 4),
+                          ContactRow(label: 'PM', name: '${plan['pm_name']}', phone: plan['pm_phone'] as String?),
+                        ],
                       ],
                     ),
                   ),
@@ -192,8 +227,10 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
                       ),
                     ),
                   ],
-                  const SectionTitle('Pekerjaan per titik'),
-                  for (final item in (plan['items'] as List? ?? const []).cast<Map>())
+                  const SectionTitle('Daftar pekerjaan hari ini'),
+                  for (final item in (plan['items'] as List? ?? const []).cast<Map>().where(
+                    (i) => !isSurveyPoint(Map<String, dynamic>.from(i)),
+                  ))
                     Padding(
                       padding: const EdgeInsets.only(bottom: 10),
                       child: _ItemCard(
@@ -228,17 +265,30 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
     };
     if (ids.isEmpty) return const [];
     return [
-      const SectionTitle('Berita acara (BAST)'),
+      const SectionTitle('Serah terima pekerjaan'),
       for (final id in ids)
         Padding(
           padding: const EdgeInsets.only(bottom: 8),
-          child: _Tile(
-            icon: Icons.draw_rounded,
-            title: 'Tandatangani BAST order',
-            subtitle: 'Ringkasan, foto realisasi, tanda tangan ketua',
-            onTap: () async {
-              await Navigator.of(context).push(MaterialPageRoute(builder: (_) => BastSignScreen(completionId: id)));
-              await _load();
+          child: FutureBuilder<Map<String, dynamic>>(
+            future: ref.read(syncEngineProvider).api.workCompletion(id),
+            builder: (context, snap) {
+              final o = snap.data;
+              final (title, subtitle) = o == null
+                  ? ('Serah terima pekerjaan', 'Memuat status…')
+                  : o['pm_signed_at'] != null
+                  ? ('Sudah disetujui PM', '${o['project_title']} · pekerjaan selesai')
+                  : o['leader_signed_at'] != null
+                  ? ('Menunggu persetujuan PM', '${o['project_title']} · bisa tanda tangan ulang')
+                  : ('Tanda tangan serah terima', '${o['project_title']} · ringkasan, foto hasil kerja, tanda tangan');
+              return _Tile(
+                icon: o?['pm_signed_at'] != null ? Icons.verified_rounded : Icons.draw_rounded,
+                title: title,
+                subtitle: subtitle,
+                onTap: () async {
+                  await Navigator.of(context).push(MaterialPageRoute(builder: (_) => BastSignScreen(completionId: id)));
+                  await _load();
+                },
+              );
             },
           ),
         ),
@@ -254,32 +304,76 @@ class _ItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SurfaceCard(
-      onTap: onTap,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    final text = Theme.of(context).textTheme;
+    final phase = phaseAccent['${item['task_phase']}'] ?? Accent.slate;
+    final done = num.tryParse('${item['completed_qty'] ?? 0}') ?? 0;
+    final target = num.tryParse('${item['target_qty'] ?? 0}') ?? 0;
+    final pct = target <= 0 ? 0.0 : (done / target).clamp(0, 1).toDouble();
+    final raw = '${item['status']}';
+    final state = raw == 'DONE'
+        ? 'DONE'
+        : (done > 0 && raw != 'SHIFTED_DAY' && raw != 'PENDING_ROLLOVER' ? 'PARTIAL' : raw);
+    final accent = statusStyle(state).accent;
+    return Material(
+      color: Theme.of(context).colorScheme.surface,
+      borderRadius: BorderRadius.circular(16),
+      clipBehavior: Clip.antiAlias,
+      elevation: 0.5,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          decoration: BoxDecoration(
+            border: Border(left: BorderSide(color: phase.strong, width: 5)),
+          ),
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(child: Text('${item['title']}', style: Theme.of(context).textTheme.titleSmall)),
-              StatusPill('${item['status']}'),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(color: phase.soft, borderRadius: BorderRadius.circular(99)),
+                    child: Text(
+                      phaseLabel['${item['task_phase']}'] ?? '${item['task_phase']}',
+                      style: text.labelSmall?.copyWith(color: phase.strong, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                  const Spacer(),
+                  StatusPill(state),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text('${item['title']}', style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+              if (item['location_name'] != null) ...[
+                const SizedBox(height: 4),
+                InfoRow(icon: Icons.place_outlined, text: '${item['location_name']}'),
+              ],
+              const SizedBox(height: 10),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(99),
+                child: LinearProgressIndicator(
+                  value: pct,
+                  minHeight: 6,
+                  color: accent.strong,
+                  backgroundColor: accent.soft,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '${qtyText(item['completed_qty'])} dari ${qtyText(item['target_qty'])} selesai',
+                      style: text.bodySmall?.copyWith(color: accent.strong, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  Icon(Icons.chevron_right_rounded, color: accent.strong),
+                ],
+              ),
             ],
           ),
-          const SizedBox(height: 6),
-          InfoRow(
-            icon: Icons.category_outlined,
-            text: '${phaseLabel[item['task_phase']] ?? item['task_phase']} · ${item['work_type_name'] ?? ''}',
-          ),
-          if (item['location_name'] != null) ...[
-            const SizedBox(height: 4),
-            InfoRow(icon: Icons.place_outlined, text: '${item['location_name']}'),
-          ],
-          const SizedBox(height: 4),
-          InfoRow(
-            icon: Icons.straighten_rounded,
-            text: 'Realisasi ${qtyText(item['completed_qty'])} / ${qtyText(item['target_qty'])}',
-          ),
-        ],
+        ),
       ),
     );
   }

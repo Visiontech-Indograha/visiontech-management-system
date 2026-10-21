@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -77,7 +76,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       width: size,
       height: size,
       alignment: Alignment.center,
-      decoration: const BoxDecoration(color: VmsColors.gold, shape: BoxShape.circle),
+      decoration: const BoxDecoration(
+        color: VmsColors.gold,
+        shape: BoxShape.circle,
+      ),
       child: Text(
         initials,
         style: (textStyle ?? VmsTextStyles.title).copyWith(
@@ -131,7 +133,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       final out = await runFaceEnrollment(context, ref);
       if (!mounted) return;
       if (out.message != null) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(out.message!)));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(out.message!)));
       }
       if (out.ok) await _loadFaceState();
     } finally {
@@ -296,9 +299,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final name = (user?.username ?? '-').split('@').first;
 
     return Scaffold(
-      appBar: VmsTopBar(
-        trailing: _avatar(name, 44),
-      ),
+      appBar: VmsTopBar(trailing: _avatar(name, 44)),
       body: ListView(
         padding: safeListPadding(context),
         children: [
@@ -431,13 +432,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                     _faceLoading
                                         ? 'Memeriksa status...'
                                         : (_faceStatus?['enrolled'] == true
-                                            ? 'Wajah Terdaftar (Aktif)'
-                                            : 'Belum Terdaftar'),
+                                              ? 'Wajah Terdaftar (Aktif)'
+                                              : 'Belum Terdaftar'),
                                     style: VmsTextStyles.caption.copyWith(
                                       color: _faceStatus?['enrolled'] == true
                                           ? Accent.emerald.strong
                                           : VmsColors.neutral500,
-                                      fontWeight: _faceStatus?['enrolled'] == true
+                                      fontWeight:
+                                          _faceStatus?['enrolled'] == true
                                           ? FontWeight.w600
                                           : FontWeight.normal,
                                     ),
@@ -469,14 +471,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         if (_faceStatus?['enrolled'] == true)
                           Text(
                             'Perlu daftar ulang (ganti wajah/HP)? Minta HR mengatur ulang pendaftaran wajah Anda.',
-                            style: VmsTextStyles.caption.copyWith(color: VmsColors.neutral500),
+                            style: VmsTextStyles.caption.copyWith(
+                              color: VmsColors.neutral500,
+                            ),
                           )
                         else if (_faceStatus?['required'] == true)
                           PrimaryAction(
                             label: 'Daftarkan Wajah (4 Foto)',
                             icon: Icons.camera_alt_rounded,
                             busy: _isEnrolling,
-                            onTap: _isEnrolling || _faceLoading ? null : _enrollFaceFlow,
+                            onTap: _isEnrolling || _faceLoading
+                                ? null
+                                : _enrollFaceFlow,
                           ),
                       ],
                     ),

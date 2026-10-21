@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/theme/theme.dart';
 
@@ -32,6 +33,8 @@ class Accent {
   static const violet = Accent(Color(0xFF6D28D9), Color(0xFFF3ECFF));
   static const teal = Accent(Color(0xFF0F766E), Color(0xFFE3F6F4));
   static const slate = Accent(Color(0xFF475467), Color(0xFFEEF0F4));
+  static const sky = Accent(Color(0xFF0369A1), Color(0xFFE0F2FE));
+  static const yellow = Accent(Color(0xFFA16207), Color(0xFFFEF9C3));
 }
 
 /// Safe zone (R-14): padding daftar yang menjauhkan konten dari area sistem — tepi bawah (bilah
@@ -39,15 +42,10 @@ class Accent {
 EdgeInsets safeListPadding(BuildContext context, {double bottomGap = 24}) {
   final mq = MediaQuery.of(context);
   final bottom = math.max(mq.padding.bottom, mq.systemGestureInsets.bottom);
-  return EdgeInsets.only(
-    left: mq.padding.left,
-    right: mq.padding.right,
-    bottom: bottom + bottomGap,
-  );
+  return EdgeInsets.only(left: mq.padding.left, right: mq.padding.right, bottom: bottom + bottomGap);
 }
 
-bool _reduceMotion(BuildContext context) =>
-    MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+bool _reduceMotion(BuildContext context) => MediaQuery.maybeDisableAnimationsOf(context) ?? false;
 
 /// Header terang: baris atas (kembali/logo + aksi bulat bergaris), label kecil, lalu judul besar tebal.
 /// Menyatu dengan latar halaman — tanpa gradasi.
@@ -75,9 +73,7 @@ class HeroHeader extends StatelessWidget {
     final pinned = Scaffold.maybeOf(context)?.hasAppBar ?? false;
     final top = pinned ? 0.0 : MediaQuery.paddingOf(context).top;
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.dark.copyWith(
-        statusBarColor: Colors.transparent,
-      ),
+      value: SystemUiOverlayStyle.dark.copyWith(statusBarColor: Colors.transparent),
       child: Padding(
         padding: EdgeInsets.fromLTRB(20, top + 10, 20, 8),
         child: Column(
@@ -91,10 +87,7 @@ class HeroHeader extends StatelessWidget {
             if (eyebrow != null) ...[
               Text(
                 eyebrow!,
-                style: VmsTextStyles.bodySm.copyWith(
-                  color: VmsColors.brand500,
-                  fontWeight: FontWeight.w700,
-                ),
+                style: VmsTextStyles.bodySm.copyWith(color: VmsColors.brand500, fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 4),
             ],
@@ -110,12 +103,7 @@ class HeroHeader extends StatelessWidget {
             ),
             if (subtitle != null) ...[
               const SizedBox(height: 6),
-              Text(
-                subtitle!,
-                style: VmsTextStyles.bodySm.copyWith(
-                  color: VmsColors.neutral500,
-                ),
-              ),
+              Text(subtitle!, style: VmsTextStyles.bodySm.copyWith(color: VmsColors.neutral500)),
             ],
             if (bottom != null) ...[const SizedBox(height: 12), bottom!],
           ],
@@ -133,17 +121,9 @@ class _TopRow extends StatelessWidget {
   Widget build(BuildContext context) => Row(
     children: [
       if (onBack != null)
-        HeaderAction(
-          icon: Icons.arrow_back_rounded,
-          onTap: onBack!,
-          tooltip: 'Kembali',
-        )
+        HeaderAction(icon: Icons.arrow_back_rounded, onTap: onBack!, tooltip: 'Kembali')
       else
-        Image.asset(
-          logoAsset,
-          height: 28,
-          semanticLabel: 'Visiontech Indograha',
-        ),
+        Image.asset(logoAsset, height: 28, semanticLabel: 'Visiontech Indograha'),
       const Spacer(),
       ?trailing,
     ],
@@ -170,9 +150,7 @@ class VmsTopBar extends StatelessWidget implements PreferredSizeWidget {
     elevation: 0,
     scrolledUnderElevation: 0,
     shape: const Border(bottom: BorderSide(color: Colors.transparent)),
-    systemOverlayStyle: SystemUiOverlayStyle.dark.copyWith(
-      statusBarColor: Colors.transparent,
-    ),
+    systemOverlayStyle: SystemUiOverlayStyle.dark.copyWith(statusBarColor: Colors.transparent),
     title: Padding(
       padding: const EdgeInsets.only(right: 20),
       child: _TopRow(onBack: onBack, trailing: trailing),
@@ -182,12 +160,7 @@ class VmsTopBar extends StatelessWidget implements PreferredSizeWidget {
 
 /// Tombol ikon bulat bergaris tipis (header, aksi kartu).
 class HeaderAction extends StatelessWidget {
-  const HeaderAction({
-    super.key,
-    required this.icon,
-    required this.onTap,
-    required this.tooltip,
-  });
+  const HeaderAction({super.key, required this.icon, required this.onTap, required this.tooltip});
   final IconData icon;
   final VoidCallback onTap;
   final String tooltip;
@@ -266,8 +239,7 @@ class FadeSlideIn extends StatelessWidget {
 }
 
 /// True bila widget berada di dalam kartu sorotan navy — komponen kit menyesuaikan warnanya.
-bool onHighlight(BuildContext context) =>
-    context.dependOnInheritedWidgetOfExactType<_HighlightScope>() != null;
+bool onHighlight(BuildContext context) => context.dependOnInheritedWidgetOfExactType<_HighlightScope>() != null;
 
 class _HighlightScope extends InheritedWidget {
   const _HighlightScope({required super.child});
@@ -361,12 +333,7 @@ class SurfaceCard extends StatelessWidget {
 
 /// Lingkaran ikon berwarna (latar lembut + ikon warna kuat).
 class IconTile extends StatelessWidget {
-  const IconTile({
-    super.key,
-    required this.icon,
-    required this.accent,
-    this.size = 44,
-  });
+  const IconTile({super.key, required this.icon, required this.accent, this.size = 44});
   final IconData icon;
   final Accent accent;
   final double size;
@@ -376,15 +343,8 @@ class IconTile extends StatelessWidget {
     return Container(
       width: size,
       height: size,
-      decoration: BoxDecoration(
-        color: hl ? Colors.white.withValues(alpha: 0.12) : accent.soft,
-        shape: BoxShape.circle,
-      ),
-      child: Icon(
-        icon,
-        color: hl ? VmsColors.gold : accent.strong,
-        size: size * 0.48,
-      ),
+      decoration: BoxDecoration(color: hl ? Colors.white.withValues(alpha: 0.12) : accent.soft, shape: BoxShape.circle),
+      child: Icon(icon, color: hl ? VmsColors.gold : accent.strong, size: size * 0.48),
     );
   }
 }
@@ -402,10 +362,7 @@ class SectionTitle extends StatelessWidget {
         Expanded(
           child: Text(
             text,
-            style: VmsTextStyles.heading.copyWith(
-              fontWeight: FontWeight.w700,
-              color: VmsColors.neutral900,
-            ),
+            style: VmsTextStyles.heading.copyWith(fontWeight: FontWeight.w700, color: VmsColors.neutral900),
           ),
         ),
         ?trailing,
@@ -421,20 +378,14 @@ class SectionTitle extends StatelessWidget {
   'ACCEPTED' => (label: 'Diterima', accent: Accent.indigo),
   'APPEALED' => (label: 'Revisi diminta', accent: Accent.amber),
   'IN_PROGRESS' => (label: 'Berjalan', accent: Accent.blue),
-  'COMPLETION_REVIEW' || 'COMPLETION_REQUESTED' => (
-    label: 'Pengajuan penutupan',
-    accent: Accent.violet,
-  ),
+  'COMPLETION_REVIEW' || 'COMPLETION_REQUESTED' => (label: 'Pengajuan penutupan', accent: Accent.violet),
   'COMPLETED' => (label: 'Selesai', accent: Accent.emerald),
   'CANCELLED' => (label: 'Dibatalkan', accent: Accent.rose),
   'SUBMITTED' => (label: 'Dikirim', accent: Accent.amber),
   'RESUBMITTED' => (label: 'Dikirim ulang', accent: Accent.amber),
   'SENT' => (label: 'Terkirim ke ketua', accent: Accent.emerald),
   // Dokumen SK (alur SK v2).
-  'AWAITING_ACCEPTANCE' => (
-    label: 'Menunggu tanda tangan',
-    accent: Accent.amber,
-  ),
+  'AWAITING_ACCEPTANCE' => (label: 'Menunggu tanda tangan', accent: Accent.amber),
   'EFFECTIVE' => (label: 'Berlaku', accent: Accent.emerald),
   'SUPERSEDED' => (label: 'Tidak berlaku', accent: Accent.slate),
   'APPROVED' => (label: 'Disetujui', accent: Accent.emerald),
@@ -446,10 +397,12 @@ class SectionTitle extends StatelessWidget {
   'ONGOING' => (label: 'Berjalan', accent: Accent.blue),
   'TODO' => (label: 'Belum mulai', accent: Accent.slate),
   'DONE' => (label: 'Selesai', accent: Accent.emerald),
-  'PENDING_ROLLOVER' => (label: 'Menunggu geser', accent: Accent.amber),
-  'SHIFTED_DAY' => (label: 'Digeser', accent: Accent.violet),
-  // R-34: absen luring yang belum terkirim ke server.
-  'OFFLINE' => (label: 'Tersimpan luring', accent: Accent.indigo),
+  'LATE' => (label: 'Terlambat', accent: Accent.rose),
+  'PARTIAL' => (label: 'Selesai sebagian', accent: Accent.yellow),
+  'PENDING_ROLLOVER' => (label: 'Minta pindah hari', accent: Accent.amber),
+  'SHIFTED_DAY' => (label: 'Pindah hari', accent: Accent.violet),
+  // R-34: absen offline yang belum terkirim ke server.
+  'OFFLINE' => (label: 'Tersimpan offline', accent: Accent.indigo),
   null => (label: 'Belum ada', accent: Accent.slate),
   _ => (label: status, accent: Accent.slate),
 };
@@ -463,16 +416,10 @@ class StatusPill extends StatelessWidget {
     final s = statusStyle(status);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: s.accent.soft,
-        borderRadius: BorderRadius.circular(99),
-      ),
+      decoration: BoxDecoration(color: s.accent.soft, borderRadius: BorderRadius.circular(99)),
       child: Text(
         s.label,
-        style: VmsTextStyles.caption.copyWith(
-          color: s.accent.strong,
-          fontWeight: FontWeight.w700,
-        ),
+        style: VmsTextStyles.caption.copyWith(color: s.accent.strong, fontWeight: FontWeight.w700),
       ),
     );
   }
@@ -485,9 +432,7 @@ class InfoRow extends StatelessWidget {
   final String text;
   @override
   Widget build(BuildContext context) {
-    final color = onHighlight(context)
-        ? Colors.white.withValues(alpha: 0.78)
-        : VmsColors.neutral600;
+    final color = onHighlight(context) ? Colors.white.withValues(alpha: 0.78) : VmsColors.neutral600;
     return Row(
       children: [
         Icon(icon, size: 16, color: color),
@@ -507,13 +452,7 @@ class InfoRow extends StatelessWidget {
 
 /// Ubin aksi cepat bergaris: ikon di atas, label di bawah.
 class ActionTile extends StatelessWidget {
-  const ActionTile({
-    super.key,
-    required this.icon,
-    required this.label,
-    required this.accent,
-    required this.onTap,
-  });
+  const ActionTile({super.key, required this.icon, required this.label, required this.accent, required this.onTap});
   final IconData icon;
   final String label;
   final Accent accent;
@@ -535,10 +474,7 @@ class ActionTile extends StatelessWidget {
           Text(
             label,
             textAlign: TextAlign.center,
-            style: VmsTextStyles.bodySm.copyWith(
-              fontWeight: FontWeight.w700,
-              color: VmsColors.neutral900,
-            ),
+            style: VmsTextStyles.bodySm.copyWith(fontWeight: FontWeight.w700, color: VmsColors.neutral900),
           ),
         ],
       ),
@@ -548,13 +484,7 @@ class ActionTile extends StatelessWidget {
 
 /// Keadaan kosong/galat yang ramah.
 class EmptyState extends StatelessWidget {
-  const EmptyState({
-    super.key,
-    required this.icon,
-    required this.title,
-    this.message,
-    this.accent = Accent.indigo,
-  });
+  const EmptyState({super.key, required this.icon, required this.title, this.message, this.accent = Accent.indigo});
   final IconData icon;
   final String title;
   final String? message;
@@ -584,14 +514,9 @@ class EmptyState extends StatelessWidget {
   );
 }
 
-/// Pita pemberitahuan (luring/galat).
+/// Pita pemberitahuan (offline/galat).
 class NoticeBanner extends StatelessWidget {
-  const NoticeBanner({
-    super.key,
-    required this.icon,
-    required this.text,
-    this.accent = Accent.amber,
-  });
+  const NoticeBanner({super.key, required this.icon, required this.text, this.accent = Accent.amber});
   final IconData icon;
   final String text;
   final Accent accent;
@@ -599,10 +524,7 @@ class NoticeBanner extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     margin: const EdgeInsets.only(bottom: 12),
     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-    decoration: BoxDecoration(
-      color: accent.soft,
-      borderRadius: BorderRadius.circular(14),
-    ),
+    decoration: BoxDecoration(color: accent.soft, borderRadius: BorderRadius.circular(14)),
     child: Row(
       children: [
         Icon(icon, size: 18, color: accent.strong),
@@ -610,10 +532,7 @@ class NoticeBanner extends StatelessWidget {
         Expanded(
           child: Text(
             text,
-            style: VmsTextStyles.bodySm.copyWith(
-              color: accent.strong,
-              fontWeight: FontWeight.w600,
-            ),
+            style: VmsTextStyles.bodySm.copyWith(color: accent.strong, fontWeight: FontWeight.w600),
           ),
         ),
       ],
@@ -651,27 +570,18 @@ class PrimaryAction extends StatelessWidget {
         onTap: enabled ? onTap : null,
         child: Container(
           height: 56,
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(18),
-          ),
+          decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(18)),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               if (busy)
-                SizedBox.square(
-                  dimension: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2.4, color: fg),
-                )
+                SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2.4, color: fg))
               else
                 Icon(icon, color: fg),
               const SizedBox(width: 10),
               Text(
                 label,
-                style: VmsTextStyles.subheading.copyWith(
-                  color: fg,
-                  fontWeight: FontWeight.w700,
-                ),
+                style: VmsTextStyles.subheading.copyWith(color: fg, fontWeight: FontWeight.w700),
               ),
             ],
           ),
@@ -679,4 +589,139 @@ class PrimaryAction extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Nama + tombol Telepon & WhatsApp (kontak PM ↔ ketua/anggota tim). Tanpa nomor → keterangan "belum ada nomor HP".
+class ContactRow extends StatelessWidget {
+  const ContactRow({super.key, required this.label, required this.name, this.phone});
+  final String label;
+  final String name;
+  final String? phone;
+
+  static String _wa(String phone) {
+    final d = phone.replaceAll(RegExp(r'\D'), '');
+    return d.startsWith('0') ? '62${d.substring(1)}' : d;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = phone;
+    return Row(
+      children: [
+        const Icon(Icons.contact_phone_outlined, size: 18),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            '$label: $name${p == null ? ' · belum ada nomor HP' : ''}',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+        ),
+        if (p != null) ...[
+          IconButton(
+            tooltip: 'Telepon $name',
+            icon: const Icon(Icons.call_rounded),
+            onPressed: () => launchUrl(Uri(scheme: 'tel', path: p.replaceAll(RegExp(r'[^\d+]'), ''))),
+          ),
+          IconButton(
+            tooltip: 'WhatsApp $name',
+            icon: const Icon(Icons.chat_rounded),
+            onPressed: () => launchUrl(Uri.parse('https://wa.me/${_wa(p)}'), mode: LaunchMode.externalApplication),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// Keadaan kerja satu jadwal (sama dengan web): biru berjalan, merah terlambat, hijau selesai,
+/// kuning selesai sebagian, abu belum mulai. Hasilnya kode status untuk [StatusPill]/[statusStyle].
+String workState(Map<String, dynamic> p, String today) {
+  final done = (p['done_count'] as num?)?.toInt() ?? 0;
+  final total = (p['item_count'] as num?)?.toInt() ?? 0;
+  final pct = workPercent(p);
+  final date = '${p['work_date']}';
+  if (total > 0 && (done >= total || pct >= 100)) return 'DONE';
+  if (p['status'] == 'COMPLETED') return pct > 0 ? 'PARTIAL' : 'LATE';
+  if (date.compareTo(today) < 0) return 'LATE';
+  if (p['status'] == 'ONGOING' || pct > 0) return 'ONGOING';
+  return 'TODO';
+}
+
+/// Persen progres nyata jadwal (rata-rata jumlah dikerjakan/target) dari API, 0–100.
+int workPercent(Map<String, dynamic> p) {
+  final v = p['progress_pct'];
+  if (v is num) return v.toInt();
+  final done = (p['done_count'] as num?)?.toInt() ?? 0;
+  final total = (p['item_count'] as num?)?.toInt() ?? 0;
+  return total == 0 ? 0 : (done * 100 / total).round();
+}
+
+/// Warna per jenis pekerjaan (sama dengan web).
+const phaseAccent = <String, Accent>{
+  'SURVEY': Accent.sky,
+  'PREPARATION': Accent.slate,
+  'INSTALLATION': Accent.emerald,
+  'REPLACEMENT': Accent.amber,
+  'MAINTENANCE': Accent.indigo,
+};
+
+/// Notifikasi singkat berwarna: hijau ✓ berhasil, merah ! gagal (muncul melayang dari bawah).
+void showVmsToast(BuildContext context, String text, {bool error = false}) {
+  final a = error ? Accent.rose : Accent.emerald;
+  ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(
+      SnackBar(
+        backgroundColor: a.strong,
+        duration: Duration(seconds: error ? 4 : 2),
+        content: Row(
+          children: [
+            Icon(error ? Icons.error_outline_rounded : Icons.check_circle_rounded, color: Colors.white),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                text,
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+}
+
+/// Kerangka kartu berdenyut selama data dimuat (pengganti lingkaran putar).
+class SkeletonCards extends StatefulWidget {
+  const SkeletonCards({super.key, this.count = 3, this.height = 120});
+  final int count;
+  final double height;
+
+  @override
+  State<SkeletonCards> createState() => _SkeletonCardsState();
+}
+
+class _SkeletonCardsState extends State<SkeletonCards> with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 900))
+    ..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => FadeTransition(
+    opacity: Tween<double>(begin: 0.45, end: 1).animate(_c),
+    child: Column(
+      children: [
+        for (var i = 0; i < widget.count; i++)
+          Container(
+            height: widget.height,
+            margin: const EdgeInsets.only(bottom: 12),
+            decoration: BoxDecoration(color: const Color(0xFFE6E9F0), borderRadius: BorderRadius.circular(18)),
+          ),
+      ],
+    ),
+  );
 }

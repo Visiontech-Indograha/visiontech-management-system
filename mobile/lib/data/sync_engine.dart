@@ -18,8 +18,8 @@ class SyncSummary {
   bool get hasErrors => pushErrors.isNotEmpty || pullErrors.isNotEmpty;
 }
 
-/// Jenis operasi yang boleh dikirim luring (dok 02 A-08; backend `OFFLINE_ALLOWED`).
-/// Absensi, penerbitan & persetujuan wajib daring.
+/// Jenis operasi yang boleh dikirim offline (dok 02 A-08; backend `OFFLINE_ALLOWED`).
+/// Absensi, penerbitan & persetujuan wajib online.
 class OfflineOp {
   static const dailyReportSave = 'DAILY_REPORT_SAVE';
   static const dailyReportSubmit = 'DAILY_REPORT_SUBMIT';
@@ -33,11 +33,11 @@ class OfflineOp {
     taskToggle: 'Centang tugas',
     incidentReport: 'Laporan insiden',
     overtimeReport: 'Laporan lembur',
-    OfflineAttendance.entityType: 'Absensi luring',
+    OfflineAttendance.entityType: 'Absensi offline',
   };
 }
 
-/// Mesin sinkronisasi luring (M12). Setiap aksi lapangan dicatat dulu di antrean
+/// Mesin sinkronisasi offline (M12). Setiap aksi lapangan dicatat dulu di antrean
 /// lokal (`PendingSyncOperations`) dengan `client_op_id` unik, lalu dikirim lewat
 /// `POST /sync/operations` — server idempoten per `client_op_id`, jadi kirim ulang
 /// setelah sinyal putus tidak menggandakan data. Foto bukti disimpan sebagai path
@@ -58,7 +58,7 @@ class SyncEngine {
     );
   }
 
-  /// R-34: absen lapangan luring — disimpan bertanda tangan, dikirim otomatis saat online.
+  /// R-34: absen lapangan offline — disimpan bertanda tangan, dikirim otomatis saat online.
   late final OfflineAttendance offlineAttendance;
 
   final VmsApi _api;
@@ -122,7 +122,7 @@ class SyncEngine {
   }
 
   Future<void> _push() async {
-    // Absen luring dikirim lebih dulu lewat endpoint-nya sendiri (bertanda tangan).
+    // Absen offline dikirim lebih dulu lewat endpoint-nya sendiri (bertanda tangan).
     await offlineAttendance.push();
     final rows =
         await (_db.select(_db.pendingSyncOperations)
@@ -234,7 +234,7 @@ class SyncEngine {
     return 'HTTP ${e.response?.statusCode ?? '-'}';
   }
 
-  // --- Cache baca-luring ---------------------------------------------------
+  // --- Cache baca-offline ---------------------------------------------------
 
   Future<void> cachePut(String key, Object data) => _db
       .into(_db.cachedSyncGroups)
@@ -256,7 +256,7 @@ class SyncEngine {
     );
   }
 
-  /// `fetchList` luring tanpa cache memberi `cachedAt` = epoch 0: itu BUKAN data tersimpan.
+  /// `fetchList` offline tanpa cache memberi `cachedAt` = epoch 0: itu BUKAN data tersimpan.
   static bool neverCached(DateTime? cachedAt) =>
       cachedAt != null && cachedAt.millisecondsSinceEpoch == 0;
 
@@ -264,7 +264,7 @@ class SyncEngine {
       'Tidak ada koneksi dan belum ada data tersimpan di HP ini. '
       'Sambungkan internet untuk memuat pertama kali.';
 
-  /// Ambil dari server lalu simpan ke cache; bila luring kembalikan isi cache.
+  /// Ambil dari server lalu simpan ke cache; bila offline kembalikan isi cache.
   Future<({List<Map<String, dynamic>> items, DateTime? cachedAt})> fetchList(
     String key,
     Future<List<Map<String, dynamic>>> Function() fetch,
@@ -286,6 +286,24 @@ class SyncEngine {
     }
   }
 
+  /// Seperti [fetchList] untuk satu objek (detail jadwal, detail survei): offline → isi cache terakhir.
+  /// Offline tanpa cache melempar ulang galat jaringan aslinya.
+  Future<Map<String, dynamic>> fetchMap(
+    String key,
+    Future<Map<String, dynamic>> Function() fetch,
+  ) async {
+    try {
+      final data = await fetch();
+      await cachePut(key, data);
+      return data;
+    } on DioException catch (e) {
+      if (!isNetworkFailure(e)) rethrow;
+      final cached = await cacheGet(key);
+      if (cached.data == null) rethrow;
+      return Map<String, dynamic>.from(cached.data as Map);
+    }
+  }
+
   // --- Dipakai banner, profil & layar antrean -----------------------------
 
   Future<SyncSummary> syncAll() async {
@@ -297,10 +315,15 @@ class SyncEngine {
       push.add(isNetworkFailure(e) ? 'Tidak ada koneksi.' : _describe(e));
     }
     try {
-      await cachePut('daily_today', await _api.dailyPlans(start: _today(), end: _today()));
+      await cachePut(
+        'daily_today',
+        await _api.dailyPlans(start: _today(), end: _today()),
+      );
     } on DioException catch (e) {
       pull.add(
-        isNetworkFailure(e) ? 'Tidak ada koneksi.' : 'Jadwal harian: ${_describe(e)}',
+        isNetworkFailure(e)
+            ? 'Tidak ada koneksi.'
+            : 'Jadwal harian: ${_describe(e)}',
       );
     }
     return SyncSummary(pushErrors: push, pullErrors: pull);
@@ -332,7 +355,7 @@ class SyncEngine {
     await (_db.delete(
       _db.pendingSyncOperations,
     )..where((t) => t.id.equals(id))).go();
-    // Absen luring: swafotonya di folder internal ikut dibuang.
+    // Absen offline: swafotonya di folder internal ikut dibuang.
     if (row?.entityType == OfflineAttendance.entityType) {
       final path = (jsonDecode(row!.payloadJson) as Map)['selfie_path'];
       if (path is String) {
@@ -361,7 +384,7 @@ class SyncEngine {
     )..where((t) => t.deadLetter.equals(false))).get()) {
       final record = jsonDecode(row.payloadJson) as Map;
       if (row.entityType == OfflineAttendance.entityType) {
-        // Absen luring: payload-nya string bertanda tangan; swafotonya di selfie_path.
+        // Absen offline: payload-nya string bertanda tangan; swafotonya di selfie_path.
         if (record['selfie_path'] != null && record['selfie_file_id'] == null) {
           n++;
         }
@@ -372,6 +395,7 @@ class SyncEngine {
     }
     return n;
   }
+
   static String _today() => DateTime.now().toIso8601String().substring(0, 10);
 }
 
@@ -381,5 +405,4 @@ class SyncRejectedException implements Exception {
 
   @override
   String toString() => message;
-
 }

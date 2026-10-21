@@ -8,8 +8,7 @@ import '../../core/error_message.dart';
 import '../../core/providers.dart';
 import '../../core/theme/theme.dart';
 import '../../shared/ui/vms_ui.dart';
-import '../plans/revision_history_screen.dart';
-import '../plans/work_plans_screen.dart';
+import '../plans/daily_plan_screen.dart';
 
 final _time = DateFormat('d MMM yyyy, HH.mm', 'id_ID');
 
@@ -135,18 +134,10 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     final api = ref.read(syncEngineProvider).api;
     try {
       if (n['read_at'] == null) await api.readNotification(n['id'] as String);
-      final planId = n['work_plan_id'] as String?;
-      if (planId != null && n['kind'] == 'PLAN_REVISED') {
+      final planId = n['daily_plan_id'] as String?;
+      if (planId != null) {
         if (!mounted) return;
-        await Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => RevisionHistoryScreen(planId: planId)),
-        );
-      } else if (planId != null) {
-        final plan = await api.workPlan(planId);
-        if (!mounted) return;
-        await Navigator.of(
-          context,
-        ).push(MaterialPageRoute(builder: (_) => PlanDetailScreen(plan: plan)));
+        await Navigator.of(context).push(MaterialPageRoute(builder: (_) => DailyPlanScreen(dailyPlanId: planId)));
       }
     } catch (e) {
       if (mounted) {

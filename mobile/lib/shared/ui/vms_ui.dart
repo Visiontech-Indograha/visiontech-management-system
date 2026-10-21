@@ -442,6 +442,12 @@ class SectionTitle extends StatelessWidget {
   'AUTO_VALID' => (label: 'Valid', accent: Accent.emerald),
   'NEEDS_REVIEW' => (label: 'Perlu review', accent: Accent.amber),
   'REJECTED' => (label: 'Ditolak', accent: Accent.rose),
+  // Jadwal harian & item per titik (V2, daily-first).
+  'ONGOING' => (label: 'Berjalan', accent: Accent.blue),
+  'TODO' => (label: 'Belum mulai', accent: Accent.slate),
+  'DONE' => (label: 'Selesai', accent: Accent.emerald),
+  'PENDING_ROLLOVER' => (label: 'Menunggu geser', accent: Accent.amber),
+  'SHIFTED_DAY' => (label: 'Digeser', accent: Accent.violet),
   // R-34: absen luring yang belum terkirim ke server.
   'OFFLINE' => (label: 'Tersimpan luring', accent: Accent.indigo),
   null => (label: 'Belum ada', accent: Accent.slate),

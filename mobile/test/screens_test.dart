@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -5,6 +7,7 @@ import 'package:geolocator_platform_interface/geolocator_platform_interface.dart
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:vms_mobile/core/location_helper.dart';
+import 'package:vms_mobile/core/photo_capture.dart';
 import 'package:vms_mobile/core/providers.dart';
 import 'package:vms_mobile/core/theme/theme.dart';
 import 'package:vms_mobile/data/app_database.dart';
@@ -12,7 +15,7 @@ import 'package:vms_mobile/data/sync_engine.dart';
 import 'package:vms_mobile/features/attendance/attendance_screen.dart';
 import 'package:vms_mobile/features/auth/auth_controller.dart';
 import 'package:vms_mobile/features/auth/auth_state.dart';
-import 'package:vms_mobile/features/plans/work_plans_screen.dart';
+import 'package:vms_mobile/features/plans/daily_plans_screen.dart';
 import 'package:vms_mobile/features/sync/sync_queue_screen.dart';
 import 'package:vms_mobile/shared/app_frame.dart';
 
@@ -65,17 +68,19 @@ Position _at(double lat, double lng, {required double accuracy}) => Position(
   speedAccuracy: 0,
 );
 
-Map<String, dynamic> _plan(String id, String status) => {
-  'id': id,
-  'title': 'SK $id',
-  'number': 'SK-202609-$id',
+Map<String, dynamic> _day(String id, String status, {String date = '2026-10-21'}) => {
+  'daily_plan_id': id,
+  'work_date': date,
   'status': status,
-  'location_text': 'Gudang Dumai',
-  'period_start': '2026-09-01',
-  'period_end': '2026-09-30',
-  'site_id': null,
+  'site_name': 'Lokasi $id',
+  'site_lat': '1.6650000',
+  'site_lng': '101.4478000',
+  'attendance_radius_m': 150,
+  'team_name': 'Tim MEP',
+  'leader_name': 'Agus',
   'leader_employee_id': 'e1',
-  'row_version': 7,
+  'item_count': 2,
+  'done_count': 1,
 };
 
 void main() {
@@ -86,12 +91,20 @@ void main() {
   setUpAll(() => initializeDateFormatting('id_ID'));
 
   setUp(() {
+    // Swafoto absen selalu diminta (V2): uji tanpa plugin kamera.
+    photoCaptureOverride = (_) async {
+      final dir = await Directory.systemTemp.createTemp('vms-swafoto');
+      return (File('${dir.path}/swafoto.jpg')..writeAsBytesSync([1, 2, 3]), null);
+    };
     db = memoryDb();
     backend = FakeBackend();
     engine = engineWith(db, backend);
   });
 
-  tearDown(() async => db.close());
+  tearDown(() async {
+    photoCaptureOverride = null;
+    await db.close();
+  });
 
   Future<void> show(WidgetTester tester, Widget screen) async {
     await tester.runAsync(() async {
@@ -121,75 +134,22 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  group('Daftar SK', () {
-    testWidgets('menampilkan SK terbit/berjalan, menyembunyikan draf', (
-      tester,
-    ) async {
-      backend.routes['/work-plans'] = (_) => [
-        _plan('a', 'IN_PROGRESS'),
-        _plan('b', 'PUBLISHED'),
-        _plan('c', 'DRAFT'),
-      ];
-      await show(tester, const WorkPlansScreen());
+  group('Jadwal harian', () {
+    testWidgets('menampilkan jadwal minggu ini beserta ringkasan titik', (tester) async {
+      backend.routes['/work-plans/daily'] = (_) => [_day('a', 'APPROVED'), _day('b', 'ONGOING', date: '2026-10-22')];
+      await show(tester, const DailyPlansScreen());
 
-      expect(find.text('SK a'), findsOneWidget);
-      expect(find.text('SK b'), findsOneWidget);
-      expect(find.text('SK c'), findsNothing);
-      expect(find.text('2 rencana kerja · 1 sedang berjalan'), findsOneWidget);
+      expect(find.text('Lokasi a'), findsOneWidget);
+      expect(find.text('Lokasi b'), findsOneWidget);
+      expect(find.text('1 dari 2 titik selesai'), findsNWidgets(2));
+      final q = backend.requests.firstWhere((r) => r.path.endsWith('/work-plans/daily')).queryParameters;
+      expect(q.keys, containsAll(['start', 'end']));
     });
 
-    testWidgets('luring: menampilkan data tersimpan beserta tandanya', (
-      tester,
-    ) async {
-      backend.routes['/work-plans'] = (_) => [_plan('a', 'IN_PROGRESS')];
-      await show(tester, const WorkPlansScreen());
-      expect(find.text('SK a'), findsOneWidget);
-
-      backend.offline();
-      await tester.tap(find.byTooltip('Muat ulang'));
-      await settle(tester);
-
-      expect(find.text('SK a'), findsOneWidget);
-      expect(find.text('Luring — menampilkan data tersimpan.'), findsOneWidget);
-    });
-
-    testWidgets(
-      'luring tanpa data tersimpan: pesan galat yang bisa ditindaklanjuti',
-      (tester) async {
-        await show(tester, const WorkPlansScreen());
-        // Temuan R-18: dulu "Luring — menampilkan data tersimpan." + "Belum ada SK untuk Anda".
-        expect(find.text(SyncEngine.offlineNoDataMessage), findsOneWidget);
-        expect(find.text('Belum ada rencana kerja untuk Anda'), findsNothing);
-        expect(find.text('Luring — menampilkan data tersimpan.'), findsNothing);
-      },
-    );
-
-    testWidgets('ketua dapat menerima SK terbit dari layar mobile', (
-      tester,
-    ) async {
-      backend.routes['/work-plans'] = (_) => [_plan('a', 'PUBLISHED')];
-      backend.routes['/work-plans/a/days'] = (_) => <Object>[];
-      backend.routes['/work-plans/a/accept'] = (_) => {
-        ..._plan('a', 'ACCEPTED'),
-        'row_version': 8,
-      };
-      await show(tester, const WorkPlansScreen());
-
-      await tester.tap(find.text('SK a'));
-      await settle(tester);
-      expect(find.text('Terima rencana kerja'), findsOneWidget);
-
-      await tester.tap(find.text('Terima rencana kerja'));
-      await tester.pumpAndSettle();
-      expect(find.text('Terima surat kerja ini?'), findsOneWidget);
-      await tester.tap(find.widgetWithText(FilledButton, 'Terima'));
-      await settle(tester);
-
-      final request = backend.requests.singleWhere(
-        (r) => r.path.endsWith('/work-plans/a/accept'),
-      );
-      expect(request.data, {'row_version': 7, 'reason': ''});
-      expect(find.text('Diterima'), findsWidgets);
+    testWidgets('kosong: pesan jadwal muncul setelah disetujui PM', (tester) async {
+      backend.routes['/work-plans/daily'] = (_) => <Object>[];
+      await show(tester, const DailyPlansScreen());
+      expect(find.text('Tidak ada jadwal minggu ini'), findsOneWidget);
     });
   });
 
@@ -204,7 +164,8 @@ void main() {
     void online() {
       backend.routes['/attendance'] = (_) => {'items': <Object>[], 'total': 0};
       backend.routes['/sites'] = (_) => [site];
-      backend.routes['/work-plans'] = (_) => <Object>[];
+      backend.routes['/work-plans/daily'] = (_) => <Object>[];
+      backend.routes['/files/upload'] = (_) => {'file_id': 'f-selfie'};
       backend.routes['/attendance/check-in'] = (o) => {
         'id': 'a1',
         'status': 'AUTO_VALID',
@@ -253,53 +214,24 @@ void main() {
             .single;
         expect((sent.data as Map)['site_id'], 's1');
         expect((sent.data as Map)['accuracy_m'], 8);
-        expect((sent.data as Map).containsKey('selfie_file_id'), isFalse);
+        // Wajah V2: swafoto selalu dikirim; server yang mencocokkan wajah.
+        expect((sent.data as Map)['selfie_file_id'], 'f-selfie');
+        expect((sent.data as Map).containsKey('face_probe_id'), isFalse);
         expect(find.text('Absen masuk tercatat.'), findsOneWidget);
       },
     );
 
-    testWidgets(
-      'terikat SK tetapi memilih kantor: peringatan tampil, absen tetap terkirim ke kantor',
-      (tester) async {
-        online();
-        const project = {
-          'id': 's2',
-          'name': 'Proyek CCTV Rumbai',
-          'radius_m': 100,
-          'location': {'lat': 1.6650, 'lng': 101.4478},
-        };
-        backend.routes['/sites'] = (_) => [site, project];
-        backend.routes['/work-plans'] = (_) => [
-          {'id': 'wp1', 'status': 'IN_PROGRESS', 'site_id': 's2'},
-        ];
-        GeolocatorPlatform.instance = _FakeGps(
-          _at(1.6650, 101.4478, accuracy: 8),
-        );
-        await show(tester, const AttendanceScreen());
-        // Lokasi SK dipilih otomatis → tanpa peringatan.
-        expect(find.text('Proyek CCTV Rumbai'), findsWidgets);
-        expect(
-          find.byKey(const Key('peringatan-bukan-lokasi-sk')),
-          findsNothing,
-        );
+    testWidgets('lokasi tugas hari ini (jadwal disetujui) didahulukan dan dikirim sebagai daily_plan_id', (tester) async {
+      online();
+      backend.routes['/work-plans/daily'] = (_) => [_day('d1', 'APPROVED')];
+      GeolocatorPlatform.instance = _FakeGps(_at(1.6650, 101.4478, accuracy: 8));
+      await show(tester, const AttendanceScreen());
+      expect(find.text('Lokasi tugas: Lokasi d1'), findsWidgets);
 
-        await tester.tap(find.text('Proyek CCTV Rumbai').first);
-        await settle(tester);
-        await tester.tap(find.text('Kantor Visiontech Dumai').last);
-        await settle(tester);
-        expect(
-          find.byKey(const Key('peringatan-bukan-lokasi-sk')),
-          findsOneWidget,
-        );
-        expect(find.textContaining('Proyek CCTV Rumbai'), findsWidgets);
-
-        await tapCheckIn(tester);
-        final sent = backend.requests
-            .where((r) => r.path.endsWith('/check-in'))
-            .single;
-        expect((sent.data as Map)['site_id'], 's1');
-      },
-    );
+      await tapCheckIn(tester);
+      final sent = backend.requests.where((r) => r.path.endsWith('/check-in')).single;
+      expect((sent.data as Map)['site_id'], 'd1');
+    });
 
     Map<String, Object?> record(String workDate, {String? out}) => {
       'id': 'a-$workDate',

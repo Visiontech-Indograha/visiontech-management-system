@@ -46,6 +46,10 @@ class PhotoSlotConfig {
 ///
 /// Return `(file, null)` bila sukses, `(null, pesanError)` bila gagal/dibatalkan
 /// (pesan null berarti user membatalkan kamera, bukan error).
+/// Celah uji: bila diisi, kamera tidak dibuka dan hasil ini yang dipakai (uji widget tanpa plugin kamera).
+@visibleForTesting
+Future<(File?, String?)> Function(String label)? photoCaptureOverride;
+
 Future<(File?, String?)> captureWatermarkedPhoto({
   required BuildContext context,
   required String label,
@@ -56,6 +60,8 @@ Future<(File?, String?)> captureWatermarkedPhoto({
   geofenceCheck,
   LocalFileKind kind = LocalFileKind.other,
 }) async {
+  final override = photoCaptureOverride;
+  if (override != null) return override(label);
   final result = await Navigator.of(context, rootNavigator: true)
       .push<WatermarkCaptureResult>(
         MaterialPageRoute(

@@ -297,10 +297,10 @@ class SyncEngine {
       push.add(isNetworkFailure(e) ? 'Tidak ada koneksi.' : _describe(e));
     }
     try {
-      await cachePut('work_plans', await _api.workPlans());
+      await cachePut('daily_today', await _api.dailyPlans(start: _today(), end: _today()));
     } on DioException catch (e) {
       pull.add(
-        isNetworkFailure(e) ? 'Tidak ada koneksi.' : 'Rencana Kerja: ${_describe(e)}',
+        isNetworkFailure(e) ? 'Tidak ada koneksi.' : 'Jadwal harian: ${_describe(e)}',
       );
     }
     return SyncSummary(pushErrors: push, pullErrors: pull);
@@ -372,6 +372,7 @@ class SyncEngine {
     }
     return n;
   }
+  static String _today() => DateTime.now().toIso8601String().substring(0, 10);
 }
 
 class SyncRejectedException implements Exception {
@@ -380,4 +381,5 @@ class SyncRejectedException implements Exception {
 
   @override
   String toString() => message;
+
 }

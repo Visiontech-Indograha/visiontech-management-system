@@ -51,7 +51,7 @@ export function WorkCompletionFormDialog({ onClose }: { onClose: () => void }) {
         priority_level: values.priority_level,
         site_address: values.site_address || undefined,
       });
-      toast.success("Order proyek klien berhasil dibuat.");
+      toast.success("Pekerjaan klien berhasil dibuat.");
       onClose();
     } catch {
       setFormError("Gagal membuat order proyek klien. Pastikan input terisi dengan benar.");
@@ -61,11 +61,11 @@ export function WorkCompletionFormDialog({ onClose }: { onClose: () => void }) {
   return (
     <VmsDialog
       open
-      title="Buat Order Proyek Klien Baru"
+      title="Pekerjaan klien baru"
       onClose={onClose}
     >
       <TextBlock className="mb-4 text-sm text-mist">
-        Daftarkan entitas order pekerjaan klien (SPK/PO) untuk pembagian slot tugas tim lapangan.
+        Catat pekerjaan dari klien; nanti dibagi ke jadwal tim lapangan.
       </TextBlock>
       <FormBlock id="work-completion-form" onSubmit={handleSubmit(onSubmit)}>
         {formError && <FormErrorText message={formError} />}
@@ -86,7 +86,7 @@ export function WorkCompletionFormDialog({ onClose }: { onClose: () => void }) {
 
         <div className="grid grid-cols-2 gap-3">
           <TextField
-            label="Nomor SPK / PO / WO (Opsional)"
+            label="Nomor surat perintah kerja (boleh kosong)"
             placeholder="misal: PO-2026-PTM-001"
             {...register("order_number")}
           />
@@ -127,7 +127,7 @@ export function WorkCompletionFormDialog({ onClose }: { onClose: () => void }) {
           onCancel={onClose}
           busy={isSubmitting}
           formId="work-completion-form"
-          submitLabel="Simpan Order"
+          submitLabel="Simpan"
           busyLabel="Menyimpan..."
         />
       </FormBlock>

@@ -1,3 +1,4 @@
+import { formatDate } from "@/lib/format";
 import { useState } from "react";
 import {
   Building,
@@ -48,7 +49,7 @@ export function WorkCompletionDetailModal({
   return (
     <VmsDialog
       open={Boolean(completionId)}
-      title={order?.project_title || "Detail Order Proyek"}
+      title={order?.project_title || "Detail pekerjaan klien"}
       onClose={onClose}
       className="sm:max-w-4xl"
     >
@@ -57,11 +58,11 @@ export function WorkCompletionDetailModal({
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line pb-3">
           <div>
             <TextBlock as="span" className="text-xs font-bold uppercase tracking-wider text-primary">
-              {order?.client_name || "Detail Order Proyek"}
+              {order?.client_name || "Detail pekerjaan klien"}
             </TextBlock>
             {order?.order_number && (
               <TextBlock className="text-xs text-mist">
-                No. SPK / PO: {order.order_number}
+                No. surat perintah kerja: {order.order_number}
               </TextBlock>
             )}
           </div>
@@ -92,21 +93,21 @@ export function WorkCompletionDetailModal({
                   className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent"
                 >
                   <Layers className="mr-1.5 h-4 w-4" />
-                  <TextBlock as="span">Ringkasan & Realisasi</TextBlock>
+                  <TextBlock as="span">Ringkasan & hasil kerja</TextBlock>
                 </TabsBlockTrigger>
                 <TabsBlockTrigger
                   value="bom"
                   className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent"
                 >
                   <Package className="mr-1.5 h-4 w-4" />
-                  <TextBlock as="span">Bill of Materials (BoM)</TextBlock>
+                  <TextBlock as="span">Daftar material</TextBlock>
                 </TabsBlockTrigger>
                 <TabsBlockTrigger
                   value="bast"
                   className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent"
                 >
                   <FileCheck2 className="mr-1.5 h-4 w-4" />
-                  <TextBlock as="span">Pengesahan & BAST</TextBlock>
+                  <TextBlock as="span">Tanda tangan serah terima</TextBlock>
                 </TabsBlockTrigger>
               </TabsBlockList>
 
@@ -117,7 +118,7 @@ export function WorkCompletionDetailModal({
                   <div className="mb-2 flex items-center justify-between">
                     <div>
                       <TextBlock className="text-xs font-semibold text-mist uppercase tracking-wider">
-                        Realisasi Deliverable Utama (CCTV / Titik Selesai)
+                        Hasil utama yang sudah selesai
                       </TextBlock>
                       <TextBlock className="text-xl font-bold text-ink">
                         {completedUnits} / {targetUnits} {order.unit_measure}
@@ -136,7 +137,7 @@ export function WorkCompletionDetailModal({
                     />
                   </div>
                   <TextBlock className="mt-2 text-2xs text-mist">
-                    *Hanya item bertipe &apos;is_main_deliverable&apos; yang dihitung dalam capaian fisik BAST. Tahapan survei & persiapan dicatat sebagai penunjang teknis.
+                    *Yang dihitung hanya pekerjaan utama (mis. kamera terpasang). Survei & persiapan dicatat sebagai pendukung.
                   </TextBlock>
                 </div>
 
@@ -145,11 +146,11 @@ export function WorkCompletionDetailModal({
                   <div className="rounded-control border border-line p-3 space-y-2">
                     <div className="flex items-center gap-2 text-xs text-mist">
                       <Calendar className="h-4 w-4 text-primary shrink-0" />
-                      <TextBlock as="span">Periode Pelaksanaan Riil:</TextBlock>
+                      <TextBlock as="span">Tanggal dikerjakan:</TextBlock>
                     </div>
                     <TextBlock className="font-semibold text-ink pl-6">
                       {order.start_work_date
-                        ? `${order.start_work_date} s/d ${order.end_work_date || "Sekarang"}`
+                        ? `${formatDate(order.start_work_date)} s.d. ${order.end_work_date ? formatDate(order.end_work_date) : "sekarang"}`
                         : "Belum terjadwal di rencana kerja harian"}
                     </TextBlock>
                   </div>
@@ -157,7 +158,7 @@ export function WorkCompletionDetailModal({
                   <div className="rounded-control border border-line p-3 space-y-2">
                     <div className="flex items-center gap-2 text-xs text-mist">
                       <Building className="h-4 w-4 text-primary shrink-0" />
-                      <TextBlock as="span">Divisi & Project Manager:</TextBlock>
+                      <TextBlock as="span">Divisi & PM:</TextBlock>
                     </div>
                     <TextBlock className="font-semibold text-ink pl-6">
                       {order.division_name || "Divisi Operasional"} • {order.pm_name || "PM"}
@@ -167,7 +168,7 @@ export function WorkCompletionDetailModal({
                   <div className="rounded-control border border-line p-3 space-y-2 md:col-span-2">
                     <div className="flex items-center gap-2 text-xs text-mist">
                       <MapPin className="h-4 w-4 text-rose-500 shrink-0" />
-                      <TextBlock as="span">Lokasi Proyek / Site:</TextBlock>
+                      <TextBlock as="span">Lokasi:</TextBlock>
                     </div>
                     <TextBlock className="font-medium text-ink pl-6">
                       {order.site_address || "Lokasi belum ditentukan secara spesifik"}
@@ -178,7 +179,7 @@ export function WorkCompletionDetailModal({
                 {order.summary_notes && (
                   <div className="rounded-control border border-line p-3 bg-hover/20">
                     <TextBlock className="text-xs font-semibold text-mist uppercase tracking-wider mb-1">
-                      Catatan Proyek & Ruang Lingkup
+                      Ringkasan pekerjaan
                     </TextBlock>
                     <TextBlock className="text-sm text-ink whitespace-pre-wrap">
                       {order.summary_notes}
@@ -257,7 +258,7 @@ export function WorkCompletionDetailModal({
                           <TextBlock as="span">Menunggu Validasi PM</TextBlock>
                         </div>
                         <TextBlock>
-                          PM memverifikasi kesesuaian unit deliverable dan realisasi BoM sebelum menutup order.
+                          PM memeriksa jumlah hasil kerja dan material terpakai sebelum menyetujui serah terima.
                         </TextBlock>
                       </div>
                     )}
@@ -273,10 +274,10 @@ export function WorkCompletionDetailModal({
                     </TextBlock>
                   </div>
                   <TextBlock className="font-mono text-xs text-mist break-all bg-surface p-2 rounded border border-line">
-                    {order.signature_hash || "Belum ada tanda tangan elektronik yang diterbitkan."}
+                    {order.signature_hash || "Belum ditandatangani."}
                   </TextBlock>
                   <TextBlock className="mt-1 text-2xs text-mist">
-                    Hash ini membuktikan keaslian dokumen BAST dan tidak dapat dimanipulasi setelah penandatanganan.
+                    Kode ini membuktikan dokumen serah terima asli dan tidak diubah setelah ditandatangani.
                   </TextBlock>
                 </div>
 

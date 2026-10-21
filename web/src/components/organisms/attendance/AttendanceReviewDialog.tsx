@@ -40,7 +40,7 @@ export function AttendanceReviewDialog({ item, onClose }: { item: Attendance; on
       </TextBlock>
       {item.offline && (
         <div role="status" className="mb-3 rounded-control border border-warning-border bg-warning-bg px-3 py-2 text-sm text-warning">
-          <TextBlock className="font-medium">Absen luring (direkam tanpa sinyal, dikirim saat online)</TextBlock>
+          <TextBlock className="font-medium">Absen offline (direkam tanpa sinyal, dikirim saat online)</TextBlock>
           {item.offline_note && <TextBlock>Catatan server: {item.offline_note}</TextBlock>}
           {item.check_out_requested_at && (
             <TextBlock>

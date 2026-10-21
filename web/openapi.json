@@ -758,6 +758,793 @@
     }
    }
   },
+  "/api/v1/work-plans/surveys": {
+   "get": {
+    "tags": [
+     "Work Plan Surveys"
+    ],
+    "summary": "List Surveys",
+    "description": "Daftar survei: ketua/anggota tim (jadwal terbit), PM/OM divisi, admin/OM semua. Saring status.",
+    "operationId": "list_surveys_api_v1_work_plans_surveys_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "state",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "enum": [
+          "DRAFT",
+          "SUBMITTED",
+          "APPROVED"
+         ],
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "State"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/SurveyListItem"
+         },
+         "title": "Response List Surveys Api V1 Work Plans Surveys Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/work-plans/surveys/{task_id}": {
+   "get": {
+    "tags": [
+     "Work Plan Surveys"
+    ],
+    "summary": "Get Survey",
+    "description": "Survei: format (ACS/CCTV), slot foto, katalog material, titik, BoM, status.",
+    "operationId": "get_survey_api_v1_work_plans_surveys__task_id__get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "task_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Task Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/SurveyOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/work-plans/surveys/{task_id}/points": {
+   "post": {
+    "tags": [
+     "Work Plan Surveys"
+    ],
+    "summary": "Add Point",
+    "description": "Ketua tim menambah titik: foto per slot, remark, material/kebutuhan/kabel.",
+    "operationId": "add_point_api_v1_work_plans_surveys__task_id__points_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "task_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Task Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PointIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/SurveyOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/work-plans/surveys/points/{point_id}": {
+   "put": {
+    "tags": [
+     "Work Plan Surveys"
+    ],
+    "summary": "Update Point",
+    "description": "Ketua tim mengganti isi titik.",
+    "operationId": "update_point_api_v1_work_plans_surveys_points__point_id__put",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "point_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Point Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PointIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/SurveyOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "tags": [
+     "Work Plan Surveys"
+    ],
+    "summary": "Delete Point",
+    "description": "Ketua tim menghapus titik.",
+    "operationId": "delete_point_api_v1_work_plans_surveys_points__point_id__delete",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "point_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Point Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/SurveyOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/work-plans/surveys/points/{point_id}/location": {
+   "put": {
+    "tags": [
+     "Work Plan Surveys"
+    ],
+    "summary": "Move Point",
+    "description": "Geser titik di peta layout (PM kapan pun; ketua tim selama survei masih draf).",
+    "operationId": "move_point_api_v1_work_plans_surveys_points__point_id__location_put",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "point_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Point Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PointLocationIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/SurveyOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/work-plans/surveys/{task_id}/lines": {
+   "post": {
+    "tags": [
+     "Work Plan Surveys"
+    ],
+    "summary": "Add General Line",
+    "description": "Material umum lokasi (bukan milik satu titik): ketua tim saat draf, PM saat meninjau.",
+    "operationId": "add_general_line_api_v1_work_plans_surveys__task_id__lines_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "task_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Task Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PointLine"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/SurveyOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/work-plans/surveys/lines/{bom_id}": {
+   "put": {
+    "tags": [
+     "Work Plan Surveys"
+    ],
+    "summary": "Edit Line",
+    "description": "Ubah nama/jumlah/satuan satu baris BoM survei (tercatat di riwayat).",
+    "operationId": "edit_line_api_v1_work_plans_surveys_lines__bom_id__put",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "bom_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Bom Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/LineEditIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/SurveyOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "tags": [
+     "Work Plan Surveys"
+    ],
+    "summary": "Delete Line",
+    "description": "Hapus satu baris BoM survei (tercatat di riwayat).",
+    "operationId": "delete_line_api_v1_work_plans_surveys_lines__bom_id__delete",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "bom_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Bom Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/SurveyOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/work-plans/surveys/{task_id}/catalog": {
+   "post": {
+    "tags": [
+     "Work Plan Surveys"
+    ],
+    "summary": "Add To Catalog",
+    "description": "PM menyimpan material di luar katalog ke katalog jenis titik.",
+    "operationId": "add_to_catalog_api_v1_work_plans_surveys__task_id__catalog_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "task_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Task Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/CatalogAddIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/SurveyOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/work-plans/surveys/{task_id}/report": {
+   "put": {
+    "tags": [
+     "Work Plan Surveys"
+    ],
+    "summary": "Save Report",
+    "description": "Ketua tim mengisi narasi, tujuan, lokasi, dan gambar layout.",
+    "operationId": "save_report_api_v1_work_plans_surveys__task_id__report_put",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "task_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Task Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ReportIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/SurveyOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/work-plans/surveys/{task_id}/submit": {
+   "post": {
+    "tags": [
+     "Work Plan Surveys"
+    ],
+    "summary": "Submit Survey",
+    "description": "Ketua tim mengirim survei (semua titik berfoto, slot wajib lengkap).",
+    "operationId": "submit_survey_api_v1_work_plans_surveys__task_id__submit_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "task_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Task Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/SurveyOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/work-plans/surveys/{task_id}/review": {
+   "post": {
+    "tags": [
+     "Work Plan Surveys"
+    ],
+    "summary": "Review Survey",
+    "description": "PM/OM divisi menyetujui atau mengembalikan survei.",
+    "operationId": "review_survey_api_v1_work_plans_surveys__task_id__review_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "task_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Task Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ReviewIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/SurveyOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/work-plans/surveys/{task_id}/plan": {
+   "post": {
+    "tags": [
+     "Work Plan Surveys"
+    ],
+    "summary": "Plan From Survey",
+    "description": "PM/OM divisi menyusun item lanjutan per titik dari survei yang disetujui.",
+    "operationId": "plan_from_survey_api_v1_work_plans_surveys__task_id__plan_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "task_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Task Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PlanFromSurveyIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/PlanFromSurveyOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/v1/work-plans/form-options": {
    "get": {
     "tags": [
@@ -1767,6 +2554,59 @@
     }
    }
   },
+  "/api/v1/work-plans/daily/{daily_plan_id}/prerequisite-options": {
+   "get": {
+    "tags": [
+     "Work Plan Items"
+    ],
+    "summary": "Prerequisite Options",
+    "description": "Calon prasyarat item baru: item tim sendiri ≤ 30 hari terakhir + item tim lain di lokasi yang sama.",
+    "operationId": "prerequisite_options_api_v1_work_plans_daily__daily_plan_id__prerequisite_options_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "daily_plan_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Daily Plan Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/PrerequisiteOption"
+         },
+         "title": "Response Prerequisite Options Api V1 Work Plans Daily  Daily Plan Id  Prerequisite Options Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/v1/work-plans/items/{item_id}": {
    "get": {
     "tags": [
@@ -2418,6 +3258,123 @@
     }
    }
   },
+  "/api/v1/work-completions/{completion_id}/photos/{file_id}": {
+   "delete": {
+    "tags": [
+     "Work Completions (Order Klien)"
+    ],
+    "summary": "Hapus Foto Realisasi BAST",
+    "description": "Ketua tim/PM menghapus satu foto realisasi selama BAST belum disahkan PM (langsung tersimpan).",
+    "operationId": "delete_work_completion_photo_api_v1_work_completions__completion_id__photos__file_id__delete",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "completion_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Completion Id"
+      }
+     },
+     {
+      "name": "file_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "File Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/WorkCompletionOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/work-completions/{completion_id}/signatures/{role}": {
+   "get": {
+    "tags": [
+     "Work Completions (Order Klien)"
+    ],
+    "summary": "Gambar Tanda Tangan BAST",
+    "description": "Tanda tangan ketua/PM yang sudah tersimpan (ditampilkan kembali di layar BAST).",
+    "operationId": "get_work_completion_signature_api_v1_work_completions__completion_id__signatures__role__get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "completion_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Completion Id"
+      }
+     },
+     {
+      "name": "role",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "enum": [
+        "leader",
+        "pm"
+       ],
+       "type": "string",
+       "title": "Role"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "image/png": {}
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/v1/work-completions/{completion_id}/status": {
    "patch": {
     "tags": [
@@ -2897,6 +3854,293 @@
          "title": "Response List Work Completion Exports Api V1 Exports Work Completions  Completion Id  Get"
         }
        }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/exports/surveys/{task_id}/preview": {
+   "get": {
+    "tags": [
+     "Ekspor Dokumen"
+    ],
+    "summary": "Preview Survey",
+    "description": "Pratinjau laporan survei (PDF; .docx bila konverter tak tersedia) — ketua tim & PM, juga sebelum dikirim.\nTidak disimpan ke registri ekspor.",
+    "operationId": "preview_survey_api_v1_exports_surveys__task_id__preview_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "task_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Task Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Berkas dokumen",
+      "content": {
+       "application/octet-stream": {}
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/exports/survey-logos": {
+   "get": {
+    "tags": [
+     "Ekspor Dokumen"
+    ],
+    "summary": "Survey Logos",
+    "description": "Logo kop laporan survei (perusahaan & klien) beserta ukuran bakunya.",
+    "operationId": "survey_logos_api_v1_exports_survey_logos_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/SurveyLogoOut"
+         },
+         "type": "array",
+         "title": "Response Survey Logos Api V1 Exports Survey Logos Get"
+        }
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ]
+   }
+  },
+  "/api/v1/exports/survey-logos/{role}": {
+   "get": {
+    "tags": [
+     "Ekspor Dokumen"
+    ],
+    "summary": "Survey Logo Image",
+    "description": "Gambar logo pengganti (404 bila masih memakai logo bawaan template).",
+    "operationId": "survey_logo_image_api_v1_exports_survey_logos__role__get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "role",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "enum": [
+        "company",
+        "client"
+       ],
+       "type": "string",
+       "title": "Role"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Berkas dokumen",
+      "content": {
+       "application/octet-stream": {}
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "put": {
+    "tags": [
+     "Ekspor Dokumen"
+    ],
+    "summary": "Set Survey Logo",
+    "description": "Ganti logo kop: gambar dipasang utuh (rasio dijaga) ke kotak ukuran baku di setiap template.",
+    "operationId": "set_survey_logo_api_v1_exports_survey_logos__role__put",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "role",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "enum": [
+        "company",
+        "client"
+       ],
+       "type": "string",
+       "title": "Role"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "multipart/form-data": {
+       "schema": {
+        "$ref": "#/components/schemas/Body_set_survey_logo_api_v1_exports_survey_logos__role__put"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/SurveyLogoOut"
+         },
+         "title": "Response Set Survey Logo Api V1 Exports Survey Logos  Role  Put"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "tags": [
+     "Ekspor Dokumen"
+    ],
+    "summary": "Reset Survey Logo",
+    "description": "Kembali ke logo bawaan template.",
+    "operationId": "reset_survey_logo_api_v1_exports_survey_logos__role__delete",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "role",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "enum": [
+        "company",
+        "client"
+       ],
+       "type": "string",
+       "title": "Role"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/SurveyLogoOut"
+         },
+         "title": "Response Reset Survey Logo Api V1 Exports Survey Logos  Role  Delete"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/exports/surveys/{task_id}": {
+   "post": {
+    "tags": [
+     "Ekspor Dokumen"
+    ],
+    "summary": "Export Survey",
+    "description": "Laporan survei ACS/CCTV (.docx) persis format baku (docs/37); tersedia setelah survei dikirim.",
+    "operationId": "export_survey_api_v1_exports_surveys__task_id__post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "task_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Task Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Berkas dokumen",
+      "content": {
+       "application/octet-stream": {}
       }
      },
      "422": {
@@ -7134,7 +8378,7 @@
      "Attendance"
     ],
     "summary": "Register Device Key",
-    "description": "R-34: daftarkan kunci publik Android Keystore perangkat ini untuk memverifikasi absen luring.",
+    "description": "R-34: daftarkan kunci publik Android Keystore perangkat ini untuk memverifikasi absen offline.",
     "operationId": "register_device_key_api_v1_attendance_device_key_post",
     "requestBody": {
      "content": {
@@ -7185,7 +8429,7 @@
      "Attendance"
     ],
     "summary": "Submit Offline Attendance",
-    "description": "R-34: terima satu absen luring yang ditandatangani perangkat (idempoten per client_op_id).",
+    "description": "R-34: terima satu absen offline yang ditandatangani perangkat (idempoten per client_op_id).",
     "operationId": "submit_offline_attendance_api_v1_attendance_offline_post",
     "requestBody": {
      "content": {
@@ -11264,6 +12508,20 @@
     ],
     "title": "Body_enroll_face_api_v1_face_enroll_post"
    },
+   "Body_set_survey_logo_api_v1_exports_survey_logos__role__put": {
+    "properties": {
+     "file": {
+      "type": "string",
+      "contentMediaType": "application/octet-stream",
+      "title": "File"
+     }
+    },
+    "type": "object",
+    "required": [
+     "file"
+    ],
+    "title": "Body_set_survey_logo_api_v1_exports_survey_logos__role__put"
+   },
    "Body_upload_document_api_v1_files_upload_post": {
     "properties": {
      "file": {
@@ -11277,6 +12535,40 @@
      "file"
     ],
     "title": "Body_upload_document_api_v1_files_upload_post"
+   },
+   "BomRow": {
+    "properties": {
+     "group": {
+      "type": "string",
+      "title": "Group"
+     },
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "qty": {
+      "type": "string",
+      "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+      "title": "Qty"
+     },
+     "unit": {
+      "type": "string",
+      "title": "Unit"
+     },
+     "custom": {
+      "type": "boolean",
+      "title": "Custom",
+      "default": false
+     }
+    },
+    "type": "object",
+    "required": [
+     "group",
+     "name",
+     "qty",
+     "unit"
+    ],
+    "title": "BomRow"
    },
    "BulkApproveIn": {
     "properties": {
@@ -11322,6 +12614,70 @@
      "skipped"
     ],
     "title": "BulkApproveOut"
+   },
+   "CatalogAddIn": {
+    "properties": {
+     "point_type_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Point Type Id"
+     },
+     "name": {
+      "type": "string",
+      "maxLength": 255,
+      "minLength": 1,
+      "title": "Name"
+     },
+     "unit": {
+      "type": "string",
+      "maxLength": 50,
+      "minLength": 1,
+      "title": "Unit"
+     }
+    },
+    "type": "object",
+    "required": [
+     "point_type_id",
+     "name",
+     "unit"
+    ],
+    "title": "CatalogAddIn",
+    "description": "PM menyimpan material di luar katalog ke katalog jenis titik."
+   },
+   "CatalogOut": {
+    "properties": {
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "unit": {
+      "type": "string",
+      "title": "Unit"
+     },
+     "category": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Category"
+     },
+     "default_qty": {
+      "type": "string",
+      "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+      "title": "Default Qty",
+      "default": "1"
+     }
+    },
+    "type": "object",
+    "required": [
+     "name",
+     "unit"
+    ],
+    "title": "CatalogOut"
    },
    "ChainStep": {
     "properties": {
@@ -12017,6 +13373,18 @@
       ],
       "title": "Completion Id"
      },
+     "depends_on_item_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Depends On Item Id"
+     },
      "location_name": {
       "anyOf": [
        {
@@ -12243,6 +13611,39 @@
       "type": "string",
       "title": "Leader Name"
      },
+     "leader_phone": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Leader Phone"
+     },
+     "pm_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Pm Name"
+     },
+     "pm_phone": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Pm Phone"
+     },
      "work_date": {
       "type": "string",
       "format": "date",
@@ -12336,6 +13737,19 @@
       "type": "integer",
       "title": "Done Count",
       "default": 0
+     },
+     "progress_pct": {
+      "type": "integer",
+      "title": "Progress Pct",
+      "default": 0
+     },
+     "phases": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Phases",
+      "default": []
      },
      "items": {
       "items": {
@@ -12433,6 +13847,39 @@
       "type": "string",
       "title": "Leader Name"
      },
+     "leader_phone": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Leader Phone"
+     },
+     "pm_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Pm Name"
+     },
+     "pm_phone": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Pm Phone"
+     },
      "work_date": {
       "type": "string",
       "format": "date",
@@ -12526,6 +13973,19 @@
       "type": "integer",
       "title": "Done Count",
       "default": 0
+     },
+     "progress_pct": {
+      "type": "integer",
+      "title": "Progress Pct",
+      "default": 0
+     },
+     "phases": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Phases",
+      "default": []
      }
     },
     "type": "object",
@@ -13194,6 +14654,19 @@
       ],
       "title": "Pkwt End Date"
      },
+     "phone_number": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 20,
+        "pattern": "^\\+?[0-9][0-9 -]{7,18}$"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Phone Number"
+     },
      "photo_file_id": {
       "anyOf": [
        {
@@ -13323,6 +14796,17 @@
        }
       ],
       "title": "Pkwt End Date"
+     },
+     "phone_number": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Phone Number"
      },
      "photo_file_id": {
       "anyOf": [
@@ -13688,6 +15172,17 @@
       ],
       "title": "Pkwt End Date"
      },
+     "phone_number": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Phone Number"
+     },
      "photo_file_id": {
       "anyOf": [
        {
@@ -13887,6 +15382,19 @@
        }
       ],
       "title": "Pkwt End Date"
+     },
+     "phone_number": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 20,
+        "pattern": "^\\+?[0-9][0-9 -]{7,18}$"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Phone Number"
      },
      "photo_file_id": {
       "anyOf": [
@@ -14810,6 +16318,105 @@
     "type": "object",
     "title": "JobPositionUpdate"
    },
+   "LineEditIn": {
+    "properties": {
+     "name": {
+      "type": "string",
+      "maxLength": 255,
+      "minLength": 1,
+      "title": "Name"
+     },
+     "qty": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 99999999.0,
+        "minimum": 0.0
+       },
+       {
+        "type": "string",
+        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+       }
+      ],
+      "title": "Qty"
+     },
+     "unit": {
+      "type": "string",
+      "maxLength": 50,
+      "minLength": 1,
+      "title": "Unit"
+     }
+    },
+    "type": "object",
+    "required": [
+     "name",
+     "qty",
+     "unit"
+    ],
+    "title": "LineEditIn",
+    "description": "Ubah satu baris BoM (ketua tim saat draf, PM saat meninjau)."
+   },
+   "LineOut": {
+    "properties": {
+     "category": {
+      "type": "string",
+      "enum": [
+       "MATERIAL",
+       "KEBUTUHAN",
+       "KABEL"
+      ],
+      "title": "Category",
+      "default": "MATERIAL"
+     },
+     "name": {
+      "type": "string",
+      "maxLength": 255,
+      "minLength": 1,
+      "title": "Name"
+     },
+     "qty": {
+      "type": "string",
+      "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+      "title": "Qty",
+      "default": "1"
+     },
+     "unit": {
+      "type": "string",
+      "maxLength": 50,
+      "minLength": 1,
+      "title": "Unit",
+      "default": "Unit"
+     },
+     "notes": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 500
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Notes"
+     },
+     "bom_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Bom Id"
+     },
+     "custom": {
+      "type": "boolean",
+      "title": "Custom",
+      "default": false
+     }
+    },
+    "type": "object",
+    "required": [
+     "name",
+     "bom_id"
+    ],
+    "title": "LineOut"
+   },
    "LoanCreate": {
     "properties": {
      "asset_type": {
@@ -15118,6 +16725,17 @@
        }
       ],
       "title": "Employee No"
+     },
+     "phone_number": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Phone Number"
      },
      "system_role": {
       "anyOf": [
@@ -16307,7 +17925,7 @@
      "signature"
     ],
     "title": "OfflineAttendanceEvent",
-    "description": "Schema representing a signed offline attendance event.\nSatu absen luring: `payload` adalah JSON persis seperti yang ditandatangani oleh HP;\n`signature` adalah tanda tangan ECDSA SHA-256 (DER, base64).\nSwafoto diunggah lebih dulu; kecocokannya dicek melalui `selfie_sha256` dalam payload."
+    "description": "Schema representing a signed offline attendance event.\nSatu absen offline: `payload` adalah JSON persis seperti yang ditandatangani oleh HP;\n`signature` adalah tanda tangan ECDSA SHA-256 (DER, base64).\nSwafoto diunggah lebih dulu; kecocokannya dicek melalui `selfie_sha256` dalam payload."
    },
    "OfflineAttendanceResult": {
     "properties": {
@@ -16776,6 +18394,43 @@
     ],
     "title": "PeriodicExportRequest"
    },
+   "PhotoOut": {
+    "properties": {
+     "file_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "File Id"
+     },
+     "requirement_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Requirement Id"
+     },
+     "slot": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Slot"
+     }
+    },
+    "type": "object",
+    "required": [
+     "file_id"
+    ],
+    "title": "PhotoOut"
+   },
    "PkwtExpiringRow": {
     "properties": {
      "employee_id": {
@@ -16822,6 +18477,104 @@
     ],
     "title": "PkwtExpiringRow",
     "description": "Karyawan PKWT yang kontraknya berakhir dalam rentang & belum diproses offboarding."
+   },
+   "PlanFromSurveyIn": {
+    "properties": {
+     "daily_plan_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Daily Plan Id"
+     },
+     "work_date": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Work Date"
+     },
+     "work_type_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Work Type Id"
+     },
+     "task_phase": {
+      "type": "string",
+      "enum": [
+       "PREPARATION",
+       "INSTALLATION",
+       "REPLACEMENT",
+       "MAINTENANCE"
+      ],
+      "title": "Task Phase",
+      "default": "INSTALLATION"
+     },
+     "point_ids": {
+      "items": {
+       "type": "string",
+       "format": "uuid"
+      },
+      "type": "array",
+      "maxItems": 100,
+      "title": "Point Ids"
+     },
+     "preparation_work_type_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Preparation Work Type Id"
+     }
+    },
+    "type": "object",
+    "title": "PlanFromSurveyIn",
+    "description": "Susun item lanjutan dari survei yang disetujui pada jadwal DRAFT/SUBMITTED tim yang sama."
+   },
+   "PlanFromSurveyOut": {
+    "properties": {
+     "daily_plan_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Daily Plan Id"
+     },
+     "created_item_ids": {
+      "items": {
+       "type": "string",
+       "format": "uuid"
+      },
+      "type": "array",
+      "title": "Created Item Ids"
+     }
+    },
+    "type": "object",
+    "required": [
+     "daily_plan_id",
+     "created_item_ids"
+    ],
+    "title": "PlanFromSurveyOut"
    },
    "PlanItemCreate": {
     "properties": {
@@ -17081,6 +18834,22 @@
        }
       ],
       "title": "Depends On Title"
+     },
+     "depends_on_team_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Depends On Team Name"
+     },
+     "depends_on_done": {
+      "type": "boolean",
+      "title": "Depends On Done",
+      "default": false
      },
      "target_qty": {
       "type": "string",
@@ -17476,6 +19245,411 @@
     },
     "type": "object",
     "title": "PlanItemUpdate"
+   },
+   "PointIn": {
+    "properties": {
+     "name": {
+      "type": "string",
+      "maxLength": 150,
+      "minLength": 2,
+      "title": "Name"
+     },
+     "point_type_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Point Type Id"
+     },
+     "point_status": {
+      "type": "string",
+      "enum": [
+       "EXISTING",
+       "PROPOSED"
+      ],
+      "title": "Point Status",
+      "default": "PROPOSED"
+     },
+     "remarks": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "maxItems": 20,
+      "title": "Remarks"
+     },
+     "photos": {
+      "items": {
+       "$ref": "#/components/schemas/PointPhoto"
+      },
+      "type": "array",
+      "maxItems": 10,
+      "title": "Photos"
+     },
+     "lines": {
+      "items": {
+       "$ref": "#/components/schemas/PointLine"
+      },
+      "type": "array",
+      "maxItems": 60,
+      "title": "Lines"
+     },
+     "site_lat": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 90.0,
+        "minimum": -90.0
+       },
+       {
+        "type": "string",
+        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Lat"
+     },
+     "site_lng": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 180.0,
+        "minimum": -180.0
+       },
+       {
+        "type": "string",
+        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Lng"
+     }
+    },
+    "type": "object",
+    "required": [
+     "name"
+    ],
+    "title": "PointIn"
+   },
+   "PointLine": {
+    "properties": {
+     "category": {
+      "type": "string",
+      "enum": [
+       "MATERIAL",
+       "KEBUTUHAN",
+       "KABEL"
+      ],
+      "title": "Category",
+      "default": "MATERIAL"
+     },
+     "name": {
+      "type": "string",
+      "maxLength": 255,
+      "minLength": 1,
+      "title": "Name"
+     },
+     "qty": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 99999999.0,
+        "minimum": 0.0
+       },
+       {
+        "type": "string",
+        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+       }
+      ],
+      "title": "Qty",
+      "default": "1"
+     },
+     "unit": {
+      "type": "string",
+      "maxLength": 50,
+      "minLength": 1,
+      "title": "Unit",
+      "default": "Unit"
+     },
+     "notes": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 500
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Notes"
+     }
+    },
+    "type": "object",
+    "required": [
+     "name"
+    ],
+    "title": "PointLine",
+    "description": "Satu baris per titik: MATERIAL (masuk BoM), KEBUTUHAN (alat/izin: scaffolding, tangga, grounding),\nKABEL (ukuran instalasi CCTV per kamera: galian, kabel FO, kabel power, subduct, pipa, …)."
+   },
+   "PointLocationIn": {
+    "properties": {
+     "site_lat": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 90.0,
+        "minimum": -90.0
+       },
+       {
+        "type": "string",
+        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+       }
+      ],
+      "title": "Site Lat"
+     },
+     "site_lng": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 180.0,
+        "minimum": -180.0
+       },
+       {
+        "type": "string",
+        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+       }
+      ],
+      "title": "Site Lng"
+     }
+    },
+    "type": "object",
+    "required": [
+     "site_lat",
+     "site_lng"
+    ],
+    "title": "PointLocationIn"
+   },
+   "PointOut": {
+    "properties": {
+     "point_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Point Id"
+     },
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "remarks": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Remarks"
+     },
+     "photos": {
+      "items": {
+       "$ref": "#/components/schemas/PhotoOut"
+      },
+      "type": "array",
+      "title": "Photos"
+     },
+     "lines": {
+      "items": {
+       "$ref": "#/components/schemas/LineOut"
+      },
+      "type": "array",
+      "title": "Lines"
+     },
+     "site_lat": {
+      "anyOf": [
+       {
+        "type": "string",
+        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Lat"
+     },
+     "site_lng": {
+      "anyOf": [
+       {
+        "type": "string",
+        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Lng"
+     },
+     "update_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Update At"
+     },
+     "point_type_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Point Type Id"
+     },
+     "point_type_name": {
+      "type": "string",
+      "title": "Point Type Name"
+     },
+     "point_status": {
+      "type": "string",
+      "enum": [
+       "EXISTING",
+       "PROPOSED"
+      ],
+      "title": "Point Status",
+      "default": "PROPOSED"
+     }
+    },
+    "type": "object",
+    "required": [
+     "point_id",
+     "name",
+     "remarks",
+     "photos",
+     "lines",
+     "update_at",
+     "point_type_id",
+     "point_type_name"
+    ],
+    "title": "PointOut"
+   },
+   "PointPhoto": {
+    "properties": {
+     "file_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "File Id"
+     },
+     "requirement_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Requirement Id"
+     }
+    },
+    "type": "object",
+    "required": [
+     "file_id",
+     "requirement_id"
+    ],
+    "title": "PointPhoto"
+   },
+   "PointTypeOut": {
+    "properties": {
+     "work_type_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Work Type Id"
+     },
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "slots": {
+      "items": {
+       "$ref": "#/components/schemas/SlotOut"
+      },
+      "type": "array",
+      "title": "Slots"
+     },
+     "catalog": {
+      "items": {
+       "$ref": "#/components/schemas/CatalogOut"
+      },
+      "type": "array",
+      "title": "Catalog"
+     },
+     "follow_up_work_type_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Follow Up Work Type Id"
+     }
+    },
+    "type": "object",
+    "required": [
+     "work_type_id",
+     "name",
+     "slots",
+     "catalog"
+    ],
+    "title": "PointTypeOut",
+    "description": "Jenis titik yang boleh dipakai survei ini: slot foto & katalog material sendiri."
+   },
+   "PrerequisiteOption": {
+    "properties": {
+     "item_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Item Id"
+     },
+     "title": {
+      "type": "string",
+      "title": "Title"
+     },
+     "task_phase": {
+      "type": "string",
+      "title": "Task Phase"
+     },
+     "status": {
+      "type": "string",
+      "title": "Status"
+     },
+     "work_date": {
+      "type": "string",
+      "format": "date",
+      "title": "Work Date"
+     },
+     "team_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Team Name"
+     },
+     "other_team": {
+      "type": "boolean",
+      "title": "Other Team",
+      "default": false
+     }
+    },
+    "type": "object",
+    "required": [
+     "item_id",
+     "title",
+     "task_phase",
+     "status",
+     "work_date"
+    ],
+    "title": "PrerequisiteOption",
+    "description": "Item yang boleh dijadikan prasyarat item baru di jadwal ini."
    },
    "ProgressIn": {
     "properties": {
@@ -17918,6 +20092,78 @@
     "title": "ReleaseFileOut",
     "description": "Berkas yang cocok untuk HP penanya."
    },
+   "ReportIn": {
+    "properties": {
+     "narrative": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 4000
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Narrative"
+     },
+     "purpose": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 255
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Purpose"
+     },
+     "location": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 500
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Location"
+     }
+    },
+    "type": "object",
+    "title": "ReportIn",
+    "description": "Bagian tingkat laporan yang diisi ketua tim: narasi, tujuan, lokasi, gambar layout."
+   },
+   "ReviewIn": {
+    "properties": {
+     "decision": {
+      "type": "string",
+      "enum": [
+       "APPROVE",
+       "RETURN"
+      ],
+      "title": "Decision"
+     },
+     "note": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 1000
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Note"
+     }
+    },
+    "type": "object",
+    "required": [
+     "decision"
+    ],
+    "title": "ReviewIn"
+   },
    "ReviewRequest": {
     "properties": {
      "is_approved": {
@@ -18022,6 +20268,432 @@
     ],
     "title": "RolloverRequest",
     "description": "Ketua: pekerjaan belum selesai (hujan, izin, material) → minta digeser."
+   },
+   "SlotOut": {
+    "properties": {
+     "requirement_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Requirement Id"
+     },
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "mandatory": {
+      "type": "boolean",
+      "title": "Mandatory"
+     },
+     "hint": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Hint"
+     },
+     "example_file_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Example File Id"
+     }
+    },
+    "type": "object",
+    "required": [
+     "requirement_id",
+     "name",
+     "mandatory"
+    ],
+    "title": "SlotOut"
+   },
+   "SurveyListItem": {
+    "properties": {
+     "task_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Task Id"
+     },
+     "title": {
+      "type": "string",
+      "title": "Title"
+     },
+     "state": {
+      "type": "string",
+      "enum": [
+       "DRAFT",
+       "SUBMITTED",
+       "APPROVED"
+      ],
+      "title": "State"
+     },
+     "format": {
+      "type": "string",
+      "enum": [
+       "ACS",
+       "CCTV"
+      ],
+      "title": "Format"
+     },
+     "work_date": {
+      "type": "string",
+      "format": "date",
+      "title": "Work Date"
+     },
+     "plan_status": {
+      "type": "string",
+      "title": "Plan Status"
+     },
+     "daily_plan_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Daily Plan Id"
+     },
+     "division_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Division Id"
+     },
+     "division_name": {
+      "type": "string",
+      "title": "Division Name"
+     },
+     "team_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Team Name"
+     },
+     "work_type_name": {
+      "type": "string",
+      "title": "Work Type Name"
+     },
+     "completion_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Completion Id"
+     },
+     "client_name": {
+      "type": "string",
+      "title": "Client Name"
+     },
+     "project_title": {
+      "type": "string",
+      "title": "Project Title"
+     },
+     "site_address": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Address"
+     },
+     "point_count": {
+      "type": "integer",
+      "title": "Point Count"
+     },
+     "update_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Update At"
+     }
+    },
+    "type": "object",
+    "required": [
+     "task_id",
+     "title",
+     "state",
+     "format",
+     "work_date",
+     "plan_status",
+     "daily_plan_id",
+     "division_id",
+     "division_name",
+     "work_type_name",
+     "completion_id",
+     "client_name",
+     "project_title",
+     "point_count",
+     "update_at"
+    ],
+    "title": "SurveyListItem"
+   },
+   "SurveyLogoOut": {
+    "properties": {
+     "role": {
+      "type": "string",
+      "enum": [
+       "company",
+       "client"
+      ],
+      "title": "Role"
+     },
+     "label": {
+      "type": "string",
+      "title": "Label"
+     },
+     "width_cm": {
+      "type": "number",
+      "title": "Width Cm"
+     },
+     "height_cm": {
+      "type": "number",
+      "title": "Height Cm"
+     },
+     "recommended_px": {
+      "prefixItems": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "integer"
+       }
+      ],
+      "type": "array",
+      "maxItems": 2,
+      "minItems": 2,
+      "title": "Recommended Px"
+     },
+     "custom": {
+      "type": "boolean",
+      "title": "Custom"
+     }
+    },
+    "type": "object",
+    "required": [
+     "role",
+     "label",
+     "width_cm",
+     "height_cm",
+     "recommended_px",
+     "custom"
+    ],
+    "title": "SurveyLogoOut",
+    "description": "Logo kop laporan survei: ukuran baku (cm & px 300 dpi) dan apakah sudah diganti."
+   },
+   "SurveyOut": {
+    "properties": {
+     "task_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Task Id"
+     },
+     "daily_plan_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Daily Plan Id"
+     },
+     "work_date": {
+      "type": "string",
+      "format": "date",
+      "title": "Work Date"
+     },
+     "plan_status": {
+      "type": "string",
+      "title": "Plan Status"
+     },
+     "team_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Team Id"
+     },
+     "team_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Team Name"
+     },
+     "division_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Division Id"
+     },
+     "division_name": {
+      "type": "string",
+      "title": "Division Name"
+     },
+     "format": {
+      "type": "string",
+      "enum": [
+       "ACS",
+       "CCTV"
+      ],
+      "title": "Format"
+     },
+     "work_type_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Work Type Id"
+     },
+     "work_type_name": {
+      "type": "string",
+      "title": "Work Type Name"
+     },
+     "completion_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Completion Id"
+     },
+     "client_name": {
+      "type": "string",
+      "title": "Client Name"
+     },
+     "project_title": {
+      "type": "string",
+      "title": "Project Title"
+     },
+     "location": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Location"
+     },
+     "purpose": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Purpose"
+     },
+     "narrative": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Narrative"
+     },
+     "state": {
+      "type": "string",
+      "enum": [
+       "DRAFT",
+       "SUBMITTED",
+       "APPROVED"
+      ],
+      "title": "State"
+     },
+     "review_note": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Review Note"
+     },
+     "point_types": {
+      "items": {
+       "$ref": "#/components/schemas/PointTypeOut"
+      },
+      "type": "array",
+      "title": "Point Types"
+     },
+     "points": {
+      "items": {
+       "$ref": "#/components/schemas/PointOut"
+      },
+      "type": "array",
+      "title": "Points"
+     },
+     "general_lines": {
+      "items": {
+       "$ref": "#/components/schemas/LineOut"
+      },
+      "type": "array",
+      "title": "General Lines",
+      "default": []
+     },
+     "bom": {
+      "items": {
+       "$ref": "#/components/schemas/BomRow"
+      },
+      "type": "array",
+      "title": "Bom"
+     },
+     "can_edit_bom": {
+      "type": "boolean",
+      "title": "Can Edit Bom",
+      "default": false
+     },
+     "can_edit": {
+      "type": "boolean",
+      "title": "Can Edit"
+     },
+     "can_review": {
+      "type": "boolean",
+      "title": "Can Review"
+     },
+     "can_move": {
+      "type": "boolean",
+      "title": "Can Move",
+      "default": false
+     }
+    },
+    "type": "object",
+    "required": [
+     "task_id",
+     "daily_plan_id",
+     "work_date",
+     "plan_status",
+     "division_id",
+     "division_name",
+     "format",
+     "work_type_id",
+     "work_type_name",
+     "completion_id",
+     "client_name",
+     "project_title",
+     "state",
+     "point_types",
+     "points",
+     "bom",
+     "can_edit",
+     "can_review"
+    ],
+    "title": "SurveyOut"
    },
    "SyncBomFromWorkTypesIn": {
     "properties": {
@@ -19741,6 +22413,18 @@
       "title": "Completed Target Unit",
       "default": 0
      },
+     "phases": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Phases"
+     },
+     "progress_pct": {
+      "type": "integer",
+      "title": "Progress Pct",
+      "default": 0
+     },
      "unit_measure": {
       "type": "string",
       "title": "Unit Measure"
@@ -20298,6 +22982,28 @@
       "type": "array",
       "title": "Photos",
       "default": []
+     },
+     "kind": {
+      "type": "string",
+      "enum": [
+       "WORK",
+       "SURVEY_TASK",
+       "SURVEY_POINT"
+      ],
+      "title": "Kind",
+      "default": "WORK"
+     },
+     "follow_up_work_type_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Follow Up Work Type Id"
      }
     },
     "type": "object",
@@ -20356,6 +23062,39 @@
       "type": "boolean",
       "title": "Is Active",
       "default": true
+     },
+     "kind": {
+      "type": "string",
+      "enum": [
+       "WORK",
+       "SURVEY_TASK",
+       "SURVEY_POINT"
+      ],
+      "title": "Kind",
+      "default": "WORK"
+     },
+     "follow_up_work_type_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Follow Up Work Type Id"
+     },
+     "follow_up_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Follow Up Name"
      },
      "photos": {
       "items": {

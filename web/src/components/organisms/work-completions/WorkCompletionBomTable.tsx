@@ -103,7 +103,7 @@ export function WorkCompletionBomTable({
           notes: values.notes || undefined,
         },
       });
-      toast.success("Material berhasil ditambahkan ke BoM.");
+      toast.success("Material ditambahkan.");
       setIsAddOpen(false);
       addForm.reset();
     } catch {
@@ -123,10 +123,10 @@ export function WorkCompletionBomTable({
           notes: values.notes || undefined,
         },
       });
-      toast.success("Realisasi material berhasil diperbarui.");
+      toast.success("Jumlah terpakai disimpan.");
       setEditingItem(null);
     } catch {
-      toast.error("Gagal memperbarui realisasi material.");
+      toast.error("Jumlah terpakai gagal disimpan.");
     }
   };
 
@@ -161,7 +161,7 @@ export function WorkCompletionBomTable({
         <div className="flex items-center gap-2">
           <Package className="h-5 w-5 text-primary" />
           <TextBlock className="font-semibold text-ink">
-            Rincian Bill of Materials (BoM)
+            Daftar material
           </TextBlock>
           <TextBlock as="span" className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
             {bomItems.length} Item
@@ -215,7 +215,7 @@ export function WorkCompletionBomTable({
         <div className="rounded-panel border border-dashed border-line p-8 text-center">
           <Package className="mx-auto mb-2 h-8 w-8 text-mist" />
           <TextBlock className="mb-1 text-sm font-medium text-ink">
-            Belum ada rincian material (BoM)
+            Belum ada daftar material
           </TextBlock>
           <TextBlock className="mb-4 text-xs text-mist">
             Tarik material default dari jenis pekerjaan atau tambahkan manual.
@@ -254,7 +254,7 @@ export function WorkCompletionBomTable({
                 <TableBlockHeaderCell>Nama Material</TableBlockHeaderCell>
                 <TableBlockHeaderCell>Kategori</TableBlockHeaderCell>
                 <TableBlockHeaderCell className="text-right">Estimasi</TableBlockHeaderCell>
-                <TableBlockHeaderCell className="text-right">Realisasi</TableBlockHeaderCell>
+                <TableBlockHeaderCell className="text-right">Terpakai</TableBlockHeaderCell>
                 <TableBlockHeaderCell className="text-center">Satuan</TableBlockHeaderCell>
                 <TableBlockHeaderCell className="text-right">Selisih</TableBlockHeaderCell>
                 <TableBlockHeaderCell>Catatan Lapangan</TableBlockHeaderCell>
@@ -306,7 +306,7 @@ export function WorkCompletionBomTable({
                             variant="ghost"
                             size="sm"
                             onClick={() => handleOpenEdit(item)}
-                            aria-label="Ubah Realisasi & Catatan"
+                            aria-label="Ubah jumlah terpakai & catatan"
                           >
                             <Edit2 className="h-4 w-4" />
                           </ActionButton>
@@ -333,7 +333,7 @@ export function WorkCompletionBomTable({
       {isAddOpen && (
         <VmsDialog
           open
-          title="Tambah Material ke BoM"
+          title="Tambah material"
           onClose={() => setIsAddOpen(false)}
         >
             <FormBlock id="add-bom-material-form" onSubmit={addForm.handleSubmit(onAddSubmit)}>
@@ -364,7 +364,7 @@ export function WorkCompletionBomTable({
               <TextField
                 type="number"
                 step="any"
-                label="Realisasi Awal"
+                label="Jumlah terpakai"
                 {...addForm.register("actual_qty")}
               />
               <TextField
@@ -394,7 +394,7 @@ export function WorkCompletionBomTable({
       {editingItem && (
         <VmsDialog
           open
-          title={`Ubah Realisasi: ${editingItem.material_name}`}
+          title={`Ubah jumlah terpakai: ${editingItem.material_name}`}
           onClose={() => setEditingItem(null)}
         >
           <FormBlock id="edit-bom-material-form" onSubmit={editForm.handleSubmit(onEditSubmit)}>
@@ -408,19 +408,19 @@ export function WorkCompletionBomTable({
               <TextField
                 type="number"
                 step="any"
-                label={`Realisasi Riil (${editingItem.unit})`}
+                label={`Jumlah terpakai (${editingItem.unit})`}
                 {...editForm.register("actual_qty", { required: true })}
               />
             </div>
             <TextAreaField
-              label="Catatan Lapangan / Realisasi Fisik"
-              placeholder="misal: Realisasi riil survei & penarikan kabel FO sepanjang 69 meter"
+              label="Catatan lapangan"
+              placeholder="mis. kabel FO terpakai 69 meter"
               {...editForm.register("notes")}
             />
             <div className="mt-4 flex justify-end gap-2">
               <DialogActions
                 onCancel={() => setEditingItem(null)}
-                submitLabel="Perbarui Realisasi"
+                submitLabel="Simpan"
                 busy={updateBom.isPending}
                 formId="edit-bom-material-form"
               />

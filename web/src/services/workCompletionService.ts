@@ -100,10 +100,11 @@ export function useWorkCompletions(filters?: {
   return useQuery({
     queryKey: ["work-completions", filters],
     queryFn: async () => {
-      const res = await api.get<WorkCompletionOrder[]>("/work-completions", {
-        params: filters,
+      // API berpaginasi ({items, total, …}); daftar ini menampilkan halaman pertama (≤ 100 order terbaru).
+      const res = await api.get<{ items: WorkCompletionOrder[] } | WorkCompletionOrder[]>("/work-completions", {
+        params: { limit: 100, ...filters },
       });
-      return res.data;
+      return Array.isArray(res.data) ? res.data : (res.data.items ?? []);
     },
   });
 }

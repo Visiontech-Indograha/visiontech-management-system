@@ -2,14 +2,13 @@ import { ActionButton } from "@/components/molecules/ActionButton";
 import { SelectField } from "@/components/molecules/Field";
 import { ControlOption } from "@/components/molecules/FormBlock";
 import { TextBlock } from "@/components/molecules/TextBlock";
-import { formatDate } from "@/lib/format";
 import { toast } from "sonner";
 import { errorMessage } from "@/lib/errors";
 import type { DailyFormOptions } from "@/services/dailyPlanService";
 import { useExportPeriodic } from "@/services/exportService";
 
 /** Navigasi minggu (Senin–Minggu) + filter divisi untuk halaman Jadwal harian. */
-export function DailyWeekToolbar({ start, end, options, divisionId, onWeek, onDivision }: {
+export function DailyWeekToolbar({ options, divisionId, onDivision }: {
   start: string;
   end: string;
   options: DailyFormOptions | undefined;
@@ -20,12 +19,6 @@ export function DailyWeekToolbar({ start, end, options, divisionId, onWeek, onDi
 }) {
   return (
     <div className="mb-4 flex flex-wrap items-end gap-3">
-      <div className="flex items-center gap-2">
-        <ActionButton variant="outline" size="sm" aria-label="Minggu sebelumnya" onClick={() => onWeek(-7)}>‹</ActionButton>
-        <ActionButton variant="outline" size="sm" onClick={() => onWeek(null)}>Minggu ini</ActionButton>
-        <ActionButton variant="outline" size="sm" aria-label="Minggu berikutnya" onClick={() => onWeek(7)}>›</ActionButton>
-        <TextBlock as="span" className="ml-2 font-medium">{formatDate(start)} – {formatDate(end)}</TextBlock>
-      </div>
       {options && options.divisions.length > 1 && (
         <div className="w-64">
           <SelectField label="Divisi" value={divisionId} onChange={(e) => onDivision(e.target.value)}>

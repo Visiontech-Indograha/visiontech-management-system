@@ -55,7 +55,7 @@ export function DailyPlansTemplate(props: {
       )}
 
       <DailyWeekMatrix
-        plans={props.plans}
+        divisionId={divisionId}
         teams={teams}
         start={start}
         today={props.today}

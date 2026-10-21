@@ -97,7 +97,7 @@ export function WorkTypeMaterialsDialog({
   return (
     <VmsDialog
       open={Boolean(workType)}
-      title={`BoM Standar: ${workType.name}`}
+      title={`Material standar: ${workType.name}`}
       onClose={onClose}
     >
       <div className="space-y-4">

@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { toast } from "sonner";
+import { ContactLinks } from "@/components/molecules/ContactLinks";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { TextAreaField, TextField } from "@/components/molecules/Field";
 import { FormBlock } from "@/components/molecules/FormBlock";
 import { ListBlock, ListPair } from "@/components/molecules/ListBlock";
+import { phaseLabel, WORK_STATE, workState } from "@/lib/workPhase";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
@@ -18,10 +20,13 @@ import {
   useRejectDailyPlan,
   type DailyAction,
   type DailyPlan,
+  wibDate,
 } from "@/services/dailyPlanService";
 import { DailyItemsPanel } from "./DailyItemsPanel";
 
-const ACTION_LABEL: Record<DailyAction, string> = { submit: "Ajukan", approve: "Setujui", start: "Mulai", complete: "Selesai" };
+const ACTION_LABEL: Record<DailyAction, string> = {
+  submit: "Ajukan ke PM", approve: "Setujui jadwal", start: "Mulai hari kerja", complete: "Tutup hari kerja",
+};
 
 /** Detail jadwal harian + tindakan sesuai status & kedudukan (aturan akhir di API). */
 export function DailyPlanDetailDialog({ plan, canPlan, isLeader, onEdit, onClose }: {
@@ -62,6 +67,9 @@ export function DailyPlanDetailDialog({ plan, canPlan, isLeader, onEdit, onClose
     ...((isLeader || canPlan) && p.status === "ONGOING" ? (["complete"] as const) : []),
   ];
 
+  const pct = p.progress_pct ?? 0;
+  const state = WORK_STATE[workState(p, wibDate())];
+
   return (
     <VmsDialog open title={`${p.team_name} · ${formatDate(p.work_date)}`} onClose={onClose}>
       <div className="space-y-4 text-sm">
@@ -69,13 +77,31 @@ export function DailyPlanDetailDialog({ plan, canPlan, isLeader, onEdit, onClose
           <StatusBadge status={p.status} />
           <TextBlock as="span" className="text-mist">{p.division_name}</TextBlock>
         </div>
+        {/* Progres penyelesaian */}
+        <div className="rounded-control border border-line p-3">
+          <div className="mb-1 flex items-baseline justify-between">
+            <TextBlock as="span" className={`flex items-center gap-2 font-semibold ${state.text}`}>
+              <TextBlock as="span" className={`h-2.5 w-2.5 rounded-full ${state.dot}`} />
+              {state.label}
+            </TextBlock>
+            <TextBlock as="span" className={`text-lg font-semibold ${state.text}`}>{pct}%</TextBlock>
+          </div>
+          <div className="h-2.5 w-full overflow-hidden rounded-full bg-line" aria-hidden="true">
+            <div className={`h-full rounded-full ${state.bar} transition-all duration-700`} style={{ width: `${pct}%` }} />
+          </div>
+          <TextBlock as="span" className="mt-1 block text-xs text-mist">
+            {`${p.done_count} dari ${p.item_count} pekerjaan selesai${(p.phases ?? []).length ? ` · ${(p.phases ?? []).map(phaseLabel).join(", ")}` : ""}`}
+          </TextBlock>
+        </div>
         {p.rejection_reason && p.status === "DRAFT" && (
           <TextBlock className="rounded-control bg-warning-bg px-3 py-2 text-warning">Dikembalikan PM: {p.rejection_reason}</TextBlock>
         )}
         <ListBlock as="dl" className="space-y-1">
           <ListPair>Lokasi: {p.site_name} ({Number(p.site_lat).toFixed(5)}, {Number(p.site_lng).toFixed(5)})</ListPair>
           <ListPair>Jam kerja: {p.clock_in_time.slice(0, 5)}–{p.clock_out_time.slice(0, 5)} · radius absen {p.attendance_radius_m} m</ListPair>
-          <ListPair>Ketua: {p.leader_name}</ListPair>
+          <ListPair>
+            Ketua: {p.leader_name} <ContactLinks phone={p.leader_phone} name={p.leader_name} />
+          </ListPair>
         </ListBlock>
 
         <DailyItemsPanel detail={detail.data} loading={detail.isPending} canPlan={canPlan} />

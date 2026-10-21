@@ -9,10 +9,10 @@ export type CompletionVerification = components["schemas"]["WorkCompletionVerify
 
 /** Dokumen per order (docs/35 §8). `needsSignature`: hanya setelah disahkan PM. */
 export const COMPLETION_TEMPLATES: { template: CompletionTemplate; label: string; needsSignature?: boolean }[] = [
-  { template: "BAST", label: "BAST (.docx)" },
+  { template: "BAST", label: "Serah terima (.docx)" },
   { template: "SURVEY_REPORT", label: "Survey Report (.docx)" },
-  { template: "BAST_PDF", label: "BAST resmi (.pdf)", needsSignature: true },
-  { template: "BOQ", label: "BoQ (.xlsx)" },
+  { template: "BAST_PDF", label: "Serah terima resmi (.pdf)", needsSignature: true },
+  { template: "BOQ", label: "Rekap material (.xlsx)" },
   { template: "PROGRESS_SLIDES", label: "Slide progres (.pptx)" },
 ];
 

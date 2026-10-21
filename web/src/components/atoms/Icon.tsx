@@ -38,6 +38,7 @@ export {
   PanelLeftClose,
   PanelLeftOpen,
   Paperclip,
+  MessageCircle,
   Phone,
   Plus,
   RefreshCw,

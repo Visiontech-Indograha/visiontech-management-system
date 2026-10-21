@@ -5,6 +5,8 @@ export const workTypeSchema = z.object({
   name: z.string().trim().min(1, "Nama jenis pekerjaan wajib diisi."),
   division_id: z.string().trim().optional().nullable(),
   description: z.string().trim().optional().nullable(),
+  kind: z.enum(["WORK", "SURVEY_TASK", "SURVEY_POINT"]),
+  follow_up_work_type_id: z.string().nullable(),
   photos: z
     .array(
       z.object({

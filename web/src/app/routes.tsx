@@ -27,6 +27,8 @@ import {
   DailyPlansPage,
   WorkTypesPage,
   WorkCompletionsPage,
+  SurveyDetailPage,
+  SurveysPage,
 } from "./lazyPages";
 import { ChangePasswordPage } from "@/pages/auth/ChangePasswordPage";
 import { VerifyCompletionPage } from "@/pages/verify/VerifyCompletionPage";
@@ -41,6 +43,7 @@ const PAGES: Record<string, ReactNode> = {
   "/work-types": <WorkTypesPage />,
   "/work-plans": <DailyPlansPage />,
   "/work-completions": <WorkCompletionsPage />,
+  "/surveys": <SurveysPage />,
   "/teams": <TeamsPage />,
   "/mess": <MessPage />,
   "/offboarding": <OffboardingPage />,
@@ -72,7 +75,14 @@ export const routes: RouteObject[] = [
               <RequireAccess item={item}>{PAGES[item.path] ?? <ComingSoonPage title={item.label} />}</RequireAccess>
             ),
           })),
-          { path: "/work-completions", element: <WorkCompletionsPage /> },
+          {
+            path: "/surveys/:id",
+            element: (
+              <RequireAccess item={NAV_ITEMS.find((i) => i.path === "/surveys")!}>
+                <SurveyDetailPage />
+              </RequireAccess>
+            ),
+          },
           {
             path: "/directory/:id",
             element: (

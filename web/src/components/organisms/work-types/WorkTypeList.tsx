@@ -1,12 +1,29 @@
 import { useState } from "react";
 import type { UseQueryResult } from "@tanstack/react-query";
-import type { WorkType } from "@/services/workTypeService";
+import { WORK_TYPE_KIND_LABEL, type WorkType } from "@/services/workTypeService";
 import { WorkTypeAddButton } from "./WorkTypeAddButton";
 import { WorkTypeMaterialsDialog } from "./WorkTypeMaterialsDialog";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { LoadingBar } from "@/components/molecules/LoadingBar";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
+import { ImageView } from "@/components/molecules/ImageView";
+import { ExternalLink } from "@/components/molecules/Links";
+import { useFileUrl } from "@/hooks/useFileUrl";
+
+/** Foto panduan pengambilan gambar dari PM (klik → ukuran penuh di tab baru). */
+function ExamplePhoto({ fileId, label }: { fileId: string; label: string }) {
+  const { data: url } = useFileUrl(fileId, "view");
+  return (
+    <div className="mt-1 h-24 w-32 overflow-hidden rounded-control border border-line bg-hover">
+      {url && (
+        <ExternalLink href={url} target="_blank" rel="noopener">
+          <ImageView src={url} alt={`Contoh ${label}`} className="h-full w-full object-cover" />
+        </ExternalLink>
+      )}
+    </div>
+  );
+}
 
 /** Kartu jenis pekerjaan + slot fotonya; keadaan memuat, galat (+ coba lagi), kosong (+ tambah), berhasil. */
 export function WorkTypeList({ types, onAdd, onEdit, onDeactivate }: {
@@ -54,8 +71,18 @@ export function WorkTypeList({ types, onAdd, onEdit, onDeactivate }: {
                     <TextBlock className="mt-1 text-xs text-mist">{t.description}</TextBlock>
                   )}
                 </div>
+                {t.kind !== "WORK" && (
+                  <TextBlock as="span" className="rounded-control bg-lens/10 px-2 py-0.5 text-xs text-lens">
+                    {WORK_TYPE_KIND_LABEL[t.kind ?? "WORK"]}
+                  </TextBlock>
+                )}
                 {!t.is_active && <TextBlock as="span" className="rounded-control bg-hover px-2 py-0.5 text-xs text-mist">Nonaktif</TextBlock>}
               </div>
+              {t.kind === "SURVEY_POINT" && (
+                <TextBlock className="mb-1 text-xs text-mist">
+                  {`Pemasangan lanjutan: ${t.follow_up_name ?? "belum ditentukan"}`}
+                </TextBlock>
+              )}
               {t.photos.length === 0 ? (
                 <TextBlock className="text-sm text-mist">Tanpa template foto.</TextBlock>
               ) : (
@@ -64,8 +91,8 @@ export function WorkTypeList({ types, onAdd, onEdit, onDeactivate }: {
                     <ListEntry key={p.id}>
                       {p.label}
                       {p.required && <TextBlock as="span" className="ml-1 text-xs text-danger">wajib</TextBlock>}
-                      {p.example_file_id && <TextBlock as="span" className="ml-1 text-xs text-mist">· ada foto contoh</TextBlock>}
                       {p.hint && <TextBlock as="span" className="block text-xs text-mist">{p.hint}</TextBlock>}
+                      {p.example_file_id && <ExamplePhoto fileId={p.example_file_id} label={p.label} />}
                     </ListEntry>
                   ))}
                 </ListBlock>

@@ -45,7 +45,7 @@ export function CompletionVerificationCard({ data, pending, failed }: {
       {data.intact ? <Pill tone="success">Asli & tidak berubah</Pill> : <Pill tone="danger">Isi berubah sejak disahkan</Pill>}
       <TextBlock className="text-sm text-mist">
         {data.intact
-          ? "Berita acara ini diterbitkan sistem VMS Visiontech dan isinya sama dengan saat disahkan."
+          ? "Dokumen serah terima ini dibuat sistem VMS Visiontech dan isinya sama dengan saat disetujui PM."
           : "Data order di sistem sudah berbeda dari dokumen yang disahkan. Jangan gunakan dokumen ini sebagai acuan."}
       </TextBlock>
       <div className="grid grid-cols-[8rem_1fr] gap-x-3 gap-y-1 text-sm">

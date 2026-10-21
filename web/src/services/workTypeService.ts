@@ -15,6 +15,13 @@ export type WorkTypeInput = components["schemas"]["WorkTypeIn"] & {
 const KEY = ["work-types"] as const;
 
 /** GET /work-types — yang aktif; `all` (butuh izin create:plan) menyertakan yang nonaktif. */
+/** Peran jenis pekerjaan (docs/37 §9). */
+export const WORK_TYPE_KIND_LABEL = {
+  WORK: "Pekerjaan",
+  SURVEY_TASK: "Tugas survei",
+  SURVEY_POINT: "Jenis titik survei",
+} as const;
+
 export const useWorkTypes = (all = false, division_id?: string) =>
   useQuery({
     queryKey: [...KEY, { all, division_id }],

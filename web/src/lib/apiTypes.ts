@@ -189,6 +189,254 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/work-plans/surveys": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Surveys
+         * @description Daftar survei: ketua/anggota tim (jadwal terbit), PM/OM divisi, admin/OM semua. Saring status.
+         */
+        get: operations["list_surveys_api_v1_work_plans_surveys_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-plans/surveys/{task_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Survey
+         * @description Survei: format (ACS/CCTV), slot foto, katalog material, titik, BoM, status.
+         */
+        get: operations["get_survey_api_v1_work_plans_surveys__task_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-plans/surveys/{task_id}/points": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add Point
+         * @description Ketua tim menambah titik: foto per slot, remark, material/kebutuhan/kabel.
+         */
+        post: operations["add_point_api_v1_work_plans_surveys__task_id__points_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-plans/surveys/points/{point_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Update Point
+         * @description Ketua tim mengganti isi titik.
+         */
+        put: operations["update_point_api_v1_work_plans_surveys_points__point_id__put"];
+        post?: never;
+        /**
+         * Delete Point
+         * @description Ketua tim menghapus titik.
+         */
+        delete: operations["delete_point_api_v1_work_plans_surveys_points__point_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-plans/surveys/points/{point_id}/location": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Move Point
+         * @description Geser titik di peta layout (PM kapan pun; ketua tim selama survei masih draf).
+         */
+        put: operations["move_point_api_v1_work_plans_surveys_points__point_id__location_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-plans/surveys/{task_id}/lines": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add General Line
+         * @description Material umum lokasi (bukan milik satu titik): ketua tim saat draf, PM saat meninjau.
+         */
+        post: operations["add_general_line_api_v1_work_plans_surveys__task_id__lines_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-plans/surveys/lines/{bom_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Edit Line
+         * @description Ubah nama/jumlah/satuan satu baris BoM survei (tercatat di riwayat).
+         */
+        put: operations["edit_line_api_v1_work_plans_surveys_lines__bom_id__put"];
+        post?: never;
+        /**
+         * Delete Line
+         * @description Hapus satu baris BoM survei (tercatat di riwayat).
+         */
+        delete: operations["delete_line_api_v1_work_plans_surveys_lines__bom_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-plans/surveys/{task_id}/catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add To Catalog
+         * @description PM menyimpan material di luar katalog ke katalog jenis titik.
+         */
+        post: operations["add_to_catalog_api_v1_work_plans_surveys__task_id__catalog_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-plans/surveys/{task_id}/report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Save Report
+         * @description Ketua tim mengisi narasi, tujuan, lokasi, dan gambar layout.
+         */
+        put: operations["save_report_api_v1_work_plans_surveys__task_id__report_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-plans/surveys/{task_id}/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Submit Survey
+         * @description Ketua tim mengirim survei (semua titik berfoto, slot wajib lengkap).
+         */
+        post: operations["submit_survey_api_v1_work_plans_surveys__task_id__submit_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-plans/surveys/{task_id}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Review Survey
+         * @description PM/OM divisi menyetujui atau mengembalikan survei.
+         */
+        post: operations["review_survey_api_v1_work_plans_surveys__task_id__review_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-plans/surveys/{task_id}/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Plan From Survey
+         * @description PM/OM divisi menyusun item lanjutan per titik dari survei yang disetujui.
+         */
+        post: operations["plan_from_survey_api_v1_work_plans_surveys__task_id__plan_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/work-plans/form-options": {
         parameters: {
             query?: never;
@@ -486,6 +734,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/work-plans/daily/{daily_plan_id}/prerequisite-options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Prerequisite Options
+         * @description Calon prasyarat item baru: item tim sendiri ≤ 30 hari terakhir + item tim lain di lokasi yang sama.
+         */
+        get: operations["prerequisite_options_api_v1_work_plans_daily__daily_plan_id__prerequisite_options_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/work-plans/items/{item_id}": {
         parameters: {
             query?: never;
@@ -630,6 +898,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/work-completions/{completion_id}/photos/{file_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Hapus Foto Realisasi BAST
+         * @description Ketua tim/PM menghapus satu foto realisasi selama BAST belum disahkan PM (langsung tersimpan).
+         */
+        delete: operations["delete_work_completion_photo_api_v1_work_completions__completion_id__photos__file_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-completions/{completion_id}/signatures/{role}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Gambar Tanda Tangan BAST
+         * @description Tanda tangan ketua/PM yang sudah tersimpan (ditampilkan kembali di layar BAST).
+         */
+        get: operations["get_work_completion_signature_api_v1_work_completions__completion_id__signatures__role__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/work-completions/{completion_id}/status": {
         parameters: {
             query?: never;
@@ -735,6 +1043,95 @@ export interface paths {
          * @description BAST (.docx), Survey Report (.docx), BAST resmi ber-QR (.pdf), BoQ (.xlsx), atau slide progres (.pptx).
          */
         post: operations["export_work_completion_api_v1_exports_work_completions__completion_id__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/exports/surveys/{task_id}/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Preview Survey
+         * @description Pratinjau laporan survei (PDF; .docx bila konverter tak tersedia) — ketua tim & PM, juga sebelum dikirim.
+         *     Tidak disimpan ke registri ekspor.
+         */
+        get: operations["preview_survey_api_v1_exports_surveys__task_id__preview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/exports/survey-logos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Survey Logos
+         * @description Logo kop laporan survei (perusahaan & klien) beserta ukuran bakunya.
+         */
+        get: operations["survey_logos_api_v1_exports_survey_logos_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/exports/survey-logos/{role}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Survey Logo Image
+         * @description Gambar logo pengganti (404 bila masih memakai logo bawaan template).
+         */
+        get: operations["survey_logo_image_api_v1_exports_survey_logos__role__get"];
+        /**
+         * Set Survey Logo
+         * @description Ganti logo kop: gambar dipasang utuh (rasio dijaga) ke kotak ukuran baku di setiap template.
+         */
+        put: operations["set_survey_logo_api_v1_exports_survey_logos__role__put"];
+        post?: never;
+        /**
+         * Reset Survey Logo
+         * @description Kembali ke logo bawaan template.
+         */
+        delete: operations["reset_survey_logo_api_v1_exports_survey_logos__role__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/exports/surveys/{task_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Export Survey
+         * @description Laporan survei ACS/CCTV (.docx) persis format baku (docs/37); tersedia setelah survei dikirim.
+         */
+        post: operations["export_survey_api_v1_exports_surveys__task_id__post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2032,7 +2429,7 @@ export interface paths {
         put?: never;
         /**
          * Register Device Key
-         * @description R-34: daftarkan kunci publik Android Keystore perangkat ini untuk memverifikasi absen luring.
+         * @description R-34: daftarkan kunci publik Android Keystore perangkat ini untuk memverifikasi absen offline.
          */
         post: operations["register_device_key_api_v1_attendance_device_key_post"];
         delete?: never;
@@ -2052,7 +2449,7 @@ export interface paths {
         put?: never;
         /**
          * Submit Offline Attendance
-         * @description R-34: terima satu absen luring yang ditandatangani perangkat (idempoten per client_op_id).
+         * @description R-34: terima satu absen offline yang ditandatangani perangkat (idempoten per client_op_id).
          */
         post: operations["submit_offline_attendance_api_v1_attendance_offline_post"];
         delete?: never;
@@ -3424,10 +3821,31 @@ export interface components {
             /** Files */
             files: string[];
         };
+        /** Body_set_survey_logo_api_v1_exports_survey_logos__role__put */
+        Body_set_survey_logo_api_v1_exports_survey_logos__role__put: {
+            /** File */
+            file: string;
+        };
         /** Body_upload_document_api_v1_files_upload_post */
         Body_upload_document_api_v1_files_upload_post: {
             /** File */
             file: string;
+        };
+        /** BomRow */
+        BomRow: {
+            /** Group */
+            group: string;
+            /** Name */
+            name: string;
+            /** Qty */
+            qty: string;
+            /** Unit */
+            unit: string;
+            /**
+             * Custom
+             * @default false
+             */
+            custom: boolean;
         };
         /** BulkApproveIn */
         BulkApproveIn: {
@@ -3440,6 +3858,35 @@ export interface components {
             approved: string[];
             /** Skipped */
             skipped: string[];
+        };
+        /**
+         * CatalogAddIn
+         * @description PM menyimpan material di luar katalog ke katalog jenis titik.
+         */
+        CatalogAddIn: {
+            /**
+             * Point Type Id
+             * Format: uuid
+             */
+            point_type_id: string;
+            /** Name */
+            name: string;
+            /** Unit */
+            unit: string;
+        };
+        /** CatalogOut */
+        CatalogOut: {
+            /** Name */
+            name: string;
+            /** Unit */
+            unit: string;
+            /** Category */
+            category?: string | null;
+            /**
+             * Default Qty
+             * @default 1
+             */
+            default_qty: string;
         };
         /** ChainStep */
         ChainStep: {
@@ -3673,6 +4120,8 @@ export interface components {
             work_type_name?: string | null;
             /** Completion Id */
             completion_id?: string | null;
+            /** Depends On Item Id */
+            depends_on_item_id?: string | null;
             /** Location Name */
             location_name?: string | null;
             /** Target Qty */
@@ -3769,6 +4218,12 @@ export interface components {
             leader_employee_id: string;
             /** Leader Name */
             leader_name: string;
+            /** Leader Phone */
+            leader_phone?: string | null;
+            /** Pm Name */
+            pm_name?: string | null;
+            /** Pm Phone */
+            pm_phone?: string | null;
             /**
              * Work Date
              * Format: date
@@ -3818,6 +4273,16 @@ export interface components {
              * @default 0
              */
             done_count: number;
+            /**
+             * Progress Pct
+             * @default 0
+             */
+            progress_pct: number;
+            /**
+             * Phases
+             * @default []
+             */
+            phases: string[];
             /**
              * Items
              * @default []
@@ -3861,6 +4326,12 @@ export interface components {
             leader_employee_id: string;
             /** Leader Name */
             leader_name: string;
+            /** Leader Phone */
+            leader_phone?: string | null;
+            /** Pm Name */
+            pm_name?: string | null;
+            /** Pm Phone */
+            pm_phone?: string | null;
             /**
              * Work Date
              * Format: date
@@ -3910,6 +4381,16 @@ export interface components {
              * @default 0
              */
             done_count: number;
+            /**
+             * Progress Pct
+             * @default 0
+             */
+            progress_pct: number;
+            /**
+             * Phases
+             * @default []
+             */
+            phases: string[];
         };
         /** DailyPlanUpdate */
         DailyPlanUpdate: {
@@ -4129,6 +4610,8 @@ export interface components {
             join_date: string;
             /** Pkwt End Date */
             pkwt_end_date?: string | null;
+            /** Phone Number */
+            phone_number?: string | null;
             /** Photo File Id */
             photo_file_id?: string | null;
             address?: components["schemas"]["AddressIn"] | null;
@@ -4168,6 +4651,8 @@ export interface components {
             join_date: string;
             /** Pkwt End Date */
             pkwt_end_date?: string | null;
+            /** Phone Number */
+            phone_number?: string | null;
             /** Photo File Id */
             photo_file_id?: string | null;
             /**
@@ -4314,6 +4799,8 @@ export interface components {
             join_date: string;
             /** Pkwt End Date */
             pkwt_end_date?: string | null;
+            /** Phone Number */
+            phone_number?: string | null;
             /** Photo File Id */
             photo_file_id?: string | null;
             /**
@@ -4371,6 +4858,8 @@ export interface components {
             join_date?: string | null;
             /** Pkwt End Date */
             pkwt_end_date?: string | null;
+            /** Phone Number */
+            phone_number?: string | null;
             /** Photo File Id */
             photo_file_id?: string | null;
         };
@@ -4716,6 +5205,51 @@ export interface components {
             status?: boolean | null;
         };
         /**
+         * LineEditIn
+         * @description Ubah satu baris BoM (ketua tim saat draf, PM saat meninjau).
+         */
+        LineEditIn: {
+            /** Name */
+            name: string;
+            /** Qty */
+            qty: number | string;
+            /** Unit */
+            unit: string;
+        };
+        /** LineOut */
+        LineOut: {
+            /**
+             * Category
+             * @default MATERIAL
+             * @enum {string}
+             */
+            category: "MATERIAL" | "KEBUTUHAN" | "KABEL";
+            /** Name */
+            name: string;
+            /**
+             * Qty
+             * @default 1
+             */
+            qty: string;
+            /**
+             * Unit
+             * @default Unit
+             */
+            unit: string;
+            /** Notes */
+            notes?: string | null;
+            /**
+             * Bom Id
+             * Format: uuid
+             */
+            bom_id: string;
+            /**
+             * Custom
+             * @default false
+             */
+            custom: boolean;
+        };
+        /**
          * LoanCreate
          * @description Serah terima aset ke karyawan; `daily_plan_id` mengaitkannya ke jadwal harian tim (opsional).
          */
@@ -4847,6 +5381,8 @@ export interface components {
             full_name?: string | null;
             /** Employee No */
             employee_no?: string | null;
+            /** Phone Number */
+            phone_number?: string | null;
             /** System Role */
             system_role?: string | null;
             /** Is Active */
@@ -5283,7 +5819,7 @@ export interface components {
         /**
          * OfflineAttendanceEvent
          * @description Schema representing a signed offline attendance event.
-         *     Satu absen luring: `payload` adalah JSON persis seperti yang ditandatangani oleh HP;
+         *     Satu absen offline: `payload` adalah JSON persis seperti yang ditandatangani oleh HP;
          *     `signature` adalah tanda tangan ECDSA SHA-256 (DER, base64).
          *     Swafoto diunggah lebih dulu; kecocokannya dicek melalui `selfie_sha256` dalam payload.
          */
@@ -5524,6 +6060,18 @@ export interface components {
              */
             export_format: "EXCEL_XLSX" | "PPTX";
         };
+        /** PhotoOut */
+        PhotoOut: {
+            /**
+             * File Id
+             * Format: uuid
+             */
+            file_id: string;
+            /** Requirement Id */
+            requirement_id?: string | null;
+            /** Slot */
+            slot?: string | null;
+        };
         /**
          * PkwtExpiringRow
          * @description Karyawan PKWT yang kontraknya berakhir dalam rentang & belum diproses offboarding.
@@ -5547,6 +6095,38 @@ export interface components {
             pkwt_end_date: string;
             /** Open Loans */
             open_loans: number;
+        };
+        /**
+         * PlanFromSurveyIn
+         * @description Susun item lanjutan dari survei yang disetujui pada jadwal DRAFT/SUBMITTED tim yang sama.
+         */
+        PlanFromSurveyIn: {
+            /** Daily Plan Id */
+            daily_plan_id?: string | null;
+            /** Work Date */
+            work_date?: string | null;
+            /** Work Type Id */
+            work_type_id?: string | null;
+            /**
+             * Task Phase
+             * @default INSTALLATION
+             * @enum {string}
+             */
+            task_phase: "PREPARATION" | "INSTALLATION" | "REPLACEMENT" | "MAINTENANCE";
+            /** Point Ids */
+            point_ids?: string[];
+            /** Preparation Work Type Id */
+            preparation_work_type_id?: string | null;
+        };
+        /** PlanFromSurveyOut */
+        PlanFromSurveyOut: {
+            /**
+             * Daily Plan Id
+             * Format: uuid
+             */
+            daily_plan_id: string;
+            /** Created Item Ids */
+            created_item_ids: string[];
         };
         /** PlanItemCreate */
         PlanItemCreate: {
@@ -5633,6 +6213,13 @@ export interface components {
             depends_on_item_id?: string | null;
             /** Depends On Title */
             depends_on_title?: string | null;
+            /** Depends On Team Name */
+            depends_on_team_name?: string | null;
+            /**
+             * Depends On Done
+             * @default false
+             */
+            depends_on_done: boolean;
             /** Target Qty */
             target_qty: string;
             /** Completed Qty */
@@ -5717,6 +6304,162 @@ export interface components {
             assigned_employee_ids?: string[] | null;
             /** Notes */
             notes?: string | null;
+        };
+        /** PointIn */
+        PointIn: {
+            /** Name */
+            name: string;
+            /** Point Type Id */
+            point_type_id?: string | null;
+            /**
+             * Point Status
+             * @default PROPOSED
+             * @enum {string}
+             */
+            point_status: "EXISTING" | "PROPOSED";
+            /** Remarks */
+            remarks?: string[];
+            /** Photos */
+            photos?: components["schemas"]["PointPhoto"][];
+            /** Lines */
+            lines?: components["schemas"]["PointLine"][];
+            /** Site Lat */
+            site_lat?: number | string | null;
+            /** Site Lng */
+            site_lng?: number | string | null;
+        };
+        /**
+         * PointLine
+         * @description Satu baris per titik: MATERIAL (masuk BoM), KEBUTUHAN (alat/izin: scaffolding, tangga, grounding),
+         *     KABEL (ukuran instalasi CCTV per kamera: galian, kabel FO, kabel power, subduct, pipa, …).
+         */
+        PointLine: {
+            /**
+             * Category
+             * @default MATERIAL
+             * @enum {string}
+             */
+            category: "MATERIAL" | "KEBUTUHAN" | "KABEL";
+            /** Name */
+            name: string;
+            /**
+             * Qty
+             * @default 1
+             */
+            qty: number | string;
+            /**
+             * Unit
+             * @default Unit
+             */
+            unit: string;
+            /** Notes */
+            notes?: string | null;
+        };
+        /** PointLocationIn */
+        PointLocationIn: {
+            /** Site Lat */
+            site_lat: number | string;
+            /** Site Lng */
+            site_lng: number | string;
+        };
+        /** PointOut */
+        PointOut: {
+            /**
+             * Point Id
+             * Format: uuid
+             */
+            point_id: string;
+            /** Name */
+            name: string;
+            /** Remarks */
+            remarks: string[];
+            /** Photos */
+            photos: components["schemas"]["PhotoOut"][];
+            /** Lines */
+            lines: components["schemas"]["LineOut"][];
+            /** Site Lat */
+            site_lat?: string | null;
+            /** Site Lng */
+            site_lng?: string | null;
+            /**
+             * Update At
+             * Format: date-time
+             */
+            update_at: string;
+            /**
+             * Point Type Id
+             * Format: uuid
+             */
+            point_type_id: string;
+            /** Point Type Name */
+            point_type_name: string;
+            /**
+             * Point Status
+             * @default PROPOSED
+             * @enum {string}
+             */
+            point_status: "EXISTING" | "PROPOSED";
+        };
+        /** PointPhoto */
+        PointPhoto: {
+            /**
+             * File Id
+             * Format: uuid
+             */
+            file_id: string;
+            /**
+             * Requirement Id
+             * Format: uuid
+             */
+            requirement_id: string;
+        };
+        /**
+         * PointTypeOut
+         * @description Jenis titik yang boleh dipakai survei ini: slot foto & katalog material sendiri.
+         */
+        PointTypeOut: {
+            /**
+             * Work Type Id
+             * Format: uuid
+             */
+            work_type_id: string;
+            /** Name */
+            name: string;
+            /** Slots */
+            slots: components["schemas"]["SlotOut"][];
+            /** Catalog */
+            catalog: components["schemas"]["CatalogOut"][];
+            /** Follow Up Work Type Id */
+            follow_up_work_type_id?: string | null;
+        };
+        /**
+         * PrerequisiteOption
+         * @description Item yang boleh dijadikan prasyarat item baru di jadwal ini.
+         */
+        PrerequisiteOption: {
+            /**
+             * Item Id
+             * Format: uuid
+             */
+            item_id: string;
+            /** Title */
+            title: string;
+            /** Task Phase */
+            task_phase: string;
+            /** Status */
+            status: string;
+            /**
+             * Work Date
+             * Format: date
+             */
+            work_date: string;
+            /** Team Name */
+            team_name?: string | null;
+            /**
+             * Other Team
+             * @default false
+             */
+            other_team: boolean;
         };
         /** ProgressIn */
         ProgressIn: {
@@ -5889,6 +6632,28 @@ export interface components {
             size: number;
         };
         /**
+         * ReportIn
+         * @description Bagian tingkat laporan yang diisi ketua tim: narasi, tujuan, lokasi, gambar layout.
+         */
+        ReportIn: {
+            /** Narrative */
+            narrative?: string | null;
+            /** Purpose */
+            purpose?: string | null;
+            /** Location */
+            location?: string | null;
+        };
+        /** ReviewIn */
+        ReviewIn: {
+            /**
+             * Decision
+             * @enum {string}
+             */
+            decision: "APPROVE" | "RETURN";
+            /** Note */
+            note?: string | null;
+        };
+        /**
          * ReviewRequest
          * @description Schema for reviewing (approving or rejecting) an attendance event.
          */
@@ -5921,6 +6686,197 @@ export interface components {
             delay_reason: string;
             /** Completed Qty */
             completed_qty: number | string;
+        };
+        /** SlotOut */
+        SlotOut: {
+            /**
+             * Requirement Id
+             * Format: uuid
+             */
+            requirement_id: string;
+            /** Name */
+            name: string;
+            /** Mandatory */
+            mandatory: boolean;
+            /** Hint */
+            hint?: string | null;
+            /** Example File Id */
+            example_file_id?: string | null;
+        };
+        /** SurveyListItem */
+        SurveyListItem: {
+            /**
+             * Task Id
+             * Format: uuid
+             */
+            task_id: string;
+            /** Title */
+            title: string;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "DRAFT" | "SUBMITTED" | "APPROVED";
+            /**
+             * Format
+             * @enum {string}
+             */
+            format: "ACS" | "CCTV";
+            /**
+             * Work Date
+             * Format: date
+             */
+            work_date: string;
+            /** Plan Status */
+            plan_status: string;
+            /**
+             * Daily Plan Id
+             * Format: uuid
+             */
+            daily_plan_id: string;
+            /**
+             * Division Id
+             * Format: uuid
+             */
+            division_id: string;
+            /** Division Name */
+            division_name: string;
+            /** Team Name */
+            team_name?: string | null;
+            /** Work Type Name */
+            work_type_name: string;
+            /**
+             * Completion Id
+             * Format: uuid
+             */
+            completion_id: string;
+            /** Client Name */
+            client_name: string;
+            /** Project Title */
+            project_title: string;
+            /** Site Address */
+            site_address?: string | null;
+            /** Point Count */
+            point_count: number;
+            /**
+             * Update At
+             * Format: date-time
+             */
+            update_at: string;
+        };
+        /**
+         * SurveyLogoOut
+         * @description Logo kop laporan survei: ukuran baku (cm & px 300 dpi) dan apakah sudah diganti.
+         */
+        SurveyLogoOut: {
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "company" | "client";
+            /** Label */
+            label: string;
+            /** Width Cm */
+            width_cm: number;
+            /** Height Cm */
+            height_cm: number;
+            /** Recommended Px */
+            recommended_px: [
+                number,
+                number
+            ];
+            /** Custom */
+            custom: boolean;
+        };
+        /** SurveyOut */
+        SurveyOut: {
+            /**
+             * Task Id
+             * Format: uuid
+             */
+            task_id: string;
+            /**
+             * Daily Plan Id
+             * Format: uuid
+             */
+            daily_plan_id: string;
+            /**
+             * Work Date
+             * Format: date
+             */
+            work_date: string;
+            /** Plan Status */
+            plan_status: string;
+            /** Team Id */
+            team_id?: string | null;
+            /** Team Name */
+            team_name?: string | null;
+            /**
+             * Division Id
+             * Format: uuid
+             */
+            division_id: string;
+            /** Division Name */
+            division_name: string;
+            /**
+             * Format
+             * @enum {string}
+             */
+            format: "ACS" | "CCTV";
+            /**
+             * Work Type Id
+             * Format: uuid
+             */
+            work_type_id: string;
+            /** Work Type Name */
+            work_type_name: string;
+            /**
+             * Completion Id
+             * Format: uuid
+             */
+            completion_id: string;
+            /** Client Name */
+            client_name: string;
+            /** Project Title */
+            project_title: string;
+            /** Location */
+            location?: string | null;
+            /** Purpose */
+            purpose?: string | null;
+            /** Narrative */
+            narrative?: string | null;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "DRAFT" | "SUBMITTED" | "APPROVED";
+            /** Review Note */
+            review_note?: string | null;
+            /** Point Types */
+            point_types: components["schemas"]["PointTypeOut"][];
+            /** Points */
+            points: components["schemas"]["PointOut"][];
+            /**
+             * General Lines
+             * @default []
+             */
+            general_lines: components["schemas"]["LineOut"][];
+            /** Bom */
+            bom: components["schemas"]["BomRow"][];
+            /**
+             * Can Edit Bom
+             * @default false
+             */
+            can_edit_bom: boolean;
+            /** Can Edit */
+            can_edit: boolean;
+            /** Can Review */
+            can_review: boolean;
+            /**
+             * Can Move
+             * @default false
+             */
+            can_move: boolean;
         };
         /**
          * SyncBomFromWorkTypesIn
@@ -6555,6 +7511,13 @@ export interface components {
              * @default 0
              */
             completed_target_unit: number;
+            /** Phases */
+            phases?: string[];
+            /**
+             * Progress Pct
+             * @default 0
+             */
+            progress_pct: number;
             /** Unit Measure */
             unit_measure: string;
             /** Order Status */
@@ -6703,6 +7666,14 @@ export interface components {
              * @default []
              */
             photos: components["schemas"]["WorkTypePhotoIn"][];
+            /**
+             * Kind
+             * @default WORK
+             * @enum {string}
+             */
+            kind: "WORK" | "SURVEY_TASK" | "SURVEY_POINT";
+            /** Follow Up Work Type Id */
+            follow_up_work_type_id?: string | null;
         };
         /**
          * WorkTypeOut
@@ -6727,6 +7698,16 @@ export interface components {
              * @default true
              */
             is_active: boolean;
+            /**
+             * Kind
+             * @default WORK
+             * @enum {string}
+             */
+            kind: "WORK" | "SURVEY_TASK" | "SURVEY_POINT";
+            /** Follow Up Work Type Id */
+            follow_up_work_type_id?: string | null;
+            /** Follow Up Name */
+            follow_up_name?: string | null;
             /**
              * Photos
              * @default []
@@ -7218,6 +8199,476 @@ export interface operations {
                     "application/json": {
                         [key: string]: string;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_surveys_api_v1_work_plans_surveys_get: {
+        parameters: {
+            query?: {
+                state?: ("DRAFT" | "SUBMITTED" | "APPROVED") | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SurveyListItem"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_survey_api_v1_work_plans_surveys__task_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SurveyOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_point_api_v1_work_plans_surveys__task_id__points_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PointIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SurveyOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_point_api_v1_work_plans_surveys_points__point_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                point_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PointIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SurveyOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_point_api_v1_work_plans_surveys_points__point_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                point_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SurveyOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    move_point_api_v1_work_plans_surveys_points__point_id__location_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                point_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PointLocationIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SurveyOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_general_line_api_v1_work_plans_surveys__task_id__lines_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PointLine"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SurveyOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    edit_line_api_v1_work_plans_surveys_lines__bom_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bom_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LineEditIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SurveyOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_line_api_v1_work_plans_surveys_lines__bom_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bom_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SurveyOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_to_catalog_api_v1_work_plans_surveys__task_id__catalog_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CatalogAddIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SurveyOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    save_report_api_v1_work_plans_surveys__task_id__report_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SurveyOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    submit_survey_api_v1_work_plans_surveys__task_id__submit_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SurveyOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    review_survey_api_v1_work_plans_surveys__task_id__review_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SurveyOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    plan_from_survey_api_v1_work_plans_surveys__task_id__plan_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlanFromSurveyIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanFromSurveyOut"];
                 };
             };
             /** @description Validation Error */
@@ -7808,6 +9259,37 @@ export interface operations {
             };
         };
     };
+    prerequisite_options_api_v1_work_plans_daily__daily_plan_id__prerequisite_options_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                daily_plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrerequisiteOption"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_item_api_v1_work_plans_items__item_id__get: {
         parameters: {
             query?: never;
@@ -8180,6 +9662,70 @@ export interface operations {
             };
         };
     };
+    delete_work_completion_photo_api_v1_work_completions__completion_id__photos__file_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                completion_id: string;
+                file_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkCompletionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_work_completion_signature_api_v1_work_completions__completion_id__signatures__role__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                completion_id: string;
+                role: "leader" | "pm";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/png": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     update_work_completion_status_api_v1_work_completions__completion_id__status_patch: {
         parameters: {
             query?: never;
@@ -8462,6 +10008,185 @@ export interface operations {
                 "application/json": components["schemas"]["CompletionExportRequest"];
             };
         };
+        responses: {
+            /** @description Berkas dokumen */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    preview_survey_api_v1_exports_surveys__task_id__preview_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Berkas dokumen */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    survey_logos_api_v1_exports_survey_logos_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SurveyLogoOut"][];
+                };
+            };
+        };
+    };
+    survey_logo_image_api_v1_exports_survey_logos__role__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                role: "company" | "client";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Berkas dokumen */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_survey_logo_api_v1_exports_survey_logos__role__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                role: "company" | "client";
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_set_survey_logo_api_v1_exports_survey_logos__role__put"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SurveyLogoOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reset_survey_logo_api_v1_exports_survey_logos__role__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                role: "company" | "client";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SurveyLogoOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_survey_api_v1_exports_surveys__task_id__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Berkas dokumen */
             200: {

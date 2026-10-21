@@ -19,3 +19,5 @@ export const TeamsPage = lazy(() => import("@/pages/teams/TeamsPage").then((m) =
 export const MessPage = lazy(() => import("@/pages/mess/MessPage").then((m) => ({ default: m.MessPage })));
 export const OffboardingPage = lazy(() => import("@/pages/offboarding/OffboardingPage").then((m) => ({ default: m.OffboardingPage })));
 export const WorkCompletionsPage = lazy(() => import("@/pages/work-completions/WorkCompletionsPage").then((m) => ({ default: m.WorkCompletionsPage })));
+export const SurveysPage = lazy(() => import("@/pages/surveys/SurveysPage").then((m) => ({ default: m.SurveysPage })));
+export const SurveyDetailPage = lazy(() => import("@/pages/surveys/SurveyDetailPage").then((m) => ({ default: m.SurveyDetailPage })));

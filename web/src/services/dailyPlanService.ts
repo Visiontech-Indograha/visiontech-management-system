@@ -98,6 +98,16 @@ export type PlanItem = S["PlanItemOut"];
 export type PlanItemCreate = S["PlanItemCreate"];
 export type RolloverDecision = S["RolloverDecision"];
 
+/** Calon prasyarat item baru: item tim sendiri ≤ 30 hari terakhir + item tim lain di lokasi yang sama. */
+export const usePrerequisiteOptions = (dailyPlanId: string) =>
+  useQuery({
+    queryKey: [...KEY, "prerequisite-options", dailyPlanId],
+    queryFn: async () =>
+      (await api.get<components["schemas"]["PrerequisiteOption"][]>(
+        `/work-plans/daily/${dailyPlanId}/prerequisite-options`,
+      )).data,
+  });
+
 export const useCreatePlanItem = (dailyPlanId: string) =>
   useDailyMutation(async (body: PlanItemCreate) =>
     (await api.post<PlanItem>(`/work-plans/daily/${dailyPlanId}/items`, body)).data);
@@ -109,3 +119,10 @@ export const useDeletePlanItem = () =>
 export const useDecideRollover = () =>
   useDailyMutation(async ({ itemId, ...body }: RolloverDecision & { itemId: string }) =>
     (await api.post<PlanItem>(`/work-plans/items/${itemId}/rollover-decision`, body)).data);
+
+/** Item lengkap (foto realisasi, catatan, alasan geser) — bukti pekerjaan untuk PM. */
+export const usePlanItem = (itemId: string) =>
+  useQuery({
+    queryKey: ["plan-item", itemId],
+    queryFn: async () => (await api.get<components["schemas"]["PlanItemOut"]>(`/work-plans/items/${itemId}`)).data,
+  });

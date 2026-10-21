@@ -38,6 +38,13 @@ export const STATUS_LABEL: Record<string, string> = {
   IN_REVIEW: "Ditinjau",
   RESOLVED: "Selesai",
   WITHDRAWN: "Ditarik PM",
+  DONE: "Selesai",
+  PARTIAL: "Selesai sebagian",
+  LATE: "Terlambat",
+  OVERDUE: "Terlambat",
+  NOT_STARTED: "Belum mulai",
+  ROLLOVER_REQUESTED: "Minta pindah hari",
+  ROLLED_OVER: "Pindah hari",
   // Aset V2 (asset_status_enum)
   ready: "Siap",
   allocated: "Dialokasikan",
@@ -49,8 +56,8 @@ export const STATUS_LABEL: Record<string, string> = {
 
 export type StatusTone = "success" | "warning" | "danger" | "info" | "neutral";
 
-const GREEN = ["COMPLETED", "APPROVED", "ACCEPTED", "EFFECTIVE", "ACTIVE", "VERIFIED", "CURRENT", "AVAILABLE", "AUTO_VALID", "RESOLVED", "ready"];
-const RED = ["REJECTED", "CANCELLED", "INACTIVE", "damaged", "lost"];
+const GREEN = ["DONE", "COMPLETED", "APPROVED", "ACCEPTED", "EFFECTIVE", "ACTIVE", "VERIFIED", "CURRENT", "AVAILABLE", "AUTO_VALID", "RESOLVED", "ready"];
+const RED = ["LATE", "OVERDUE", "REJECTED", "CANCELLED", "INACTIVE", "damaged", "lost"];
 const BLUE = ["IN_PROGRESS", "PUBLISHED", "IN_USE", "allocated", "loaned", "ONGOING"];
 const GREY = ["DRAFT", "SUPERSEDED", "WITHDRAWN", "pension"];
 

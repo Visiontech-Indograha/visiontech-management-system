@@ -3597,7 +3597,7 @@
      "Media Streaming"
     ],
     "summary": "Preview Media",
-    "description": "Menyajikan pratinjau berkas secara inline di peramban (PDF, Foto, dsb.).\nTidak memicu unduhan paksa (Content-Disposition: inline).",
+    "description": "Pratinjau inline media rujukan (contoh SOP, foto alat/kendaraan).",
     "operationId": "preview_media_api_v1_media_preview_get",
     "parameters": [
      {
@@ -3606,10 +3606,11 @@
       "required": true,
       "schema": {
        "type": "string",
-       "description": "Path relatif berkas di storage",
+       "maxLength": 300,
+       "description": "Path rujukan, mis. /uploads/sop/x.png",
        "title": "Path"
       },
-      "description": "Path relatif berkas di storage"
+      "description": "Path rujukan, mis. /uploads/sop/x.png"
      }
     ],
     "responses": {
@@ -3640,7 +3641,7 @@
      "Media Streaming"
     ],
     "summary": "Download Media",
-    "description": "Mengunduh berkas fisik ke komputer pengguna (Content-Disposition: attachment).",
+    "description": "Unduh media rujukan (Content-Disposition: attachment).",
     "operationId": "download_media_api_v1_media_download_get",
     "parameters": [
      {
@@ -3649,10 +3650,11 @@
       "required": true,
       "schema": {
        "type": "string",
-       "description": "Path relatif berkas di storage",
+       "maxLength": 300,
+       "description": "Path rujukan, mis. /uploads/sop/x.pdf",
        "title": "Path"
       },
-      "description": "Path relatif berkas di storage"
+      "description": "Path rujukan, mis. /uploads/sop/x.pdf"
      }
     ],
     "responses": {
@@ -3661,50 +3663,6 @@
       "content": {
        "application/json": {
         "schema": {}
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    }
-   }
-  },
-  "/api/v1/media/upload": {
-   "post": {
-    "tags": [
-     "Media Streaming"
-    ],
-    "summary": "Upload Media",
-    "description": "Mengunggah berkas multimedia (foto mobil, foto inspeksi, berkas karyawan, SOP, bukti absen).\nMenyimpan ke partisi folder uploads/{module_category}/{year}/{month}/.",
-    "operationId": "upload_media_api_v1_media_upload_post",
-    "requestBody": {
-     "content": {
-      "multipart/form-data": {
-       "schema": {
-        "$ref": "#/components/schemas/Body_upload_media_api_v1_media_upload_post"
-       }
-      }
-     },
-     "required": true
-    },
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {
-         "additionalProperties": true,
-         "type": "object",
-         "title": "Response Upload Media Api V1 Media Upload Post"
-        }
        }
       }
      },
@@ -10087,25 +10045,6 @@
      "file"
     ],
     "title": "Body_upload_document_api_v1_files_upload_post"
-   },
-   "Body_upload_media_api_v1_media_upload_post": {
-    "properties": {
-     "file": {
-      "type": "string",
-      "contentMediaType": "application/octet-stream",
-      "title": "File"
-     },
-     "module_category": {
-      "type": "string",
-      "title": "Module Category",
-      "default": "general"
-     }
-    },
-    "type": "object",
-    "required": [
-     "file"
-    ],
-    "title": "Body_upload_media_api_v1_media_upload_post"
    },
    "BulkApproveIn": {
     "properties": {

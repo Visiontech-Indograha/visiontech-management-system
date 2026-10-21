@@ -1086,8 +1086,7 @@ export interface paths {
         };
         /**
          * Preview Media
-         * @description Menyajikan pratinjau berkas secara inline di peramban (PDF, Foto, dsb.).
-         *     Tidak memicu unduhan paksa (Content-Disposition: inline).
+         * @description Pratinjau inline media rujukan (contoh SOP, foto alat/kendaraan).
          */
         get: operations["preview_media_api_v1_media_preview_get"];
         put?: never;
@@ -1107,32 +1106,11 @@ export interface paths {
         };
         /**
          * Download Media
-         * @description Mengunduh berkas fisik ke komputer pengguna (Content-Disposition: attachment).
+         * @description Unduh media rujukan (Content-Disposition: attachment).
          */
         get: operations["download_media_api_v1_media_download_get"];
         put?: never;
         post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/media/upload": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Upload Media
-         * @description Mengunggah berkas multimedia (foto mobil, foto inspeksi, berkas karyawan, SOP, bukti absen).
-         *     Menyimpan ke partisi folder uploads/{module_category}/{year}/{month}/.
-         */
-        post: operations["upload_media_api_v1_media_upload_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3190,16 +3168,6 @@ export interface components {
         Body_upload_document_api_v1_files_upload_post: {
             /** File */
             file: string;
-        };
-        /** Body_upload_media_api_v1_media_upload_post */
-        Body_upload_media_api_v1_media_upload_post: {
-            /** File */
-            file: string;
-            /**
-             * Module Category
-             * @default general
-             */
-            module_category: string;
         };
         /** BulkApproveIn */
         BulkApproveIn: {
@@ -8162,7 +8130,7 @@ export interface operations {
     preview_media_api_v1_media_preview_get: {
         parameters: {
             query: {
-                /** @description Path relatif berkas di storage */
+                /** @description Path rujukan, mis. /uploads/sop/x.png */
                 path: string;
             };
             header?: never;
@@ -8194,7 +8162,7 @@ export interface operations {
     download_media_api_v1_media_download_get: {
         parameters: {
             query: {
-                /** @description Path relatif berkas di storage */
+                /** @description Path rujukan, mis. /uploads/sop/x.pdf */
                 path: string;
             };
             header?: never;
@@ -8210,41 +8178,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    upload_media_api_v1_media_upload_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "multipart/form-data": components["schemas"]["Body_upload_media_api_v1_media_upload_post"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
                 };
             };
             /** @description Validation Error */

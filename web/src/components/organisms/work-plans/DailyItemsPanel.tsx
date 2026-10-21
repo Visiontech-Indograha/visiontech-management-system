@@ -167,7 +167,7 @@ function ItemForm({ detail, onDone }: { detail: DailyPlanDetail; onDone: () => v
           {Object.entries(PHASE).map(([k, l]) => <ControlOption key={k} value={k}>{l}</ControlOption>)}
         </SelectField>
         {MAIN.includes(phase) && (
-          <SelectField name="main" label="Deliverable utama order?" defaultValue="yes">
+          <SelectField name="main" label="Hasil utama pekerjaan klien?" defaultValue="yes">
             <ControlOption value="yes">Ya</ControlOption>
             <ControlOption value="no">Tidak</ControlOption>
           </SelectField>

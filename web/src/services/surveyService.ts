@@ -80,7 +80,7 @@ export function useOfficialSurveyReport(taskId: string) {
   });
 }
 
-/** Geser titik di peta layout (PM kapan pun; ketua tim selama draf) — dipakai layout otomatis laporan. */
+/** Geser titik di peta titik (PM kapan pun; ketua tim selama draf) — dipakai layout otomatis laporan. */
 export function useMoveSurveyPoint(taskId: string) {
   const qc = useQueryClient();
   return useMutation({

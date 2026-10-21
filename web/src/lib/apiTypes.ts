@@ -283,7 +283,7 @@ export interface paths {
         get?: never;
         /**
          * Move Point
-         * @description Geser titik di peta layout (PM kapan pun; ketua tim selama survei masih draf).
+         * @description Geser titik di peta titik (PM kapan pun; ketua tim selama survei masih draf).
          */
         put: operations["move_point_api_v1_work_plans_surveys_points__point_id__location_put"];
         post?: never;

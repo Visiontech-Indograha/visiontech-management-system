@@ -253,7 +253,7 @@ class _SurveyScreenState extends ConsumerState<SurveyScreen> {
                           if (mounted) await _load();
                         },
                         icon: const Icon(Icons.map_rounded),
-                        label: Text(s['can_move'] == true ? 'Peta layout · atur posisi titik' : 'Lihat peta layout'),
+                        label: Text(s['can_move'] == true ? 'Peta layout · atur posisi titik' : 'Lihat peta titik'),
                       ),
                     ),
                   for (final p in _points)
@@ -382,7 +382,7 @@ class _SurveyScreenState extends ConsumerState<SurveyScreen> {
         Row(
           children: [
             Expanded(child: Text('${s['client_name']}', style: Theme.of(context).textTheme.titleMedium)),
-            StatusPill(surveyStateLabel[s['state']] ?? '${s['state']}'),
+            StatusPill('${s['state']}', label: surveyStateLabel[s['state']]),
           ],
         ),
         const SizedBox(height: 6),
@@ -401,6 +401,7 @@ class _SurveyScreenState extends ConsumerState<SurveyScreen> {
     if (state == 'APPROVED') {
       return const NoticeBanner(
         icon: Icons.verified_rounded,
+        accent: Accent.emerald,
         text: 'Survei disetujui PM. Laporan resmi bisa diunduh lewat tombol di bawah.',
       );
     }
@@ -795,7 +796,7 @@ class _MySurveysSectionState extends ConsumerState<MySurveysSection> {
                       ],
                     ),
                   ),
-                  StatusPill(surveyStateLabel[s['state']] ?? '${s['state']}'),
+                  StatusPill('${s['state']}', label: surveyStateLabel[s['state']]),
                 ],
               ),
             ),

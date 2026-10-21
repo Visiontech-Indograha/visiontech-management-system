@@ -409,8 +409,11 @@ class SectionTitle extends StatelessWidget {
 
 /// Chip status berbentuk pil terisi.
 class StatusPill extends StatelessWidget {
-  const StatusPill(this.status, {super.key});
+  const StatusPill(this.status, {super.key, this.label});
   final String? status;
+
+  /// Label pengganti (mis. "Disetujui PM"); warna tetap dari kode [status].
+  final String? label;
   @override
   Widget build(BuildContext context) {
     final s = statusStyle(status);
@@ -418,7 +421,7 @@ class StatusPill extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(color: s.accent.soft, borderRadius: BorderRadius.circular(99)),
       child: Text(
-        s.label,
+        label ?? s.label,
         style: VmsTextStyles.caption.copyWith(color: s.accent.strong, fontWeight: FontWeight.w700),
       ),
     );

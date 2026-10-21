@@ -346,7 +346,7 @@ class _SurveyPointScreenState extends ConsumerState<SurveyPointScreen> {
           ),
           _Section(
             number: 3,
-            title: 'Remark',
+            title: 'Keterangan',
             subtitle: 'Catatan kondisi titik, satu poin per baris (tampil sebagai daftar di laporan).',
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,

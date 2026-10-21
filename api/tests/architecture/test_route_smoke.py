@@ -21,7 +21,9 @@ PUBLIC_ROUTES = {
     ("POST", "/auth/login"),
     ("POST", "/auth/refresh"),
     ("POST", "/auth/logout"),
-    ("GET", "/verify/{token}"),   # fase 6: verifikasi QR publik, dibatasi 30/menit per IP
+    # Media rujukan statis (contoh SOP, foto alat/kendaraan seed) untuk tag <img>: folder & jenis berkas dibatasi.
+    ("GET", "/media/preview"),
+    ("GET", "/media/download"),
     # Pembaruan APK (docs/32, keputusan pemilik 2026-10-07): wajib bisa diunduh sebelum login.
     ("GET", "/app/android/update"),
     ("GET", "/app/android/files/{name}"),

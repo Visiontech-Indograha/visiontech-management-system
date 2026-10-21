@@ -135,7 +135,7 @@ class VmsApi {
   // --- Lokasi & absensi ---------------------------------------------------
   Future<List<Map<String, dynamic>>> sites() async => _list(
     (await _dio.get(
-      '$_p/sites',
+      '$_p/offices',
       queryParameters: {'for_attendance': true},
     )).data,
   );

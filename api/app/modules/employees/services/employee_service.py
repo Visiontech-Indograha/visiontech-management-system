@@ -1,194 +1,137 @@
 """
-app/services/employee_service.py
-Karyawan — padanan `domain.js` OFFBOARD dan RESTORE_EMPLOYEE (V-29), plus hapus karyawan (keputusan pemilik
-2026-09-25; prototipe tidak punya tindakannya). Izin HR (`manage:users`) dijaga router.
-"""
+app/modules/employees/services/employee_service.py
+Karyawan V2 (Milestone 10).
 
+- Baca: semua yang login (`view:users`, direktori). Kelola: HR (`manage:users`).
+- No. karyawan unik; kantor wajib ada; divisi & jabatan aktif; jabatan per divisi harus sama dengan divisi karyawan;
+  akhir PKWT ≥ tanggal bergabung; foto = berkas gambar yang sudah diunggah.
+- Masa kerja diakhiri lewat modul offboarding (clearance aset), bukan di sini. Arsip hanya untuk yang sudah offboarded.
+"""
 from __future__ import annotations
 
-from datetime import date
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.core.errors import AppError, NotFoundError, ValidationError
-from app.core.permissions import Permission
-from app.modules.employees.repositories.emergency_contact_repository import CRUDEmergencyContact
-from app.modules.employees.repositories.employee_repository import CRUDEmployee
-from app.shared.access.access_service import ensure_same_org
+from app.modules.employees.repositories.employee_repository import EmployeeRepository
+from app.modules.employees.schemas.employee_schema import AddressIn, EmployeeCreate, EmployeeUpdate
 
-RESTORED = "Data dipulihkan sebagai nonaktif. Akses lama tetap dicabut."
-ARCHIVED = "Karyawan dihapus. Data historis tetap tersimpan."
+ARCHIVED = "Karyawan diarsipkan. Data historis tetap tersimpan."
+RESTORED = "Arsip dibatalkan. Karyawan tetap berstatus selesai bekerja."
 
 
 class EmployeeService:
-    """Layanan untuk mengelola data karyawan, penempatan (assignment), mutasi, dan offboarding."""
+    def __init__(self, repo: EmployeeRepository) -> None:
+        self.repo = repo
 
-    def __init__(self, db: AsyncSession) -> None:
-        self.db = db
-        self.repo = CRUDEmployee(db)
-        self.emergency_repo = CRUDEmergencyContact(db)
+    async def list(self, *, page: int, size: int, status: str | None, division_id: UUID | None,
+                   office_id: UUID | None, position_id: UUID | None, q: str | None) -> tuple[list[Any], int]:
+        filters = {"status": status, "division_id": division_id, "office_id": office_id,
+                   "position_id": position_id, "q": (q or "").strip() or None}
+        return await self.repo.page(size, (page - 1) * size, **filters), await self.repo.count(**filters)
 
-    async def ensure_units(self, org_id: str, *unit_ids: UUID | None) -> None:
-        """Unit tujuan harus milik organisasi ini (422 bila bukan)."""
-        await ensure_same_org(self.db, org_id, units=list(unit_ids))
-
-    async def list_page(
-        self, org_id: str, is_active: bool | None, q: str | None, page: int, size: int
-    ) -> tuple[int, list[Any]]:
-        """(jumlah total, baris halaman `page`) karyawan organisasi ini."""
-        total = await self.repo.count_in_org(org_id, is_active, q)
-        return total, await self.repo.page_in_org(org_id, is_active, q, size, (page - 1) * size)
-
-    async def get(self, employee_id: UUID, org_id: str) -> Any:
-        """Satu karyawan; organisasi lain / terhapus → 404."""
-        row = await self.repo.get_in_org(employee_id, org_id)
+    async def get(self, employee_id: UUID) -> Any:
+        row = await self.repo.get(employee_id)
         if row is None:
-            raise AppError("NOT_FOUND", "Karyawan tidak ditemukan.", status=404)
-        return row
-
-    async def create(self, org_id: str, data: dict[str, Any]) -> Any:
-        """Karyawan baru beserta penempatan perdananya."""
-        await self.ensure_units(org_id, data["unit_id"])
-        emergency_contacts = data.pop("emergency_contacts", None)
-        row = await self.repo.insert(org_id, data)
-        if emergency_contacts:
-            for ec in emergency_contacts:
-                contact_data = ec if isinstance(ec, dict) else ec.model_dump()
-                await self.emergency_repo.insert(org_id, row.id, contact_data)
-        return row
-
-    async def update(self, employee_id: UUID, org_id: str, fields: dict[str, Any]) -> Any:
-        """Ubah data pribadi (jabatan/unit lewat /assignments). Organisasi lain → None."""
-        return await self.repo.update_fields(employee_id, org_id, fields)
-
-    async def conflicts(
-        self, employee_id: UUID, org_id: str, start: date, end: date, exclude_plan: UUID | None
-    ) -> list[Any]:
-        """Bentrok jadwal harian untuk penyusun jadwal; karyawan/jadwal tak dikenal → 404."""
-        await ensure_same_org(self.db, org_id, employees=[employee_id], work_plans=[exclude_plan])
-        return await self.repo.conflicts(employee_id, start, end, exclude_plan)
-
-    async def private_viewer(self, user_id: str, permissions: list[str]) -> tuple[bool, str | None]:
-        """Prototipe `privateAccess`: data kontak pribadi hanya untuk HR (dan admin) serta pemiliknya.
-        Hasil: (boleh melihat semua, employee_id milik pengguna)."""
-        if Permission.MANAGE_EMPLOYEE_DOCUMENTS.value in permissions:
-            return True, None
-        own = await self.repo.employee_of_user(user_id)
-        return False, str(own) if own else None
-
-    async def restore_employee(self, employee_id: UUID, org_id: str) -> dict[str, Any]:
-        """
-        Memulihkan karyawan yang dihapus (deleted).
-        Karyawan yang dipulihkan berstatus nonaktif dan harus diberikan akses baru.
-
-        Args:
-            employee_id (UUID): ID karyawan.
-            org_id (str): ID organisasi tempat karyawan bernaung.
-
-        Returns:
-            dict[str, Any]: ID karyawan, status is_active (False), dan pesan pemulihan.
-        """
-        employee = await self.repo.lock(employee_id, org_id)
-        if employee is None:
             raise NotFoundError("Karyawan")
-        if not employee.deleted:
-            raise AppError(
-                "INVALID_STATE",
-                "Karyawan tidak dihapus. Untuk bergabung kembali dibutuhkan masa kerja dan akses baru.",
-                status=409,
-            )
-        await self.repo.restore(employee_id)
-        return {"id": str(employee_id), "is_active": False, "message": RESTORED}
+        return row
 
-    async def archive_employee(self, employee_id: UUID, org_id: str) -> dict[str, Any]:
-        """Hanya karyawan yang sudah di-offboard (nonaktif); data historis tidak dihapus."""
-        employee = await self.repo.lock(employee_id, org_id)
+    async def detail(self, employee_id: UUID) -> dict[str, Any]:
+        row = await self.get(employee_id)
+        return {**dict(row._mapping), "addresses": [dict(a._mapping) for a in await self.repo.addresses(employee_id)]}
+
+    async def _validate(self, fields: dict[str, Any], current: Any = None) -> dict[str, Any]:
+        """Periksa referensi & ubah photo_file_id → photo_path; kembalikan kolom siap simpan."""
+        out = dict(fields)
+        if out.get("employee_no"):
+            out["employee_no"] = out["employee_no"].strip()
+            if await self.repo.employee_no_taken(out["employee_no"], exclude=current.employee_id if current else None):
+                raise AppError("EMPLOYEE_NO_TAKEN", "No. karyawan sudah dipakai.", status=409)
+        if out.get("full_name"):
+            out["full_name"] = out["full_name"].strip()
+        division = out.get("division_id", current.division_id if current else None)
+        position = out.get("position_id", current.position_id if current else None)
+        refs = await self.repo.refs(out.get("office_id"), out.get("division_id"), out.get("position_id"))
+        if not refs.office_ok:
+            raise ValidationError("Kantor tidak ditemukan.")
+        if not refs.division_ok:
+            raise ValidationError("Divisi tidak ditemukan atau nonaktif.")
+        if not refs.position_ok:
+            raise ValidationError("Jabatan tidak ditemukan atau nonaktif.")
+        if position and "position_id" in out:
+            pos_div = refs.position_division
+        elif position and current is not None:
+            pos_div = (await self.repo.refs(None, None, position)).position_division
+        else:
+            pos_div = None
+        if pos_div is not None and str(pos_div) != str(division):
+            raise ValidationError("Jabatan ini milik divisi lain.")
+        join = out.get("join_date", current.join_date if current else None)
+        end = out.get("pkwt_end_date", current.pkwt_end_date if current else None)
+        if end is not None and join is not None and end < join:
+            raise ValidationError("Akhir PKWT tidak boleh sebelum tanggal bergabung.")
+        if "photo_file_id" in out:
+            file_id = out.pop("photo_file_id")
+            if file_id is None:
+                out["photo_path"] = None
+            else:
+                key = await self.repo.image_key(file_id)
+                if key is None:
+                    raise ValidationError("Foto belum diunggah atau bukan gambar.")
+                out["photo_path"] = key
+        return out
+
+    async def create(self, data: EmployeeCreate) -> dict[str, Any]:
+        fields = await self._validate(data.model_dump(exclude={"address"}))
+        fields.setdefault("photo_path", None)
+        employee_id = await self.repo.insert(fields)
+        if data.address:
+            await self.repo.add_address(employee_id, data.address.model_dump())
+        return await self.detail(employee_id)
+
+    async def update(self, employee_id: UUID, data: EmployeeUpdate) -> dict[str, Any]:
+        current = await self.get(employee_id)
+        if current.archived:
+            raise AppError("INVALID_STATE", "Karyawan diarsipkan; batalkan arsip dulu.", status=409)
+        fields = data.model_dump(exclude_unset=True)
+        for required in ("employee_no", "full_name", "office_id", "join_date"):
+            if required in fields and fields[required] is None:
+                raise ValidationError("No. karyawan, nama, kantor, dan tanggal bergabung tidak boleh dikosongkan.")
+        await self.repo.update(employee_id, await self._validate(fields, current))
+        return await self.detail(employee_id)
+
+    # ── Alamat ────────────────────────────────────────────────────────────────
+    async def add_address(self, employee_id: UUID, data: AddressIn) -> Any:
+        await self.get(employee_id)
+        return await self.repo.add_address(employee_id, data.model_dump())
+
+    async def update_address(self, employee_id: UUID, address_id: UUID, data: AddressIn) -> Any:
+        row = await self.repo.update_address(employee_id, address_id, data.model_dump())
+        if row is None:
+            raise NotFoundError("Alamat")
+        return row
+
+    async def delete_address(self, employee_id: UUID, address_id: UUID) -> None:
+        if not await self.repo.delete_address(employee_id, address_id):
+            raise NotFoundError("Alamat")
+
+    # ── Arsip ─────────────────────────────────────────────────────────────────
+    async def archive(self, employee_id: UUID) -> dict[str, Any]:
+        employee = await self.repo.lock(employee_id)
         if employee is None:
             raise NotFoundError("Karyawan")
         if employee.deleted:
-            raise AppError("INVALID_STATE", "Karyawan sudah dihapus.", status=409)
-        if employee.is_active:
-            raise AppError("INVALID_STATE", "Akhiri masa kerja karyawan ini terlebih dahulu.", status=409)
+            raise AppError("INVALID_STATE", "Karyawan sudah diarsipkan.", status=409)
+        if employee.offboarding_status != "offboarded":
+            raise AppError("INVALID_STATE", "Selesaikan offboarding karyawan ini terlebih dahulu.", status=409)
         await self.repo.archive(employee_id)
         return {"id": str(employee_id), "message": ARCHIVED}
 
-    async def assignments(self, employee_id: UUID, org_id: str) -> list[Any]:
-        """
-        Mendapatkan riwayat penempatan (jabatan dan unit) seorang karyawan.
-
-        Args:
-            employee_id (UUID): ID karyawan.
-            org_id (str): ID organisasi tempat karyawan bekerja.
-
-        Returns:
-            list[Any]: Daftar penempatan jabatan historis dan saat ini.
-        """
-        rows = await self.repo.assignments(employee_id, org_id)
-        if rows is None:
+    async def restore(self, employee_id: UUID) -> dict[str, Any]:
+        employee = await self.repo.lock(employee_id)
+        if employee is None:
             raise NotFoundError("Karyawan")
-        return rows
-
-    async def promote(
-        self, employee_id: UUID, org_id: str, position: str, unit_id: UUID | None, valid_from: date
-    ) -> Any:
-        """
-        domain.js PROMOTE — mutasi atau promosi jabatan karyawan.
-        karyawan aktif, jabatan & unit valid, mutasi lintas unit diblokir selama
-        masih bertugas di SK aktif. Unit kosong = tetap di unit sekarang.
-        """
-        employee = await self.repo.lock(employee_id, org_id)
-        if employee is None or employee.deleted:
-            raise NotFoundError("Karyawan")
-        if not employee.is_active:
-            raise AppError("INVALID_STATE", "Karyawan harus aktif.", status=409)
-        if not position.strip():
-            raise ValidationError("Jabatan dan unit wajib valid.")
-
-        target_unit = str(unit_id) if unit_id else employee.unit_id
-        # Aturan bisnis: Tidak boleh memutasi karyawan ke unit lain jika ia masih
-        # bagian dari tim SK di unit lamanya yang belum selesai.
-        if target_unit != employee.unit_id and await self.repo.on_running_plan(employee_id):
-            raise AppError(
-                "INVALID_STATE", "Mutasi lintas unit diblokir sampai penugasan aktif diserahterimakan.", status=409
-            )
-
-        last_start = await self.repo.last_assignment_start(employee_id)
-        # Menjaga urutan kronologis penempatan.
-        if last_start is not None and valid_from < last_start:
-            raise ValidationError("Tanggal berlaku tidak boleh sebelum penempatan terakhir.")
-
-        return await self.repo.promote(employee_id, position.strip(), target_unit, valid_from)
-
-    async def list_emergency_contacts(self, employee_id: UUID, org_id: str) -> list[Any]:
-        """Daftar kontak darurat karyawan dalam organisasi."""
-        await self.get(employee_id, org_id)
-        return await self.emergency_repo.list_by_employee(employee_id, org_id)
-
-    async def get_emergency_contact(self, employee_id: UUID, contact_id: UUID, org_id: str) -> Any:
-        """Satu kontak darurat."""
-        row = await self.emergency_repo.get(contact_id, employee_id, org_id)
-        if row is None:
-            raise NotFoundError("Kontak darurat")
-        return row
-
-    async def create_emergency_contact(self, employee_id: UUID, org_id: str, data: dict[str, Any]) -> Any:
-        """Tambah kontak darurat."""
-        await self.get(employee_id, org_id)
-        return await self.emergency_repo.insert(org_id, employee_id, data)
-
-    async def update_emergency_contact(
-        self, employee_id: UUID, contact_id: UUID, org_id: str, fields: dict[str, Any]
-    ) -> Any:
-        """Ubah kontak darurat."""
-        row = await self.emergency_repo.update_fields(contact_id, employee_id, org_id, fields)
-        if row is None:
-            raise NotFoundError("Kontak darurat")
-        return row
-
-    async def delete_emergency_contact(self, employee_id: UUID, contact_id: UUID, org_id: str) -> None:
-        """Hapus kontak darurat."""
-        deleted = await self.emergency_repo.delete(contact_id, employee_id, org_id)
-        if not deleted:
-            raise NotFoundError("Kontak darurat")
+        if not employee.deleted:
+            raise AppError("INVALID_STATE", "Karyawan tidak diarsipkan.", status=409)
+        await self.repo.restore(employee_id)
+        return {"id": str(employee_id), "message": RESTORED}

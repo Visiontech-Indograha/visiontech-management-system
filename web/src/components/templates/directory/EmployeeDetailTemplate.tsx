@@ -1,8 +1,6 @@
 import { AccountCard } from "@/components/organisms/directory/AccountCard";
-import { AssignmentHistory } from "@/components/organisms/directory/AssignmentHistory";
-import { EmployeePromoteDialog } from "@/components/organisms/directory/EmployeePromoteDialog";
 import { DocumentsPanel } from "@/components/organisms/directory/DocumentsPanel";
-import { EmergencyContactsPanel } from "@/components/organisms/directory/EmergencyContactsPanel";
+import { EmployeeAddressesPanel } from "@/components/organisms/directory/EmployeeAddressesPanel";
 import { EmployeeActions } from "@/components/organisms/directory/EmployeeActions";
 import { EmployeeArchivePanel } from "@/components/organisms/directory/EmployeeArchivePanel";
 import { EmployeeDetailSkeleton } from "@/components/organisms/directory/EmployeeDetailSkeleton";
@@ -13,25 +11,21 @@ import { EmployeeProfileDialog } from "@/components/organisms/directory/Employee
 import type { Employee } from "@/services/employeeService";
 import { PageTemplate } from "../PageTemplate";
 
-/** Kerangka detail karyawan: galat / memuat / profil, akun, penugasan, arsip, dokumen + dialog HR. */
+/** Kerangka detail karyawan: galat / memuat / profil, alamat, akun, arsip, dokumen + dialog HR. */
 export function EmployeeDetailTemplate(props: {
   errorMessage: string | null;
   employee: Employee | undefined;
-  unitName: string | null;
   canEdit: boolean;
   canManageDocs: boolean;
   canSeePrivate: boolean;
   editing: boolean;
-  promoting: boolean;
   offboarding: boolean;
   onEdit: () => void;
-  onPromote: () => void;
   onOffboard: () => void;
   onCloseEdit: () => void;
-  onClosePromote: () => void;
   onCloseOffboard: () => void;
 }) {
-  const { errorMessage, employee: e, unitName, canEdit, canManageDocs, canSeePrivate, editing, promoting, offboarding } = props;
+  const { errorMessage, employee: e, canEdit, canManageDocs, canSeePrivate, editing, offboarding } = props;
   if (errorMessage !== null) return <EmployeeLoadError message={errorMessage} />;
 
   if (!e) return <EmployeeDetailSkeleton />;
@@ -42,8 +36,7 @@ export function EmployeeDetailTemplate(props: {
       action={
         canEdit && (
           <EmployeeActions
-            isActive={e.is_active}
-            onPromote={props.onPromote}
+            isActive={e.offboarding_status === "active"}
             onOffboard={props.onOffboard}
             onEdit={props.onEdit}
           />
@@ -52,16 +45,15 @@ export function EmployeeDetailTemplate(props: {
     >
       <EmployeeProfileCard
         employee={e}
-        unitName={unitName}
         canSeePrivate={canSeePrivate}
       />
-      {canSeePrivate && <EmergencyContactsPanel employeeId={e.id} canEdit={canEdit} />}
+      {canSeePrivate && (
+        <EmployeeAddressesPanel employeeId={e.employee_id} addresses={e.addresses ?? []} canEdit={canEdit} />
+      )}
       {canEdit && <AccountCard employee={e} />}
-      <AssignmentHistory employee={e} />
-      {canEdit && !e.is_active && <EmployeeArchivePanel employee={e} />}
-      {canManageDocs && <DocumentsPanel employeeId={e.id} canManage />}
+      {canEdit && e.offboarding_status === "offboarded" && <EmployeeArchivePanel employee={e} />}
+      {canManageDocs && <DocumentsPanel employeeId={e.employee_id} canManage />}
       {editing && <EmployeeProfileDialog employee={e} onClose={props.onCloseEdit} />}
-      {promoting && <EmployeePromoteDialog employee={e} onClose={props.onClosePromote} />}
       {offboarding && <EmployeeOffboardDialog employee={e} onClose={props.onCloseOffboard} />}
     </PageTemplate>
   );

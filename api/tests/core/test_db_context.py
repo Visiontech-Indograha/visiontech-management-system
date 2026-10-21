@@ -50,6 +50,6 @@ def test_protected_endpoint_reaches_database(client, seeded_user):
         "/auth/login", json={"email": seeded_user.login, "password": seeded_user.password}
     ).json()["access_token"]
 
-    response = client.get("/sites", headers={"Authorization": f"Bearer {access}"})
+    response = client.get("/offices", headers={"Authorization": f"Bearer {access}"})
 
     assert response.status_code != 500, response.text

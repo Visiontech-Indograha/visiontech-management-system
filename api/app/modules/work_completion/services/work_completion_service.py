@@ -164,6 +164,21 @@ class WorkCompletionService:
             raise ForbiddenError("Hanya PM, OM, atau Super Admin yang dapat membuat Order Klien.")
         if current_user.role == "PROJECT_MANAGER" and not data.get("pm_id"):
             data["pm_id"] = current_user.employee_id
+        if data.get("project_id"):
+            project = await self.crud.project_snapshot(data["project_id"])
+            if project is None or str(project.division_id) != str(data["division_id"]):
+                raise ValidationError("Proyek tidak ditemukan di divisi order ini.")
+            if project.status != "ONGOING":
+                raise ValidationError("Proyek tidak sedang berjalan.")
+            data["client_name"] = data.get("client_name") or project.client_name
+            data["project_title"] = data.get("project_title") or project.project_title
+            data["order_number"] = data.get("order_number") or project.spk_number[:50]
+            data.setdefault("start_work_date", project.start_date)
+            data.setdefault("end_work_date", project.end_date)
+            if current_user.role != "PROJECT_MANAGER" and not data.get("pm_id"):
+                data["pm_id"] = project.pm_id
+        if not data.get("client_name") or not data.get("project_title"):
+            raise ValidationError("Isi nama klien dan judul pekerjaan, atau pilih proyek.")
         pm_id = data.get("pm_id")
         if pm_id and await self.crud.employee_role(pm_id) != "PROJECT_MANAGER":
             raise ValidationError("PM order harus karyawan aktif dengan peran Project Manager.")

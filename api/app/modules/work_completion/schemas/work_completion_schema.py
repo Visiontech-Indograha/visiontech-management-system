@@ -17,8 +17,10 @@ class WorkCompletionCreate(BaseModel):
     """Schema input pembuatan Order Klien baru oleh PM / OM."""
     division_id: UUID
     pm_id: UUID | None = None
-    client_name: str = Field(..., min_length=2, max_length=150, description="Nama Klien/Perusahaan (misal: Pertamina)")
-    project_title: str = Field(..., min_length=3, max_length=255, description="Judul Pekerjaan/Proyek")
+    # Proyek/SPK (Milestone 10): kosongkan klien/judul/nomor untuk diisi otomatis dari proyek.
+    project_id: UUID | None = None
+    client_name: str | None = Field(None, min_length=2, max_length=150, description="Nama klien (kosong = dari proyek)")
+    project_title: str | None = Field(None, min_length=3, max_length=255, description="Judul (kosong = dari proyek)")
     order_number: str | None = Field(None, max_length=50, description="Nomor SPK / PO / WO")
     total_target_unit: int = Field(default=1, ge=1, description="Total target unit volume pekerjaan")
     unit_measure: str = Field(default="Unit", max_length=50, description="Satuan unit (Unit, Titik, Meter, Gardu)")
@@ -125,6 +127,7 @@ class SyncBomFromWorkTypesIn(BaseModel):
 class WorkCompletionOut(BaseModel):
     """Schema output representasi Order Proyek Klien."""
     completion_id: UUID
+    project_id: UUID | None = None
     division_id: UUID | None = None
     division_name: str | None = None
     pm_id: UUID | None = None

@@ -64,6 +64,9 @@ Status per 2026-10-20 (API + uji Postman; UI web/HP belum disesuaikan sehingga b
       daftar PKWT segera berakhir. Jalur lama `POST /employees/{id}/offboard` (tanpa clearance) dipensiunkan.
 
 ---
+- [ ] **Milestone 10**: Master V2 — kantor, divisi, jabatan, klien, proyek, karyawan V2 & alamat (`office`, `division`,
+  `job_position`, `client`, `project`, `employee`, `address`) — API ✔, web ✔, mobile ✔; Postman menunggu penyesuaian seed baru
+- [ ] **Milestone 11-S**: Survei ACS & CCTV berformat baku + rencana dari survei — rancangan docs/37 (disetujui 2026-10-21)
 
 ## 3. Keputusan Pemilik yang Mengikat (2026-10-20)
 

@@ -176,6 +176,70 @@
     "title": "AccountWithPassword",
     "type": "object"
    },
+   "AddressIn": {
+    "properties": {
+     "address_line": {
+      "maxLength": 255,
+      "minLength": 3,
+      "title": "Address Line",
+      "type": "string"
+     },
+     "city": {
+      "maxLength": 100,
+      "minLength": 2,
+      "title": "City",
+      "type": "string"
+     },
+     "postal_code": {
+      "maxLength": 10,
+      "minLength": 3,
+      "title": "Postal Code",
+      "type": "string"
+     }
+    },
+    "required": [
+     "address_line",
+     "city",
+     "postal_code"
+    ],
+    "title": "AddressIn",
+    "type": "object"
+   },
+   "AddressOut": {
+    "properties": {
+     "address_id": {
+      "format": "uuid",
+      "title": "Address Id",
+      "type": "string"
+     },
+     "address_line": {
+      "maxLength": 255,
+      "minLength": 3,
+      "title": "Address Line",
+      "type": "string"
+     },
+     "city": {
+      "maxLength": 100,
+      "minLength": 2,
+      "title": "City",
+      "type": "string"
+     },
+     "postal_code": {
+      "maxLength": 10,
+      "minLength": 3,
+      "title": "Postal Code",
+      "type": "string"
+     }
+    },
+    "required": [
+     "address_line",
+     "city",
+     "postal_code",
+     "address_id"
+    ],
+    "title": "AddressOut",
+    "type": "object"
+   },
    "AppUpdateOut": {
     "description": "Jawaban pemeriksaan pembaruan untuk satu HP.",
     "properties": {
@@ -1746,6 +1810,210 @@
     "title": "ClearanceItemVerify",
     "type": "object"
    },
+   "ClientCreate": {
+    "properties": {
+     "address": {
+      "anyOf": [
+       {
+        "maxLength": 2000,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Address"
+     },
+     "client_code": {
+      "maxLength": 30,
+      "minLength": 2,
+      "title": "Client Code",
+      "type": "string"
+     },
+     "name": {
+      "maxLength": 150,
+      "minLength": 2,
+      "title": "Name",
+      "type": "string"
+     },
+     "pic_name": {
+      "anyOf": [
+       {
+        "maxLength": 100,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Pic Name"
+     },
+     "pic_phone": {
+      "anyOf": [
+       {
+        "maxLength": 30,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Pic Phone"
+     }
+    },
+    "required": [
+     "client_code",
+     "name"
+    ],
+    "title": "ClientCreate",
+    "type": "object"
+   },
+   "ClientOut": {
+    "properties": {
+     "address": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Address"
+     },
+     "client_code": {
+      "title": "Client Code",
+      "type": "string"
+     },
+     "client_id": {
+      "format": "uuid",
+      "title": "Client Id",
+      "type": "string"
+     },
+     "name": {
+      "title": "Name",
+      "type": "string"
+     },
+     "pic_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Pic Name"
+     },
+     "pic_phone": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Pic Phone"
+     },
+     "project_count": {
+      "default": 0,
+      "title": "Project Count",
+      "type": "integer"
+     },
+     "status": {
+      "title": "Status",
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "client_id",
+     "client_code",
+     "name",
+     "status"
+    ],
+    "title": "ClientOut",
+    "type": "object"
+   },
+   "ClientUpdate": {
+    "properties": {
+     "address": {
+      "anyOf": [
+       {
+        "maxLength": 2000,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Address"
+     },
+     "client_code": {
+      "anyOf": [
+       {
+        "maxLength": 30,
+        "minLength": 2,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Client Code"
+     },
+     "name": {
+      "anyOf": [
+       {
+        "maxLength": 150,
+        "minLength": 2,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Name"
+     },
+     "pic_name": {
+      "anyOf": [
+       {
+        "maxLength": 100,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Pic Name"
+     },
+     "pic_phone": {
+      "anyOf": [
+       {
+        "maxLength": 30,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Pic Phone"
+     },
+     "status": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Status"
+     }
+    },
+    "title": "ClientUpdate",
+    "type": "object"
+   },
    "CompleteDueResult": {
     "properties": {
      "completed": {
@@ -1955,6 +2223,18 @@
       "title": "Division Id",
       "type": "string"
      },
+     "project_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Project Id"
+     },
      "site_lat": {
       "anyOf": [
        {
@@ -2106,6 +2386,29 @@
       "title": "Leader Name",
       "type": "string"
      },
+     "project_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Project Id"
+     },
+     "project_title": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Project Title"
+     },
      "rejection_reason": {
       "anyOf": [
        {
@@ -2256,6 +2559,29 @@
       "title": "Leader Name",
       "type": "string"
      },
+     "project_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Project Id"
+     },
+     "project_title": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Project Title"
+     },
      "rejection_reason": {
       "anyOf": [
        {
@@ -2366,6 +2692,18 @@
        }
       ],
       "title": "Clock Out Time"
+     },
+     "project_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Project Id"
      },
      "site_lat": {
       "anyOf": [
@@ -2697,6 +3035,34 @@
     "title": "DeviceKeyRequest",
     "type": "object"
    },
+   "DivisionCreate": {
+    "description": "Divisi baru.",
+    "properties": {
+     "name": {
+      "maxLength": 100,
+      "minLength": 2,
+      "title": "Name",
+      "type": "string"
+     },
+     "om_id": {
+      "format": "uuid",
+      "title": "Om Id",
+      "type": "string"
+     },
+     "pm_id": {
+      "format": "uuid",
+      "title": "Pm Id",
+      "type": "string"
+     }
+    },
+    "required": [
+     "name",
+     "om_id",
+     "pm_id"
+    ],
+    "title": "DivisionCreate",
+    "type": "object"
+   },
    "DivisionOption": {
     "properties": {
      "division_id": {
@@ -2714,6 +3080,142 @@
      "name"
     ],
     "title": "DivisionOption",
+    "type": "object"
+   },
+   "DivisionOut": {
+    "description": "Divisi aktif beserta OM & PM-nya.",
+    "properties": {
+     "code": {
+      "title": "Code",
+      "type": "string"
+     },
+     "id": {
+      "format": "uuid",
+      "title": "Id",
+      "type": "string"
+     },
+     "name": {
+      "title": "Name",
+      "type": "string"
+     },
+     "om_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Om Id"
+     },
+     "om_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Om Name"
+     },
+     "pm_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Pm Id"
+     },
+     "pm_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Pm Name"
+     },
+     "status": {
+      "default": true,
+      "title": "Status",
+      "type": "boolean"
+     },
+     "team_count": {
+      "default": 0,
+      "title": "Team Count",
+      "type": "integer"
+     }
+    },
+    "required": [
+     "id",
+     "code",
+     "name"
+    ],
+    "title": "DivisionOut",
+    "type": "object"
+   },
+   "DivisionUpdate": {
+    "description": "Perubahan sebagian divisi; field kosong tidak diubah.",
+    "properties": {
+     "name": {
+      "anyOf": [
+       {
+        "maxLength": 100,
+        "minLength": 2,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Name"
+     },
+     "om_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Om Id"
+     },
+     "pm_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Pm Id"
+     },
+     "status": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Status"
+     }
+    },
+    "title": "DivisionUpdate",
     "type": "object"
    },
    "DocumentListResponse": {
@@ -2737,400 +3239,39 @@
     "title": "DocumentListResponse",
     "type": "object"
    },
-   "EmergencyContactBase": {
-    "description": "Base schema for an employee emergency contact.",
-    "properties": {
-     "address": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Address"
-     },
-     "is_primary": {
-      "default": true,
-      "title": "Is Primary",
-      "type": "boolean"
-     },
-     "name": {
-      "maxLength": 150,
-      "minLength": 1,
-      "title": "Name",
-      "type": "string"
-     },
-     "phone": {
-      "maxLength": 50,
-      "minLength": 1,
-      "title": "Phone",
-      "type": "string"
-     },
-     "relationship": {
-      "maxLength": 50,
-      "minLength": 1,
-      "title": "Relationship",
-      "type": "string"
-     }
-    },
-    "required": [
-     "name",
-     "relationship",
-     "phone"
-    ],
-    "title": "EmergencyContactBase",
-    "type": "object"
-   },
-   "EmergencyContactCreate": {
-    "description": "Schema for adding a new emergency contact.",
-    "properties": {
-     "address": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Address"
-     },
-     "is_primary": {
-      "default": true,
-      "title": "Is Primary",
-      "type": "boolean"
-     },
-     "name": {
-      "maxLength": 150,
-      "minLength": 1,
-      "title": "Name",
-      "type": "string"
-     },
-     "phone": {
-      "maxLength": 50,
-      "minLength": 1,
-      "title": "Phone",
-      "type": "string"
-     },
-     "relationship": {
-      "maxLength": 50,
-      "minLength": 1,
-      "title": "Relationship",
-      "type": "string"
-     }
-    },
-    "required": [
-     "name",
-     "relationship",
-     "phone"
-    ],
-    "title": "EmergencyContactCreate",
-    "type": "object"
-   },
-   "EmergencyContactResponse": {
-    "description": "Schema for returning an emergency contact response.",
-    "properties": {
-     "address": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Address"
-     },
-     "created_at": {
-      "format": "date-time",
-      "title": "Created At",
-      "type": "string"
-     },
-     "employee_id": {
-      "format": "uuid",
-      "title": "Employee Id",
-      "type": "string"
-     },
-     "id": {
-      "format": "uuid",
-      "title": "Id",
-      "type": "string"
-     },
-     "is_primary": {
-      "default": true,
-      "title": "Is Primary",
-      "type": "boolean"
-     },
-     "name": {
-      "maxLength": 150,
-      "minLength": 1,
-      "title": "Name",
-      "type": "string"
-     },
-     "phone": {
-      "maxLength": 50,
-      "minLength": 1,
-      "title": "Phone",
-      "type": "string"
-     },
-     "relationship": {
-      "maxLength": 50,
-      "minLength": 1,
-      "title": "Relationship",
-      "type": "string"
-     },
-     "updated_at": {
-      "format": "date-time",
-      "title": "Updated At",
-      "type": "string"
-     }
-    },
-    "required": [
-     "name",
-     "relationship",
-     "phone",
-     "id",
-     "employee_id",
-     "created_at",
-     "updated_at"
-    ],
-    "title": "EmergencyContactResponse",
-    "type": "object"
-   },
-   "EmergencyContactUpdate": {
-    "description": "Schema for updating an existing emergency contact.",
-    "properties": {
-     "address": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Address"
-     },
-     "is_primary": {
-      "anyOf": [
-       {
-        "type": "boolean"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Is Primary"
-     },
-     "name": {
-      "anyOf": [
-       {
-        "maxLength": 150,
-        "minLength": 1,
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Name"
-     },
-     "phone": {
-      "anyOf": [
-       {
-        "maxLength": 50,
-        "minLength": 1,
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Phone"
-     },
-     "relationship": {
-      "anyOf": [
-       {
-        "maxLength": 50,
-        "minLength": 1,
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Relationship"
-     }
-    },
-    "title": "EmergencyContactUpdate",
-    "type": "object"
-   },
-   "EmployeeAssignmentCreate": {
-    "description": "Schema for assigning an employee.",
-    "properties": {
-     "position": {
-      "title": "Position",
-      "type": "string"
-     },
-     "unit_id": {
-      "anyOf": [
-       {
-        "format": "uuid",
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Unit Id"
-     },
-     "valid_from": {
-      "format": "date",
-      "title": "Valid From",
-      "type": "string"
-     }
-    },
-    "required": [
-     "position",
-     "valid_from"
-    ],
-    "title": "EmployeeAssignmentCreate",
-    "type": "object"
-   },
-   "EmployeeAssignmentResponse": {
-    "description": "Schema for responding with an employee assignment's details.",
-    "properties": {
-     "employee_id": {
-      "format": "uuid",
-      "title": "Employee Id",
-      "type": "string"
-     },
-     "id": {
-      "format": "uuid",
-      "title": "Id",
-      "type": "string"
-     },
-     "position": {
-      "title": "Position",
-      "type": "string"
-     },
-     "unit_id": {
-      "anyOf": [
-       {
-        "format": "uuid",
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Unit Id"
-     },
-     "unit_name": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Unit Name"
-     },
-     "valid_from": {
-      "format": "date",
-      "title": "Valid From",
-      "type": "string"
-     },
-     "valid_to": {
-      "anyOf": [
-       {
-        "format": "date",
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Valid To"
-     }
-    },
-    "required": [
-     "position",
-     "valid_from",
-     "id",
-     "employee_id"
-    ],
-    "title": "EmployeeAssignmentResponse",
-    "type": "object"
-   },
    "EmployeeCreate": {
-    "description": "Schema for creating a new employee.",
     "properties": {
      "address": {
       "anyOf": [
        {
+        "$ref": "#/components/schemas/AddressIn"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "division_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
         "type": "string"
        },
        {
         "type": "null"
        }
       ],
-      "title": "Address"
-     },
-     "attendance_mode": {
-      "default": "FIELD",
-      "enum": [
-       "FIELD",
-       "OFFICE"
-      ],
-      "title": "Attendance Mode",
-      "type": "string"
-     },
-     "birth_date": {
-      "anyOf": [
-       {
-        "format": "date",
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Birth Date"
-     },
-     "email": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Email"
-     },
-     "emergency_contacts": {
-      "anyOf": [
-       {
-        "items": {
-         "$ref": "#/components/schemas/EmergencyContactBase"
-        },
-        "type": "array"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Emergency Contacts"
+      "title": "Division Id"
      },
      "employee_no": {
+      "maxLength": 50,
+      "minLength": 2,
       "title": "Employee No",
       "type": "string"
      },
      "full_name": {
+      "maxLength": 150,
+      "minLength": 2,
       "title": "Full Name",
       "type": "string"
      },
@@ -3139,16 +3280,10 @@
       "title": "Join Date",
       "type": "string"
      },
-     "phone": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Phone"
+     "office_id": {
+      "format": "uuid",
+      "title": "Office Id",
+      "type": "string"
      },
      "photo_file_id": {
       "anyOf": [
@@ -3162,11 +3297,19 @@
       ],
       "title": "Photo File Id"
      },
-     "position": {
-      "title": "Position",
-      "type": "string"
+     "pkwt_end_date": {
+      "anyOf": [
+       {
+        "format": "date",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Pkwt End Date"
      },
-     "unit_id": {
+     "position_id": {
       "anyOf": [
        {
         "format": "uuid",
@@ -3176,16 +3319,234 @@
         "type": "null"
        }
       ],
-      "title": "Unit Id"
+      "title": "Position Id"
      }
     },
     "required": [
      "employee_no",
      "full_name",
-     "position",
+     "office_id",
      "join_date"
     ],
     "title": "EmployeeCreate",
+    "type": "object"
+   },
+   "EmployeeDetail": {
+    "properties": {
+     "account_active": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Account Active"
+     },
+     "addresses": {
+      "default": [],
+      "items": {
+       "$ref": "#/components/schemas/AddressOut"
+      },
+      "title": "Addresses",
+      "type": "array"
+     },
+     "archived": {
+      "default": false,
+      "title": "Archived",
+      "type": "boolean"
+     },
+     "city": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "City"
+     },
+     "create_at": {
+      "format": "date-time",
+      "title": "Create At",
+      "type": "string"
+     },
+     "division_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Division Id"
+     },
+     "division_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Division Name"
+     },
+     "email": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Email"
+     },
+     "employee_id": {
+      "format": "uuid",
+      "title": "Employee Id",
+      "type": "string"
+     },
+     "employee_no": {
+      "title": "Employee No",
+      "type": "string"
+     },
+     "face_enrolled": {
+      "default": false,
+      "title": "Face Enrolled",
+      "type": "boolean"
+     },
+     "full_name": {
+      "title": "Full Name",
+      "type": "string"
+     },
+     "join_date": {
+      "format": "date",
+      "title": "Join Date",
+      "type": "string"
+     },
+     "offboarding_status": {
+      "enum": [
+       "active",
+       "in_process",
+       "offboarded"
+      ],
+      "title": "Offboarding Status",
+      "type": "string"
+     },
+     "office_id": {
+      "format": "uuid",
+      "title": "Office Id",
+      "type": "string"
+     },
+     "office_name": {
+      "title": "Office Name",
+      "type": "string"
+     },
+     "photo_file_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Photo File Id"
+     },
+     "pkwt_end_date": {
+      "anyOf": [
+       {
+        "format": "date",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Pkwt End Date"
+     },
+     "position_code": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Position Code"
+     },
+     "position_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Position Id"
+     },
+     "position_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Position Name"
+     },
+     "system_role": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "System Role"
+     },
+     "update_at": {
+      "format": "date-time",
+      "title": "Update At",
+      "type": "string"
+     },
+     "user_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "User Id"
+     }
+    },
+    "required": [
+     "employee_id",
+     "employee_no",
+     "full_name",
+     "office_id",
+     "office_name",
+     "join_date",
+     "offboarding_status",
+     "create_at",
+     "update_at"
+    ],
+    "title": "EmployeeDetail",
     "type": "object"
    },
    "EmployeeDocumentCreate": {
@@ -3304,11 +3665,10 @@
     "type": "object"
    },
    "EmployeeListResponse": {
-    "description": "Schema for paginated employee lists.",
     "properties": {
      "items": {
       "items": {
-       "$ref": "#/components/schemas/EmployeeResponse"
+       "$ref": "#/components/schemas/EmployeeOut"
       },
       "title": "Items",
       "type": "array"
@@ -3319,7 +3679,7 @@
       "type": "integer"
      },
      "size": {
-      "default": 50,
+      "default": 20,
       "title": "Size",
       "type": "integer"
      },
@@ -3335,10 +3695,25 @@
     "title": "EmployeeListResponse",
     "type": "object"
    },
-   "EmployeeResponse": {
-    "description": "Schema for an employee response object.",
+   "EmployeeOut": {
     "properties": {
-     "address": {
+     "account_active": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Account Active"
+     },
+     "archived": {
+      "default": false,
+      "title": "Archived",
+      "type": "boolean"
+     },
+     "city": {
       "anyOf": [
        {
         "type": "string"
@@ -3347,40 +3722,35 @@
         "type": "null"
        }
       ],
-      "title": "Address"
+      "title": "City"
      },
-     "attendance_mode": {
-      "default": "FIELD",
-      "enum": [
-       "FIELD",
-       "OFFICE"
-      ],
-      "title": "Attendance Mode",
+     "create_at": {
+      "format": "date-time",
+      "title": "Create At",
       "type": "string"
      },
-     "birth_date": {
+     "division_id": {
       "anyOf": [
        {
-        "format": "date",
+        "format": "uuid",
         "type": "string"
        },
        {
         "type": "null"
        }
       ],
-      "title": "Birth Date"
+      "title": "Division Id"
      },
-     "created_at": {
+     "division_name": {
       "anyOf": [
        {
-        "format": "date-time",
         "type": "string"
        },
        {
         "type": "null"
        }
       ],
-      "title": "Created At"
+      "title": "Division Name"
      },
      "email": {
       "anyOf": [
@@ -3393,69 +3763,46 @@
       ],
       "title": "Email"
      },
-     "emergency_contacts": {
-      "default": [],
-      "items": {
-       "$ref": "#/components/schemas/EmergencyContactResponse"
-      },
-      "title": "Emergency Contacts",
-      "type": "array"
+     "employee_id": {
+      "format": "uuid",
+      "title": "Employee Id",
+      "type": "string"
      },
      "employee_no": {
       "title": "Employee No",
       "type": "string"
      },
+     "face_enrolled": {
+      "default": false,
+      "title": "Face Enrolled",
+      "type": "boolean"
+     },
      "full_name": {
       "title": "Full Name",
       "type": "string"
-     },
-     "id": {
-      "format": "uuid",
-      "title": "Id",
-      "type": "string"
-     },
-     "is_active": {
-      "title": "Is Active",
-      "type": "boolean"
      },
      "join_date": {
       "format": "date",
       "title": "Join Date",
       "type": "string"
      },
-     "offboarded_at": {
-      "anyOf": [
-       {
-        "format": "date-time",
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
+     "offboarding_status": {
+      "enum": [
+       "active",
+       "in_process",
+       "offboarded"
       ],
-      "title": "Offboarded At"
+      "title": "Offboarding Status",
+      "type": "string"
      },
-     "offboarding_reason": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Offboarding Reason"
+     "office_id": {
+      "format": "uuid",
+      "title": "Office Id",
+      "type": "string"
      },
-     "phone": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Phone"
+     "office_name": {
+      "title": "Office Name",
+      "type": "string"
      },
      "photo_file_id": {
       "anyOf": [
@@ -3469,11 +3816,30 @@
       ],
       "title": "Photo File Id"
      },
-     "position": {
-      "title": "Position",
-      "type": "string"
+     "pkwt_end_date": {
+      "anyOf": [
+       {
+        "format": "date",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Pkwt End Date"
      },
-     "unit_id": {
+     "position_code": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Position Code"
+     },
+     "position_id": {
       "anyOf": [
        {
         "format": "uuid",
@@ -3483,19 +3849,34 @@
         "type": "null"
        }
       ],
-      "title": "Unit Id"
+      "title": "Position Id"
      },
-     "updated_at": {
+     "position_name": {
       "anyOf": [
        {
-        "format": "date-time",
         "type": "string"
        },
        {
         "type": "null"
        }
       ],
-      "title": "Updated At"
+      "title": "Position Name"
+     },
+     "system_role": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "System Role"
+     },
+     "update_at": {
+      "format": "date-time",
+      "title": "Update At",
+      "type": "string"
      },
      "user_id": {
       "anyOf": [
@@ -3511,46 +3892,61 @@
      }
     },
     "required": [
+     "employee_id",
      "employee_no",
      "full_name",
-     "position",
+     "office_id",
+     "office_name",
      "join_date",
-     "id",
-     "is_active"
+     "offboarding_status",
+     "create_at",
+     "update_at"
     ],
-    "title": "EmployeeResponse",
+    "title": "EmployeeOut",
     "type": "object"
    },
    "EmployeeUpdate": {
-    "description": "Schema for updating employee details.",
+    "description": "Sebagian; kirim `null` untuk mengosongkan divisi/jabatan/akhir PKWT/foto.",
     "properties": {
-     "address": {
+     "division_id": {
       "anyOf": [
        {
+        "format": "uuid",
         "type": "string"
        },
        {
         "type": "null"
        }
       ],
-      "title": "Address"
+      "title": "Division Id"
      },
-     "attendance_mode": {
+     "employee_no": {
       "anyOf": [
        {
-        "enum": [
-         "FIELD",
-         "OFFICE"
-        ],
+        "maxLength": 50,
+        "minLength": 2,
         "type": "string"
        },
        {
         "type": "null"
        }
       ],
-      "title": "Attendance Mode"
+      "title": "Employee No"
      },
-     "birth_date": {
+     "full_name": {
+      "anyOf": [
+       {
+        "maxLength": 150,
+        "minLength": 2,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Full Name"
+     },
+     "join_date": {
       "anyOf": [
        {
         "format": "date",
@@ -3560,51 +3956,19 @@
         "type": "null"
        }
       ],
-      "title": "Birth Date"
+      "title": "Join Date"
      },
-     "email": {
+     "office_id": {
       "anyOf": [
        {
+        "format": "uuid",
         "type": "string"
        },
        {
         "type": "null"
        }
       ],
-      "title": "Email"
-     },
-     "full_name": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Full Name"
-     },
-     "is_active": {
-      "anyOf": [
-       {
-        "type": "boolean"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Is Active"
-     },
-     "phone": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Phone"
+      "title": "Office Id"
      },
      "photo_file_id": {
       "anyOf": [
@@ -3617,6 +3981,30 @@
        }
       ],
       "title": "Photo File Id"
+     },
+     "pkwt_end_date": {
+      "anyOf": [
+       {
+        "format": "date",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Pkwt End Date"
+     },
+     "position_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Position Id"
      }
     },
     "title": "EmployeeUpdate",
@@ -4281,6 +4669,250 @@
      "file_id"
     ],
     "title": "ItemPhoto",
+    "type": "object"
+   },
+   "JobPositionCreate": {
+    "properties": {
+     "code": {
+      "maxLength": 30,
+      "minLength": 1,
+      "title": "Code",
+      "type": "string"
+     },
+     "daily_allowance": {
+      "anyOf": [
+       {
+        "maximum": 99999999.0,
+        "minimum": 0.0,
+        "type": "number"
+       },
+       {
+        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+        "type": "string"
+       }
+      ],
+      "default": "0",
+      "title": "Daily Allowance"
+     },
+     "description": {
+      "anyOf": [
+       {
+        "maxLength": 2000,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Description"
+     },
+     "division_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Division Id"
+     },
+     "grade_level": {
+      "default": 1,
+      "maximum": 20.0,
+      "minimum": 1.0,
+      "title": "Grade Level",
+      "type": "integer"
+     },
+     "name": {
+      "maxLength": 100,
+      "minLength": 2,
+      "title": "Name",
+      "type": "string"
+     }
+    },
+    "required": [
+     "code",
+     "name"
+    ],
+    "title": "JobPositionCreate",
+    "type": "object"
+   },
+   "JobPositionOut": {
+    "properties": {
+     "code": {
+      "title": "Code",
+      "type": "string"
+     },
+     "daily_allowance": {
+      "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+      "title": "Daily Allowance",
+      "type": "string"
+     },
+     "description": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Description"
+     },
+     "division_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Division Id"
+     },
+     "division_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Division Name"
+     },
+     "employee_count": {
+      "default": 0,
+      "title": "Employee Count",
+      "type": "integer"
+     },
+     "grade_level": {
+      "title": "Grade Level",
+      "type": "integer"
+     },
+     "name": {
+      "title": "Name",
+      "type": "string"
+     },
+     "position_id": {
+      "format": "uuid",
+      "title": "Position Id",
+      "type": "string"
+     },
+     "status": {
+      "title": "Status",
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "position_id",
+     "code",
+     "name",
+     "grade_level",
+     "daily_allowance",
+     "status"
+    ],
+    "title": "JobPositionOut",
+    "type": "object"
+   },
+   "JobPositionUpdate": {
+    "properties": {
+     "code": {
+      "anyOf": [
+       {
+        "maxLength": 30,
+        "minLength": 1,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Code"
+     },
+     "daily_allowance": {
+      "anyOf": [
+       {
+        "maximum": 99999999.0,
+        "minimum": 0.0,
+        "type": "number"
+       },
+       {
+        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Daily Allowance"
+     },
+     "description": {
+      "anyOf": [
+       {
+        "maxLength": 2000,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Description"
+     },
+     "division_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Division Id"
+     },
+     "grade_level": {
+      "anyOf": [
+       {
+        "maximum": 20.0,
+        "minimum": 1.0,
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Grade Level"
+     },
+     "name": {
+      "anyOf": [
+       {
+        "maxLength": 100,
+        "minLength": 2,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Name"
+     },
+     "status": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Status"
+     }
+    },
+    "title": "JobPositionUpdate",
     "type": "object"
    },
    "LoanCreate": {
@@ -5402,6 +6034,330 @@
     ],
     "title": "OffboardingStatus",
     "type": "string"
+   },
+   "OfficeCreate": {
+    "description": "Kantor baru (pusat/cabang).",
+    "properties": {
+     "address": {
+      "anyOf": [
+       {
+        "maxLength": 500,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Address"
+     },
+     "city_boundary_radius_m": {
+      "default": 15000,
+      "maximum": 200000.0,
+      "minimum": 1000.0,
+      "title": "City Boundary Radius M",
+      "type": "integer"
+     },
+     "clock_in_time": {
+      "default": "07:00:00",
+      "format": "time",
+      "title": "Clock In Time",
+      "type": "string"
+     },
+     "clock_out_time": {
+      "default": "16:00:00",
+      "format": "time",
+      "title": "Clock Out Time",
+      "type": "string"
+     },
+     "in_city_meal_rate": {
+      "anyOf": [
+       {
+        "minimum": 0.0,
+        "type": "number"
+       },
+       {
+        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+        "type": "string"
+       }
+      ],
+      "default": "35000.00",
+      "title": "In City Meal Rate"
+     },
+     "is_main_office": {
+      "default": false,
+      "title": "Is Main Office",
+      "type": "boolean"
+     },
+     "location": {
+      "$ref": "#/components/schemas/GeoPoint"
+     },
+     "name": {
+      "maxLength": 100,
+      "minLength": 2,
+      "title": "Name",
+      "type": "string"
+     },
+     "out_city_meal_rate": {
+      "anyOf": [
+       {
+        "minimum": 0.0,
+        "type": "number"
+       },
+       {
+        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+        "type": "string"
+       }
+      ],
+      "default": "65000.00",
+      "title": "Out City Meal Rate"
+     },
+     "radius_m": {
+      "default": 100,
+      "maximum": 5000.0,
+      "minimum": 10.0,
+      "title": "Radius M",
+      "type": "integer"
+     }
+    },
+    "required": [
+     "name",
+     "location"
+    ],
+    "title": "OfficeCreate",
+    "type": "object"
+   },
+   "OfficeResponse": {
+    "description": "Kantor sebagaimana tersimpan.",
+    "properties": {
+     "address": {
+      "anyOf": [
+       {
+        "maxLength": 500,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Address"
+     },
+     "can_manage": {
+      "default": false,
+      "title": "Can Manage",
+      "type": "boolean"
+     },
+     "city_boundary_radius_m": {
+      "default": 15000,
+      "maximum": 200000.0,
+      "minimum": 1000.0,
+      "title": "City Boundary Radius M",
+      "type": "integer"
+     },
+     "clock_in_time": {
+      "default": "07:00:00",
+      "format": "time",
+      "title": "Clock In Time",
+      "type": "string"
+     },
+     "clock_out_time": {
+      "default": "16:00:00",
+      "format": "time",
+      "title": "Clock Out Time",
+      "type": "string"
+     },
+     "id": {
+      "format": "uuid",
+      "title": "Id",
+      "type": "string"
+     },
+     "in_city_meal_rate": {
+      "default": "35000.00",
+      "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+      "title": "In City Meal Rate",
+      "type": "string"
+     },
+     "is_main_office": {
+      "default": false,
+      "title": "Is Main Office",
+      "type": "boolean"
+     },
+     "location": {
+      "$ref": "#/components/schemas/GeoPoint"
+     },
+     "name": {
+      "maxLength": 100,
+      "minLength": 2,
+      "title": "Name",
+      "type": "string"
+     },
+     "out_city_meal_rate": {
+      "default": "65000.00",
+      "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+      "title": "Out City Meal Rate",
+      "type": "string"
+     },
+     "radius_m": {
+      "default": 100,
+      "maximum": 5000.0,
+      "minimum": 10.0,
+      "title": "Radius M",
+      "type": "integer"
+     },
+     "unit_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Unit Id"
+     }
+    },
+    "required": [
+     "name",
+     "location",
+     "id"
+    ],
+    "title": "OfficeResponse",
+    "type": "object"
+   },
+   "OfficeUpdate": {
+    "description": "Perubahan sebagian data kantor; field kosong tidak diubah.",
+    "properties": {
+     "address": {
+      "anyOf": [
+       {
+        "maxLength": 500,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Address"
+     },
+     "city_boundary_radius_m": {
+      "anyOf": [
+       {
+        "maximum": 200000.0,
+        "minimum": 1000.0,
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "City Boundary Radius M"
+     },
+     "clock_in_time": {
+      "anyOf": [
+       {
+        "format": "time",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Clock In Time"
+     },
+     "clock_out_time": {
+      "anyOf": [
+       {
+        "format": "time",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Clock Out Time"
+     },
+     "in_city_meal_rate": {
+      "anyOf": [
+       {
+        "minimum": 0.0,
+        "type": "number"
+       },
+       {
+        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "In City Meal Rate"
+     },
+     "is_main_office": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Is Main Office"
+     },
+     "location": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/GeoPoint"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "name": {
+      "anyOf": [
+       {
+        "maxLength": 100,
+        "minLength": 2,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Name"
+     },
+     "out_city_meal_rate": {
+      "anyOf": [
+       {
+        "minimum": 0.0,
+        "type": "number"
+       },
+       {
+        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Out City Meal Rate"
+     },
+     "radius_m": {
+      "anyOf": [
+       {
+        "maximum": 5000.0,
+        "minimum": 10.0,
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Radius M"
+     }
+    },
+    "title": "OfficeUpdate",
+    "type": "object"
    },
    "OfflineAttendanceEvent": {
     "description": "Schema representing a signed offline attendance event.\nSatu absen luring: `payload` adalah JSON persis seperti yang ditandatangani oleh HP;\n`signature` adalah tanda tangan ECDSA SHA-256 (DER, base64).\nSwafoto diunggah lebih dulu; kecocokannya dicek melalui `selfie_sha256` dalam payload.",
@@ -6675,6 +7631,354 @@
     "title": "ProgressIn",
     "type": "object"
    },
+   "ProjectCreate": {
+    "properties": {
+     "client_id": {
+      "format": "uuid",
+      "title": "Client Id",
+      "type": "string"
+     },
+     "division_id": {
+      "format": "uuid",
+      "title": "Division Id",
+      "type": "string"
+     },
+     "end_date": {
+      "format": "date",
+      "title": "End Date",
+      "type": "string"
+     },
+     "office_id": {
+      "format": "uuid",
+      "title": "Office Id",
+      "type": "string"
+     },
+     "pm_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Pm Id"
+     },
+     "project_title": {
+      "maxLength": 255,
+      "minLength": 3,
+      "title": "Project Title",
+      "type": "string"
+     },
+     "spk_number": {
+      "maxLength": 100,
+      "minLength": 2,
+      "title": "Spk Number",
+      "type": "string"
+     },
+     "start_date": {
+      "format": "date",
+      "title": "Start Date",
+      "type": "string"
+     },
+     "status": {
+      "default": "ONGOING",
+      "enum": [
+       "DRAFT",
+       "ONGOING",
+       "COMPLETED",
+       "CANCELLED"
+      ],
+      "title": "Status",
+      "type": "string"
+     },
+     "total_target_qty": {
+      "anyOf": [
+       {
+        "exclusiveMinimum": 0.0,
+        "maximum": 9999999999.0,
+        "type": "number"
+       },
+       {
+        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+        "type": "string"
+       }
+      ],
+      "default": "1",
+      "title": "Total Target Qty"
+     },
+     "unit_measure": {
+      "default": "Unit",
+      "maxLength": 50,
+      "minLength": 1,
+      "title": "Unit Measure",
+      "type": "string"
+     }
+    },
+    "required": [
+     "client_id",
+     "office_id",
+     "division_id",
+     "spk_number",
+     "project_title",
+     "start_date",
+     "end_date"
+    ],
+    "title": "ProjectCreate",
+    "type": "object"
+   },
+   "ProjectOut": {
+    "properties": {
+     "client_id": {
+      "format": "uuid",
+      "title": "Client Id",
+      "type": "string"
+     },
+     "client_name": {
+      "title": "Client Name",
+      "type": "string"
+     },
+     "daily_plan_count": {
+      "default": 0,
+      "title": "Daily Plan Count",
+      "type": "integer"
+     },
+     "division_id": {
+      "format": "uuid",
+      "title": "Division Id",
+      "type": "string"
+     },
+     "division_name": {
+      "title": "Division Name",
+      "type": "string"
+     },
+     "end_date": {
+      "format": "date",
+      "title": "End Date",
+      "type": "string"
+     },
+     "office_id": {
+      "format": "uuid",
+      "title": "Office Id",
+      "type": "string"
+     },
+     "office_name": {
+      "title": "Office Name",
+      "type": "string"
+     },
+     "order_count": {
+      "default": 0,
+      "title": "Order Count",
+      "type": "integer"
+     },
+     "pm_id": {
+      "format": "uuid",
+      "title": "Pm Id",
+      "type": "string"
+     },
+     "pm_name": {
+      "title": "Pm Name",
+      "type": "string"
+     },
+     "project_id": {
+      "format": "uuid",
+      "title": "Project Id",
+      "type": "string"
+     },
+     "project_title": {
+      "title": "Project Title",
+      "type": "string"
+     },
+     "spk_number": {
+      "title": "Spk Number",
+      "type": "string"
+     },
+     "start_date": {
+      "format": "date",
+      "title": "Start Date",
+      "type": "string"
+     },
+     "status": {
+      "enum": [
+       "DRAFT",
+       "ONGOING",
+       "COMPLETED",
+       "CANCELLED"
+      ],
+      "title": "Status",
+      "type": "string"
+     },
+     "total_target_qty": {
+      "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+      "title": "Total Target Qty",
+      "type": "string"
+     },
+     "unit_measure": {
+      "title": "Unit Measure",
+      "type": "string"
+     }
+    },
+    "required": [
+     "project_id",
+     "client_id",
+     "client_name",
+     "office_id",
+     "office_name",
+     "division_id",
+     "division_name",
+     "pm_id",
+     "pm_name",
+     "spk_number",
+     "project_title",
+     "total_target_qty",
+     "unit_measure",
+     "start_date",
+     "end_date",
+     "status"
+    ],
+    "title": "ProjectOut",
+    "type": "object"
+   },
+   "ProjectUpdate": {
+    "properties": {
+     "client_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Client Id"
+     },
+     "end_date": {
+      "anyOf": [
+       {
+        "format": "date",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "End Date"
+     },
+     "office_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Office Id"
+     },
+     "pm_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Pm Id"
+     },
+     "project_title": {
+      "anyOf": [
+       {
+        "maxLength": 255,
+        "minLength": 3,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Project Title"
+     },
+     "spk_number": {
+      "anyOf": [
+       {
+        "maxLength": 100,
+        "minLength": 2,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Spk Number"
+     },
+     "start_date": {
+      "anyOf": [
+       {
+        "format": "date",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Start Date"
+     },
+     "status": {
+      "anyOf": [
+       {
+        "enum": [
+         "DRAFT",
+         "ONGOING",
+         "COMPLETED",
+         "CANCELLED"
+        ],
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Status"
+     },
+     "total_target_qty": {
+      "anyOf": [
+       {
+        "exclusiveMinimum": 0.0,
+        "maximum": 9999999999.0,
+        "type": "number"
+       },
+       {
+        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Total Target Qty"
+     },
+     "unit_measure": {
+      "anyOf": [
+       {
+        "maxLength": 50,
+        "minLength": 1,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Unit Measure"
+     }
+    },
+    "title": "ProjectUpdate",
+    "type": "object"
+   },
    "RejectIn": {
     "properties": {
      "reason": {
@@ -6822,330 +8126,6 @@
      "completed_qty"
     ],
     "title": "RolloverRequest",
-    "type": "object"
-   },
-   "SiteCreate": {
-    "description": "Kantor baru (pusat/cabang).",
-    "properties": {
-     "address": {
-      "anyOf": [
-       {
-        "maxLength": 500,
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Address"
-     },
-     "city_boundary_radius_m": {
-      "default": 15000,
-      "maximum": 200000.0,
-      "minimum": 1000.0,
-      "title": "City Boundary Radius M",
-      "type": "integer"
-     },
-     "clock_in_time": {
-      "default": "07:00:00",
-      "format": "time",
-      "title": "Clock In Time",
-      "type": "string"
-     },
-     "clock_out_time": {
-      "default": "16:00:00",
-      "format": "time",
-      "title": "Clock Out Time",
-      "type": "string"
-     },
-     "in_city_meal_rate": {
-      "anyOf": [
-       {
-        "minimum": 0.0,
-        "type": "number"
-       },
-       {
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
-        "type": "string"
-       }
-      ],
-      "default": "35000.00",
-      "title": "In City Meal Rate"
-     },
-     "is_main_office": {
-      "default": false,
-      "title": "Is Main Office",
-      "type": "boolean"
-     },
-     "location": {
-      "$ref": "#/components/schemas/GeoPoint"
-     },
-     "name": {
-      "maxLength": 100,
-      "minLength": 2,
-      "title": "Name",
-      "type": "string"
-     },
-     "out_city_meal_rate": {
-      "anyOf": [
-       {
-        "minimum": 0.0,
-        "type": "number"
-       },
-       {
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
-        "type": "string"
-       }
-      ],
-      "default": "65000.00",
-      "title": "Out City Meal Rate"
-     },
-     "radius_m": {
-      "default": 100,
-      "maximum": 5000.0,
-      "minimum": 10.0,
-      "title": "Radius M",
-      "type": "integer"
-     }
-    },
-    "required": [
-     "name",
-     "location"
-    ],
-    "title": "SiteCreate",
-    "type": "object"
-   },
-   "SiteResponse": {
-    "description": "Kantor sebagaimana tersimpan.",
-    "properties": {
-     "address": {
-      "anyOf": [
-       {
-        "maxLength": 500,
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Address"
-     },
-     "can_manage": {
-      "default": false,
-      "title": "Can Manage",
-      "type": "boolean"
-     },
-     "city_boundary_radius_m": {
-      "default": 15000,
-      "maximum": 200000.0,
-      "minimum": 1000.0,
-      "title": "City Boundary Radius M",
-      "type": "integer"
-     },
-     "clock_in_time": {
-      "default": "07:00:00",
-      "format": "time",
-      "title": "Clock In Time",
-      "type": "string"
-     },
-     "clock_out_time": {
-      "default": "16:00:00",
-      "format": "time",
-      "title": "Clock Out Time",
-      "type": "string"
-     },
-     "id": {
-      "format": "uuid",
-      "title": "Id",
-      "type": "string"
-     },
-     "in_city_meal_rate": {
-      "default": "35000.00",
-      "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
-      "title": "In City Meal Rate",
-      "type": "string"
-     },
-     "is_main_office": {
-      "default": false,
-      "title": "Is Main Office",
-      "type": "boolean"
-     },
-     "location": {
-      "$ref": "#/components/schemas/GeoPoint"
-     },
-     "name": {
-      "maxLength": 100,
-      "minLength": 2,
-      "title": "Name",
-      "type": "string"
-     },
-     "out_city_meal_rate": {
-      "default": "65000.00",
-      "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
-      "title": "Out City Meal Rate",
-      "type": "string"
-     },
-     "radius_m": {
-      "default": 100,
-      "maximum": 5000.0,
-      "minimum": 10.0,
-      "title": "Radius M",
-      "type": "integer"
-     },
-     "unit_id": {
-      "anyOf": [
-       {
-        "format": "uuid",
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Unit Id"
-     }
-    },
-    "required": [
-     "name",
-     "location",
-     "id"
-    ],
-    "title": "SiteResponse",
-    "type": "object"
-   },
-   "SiteUpdate": {
-    "description": "Perubahan sebagian data kantor; field kosong tidak diubah.",
-    "properties": {
-     "address": {
-      "anyOf": [
-       {
-        "maxLength": 500,
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Address"
-     },
-     "city_boundary_radius_m": {
-      "anyOf": [
-       {
-        "maximum": 200000.0,
-        "minimum": 1000.0,
-        "type": "integer"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "City Boundary Radius M"
-     },
-     "clock_in_time": {
-      "anyOf": [
-       {
-        "format": "time",
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Clock In Time"
-     },
-     "clock_out_time": {
-      "anyOf": [
-       {
-        "format": "time",
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Clock Out Time"
-     },
-     "in_city_meal_rate": {
-      "anyOf": [
-       {
-        "minimum": 0.0,
-        "type": "number"
-       },
-       {
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "In City Meal Rate"
-     },
-     "is_main_office": {
-      "anyOf": [
-       {
-        "type": "boolean"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Is Main Office"
-     },
-     "location": {
-      "anyOf": [
-       {
-        "$ref": "#/components/schemas/GeoPoint"
-       },
-       {
-        "type": "null"
-       }
-      ]
-     },
-     "name": {
-      "anyOf": [
-       {
-        "maxLength": 100,
-        "minLength": 2,
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Name"
-     },
-     "out_city_meal_rate": {
-      "anyOf": [
-       {
-        "minimum": 0.0,
-        "type": "number"
-       },
-       {
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Out City Meal Rate"
-     },
-     "radius_m": {
-      "anyOf": [
-       {
-        "maximum": 5000.0,
-        "minimum": 10.0,
-        "type": "integer"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Radius M"
-     }
-    },
-    "title": "SiteUpdate",
     "type": "object"
    },
    "SyncBomFromWorkTypesIn": {
@@ -7846,170 +8826,6 @@
      }
     },
     "title": "ToolUpdate",
-    "type": "object"
-   },
-   "UnitCreate": {
-    "description": "Divisi baru.",
-    "properties": {
-     "name": {
-      "maxLength": 100,
-      "minLength": 2,
-      "title": "Name",
-      "type": "string"
-     },
-     "om_id": {
-      "format": "uuid",
-      "title": "Om Id",
-      "type": "string"
-     },
-     "pm_id": {
-      "format": "uuid",
-      "title": "Pm Id",
-      "type": "string"
-     }
-    },
-    "required": [
-     "name",
-     "om_id",
-     "pm_id"
-    ],
-    "title": "UnitCreate",
-    "type": "object"
-   },
-   "UnitOut": {
-    "description": "Divisi aktif beserta OM & PM-nya.",
-    "properties": {
-     "code": {
-      "title": "Code",
-      "type": "string"
-     },
-     "id": {
-      "format": "uuid",
-      "title": "Id",
-      "type": "string"
-     },
-     "name": {
-      "title": "Name",
-      "type": "string"
-     },
-     "om_id": {
-      "anyOf": [
-       {
-        "format": "uuid",
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Om Id"
-     },
-     "om_name": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Om Name"
-     },
-     "pm_id": {
-      "anyOf": [
-       {
-        "format": "uuid",
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Pm Id"
-     },
-     "pm_name": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Pm Name"
-     },
-     "status": {
-      "default": true,
-      "title": "Status",
-      "type": "boolean"
-     },
-     "team_count": {
-      "default": 0,
-      "title": "Team Count",
-      "type": "integer"
-     }
-    },
-    "required": [
-     "id",
-     "code",
-     "name"
-    ],
-    "title": "UnitOut",
-    "type": "object"
-   },
-   "UnitUpdate": {
-    "description": "Perubahan sebagian divisi; field kosong tidak diubah.",
-    "properties": {
-     "name": {
-      "anyOf": [
-       {
-        "maxLength": 100,
-        "minLength": 2,
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Name"
-     },
-     "om_id": {
-      "anyOf": [
-       {
-        "format": "uuid",
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Om Id"
-     },
-     "pm_id": {
-      "anyOf": [
-       {
-        "format": "uuid",
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Pm Id"
-     },
-     "status": {
-      "anyOf": [
-       {
-        "type": "boolean"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Status"
-     }
-    },
-    "title": "UnitUpdate",
     "type": "object"
    },
    "ValidationError": {
@@ -8769,11 +9585,18 @@
     "description": "Schema input pembuatan Order Klien baru oleh PM / OM.",
     "properties": {
      "client_name": {
-      "description": "Nama Klien/Perusahaan (misal: Pertamina)",
-      "maxLength": 150,
-      "minLength": 2,
-      "title": "Client Name",
-      "type": "string"
+      "anyOf": [
+       {
+        "maxLength": 150,
+        "minLength": 2,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "Nama klien (kosong = dari proyek)",
+      "title": "Client Name"
      },
      "division_id": {
       "format": "uuid",
@@ -8817,12 +9640,31 @@
       "title": "Priority Level",
       "type": "string"
      },
+     "project_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Project Id"
+     },
      "project_title": {
-      "description": "Judul Pekerjaan/Proyek",
-      "maxLength": 255,
-      "minLength": 3,
-      "title": "Project Title",
-      "type": "string"
+      "anyOf": [
+       {
+        "maxLength": 255,
+        "minLength": 3,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "Judul (kosong = dari proyek)",
+      "title": "Project Title"
      },
      "site_address": {
       "anyOf": [
@@ -8884,9 +9726,7 @@
      }
     },
     "required": [
-     "division_id",
-     "client_name",
-     "project_title"
+     "division_id"
     ],
     "title": "WorkCompletionCreate",
     "type": "object"
@@ -9094,6 +9934,18 @@
      "priority_level": {
       "title": "Priority Level",
       "type": "string"
+     },
+     "project_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Project Id"
      },
      "project_title": {
       "title": "Project Title",
@@ -11248,7 +12100,7 @@
   },
   "/api/v1/attendance/meal-allowance": {
    "get": {
-    "description": "Rekap uang makan per karyawan (dalam/luar kota) dari absensi sah, untuk Finance.",
+    "description": "Rekap uang makan per karyawan dari absensi sah: pengelola absensi semua divisi, PM divisinya.",
     "operationId": "meal_allowance_recap_api_v1_attendance_meal_allowance_get",
     "parameters": [
      {
@@ -12025,6 +12877,230 @@
     ]
    }
   },
+  "/api/v1/clients": {
+   "get": {
+    "description": "Daftar klien.",
+    "operationId": "list_clients_api_v1_clients_get",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "q",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Q"
+      }
+     },
+     {
+      "in": "query",
+      "name": "active_only",
+      "required": false,
+      "schema": {
+       "default": true,
+       "title": "Active Only",
+       "type": "boolean"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/ClientOut"
+         },
+         "title": "Response List Clients Api V1 Clients Get",
+         "type": "array"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "List Clients",
+    "tags": [
+     "Clients"
+    ]
+   },
+   "post": {
+    "description": "Tambah klien.",
+    "operationId": "create_client_api_v1_clients_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ClientCreate"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ClientOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Create Client",
+    "tags": [
+     "Clients"
+    ]
+   }
+  },
+  "/api/v1/clients/{client_id}": {
+   "delete": {
+    "description": "Hapus (arsip) klien yang belum dipakai.",
+    "operationId": "delete_client_api_v1_clients__client_id__delete",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "client_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Client Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": {
+          "type": "string"
+         },
+         "title": "Response Delete Client Api V1 Clients  Client Id  Delete",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Delete Client",
+    "tags": [
+     "Clients"
+    ]
+   },
+   "put": {
+    "description": "Ubah klien (sebagian).",
+    "operationId": "update_client_api_v1_clients__client_id__put",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "client_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Client Id",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ClientUpdate"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ClientOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Update Client",
+    "tags": [
+     "Clients"
+    ]
+   }
+  },
   "/api/v1/cron/attendance/alert-missing": {
    "post": {
     "description": "Pemicu cron untuk memeriksa absensi check-in yang belum dilakukan pada hari berjalan,\nkemudian mengirim peringatan jika ditemukan.",
@@ -12107,6 +13183,192 @@
     "summary": "Auto Checkout Daily",
     "tags": [
      "Attendance Cron"
+    ]
+   }
+  },
+  "/api/v1/divisions": {
+   "get": {
+    "description": "Daftar divisi aktif beserta OM, PM, dan jumlah timnya (GET).",
+    "operationId": "list_divisions_api_v1_divisions_get",
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/DivisionOut"
+         },
+         "title": "Response List Divisions Api V1 Divisions Get",
+         "type": "array"
+        }
+       }
+      },
+      "description": "Successful Response"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "List Divisions",
+    "tags": [
+     "Divisions"
+    ]
+   },
+   "post": {
+    "description": "Membuat divisi baru dengan OM & PM-nya (POST) — izin manage:divisions.",
+    "operationId": "create_division_api_v1_divisions_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/DivisionCreate"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/DivisionOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Create Division",
+    "tags": [
+     "Divisions"
+    ]
+   }
+  },
+  "/api/v1/divisions/{division_id}": {
+   "delete": {
+    "description": "Menghapus (arsip) divisi yang tidak lagi dipakai (DELETE) — izin manage:divisions.",
+    "operationId": "delete_division_api_v1_divisions__division_id__delete",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "division_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Division Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": {
+          "type": "string"
+         },
+         "title": "Response Delete Division Api V1 Divisions  Division Id  Delete",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Delete Division",
+    "tags": [
+     "Divisions"
+    ]
+   },
+   "put": {
+    "description": "Mengubah divisi (PUT, sebagian) — izin manage:divisions.",
+    "operationId": "update_division_api_v1_divisions__division_id__put",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "division_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Division Id",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/DivisionUpdate"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/DivisionOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Update Division",
+    "tags": [
+     "Divisions"
     ]
    }
   },
@@ -12201,8 +13463,8 @@
   },
   "/api/v1/employees": {
    "get": {
-    "description": "Mendapatkan daftar karyawan di organisasi pengguna dengan paginasi dan pencarian.",
-    "operationId": "get_employees_api_v1_employees_get",
+    "description": "Direktori karyawan (cari nama / no. karyawan / email; saring status, divisi, kantor, jabatan).",
+    "operationId": "list_employees_api_v1_employees_get",
     "parameters": [
      {
       "in": "query",
@@ -12228,19 +13490,79 @@
       }
      },
      {
+      "description": "Kosong = semua yang belum diarsipkan",
       "in": "query",
-      "name": "is_active",
+      "name": "status",
       "required": false,
       "schema": {
        "anyOf": [
         {
-         "type": "boolean"
+         "enum": [
+          "active",
+          "in_process",
+          "offboarded",
+          "archived",
+          "all"
+         ],
+         "type": "string"
         },
         {
          "type": "null"
         }
        ],
-       "title": "Is Active"
+       "description": "Kosong = semua yang belum diarsipkan",
+       "title": "Status"
+      }
+     },
+     {
+      "in": "query",
+      "name": "division_id",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "format": "uuid",
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Division Id"
+      }
+     },
+     {
+      "in": "query",
+      "name": "office_id",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "format": "uuid",
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Office Id"
+      }
+     },
+     {
+      "in": "query",
+      "name": "position_id",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "format": "uuid",
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Position Id"
       }
      },
      {
@@ -12287,13 +13609,13 @@
       "HTTPBearer": []
      }
     ],
-    "summary": "Get Employees",
+    "summary": "List Employees",
     "tags": [
      "Employees"
     ]
    },
    "post": {
-    "description": "Menambahkan data karyawan baru ke dalam organisasi.",
+    "description": "Karyawan baru (akun login dibuat terpisah lewat /employees/{id}/account).",
     "operationId": "create_employee_api_v1_employees_post",
     "requestBody": {
      "content": {
@@ -12310,7 +13632,7 @@
       "content": {
        "application/json": {
         "schema": {
-         "$ref": "#/components/schemas/EmployeeResponse"
+         "$ref": "#/components/schemas/EmployeeDetail"
         }
        }
       },
@@ -12333,112 +13655,6 @@
      }
     ],
     "summary": "Create Employee",
-    "tags": [
-     "Employees"
-    ]
-   }
-  },
-  "/api/v1/employees/{emp_id}": {
-   "get": {
-    "description": "Detail satu karyawan berdasarkan ID.",
-    "operationId": "get_employee_api_v1_employees__emp_id__get",
-    "parameters": [
-     {
-      "in": "path",
-      "name": "emp_id",
-      "required": true,
-      "schema": {
-       "format": "uuid",
-       "title": "Emp Id",
-       "type": "string"
-      }
-     }
-    ],
-    "responses": {
-     "200": {
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/EmployeeResponse"
-        }
-       }
-      },
-      "description": "Successful Response"
-     },
-     "422": {
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      },
-      "description": "Validation Error"
-     }
-    },
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ],
-    "summary": "Get Employee",
-    "tags": [
-     "Employees"
-    ]
-   },
-   "put": {
-    "description": "Mengubah data pribadi karyawan.",
-    "operationId": "update_employee_api_v1_employees__emp_id__put",
-    "parameters": [
-     {
-      "in": "path",
-      "name": "emp_id",
-      "required": true,
-      "schema": {
-       "format": "uuid",
-       "title": "Emp Id",
-       "type": "string"
-      }
-     }
-    ],
-    "requestBody": {
-     "content": {
-      "application/json": {
-       "schema": {
-        "$ref": "#/components/schemas/EmployeeUpdate"
-       }
-      }
-     },
-     "required": true
-    },
-    "responses": {
-     "200": {
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/EmployeeResponse"
-        }
-       }
-      },
-      "description": "Successful Response"
-     },
-     "422": {
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      },
-      "description": "Validation Error"
-     }
-    },
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ],
-    "summary": "Update Employee",
     "tags": [
      "Employees"
     ]
@@ -12697,255 +13913,6 @@
     ]
    }
   },
-  "/api/v1/employees/{emp_id}/archive": {
-   "post": {
-    "description": "Pengarsipan (penghapusan lunak) karyawan yang telah dinonaktifkan.",
-    "operationId": "archive_employee_api_v1_employees__emp_id__archive_post",
-    "parameters": [
-     {
-      "in": "path",
-      "name": "emp_id",
-      "required": true,
-      "schema": {
-       "format": "uuid",
-       "title": "Emp Id",
-       "type": "string"
-      }
-     }
-    ],
-    "responses": {
-     "200": {
-      "content": {
-       "application/json": {
-        "schema": {
-         "additionalProperties": true,
-         "title": "Response Archive Employee Api V1 Employees  Emp Id  Archive Post",
-         "type": "object"
-        }
-       }
-      },
-      "description": "Successful Response"
-     },
-     "422": {
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      },
-      "description": "Validation Error"
-     }
-    },
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ],
-    "summary": "Archive Employee",
-    "tags": [
-     "Employees"
-    ]
-   }
-  },
-  "/api/v1/employees/{emp_id}/assignments": {
-   "get": {
-    "description": "Riwayat jabatan/penempatan karyawan.",
-    "operationId": "list_assignments_api_v1_employees__emp_id__assignments_get",
-    "parameters": [
-     {
-      "in": "path",
-      "name": "emp_id",
-      "required": true,
-      "schema": {
-       "format": "uuid",
-       "title": "Emp Id",
-       "type": "string"
-      }
-     }
-    ],
-    "responses": {
-     "200": {
-      "content": {
-       "application/json": {
-        "schema": {
-         "items": {
-          "$ref": "#/components/schemas/EmployeeAssignmentResponse"
-         },
-         "title": "Response List Assignments Api V1 Employees  Emp Id  Assignments Get",
-         "type": "array"
-        }
-       }
-      },
-      "description": "Successful Response"
-     },
-     "422": {
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      },
-      "description": "Validation Error"
-     }
-    },
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ],
-    "summary": "List Assignments",
-    "tags": [
-     "Employees"
-    ]
-   },
-   "post": {
-    "description": "Mutasi atau promosi jabatan baru bagi karyawan.",
-    "operationId": "add_assignment_api_v1_employees__emp_id__assignments_post",
-    "parameters": [
-     {
-      "in": "path",
-      "name": "emp_id",
-      "required": true,
-      "schema": {
-       "format": "uuid",
-       "title": "Emp Id",
-       "type": "string"
-      }
-     }
-    ],
-    "requestBody": {
-     "content": {
-      "application/json": {
-       "schema": {
-        "$ref": "#/components/schemas/EmployeeAssignmentCreate"
-       }
-      }
-     },
-     "required": true
-    },
-    "responses": {
-     "200": {
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/EmployeeAssignmentResponse"
-        }
-       }
-      },
-      "description": "Successful Response"
-     },
-     "422": {
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      },
-      "description": "Validation Error"
-     }
-    },
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ],
-    "summary": "Add Assignment",
-    "tags": [
-     "Employees"
-    ]
-   }
-  },
-  "/api/v1/employees/{emp_id}/conflicts": {
-   "get": {
-    "description": "Mengecek konflik jadwal penugasan karyawan.",
-    "operationId": "check_conflicts_api_v1_employees__emp_id__conflicts_get",
-    "parameters": [
-     {
-      "in": "path",
-      "name": "emp_id",
-      "required": true,
-      "schema": {
-       "format": "uuid",
-       "title": "Emp Id",
-       "type": "string"
-      }
-     },
-     {
-      "in": "query",
-      "name": "start_date",
-      "required": true,
-      "schema": {
-       "format": "date",
-       "title": "Start Date",
-       "type": "string"
-      }
-     },
-     {
-      "in": "query",
-      "name": "end_date",
-      "required": true,
-      "schema": {
-       "format": "date",
-       "title": "End Date",
-       "type": "string"
-      }
-     },
-     {
-      "in": "query",
-      "name": "exclude_plan",
-      "required": false,
-      "schema": {
-       "anyOf": [
-        {
-         "format": "uuid",
-         "type": "string"
-        },
-        {
-         "type": "null"
-        }
-       ],
-       "title": "Exclude Plan"
-      }
-     }
-    ],
-    "responses": {
-     "200": {
-      "content": {
-       "application/json": {
-        "schema": {
-         "additionalProperties": true,
-         "title": "Response Check Conflicts Api V1 Employees  Emp Id  Conflicts Get",
-         "type": "object"
-        }
-       }
-      },
-      "description": "Successful Response"
-     },
-     "422": {
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      },
-      "description": "Validation Error"
-     }
-    },
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ],
-    "summary": "Check Conflicts",
-    "tags": [
-     "Employees"
-    ]
-   }
-  },
   "/api/v1/employees/{emp_id}/documents": {
    "get": {
     "description": "Daftar dokumen karyawan (milik sendiri, atau semua bagi pengelola dokumen).",
@@ -13174,18 +14141,18 @@
     ]
    }
   },
-  "/api/v1/employees/{emp_id}/emergency-contacts": {
+  "/api/v1/employees/{employee_id}": {
    "get": {
-    "description": "Daftar kontak darurat karyawan (M2-01).",
-    "operationId": "list_emergency_contacts_api_v1_employees__emp_id__emergency_contacts_get",
+    "description": "Detail karyawan + alamat.",
+    "operationId": "get_employee_api_v1_employees__employee_id__get",
     "parameters": [
      {
       "in": "path",
-      "name": "emp_id",
+      "name": "employee_id",
       "required": true,
       "schema": {
        "format": "uuid",
-       "title": "Emp Id",
+       "title": "Employee Id",
        "type": "string"
       }
      }
@@ -13195,11 +14162,7 @@
       "content": {
        "application/json": {
         "schema": {
-         "items": {
-          "$ref": "#/components/schemas/EmergencyContactResponse"
-         },
-         "title": "Response List Emergency Contacts Api V1 Employees  Emp Id  Emergency Contacts Get",
-         "type": "array"
+         "$ref": "#/components/schemas/EmployeeDetail"
         }
        }
       },
@@ -13221,22 +14184,22 @@
       "HTTPBearer": []
      }
     ],
-    "summary": "List Emergency Contacts",
+    "summary": "Get Employee",
     "tags": [
      "Employees"
     ]
    },
-   "post": {
-    "description": "Menambahkan kontak darurat baru.",
-    "operationId": "create_emergency_contact_api_v1_employees__emp_id__emergency_contacts_post",
+   "put": {
+    "description": "Ubah data karyawan (sebagian).",
+    "operationId": "update_employee_api_v1_employees__employee_id__put",
     "parameters": [
      {
       "in": "path",
-      "name": "emp_id",
+      "name": "employee_id",
       "required": true,
       "schema": {
        "format": "uuid",
-       "title": "Emp Id",
+       "title": "Employee Id",
        "type": "string"
       }
      }
@@ -13245,7 +14208,66 @@
      "content": {
       "application/json": {
        "schema": {
-        "$ref": "#/components/schemas/EmergencyContactCreate"
+        "$ref": "#/components/schemas/EmployeeUpdate"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/EmployeeDetail"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Update Employee",
+    "tags": [
+     "Employees"
+    ]
+   }
+  },
+  "/api/v1/employees/{employee_id}/addresses": {
+   "post": {
+    "description": "Tambah alamat karyawan.",
+    "operationId": "add_address_api_v1_employees__employee_id__addresses_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "employee_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Employee Id",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/AddressIn"
        }
       }
      },
@@ -13256,7 +14278,7 @@
       "content": {
        "application/json": {
         "schema": {
-         "$ref": "#/components/schemas/EmergencyContactResponse"
+         "$ref": "#/components/schemas/AddressOut"
         }
        }
       },
@@ -13278,34 +14300,34 @@
       "HTTPBearer": []
      }
     ],
-    "summary": "Create Emergency Contact",
+    "summary": "Add Address",
     "tags": [
      "Employees"
     ]
    }
   },
-  "/api/v1/employees/{emp_id}/emergency-contacts/{contact_id}": {
+  "/api/v1/employees/{employee_id}/addresses/{address_id}": {
    "delete": {
-    "description": "Menghapus kontak darurat.",
-    "operationId": "delete_emergency_contact_api_v1_employees__emp_id__emergency_contacts__contact_id__delete",
+    "description": "Hapus alamat karyawan.",
+    "operationId": "delete_address_api_v1_employees__employee_id__addresses__address_id__delete",
     "parameters": [
      {
       "in": "path",
-      "name": "emp_id",
+      "name": "employee_id",
       "required": true,
       "schema": {
        "format": "uuid",
-       "title": "Emp Id",
+       "title": "Employee Id",
        "type": "string"
       }
      },
      {
       "in": "path",
-      "name": "contact_id",
+      "name": "address_id",
       "required": true,
       "schema": {
        "format": "uuid",
-       "title": "Contact Id",
+       "title": "Address Id",
        "type": "string"
       }
      }
@@ -13315,8 +14337,10 @@
       "content": {
        "application/json": {
         "schema": {
-         "additionalProperties": true,
-         "title": "Response Delete Emergency Contact Api V1 Employees  Emp Id  Emergency Contacts  Contact Id  Delete",
+         "additionalProperties": {
+          "type": "string"
+         },
+         "title": "Response Delete Address Api V1 Employees  Employee Id  Addresses  Address Id  Delete",
          "type": "object"
         }
        }
@@ -13339,32 +14363,32 @@
       "HTTPBearer": []
      }
     ],
-    "summary": "Delete Emergency Contact",
+    "summary": "Delete Address",
     "tags": [
      "Employees"
     ]
    },
    "put": {
-    "description": "Mengubah kontak darurat.",
-    "operationId": "update_emergency_contact_api_v1_employees__emp_id__emergency_contacts__contact_id__put",
+    "description": "Ubah alamat karyawan.",
+    "operationId": "update_address_api_v1_employees__employee_id__addresses__address_id__put",
     "parameters": [
      {
       "in": "path",
-      "name": "emp_id",
+      "name": "employee_id",
       "required": true,
       "schema": {
        "format": "uuid",
-       "title": "Emp Id",
+       "title": "Employee Id",
        "type": "string"
       }
      },
      {
       "in": "path",
-      "name": "contact_id",
+      "name": "address_id",
       "required": true,
       "schema": {
        "format": "uuid",
-       "title": "Contact Id",
+       "title": "Address Id",
        "type": "string"
       }
      }
@@ -13373,7 +14397,7 @@
      "content": {
       "application/json": {
        "schema": {
-        "$ref": "#/components/schemas/EmergencyContactUpdate"
+        "$ref": "#/components/schemas/AddressIn"
        }
       }
      },
@@ -13384,7 +14408,7 @@
       "content": {
        "application/json": {
         "schema": {
-         "$ref": "#/components/schemas/EmergencyContactResponse"
+         "$ref": "#/components/schemas/AddressOut"
         }
        }
       },
@@ -13406,24 +14430,24 @@
       "HTTPBearer": []
      }
     ],
-    "summary": "Update Emergency Contact",
+    "summary": "Update Address",
     "tags": [
      "Employees"
     ]
    }
   },
-  "/api/v1/employees/{emp_id}/restore": {
+  "/api/v1/employees/{employee_id}/archive": {
    "post": {
-    "description": "Memulihkan karyawan terhapus sebagai nonaktif.",
-    "operationId": "restore_employee_api_v1_employees__emp_id__restore_post",
+    "description": "Arsipkan karyawan yang sudah selesai offboarding.",
+    "operationId": "archive_employee_api_v1_employees__employee_id__archive_post",
     "parameters": [
      {
       "in": "path",
-      "name": "emp_id",
+      "name": "employee_id",
       "required": true,
       "schema": {
        "format": "uuid",
-       "title": "Emp Id",
+       "title": "Employee Id",
        "type": "string"
       }
      }
@@ -13433,8 +14457,63 @@
       "content": {
        "application/json": {
         "schema": {
-         "additionalProperties": true,
-         "title": "Response Restore Employee Api V1 Employees  Emp Id  Restore Post",
+         "additionalProperties": {
+          "type": "string"
+         },
+         "title": "Response Archive Employee Api V1 Employees  Employee Id  Archive Post",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Archive Employee",
+    "tags": [
+     "Employees"
+    ]
+   }
+  },
+  "/api/v1/employees/{employee_id}/restore": {
+   "post": {
+    "description": "Batalkan arsip (status tetap selesai bekerja).",
+    "operationId": "restore_employee_api_v1_employees__employee_id__restore_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "employee_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Employee Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": {
+          "type": "string"
+         },
+         "title": "Response Restore Employee Api V1 Employees  Employee Id  Restore Post",
          "type": "object"
         }
        }
@@ -14312,6 +15391,231 @@
     "summary": "Update Requirement",
     "tags": [
      "Image Requirements"
+    ]
+   }
+  },
+  "/api/v1/job-positions": {
+   "get": {
+    "description": "Daftar jabatan.",
+    "operationId": "list_job_positions_api_v1_job_positions_get",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "division_id",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "format": "uuid",
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Division Id"
+      }
+     },
+     {
+      "in": "query",
+      "name": "active_only",
+      "required": false,
+      "schema": {
+       "default": true,
+       "title": "Active Only",
+       "type": "boolean"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/JobPositionOut"
+         },
+         "title": "Response List Job Positions Api V1 Job Positions Get",
+         "type": "array"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "List Job Positions",
+    "tags": [
+     "Job Positions"
+    ]
+   },
+   "post": {
+    "description": "Tambah jabatan.",
+    "operationId": "create_job_position_api_v1_job_positions_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/JobPositionCreate"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/JobPositionOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Create Job Position",
+    "tags": [
+     "Job Positions"
+    ]
+   }
+  },
+  "/api/v1/job-positions/{position_id}": {
+   "delete": {
+    "description": "Hapus (arsip) jabatan yang belum dipakai.",
+    "operationId": "delete_job_position_api_v1_job_positions__position_id__delete",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "position_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Position Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": {
+          "type": "string"
+         },
+         "title": "Response Delete Job Position Api V1 Job Positions  Position Id  Delete",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Delete Job Position",
+    "tags": [
+     "Job Positions"
+    ]
+   },
+   "put": {
+    "description": "Ubah jabatan (sebagian).",
+    "operationId": "update_job_position_api_v1_job_positions__position_id__put",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "position_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Position Id",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/JobPositionUpdate"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/JobPositionOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Update Job Position",
+    "tags": [
+     "Job Positions"
     ]
    }
   },
@@ -15264,6 +16568,214 @@
     ]
    }
   },
+  "/api/v1/offices": {
+   "get": {
+    "description": "Daftar kantor aktif (GET). Terbuka untuk semua pengguna; `can_manage` menandai hak kelola.",
+    "operationId": "get_offices_api_v1_offices_get",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "for_attendance",
+      "required": false,
+      "schema": {
+       "default": false,
+       "title": "For Attendance",
+       "type": "boolean"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/OfficeResponse"
+         },
+         "title": "Response Get Offices Api V1 Offices Get",
+         "type": "array"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Get Offices",
+    "tags": [
+     "Offices"
+    ]
+   },
+   "post": {
+    "description": "Membuat kantor baru (POST) — izin manage:offices.",
+    "operationId": "create_office_api_v1_offices_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/OfficeCreate"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/OfficeResponse"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Create Office",
+    "tags": [
+     "Offices"
+    ]
+   }
+  },
+  "/api/v1/offices/{office_id}": {
+   "delete": {
+    "description": "Menghapus (arsip) kantor cabang (DELETE) — izin manage:offices.",
+    "operationId": "delete_office_api_v1_offices__office_id__delete",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "office_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Office Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": {
+          "type": "string"
+         },
+         "title": "Response Delete Office Api V1 Offices  Office Id  Delete",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Delete Office",
+    "tags": [
+     "Offices"
+    ]
+   },
+   "put": {
+    "description": "Mengubah data kantor (PUT, sebagian) — izin manage:offices.",
+    "operationId": "update_office_api_v1_offices__office_id__put",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "office_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Office Id",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/OfficeUpdate"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/OfficeResponse"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Update Office",
+    "tags": [
+     "Offices"
+    ]
+   }
+  },
   "/api/v1/overtime": {
    "get": {
     "description": "Daftar lembur untuk satu jadwal harian.",
@@ -15421,6 +16933,270 @@
     ]
    }
   },
+  "/api/v1/projects": {
+   "get": {
+    "description": "Daftar proyek.",
+    "operationId": "list_projects_api_v1_projects_get",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "division_id",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "format": "uuid",
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Division Id"
+      }
+     },
+     {
+      "in": "query",
+      "name": "client_id",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "format": "uuid",
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Client Id"
+      }
+     },
+     {
+      "in": "query",
+      "name": "status",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Status"
+      }
+     },
+     {
+      "in": "query",
+      "name": "q",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Q"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/ProjectOut"
+         },
+         "title": "Response List Projects Api V1 Projects Get",
+         "type": "array"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "List Projects",
+    "tags": [
+     "Projects"
+    ]
+   },
+   "post": {
+    "description": "Tambah proyek.",
+    "operationId": "create_project_api_v1_projects_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ProjectCreate"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ProjectOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Create Project",
+    "tags": [
+     "Projects"
+    ]
+   }
+  },
+  "/api/v1/projects/{project_id}": {
+   "delete": {
+    "description": "Hapus (arsip) proyek yang belum dipakai.",
+    "operationId": "delete_project_api_v1_projects__project_id__delete",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "project_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Project Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": {
+          "type": "string"
+         },
+         "title": "Response Delete Project Api V1 Projects  Project Id  Delete",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Delete Project",
+    "tags": [
+     "Projects"
+    ]
+   },
+   "put": {
+    "description": "Ubah proyek (sebagian).",
+    "operationId": "update_project_api_v1_projects__project_id__put",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "project_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Project Id",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ProjectUpdate"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ProjectOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Update Project",
+    "tags": [
+     "Projects"
+    ]
+   }
+  },
   "/api/v1/recaps/attendance": {
    "get": {
     "description": "FINANCE/HR/OPS/ADMIN: seluruh organisasi; lainnya: hanya dirinya (aturan `GET /attendance`).",
@@ -15536,214 +17312,6 @@
     "summary": "Overtime Recap",
     "tags": [
      "Overtime"
-    ]
-   }
-  },
-  "/api/v1/sites": {
-   "get": {
-    "description": "Daftar kantor aktif (GET). Terbuka untuk semua pengguna; `can_manage` menandai hak kelola.",
-    "operationId": "get_sites_api_v1_sites_get",
-    "parameters": [
-     {
-      "in": "query",
-      "name": "for_attendance",
-      "required": false,
-      "schema": {
-       "default": false,
-       "title": "For Attendance",
-       "type": "boolean"
-      }
-     }
-    ],
-    "responses": {
-     "200": {
-      "content": {
-       "application/json": {
-        "schema": {
-         "items": {
-          "$ref": "#/components/schemas/SiteResponse"
-         },
-         "title": "Response Get Sites Api V1 Sites Get",
-         "type": "array"
-        }
-       }
-      },
-      "description": "Successful Response"
-     },
-     "422": {
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      },
-      "description": "Validation Error"
-     }
-    },
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ],
-    "summary": "Get Sites",
-    "tags": [
-     "Sites"
-    ]
-   },
-   "post": {
-    "description": "Membuat kantor baru (POST) — izin manage:sites.",
-    "operationId": "create_site_api_v1_sites_post",
-    "requestBody": {
-     "content": {
-      "application/json": {
-       "schema": {
-        "$ref": "#/components/schemas/SiteCreate"
-       }
-      }
-     },
-     "required": true
-    },
-    "responses": {
-     "201": {
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/SiteResponse"
-        }
-       }
-      },
-      "description": "Successful Response"
-     },
-     "422": {
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      },
-      "description": "Validation Error"
-     }
-    },
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ],
-    "summary": "Create Site",
-    "tags": [
-     "Sites"
-    ]
-   }
-  },
-  "/api/v1/sites/{site_id}": {
-   "delete": {
-    "description": "Menghapus (arsip) kantor cabang (DELETE) — izin manage:sites.",
-    "operationId": "delete_site_api_v1_sites__site_id__delete",
-    "parameters": [
-     {
-      "in": "path",
-      "name": "site_id",
-      "required": true,
-      "schema": {
-       "format": "uuid",
-       "title": "Site Id",
-       "type": "string"
-      }
-     }
-    ],
-    "responses": {
-     "200": {
-      "content": {
-       "application/json": {
-        "schema": {
-         "additionalProperties": {
-          "type": "string"
-         },
-         "title": "Response Delete Site Api V1 Sites  Site Id  Delete",
-         "type": "object"
-        }
-       }
-      },
-      "description": "Successful Response"
-     },
-     "422": {
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      },
-      "description": "Validation Error"
-     }
-    },
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ],
-    "summary": "Delete Site",
-    "tags": [
-     "Sites"
-    ]
-   },
-   "put": {
-    "description": "Mengubah data kantor (PUT, sebagian) — izin manage:sites.",
-    "operationId": "update_site_api_v1_sites__site_id__put",
-    "parameters": [
-     {
-      "in": "path",
-      "name": "site_id",
-      "required": true,
-      "schema": {
-       "format": "uuid",
-       "title": "Site Id",
-       "type": "string"
-      }
-     }
-    ],
-    "requestBody": {
-     "content": {
-      "application/json": {
-       "schema": {
-        "$ref": "#/components/schemas/SiteUpdate"
-       }
-      }
-     },
-     "required": true
-    },
-    "responses": {
-     "200": {
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/SiteResponse"
-        }
-       }
-      },
-      "description": "Successful Response"
-     },
-     "422": {
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      },
-      "description": "Validation Error"
-     }
-    },
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ],
-    "summary": "Update Site",
-    "tags": [
-     "Sites"
     ]
    }
   },
@@ -16241,192 +17809,6 @@
     "summary": "Remove Member",
     "tags": [
      "Teams"
-    ]
-   }
-  },
-  "/api/v1/units": {
-   "get": {
-    "description": "Daftar divisi aktif beserta OM, PM, dan jumlah timnya (GET).",
-    "operationId": "list_units_api_v1_units_get",
-    "responses": {
-     "200": {
-      "content": {
-       "application/json": {
-        "schema": {
-         "items": {
-          "$ref": "#/components/schemas/UnitOut"
-         },
-         "title": "Response List Units Api V1 Units Get",
-         "type": "array"
-        }
-       }
-      },
-      "description": "Successful Response"
-     }
-    },
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ],
-    "summary": "List Units",
-    "tags": [
-     "Units"
-    ]
-   },
-   "post": {
-    "description": "Membuat divisi baru dengan OM & PM-nya (POST) — izin manage:divisions.",
-    "operationId": "create_unit_api_v1_units_post",
-    "requestBody": {
-     "content": {
-      "application/json": {
-       "schema": {
-        "$ref": "#/components/schemas/UnitCreate"
-       }
-      }
-     },
-     "required": true
-    },
-    "responses": {
-     "201": {
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/UnitOut"
-        }
-       }
-      },
-      "description": "Successful Response"
-     },
-     "422": {
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      },
-      "description": "Validation Error"
-     }
-    },
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ],
-    "summary": "Create Unit",
-    "tags": [
-     "Units"
-    ]
-   }
-  },
-  "/api/v1/units/{unit_id}": {
-   "delete": {
-    "description": "Menghapus (arsip) divisi yang tidak lagi dipakai (DELETE) — izin manage:divisions.",
-    "operationId": "delete_unit_api_v1_units__unit_id__delete",
-    "parameters": [
-     {
-      "in": "path",
-      "name": "unit_id",
-      "required": true,
-      "schema": {
-       "format": "uuid",
-       "title": "Unit Id",
-       "type": "string"
-      }
-     }
-    ],
-    "responses": {
-     "200": {
-      "content": {
-       "application/json": {
-        "schema": {
-         "additionalProperties": {
-          "type": "string"
-         },
-         "title": "Response Delete Unit Api V1 Units  Unit Id  Delete",
-         "type": "object"
-        }
-       }
-      },
-      "description": "Successful Response"
-     },
-     "422": {
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      },
-      "description": "Validation Error"
-     }
-    },
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ],
-    "summary": "Delete Unit",
-    "tags": [
-     "Units"
-    ]
-   },
-   "put": {
-    "description": "Mengubah divisi (PUT, sebagian) — izin manage:divisions.",
-    "operationId": "update_unit_api_v1_units__unit_id__put",
-    "parameters": [
-     {
-      "in": "path",
-      "name": "unit_id",
-      "required": true,
-      "schema": {
-       "format": "uuid",
-       "title": "Unit Id",
-       "type": "string"
-      }
-     }
-    ],
-    "requestBody": {
-     "content": {
-      "application/json": {
-       "schema": {
-        "$ref": "#/components/schemas/UnitUpdate"
-       }
-      }
-     },
-     "required": true
-    },
-    "responses": {
-     "200": {
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/UnitOut"
-        }
-       }
-      },
-      "description": "Successful Response"
-     },
-     "422": {
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      },
-      "description": "Validation Error"
-     }
-    },
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ],
-    "summary": "Update Unit",
-    "tags": [
-     "Units"
     ]
    }
   },

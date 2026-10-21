@@ -1,27 +1,14 @@
-"""
-Paket skema untuk modul employees.
-"""
+"""Paket skema modul employees."""
 
 from app.modules.employees.schemas.employee_schema import (
-    AttendanceMode,
-    EmployeeAssignmentBase,
-    EmployeeAssignmentCreate,
-    EmployeeAssignmentResponse,
-    EmployeeBase,
+    AddressIn,
+    AddressOut,
     EmployeeCreate,
+    EmployeeDetail,
     EmployeeListResponse,
-    EmployeeResponse,
+    EmployeeOut,
     EmployeeUpdate,
 )
 
-__all__ = [
-    "AttendanceMode",
-    "EmployeeAssignmentBase",
-    "EmployeeAssignmentCreate",
-    "EmployeeAssignmentResponse",
-    "EmployeeBase",
-    "EmployeeCreate",
-    "EmployeeListResponse",
-    "EmployeeResponse",
-    "EmployeeUpdate",
-]
+__all__ = ["AddressIn", "AddressOut", "EmployeeCreate", "EmployeeDetail", "EmployeeListResponse", "EmployeeOut",
+           "EmployeeUpdate"]

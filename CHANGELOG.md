@@ -7,6 +7,15 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ---
 
+- **Milestone 10 — Master V2: Kantor, Divisi, Jabatan, Klien, Proyek & Karyawan V2 (`api/app/modules/*`, `web/`, `mobile/`):**
+  - Swagger masih memakai skema lama → API diselaraskan ke skema `test_migration`: modul `units` → **`divisions`** (`/divisions`), `sites` → **`offices`** (`/offices`); modul baru **`job_positions`** (`/job-positions`, MANAGE_USERS), **`clients`** (`/clients`) dan **`projects`** (`/projects`, PM hanya divisinya).
+  - **Karyawan V2**: `EmployeeOut`/`EmployeeDetail` (kantor, divisi, jabatan, PKWT, `offboarding_status`, akun) + alamat 1─N (`/employees/{id}/addresses`); filter `status` (active/in_process/offboarded/archived/all), divisi, kantor, jabatan, `q`. Dipensiunkan: penugasan/mutasi (`/assignments`), konflik, kontak darurat.
+  - **Proyek ↔ jadwal & order**: `work_plan_daily.project_id` (divisi sama, ONGOING, tanggal dalam masa proyek; ikut tersalin); order `work_completion.project_id` mengisi klien/judul/SPK/PM dari proyek.
+  - **Login**: verifikasi sandi menerima hash bcrypt dari seed DB V2 (`bcrypt==4.2.1`); hash baru tetap argon2.
+  - **Web**: direktori karyawan V2 (tabel, profil, form tambah/ubah dengan kantor/divisi/jabatan/PKWT, panel alamat, filter status kerja); `siteService` → `/offices`; tipe API diperbarui.
+  - **Mobile**: `/sites` → `/offices`; GPS dihangatkan sejak aplikasi dibuka (`LocationWarmer`) — absen & foto berlokasi memakai titik segar (≤20 dtk, ≤100 m) tanpa menunggu.
+  - **Uji** (belum dijalankan): tes karyawan & rute disesuaikan V2, snapshot OpenAPI diperbarui. Postman folder 18 disiapkan; koleksi perlu disesuaikan ke seed DB baru.
+
 - **Milestone 9 — Offboarding PKWT & Clearance Aset (`api/app/modules/offboarding`, `employees`, `web/`):**
   - Modul offboarding V1 (status `active`/`in_process` yang salah tabel, kondisi `PENDING_CHECK`, kolom `asset_assignment.return_condition` yang tidak ada) ditulis ulang sesuai docs/35 §7.
   - **Mulai** (`POST /offboarding`, HR): karyawan aktif, satu proses terbuka (`ALREADY_OFFBOARDING`), ketua tim aktif / PM-OM divisi wajib serah terima dulu (`HANDOVER_REQUIRED`); tanggal efektif kosong + PKWT berakhir → tanggal akhir PKWT. Pinjaman alat/kendaraan yang belum kembali jadi item clearance; karyawan `in_process` sehingga tidak bisa meminjam aset baru.

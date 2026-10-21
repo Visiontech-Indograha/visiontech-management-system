@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { formatDate } from "@/lib/format";
-import { ATTENDANCE_MODE_LABEL } from "@/lib/attendanceModeLabels";
 import type { Employee } from "@/services/employeeService";
+import { EmployeeStatusPill } from "./EmployeeStatusPill";
 import { Pill } from "@/components/molecules/Pill";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { ListBlock } from "@/components/molecules/ListBlock";
@@ -15,10 +15,9 @@ const Row = ({ label, children }: { label: string; children: ReactNode }) => (
   </div>
 );
 
-/** Data pokok karyawan; kontak pribadi hanya bila `canSeePrivate` (M2-01 — server pun menyaringnya). */
-export function EmployeeProfileCard({ employee: e, unitName, canSeePrivate }: {
+/** Data pokok karyawan V2; email hanya bila `canSeePrivate`. */
+export function EmployeeProfileCard({ employee: e, canSeePrivate }: {
   employee: Employee;
-  unitName: string | null;
   canSeePrivate: boolean;
 }) {
   // Presigned URL: <img src> tidak bisa mengirim header Authorization.
@@ -37,28 +36,18 @@ export function EmployeeProfileCard({ employee: e, unitName, canSeePrivate }: {
         )}
         <ListBlock as="dl" className="text-sm">
           <Row label="No. karyawan">{e.employee_no}</Row>
-          <Row label="Jabatan">{e.position}</Row>
-          <Row label="Unit">{unitName}</Row>
-          <Row label="Akun">{e.is_active ? <Pill tone="success">Aktif</Pill> : <Pill>Nonaktif</Pill>}</Row>
+          <Row label="Jabatan">{e.position_name}</Row>
+          <Row label="Divisi">{e.division_name}</Row>
+          <Row label="Kantor">{e.office_name}</Row>
+          <Row label="Status"><EmployeeStatusPill status={e.offboarding_status} /></Row>
           <Row label="Tanggal bergabung">{formatDate(e.join_date)}</Row>
-          <Row label="Absen lewat">{ATTENDANCE_MODE_LABEL[e.attendance_mode ?? "FIELD"]}</Row>
-          {canSeePrivate && (
-            <>
-              <Row label="Email">{e.email}</Row>
-              <Row label="No. telepon">{e.phone}</Row>
-              <Row label="Tanggal lahir">{e.birth_date ? formatDate(e.birth_date) : null}</Row>
-              <Row label="Alamat">{e.address}</Row>
-            </>
-          )}
-          {e.offboarded_at && (
-            <Row label="Keluar">
-              {formatDate(e.offboarded_at)} – {e.offboarding_reason ?? "-"}
-            </Row>
-          )}
+          <Row label="Akhir PKWT">{e.pkwt_end_date ? formatDate(e.pkwt_end_date) : "Karyawan tetap"}</Row>
+          <Row label="Wajah">{e.face_enrolled ? <Pill tone="success">Terdaftar</Pill> : <Pill>Belum</Pill>}</Row>
+          {canSeePrivate && <Row label="Email">{e.email}</Row>}
         </ListBlock>
         {!canSeePrivate && (
           <TextBlock className="border-t border-line py-3 text-caption text-mist">
-            Data kontak pribadi dan dokumen identitas hanya terlihat oleh pemilik serta HR.
+            Email, alamat, dan dokumen identitas hanya terlihat oleh pemilik serta HR.
           </TextBlock>
         )}
       </div>

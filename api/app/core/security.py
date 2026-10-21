@@ -12,6 +12,7 @@ import uuid
 from datetime import timedelta
 from typing import Any
 
+import bcrypt
 import jwt
 from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHashError, VerificationError
@@ -47,6 +48,12 @@ def hash_password(password: str) -> str:
 
 
 def verify_password(password: str, hashed: str) -> bool:
+    # Seed DB V2 menyimpan bcrypt ($2a/$2b/$2y); hash yang dibuat aplikasi tetap argon2.
+    if hashed.startswith(("$2a$", "$2b$", "$2y$")):
+        try:
+            return bcrypt.checkpw(password.encode(), hashed.encode())
+        except ValueError:
+            return False
     try:
         return ph.verify(hashed, password)
     except (VerificationError, InvalidHashError):

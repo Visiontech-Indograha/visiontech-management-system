@@ -7,6 +7,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
 import 'core/connectivity_sync.dart';
+import 'core/location_helper.dart';
 import 'core/theme/theme.dart';
 import 'features/update/update_ui.dart';
 import 'shared/app_frame.dart';
@@ -32,7 +33,9 @@ class VmsMobileApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
 
-    return ConnectivitySyncWatcher(
+    // GPS dihangatkan sejak aplikasi dibuka agar absen & foto berlokasi tidak menunggu lama.
+    return LocationWarmerScope(
+      child: ConnectivitySyncWatcher(
       // shadcn_ui (R-14) + tema Material VMS untuk layar yang belum dimigrasi. Mode gelap di luar MVP (K-23).
       child: ShadApp.router(
         title: 'Visiontech',
@@ -45,6 +48,7 @@ class VmsMobileApp extends ConsumerWidget {
         // Gerbang pembaruan wajib (docs/32) di atas Navigator: berlaku juga untuk layar login.
         builder: (context, child) =>
             vmsAppFrame(context, AppUpdateGate(child: child ?? const SizedBox.shrink())),
+      ),
       ),
     );
   }

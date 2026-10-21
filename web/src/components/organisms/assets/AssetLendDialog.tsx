@@ -57,7 +57,7 @@ export function AssetLendDialog({ kind, assetId, assetName, onClose }: {
       <SelectField label="Karyawan penerima" value={employeeId} onChange={(e) => setEmployeeId(e.target.value)}>
         <ControlOption value="">Pilih karyawan</ControlOption>
         {employees.data?.items.map((emp) => (
-          <ControlOption key={emp.id} value={emp.id}>
+          <ControlOption key={emp.employee_id} value={emp.employee_id}>
             {emp.full_name} · {emp.employee_no}
           </ControlOption>
         ))}

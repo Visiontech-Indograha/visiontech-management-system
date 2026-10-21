@@ -163,7 +163,7 @@ void main() {
 
     void online() {
       backend.routes['/attendance'] = (_) => {'items': <Object>[], 'total': 0};
-      backend.routes['/sites'] = (_) => [site];
+      backend.routes['/offices'] = (_) => [site];
       backend.routes['/work-plans/daily'] = (_) => <Object>[];
       backend.routes['/files/upload'] = (_) => {'file_id': 'f-selfie'};
       backend.routes['/attendance/check-in'] = (o) => {

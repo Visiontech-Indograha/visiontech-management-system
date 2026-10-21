@@ -13,6 +13,8 @@ from app.core.repository import BaseRepository
 
 _SELECT = """
     SELECT wpd.daily_plan_id, wpd.division_id, d.name AS division_name, wpd.team_id, t.name AS team_name,
+           wpd.project_id, (SELECT p.project_title FROM project p WHERE p.project_id = wpd.project_id)
+               AS project_title,
            t.leader_employee_id, le.full_name AS leader_name, wpd.work_date, wpd.site_name, wpd.site_lat,
            wpd.site_lng, wpd.attendance_radius_m, wpd.clock_in_time, wpd.clock_out_time, wpd.status,
            wpd.created_by_id, wpd.approved_by_pm_id, wpd.approved_at, wpd.rejection_reason,
@@ -28,6 +30,14 @@ _SELECT = """
 
 
 class DailyPlanRepository(BaseRepository):
+    async def project_window(self, project_id: UUID | str) -> Any:
+        """Divisi, status & rentang tanggal proyek (validasi jadwal yang dikaitkan)."""
+        return await self.fetchone(
+            "SELECT division_id, status, start_date, end_date FROM project "
+            "WHERE project_id = CAST(:id AS uuid) AND delete_at IS NULL",
+            {"id": str(project_id)},
+        )
+
     """Query work_plan_daily dan rujukannya."""
 
     async def list_plans(
@@ -108,13 +118,14 @@ class DailyPlanRepository(BaseRepository):
     async def insert(self, fields: dict[str, Any]) -> UUID:
         daily_plan_id: UUID = await self.scalar(
             """
-            INSERT INTO work_plan_daily (division_id, team_id, work_date, site_name, site_lat, site_lng,
+            INSERT INTO work_plan_daily (division_id, team_id, project_id, work_date, site_name, site_lat, site_lng,
                                          attendance_radius_m, clock_in_time, clock_out_time, status, created_by_id)
-            VALUES (CAST(:division_id AS uuid), CAST(:team_id AS uuid), :work_date, :site_name, :site_lat, :site_lng,
-                    :attendance_radius_m, :clock_in_time, :clock_out_time, 'DRAFT', CAST(:created_by_id AS uuid))
+            VALUES (CAST(:division_id AS uuid), CAST(:team_id AS uuid), CAST(:project_id AS uuid), :work_date,
+                    :site_name, :site_lat, :site_lng, :attendance_radius_m, :clock_in_time, :clock_out_time, 'DRAFT',
+                    CAST(:created_by_id AS uuid))
             RETURNING daily_plan_id
             """,
-            fields,
+            {"project_id": None, **fields},
         )
         return daily_plan_id
 
@@ -123,6 +134,7 @@ class DailyPlanRepository(BaseRepository):
             """
             UPDATE work_plan_daily SET
                 team_id = COALESCE(CAST(:team_id AS uuid), team_id),
+                project_id = COALESCE(CAST(:project_id AS uuid), project_id),
                 work_date = COALESCE(CAST(:work_date AS date), work_date),
                 site_name = COALESCE(:site_name, site_name),
                 site_lat = COALESCE(CAST(:site_lat AS numeric), site_lat),

@@ -1,134 +1,104 @@
 """
 app/modules/employees/schemas/employee_schema.py
-
-Request and response schemas for employee data management, emergency contacts, and assignments.
+Karyawan V2 (Milestone 10): tabel `employee` (kantor, divisi, jabatan, PKWT, foto, wajah, status offboarding) +
+`address` (1─N) + akun `users` (1─1, dikelola modul accounts).
 """
+from __future__ import annotations
+
 from datetime import date, datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
-# FIELD = absen di HP, OFFICE = absen di web
-AttendanceMode = Literal["FIELD", "OFFICE"]
-
-
-class EmergencyContactBase(BaseModel):
-    """Base schema for an employee emergency contact."""
-    name: str = Field(..., min_length=1, max_length=150)
-    relationship: str = Field(..., min_length=1, max_length=50)
-    phone: str = Field(..., min_length=1, max_length=50)
-    address: str | None = None
-    is_primary: bool = True
+OffboardingStatus = Literal["active", "in_process", "offboarded"]
 
 
-class EmergencyContactCreate(EmergencyContactBase):
-    """Schema for adding a new emergency contact."""
+class AddressIn(BaseModel):
+    address_line: str = Field(min_length=3, max_length=255)
+    city: str = Field(min_length=2, max_length=100)
+    postal_code: str = Field(min_length=3, max_length=10)
 
 
-class EmergencyContactUpdate(BaseModel):
-    """Schema for updating an existing emergency contact."""
-    name: str | None = Field(None, min_length=1, max_length=150)
-    relationship: str | None = Field(None, min_length=1, max_length=50)
-    phone: str | None = Field(None, min_length=1, max_length=50)
-    address: str | None = None
-    is_primary: bool | None = None
+class AddressOut(AddressIn):
+    address_id: UUID
 
 
-class EmergencyContactResponse(EmergencyContactBase):
-    """Schema for returning an emergency contact response."""
-    id: UUID
+class EmployeeOut(BaseModel):
     employee_id: UUID
-    created_at: datetime
-    updated_at: datetime
-
-
-class EmployeeBase(BaseModel):
-    """Base schema for an employee."""
     employee_no: str
     full_name: str
-    position: str
-    unit_id: UUID | None = None
-    email: str | None = None
-    phone: str | None = None
+    office_id: UUID
+    office_name: str
+    division_id: UUID | None = None
+    division_name: str | None = None
+    position_id: UUID | None = None
+    position_code: str | None = None
+    position_name: str | None = None
     join_date: date
-    birth_date: date | None = None
-    address: str | None = None
+    pkwt_end_date: date | None = None
     photo_file_id: UUID | None = None
-
-
-class EmployeeCreate(EmployeeBase):
-    """Schema for creating a new employee."""
-    attendance_mode: AttendanceMode = "FIELD"
-    emergency_contacts: list[EmergencyContactBase] | None = None
-
-
-class EmployeeUpdate(BaseModel):
-    """Schema for updating employee details."""
-    full_name: str | None = None
-    attendance_mode: AttendanceMode | None = None
-    email: str | None = None
-    phone: str | None = None
-    birth_date: date | None = None
-    address: str | None = None
-    photo_file_id: UUID | None = None
-    is_active: bool | None = None
-
-
-class EmployeeResponse(EmployeeBase):
-    """Schema for an employee response object."""
-    id: UUID
-    attendance_mode: AttendanceMode = "FIELD"
-    is_active: bool
-    offboarded_at: datetime | None = None
-    offboarding_reason: str | None = None
+    face_enrolled: bool = False
+    offboarding_status: OffboardingStatus
+    archived: bool = False
     user_id: UUID | None = None
-    created_at: datetime | None = None
-    updated_at: datetime | None = None
-    emergency_contacts: list[EmergencyContactResponse] = []
+    email: str | None = None
+    system_role: str | None = None
+    account_active: bool | None = None
+    city: str | None = None  # kota alamat pertama (daftar)
+    create_at: datetime
+    update_at: datetime
 
-    model_config = {"from_attributes": True}
+
+class EmployeeDetail(EmployeeOut):
+    addresses: list[AddressOut] = []
 
 
 class EmployeeListResponse(BaseModel):
-    """Schema for paginated employee lists."""
-    items: list[EmployeeResponse]
+    items: list[EmployeeOut]
     total: int
     page: int = 1
-    size: int = 50
+    size: int = 20
 
 
-class EmployeeAssignmentBase(BaseModel):
-    """Base schema for an employee assignment to a unit and position."""
-    position: str
-    unit_id: UUID | None = None
-    valid_from: date
+class EmployeeCreate(BaseModel):
+    employee_no: str = Field(min_length=2, max_length=50)
+    full_name: str = Field(min_length=2, max_length=150)
+    office_id: UUID
+    division_id: UUID | None = None
+    position_id: UUID | None = None
+    join_date: date
+    pkwt_end_date: date | None = None  # kosong = karyawan tetap
+    photo_file_id: UUID | None = None
+    address: AddressIn | None = None
+
+    @model_validator(mode="after")
+    def _dates(self) -> EmployeeCreate:
+        if self.pkwt_end_date and self.pkwt_end_date < self.join_date:
+            raise ValueError("Akhir PKWT tidak boleh sebelum tanggal bergabung.")
+        return self
 
 
-class EmployeeAssignmentCreate(EmployeeAssignmentBase):
-    """Schema for assigning an employee."""
+class EmployeeUpdate(BaseModel):
+    """Sebagian; kirim `null` untuk mengosongkan divisi/jabatan/akhir PKWT/foto."""
 
-
-class EmployeeAssignmentResponse(EmployeeAssignmentBase):
-    """Schema for responding with an employee assignment's details."""
-    id: UUID
-    employee_id: UUID
-    valid_to: date | None = None
-    unit_name: str | None = None
+    employee_no: str | None = Field(None, min_length=2, max_length=50)
+    full_name: str | None = Field(None, min_length=2, max_length=150)
+    office_id: UUID | None = None
+    division_id: UUID | None = None
+    position_id: UUID | None = None
+    join_date: date | None = None
+    pkwt_end_date: date | None = None
+    photo_file_id: UUID | None = None
 
 
 __all__ = [
-    "AttendanceMode",
-    "EmergencyContactBase",
-    "EmergencyContactCreate",
-    "EmergencyContactResponse",
-    "EmergencyContactUpdate",
-    "EmployeeAssignmentBase",
-    "EmployeeAssignmentCreate",
-    "EmployeeAssignmentResponse",
-    "EmployeeBase",
+    "AddressIn",
+    "AddressOut",
     "EmployeeCreate",
+    "EmployeeDetail",
     "EmployeeListResponse",
-    "EmployeeResponse",
+    "EmployeeOut",
     "EmployeeUpdate",
+    "OffboardingStatus",
 ]

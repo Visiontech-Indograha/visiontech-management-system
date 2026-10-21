@@ -34,7 +34,7 @@ const loan = {
   employee_id: "e1", employee_name: "Doni", daily_plan_id: null, work_date: null, assignment_status: "loaned",
   loaned_at: "2026-10-01T02:00:00Z", returned_at: null,
 };
-const employees = { items: [{ id: "e1", full_name: "Doni", employee_no: "VT-08", join_date: "2024-01-01", is_active: true }], total: 1, page: 1, size: 25 };
+const employees = { items: [{ employee_id: "e1", full_name: "Doni", employee_no: "VT-08", join_date: "2024-01-01", offboarding_status: "active" }], total: 1, page: 1, size: 25 };
 
 const setup = (extra?: (url: string, method: string) => { status?: number; data?: unknown } | undefined) =>
   mockApi((c) => {

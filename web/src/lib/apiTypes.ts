@@ -45,6 +45,150 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/clients": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Clients
+         * @description Daftar klien.
+         */
+        get: operations["list_clients_api_v1_clients_get"];
+        put?: never;
+        /**
+         * Create Client
+         * @description Tambah klien.
+         */
+        post: operations["create_client_api_v1_clients_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/clients/{client_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Update Client
+         * @description Ubah klien (sebagian).
+         */
+        put: operations["update_client_api_v1_clients__client_id__put"];
+        post?: never;
+        /**
+         * Delete Client
+         * @description Hapus (arsip) klien yang belum dipakai.
+         */
+        delete: operations["delete_client_api_v1_clients__client_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Projects
+         * @description Daftar proyek.
+         */
+        get: operations["list_projects_api_v1_projects_get"];
+        put?: never;
+        /**
+         * Create Project
+         * @description Tambah proyek.
+         */
+        post: operations["create_project_api_v1_projects_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{project_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Update Project
+         * @description Ubah proyek (sebagian).
+         */
+        put: operations["update_project_api_v1_projects__project_id__put"];
+        post?: never;
+        /**
+         * Delete Project
+         * @description Hapus (arsip) proyek yang belum dipakai.
+         */
+        delete: operations["delete_project_api_v1_projects__project_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/job-positions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Job Positions
+         * @description Daftar jabatan.
+         */
+        get: operations["list_job_positions_api_v1_job_positions_get"];
+        put?: never;
+        /**
+         * Create Job Position
+         * @description Tambah jabatan.
+         */
+        post: operations["create_job_position_api_v1_job_positions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/job-positions/{position_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Update Job Position
+         * @description Ubah jabatan (sebagian).
+         */
+        put: operations["update_job_position_api_v1_job_positions__position_id__put"];
+        post?: never;
+        /**
+         * Delete Job Position
+         * @description Hapus (arsip) jabatan yang belum dipakai.
+         */
+        delete: operations["delete_job_position_api_v1_job_positions__position_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/work-plans/form-options": {
         parameters: {
             query?: never;
@@ -1388,14 +1532,14 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get Employees
-         * @description Mendapatkan daftar karyawan di organisasi pengguna dengan paginasi dan pencarian.
+         * List Employees
+         * @description Direktori karyawan (cari nama / no. karyawan / email; saring status, divisi, kantor, jabatan).
          */
-        get: operations["get_employees_api_v1_employees_get"];
+        get: operations["list_employees_api_v1_employees_get"];
         put?: never;
         /**
          * Create Employee
-         * @description Menambahkan data karyawan baru ke dalam organisasi.
+         * @description Karyawan baru (akun login dibuat terpisah lewat /employees/{id}/account).
          */
         post: operations["create_employee_api_v1_employees_post"];
         delete?: never;
@@ -1404,7 +1548,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/employees/{emp_id}": {
+    "/api/v1/employees/{employee_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -1413,14 +1557,14 @@ export interface paths {
         };
         /**
          * Get Employee
-         * @description Detail satu karyawan berdasarkan ID.
+         * @description Detail karyawan + alamat.
          */
-        get: operations["get_employee_api_v1_employees__emp_id__get"];
+        get: operations["get_employee_api_v1_employees__employee_id__get"];
         /**
          * Update Employee
-         * @description Mengubah data pribadi karyawan.
+         * @description Ubah data karyawan (sebagian).
          */
-        put: operations["update_employee_api_v1_employees__emp_id__put"];
+        put: operations["update_employee_api_v1_employees__employee_id__put"];
         post?: never;
         delete?: never;
         options?: never;
@@ -1428,31 +1572,51 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/employees/{emp_id}/assignments": {
+    "/api/v1/employees/{employee_id}/addresses": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /**
-         * List Assignments
-         * @description Riwayat jabatan/penempatan karyawan.
-         */
-        get: operations["list_assignments_api_v1_employees__emp_id__assignments_get"];
+        get?: never;
         put?: never;
         /**
-         * Add Assignment
-         * @description Mutasi atau promosi jabatan baru bagi karyawan.
+         * Add Address
+         * @description Tambah alamat karyawan.
          */
-        post: operations["add_assignment_api_v1_employees__emp_id__assignments_post"];
+        post: operations["add_address_api_v1_employees__employee_id__addresses_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/employees/{emp_id}/archive": {
+    "/api/v1/employees/{employee_id}/addresses/{address_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Update Address
+         * @description Ubah alamat karyawan.
+         */
+        put: operations["update_address_api_v1_employees__employee_id__addresses__address_id__put"];
+        post?: never;
+        /**
+         * Delete Address
+         * @description Hapus alamat karyawan.
+         */
+        delete: operations["delete_address_api_v1_employees__employee_id__addresses__address_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/employees/{employee_id}/archive": {
         parameters: {
             query?: never;
             header?: never;
@@ -1463,16 +1627,16 @@ export interface paths {
         put?: never;
         /**
          * Archive Employee
-         * @description Pengarsipan (penghapusan lunak) karyawan yang telah dinonaktifkan.
+         * @description Arsipkan karyawan yang sudah selesai offboarding.
          */
-        post: operations["archive_employee_api_v1_employees__emp_id__archive_post"];
+        post: operations["archive_employee_api_v1_employees__employee_id__archive_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/employees/{emp_id}/restore": {
+    "/api/v1/employees/{employee_id}/restore": {
         parameters: {
             query?: never;
             header?: never;
@@ -1483,78 +1647,10 @@ export interface paths {
         put?: never;
         /**
          * Restore Employee
-         * @description Memulihkan karyawan terhapus sebagai nonaktif.
+         * @description Batalkan arsip (status tetap selesai bekerja).
          */
-        post: operations["restore_employee_api_v1_employees__emp_id__restore_post"];
+        post: operations["restore_employee_api_v1_employees__employee_id__restore_post"];
         delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/employees/{emp_id}/conflicts": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Check Conflicts
-         * @description Mengecek konflik jadwal penugasan karyawan.
-         */
-        get: operations["check_conflicts_api_v1_employees__emp_id__conflicts_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/employees/{emp_id}/emergency-contacts": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List Emergency Contacts
-         * @description Daftar kontak darurat karyawan (M2-01).
-         */
-        get: operations["list_emergency_contacts_api_v1_employees__emp_id__emergency_contacts_get"];
-        put?: never;
-        /**
-         * Create Emergency Contact
-         * @description Menambahkan kontak darurat baru.
-         */
-        post: operations["create_emergency_contact_api_v1_employees__emp_id__emergency_contacts_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/employees/{emp_id}/emergency-contacts/{contact_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /**
-         * Update Emergency Contact
-         * @description Mengubah kontak darurat.
-         */
-        put: operations["update_emergency_contact_api_v1_employees__emp_id__emergency_contacts__contact_id__put"];
-        post?: never;
-        /**
-         * Delete Emergency Contact
-         * @description Menghapus kontak darurat.
-         */
-        delete: operations["delete_emergency_contact_api_v1_employees__emp_id__emergency_contacts__contact_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1664,7 +1760,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/sites": {
+    "/api/v1/offices": {
         parameters: {
             query?: never;
             header?: never;
@@ -1672,23 +1768,23 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get Sites
+         * Get Offices
          * @description Daftar kantor aktif (GET). Terbuka untuk semua pengguna; `can_manage` menandai hak kelola.
          */
-        get: operations["get_sites_api_v1_sites_get"];
+        get: operations["get_offices_api_v1_offices_get"];
         put?: never;
         /**
-         * Create Site
-         * @description Membuat kantor baru (POST) — izin manage:sites.
+         * Create Office
+         * @description Membuat kantor baru (POST) — izin manage:offices.
          */
-        post: operations["create_site_api_v1_sites_post"];
+        post: operations["create_office_api_v1_offices_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/sites/{site_id}": {
+    "/api/v1/offices/{office_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -1697,22 +1793,22 @@ export interface paths {
         };
         get?: never;
         /**
-         * Update Site
-         * @description Mengubah data kantor (PUT, sebagian) — izin manage:sites.
+         * Update Office
+         * @description Mengubah data kantor (PUT, sebagian) — izin manage:offices.
          */
-        put: operations["update_site_api_v1_sites__site_id__put"];
+        put: operations["update_office_api_v1_offices__office_id__put"];
         post?: never;
         /**
-         * Delete Site
-         * @description Menghapus (arsip) kantor cabang (DELETE) — izin manage:sites.
+         * Delete Office
+         * @description Menghapus (arsip) kantor cabang (DELETE) — izin manage:offices.
          */
-        delete: operations["delete_site_api_v1_sites__site_id__delete"];
+        delete: operations["delete_office_api_v1_offices__office_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/units": {
+    "/api/v1/divisions": {
         parameters: {
             query?: never;
             header?: never;
@@ -1720,23 +1816,23 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * List Units
+         * List Divisions
          * @description Daftar divisi aktif beserta OM, PM, dan jumlah timnya (GET).
          */
-        get: operations["list_units_api_v1_units_get"];
+        get: operations["list_divisions_api_v1_divisions_get"];
         put?: never;
         /**
-         * Create Unit
+         * Create Division
          * @description Membuat divisi baru dengan OM & PM-nya (POST) — izin manage:divisions.
          */
-        post: operations["create_unit_api_v1_units_post"];
+        post: operations["create_division_api_v1_divisions_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/units/{unit_id}": {
+    "/api/v1/divisions/{division_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -1745,16 +1841,16 @@ export interface paths {
         };
         get?: never;
         /**
-         * Update Unit
+         * Update Division
          * @description Mengubah divisi (PUT, sebagian) — izin manage:divisions.
          */
-        put: operations["update_unit_api_v1_units__unit_id__put"];
+        put: operations["update_division_api_v1_divisions__division_id__put"];
         post?: never;
         /**
-         * Delete Unit
+         * Delete Division
          * @description Menghapus (arsip) divisi yang tidak lagi dipakai (DELETE) — izin manage:divisions.
          */
-        delete: operations["delete_unit_api_v1_units__unit_id__delete"];
+        delete: operations["delete_division_api_v1_divisions__division_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2076,7 +2172,7 @@ export interface paths {
         };
         /**
          * Meal Allowance Recap
-         * @description Rekap uang makan per karyawan (dalam/luar kota) dari absensi sah, untuk Finance.
+         * @description Rekap uang makan per karyawan dari absensi sah: pengelola absensi semua divisi, PM divisinya.
          */
         get: operations["meal_allowance_recap_api_v1_attendance_meal_allowance_get"];
         put?: never;
@@ -2877,6 +2973,29 @@ export interface components {
             /** Temporary Password */
             temporary_password: string;
         };
+        /** AddressIn */
+        AddressIn: {
+            /** Address Line */
+            address_line: string;
+            /** City */
+            city: string;
+            /** Postal Code */
+            postal_code: string;
+        };
+        /** AddressOut */
+        AddressOut: {
+            /** Address Line */
+            address_line: string;
+            /** City */
+            city: string;
+            /** Postal Code */
+            postal_code: string;
+            /**
+             * Address Id
+             * Format: uuid
+             */
+            address_id: string;
+        };
         /**
          * AppUpdateOut
          * @description Jawaban pemeriksaan pembaruan untuk satu HP.
@@ -3456,6 +3575,59 @@ export interface components {
             /** Handover File Id */
             handover_file_id?: string | null;
         };
+        /** ClientCreate */
+        ClientCreate: {
+            /** Client Code */
+            client_code: string;
+            /** Name */
+            name: string;
+            /** Pic Name */
+            pic_name?: string | null;
+            /** Pic Phone */
+            pic_phone?: string | null;
+            /** Address */
+            address?: string | null;
+        };
+        /** ClientOut */
+        ClientOut: {
+            /**
+             * Client Id
+             * Format: uuid
+             */
+            client_id: string;
+            /** Client Code */
+            client_code: string;
+            /** Name */
+            name: string;
+            /** Pic Name */
+            pic_name?: string | null;
+            /** Pic Phone */
+            pic_phone?: string | null;
+            /** Address */
+            address?: string | null;
+            /** Status */
+            status: boolean;
+            /**
+             * Project Count
+             * @default 0
+             */
+            project_count: number;
+        };
+        /** ClientUpdate */
+        ClientUpdate: {
+            /** Client Code */
+            client_code?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Pic Name */
+            pic_name?: string | null;
+            /** Pic Phone */
+            pic_phone?: string | null;
+            /** Address */
+            address?: string | null;
+            /** Status */
+            status?: boolean | null;
+        };
         /** CompleteDueResult */
         CompleteDueResult: {
             /** Completed */
@@ -3534,6 +3706,8 @@ export interface components {
              * Format: uuid
              */
             team_id: string;
+            /** Project Id */
+            project_id?: string | null;
             /**
              * Work Date
              * Format: date
@@ -3575,6 +3749,10 @@ export interface components {
              * Format: uuid
              */
             division_id: string;
+            /** Project Id */
+            project_id?: string | null;
+            /** Project Title */
+            project_title?: string | null;
             /** Division Name */
             division_name: string;
             /**
@@ -3663,6 +3841,10 @@ export interface components {
              * Format: uuid
              */
             division_id: string;
+            /** Project Id */
+            project_id?: string | null;
+            /** Project Title */
+            project_title?: string | null;
             /** Division Name */
             division_name: string;
             /**
@@ -3733,6 +3915,8 @@ export interface components {
         DailyPlanUpdate: {
             /** Team Id */
             team_id?: string | null;
+            /** Project Id */
+            project_id?: string | null;
             /** Work Date */
             work_date?: string | null;
             /** Site Name */
@@ -3841,6 +4025,24 @@ export interface components {
             /** Public Key */
             public_key: string;
         };
+        /**
+         * DivisionCreate
+         * @description Divisi baru.
+         */
+        DivisionCreate: {
+            /** Name */
+            name: string;
+            /**
+             * Om Id
+             * Format: uuid
+             */
+            om_id: string;
+            /**
+             * Pm Id
+             * Format: uuid
+             */
+            pm_id: string;
+        };
         /** DivisionOption */
         DivisionOption: {
             /**
@@ -3851,6 +4053,53 @@ export interface components {
             /** Name */
             name: string;
         };
+        /**
+         * DivisionOut
+         * @description Divisi aktif beserta OM & PM-nya.
+         */
+        DivisionOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Code */
+            code: string;
+            /** Name */
+            name: string;
+            /**
+             * Status
+             * @default true
+             */
+            status: boolean;
+            /** Om Id */
+            om_id?: string | null;
+            /** Pm Id */
+            pm_id?: string | null;
+            /** Om Name */
+            om_name?: string | null;
+            /** Pm Name */
+            pm_name?: string | null;
+            /**
+             * Team Count
+             * @default 0
+             */
+            team_count: number;
+        };
+        /**
+         * DivisionUpdate
+         * @description Perubahan sebagian divisi; field kosong tidak diubah.
+         */
+        DivisionUpdate: {
+            /** Name */
+            name?: string | null;
+            /** Om Id */
+            om_id?: string | null;
+            /** Pm Id */
+            pm_id?: string | null;
+            /** Status */
+            status?: boolean | null;
+        };
         /** DocumentListResponse */
         DocumentListResponse: {
             /** Items */
@@ -3858,179 +4107,109 @@ export interface components {
             /** Total */
             total: number;
         };
-        /**
-         * EmergencyContactBase
-         * @description Base schema for an employee emergency contact.
-         */
-        EmergencyContactBase: {
-            /** Name */
-            name: string;
-            /** Relationship */
-            relationship: string;
-            /** Phone */
-            phone: string;
-            /** Address */
-            address?: string | null;
-            /**
-             * Is Primary
-             * @default true
-             */
-            is_primary: boolean;
-        };
-        /**
-         * EmergencyContactCreate
-         * @description Schema for adding a new emergency contact.
-         */
-        EmergencyContactCreate: {
-            /** Name */
-            name: string;
-            /** Relationship */
-            relationship: string;
-            /** Phone */
-            phone: string;
-            /** Address */
-            address?: string | null;
-            /**
-             * Is Primary
-             * @default true
-             */
-            is_primary: boolean;
-        };
-        /**
-         * EmergencyContactResponse
-         * @description Schema for returning an emergency contact response.
-         */
-        EmergencyContactResponse: {
-            /** Name */
-            name: string;
-            /** Relationship */
-            relationship: string;
-            /** Phone */
-            phone: string;
-            /** Address */
-            address?: string | null;
-            /**
-             * Is Primary
-             * @default true
-             */
-            is_primary: boolean;
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /**
-             * Employee Id
-             * Format: uuid
-             */
-            employee_id: string;
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
-            /**
-             * Updated At
-             * Format: date-time
-             */
-            updated_at: string;
-        };
-        /**
-         * EmergencyContactUpdate
-         * @description Schema for updating an existing emergency contact.
-         */
-        EmergencyContactUpdate: {
-            /** Name */
-            name?: string | null;
-            /** Relationship */
-            relationship?: string | null;
-            /** Phone */
-            phone?: string | null;
-            /** Address */
-            address?: string | null;
-            /** Is Primary */
-            is_primary?: boolean | null;
-        };
-        /**
-         * EmployeeAssignmentCreate
-         * @description Schema for assigning an employee.
-         */
-        EmployeeAssignmentCreate: {
-            /** Position */
-            position: string;
-            /** Unit Id */
-            unit_id?: string | null;
-            /**
-             * Valid From
-             * Format: date
-             */
-            valid_from: string;
-        };
-        /**
-         * EmployeeAssignmentResponse
-         * @description Schema for responding with an employee assignment's details.
-         */
-        EmployeeAssignmentResponse: {
-            /** Position */
-            position: string;
-            /** Unit Id */
-            unit_id?: string | null;
-            /**
-             * Valid From
-             * Format: date
-             */
-            valid_from: string;
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /**
-             * Employee Id
-             * Format: uuid
-             */
-            employee_id: string;
-            /** Valid To */
-            valid_to?: string | null;
-            /** Unit Name */
-            unit_name?: string | null;
-        };
-        /**
-         * EmployeeCreate
-         * @description Schema for creating a new employee.
-         */
+        /** EmployeeCreate */
         EmployeeCreate: {
             /** Employee No */
             employee_no: string;
             /** Full Name */
             full_name: string;
-            /** Position */
-            position: string;
-            /** Unit Id */
-            unit_id?: string | null;
-            /** Email */
-            email?: string | null;
-            /** Phone */
-            phone?: string | null;
+            /**
+             * Office Id
+             * Format: uuid
+             */
+            office_id: string;
+            /** Division Id */
+            division_id?: string | null;
+            /** Position Id */
+            position_id?: string | null;
             /**
              * Join Date
              * Format: date
              */
             join_date: string;
-            /** Birth Date */
-            birth_date?: string | null;
-            /** Address */
-            address?: string | null;
+            /** Pkwt End Date */
+            pkwt_end_date?: string | null;
+            /** Photo File Id */
+            photo_file_id?: string | null;
+            address?: components["schemas"]["AddressIn"] | null;
+        };
+        /** EmployeeDetail */
+        EmployeeDetail: {
+            /**
+             * Employee Id
+             * Format: uuid
+             */
+            employee_id: string;
+            /** Employee No */
+            employee_no: string;
+            /** Full Name */
+            full_name: string;
+            /**
+             * Office Id
+             * Format: uuid
+             */
+            office_id: string;
+            /** Office Name */
+            office_name: string;
+            /** Division Id */
+            division_id?: string | null;
+            /** Division Name */
+            division_name?: string | null;
+            /** Position Id */
+            position_id?: string | null;
+            /** Position Code */
+            position_code?: string | null;
+            /** Position Name */
+            position_name?: string | null;
+            /**
+             * Join Date
+             * Format: date
+             */
+            join_date: string;
+            /** Pkwt End Date */
+            pkwt_end_date?: string | null;
             /** Photo File Id */
             photo_file_id?: string | null;
             /**
-             * Attendance Mode
-             * @default FIELD
+             * Face Enrolled
+             * @default false
+             */
+            face_enrolled: boolean;
+            /**
+             * Offboarding Status
              * @enum {string}
              */
-            attendance_mode: "FIELD" | "OFFICE";
-            /** Emergency Contacts */
-            emergency_contacts?: components["schemas"]["EmergencyContactBase"][] | null;
+            offboarding_status: "active" | "in_process" | "offboarded";
+            /**
+             * Archived
+             * @default false
+             */
+            archived: boolean;
+            /** User Id */
+            user_id?: string | null;
+            /** Email */
+            email?: string | null;
+            /** System Role */
+            system_role?: string | null;
+            /** Account Active */
+            account_active?: boolean | null;
+            /** City */
+            city?: string | null;
+            /**
+             * Create At
+             * Format: date-time
+             */
+            create_at: string;
+            /**
+             * Update At
+             * Format: date-time
+             */
+            update_at: string;
+            /**
+             * Addresses
+             * @default []
+             */
+            addresses: components["schemas"]["AddressOut"][];
         };
         /**
          * EmployeeDocumentCreate
@@ -4083,13 +4262,10 @@ export interface components {
              */
             created_at: string;
         };
-        /**
-         * EmployeeListResponse
-         * @description Schema for paginated employee lists.
-         */
+        /** EmployeeListResponse */
         EmployeeListResponse: {
             /** Items */
-            items: components["schemas"]["EmployeeResponse"][];
+            items: components["schemas"]["EmployeeOut"][];
             /** Total */
             total: number;
             /**
@@ -4099,88 +4275,104 @@ export interface components {
             page: number;
             /**
              * Size
-             * @default 50
+             * @default 20
              */
             size: number;
         };
-        /**
-         * EmployeeResponse
-         * @description Schema for an employee response object.
-         */
-        EmployeeResponse: {
+        /** EmployeeOut */
+        EmployeeOut: {
+            /**
+             * Employee Id
+             * Format: uuid
+             */
+            employee_id: string;
             /** Employee No */
             employee_no: string;
             /** Full Name */
             full_name: string;
-            /** Position */
-            position: string;
-            /** Unit Id */
-            unit_id?: string | null;
-            /** Email */
-            email?: string | null;
-            /** Phone */
-            phone?: string | null;
+            /**
+             * Office Id
+             * Format: uuid
+             */
+            office_id: string;
+            /** Office Name */
+            office_name: string;
+            /** Division Id */
+            division_id?: string | null;
+            /** Division Name */
+            division_name?: string | null;
+            /** Position Id */
+            position_id?: string | null;
+            /** Position Code */
+            position_code?: string | null;
+            /** Position Name */
+            position_name?: string | null;
             /**
              * Join Date
              * Format: date
              */
             join_date: string;
-            /** Birth Date */
-            birth_date?: string | null;
-            /** Address */
-            address?: string | null;
+            /** Pkwt End Date */
+            pkwt_end_date?: string | null;
             /** Photo File Id */
             photo_file_id?: string | null;
             /**
-             * Id
-             * Format: uuid
+             * Face Enrolled
+             * @default false
              */
-            id: string;
+            face_enrolled: boolean;
             /**
-             * Attendance Mode
-             * @default FIELD
+             * Offboarding Status
              * @enum {string}
              */
-            attendance_mode: "FIELD" | "OFFICE";
-            /** Is Active */
-            is_active: boolean;
-            /** Offboarded At */
-            offboarded_at?: string | null;
-            /** Offboarding Reason */
-            offboarding_reason?: string | null;
+            offboarding_status: "active" | "in_process" | "offboarded";
+            /**
+             * Archived
+             * @default false
+             */
+            archived: boolean;
             /** User Id */
             user_id?: string | null;
-            /** Created At */
-            created_at?: string | null;
-            /** Updated At */
-            updated_at?: string | null;
+            /** Email */
+            email?: string | null;
+            /** System Role */
+            system_role?: string | null;
+            /** Account Active */
+            account_active?: boolean | null;
+            /** City */
+            city?: string | null;
             /**
-             * Emergency Contacts
-             * @default []
+             * Create At
+             * Format: date-time
              */
-            emergency_contacts: components["schemas"]["EmergencyContactResponse"][];
+            create_at: string;
+            /**
+             * Update At
+             * Format: date-time
+             */
+            update_at: string;
         };
         /**
          * EmployeeUpdate
-         * @description Schema for updating employee details.
+         * @description Sebagian; kirim `null` untuk mengosongkan divisi/jabatan/akhir PKWT/foto.
          */
         EmployeeUpdate: {
+            /** Employee No */
+            employee_no?: string | null;
             /** Full Name */
             full_name?: string | null;
-            /** Attendance Mode */
-            attendance_mode?: ("FIELD" | "OFFICE") | null;
-            /** Email */
-            email?: string | null;
-            /** Phone */
-            phone?: string | null;
-            /** Birth Date */
-            birth_date?: string | null;
-            /** Address */
-            address?: string | null;
+            /** Office Id */
+            office_id?: string | null;
+            /** Division Id */
+            division_id?: string | null;
+            /** Position Id */
+            position_id?: string | null;
+            /** Join Date */
+            join_date?: string | null;
+            /** Pkwt End Date */
+            pkwt_end_date?: string | null;
             /** Photo File Id */
             photo_file_id?: string | null;
-            /** Is Active */
-            is_active?: boolean | null;
         };
         /** EnrollResponse */
         EnrollResponse: {
@@ -4455,6 +4647,73 @@ export interface components {
             file_id: string;
             /** Requirement Id */
             requirement_id?: string | null;
+        };
+        /** JobPositionCreate */
+        JobPositionCreate: {
+            /** Code */
+            code: string;
+            /** Name */
+            name: string;
+            /** Division Id */
+            division_id?: string | null;
+            /**
+             * Grade Level
+             * @default 1
+             */
+            grade_level: number;
+            /**
+             * Daily Allowance
+             * @default 0
+             */
+            daily_allowance: number | string;
+            /** Description */
+            description?: string | null;
+        };
+        /** JobPositionOut */
+        JobPositionOut: {
+            /**
+             * Position Id
+             * Format: uuid
+             */
+            position_id: string;
+            /** Division Id */
+            division_id?: string | null;
+            /** Division Name */
+            division_name?: string | null;
+            /** Code */
+            code: string;
+            /** Name */
+            name: string;
+            /** Grade Level */
+            grade_level: number;
+            /** Daily Allowance */
+            daily_allowance: string;
+            /** Description */
+            description?: string | null;
+            /** Status */
+            status: boolean;
+            /**
+             * Employee Count
+             * @default 0
+             */
+            employee_count: number;
+        };
+        /** JobPositionUpdate */
+        JobPositionUpdate: {
+            /** Code */
+            code?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Division Id */
+            division_id?: string | null;
+            /** Grade Level */
+            grade_level?: number | null;
+            /** Daily Allowance */
+            daily_allowance?: number | string | null;
+            /** Description */
+            description?: string | null;
+            /** Status */
+            status?: boolean | null;
         };
         /**
          * LoanCreate
@@ -4888,6 +5147,139 @@ export interface components {
          * @enum {string}
          */
         OffboardingStatus: "SUBMITTED" | "CLEARANCE_PENDING" | "APPROVED" | "COMPLETED";
+        /**
+         * OfficeCreate
+         * @description Kantor baru (pusat/cabang).
+         */
+        OfficeCreate: {
+            /** Name */
+            name: string;
+            /** Address */
+            address?: string | null;
+            location: components["schemas"]["GeoPoint"];
+            /**
+             * Radius M
+             * @default 100
+             */
+            radius_m: number;
+            /**
+             * City Boundary Radius M
+             * @default 15000
+             */
+            city_boundary_radius_m: number;
+            /**
+             * Clock In Time
+             * Format: time
+             * @default 07:00:00
+             */
+            clock_in_time: string;
+            /**
+             * Clock Out Time
+             * Format: time
+             * @default 16:00:00
+             */
+            clock_out_time: string;
+            /**
+             * In City Meal Rate
+             * @default 35000.00
+             */
+            in_city_meal_rate: number | string;
+            /**
+             * Out City Meal Rate
+             * @default 65000.00
+             */
+            out_city_meal_rate: number | string;
+            /**
+             * Is Main Office
+             * @default false
+             */
+            is_main_office: boolean;
+        };
+        /**
+         * OfficeResponse
+         * @description Kantor sebagaimana tersimpan.
+         */
+        OfficeResponse: {
+            /** Name */
+            name: string;
+            /** Address */
+            address?: string | null;
+            location: components["schemas"]["GeoPoint"];
+            /**
+             * Radius M
+             * @default 100
+             */
+            radius_m: number;
+            /**
+             * City Boundary Radius M
+             * @default 15000
+             */
+            city_boundary_radius_m: number;
+            /**
+             * Clock In Time
+             * Format: time
+             * @default 07:00:00
+             */
+            clock_in_time: string;
+            /**
+             * Clock Out Time
+             * Format: time
+             * @default 16:00:00
+             */
+            clock_out_time: string;
+            /**
+             * In City Meal Rate
+             * @default 35000.00
+             */
+            in_city_meal_rate: string;
+            /**
+             * Out City Meal Rate
+             * @default 65000.00
+             */
+            out_city_meal_rate: string;
+            /**
+             * Is Main Office
+             * @default false
+             */
+            is_main_office: boolean;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Unit Id */
+            unit_id?: string | null;
+            /**
+             * Can Manage
+             * @default false
+             */
+            can_manage: boolean;
+        };
+        /**
+         * OfficeUpdate
+         * @description Perubahan sebagian data kantor; field kosong tidak diubah.
+         */
+        OfficeUpdate: {
+            /** Name */
+            name?: string | null;
+            /** Address */
+            address?: string | null;
+            location?: components["schemas"]["GeoPoint"] | null;
+            /** Radius M */
+            radius_m?: number | null;
+            /** City Boundary Radius M */
+            city_boundary_radius_m?: number | null;
+            /** Clock In Time */
+            clock_in_time?: string | null;
+            /** Clock Out Time */
+            clock_out_time?: string | null;
+            /** In City Meal Rate */
+            in_city_meal_rate?: number | string | null;
+            /** Out City Meal Rate */
+            out_city_meal_rate?: number | string | null;
+            /** Is Main Office */
+            is_main_office?: boolean | null;
+        };
         /**
          * OfflineAttendanceEvent
          * @description Schema representing a signed offline attendance event.
@@ -5335,6 +5727,148 @@ export interface components {
             /** Notes */
             notes?: string | null;
         };
+        /** ProjectCreate */
+        ProjectCreate: {
+            /**
+             * Client Id
+             * Format: uuid
+             */
+            client_id: string;
+            /**
+             * Office Id
+             * Format: uuid
+             */
+            office_id: string;
+            /**
+             * Division Id
+             * Format: uuid
+             */
+            division_id: string;
+            /** Pm Id */
+            pm_id?: string | null;
+            /** Spk Number */
+            spk_number: string;
+            /** Project Title */
+            project_title: string;
+            /**
+             * Total Target Qty
+             * @default 1
+             */
+            total_target_qty: number | string;
+            /**
+             * Unit Measure
+             * @default Unit
+             */
+            unit_measure: string;
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /**
+             * End Date
+             * Format: date
+             */
+            end_date: string;
+            /**
+             * Status
+             * @default ONGOING
+             * @enum {string}
+             */
+            status: "DRAFT" | "ONGOING" | "COMPLETED" | "CANCELLED";
+        };
+        /** ProjectOut */
+        ProjectOut: {
+            /**
+             * Project Id
+             * Format: uuid
+             */
+            project_id: string;
+            /**
+             * Client Id
+             * Format: uuid
+             */
+            client_id: string;
+            /** Client Name */
+            client_name: string;
+            /**
+             * Office Id
+             * Format: uuid
+             */
+            office_id: string;
+            /** Office Name */
+            office_name: string;
+            /**
+             * Division Id
+             * Format: uuid
+             */
+            division_id: string;
+            /** Division Name */
+            division_name: string;
+            /**
+             * Pm Id
+             * Format: uuid
+             */
+            pm_id: string;
+            /** Pm Name */
+            pm_name: string;
+            /** Spk Number */
+            spk_number: string;
+            /** Project Title */
+            project_title: string;
+            /** Total Target Qty */
+            total_target_qty: string;
+            /** Unit Measure */
+            unit_measure: string;
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /**
+             * End Date
+             * Format: date
+             */
+            end_date: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "DRAFT" | "ONGOING" | "COMPLETED" | "CANCELLED";
+            /**
+             * Daily Plan Count
+             * @default 0
+             */
+            daily_plan_count: number;
+            /**
+             * Order Count
+             * @default 0
+             */
+            order_count: number;
+        };
+        /** ProjectUpdate */
+        ProjectUpdate: {
+            /** Client Id */
+            client_id?: string | null;
+            /** Office Id */
+            office_id?: string | null;
+            /** Pm Id */
+            pm_id?: string | null;
+            /** Spk Number */
+            spk_number?: string | null;
+            /** Project Title */
+            project_title?: string | null;
+            /** Total Target Qty */
+            total_target_qty?: number | string | null;
+            /** Unit Measure */
+            unit_measure?: string | null;
+            /** Start Date */
+            start_date?: string | null;
+            /** End Date */
+            end_date?: string | null;
+            /** Status */
+            status?: ("DRAFT" | "ONGOING" | "COMPLETED" | "CANCELLED") | null;
+        };
         /** RejectIn */
         RejectIn: {
             /** Reason */
@@ -5387,139 +5921,6 @@ export interface components {
             delay_reason: string;
             /** Completed Qty */
             completed_qty: number | string;
-        };
-        /**
-         * SiteCreate
-         * @description Kantor baru (pusat/cabang).
-         */
-        SiteCreate: {
-            /** Name */
-            name: string;
-            /** Address */
-            address?: string | null;
-            location: components["schemas"]["GeoPoint"];
-            /**
-             * Radius M
-             * @default 100
-             */
-            radius_m: number;
-            /**
-             * City Boundary Radius M
-             * @default 15000
-             */
-            city_boundary_radius_m: number;
-            /**
-             * Clock In Time
-             * Format: time
-             * @default 07:00:00
-             */
-            clock_in_time: string;
-            /**
-             * Clock Out Time
-             * Format: time
-             * @default 16:00:00
-             */
-            clock_out_time: string;
-            /**
-             * In City Meal Rate
-             * @default 35000.00
-             */
-            in_city_meal_rate: number | string;
-            /**
-             * Out City Meal Rate
-             * @default 65000.00
-             */
-            out_city_meal_rate: number | string;
-            /**
-             * Is Main Office
-             * @default false
-             */
-            is_main_office: boolean;
-        };
-        /**
-         * SiteResponse
-         * @description Kantor sebagaimana tersimpan.
-         */
-        SiteResponse: {
-            /** Name */
-            name: string;
-            /** Address */
-            address?: string | null;
-            location: components["schemas"]["GeoPoint"];
-            /**
-             * Radius M
-             * @default 100
-             */
-            radius_m: number;
-            /**
-             * City Boundary Radius M
-             * @default 15000
-             */
-            city_boundary_radius_m: number;
-            /**
-             * Clock In Time
-             * Format: time
-             * @default 07:00:00
-             */
-            clock_in_time: string;
-            /**
-             * Clock Out Time
-             * Format: time
-             * @default 16:00:00
-             */
-            clock_out_time: string;
-            /**
-             * In City Meal Rate
-             * @default 35000.00
-             */
-            in_city_meal_rate: string;
-            /**
-             * Out City Meal Rate
-             * @default 65000.00
-             */
-            out_city_meal_rate: string;
-            /**
-             * Is Main Office
-             * @default false
-             */
-            is_main_office: boolean;
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /** Unit Id */
-            unit_id?: string | null;
-            /**
-             * Can Manage
-             * @default false
-             */
-            can_manage: boolean;
-        };
-        /**
-         * SiteUpdate
-         * @description Perubahan sebagian data kantor; field kosong tidak diubah.
-         */
-        SiteUpdate: {
-            /** Name */
-            name?: string | null;
-            /** Address */
-            address?: string | null;
-            location?: components["schemas"]["GeoPoint"] | null;
-            /** Radius M */
-            radius_m?: number | null;
-            /** City Boundary Radius M */
-            city_boundary_radius_m?: number | null;
-            /** Clock In Time */
-            clock_in_time?: string | null;
-            /** Clock Out Time */
-            clock_out_time?: string | null;
-            /** In City Meal Rate */
-            in_city_meal_rate?: number | string | null;
-            /** Out City Meal Rate */
-            out_city_meal_rate?: number | string | null;
-            /** Is Main Office */
-            is_main_office?: boolean | null;
         };
         /**
          * SyncBomFromWorkTypesIn
@@ -5785,71 +6186,6 @@ export interface components {
             tool_code?: string | null;
             /** Photo File Id */
             photo_file_id?: string | null;
-        };
-        /**
-         * UnitCreate
-         * @description Divisi baru.
-         */
-        UnitCreate: {
-            /** Name */
-            name: string;
-            /**
-             * Om Id
-             * Format: uuid
-             */
-            om_id: string;
-            /**
-             * Pm Id
-             * Format: uuid
-             */
-            pm_id: string;
-        };
-        /**
-         * UnitOut
-         * @description Divisi aktif beserta OM & PM-nya.
-         */
-        UnitOut: {
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /** Code */
-            code: string;
-            /** Name */
-            name: string;
-            /**
-             * Status
-             * @default true
-             */
-            status: boolean;
-            /** Om Id */
-            om_id?: string | null;
-            /** Pm Id */
-            pm_id?: string | null;
-            /** Om Name */
-            om_name?: string | null;
-            /** Pm Name */
-            pm_name?: string | null;
-            /**
-             * Team Count
-             * @default 0
-             */
-            team_count: number;
-        };
-        /**
-         * UnitUpdate
-         * @description Perubahan sebagian divisi; field kosong tidak diubah.
-         */
-        UnitUpdate: {
-            /** Name */
-            name?: string | null;
-            /** Om Id */
-            om_id?: string | null;
-            /** Pm Id */
-            pm_id?: string | null;
-            /** Status */
-            status?: boolean | null;
         };
         /** ValidationError */
         ValidationError: {
@@ -6126,16 +6462,18 @@ export interface components {
             division_id: string;
             /** Pm Id */
             pm_id?: string | null;
+            /** Project Id */
+            project_id?: string | null;
             /**
              * Client Name
-             * @description Nama Klien/Perusahaan (misal: Pertamina)
+             * @description Nama klien (kosong = dari proyek)
              */
-            client_name: string;
+            client_name?: string | null;
             /**
              * Project Title
-             * @description Judul Pekerjaan/Proyek
+             * @description Judul (kosong = dari proyek)
              */
-            project_title: string;
+            project_title?: string | null;
             /**
              * Order Number
              * @description Nomor SPK / PO / WO
@@ -6194,6 +6532,8 @@ export interface components {
              * Format: uuid
              */
             completion_id: string;
+            /** Project Id */
+            project_id?: string | null;
             /** Division Id */
             division_id?: string | null;
             /** Division Name */
@@ -6486,6 +6826,407 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+        };
+    };
+    list_clients_api_v1_clients_get: {
+        parameters: {
+            query?: {
+                q?: string | null;
+                active_only?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClientOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_client_api_v1_clients_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClientCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClientOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_client_api_v1_clients__client_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                client_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClientUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClientOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_client_api_v1_clients__client_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                client_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_projects_api_v1_projects_get: {
+        parameters: {
+            query?: {
+                division_id?: string | null;
+                client_id?: string | null;
+                status?: string | null;
+                q?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_project_api_v1_projects_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProjectCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_project_api_v1_projects__project_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProjectUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_project_api_v1_projects__project_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_job_positions_api_v1_job_positions_get: {
+        parameters: {
+            query?: {
+                division_id?: string | null;
+                active_only?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobPositionOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_job_position_api_v1_job_positions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["JobPositionCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobPositionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_job_position_api_v1_job_positions__position_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                position_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["JobPositionUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobPositionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_job_position_api_v1_job_positions__position_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                position_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -9194,12 +9935,16 @@ export interface operations {
             };
         };
     };
-    get_employees_api_v1_employees_get: {
+    list_employees_api_v1_employees_get: {
         parameters: {
             query?: {
                 page?: number;
                 size?: number;
-                is_active?: boolean | null;
+                /** @description Kosong = semua yang belum diarsipkan */
+                status?: ("active" | "in_process" | "offboarded" | "archived" | "all") | null;
+                division_id?: string | null;
+                office_id?: string | null;
+                position_id?: string | null;
                 q?: string | null;
             };
             header?: never;
@@ -9247,7 +9992,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["EmployeeResponse"];
+                    "application/json": components["schemas"]["EmployeeDetail"];
                 };
             };
             /** @description Validation Error */
@@ -9261,12 +10006,12 @@ export interface operations {
             };
         };
     };
-    get_employee_api_v1_employees__emp_id__get: {
+    get_employee_api_v1_employees__employee_id__get: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                emp_id: string;
+                employee_id: string;
             };
             cookie?: never;
         };
@@ -9278,7 +10023,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["EmployeeResponse"];
+                    "application/json": components["schemas"]["EmployeeDetail"];
                 };
             };
             /** @description Validation Error */
@@ -9292,12 +10037,12 @@ export interface operations {
             };
         };
     };
-    update_employee_api_v1_employees__emp_id__put: {
+    update_employee_api_v1_employees__employee_id__put: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                emp_id: string;
+                employee_id: string;
             };
             cookie?: never;
         };
@@ -9313,7 +10058,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["EmployeeResponse"];
+                    "application/json": components["schemas"]["EmployeeDetail"];
                 };
             };
             /** @description Validation Error */
@@ -9327,218 +10072,18 @@ export interface operations {
             };
         };
     };
-    list_assignments_api_v1_employees__emp_id__assignments_get: {
+    add_address_api_v1_employees__employee_id__addresses_post: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                emp_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["EmployeeAssignmentResponse"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    add_assignment_api_v1_employees__emp_id__assignments_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                emp_id: string;
+                employee_id: string;
             };
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["EmployeeAssignmentCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["EmployeeAssignmentResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    archive_employee_api_v1_employees__emp_id__archive_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                emp_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    restore_employee_api_v1_employees__emp_id__restore_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                emp_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    check_conflicts_api_v1_employees__emp_id__conflicts_get: {
-        parameters: {
-            query: {
-                start_date: string;
-                end_date: string;
-                exclude_plan?: string | null;
-            };
-            header?: never;
-            path: {
-                emp_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    list_emergency_contacts_api_v1_employees__emp_id__emergency_contacts_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                emp_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["EmergencyContactResponse"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    create_emergency_contact_api_v1_employees__emp_id__emergency_contacts_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                emp_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["EmergencyContactCreate"];
+                "application/json": components["schemas"]["AddressIn"];
             };
         };
         responses: {
@@ -9548,7 +10093,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["EmergencyContactResponse"];
+                    "application/json": components["schemas"]["AddressOut"];
                 };
             };
             /** @description Validation Error */
@@ -9562,19 +10107,19 @@ export interface operations {
             };
         };
     };
-    update_emergency_contact_api_v1_employees__emp_id__emergency_contacts__contact_id__put: {
+    update_address_api_v1_employees__employee_id__addresses__address_id__put: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                emp_id: string;
-                contact_id: string;
+                employee_id: string;
+                address_id: string;
             };
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["EmergencyContactUpdate"];
+                "application/json": components["schemas"]["AddressIn"];
             };
         };
         responses: {
@@ -9584,7 +10129,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["EmergencyContactResponse"];
+                    "application/json": components["schemas"]["AddressOut"];
                 };
             };
             /** @description Validation Error */
@@ -9598,13 +10143,13 @@ export interface operations {
             };
         };
     };
-    delete_emergency_contact_api_v1_employees__emp_id__emergency_contacts__contact_id__delete: {
+    delete_address_api_v1_employees__employee_id__addresses__address_id__delete: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                emp_id: string;
-                contact_id: string;
+                employee_id: string;
+                address_id: string;
             };
             cookie?: never;
         };
@@ -9617,7 +10162,73 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        [key: string]: unknown;
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    archive_employee_api_v1_employees__employee_id__archive_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                employee_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    restore_employee_api_v1_employees__employee_id__restore_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                employee_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
                     };
                 };
             };
@@ -9817,7 +10428,7 @@ export interface operations {
             };
         };
     };
-    get_sites_api_v1_sites_get: {
+    get_offices_api_v1_offices_get: {
         parameters: {
             query?: {
                 for_attendance?: boolean;
@@ -9834,7 +10445,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SiteResponse"][];
+                    "application/json": components["schemas"]["OfficeResponse"][];
                 };
             };
             /** @description Validation Error */
@@ -9848,7 +10459,7 @@ export interface operations {
             };
         };
     };
-    create_site_api_v1_sites_post: {
+    create_office_api_v1_offices_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -9857,7 +10468,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["SiteCreate"];
+                "application/json": components["schemas"]["OfficeCreate"];
             };
         };
         responses: {
@@ -9867,7 +10478,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SiteResponse"];
+                    "application/json": components["schemas"]["OfficeResponse"];
                 };
             };
             /** @description Validation Error */
@@ -9881,18 +10492,18 @@ export interface operations {
             };
         };
     };
-    update_site_api_v1_sites__site_id__put: {
+    update_office_api_v1_offices__office_id__put: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                site_id: string;
+                office_id: string;
             };
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["SiteUpdate"];
+                "application/json": components["schemas"]["OfficeUpdate"];
             };
         };
         responses: {
@@ -9902,7 +10513,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SiteResponse"];
+                    "application/json": components["schemas"]["OfficeResponse"];
                 };
             };
             /** @description Validation Error */
@@ -9916,12 +10527,12 @@ export interface operations {
             };
         };
     };
-    delete_site_api_v1_sites__site_id__delete: {
+    delete_office_api_v1_offices__office_id__delete: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                site_id: string;
+                office_id: string;
             };
             cookie?: never;
         };
@@ -9949,7 +10560,7 @@ export interface operations {
             };
         };
     };
-    list_units_api_v1_units_get: {
+    list_divisions_api_v1_divisions_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -9964,12 +10575,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UnitOut"][];
+                    "application/json": components["schemas"]["DivisionOut"][];
                 };
             };
         };
     };
-    create_unit_api_v1_units_post: {
+    create_division_api_v1_divisions_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -9978,7 +10589,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["UnitCreate"];
+                "application/json": components["schemas"]["DivisionCreate"];
             };
         };
         responses: {
@@ -9988,7 +10599,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UnitOut"];
+                    "application/json": components["schemas"]["DivisionOut"];
                 };
             };
             /** @description Validation Error */
@@ -10002,18 +10613,18 @@ export interface operations {
             };
         };
     };
-    update_unit_api_v1_units__unit_id__put: {
+    update_division_api_v1_divisions__division_id__put: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                unit_id: string;
+                division_id: string;
             };
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["UnitUpdate"];
+                "application/json": components["schemas"]["DivisionUpdate"];
             };
         };
         responses: {
@@ -10023,7 +10634,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UnitOut"];
+                    "application/json": components["schemas"]["DivisionOut"];
                 };
             };
             /** @description Validation Error */
@@ -10037,12 +10648,12 @@ export interface operations {
             };
         };
     };
-    delete_unit_api_v1_units__unit_id__delete: {
+    delete_division_api_v1_divisions__division_id__delete: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                unit_id: string;
+                division_id: string;
             };
             cookie?: never;
         };

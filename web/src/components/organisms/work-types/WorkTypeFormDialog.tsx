@@ -9,7 +9,7 @@ import { errorMessage } from "@/lib/errors";
 import { workTypeSchema, type WorkTypeValues } from "@/schemas/workTypeSchema";
 import { oversize, uploadForm } from "@/services/uploadService";
 import { useSaveWorkType, type WorkType } from "@/services/workTypeService";
-import { useUnits } from "@/services/employeeService";
+import { useDivisions } from "@/services/employeeService";
 import { useSession } from "@/stores/sessionStore";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { ArrowDown, ArrowUp, Plus, Trash2 } from "@/components/molecules/Glyphs";
@@ -23,7 +23,7 @@ import { FormErrorText } from "@/components/molecules/FormErrorText";
 export function WorkTypeFormDialog({ type, onClose }: { type: WorkType | null; onClose: () => void }) {
   const save = useSaveWorkType(type?.id);
   const { me } = useSession();
-  const { data: units } = useUnits();
+  const { data: units } = useDivisions();
   const [formError, setFormError] = useState<string | null>(null);
 
   const initialDivisionId = type?.division_id ?? me?.division_id ?? "";

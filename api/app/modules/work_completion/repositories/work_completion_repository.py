@@ -51,6 +51,15 @@ class WorkCompletionRepository(BaseRepository):
             {"id": str(completion_id), "emp": str(employee_id) if employee_id else None},
         )
 
+    async def project_snapshot(self, project_id: UUID | str) -> Any:
+        """Data proyek untuk mengisi order: divisi, status, klien, judul, SPK, target."""
+        return await self.fetchone(
+            "SELECT p.division_id, p.status, p.pm_id, c.name AS client_name, p.project_title, p.spk_number, "
+            "p.total_target_qty, p.unit_measure, p.start_date, p.end_date FROM project p "
+            "JOIN client c ON c.client_id = p.client_id WHERE p.project_id = CAST(:id AS uuid) AND p.delete_at IS NULL",
+            {"id": str(project_id)},
+        )
+
     async def employee_role(self, employee_id: UUID | str) -> str | None:
         role: str | None = await self.scalar(
             "SELECT u.system_role::text FROM employee e JOIN users u ON u.employee_id = e.employee_id "
@@ -107,6 +116,7 @@ class WorkCompletionRepository(BaseRepository):
         sql = f"""
             SELECT
                 wc.completion_id,
+                wc.project_id,
                 wc.division_id,
                 d.name AS division_name,
                 wc.pm_id,
@@ -220,6 +230,7 @@ class WorkCompletionRepository(BaseRepository):
         sql = """
             SELECT
                 wc.completion_id,
+                wc.project_id,
                 wc.division_id,
                 d.name AS division_name,
                 wc.pm_id,
@@ -300,13 +311,14 @@ class WorkCompletionRepository(BaseRepository):
         """Membuat order proyek baru."""
         sql = """
             INSERT INTO work_completion (
-                report_scope, division_id, pm_id, client_name, project_title, order_number,
+                report_scope, division_id, pm_id, project_id, client_name, project_title, order_number,
                 total_target_unit, unit_measure, order_status, priority_level,
                 site_address, site_lat, site_lng, summary_notes, realization_photos_json
             ) VALUES (
                 COALESCE(:report_scope, 'PROJECT'),
                 CAST(:division_id AS uuid),
                 CAST(:pm_id AS uuid),
+                CAST(:project_id AS uuid),
                 :client_name,
                 :project_title,
                 :order_number,
@@ -329,6 +341,7 @@ class WorkCompletionRepository(BaseRepository):
                 "report_scope": data.get("report_scope", "PROJECT"),
                 "division_id": str(data["division_id"]),
                 "pm_id": str(data["pm_id"]) if data.get("pm_id") else None,
+                "project_id": str(data["project_id"]) if data.get("project_id") else None,
                 "client_name": data["client_name"],
                 "project_title": data["project_title"],
                 "order_number": data.get("order_number"),

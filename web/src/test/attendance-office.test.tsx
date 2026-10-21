@@ -47,7 +47,7 @@ const setup = (items: unknown[], extra?: (url: string) => { status?: number; dat
     const hit = extra?.(c.url ?? "");
     if (hit) return hit;
     if (c.url === "/attendance") return { data: { items, total: items.length, page: 1, size: 50, today: "2026-10-02" } };
-    if (c.url === "/sites") return { data: [site] };
+    if (c.url === "/offices") return { data: [site] };
     if (c.url === "/employees") return { data: { items: [], total: 0, page: 1, size: 100 } };
   });
 

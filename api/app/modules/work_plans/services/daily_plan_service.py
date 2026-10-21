@@ -111,14 +111,27 @@ class DailyPlanService:
         if await self.repo.team_day_taken(team_id, work_date, exclude):
             raise AppError("TEAM_DAY_TAKEN", "Tim ini sudah punya jadwal pada tanggal tersebut.", status=409)
 
+    async def _check_project(self, project_id: UUID | None, division_id: Any, work_date: date) -> None:
+        """Proyek jadwal: divisi sama, sedang berjalan, dan tanggal jadwal di dalam masa proyek."""
+        if project_id is None:
+            return
+        project = await self.repo.project_window(project_id)
+        if project is None or str(project.division_id) != str(division_id):
+            raise ValidationError("Proyek tidak ditemukan di divisi jadwal ini.")
+        if project.status != "ONGOING":
+            raise ValidationError("Proyek tidak sedang berjalan.")
+        if not project.start_date <= work_date <= project.end_date:
+            raise ValidationError("Tanggal jadwal di luar masa proyek.")
+
     async def create(self, user: CurrentUser, data: DailyPlanCreate) -> Any:
         await check_division_manager(self.db, data.division_id, user)
         await self._check_team_day(data.division_id, data.team_id, data.work_date, None)
+        await self._check_project(data.project_id, data.division_id, data.work_date)
         if not user.employee_id:
             raise ValidationError("Akun ini belum terhubung ke data karyawan; jadwal butuh pembuat yang tercatat.")
         fields = data.model_dump()
         fields.update(division_id=str(data.division_id), team_id=str(data.team_id), created_by_id=user.employee_id,
-                      site_name=data.site_name.strip())
+                      site_name=data.site_name.strip(), project_id=str(data.project_id) if data.project_id else None)
         return await self.repo.get(await self.repo.insert(fields))
 
     async def update(self, user: CurrentUser, daily_plan_id: UUID, data: DailyPlanUpdate) -> Any:
@@ -129,12 +142,16 @@ class DailyPlanService:
             await self._check_team_day(plan.division_id, data.team_id or plan.team_id,
                                        data.work_date or plan.work_date, daily_plan_id)
         current = await self.repo.get(daily_plan_id)
+        if data.project_id or (data.work_date and current.project_id):
+            await self._check_project(data.project_id or current.project_id, plan.division_id,
+                                      data.work_date or plan.work_date)
         clock_in = data.clock_in_time or current.clock_in_time
         clock_out = data.clock_out_time or current.clock_out_time
         if clock_out <= clock_in:
             raise ValidationError("Jam pulang harus setelah jam masuk.")
         fields = data.model_dump()
         fields.update(team_id=str(data.team_id) if data.team_id else None,
+                      project_id=str(data.project_id) if data.project_id else None,
                       site_name=data.site_name.strip() if data.site_name else None)
         await self.repo.update(daily_plan_id, fields)
         return await self.repo.get(daily_plan_id)
@@ -146,10 +163,12 @@ class DailyPlanService:
         created = []
         for work_date in sorted(set(work_dates)):
             await self._check_team_day(access.plan.division_id, source.team_id, work_date, None)
+            await self._check_project(source.project_id, source.division_id, work_date)
             fields = {k: getattr(source, k) for k in ("work_date", "site_name", "site_lat", "site_lng",
                                                       "attendance_radius_m", "clock_in_time", "clock_out_time")}
             fields.update(work_date=work_date, division_id=str(source.division_id), team_id=str(source.team_id),
-                          created_by_id=user.employee_id)
+                          created_by_id=user.employee_id,
+                          project_id=str(source.project_id) if source.project_id else None)
             created.append(await self.repo.get(await self.repo.insert(fields)))
         return created
 

@@ -24,6 +24,7 @@ def _check_hours(clock_in: time | None, clock_out: time | None) -> None:
 class DailyPlanCreate(BaseModel):
     division_id: UUID
     team_id: UUID
+    project_id: UUID | None = None  # proyek/SPK divisi yang sama (Milestone 10)
     work_date: date
     site_name: str = Field(min_length=2, max_length=150)
     site_lat: Decimal = Field(ge=-90, le=90)
@@ -40,6 +41,7 @@ class DailyPlanCreate(BaseModel):
 
 class DailyPlanUpdate(BaseModel):
     team_id: UUID | None = None
+    project_id: UUID | None = None
     work_date: date | None = None
     site_name: str | None = Field(default=None, min_length=2, max_length=150)
     site_lat: Decimal | None = Field(default=None, ge=-90, le=90)
@@ -97,6 +99,8 @@ class DailyItemBrief(BaseModel):
 class DailyPlanOut(BaseModel):
     daily_plan_id: UUID
     division_id: UUID
+    project_id: UUID | None = None
+    project_title: str | None = None
     division_name: str
     team_id: UUID
     team_name: str

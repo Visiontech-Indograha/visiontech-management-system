@@ -1301,12 +1301,12 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/sites",
+              "raw": "{{baseUrl}}/offices",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "sites"
+                "offices"
               ]
             }
           }
@@ -1337,12 +1337,12 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/sites",
+              "raw": "{{baseUrl}}/offices",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "sites"
+                "offices"
               ]
             },
             "body": {
@@ -1394,12 +1394,12 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/sites",
+              "raw": "{{baseUrl}}/offices",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "sites"
+                "offices"
               ]
             },
             "body": {
@@ -1448,12 +1448,12 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/sites/{{test_office_id}}",
+              "raw": "{{baseUrl}}/offices/{{test_office_id}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "sites",
+                "offices",
                 "{{test_office_id}}"
               ]
             },
@@ -1497,12 +1497,12 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/sites/{{test_office_id}}",
+              "raw": "{{baseUrl}}/offices/{{test_office_id}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "sites",
+                "offices",
                 "{{test_office_id}}"
               ]
             },
@@ -1546,12 +1546,12 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/sites/{{main_office_id}}",
+              "raw": "{{baseUrl}}/offices/{{main_office_id}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "sites",
+                "offices",
                 "{{main_office_id}}"
               ]
             },
@@ -1592,12 +1592,12 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/sites/{{main_office_id}}",
+              "raw": "{{baseUrl}}/offices/{{main_office_id}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "sites",
+                "offices",
                 "{{main_office_id}}"
               ]
             }
@@ -1629,12 +1629,12 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/sites/{{test_office_id}}",
+              "raw": "{{baseUrl}}/offices/{{test_office_id}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "sites",
+                "offices",
                 "{{test_office_id}}"
               ]
             }
@@ -1669,12 +1669,12 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/sites",
+              "raw": "{{baseUrl}}/offices",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "sites"
+                "offices"
               ]
             }
           }
@@ -1712,12 +1712,12 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/units",
+              "raw": "{{baseUrl}}/divisions",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "units"
+                "divisions"
               ]
             }
           }
@@ -1751,12 +1751,12 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/units",
+              "raw": "{{baseUrl}}/divisions",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "units"
+                "divisions"
               ]
             },
             "body": {
@@ -1796,12 +1796,12 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/units",
+              "raw": "{{baseUrl}}/divisions",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "units"
+                "divisions"
               ]
             },
             "body": {
@@ -1848,12 +1848,12 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/units",
+              "raw": "{{baseUrl}}/divisions",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "units"
+                "divisions"
               ]
             },
             "body": {
@@ -1897,12 +1897,12 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/units/{{test_division_id}}",
+              "raw": "{{baseUrl}}/divisions/{{test_division_id}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "units",
+                "divisions",
                 "{{test_division_id}}"
               ]
             },
@@ -1943,12 +1943,12 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/units/{{test_division_id}}",
+              "raw": "{{baseUrl}}/divisions/{{test_division_id}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "units",
+                "divisions",
                 "{{test_division_id}}"
               ]
             }
@@ -1983,12 +1983,12 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/units/{{division_id}}",
+              "raw": "{{baseUrl}}/divisions/{{division_id}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "units",
+                "divisions",
                 "{{division_id}}"
               ]
             }
@@ -2143,1249 +2143,6 @@
                   "language": "json"
                 }
               }
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "11 - Milestone 3: Tim, Anggota & Dokumen Karyawan (V2)",
-      "item": [
-        {
-          "name": "11.00 - Login PM Dian via web",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
-                  "pm.collectionVariables.set(\"tok_pm2\", pm.response.json().access_token);"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/auth/login",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "auth",
-                "login"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"dian.pm@visiontech.co.id\",\n  \"password\": \"Admin123!\",\n  \"platform\": \"web\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "11.01 - PM Sipil: daftar tim hanya divisinya",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
-                  "const teams = pm.response.json();",
-                  "pm.test(\"semua tim di divisi PM\", () => teams.forEach(t => pm.expect(t.division_id).to.eql(\"33333333-0000-4000-a000-000000000001\")));",
-                  "const alpha = teams.find(t => t.name === \"Tim Alpha Sipil (Medan)\");",
-                  "pm.test(\"Tim Alpha terlihat\", () => pm.expect(alpha).to.be.an(\"object\"));",
-                  "pm.collectionVariables.set(\"alpha_team_id\", alpha ? alpha.team_id : \"\");",
-                  "pm.collectionVariables.set(\"m3_tag\", String(Date.now()));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{tok_pm}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/teams",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "teams"
-              ]
-            }
-          }
-        },
-        {
-          "name": "11.02 - PM membuat tim; ketua otomatis jadi anggota",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"201\", () => pm.response.to.have.status(201));",
-                  "const t = pm.response.json();",
-                  "pm.test(\"member_count 1 (ketua)\", () => pm.expect(t.member_count).to.eql(1));",
-                  "pm.collectionVariables.set(\"m3_team_id\", t.team_id);"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{tok_pm}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/teams",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "teams"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"office_id\": \"11111111-0000-4000-a000-000000000001\",\n  \"division_id\": \"33333333-0000-4000-a000-000000000001\",\n  \"leader_employee_id\": \"22222222-0000-4000-a000-000000000006\",\n  \"name\": \"Tim Postman {{m3_tag}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "11.03 - Nama tim kembar di divisi yang sama ditolak",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"409 TEAM_NAME_TAKEN\", () => pm.response.to.have.status(409));",
-                  "pm.test(\"kode TEAM_NAME_TAKEN\", () => pm.expect(pm.response.json().error.code).to.eql(\"TEAM_NAME_TAKEN\"));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{tok_pm}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/teams",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "teams"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"office_id\": \"11111111-0000-4000-a000-000000000001\",\n  \"division_id\": \"33333333-0000-4000-a000-000000000001\",\n  \"leader_employee_id\": \"22222222-0000-4000-a000-000000000006\",\n  \"name\": \"Tim Postman {{m3_tag}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "11.04 - Ketua bukan Team Leader ditolak",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"422 VALIDATION_ERROR\", () => pm.response.to.have.status(422));",
-                  "pm.test(\"kode VALIDATION_ERROR\", () => pm.expect(pm.response.json().error.code).to.eql(\"VALIDATION_ERROR\"));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{tok_pm}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/teams",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "teams"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"office_id\": \"11111111-0000-4000-a000-000000000001\",\n  \"division_id\": \"33333333-0000-4000-a000-000000000001\",\n  \"leader_employee_id\": \"22222222-0000-4000-a000-000000000007\",\n  \"name\": \"Tim Postman ketua salah {{m3_tag}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "11.05 - PM Sipil membuat tim di divisi MEP ditolak",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"403\", () => pm.response.to.have.status(403));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{tok_pm}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/teams",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "teams"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"office_id\": \"11111111-0000-4000-a000-000000000001\",\n  \"division_id\": \"33333333-0000-4000-a000-000000000002\",\n  \"leader_employee_id\": \"22222222-0000-4000-a000-000000000006\",\n  \"name\": \"Tim Postman lintas {{m3_tag}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "11.06 - PM MEP tidak melihat tim divisi Sipil",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"404\", () => pm.response.to.have.status(404));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{tok_pm2}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/teams/{{m3_team_id}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "teams",
-                "{{m3_team_id}}"
-              ]
-            }
-          }
-        },
-        {
-          "name": "11.07 - Team Leader tidak boleh mengelola tim",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"403\", () => pm.response.to.have.status(403));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{tok_tl}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/teams",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "teams"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"office_id\": \"11111111-0000-4000-a000-000000000001\",\n  \"division_id\": \"33333333-0000-4000-a000-000000000001\",\n  \"leader_employee_id\": \"22222222-0000-4000-a000-000000000006\",\n  \"name\": \"Tim Postman TL {{m3_tag}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "11.08 - Tambah anggota lapangan",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"201\", () => pm.response.to.have.status(201));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{tok_pm}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/teams/{{m3_team_id}}/members",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "teams",
-                "{{m3_team_id}}",
-                "members"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"employee_id\": \"22222222-0000-4000-a000-000000000007\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "11.09 - Anggota ganda ditolak",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"409 MEMBER_EXISTS\", () => pm.response.to.have.status(409));",
-                  "pm.test(\"kode MEMBER_EXISTS\", () => pm.expect(pm.response.json().error.code).to.eql(\"MEMBER_EXISTS\"));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{tok_pm}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/teams/{{m3_team_id}}/members",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "teams",
-                "{{m3_team_id}}",
-                "members"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"employee_id\": \"22222222-0000-4000-a000-000000000007\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "11.10 - Staf kantor (HR) tidak bisa jadi anggota",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"422 VALIDATION_ERROR\", () => pm.response.to.have.status(422));",
-                  "pm.test(\"kode VALIDATION_ERROR\", () => pm.expect(pm.response.json().error.code).to.eql(\"VALIDATION_ERROR\"));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{tok_pm}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/teams/{{m3_team_id}}/members",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "teams",
-                "{{m3_team_id}}",
-                "members"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"employee_id\": \"22222222-0000-4000-a000-000000000005\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "11.11 - Ketua tidak bisa dikeluarkan",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"409 LEADER_REQUIRED\", () => pm.response.to.have.status(409));",
-                  "pm.test(\"kode LEADER_REQUIRED\", () => pm.expect(pm.response.json().error.code).to.eql(\"LEADER_REQUIRED\"));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{tok_pm}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/teams/{{m3_team_id}}/members/22222222-0000-4000-a000-000000000006",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "teams",
-                "{{m3_team_id}}",
-                "members",
-                "22222222-0000-4000-a000-000000000006"
-              ]
-            }
-          }
-        },
-        {
-          "name": "11.12 - Detail tim: ketua di urutan pertama",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
-                  "const ids = pm.response.json().members.map(m => m.employee_id);",
-                  "pm.test(\"ketua + anggota\", () => pm.expect(ids).to.eql([\"22222222-0000-4000-a000-000000000006\", \"22222222-0000-4000-a000-000000000007\"]));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{tok_pm}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/teams/{{m3_team_id}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "teams",
-                "{{m3_team_id}}"
-              ]
-            }
-          }
-        },
-        {
-          "name": "11.13 - Keluarkan anggota",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"200\", () => pm.response.to.have.status(200));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{tok_pm}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/teams/{{m3_team_id}}/members/22222222-0000-4000-a000-000000000007",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "teams",
-                "{{m3_team_id}}",
-                "members",
-                "22222222-0000-4000-a000-000000000007"
-              ]
-            }
-          }
-        },
-        {
-          "name": "11.14 - Tim yang dipakai jadwal harian tidak bisa dihapus",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"409 TEAM_IN_USE\", () => pm.response.to.have.status(409));",
-                  "pm.test(\"kode TEAM_IN_USE\", () => pm.expect(pm.response.json().error.code).to.eql(\"TEAM_IN_USE\"));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{tok_pm}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/teams/{{alpha_team_id}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "teams",
-                "{{alpha_team_id}}"
-              ]
-            }
-          }
-        },
-        {
-          "name": "11.15 - Hapus tim uji (bersih-bersih)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"200\", () => pm.response.to.have.status(200));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{tok_pm}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/teams/{{m3_team_id}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "teams",
-                "{{m3_team_id}}"
-              ]
-            }
-          }
-        },
-        {
-          "name": "11.16 - Tim terhapus tidak ditemukan",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"404\", () => pm.response.to.have.status(404));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{tok_pm}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/teams/{{m3_team_id}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "teams",
-                "{{m3_team_id}}"
-              ]
-            }
-          }
-        },
-        {
-          "name": "11.20 - HR mengunggah berkas",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
-                  "pm.collectionVariables.set(\"m3_file_id\", pm.response.json().file_id);"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{tok_hr}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/files/upload",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "files",
-                "upload"
-              ]
-            },
-            "body": {
-              "mode": "formdata",
-              "formdata": [
-                {
-                  "key": "file",
-                  "type": "file",
-                  "src": "postman/fixtures/dokumen-uji.png"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "11.21 - HR mencatat SIM B1 Doni (ketikan bebas dirapikan)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"201\", () => pm.response.to.have.status(201));",
-                  "const d = pm.response.json();",
-                  "pm.test(\"kode baku SIM_B1, berlaku\", () => { pm.expect(d.doc_type).to.eql(\"SIM_B1\"); pm.expect(d.status).to.eql(\"active\"); });",
-                  "pm.test(\"file_id tertaut\", () => pm.expect(d.file_id).to.eql(pm.collectionVariables.get(\"m3_file_id\")));",
-                  "pm.collectionVariables.set(\"m3_doc1\", d.id);"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{tok_hr}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/employees/22222222-0000-4000-a000-000000000008/documents",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "employees",
-                "22222222-0000-4000-a000-000000000008",
-                "documents"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"doc_type\": \"sim b i\",\n  \"file_id\": \"{{m3_file_id}}\",\n  \"expired_at\": \"2031-12-31\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "11.22 - Dokumen sejenis yang baru menggantikan yang lama",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"201\", () => pm.response.to.have.status(201));",
-                  "pm.collectionVariables.set(\"m3_doc2\", pm.response.json().id);"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{tok_hr}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/employees/22222222-0000-4000-a000-000000000008/documents",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "employees",
-                "22222222-0000-4000-a000-000000000008",
-                "documents"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"doc_type\": \"SIM_B1\",\n  \"file_id\": \"{{m3_file_id}}\",\n  \"expired_at\": \"2036-12-31\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "11.23 - Daftar dokumen: lama extended, baru active",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
-                  "const by = Object.fromEntries(pm.response.json().items.map(d => [d.id, d.status]));",
-                  "pm.test(\"status\", () => {",
-                  "    pm.expect(by[pm.collectionVariables.get(\"m3_doc1\")]).to.eql(\"extended\");",
-                  "    pm.expect(by[pm.collectionVariables.get(\"m3_doc2\")]).to.eql(\"active\");",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{tok_hr}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/employees/22222222-0000-4000-a000-000000000008/documents",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "employees",
-                "22222222-0000-4000-a000-000000000008",
-                "documents"
-              ]
-            }
-          }
-        },
-        {
-          "name": "11.24 - Karyawan lain tidak melihat dokumen Doni",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"404\", () => pm.response.to.have.status(404));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{tok_emp}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/employees/22222222-0000-4000-a000-000000000008/documents",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "employees",
-                "22222222-0000-4000-a000-000000000008",
-                "documents"
-              ]
-            }
-          }
-        },
-        {
-          "name": "11.25 - Karyawan tidak boleh mencatat dokumen",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"403\", () => pm.response.to.have.status(403));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{tok_emp}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/employees/22222222-0000-4000-a000-000000000007/documents",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "employees",
-                "22222222-0000-4000-a000-000000000007",
-                "documents"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"doc_type\": \"KTP\",\n  \"file_id\": \"{{m3_file_id}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "11.26 - Berkas tak dikenal ditolak",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"422 VALIDATION_ERROR\", () => pm.response.to.have.status(422));",
-                  "pm.test(\"kode VALIDATION_ERROR\", () => pm.expect(pm.response.json().error.code).to.eql(\"VALIDATION_ERROR\"));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{tok_hr}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/employees/22222222-0000-4000-a000-000000000008/documents",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "employees",
-                "22222222-0000-4000-a000-000000000008",
-                "documents"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"doc_type\": \"KTP\",\n  \"file_id\": \"01a0dd8d-b442-7c07-91b8-5d8ac8f059fb\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "11.27 - Nonaktifkan dokumen",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
-                  "pm.test(\"not_active\", () => pm.expect(pm.response.json().status).to.eql(\"not_active\"));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{tok_hr}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/employees/22222222-0000-4000-a000-000000000008/documents/{{m3_doc2}}/deactivate",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "employees",
-                "22222222-0000-4000-a000-000000000008",
-                "documents",
-                "{{m3_doc2}}",
-                "deactivate"
-              ]
-            }
-          }
-        },
-        {
-          "name": "11.28 - Dokumen kedaluwarsa: HR boleh, PM tidak",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"403\", () => pm.response.to.have.status(403));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{tok_pm}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/documents/expiring",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "documents",
-                "expiring"
-              ]
-            }
-          }
-        },
-        {
-          "name": "11.29 - Daftar dokumen kedaluwarsa (HR)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
-                  "pm.test(\"hanya EXPIRED\", () => pm.response.json().items.forEach(i => pm.expect(i.urgency).to.eql(\"EXPIRED\")));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{tok_hr}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/documents/expiring?urgency=EXPIRED",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "documents",
-                "expiring?urgency=EXPIRED"
-              ]
-            }
-          }
-        },
-        {
-          "name": "11.30 - Hapus dokumen uji 1 (bersih-bersih)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"200\", () => pm.response.to.have.status(200));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{tok_hr}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/employees/22222222-0000-4000-a000-000000000008/documents/{{m3_doc1}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "employees",
-                "22222222-0000-4000-a000-000000000008",
-                "documents",
-                "{{m3_doc1}}"
-              ]
-            }
-          }
-        },
-        {
-          "name": "11.31 - Hapus dokumen uji 2 (bersih-bersih)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"200\", () => pm.response.to.have.status(200));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{tok_hr}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/employees/22222222-0000-4000-a000-000000000008/documents/{{m3_doc2}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "employees",
-                "22222222-0000-4000-a000-000000000008",
-                "documents",
-                "{{m3_doc2}}"
-              ]
             }
           }
         }
@@ -9851,6 +8608,2220 @@
                   "language": "json"
                 }
               }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "11 - Milestone 3: Tim, Anggota & Dokumen Karyawan (V2)",
+      "item": [
+        {
+          "name": "11.00 - Login PM Dian via web",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set(\"tok_pm2\", pm.response.json().access_token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"dian.pm@visiontech.co.id\",\n  \"password\": \"Admin123!\",\n  \"platform\": \"web\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "11.01 - PM Sipil: daftar tim hanya divisinya",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "const teams = pm.response.json();",
+                  "pm.test(\"semua tim di divisi PM\", () => teams.forEach(t => pm.expect(t.division_id).to.eql(\"33333333-0000-4000-a000-000000000001\")));",
+                  "const alpha = teams.find(t => t.name === \"Tim Alpha Sipil (Medan)\");",
+                  "pm.test(\"Tim Alpha terlihat\", () => pm.expect(alpha).to.be.an(\"object\"));",
+                  "pm.collectionVariables.set(\"alpha_team_id\", alpha ? alpha.team_id : \"\");",
+                  "pm.collectionVariables.set(\"m3_tag\", String(Date.now()));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/teams",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "teams"
+              ]
+            }
+          }
+        },
+        {
+          "name": "11.02 - PM membuat tim; ketua otomatis jadi anggota",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201\", () => pm.response.to.have.status(201));",
+                  "const t = pm.response.json();",
+                  "pm.test(\"member_count 1 (ketua)\", () => pm.expect(t.member_count).to.eql(1));",
+                  "pm.collectionVariables.set(\"m3_team_id\", t.team_id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/teams",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "teams"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"office_id\": \"11111111-0000-4000-a000-000000000001\",\n  \"division_id\": \"33333333-0000-4000-a000-000000000001\",\n  \"leader_employee_id\": \"22222222-0000-4000-a000-000000000006\",\n  \"name\": \"Tim Postman {{m3_tag}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "11.03 - Nama tim kembar di divisi yang sama ditolak",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"409 TEAM_NAME_TAKEN\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"kode TEAM_NAME_TAKEN\", () => pm.expect(pm.response.json().error.code).to.eql(\"TEAM_NAME_TAKEN\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/teams",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "teams"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"office_id\": \"11111111-0000-4000-a000-000000000001\",\n  \"division_id\": \"33333333-0000-4000-a000-000000000001\",\n  \"leader_employee_id\": \"22222222-0000-4000-a000-000000000006\",\n  \"name\": \"Tim Postman {{m3_tag}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "11.04 - Ketua bukan Team Leader ditolak",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"422 VALIDATION_ERROR\", () => pm.response.to.have.status(422));",
+                  "pm.test(\"kode VALIDATION_ERROR\", () => pm.expect(pm.response.json().error.code).to.eql(\"VALIDATION_ERROR\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/teams",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "teams"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"office_id\": \"11111111-0000-4000-a000-000000000001\",\n  \"division_id\": \"33333333-0000-4000-a000-000000000001\",\n  \"leader_employee_id\": \"22222222-0000-4000-a000-000000000007\",\n  \"name\": \"Tim Postman ketua salah {{m3_tag}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "11.05 - PM Sipil membuat tim di divisi MEP ditolak",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/teams",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "teams"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"office_id\": \"11111111-0000-4000-a000-000000000001\",\n  \"division_id\": \"33333333-0000-4000-a000-000000000002\",\n  \"leader_employee_id\": \"22222222-0000-4000-a000-000000000006\",\n  \"name\": \"Tim Postman lintas {{m3_tag}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "11.06 - PM MEP tidak melihat tim divisi Sipil",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"404\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm2}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/teams/{{m3_team_id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "teams",
+                "{{m3_team_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "11.07 - Team Leader tidak boleh mengelola tim",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_tl}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/teams",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "teams"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"office_id\": \"11111111-0000-4000-a000-000000000001\",\n  \"division_id\": \"33333333-0000-4000-a000-000000000001\",\n  \"leader_employee_id\": \"22222222-0000-4000-a000-000000000006\",\n  \"name\": \"Tim Postman TL {{m3_tag}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "11.08 - Tambah anggota lapangan",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201\", () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/teams/{{m3_team_id}}/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "teams",
+                "{{m3_team_id}}",
+                "members"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employee_id\": \"22222222-0000-4000-a000-000000000007\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "11.09 - Anggota ganda ditolak",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"409 MEMBER_EXISTS\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"kode MEMBER_EXISTS\", () => pm.expect(pm.response.json().error.code).to.eql(\"MEMBER_EXISTS\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/teams/{{m3_team_id}}/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "teams",
+                "{{m3_team_id}}",
+                "members"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employee_id\": \"22222222-0000-4000-a000-000000000007\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "11.10 - Staf kantor (HR) tidak bisa jadi anggota",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"422 VALIDATION_ERROR\", () => pm.response.to.have.status(422));",
+                  "pm.test(\"kode VALIDATION_ERROR\", () => pm.expect(pm.response.json().error.code).to.eql(\"VALIDATION_ERROR\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/teams/{{m3_team_id}}/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "teams",
+                "{{m3_team_id}}",
+                "members"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employee_id\": \"22222222-0000-4000-a000-000000000005\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "11.11 - Ketua tidak bisa dikeluarkan",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"409 LEADER_REQUIRED\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"kode LEADER_REQUIRED\", () => pm.expect(pm.response.json().error.code).to.eql(\"LEADER_REQUIRED\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/teams/{{m3_team_id}}/members/22222222-0000-4000-a000-000000000006",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "teams",
+                "{{m3_team_id}}",
+                "members",
+                "22222222-0000-4000-a000-000000000006"
+              ]
+            }
+          }
+        },
+        {
+          "name": "11.12 - Detail tim: ketua di urutan pertama",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "const ids = pm.response.json().members.map(m => m.employee_id);",
+                  "pm.test(\"ketua + anggota\", () => pm.expect(ids).to.eql([\"22222222-0000-4000-a000-000000000006\", \"22222222-0000-4000-a000-000000000007\"]));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/teams/{{m3_team_id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "teams",
+                "{{m3_team_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "11.13 - Keluarkan anggota",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/teams/{{m3_team_id}}/members/22222222-0000-4000-a000-000000000007",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "teams",
+                "{{m3_team_id}}",
+                "members",
+                "22222222-0000-4000-a000-000000000007"
+              ]
+            }
+          }
+        },
+        {
+          "name": "11.14 - Tim yang dipakai jadwal harian tidak bisa dihapus",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"409 TEAM_IN_USE\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"kode TEAM_IN_USE\", () => pm.expect(pm.response.json().error.code).to.eql(\"TEAM_IN_USE\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/teams/{{alpha_team_id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "teams",
+                "{{alpha_team_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "11.15 - Hapus tim uji (bersih-bersih)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/teams/{{m3_team_id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "teams",
+                "{{m3_team_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "11.16 - Tim terhapus tidak ditemukan",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"404\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/teams/{{m3_team_id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "teams",
+                "{{m3_team_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "11.20 - HR mengunggah berkas",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set(\"m3_file_id\", pm.response.json().file_id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/files/upload",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "files",
+                "upload"
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "postman/fixtures/dokumen-uji.png"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "11.21 - HR mencatat SIM B1 Doni (ketikan bebas dirapikan)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201\", () => pm.response.to.have.status(201));",
+                  "const d = pm.response.json();",
+                  "pm.test(\"kode baku SIM_B1, berlaku\", () => { pm.expect(d.doc_type).to.eql(\"SIM_B1\"); pm.expect(d.status).to.eql(\"active\"); });",
+                  "pm.test(\"file_id tertaut\", () => pm.expect(d.file_id).to.eql(pm.collectionVariables.get(\"m3_file_id\")));",
+                  "pm.collectionVariables.set(\"m3_doc1\", d.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/employees/22222222-0000-4000-a000-000000000008/documents",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "22222222-0000-4000-a000-000000000008",
+                "documents"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"doc_type\": \"sim b i\",\n  \"file_id\": \"{{m3_file_id}}\",\n  \"expired_at\": \"2031-12-31\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "11.22 - Dokumen sejenis yang baru menggantikan yang lama",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"m3_doc2\", pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/employees/22222222-0000-4000-a000-000000000008/documents",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "22222222-0000-4000-a000-000000000008",
+                "documents"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"doc_type\": \"SIM_B1\",\n  \"file_id\": \"{{m3_file_id}}\",\n  \"expired_at\": \"2036-12-31\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "11.23 - Daftar dokumen: lama extended, baru active",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "const by = Object.fromEntries(pm.response.json().items.map(d => [d.id, d.status]));",
+                  "pm.test(\"status\", () => {",
+                  "    pm.expect(by[pm.collectionVariables.get(\"m3_doc1\")]).to.eql(\"extended\");",
+                  "    pm.expect(by[pm.collectionVariables.get(\"m3_doc2\")]).to.eql(\"active\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/employees/22222222-0000-4000-a000-000000000008/documents",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "22222222-0000-4000-a000-000000000008",
+                "documents"
+              ]
+            }
+          }
+        },
+        {
+          "name": "11.24 - Karyawan lain tidak melihat dokumen Doni",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"404\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_emp}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/employees/22222222-0000-4000-a000-000000000008/documents",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "22222222-0000-4000-a000-000000000008",
+                "documents"
+              ]
+            }
+          }
+        },
+        {
+          "name": "11.25 - Karyawan tidak boleh mencatat dokumen",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_emp}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/employees/22222222-0000-4000-a000-000000000007/documents",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "22222222-0000-4000-a000-000000000007",
+                "documents"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"doc_type\": \"KTP\",\n  \"file_id\": \"{{m3_file_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "11.26 - Berkas tak dikenal ditolak",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"422 VALIDATION_ERROR\", () => pm.response.to.have.status(422));",
+                  "pm.test(\"kode VALIDATION_ERROR\", () => pm.expect(pm.response.json().error.code).to.eql(\"VALIDATION_ERROR\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/employees/22222222-0000-4000-a000-000000000008/documents",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "22222222-0000-4000-a000-000000000008",
+                "documents"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"doc_type\": \"KTP\",\n  \"file_id\": \"01a0dd8d-b442-7c07-91b8-5d8ac8f059fb\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "11.27 - Nonaktifkan dokumen",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"not_active\", () => pm.expect(pm.response.json().status).to.eql(\"not_active\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/employees/22222222-0000-4000-a000-000000000008/documents/{{m3_doc2}}/deactivate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "22222222-0000-4000-a000-000000000008",
+                "documents",
+                "{{m3_doc2}}",
+                "deactivate"
+              ]
+            }
+          }
+        },
+        {
+          "name": "11.28 - Dokumen kedaluwarsa: HR boleh, PM tidak",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/documents/expiring",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "documents",
+                "expiring"
+              ]
+            }
+          }
+        },
+        {
+          "name": "11.29 - Daftar dokumen kedaluwarsa (HR)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"hanya EXPIRED\", () => pm.response.json().items.forEach(i => pm.expect(i.urgency).to.eql(\"EXPIRED\")));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/documents/expiring?urgency=EXPIRED",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "documents",
+                "expiring?urgency=EXPIRED"
+              ]
+            }
+          }
+        },
+        {
+          "name": "11.30 - Hapus dokumen uji 1 (bersih-bersih)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/employees/22222222-0000-4000-a000-000000000008/documents/{{m3_doc1}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "22222222-0000-4000-a000-000000000008",
+                "documents",
+                "{{m3_doc1}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "11.31 - Hapus dokumen uji 2 (bersih-bersih)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/employees/22222222-0000-4000-a000-000000000008/documents/{{m3_doc2}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "22222222-0000-4000-a000-000000000008",
+                "documents",
+                "{{m3_doc2}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "18 - Milestone 10: Master V2 (kantor, divisi, jabatan, klien, proyek, karyawan)",
+      "item": [
+        {
+          "name": "18.01 - Daftar kantor (/offices)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "",
+                  "pm.test(\"kantor pusat ada\", () => pm.expect(pm.response.json().some(o => o.id === \"11111111-0000-4000-a000-000000000001\")).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/offices",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "offices"
+              ]
+            }
+          }
+        },
+        {
+          "name": "18.02 - Daftar divisi (/divisions)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "",
+                  "pm.test(\"Sipil & MEP\", () => {",
+                  "    const ids = pm.response.json().map(d => d.id);",
+                  "    pm.expect(ids).to.include(\"33333333-0000-4000-a000-000000000001\"); pm.expect(ids).to.include(\"33333333-0000-4000-a000-000000000002\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/divisions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "divisions"
+              ]
+            }
+          }
+        },
+        {
+          "name": "18.03 - Daftar jabatan (/job-positions)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "",
+                  "pm.test(\"bentuk V2\", () => {",
+                  "    const j = pm.response.json();",
+                  "    pm.expect(j).to.be.an(\"array\");",
+                  "    if (j.length) pm.expect(j[0]).to.include.keys(\"position_id\", \"code\", \"grade_level\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/job-positions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "job-positions"
+              ]
+            }
+          }
+        },
+        {
+          "name": "18.04 - Karyawan biasa tidak bisa membuka jabatan",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_emp}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/job-positions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "job-positions"
+              ]
+            }
+          }
+        },
+        {
+          "name": "18.05 - Rute lama /sites & /units sudah tidak ada",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"404\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sites",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sites"
+              ]
+            }
+          }
+        },
+        {
+          "name": "18.06 - PM menambah klien",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201\", () => pm.response.to.have.status(201));",
+                  "",
+                  "const k = pm.response.json();",
+                  "pm.test(\"aktif, 0 proyek\", () => { pm.expect(k.status).to.eql(true); pm.expect(k.project_count).to.eql(0); });",
+                  "pm.collectionVariables.set(\"m10_client\", k.client_id);",
+                  "pm.collectionVariables.set(\"m10_client_code\", k.client_code);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/clients",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "clients"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"client_code\": \"PM10-{{$timestamp}}\",\n  \"name\": \"Klien Uji M10\",\n  \"pic_name\": \"Bu Rina\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "18.07 - Kode klien ganda ditolak",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"409\", () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/clients",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "clients"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"client_code\": \"{{m10_client_code}}\",\n  \"name\": \"Klien Ganda\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "18.08 - PM membuat proyek/SPK di divisinya",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201\", () => pm.response.to.have.status(201));",
+                  "",
+                  "const p = pm.response.json();",
+                  "pm.test(\"ONGOING, PM divisi terisi\", () => {",
+                  "    pm.expect(p.status).to.eql(\"ONGOING\"); pm.expect(p.pm_id).to.be.a(\"string\");",
+                  "    pm.expect(p.client_name).to.eql(\"Klien Uji M10\");",
+                  "});",
+                  "pm.collectionVariables.set(\"m10_project\", p.project_id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"client_id\": \"{{m10_client}}\",\n  \"office_id\": \"11111111-0000-4000-a000-000000000001\",\n  \"division_id\": \"33333333-0000-4000-a000-000000000001\",\n  \"spk_number\": \"SPK-M10-{{$timestamp}}\",\n  \"project_title\": \"Proyek Uji Postman M10\",\n  \"total_target_qty\": 10,\n  \"unit_measure\": \"Titik\",\n  \"start_date\": \"2020-01-01\",\n  \"end_date\": \"2099-12-31\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "18.09 - PM tidak bisa membuat proyek di divisi lain",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"client_id\": \"{{m10_client}}\",\n  \"office_id\": \"11111111-0000-4000-a000-000000000001\",\n  \"division_id\": \"33333333-0000-4000-a000-000000000002\",\n  \"spk_number\": \"SPK-X-{{$timestamp}}\",\n  \"project_title\": \"Proyek Divisi Lain\",\n  \"start_date\": \"2020-01-01\",\n  \"end_date\": \"2099-12-31\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "18.10 - Tanggal selesai sebelum mulai ditolak",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"422\", () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"client_id\": \"{{m10_client}}\",\n  \"office_id\": \"11111111-0000-4000-a000-000000000001\",\n  \"division_id\": \"33333333-0000-4000-a000-000000000001\",\n  \"spk_number\": \"SPK-Y-{{$timestamp}}\",\n  \"project_title\": \"Proyek Tanggal Salah\",\n  \"start_date\": \"2026-02-01\",\n  \"end_date\": \"2026-01-01\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "18.11 - Daftar proyek memuat proyek baru",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "",
+                  "pm.test(\"ada\", () => pm.expect(pm.response.json().some(p => p.project_id === pm.collectionVariables.get(\"m10_project\"))).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects"
+              ]
+            }
+          }
+        },
+        {
+          "name": "18.12 - Direktori karyawan V2 (status=active)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "",
+                  "const j = pm.response.json();",
+                  "pm.test(\"bentuk V2\", () => {",
+                  "    pm.expect(j.items.length).to.be.above(0);",
+                  "    pm.expect(j.items[0]).to.include.keys(\"employee_id\", \"office_name\", \"position_name\", \"offboarding_status\");",
+                  "    pm.expect(j.items.every(e => e.offboarding_status === \"active\")).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/employees?status=active&size=5",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees?status=active&size=5"
+              ]
+            }
+          }
+        },
+        {
+          "name": "18.13 - Detail karyawan + alamat",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "",
+                  "pm.test(\"addresses array\", () => pm.expect(pm.response.json().addresses).to.be.an(\"array\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/employees/22222222-0000-4000-a000-000000000007",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "22222222-0000-4000-a000-000000000007"
+              ]
+            }
+          }
+        },
+        {
+          "name": "18.14 - Karyawan tidak ditemukan",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"404\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/employees/22222222-0000-4000-a000-0000000000ff",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "22222222-0000-4000-a000-0000000000ff"
+              ]
+            }
+          }
+        },
+        {
+          "name": "18.15 - HR menambah alamat",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201\", () => pm.response.to.have.status(201));",
+                  "",
+                  "pm.collectionVariables.set(\"m10_addr\", pm.response.json().address_id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/employees/22222222-0000-4000-a000-000000000007/addresses",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "22222222-0000-4000-a000-000000000007",
+                "addresses"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"address_line\": \"Jl. Uji Postman 10\",\n  \"city\": \"Bandung\",\n  \"postal_code\": \"40111\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "18.16 - HR mengubah alamat",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "",
+                  "pm.test(\"tersimpan\", () => pm.expect(pm.response.json().postal_code).to.eql(\"40112\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/employees/22222222-0000-4000-a000-000000000007/addresses/{{m10_addr}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "22222222-0000-4000-a000-000000000007",
+                "addresses",
+                "{{m10_addr}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"address_line\": \"Jl. Uji Postman 11\",\n  \"city\": \"Bandung\",\n  \"postal_code\": \"40112\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "18.17 - HR menghapus alamat",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/employees/22222222-0000-4000-a000-000000000007/addresses/{{m10_addr}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "22222222-0000-4000-a000-000000000007",
+                "addresses",
+                "{{m10_addr}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "18.18 - Hapus ulang alamat → 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"404\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/employees/22222222-0000-4000-a000-000000000007/addresses/{{m10_addr}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "22222222-0000-4000-a000-000000000007",
+                "addresses",
+                "{{m10_addr}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "18.19 - Karyawan baru dengan kantor tak dikenal ditolak",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"422\", () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/employees",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employee_no\": \"VT-M10-{{$timestamp}}\",\n  \"full_name\": \"Uji Kantor Salah\",\n  \"office_id\": \"22222222-0000-4000-a000-0000000000ff\",\n  \"join_date\": \"2026-01-01\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "18.20 - Akhir PKWT sebelum bergabung ditolak",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"422\", () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/employees",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employee_no\": \"VT-M10B-{{$timestamp}}\",\n  \"full_name\": \"Uji PKWT\",\n  \"office_id\": \"11111111-0000-4000-a000-000000000001\",\n  \"join_date\": \"2026-06-01\",\n  \"pkwt_end_date\": \"2026-01-01\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "18.21 - Endpoint V1 penugasan sudah dihapus",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"404\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/employees/22222222-0000-4000-a000-000000000007/assignments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "22222222-0000-4000-a000-000000000007",
+                "assignments"
+              ]
+            }
+          }
+        },
+        {
+          "name": "18.22 - PM menghapus proyek uji",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{m10_project}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "{{m10_project}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "18.23 - PM menghapus klien uji",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/clients/{{m10_client}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "clients",
+                "{{m10_client}}"
+              ]
             }
           }
         }

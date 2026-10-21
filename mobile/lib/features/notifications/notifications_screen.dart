@@ -43,7 +43,7 @@ class _NotificationBellState extends ConsumerState<NotificationBell> {
       final res = await ref.read(syncEngineProvider).api.notifications();
       if (mounted) setState(() => _unread = res.unread);
     } catch (_) {
-      // Luring: lencana tetap angka terakhir.
+      // Offline: lencana tetap angka terakhir.
     }
   }
 
@@ -137,7 +137,11 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
       final planId = n['daily_plan_id'] as String?;
       if (planId != null) {
         if (!mounted) return;
-        await Navigator.of(context).push(MaterialPageRoute(builder: (_) => DailyPlanScreen(dailyPlanId: planId)));
+        await Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => DailyPlanScreen(dailyPlanId: planId),
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -150,7 +154,10 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen(liveEventTickProvider, (_, _) => _load());   // T8: peristiwa waktu nyata
+    ref.listen(
+      liveEventTickProvider,
+      (_, _) => _load(),
+    ); // T8: peristiwa waktu nyata
     final unread = _items.where((n) => n['read_at'] == null).length;
     return Scaffold(
       appBar: VmsTopBar(

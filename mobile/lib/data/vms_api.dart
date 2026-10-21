@@ -17,14 +17,23 @@ class VmsApi {
   List<Map<String, dynamic>> _list(dynamic data) =>
       (data as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
 
-  Map<String, dynamic> _map(dynamic data) => Map<String, dynamic>.from(data as Map);
+  Map<String, dynamic> _map(dynamic data) =>
+      Map<String, dynamic>.from(data as Map);
 
   // --- Jadwal harian (Milestone 5–6, daily-first) -------------------------
   /// Jadwal tim saya dalam rentang tanggal (lapangan hanya melihat yang sudah disetujui).
-  Future<List<Map<String, dynamic>>> dailyPlans({required String start, required String end}) async =>
-      _list((await _dio.get('$_p/work-plans/daily', queryParameters: {'start': start, 'end': end})).data);
+  Future<List<Map<String, dynamic>>> dailyPlans({
+    required String start,
+    required String end,
+  }) async => _list(
+    (await _dio.get(
+      '$_p/work-plans/daily',
+      queryParameters: {'start': start, 'end': end},
+    )).data,
+  );
 
-  Future<Map<String, dynamic>> dailyPlan(String id) async => _map((await _dio.get('$_p/work-plans/daily/$id')).data);
+  Future<Map<String, dynamic>> dailyPlan(String id) async =>
+      _map((await _dio.get('$_p/work-plans/daily/$id')).data);
 
   /// Ketua tim memulai hari kerja (APPROVED → ONGOING) / menutupnya (→ COMPLETED).
   Future<Map<String, dynamic>> startDay(String id) async =>
@@ -45,21 +54,31 @@ class VmsApi {
     required num completedQty,
     List<Map<String, String?>>? photos,
     String? notes,
-  }) async => _map((await _dio.patch(
-    '$_p/work-plans/items/$itemId/progress',
-    data: {'completed_qty': completedQty, 'photos': ?photos, 'notes': ?notes},
-  )).data);
+  }) async => _map(
+    (await _dio.patch(
+      '$_p/work-plans/items/$itemId/progress',
+      data: {'completed_qty': completedQty, 'photos': ?photos, 'notes': ?notes},
+    )).data,
+  );
 
   /// Ketua: pekerjaan belum selesai → minta digeser (diputus PM).
-  Future<Map<String, dynamic>> requestRollover(String itemId, {required String reason, required num completedQty}) async =>
-      _map((await _dio.post(
-        '$_p/work-plans/items/$itemId/request-rollover',
-        data: {'delay_reason': reason, 'completed_qty': completedQty},
-      )).data);
+  Future<Map<String, dynamic>> requestRollover(
+    String itemId, {
+    required String reason,
+    required num completedQty,
+  }) async => _map(
+    (await _dio.post(
+      '$_p/work-plans/items/$itemId/request-rollover',
+      data: {'delay_reason': reason, 'completed_qty': completedQty},
+    )).data,
+  );
 
   /// Syarat foto (slot) jenis pekerjaan item.
-  Future<List<Map<String, dynamic>>> imageRequirements(String workTypeId) async =>
-      _list((await _dio.get('$_p/image-requirements/by-work-type/$workTypeId')).data);
+  Future<List<Map<String, dynamic>>> imageRequirements(
+    String workTypeId,
+  ) async => _list(
+    (await _dio.get('$_p/image-requirements/by-work-type/$workTypeId')).data,
+  );
 
   /// Aset yang dialokasikan ke jadwal tim (Milestone 4).
   Future<List<Map<String, dynamic>>> dayAssets(String dayId) async =>
@@ -69,6 +88,27 @@ class VmsApi {
   Future<Map<String, dynamic>> workCompletion(String id) async =>
       _map((await _dio.get('$_p/work-completions/$id')).data);
 
+  /// Hapus satu foto realisasi BAST (langsung tersimpan; ditolak bila BAST sudah disahkan PM).
+  Future<Map<String, dynamic>> deleteCompletionPhoto(
+    String id,
+    String fileId,
+  ) async =>
+      _map((await _dio.delete('$_p/work-completions/$id/photos/$fileId')).data);
+
+  /// Gambar tanda tangan tersimpan (`leader` / `pm`); null bila belum ada.
+  Future<List<int>?> completionSignature(String id, String role) async {
+    try {
+      final res = await _dio.get<List<int>>(
+        '$_p/work-completions/$id/signatures/$role',
+        options: Options(responseType: ResponseType.bytes),
+      );
+      return res.data;
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) return null;
+      rethrow;
+    }
+  }
+
   /// Ketua tim menandatangani BAST lebih dulu (ringkasan wajib, foto realisasi = id file), lalu PM mengesahkan.
   Future<Map<String, dynamic>> signCompletion(
     String id, {
@@ -76,30 +116,39 @@ class VmsApi {
     required String summary,
     String? obstacles,
     List<String> photoFileIds = const [],
-  }) async => _map((await _dio.post(
-    '$_p/work-completions/$id/sign',
-    data: {
-      'signature_data_url': 'data:image/png;base64,$signaturePng',
-      'summary_notes': summary,
-      'obstacles': ?obstacles,
-      'realization_photos': photoFileIds,
-    },
-  )).data);
+  }) async => _map(
+    (await _dio.post(
+      '$_p/work-completions/$id/sign',
+      data: {
+        'signature_data_url': 'data:image/png;base64,$signaturePng',
+        'summary_notes': summary,
+        'obstacles': ?obstacles,
+        'realization_photos': photoFileIds,
+      },
+    )).data,
+  );
 
   // --- Lembur (jadwal ONGOING) ---------------------------------------------
   Future<Map<String, dynamic>> requestOvertime({
     required String dayId,
     required num hours,
     required String reason,
-  }) async => _map((await _dio.post(
-    '$_p/overtime',
-    data: {'daily_plan_id': dayId, 'hours': hours, 'reason': reason},
-  )).data);
+  }) async => _map(
+    (await _dio.post(
+      '$_p/overtime',
+      data: {'daily_plan_id': dayId, 'hours': hours, 'reason': reason},
+    )).data,
+  );
 
   /// URL sementara (presigned) sebuah berkas gambar, mis. foto contoh template. `variant`: thumb | view | full.
   Future<String> fileUrl(String fileId, {String variant = 'view'}) async {
-    final res = await _dio.get('$_p/files/$fileId/url', queryParameters: {'variant': variant});
-    return (res.data as Map)['url'] as String;
+    final res = await _dio.get(
+      '$_p/files/$fileId/url',
+      queryParameters: {'variant': variant},
+    );
+    // API mengembalikan URL relatif (/api/v1/files/…?token=…); Image.network butuh URL absolut.
+    final url = (res.data as Map)['url'] as String;
+    return Uri.parse(_dio.options.baseUrl).resolve(url).toString();
   }
 
   /// Aliran peristiwa waktu nyata (SSE, T8). Tanpa batas waktu baca: sambungan sengaja berumur panjang.
@@ -233,14 +282,17 @@ class VmsApi {
     final form = FormData.fromMap({
       'files': [
         for (final photo in photos)
-          await MultipartFile.fromFile(photo.path, filename: photo.uri.pathSegments.last),
+          await MultipartFile.fromFile(
+            photo.path,
+            filename: photo.uri.pathSegments.last,
+          ),
       ],
     });
     final res = await _dio.post('$_p/face/enroll', data: form);
     return Map<String, dynamic>.from(res.data as Map);
   }
 
-  /// R-34: daftarkan kunci publik Android Keystore untuk absen luring.
+  /// R-34: daftarkan kunci publik Android Keystore untuk absen offline.
   Future<void> registerDeviceKey({
     required String deviceId,
     required String publicKey,
@@ -249,7 +301,7 @@ class VmsApi {
     data: {'device_id': deviceId, 'public_key': publicKey},
   );
 
-  /// R-34: kirim satu absen luring bertanda tangan (idempoten per client_op_id).
+  /// R-34: kirim satu absen offline bertanda tangan (idempoten per client_op_id).
   Future<Map<String, dynamic>> submitOfflineAttendance({
     required String deviceId,
     required String clientOpId,
@@ -277,6 +329,130 @@ class VmsApi {
         '$_p/attendance/$attendanceId/explain',
         data: {'explanation': explanation},
       );
+
+  // --- Survei ACS & CCTV berformat baku (docs/37) ------------------------
+  /// Daftar survei saya (ketua/anggota tim): DRAFT = sedang diisi, SUBMITTED = menunggu PM, APPROVED.
+  Future<List<Map<String, dynamic>>> surveys({String? state}) async => _list(
+    (await _dio.get(
+      '$_p/work-plans/surveys',
+      queryParameters: {'state': ?state},
+    )).data,
+  );
+
+  /// Laporan mingguan tim (.pptx): semua pekerjaan tim 7 hari mulai [start] — foto, keterangan, status.
+  Future<List<int>> teamWeekSlides(String teamId, String start) async {
+    final res = await _dio.post<List<int>>(
+      '$_p/exports/team-week',
+      data: {'team_id': teamId, 'start_date': start},
+      options: Options(responseType: ResponseType.bytes, receiveTimeout: const Duration(minutes: 3)),
+    );
+    return res.data ?? const <int>[];
+  }
+
+  /// Slide laporan pekerjaan klien (.pptx): foto per pekerjaan + keterangan + status berwarna.
+  Future<List<int>> completionSlides(String completionId) async {
+    final res = await _dio.post<List<int>>(
+      '$_p/exports/work-completions/$completionId',
+      data: {'template': 'PROGRESS_SLIDES'},
+      options: Options(responseType: ResponseType.bytes, receiveTimeout: const Duration(minutes: 3)),
+    );
+    return res.data ?? const <int>[];
+  }
+
+  /// Laporan survei resmi (.docx, tercatat di riwayat dokumen) — setelah survei dikirim.
+  Future<List<int>> surveyOfficialReport(String taskId) async {
+    final res = await _dio.post<List<int>>(
+      '$_p/exports/surveys/$taskId',
+      options: Options(
+        responseType: ResponseType.bytes,
+        receiveTimeout: const Duration(minutes: 3),
+      ),
+    );
+    return res.data ?? const <int>[];
+  }
+
+  /// Survei: format, slot foto, katalog material, titik, BoM, status, `can_edit`.
+  Future<Map<String, dynamic>> survey(String taskId) async =>
+      _map((await _dio.get('$_p/work-plans/surveys/$taskId')).data);
+
+  /// Titik baru / ganti isi titik: `{name, remarks[], photos[{file_id, requirement_id}], lines[{category, name, qty, unit, notes}]}`.
+  Future<Map<String, dynamic>> addSurveyPoint(
+    String taskId,
+    Map<String, dynamic> point,
+  ) async => _map(
+    (await _dio.post(
+      '$_p/work-plans/surveys/$taskId/points',
+      data: point,
+    )).data,
+  );
+
+  Future<Map<String, dynamic>> updateSurveyPoint(
+    String pointId,
+    Map<String, dynamic> point,
+  ) async => _map(
+    (await _dio.put(
+      '$_p/work-plans/surveys/points/$pointId',
+      data: point,
+    )).data,
+  );
+
+  Future<Map<String, dynamic>> deleteSurveyPoint(String pointId) async =>
+      _map((await _dio.delete('$_p/work-plans/surveys/points/$pointId')).data);
+
+  /// Pindahkan titik di peta layout (layout laporan dibuat otomatis dari koordinat titik).
+  Future<Map<String, dynamic>> moveSurveyPoint(
+    String pointId,
+    double lat,
+    double lng,
+  ) async => _map(
+    (await _dio.put(
+      '$_p/work-plans/surveys/points/$pointId/location',
+      data: {
+        'site_lat': double.parse(lat.toStringAsFixed(7)),
+        'site_lng': double.parse(lng.toStringAsFixed(7)),
+      },
+    )).data,
+  );
+
+  /// Narasi, tujuan, dan lokasi laporan.
+  /// Material umum lokasi (bukan milik satu titik) — rack, panel, kabel tray utama.
+  Future<Map<String, dynamic>> addSurveyLine(
+    String taskId,
+    Map<String, dynamic> line,
+  ) async => _map(
+    (await _dio.post('$_p/work-plans/surveys/$taskId/lines', data: line)).data,
+  );
+
+  Future<Map<String, dynamic>> deleteSurveyLine(String bomId) async =>
+      _map((await _dio.delete('$_p/work-plans/surveys/lines/$bomId')).data);
+
+  Future<Map<String, dynamic>> saveSurveyReport(
+    String taskId,
+    Map<String, dynamic> report,
+  ) async => _map(
+    (await _dio.put(
+      '$_p/work-plans/surveys/$taskId/report',
+      data: report,
+    )).data,
+  );
+
+  Future<Map<String, dynamic>> submitSurvey(String taskId) async =>
+      _map((await _dio.post('$_p/work-plans/surveys/$taskId/submit')).data);
+
+  /// Pratinjau laporan (tidak disimpan di server): PDF, atau .docx bila server tak punya konverter.
+  Future<({List<int> bytes, bool isPdf})> surveyPreview(String taskId) async {
+    final res = await _dio.get<List<int>>(
+      '$_p/exports/surveys/$taskId/preview',
+      options: Options(
+        responseType: ResponseType.bytes,
+        receiveTimeout: const Duration(minutes: 3),
+      ),
+    );
+    return (
+      bytes: res.data ?? const <int>[],
+      isPdf: res.headers.value('x-preview-format') == 'PDF',
+    );
+  }
 
   // --- Lembur -------------------------------------------------------------
   Future<List<Map<String, dynamic>>> myOvertime() async =>

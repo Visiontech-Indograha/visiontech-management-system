@@ -59,17 +59,22 @@ class _HomeShellState extends ConsumerState<HomeShell>
         ref.read(liveEventTickProvider.notifier).bump();
         if (event.topic == 'notification') {
           final planId = event.data['daily_plan_id'] ?? '';
-          unawaited(notifier.show(
-            title: '${event.data['title'] ?? 'Notifikasi baru'}',
-            body: '${event.data['body'] ?? ''}',
-            payload: '$planId|${event.data['kind'] ?? ''}',
-          ));
+          unawaited(
+            notifier.show(
+              title: '${event.data['title'] ?? 'Notifikasi baru'}',
+              body: '${event.data['body'] ?? ''}',
+              payload: '$planId|${event.data['kind'] ?? ''}',
+            ),
+          );
         } else if (event.topic == 'security') {
-          unawaited(notifier.show(
-            title: '${event.data['title'] ?? 'Aktivitas Keamanan'}',
-            body: '${event.data['body'] ?? 'Ada perangkat lain yang masuk dengan akun Anda.'}',
-            payload: 'security',
-          ));
+          unawaited(
+            notifier.show(
+              title: '${event.data['title'] ?? 'Aktivitas Keamanan'}',
+              body:
+                  '${event.data['body'] ?? 'Ada perangkat lain yang masuk dengan akun Anda.'}',
+              payload: 'security',
+            ),
+          );
         }
       },
     )..start();
@@ -79,7 +84,9 @@ class _HomeShellState extends ConsumerState<HomeShell>
   Future<void> _openFromNotification(String payload) async {
     final planId = payload.split('|').first;
     if (planId.isEmpty || planId == 'security' || !mounted) return;
-    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => DailyPlanScreen(dailyPlanId: planId)));
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => DailyPlanScreen(dailyPlanId: planId)),
+    );
   }
 
   @override
@@ -108,7 +115,9 @@ class _HomeShellState extends ConsumerState<HomeShell>
     }
     if (state != AppLifecycleState.resumed) return;
     _live?.start();
-    ref.read(liveEventTickProvider.notifier).bump();   // peristiwa selama di latar belakang tidak terlihat
+    ref
+        .read(liveEventTickProvider.notifier)
+        .bump(); // peristiwa selama di latar belakang tidak terlihat
 
     // Kunci ulang saat aplikasi kembali dari latar belakang. Tanpa ini gerbang
     // sidik jari hanya berlaku saat aplikasi dibuka dari kondisi mati total --

@@ -161,7 +161,7 @@ class AppUpdateController extends Notifier<AppUpdateState> {
       state = state.copyWith(installed: app, info: info, clearError: true);
       return info;
     } catch (_) {
-      // Luring / server tak terjangkau: biarkan apa adanya, coba lagi nanti.
+      // Offline / server tak terjangkau: biarkan apa adanya, coba lagi nanti.
       _lastCheck = null;
       return state.info;
     }

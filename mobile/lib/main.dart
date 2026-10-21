@@ -36,19 +36,21 @@ class VmsMobileApp extends ConsumerWidget {
     // GPS dihangatkan sejak aplikasi dibuka agar absen & foto berlokasi tidak menunggu lama.
     return LocationWarmerScope(
       child: ConnectivitySyncWatcher(
-      // shadcn_ui (R-14) + tema Material VMS untuk layar yang belum dimigrasi. Mode gelap di luar MVP (K-23).
-      child: ShadApp.router(
-        title: 'Visiontech',
-        theme: VmsShadTheme.light,
-        darkTheme: VmsShadTheme.light,
-        themeMode: ThemeMode.light,
-        materialThemeBuilder: (context, _) => VmsTheme.light,
-        routerConfig: router,
-        // ScaffoldMessenger (SnackBar) + safe zone kiri/kanan — lihat shared/app_frame.dart.
-        // Gerbang pembaruan wajib (docs/32) di atas Navigator: berlaku juga untuk layar login.
-        builder: (context, child) =>
-            vmsAppFrame(context, AppUpdateGate(child: child ?? const SizedBox.shrink())),
-      ),
+        // shadcn_ui (R-14) + tema Material VMS untuk layar yang belum dimigrasi. Mode gelap di luar MVP (K-23).
+        child: ShadApp.router(
+          title: 'Visiontech',
+          theme: VmsShadTheme.light,
+          darkTheme: VmsShadTheme.light,
+          themeMode: ThemeMode.light,
+          materialThemeBuilder: (context, _) => VmsTheme.light,
+          routerConfig: router,
+          // ScaffoldMessenger (SnackBar) + safe zone kiri/kanan — lihat shared/app_frame.dart.
+          // Gerbang pembaruan wajib (docs/32) di atas Navigator: berlaku juga untuk layar login.
+          builder: (context, child) => vmsAppFrame(
+            context,
+            AppUpdateGate(child: child ?? const SizedBox.shrink()),
+          ),
+        ),
       ),
     );
   }

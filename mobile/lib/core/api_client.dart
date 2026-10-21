@@ -82,7 +82,7 @@ class ApiClient {
             handler.resolve(response);
           } on DioException catch (retryError) {
             // Teruskan kegagalan kiriman ULANG, bukan 401 lama: bila sinyal putus di sini, pemanggil
-            // harus melihat gangguan jaringan (mis. layar Absensi lalu menyimpan absen luring, R-34).
+            // harus melihat gangguan jaringan (mis. layar Absensi lalu menyimpan absen offline, R-34).
             handler.next(retryError);
           } catch (_) {
             handler.next(error);

@@ -239,23 +239,3 @@ export function useSyncBomFromWorkTypes() {
     },
   });
 }
-
-export async function downloadWorkCompletionDocx(completionId: string, filename?: string): Promise<void> {
-  const res = await api.get(`/work-completions/${completionId}/export`, {
-    responseType: "blob",
-  });
-  const blob = new Blob([res.data], {
-    type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  });
-  const url = window.URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.setAttribute(
-    "download",
-    filename || `BAST_Work_Completion_${completionId.slice(0, 8)}.docx`
-  );
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  window.URL.revokeObjectURL(url);
-}

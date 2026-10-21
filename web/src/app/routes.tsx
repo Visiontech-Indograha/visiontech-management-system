@@ -29,6 +29,7 @@ import {
   WorkCompletionsPage,
 } from "./lazyPages";
 import { ChangePasswordPage } from "@/pages/auth/ChangePasswordPage";
+import { VerifyCompletionPage } from "@/pages/verify/VerifyCompletionPage";
 
 
 /** Halaman yang sudah dibangun; sisanya tampil "dibangun pada fase berikutnya". */
@@ -56,6 +57,7 @@ export const routes: RouteObject[] = [
     children: [
   { path: "/login", element: <LoginPage /> },
   { path: "/admin-login", element: <LoginPage admin /> }, // sengaja tidak ditautkan dari menu/halaman lain
+  { path: "/verify/work-completion/:id", element: <VerifyCompletionPage /> }, // QR BAST resmi, publik
   {
     element: <RequireAuth />,
     children: [

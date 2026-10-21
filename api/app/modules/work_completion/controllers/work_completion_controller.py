@@ -23,6 +23,7 @@ from app.modules.work_completion.schemas.work_completion_schema import (
     WorkCompletionSignRequest,
     WorkCompletionStatusUpdate,
     WorkCompletionUpdate,
+    WorkCompletionVerifyOut,
 )
 from app.modules.work_completion.services.work_completion_service import WorkCompletionService
 
@@ -170,10 +171,6 @@ class WorkCompletionController:
             "message": f"Berhasil menyinkronkan {synced_count} material dari template jenis pekerjaan.",
         }
 
-    async def export_docx(
-        self,
-        completion_id: UUID,
-        current_user: CurrentUser,
-    ) -> tuple[bytes, str]:
-        """Ekspor dokumen Berita Acara & BoM dalam format Word (.docx)."""
-        return await self.service.export_completion_docx(current_user, completion_id)
+    async def verify(self, completion_id: UUID, signature_hash: str) -> WorkCompletionVerifyOut:
+        """Verifikasi publik dokumen resmi lewat QR."""
+        return WorkCompletionVerifyOut(**await self.service.verify(completion_id, signature_hash))

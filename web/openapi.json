@@ -2093,13 +2093,67 @@
     }
    }
   },
-  "/api/v1/work-completions/{completion_id}/export": {
+  "/api/v1/exports/work-completions/{completion_id}": {
+   "post": {
+    "tags": [
+     "Ekspor Dokumen"
+    ],
+    "summary": "Export Work Completion",
+    "description": "BAST (.docx), Survey Report (.docx), BAST resmi ber-QR (.pdf), BoQ (.xlsx), atau slide progres (.pptx).",
+    "operationId": "export_work_completion_api_v1_exports_work_completions__completion_id__post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "completion_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Completion Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/CompletionExportRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Berkas dokumen",
+      "content": {
+       "application/octet-stream": {}
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
    "get": {
     "tags": [
-     "Work Completions (Order Klien)"
+     "Ekspor Dokumen"
     ],
-    "summary": "Unduh Berita Acara & BoM Format Word DOCX",
-    "operationId": "export_work_completion_docx_api_v1_work_completions__completion_id__export_get",
+    "summary": "List Work Completion Exports",
+    "description": "Riwayat dokumen yang pernah dibuat untuk order ini.",
+    "operationId": "list_work_completion_exports_api_v1_exports_work_completions__completion_id__get",
     "security": [
      {
       "HTTPBearer": []
@@ -2122,7 +2176,186 @@
       "description": "Successful Response",
       "content": {
        "application/json": {
-        "schema": {}
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/ExportOut"
+         },
+         "title": "Response List Work Completion Exports Api V1 Exports Work Completions  Completion Id  Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/exports/periodic": {
+   "get": {
+    "tags": [
+     "Ekspor Dokumen"
+    ],
+    "summary": "List Periodic Exports",
+    "description": "Rekap periodik: OM & SUPER_ADMIN melihat semua, PM miliknya sendiri.",
+    "operationId": "list_periodic_exports_api_v1_exports_periodic_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/ExportOut"
+         },
+         "type": "array",
+         "title": "Response List Periodic Exports Api V1 Exports Periodic Get"
+        }
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "Ekspor Dokumen"
+    ],
+    "summary": "Export Periodic",
+    "description": "Rekap divisi per rentang (maks. 31 hari): jadwal, BoQ & uang makan (.xlsx) atau slide mingguan (.pptx).",
+    "operationId": "export_periodic_api_v1_exports_periodic_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PeriodicExportRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Berkas dokumen",
+      "content": {
+       "application/octet-stream": {}
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ]
+   }
+  },
+  "/api/v1/exports/{export_id}/file": {
+   "get": {
+    "tags": [
+     "Ekspor Dokumen"
+    ],
+    "summary": "Download Export",
+    "description": "Unduh ulang dokumen dari registri (hak sama dengan saat membuatnya).",
+    "operationId": "download_export_api_v1_exports__export_id__file_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "export_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Export Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Berkas dokumen",
+      "content": {
+       "application/octet-stream": {}
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/verify/work-completions/{completion_id}": {
+   "get": {
+    "tags": [
+     "Verifikasi Dokumen"
+    ],
+    "summary": "Verify Work Completion",
+    "description": "Cek keaslian BAST resmi: sidik cocok dan isi tidak berubah sejak disahkan PM. Sidik salah → 404.",
+    "operationId": "verify_work_completion_api_v1_verify_work_completions__completion_id__get",
+    "parameters": [
+     {
+      "name": "completion_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Completion Id"
+      }
+     },
+     {
+      "name": "h",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "minLength": 64,
+       "maxLength": 64,
+       "pattern": "^[0-9a-fA-F]{64}$",
+       "title": "H"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/WorkCompletionVerifyOut"
+        }
        }
       }
      },
@@ -10779,6 +11012,26 @@
     ],
     "title": "ClearanceItemVerify"
    },
+   "CompletionExportRequest": {
+    "properties": {
+     "template": {
+      "type": "string",
+      "enum": [
+       "BAST",
+       "SURVEY_REPORT",
+       "BAST_PDF",
+       "BOQ",
+       "PROGRESS_SLIDES"
+      ],
+      "title": "Template"
+     }
+    },
+    "type": "object",
+    "required": [
+     "template"
+    ],
+    "title": "CompletionExportRequest"
+   },
    "DailyFormOptions": {
     "properties": {
      "divisions": {
@@ -12745,6 +12998,100 @@
     ],
     "title": "ExplanationRequest",
     "description": "Schema for supplying an explanation to an attendance record."
+   },
+   "ExportOut": {
+    "properties": {
+     "export_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Export Id"
+     },
+     "source_type": {
+      "type": "string",
+      "title": "Source Type"
+     },
+     "completion_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Completion Id"
+     },
+     "period_start_date": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Period Start Date"
+     },
+     "period_end_date": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Period End Date"
+     },
+     "template_type": {
+      "type": "string",
+      "title": "Template Type"
+     },
+     "export_format": {
+      "type": "string",
+      "title": "Export Format"
+     },
+     "generated_by_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Generated By Id"
+     },
+     "generated_by_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Generated By Name"
+     },
+     "create_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Create At"
+     },
+     "file_name": {
+      "type": "string",
+      "title": "File Name",
+      "description": "Nama berkas saat diunduh"
+     }
+    },
+    "type": "object",
+    "required": [
+     "export_id",
+     "source_type",
+     "template_type",
+     "export_format",
+     "generated_by_id",
+     "create_at",
+     "file_name"
+    ],
+    "title": "ExportOut"
    },
    "FacePolicy": {
     "properties": {
@@ -14729,6 +15076,41 @@
     ],
     "title": "OvertimeReview",
     "description": "Schema for reviewing an overtime request (domain.js REVIEW_OVERTIME).\n\nStatus keputusan (decision) berupa APPROVED atau REJECTED, dan akan\ndiperiksa serta diproses di dalam service."
+   },
+   "PeriodicExportRequest": {
+    "properties": {
+     "division_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Division Id"
+     },
+     "start_date": {
+      "type": "string",
+      "format": "date",
+      "title": "Start Date"
+     },
+     "end_date": {
+      "type": "string",
+      "format": "date",
+      "title": "End Date"
+     },
+     "export_format": {
+      "type": "string",
+      "enum": [
+       "EXCEL_XLSX",
+       "PPTX"
+      ],
+      "title": "Export Format",
+      "default": "EXCEL_XLSX"
+     }
+    },
+    "type": "object",
+    "required": [
+     "division_id",
+     "start_date",
+     "end_date"
+    ],
+    "title": "PeriodicExportRequest"
    },
    "PlanItemCreate": {
     "properties": {
@@ -17997,11 +18379,12 @@
      },
      "realization_photos": {
       "items": {
-       "type": "string"
+       "type": "string",
+       "format": "uuid"
       },
       "type": "array",
-      "title": "Realization Photos",
-      "description": "Array path foto dokumentasi hasil kerja"
+      "maxItems": 30,
+      "title": "Realization Photos"
      }
     },
     "type": "object",
@@ -18164,6 +18547,110 @@
     "type": "object",
     "title": "WorkCompletionUpdate",
     "description": "Schema pembaruan detail Order Klien."
+   },
+   "WorkCompletionVerifyOut": {
+    "properties": {
+     "completion_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Completion Id"
+     },
+     "order_number": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Order Number"
+     },
+     "client_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Client Name"
+     },
+     "project_title": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Project Title"
+     },
+     "leader_signer_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Leader Signer Name"
+     },
+     "leader_signed_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Leader Signed At"
+     },
+     "pm_signer_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Pm Signer Name"
+     },
+     "pm_signed_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Pm Signed At"
+     },
+     "signature_hash": {
+      "type": "string",
+      "title": "Signature Hash"
+     },
+     "intact": {
+      "type": "boolean",
+      "title": "Intact"
+     }
+    },
+    "type": "object",
+    "required": [
+     "completion_id",
+     "signature_hash",
+     "intact"
+    ],
+    "title": "WorkCompletionVerifyOut",
+    "description": "Verifikasi publik dokumen resmi (QR): hanya data yang tercetak di dokumen."
    },
    "WorkTypeIn": {
     "properties": {

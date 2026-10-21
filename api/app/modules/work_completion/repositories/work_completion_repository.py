@@ -278,6 +278,8 @@ class WorkCompletionRepository(BaseRepository):
                 wc.leader_signer_id,
                 e_ldr.full_name AS leader_signer_name,
                 wc.leader_signed_at,
+                wc.leader_signature_path,
+                wc.pm_signature_path,
                 wc.pm_signer_id,
                 e_pm2.full_name AS pm_signer_name,
                 wc.pm_signed_at,
@@ -337,7 +339,7 @@ class WorkCompletionRepository(BaseRepository):
                 "site_address": data.get("site_address"),
                 "site_lat": data.get("site_lat"),
                 "site_lng": data.get("site_lng"),
-                "summary_notes": data.get("summary_notes"),
+                "summary_notes": data.get("summary_notes") or "",  # DB uji: NOT NULL (DDL: NULL) — "" aman di keduanya
                 "realization_photos_json": json.dumps(photos),
             },
         )
@@ -382,50 +384,64 @@ class WorkCompletionRepository(BaseRepository):
         *,
         completion_id: UUID | str,
         signer_id: UUID | str,
-        role: str,
-        signature_path: str,
-        summary_notes: str | None,
-        obstacles: str | None,
-        photos: list[str],
-        signature_hash: str,
+        as_leader: bool,
+        signature_key: str,
+        summary_notes: str | None = None,
+        obstacles: str | None = None,
+        photos: list[str] | None = None,
     ) -> None:
-        """Membubuhkan tanda tangan digital leader atau PM."""
-        if role == "TEAM_LEADER":
+        """Tanda tangan ketua (boleh diulang sebelum PM; sidik direset) atau PM (order selesai)."""
+        if as_leader:
             sql = """
                 UPDATE work_completion
                 SET leader_signer_id = CAST(:signer_id AS uuid),
-                    leader_signature_path = :sig_path,
+                    leader_signature_path = :sig_key,
                     leader_signed_at = NOW(),
                     summary_notes = COALESCE(:summary_notes, summary_notes),
                     obstacles = COALESCE(:obstacles, obstacles),
-                    realization_photos_json = CAST(:photos AS jsonb),
-                    signature_hash = :sig_hash,
+                    realization_photos_json = COALESCE(CAST(:photos AS jsonb), realization_photos_json),
+                    signature_hash = NULL,
                     update_at = NOW()
-                WHERE completion_id = CAST(:id AS uuid) AND delete_at IS NULL
+                WHERE completion_id = CAST(:id AS uuid) AND delete_at IS NULL AND pm_signed_at IS NULL
             """
         else:
             sql = """
                 UPDATE work_completion
                 SET pm_signer_id = CAST(:signer_id AS uuid),
-                    pm_signature_path = :sig_path,
+                    pm_signature_path = :sig_key,
                     pm_signed_at = NOW(),
                     order_status = 'COMPLETED',
-                    signature_hash = :sig_hash,
                     update_at = NOW()
-                WHERE completion_id = CAST(:id AS uuid) AND delete_at IS NULL
+                WHERE completion_id = CAST(:id AS uuid) AND delete_at IS NULL AND pm_signed_at IS NULL
+                  AND leader_signed_at IS NOT NULL
             """
         await self.execute(
             sql,
             {
                 "id": str(completion_id),
                 "signer_id": str(signer_id),
-                "sig_path": signature_path,
+                "sig_key": signature_key,
                 "summary_notes": summary_notes,
                 "obstacles": obstacles,
-                "photos": json.dumps(photos),
-                "sig_hash": signature_hash,
+                "photos": json.dumps(photos) if photos else None,
             },
         )
+
+    async def set_signature_hash(self, completion_id: UUID | str, signature_hash: str) -> None:
+        await self.execute(
+            "UPDATE work_completion SET signature_hash = :h WHERE completion_id = CAST(:id AS uuid)",
+            {"id": str(completion_id), "h": signature_hash},
+        )
+
+    async def existing_images(self, file_ids: list[str]) -> int:
+        """Jumlah id yang benar-benar berkas gambar terunggah (foto realisasi BAST)."""
+        if not file_ids:
+            return 0
+        count = await self.scalar(
+            "SELECT COUNT(*) FROM file_object WHERE id = ANY(CAST(:ids AS uuid[])) AND mime_type LIKE 'image/%'",
+            {"ids": file_ids},
+        )
+        return int(count or 0)
 
     async def list_bom_items(self, completion_id: UUID | str) -> list[dict[str, Any]]:
         """Daftar item BoM riil untuk satu order proyek klien."""

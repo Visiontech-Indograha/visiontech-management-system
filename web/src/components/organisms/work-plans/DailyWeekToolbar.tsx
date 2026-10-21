@@ -3,7 +3,10 @@ import { SelectField } from "@/components/molecules/Field";
 import { ControlOption } from "@/components/molecules/FormBlock";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { formatDate } from "@/lib/format";
+import { toast } from "sonner";
+import { errorMessage } from "@/lib/errors";
 import type { DailyFormOptions } from "@/services/dailyPlanService";
+import { useExportPeriodic } from "@/services/exportService";
 
 /** Navigasi minggu (Senin–Minggu) + filter divisi untuk halaman Jadwal harian. */
 export function DailyWeekToolbar({ start, end, options, divisionId, onWeek, onDivision }: {
@@ -43,5 +46,28 @@ export function ApproveWeekButton({ count, busy, onClick }: { count: number; bus
     <ActionButton onClick={onClick} disabled={busy}>
       Setujui minggu ini ({count})
     </ActionButton>
+  );
+}
+
+/** Rekap divisi minggu yang tampil (docs/35 §8): .xlsx (jadwal, BoQ, uang makan) atau slide .pptx. Butuh satu divisi. */
+export function WeekRecapButtons({ divisionId, start, end }: { divisionId: string; start: string; end: string }) {
+  const exporter = useExportPeriodic();
+  const run = (export_format: "EXCEL_XLSX" | "PPTX") =>
+    exporter.mutate(
+      { division_id: divisionId, start_date: start, end_date: end, export_format },
+      { onSuccess: () => toast.success("Rekap minggu berhasil dibuat."), onError: (err) => toast.error(errorMessage(err)) },
+    );
+  if (!divisionId) {
+    return <TextBlock as="span" className="text-xs text-mist">Pilih satu divisi untuk mengunduh rekap minggu.</TextBlock>;
+  }
+  return (
+    <div className="flex gap-2">
+      <ActionButton variant="outline" size="sm" disabled={exporter.isPending} onClick={() => run("EXCEL_XLSX")}>
+        Rekap minggu (.xlsx)
+      </ActionButton>
+      <ActionButton variant="outline" size="sm" disabled={exporter.isPending} onClick={() => run("PPTX")}>
+        Slide minggu (.pptx)
+      </ActionButton>
+    </div>
   );
 }

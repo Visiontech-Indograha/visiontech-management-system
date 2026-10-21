@@ -2,7 +2,7 @@ import type { UseQueryResult } from "@tanstack/react-query";
 import { DailyPlanDetailDialog } from "@/components/organisms/work-plans/DailyPlanDetailDialog";
 import { DailyPlanFormDialog } from "@/components/organisms/work-plans/DailyPlanFormDialog";
 import { DailyWeekMatrix, type MatrixTeam } from "@/components/organisms/work-plans/DailyWeekMatrix";
-import { ApproveWeekButton, DailyWeekToolbar } from "@/components/organisms/work-plans/DailyWeekToolbar";
+import { ApproveWeekButton, DailyWeekToolbar, WeekRecapButtons } from "@/components/organisms/work-plans/DailyWeekToolbar";
 import type { DailyFormOptions, DailyPlan } from "@/services/dailyPlanService";
 import { PageTemplate } from "../PageTemplate";
 
@@ -44,6 +44,15 @@ export function DailyPlansTemplate(props: {
     >
       <DailyWeekToolbar start={start} end={end} options={options} divisionId={divisionId}
                         onWeek={props.onWeek} onDivision={props.onDivision} />
+      {canPlan && options && (
+        <div className="mb-4">
+          <WeekRecapButtons
+            divisionId={divisionId || (options.divisions.length === 1 ? options.divisions[0]!.division_id : "")}
+            start={start}
+            end={end}
+          />
+        </div>
+      )}
 
       <DailyWeekMatrix
         plans={props.plans}

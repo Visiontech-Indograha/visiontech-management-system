@@ -1,11 +1,9 @@
 import { useState } from "react";
-import { toast } from "sonner";
 import {
   Building,
   Calendar,
   CheckCircle2,
   Clock,
-  Download,
   FileCheck2,
   Layers,
   MapPin,
@@ -21,13 +19,10 @@ import {
   TabsBlockContent,
 } from "@/components/molecules/TabsBlock";
 import { TextBlock } from "@/components/molecules/TextBlock";
-import { ActionButton } from "@/components/molecules/ActionButton";
 import { LoadingBar } from "@/components/molecules/LoadingBar";
-import {
-  useWorkCompletion,
-  downloadWorkCompletionDocx,
-} from "@/services/workCompletionService";
+import { useWorkCompletion } from "@/services/workCompletionService";
 import { WorkCompletionBomTable } from "./WorkCompletionBomTable";
+import { WorkCompletionExportPanel } from "./WorkCompletionExportPanel";
 
 interface WorkCompletionDetailModalProps {
   completionId: string | null;
@@ -41,25 +36,10 @@ export function WorkCompletionDetailModal({
   canManage,
 }: WorkCompletionDetailModalProps) {
   const [activeTab, setActiveTab] = useState<string>("ringkasan");
-  const [downloadingDoc, setDownloadingDoc] = useState(false);
 
   const { data: order, isPending, isError } = useWorkCompletion(completionId || "");
 
   if (!completionId) return null;
-
-  const handleDownloadDocx = async () => {
-    if (!order) return;
-    setDownloadingDoc(true);
-    try {
-      const filename = `BAST_${order.order_number || order.client_name.replace(/\s+/g, "_")}.docx`;
-      await downloadWorkCompletionDocx(order.completion_id, filename);
-      toast.success("Berita Acara & BoM Word (.docx) berhasil diunduh.");
-    } catch {
-      toast.error("Gagal mengunduh dokumen Berita Acara.");
-    } finally {
-      setDownloadingDoc(false);
-    }
-  };
 
   const completedUnits = order?.completed_target_unit ?? 0;
   const targetUnits = order?.total_target_unit ?? 1;
@@ -86,17 +66,6 @@ export function WorkCompletionDetailModal({
             )}
           </div>
 
-          {order && (
-            <ActionButton
-              variant="outline"
-              size="sm"
-              onClick={handleDownloadDocx}
-              disabled={downloadingDoc}
-            >
-              <Download className={`mr-1.5 h-3.5 w-3.5 ${downloadingDoc ? "animate-spin" : ""}`} />
-              Unduh BAST (.docx)
-            </ActionButton>
-          )}
         </div>
 
         {isPending && (
@@ -311,25 +280,7 @@ export function WorkCompletionDetailModal({
                   </TextBlock>
                 </div>
 
-                {/* Download Document Action */}
-                <div className="rounded-panel border border-primary/20 bg-primary/5 p-4 flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <TextBlock className="font-semibold text-ink">
-                      Ekspor Dokumen Resmi BAST & BoM (.docx)
-                    </TextBlock>
-                    <TextBlock className="text-xs text-mist">
-                      Format resmi dokumen Berita Acara lengkap dengan matriks teknis, tabel BoM, dan hash pengesahan.
-                    </TextBlock>
-                  </div>
-                  <ActionButton
-                    variant="default"
-                    onClick={handleDownloadDocx}
-                    disabled={downloadingDoc}
-                  >
-                    <Download className={`mr-2 h-4 w-4 ${downloadingDoc ? "animate-spin" : ""}`} />
-                    {downloadingDoc ? "Mengunduh..." : "Unduh Dokumen Word"}
-                  </ActionButton>
-                </div>
+                <WorkCompletionExportPanel completionId={order.completion_id} signed={!!order.signature_hash} />
               </TabsBlockContent>
             </TabsBlock>
           </div>

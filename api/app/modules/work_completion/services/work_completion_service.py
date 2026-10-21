@@ -5,25 +5,81 @@ Order Proyek Klien (Milestone 5, docs/35 §3): PM menerima order dari klien (mis
 per hari/titik.
 - Kelola (ubah, status, BoM): SUPER_ADMIN, PM order, atau PM/OM divisinya.
 - Lihat: pengelola, ADMIN_HR_GA, atau anggota tim yang punya jadwal (disetujui) berisi item order ini.
-- Tanda tangan BAST: ketua tim yang mengerjakan order, atau pengelolanya.
+- Tanda tangan BAST (docs/35 §8): ketua tim yang mengerjakan order lebih dulu (ringkasan + foto realisasi), lalu
+  pengelola (PM/OM divisi). PNG tanda tangan disimpan di storage; setelah PM menandatangani, sidik SHA-256 atas isi
+  dokumen disimpan di `signature_hash` dan order terkunci (`ORDER_LOCKED`). Verifikasi publik (QR) menghitung ulang.
 Order tak terlihat → 404; terlihat tetapi tidak berwenang → 403.
 """
 
 from __future__ import annotations
 
 import base64
+import binascii
 import hashlib
+import json
 from typing import Any
 from uuid import UUID
 
+import filetype
+
+from app.core import storage
+from app.core.config import settings
 from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationError
 from app.core.security import CurrentUser
 from app.modules.work_completion.repositories.work_completion_repository import (
     CRUDWorkCompletion,
 )
-from app.shared.documents.document_export_service import DocumentExportService
 
 FIELD_ROLES = ("TEAM_LEADER", "EMPLOYEE")
+SIGNATURE_MAX_BYTES = 300_000
+ORDER_LOCKED = "Berita acara sudah disahkan PM; order tidak dapat diubah lagi."
+
+
+def _iso(value: Any) -> str | None:
+    return value.isoformat() if hasattr(value, "isoformat") else (str(value) if value else None)
+
+
+def completion_fingerprint(order: dict[str, Any], leader_png: bytes | None, pm_png: bytes | None) -> str:
+    """SHA-256 atas isi berita acara yang disahkan: data order, ringkasan, foto, BoM, penanda tangan & PNG-nya."""
+    bom = sorted(
+        (str(b.get("material_code") or ""), str(b.get("material_name") or ""), float(b.get("estimated_qty") or 0),
+         float(b.get("actual_qty") or 0), str(b.get("unit") or ""))
+        for b in order.get("bom_items") or []
+    )
+    content = {
+        "completion_id": str(order["completion_id"]),
+        "order": [order.get(k) for k in ("order_number", "client_name", "project_title", "site_address",
+                                         "total_target_unit", "unit_measure")],
+        "summary_notes": order.get("summary_notes"),
+        "obstacles": order.get("obstacles"),
+        "photos": order.get("realization_photos_json") or [],
+        "bom": bom,
+        "leader": [str(order.get("leader_signer_id")), _iso(order.get("leader_signed_at")),
+                   hashlib.sha256(leader_png or b"").hexdigest()],
+        "pm": [str(order.get("pm_signer_id")), _iso(order.get("pm_signed_at")),
+               hashlib.sha256(pm_png or b"").hexdigest()],
+    }
+    return hashlib.sha256(json.dumps(content, sort_keys=True, default=str).encode()).hexdigest()
+
+
+def verify_url(order: dict[str, Any]) -> str | None:
+    """Isi QR dokumen resmi: halaman verifikasi publik web."""
+    h = order.get("signature_hash")
+    return f"{settings.PUBLIC_VERIFY_URL.rstrip('/')}/work-completion/{order['completion_id']}?h={h}" if h else None
+
+
+def _decode_png(data_url: str) -> bytes:
+    raw = data_url.split(",", 1)[1] if data_url.startswith("data:") else data_url
+    try:
+        png = base64.b64decode(raw, validate=True)
+    except (binascii.Error, ValueError):
+        raise ValidationError("Tanda tangan tidak terbaca. Ulangi tanda tangan.") from None
+    if not png or len(png) > SIGNATURE_MAX_BYTES:
+        raise ValidationError("Tanda tangan kosong atau terlalu besar (maks. 300 KB).")
+    kind = filetype.guess(png)
+    if kind is None or kind.mime != "image/png":
+        raise ValidationError("Tanda tangan harus berupa gambar PNG.")
+    return png
 
 
 class WorkCompletionService:
@@ -89,6 +145,13 @@ class WorkCompletionService:
         order["_on_team"] = bool(standing.on_team)
         return order
 
+    async def _editable(self, user: CurrentUser, completion_id: UUID) -> dict[str, Any]:
+        """Pengelola + belum disahkan PM (BAST resmi tidak boleh berubah setelah ditandatangani)."""
+        order = await self._access(user, completion_id, manage=True)
+        if order.get("pm_signed_at"):
+            raise AppError("ORDER_LOCKED", ORDER_LOCKED, status=409)
+        return order
+
     async def get_order_detail(self, current_user: CurrentUser, completion_id: UUID) -> dict[str, Any]:
         """Mengambil rincian order proyek (yang terlihat oleh pengguna)."""
         order = await self._access(current_user, completion_id, manage=False)
@@ -115,7 +178,7 @@ class WorkCompletionService:
         self, current_user: CurrentUser, completion_id: UUID, data: dict[str, Any]
     ) -> dict[str, Any]:
         """Memperbarui rincian order."""
-        existing = await self._access(current_user, completion_id, manage=True)
+        existing = await self._editable(current_user, completion_id)
         if data.get("pm_id") and await self.crud.employee_role(data["pm_id"]) != "PROJECT_MANAGER":
             raise ValidationError("PM order harus karyawan aktif dengan peran Project Manager.")
 
@@ -135,7 +198,7 @@ class WorkCompletionService:
         if new_status not in valid_statuses:
             raise AppError("INVALID_STATUS", f"Status order harus salah satu dari: {', '.join(valid_statuses)}")
 
-        existing = await self._access(current_user, completion_id, manage=True)
+        existing = await self._editable(current_user, completion_id)
 
         await self.crud.update_status(completion_id, new_status, notes)
         updated = await self.crud.get_completion(completion_id)
@@ -148,42 +211,75 @@ class WorkCompletionService:
         signature_data_url: str,
         summary_notes: str | None,
         obstacles: str | None,
-        realization_photos: list[str],
+        realization_photos: list[UUID],
     ) -> dict[str, Any]:
-        """Membubuhkan tanda tangan digital pada Berita Acara Penyelesaian."""
+        """Tanda tangan BAST: ketua tim lebih dulu, lalu PM/OM divisi (mengesahkan & mengunci)."""
         existing = await self._access(current_user, completion_id, manage=False)
-        if current_user.role == "TEAM_LEADER":
-            if not existing.pop("_on_team", False):
+        on_team = existing.pop("_on_team", False)
+        if existing.get("pm_signed_at"):
+            raise AppError("ORDER_LOCKED", ORDER_LOCKED, status=409)
+        as_leader = current_user.role == "TEAM_LEADER"
+        photo_ids: list[str] = []
+        if as_leader:
+            if not on_team:
                 raise ForbiddenError("Hanya ketua tim yang mengerjakan order ini yang dapat menandatangani.")
+            if not ((summary_notes or "").strip() or (existing.get("summary_notes") or "").strip()):
+                raise ValidationError("Isi ringkasan pekerjaan sebelum menandatangani.")
+            photo_ids = [str(p) for p in dict.fromkeys(realization_photos)]
+            if photo_ids and await self.crud.existing_images(photo_ids) != len(photo_ids):
+                raise ValidationError("Ada foto realisasi yang belum diunggah atau bukan gambar.")
         elif current_user.role in FIELD_ROLES or current_user.role == "ADMIN_HR_GA":
             raise ForbiddenError("Peran Anda tidak diizinkan menandatangani Berita Acara.")
         else:
             await self._access(current_user, completion_id, manage=True)
+            if not existing.get("leader_signed_at"):
+                raise AppError("LEADER_SIGNATURE_REQUIRED",
+                               "Ketua tim harus menandatangani berita acara lebih dulu.", status=409)
+        if not current_user.employee_id:
+            raise ForbiddenError("Akun ini belum tertaut ke data karyawan.")
 
-        # Simpan tanda tangan PNG secara lokal
-        sig_bytes = b""
-        if "," in signature_data_url:
-            sig_bytes = base64.b64decode(signature_data_url.split(",")[1])
-        else:
-            sig_bytes = base64.b64decode(signature_data_url)
-
-        sig_hash = hashlib.sha256(sig_bytes).hexdigest()
-        signer_id = current_user.employee_id or current_user.user_id
-        sig_path = f"/uploads/inspections/sig_{completion_id}_{signer_id}.png"
-
+        png = _decode_png(signature_data_url)
+        key = f"signatures/work-completion/{completion_id}/{'leader' if as_leader else 'pm'}.png"
+        if not storage.upload_file(key, png, "image/png"):
+            raise AppError("STORAGE_UNAVAILABLE", "Penyimpanan berkas sedang tidak tersedia. Coba lagi.", status=503)
         await self.crud.sign_completion(
             completion_id=completion_id,
-            signer_id=signer_id,
-            role=current_user.role,
-            signature_path=sig_path,
-            summary_notes=summary_notes,
-            obstacles=obstacles,
-            photos=realization_photos,
-            signature_hash=sig_hash,
+            signer_id=current_user.employee_id,
+            as_leader=as_leader,
+            signature_key=key,
+            summary_notes=(summary_notes or "").strip() or None,
+            obstacles=(obstacles or "").strip() or None,
+            photos=photo_ids or None,
         )
-
         signed = await self.crud.get_completion(completion_id)
-        return signed or existing
+        if not signed:
+            raise NotFoundError("Order Proyek Klien")
+        if not as_leader:
+            leader_png = storage.get_object_bytes(signed["leader_signature_path"] or "")
+            signed["signature_hash"] = completion_fingerprint(signed, leader_png, png)
+            await self.crud.set_signature_hash(completion_id, signed["signature_hash"])
+        return signed
+
+    async def verify(self, completion_id: UUID, signature_hash: str) -> dict[str, Any]:
+        """Verifikasi publik (QR): sidik harus sama dengan yang tersimpan DAN dengan hitungan ulang isi saat ini.
+        Sidik salah / belum disahkan → 404 (tidak membocorkan keberadaan order)."""
+        order = await self.crud.get_completion(completion_id)
+        if not order or not order.get("signature_hash") or order["signature_hash"] != signature_hash.lower():
+            raise NotFoundError("Dokumen")
+        leader_png = storage.get_object_bytes(order["leader_signature_path"] or "")
+        pm_png = storage.get_object_bytes(order["pm_signature_path"] or "")
+        return {
+            "completion_id": order["completion_id"],
+            "order_number": order.get("order_number"),
+            "client_name": order.get("client_name"),
+            "project_title": order.get("project_title"),
+            "leader_signer_name": order.get("leader_signer_name"),
+            "leader_signed_at": order.get("leader_signed_at"),
+            "pm_signer_name": order.get("pm_signer_name"),
+            "pm_signed_at": order.get("pm_signed_at"),
+            "signature_hash": order["signature_hash"],
+            "intact": completion_fingerprint(order, leader_png, pm_png) == order["signature_hash"],
+        }
 
     async def list_bom_items(self, current_user: CurrentUser, completion_id: UUID) -> list[dict[str, Any]]:
         """Membaca daftar item BoM untuk satu order proyek klien."""
@@ -194,7 +290,7 @@ class WorkCompletionService:
         self, current_user: CurrentUser, completion_id: UUID, data: dict[str, Any]
     ) -> dict[str, Any]:
         """Menambahkan item BoM baru."""
-        await self._access(current_user, completion_id, manage=True)
+        await self._editable(current_user, completion_id)
         bom_id = await self.crud.add_bom_item(completion_id, data)
         item = await self.crud.get_bom_item(UUID(bom_id))
         if not item:
@@ -208,7 +304,7 @@ class WorkCompletionService:
         existing = await self.crud.get_bom_item(bom_id)
         if not existing:
             raise NotFoundError("Item Bill of Materials")
-        await self._access(current_user, UUID(str(existing["completion_id"])), manage=True)
+        await self._editable(current_user, UUID(str(existing["completion_id"])))
         await self.crud.update_bom_item(bom_id, data)
         updated = await self.crud.get_bom_item(bom_id)
         return updated or existing
@@ -218,20 +314,12 @@ class WorkCompletionService:
         existing = await self.crud.get_bom_item(bom_id)
         if not existing:
             raise NotFoundError("Item Bill of Materials")
-        await self._access(current_user, UUID(str(existing["completion_id"])), manage=True)
+        await self._editable(current_user, UUID(str(existing["completion_id"])))
         await self.crud.delete_bom_item(bom_id)
 
     async def sync_bom_from_work_types(
         self, current_user: CurrentUser, completion_id: UUID, overwrite_existing: bool = False
     ) -> int:
         """Sinkronisasi otomatis template default materials dari jenis pekerjaan."""
-        await self._access(current_user, completion_id, manage=True)
+        await self._editable(current_user, completion_id)
         return await self.crud.sync_bom_from_work_types(completion_id, overwrite_existing=overwrite_existing)
-
-    async def export_completion_docx(self, current_user: CurrentUser, completion_id: UUID) -> tuple[bytes, str]:
-        """Ekspor Berita Acara & BoM ke dalam format Microsoft Word (.docx)."""
-        detail = await self.get_order_detail(current_user, completion_id)
-        docx_bytes = DocumentExportService.export_completion_docx(detail)
-        client_clean = "".join(c for c in (detail.get("client_name") or "Order") if c.isalnum() or c in ("-", "_"))
-        filename = f"BAST_BoM_{client_clean}_{str(completion_id)[:8]}.docx"
-        return docx_bytes, filename

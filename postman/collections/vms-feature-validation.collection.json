@@ -417,100 +417,6 @@
       ]
     },
     {
-      "name": "07 - Pengesahan Digital & Ekspor BAST Word",
-      "item": [
-        {
-          "name": "07.1 - Digital Signature Leader & PM",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{bearer_token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"signature_data_url\": \"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==\",\n  \"summary_notes\": \"Pemasangan 13 titik CCTV dan penarikan FO telah selesai dan tuntas diuji.\",\n  \"obstacles\": \"Pekerjaan terlaksana tanpa kendala keselamatan kerja (Zero Accident).\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/work-completions/{{test_completion_id}}/sign",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "work-completions",
-                "{{test_completion_id}}",
-                "sign"
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Pengesahan Berita Acara berhasil (200 OK)', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "var json = pm.response.json();",
-                  "pm.test('Memiliki hash integritas tanda tangan digital SHA-256', function () {",
-                  "    pm.expect(json.signature_hash).to.be.a('string');",
-                  "    pm.expect(json.signature_hash.length).to.be.at.least(32);",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "07.2 - Export BAST Document Word (.docx)",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{bearer_token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/work-completions/{{test_completion_id}}/export",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "work-completions",
-                "{{test_completion_id}}",
-                "export"
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Ekspor Berita Acara Word berhasil diunduh (200 OK)', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "pm.test('Header Content-Type sesuai spesifikasi Word Docx', function () {",
-                  "    var ct = pm.response.headers.get('Content-Type') || '';",
-                  "    pm.expect(ct).to.include('application/vnd.openxmlformats-officedocument.wordprocessingml.document');",
-                  "});"
-                ]
-              }
-            }
-          ]
-        }
-      ]
-    },
-    {
       "name": "08 - Milestone 1: Auth, Sesi & Platform (V2)",
       "item": [
         {
@@ -7487,6 +7393,1580 @@
           }
         }
       ]
+    },
+    {
+      "name": "16 - Milestone 8: BAST, Survey Report & Ekspor Dokumen",
+      "item": [
+        {
+          "name": "16.01 - PM MEP membuat order klien",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = new Date(Date.now() + (900 + Math.floor(Math.random() * 300)) * 86400000);",
+                  "const iso = x => x.toISOString().slice(0, 10);",
+                  "pm.collectionVariables.set('m8_date', iso(d));",
+                  "pm.collectionVariables.set('m8_date_end', iso(new Date(d.getTime() + 6 * 86400000)));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"m8_order\", pm.response.json().completion_id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm2}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/work-completions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "work-completions"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"division_id\": \"33333333-0000-4000-a000-000000000002\",\n  \"client_name\": \"PT Pertamina Hulu Rokan (uji M8)\",\n  \"project_title\": \"New CCTV MGT Minas\",\n  \"order_number\": \"PO-M8-{{$timestamp}}\",\n  \"total_target_unit\": 1,\n  \"unit_measure\": \"Titik\",\n  \"site_address\": \"Minas, Siak\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "16.02 - Jadwal tim MEP untuk order",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"m8_plan\", pm.response.json().daily_plan_id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm2}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/work-plans/daily",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "work-plans",
+                "daily"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"division_id\": \"33333333-0000-4000-a000-000000000002\",\n  \"team_id\": \"44444444-0000-4000-a000-000000000003\",\n  \"work_date\": \"{{m8_date}}\",\n  \"site_name\": \"Minas (uji M8)\",\n  \"site_lat\": \"1.4700000\",\n  \"site_lng\": \"101.4500000\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "16.03 - Item SURVEY titik (order, remark)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"m8_survey\", pm.response.json().item_id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm2}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/work-plans/daily/{{m8_plan}}/items",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "work-plans",
+                "daily",
+                "{{m8_plan}}",
+                "items"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"work_type_id\": \"71111111-0000-4000-a000-000000000013\",\n  \"title\": \"Survei Titik CCTV 03\",\n  \"task_phase\": \"SURVEY\",\n  \"target_qty\": \"1\",\n  \"completion_id\": \"{{m8_order}}\",\n  \"location_name\": \"Pos Jaga Utara\",\n  \"site_lat\": \"1.4705000\",\n  \"site_lng\": \"101.4512000\",\n  \"notes\": \"Butuh tiang 6 m + bracket; kabel 45 m ke NVR\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "16.04 - Item INSTALLATION utama",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201\", () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm2}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/work-plans/daily/{{m8_plan}}/items",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "work-plans",
+                "daily",
+                "{{m8_plan}}",
+                "items"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"work_type_id\": \"71111111-0000-4000-a000-000000000011\",\n  \"title\": \"Instalasi CCTV 03\",\n  \"task_phase\": \"INSTALLATION\",\n  \"is_main_deliverable\": true,\n  \"target_qty\": \"1\",\n  \"completion_id\": \"{{m8_order}}\",\n  \"depends_on_item_id\": \"{{m8_survey}}\",\n  \"location_name\": \"Pos Jaga Utara\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "16.05 - BoM estimasi per titik survei",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201\", () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm2}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/work-completions/{{m8_order}}/bom",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "work-completions",
+                "{{m8_order}}",
+                "bom"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"work_plan_item_id\": \"{{m8_survey}}\",\n  \"material_code\": \"FO-12\",\n  \"material_name\": \"Kabel FO 12 core\",\n  \"estimated_qty\": 45,\n  \"actual_qty\": 0,\n  \"unit\": \"m\",\n  \"category\": \"Kabel\",\n  \"notes\": \"Jalur ke NVR\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "16.06 - PM menyetujui jadwal",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm2}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/work-plans/daily/{{m8_plan}}/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "work-plans",
+                "daily",
+                "{{m8_plan}}",
+                "approve"
+              ]
+            }
+          }
+        },
+        {
+          "name": "16.07 - Ketua tim: Survey Report (.docx)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"berkas document\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/vnd.openxmlformats-officedocument.wordprocessingml.document\"));",
+                  "pm.test(\"tercatat di registri\", () => pm.expect(pm.response.headers.get(\"X-Export-Id\")).to.be.a(\"string\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_tl}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/exports/work-completions/{{m8_order}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "exports",
+                "work-completions",
+                "{{m8_order}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"template\": \"SURVEY_REPORT\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "16.08 - BAST (.docx) sebelum disahkan",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"berkas document\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/vnd.openxmlformats-officedocument.wordprocessingml.document\"));",
+                  "pm.test(\"tercatat di registri\", () => pm.expect(pm.response.headers.get(\"X-Export-Id\")).to.be.a(\"string\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm2}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/exports/work-completions/{{m8_order}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "exports",
+                "work-completions",
+                "{{m8_order}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"template\": \"BAST\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "16.09 - BoQ (.xlsx)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"berkas sheet\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"spreadsheetml.sheet\"));",
+                  "pm.test(\"tercatat di registri\", () => pm.expect(pm.response.headers.get(\"X-Export-Id\")).to.be.a(\"string\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm2}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/exports/work-completions/{{m8_order}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "exports",
+                "work-completions",
+                "{{m8_order}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"template\": \"BOQ\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "16.10 - Slide progres (.pptx)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"berkas presentation\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"presentationml.presentation\"));",
+                  "pm.test(\"tercatat di registri\", () => pm.expect(pm.response.headers.get(\"X-Export-Id\")).to.be.a(\"string\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm2}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/exports/work-completions/{{m8_order}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "exports",
+                "work-completions",
+                "{{m8_order}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"template\": \"PROGRESS_SLIDES\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "16.11 - PDF resmi ditolak sebelum disahkan",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"409 NOT_SIGNED\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"kode NOT_SIGNED\", () => pm.expect(pm.response.json().error.code).to.eql(\"NOT_SIGNED\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm2}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/exports/work-completions/{{m8_order}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "exports",
+                "work-completions",
+                "{{m8_order}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"template\": \"BAST_PDF\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "16.12 - Template tak dikenal ditolak",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"422\", () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm2}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/exports/work-completions/{{m8_order}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "exports",
+                "work-completions",
+                "{{m8_order}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"template\": \"SK_V1\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "16.13 - PM divisi lain tidak melihat order",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"404\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/exports/work-completions/{{m8_order}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "exports",
+                "work-completions",
+                "{{m8_order}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"template\": \"BAST\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "16.14 - PM tidak bisa mengesahkan sebelum ketua",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"409 LEADER_SIGNATURE_REQUIRED\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"kode LEADER_SIGNATURE_REQUIRED\", () => pm.expect(pm.response.json().error.code).to.eql(\"LEADER_SIGNATURE_REQUIRED\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm2}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/work-completions/{{m8_order}}/sign",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "work-completions",
+                "{{m8_order}}",
+                "sign"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"signature_data_url\": \"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "16.15 - Anggota tim tidak bisa menandatangani",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_emp}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/work-completions/{{m8_order}}/sign",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "work-completions",
+                "{{m8_order}}",
+                "sign"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"signature_data_url\": \"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==\",\n  \"summary_notes\": \"x\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "16.16 - Tanda tangan bukan PNG ditolak",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"422 VALIDATION_ERROR\", () => pm.response.to.have.status(422));",
+                  "pm.test(\"kode VALIDATION_ERROR\", () => pm.expect(pm.response.json().error.code).to.eql(\"VALIDATION_ERROR\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_tl}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/work-completions/{{m8_order}}/sign",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "work-completions",
+                "{{m8_order}}",
+                "sign"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"signature_data_url\": \"data:image/png;base64,aGFsbw==\",\n  \"summary_notes\": \"Survei selesai\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "16.17 - Ketua tim menandatangani (ringkasan)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "const o = pm.response.json();",
+                  "pm.test(\"ketua tercatat, belum sah\", () => {",
+                  "    pm.expect(o.leader_signed_at).to.be.a(\"string\"); pm.expect(o.signature_hash).to.eql(null);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_tl}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/work-completions/{{m8_order}}/sign",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "work-completions",
+                "{{m8_order}}",
+                "sign"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"signature_data_url\": \"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==\",\n  \"summary_notes\": \"Survei 1 titik selesai; instalasi dijadwalkan.\",\n  \"obstacles\": \"Izin kerja PHR\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "16.18 - PM mengesahkan (sidik SHA-256, order selesai)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "const o = pm.response.json();",
+                  "pm.test(\"sah & selesai\", () => {",
+                  "    pm.expect(o.signature_hash).to.match(/^[0-9a-f]{64}$/); pm.expect(o.order_status).to.eql(\"COMPLETED\");",
+                  "});",
+                  "pm.collectionVariables.set(\"m8_hash\", o.signature_hash);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm2}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/work-completions/{{m8_order}}/sign",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "work-completions",
+                "{{m8_order}}",
+                "sign"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"signature_data_url\": \"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "16.19 - Order terkunci setelah disahkan",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"409 ORDER_LOCKED\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"kode ORDER_LOCKED\", () => pm.expect(pm.response.json().error.code).to.eql(\"ORDER_LOCKED\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm2}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/work-completions/{{m8_order}}/bom",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "work-completions",
+                "{{m8_order}}",
+                "bom"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"material_name\": \"Tambahan\",\n  \"estimated_qty\": 1,\n  \"unit\": \"Unit\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "16.20 - Tidak bisa ditandatangani ulang",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"409 ORDER_LOCKED\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"kode ORDER_LOCKED\", () => pm.expect(pm.response.json().error.code).to.eql(\"ORDER_LOCKED\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm2}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/work-completions/{{m8_order}}/sign",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "work-completions",
+                "{{m8_order}}",
+                "sign"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"signature_data_url\": \"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "16.21 - Verifikasi QR publik (tanpa login)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"asli & utuh\", () => {",
+                  "    pm.expect(pm.response.json().intact).to.eql(true);",
+                  "    pm.expect(pm.response.json().signature_hash).to.eql(pm.collectionVariables.get(\"m8_hash\"));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/verify/work-completions/{{m8_order}}?h={{m8_hash}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "verify",
+                "work-completions",
+                "{{m8_order}}?h={{m8_hash}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "16.22 - Verifikasi dengan sidik salah → 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"404\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/verify/work-completions/{{m8_order}}?h=0000000000000000000000000000000000000000000000000000000000000000",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "verify",
+                "work-completions",
+                "{{m8_order}}?h=0000000000000000000000000000000000000000000000000000000000000000"
+              ]
+            }
+          }
+        },
+        {
+          "name": "16.23 - PDF resmi ber-QR (503 bila WeasyPrint tak ada di host)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 PDF atau 503 PDF_UNAVAILABLE\", () => {",
+                  "    pm.expect([200, 503]).to.include(pm.response.code);",
+                  "    if (pm.response.code === 200) pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/pdf\");",
+                  "    else pm.expect(pm.response.json().error.code).to.eql(\"PDF_UNAVAILABLE\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm2}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/exports/work-completions/{{m8_order}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "exports",
+                "work-completions",
+                "{{m8_order}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"template\": \"BAST_PDF\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "16.24 - Riwayat ekspor order",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "const rows = pm.response.json();",
+                  "pm.test(\"min. 4 dokumen tercatat\", () => pm.expect(rows.length).to.be.at.least(4));",
+                  "pm.test(\"ada Survey Report\", () => pm.expect(rows.map(r => r.template_type)).to.include(\"SURVEY_REPORT\"));",
+                  "pm.collectionVariables.set(\"m8_export\", rows[0].export_id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_tl}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/exports/work-completions/{{m8_order}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "exports",
+                "work-completions",
+                "{{m8_order}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "16.25 - Unduh ulang dari registri",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"nama berkas\", () => pm.expect(pm.response.headers.get(\"Content-Disposition\")).to.include(\"attachment\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_tl}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/exports/{{m8_export}}/file",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "exports",
+                "{{m8_export}}",
+                "file"
+              ]
+            }
+          }
+        },
+        {
+          "name": "16.26 - PM divisi lain tidak bisa mengunduh",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"404\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/exports/{{m8_export}}/file",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "exports",
+                "{{m8_export}}",
+                "file"
+              ]
+            }
+          }
+        },
+        {
+          "name": "16.27 - Rekap minggu divisi (.xlsx)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"berkas sheet\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"spreadsheetml.sheet\"));",
+                  "pm.test(\"tercatat di registri\", () => pm.expect(pm.response.headers.get(\"X-Export-Id\")).to.be.a(\"string\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm2}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/exports/periodic",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "exports",
+                "periodic"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"division_id\": \"33333333-0000-4000-a000-000000000002\",\n  \"start_date\": \"{{m8_date}}\",\n  \"end_date\": \"{{m8_date_end}}\",\n  \"export_format\": \"EXCEL_XLSX\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "16.28 - Slide minggu divisi (.pptx)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"berkas presentation\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"presentationml.presentation\"));",
+                  "pm.test(\"tercatat di registri\", () => pm.expect(pm.response.headers.get(\"X-Export-Id\")).to.be.a(\"string\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm2}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/exports/periodic",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "exports",
+                "periodic"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"division_id\": \"33333333-0000-4000-a000-000000000002\",\n  \"start_date\": \"{{m8_date}}\",\n  \"end_date\": \"{{m8_date_end}}\",\n  \"export_format\": \"PPTX\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "16.29 - PM divisi lain tidak bisa merekap divisi MEP",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/exports/periodic",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "exports",
+                "periodic"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"division_id\": \"33333333-0000-4000-a000-000000000002\",\n  \"start_date\": \"{{m8_date}}\",\n  \"end_date\": \"{{m8_date_end}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "16.30 - Rentang lebih dari 31 hari ditolak",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"422 VALIDATION_ERROR\", () => pm.response.to.have.status(422));",
+                  "pm.test(\"kode VALIDATION_ERROR\", () => pm.expect(pm.response.json().error.code).to.eql(\"VALIDATION_ERROR\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm2}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/exports/periodic",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "exports",
+                "periodic"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"division_id\": \"33333333-0000-4000-a000-000000000002\",\n  \"start_date\": \"2026-01-01\",\n  \"end_date\": \"2026-03-01\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "16.31 - Karyawan tidak bisa membuat rekap",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_emp}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/exports/periodic",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "exports",
+                "periodic"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"division_id\": \"33333333-0000-4000-a000-000000000002\",\n  \"start_date\": \"{{m8_date}}\",\n  \"end_date\": \"{{m8_date_end}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "16.32 - Daftar rekap periodik milik PM",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"rekap tercatat\", () => pm.expect(pm.response.json().map(r => r.source_type)).to.include(\"WORK_PLAN_PERIODIC\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm2}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/exports/periodic",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "exports",
+                "periodic"
+              ]
+            }
+          }
+        },
+        {
+          "name": "16.33a - Kembalikan jadwal uji (bersih-bersih)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm2}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/work-plans/daily/{{m8_plan}}/reject",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "work-plans",
+                "daily",
+                "{{m8_plan}}",
+                "reject"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Bersih-bersih uji Postman\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "16.33b - Hapus jadwal uji (bersih-bersih)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm2}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/work-plans/daily/{{m8_plan}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "work-plans",
+                "daily",
+                "{{m8_plan}}"
+              ]
+            }
+          }
+        }
+      ]
     }
   ],
   "variable": [
@@ -7656,6 +9136,34 @@
     },
     {
       "key": "m7_to",
+      "value": ""
+    },
+    {
+      "key": "m8_date",
+      "value": ""
+    },
+    {
+      "key": "m8_date_end",
+      "value": ""
+    },
+    {
+      "key": "m8_order",
+      "value": ""
+    },
+    {
+      "key": "m8_plan",
+      "value": ""
+    },
+    {
+      "key": "m8_survey",
+      "value": ""
+    },
+    {
+      "key": "m8_hash",
+      "value": ""
+    },
+    {
+      "key": "m8_export",
       "value": ""
     }
   ]

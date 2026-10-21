@@ -1,27 +1,20 @@
-"""Kop PDF SK memuat logo Visiontech (temuan uji: PDF belum berlogo). Logo disematkan sebagai
-data URI agar WeasyPrint tidak perlu mengambil berkas/URL dari luar."""
+"""Templat PDF resmi (M8): logo kop & QR verifikasi tertanam sebagai data URI (WeasyPrint tak mengambil URL luar)."""
+
 from __future__ import annotations
 
 import base64
 from datetime import UTC, datetime
-from types import SimpleNamespace
 
-from app.shared.documents.pdf_service import render_plan_document_html
-
-
-def _doc() -> SimpleNamespace:
-    return SimpleNamespace(
-        title="Perawatan CCTV", number="SK-202609-01", kind="INITIAL_ORDER", version=1,
-        issued_at=datetime(2026, 9, 26, 3, 0, tzinfo=UTC),
-        snapshot={"plan": {"location_text": "Dumai", "period_start": "2026-09-26", "period_end": "2026-09-26"}},
-        snapshot_sha256=b"\x01" * 32,
-    )
+from app.modules.exports.services.builders.model import qty, tgl
+from app.shared.documents.pdf_service import LOGO_DATA_URI, qr_data_uri, render_html
 
 
-def test_pdf_header_embeds_logo_png() -> None:
-    html = render_plan_document_html(_doc(), [])
-    marker = 'src="data:image/png;base64,'
-    assert marker in html
-    encoded = html.split(marker, 1)[1].split('"', 1)[0]
-    assert base64.b64decode(encoded).startswith(b"\x89PNG")
-    assert 'alt="Visiontech Indograha"' in html
+def test_completion_pdf_template_embeds_logo_and_qr() -> None:
+    qr = qr_data_uri("http://localhost:5173/verify/work-completion/x?h=" + "ab" * 32)
+    assert base64.b64decode(qr.split(",", 1)[1]).startswith(b"\x89PNG")
+    order = {"client_name": "PHR", "project_title": "CCTV", "signature_hash": "ab" * 32}
+    html = render_html("completion_report.html", o=order, number="PHR-01", points=[], bom=[], photos=[],
+                       generated_at=datetime(2026, 10, 21, tzinfo=UTC), generated_by="pm", tgl=tgl, qty=qty,
+                       leader_sig=None, pm_sig=None, qr=qr)
+    assert LOGO_DATA_URI in html and qr in html
+    assert "ab" * 32 in html

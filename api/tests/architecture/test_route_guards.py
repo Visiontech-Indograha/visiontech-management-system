@@ -75,7 +75,10 @@ GUARDED_IN_HANDLER = {
     ("POST", "/work-plans/daily/{daily_plan_id}/complete"): "DailyPlanService: ketua tim atau PM/OM divisi",
     ("GET", "/work-completions/{completion_id}"): "WorkCompletionService: pengelola/HR/anggota tim, lain 404",
     ("GET", "/work-completions/{completion_id}/bom"): "WorkCompletionService: sama dengan detail order",
-    ("GET", "/work-completions/{completion_id}/export"): "WorkCompletionService: sama dengan detail order",
+    # M8: ekspor/riwayat/unduh ulang dokumen order = hak lihat order (WorkCompletionService), lain 404.
+    ("POST", "/exports/work-completions/{completion_id}"): "ExportService: sama dengan detail order",
+    ("GET", "/exports/work-completions/{completion_id}"): "ExportService: sama dengan detail order",
+    ("GET", "/exports/{export_id}/file"): "ExportService: order terlihat / rekap milik sendiri, OM, admin; lain 404",
     ("POST", "/work-completions/{completion_id}/sign"): "WorkCompletionService: ketua tim order / pengelola",
     ("GET", "/files/{file_id}/url"): "check_file_access (V-17): pemilik/HR/peninjau/penglihat SK, selain itu 404",
     ("GET", "/files/{file_id}"): "check_file_access (V-17): isi berkas disajikan setelah otorisasi; tidak berhak → 404",

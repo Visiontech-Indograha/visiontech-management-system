@@ -28,6 +28,8 @@ PUBLIC_ROUTES = {
     ("GET", "/app/android/update"),
     ("GET", "/app/android/files/{name}"),
     ("GET", "/app/android/latest.apk"),
+    # QR BAST resmi (M8): wajib sidik SHA-256 lengkap; salah → 404; hanya data yang tercetak di dokumen.
+    ("GET", "/verify/work-completions/{completion_id}"),
 }
 
 # Aliran SSE tak berujung (T8): tanpa token tetap diuji 401 di bawah; dengan token diuji manual (E2E T8).

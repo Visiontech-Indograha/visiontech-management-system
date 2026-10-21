@@ -26,6 +26,7 @@ from app.modules.work_completion.schemas.work_completion_schema import (
     WorkCompletionSignRequest,
     WorkCompletionStatusUpdate,
     WorkCompletionUpdate,
+    WorkCompletionVerifyOut,
 )
 
 _PLANNER = Depends(require_permission(Permission.CREATE_PLAN))
@@ -183,16 +184,15 @@ async def sync_bom_from_work_types(
     return await controller.sync_bom(completion_id, overwrite, current_user)
 
 
-@router.get(
-    "/{completion_id}/export",
-    summary="Unduh Berita Acara & BoM Format Word DOCX",
-)
-async def export_work_completion_docx(
+# Halaman verifikasi QR dibuka siapa saja yang memegang dokumen: tanpa login, wajib sidik SHA-256 lengkap.
+verify_router = APIRouter(prefix="/verify", tags=["Verifikasi Dokumen"])
+
+
+@verify_router.get("/work-completions/{completion_id}", response_model=WorkCompletionVerifyOut)
+async def verify_work_completion(
     completion_id: UUID,
-    current_user: CurrentUser = Depends(get_current_user),
+    h: str = Query(..., min_length=64, max_length=64, pattern="^[0-9a-fA-F]{64}$"),
     controller: WorkCompletionController = Depends(),
-) -> Response:
-    file_bytes, filename = await controller.export_docx(completion_id, current_user)
-    media_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-    headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
-    return Response(content=file_bytes, media_type=media_type, headers=headers)
+) -> WorkCompletionVerifyOut:
+    """Cek keaslian BAST resmi: sidik cocok dan isi tidak berubah sejak disahkan PM. Sidik salah → 404."""
+    return await controller.verify(completion_id, h)

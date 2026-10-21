@@ -51,7 +51,11 @@ Status per 2026-10-20 (API + uji Postman; UI web/HP belum disesuaikan sehingga b
       dibuang. Absen di lokasi tugas: jadwal APPROVED/ONGOING, tanggal hari ini, pengabsen anggota/ketua tim.
       Uang makan: tarif beku per absen (zona kantor utama), rekap `/attendance/meal-allowance` hanya absen sah.
 - [ ] **Milestone 8**: Laporan Penyelesaian & Ekspor Multi-Format, termasuk Survey Report .docx
-      (`work_completion`, `document_template_export`)
+      (`work_completion`, `document_template_export`) — API ✔, Postman ✔, web ✔, HP belum. Modul baru `exports`:
+      BAST/Survey Report (.docx), BAST resmi ber-QR (.pdf, butuh WeasyPrint di host), BoQ (.xlsx), slide progres (.pptx),
+      rekap divisi ≤31 hari (.xlsx jadwal+BoQ+uang makan / .pptx); semua tersimpan di storage & tercatat di
+      `document_template_export`, unduh ulang `/exports/{id}/file`. Tanda tangan: ketua tim dulu lalu PM/OM, PNG
+      disimpan, sidik SHA-256 atas isi, order terkunci; QR → `/verify/work-completions/{id}?h=` (publik).
 - [ ] **Milestone 9**: Penghentian Kerja (PKWT) & Clearance Aset (`employee_offboarding`, `offboarding_clearance_item`)
 
 ---

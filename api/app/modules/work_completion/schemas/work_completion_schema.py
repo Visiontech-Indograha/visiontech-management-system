@@ -6,6 +6,7 @@ Pydantic schemas untuk entitas Order Proyek Klien (Work Completion) VMS V3.
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
@@ -55,7 +56,22 @@ class WorkCompletionSignRequest(BaseModel):
     signature_data_url: str = Field(..., description="Base64 PNG tanda tangan digital")
     summary_notes: str | None = None
     obstacles: str | None = None
-    realization_photos: list[str] = Field(default_factory=list, description="Array path foto dokumentasi hasil kerja")
+    # Ketua tim: id file_object foto realisasi (kosong = tetap yang lama). Diabaikan saat PM menandatangani.
+    realization_photos: list[UUID] = Field(default_factory=list, max_length=30)
+
+
+class WorkCompletionVerifyOut(BaseModel):
+    """Verifikasi publik dokumen resmi (QR): hanya data yang tercetak di dokumen."""
+    completion_id: UUID
+    order_number: str | None = None
+    client_name: str | None = None
+    project_title: str | None = None
+    leader_signer_name: str | None = None
+    leader_signed_at: datetime | None = None
+    pm_signer_name: str | None = None
+    pm_signed_at: datetime | None = None
+    signature_hash: str
+    intact: bool  # isi saat ini masih sama dengan saat disahkan
 
 
 class WorkCompletionBomIn(BaseModel):

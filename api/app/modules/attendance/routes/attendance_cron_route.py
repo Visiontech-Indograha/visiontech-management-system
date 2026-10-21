@@ -45,29 +45,6 @@ async def alert_needs_review_spike(
     return await controller.handle_alert_needs_review(current_user)
 
 
-@router.post("/reverify-faces")
-async def reverify_pending_faces(
-    limit: int = 50,
-    current_user: CurrentUser = Depends(require_permission(Permission.RUN_SYSTEM_JOBS)),
-    controller: AttendanceCronController = Depends(),
-) -> dict[str, int]:
-    """
-    Penjadwal: hitung dan cocokkan ulang wajah yang tertunda saat face-service sempat mati.
-    """
-    return await controller.handle_reverify_faces(limit=limit)
-
-
-@router.post("/purge-face-probes")
-async def purge_expired_face_probes(
-    current_user: CurrentUser = Depends(require_permission(Permission.RUN_SYSTEM_JOBS)),
-    controller: AttendanceCronController = Depends(),
-) -> dict[str, int]:
-    """
-    Penjadwal: hapus berkas gambar wajah (probe) yang telah melewati masa retensi (P8-6).
-    """
-    return await controller.handle_purge_face_probes()
-
-
 @router.post("/auto-checkout")
 async def auto_checkout_daily(
     current_user: CurrentUser = Depends(require_permission(Permission.RUN_SYSTEM_JOBS)),

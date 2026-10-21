@@ -70,8 +70,6 @@ async def test_network_failure_and_timeout_mean_unavailable(monkeypatch):
     for handler in (boom, slow):
         with pytest.raises(FaceServiceUnavailable):
             await client_with(monkeypatch, handler).embed(b"x")
-        with pytest.raises(FaceServiceUnavailable):
-            await client_with(monkeypatch, handler).check_challenge(b"x", "kiri")
 
 
 @pytest.mark.parametrize("kw", [{"base_url": ""}, {"token": ""}])
@@ -85,30 +83,7 @@ async def test_not_configured_is_unavailable_without_any_request(monkeypatch, kw
     client = client_with(monkeypatch, handler, **kw)
     with pytest.raises(FaceServiceUnavailable):
         await client.embed(b"x")
-    with pytest.raises(FaceServiceUnavailable):
-        await client.check_challenge(b"x", "kiri")
     assert called == []
-
-
-async def test_check_challenge_posts_challenge_and_returns_verdict(monkeypatch):
-    seen = {}
-
-    def handler(request: httpx.Request) -> httpx.Response:
-        seen["url"], seen["token"] = str(request.url), request.headers.get("x-face-token")
-        seen["challenge"] = b"name=\"challenge\"\r\n\r\nkiri" in request.content
-        return httpx.Response(200, json={"status": "menunggu", "detail": "Tengok lagi ke KIRI sedikit.",
-                                         "metrics": {"yaw": 5.0}})
-
-    got = await client_with(monkeypatch, handler).check_challenge(b"jpeg", "kiri")
-    assert seen == {"url": "http://face:8001/challenge-check", "token": "rahasia", "challenge": True}
-    assert got["status"] == "menunggu" and got["metrics"] == {"yaw": 5.0}
-
-
-async def test_check_challenge_error_mapping(monkeypatch):
-    with pytest.raises(FaceServiceUnavailable):
-        await client_with(monkeypatch, lambda r: httpx.Response(503)).check_challenge(b"x", "kiri")
-    with pytest.raises(ValueError):
-        await client_with(monkeypatch, lambda r: httpx.Response(400)).check_challenge(b"x", "kiri")
 
 
 def test_trailing_slash_in_base_url_is_ignored():

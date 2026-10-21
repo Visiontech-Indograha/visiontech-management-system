@@ -43,7 +43,13 @@ Status per 2026-10-20 (API + uji Postman; UI web/HP belum disesuaikan sehingga b
       tak melebihi target, prasyarat harus DONE, DONE butuh foto wajib; rollover ketua → PM (jadwal ada / tanggal
       baru dibuat otomatis & disetujui), 4 aturan docs/35 §4, catatan PM ke app_activity_logs. Seed: template
       Instalasi CCTV, Instalasi Barrier Gate, Survei Titik CCTV; seed tanpa work_plan_weekly.
-- [ ] **Milestone 7**: Presensi Biometrik Wajah & Otomasi Uang Makan (`attendance`, `employee.face_embedding`)
+- [ ] **Milestone 7**: Presensi Biometrik Wajah & Otomasi Uang Makan (`attendance`, `employee.face_embedding`) — API ✔, Postman ✔,
+      web ✔, HP belum. Daftar 3–5 foto → rata-rata vektor ke `employee.face_embedding` (tolak: bukan satu wajah,
+      kualitas rendah, pose bukan orang yang sama, sudah terdaftar, wajah karyawan lain); swafoto absen dicocokkan
+      SERVER sebelum ditulis (kosinus ≥ 0,80 → `face_match_score` ×100): online tidak cocok → 422 `FACE_MISMATCH`,
+      luring tidak cocok / layanan mati / model berganti → PENDING_OM + catatan. Alur probe/consent/template/liveness
+      dibuang. Absen di lokasi tugas: jadwal APPROVED/ONGOING, tanggal hari ini, pengabsen anggota/ketua tim.
+      Uang makan: tarif beku per absen (zona kantor utama), rekap `/attendance/meal-allowance` hanya absen sah.
 - [ ] **Milestone 8**: Laporan Penyelesaian & Ekspor Multi-Format, termasuk Survey Report .docx
       (`work_completion`, `document_template_export`)
 - [ ] **Milestone 9**: Penghentian Kerja (PKWT) & Clearance Aset (`employee_offboarding`, `offboarding_clearance_item`)

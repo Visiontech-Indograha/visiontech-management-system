@@ -1,23 +1,3 @@
-from .face_schema import (
-    ChallengeCheckResponse,
-    ConsentRequest,
-    ConsentState,
-    EnrollResponse,
-    FaceLiveness,
-    FacePolicy,
-    FaceStatus,
-    ProbeResponse,
-    TemplateResponse,
-)
+from .face_schema import EnrollResponse, FacePolicy, FaceResetResponse, FaceStatus
 
-__all__ = [
-    "ChallengeCheckResponse",
-    "ConsentRequest",
-    "ConsentState",
-    "EnrollResponse",
-    "FaceLiveness",
-    "FacePolicy",
-    "FaceStatus",
-    "ProbeResponse",
-    "TemplateResponse",
-]
+__all__ = ["EnrollResponse", "FacePolicy", "FaceResetResponse", "FaceStatus"]

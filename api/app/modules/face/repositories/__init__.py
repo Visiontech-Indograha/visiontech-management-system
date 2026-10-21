@@ -1,3 +1,3 @@
-from .face_repository import CRUDFace, FaceRepository
+from .face_repository import FaceRepository, parse_embedding
 
-__all__ = ["CRUDFace", "FaceRepository"]
+__all__ = ["FaceRepository", "parse_embedding"]

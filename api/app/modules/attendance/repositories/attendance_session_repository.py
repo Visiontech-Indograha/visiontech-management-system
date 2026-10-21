@@ -317,7 +317,7 @@ class AttendanceSessionRepository(BaseRepository):
             raise LookupError("swafoto absen tidak ditemukan")
 
         om_status = "AUTO_VALID" if is_within_radius else "PENDING_OM"
-        # Skor 0 = wajah belum diperiksa (bukan "cocok"); hasil pencocokan disimpan kemudian oleh set_face.
+        # Skor 0 = wajah belum diperiksa (bukan "cocok"); skor dari pencocokan server sebelum insert (M7).
         face_score = float(face_similarity * 100.0) if face_similarity is not None else 0.0
 
         return await self.fetchone(
@@ -487,51 +487,6 @@ class AttendanceSessionRepository(BaseRepository):
                       NULL::text AS check_out_face_result, NULL::float AS check_out_face_similarity
             """,
             {"id": str(attendance_id), "note": note},
-        )
-
-    async def set_face(
-        self,
-        attendance_id: UUID | str,
-        event: str,
-        *,
-        check_id: UUID | str | None,
-        result: str,
-        similarity: float | None,
-        flag_review: bool,
-    ) -> Any:
-        """Menyimpan hasil pengenalan wajah pada absen masuk/pulang."""
-        score = float(similarity * 100.0) if similarity is not None else 0.0
-        return await self.fetchone(
-            """
-            UPDATE attendance
-               SET face_match_score = :score,
-                   om_approval_status = CASE
-                       WHEN CAST(:flag AS boolean) AND om_approval_status = 'AUTO_VALID'
-                       THEN 'PENDING_OM'
-                       ELSE om_approval_status
-                   END,
-                   update_at = NOW()
-             WHERE attendance_id = CAST(:id AS uuid) AND delete_at IS NULL
-            RETURNING attendance_id AS id, employee_id, attendance_date AS work_date,
-                      COALESCE(daily_plan_id, office_id) AS site_id, 'Lokasi Kerja' AS site_label,
-                      clock_in_at AS check_in_at, clock_out_at AS check_out_at,
-                      distance_to_target_m::float AS distance_m,
-                      (clock_in_at::time > scheduled_in) AS is_late,
-                      (clock_out_at IS NOT NULL AND clock_out_at::time < scheduled_out) AS is_early_leave,
-                      CASE
-                          WHEN om_approval_status = 'AUTO_VALID' THEN 'AUTO_VALID'
-                          WHEN om_approval_status = 'APPROVED_BY_OM' THEN 'APPROVED'
-                          WHEN om_approval_status = 'REJECTED_BY_OM' THEN 'REJECTED'
-                          ELSE 'NEEDS_REVIEW'
-                      END AS status,
-                      out_of_radius_note AS explanation, update_at AS reviewed_at,
-                      NULL::uuid AS selfie_file_id,
-                      CASE WHEN face_match_score = 0 THEN 'SKIPPED' WHEN face_match_score >= 80.0 THEN 'MATCH'
-                           ELSE 'MISMATCH' END AS face_result,
-                      (face_match_score / 100.0)::float AS face_similarity,
-                      NULL::text AS check_out_face_result, NULL::float AS check_out_face_similarity
-            """,
-            {"id": str(attendance_id), "score": score, "flag": flag_review},
         )
 
     async def get(self, attendance_id: UUID | str, org_id: UUID | str) -> Any:
@@ -765,7 +720,9 @@ class AttendanceSessionRepository(BaseRepository):
                        (a.clock_out_at IS NOT NULL AND a.clock_out_at::time < a.scheduled_out) AS is_early_leave,
                        NULL::float AS check_out_distance_m,
                        FALSE AS check_out_outside,
-                       a.city_zone_status::text AS city_category
+                       a.city_zone_status::text AS city_category,
+                       CASE WHEN a.om_approval_status IN ('AUTO_VALID', 'APPROVED_BY_OM')
+                            THEN a.meal_allowance_amount ELSE 0 END::float AS meal_allowance_amount
                 FROM attendance a
                 JOIN employee e ON a.employee_id = e.employee_id
                 LEFT JOIN office o ON o.office_id = a.office_id
@@ -775,6 +732,30 @@ class AttendanceSessionRepository(BaseRepository):
                 ORDER BY a.attendance_date ASC, e.full_name ASC
                 """,
                 {"start": start, "end": end},
+            )
+        )
+
+    async def meal_allowance_recap(self, start: Any, end: Any, division_id: UUID | None = None) -> list[Any]:
+        """Uang makan per karyawan: tarif sudah dibekukan per absen saat masuk (zona kota kantor utama);
+        hanya absensi sah yang dijumlah. Satu absen per karyawan per hari (attendance_active_uidx)."""
+        return list(
+            await self.fetchall(
+                """
+                SELECT e.employee_id, e.employee_no, e.full_name,
+                       COUNT(*) FILTER (WHERE ok AND a.city_zone_status = 'DALAM_KOTA')::int AS in_city_days,
+                       COUNT(*) FILTER (WHERE ok AND a.city_zone_status = 'LUAR_KOTA')::int AS out_city_days,
+                       COALESCE(SUM(a.meal_allowance_amount) FILTER (WHERE ok), 0)::float AS total_amount,
+                       COUNT(*) FILTER (WHERE a.om_approval_status = 'PENDING_OM')::int AS pending_days
+                FROM attendance a
+                CROSS JOIN LATERAL (SELECT a.om_approval_status IN ('AUTO_VALID', 'APPROVED_BY_OM') AS ok) v
+                JOIN employee e ON e.employee_id = a.employee_id
+                WHERE a.delete_at IS NULL
+                  AND a.attendance_date BETWEEN :start AND :end
+                  AND (CAST(:div AS uuid) IS NULL OR e.division_id = CAST(:div AS uuid))
+                GROUP BY e.employee_id, e.employee_no, e.full_name
+                ORDER BY e.full_name
+                """,
+                {"start": start, "end": end, "div": str(division_id) if division_id else None},
             )
         )
 

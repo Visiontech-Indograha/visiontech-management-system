@@ -35,10 +35,8 @@ class CheckInRequest(BaseModel):
     location_origin: Literal["GPS", "SIMULASI"] = "GPS"
     # Radius ketidakpastian GPS perangkat (m). Opsional: klien lama / antrean luring tidak ditolak (K-12).
     accuracy_m: float | None = Field(None, ge=0)
-    # Foto bukti: hanya diwajibkan di luar radius (trigger DB).
+    # Swafoto absen (wajib): dicocokkan server dengan wajah terdaftar (M7); juga foto bukti di luar radius.
     selfie_file_id: UUID | None = None
-    # Pengenalan wajah: id gambar wajah sementara dari POST /face/probe. Hasil dihitung SERVER (aturan inti #3).
-    face_probe_id: UUID | None = None
     # DEPRECATED & DIABAIKAN: klien tidak lagi dipercaya soal hasil wajah. Dipertahankan agar APK lama tidak ditolak.
     face_result: Literal["MATCH", "NO_MATCH", "LOW_QUALITY", "NOT_ENROLLED", "SKIPPED"] | None = None
     face_similarity: float | None = None
@@ -53,8 +51,6 @@ class CheckOutRequest(BaseModel):
     channel: AttendanceChannel = "MOBILE"
     location: GeoPoint
     location_origin: Literal["GPS", "SIMULASI"] = "GPS"
-    # Pengenalan wajah saat pulang (tanpa foto bukti): id gambar wajah sementara dari POST /face/probe.
-    face_probe_id: UUID | None = None
     # T7: di luar radius lokasi, swafoto + penjelasan wajib (jarak dihitung ulang oleh server).
     selfie_file_id: UUID | None = None
     explanation: str | None = Field(None, max_length=1000)
@@ -121,6 +117,17 @@ class AttendanceResponse(BaseModel):
     encouragement_message: str | None = None
 
 
+class MealAllowanceRow(BaseModel):
+    """Rekap uang makan per karyawan (docs/35 §5): hanya absensi sah (AUTO_VALID / APPROVED_BY_OM)."""
+    employee_id: UUID
+    employee_no: str | None = None
+    full_name: str
+    in_city_days: int
+    out_city_days: int
+    total_amount: float
+    pending_days: int  # absensi yang masih menunggu OM — belum dibayar
+
+
 class AttendanceListResponse(BaseModel):
     """
     Schema for paginated responses of attendance records.
@@ -159,8 +166,6 @@ class OfflineAttendanceEvent(BaseModel):
     payload: str = Field(..., max_length=10000)
     signature: str = Field(..., max_length=500)
     selfie_file_id: UUID | None = None
-    # Gambar wajah sementara (POST /face/probe); kecocokannya dicek lewat `face.probe_sha256` dalam payload.
-    face_probe_id: UUID | None = None
 
 
 class OfflineAttendanceResult(BaseModel):

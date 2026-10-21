@@ -7010,6 +7010,483 @@
           }
         }
       ]
+    },
+    {
+      "name": "15 - Milestone 7: Wajah V2 & Uang Makan",
+      "item": [
+        {
+          "name": "15.01 - Kebijakan wajah",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "const p = pm.response.json();",
+                  "pm.test(\"ambang 0,8 & 3–5 foto\", () => {",
+                  "    pm.expect(p.match_threshold).to.eql(0.8); pm.expect(p.min_images).to.eql(3); pm.expect(p.max_images).to.eql(5);",
+                  "});",
+                  "const d = new Date(), iso = x => x.toISOString().slice(0, 10);",
+                  "pm.collectionVariables.set(\"m7_to\", iso(d));",
+                  "pm.collectionVariables.set(\"m7_from\", iso(new Date(d.getTime() - 30 * 86400000)));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_emp}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/face/policy",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "face",
+                "policy"
+              ]
+            }
+          }
+        },
+        {
+          "name": "15.02 - Status wajah pekerja lapangan (terdaftar, wajib)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"terdaftar & wajib\", () => {",
+                  "    pm.expect(pm.response.json().enrolled).to.eql(true); pm.expect(pm.response.json().required).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_emp}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/face/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "face",
+                "status"
+              ]
+            }
+          }
+        },
+        {
+          "name": "15.03 - Status wajah PM (tidak wajib)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"tidak wajib untuk staf kantor\", () => pm.expect(pm.response.json().required).to.eql(false));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/face/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "face",
+                "status"
+              ]
+            }
+          }
+        },
+        {
+          "name": "15.04 - Pendaftaran tanpa foto ditolak",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"422\", () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_emp}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/face/enroll",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "face",
+                "enroll"
+              ]
+            }
+          }
+        },
+        {
+          "name": "15.05 - Karyawan biasa tidak bisa mereset wajah orang lain",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_emp}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/face/enrollments/22222222-0000-4000-a000-000000000007",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "face",
+                "enrollments",
+                "22222222-0000-4000-a000-000000000007"
+              ]
+            }
+          }
+        },
+        {
+          "name": "15.06 - HR reset karyawan yang tidak ada",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"404\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/face/enrollments/22222222-0000-4000-a000-0000000000ff",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "face",
+                "enrollments",
+                "22222222-0000-4000-a000-0000000000ff"
+              ]
+            }
+          }
+        },
+        {
+          "name": "15.07 - HR reset pendaftaran (karyawan tanpa wajah)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"tidak terdaftar\", () => {",
+                  "    pm.expect(pm.response.json().employee_id).to.eql(\"22222222-0000-4000-a000-000000000010\"); pm.expect(pm.response.json().enrolled).to.eql(false);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/face/enrollments/22222222-0000-4000-a000-000000000010",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "face",
+                "enrollments",
+                "22222222-0000-4000-a000-000000000010"
+              ]
+            }
+          }
+        },
+        {
+          "name": "15.08 - Alur probe lama sudah dihapus",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"404\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_emp}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/face/probe",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "face",
+                "probe"
+              ]
+            }
+          }
+        },
+        {
+          "name": "15.09 - Rekap uang makan (admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "const rows = pm.response.json();",
+                  "pm.test(\"larik baris per karyawan\", () => {",
+                  "    pm.expect(rows).to.be.an(\"array\");",
+                  "    rows.forEach(r => {",
+                  "        pm.expect(r).to.have.keys(\"employee_id\", \"employee_no\", \"full_name\", \"in_city_days\", \"out_city_days\",",
+                  "                                  \"total_amount\", \"pending_days\");",
+                  "        pm.expect(r.total_amount).to.be.at.least(0);",
+                  "    });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/attendance/meal-allowance?start_date={{m7_from}}&end_date={{m7_to}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "attendance",
+                "meal-allowance?start_date={{m7_from}}&end_date={{m7_to}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "15.10 - Rekap uang makan: karyawan biasa ditolak",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_emp}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/attendance/meal-allowance?start_date={{m7_from}}&end_date={{m7_to}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "attendance",
+                "meal-allowance?start_date={{m7_from}}&end_date={{m7_to}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "15.11 - Rekap uang makan: rentang terbalik ditolak",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"422 VALIDATION_ERROR\", () => pm.response.to.have.status(422));",
+                  "pm.test(\"kode VALIDATION_ERROR\", () => pm.expect(pm.response.json().error.code).to.eql(\"VALIDATION_ERROR\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/attendance/meal-allowance?start_date={{m7_to}}&end_date={{m7_from}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "attendance",
+                "meal-allowance?start_date={{m7_to}}&end_date={{m7_from}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "15.12 - Ekspor CSV memuat kolom uang makan",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"kolom uang makan\", () => pm.expect(pm.response.text()).to.include(\"Uang makan (Rp)\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/attendance/export?start_date={{m7_from}}&end_date={{m7_to}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "attendance",
+                "export?start_date={{m7_from}}&end_date={{m7_to}}"
+              ]
+            }
+          }
+        }
+      ]
     }
   ],
   "variable": [
@@ -7171,6 +7648,14 @@
     },
     {
       "key": "m6_next",
+      "value": ""
+    },
+    {
+      "key": "m7_from",
+      "value": ""
+    },
+    {
+      "key": "m7_to",
       "value": ""
     }
   ]

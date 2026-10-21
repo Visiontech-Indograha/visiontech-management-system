@@ -59,13 +59,9 @@ SELF_SERVICE = {
     ("GET", "/recaps/attendance"): "rekap sendiri; FINANCE/HR/OPS/ADMIN seluruh organisasi (V-30, diuji)",
     ("POST", "/sync/operations"): "antrean luring milik sendiri; tiap operasi dijaga seperti jalur daring (M12)",
     ("GET", "/sync/status"): "status antrean luring milik sendiri (M12)",
-    ("GET", "/face/policy"): "kebijakan biometrik organisasi milik sendiri",
+    ("GET", "/face/policy"): "ambang & syarat pendaftaran wajah (sama untuk semua)",
     ("GET", "/face/status"): "status pendaftaran wajah milik sendiri",
-    ("POST", "/face/consent"): "persetujuan biometrik milik sendiri",
-    ("POST", "/face/enroll"): "pendaftaran template wajah milik sendiri (FIELD)",
-    ("GET", "/face/template"): "unduh template embedding milik sendiri untuk absen luring",
-    ("POST", "/face/probe"): "unggah probe foto wajah milik sendiri untuk absensi",
-    ("POST", "/face/challenge-check"): "pemeriksaan tantangan liveness bingkai kamera milik sendiri (menerbitkan bukti)",
+    ("POST", "/face/enroll"): "pendaftaran wajah milik sendiri (pekerja lapangan)",
 }
 # Kewenangan bergantung pada isi permintaan (SK di badan) atau tautan berkas → dijaga di handler.
 GUARDED_IN_HANDLER = {

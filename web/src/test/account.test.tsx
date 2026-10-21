@@ -48,98 +48,64 @@ describe("Akun & keamanan", () => {
     expect(screen.queryByRole("button", { name: "Keluarkan perangkat lain" })).toBeNull();
   });
 
-  describe("Biometrik wajah", () => {
-    const faceStatus = (over: Record<string, unknown> = {}) => ({
-      employee_linked: true, consent: null, consent_policy_version: null, enrolled: false, enrollment_version: null,
-      model_name: null, model_version: null, liveness_required: true, template_ttl_days: 7,
-      policy: { version: "2026-10-05", text: "Saya menyetujui pemakaian data wajah HANYA untuk absensi." }, ...over,
-    });
+  describe("Biometrik wajah (V2)", () => {
+    const faceStatus = (over: Record<string, unknown> = {}) => ({ enrolled: false, required: true, ...over });
     const setup = (status: Record<string, unknown>) =>
       mockApi((c) => {
         if (c.url === "/auth/sessions") return { data: [] };
         if (c.url === "/face/status") return { data: status };
-        if (c.url === "/face/consent") return { data: { message: "ok" } };
       });
 
-    it("persetujuan memakai versi dari server dan butuh centang", async () => {
-      const calls = setup(faceStatus());
+    it("tanpa persetujuan terpisah: tidak ada /face/consent maupun kotak centang", async () => {
+      const calls = setup(faceStatus({ required: false }));
       renderRoute("/account", { role: "field" });
-      expect(await screen.findByText(/HANYA untuk absensi/)).toBeInTheDocument();
-      const button = screen.getByRole("button", { name: "Beri Persetujuan Biometrik" });
-      expect(button).toBeDisabled(); // belum dicentang
-      fireEvent.click(screen.getByRole("checkbox"));
-      fireEvent.click(button);
-      await waitFor(() => expect(calls.some((c) => c.url === "/face/consent")).toBe(true));
-      expect(calls.find((c) => c.url === "/face/consent")!.data).toEqual({ state: "GRANTED", policy_version: "2026-10-05" });
+      expect(await screen.findByText(/hanya untuk pekerja lapangan/)).toBeInTheDocument();
+      expect(screen.queryByRole("checkbox")).toBeNull();
+      expect(calls.some((c) => c.url === "/face/consent")).toBe(false);
     });
 
-    it("pendaftaran wajah di web lewat kamera langsung, bukan pilih berkas", async () => {
-      setup(faceStatus({ consent: "GRANTED", consent_policy_version: "2026-10-05" }));
+    it("pekerja lapangan belum terdaftar: daftar lewat kamera langsung, bukan pilih berkas", async () => {
+      setup(faceStatus());
       renderRoute("/account", { role: "field" });
-      const info = await screen.findByTestId("face-enroll-info");
-      expect(within(info).getByTestId("face-capture")).toBeInTheDocument();
-      expect(within(info).getByRole("button", { name: "Mulai Pendaftaran Wajah" })).toBeInTheDocument();
+      const section = await screen.findByRole("region", { name: "Biometrik Wajah" });
+      expect(within(section).getByTestId("face-capture")).toBeInTheDocument();
+      expect(within(section).getByRole("button", { name: "Mulai Pendaftaran Wajah" })).toBeInTheDocument();
       expect(document.querySelector('input[type="file"]')).toBeNull(); // foto orang lain tak bisa didaftarkan
     });
 
-    it("sudah terdaftar: menampilkan masa berlaku template dan tombol daftar ulang", async () => {
-      setup(faceStatus({ consent: "GRANTED", enrolled: true, model_name: "w600k_mbf", enrollment_version: "3-1" }));
+    it("sudah terdaftar: info model, daftar ulang lewat HR (tanpa tombol daftar ulang)", async () => {
+      setup(faceStatus({ enrolled: true, model_name: "w600k_mbf", enrolled_at: "2026-10-20T02:00:00Z" }));
       renderRoute("/account", { role: "field" });
       const info = await screen.findByTestId("face-enroll-info");
-      expect(within(info).getByText("w600k_mbf")).toBeInTheDocument();
-      expect(within(info).getByText("7 hari")).toBeInTheDocument();
-      expect(within(info).getByRole("button", { name: "Daftar Ulang Wajah" })).toBeInTheDocument();
-    });
-
-    it("menarik persetujuan mengirim WITHDRAWN dengan versi kebijakan server", async () => {
-      const calls = setup(faceStatus({ consent: "GRANTED", enrolled: true, model_name: "w600k_mbf" }));
-      renderRoute("/account", { role: "field" });
-      fireEvent.click(await screen.findByRole("button", { name: "Tarik Persetujuan" }));
-      await waitFor(() => expect(calls.some((c) => c.url === "/face/consent")).toBe(true));
-      expect(calls.find((c) => c.url === "/face/consent")!.data).toEqual({ state: "WITHDRAWN", policy_version: "2026-10-05" });
+      expect(within(info).getByText("Model: w600k_mbf")).toBeInTheDocument();
+      expect(within(info).getByText(/Minta HR mengatur ulang/)).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Daftar Ulang Wajah" })).toBeNull();
     });
   });
 });
 
 describe("Wajib daftar wajah setelah login", () => {
-  const status = (over: Record<string, unknown> = {}) => ({
-    employee_linked: true, consent: null, consent_policy_version: null, enrolled: false, enrollment_version: null,
-    model_name: null, model_version: null, liveness_required: true, enrollment_required: true, template_ttl_days: 7,
-    policy: { version: "2026-10-05", text: "Saya menyetujui pemakaian data wajah HANYA untuk absensi." }, ...over,
-  });
+  const status = (over: Record<string, unknown> = {}) => ({ enrolled: false, required: true, ...over });
 
-  it("belum terdaftar: menu lain tertutup, muncul persetujuan lebih dulu", async () => {
-    const calls = mockApi((c) => {
-      if (c.url === "/face/status") return { data: status() };
-      if (c.url === "/face/consent") return { data: { message: "ok" } };
-    });
-    renderRoute("/work-plans", { role: "field" });
-    expect(await screen.findByTestId("face-gate")).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Akun & keamanan" })).toBeNull(); // menu tidak tampil
-    const agree = screen.getByRole("button", { name: "Setuju dan Lanjut" });
-    expect(agree).toBeDisabled();
-    fireEvent.click(screen.getByRole("checkbox"));
-    fireEvent.click(agree);
-    await waitFor(() => expect(calls.find((c) => c.url === "/face/consent")?.data).toEqual({
-      state: "GRANTED", policy_version: "2026-10-05",
-    }));
-  });
-
-  it("sudah setuju: langsung kamera pendaftaran", async () => {
-    mockApi((c) => (c.url === "/face/status" ? { data: status({ consent: "GRANTED" }) } : undefined));
+  it("belum terdaftar: menu lain tertutup, langsung kamera pendaftaran", async () => {
+    mockApi((c) => (c.url === "/face/status" ? { data: status() } : undefined));
     renderRoute("/work-plans", { role: "field" });
     const gate = await screen.findByTestId("face-gate");
+    expect(screen.queryByRole("link", { name: "Akun & keamanan" })).toBeNull(); // menu tidak tampil
     expect(within(gate).getByTestId("face-capture")).toBeInTheDocument();
   });
 
-  it("tidak diwajibkan server (atau sudah terdaftar): halaman terbuka normal", async () => {
-    mockApi((c) => {
-      if (c.url === "/auth/sessions") return { data: [] };
-      if (c.url === "/face/status") return { data: status({ enrollment_required: false, consent: "GRANTED", enrolled: true }) };
-    });
-    renderRoute("/account", { role: "field" });
-    expect(await screen.findByRole("link", { name: "Ganti password" })).toBeInTheDocument();
-    expect(screen.queryByTestId("face-gate")).toBeNull();
+  it("sudah terdaftar atau tidak diwajibkan: halaman terbuka normal", async () => {
+    for (const over of [{ enrolled: true }, { required: false }]) {
+      mockApi((c) => {
+        if (c.url === "/auth/sessions") return { data: [] };
+        if (c.url === "/face/status") return { data: status(over) };
+      });
+      const { unmount } = renderRoute("/account", { role: "field" });
+      expect(await screen.findByRole("link", { name: "Ganti password" })).toBeInTheDocument();
+      expect(screen.queryByTestId("face-gate")).toBeNull();
+      unmount();
+    }
   });
 
   it("ganti password tetap bisa dibuka walau wajib daftar wajah (tidak ikut terkunci)", async () => {
@@ -148,16 +114,6 @@ describe("Wajib daftar wajah setelah login", () => {
     await waitFor(() => expect(screen.queryByTestId("face-gate")).toBeNull());
     expect(await screen.findByRole("heading", { name: /ganti password/i })).toBeInTheDocument();
   });
-
-  it("akun tanpa karyawan (admin murni): tidak pernah dikunci gerbang walau server mewajibkan", async () => {
-    mockApi((c) => {
-      if (c.url === "/auth/sessions") return { data: [] };
-      if (c.url === "/face/status") return { data: status({ employee_linked: false, enrollment_required: false }) };
-    });
-    renderRoute("/account", { role: "ADMIN" });
-    expect(await screen.findByRole("link", { name: "Ganti password" })).toBeInTheDocument();
-    expect(screen.queryByTestId("face-gate")).toBeNull();
-  });
 });
 
 describe("Tata letak halaman Akun & keamanan", () => {
@@ -165,8 +121,7 @@ describe("Tata letak halaman Akun & keamanan", () => {
     mockApi((c) => {
       if (c.url === "/auth/sessions") return { data: [] };
       if (c.url === "/face/status") {
-        return { data: { employee_linked: true, consent: "GRANTED", consent_policy_version: "v1", enrolled: false,
-          liveness_required: true, template_ttl_days: 7, policy: { version: "v1", text: "t" } } };
+        return { data: { enrolled: false, required: true } };
       }
     });
     renderRoute("/account", { role: "field" });
@@ -197,8 +152,7 @@ describe("Foto profil di Akun & keamanan", () => {
     permissions: ["view:users", "view:documents"], employee_id: "e-1",
     photo_file_id: "f-photo",
   };
-  const FACE_OK = { data: { employee_linked: true, consent: "GRANTED", consent_policy_version: "v1",
-    enrolled: true, liveness_required: true, template_ttl_days: 7, policy: { version: "v1", text: "t" } } };
+  const FACE_OK = { data: { enrolled: true, required: false } };
 
   it("mengambil URL bertanda tangan lewat API lalu menampilkan gambar", async () => {
     const calls = mockApi((c) => {

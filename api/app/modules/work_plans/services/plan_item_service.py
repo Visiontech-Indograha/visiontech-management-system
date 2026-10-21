@@ -147,7 +147,7 @@ class PlanItemService:
             photos = [{"file_id": str(p.file_id), "requirement_id": str(p.requirement_id) if p.requirement_id else None}
                       for p in data.photos]
         if data.completed_qty >= item.target_qty:
-            given = {p["requirement_id"] for p in (photos if photos is not None else item.realization_photos_json)
+            given = {str(p["requirement_id"]) for p in (photos if photos is not None else item.realization_photos_json)
                      if p.get("requirement_id")}
             missing = await self.repo.missing_required_photos(item_id, given)
             if missing:

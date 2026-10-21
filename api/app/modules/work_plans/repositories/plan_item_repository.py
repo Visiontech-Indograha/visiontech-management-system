@@ -137,7 +137,7 @@ class PlanItemRepository(BaseRepository):
         )
 
     async def set_progress(self, item_id: UUID | str, completed: Decimal, target: Decimal,
-                           photos: list[dict[str, str]] | None, notes: str | None) -> None:
+                           photos: list[dict[str, str | None]] | None, notes: str | None) -> None:
         done = completed >= target
         await self.execute(
             """

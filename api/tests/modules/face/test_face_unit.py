@@ -1,106 +1,155 @@
 """
-api/tests/test_face_unit.py
-Pengujian unit murni (tanpa ketergantungan DB) untuk skema, klien, dan logika layanan Face Recognition.
+api/tests/modules/face/test_face_unit.py
+Uji unit wajah V2 (Milestone 7) tanpa DB: pendaftaran → employee.face_embedding, pencocokan swafoto absen,
+dan dampaknya pada absensi (tidak cocok → ditolak online / ditandai luring; layanan mati → PENDING_OM).
 """
 from __future__ import annotations
 
-from datetime import UTC, datetime
+import io
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
+from PIL import Image
 
-from app.core.errors import ValidationError
-from app.modules.face.repositories.face_repository import parse_vector
-from app.modules.face.schemas.face_schema import (
-    ConsentRequest,
-    FaceLiveness,
-    FacePolicy,
-    TemplateResponse,
-)
-from app.modules.face.services.face_embed_client import FaceEmbedClient
-from app.modules.face.services.face_service import POLICY_TEXT, POLICY_VERSION, FaceService, _cosine, _normalize
+from app.core.errors import AppError, ForbiddenError, ValidationError
+from app.modules.attendance.services.attendance_session_service import AttendanceSessionService
+from app.modules.face.repositories.face_repository import parse_embedding
+from app.modules.face.services import face_service as fs
+from app.modules.face.services.face_embed_client import EmbedResult, FaceServiceUnavailable
+from app.modules.face.services.face_service import FaceOutcome, FaceService, cosine
 
-
-def test_face_service_math():
-    v1 = [1.0, 0.0, 0.0]
-    v2 = [0.0, 1.0, 0.0]
-    assert _cosine(v1, v2) == 0.0
-    assert _cosine(v1, v1) == 1.0
-    norm = _normalize([3.0, 4.0])
-    assert pytest.approx(norm[0]) == 0.6
-    assert pytest.approx(norm[1]) == 0.8
+EMP = uuid4()
 
 
-def test_face_policy():
-    policy = FacePolicy(version=POLICY_VERSION, text=POLICY_TEXT)
-    assert policy.version == "2026-10-05"
-    assert "HANYA untuk absensi masuk dan pulang" in policy.text
+def _jpeg() -> bytes:
+    buf = io.BytesIO()
+    Image.new("RGB", (16, 16), (120, 90, 30)).save(buf, "JPEG")
+    return buf.getvalue()
 
 
-def test_consent_request_valid():
-    req = ConsentRequest(state="GRANTED", policy_version="2026-10-05")
-    assert req.state == "GRANTED"
-    assert req.policy_version == "2026-10-05"
+def _result(vector: list[float] | None, faces: int = 1, quality: float = 0.9) -> EmbedResult:
+    return EmbedResult(faces=faces, embedding=vector, quality=quality, detection_score=0.99,
+                       model_name="arcface", model_version="1")
 
 
-def test_face_liveness():
-    live = FaceLiveness(challenges=["BLINK", "TURN_LEFT"], passed=True)
-    assert live.passed is True
-    assert len(live.challenges) == 2
-
-
-def test_template_response():
-    now = datetime.now(UTC)
-    vec = [0.1] * 512
-    resp = TemplateResponse(
-        model_name="buffalo_s",
-        model_version="w600k_mbf",
-        enrollment_version="v1",
-        embeddings=[vec],
-        expires_at=now,
-    )
-    assert len(resp.embeddings[0]) == 512
-    assert resp.model_name == "buffalo_s"
-
-
-def test_parse_vector():
-    raw = "[0.123, -0.456, 0.789]"
-    parsed = parse_vector(raw)
-    assert parsed is not None
-    assert len(parsed) == 3
-    assert pytest.approx(parsed[0]) == 0.123
-    assert pytest.approx(parsed[1]) == -0.456
-    assert pytest.approx(parsed[2]) == 0.789
-
-
-def test_parse_vector_none():
-    assert parse_vector(None) is None
-    assert parse_vector("") is None
-
-
-def test_face_embed_client_attributes():
-    client = FaceEmbedClient(base_url="http://face:8000", token="secret-token")
-    assert client.base_url == "http://face:8000"
-    assert client.token == "secret-token"
-
-
-@pytest.mark.anyio
-async def test_face_service_enroll_count_validation():
+def _service(*, embedding=None, role="EMPLOYEE", others=(), results=None, key="k/selfie.jpg"):
     repo = MagicMock()
-    repo.employee_of_user = AsyncMock(return_value=MagicMock(employee_id=uuid4(), attendance_mode="FIELD"))
-    repo.latest_consent = AsyncMock(return_value=MagicMock(state="GRANTED"))
-    service = FaceService(repo=repo, client=None)  # type: ignore
-    # Kurang dari ENROLL_MIN (3)
-    with pytest.raises(ValidationError) as exc:
-        await service.enroll("org-1", "user-1", [b"fake1", b"fake2"], FaceLiveness(passed=True))
-    assert "3 sampai 5 foto" in str(exc.value)
+    repo.employee_of_user = AsyncMock(return_value=SimpleNamespace(employee_id=EMP, role=role,
+                                                                   face_embedding=embedding))
+    repo.embedding_of = AsyncMock(return_value=embedding)
+    repo.other_embeddings = AsyncMock(return_value=[SimpleNamespace(face_embedding=o) for o in others])
+    repo.set_embedding = AsyncMock()
+    repo.clear_embedding = AsyncMock(return_value=True)
+    repo.file_key = AsyncMock(return_value=key)
+    client = MagicMock()
+    client.embed = AsyncMock(side_effect=results or [])
+    return FaceService(repo, client), repo
 
-    # Lebih dari ENROLL_MAX (5)
-    with pytest.raises(ValidationError) as exc:
-        await service.enroll(
-            "org-1", "user-1",
-            [b"1", b"2", b"3", b"4", b"5", b"6"],
-            FaceLiveness(passed=True)
-        )
-    assert "3 sampai 5 foto" in str(exc.value)
+
+def test_parse_embedding_accepts_object_and_plain_list():
+    assert parse_embedding({"vector": [1, 0], "model": "m"}) == ([1.0, 0.0], {"model": "m"})
+    assert parse_embedding("[0.5, 0.5]") == ([0.5, 0.5], {})
+    assert parse_embedding(None) == (None, {})
+    assert parse_embedding({"foo": 1}) == (None, {})
+
+
+def test_cosine_and_score():
+    assert cosine([1.0, 0.0], [1.0, 0.0]) == pytest.approx(1.0)
+    assert cosine([1.0, 0.0], [0.0, 1.0]) == pytest.approx(0.0)
+    assert cosine([1.0], [1.0, 0.0]) == 0.0  # panjang beda → tidak cocok
+    assert FaceOutcome("MATCH", 0.8123).score == 81.23
+    assert FaceOutcome("UNAVAILABLE", None).score == 0.0
+
+
+async def test_enroll_stores_normalised_mean():
+    svc, repo = _service(results=[_result([1.0, 0.1]), _result([1.0, 0.0]), _result([0.9, 0.1])])
+    got = await svc.enroll("u", [_jpeg()] * 3)
+    assert got.enrolled and got.images_used == 3
+    vector = repo.set_embedding.await_args.args[1]
+    assert sum(v * v for v in vector) == pytest.approx(1.0)
+
+
+async def test_enroll_rules():
+    svc, _ = _service(role="PROJECT_MANAGER")
+    with pytest.raises(ForbiddenError):
+        await svc.enroll("u", [_jpeg()] * 3)
+    svc, _ = _service()
+    with pytest.raises(ValidationError):
+        await svc.enroll("u", [_jpeg()] * 2)
+    svc, _ = _service(embedding={"vector": [1.0, 0.0]})
+    with pytest.raises(AppError) as err:
+        await svc.enroll("u", [_jpeg()] * 3)
+    assert err.value.code == "FACE_ALREADY_ENROLLED"
+    svc, _ = _service(results=[_result(None, faces=2)])
+    with pytest.raises(ValidationError):
+        await svc.enroll("u", [_jpeg()] * 3)
+    svc, _ = _service(results=[_result([1.0, 0.0]), _result([0.0, 1.0]), _result([1.0, 0.0])])
+    with pytest.raises(ValidationError):  # foto-foto bukan orang yang sama
+        await svc.enroll("u", [_jpeg()] * 3)
+    svc, _ = _service(results=FaceServiceUnavailable("mati"))
+    with pytest.raises(AppError) as err:
+        await svc.enroll("u", [_jpeg()] * 3)
+    assert err.value.code == "FACE_SERVICE_UNAVAILABLE"
+
+
+async def test_enroll_rejects_face_of_another_employee():
+    svc, repo = _service(others=[{"vector": [1.0, 0.0]}],
+                         results=[_result([1.0, 0.0]), _result([1.0, 0.05]), _result([1.0, 0.02])])
+    with pytest.raises(AppError) as err:
+        await svc.enroll("u", [_jpeg()] * 3)
+    assert err.value.code == "FACE_DUPLICATE"
+    repo.set_embedding.assert_not_awaited()
+
+
+async def test_verify_selfie_outcomes(monkeypatch):
+    monkeypatch.setattr(fs.storage, "get_object_bytes", lambda key: b"jpeg")
+    enrolled = {"vector": [1.0, 0.0]}
+    svc, _ = _service(embedding=enrolled, results=[_result([0.95, 0.05])])
+    assert (await svc.verify_selfie(EMP, uuid4())).result == "MATCH"
+    svc, _ = _service(embedding=enrolled, results=[_result([0.2, 1.0])])
+    assert (await svc.verify_selfie(EMP, uuid4())).result == "MISMATCH"
+    svc, _ = _service(embedding=enrolled, results=[_result(None, faces=0)])
+    assert (await svc.verify_selfie(EMP, uuid4())).result == "MISMATCH"
+    svc, _ = _service(embedding=enrolled, results=FaceServiceUnavailable("mati"))
+    assert (await svc.verify_selfie(EMP, uuid4())).result == "UNAVAILABLE"
+    svc, _ = _service(embedding=None)
+    assert (await svc.verify_selfie(EMP, uuid4())).result == "NOT_ENROLLED"
+    svc, _ = _service(embedding=[0.1, 0.2, 0.3, 0.4], results=[_result([1.0, 0.0])])  # seed 4-dimensi lama
+    assert (await svc.verify_selfie(EMP, uuid4())).result == "STALE"
+
+
+def _attendance(outcome: FaceOutcome) -> tuple[AttendanceSessionService, MagicMock]:
+    repo = MagicMock()
+    repo.flag_missing_face = AsyncMock(return_value="flagged")
+    faces = MagicMock()
+    faces.verify_selfie = AsyncMock(return_value=outcome)
+    return AttendanceSessionService(repo, MagicMock(), faces), repo
+
+
+async def test_attendance_online_mismatch_is_rejected():
+    svc, _ = _attendance(FaceOutcome("MISMATCH", 0.41))
+    with pytest.raises(AppError) as err:
+        await svc.verify_face(EMP, uuid4(), online=True)
+    assert err.value.code == "FACE_MISMATCH"
+
+
+async def test_attendance_offline_mismatch_and_outage_are_flagged():
+    row = SimpleNamespace(id=uuid4())
+    svc, repo = _attendance(FaceOutcome("MISMATCH", 0.41))
+    outcome = await svc.verify_face(EMP, uuid4(), online=False)
+    assert await svc.record_face(row, "CHECK_IN", outcome, online=False) == "flagged"
+    assert "tidak cocok" in repo.flag_missing_face.await_args.args[2]
+    svc, repo = _attendance(FaceOutcome("UNAVAILABLE", None))
+    outcome = await svc.verify_face(EMP, uuid4(), online=True)
+    assert await svc.record_face(row, "CHECK_OUT", outcome, online=True) == "flagged"
+    assert "tidak tersedia" in repo.flag_missing_face.await_args.args[2]
+
+
+async def test_attendance_match_is_not_flagged():
+    row = SimpleNamespace(id=uuid4())
+    svc, repo = _attendance(FaceOutcome("MATCH", 0.93))
+    outcome = await svc.verify_face(EMP, uuid4(), online=True)
+    assert await svc.record_face(row, "CHECK_IN", outcome, online=True) is row
+    repo.flag_missing_face.assert_not_awaited()

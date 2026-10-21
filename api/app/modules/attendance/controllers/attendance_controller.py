@@ -23,6 +23,7 @@ from app.modules.attendance.schemas.attendance_schema import (
     CheckOutRequest,
     DeviceKeyRequest,
     ExplanationRequest,
+    MealAllowanceRow,
     OfflineAttendanceEvent,
     OfflineAttendanceResult,
     ReviewRequest,
@@ -107,7 +108,6 @@ class AttendanceController:
             payload=data.payload,
             signature=data.signature,
             selfie_file_id=data.selfie_file_id,
-            face_probe_id=data.face_probe_id,
         )
         return OfflineAttendanceResult(**result)
 
@@ -129,7 +129,6 @@ class AttendanceController:
             selfie_file_id=data.selfie_file_id,
             channel=data.channel,
             explanation=data.explanation,
-            face_probe_id=data.face_probe_id,
         )
         return _response(row)
 
@@ -144,7 +143,6 @@ class AttendanceController:
             current_user.user_id,
             data.channel,
             org_id=current_user.organization_id,
-            face_probe_id=data.face_probe_id,
             lat=data.location.lat,
             lng=data.location.lng,
             selfie_file_id=data.selfie_file_id,
@@ -185,6 +183,12 @@ class AttendanceController:
     ) -> str:
         """Mengekspor data absensi organisasi dalam rentang tanggal ke format CSV."""
         return await self.session_service.export_csv(current_user.organization_id, start_date, end_date)
+
+    async def handle_meal_allowance(
+        self, start_date: date, end_date: date, division_id: UUID | None
+    ) -> list[MealAllowanceRow]:
+        rows = await self.session_service.meal_allowance(start_date, end_date, division_id)
+        return [MealAllowanceRow(**dict(r._mapping)) for r in rows]
 
 
 __all__ = ["AttendanceController"]

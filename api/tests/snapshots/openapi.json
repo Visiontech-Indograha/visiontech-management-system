@@ -1288,44 +1288,6 @@
     "title": "BackupOut",
     "type": "object"
    },
-   "Body_check_face_challenge_api_v1_face_challenge_check_post": {
-    "properties": {
-     "challenge": {
-      "title": "Challenge",
-      "type": "string"
-     },
-     "file": {
-      "contentMediaType": "application/octet-stream",
-      "title": "File",
-      "type": "string"
-     }
-    },
-    "required": [
-     "file",
-     "challenge"
-    ],
-    "title": "Body_check_face_challenge_api_v1_face_challenge_check_post",
-    "type": "object"
-   },
-   "Body_create_face_probe_api_v1_face_probe_post": {
-    "properties": {
-     "file": {
-      "contentMediaType": "application/octet-stream",
-      "title": "File",
-      "type": "string"
-     },
-     "liveness": {
-      "default": "{}",
-      "title": "Liveness",
-      "type": "string"
-     }
-    },
-    "required": [
-     "file"
-    ],
-    "title": "Body_create_face_probe_api_v1_face_probe_post",
-    "type": "object"
-   },
    "Body_enroll_face_api_v1_face_enroll_post": {
     "properties": {
      "files": {
@@ -1335,11 +1297,6 @@
       },
       "title": "Files",
       "type": "array"
-     },
-     "liveness": {
-      "default": "{}",
-      "title": "Liveness",
-      "type": "string"
      }
     },
     "required": [
@@ -1468,64 +1425,6 @@
     "title": "ChainStep",
     "type": "object"
    },
-   "ChallengeCheckResponse": {
-    "properties": {
-     "detail": {
-      "title": "Detail",
-      "type": "string"
-     },
-     "metrics": {
-      "anyOf": [
-       {
-        "additionalProperties": {
-         "type": "number"
-        },
-        "type": "object"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Metrics"
-     },
-     "proof": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Proof"
-     },
-     "quality": {
-      "anyOf": [
-       {
-        "type": "number"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Quality"
-     },
-     "status": {
-      "enum": [
-       "sukses",
-       "menunggu"
-      ],
-      "title": "Status",
-      "type": "string"
-     }
-    },
-    "required": [
-     "status",
-     "detail"
-    ],
-    "title": "ChallengeCheckResponse",
-    "type": "object"
-   },
    "CheckInRequest": {
     "description": "Schema for processing a check-in request.",
     "properties": {
@@ -1561,18 +1460,6 @@
        }
       ],
       "title": "Explanation"
-     },
-     "face_probe_id": {
-      "anyOf": [
-       {
-        "format": "uuid",
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Face Probe Id"
      },
      "face_result": {
       "anyOf": [
@@ -1675,18 +1562,6 @@
        }
       ],
       "title": "Explanation"
-     },
-     "face_probe_id": {
-      "anyOf": [
-       {
-        "format": "uuid",
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Face Probe Id"
      },
      "location": {
       "$ref": "#/components/schemas/GeoPoint"
@@ -1848,30 +1723,6 @@
      "return_condition"
     ],
     "title": "ClearanceItemVerify",
-    "type": "object"
-   },
-   "ConsentRequest": {
-    "properties": {
-     "policy_version": {
-      "maxLength": 40,
-      "minLength": 1,
-      "title": "Policy Version",
-      "type": "string"
-     },
-     "state": {
-      "enum": [
-       "GRANTED",
-       "WITHDRAWN"
-      ],
-      "title": "State",
-      "type": "string"
-     }
-    },
-    "required": [
-     "state",
-     "policy_version"
-    ],
-    "title": "ConsentRequest",
     "type": "object"
    },
    "DailyFormOptions": {
@@ -3735,26 +3586,27 @@
     "properties": {
      "enrolled": {
       "title": "Enrolled",
+      "type": "boolean"
+     },
+     "images_used": {
+      "title": "Images Used",
       "type": "integer"
      },
-     "enrollment_version": {
-      "title": "Enrollment Version",
-      "type": "string"
-     },
-     "model_name": {
-      "title": "Model Name",
-      "type": "string"
-     },
-     "model_version": {
-      "title": "Model Version",
-      "type": "string"
+     "quality": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Quality"
      }
     },
     "required": [
      "enrolled",
-     "enrollment_version",
-     "model_name",
-     "model_version"
+     "images_used"
     ],
     "title": "EnrollResponse",
     "type": "object"
@@ -3841,81 +3693,69 @@
     "type": "object"
    },
    "FacePolicy": {
-    "description": "Teks persetujuan biometrik milik server (klien tidak bisa mengubah kalimat yang disetujui).",
     "properties": {
-     "text": {
-      "title": "Text",
-      "type": "string"
+     "enrollment_required": {
+      "title": "Enrollment Required",
+      "type": "boolean"
      },
-     "version": {
-      "title": "Version",
-      "type": "string"
+     "match_threshold": {
+      "title": "Match Threshold",
+      "type": "number"
+     },
+     "max_images": {
+      "title": "Max Images",
+      "type": "integer"
+     },
+     "min_images": {
+      "title": "Min Images",
+      "type": "integer"
      }
     },
     "required": [
-     "version",
-     "text"
+     "match_threshold",
+     "enrollment_required",
+     "min_images",
+     "max_images"
     ],
     "title": "FacePolicy",
     "type": "object"
    },
-   "FaceStatus": {
+   "FaceResetResponse": {
     "properties": {
-     "consent": {
-      "anyOf": [
-       {
-        "enum": [
-         "GRANTED",
-         "WITHDRAWN"
-        ],
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Consent"
-     },
-     "consent_policy_version": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Consent Policy Version"
-     },
-     "employee_linked": {
-      "title": "Employee Linked",
-      "type": "boolean"
+     "employee_id": {
+      "format": "uuid",
+      "title": "Employee Id",
+      "type": "string"
      },
      "enrolled": {
-      "default": false,
+      "title": "Enrolled",
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "employee_id",
+     "enrolled"
+    ],
+    "title": "FaceResetResponse",
+    "type": "object"
+   },
+   "FaceStatus": {
+    "properties": {
+     "enrolled": {
       "title": "Enrolled",
       "type": "boolean"
      },
-     "enrollment_required": {
-      "default": false,
-      "title": "Enrollment Required",
-      "type": "boolean"
-     },
-     "enrollment_version": {
+     "enrolled_at": {
       "anyOf": [
        {
+        "format": "date-time",
         "type": "string"
        },
        {
         "type": "null"
        }
       ],
-      "title": "Enrollment Version"
-     },
-     "liveness_required": {
-      "default": true,
-      "title": "Liveness Required",
-      "type": "boolean"
+      "title": "Enrolled At"
      },
      "model_name": {
       "anyOf": [
@@ -3928,29 +3768,14 @@
       ],
       "title": "Model Name"
      },
-     "model_version": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Model Version"
-     },
-     "policy": {
-      "$ref": "#/components/schemas/FacePolicy"
-     },
-     "template_ttl_days": {
-      "title": "Template Ttl Days",
-      "type": "integer"
+     "required": {
+      "title": "Required",
+      "type": "boolean"
      }
     },
     "required": [
-     "employee_linked",
-     "template_ttl_days",
-     "policy"
+     "enrolled",
+     "required"
     ],
     "title": "FaceStatus",
     "type": "object"
@@ -4527,6 +4352,57 @@
      }
     },
     "title": "LoanReturn",
+    "type": "object"
+   },
+   "MealAllowanceRow": {
+    "description": "Rekap uang makan per karyawan (docs/35 §5): hanya absensi sah (AUTO_VALID / APPROVED_BY_OM).",
+    "properties": {
+     "employee_id": {
+      "format": "uuid",
+      "title": "Employee Id",
+      "type": "string"
+     },
+     "employee_no": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Employee No"
+     },
+     "full_name": {
+      "title": "Full Name",
+      "type": "string"
+     },
+     "in_city_days": {
+      "title": "In City Days",
+      "type": "integer"
+     },
+     "out_city_days": {
+      "title": "Out City Days",
+      "type": "integer"
+     },
+     "pending_days": {
+      "title": "Pending Days",
+      "type": "integer"
+     },
+     "total_amount": {
+      "title": "Total Amount",
+      "type": "number"
+     }
+    },
+    "required": [
+     "employee_id",
+     "full_name",
+     "in_city_days",
+     "out_city_days",
+     "total_amount",
+     "pending_days"
+    ],
+    "title": "MealAllowanceRow",
     "type": "object"
    },
    "MemberAdd": {
@@ -5326,18 +5202,6 @@
       "minLength": 8,
       "title": "Device Id",
       "type": "string"
-     },
-     "face_probe_id": {
-      "anyOf": [
-       {
-        "format": "uuid",
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Face Probe Id"
      },
      "kind": {
       "enum": [
@@ -6466,42 +6330,6 @@
     "title": "PlanItemUpdate",
     "type": "object"
    },
-   "ProbeResponse": {
-    "properties": {
-     "expires_at": {
-      "format": "date-time",
-      "title": "Expires At",
-      "type": "string"
-     },
-     "pending": {
-      "default": false,
-      "title": "Pending",
-      "type": "boolean"
-     },
-     "probe_id": {
-      "format": "uuid",
-      "title": "Probe Id",
-      "type": "string"
-     },
-     "quality": {
-      "anyOf": [
-       {
-        "type": "number"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Quality"
-     }
-    },
-    "required": [
-     "probe_id",
-     "expires_at"
-    ],
-    "title": "ProbeResponse",
-    "type": "object"
-   },
    "ProgressIn": {
     "properties": {
      "completed_qty": {
@@ -7394,47 +7222,6 @@
      }
     },
     "title": "TeamUpdate",
-    "type": "object"
-   },
-   "TemplateResponse": {
-    "description": "Embedding MILIK SENDIRI untuk dicocokkan di HP saat luring. Disimpan terenkripsi (Keystore); berlaku terbatas.",
-    "properties": {
-     "embeddings": {
-      "items": {
-       "items": {
-        "type": "number"
-       },
-       "type": "array"
-      },
-      "title": "Embeddings",
-      "type": "array"
-     },
-     "enrollment_version": {
-      "title": "Enrollment Version",
-      "type": "string"
-     },
-     "expires_at": {
-      "format": "date-time",
-      "title": "Expires At",
-      "type": "string"
-     },
-     "model_name": {
-      "title": "Model Name",
-      "type": "string"
-     },
-     "model_version": {
-      "title": "Model Version",
-      "type": "string"
-     }
-    },
-    "required": [
-     "model_name",
-     "model_version",
-     "enrollment_version",
-     "embeddings",
-     "expires_at"
-    ],
-    "title": "TemplateResponse",
     "type": "object"
    },
    "ToolCreate": {
@@ -11058,6 +10845,86 @@
     ]
    }
   },
+  "/api/v1/attendance/meal-allowance": {
+   "get": {
+    "description": "Rekap uang makan per karyawan (dalam/luar kota) dari absensi sah, untuk Finance.",
+    "operationId": "meal_allowance_recap_api_v1_attendance_meal_allowance_get",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "start_date",
+      "required": true,
+      "schema": {
+       "format": "date",
+       "title": "Start Date",
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "end_date",
+      "required": true,
+      "schema": {
+       "format": "date",
+       "title": "End Date",
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "division_id",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "format": "uuid",
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Division Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/MealAllowanceRow"
+         },
+         "title": "Response Meal Allowance Recap Api V1 Attendance Meal Allowance Get",
+         "type": "array"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Meal Allowance Recap",
+    "tags": [
+     "Attendance"
+    ]
+   }
+  },
   "/api/v1/attendance/offline": {
    "post": {
     "description": "R-34: terima satu absen luring yang ditandatangani perangkat (idempoten per client_op_id).",
@@ -11837,90 +11704,6 @@
      }
     ],
     "summary": "Auto Checkout Daily",
-    "tags": [
-     "Attendance Cron"
-    ]
-   }
-  },
-  "/api/v1/cron/attendance/purge-face-probes": {
-   "post": {
-    "description": "Penjadwal: hapus berkas gambar wajah (probe) yang telah melewati masa retensi (P8-6).",
-    "operationId": "purge_expired_face_probes_api_v1_cron_attendance_purge_face_probes_post",
-    "responses": {
-     "200": {
-      "content": {
-       "application/json": {
-        "schema": {
-         "additionalProperties": {
-          "type": "integer"
-         },
-         "title": "Response Purge Expired Face Probes Api V1 Cron Attendance Purge Face Probes Post",
-         "type": "object"
-        }
-       }
-      },
-      "description": "Successful Response"
-     }
-    },
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ],
-    "summary": "Purge Expired Face Probes",
-    "tags": [
-     "Attendance Cron"
-    ]
-   }
-  },
-  "/api/v1/cron/attendance/reverify-faces": {
-   "post": {
-    "description": "Penjadwal: hitung dan cocokkan ulang wajah yang tertunda saat face-service sempat mati.",
-    "operationId": "reverify_pending_faces_api_v1_cron_attendance_reverify_faces_post",
-    "parameters": [
-     {
-      "in": "query",
-      "name": "limit",
-      "required": false,
-      "schema": {
-       "default": 50,
-       "title": "Limit",
-       "type": "integer"
-      }
-     }
-    ],
-    "responses": {
-     "200": {
-      "content": {
-       "application/json": {
-        "schema": {
-         "additionalProperties": {
-          "type": "integer"
-         },
-         "title": "Response Reverify Pending Faces Api V1 Cron Attendance Reverify Faces Post",
-         "type": "object"
-        }
-       }
-      },
-      "description": "Successful Response"
-     },
-     "422": {
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      },
-      "description": "Validation Error"
-     }
-    },
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ],
-    "summary": "Reverify Pending Faces",
     "tags": [
      "Attendance Cron"
     ]
@@ -13365,107 +13148,9 @@
     ]
    }
   },
-  "/api/v1/face/challenge-check": {
-   "post": {
-    "description": "Memeriksa gambar langsung dari kamera HP untuk memvalidasi tantangan liveness.",
-    "operationId": "check_face_challenge_api_v1_face_challenge_check_post",
-    "requestBody": {
-     "content": {
-      "multipart/form-data": {
-       "schema": {
-        "$ref": "#/components/schemas/Body_check_face_challenge_api_v1_face_challenge_check_post"
-       }
-      }
-     },
-     "required": true
-    },
-    "responses": {
-     "200": {
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/ChallengeCheckResponse"
-        }
-       }
-      },
-      "description": "Successful Response"
-     },
-     "422": {
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      },
-      "description": "Validation Error"
-     }
-    },
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ],
-    "summary": "Check Face Challenge",
-    "tags": [
-     "Face"
-    ]
-   }
-  },
-  "/api/v1/face/consent": {
-   "post": {
-    "description": "Menyetujui atau menarik persetujuan pemakaian data biometrik wajah.",
-    "operationId": "set_face_consent_api_v1_face_consent_post",
-    "requestBody": {
-     "content": {
-      "application/json": {
-       "schema": {
-        "$ref": "#/components/schemas/ConsentRequest"
-       }
-      }
-     },
-     "required": true
-    },
-    "responses": {
-     "200": {
-      "content": {
-       "application/json": {
-        "schema": {
-         "additionalProperties": {
-          "type": "string"
-         },
-         "title": "Response Set Face Consent Api V1 Face Consent Post",
-         "type": "object"
-        }
-       }
-      },
-      "description": "Successful Response"
-     },
-     "422": {
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      },
-      "description": "Validation Error"
-     }
-    },
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ],
-    "summary": "Set Face Consent",
-    "tags": [
-     "Face"
-    ]
-   }
-  },
   "/api/v1/face/enroll": {
    "post": {
-    "description": "Mendaftarkan 3-5 foto pose wajah karyawan.",
+    "description": "Mendaftarkan wajah sendiri dari 3–5 foto (sudut berbeda).",
     "operationId": "enroll_face_api_v1_face_enroll_post",
     "requestBody": {
      "content": {
@@ -13478,7 +13163,7 @@
      "required": true
     },
     "responses": {
-     "200": {
+     "201": {
       "content": {
        "application/json": {
         "schema": {
@@ -13510,9 +13195,58 @@
     ]
    }
   },
+  "/api/v1/face/enrollments/{employee_id}": {
+   "delete": {
+    "description": "Hapus pendaftaran wajah karyawan agar ia bisa mendaftar ulang (HR/admin).",
+    "operationId": "reset_face_enrollment_api_v1_face_enrollments__employee_id__delete",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "employee_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Employee Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/FaceResetResponse"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Reset Face Enrollment",
+    "tags": [
+     "Face"
+    ]
+   }
+  },
   "/api/v1/face/policy": {
    "get": {
-    "description": "Mengambil versi dan teks kebijakan persetujuan biometrik server saat ini.",
+    "description": "Ambang kecocokan, kewajiban pendaftaran, dan jumlah foto pendaftaran.",
     "operationId": "get_face_policy_api_v1_face_policy_get",
     "responses": {
      "200": {
@@ -13537,56 +13271,9 @@
     ]
    }
   },
-  "/api/v1/face/probe": {
-   "post": {
-    "description": "Mengunggah gambar wajah sementara untuk diverifikasi saat check-in atau check-out.",
-    "operationId": "create_face_probe_api_v1_face_probe_post",
-    "requestBody": {
-     "content": {
-      "multipart/form-data": {
-       "schema": {
-        "$ref": "#/components/schemas/Body_create_face_probe_api_v1_face_probe_post"
-       }
-      }
-     },
-     "required": true
-    },
-    "responses": {
-     "200": {
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/ProbeResponse"
-        }
-       }
-      },
-      "description": "Successful Response"
-     },
-     "422": {
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      },
-      "description": "Validation Error"
-     }
-    },
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ],
-    "summary": "Create Face Probe",
-    "tags": [
-     "Face"
-    ]
-   }
-  },
   "/api/v1/face/status": {
    "get": {
-    "description": "Status pengenalan wajah pengguna saat ini: persetujuan, template, dan status aktif.",
+    "description": "Apakah wajah pengguna saat ini sudah terdaftar & wajib terdaftar.",
     "operationId": "get_face_status_api_v1_face_status_get",
     "responses": {
      "200": {
@@ -13606,33 +13293,6 @@
      }
     ],
     "summary": "Get Face Status",
-    "tags": [
-     "Face"
-    ]
-   }
-  },
-  "/api/v1/face/template": {
-   "get": {
-    "description": "Mengunduh embedding wajah milik sendiri untuk disimpan terenkripsi di HP.",
-    "operationId": "get_face_template_api_v1_face_template_get",
-    "responses": {
-     "200": {
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/TemplateResponse"
-        }
-       }
-      },
-      "description": "Successful Response"
-     }
-    },
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ],
-    "summary": "Get Face Template",
     "tags": [
      "Face"
     ]

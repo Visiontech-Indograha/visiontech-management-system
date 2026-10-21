@@ -80,9 +80,8 @@ class Phone:
         return {"device_id": self.device_id, "client_op_id": op, "kind": kind, "payload": payload,
                 "signature": signature}
 
-    def send(self, event: dict, selfie_file_id: str | None = None, face_probe_id: str | None = None):
-        body = {**event, **({"selfie_file_id": selfie_file_id} if selfie_file_id else {}),
-                **({"face_probe_id": face_probe_id} if face_probe_id else {})}
+    def send(self, event: dict, selfie_file_id: str | None = None):
+        body = {**event, **({"selfie_file_id": selfie_file_id} if selfie_file_id else {})}
         return self.client.post("/attendance/offline", headers=self.headers, json=body)
 
     def _user_id(self) -> str:

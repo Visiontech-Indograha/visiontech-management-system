@@ -153,7 +153,6 @@ class AttendanceOfflineService:
         payload: str,
         signature: str,
         selfie_file_id: UUID | None,
-        face_probe_id: UUID | None = None,
     ) -> dict[str, Any]:
         """
         Memproses sinkronisasi data absensi (masuk/pulang) yang dikumpulkan saat perangkat luring.
@@ -192,15 +191,12 @@ class AttendanceOfflineService:
 
         # Mengekstrak dan memverifikasi waktu absensi secara ketat melawan manipulasi jam perangkat.
         event, trusted, notes = self._event_time(user, p)
-        # Pengenalan wajah: blok `face` ikut ditandatangani HP (termasuk hash gambar wajah sementara).
-        face = p.get("face") if isinstance(p.get("face"), dict) else None
-        if face is not None and face_probe_id is None:
-            raise _reject("OFFLINE_FACE_MISSING", "Gambar wajah absen luring belum terunggah.")
-
+        # Swafoto absen luring dicocokkan server dengan wajah terdaftar saat disinkronkan (M7); tidak cocok tidak
+        # ditolak (absen sudah terjadi) melainkan ditandai untuk OM.
         if kind == "CHECK_IN":
-            result, attendance_id = await self._check_in(user, p, event, notes, selfie_file_id, face_probe_id, face)
+            result, attendance_id = await self._check_in(user, p, event, notes, selfie_file_id)
         else:
-            result, attendance_id = await self._check_out(user, event, notes, face_probe_id, face, p)
+            result, attendance_id = await self._check_out(user, event, notes, selfie_file_id, p)
 
         await self.repo.record_event(
             client_op_id=client_op_id,
@@ -222,19 +218,6 @@ class AttendanceOfflineService:
             "notes": notes,
         }
 
-    @staticmethod
-    def _face_notes(face: dict[str, Any] | None, server_result: str | None, notes: list[str]) -> None:
-        """Hasil HP hanya pendamping: yang berlaku hitungan server. Selisih besar = kemungkinan manipulasi."""
-        if face is None or server_result is None:
-            return
-        local = face.get("local_result")
-        if local == "MATCH" and server_result in ("NO_MATCH", "LOW_QUALITY"):
-            notes.append("wajah cocok di HP tetapi tidak cocok di server (kemungkinan manipulasi)")
-        elif server_result == "NO_MATCH":
-            notes.append("wajah tidak cocok")
-        elif server_result == "LOW_QUALITY":
-            notes.append("pemeriksaan keaslian wajah tidak lolos")
-
     async def _check_in(
         self,
         user: CurrentUser,
@@ -242,8 +225,6 @@ class AttendanceOfflineService:
         event: datetime,
         notes: list[str],
         selfie_file_id: UUID | None,
-        face_probe_id: UUID | None = None,
-        face: dict[str, Any] | None = None,
     ) -> tuple[str, Any]:
         """
         Memproses data absensi masuk (check-in) yang tertunda saat luring.
@@ -270,11 +251,8 @@ class AttendanceOfflineService:
             explanation=p.get("explanation"),
             at=event,
             work_date=work_date,
-            face_probe_id=face_probe_id if face is not None else None,
             online=False,
-            expected_face_sha256=str(face.get("probe_sha256") or "") if face is not None else None,
         )
-        self._face_notes(face, getattr(row, "face_result", None), notes)
         note = "; ".join(notes) if notes else None
         marked = await self.repo.mark_offline(row.id, note, force_review=bool(notes))
         return str(marked.status), marked.id
@@ -284,8 +262,7 @@ class AttendanceOfflineService:
         user: CurrentUser,
         event: datetime,
         notes: list[str],
-        face_probe_id: UUID | None = None,
-        face: dict[str, Any] | None = None,
+        selfie_file_id: UUID | None = None,
         p: dict[str, Any] | None = None,
     ) -> tuple[str, Any]:
         """
@@ -310,16 +287,6 @@ class AttendanceOfflineService:
         else:
             await self.repo.request_checkout(target.id, event)
             result = "CHECK_OUT_PENDING_REVIEW"
-        row = await self.sessions.apply_face(
-            user.organization_id,
-            user.user_id,
-            target,
-            "CHECK_OUT",
-            face_probe_id if face is not None else None,
-            online=False,
-            expected_sha256=str(face.get("probe_sha256") or "") if face is not None else None,
-            device="MOBILE",
-        )
-        if face is not None:
-            self._face_notes(face, getattr(row, "check_out_face_result", None), notes)
+        outcome = await self.sessions.verify_face(worker.employee_id, selfie_file_id, online=False)
+        await self.sessions.record_face(target, "CHECK_OUT", outcome, online=False)
         return result, target.id

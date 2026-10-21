@@ -20,8 +20,8 @@ export function WorkCompletionsTemplate({
 }) {
   return (
     <PageTemplate
-      title="Order Proyek Klien (Work Completion)"
-      description="Manajemen target volume pekerjaan klien (SPK/PO) dan pembagian slot tugas tim lapangan."
+      title="Pekerjaan klien"
+      description="Pekerjaan dari klien, kemajuannya, hasil kerja, dan dokumen serah terima."
       action={canManage && <WorkCompletionAddButton onAdd={onAdd} />}
     >
       <WorkCompletionList query={query} canManage={canManage} onAdd={onAdd} />

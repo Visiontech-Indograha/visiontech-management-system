@@ -11,6 +11,7 @@ const PATTERNS: [RegExp, string][] = [
   [/^\/account$/, "Akun & keamanan"],
   [/^\/forbidden$/, "Tidak berwenang"],
   [/^\/directory\/[^/]+$/, "Detail karyawan"],
+  [/^\/surveys\/[^/]+$/, "Detail survei"],
 ];
 
 /** Judul tab peramban untuk satu alamat; `null` bila tidak dikenal (dipakai sebagai "halaman tidak ditemukan"). */

@@ -43,7 +43,7 @@ export function AttendanceList({ list, page, meEmployeeId, onPageChange, onOpen 
                   <TextBlock as="dd" className="inline">
                     {Math.round(a.distance_m)} m{a.is_late ? " · terlambat" : ""}
                     {a.is_early_leave ? " · pulang cepat" : ""}
-                    {a.offline ? " · absen luring" : ""}
+                    {a.offline ? " · absen offline" : ""}
                   </TextBlock>
                 </div>
                 <div>

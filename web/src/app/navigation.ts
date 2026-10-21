@@ -1,6 +1,8 @@
 import {
   Bed,
   BookUser,
+  Briefcase,
+  ClipboardCheck,
   Clock,
   ChartColumn,
   ClipboardList,
@@ -30,6 +32,8 @@ export interface NavItem {
 export const NAV_ITEMS: NavItem[] = [
   { path: "/", label: "Beranda", icon: House },
   { path: "/work-plans", label: "Jadwal harian", icon: ClipboardList },
+  { path: "/surveys", label: "Survei", icon: ClipboardCheck, requires: ["create:plan"] },
+  { path: "/work-completions", label: "Pekerjaan klien & dokumen", icon: Briefcase, requires: ["create:plan"] },
   { path: "/teams", label: "Tim Lapangan", icon: Users, requires: ["view:teams"] },
   { path: "/attendance", label: "Absensi", icon: Clock },
   { path: "/attendance-recap", label: "Rekap absensi", icon: ChartColumn },

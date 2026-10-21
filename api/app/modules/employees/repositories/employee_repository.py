@@ -138,28 +138,6 @@ class EmployeeRepository(BaseRepository):
             )
         )
 
-    async def offboard(self, employee_id: UUID | str, reason: str, today: Any) -> None:
-        """Offboarding karyawan dan pencabutan akses login/sesi."""
-        await self.execute(
-            """
-            UPDATE employee
-            SET offboarding_status = 'offboarded', update_at = now()
-            WHERE employee_id = CAST(:id AS uuid)
-            """,
-            {"id": employee_id},
-        )
-        # Nonaktifkan akun pengguna dan cabut seluruh sesi
-        user_id = await self.scalar(
-            "UPDATE users SET is_active = false, update_at = now() "
-            "WHERE employee_id = CAST(:id AS uuid) RETURNING user_id",
-            {"id": employee_id},
-        )
-        if user_id:
-            await self.execute(
-                "UPDATE user_sessions SET is_revoked = TRUE, update_at = now() WHERE user_id = CAST(:uid AS uuid)",
-                {"uid": user_id},
-            )
-
     _SELECT_FIELDS = """
         e.employee_id AS id,
         e.employee_no,

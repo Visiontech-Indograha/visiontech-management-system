@@ -10,7 +10,6 @@ from app.modules.employees.schemas.employee_schema import (
     EmployeeBase,
     EmployeeCreate,
     EmployeeListResponse,
-    EmployeeOffboard,
     EmployeeResponse,
     EmployeeUpdate,
 )
@@ -23,7 +22,6 @@ __all__ = [
     "EmployeeBase",
     "EmployeeCreate",
     "EmployeeListResponse",
-    "EmployeeOffboard",
     "EmployeeResponse",
     "EmployeeUpdate",
 ]

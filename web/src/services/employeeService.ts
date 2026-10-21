@@ -169,18 +169,6 @@ export function useCreateEmployee() {
   });
 }
 
-/** HR: akhiri masa kerja (POST /employees/{id}/offboard, domain.js OFFBOARD) — M2-02. Akses login ikut dicabut. */
-export function useOffboardEmployee(employeeId: string) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (reason: string) => (await api.post(`/employees/${employeeId}/offboard`, { reason })).data,
-    onSuccess: async () => {
-      await qc.invalidateQueries({ queryKey: ["employee", employeeId] });
-      await qc.invalidateQueries({ queryKey: ["employees"] });
-    },
-  });
-}
-
 export type Account = S["AccountOut"];
 export type AccountWithPassword = S["AccountWithPassword"];
 

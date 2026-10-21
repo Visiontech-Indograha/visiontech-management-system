@@ -8967,6 +8967,894 @@
           }
         }
       ]
+    },
+    {
+      "name": "17 - Milestone 9: Offboarding PKWT & Clearance Aset",
+      "item": [
+        {
+          "name": "17.01 - HR meminjamkan alat ke karyawan",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('m9_date', new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201\", () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/assets/loans",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assets",
+                "loans"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"asset_type\": \"TOOL\",\n  \"tool_id\": \"61111111-0000-4000-a000-000000000002\",\n  \"employee_id\": \"22222222-0000-4000-a000-000000000011\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "17.02 - HR memulai offboarding (pinjaman jadi item clearance)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201\", () => pm.response.to.have.status(201));",
+                  "const o = pm.response.json();",
+                  "pm.test(\"CLEARANCE_PENDING + 1 barang\", () => {",
+                  "    pm.expect(o.status).to.eql(\"CLEARANCE_PENDING\"); pm.expect(o.is_all_assets_returned).to.eql(false);",
+                  "    pm.expect(o.clearance_items.length).to.eql(1); pm.expect(o.clearance_items[0].return_condition).to.eql(\"PENDING\");",
+                  "});",
+                  "pm.collectionVariables.set(\"m9_off\", o.offboarding_id);",
+                  "pm.collectionVariables.set(\"m9_item\", o.clearance_items[0].clearance_item_id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/offboarding",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "offboarding"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employee_id\": \"22222222-0000-4000-a000-000000000011\",\n  \"reason_type\": \"RESIGN\",\n  \"effective_date\": \"{{m9_date}}\",\n  \"notes\": \"Uji Postman M9\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "17.03 - Offboarding ganda ditolak",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"409 ALREADY_OFFBOARDING\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"kode ALREADY_OFFBOARDING\", () => pm.expect(pm.response.json().error.code).to.eql(\"ALREADY_OFFBOARDING\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/offboarding",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "offboarding"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employee_id\": \"22222222-0000-4000-a000-000000000011\",\n  \"reason_type\": \"RESIGN\",\n  \"effective_date\": \"{{m9_date}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "17.04 - Karyawan dalam offboarding tidak bisa meminjam aset baru",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"422 VALIDATION_ERROR\", () => pm.response.to.have.status(422));",
+                  "pm.test(\"kode VALIDATION_ERROR\", () => pm.expect(pm.response.json().error.code).to.eql(\"VALIDATION_ERROR\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/assets/loans",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assets",
+                "loans"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"asset_type\": \"TOOL\",\n  \"tool_id\": \"03aa34af-820b-44dd-9f02-10d66c6f5791\",\n  \"employee_id\": \"22222222-0000-4000-a000-000000000011\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "17.05 - Persetujuan sebelum clearance lengkap ditolak",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"409 CLEARANCE_INCOMPLETE\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"kode CLEARANCE_INCOMPLETE\", () => pm.expect(pm.response.json().error.code).to.eql(\"CLEARANCE_INCOMPLETE\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/offboarding/{{m9_off}}/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "offboarding",
+                "{{m9_off}}",
+                "approve"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"approval_type\": \"HR\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "17.06 - PM divisi lain tidak melihat",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"404\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/offboarding/{{m9_off}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "offboarding",
+                "{{m9_off}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "17.07 - Karyawan biasa tidak bisa membuka daftar",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_emp}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/offboarding",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "offboarding"
+              ]
+            }
+          }
+        },
+        {
+          "name": "17.08 - Barang kembali tanpa foto ditolak",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"422\", () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/offboarding/clearance-items/{{m9_item}}/verify",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "offboarding",
+                "clearance-items",
+                "{{m9_item}}",
+                "verify"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"return_condition\": \"GOOD\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "17.09 - HR mencatat barang hilang → clearance lengkap",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "const o = pm.response.json();",
+                  "pm.test(\"SUBMITTED, semua aset tuntas\", () => {",
+                  "    pm.expect(o.status).to.eql(\"SUBMITTED\"); pm.expect(o.is_all_assets_returned).to.eql(true);",
+                  "    pm.expect(o.clearance_items[0].return_condition).to.eql(\"LOST\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/offboarding/clearance-items/{{m9_item}}/verify",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "offboarding",
+                "clearance-items",
+                "{{m9_item}}",
+                "verify"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"return_condition\": \"LOST\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "17.10 - Verifikasi ganda ditolak",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"409 ALREADY_VERIFIED\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"kode ALREADY_VERIFIED\", () => pm.expect(pm.response.json().error.code).to.eql(\"ALREADY_VERIFIED\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/offboarding/clearance-items/{{m9_item}}/verify",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "offboarding",
+                "clearance-items",
+                "{{m9_item}}",
+                "verify"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"return_condition\": \"LOST\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "17.11 - HR tidak bisa menyetujui sebagai PM",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/offboarding/{{m9_off}}/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "offboarding",
+                "{{m9_off}}",
+                "approve"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"approval_type\": \"PM\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "17.12 - PM divisi karyawan menyetujui",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"PM tercatat, belum final\", () => {",
+                  "    pm.expect(pm.response.json().approved_by_pm_id).to.be.a(\"string\");",
+                  "    pm.expect(pm.response.json().status).to.eql(\"SUBMITTED\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_pm2}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/offboarding/{{m9_off}}/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "offboarding",
+                "{{m9_off}}",
+                "approve"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"approval_type\": \"PM\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "17.13 - HR menyetujui → APPROVED (menunggu tanggal efektif)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"APPROVED, belum COMPLETED\", () => pm.expect(pm.response.json().status).to.eql(\"APPROVED\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/offboarding/{{m9_off}}/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "offboarding",
+                "{{m9_off}}",
+                "approve"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"approval_type\": \"HR\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "17.14 - Persetujuan ganda ditolak",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"409 ALREADY_APPROVED\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"kode ALREADY_APPROVED\", () => pm.expect(pm.response.json().error.code).to.eql(\"ALREADY_APPROVED\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/offboarding/{{m9_off}}/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "offboarding",
+                "{{m9_off}}",
+                "approve"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"approval_type\": \"HR\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "17.15 - Penjadwal complete-due tidak memfinalisasi tanggal masa depan",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"jumlah\", () => pm.expect(pm.response.json().completed).to.be.a(\"number\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/offboarding/complete-due",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "offboarding",
+                "complete-due"
+              ]
+            }
+          }
+        },
+        {
+          "name": "17.16 - Daftar PKWT segera berakhir",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"larik\", () => pm.expect(pm.response.json()).to.be.an(\"array\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/offboarding/pkwt-expiring?days=180",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "offboarding",
+                "pkwt-expiring?days=180"
+              ]
+            }
+          }
+        },
+        {
+          "name": "17.17 - Jalur lama nonaktif langsung sudah dihapus",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"404/405\", () => pm.expect([404, 405]).to.include(pm.response.code));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/employees/22222222-0000-4000-a000-000000000011/offboard",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "22222222-0000-4000-a000-000000000011",
+                "offboard"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"x\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "17.18 - HR membatalkan (bersih-bersih) → karyawan aktif kembali",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/offboarding/{{m9_off}}/cancel",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "offboarding",
+                "{{m9_off}}",
+                "cancel"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Bersih-bersih uji Postman\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "17.19 - Alat dikembalikan ke status siap (bersih-bersih)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_hr}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/assets/tools/61111111-0000-4000-a000-000000000002/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assets",
+                "tools",
+                "61111111-0000-4000-a000-000000000002",
+                "status"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"ready\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
     }
   ],
   "variable": [
@@ -9164,6 +10052,18 @@
     },
     {
       "key": "m8_export",
+      "value": ""
+    },
+    {
+      "key": "m9_date",
+      "value": ""
+    },
+    {
+      "key": "m9_off",
+      "value": ""
+    },
+    {
+      "key": "m9_item",
       "value": ""
     }
   ]

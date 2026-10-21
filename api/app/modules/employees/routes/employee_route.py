@@ -23,7 +23,6 @@ from app.modules.employees.schemas.employee_schema import (
     EmployeeAssignmentResponse,
     EmployeeCreate,
     EmployeeListResponse,
-    EmployeeOffboard,
     EmployeeResponse,
     EmployeeUpdate,
 )
@@ -94,17 +93,6 @@ async def add_assignment(
 ) -> EmployeeAssignmentResponse:
     """Mutasi atau promosi jabatan baru bagi karyawan."""
     return await controller.handle_add_assignment(current_user, emp_id, data)
-
-
-@router.post("/{emp_id}/offboard")
-async def offboard_employee(
-    emp_id: UUID,
-    data: EmployeeOffboard,
-    current_user: CurrentUser = Depends(require_permission(Permission.MANAGE_USERS)),
-    controller: EmployeeController = Depends(),
-) -> dict[str, Any]:
-    """HR mengakhiri masa kerja karyawan."""
-    return await controller.handle_offboard(current_user, emp_id, data)
 
 
 @router.post("/{emp_id}/archive")

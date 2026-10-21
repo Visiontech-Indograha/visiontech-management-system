@@ -17,11 +17,9 @@ from app.core.permissions import Permission
 from app.modules.employees.repositories.emergency_contact_repository import CRUDEmergencyContact
 from app.modules.employees.repositories.employee_repository import CRUDEmployee
 from app.shared.access.access_service import ensure_same_org
-from app.shared.org_clock import CRUDOrgClock
 
 RESTORED = "Data dipulihkan sebagai nonaktif. Akses lama tetap dicabut."
 ARCHIVED = "Karyawan dihapus. Data historis tetap tersimpan."
-OFFBOARDED = "Masa kerja diakhiri dan akses dicabut. Data historis tetap tersedia."
 
 
 class EmployeeService:
@@ -162,31 +160,6 @@ class EmployeeService:
             raise ValidationError("Tanggal berlaku tidak boleh sebelum penempatan terakhir.")
 
         return await self.repo.promote(employee_id, position.strip(), target_unit, valid_from)
-
-    async def offboard(self, employee_id: UUID, org_id: str, reason: str) -> dict[str, Any]:
-        """
-        domain.js OFFBOARD — menghentikan masa kerja karyawan (PHK, Resign).
-        urutan & pesan sama dengan prototipe.
-        """
-        employee = await self.repo.lock(employee_id, org_id)
-        if employee is None:
-            raise NotFoundError("Karyawan")
-        if employee.deleted or not employee.is_active:
-            raise AppError("INVALID_STATE", "Karyawan sudah nonaktif atau tidak ditemukan.", status=409)
-        if not reason.strip():
-            raise ValidationError("Alasan pengakhiran masa kerja wajib diisi.")
-
-        # Aturan bisnis: Karyawan yang masih tergabung dalam pekerjaan berjalan (SK aktif) tidak bisa diberhentikan.
-        if await self.repo.on_running_plan(employee_id):
-            raise AppError(
-                "INVALID_STATE",
-                "Selesaikan atau serahterimakan penugasan aktif sebelum mengakhiri masa kerja.",
-                status=409,
-            )
-
-        today = (await CRUDOrgClock(self.db).local_now(org_id)).today
-        await self.repo.offboard(employee_id, reason.strip(), today)
-        return {"id": str(employee_id), "message": OFFBOARDED}
 
     async def list_emergency_contacts(self, employee_id: UUID, org_id: str) -> list[Any]:
         """Daftar kontak darurat karyawan dalam organisasi."""

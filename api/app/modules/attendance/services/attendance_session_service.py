@@ -24,6 +24,7 @@ from app.modules.attendance.repositories.attendance_session_repository import (
 from app.modules.face.services.face_service import FaceOutcome, FaceService
 from app.modules.notifications.services.notification_service import NotificationService
 from app.shared.access.access_service import ensure_same_org
+from app.shared.access.daily_access_repository import DailyAccessRepository
 from app.shared.org_clock import CRUDOrgClock
 
 
@@ -58,6 +59,9 @@ CHECKOUT_NOT_VALID = (
     "Absen pulang hanya bisa dilakukan setelah absen masuk valid. Absen masuk Anda masih menunggu pemeriksaan."
 )
 FACE_NOT_ENROLLED = "Daftarkan wajah Anda dulu di menu Profil sebelum absen."
+FACE_MISMATCH = "Wajah pada swafoto tidak cocok dengan wajah terdaftar. Ambil ulang swafoto dengan wajah jelas."
+# docs/35 §5: absen di lokasi tugas harian hanya untuk anggota/ketua tim jadwal itu, pada tanggalnya, setelah disetujui.
+DAILY_OPEN_STATUSES = ("APPROVED", "ONGOING")
 ALREADY_TODAY = "Absensi untuk hari ini sudah tercatat (hanya dapat mengajukan ulang jika absensi sebelumnya ditolak)."
 # Keputusan pemilik 2026-10-02: ditolak → boleh mengajukan ulang SEKALI;
 # ditolak lagi → hari itu terkunci (tercatat ditolak).
@@ -119,6 +123,7 @@ class AttendanceSessionService:
                 "Status",
                 "Kategori",
                 "Jarak pulang (m)",
+                "Uang makan (Rp)",
             ]
         )
         for r in await self.repo.export_rows(org_id, start, end):
@@ -135,9 +140,18 @@ class AttendanceSessionService:
                     r.status,
                     "Luar kota" if r.city_category == "LUAR_KOTA" else "Dalam kota",
                     "" if r.check_out_distance_m is None else r.check_out_distance_m,
+                    f"{r.meal_allowance_amount:.0f}",
                 ]
             )
         return out.getvalue()
+
+    async def meal_allowance(self, start: Any, end: Any, division_id: UUID | None = None) -> list[Any]:
+        """Rekap uang makan untuk Finance (docs/35 §5)."""
+        if end < start:
+            raise ValidationError("Tanggal akhir harus sama atau setelah tanggal awal.")
+        if (end - start).days > 62:
+            raise ValidationError("Rentang rekap paling lama 62 hari.")
+        return await self.repo.meal_allowance_recap(start, end, division_id)
 
     async def _require_enrolled(self, user_id: str, worker: Any, channel: str, online: bool) -> None:
         """T3: absen HP (online) ditolak bila wajah belum terdaftar dan saklar FACE_ENROLLMENT_REQUIRED menyala.
@@ -150,8 +164,47 @@ class AttendanceSessionService:
             or worker.is_admin
         ):
             return
-        if not await self.faces.face_expected(user_id):
+        if not await self.faces.is_enrolled(worker.employee_id):
             raise AppError("FACE_NOT_ENROLLED", FACE_NOT_ENROLLED, status=409)
+
+    async def _check_daily_target(self, site: Any, employee_id: Any, today: Any) -> None:
+        """Lokasi tugas harian: jadwal APPROVED/ONGOING, tanggalnya hari ini, dan pengabsen anggota/ketua timnya."""
+        if site.kind != "WORK_PLAN_DAILY":
+            return
+        plan = await DailyAccessRepository(self.repo.db).standing(site.id, employee_id)
+        if plan is None or not (plan.is_member or plan.is_leader):
+            raise AppError("SITE_NOT_ALLOWED", "Anda tidak terdaftar di tim jadwal kerja ini.", status=403)
+        if plan.status not in DAILY_OPEN_STATUSES:
+            raise AppError("PLAN_NOT_APPROVED", "Jadwal kerja ini belum disetujui PM.", status=409)
+        if today is not None and plan.work_date != today:
+            raise AppError("SITE_NOT_ALLOWED", "Jadwal kerja ini bukan untuk hari ini.", status=403)
+
+    async def verify_face(self, employee_id: Any, selfie_file_id: UUID | None, *, online: bool) -> FaceOutcome | None:
+        """Cocokkan swafoto dengan wajah terdaftar SEBELUM absen ditulis. Online & tidak cocok → ditolak (422);
+        luring tidak ditolak (sudah terjadi) — hasilnya ditandai untuk OM oleh `record_face`."""
+        if self.faces is None or selfie_file_id is None:
+            return None
+        outcome = await self.faces.verify_selfie(employee_id, selfie_file_id)
+        if online and outcome.result == "MISMATCH":
+            raise AppError("FACE_MISMATCH", FACE_MISMATCH, status=422)
+        return outcome
+
+    async def record_face(self, row: Any, event: str, outcome: FaceOutcome | None, *, online: bool) -> Any:
+        """Hasil yang tidak bisa dipastikan → PENDING_OM dengan catatan; wajah tidak boleh dilewati diam-diam."""
+        label = "masuk" if event == "CHECK_IN" else "pulang"
+        if outcome is None or outcome.result == "MATCH":
+            return row
+        if outcome.result == "UNAVAILABLE":
+            note = f"wajah absen {label} belum diperiksa: layanan pengenalan wajah tidak tersedia"
+        elif outcome.result == "STALE":
+            note = f"wajah absen {label} belum diperiksa: pendaftaran wajah perlu diulang (model berganti)"
+        elif outcome.result == "MISMATCH":
+            note = f"wajah absen {label} tidak cocok (skor {outcome.score:.0f})"
+        elif not online and settings.FACE_ENROLLMENT_REQUIRED:  # NOT_ENROLLED, absen luring
+            note = "belum mendaftar wajah"
+        else:
+            return row
+        return await self.repo.flag_missing_face(row.id, event, note)
 
     async def _flag_for_review(self, org_id: str, row: Any, template: str) -> None:
         """T8: absen yang menjadi Perlu review → beri tahu peninjau berwenang (notifikasi + peristiwa realtime)."""
@@ -180,9 +233,7 @@ class AttendanceSessionService:
         explanation: str | None = None,
         at: Any = None,
         work_date: Any = None,
-        face_probe_id: UUID | None = None,
         online: bool = True,
-        expected_face_sha256: str | None = None,
     ) -> Any:
         """
         Mencatat absen masuk harian (check-in) dengan mengevaluasi aturan jarak dan akurasi GPS.
@@ -190,8 +241,8 @@ class AttendanceSessionService:
         `at`/`work_date`: absen luring (R-34) — jam & tanggal peristiwa yang sudah diverifikasi server
         (jangkar waktu + tanda tangan perangkat), bukan jam terima.
 
-        Pengenalan wajah: `face_probe_id` = gambar wajah sementara (POST /face/probe). Hasil cocok/tidak dihitung
-        SERVER setelah absen tercatat; klien tidak lagi dipercaya (aturan inti #3).
+        Pengenalan wajah (M7): swafoto absen dicocokkan SERVER dengan `employee.face_embedding` sebelum absen ditulis;
+        skornya disimpan di `attendance.face_match_score`. Online & tidak cocok → ditolak; layanan mati → PENDING_OM.
         """
         worker = await self._employee_for_channel(user_id, channel)
         await self._require_enrolled(user_id, worker, channel, online)
@@ -276,6 +327,8 @@ class AttendanceSessionService:
             )
         if note is None and rejected >= 1:
             raise AppError("EXPLANATION_REQUIRED", EXPLANATION_RESUBMIT, status=422)
+        await self._check_daily_target(site, employee_id, today)
+        outcome = await self.verify_face(employee_id, selfie_file_id, online=online)
         try:
             row = await self.repo.insert(
                 org_id=org_id,
@@ -287,22 +340,13 @@ class AttendanceSessionService:
                 lat=lat,
                 origin=origin,
                 selfie_file_id=selfie_file_id,
-                face_result=None,
-                face_similarity=None,
+                face_result=outcome.result if outcome else None,
+                face_similarity=outcome.similarity if outcome else None,
                 source=channel,
                 explanation=note,
                 at=at,
             )
-            row = await self.apply_face(
-                org_id,
-                user_id,
-                row,
-                "CHECK_IN",
-                face_probe_id,
-                online=online,
-                expected_sha256=expected_face_sha256,
-                device=channel,
-            )
+            row = await self.record_face(row, "CHECK_IN", outcome, online=online)
             await self._flag_for_review(org_id, row, "Absen masuk {name} perlu diperiksa")
             return row
         except IntegrityError as exc:
@@ -314,85 +358,13 @@ class AttendanceSessionService:
                 raise AppError("ALREADY_CHECKED_IN", ALREADY_TODAY, status=409) from None
             raise
 
-    async def apply_face(
-        self,
-        org_id: str,
-        user_id: str,
-        row: Any,
-        event: str,
-        face_probe_id: UUID | None,
-        *,
-        online: bool = True,
-        expected_sha256: str | None = None,
-        device: str | None = None,
-    ) -> Any:
-        """
-        Mencocokkan wajah untuk absen `row` (masuk/pulang) dan menyimpan hasilnya. Hasil bermasalah menaikkan absensi
-        ke antrean periksa; tidak pernah menolak. Tanpa `face_probe_id`: karyawan tanpa pendaftaran wajah tidak
-        terpengaruh; pekerja lapangan yang SUDAH mendaftar tetapi absen tanpa data wajah (APK lama, kamera ditolak,
-        luring tanpa blok wajah) ditandai Perlu review dengan catatan — wajah tidak boleh dilewati diam-diam.
-        """
-        if self.faces is None:
-            return row
-        if face_probe_id is None:
-            if await self.faces.face_expected(user_id):
-                return await self.repo.flag_missing_face(
-                    row.id, event, "wajah tidak diperiksa: karyawan sudah mendaftar wajah tetapi absen tanpa data wajah"
-                )
-            if not online and settings.FACE_ENROLLMENT_REQUIRED:  # T3: absen luring tanpa wajah terdaftar
-                return await self.repo.flag_missing_face(row.id, event, "belum mendaftar wajah")
-            return row
-        outcome: FaceOutcome = await self.faces.verify_for_attendance(
-            org_id,
-            user_id,
-            probe_id=face_probe_id,
-            event=event,
-            attendance_id=row.id,
-            device=device,
-            online=online,
-            expected_sha256=expected_sha256,
-        )
-        return await self.repo.set_face(
-            row.id,
-            event,
-            check_id=outcome.check_id,
-            result=outcome.result,
-            similarity=outcome.similarity,
-            flag_review=outcome.flag_review,
-        )
-
-    async def reverify_faces(self, limit: int = 50) -> tuple[int, int]:
-        """
-        Penjadwal: hitung & cocokkan ulang wajah yang tertunda
-        (face-service mati saat absen). → (selesai, tersisa).
-        """
-        if self.faces is None:
-            return 0, 0
-        done, left = await self.faces.recompute_pending(limit)
-        for attendance_id, event, outcome in done:
-            await self.repo.set_face(
-                attendance_id,
-                event,
-                check_id=outcome.check_id,
-                result=outcome.result,
-                similarity=outcome.similarity,
-                flag_review=outcome.flag_review,
-            )
-        return len(done), left
-
-    async def purge_faces(self) -> int:
-        """Penjadwal: hapus gambar wajah yang lewat masa simpan."""
-        return await self.faces.purge_expired() if self.faces is not None else 0
-
     async def check_out(
         self,
         user_id: str,
         channel: str = "MOBILE",
         *,
         org_id: str | None = None,
-        face_probe_id: UUID | None = None,
         online: bool = True,
-        expected_face_sha256: str | None = None,
         lat: float | None = None,
         lng: float | None = None,
         selfie_file_id: UUID | None = None,
@@ -449,6 +421,8 @@ class AttendanceSessionService:
                     status=422,
                 )
 
+        outcome = await self.verify_face(worker.employee_id, selfie_file_id, online=online)
+
         # Evaluasi durasi kerja: 9 jam kotor = 8 jam kerja efektif + 1 jam istirahat.
         is_under_required_hours = False
         duration_text = ""
@@ -486,16 +460,7 @@ class AttendanceSessionService:
                 raise ValidationError(rule) from None
             raise
         if org_id is not None:
-            row = await self.apply_face(
-                org_id,
-                user_id,
-                row,
-                "CHECK_OUT",
-                face_probe_id,
-                online=online,
-                expected_sha256=expected_face_sha256,
-                device=channel,
-            )
+            row = await self.record_face(row, "CHECK_OUT", outcome, online=online)
             if getattr(row, "check_out_outside", False):
                 await self._flag_for_review(
                     org_id, row, "Absen pulang {name} di luar radius (" + f"{round(row.check_out_distance_m)} m)"

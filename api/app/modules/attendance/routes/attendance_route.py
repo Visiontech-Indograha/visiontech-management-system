@@ -22,6 +22,7 @@ from app.modules.attendance.schemas.attendance_schema import (
     CheckOutRequest,
     DeviceKeyRequest,
     ExplanationRequest,
+    MealAllowanceRow,
     OfflineAttendanceEvent,
     OfflineAttendanceResult,
     ReviewRequest,
@@ -145,6 +146,18 @@ async def export_attendance(
     P4-5: Ekspor CSV untuk Finance. Jam dalam zona waktu organisasi (sebelumnya tercetak UTC).
     """
     return await controller.handle_export(current_user, start_date, end_date)
+
+
+@router.get("/meal-allowance", response_model=list[MealAllowanceRow])
+async def meal_allowance_recap(
+    start_date: date,
+    end_date: date,
+    division_id: UUID | None = None,
+    current_user: CurrentUser = Depends(require_permission(Permission.EXPORT_ATTENDANCE)),
+    controller: AttendanceController = Depends(),
+) -> list[MealAllowanceRow]:
+    """Rekap uang makan per karyawan (dalam/luar kota) dari absensi sah, untuk Finance."""
+    return await controller.handle_meal_allowance(start_date, end_date, division_id)
 
 
 __all__ = ["router"]

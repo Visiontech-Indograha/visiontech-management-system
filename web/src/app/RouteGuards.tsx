@@ -13,12 +13,12 @@ export function RequireAuth() {
 }
 
 /** Akun terhubung karyawan yang belum mendaftarkan wajah tidak boleh membuka menu lain (bila server mewajibkan).
- *  Galat/memuat TIDAK memblokir: hanya `enrollment_required` dari server yang menutup halaman. */
+ *  Galat/memuat TIDAK memblokir: hanya `required` tanpa `enrolled` dari server yang menutup halaman. */
 function RequireFace() {
   const { pathname } = useLocation();
   const status = useFaceStatus();
-  if (pathname !== "/change-password" && status.data?.enrollment_required) {
-    return <FaceEnrollRequiredPage status={status.data} />;
+  if (pathname !== "/change-password" && status.data?.required && !status.data.enrolled) {
+    return <FaceEnrollRequiredPage />;
   }
   return <Outlet />;
 }

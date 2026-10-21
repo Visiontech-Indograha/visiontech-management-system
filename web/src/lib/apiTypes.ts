@@ -1956,6 +1956,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/attendance/meal-allowance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Meal Allowance Recap
+         * @description Rekap uang makan per karyawan (dalam/luar kota) dari absensi sah, untuk Finance.
+         */
+        get: operations["meal_allowance_recap_api_v1_attendance_meal_allowance_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/face/policy": {
         parameters: {
             query?: never;
@@ -1965,7 +1985,7 @@ export interface paths {
         };
         /**
          * Get Face Policy
-         * @description Mengambil versi dan teks kebijakan persetujuan biometrik server saat ini.
+         * @description Ambang kecocokan, kewajiban pendaftaran, dan jumlah foto pendaftaran.
          */
         get: operations["get_face_policy_api_v1_face_policy_get"];
         put?: never;
@@ -1985,31 +2005,11 @@ export interface paths {
         };
         /**
          * Get Face Status
-         * @description Status pengenalan wajah pengguna saat ini: persetujuan, template, dan status aktif.
+         * @description Apakah wajah pengguna saat ini sudah terdaftar & wajib terdaftar.
          */
         get: operations["get_face_status_api_v1_face_status_get"];
         put?: never;
         post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/face/consent": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Set Face Consent
-         * @description Menyetujui atau menarik persetujuan pemakaian data biometrik wajah.
-         */
-        post: operations["set_face_consent_api_v1_face_consent_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2027,7 +2027,7 @@ export interface paths {
         put?: never;
         /**
          * Enroll Face
-         * @description Mendaftarkan 3-5 foto pose wajah karyawan.
+         * @description Mendaftarkan wajah sendiri dari 3–5 foto (sudut berbeda).
          */
         post: operations["enroll_face_api_v1_face_enroll_post"];
         delete?: never;
@@ -2036,61 +2036,21 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/face/template": {
+    "/api/v1/face/enrollments/{employee_id}": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /**
-         * Get Face Template
-         * @description Mengunduh embedding wajah milik sendiri untuk disimpan terenkripsi di HP.
-         */
-        get: operations["get_face_template_api_v1_face_template_get"];
+        get?: never;
         put?: never;
         post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/face/probe": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
         /**
-         * Create Face Probe
-         * @description Mengunggah gambar wajah sementara untuk diverifikasi saat check-in atau check-out.
+         * Reset Face Enrollment
+         * @description Hapus pendaftaran wajah karyawan agar ia bisa mendaftar ulang (HR/admin).
          */
-        post: operations["create_face_probe_api_v1_face_probe_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/face/challenge-check": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Check Face Challenge
-         * @description Memeriksa gambar langsung dari kamera HP untuk memvalidasi tantangan liveness.
-         */
-        post: operations["check_face_challenge_api_v1_face_challenge_check_post"];
-        delete?: never;
+        delete: operations["reset_face_enrollment_api_v1_face_enrollments__employee_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2132,46 +2092,6 @@ export interface paths {
          *     dan memperingatkan manajer terkait.
          */
         post: operations["alert_needs_review_spike_api_v1_cron_attendance_alert_needs_review_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/cron/attendance/reverify-faces": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Reverify Pending Faces
-         * @description Penjadwal: hitung dan cocokkan ulang wajah yang tertunda saat face-service sempat mati.
-         */
-        post: operations["reverify_pending_faces_api_v1_cron_attendance_reverify_faces_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/cron/attendance/purge-face-probes": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Purge Expired Face Probes
-         * @description Penjadwal: hapus berkas gambar wajah (probe) yang telah melewati masa retensi (P8-6).
-         */
-        post: operations["purge_expired_face_probes_api_v1_cron_attendance_purge_face_probes_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3269,32 +3189,10 @@ export interface components {
              */
             created_at: string;
         };
-        /** Body_check_face_challenge_api_v1_face_challenge_check_post */
-        Body_check_face_challenge_api_v1_face_challenge_check_post: {
-            /** File */
-            file: string;
-            /** Challenge */
-            challenge: string;
-        };
-        /** Body_create_face_probe_api_v1_face_probe_post */
-        Body_create_face_probe_api_v1_face_probe_post: {
-            /** File */
-            file: string;
-            /**
-             * Liveness
-             * @default {}
-             */
-            liveness: string;
-        };
         /** Body_enroll_face_api_v1_face_enroll_post */
         Body_enroll_face_api_v1_face_enroll_post: {
             /** Files */
             files: string[];
-            /**
-             * Liveness
-             * @default {}
-             */
-            liveness: string;
         };
         /** Body_upload_document_api_v1_files_upload_post */
         Body_upload_document_api_v1_files_upload_post: {
@@ -3342,24 +3240,6 @@ export interface components {
             /** Delay Reason */
             delay_reason?: string | null;
         };
-        /** ChallengeCheckResponse */
-        ChallengeCheckResponse: {
-            /**
-             * Status
-             * @enum {string}
-             */
-            status: "sukses" | "menunggu";
-            /** Detail */
-            detail: string;
-            /** Quality */
-            quality?: number | null;
-            /** Proof */
-            proof?: string | null;
-            /** Metrics */
-            metrics?: {
-                [key: string]: number;
-            } | null;
-        };
         /**
          * CheckInRequest
          * @description Schema for processing a check-in request.
@@ -3387,8 +3267,6 @@ export interface components {
             accuracy_m?: number | null;
             /** Selfie File Id */
             selfie_file_id?: string | null;
-            /** Face Probe Id */
-            face_probe_id?: string | null;
             /** Face Result */
             face_result?: ("MATCH" | "NO_MATCH" | "LOW_QUALITY" | "NOT_ENROLLED" | "SKIPPED") | null;
             /** Face Similarity */
@@ -3414,8 +3292,6 @@ export interface components {
              * @enum {string}
              */
             location_origin: "GPS" | "SIMULASI";
-            /** Face Probe Id */
-            face_probe_id?: string | null;
             /** Selfie File Id */
             selfie_file_id?: string | null;
             /** Explanation */
@@ -3467,16 +3343,6 @@ export interface components {
             /** Handover Photo Path */
             handover_photo_path?: string | null;
         };
-        /** ConsentRequest */
-        ConsentRequest: {
-            /**
-             * State
-             * @enum {string}
-             */
-            state: "GRANTED" | "WITHDRAWN";
-            /** Policy Version */
-            policy_version: string;
-        };
         /** DailyFormOptions */
         DailyFormOptions: {
             /** Divisions */
@@ -3519,6 +3385,8 @@ export interface components {
             status: string;
             /** Rollover Approval Status */
             rollover_approval_status: string;
+            /** Delay Reason */
+            delay_reason?: string | null;
         };
         /**
          * DailyPlanCopy
@@ -4199,13 +4067,11 @@ export interface components {
         /** EnrollResponse */
         EnrollResponse: {
             /** Enrolled */
-            enrolled: number;
-            /** Enrollment Version */
-            enrollment_version: string;
-            /** Model Name */
-            model_name: string;
-            /** Model Version */
-            model_version: string;
+            enrolled: boolean;
+            /** Images Used */
+            images_used: number;
+            /** Quality */
+            quality?: number | null;
         };
         /** ExpiringDocumentList */
         ExpiringDocumentList: {
@@ -4249,48 +4115,37 @@ export interface components {
             /** Explanation */
             explanation: string;
         };
-        /**
-         * FacePolicy
-         * @description Teks persetujuan biometrik milik server (klien tidak bisa mengubah kalimat yang disetujui).
-         */
+        /** FacePolicy */
         FacePolicy: {
-            /** Version */
-            version: string;
-            /** Text */
-            text: string;
+            /** Match Threshold */
+            match_threshold: number;
+            /** Enrollment Required */
+            enrollment_required: boolean;
+            /** Min Images */
+            min_images: number;
+            /** Max Images */
+            max_images: number;
+        };
+        /** FaceResetResponse */
+        FaceResetResponse: {
+            /**
+             * Employee Id
+             * Format: uuid
+             */
+            employee_id: string;
+            /** Enrolled */
+            enrolled: boolean;
         };
         /** FaceStatus */
         FaceStatus: {
-            /** Employee Linked */
-            employee_linked: boolean;
-            /** Consent */
-            consent?: ("GRANTED" | "WITHDRAWN") | null;
-            /** Consent Policy Version */
-            consent_policy_version?: string | null;
-            /**
-             * Enrolled
-             * @default false
-             */
+            /** Enrolled */
             enrolled: boolean;
-            /** Enrollment Version */
-            enrollment_version?: string | null;
+            /** Enrolled At */
+            enrolled_at?: string | null;
             /** Model Name */
             model_name?: string | null;
-            /** Model Version */
-            model_version?: string | null;
-            /**
-             * Liveness Required
-             * @default true
-             */
-            liveness_required: boolean;
-            /**
-             * Enrollment Required
-             * @default false
-             */
-            enrollment_required: boolean;
-            /** Template Ttl Days */
-            template_ttl_days: number;
-            policy: components["schemas"]["FacePolicy"];
+            /** Required */
+            required: boolean;
         };
         /**
          * GeoPoint
@@ -4525,6 +4380,29 @@ export interface components {
              * @enum {string}
              */
             condition: "ready" | "damaged" | "lost";
+        };
+        /**
+         * MealAllowanceRow
+         * @description Rekap uang makan per karyawan (docs/35 §5): hanya absensi sah (AUTO_VALID / APPROVED_BY_OM).
+         */
+        MealAllowanceRow: {
+            /**
+             * Employee Id
+             * Format: uuid
+             */
+            employee_id: string;
+            /** Employee No */
+            employee_no?: string | null;
+            /** Full Name */
+            full_name: string;
+            /** In City Days */
+            in_city_days: number;
+            /** Out City Days */
+            out_city_days: number;
+            /** Total Amount */
+            total_amount: number;
+            /** Pending Days */
+            pending_days: number;
         };
         /** MemberAdd */
         MemberAdd: {
@@ -4859,8 +4737,6 @@ export interface components {
             signature: string;
             /** Selfie File Id */
             selfie_file_id?: string | null;
-            /** Face Probe Id */
-            face_probe_id?: string | null;
         };
         /**
          * OfflineAttendanceResult
@@ -5224,26 +5100,6 @@ export interface components {
             assigned_employee_ids?: string[] | null;
             /** Notes */
             notes?: string | null;
-        };
-        /** ProbeResponse */
-        ProbeResponse: {
-            /**
-             * Probe Id
-             * Format: uuid
-             */
-            probe_id: string;
-            /** Quality */
-            quality?: number | null;
-            /**
-             * Pending
-             * @default false
-             */
-            pending: boolean;
-            /**
-             * Expires At
-             * Format: date-time
-             */
-            expires_at: string;
         };
         /** ProgressIn */
         ProgressIn: {
@@ -5613,25 +5469,6 @@ export interface components {
             name?: string | null;
             /** Status */
             status?: boolean | null;
-        };
-        /**
-         * TemplateResponse
-         * @description Embedding MILIK SENDIRI untuk dicocokkan di HP saat luring. Disimpan terenkripsi (Keystore); berlaku terbatas.
-         */
-        TemplateResponse: {
-            /** Model Name */
-            model_name: string;
-            /** Model Version */
-            model_version: string;
-            /** Enrollment Version */
-            enrollment_version: string;
-            /** Embeddings */
-            embeddings: number[][];
-            /**
-             * Expires At
-             * Format: date-time
-             */
-            expires_at: string;
         };
         /** ToolCreate */
         ToolCreate: {
@@ -10313,6 +10150,39 @@ export interface operations {
             };
         };
     };
+    meal_allowance_recap_api_v1_attendance_meal_allowance_get: {
+        parameters: {
+            query: {
+                start_date: string;
+                end_date: string;
+                division_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MealAllowanceRow"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_face_policy_api_v1_face_policy_get: {
         parameters: {
             query?: never;
@@ -10353,41 +10223,6 @@ export interface operations {
             };
         };
     };
-    set_face_consent_api_v1_face_consent_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ConsentRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: string;
-                    };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     enroll_face_api_v1_face_enroll_post: {
         parameters: {
             query?: never;
@@ -10402,7 +10237,7 @@ export interface operations {
         };
         responses: {
             /** @description Successful Response */
-            200: {
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -10421,11 +10256,13 @@ export interface operations {
             };
         };
     };
-    get_face_template_api_v1_face_template_get: {
+    reset_face_enrollment_api_v1_face_enrollments__employee_id__delete: {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                employee_id: string;
+            };
             cookie?: never;
         };
         requestBody?: never;
@@ -10436,64 +10273,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["TemplateResponse"];
-                };
-            };
-        };
-    };
-    create_face_probe_api_v1_face_probe_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "multipart/form-data": components["schemas"]["Body_create_face_probe_api_v1_face_probe_post"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProbeResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    check_face_challenge_api_v1_face_challenge_check_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "multipart/form-data": components["schemas"]["Body_check_face_challenge_api_v1_face_challenge_check_post"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ChallengeCheckResponse"];
+                    "application/json": components["schemas"]["FaceResetResponse"];
                 };
             };
             /** @description Validation Error */
@@ -10543,61 +10323,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["NeedsReviewResponse"];
-                };
-            };
-        };
-    };
-    reverify_pending_faces_api_v1_cron_attendance_reverify_faces_post: {
-        parameters: {
-            query?: {
-                limit?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: number;
-                    };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    purge_expired_face_probes_api_v1_cron_attendance_purge_face_probes_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: number;
-                    };
                 };
             };
         };

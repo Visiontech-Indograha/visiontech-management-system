@@ -55,21 +55,6 @@ class AttendanceCronController:
             daily_average=result.daily_average,
         )
 
-    async def handle_reverify_faces(
-        self,
-        limit: int = 50,
-    ) -> dict[str, int]:
-        """Mencocokkan ulang probe wajah yang tertunda saat face service sempat tidak aktif."""
-        done, left = await self.session_service.reverify_faces(limit=limit)
-        return {"done": done, "remaining": left}
-
-    async def handle_purge_face_probes(
-        self,
-    ) -> dict[str, int]:
-        """Menghapus berkas gambar wajah (probe) yang melewati masa retensi privasi."""
-        purged = await self.session_service.purge_faces()
-        return {"purged": purged}
-
     async def handle_auto_checkout(
         self,
         current_user: CurrentUser,

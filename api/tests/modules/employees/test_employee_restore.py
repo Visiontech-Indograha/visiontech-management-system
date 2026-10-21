@@ -56,9 +56,9 @@ def test_hr_archives_an_offboarded_employee_and_can_restore_it(client, world):
     assert active.status_code == 409
     assert active.json()["error"]["message"] == "Akhiri masa kerja karyawan ini terlebih dahulu."
 
-    offboarded = client.post(f"/employees/{employee_id}/offboard", headers=world.headers(client, "hr"),
-                             json={"reason": "Kontrak selesai"})
-    assert offboarded.status_code == 200, offboarded.text
+    # Jalur offboarding V2 (clearance + persetujuan) diuji di tests/modules/offboarding; di sini cukup hasil akhirnya.
+    assert sync_query("UPDATE employee SET offboarding_status = 'offboarded' WHERE employee_id = %s "
+                      "RETURNING employee_id", (employee_id,))
     assert _archive(client, world, employee_id, who="pm").status_code == 403
 
     archived = _archive(client, world, employee_id)

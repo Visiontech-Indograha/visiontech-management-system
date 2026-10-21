@@ -43,9 +43,6 @@ def test_employee_lifecycle(client, world):
     listed = client.get("/employees", headers=admin).json()
     assert emp_id in {e["id"] for e in listed["items"]}
 
-    off = client.post(f"/employees/{emp_id}/offboard", headers=admin, json={"reason": "Kontrak selesai"})
-    assert off.status_code == 200, off.text
-    assert sync_query("SELECT is_active FROM vms.employee WHERE id = %s", (emp_id,)) == [(False,)]
 
 
 def test_personal_document_upload_and_hr_verification(client, world, fake_storage):

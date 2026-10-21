@@ -1,34 +1,38 @@
 import type { UseQueryResult } from "@tanstack/react-query";
 import { OffboardingAddButton } from "@/components/organisms/offboarding/OffboardingAddButton";
+import { OffboardingDetailDialog } from "@/components/organisms/offboarding/OffboardingDetailDialog";
 import { OffboardingFormDialog } from "@/components/organisms/offboarding/OffboardingFormDialog";
 import { OffboardingList } from "@/components/organisms/offboarding/OffboardingList";
-import type { Offboarding } from "@/services/offboardingService";
+import { PkwtExpiringPanel } from "@/components/organisms/offboarding/PkwtExpiringPanel";
+import type { Offboarding, PkwtExpiring } from "@/services/offboardingService";
 import { PageTemplate } from "../PageTemplate";
 
-export function OffboardingTemplate({
-  offboardings,
-  adding,
-  onAdd,
-  onVerifyClearance,
-  onDecision,
-  onCloseAdd,
-}: {
+export type OffboardingDialog =
+  | { kind: "create"; employee?: { id: string; name: string } }
+  | { kind: "detail"; id: string }
+  | null;
+
+/** Kerangka "Offboarding & Clearance" (docs/35 §7): PKWT segera berakhir, daftar proses, detail & persetujuan. */
+export function OffboardingTemplate({ offboardings, expiring, canManage, canApprovePm, dialog, onDialog }: {
   offboardings: UseQueryResult<Offboarding[]>;
-  adding: boolean;
-  onAdd: () => void;
-  onVerifyClearance?: (itemId: string, isCleared: boolean) => void;
-  onDecision?: (id: string, approved: boolean) => void;
-  onCloseAdd: () => void;
+  expiring: PkwtExpiring[];
+  canManage: boolean;
+  canApprovePm: boolean;
+  dialog: OffboardingDialog;
+  onDialog: (d: OffboardingDialog) => void;
 }) {
+  const add = () => onDialog({ kind: "create" });
   return (
-    <PageTemplate title="Offboarding & Clearance" action={<OffboardingAddButton onAdd={onAdd} />}>
-      <OffboardingList
-        offboardings={offboardings}
-        onAdd={onAdd}
-        onVerifyClearance={onVerifyClearance}
-        onDecision={onDecision}
-      />
-      {adding && <OffboardingFormDialog onClose={onCloseAdd} />}
+    <PageTemplate title="Offboarding & Clearance" action={canManage && <OffboardingAddButton onAdd={add} />}>
+      <PkwtExpiringPanel rows={expiring} canManage={canManage}
+                         onStart={(r) => onDialog({ kind: "create", employee: { id: r.employee_id, name: r.full_name } })} />
+      <OffboardingList offboardings={offboardings} canManage={canManage} onAdd={add}
+                       onOpen={(id) => onDialog({ kind: "detail", id })} />
+      {dialog?.kind === "create" && <OffboardingFormDialog employee={dialog.employee} onClose={() => onDialog(null)} />}
+      {dialog?.kind === "detail" && (
+        <OffboardingDetailDialog offboardingId={dialog.id} canManage={canManage} canApprovePm={canApprovePm}
+                                 onClose={() => onDialog(null)} />
+      )}
     </PageTemplate>
   );
 }

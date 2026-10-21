@@ -117,11 +117,6 @@ class EmployeeAssignmentResponse(EmployeeAssignmentBase):
     unit_name: str | None = None
 
 
-class EmployeeOffboard(BaseModel):
-    """Schema for requesting to offboard an employee."""
-    reason: str
-
-
 __all__ = [
     "AttendanceMode",
     "EmergencyContactBase",
@@ -134,7 +129,6 @@ __all__ = [
     "EmployeeBase",
     "EmployeeCreate",
     "EmployeeListResponse",
-    "EmployeeOffboard",
     "EmployeeResponse",
     "EmployeeUpdate",
 ]

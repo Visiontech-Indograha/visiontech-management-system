@@ -3070,7 +3070,7 @@
      "Offboarding"
     ],
     "summary": "List Offboardings",
-    "description": "Mengambil daftar seluruh permohonan offboarding karyawan.",
+    "description": "Daftar offboarding (PM hanya karyawan divisinya).",
     "operationId": "list_offboardings_api_v1_offboarding_get",
     "security": [
      {
@@ -3085,16 +3085,14 @@
       "schema": {
        "anyOf": [
         {
-         "type": "string"
+         "$ref": "#/components/schemas/OffboardingStatus"
         },
         {
          "type": "null"
         }
        ],
-       "description": "Filter status (active, in_process, offboarded)",
        "title": "Status"
-      },
-      "description": "Filter status (active, in_process, offboarded)"
+      }
      }
     ],
     "responses": {
@@ -3129,7 +3127,7 @@
      "Offboarding"
     ],
     "summary": "Create Offboarding",
-    "description": "Mengajukan proses offboarding / pengunduran diri karyawan.",
+    "description": "HR memulai offboarding: pinjaman aset yang belum kembali otomatis menjadi item clearance.",
     "operationId": "create_offboarding_api_v1_offboarding_post",
     "security": [
      {
@@ -3152,7 +3150,7 @@
       "content": {
        "application/json": {
         "schema": {
-         "$ref": "#/components/schemas/OffboardingListItem"
+         "$ref": "#/components/schemas/OffboardingDetail"
         }
        }
       }
@@ -3170,13 +3168,95 @@
     }
    }
   },
+  "/api/v1/offboarding/pkwt-expiring": {
+   "get": {
+    "tags": [
+     "Offboarding"
+    ],
+    "summary": "Pkwt Expiring",
+    "description": "Karyawan PKWT yang kontraknya berakhir dalam `days` hari (atau sudah lewat) dan belum diproses.",
+    "operationId": "pkwt_expiring_api_v1_offboarding_pkwt_expiring_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "days",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 180,
+       "minimum": 0,
+       "default": 30,
+       "title": "Days"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/PkwtExpiringRow"
+         },
+         "title": "Response Pkwt Expiring Api V1 Offboarding Pkwt Expiring Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/offboarding/complete-due": {
+   "post": {
+    "tags": [
+     "Offboarding"
+    ],
+    "summary": "Complete Due Offboardings",
+    "description": "Penjadwal harian: selesaikan offboarding yang disetujui dan tanggal efektifnya tiba.",
+    "operationId": "complete_due_offboardings_api_v1_offboarding_complete_due_post",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/CompleteDueResult"
+        }
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ]
+   }
+  },
   "/api/v1/offboarding/{offboarding_id}": {
    "get": {
     "tags": [
      "Offboarding"
     ],
     "summary": "Get Offboarding",
-    "description": "Mengambil detail offboarding beserta checklist pengembalian asetnya.",
+    "description": "Detail offboarding + daftar barang yang harus dikembalikan.",
     "operationId": "get_offboarding_api_v1_offboarding__offboarding_id__get",
     "security": [
      {
@@ -3225,7 +3305,7 @@
      "Offboarding"
     ],
     "summary": "Verify Clearance Item",
-    "description": "Verifikasi dan checklist fisik pengembalian aset pinjaman.",
+    "description": "HR/GA memverifikasi barang yang dikembalikan (GOOD/DAMAGED/LOST + foto); pinjaman aset ditutup.",
     "operationId": "verify_clearance_item_api_v1_offboarding_clearance_items__clearance_item_id__verify_post",
     "security": [
      {
@@ -3260,11 +3340,7 @@
       "content": {
        "application/json": {
         "schema": {
-         "type": "object",
-         "additionalProperties": {
-          "type": "string"
-         },
-         "title": "Response Verify Clearance Item Api V1 Offboarding Clearance Items  Clearance Item Id  Verify Post"
+         "$ref": "#/components/schemas/OffboardingDetail"
         }
        }
       }
@@ -3288,7 +3364,7 @@
      "Offboarding"
     ],
     "summary": "Approve Offboarding",
-    "description": "Menyetujui proses offboarding oleh PM (operasional) atau HR (final clearance).",
+    "description": "Persetujuan PM (PM/OM divisi karyawan) atau HR — hanya setelah clearance lengkap.",
     "operationId": "approve_offboarding_api_v1_offboarding__offboarding_id__approve_post",
     "security": [
      {
@@ -3323,7 +3399,70 @@
       "content": {
        "application/json": {
         "schema": {
-         "$ref": "#/components/schemas/OffboardingListItem"
+         "$ref": "#/components/schemas/OffboardingDetail"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/offboarding/{offboarding_id}/cancel": {
+   "post": {
+    "tags": [
+     "Offboarding"
+    ],
+    "summary": "Cancel Offboarding",
+    "description": "Batalkan offboarding yang belum selesai; karyawan aktif kembali.",
+    "operationId": "cancel_offboarding_api_v1_offboarding__offboarding_id__cancel_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "offboarding_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Offboarding Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/OffboardingCancel"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": {
+          "type": "string"
+         },
+         "title": "Response Cancel Offboarding Api V1 Offboarding  Offboarding Id  Cancel Post"
         }
        }
       }
@@ -4747,67 +4886,6 @@
        "application/json": {
         "schema": {
          "$ref": "#/components/schemas/EmployeeAssignmentResponse"
-        }
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    }
-   }
-  },
-  "/api/v1/employees/{emp_id}/offboard": {
-   "post": {
-    "tags": [
-     "Employees"
-    ],
-    "summary": "Offboard Employee",
-    "description": "HR mengakhiri masa kerja karyawan.",
-    "operationId": "offboard_employee_api_v1_employees__emp_id__offboard_post",
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ],
-    "parameters": [
-     {
-      "name": "emp_id",
-      "in": "path",
-      "required": true,
-      "schema": {
-       "type": "string",
-       "format": "uuid",
-       "title": "Emp Id"
-      }
-     }
-    ],
-    "requestBody": {
-     "required": true,
-     "content": {
-      "application/json": {
-       "schema": {
-        "$ref": "#/components/schemas/EmployeeOffboard"
-       }
-      }
-     }
-    },
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {
-         "type": "object",
-         "additionalProperties": true,
-         "title": "Response Offboard Employee Api V1 Employees  Emp Id  Offboard Post"
         }
        }
       }
@@ -10920,6 +10998,29 @@
       ],
       "title": "Asset Name"
      },
+     "asset_code": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Asset Code"
+     },
+     "loaned_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Loaned At"
+     },
      "return_condition": {
       "type": "string",
       "title": "Return Condition"
@@ -10969,11 +11070,6 @@
        }
       ],
       "title": "Verified At"
-     },
-     "create_at": {
-      "type": "string",
-      "format": "date-time",
-      "title": "Create At"
      }
     },
     "type": "object",
@@ -10981,8 +11077,7 @@
      "clearance_item_id",
      "offboarding_id",
      "assignment_id",
-     "return_condition",
-     "create_at"
+     "return_condition"
     ],
     "title": "ClearanceItemOut"
    },
@@ -10990,20 +11085,24 @@
     "properties": {
      "return_condition": {
       "type": "string",
-      "maxLength": 100,
-      "minLength": 2,
+      "enum": [
+       "GOOD",
+       "DAMAGED",
+       "LOST"
+      ],
       "title": "Return Condition"
      },
-     "handover_photo_path": {
+     "handover_file_id": {
       "anyOf": [
        {
-        "type": "string"
+        "type": "string",
+        "format": "uuid"
        },
        {
         "type": "null"
        }
       ],
-      "title": "Handover Photo Path"
+      "title": "Handover File Id"
      }
     },
     "type": "object",
@@ -11011,6 +11110,19 @@
      "return_condition"
     ],
     "title": "ClearanceItemVerify"
+   },
+   "CompleteDueResult": {
+    "properties": {
+     "completed": {
+      "type": "integer",
+      "title": "Completed"
+     }
+    },
+    "type": "object",
+    "required": [
+     "completed"
+    ],
+    "title": "CompleteDueResult"
    },
    "CompletionExportRequest": {
     "properties": {
@@ -12587,20 +12699,6 @@
     ],
     "title": "EmployeeListResponse",
     "description": "Schema for paginated employee lists."
-   },
-   "EmployeeOffboard": {
-    "properties": {
-     "reason": {
-      "type": "string",
-      "title": "Reason"
-     }
-    },
-    "type": "object",
-    "required": [
-     "reason"
-    ],
-    "title": "EmployeeOffboard",
-    "description": "Schema for requesting to offboard an employee."
    },
    "EmployeeResponse": {
     "properties": {
@@ -14276,24 +14374,33 @@
     "properties": {
      "approval_type": {
       "type": "string",
-      "title": "Approval Type",
-      "description": "'PM' atau 'HR'",
-      "default": "HR"
-     },
-     "notes": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
+      "enum": [
+       "PM",
+       "HR"
       ],
-      "title": "Notes"
+      "title": "Approval Type"
      }
     },
     "type": "object",
+    "required": [
+     "approval_type"
+    ],
     "title": "OffboardingApprove"
+   },
+   "OffboardingCancel": {
+    "properties": {
+     "reason": {
+      "type": "string",
+      "maxLength": 500,
+      "minLength": 3,
+      "title": "Reason"
+     }
+    },
+    "type": "object",
+    "required": [
+     "reason"
+    ],
+    "title": "OffboardingCancel"
    },
    "OffboardingCreate": {
     "properties": {
@@ -14306,14 +14413,22 @@
       "$ref": "#/components/schemas/OffboardingReason"
      },
      "effective_date": {
-      "type": "string",
-      "format": "date",
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date"
+       },
+       {
+        "type": "null"
+       }
+      ],
       "title": "Effective Date"
      },
      "notes": {
       "anyOf": [
        {
-        "type": "string"
+        "type": "string",
+        "maxLength": 2000
        },
        {
         "type": "null"
@@ -14325,8 +14440,7 @@
     "type": "object",
     "required": [
      "employee_id",
-     "reason_type",
-     "effective_date"
+     "reason_type"
     ],
     "title": "OffboardingCreate"
    },
@@ -14409,6 +14523,17 @@
       ],
       "title": "Approved By Pm Id"
      },
+     "approved_by_pm_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Approved By Pm Name"
+     },
      "approved_by_hr_id": {
       "anyOf": [
        {
@@ -14420,6 +14545,22 @@
        }
       ],
       "title": "Approved By Hr Id"
+     },
+     "approved_by_hr_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Approved By Hr Name"
+     },
+     "pending_items": {
+      "type": "integer",
+      "title": "Pending Items",
+      "default": 0
      },
      "notes": {
       "anyOf": [
@@ -14538,6 +14679,17 @@
       ],
       "title": "Approved By Pm Id"
      },
+     "approved_by_pm_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Approved By Pm Name"
+     },
      "approved_by_hr_id": {
       "anyOf": [
        {
@@ -14549,6 +14701,22 @@
        }
       ],
       "title": "Approved By Hr Id"
+     },
+     "approved_by_hr_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Approved By Hr Name"
+     },
+     "pending_items": {
+      "type": "integer",
+      "title": "Pending Items",
+      "default": 0
      },
      "notes": {
       "anyOf": [
@@ -14589,6 +14757,16 @@
      "RETIRED"
     ],
     "title": "OffboardingReason"
+   },
+   "OffboardingStatus": {
+    "type": "string",
+    "enum": [
+     "SUBMITTED",
+     "CLEARANCE_PENDING",
+     "APPROVED",
+     "COMPLETED"
+    ],
+    "title": "OffboardingStatus"
    },
    "OfflineAttendanceEvent": {
     "properties": {
@@ -15111,6 +15289,53 @@
      "end_date"
     ],
     "title": "PeriodicExportRequest"
+   },
+   "PkwtExpiringRow": {
+    "properties": {
+     "employee_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Employee Id"
+     },
+     "employee_no": {
+      "type": "string",
+      "title": "Employee No"
+     },
+     "full_name": {
+      "type": "string",
+      "title": "Full Name"
+     },
+     "division_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Division Name"
+     },
+     "pkwt_end_date": {
+      "type": "string",
+      "format": "date",
+      "title": "Pkwt End Date"
+     },
+     "open_loans": {
+      "type": "integer",
+      "title": "Open Loans"
+     }
+    },
+    "type": "object",
+    "required": [
+     "employee_id",
+     "employee_no",
+     "full_name",
+     "pkwt_end_date",
+     "open_loans"
+    ],
+    "title": "PkwtExpiringRow",
+    "description": "Karyawan PKWT yang kontraknya berakhir dalam rentang & belum diproses offboarding."
    },
    "PlanItemCreate": {
     "properties": {

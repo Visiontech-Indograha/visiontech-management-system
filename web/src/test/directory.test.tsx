@@ -338,20 +338,24 @@ describe("siklus karyawan oleh HR (M2-02, M2-03)", () => {
     expect(body).toMatchObject({ employee_no: "VT-099", full_name: "Karyawan Baru", unit_id: "u1", email: null });
   });
 
-  it("Offboarding: alasan wajib, lalu POST offboard", async () => {
+  it("Offboarding (M9): memulai proses clearance lewat POST /offboarding, bukan menonaktifkan langsung", async () => {
     const calls = mockApi((c) => {
       if (c.url === "/employees/e1") return { data: employee() };
-      if (c.url === "/employees/e1/offboard") return { data: { id: "e1" } };
+      if (c.url === "/offboarding" && c.method === "post") return { data: { clearance_items: [{}, {}] } };
     });
     renderRoute("/directory/e1", { role: "HR" });
     fireEvent.click(await screen.findByRole("button", { name: "Offboarding" }));
     const dialog = screen.getByRole("dialog", { name: "Offboarding Test User" });
-    fireEvent.click(within(dialog).getByRole("button", { name: "Akhiri masa kerja" }));
-    expect(await within(dialog).findByText("Alasan pengakhiran masa kerja wajib diisi.")).toBeInTheDocument();
-    fireEvent.change(within(dialog).getByLabelText("Alasan"), { target: { value: "Kontrak selesai" } });
-    fireEvent.click(within(dialog).getByRole("button", { name: "Akhiri masa kerja" }));
-    await waitFor(() => expect(calls.some((c) => c.url === "/employees/e1/offboard")).toBe(true));
-    expect(calls.find((c) => c.url === "/employees/e1/offboard")!.data).toEqual({ reason: "Kontrak selesai" });
+    fireEvent.change(within(dialog).getByLabelText("Alasan"), { target: { value: "RESIGN" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Mulai offboarding" }));
+    expect(await within(dialog).findByText("Isi tanggal efektif.")).toBeInTheDocument();
+    fireEvent.change(within(dialog).getByLabelText("Tanggal efektif"), { target: { value: "2026-11-30" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Mulai offboarding" }));
+    await waitFor(() => expect(calls.some((c) => c.url === "/offboarding" && c.method === "post")).toBe(true));
+    expect(calls.find((c) => c.url === "/offboarding")!.data).toEqual({
+      employee_id: "e1", reason_type: "RESIGN", effective_date: "2026-11-30", notes: null,
+    });
+    expect(calls.some((c) => c.url.endsWith("/offboard"))).toBe(false);
   });
 
   it("bukan HR: tidak ada tombol Tambah karyawan", async () => {

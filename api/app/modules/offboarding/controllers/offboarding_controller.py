@@ -1,6 +1,6 @@
 """
 app/modules/offboarding/controllers/offboarding_controller.py
-Controller orkestrasi use case offboarding karyawan dan clearance aset.
+Controller offboarding PKWT & clearance aset (Milestone 9).
 """
 from __future__ import annotations
 
@@ -12,58 +12,40 @@ from app.core.security import CurrentUser
 from app.modules.offboarding.dependencies import get_offboarding_service
 from app.modules.offboarding.schemas.offboarding_schema import (
     ClearanceItemVerify,
-    OffboardingApprove,
+    CompleteDueResult,
     OffboardingCreate,
     OffboardingDetail,
     OffboardingListItem,
+    PkwtExpiringRow,
 )
 from app.modules.offboarding.services.offboarding_service import OffboardingService
 
 
 class OffboardingController:
-    """Controller use case proses pengunduran diri/offboarding dan serah terima aset."""
+    def __init__(self, service: OffboardingService = Depends(get_offboarding_service)) -> None:
+        self.service = service
 
-    def __init__(self, offboarding_service: OffboardingService = Depends(get_offboarding_service)) -> None:
-        self.service = offboarding_service
+    async def list_all(self, user: CurrentUser, status: str | None) -> list[OffboardingListItem]:
+        return [OffboardingListItem(**dict(r._mapping)) for r in await self.service.list_all(user, status)]
 
-    async def handle_list_offboardings(
-        self,
-        current_user: CurrentUser,
-        status: str | None = None,
-    ) -> list[OffboardingListItem]:
-        rows = await self.service.list_offboardings(status)
-        return [OffboardingListItem(**dict(r._mapping)) for r in rows]
+    async def detail(self, user: CurrentUser, offboarding_id: UUID) -> OffboardingDetail:
+        return OffboardingDetail(**await self.service.detail(user, offboarding_id))
 
-    async def handle_get_offboarding(
-        self,
-        current_user: CurrentUser,
-        offboarding_id: UUID,
-    ) -> OffboardingDetail:
-        data = await self.service.get_offboarding(offboarding_id)
-        return OffboardingDetail(**data)
+    async def create(self, data: OffboardingCreate) -> OffboardingDetail:
+        return OffboardingDetail(**await self.service.create(data))
 
-    async def handle_create_offboarding(
-        self,
-        current_user: CurrentUser,
-        data: OffboardingCreate,
-    ) -> OffboardingListItem:
-        row = await self.service.create_offboarding(data)
-        return OffboardingListItem(**dict(row._mapping))
+    async def verify_item(self, user: CurrentUser, item_id: UUID, data: ClearanceItemVerify) -> OffboardingDetail:
+        return OffboardingDetail(**await self.service.verify_item(user, item_id, data))
 
-    async def handle_verify_clearance(
-        self,
-        current_user: CurrentUser,
-        clearance_item_id: UUID,
-        data: ClearanceItemVerify,
-    ) -> dict[str, str]:
-        await self.service.verify_clearance_item(clearance_item_id, UUID(current_user.user_id), data)
-        return {"message": "Aset berhasil diverifikasi dan dicatat pengembaliannya."}
+    async def approve(self, user: CurrentUser, offboarding_id: UUID, approval_type: str) -> OffboardingDetail:
+        return OffboardingDetail(**await self.service.approve(user, offboarding_id, approval_type))
 
-    async def handle_approve_offboarding(
-        self,
-        current_user: CurrentUser,
-        offboarding_id: UUID,
-        data: OffboardingApprove,
-    ) -> OffboardingListItem:
-        row = await self.service.approve_offboarding(offboarding_id, UUID(current_user.user_id), data)
-        return OffboardingListItem(**dict(row._mapping))
+    async def cancel(self, user: CurrentUser, offboarding_id: UUID, reason: str) -> dict[str, str]:
+        await self.service.cancel(user, offboarding_id, reason)
+        return {"message": "Offboarding dibatalkan; karyawan aktif kembali."}
+
+    async def pkwt_expiring(self, user: CurrentUser, days: int) -> list[PkwtExpiringRow]:
+        return [PkwtExpiringRow(**dict(r._mapping)) for r in await self.service.pkwt_expiring(user, days)]
+
+    async def complete_due(self) -> CompleteDueResult:
+        return CompleteDueResult(completed=await self.service.complete_due())

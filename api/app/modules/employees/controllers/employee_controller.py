@@ -25,7 +25,6 @@ from app.modules.employees.schemas.employee_schema import (
     EmployeeAssignmentResponse,
     EmployeeCreate,
     EmployeeListResponse,
-    EmployeeOffboard,
     EmployeeResponse,
     EmployeeUpdate,
 )
@@ -122,10 +121,6 @@ class EmployeeController:
             emp_id, current_user.organization_id, data.position, data.unit_id, data.valid_from
         )
         return EmployeeAssignmentResponse(**row._mapping)
-
-    async def handle_offboard(self, current_user: CurrentUser, emp_id: UUID, data: EmployeeOffboard) -> dict[str, Any]:
-        """Mengakhiri masa kerja karyawan."""
-        return await self.employee_service.offboard(emp_id, current_user.organization_id, data.reason)
 
     async def handle_archive(self, current_user: CurrentUser, emp_id: UUID) -> dict[str, Any]:
         """Menghapus lunak karyawan yang sudah dinonaktifkan."""

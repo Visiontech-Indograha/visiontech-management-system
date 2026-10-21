@@ -7,6 +7,15 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ---
 
+- **Milestone 9 — Offboarding PKWT & Clearance Aset (`api/app/modules/offboarding`, `employees`, `web/`):**
+  - Modul offboarding V1 (status `active`/`in_process` yang salah tabel, kondisi `PENDING_CHECK`, kolom `asset_assignment.return_condition` yang tidak ada) ditulis ulang sesuai docs/35 §7.
+  - **Mulai** (`POST /offboarding`, HR): karyawan aktif, satu proses terbuka (`ALREADY_OFFBOARDING`), ketua tim aktif / PM-OM divisi wajib serah terima dulu (`HANDOVER_REQUIRED`); tanggal efektif kosong + PKWT berakhir → tanggal akhir PKWT. Pinjaman alat/kendaraan yang belum kembali jadi item clearance; karyawan `in_process` sehingga tidak bisa meminjam aset baru.
+  - **Clearance** (`POST /offboarding/clearance-items/{id}/verify`): GOOD/DAMAGED/LOST, foto serah terima wajib kecuali hilang; pinjaman ditutup & status aset diperbarui lewat modul aset (yang sudah dikembalikan di menu aset cukup dicatat). Semua tuntas → `is_all_assets_returned`, CLEARANCE_PENDING → SUBMITTED.
+  - **Persetujuan** (`/approve`): PM/OM divisi karyawan dan HR, urutan bebas, hanya setelah clearance (`CLEARANCE_INCOMPLETE`), bukan untuk diri sendiri. Keduanya + tanggal efektif tiba → COMPLETED: karyawan `offboarded`, keanggotaan tim nonaktif, akun nonaktif & semua sesi dicabut; tanggal masa depan → APPROVED, diselesaikan penjadwal `POST /offboarding/complete-due`. Batal (`/cancel`) mengaktifkan karyawan kembali. `GET /offboarding/pkwt-expiring`. PM hanya melihat karyawan divisinya.
+  - **Dipensiunkan**: `POST /employees/{id}/offboard` (menonaktifkan tanpa clearance).
+  - **Web**: halaman Offboarding ditulis ulang (sebelumnya tidak cocok dengan API): daftar, panel PKWT segera berakhir, detail dengan terima barang + foto, setujui PM/HR, batal; tombol Offboarding di detail karyawan memulai proses clearance.
+  - **Uji** (belum dijalankan): `tests/modules/offboarding/test_offboarding_unit.py`; tes jalur lama dihapus/disesuaikan; tes web direktori. Postman folder 17 (berulang-aman) — seluruh koleksi 218 request / 354 assertion lulus.
+
 - **Milestone 8 — Laporan Penyelesaian & Ekspor Multi-Format (`api/app/modules/exports`, `work_completion`, `web/`):**
   - **Modul `exports`** (pemilik `document_template_export`): `POST /exports/work-completions/{id}` dengan `template` BAST (.docx), SURVEY_REPORT (.docx), BAST_PDF (.pdf ber-QR, hanya setelah disahkan PM — `NOT_SIGNED`), BOQ (.xlsx), PROGRESS_SLIDES (.pptx); riwayat `GET /exports/work-completions/{id}`; rekap divisi `POST /exports/periodic` (≤31 hari; .xlsx jadwal + BoQ + uang makan sah, atau .pptx mingguan; PM/OM divisi); unduh ulang `GET /exports/{id}/file`. Setiap dokumen disimpan di storage dan dicatat (format, templat baku, pembuat).
   - **Survey Report** mengikuti kerangka laporan MGT Minas (docs/35 §8): kop Visiontech & klien, info survei, jadwal, aktivitas & tim, layout titik (koordinat), kebutuhan instalasi per titik (BoM item), dokumentasi per titik (foto + remark), BoM estimasi, penutup & penanda tangan. Hanya item fase SURVEY (`NO_SURVEY_ITEMS`). Foto diperkecil (≤1280 px).

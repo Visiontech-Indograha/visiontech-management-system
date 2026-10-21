@@ -56,7 +56,12 @@ Status per 2026-10-20 (API + uji Postman; UI web/HP belum disesuaikan sehingga b
       rekap divisi ≤31 hari (.xlsx jadwal+BoQ+uang makan / .pptx); semua tersimpan di storage & tercatat di
       `document_template_export`, unduh ulang `/exports/{id}/file`. Tanda tangan: ketua tim dulu lalu PM/OM, PNG
       disimpan, sidik SHA-256 atas isi, order terkunci; QR → `/verify/work-completions/{id}?h=` (publik).
-- [ ] **Milestone 9**: Penghentian Kerja (PKWT) & Clearance Aset (`employee_offboarding`, `offboarding_clearance_item`)
+- [ ] **Milestone 9**: Penghentian Kerja (PKWT) & Clearance Aset (`employee_offboarding`, `offboarding_clearance_item`) — API ✔,
+      Postman ✔, web ✔, HP belum. HR mulai → pinjaman terbuka jadi item, karyawan `in_process` (tak bisa pinjam);
+      ketua tim/PM-OM harus serah terima dulu; verifikasi GOOD/DAMAGED/LOST + foto menutup pinjaman lewat modul aset;
+      CLEARANCE_PENDING → SUBMITTED → persetujuan PM/OM divisi & HR → APPROVED → COMPLETED pada tanggal efektif
+      (karyawan `offboarded`, keanggotaan tim berakhir, akun & sesi dicabut); `complete-due` penjadwal; batal;
+      daftar PKWT segera berakhir. Jalur lama `POST /employees/{id}/offboard` (tanpa clearance) dipensiunkan.
 
 ---
 

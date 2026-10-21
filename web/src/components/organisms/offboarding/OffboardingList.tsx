@@ -1,138 +1,57 @@
-import { useState } from "react";
 import type { UseQueryResult } from "@tanstack/react-query";
-import type { Offboarding } from "@/services/offboardingService";
-import { OffboardingAddButton } from "./OffboardingAddButton";
-import { ActionButton } from "@/components/molecules/ActionButton";
-import { LoadingBar } from "@/components/molecules/LoadingBar";
-import { TextBlock } from "@/components/molecules/TextBlock";
 import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
-import { RetryNotice } from "@/components/molecules/RetryNotice";
-import { FileCheck2, FileWarning, ShieldCheck } from "@/components/molecules/Glyphs";
-import { Button } from "@/components/atoms/Button";
-import { Camera } from "lucide-react";
-import { UniversalMediaModal } from "@/components/organisms/media";
+import { Pill } from "@/components/molecules/Pill";
+import { PlainAction } from "@/components/molecules/PlainAction";
+import { QueryState } from "@/components/molecules/QueryState";
+import { TextBlock } from "@/components/molecules/TextBlock";
+import { formatDate } from "@/lib/format";
+import { REASON_LABEL, STATUS_LABEL, type Offboarding } from "@/services/offboardingService";
+import { OffboardingAddButton } from "./OffboardingAddButton";
 
-export function OffboardingList({
-  offboardings,
-  onAdd,
-  onVerifyClearance,
-  onDecision,
-}: {
+const TONE: Record<string, "warning" | "neutral" | "success"> = {
+  CLEARANCE_PENDING: "warning",
+  SUBMITTED: "neutral",
+  APPROVED: "neutral",
+  COMPLETED: "success",
+};
+
+/** Daftar offboarding: karyawan, alasan, tanggal efektif, status clearance/persetujuan. Klik → detail. */
+export function OffboardingList({ offboardings, canManage, onAdd, onOpen }: {
   offboardings: UseQueryResult<Offboarding[]>;
+  canManage: boolean;
   onAdd: () => void;
-  onVerifyClearance?: (itemId: string, isCleared: boolean) => void;
-  onDecision?: (id: string, approved: boolean) => void;
+  onOpen: (id: string) => void;
 }) {
-  const [selectedMedia, setSelectedMedia] = useState<{ url: string; title: string } | null>(null);
-
   return (
-    <>
-      {offboardings.isPending && (
-        <div aria-hidden className="grid gap-3 md:grid-cols-2">
-          <LoadingBar className="h-24" />
-          <LoadingBar className="h-24" />
-        </div>
-      )}
-      {offboardings.isError && (
-        <RetryNotice message="Daftar offboarding tidak dapat dimuat." onRetry={() => offboardings.refetch()} />
-      )}
-      {offboardings.data?.length === 0 && (
-        <div className="rounded-panel border border-line bg-surface shadow-card p-6 text-center">
-          <TextBlock className="mb-3 text-mist">Belum ada pengajuan offboarding atau clearance karyawan.</TextBlock>
-          <OffboardingAddButton onAdd={onAdd} />
-        </div>
-      )}
-      {offboardings.data && offboardings.data.length > 0 && (
-        <ListBlock className="grid gap-4">
-          {offboardings.data.map((o) => (
-            <ListEntry key={o.id} className="rounded-panel border border-line bg-surface shadow-card p-4 space-y-3">
-              <div className="flex items-start justify-between">
-                <div>
-                  <TextBlock className="font-medium text-ink">
-                    {o.employee_name || o.employee_id}
-                  </TextBlock>
-                  <TextBlock className="text-xs text-mist">
-                    Tanggal Resign: {o.resignation_date} · Hari Kerja Terakhir: {o.last_working_date}
-                  </TextBlock>
-                  {o.reason && (
-                    <TextBlock className="text-sm text-mist">Alasan: {o.reason}</TextBlock>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  <TextBlock className="text-xs font-semibold px-2 py-0.5 rounded border border-line bg-surface-muted text-ink">
-                    {o.status}
-                  </TextBlock>
-                  {o.status === "IN_CLEARANCE" && onDecision && (
-                    <>
-                      <ActionButton size="sm" variant="secondary" onClick={() => onDecision(o.id, true)}>
-                        <ShieldCheck size={16} />
-                        Setujui
-                      </ActionButton>
-                      <ActionButton size="sm" variant="ghost" onClick={() => onDecision(o.id, false)}>
-                        Tolak
-                      </ActionButton>
-                    </>
-                  )}
-                </div>
+    <QueryState
+      query={offboardings}
+      errorText="Daftar offboarding gagal dimuat."
+      empty={(offboardings.data?.length ?? 0) === 0}
+      emptyText="Belum ada proses offboarding."
+      emptyAction={canManage ? <OffboardingAddButton onAdd={onAdd} /> : undefined}
+    >
+      <ListBlock className="space-y-2">
+        {(offboardings.data ?? []).map((o) => (
+          <ListEntry key={o.offboarding_id} className="rounded-panel border border-line bg-surface p-4 shadow-card">
+            <PlainAction className="flex w-full flex-wrap items-center justify-between gap-2 text-left"
+                         onClick={() => onOpen(o.offboarding_id)}>
+              <div>
+                <TextBlock className="font-semibold">{`${o.employee_name ?? "-"} · ${o.employee_no ?? ""}`}</TextBlock>
+                <TextBlock className="text-xs text-mist">
+                  {`${REASON_LABEL[o.reason_type] ?? o.reason_type} · efektif ${formatDate(o.effective_date)}`}
+                  {o.division_name ? ` · ${o.division_name}` : ""}
+                </TextBlock>
               </div>
-
-              {o.clearance_items && o.clearance_items.length > 0 && (
-                <div className="border-t border-line pt-2">
-                  <TextBlock className="text-xs font-medium text-mist mb-2">Item Clearance Aset & Serah Terima:</TextBlock>
-                  <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3">
-                    {o.clearance_items.map((item) => (
-                      <div key={item.id} className="flex items-center justify-between p-2 rounded bg-surface-muted border border-line">
-                        <div className="min-w-0">
-                          <TextBlock className="text-xs font-medium text-ink">{item.item_name}</TextBlock>
-                          <TextBlock className="text-[10px] text-mist">{item.category}</TextBlock>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          {item.handover_photo_path && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 px-1.5 text-xs text-sky-600 hover:text-sky-700"
-                              onClick={() => setSelectedMedia({ url: item.handover_photo_path!, title: `Bukti Serah Terima: ${item.item_name}` })}
-                              title="Lihat Foto Bukti Serah Terima"
-                            >
-                              <Camera className="w-3.5 h-3.5 mr-1" />
-                              Foto
-                            </Button>
-                          )}
-                          {item.is_cleared ? (
-                            <FileCheck2 className="text-emerald-500" size={16} />
-                          ) : (
-                            <FileWarning className="text-amber-500" size={16} />
-                          )}
-                          {onVerifyClearance && !item.is_cleared && (
-                            <ActionButton
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => onVerifyClearance(item.id, true)}
-                              aria-label={`Verifikasi ${item.item_name}`}
-                            >
-                              Verifikasi
-                            </ActionButton>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </ListEntry>
-          ))}
-        </ListBlock>
-      )}
-
-      {selectedMedia && (
-        <UniversalMediaModal
-          isOpen={!!selectedMedia}
-          onClose={() => setSelectedMedia(null)}
-          filePath={selectedMedia.url}
-          title={selectedMedia.title}
-        />
-      )}
-    </>
+              <div className="flex items-center gap-2">
+                {o.pending_items > 0 && (
+                  <TextBlock as="span" className="text-xs text-mist">{`${o.pending_items} barang belum kembali`}</TextBlock>
+                )}
+                <Pill tone={TONE[o.status] ?? "neutral"}>{STATUS_LABEL[o.status] ?? o.status}</Pill>
+              </div>
+            </PlainAction>
+          </ListEntry>
+        ))}
+      </ListBlock>
+    </QueryState>
   );
 }

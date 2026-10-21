@@ -814,15 +814,55 @@ export interface paths {
         };
         /**
          * List Offboardings
-         * @description Mengambil daftar seluruh permohonan offboarding karyawan.
+         * @description Daftar offboarding (PM hanya karyawan divisinya).
          */
         get: operations["list_offboardings_api_v1_offboarding_get"];
         put?: never;
         /**
          * Create Offboarding
-         * @description Mengajukan proses offboarding / pengunduran diri karyawan.
+         * @description HR memulai offboarding: pinjaman aset yang belum kembali otomatis menjadi item clearance.
          */
         post: operations["create_offboarding_api_v1_offboarding_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/offboarding/pkwt-expiring": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Pkwt Expiring
+         * @description Karyawan PKWT yang kontraknya berakhir dalam `days` hari (atau sudah lewat) dan belum diproses.
+         */
+        get: operations["pkwt_expiring_api_v1_offboarding_pkwt_expiring_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/offboarding/complete-due": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Complete Due Offboardings
+         * @description Penjadwal harian: selesaikan offboarding yang disetujui dan tanggal efektifnya tiba.
+         */
+        post: operations["complete_due_offboardings_api_v1_offboarding_complete_due_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -838,7 +878,7 @@ export interface paths {
         };
         /**
          * Get Offboarding
-         * @description Mengambil detail offboarding beserta checklist pengembalian asetnya.
+         * @description Detail offboarding + daftar barang yang harus dikembalikan.
          */
         get: operations["get_offboarding_api_v1_offboarding__offboarding_id__get"];
         put?: never;
@@ -860,7 +900,7 @@ export interface paths {
         put?: never;
         /**
          * Verify Clearance Item
-         * @description Verifikasi dan checklist fisik pengembalian aset pinjaman.
+         * @description HR/GA memverifikasi barang yang dikembalikan (GOOD/DAMAGED/LOST + foto); pinjaman aset ditutup.
          */
         post: operations["verify_clearance_item_api_v1_offboarding_clearance_items__clearance_item_id__verify_post"];
         delete?: never;
@@ -880,9 +920,29 @@ export interface paths {
         put?: never;
         /**
          * Approve Offboarding
-         * @description Menyetujui proses offboarding oleh PM (operasional) atau HR (final clearance).
+         * @description Persetujuan PM (PM/OM divisi karyawan) atau HR — hanya setelah clearance lengkap.
          */
         post: operations["approve_offboarding_api_v1_offboarding__offboarding_id__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/offboarding/{offboarding_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel Offboarding
+         * @description Batalkan offboarding yang belum selesai; karyawan aktif kembali.
+         */
+        post: operations["cancel_offboarding_api_v1_offboarding__offboarding_id__cancel_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1386,26 +1446,6 @@ export interface paths {
          * @description Mutasi atau promosi jabatan baru bagi karyawan.
          */
         post: operations["add_assignment_api_v1_employees__emp_id__assignments_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/employees/{emp_id}/offboard": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Offboard Employee
-         * @description HR mengakhiri masa kerja karyawan.
-         */
-        post: operations["offboard_employee_api_v1_employees__emp_id__offboard_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3391,6 +3431,10 @@ export interface components {
             asset_type?: string | null;
             /** Asset Name */
             asset_name?: string | null;
+            /** Asset Code */
+            asset_code?: string | null;
+            /** Loaned At */
+            loaned_at?: string | null;
             /** Return Condition */
             return_condition: string;
             /** Handover Photo Path */
@@ -3401,18 +3445,21 @@ export interface components {
             verified_by_name?: string | null;
             /** Verified At */
             verified_at?: string | null;
-            /**
-             * Create At
-             * Format: date-time
-             */
-            create_at: string;
         };
         /** ClearanceItemVerify */
         ClearanceItemVerify: {
-            /** Return Condition */
-            return_condition: string;
-            /** Handover Photo Path */
-            handover_photo_path?: string | null;
+            /**
+             * Return Condition
+             * @enum {string}
+             */
+            return_condition: "GOOD" | "DAMAGED" | "LOST";
+            /** Handover File Id */
+            handover_file_id?: string | null;
+        };
+        /** CompleteDueResult */
+        CompleteDueResult: {
+            /** Completed */
+            completed: number;
         };
         /** CompletionExportRequest */
         CompletionExportRequest: {
@@ -4057,14 +4104,6 @@ export interface components {
             size: number;
         };
         /**
-         * EmployeeOffboard
-         * @description Schema for requesting to offboard an employee.
-         */
-        EmployeeOffboard: {
-            /** Reason */
-            reason: string;
-        };
-        /**
          * EmployeeResponse
          * @description Schema for an employee response object.
          */
@@ -4702,12 +4741,14 @@ export interface components {
         OffboardingApprove: {
             /**
              * Approval Type
-             * @description 'PM' atau 'HR'
-             * @default HR
+             * @enum {string}
              */
-            approval_type: string;
-            /** Notes */
-            notes?: string | null;
+            approval_type: "PM" | "HR";
+        };
+        /** OffboardingCancel */
+        OffboardingCancel: {
+            /** Reason */
+            reason: string;
         };
         /** OffboardingCreate */
         OffboardingCreate: {
@@ -4717,11 +4758,8 @@ export interface components {
              */
             employee_id: string;
             reason_type: components["schemas"]["OffboardingReason"];
-            /**
-             * Effective Date
-             * Format: date
-             */
-            effective_date: string;
+            /** Effective Date */
+            effective_date?: string | null;
             /** Notes */
             notes?: string | null;
         };
@@ -4761,8 +4799,17 @@ export interface components {
             status: string;
             /** Approved By Pm Id */
             approved_by_pm_id?: string | null;
+            /** Approved By Pm Name */
+            approved_by_pm_name?: string | null;
             /** Approved By Hr Id */
             approved_by_hr_id?: string | null;
+            /** Approved By Hr Name */
+            approved_by_hr_name?: string | null;
+            /**
+             * Pending Items
+             * @default 0
+             */
+            pending_items: number;
             /** Notes */
             notes?: string | null;
             /**
@@ -4812,8 +4859,17 @@ export interface components {
             status: string;
             /** Approved By Pm Id */
             approved_by_pm_id?: string | null;
+            /** Approved By Pm Name */
+            approved_by_pm_name?: string | null;
             /** Approved By Hr Id */
             approved_by_hr_id?: string | null;
+            /** Approved By Hr Name */
+            approved_by_hr_name?: string | null;
+            /**
+             * Pending Items
+             * @default 0
+             */
+            pending_items: number;
             /** Notes */
             notes?: string | null;
             /**
@@ -4827,6 +4883,11 @@ export interface components {
          * @enum {string}
          */
         OffboardingReason: "PKWT_EXPIRED" | "RESIGN" | "TERMINATED" | "RETIRED";
+        /**
+         * OffboardingStatus
+         * @enum {string}
+         */
+        OffboardingStatus: "SUBMITTED" | "CLEARANCE_PENDING" | "APPROVED" | "COMPLETED";
         /**
          * OfflineAttendanceEvent
          * @description Schema representing a signed offline attendance event.
@@ -5070,6 +5131,30 @@ export interface components {
              * @enum {string}
              */
             export_format: "EXCEL_XLSX" | "PPTX";
+        };
+        /**
+         * PkwtExpiringRow
+         * @description Karyawan PKWT yang kontraknya berakhir dalam rentang & belum diproses offboarding.
+         */
+        PkwtExpiringRow: {
+            /**
+             * Employee Id
+             * Format: uuid
+             */
+            employee_id: string;
+            /** Employee No */
+            employee_no: string;
+            /** Full Name */
+            full_name: string;
+            /** Division Name */
+            division_name?: string | null;
+            /**
+             * Pkwt End Date
+             * Format: date
+             */
+            pkwt_end_date: string;
+            /** Open Loans */
+            open_loans: number;
         };
         /** PlanItemCreate */
         PlanItemCreate: {
@@ -8180,8 +8265,7 @@ export interface operations {
     list_offboardings_api_v1_offboarding_get: {
         parameters: {
             query?: {
-                /** @description Filter status (active, in_process, offboarded) */
-                status?: string | null;
+                status?: components["schemas"]["OffboardingStatus"] | null;
             };
             header?: never;
             path?: never;
@@ -8228,7 +8312,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["OffboardingListItem"];
+                    "application/json": components["schemas"]["OffboardingDetail"];
                 };
             };
             /** @description Validation Error */
@@ -8238,6 +8322,57 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    pkwt_expiring_api_v1_offboarding_pkwt_expiring_get: {
+        parameters: {
+            query?: {
+                days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PkwtExpiringRow"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    complete_due_offboardings_api_v1_offboarding_complete_due_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompleteDueResult"];
                 };
             };
         };
@@ -8294,9 +8429,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: string;
-                    };
+                    "application/json": components["schemas"]["OffboardingDetail"];
                 };
             };
             /** @description Validation Error */
@@ -8331,7 +8464,44 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["OffboardingListItem"];
+                    "application/json": components["schemas"]["OffboardingDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_offboarding_api_v1_offboarding__offboarding_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                offboarding_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OffboardingCancel"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
                 };
             };
             /** @description Validation Error */
@@ -9210,43 +9380,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EmployeeAssignmentResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    offboard_employee_api_v1_employees__emp_id__offboard_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                emp_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["EmployeeOffboard"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
                 };
             };
             /** @description Validation Error */

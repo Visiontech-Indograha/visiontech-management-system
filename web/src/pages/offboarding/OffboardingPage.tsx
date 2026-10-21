@@ -1,33 +1,25 @@
 import { useState } from "react";
-import { OffboardingTemplate } from "@/components/templates/offboarding/OffboardingTemplate";
-import {
-  useOffboardings,
-  useVerifyClearanceItem,
-  useApproveOffboarding,
-} from "@/services/offboardingService";
+import { OffboardingTemplate, type OffboardingDialog } from "@/components/templates/offboarding/OffboardingTemplate";
+import { useOffboardings, usePkwtExpiring } from "@/services/offboardingService";
+import { useSession } from "@/stores/sessionStore";
 
+/** "Offboarding & Clearance" (Milestone 9): HR mengelola; PM/OM divisi ikut menyetujui karyawan divisinya. */
 export function OffboardingPage() {
+  const { me } = useSession();
+  const canManage = !!me?.permissions.includes("manage:offboarding");
+  const canApprovePm = ["SUPER_ADMIN", "PROJECT_MANAGER", "OPERATIONAL_MANAGER"].includes(me?.role ?? "");
   const offboardings = useOffboardings();
-  const verifyClearance = useVerifyClearanceItem();
-  const approveOffboarding = useApproveOffboarding();
-  const [adding, setAdding] = useState(false);
-
-  const handleVerifyClearance = async (itemId: string, isCleared: boolean) => {
-    await verifyClearance.mutateAsync({ itemId, isCleared });
-  };
-
-  const handleDecision = async (id: string, approved: boolean) => {
-    await approveOffboarding.mutateAsync({ id, approved });
-  };
+  const expiring = usePkwtExpiring(30);
+  const [dialog, setDialog] = useState<OffboardingDialog>(null);
 
   return (
     <OffboardingTemplate
       offboardings={offboardings}
-      adding={adding}
-      onAdd={() => setAdding(true)}
-      onVerifyClearance={handleVerifyClearance}
-      onDecision={handleDecision}
-      onCloseAdd={() => setAdding(false)}
+      expiring={expiring.data ?? []}
+      canManage={canManage}
+      canApprovePm={canApprovePm}
+      dialog={dialog}
+      onDialog={setDialog}
     />
   );
 }

@@ -30,12 +30,13 @@ from app.modules.system_backup.routes import router as backup_router
 from app.modules.teams.routes import router as teams_router
 from app.modules.units.routes import router as units_router
 from app.modules.work_completion.routes import router as work_completion_router
-from app.modules.work_plans.routes import daily_plans_router
+from app.modules.work_plans.routes import daily_plans_router, plan_items_router
 from app.modules.work_types.routes import router as work_types_router
 
 api_router = APIRouter()
 
 api_router.include_router(daily_plans_router)
+api_router.include_router(plan_items_router)
 api_router.include_router(work_completion_router)
 api_router.include_router(teams_router)
 api_router.include_router(mess_router)

@@ -72,7 +72,7 @@ class DailyPlanRepository(BaseRepository):
             """
             SELECT i.item_id, i.title, i.task_phase, i.work_type_id, wt.name AS work_type_name, i.completion_id,
                    i.location_name, i.target_qty, i.completed_qty, i.status,
-                   i.rollover_approval_status::text AS rollover_approval_status
+                   i.rollover_approval_status::text AS rollover_approval_status, i.delay_reason
             FROM work_plan_item i
             JOIN work_type wt ON wt.work_type_id = i.work_type_id
             WHERE i.daily_plan_id = CAST(:id AS uuid) AND i.delete_at IS NULL

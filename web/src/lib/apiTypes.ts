@@ -318,6 +318,138 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/work-plans/daily/{daily_plan_id}/items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Items
+         * @description Item jadwal harian (siapa pun yang boleh melihat jadwal itu).
+         */
+        get: operations["list_items_api_v1_work_plans_daily__daily_plan_id__items_get"];
+        put?: never;
+        /**
+         * Create Item
+         * @description Tambah item per titik (jadwal DRAFT/SUBMITTED).
+         */
+        post: operations["create_item_api_v1_work_plans_daily__daily_plan_id__items_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-plans/items/{item_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Item
+         * @description Detail item.
+         */
+        get: operations["get_item_api_v1_work_plans_items__item_id__get"];
+        /**
+         * Update Item
+         * @description Ubah item (jadwal DRAFT/SUBMITTED).
+         */
+        put: operations["update_item_api_v1_work_plans_items__item_id__put"];
+        post?: never;
+        /**
+         * Delete Item
+         * @description Hapus item yang bukan prasyarat item lain (jadwal DRAFT/SUBMITTED).
+         */
+        delete: operations["delete_item_api_v1_work_plans_items__item_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-plans/items/{item_id}/progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update Progress
+         * @description Tim mencatat volume selesai & foto realisasi (jadwal ONGOING; prasyarat harus selesai).
+         */
+        patch: operations["update_progress_api_v1_work_plans_items__item_id__progress_patch"];
+        trace?: never;
+    };
+    "/api/v1/work-plans/items/{item_id}/request-rollover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Request Rollover
+         * @description Ketua mengajukan geser item yang belum selesai (alasan + progres parsial).
+         */
+        post: operations["request_rollover_api_v1_work_plans_items__item_id__request_rollover_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-plans/items/{item_id}/rollover-decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Decide Rollover
+         * @description PM/OM divisi: setujui (ke jadwal yang ada / tanggal baru) → item lanjutan; atau tolak.
+         */
+        post: operations["decide_rollover_api_v1_work_plans_items__item_id__rollover_decision_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-plans/items/{item_id}/chain": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Rollover Chain
+         * @description Rantai rollover item (asal pertama → item aktif terakhir).
+         */
+        get: operations["rollover_chain_api_v1_work_plans_items__item_id__chain_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/work-completions": {
         parameters: {
             query?: never;
@@ -3181,6 +3313,35 @@ export interface components {
             /** Skipped */
             skipped: string[];
         };
+        /** ChainStep */
+        ChainStep: {
+            /**
+             * Item Id
+             * Format: uuid
+             */
+            item_id: string;
+            /**
+             * Daily Plan Id
+             * Format: uuid
+             */
+            daily_plan_id: string;
+            /**
+             * Work Date
+             * Format: date
+             */
+            work_date: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "TODO" | "IN_PROGRESS" | "DONE" | "PENDING_ROLLOVER" | "SHIFTED_DAY";
+            /** Target Qty */
+            target_qty: string;
+            /** Completed Qty */
+            completed_qty: string;
+            /** Delay Reason */
+            delay_reason?: string | null;
+        };
         /** ChallengeCheckResponse */
         ChallengeCheckResponse: {
             /**
@@ -4273,6 +4434,19 @@ export interface components {
             created_at: string;
         };
         /**
+         * ItemPhoto
+         * @description Foto realisasi: berkas /files + slot syarat foto (image_requirement) yang dipenuhinya.
+         */
+        ItemPhoto: {
+            /**
+             * File Id
+             * Format: uuid
+             */
+            file_id: string;
+            /** Requirement Id */
+            requirement_id?: string | null;
+        };
+        /**
          * LoanCreate
          * @description Serah terima aset ke karyawan; `daily_plan_id` mengaitkannya ke jadwal harian tim (opsional).
          */
@@ -4881,6 +5055,176 @@ export interface components {
             /** Note */
             note?: string | null;
         };
+        /** PlanItemCreate */
+        PlanItemCreate: {
+            /**
+             * Work Type Id
+             * Format: uuid
+             */
+            work_type_id: string;
+            /** Title */
+            title: string;
+            /**
+             * Task Phase
+             * @default INSTALLATION
+             * @enum {string}
+             */
+            task_phase: "SURVEY" | "PREPARATION" | "INSTALLATION" | "REPLACEMENT" | "MAINTENANCE";
+            /**
+             * Is Main Deliverable
+             * @default false
+             */
+            is_main_deliverable: boolean;
+            /** Completion Id */
+            completion_id?: string | null;
+            /** Depends On Item Id */
+            depends_on_item_id?: string | null;
+            /**
+             * Target Qty
+             * @default 1
+             */
+            target_qty: number | string;
+            /** Start Time */
+            start_time?: string | null;
+            /** End Time */
+            end_time?: string | null;
+            /** Location Name */
+            location_name?: string | null;
+            /** Site Lat */
+            site_lat?: number | string | null;
+            /** Site Lng */
+            site_lng?: number | string | null;
+            /** Assigned Employee Ids */
+            assigned_employee_ids?: string[];
+            /** Notes */
+            notes?: string | null;
+        };
+        /** PlanItemOut */
+        PlanItemOut: {
+            /**
+             * Item Id
+             * Format: uuid
+             */
+            item_id: string;
+            /**
+             * Daily Plan Id
+             * Format: uuid
+             */
+            daily_plan_id: string;
+            /**
+             * Work Date
+             * Format: date
+             */
+            work_date: string;
+            /**
+             * Work Type Id
+             * Format: uuid
+             */
+            work_type_id: string;
+            /** Work Type Name */
+            work_type_name: string;
+            /** Title */
+            title: string;
+            /**
+             * Task Phase
+             * @enum {string}
+             */
+            task_phase: "SURVEY" | "PREPARATION" | "INSTALLATION" | "REPLACEMENT" | "MAINTENANCE";
+            /** Is Main Deliverable */
+            is_main_deliverable: boolean;
+            /** Completion Id */
+            completion_id?: string | null;
+            /** Order Title */
+            order_title?: string | null;
+            /** Depends On Item Id */
+            depends_on_item_id?: string | null;
+            /** Depends On Title */
+            depends_on_title?: string | null;
+            /** Target Qty */
+            target_qty: string;
+            /** Completed Qty */
+            completed_qty: string;
+            /** Progress Percent */
+            progress_percent: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "TODO" | "IN_PROGRESS" | "DONE" | "PENDING_ROLLOVER" | "SHIFTED_DAY";
+            /**
+             * Rollover Approval Status
+             * @enum {string}
+             */
+            rollover_approval_status: "NONE" | "WAITING_PM" | "APPROVED_BY_PM" | "REJECTED_BY_PM";
+            /** Approved By Pm Id */
+            approved_by_pm_id?: string | null;
+            /** Origin Item Id */
+            origin_item_id?: string | null;
+            /** Shifted To Daily Id */
+            shifted_to_daily_id?: string | null;
+            /** Delay Reason */
+            delay_reason?: string | null;
+            /** Notes */
+            notes?: string | null;
+            /** Start Time */
+            start_time?: string | null;
+            /** End Time */
+            end_time?: string | null;
+            /** Location Name */
+            location_name?: string | null;
+            /** Site Lat */
+            site_lat?: string | null;
+            /** Site Lng */
+            site_lng?: string | null;
+            /**
+             * Assigned Employee Ids
+             * @default []
+             */
+            assigned_employee_ids: string[];
+            /**
+             * Realization Photos Json
+             * @default []
+             */
+            realization_photos_json: {
+                [key: string]: unknown;
+            }[];
+            /**
+             * Update At
+             * Format: date-time
+             */
+            update_at: string;
+        };
+        /** PlanItemUpdate */
+        PlanItemUpdate: {
+            /** Work Type Id */
+            work_type_id?: string | null;
+            /** Title */
+            title?: string | null;
+            /** Task Phase */
+            task_phase?: ("SURVEY" | "PREPARATION" | "INSTALLATION" | "REPLACEMENT" | "MAINTENANCE") | null;
+            /** Is Main Deliverable */
+            is_main_deliverable?: boolean | null;
+            /** Completion Id */
+            completion_id?: string | null;
+            /** Depends On Item Id */
+            depends_on_item_id?: string | null;
+            /** Target Qty */
+            target_qty?: number | string | null;
+            /** Start Time */
+            start_time?: string | null;
+            /** End Time */
+            end_time?: string | null;
+            /** Location Name */
+            location_name?: string | null;
+            /** Site Lat */
+            site_lat?: number | string | null;
+            /** Site Lng */
+            site_lng?: number | string | null;
+            /** Assigned Employee Ids */
+            assigned_employee_ids?: string[] | null;
+            /** Notes */
+            notes?: string | null;
+        };
         /** ProbeResponse */
         ProbeResponse: {
             /**
@@ -4900,6 +5244,15 @@ export interface components {
              * Format: date-time
              */
             expires_at: string;
+        };
+        /** ProgressIn */
+        ProgressIn: {
+            /** Completed Qty */
+            completed_qty: number | string;
+            /** Photos */
+            photos?: components["schemas"]["ItemPhoto"][] | null;
+            /** Notes */
+            notes?: string | null;
         };
         /** RejectIn */
         RejectIn: {
@@ -4929,6 +5282,30 @@ export interface components {
             is_approved: boolean;
             /** Note */
             note?: string | null;
+        };
+        /**
+         * RolloverDecision
+         * @description PM: setujui ke jadwal yang ada (`target_daily_plan_id`) atau tanggal baru (`target_date`), atau tolak.
+         */
+        RolloverDecision: {
+            /** Approve */
+            approve: boolean;
+            /** Target Daily Plan Id */
+            target_daily_plan_id?: string | null;
+            /** Target Date */
+            target_date?: string | null;
+            /** Note */
+            note?: string | null;
+        };
+        /**
+         * RolloverRequest
+         * @description Ketua: pekerjaan belum selesai (hujan, izin, material) → minta digeser.
+         */
+        RolloverRequest: {
+            /** Delay Reason */
+            delay_reason: string;
+            /** Completed Qty */
+            completed_qty: number | string;
         };
         /**
          * SiteCreate
@@ -6523,6 +6900,307 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DailyPlanOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_items_api_v1_work_plans_daily__daily_plan_id__items_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                daily_plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanItemOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_item_api_v1_work_plans_daily__daily_plan_id__items_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                daily_plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlanItemCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanItemOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_item_api_v1_work_plans_items__item_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanItemOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_item_api_v1_work_plans_items__item_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlanItemUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanItemOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_item_api_v1_work_plans_items__item_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_progress_api_v1_work_plans_items__item_id__progress_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProgressIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanItemOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    request_rollover_api_v1_work_plans_items__item_id__request_rollover_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RolloverRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanItemOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    decide_rollover_api_v1_work_plans_items__item_id__rollover_decision_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RolloverDecision"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanItemOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rollover_chain_api_v1_work_plans_items__item_id__chain_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChainStep"][];
                 };
             };
             /** @description Validation Error */

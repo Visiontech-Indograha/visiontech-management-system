@@ -70,6 +70,11 @@ SELF_SERVICE = {
 # Kewenangan bergantung pada isi permintaan (SK di badan) atau tautan berkas → dijaga di handler.
 GUARDED_IN_HANDLER = {
     # M5 daily-first: kedudukan pada jadwal/order dibaca di service (check_daily_access / standing order).
+    ("GET", "/work-plans/daily/{daily_plan_id}/items"): "PlanItemService: check_daily_access(VIEW), lain 404",
+    ("GET", "/work-plans/items/{item_id}"): "PlanItemService: jadwal item terlihat (VIEW), lain 404",
+    ("GET", "/work-plans/items/{item_id}/chain"): "PlanItemService: jadwal item terlihat (VIEW), lain 404",
+    ("PATCH", "/work-plans/items/{item_id}/progress"): "PlanItemService: ketua/anggota tim jadwal ONGOING (diuji)",
+    ("POST", "/work-plans/items/{item_id}/request-rollover"): "PlanItemService: hanya ketua tim jadwal (diuji)",
     ("POST", "/work-plans/daily/{daily_plan_id}/start"): "DailyPlanService: hanya ketua tim jadwal (diuji)",
     ("POST", "/work-plans/daily/{daily_plan_id}/complete"): "DailyPlanService: ketua tim atau PM/OM divisi",
     ("GET", "/work-completions/{completion_id}"): "WorkCompletionService: pengelola/HR/anggota tim, lain 404",

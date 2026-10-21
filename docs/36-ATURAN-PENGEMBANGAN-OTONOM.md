@@ -37,7 +37,12 @@ Status per 2026-10-20 (API + uji Postman; UI web/HP belum disesuaikan sehingga b
       disetujui. Migrasi `db/migration_m5_daily_refs.sql`: overtime/lampiran → `daily_plan_id` (FK), `file_object`
       → `office_id` (FK) + `uploaded_by` (FK), `work_plan_item.notes`, CHECK fase & status.
 - [ ] **Milestone 6**: Item Pekerjaan per Titik, Fase & Rollover (`work_plan_item`, `work_type`, `image_requirement`,
-      `work_type_default_materials`, `work_completion_bom`)
+      `work_type_default_materials`, `work_completion_bom`) — API ✔, Postman ✔, web ✔ (susun item & putuskan geser),
+      HP belum. Item = satu titik; template milik divisi jadwal; hanya INSTALLATION/REPLACEMENT/MAINTENANCE boleh
+      deliverable utama; prasyarat = item tim sama pada tanggal ≤; penugasan hanya anggota tim; progres saat ONGOING,
+      tak melebihi target, prasyarat harus DONE, DONE butuh foto wajib; rollover ketua → PM (jadwal ada / tanggal
+      baru dibuat otomatis & disetujui), 4 aturan docs/35 §4, catatan PM ke app_activity_logs. Seed: template
+      Instalasi CCTV, Instalasi Barrier Gate, Survei Titik CCTV; seed tanpa work_plan_weekly.
 - [ ] **Milestone 7**: Presensi Biometrik Wajah & Otomasi Uang Makan (`attendance`, `employee.face_embedding`)
 - [ ] **Milestone 8**: Laporan Penyelesaian & Ekspor Multi-Format, termasuk Survey Report .docx
       (`work_completion`, `document_template_export`)

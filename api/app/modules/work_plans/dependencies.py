@@ -9,8 +9,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_db_with_user
 from app.modules.work_plans.repositories.daily_plan_repository import DailyPlanRepository
+from app.modules.work_plans.repositories.plan_item_repository import PlanItemRepository
 from app.modules.work_plans.services.daily_plan_service import DailyPlanService
 from app.modules.work_plans.services.geocode_service import GeocodeService
+from app.modules.work_plans.services.plan_item_service import PlanItemService
 
 
 def get_daily_plan_service(db: AsyncSession = Depends(get_db_with_user)) -> DailyPlanService:
@@ -19,3 +21,7 @@ def get_daily_plan_service(db: AsyncSession = Depends(get_db_with_user)) -> Dail
 
 def get_geocode_service() -> GeocodeService:
     return GeocodeService()
+
+
+def get_plan_item_service(db: AsyncSession = Depends(get_db_with_user)) -> PlanItemService:
+    return PlanItemService(db, PlanItemRepository(db))

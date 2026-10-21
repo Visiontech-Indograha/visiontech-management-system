@@ -3,8 +3,7 @@ import { toast } from "sonner";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { TextAreaField, TextField } from "@/components/molecules/Field";
 import { FormBlock } from "@/components/molecules/FormBlock";
-import { ListBlock, ListEntry, ListPair } from "@/components/molecules/ListBlock";
-import { LoadingBar } from "@/components/molecules/LoadingBar";
+import { ListBlock, ListPair } from "@/components/molecules/ListBlock";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
@@ -20,10 +19,8 @@ import {
   type DailyAction,
   type DailyPlan,
 } from "@/services/dailyPlanService";
+import { DailyItemsPanel } from "./DailyItemsPanel";
 
-const PHASE: Record<string, string> = {
-  SURVEY: "Survei", PREPARATION: "Persiapan", INSTALLATION: "Instalasi", REPLACEMENT: "Penggantian", MAINTENANCE: "Pemeliharaan",
-};
 const ACTION_LABEL: Record<DailyAction, string> = { submit: "Ajukan", approve: "Setujui", start: "Mulai", complete: "Selesai" };
 
 /** Detail jadwal harian + tindakan sesuai status & kedudukan (aturan akhir di API). */
@@ -81,22 +78,7 @@ export function DailyPlanDetailDialog({ plan, canPlan, isLeader, onEdit, onClose
           <ListPair>Ketua: {p.leader_name}</ListPair>
         </ListBlock>
 
-        <section aria-label="Item pekerjaan">
-          <TextBlock as="h3" className="mb-2 font-semibold">Item pekerjaan</TextBlock>
-          {detail.isPending && <LoadingBar className="h-4 w-1/2" />}
-          {detail.data?.items.length === 0 && <TextBlock className="text-mist">Belum ada item. Item per titik (survei, persiapan, instalasi) ditambahkan per jadwal.</TextBlock>}
-          <ListBlock className="divide-y divide-line">
-            {detail.data?.items.map((i) => (
-              <ListEntry key={i.item_id} className="flex flex-wrap items-center justify-between gap-2 py-2">
-                <TextBlock as="span">
-                  {PHASE[i.task_phase] ?? i.task_phase} · {i.title}
-                  {i.location_name ? ` · ${i.location_name}` : ""}
-                </TextBlock>
-                <TextBlock as="span" className="text-mist">{Number(i.completed_qty)}/{Number(i.target_qty)} · {i.status}</TextBlock>
-              </ListEntry>
-            ))}
-          </ListBlock>
-        </section>
+        <DailyItemsPanel detail={detail.data} loading={detail.isPending} canPlan={canPlan} />
 
         {error && <TextBlock role="alert" className="text-danger">{error}</TextBlock>}
 

@@ -92,3 +92,20 @@ export const useBulkApprove = () =>
     (await api.post<S["BulkApproveOut"]>("/work-plans/daily/approve", { daily_plan_ids })).data);
 
 export const geoSearch = async (q: string) => (await api.get<GeoResult[]>("/work-plans/geo/search", { params: { q } })).data;
+
+// ── Item per titik (Milestone 6) ─────────────────────────────────────────────
+export type PlanItem = S["PlanItemOut"];
+export type PlanItemCreate = S["PlanItemCreate"];
+export type RolloverDecision = S["RolloverDecision"];
+
+export const useCreatePlanItem = (dailyPlanId: string) =>
+  useDailyMutation(async (body: PlanItemCreate) =>
+    (await api.post<PlanItem>(`/work-plans/daily/${dailyPlanId}/items`, body)).data);
+
+export const useDeletePlanItem = () =>
+  useDailyMutation(async (itemId: string) => (await api.delete(`/work-plans/items/${itemId}`)).data);
+
+/** PM/OM: setujui geser (ke jadwal yang ada / tanggal baru) atau tolak. */
+export const useDecideRollover = () =>
+  useDailyMutation(async ({ itemId, ...body }: RolloverDecision & { itemId: string }) =>
+    (await api.post<PlanItem>(`/work-plans/items/${itemId}/rollover-decision`, body)).data);

@@ -91,6 +91,7 @@ class DailyItemBrief(BaseModel):
     completed_qty: Decimal
     status: str
     rollover_approval_status: str
+    delay_reason: str | None = None
 
 
 class DailyPlanOut(BaseModel):

@@ -1407,6 +1407,67 @@
     "title": "BulkApproveOut",
     "type": "object"
    },
+   "ChainStep": {
+    "properties": {
+     "completed_qty": {
+      "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+      "title": "Completed Qty",
+      "type": "string"
+     },
+     "daily_plan_id": {
+      "format": "uuid",
+      "title": "Daily Plan Id",
+      "type": "string"
+     },
+     "delay_reason": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Delay Reason"
+     },
+     "item_id": {
+      "format": "uuid",
+      "title": "Item Id",
+      "type": "string"
+     },
+     "status": {
+      "enum": [
+       "TODO",
+       "IN_PROGRESS",
+       "DONE",
+       "PENDING_ROLLOVER",
+       "SHIFTED_DAY"
+      ],
+      "title": "Status",
+      "type": "string"
+     },
+     "target_qty": {
+      "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+      "title": "Target Qty",
+      "type": "string"
+     },
+     "work_date": {
+      "format": "date",
+      "title": "Work Date",
+      "type": "string"
+     }
+    },
+    "required": [
+     "item_id",
+     "daily_plan_id",
+     "work_date",
+     "status",
+     "target_qty",
+     "completed_qty"
+    ],
+    "title": "ChainStep",
+    "type": "object"
+   },
    "ChallengeCheckResponse": {
     "properties": {
      "detail": {
@@ -1864,6 +1925,17 @@
        }
       ],
       "title": "Completion Id"
+     },
+     "delay_reason": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Delay Reason"
      },
      "item_id": {
       "format": "uuid",
@@ -4225,6 +4297,33 @@
     "title": "InspectionOut",
     "type": "object"
    },
+   "ItemPhoto": {
+    "description": "Foto realisasi: berkas /files + slot syarat foto (image_requirement) yang dipenuhinya.",
+    "properties": {
+     "file_id": {
+      "format": "uuid",
+      "title": "File Id",
+      "type": "string"
+     },
+     "requirement_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Requirement Id"
+     }
+    },
+    "required": [
+     "file_id"
+    ],
+    "title": "ItemPhoto",
+    "type": "object"
+   },
    "LoanCreate": {
     "description": "Serah terima aset ke karyawan; `daily_plan_id` mengaitkannya ke jadwal harian tim (opsional).",
     "properties": {
@@ -5713,6 +5812,660 @@
     "title": "OvertimeReview",
     "type": "object"
    },
+   "PlanItemCreate": {
+    "properties": {
+     "assigned_employee_ids": {
+      "items": {
+       "format": "uuid",
+       "type": "string"
+      },
+      "maxItems": 50,
+      "title": "Assigned Employee Ids",
+      "type": "array"
+     },
+     "completion_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Completion Id"
+     },
+     "depends_on_item_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Depends On Item Id"
+     },
+     "end_time": {
+      "anyOf": [
+       {
+        "format": "time",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "End Time"
+     },
+     "is_main_deliverable": {
+      "default": false,
+      "title": "Is Main Deliverable",
+      "type": "boolean"
+     },
+     "location_name": {
+      "anyOf": [
+       {
+        "maxLength": 150,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Location Name"
+     },
+     "notes": {
+      "anyOf": [
+       {
+        "maxLength": 4000,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Notes"
+     },
+     "site_lat": {
+      "anyOf": [
+       {
+        "maximum": 90.0,
+        "minimum": -90.0,
+        "type": "number"
+       },
+       {
+        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Lat"
+     },
+     "site_lng": {
+      "anyOf": [
+       {
+        "maximum": 180.0,
+        "minimum": -180.0,
+        "type": "number"
+       },
+       {
+        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Lng"
+     },
+     "start_time": {
+      "anyOf": [
+       {
+        "format": "time",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Start Time"
+     },
+     "target_qty": {
+      "anyOf": [
+       {
+        "exclusiveMinimum": 0.0,
+        "maximum": 99999999.0,
+        "type": "number"
+       },
+       {
+        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+        "type": "string"
+       }
+      ],
+      "default": "1",
+      "title": "Target Qty"
+     },
+     "task_phase": {
+      "default": "INSTALLATION",
+      "enum": [
+       "SURVEY",
+       "PREPARATION",
+       "INSTALLATION",
+       "REPLACEMENT",
+       "MAINTENANCE"
+      ],
+      "title": "Task Phase",
+      "type": "string"
+     },
+     "title": {
+      "maxLength": 200,
+      "minLength": 3,
+      "title": "Title",
+      "type": "string"
+     },
+     "work_type_id": {
+      "format": "uuid",
+      "title": "Work Type Id",
+      "type": "string"
+     }
+    },
+    "required": [
+     "work_type_id",
+     "title"
+    ],
+    "title": "PlanItemCreate",
+    "type": "object"
+   },
+   "PlanItemOut": {
+    "properties": {
+     "approved_by_pm_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Approved By Pm Id"
+     },
+     "assigned_employee_ids": {
+      "default": [],
+      "items": {
+       "format": "uuid",
+       "type": "string"
+      },
+      "title": "Assigned Employee Ids",
+      "type": "array"
+     },
+     "completed_qty": {
+      "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+      "title": "Completed Qty",
+      "type": "string"
+     },
+     "completion_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Completion Id"
+     },
+     "daily_plan_id": {
+      "format": "uuid",
+      "title": "Daily Plan Id",
+      "type": "string"
+     },
+     "delay_reason": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Delay Reason"
+     },
+     "depends_on_item_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Depends On Item Id"
+     },
+     "depends_on_title": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Depends On Title"
+     },
+     "end_time": {
+      "anyOf": [
+       {
+        "format": "time",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "End Time"
+     },
+     "is_main_deliverable": {
+      "title": "Is Main Deliverable",
+      "type": "boolean"
+     },
+     "item_id": {
+      "format": "uuid",
+      "title": "Item Id",
+      "type": "string"
+     },
+     "location_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Location Name"
+     },
+     "notes": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Notes"
+     },
+     "order_title": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Order Title"
+     },
+     "origin_item_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Origin Item Id"
+     },
+     "progress_percent": {
+      "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+      "title": "Progress Percent",
+      "type": "string"
+     },
+     "realization_photos_json": {
+      "default": [],
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "title": "Realization Photos Json",
+      "type": "array"
+     },
+     "rollover_approval_status": {
+      "enum": [
+       "NONE",
+       "WAITING_PM",
+       "APPROVED_BY_PM",
+       "REJECTED_BY_PM"
+      ],
+      "title": "Rollover Approval Status",
+      "type": "string"
+     },
+     "shifted_to_daily_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Shifted To Daily Id"
+     },
+     "site_lat": {
+      "anyOf": [
+       {
+        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Lat"
+     },
+     "site_lng": {
+      "anyOf": [
+       {
+        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Lng"
+     },
+     "start_time": {
+      "anyOf": [
+       {
+        "format": "time",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Start Time"
+     },
+     "status": {
+      "enum": [
+       "TODO",
+       "IN_PROGRESS",
+       "DONE",
+       "PENDING_ROLLOVER",
+       "SHIFTED_DAY"
+      ],
+      "title": "Status",
+      "type": "string"
+     },
+     "target_qty": {
+      "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+      "title": "Target Qty",
+      "type": "string"
+     },
+     "task_phase": {
+      "enum": [
+       "SURVEY",
+       "PREPARATION",
+       "INSTALLATION",
+       "REPLACEMENT",
+       "MAINTENANCE"
+      ],
+      "title": "Task Phase",
+      "type": "string"
+     },
+     "title": {
+      "title": "Title",
+      "type": "string"
+     },
+     "update_at": {
+      "format": "date-time",
+      "title": "Update At",
+      "type": "string"
+     },
+     "work_date": {
+      "format": "date",
+      "title": "Work Date",
+      "type": "string"
+     },
+     "work_type_id": {
+      "format": "uuid",
+      "title": "Work Type Id",
+      "type": "string"
+     },
+     "work_type_name": {
+      "title": "Work Type Name",
+      "type": "string"
+     }
+    },
+    "required": [
+     "item_id",
+     "daily_plan_id",
+     "work_date",
+     "work_type_id",
+     "work_type_name",
+     "title",
+     "task_phase",
+     "is_main_deliverable",
+     "target_qty",
+     "completed_qty",
+     "progress_percent",
+     "status",
+     "rollover_approval_status",
+     "update_at"
+    ],
+    "title": "PlanItemOut",
+    "type": "object"
+   },
+   "PlanItemUpdate": {
+    "properties": {
+     "assigned_employee_ids": {
+      "anyOf": [
+       {
+        "items": {
+         "format": "uuid",
+         "type": "string"
+        },
+        "maxItems": 50,
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Assigned Employee Ids"
+     },
+     "completion_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Completion Id"
+     },
+     "depends_on_item_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Depends On Item Id"
+     },
+     "end_time": {
+      "anyOf": [
+       {
+        "format": "time",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "End Time"
+     },
+     "is_main_deliverable": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Is Main Deliverable"
+     },
+     "location_name": {
+      "anyOf": [
+       {
+        "maxLength": 150,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Location Name"
+     },
+     "notes": {
+      "anyOf": [
+       {
+        "maxLength": 4000,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Notes"
+     },
+     "site_lat": {
+      "anyOf": [
+       {
+        "maximum": 90.0,
+        "minimum": -90.0,
+        "type": "number"
+       },
+       {
+        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Lat"
+     },
+     "site_lng": {
+      "anyOf": [
+       {
+        "maximum": 180.0,
+        "minimum": -180.0,
+        "type": "number"
+       },
+       {
+        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Lng"
+     },
+     "start_time": {
+      "anyOf": [
+       {
+        "format": "time",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Start Time"
+     },
+     "target_qty": {
+      "anyOf": [
+       {
+        "exclusiveMinimum": 0.0,
+        "maximum": 99999999.0,
+        "type": "number"
+       },
+       {
+        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Target Qty"
+     },
+     "task_phase": {
+      "anyOf": [
+       {
+        "enum": [
+         "SURVEY",
+         "PREPARATION",
+         "INSTALLATION",
+         "REPLACEMENT",
+         "MAINTENANCE"
+        ],
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Task Phase"
+     },
+     "title": {
+      "anyOf": [
+       {
+        "maxLength": 200,
+        "minLength": 3,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Title"
+     },
+     "work_type_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Work Type Id"
+     }
+    },
+    "title": "PlanItemUpdate",
+    "type": "object"
+   },
    "ProbeResponse": {
     "properties": {
      "expires_at": {
@@ -5747,6 +6500,55 @@
      "expires_at"
     ],
     "title": "ProbeResponse",
+    "type": "object"
+   },
+   "ProgressIn": {
+    "properties": {
+     "completed_qty": {
+      "anyOf": [
+       {
+        "minimum": 0.0,
+        "type": "number"
+       },
+       {
+        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+        "type": "string"
+       }
+      ],
+      "title": "Completed Qty"
+     },
+     "notes": {
+      "anyOf": [
+       {
+        "maxLength": 4000,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Notes"
+     },
+     "photos": {
+      "anyOf": [
+       {
+        "items": {
+         "$ref": "#/components/schemas/ItemPhoto"
+        },
+        "maxItems": 40,
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Photos"
+     }
+    },
+    "required": [
+     "completed_qty"
+    ],
+    "title": "ProgressIn",
     "type": "object"
    },
    "RejectIn": {
@@ -5816,6 +6618,86 @@
      "is_approved"
     ],
     "title": "ReviewRequest",
+    "type": "object"
+   },
+   "RolloverDecision": {
+    "description": "PM: setujui ke jadwal yang ada (`target_daily_plan_id`) atau tanggal baru (`target_date`), atau tolak.",
+    "properties": {
+     "approve": {
+      "title": "Approve",
+      "type": "boolean"
+     },
+     "note": {
+      "anyOf": [
+       {
+        "maxLength": 1000,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Note"
+     },
+     "target_daily_plan_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Target Daily Plan Id"
+     },
+     "target_date": {
+      "anyOf": [
+       {
+        "format": "date",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Target Date"
+     }
+    },
+    "required": [
+     "approve"
+    ],
+    "title": "RolloverDecision",
+    "type": "object"
+   },
+   "RolloverRequest": {
+    "description": "Ketua: pekerjaan belum selesai (hujan, izin, material) → minta digeser.",
+    "properties": {
+     "completed_qty": {
+      "anyOf": [
+       {
+        "minimum": 0.0,
+        "type": "number"
+       },
+       {
+        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+        "type": "string"
+       }
+      ],
+      "title": "Completed Qty"
+     },
+     "delay_reason": {
+      "maxLength": 1000,
+      "minLength": 3,
+      "title": "Delay Reason",
+      "type": "string"
+     }
+    },
+    "required": [
+     "delay_reason",
+     "completed_qty"
+    ],
+    "title": "RolloverRequest",
     "type": "object"
    },
    "SiteCreate": {
@@ -16545,6 +17427,116 @@
     ]
    }
   },
+  "/api/v1/work-plans/daily/{daily_plan_id}/items": {
+   "get": {
+    "description": "Item jadwal harian (siapa pun yang boleh melihat jadwal itu).",
+    "operationId": "list_items_api_v1_work_plans_daily__daily_plan_id__items_get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "daily_plan_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Daily Plan Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/PlanItemOut"
+         },
+         "title": "Response List Items Api V1 Work Plans Daily  Daily Plan Id  Items Get",
+         "type": "array"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "List Items",
+    "tags": [
+     "Work Plan Items"
+    ]
+   },
+   "post": {
+    "description": "Tambah item per titik (jadwal DRAFT/SUBMITTED).",
+    "operationId": "create_item_api_v1_work_plans_daily__daily_plan_id__items_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "daily_plan_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Daily Plan Id",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PlanItemCreate"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/PlanItemOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Create Item",
+    "tags": [
+     "Work Plan Items"
+    ]
+   }
+  },
   "/api/v1/work-plans/daily/{daily_plan_id}/photo-template": {
    "get": {
     "description": "Template foto SOP untuk item-item jadwal harian ini.",
@@ -16833,6 +17825,393 @@
     "summary": "Geo Search",
     "tags": [
      "Work Plans (Daily-First)"
+    ]
+   }
+  },
+  "/api/v1/work-plans/items/{item_id}": {
+   "delete": {
+    "description": "Hapus item yang bukan prasyarat item lain (jadwal DRAFT/SUBMITTED).",
+    "operationId": "delete_item_api_v1_work_plans_items__item_id__delete",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "item_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Item Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": {
+          "type": "string"
+         },
+         "title": "Response Delete Item Api V1 Work Plans Items  Item Id  Delete",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Delete Item",
+    "tags": [
+     "Work Plan Items"
+    ]
+   },
+   "get": {
+    "description": "Detail item.",
+    "operationId": "get_item_api_v1_work_plans_items__item_id__get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "item_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Item Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/PlanItemOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Get Item",
+    "tags": [
+     "Work Plan Items"
+    ]
+   },
+   "put": {
+    "description": "Ubah item (jadwal DRAFT/SUBMITTED).",
+    "operationId": "update_item_api_v1_work_plans_items__item_id__put",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "item_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Item Id",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PlanItemUpdate"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/PlanItemOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Update Item",
+    "tags": [
+     "Work Plan Items"
+    ]
+   }
+  },
+  "/api/v1/work-plans/items/{item_id}/chain": {
+   "get": {
+    "description": "Rantai rollover item (asal pertama → item aktif terakhir).",
+    "operationId": "rollover_chain_api_v1_work_plans_items__item_id__chain_get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "item_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Item Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/ChainStep"
+         },
+         "title": "Response Rollover Chain Api V1 Work Plans Items  Item Id  Chain Get",
+         "type": "array"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Rollover Chain",
+    "tags": [
+     "Work Plan Items"
+    ]
+   }
+  },
+  "/api/v1/work-plans/items/{item_id}/progress": {
+   "patch": {
+    "description": "Tim mencatat volume selesai & foto realisasi (jadwal ONGOING; prasyarat harus selesai).",
+    "operationId": "update_progress_api_v1_work_plans_items__item_id__progress_patch",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "item_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Item Id",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ProgressIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/PlanItemOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Update Progress",
+    "tags": [
+     "Work Plan Items"
+    ]
+   }
+  },
+  "/api/v1/work-plans/items/{item_id}/request-rollover": {
+   "post": {
+    "description": "Ketua mengajukan geser item yang belum selesai (alasan + progres parsial).",
+    "operationId": "request_rollover_api_v1_work_plans_items__item_id__request_rollover_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "item_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Item Id",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/RolloverRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/PlanItemOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Request Rollover",
+    "tags": [
+     "Work Plan Items"
+    ]
+   }
+  },
+  "/api/v1/work-plans/items/{item_id}/rollover-decision": {
+   "post": {
+    "description": "PM/OM divisi: setujui (ke jadwal yang ada / tanggal baru) → item lanjutan; atau tolak.",
+    "operationId": "decide_rollover_api_v1_work_plans_items__item_id__rollover_decision_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "item_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Item Id",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/RolloverDecision"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/PlanItemOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Decide Rollover",
+    "tags": [
+     "Work Plan Items"
     ]
    }
   },

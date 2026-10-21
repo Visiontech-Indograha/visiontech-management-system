@@ -124,6 +124,8 @@ class PlanItemOut(BaseModel):
     order_title: str | None = None
     depends_on_item_id: UUID | None = None
     depends_on_title: str | None = None
+    depends_on_team_name: str | None = None  # tim pemilik prasyarat (bisa tim divisi lain)
+    depends_on_done: bool = False  # pekerjaan yang ditunggu sudah selesai
     target_qty: Decimal
     completed_qty: Decimal
     progress_percent: Decimal
@@ -142,6 +144,18 @@ class PlanItemOut(BaseModel):
     assigned_employee_ids: list[UUID] = []
     realization_photos_json: list[dict[str, Any]] = []
     update_at: datetime
+
+
+class PrerequisiteOption(BaseModel):
+    """Item yang boleh dijadikan prasyarat item baru di jadwal ini."""
+
+    item_id: UUID
+    title: str
+    task_phase: str
+    status: str
+    work_date: date
+    team_name: str | None = None
+    other_team: bool = False  # milik tim/divisi lain di lokasi yang sama
 
 
 class ChainStep(BaseModel):

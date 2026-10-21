@@ -168,7 +168,7 @@ class AttendanceSessionService:
 
     async def _require_enrolled(self, user_id: str, worker: Any, channel: str, online: bool) -> None:
         """T3: absen HP (online) ditolak bila wajah belum terdaftar dan saklar FACE_ENROLLMENT_REQUIRED menyala.
-        Administrator dikecualikan (sama seperti gerbang pendaftaran). Absen luring tidak ditolak (sudah terjadi)."""
+        Administrator dikecualikan (sama seperti gerbang pendaftaran). Absen offline tidak ditolak (sudah terjadi)."""
         if (
             self.faces is None
             or not settings.FACE_ENROLLMENT_REQUIRED
@@ -194,7 +194,7 @@ class AttendanceSessionService:
 
     async def verify_face(self, employee_id: Any, selfie_file_id: UUID | None, *, online: bool) -> FaceOutcome | None:
         """Cocokkan swafoto dengan wajah terdaftar SEBELUM absen ditulis. Online & tidak cocok → ditolak (422);
-        luring tidak ditolak (sudah terjadi) — hasilnya ditandai untuk OM oleh `record_face`."""
+        offline tidak ditolak (sudah terjadi) — hasilnya ditandai untuk OM oleh `record_face`."""
         if self.faces is None or selfie_file_id is None:
             return None
         outcome = await self.faces.verify_selfie(employee_id, selfie_file_id)
@@ -213,7 +213,7 @@ class AttendanceSessionService:
             note = f"wajah absen {label} belum diperiksa: pendaftaran wajah perlu diulang (model berganti)"
         elif outcome.result == "MISMATCH":
             note = f"wajah absen {label} tidak cocok (skor {outcome.score:.0f})"
-        elif not online and settings.FACE_ENROLLMENT_REQUIRED:  # NOT_ENROLLED, absen luring
+        elif not online and settings.FACE_ENROLLMENT_REQUIRED:  # NOT_ENROLLED, absen offline
             note = "belum mendaftar wajah"
         else:
             return row
@@ -251,7 +251,7 @@ class AttendanceSessionService:
         """
         Mencatat absen masuk harian (check-in) dengan mengevaluasi aturan jarak dan akurasi GPS.
 
-        `at`/`work_date`: absen luring (R-34) — jam & tanggal peristiwa yang sudah diverifikasi server
+        `at`/`work_date`: absen offline (R-34) — jam & tanggal peristiwa yang sudah diverifikasi server
         (jangkar waktu + tanda tangan perangkat), bukan jam terima.
 
         Pengenalan wajah (M7): swafoto absen dicocokkan SERVER dengan `employee.face_embedding` sebelum absen ditulis;

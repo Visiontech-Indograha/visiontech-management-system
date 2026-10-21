@@ -13,7 +13,7 @@ from app.core.repository import BaseRepository
 _SELECT = """
     SELECT e.employee_id, e.employee_no, e.full_name, e.office_id, o.name AS office_name,
            e.division_id, d.name AS division_name, e.position_id, jp.code AS position_code, jp.name AS position_name,
-           e.join_date::date AS join_date, e.pkwt_end_date::date AS pkwt_end_date,
+           e.join_date::date AS join_date, e.pkwt_end_date::date AS pkwt_end_date, e.phone_number,
            (SELECT f.id FROM file_object f WHERE f.storage_key = e.photo_path LIMIT 1) AS photo_file_id,
            (e.face_embedding IS NOT NULL) AS face_enrolled, e.offboarding_status::text AS offboarding_status,
            (e.delete_at IS NOT NULL) AS archived,
@@ -126,10 +126,10 @@ class EmployeeRepository(BaseRepository):
         new_id: UUID = await self.scalar(
             """
             INSERT INTO employee (office_id, division_id, position_id, full_name, employee_no, join_date,
-                                  pkwt_end_date, photo_path, profile_photo_path)
+                                  pkwt_end_date, phone_number, photo_path, profile_photo_path)
             VALUES (CAST(:office_id AS uuid), CAST(:division_id AS uuid), CAST(:position_id AS uuid), :full_name,
                     :employee_no, CAST(:join_date AS timestamptz), CAST(:pkwt_end_date AS timestamptz),
-                    :photo_path, :photo_path)
+                    :phone_number, :photo_path, :photo_path)
             RETURNING employee_id
             """,
             {**data, **{k: str(data[k]) if data.get(k) else None for k in _UUIDS}},

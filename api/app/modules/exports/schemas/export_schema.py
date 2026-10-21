@@ -15,8 +15,24 @@ CompletionTemplate = Literal["BAST", "SURVEY_REPORT", "BAST_PDF", "BOQ", "PROGRE
 PeriodicFormat = Literal["EXCEL_XLSX", "PPTX"]
 
 
+class SurveyLogoOut(BaseModel):
+    """Logo kop laporan survei: ukuran baku (cm & px 300 dpi) dan apakah sudah diganti."""
+
+    role: Literal["company", "client"]
+    label: str
+    width_cm: float
+    height_cm: float
+    recommended_px: tuple[int, int]
+    custom: bool
+
+
 class CompletionExportRequest(BaseModel):
     template: CompletionTemplate
+
+
+class TeamWeekExportRequest(BaseModel):
+    team_id: UUID
+    start_date: date  # hari pertama minggu (Senin); laporan mencakup 7 hari
 
 
 class PeriodicExportRequest(BaseModel):

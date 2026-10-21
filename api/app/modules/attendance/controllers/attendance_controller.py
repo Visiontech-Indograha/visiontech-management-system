@@ -1,7 +1,7 @@
 """
 app/modules/attendance/controllers/attendance_controller.py
 
-Controller orkestrasi use case absensi lapangan dan luring.
+Controller orkestrasi use case absensi lapangan dan offline.
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.2.
 """
 
@@ -41,7 +41,7 @@ def _response(row: Any) -> AttendanceResponse:
 
 class AttendanceController:
     """
-    Controller use case absensi lapangan (check-in, check-out, review, ekspor, dan event luring).
+    Controller use case absensi lapangan (check-in, check-out, review, ekspor, dan event offline).
     """
 
     def __init__(
@@ -90,7 +90,7 @@ class AttendanceController:
         current_user: CurrentUser,
         data: DeviceKeyRequest,
     ) -> dict[str, str]:
-        """Mendaftarkan kunci publik Android Keystore perangkat untuk verifikasi absen luring."""
+        """Mendaftarkan kunci publik Android Keystore perangkat untuk verifikasi absen offline."""
         await self.offline_service.register_device_key(current_user, data.device_id, data.public_key)
         return {"message": "Kunci perangkat terdaftar."}
 
@@ -99,7 +99,7 @@ class AttendanceController:
         current_user: CurrentUser,
         data: OfflineAttendanceEvent,
     ) -> OfflineAttendanceResult:
-        """Memproses sinkronisasi event absen luring bertanda tangan kriptografis."""
+        """Memproses sinkronisasi event absen offline bertanda tangan kriptografis."""
         result = await self.offline_service.apply(
             current_user,
             device_id=data.device_id,

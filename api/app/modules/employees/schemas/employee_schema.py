@@ -37,6 +37,7 @@ class EmployeeOut(BaseModel):
     position_name: str | None = None
     join_date: date
     pkwt_end_date: date | None = None
+    phone_number: str | None = None
     photo_file_id: UUID | None = None
     face_enrolled: bool = False
     offboarding_status: OffboardingStatus
@@ -69,6 +70,7 @@ class EmployeeCreate(BaseModel):
     position_id: UUID | None = None
     join_date: date
     pkwt_end_date: date | None = None  # kosong = karyawan tetap
+    phone_number: str | None = Field(None, max_length=20, pattern=r"^\+?[0-9][0-9 -]{7,18}$")  # telepon/WA
     photo_file_id: UUID | None = None
     address: AddressIn | None = None
 
@@ -89,6 +91,7 @@ class EmployeeUpdate(BaseModel):
     position_id: UUID | None = None
     join_date: date | None = None
     pkwt_end_date: date | None = None
+    phone_number: str | None = Field(None, max_length=20, pattern=r"^\+?[0-9][0-9 -]{7,18}$")  # telepon/WA
     photo_file_id: UUID | None = None
 
 

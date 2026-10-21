@@ -15,13 +15,27 @@ _SELECT = """
     SELECT wpd.daily_plan_id, wpd.division_id, d.name AS division_name, wpd.team_id, t.name AS team_name,
            wpd.project_id, (SELECT p.project_title FROM project p WHERE p.project_id = wpd.project_id)
                AS project_title,
-           t.leader_employee_id, le.full_name AS leader_name, wpd.work_date, wpd.site_name, wpd.site_lat,
+           t.leader_employee_id, le.full_name AS leader_name, le.phone_number AS leader_phone,
+           d.pm_id, (SELECT pm.full_name FROM employee pm WHERE pm.employee_id = d.pm_id) AS pm_name,
+           (SELECT pm.phone_number FROM employee pm WHERE pm.employee_id = d.pm_id) AS pm_phone,
+           wpd.work_date, wpd.site_name, wpd.site_lat,
            wpd.site_lng, wpd.attendance_radius_m, wpd.clock_in_time, wpd.clock_out_time, wpd.status,
            wpd.created_by_id, wpd.approved_by_pm_id, wpd.approved_at, wpd.rejection_reason,
            (SELECT COUNT(*)::int FROM work_plan_item i WHERE i.daily_plan_id = wpd.daily_plan_id
-              AND i.delete_at IS NULL) AS item_count,
+              AND i.delete_at IS NULL AND NOT (i.task_phase = 'SURVEY' AND i.depends_on_item_id IS NOT NULL))
+              AS item_count,
            (SELECT COUNT(*)::int FROM work_plan_item i WHERE i.daily_plan_id = wpd.daily_plan_id
-              AND i.delete_at IS NULL AND i.status = 'DONE') AS done_count
+              AND i.delete_at IS NULL AND i.status = 'DONE'
+              AND NOT (i.task_phase = 'SURVEY' AND i.depends_on_item_id IS NOT NULL)) AS done_count,
+           -- Persen progres nyata: rata-rata (jumlah dikerjakan / target) per pekerjaan, DONE = 100%.
+           (SELECT COALESCE(ROUND(AVG(CASE WHEN i.status = 'DONE' THEN 1
+                        ELSE LEAST(COALESCE(i.completed_qty, 0) / NULLIF(i.target_qty, 0), 1) END) * 100), 0)::int
+              FROM work_plan_item i WHERE i.daily_plan_id = wpd.daily_plan_id AND i.delete_at IS NULL
+              AND i.status <> 'SHIFTED_DAY'
+              AND NOT (i.task_phase = 'SURVEY' AND i.depends_on_item_id IS NOT NULL)) AS progress_pct,
+           -- Jenis pekerjaan hari itu (Survei/Persiapan/Instalasi/Replacement/Maintenance) untuk filter & warna.
+           ARRAY(SELECT DISTINCT i.task_phase::text FROM work_plan_item i
+                 WHERE i.daily_plan_id = wpd.daily_plan_id AND i.delete_at IS NULL) AS phases
     FROM work_plan_daily wpd
     JOIN division d ON d.division_id = wpd.division_id
     JOIN team t ON t.team_id = wpd.team_id
@@ -81,6 +95,7 @@ class DailyPlanRepository(BaseRepository):
         return list(await self.fetchall(
             """
             SELECT i.item_id, i.title, i.task_phase, i.work_type_id, wt.name AS work_type_name, i.completion_id,
+                   i.depends_on_item_id,
                    i.location_name, i.target_qty, i.completed_qty, i.status,
                    i.rollover_approval_status::text AS rollover_approval_status, i.delay_reason
             FROM work_plan_item i

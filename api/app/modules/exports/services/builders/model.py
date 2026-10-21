@@ -12,15 +12,15 @@ PHASE_LABEL = {
     "SURVEY": "Survei",
     "PREPARATION": "Persiapan",
     "INSTALLATION": "Instalasi",
-    "REPLACEMENT": "Penggantian",
-    "MAINTENANCE": "Pemeliharaan",
+    "REPLACEMENT": "Replacement",
+    "MAINTENANCE": "Maintenance",
 }
 STATUS_LABEL = {
     "TODO": "Belum mulai",
     "IN_PROGRESS": "Berjalan",
     "DONE": "Selesai",
-    "PENDING_ROLLOVER": "Menunggu geser",
-    "SHIFTED_DAY": "Digeser",
+    "PENDING_ROLLOVER": "Minta pindah hari",
+    "SHIFTED_DAY": "Pindah hari",
 }
 MONTHS = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober",
           "November", "Desember"]
@@ -119,5 +119,19 @@ class PeriodicReport:
     days: list[Any]
     boq: list[Any]
     meal: list[Any]
+    generated_by: str
+    generated_at: datetime
+
+
+@dataclass
+class TeamWeekReport:
+    """Laporan mingguan satu tim: semua pekerjaan (foto, keterangan, status) dalam rentang tanggal."""
+
+    team_name: str
+    division_name: str
+    start: date
+    end: date
+    points: list[ReportPoint]
+    roster: list[Any]
     generated_by: str
     generated_at: datetime

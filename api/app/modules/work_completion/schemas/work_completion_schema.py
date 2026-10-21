@@ -137,6 +137,8 @@ class WorkCompletionOut(BaseModel):
     order_number: str | None = None
     total_target_unit: int
     completed_target_unit: int = 0
+    phases: list[str] = Field(default_factory=list)  # SURVEY/PREPARATION/INSTALLATION/REPLACEMENT/MAINTENANCE
+    progress_pct: int = 0  # rata-rata dikerjakan/target per pekerjaan, 0–100
     unit_measure: str
     order_status: str
     priority_level: str

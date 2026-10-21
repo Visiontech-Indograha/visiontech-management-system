@@ -16,6 +16,7 @@ from app.modules.work_plans.schemas.plan_item_schema import (
     PlanItemCreate,
     PlanItemOut,
     PlanItemUpdate,
+    PrerequisiteOption,
     ProgressIn,
     RolloverDecision,
     RolloverRequest,
@@ -35,6 +36,10 @@ class PlanItemController:
 
     async def handle_list(self, user: CurrentUser, daily_plan_id: UUID) -> list[PlanItemOut]:
         return [self._out(r) for r in await self.service.list_of_daily(user, daily_plan_id)]
+
+    async def handle_prerequisite_options(self, user: CurrentUser, daily_plan_id: UUID) -> list[PrerequisiteOption]:
+        rows = await self.service.prerequisite_options(user, daily_plan_id)
+        return [PrerequisiteOption(**dict(r._mapping)) for r in rows]
 
     async def handle_get(self, user: CurrentUser, item_id: UUID) -> PlanItemOut:
         return self._out(await self.service.get(user, item_id))

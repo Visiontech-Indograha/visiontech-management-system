@@ -21,6 +21,7 @@ from app.core.security import CurrentUser, create_file_access_ticket
 from app.core.storage import get_object_bytes, upload_file
 from app.modules.system.dependencies import get_file_service
 from app.modules.system.services.system_service import FileService
+from app.shared.content_disposition import content_disposition
 
 MAX_FILE_SIZE = 10 * 1024 * 1024
 ALLOWED_MIMES = [
@@ -126,20 +127,23 @@ class FilesController:
         Menyajikan isi berkas langsung sebagai byte agar bisa dipakai sebagai `src` <img> atau unduhan aman.
 
         Urutan pencarian objek di MinIO:
-        1. `{org}/{file_id}_{variant}.webp` (hasil kompresi aplikasi)
+        1. `{kantor pengunggah}/{file_id}_{variant}.webp` (hasil kompresi aplikasi)
         2. `file_object.storage_key` (berkas asli / hasil impor massal)
         3. Semua varian webp lain sebagai cadangan
         """
         file_obj = await self.service.authorize(file_id, current_user)
         is_image = file_obj.mime_type.startswith("image/")
 
+        # Varian WebP disimpan di prefiks kantor PENGUNGGAH (`storage_key` = `{kantor}/{id}.{ext}`), bukan kantor
+        # yang membuka — PM kantor lain harus tetap bisa melihat foto ketua tim.
+        base = (file_obj.storage_key or "").rsplit(".", 1)[0] or f"{current_user.organization_id}/{file_id}"
         candidates: list[str] = []
         if is_image and variant in ("thumb", "view", "full"):
-            candidates.append(f"{current_user.organization_id}/{file_id}_{variant}.webp")
+            candidates.append(f"{base}_{variant}.webp")
         candidates.append(file_obj.storage_key)
         if is_image:
             for v in ("view", "full", "thumb"):
-                candidates.append(f"{current_user.organization_id}/{file_id}_{v}.webp")
+                candidates.append(f"{base}_{v}.webp")
 
         seen: set[str] = set()
         for key in candidates:
@@ -149,13 +153,12 @@ class FilesController:
             data = get_object_bytes(key)
             if data:
                 file_name = getattr(file_obj, "file_name", None) or f"{file_id}.{file_obj.mime_type.split('/')[-1]}"
-                safe_name = str(file_name).replace('"', '\\"')
                 disp_type = "attachment" if download else "inline"
                 return Response(
                     content=data,
                     media_type="image/webp" if key.endswith(".webp") else file_obj.mime_type,
                     headers={
-                        "Content-Disposition": f'{disp_type}; filename="{safe_name}"',
+                        "Content-Disposition": content_disposition(disp_type, str(file_name)),
                         "Cache-Control": "private, no-cache, no-store, must-revalidate",
                     },
                 )

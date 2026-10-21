@@ -101,6 +101,17 @@ DDL_STATEMENTS = [
     "CREATE INDEX IF NOT EXISTS idx_site_visit_item ON attendance_site_visit(item_id);",
 
     # file_object & work_plan_attachment kini bagian DDL 06 (db/migration_m5_daily_refs.sql).
+
+    # 6. Jenis titik survei dinamis (docs/37 §9): peran work type, pemasangan lanjutan, status titik.
+    "ALTER TABLE work_type ADD COLUMN IF NOT EXISTS kind VARCHAR(20) NOT NULL DEFAULT 'WORK' "
+    "CHECK (kind IN ('WORK', 'SURVEY_TASK', 'SURVEY_POINT'));",
+    "ALTER TABLE work_type ADD COLUMN IF NOT EXISTS follow_up_work_type_id UUID NULL "
+    "REFERENCES work_type(work_type_id) ON DELETE SET NULL;",
+    "ALTER TABLE work_plan_item ADD COLUMN IF NOT EXISTS point_status VARCHAR(10) NULL "
+    "CHECK (point_status IN ('EXISTING', 'PROPOSED'));",
+    "CREATE INDEX IF NOT EXISTS idx_work_type_division_kind ON work_type(division_id, kind) WHERE delete_at IS NULL;",
+    # 7. Kontak PM ↔ ketua/anggota tim (telepon & WhatsApp dari web/HP).
+    "ALTER TABLE employee ADD COLUMN IF NOT EXISTS phone_number VARCHAR(20) NULL;",
 ]
 
 
@@ -174,7 +185,7 @@ def _activity_log_partition_ddl(today: date, months_ahead: int = 2) -> list[str]
     """DDL partisi bulanan `app_activity_logs` (bulan ini + `months_ahead` bulan) dan partisi DEFAULT.
 
     Batas memakai WIB (+07) seperti partisi bawaan Master Schema V2. Tanpa partisi untuk bulan berjalan,
-    setiap INSERT jejak audit (login, sinkron luring, dll.) gagal; DEFAULT menampung bila startup terlewat.
+    setiap INSERT jejak audit (login, sinkron offline, dll.) gagal; DEFAULT menampung bila startup terlewat.
     """
     statements = []
     year, month = today.year, today.month

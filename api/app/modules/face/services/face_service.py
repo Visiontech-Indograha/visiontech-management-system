@@ -7,7 +7,7 @@ Wajah V2 sederhana (Milestone 7, keputusan pemilik 2026-10-20; docs/35 §5).
   pose saling tak mirip (kemungkinan orang berbeda), atau wajah sudah terdaftar untuk karyawan lain.
 - Absen: swafoto absen (file_object yang sama dengan `attendance.face_photo_path`) dicocokkan SERVER dengan embedding
   terdaftar → kemiripan kosinus; skor ×100 disimpan di `attendance.face_match_score`.
-  MATCH → lanjut; MISMATCH → absen online ditolak (absen luring ditandai untuk OM); face-service mati/tak terkonfigurasi
+  MATCH → lanjut; MISMATCH → absen online ditolak (absen offline ditandai untuk OM); face-service mati/belum diatur
   → UNAVAILABLE: absen tetap tercatat dengan status PENDING_OM.
 - Reset pendaftaran oleh pengelola karyawan (manage:users), mis. ganti HP/wajah berubah.
 Tidak ada foto wajah pendaftaran yang disimpan; embedding tidak pernah dicatat ke log.
@@ -152,7 +152,7 @@ class FaceService:
         if template is None:
             return FaceOutcome("NOT_ENROLLED", None)
         key = await self.repo.file_key(selfie_file_id)
-        image = storage.get_object_bytes(key) if key else None
+        image = storage.get_image_bytes(key) if key else None
         if not image:
             return FaceOutcome("UNAVAILABLE", None)
         try:

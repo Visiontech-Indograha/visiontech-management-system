@@ -1,6 +1,6 @@
 """
 app/crud/crud_sync.py
-Antrean luring dan sinkronisasi Master Schema V2 (tabel app_activity_logs).
+Antrean offline dan sinkronisasi Master Schema V2 (tabel app_activity_logs).
 """
 
 from __future__ import annotations
@@ -16,7 +16,7 @@ from app.core.repository import BaseRepository
 class SyncRepository(BaseRepository):
     """Repositori sinkronisasi data offline mobile."""
     """
-    CRUD untuk mengelola antrean operasi luring (offline) Master Schema V2.
+    CRUD untuk mengelola antrean operasi offline Master Schema V2.
     """
 
     async def enqueue(
@@ -30,7 +30,7 @@ class SyncRepository(BaseRepository):
         client_created_at: datetime,
     ) -> Any:
         """
-        Mencatat operasi luring ke dalam antrean audit activity log.
+        Mencatat operasi offline ke dalam antrean audit activity log.
         """
         row = await self.fetchone(
             """
@@ -65,7 +65,7 @@ class SyncRepository(BaseRepository):
         return row
 
     async def mark(self, operation_id: UUID | str, status: str, error_message: str | None) -> None:
-        """Menandai status akhir dari operasi luring."""
+        """Menandai status akhir dari operasi offline."""
         await self.execute(
             """
             UPDATE app_activity_logs
@@ -79,7 +79,7 @@ class SyncRepository(BaseRepository):
         )
 
     async def status_since(self, user_id: UUID | str, since: datetime | None) -> list[Any]:
-        """Mengambil status operasi luring pengguna."""
+        """Mengambil status operasi offline pengguna."""
         return list(
             await self.fetchall(
                 """

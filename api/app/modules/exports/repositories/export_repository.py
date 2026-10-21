@@ -28,8 +28,35 @@ class ExportRepository(BaseRepository):
     # ── Bahan dokumen order ───────────────────────────────────────────────────
     async def completion_items(self, completion_id: UUID | str) -> list[Any]:
         """Item (titik) order, urut tanggal & jam; termasuk nama penugasan dan foto realisasinya."""
+        return await self._items("i.completion_id = CAST(:id AS uuid)", {"id": str(completion_id)})
+
+    async def team_week_items(self, team_id: UUID | str, start: date, end: date) -> list[Any]:
+        """Semua pekerjaan satu tim dalam rentang tanggal (laporan mingguan tim)."""
+        return await self._items(
+            "d.team_id = CAST(:team AS uuid) AND d.work_date BETWEEN :start AND :end "
+            "AND d.status IN ('APPROVED', 'ONGOING', 'COMPLETED')",
+            {"team": str(team_id), "start": start, "end": end},
+        )
+
+    async def team_info(self, team_id: UUID | str) -> Any:
+        return await self.fetchone(
+            "SELECT t.team_id, t.name, t.division_id, t.leader_employee_id, d.name AS division_name "
+            "FROM team t JOIN division d ON d.division_id = t.division_id "
+            "WHERE t.team_id = CAST(:t AS uuid) AND t.delete_at IS NULL",
+            {"t": str(team_id)},
+        )
+
+    async def is_team_member(self, team_id: UUID | str, employee_id: UUID | str) -> bool:
+        return bool(await self.scalar(
+            "SELECT EXISTS (SELECT 1 FROM team t WHERE t.team_id = CAST(:t AS uuid) "
+            "AND t.leader_employee_id = CAST(:e AS uuid)) OR EXISTS (SELECT 1 FROM member m "
+            "WHERE m.team_id = CAST(:t AS uuid) AND m.employee_id = CAST(:e AS uuid) AND m.delete_at IS NULL)",
+            {"t": str(team_id), "e": str(employee_id)},
+        ))
+
+    async def _items(self, where: str, params: dict[str, Any]) -> list[Any]:
         return list(await self.fetchall(
-            """
+            f"""
             SELECT i.item_id, i.title, i.task_phase, i.status, i.location_name,
                    i.site_lat::float AS site_lat, i.site_lng::float AS site_lng,
                    i.target_qty::float AS target_qty, i.completed_qty::float AS completed_qty,
@@ -44,10 +71,10 @@ class ExportRepository(BaseRepository):
             JOIN work_plan_daily d ON d.daily_plan_id = i.daily_plan_id AND d.delete_at IS NULL
             JOIN team t ON t.team_id = d.team_id
             JOIN work_type wt ON wt.work_type_id = i.work_type_id
-            WHERE i.completion_id = CAST(:id AS uuid) AND i.delete_at IS NULL
+            WHERE {where} AND i.delete_at IS NULL
             ORDER BY d.work_date, i.start_time NULLS LAST, i.title
             """,
-            {"id": str(completion_id)},
+            params,
         ))
 
     async def team_roster(self, team_ids: list[str]) -> list[Any]:
@@ -127,6 +154,7 @@ class ExportRepository(BaseRepository):
                    SUM(b.estimated_qty)::float AS estimated_qty, SUM(b.actual_qty)::float AS actual_qty
             FROM work_completion wc
             JOIN work_completion_bom b ON b.completion_id = wc.completion_id AND b.delete_at IS NULL
+                 AND COALESCE(b.category, 'MATERIAL') NOT IN ('KEBUTUHAN', 'KABEL')
             WHERE wc.division_id = CAST(:div AS uuid) AND wc.delete_at IS NULL
               AND EXISTS (SELECT 1 FROM work_plan_item i
                           JOIN work_plan_daily d ON d.daily_plan_id = i.daily_plan_id AND d.delete_at IS NULL
@@ -171,7 +199,8 @@ class ExportRepository(BaseRepository):
                 ) VALUES (
                     :source, CAST(:cid AS uuid), :pstart, :pend, :tpl, :master,
                     CAST(:fmt AS export_format_enum), :key, CAST(:by AS uuid)
-                ) RETURNING *
+                ) RETURNING export_id, source_type, completion_id, daily_plan_id, period_start_date, period_end_date,
+                            template_type, export_format, file_output_url, generated_by_id, create_at
             )
             SELECT {_EXPORT_COLS} FROM x JOIN employee e ON e.employee_id = x.generated_by_id
             """,

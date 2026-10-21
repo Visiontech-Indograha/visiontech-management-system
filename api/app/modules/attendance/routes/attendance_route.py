@@ -1,7 +1,7 @@
 """
 app/modules/attendance/routes/attendance_route.py
 
-Rute endpoint HTTP untuk absensi lapangan dan luring (/attendance).
+Rute endpoint HTTP untuk absensi lapangan dan offline (/attendance).
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.1.
 """
 
@@ -66,7 +66,7 @@ async def register_device_key(
     controller: AttendanceController = Depends(),
 ) -> dict[str, str]:
     """
-    R-34: daftarkan kunci publik Android Keystore perangkat ini untuk memverifikasi absen luring.
+    R-34: daftarkan kunci publik Android Keystore perangkat ini untuk memverifikasi absen offline.
     """
     return await controller.handle_register_device_key(current_user, data)
 
@@ -78,7 +78,7 @@ async def submit_offline_attendance(
     controller: AttendanceController = Depends(),
 ) -> OfflineAttendanceResult:
     """
-    R-34: terima satu absen luring yang ditandatangani perangkat (idempoten per client_op_id).
+    R-34: terima satu absen offline yang ditandatangani perangkat (idempoten per client_op_id).
     """
     return await controller.handle_submit_offline(current_user, data)
 

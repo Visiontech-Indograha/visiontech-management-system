@@ -1,8 +1,8 @@
 """
 app/modules/system/services/sync_service.py
-Sinkronisasi luring (M12; dok 02 A-08, dok 04 §7). Tiap operasi dijalankan dalam SAVEPOINT memakai
-logika yang sama dengan jalur daring, lalu ditandai APPLIED / REJECTED (alasan disimpan, tidak dibuang).
-Hanya aksi lapangan yang boleh luring; absensi, penerbitan & persetujuan wajib daring (waktu & geofence server).
+Sinkronisasi offline (M12; dok 02 A-08, dok 04 §7). Tiap operasi dijalankan dalam SAVEPOINT memakai
+logika yang sama dengan jalur online, lalu ditandai APPLIED / REJECTED (alasan disimpan, tidak dibuang).
+Hanya aksi lapangan yang boleh offline; absensi, penerbitan & persetujuan wajib online (waktu & geofence server).
 Daily-first (Milestone 5): laporan harian & insiden SK V1 dipensiunkan — yang tersisa lembur per jadwal harian.
 """
 
@@ -22,7 +22,7 @@ from app.modules.overtime.services.overtime_service import OvertimeService
 from app.modules.system.repositories.sync_repository import CRUDSync
 
 OFFLINE_ALLOWED = ("OVERTIME_REPORT",)
-NOT_OFFLINE = "Aksi ini tidak dapat dikirim saat luring."
+NOT_OFFLINE = "Aksi ini tidak dapat dikirim saat offline."
 INVALID = "Data operasi tidak valid."
 
 
@@ -37,7 +37,7 @@ def _message(exc: Exception) -> str:
 
 class SyncService:
     """
-    Layanan sinkronisasi untuk memproses antrean operasi yang dikirim oleh klien secara luring (offline).
+    Layanan sinkronisasi untuk memproses antrean operasi yang dikirim oleh klien secara offline.
     Menjamin operasi divalidasi dengan aturan yang sama seperti saat online dan hasil sinkronisasi dicatat.
     """
 
@@ -67,7 +67,7 @@ class SyncService:
 
     async def apply_operations(self, user: CurrentUser, device_id: str, operations: list[Any]) -> list[dict[str, Any]]:
         """
-        Memproses sekumpulan operasi dari antrean sinkronisasi luring yang dikirim klien.
+        Memproses sekumpulan operasi dari antrean sinkronisasi offline yang dikirim klien.
 
         Args:
             user (CurrentUser): Pengguna pengirim.

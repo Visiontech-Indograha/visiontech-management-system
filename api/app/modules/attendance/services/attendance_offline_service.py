@@ -1,6 +1,6 @@
 """
 app/modules/attendance/services/attendance_offline_service.py
-Absensi lapangan luring (R-34, keputusan pemilik 2026-10-02 — mengubah K-13).
+Absensi lapangan offline (R-34, keputusan pemilik 2026-10-02 — mengubah K-13).
 
 HP merekam absen masuk/pulang saat tanpa sinyal, menandatanganinya dengan kunci Android Keystore (tidak bisa
 dikeluarkan dari HP), lalu mengirimnya otomatis begitu online. Server:
@@ -8,9 +8,9 @@ dikeluarkan dari HP), lalu mengirimnya otomatis begitu online. Server:
    (tanggal, jam, lokasi, alasan, swafoto) ditolak;
 2. menghitung jam peristiwa dari jangkar waktu bertanda tangan server + penghitung waktu internal Android
    (tidak terpengaruh jam HP), dibandingkan dengan waktu satelit GPS;
-3. menerapkan aturan absen yang sama dengan daring (lokasi unit, jarak dihitung trigger, alasan & swafoto wajib);
+3. menerapkan aturan absen yang sama dengan online (lokasi unit, jarak dihitung trigger, alasan & swafoto wajib);
 4. menurunkan status ke Perlu review bila jam tak terverifikasi, terkirim > 24 jam, atau lokasi palsu.
-Absen pulang luring: absen masuk valid → langsung tercatat; Perlu review → berlaku saat disetujui; ditolak → gugur.
+Absen pulang offline: absen masuk valid → langsung tercatat; Perlu review → berlaku saat disetujui; ditolak → gugur.
 """
 
 from __future__ import annotations
@@ -45,7 +45,7 @@ def _reject(code: str, message: str, status: int = 422) -> AppError:
 
 
 class AttendanceOfflineService:
-    """Layanan untuk mengelola absensi luring (offline) yang disinkronisasi ketika perangkat kembali daring (online)."""
+    """Layanan untuk mengelola absensi offline yang disinkronisasi ketika perangkat kembali online."""
 
     def __init__(self, repo: CRUDAttendanceOffline, sessions: AttendanceSessionService) -> None:
         self.repo = repo
@@ -66,12 +66,12 @@ class AttendanceOfflineService:
         except ValueError as exc:
             raise _reject(
                 "DEVICE_KEY_INVALID",
-                "Pendaftaran perangkat untuk absen luring gagal. Perbarui aplikasi, lalu coba lagi saat online.",
+                "Pendaftaran perangkat untuk absen offline gagal. Perbarui aplikasi, lalu coba lagi saat online.",
             ) from exc
         if not isinstance(key, ec.EllipticCurvePublicKey) or key.curve.name != "secp256r1":
             raise _reject(
                 "DEVICE_KEY_INVALID",
-                "Perangkat ini belum dapat dipakai untuk absen luring. Perbarui aplikasi, lalu buka saat online.",
+                "Perangkat ini belum dapat dipakai untuk absen offline. Perbarui aplikasi, lalu buka saat online.",
             )
         await self.repo.register_device_key(user.organization_id, user.user_id, device_id, public_key)
 
@@ -86,7 +86,7 @@ class AttendanceOfflineService:
         if public_key is None:
             raise _reject(
                 "DEVICE_KEY_MISSING",
-                "Perangkat belum terdaftar untuk absen luring. Buka aplikasi saat online sekali, lalu kirim ulang.",
+                "Perangkat belum terdaftar untuk absen offline. Buka aplikasi saat online sekali, lalu kirim ulang.",
                 status=409,
             )
         key = load_der_public_key(base64.b64decode(public_key))
@@ -97,11 +97,11 @@ class AttendanceOfflineService:
         except (InvalidSignature, ValueError) as exc:
             raise _reject(
                 "OFFLINE_TAMPERED",
-                "Data absen luring tidak utuh — tanggal, jam, atau lokasi diubah setelah direkam. Absen ditolak.",
+                "Data absen offline tidak utuh — tanggal, jam, atau lokasi diubah setelah direkam. Absen ditolak.",
             ) from exc
         data: dict[str, Any] = json.loads(payload)
         if data.get("device_id") != device_id:
-            raise _reject("OFFLINE_TAMPERED", "Data absen luring bukan dari perangkat ini.")
+            raise _reject("OFFLINE_TAMPERED", "Data absen offline bukan dari perangkat ini.")
         return data
 
     def _event_time(self, user: CurrentUser, p: dict[str, Any]) -> tuple[datetime, bool, list[str]]:
@@ -126,17 +126,17 @@ class AttendanceOfflineService:
             if not gps_ok:
                 notes.append("jam tidak cocok dengan waktu satelit GPS")
         elif gps_ms is not None:
-            # HP dinyalakan ulang saat luring / jangkar tak ada: hanya waktu satelit GPS → perlu review.
+            # HP dinyalakan ulang saat offline / jangkar tak ada: hanya waktu satelit GPS → perlu review.
             event = datetime.fromtimestamp(int(gps_ms) / 1000, tz=UTC)
             trusted = False
-            notes.append("jam hanya dari satelit GPS (HP dinyalakan ulang saat luring)")
+            notes.append("jam hanya dari satelit GPS (HP dinyalakan ulang saat offline)")
         else:
-            raise _reject("OFFLINE_TIME_UNKNOWN", "Jam absen luring tidak dapat dipastikan. Absen ditolak.")
+            raise _reject("OFFLINE_TIME_UNKNOWN", "Jam absen offline tidak dapat dipastikan. Absen ditolak.")
         now = utcnow()
         if event > now + MAX_FUTURE:
-            raise _reject("OFFLINE_TIME_UNKNOWN", "Jam absen luring berada di masa depan. Absen ditolak.")
+            raise _reject("OFFLINE_TIME_UNKNOWN", "Jam absen offline berada di masa depan. Absen ditolak.")
         if now - event > HARD_LIMIT:
-            raise _reject("OFFLINE_TOO_OLD", "Absen luring lebih dari 7 hari tidak dapat diterima.")
+            raise _reject("OFFLINE_TOO_OLD", "Absen offline lebih dari 7 hari tidak dapat diterima.")
         if now - event > SYNC_DEADLINE:
             notes.append("terkirim lebih dari 24 jam setelah absen")
         if p.get("mocked"):
@@ -155,7 +155,7 @@ class AttendanceOfflineService:
         selfie_file_id: UUID | None,
     ) -> dict[str, Any]:
         """
-        Memproses sinkronisasi data absensi (masuk/pulang) yang dikumpulkan saat perangkat luring.
+        Memproses sinkronisasi data absensi (masuk/pulang) yang dikumpulkan saat perangkat offline.
 
         Args:
             user: Pengguna yang melakukan absensi.
@@ -167,7 +167,7 @@ class AttendanceOfflineService:
             selfie_file_id: ID file foto swafoto jika ada.
 
         Returns:
-            Status penerapan data absensi luring.
+            Status penerapan data absensi offline.
         """
         # Idempotency: Jika client_op_id sudah ada, kembalikan hasil sebelumnya
         # (menghindari proses ganda saat ada percobaan ulang koneksi jaringan).
@@ -176,7 +176,7 @@ class AttendanceOfflineService:
             if str(done.user_id) != user.user_id:
                 raise _reject(
                     "OFFLINE_TAMPERED",
-                    "Data absen luring tidak dikenali. Perbarui aplikasi, lalu kirim ulang.",
+                    "Data absen offline tidak dikenali. Perbarui aplikasi, lalu kirim ulang.",
                     status=404,
                 )
             return {
@@ -187,11 +187,11 @@ class AttendanceOfflineService:
             }
         p = await self._verified_payload(user, device_id, payload, signature)
         if p.get("client_op_id") != str(client_op_id) or p.get("kind") != kind:
-            raise _reject("OFFLINE_TAMPERED", "Data absen luring tidak cocok dengan kirimannya.")
+            raise _reject("OFFLINE_TAMPERED", "Data absen offline tidak cocok dengan kirimannya.")
 
         # Mengekstrak dan memverifikasi waktu absensi secara ketat melawan manipulasi jam perangkat.
         event, trusted, notes = self._event_time(user, p)
-        # Swafoto absen luring dicocokkan server dengan wajah terdaftar saat disinkronkan (M7); tidak cocok tidak
+        # Swafoto absen offline dicocokkan server dengan wajah terdaftar saat disinkronkan (M7); tidak cocok tidak
         # ditolak (absen sudah terjadi) melainkan ditandai untuk OM.
         if kind == "CHECK_IN":
             result, attendance_id = await self._check_in(user, p, event, notes, selfie_file_id)
@@ -227,16 +227,16 @@ class AttendanceOfflineService:
         selfie_file_id: UUID | None,
     ) -> tuple[str, Any]:
         """
-        Memproses data absensi masuk (check-in) yang tertunda saat luring.
-        Memvalidasi keberadaan dan kecocokan swafoto dengan hash yang direkam saat luring.
+        Memproses data absensi masuk (check-in) yang tertunda saat offline.
+        Memvalidasi keberadaan dan kecocokan swafoto dengan hash yang direkam saat offline.
         """
         expected_sha = p.get("selfie_sha256")
         if expected_sha:
             if selfie_file_id is None:
-                raise _reject("OFFLINE_SELFIE_MISSING", "Swafoto absen luring belum terunggah.")
+                raise _reject("OFFLINE_SELFIE_MISSING", "Swafoto absen offline belum terunggah.")
             actual = await self.repo.file_sha256(selfie_file_id, user.organization_id)
             if actual is None or actual.lower() != str(expected_sha).lower():
-                raise _reject("OFFLINE_TAMPERED", "Swafoto absen luring tidak sama dengan yang direkam.")
+                raise _reject("OFFLINE_TAMPERED", "Swafoto absen offline tidak sama dengan yang direkam.")
         work_date = await self.repo.local_date(user.organization_id, event)
         row = await self.sessions.check_in(
             user.organization_id,
@@ -266,12 +266,12 @@ class AttendanceOfflineService:
         p: dict[str, Any] | None = None,
     ) -> tuple[str, Any]:
         """
-        Memproses data absensi pulang (check-out) yang tertunda saat luring. Lokasi pulang ikut disimpan; di luar
+        Memproses data absensi pulang (check-out) yang tertunda saat offline. Lokasi pulang ikut disimpan; di luar
         radius tidak ditolak (sudah terjadi) melainkan ditandai Perlu review oleh trigger (T7).
         """
         worker = await self.sessions.repo.attendance_mode_of(user.user_id)
         if worker is None or worker.attendance_mode != "FIELD":
-            raise _reject("WRONG_ATTENDANCE_CHANNEL", "Absen luring hanya untuk pekerja lapangan.", status=403)
+            raise _reject("WRONG_ATTENDANCE_CHANNEL", "Absen offline hanya untuk pekerja lapangan.", status=403)
         target = await self.repo.open_before(worker.employee_id, event)
         if target is None:
             raise _reject("NO_OPEN_SESSION", "Tidak ada absen masuk yang bisa ditutup untuk jam ini.", status=409)

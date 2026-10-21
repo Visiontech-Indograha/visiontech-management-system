@@ -33,7 +33,7 @@ class CheckInRequest(BaseModel):
     location: GeoPoint
     # MESIN hanya digunakan untuk absen dari mesin fisik, bukan API
     location_origin: Literal["GPS", "SIMULASI"] = "GPS"
-    # Radius ketidakpastian GPS perangkat (m). Opsional: klien lama / antrean luring tidak ditolak (K-12).
+    # Radius ketidakpastian GPS perangkat (m). Opsional: klien lama / antrean offline tidak ditolak (K-12).
     accuracy_m: float | None = Field(None, ge=0)
     # Swafoto absen (wajib): dicocokkan server dengan wajah terdaftar (M7); juga foto bukti di luar radius.
     selfie_file_id: UUID | None = None
@@ -101,7 +101,7 @@ class AttendanceResponse(BaseModel):
     employee_name: str | None = None
     # Peminta berwenang meninjau baris ini (R-33, dihitung oleh server)
     can_review: bool = False
-    # R-34: Absen luring — catatan pemeriksaan server & jam pulang yang menunggu persetujuan absen masuk.
+    # R-34: Absen offline — catatan pemeriksaan server & jam pulang yang menunggu persetujuan absen masuk.
     offline: bool = False
     offline_note: str | None = None
     check_out_requested_at: datetime | None = None
@@ -139,7 +139,7 @@ class AttendanceListResponse(BaseModel):
     # O-10: Tanggal hari ini menurut zona waktu organisasi.
     # Aplikasi HP menandai "absensi hari ini" menggunakan nilai ini, bukan jam perangkat.
     today: date | None = None
-    # R-34: Jangkar waktu bertanda tangan server untuk absen luring.
+    # R-34: Jangkar waktu bertanda tangan server untuk absen offline.
     # Mewakili jam server saat ini, berlaku selama 30 hari.
     time_anchor: str | None = None
 
@@ -156,7 +156,7 @@ class DeviceKeyRequest(BaseModel):
 class OfflineAttendanceEvent(BaseModel):
     """
     Schema representing a signed offline attendance event.
-    Satu absen luring: `payload` adalah JSON persis seperti yang ditandatangani oleh HP;
+    Satu absen offline: `payload` adalah JSON persis seperti yang ditandatangani oleh HP;
     `signature` adalah tanda tangan ECDSA SHA-256 (DER, base64).
     Swafoto diunggah lebih dulu; kecocokannya dicek melalui `selfie_sha256` dalam payload.
     """

@@ -132,6 +132,14 @@ class WorkCompletionRepository(BaseRepository):
                       AND wpi.is_main_deliverable = TRUE
                       AND wpi.delete_at IS NULL
                 ), 0) AS completed_target_unit,
+                -- Jenis pekerjaan order & persen progres nyata (rata-rata dikerjakan/target per pekerjaan).
+                ARRAY(SELECT DISTINCT wpi.task_phase::text FROM work_plan_item wpi
+                      WHERE wpi.completion_id = wc.completion_id AND wpi.delete_at IS NULL) AS phases,
+                (SELECT COALESCE(ROUND(AVG(CASE WHEN wpi.status = 'DONE' THEN 1
+                        ELSE LEAST(COALESCE(wpi.completed_qty, 0) / NULLIF(wpi.target_qty, 0), 1) END) * 100), 0)::int
+                   FROM work_plan_item wpi WHERE wpi.completion_id = wc.completion_id AND wpi.delete_at IS NULL
+                   AND wpi.status <> 'SHIFTED_DAY'
+                   AND NOT (wpi.task_phase = 'SURVEY' AND wpi.depends_on_item_id IS NOT NULL)) AS progress_pct,
                 wc.unit_measure,
                 wc.order_status,
                 wc.priority_level,
@@ -285,6 +293,7 @@ class WorkCompletionRepository(BaseRepository):
                     ) ORDER BY b.sort_order, b.material_name)
                     FROM work_completion_bom b
                     WHERE b.completion_id = wc.completion_id AND b.delete_at IS NULL
+                      AND COALESCE(b.category, 'MATERIAL') NOT IN ('KEBUTUHAN', 'KABEL')
                 ), '[]'::jsonb) AS bom_items,
                 wc.leader_signer_id,
                 e_ldr.full_name AS leader_signer_name,
@@ -440,6 +449,22 @@ class WorkCompletionRepository(BaseRepository):
             },
         )
 
+    async def remove_photo(self, completion_id: UUID | str, file_id: str) -> bool:
+        """Lepas satu foto realisasi (format lama: id string; baru: {file_id}). True bila ada yang terhapus."""
+        removed = await self.scalar(
+            """
+            UPDATE work_completion SET realization_photos_json = COALESCE((
+                SELECT jsonb_agg(e) FROM jsonb_array_elements(realization_photos_json) e
+                WHERE COALESCE(e->>'file_id', e #>> '{}') <> :f), '[]'::jsonb), update_at = now()
+            WHERE completion_id = CAST(:id AS uuid)
+              AND EXISTS (SELECT 1 FROM jsonb_array_elements(realization_photos_json) e
+                          WHERE COALESCE(e->>'file_id', e #>> '{}') = :f)
+            RETURNING 1
+            """,
+            {"id": str(completion_id), "f": file_id},
+        )
+        return bool(removed)
+
     async def set_signature_hash(self, completion_id: UUID | str, signature_hash: str) -> None:
         await self.execute(
             "UPDATE work_completion SET signature_hash = :h WHERE completion_id = CAST(:id AS uuid)",
@@ -475,6 +500,8 @@ class WorkCompletionRepository(BaseRepository):
                 update_at
             FROM work_completion_bom
             WHERE completion_id = CAST(:cid AS uuid) AND delete_at IS NULL
+              -- survei: KEBUTUHAN (alat/izin) & KABEL (ukuran) bukan material BoM/BoQ
+              AND COALESCE(category, 'MATERIAL') NOT IN ('KEBUTUHAN', 'KABEL')
             ORDER BY sort_order, material_name
         """
         rows = await self.fetchall(sql, {"cid": str(completion_id)})

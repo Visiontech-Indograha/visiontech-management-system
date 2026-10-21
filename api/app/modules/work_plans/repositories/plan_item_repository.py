@@ -16,7 +16,16 @@ from app.core.repository import BaseRepository
 _SELECT = """
     SELECT i.item_id, i.daily_plan_id, wpd.work_date, i.work_type_id, wt.name AS work_type_name, i.title,
            i.task_phase, i.is_main_deliverable, i.completion_id, wc.project_title AS order_title,
-           i.depends_on_item_id, dep.title AS depends_on_title, i.target_qty, i.completed_qty, i.progress_percent,
+           i.depends_on_item_id, dep.title AS depends_on_title, dep_team.name AS depends_on_team_name,
+           -- Pekerjaan yang ditunggu sudah selesai? (mengikuti rantai pindah hari)
+           (WITH RECURSIVE ch AS (
+                SELECT dep.item_id, dep.status
+                UNION ALL
+                SELECT c.item_id, c.status FROM work_plan_item c JOIN ch ON c.origin_item_id = ch.item_id
+                WHERE c.delete_at IS NULL)
+            SELECT COALESCE(bool_or(ch.status = 'DONE'), FALSE) FROM ch
+            WHERE ch.item_id IS NOT NULL) AS depends_on_done,
+           i.target_qty, i.completed_qty, i.progress_percent,
            i.status, i.rollover_approval_status::text AS rollover_approval_status, i.approved_by_pm_id,
            i.origin_item_id, i.shifted_to_daily_id, i.delay_reason, i.notes, i.start_time, i.end_time,
            i.location_name, i.site_lat, i.site_lng, COALESCE(i.assigned_employee_ids, '[]'::jsonb)
@@ -26,6 +35,8 @@ _SELECT = """
     JOIN work_type wt ON wt.work_type_id = i.work_type_id
     LEFT JOIN work_completion wc ON wc.completion_id = i.completion_id
     LEFT JOIN work_plan_item dep ON dep.item_id = i.depends_on_item_id
+    LEFT JOIN work_plan_daily dep_day ON dep_day.daily_plan_id = dep.daily_plan_id
+    LEFT JOIN team dep_team ON dep_team.team_id = dep_day.team_id
 """
 
 _FIELDS = ("work_type_id", "title", "task_phase", "is_main_deliverable", "completion_id", "depends_on_item_id",
@@ -66,8 +77,9 @@ class PlanItemRepository(BaseRepository):
 
     async def work_type_division(self, work_type_id: UUID | str) -> str | None:
         val = await self.scalar(
+            # Jenis titik survei hanya dipakai di dalam survei, bukan sebagai item jadwal.
             "SELECT CAST(division_id AS text) FROM work_type WHERE work_type_id = CAST(:id AS uuid) "
-            "AND delete_at IS NULL",
+            "AND delete_at IS NULL AND kind <> 'SURVEY_POINT'",
             {"id": str(work_type_id)},
         )
         return str(val) if val else None
@@ -81,13 +93,58 @@ class PlanItemRepository(BaseRepository):
         )
 
     async def prerequisite(self, item_id: UUID | str) -> Any:
-        """Item prasyarat: jadwal, tanggal, tim, order, statusnya."""
+        """Item prasyarat: jadwal, tanggal, tim, lokasi, order/klien, dan `done` — DONE di item itu ATAU di item
+        lanjutan rollover-nya (galian yang digeser ke hari lain selesai di item lanjutan, bukan item asal)."""
         return await self.fetchone(
-            "SELECT i.item_id, i.status, i.completion_id, wpd.work_date, wpd.team_id, wpd.division_id "
-            "FROM work_plan_item i JOIN work_plan_daily wpd ON wpd.daily_plan_id = i.daily_plan_id "
-            "WHERE i.item_id = CAST(:id AS uuid) AND i.delete_at IS NULL AND wpd.delete_at IS NULL",
+            """
+            WITH RECURSIVE chain AS (
+                SELECT item_id, status FROM work_plan_item WHERE item_id = CAST(:id AS uuid)
+                UNION ALL
+                SELECT c.item_id, c.status FROM work_plan_item c JOIN chain ON c.origin_item_id = chain.item_id
+                WHERE c.delete_at IS NULL
+            )
+            SELECT i.item_id, i.status, i.completion_id, wpd.work_date, wpd.team_id, wpd.division_id,
+                   wpd.site_name, wc.client_name, t.name AS team_name,
+                   EXISTS (SELECT 1 FROM chain WHERE chain.status = 'DONE') AS done
+            FROM work_plan_item i
+            JOIN work_plan_daily wpd ON wpd.daily_plan_id = i.daily_plan_id
+            LEFT JOIN team t ON t.team_id = wpd.team_id
+            LEFT JOIN work_completion wc ON wc.completion_id = i.completion_id
+            WHERE i.item_id = CAST(:id AS uuid) AND i.delete_at IS NULL AND wpd.delete_at IS NULL
+            """,
             {"id": str(item_id)},
         )
+
+    async def prerequisite_options(self, daily_plan_id: UUID | str) -> list[Any]:
+        """Calon prasyarat: item tim sendiri 30 hari terakhir s.d. tanggal jadwal, plus item tim lain di lokasi yang
+        sama (nama lokasi jadwal) pada rentang yang sama — urut tanggal terbaru."""
+        return list(await self.fetchall(
+            """
+            SELECT i.item_id, i.title, i.task_phase, i.status, d.work_date, t.name AS team_name,
+                   (d.team_id <> me.team_id) AS other_team
+            FROM work_plan_daily me
+            JOIN work_plan_daily d ON d.work_date BETWEEN me.work_date - 30 AND me.work_date AND d.delete_at IS NULL
+                 AND (d.team_id = me.team_id OR lower(trim(d.site_name)) = lower(trim(me.site_name)))
+            JOIN work_plan_item i ON i.daily_plan_id = d.daily_plan_id AND i.delete_at IS NULL
+                 AND i.status <> 'SHIFTED_DAY' AND NOT (i.task_phase = 'SURVEY' AND i.depends_on_item_id IS NOT NULL)
+            LEFT JOIN team t ON t.team_id = d.team_id
+            WHERE me.daily_plan_id = CAST(:id AS uuid)
+            ORDER BY d.work_date DESC, (d.team_id <> me.team_id), i.create_at
+            LIMIT 200
+            """,
+            {"id": str(daily_plan_id)},
+        ))
+
+    async def plan_site(self, daily_plan_id: UUID | str) -> str | None:
+        site: str | None = await self.scalar(
+            "SELECT site_name FROM work_plan_daily WHERE daily_plan_id = CAST(:id AS uuid)", {"id": str(daily_plan_id)})
+        return site
+
+    async def order_client(self, completion_id: UUID | str) -> str | None:
+        client: str | None = await self.scalar(
+            "SELECT client_name FROM work_completion WHERE completion_id = CAST(:id AS uuid)",
+            {"id": str(completion_id)})
+        return client
 
     async def team_members(self, team_id: UUID | str) -> set[str]:
         rows = await self.fetchall(

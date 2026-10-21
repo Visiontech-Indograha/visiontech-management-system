@@ -89,9 +89,9 @@ def verify_jwt_token(token: str) -> dict[str, Any]:
     return claims
 
 
-# ── Jangkar waktu absensi luring (R-34) ─────────────────────────────────────────────────────────
+# ── Jangkar waktu absensi offline (R-34) ─────────────────────────────────────────────────────────
 # Diterbitkan setiap HP online membaca absensi: `iat` = jam server saat itu. HP menyimpannya bersama
-# penghitung waktu internal (elapsedRealtime) lalu menghitung jam absen luring = iat + selisih penghitung,
+# penghitung waktu internal (elapsedRealtime) lalu menghitung jam absen offline = iat + selisih penghitung,
 # sehingga jam HP yang diubah tidak berpengaruh. Audience terpisah: tidak pernah diterima sebagai token akses.
 TIME_ANCHOR_AUDIENCE = "vms-time-anchor"
 

@@ -19,6 +19,7 @@ from app.modules.work_plans.schemas.plan_item_schema import (
     PlanItemCreate,
     PlanItemOut,
     PlanItemUpdate,
+    PrerequisiteOption,
     ProgressIn,
     RolloverDecision,
     RolloverRequest,
@@ -34,6 +35,13 @@ async def list_items(daily_plan_id: UUID, current_user: CurrentUser = _LOGIN,
                      controller: PlanItemController = Depends()) -> list[PlanItemOut]:
     """Item jadwal harian (siapa pun yang boleh melihat jadwal itu)."""
     return await controller.handle_list(current_user, daily_plan_id)
+
+
+@router.get("/daily/{daily_plan_id}/prerequisite-options", response_model=list[PrerequisiteOption])
+async def prerequisite_options(daily_plan_id: UUID, current_user: CurrentUser = _PLANNER,
+                               controller: PlanItemController = Depends()) -> list[PrerequisiteOption]:
+    """Calon prasyarat item baru: item tim sendiri ≤ 30 hari terakhir + item tim lain di lokasi yang sama."""
+    return await controller.handle_prerequisite_options(current_user, daily_plan_id)
 
 
 @router.post("/daily/{daily_plan_id}/items", response_model=PlanItemOut, status_code=status.HTTP_201_CREATED)

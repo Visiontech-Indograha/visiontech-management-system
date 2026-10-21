@@ -1,7 +1,7 @@
 """
 api/tests/modules/face/test_face_unit.py
 Uji unit wajah V2 (Milestone 7) tanpa DB: pendaftaran → employee.face_embedding, pencocokan swafoto absen,
-dan dampaknya pada absensi (tidak cocok → ditolak online / ditandai luring; layanan mati → PENDING_OM).
+dan dampaknya pada absensi (tidak cocok → ditolak online / ditandai offline; layanan mati → PENDING_OM).
 """
 from __future__ import annotations
 

@@ -1251,7 +1251,6 @@
         "type": "number"
        },
        {
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
         "type": "string"
        }
       ],
@@ -1306,7 +1305,6 @@
       "type": "string"
      },
      "compressed_size_mb": {
-      "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
       "title": "Compressed Size Mb",
       "type": "string"
      },
@@ -1413,7 +1411,6 @@
       "type": "string"
      },
      "qty": {
-      "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
       "title": "Qty",
       "type": "string"
      },
@@ -1520,7 +1517,6 @@
      },
      "default_qty": {
       "default": "1",
-      "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
       "title": "Default Qty",
       "type": "string"
      },
@@ -1543,7 +1539,6 @@
    "ChainStep": {
     "properties": {
      "completed_qty": {
-      "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
       "title": "Completed Qty",
       "type": "string"
      },
@@ -1580,7 +1575,6 @@
       "type": "string"
      },
      "target_qty": {
-      "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
       "title": "Target Qty",
       "type": "string"
      },
@@ -2195,7 +2189,6 @@
     "description": "Ringkasan item di detail jadwal (pengelolaan item: Milestone 6).",
     "properties": {
      "completed_qty": {
-      "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
       "title": "Completed Qty",
       "type": "string"
      },
@@ -2259,7 +2252,6 @@
       "type": "string"
      },
      "target_qty": {
-      "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
       "title": "Target Qty",
       "type": "string"
      },
@@ -2367,7 +2359,6 @@
         "type": "number"
        },
        {
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
         "type": "string"
        }
       ],
@@ -2381,7 +2372,6 @@
         "type": "number"
        },
        {
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
         "type": "string"
        }
       ],
@@ -2591,12 +2581,10 @@
       "title": "Rejection Reason"
      },
      "site_lat": {
-      "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
       "title": "Site Lat",
       "type": "string"
      },
      "site_lng": {
-      "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
       "title": "Site Lng",
       "type": "string"
      },
@@ -2810,12 +2798,10 @@
       "title": "Rejection Reason"
      },
      "site_lat": {
-      "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
       "title": "Site Lat",
       "type": "string"
      },
      "site_lng": {
-      "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
       "title": "Site Lng",
       "type": "string"
      },
@@ -2929,7 +2915,6 @@
         "type": "number"
        },
        {
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
         "type": "string"
        },
        {
@@ -2946,7 +2931,6 @@
         "type": "number"
        },
        {
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
         "type": "string"
        },
        {
@@ -4951,7 +4935,6 @@
         "type": "number"
        },
        {
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
         "type": "string"
        }
       ],
@@ -5010,7 +4993,6 @@
       "type": "string"
      },
      "daily_allowance": {
-      "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
       "title": "Daily Allowance",
       "type": "string"
      },
@@ -5105,7 +5087,6 @@
         "type": "number"
        },
        {
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
         "type": "string"
        },
        {
@@ -5196,7 +5177,6 @@
         "type": "number"
        },
        {
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
         "type": "string"
        }
       ],
@@ -5259,7 +5239,6 @@
      },
      "qty": {
       "default": "1",
-      "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
       "title": "Qty",
       "type": "string"
      },
@@ -5654,7 +5633,6 @@
         "type": "number"
        },
        {
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
         "type": "string"
        }
       ],
@@ -5668,7 +5646,6 @@
         "type": "number"
        },
        {
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
         "type": "string"
        }
       ],
@@ -5747,12 +5724,10 @@
       "title": "Employee No"
      },
      "latitude": {
-      "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
       "title": "Latitude",
       "type": "string"
      },
      "longitude": {
-      "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
       "title": "Longitude",
       "type": "string"
      },
@@ -5823,7 +5798,6 @@
         "type": "number"
        },
        {
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
         "type": "string"
        },
        {
@@ -5838,7 +5812,6 @@
         "type": "number"
        },
        {
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
         "type": "string"
        },
        {
@@ -6450,7 +6423,6 @@
         "type": "number"
        },
        {
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
         "type": "string"
        }
       ],
@@ -6478,7 +6450,6 @@
         "type": "number"
        },
        {
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
         "type": "string"
        }
       ],
@@ -6546,7 +6517,6 @@
      },
      "in_city_meal_rate": {
       "default": "35000.00",
-      "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
       "title": "In City Meal Rate",
       "type": "string"
      },
@@ -6566,7 +6536,6 @@
      },
      "out_city_meal_rate": {
       "default": "65000.00",
-      "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
       "title": "Out City Meal Rate",
       "type": "string"
      },
@@ -6657,7 +6626,6 @@
         "type": "number"
        },
        {
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
         "type": "string"
        },
        {
@@ -6707,7 +6675,6 @@
         "type": "number"
        },
        {
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
         "type": "string"
        },
        {
@@ -7521,7 +7488,6 @@
         "type": "number"
        },
        {
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
         "type": "string"
        },
        {
@@ -7538,7 +7504,6 @@
         "type": "number"
        },
        {
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
         "type": "string"
        },
        {
@@ -7567,7 +7532,6 @@
         "type": "number"
        },
        {
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
         "type": "string"
        }
       ],
@@ -7629,7 +7593,6 @@
       "type": "array"
      },
      "completed_qty": {
-      "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
       "title": "Completed Qty",
       "type": "string"
      },
@@ -7767,7 +7730,6 @@
       "title": "Origin Item Id"
      },
      "progress_percent": {
-      "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
       "title": "Progress Percent",
       "type": "string"
      },
@@ -7805,7 +7767,6 @@
      "site_lat": {
       "anyOf": [
        {
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
         "type": "string"
        },
        {
@@ -7817,7 +7778,6 @@
      "site_lng": {
       "anyOf": [
        {
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
         "type": "string"
        },
        {
@@ -7850,7 +7810,6 @@
       "type": "string"
      },
      "target_qty": {
-      "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
       "title": "Target Qty",
       "type": "string"
      },
@@ -8005,7 +7964,6 @@
         "type": "number"
        },
        {
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
         "type": "string"
        },
        {
@@ -8022,7 +7980,6 @@
         "type": "number"
        },
        {
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
         "type": "string"
        },
        {
@@ -8051,7 +8008,6 @@
         "type": "number"
        },
        {
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
         "type": "string"
        },
        {
@@ -8168,7 +8124,6 @@
         "type": "number"
        },
        {
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
         "type": "string"
        },
        {
@@ -8185,7 +8140,6 @@
         "type": "number"
        },
        {
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
         "type": "string"
        },
        {
@@ -8240,7 +8194,6 @@
         "type": "number"
        },
        {
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
         "type": "string"
        }
       ],
@@ -8271,7 +8224,6 @@
         "type": "number"
        },
        {
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
         "type": "string"
        }
       ],
@@ -8285,7 +8237,6 @@
         "type": "number"
        },
        {
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
         "type": "string"
        }
       ],
@@ -8352,7 +8303,6 @@
      "site_lat": {
       "anyOf": [
        {
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
         "type": "string"
        },
        {
@@ -8364,7 +8314,6 @@
      "site_lng": {
       "anyOf": [
        {
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
         "type": "string"
        },
        {
@@ -8521,7 +8470,6 @@
         "type": "number"
        },
        {
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
         "type": "string"
        }
       ],
@@ -8631,7 +8579,6 @@
         "type": "number"
        },
        {
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
         "type": "string"
        }
       ],
@@ -8740,7 +8687,6 @@
       "type": "string"
      },
      "total_target_qty": {
-      "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
       "title": "Total Target Qty",
       "type": "string"
      },
@@ -8883,7 +8829,6 @@
         "type": "number"
        },
        {
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
         "type": "string"
        },
        {
@@ -9110,7 +9055,6 @@
         "type": "number"
        },
        {
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
         "type": "string"
        }
       ],

@@ -61,7 +61,10 @@ jobs:
         working-directory: db
         env:
           PGPASSWORD: postgres
-        run: psql -h localhost -U postgres -d visiontech_db -v ON_ERROR_STOP=1 -q -f 06_master_schema_v2.sql
+        run: |
+          for f in 06_master_schema_v2.sql 08_master_v2_tambahan.sql; do
+            psql -h localhost -U postgres -d visiontech_db -v ON_ERROR_STOP=1 -q -f "$f"
+          done
 
       - name: Pasang dependensi
         run: pip install -r requirements-dev.txt

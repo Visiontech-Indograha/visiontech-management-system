@@ -8,6 +8,10 @@ import { ApiError } from "@/lib/apiClient";
 import { TextAreaField } from "@/components/molecules/Field";
 import { errorMessage } from "@/lib/errors";
 import { formatDateTime } from "@/lib/format";
+
+/** Jam sekarang di WIB (aturan jam absen server), bukan zona waktu perangkat. */
+const wibHour = (d = new Date()) =>
+  Number(new Intl.DateTimeFormat("en-GB", { hour: "2-digit", hourCycle: "h23", timeZone: "Asia/Jakarta" }).format(d));
 import { useAttendanceSites } from "@/services/siteService";
 import { SelfieCaptureDialog } from "./SelfieCaptureDialog";
 import { ActionButton } from "@/components/molecules/ActionButton";
@@ -138,8 +142,7 @@ function OfficeCheckInForm({ employeeId }: { employeeId: string }) {
   };
 
   const handleCheckInClick = () => {
-    const now = new Date();
-    if (now.getHours() < 7) {
+    if (wibHour() < 7) {
       setError("Absensi masuk belum dibuka. Jam masuk kerja dimulai pukul 07:00 WIB.");
       return;
     }
@@ -151,7 +154,7 @@ function OfficeCheckInForm({ employeeId }: { employeeId: string }) {
 
   const handleCheckOutClick = () => {
     const now = new Date();
-    if (now.getHours() >= 19) {
+    if (wibHour(now) >= 19) {
       setError("Batas waktu absensi pulang mandiri telah ditutup pada pukul 19:00 WIB (Sistem auto check-out aktif).");
       return;
     }

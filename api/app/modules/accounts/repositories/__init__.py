@@ -1,7 +1,3 @@
 """
-Paket repository untuk modul accounts.
+Paket repository untuk modul accounts (akun memakai repositori auth & employees lewat AccountService).
 """
-from app.modules.accounts.repositories.account_repository import AccountRepository
-
-__all__ = ["AccountRepository"]
-

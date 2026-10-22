@@ -1,35 +1,7 @@
 """
-Paket repositori untuk modul work_plans.
+Paket repositories untuk modul work_plans (jadwal harian daily-first).
 """
-from app.modules.work_plans.repositories.work_plan_repository import (
-    MemberReportRepository,
-    PlanAccessRepository,
-    PlanAmendmentRepository,
-    PlanAssignmentRepository,
-    PlanAttachmentRepository,
-    PlanChangeRepository,
-    PlanDayRepository,
-    PlanDraftRepository,
-    PlanEditRepository,
-    PlanLocationRepository,
-    PlanMemberRepository,
-    PlanRevisionRepository,
-    PlanTransitionRepository,
-)
 
-__all__ = [
-    "MemberReportRepository",
-    "PlanAccessRepository",
-    "PlanAmendmentRepository",
-    "PlanAssignmentRepository",
-    "PlanAttachmentRepository",
-    "PlanChangeRepository",
-    "PlanDayRepository",
-    "PlanDraftRepository",
-    "PlanEditRepository",
-    "PlanLocationRepository",
-    "PlanMemberRepository",
-    "PlanRevisionRepository",
-    "PlanTransitionRepository",
-]
+from app.modules.work_plans.repositories.daily_plan_repository import DailyPlanRepository
 
+__all__ = ["DailyPlanRepository"]

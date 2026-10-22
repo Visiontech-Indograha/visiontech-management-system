@@ -4,6 +4,7 @@ app/modules/system/routes/app_release_route.py
 Rute endpoint HTTP untuk pembaruan aplikasi Android tanpa Play Store (/app/android).
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.1.
 """
+
 from fastapi import APIRouter, Depends, Query, Response
 from fastapi.responses import FileResponse, RedirectResponse
 
@@ -46,4 +47,3 @@ async def latest_android_release(
 
 
 __all__ = ["router"]
-

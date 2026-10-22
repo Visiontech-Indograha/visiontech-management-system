@@ -12,6 +12,7 @@ import uuid
 from datetime import timedelta
 from typing import Any
 
+import bcrypt
 import jwt
 from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHashError, VerificationError
@@ -47,6 +48,12 @@ def hash_password(password: str) -> str:
 
 
 def verify_password(password: str, hashed: str) -> bool:
+    # Seed DB V2 menyimpan bcrypt ($2a/$2b/$2y); hash yang dibuat aplikasi tetap argon2.
+    if hashed.startswith(("$2a$", "$2b$", "$2y$")):
+        try:
+            return bcrypt.checkpw(password.encode(), hashed.encode())
+        except ValueError:
+            return False
     try:
         return ph.verify(hashed, password)
     except (VerificationError, InvalidHashError):
@@ -82,9 +89,9 @@ def verify_jwt_token(token: str) -> dict[str, Any]:
     return claims
 
 
-# ── Jangkar waktu absensi luring (R-34) ─────────────────────────────────────────────────────────
+# ── Jangkar waktu absensi offline (R-34) ─────────────────────────────────────────────────────────
 # Diterbitkan setiap HP online membaca absensi: `iat` = jam server saat itu. HP menyimpannya bersama
-# penghitung waktu internal (elapsedRealtime) lalu menghitung jam absen luring = iat + selisih penghitung,
+# penghitung waktu internal (elapsedRealtime) lalu menghitung jam absen offline = iat + selisih penghitung,
 # sehingga jam HP yang diubah tidak berpengaruh. Audience terpisah: tidak pernah diterima sebagai token akses.
 TIME_ANCHOR_AUDIENCE = "vms-time-anchor"
 
@@ -109,35 +116,6 @@ def verify_time_anchor(token: str, user_id: str) -> int | None:
     if claims.get("sub") != user_id:
         return None
     return int(claims["iat"]) * 1000
-
-
-# ── Bukti tantangan liveness wajah (online) ───────────────────────────────────
-# Diterbitkan server HANYA bila /face/challenge-check benar-benar melihat gerakan di bingkai kamera. Probe wajib
-# membawa bukti untuk beberapa tantangan berbeda; HP tidak bisa memalsukannya. Terikat pengguna, singkat, dan
-# `jti` dipakai sekali. Audience terpisah: tidak pernah diterima sebagai token akses.
-FACE_CHALLENGE_AUDIENCE = "vms-face-challenge"
-FACE_CHALLENGE_TTL = timedelta(minutes=5)
-
-
-def create_face_challenge_proof(user_id: str, challenge: str) -> str:
-    now = utcnow()
-    claims = {"sub": user_id, "iat": now, "exp": now + FACE_CHALLENGE_TTL, "aud": FACE_CHALLENGE_AUDIENCE,
-              "iss": ACCESS_ISSUER, "chl": challenge, "jti": uuid.uuid4().hex}
-    return jwt.encode(claims, _private_key, algorithm=_ALGORITHM, headers={"kid": settings.JWT_KID})
-
-
-def verify_face_challenge_proof(token: str, user_id: str) -> tuple[str, str] | None:
-    """(tantangan, nonce) bila bukti sah, belum kedaluwarsa, dan milik pengguna ini; selain itu None."""
-    try:
-        if jwt.get_unverified_header(token).get("kid") != settings.JWT_KID:
-            return None
-        claims = jwt.decode(token, _public_key, algorithms=[_ALGORITHM], audience=FACE_CHALLENGE_AUDIENCE,
-                            issuer=ACCESS_ISSUER, options={"require": ["exp", "iat", "sub", "chl", "jti"]})
-    except jwt.PyJWTError:
-        return None
-    if claims.get("sub") != user_id:
-        return None
-    return str(claims["chl"]), str(claims["jti"])
 
 
 # ── Tiket akses berkas aman (Zero Public Access) ──────────────────────────────
@@ -200,3 +178,4 @@ class CurrentUser(BaseModel):
     roles: list[str]
     session_id: str
     permissions: list[str]
+    employee_id: str | None = None

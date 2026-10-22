@@ -5,7 +5,7 @@ import { useDeleteSite, type Site } from "@/services/siteService";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { TextBlock } from "@/components/molecules/TextBlock";
 
-/** Konfirmasi hapus lokasi kerja (DELETE /sites/{id}). */
+/** Konfirmasi hapus lokasi kerja (DELETE /offices/{id}). */
 export function SiteDeleteDialog({ site, onClose }: { site: Site; onClose: () => void }) {
   const remove = useDeleteSite();
   const confirm = async () => {

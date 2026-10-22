@@ -1,26 +1,33 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { FilePreview } from "@/components/molecules/FilePreview";
-import { TextField } from "@/components/molecules/Field";
+import { SelectField, TextField } from "@/components/molecules/Field";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { errorMessage } from "@/lib/errors";
 import { workTypeSchema, type WorkTypeValues } from "@/schemas/workTypeSchema";
 import { oversize, uploadForm } from "@/services/uploadService";
-import { useSaveWorkType, type WorkType } from "@/services/workTypeService";
+import { useSaveWorkType, useWorkTypes, WORK_TYPE_KIND_LABEL, type WorkType } from "@/services/workTypeService";
+import { useDivisions } from "@/services/employeeService";
+import { useSession } from "@/stores/sessionStore";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { ArrowDown, ArrowUp, Plus, Trash2 } from "@/components/molecules/Glyphs";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
-import { ControlInput, ControlLabel, FormBlock } from "@/components/molecules/FormBlock";
+import { ControlInput, ControlLabel, ControlOption, FormBlock } from "@/components/molecules/FormBlock";
 import { DialogActions } from "@/components/molecules/DialogActions";
 import { FormErrorText } from "@/components/molecules/FormErrorText";
 
-/** Dialog tambah/ubah jenis pekerjaan: nama + slot template foto (label, petunjuk, foto contoh, wajib, urutan). */
+/** Dialog tambah/ubah jenis pekerjaan: nama + divisi + slot template foto (label, petunjuk, foto contoh, wajib, urutan). */
 export function WorkTypeFormDialog({ type, onClose }: { type: WorkType | null; onClose: () => void }) {
   const save = useSaveWorkType(type?.id);
+  const { me } = useSession();
+  const { data: units } = useDivisions();
   const [formError, setFormError] = useState<string | null>(null);
+
+  const initialDivisionId = type?.division_id ?? me?.division_id ?? "";
+
   const {
     register,
     handleSubmit,
@@ -31,10 +38,30 @@ export function WorkTypeFormDialog({ type, onClose }: { type: WorkType | null; o
     resolver: zodResolver(workTypeSchema),
     defaultValues: {
       name: type?.name ?? "",
-      photos: (type?.photos ?? []).map((p) => ({ label: p.label, hint: p.hint ?? "", required: p.required ?? false, example_file_id: p.example_file_id ?? null })),
+      division_id: initialDivisionId,
+      description: type?.description ?? "",
+      kind: type?.kind ?? "WORK",
+      follow_up_work_type_id: type?.follow_up_work_type_id ?? null,
+      photos: (type?.photos ?? []).map((p) => ({
+        label: p.label,
+        hint: p.hint ?? "",
+        required: p.required ?? false,
+        example_file_id: p.example_file_id ?? null,
+      })),
     },
   });
+
+  useEffect(() => {
+    const divId = type?.division_id ?? me?.division_id;
+    if (divId) {
+      setValue("division_id", divId);
+    }
+  }, [type, me, units, setValue]);
   const slots = useFieldArray({ control, name: "photos" });
+  const kind = useWatch({ control, name: "kind" });
+  const divisionId = useWatch({ control, name: "division_id" });
+  const sameDivision = useWorkTypes(false, divisionId || undefined);
+  const installTypes = (sameDivision.data ?? []).filter((w) => w.kind === "WORK" && w.id !== type?.id);
   const watched = useWatch({ control, name: "photos" });
   const [uploading, setUploading] = useState<number | null>(null);
   const uploadExample = async (i: number, file: File | undefined) => {
@@ -59,9 +86,19 @@ export function WorkTypeFormDialog({ type, onClose }: { type: WorkType | null; o
   const onSubmit = handleSubmit(async (v) => {
     setFormError(null);
     try {
+      const divisionId = v.division_id || me?.division_id || type?.division_id || undefined;
       await save.mutateAsync({
         name: v.name,
-        photos: v.photos.map((p) => ({ label: p.label, hint: p.hint || null, required: p.required, example_file_id: p.example_file_id })),
+        division_id: divisionId,
+        description: v.description || null,
+        kind: v.kind,
+        follow_up_work_type_id: v.kind === "SURVEY_POINT" ? v.follow_up_work_type_id || null : null,
+        photos: v.photos.map((p) => ({
+          label: p.label,
+          hint: p.hint || null,
+          required: p.required,
+          example_file_id: p.example_file_id,
+        })),
       });
       toast.success(type ? "Jenis pekerjaan disimpan." : "Jenis pekerjaan ditambahkan.");
       onClose();
@@ -81,7 +118,59 @@ export function WorkTypeFormDialog({ type, onClose }: { type: WorkType | null; o
     >
       <FormBlock id="work-type-form" onSubmit={onSubmit} noValidate>
         <FormErrorText message={formError} />
+        <SelectField
+          label="Divisi"
+          error={errors.division_id?.message}
+          hint={
+            me?.role === "PROJECT_MANAGER" && me?.division_id
+              ? "Divisi ditentukan otomatis sesuai akun Anda."
+              : "Pilih divisi yang menaungi jenis pekerjaan ini."
+          }
+          disabled={Boolean(me?.role === "PROJECT_MANAGER" && me?.division_id)}
+          {...register("division_id")}
+        >
+          <ControlOption value="">-- Pilih Divisi --</ControlOption>
+          {units?.map((u) => (
+            <ControlOption key={u.id} value={u.id}>
+              {`${u.name} (${u.code})`}
+            </ControlOption>
+          ))}
+          {initialDivisionId && !units?.some((u) => u.id === initialDivisionId) && (
+            <ControlOption value={initialDivisionId}>
+              {type?.division_name || "Divisi Terkait"}
+            </ControlOption>
+          )}
+        </SelectField>
+        <SelectField
+          label="Peran"
+          hint={
+            kind === "SURVEY_POINT"
+              ? "Dipilih ketua tim saat menambah titik survei (mis. Pintu Akses, Barrier Gate). Foto & material di bawah berlaku untuk titik jenis ini."
+              : kind === "SURVEY_TASK"
+                ? "Paket survei yang dimasukkan ke jadwal; titik-titiknya memakai jenis titik survei divisi ini."
+                : "Pekerjaan biasa di jadwal (pemasangan, maintenance, …)."
+          }
+          {...register("kind")}
+        >
+          {Object.entries(WORK_TYPE_KIND_LABEL).map(([value, label]) => (
+            <ControlOption key={value} value={value}>{label}</ControlOption>
+          ))}
+        </SelectField>
         <TextField label="Nama jenis" error={errors.name?.message} {...register("name")} />
+        {/* Tunggu pilihan dimuat: select yang dipasang sebelum opsinya ada kehilangan nilai tersimpan. */}
+        {kind === "SURVEY_POINT" && sameDivision.isSuccess && (
+          <SelectField
+            label="Pemasangan lanjutan"
+            hint="Dipakai otomatis saat PM merencanakan pekerjaan dari survei."
+            {...register("follow_up_work_type_id", { setValueAs: (v: string) => v || null })}
+          >
+            <ControlOption value="">-- Belum ditentukan --</ControlOption>
+            {installTypes.map((w) => (
+              <ControlOption key={w.id} value={w.id}>{w.name}</ControlOption>
+            ))}
+          </SelectField>
+        )}
+        <TextField label="Keterangan (opsional)" error={errors.description?.message} {...register("description")} />
         <TextBlock className="mb-2 text-sm font-medium">Template foto laporan</TextBlock>
         {errors.photos?.root?.message && <TextBlock className="mb-2 text-sm text-danger">{errors.photos.root.message}</TextBlock>}
         <ListBlock as="ol" className="space-y-3">

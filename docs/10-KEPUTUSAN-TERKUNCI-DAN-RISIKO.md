@@ -171,3 +171,5 @@ Dikunci sebagai **daftar tunggu**, bukan janji. Tidak ada yang dikerjakan sebelu
 | 7 | iOS | Bila ada staf yang memakai iPhone |
 | 8 | Dasbor analitik / gudang data | Setelah ada data historis ≥ 1 tahun |
 | 9 | Modul cuti | Bila diminta secara eksplisit |
+
+| 2026-10-22 | Master Schema V2 · kantor = cabang satu perusahaan | Tes V1 melarang data lintas organisasi (lokasi absen, divisi karyawan, dokumen) — di V2 `office` adalah cabang, bukan perusahaan terpisah | Keputusan pemilik: **semua kantor satu perusahaan**; referensi lintas kantor sah. Tes `test_same_org_refs.py` dihapus. Kepemilikan berkas per orang (swafoto/dokumen milik orang lain) tetap perlu dijaga — dicatat sebagai tindak lanjut | Ya — longgar antar kantor, tetap per orang untuk berkas pribadi |

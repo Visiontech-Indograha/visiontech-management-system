@@ -35,14 +35,20 @@ Future<PendingPhoto?> pickReportPhoto({
 }) async {
   if (origin == PhotoOrigin.phoneGallery) {
     final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
-    return picked == null ? null : PendingPhoto(path: picked.path, slot: slot, source: 'GALLERY');
+    return picked == null
+        ? null
+        : PendingPhoto(path: picked.path, slot: slot, source: 'GALLERY');
   }
   if (origin == PhotoOrigin.appGallery) {
     // Foto lama dari kamera aplikasi: sumbernya tetap CAMERA (bertanda air).
     final path = await Navigator.of(context).push<String>(
-      MaterialPageRoute(builder: (_) => const PhotoGalleryScreen(selectMode: true)),
+      MaterialPageRoute(
+        builder: (_) => const PhotoGalleryScreen(selectMode: true),
+      ),
     );
-    return path == null ? null : PendingPhoto(path: path, slot: slot, source: 'CAMERA');
+    return path == null
+        ? null
+        : PendingPhoto(path: path, slot: slot, source: 'CAMERA');
   }
   final (file, err) = await captureWatermarkedPhoto(
     context: context,
@@ -100,7 +106,10 @@ class PhotoSlots extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final slots = <String?>[for (final s in template) s['label'] as String, null];
+    final slots = <String?>[
+      for (final s in template) s['label'] as String,
+      null,
+    ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -118,19 +127,24 @@ class PhotoSlots extends StatelessWidget {
                       Expanded(
                         child: Text(
                           slot ?? 'Foto lain',
-                          style: VmsTextStyles.bodySm.copyWith(fontWeight: FontWeight.w700),
+                          style: VmsTextStyles.bodySm.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
                       if (slot != null && _isRequired(slot))
                         Text(
                           'Wajib',
-                          style: VmsTextStyles.caption.copyWith(color: Accent.rose.strong),
+                          style: VmsTextStyles.caption.copyWith(
+                            color: Accent.rose.strong,
+                          ),
                         ),
                     ],
                   ),
                   if (slot != null && _hint(slot) != null)
                     Text(_hint(slot)!, style: VmsTextStyles.caption),
-                  if (slot != null && _example(slot) != null) ExampleThumb(fileId: _example(slot)!, label: slot),
+                  if (slot != null && _example(slot) != null)
+                    ExampleThumb(fileId: _example(slot)!, label: slot),
                   const SizedBox(height: 6),
                   Text('${_count(slot)} foto', style: VmsTextStyles.caption),
                   for (final p in pending.where((p) => p.slot == slot))
@@ -139,9 +153,18 @@ class PhotoSlots extends StatelessWidget {
                       contentPadding: EdgeInsets.zero,
                       leading: ClipRRect(
                         borderRadius: BorderRadius.circular(6),
-                        child: Image.file(File(p.path), width: 40, height: 40, fit: BoxFit.cover),
+                        child: Image.file(
+                          File(p.path),
+                          width: 40,
+                          height: 40,
+                          fit: BoxFit.cover,
+                        ),
                       ),
-                      title: Text(p.source == 'GALLERY' ? 'Dari galeri (belum diunggah)' : 'Kamera (belum diunggah)'),
+                      title: Text(
+                        p.source == 'GALLERY'
+                            ? 'Dari galeri (belum diunggah)'
+                            : 'Kamera (belum diunggah)',
+                      ),
                       trailing: enabled
                           ? IconButton(
                               tooltip: 'Buang foto',
@@ -161,7 +184,8 @@ class PhotoSlots extends StatelessWidget {
                         ),
                         TextButton.icon(
                           key: Key('photo-gallery-${slot ?? 'other'}'),
-                          onPressed: () => onAdd(slot, PhotoOrigin.phoneGallery),
+                          onPressed: () =>
+                              onAdd(slot, PhotoOrigin.phoneGallery),
                           icon: const Icon(Icons.photo_library_rounded),
                           label: const Text('Galeri'),
                         ),
@@ -182,11 +206,14 @@ class PhotoSlots extends StatelessWidget {
   }
 
   String? _example(String slot) {
-    final id = template.where((s) => s['label'] == slot).firstOrNull?['example_file_id'];
+    final id = template
+        .where((s) => s['label'] == slot)
+        .firstOrNull?['example_file_id'];
     return id == null || '$id'.isEmpty ? null : '$id';
   }
 
-  bool _isRequired(String slot) => template.any((s) => s['label'] == slot && s['required'] == true);
+  bool _isRequired(String slot) =>
+      template.any((s) => s['label'] == slot && s['required'] == true);
 
   String? _hint(String slot) {
     final h = template.where((s) => s['label'] == slot).firstOrNull?['hint'];
@@ -205,7 +232,10 @@ class ExampleThumb extends ConsumerStatefulWidget {
 }
 
 class _ExampleThumbState extends ConsumerState<ExampleThumb> {
-  late final Future<String> _url = ref.read(syncEngineProvider).api.fileUrl(widget.fileId);
+  late final Future<String> _url = ref
+      .read(syncEngineProvider)
+      .api
+      .fileUrl(widget.fileId);
 
   void _preview(String url) => showDialog<void>(
     context: context,
@@ -215,10 +245,20 @@ class _ExampleThumbState extends ConsumerState<ExampleThumb> {
         children: [
           Padding(
             padding: const EdgeInsets.all(12),
-            child: Text('Contoh: ${widget.label}', style: VmsTextStyles.bodySm.copyWith(fontWeight: FontWeight.w700)),
+            child: Text(
+              'Contoh: ${widget.label}',
+              style: VmsTextStyles.bodySm.copyWith(fontWeight: FontWeight.w700),
+            ),
           ),
-          Flexible(child: InteractiveViewer(child: Image.network(url, fit: BoxFit.contain))),
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Tutup')),
+          Flexible(
+            child: InteractiveViewer(
+              child: Image.network(url, fit: BoxFit.contain),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Tutup'),
+          ),
         ],
       ),
     ),
@@ -231,10 +271,16 @@ class _ExampleThumbState extends ConsumerState<ExampleThumb> {
       future: _url,
       builder: (context, snap) {
         if (snap.connectionState != ConnectionState.done) {
-          return const SizedBox(height: 72, child: Center(child: CircularProgressIndicator(strokeWidth: 2)));
+          return const SizedBox(
+            height: 72,
+            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+          );
         }
         if (snap.hasError || snap.data == null) {
-          return Text('Foto contoh tidak dapat dimuat.', style: VmsTextStyles.caption);
+          return Text(
+            'Foto contoh tidak dapat dimuat.',
+            style: VmsTextStyles.caption,
+          );
         }
         final url = snap.data!;
         return Row(
@@ -244,12 +290,26 @@ class _ExampleThumbState extends ConsumerState<ExampleThumb> {
               onTap: () => _preview(url),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(8),
-                child: Image.network(url, width: 72, height: 72, fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => const SizedBox(width: 72, height: 72, child: Icon(Icons.broken_image_outlined))),
+                child: Image.network(
+                  url,
+                  width: 72,
+                  height: 72,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, _, _) => const SizedBox(
+                    width: 72,
+                    height: 72,
+                    child: Icon(Icons.broken_image_outlined),
+                  ),
+                ),
               ),
             ),
             const SizedBox(width: 10),
-            Expanded(child: Text('Contoh foto dari PM. Ketuk untuk memperbesar.', style: VmsTextStyles.caption)),
+            Expanded(
+              child: Text(
+                'Contoh foto dari PM. Ketuk untuk memperbesar.',
+                style: VmsTextStyles.caption,
+              ),
+            ),
           ],
         );
       },

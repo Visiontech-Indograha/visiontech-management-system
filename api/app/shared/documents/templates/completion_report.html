@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>BAST {{ number }}</title>
+<style>
+  @page { size: A4; margin: 16mm 15mm 18mm; @bottom-right { content: "Hal. " counter(page) " / " counter(pages); font-size: 8pt; color: #64748b; } }
+  body { font-family: "Plus Jakarta Sans", "DejaVu Sans", sans-serif; font-size: 10pt; color: #111827; }
+  h1 { font-size: 15pt; margin: 0 0 1mm; text-align: center; letter-spacing: 0.2mm; }
+  h2 { font-size: 11pt; margin: 6mm 0 2mm; color: #1e293b; }
+  .meta { color: #475569; font-size: 9pt; text-align: center; }
+  table { width: 100%; border-collapse: collapse; margin-top: 1.5mm; }
+  th, td { border: 0.3mm solid #cbd5e1; padding: 1.4mm 2mm; text-align: left; vertical-align: top; }
+  th { background: #e2e8f0; }
+  table.info th { width: 30%; }
+  .num { text-align: right; }
+  .kop { display: flex; align-items: center; justify-content: space-between;
+         padding-bottom: 3mm; margin-bottom: 4mm; border-bottom: 0.8mm solid #232c6f; }
+  .kop img { height: 13mm; }
+  .kop .client { text-align: right; font-size: 8pt; color: #64748b; }
+  .kop .client b { display: block; font-size: 11pt; color: #111827; }
+  .photos { display: flex; flex-wrap: wrap; gap: 3mm; }
+  .photos figure { margin: 0; width: 86mm; page-break-inside: avoid; }
+  .photos img { width: 86mm; max-height: 64mm; object-fit: cover; border: 0.3mm solid #cbd5e1; }
+  .photos figcaption { font-size: 8pt; color: #475569; font-style: italic; }
+  table.sign { margin-top: 8mm; page-break-inside: avoid; }
+  table.sign td { border: 0; width: 50%; text-align: center; }
+  table.sign img { height: 18mm; }
+  table.sign .name { display: block; margin-top: 2mm; font-weight: bold; text-decoration: underline; }
+  table.sign .when { font-size: 8.5pt; color: #64748b; }
+  .verify { margin-top: 6mm; display: flex; gap: 4mm; align-items: center; font-size: 8pt; color: #475569;
+            border-top: 0.3mm solid #cbd5e1; padding-top: 3mm; page-break-inside: avoid; }
+  .verify img { width: 24mm; height: 24mm; }
+  .hash { font-family: "DejaVu Sans Mono", monospace; word-break: break-all; }
+</style>
+</head>
+<body>
+  <div class="kop">
+    <img src="{{ logo }}" alt="Visiontech Indograha">
+    <div class="client">Klien<b>{{ o.client_name or "-" }}</b></div>
+  </div>
+  <h1>BERITA ACARA SERAH TERIMA PEKERJAAN</h1>
+  <div class="meta">Nomor {{ number }} · diterbitkan {{ generated_at | wib }} oleh {{ generated_by }}</div>
+
+  <h2>1. Informasi Pekerjaan</h2>
+  <table class="info">
+    <tr><th>Pekerjaan</th><td>{{ o.project_title or "-" }}</td></tr>
+    <tr><th>Divisi / PM</th><td>{{ o.division_name or "-" }} / {{ o.pm_name or "-" }}</td></tr>
+    <tr><th>Lokasi</th><td>{{ o.site_address or "-" }}</td></tr>
+    <tr><th>Periode</th><td>{{ tgl(o.start_work_date) }} s.d. {{ tgl(o.end_work_date) }}</td></tr>
+    <tr><th>Realisasi volume</th><td>{{ qty(o.completed_target_unit) }} / {{ qty(o.total_target_unit) }} {{ o.unit_measure or "" }}</td></tr>
+  </table>
+
+  <h2>2. Rincian per Titik</h2>
+  <table>
+    <tr><th>No</th><th>Tanggal</th><th>Titik / Pekerjaan</th><th>Fase</th><th class="num">Realisasi</th><th>Status</th></tr>
+    {% for p in points %}
+    <tr><td>{{ loop.index }}</td><td>{{ tgl(p.work_date) }}</td>
+        <td>{{ p.title }}{% if p.location %}<br><small>{{ p.location }}</small>{% endif %}</td>
+        <td>{{ p.phase_label }}</td><td class="num">{{ qty(p.completed) }} / {{ qty(p.target) }}</td><td>{{ p.status_label }}</td></tr>
+    {% else %}
+    <tr><td colspan="6">Belum ada titik pekerjaan.</td></tr>
+    {% endfor %}
+  </table>
+
+  <h2>3. Realisasi Material (BoM)</h2>
+  <table>
+    <tr><th>No</th><th>Kode</th><th>Material</th><th class="num">Estimasi</th><th class="num">Aktual</th><th>Satuan</th></tr>
+    {% for b in bom %}
+    <tr><td>{{ loop.index }}</td><td>{{ b.material_code or "-" }}</td><td>{{ b.material_name }}</td>
+        <td class="num">{{ qty(b.estimated_qty) }}</td><td class="num">{{ qty(b.actual_qty) }}</td><td>{{ b.unit }}</td></tr>
+    {% else %}
+    <tr><td colspan="6">Tidak ada material yang dicatat.</td></tr>
+    {% endfor %}
+  </table>
+
+  <h2>4. Ringkasan & Kendala</h2>
+  <p>{{ o.summary_notes or "Pekerjaan telah dilaksanakan sesuai lingkup." }}</p>
+  {% if o.obstacles %}<p><b>Kendala:</b> {{ o.obstacles }}</p>{% endif %}
+
+  {% if photos %}
+  <h2>5. Dokumentasi</h2>
+  <div class="photos">
+    {% for label, src in photos %}<figure><img src="{{ src }}" alt=""><figcaption>{{ label }}</figcaption></figure>{% endfor %}
+  </div>
+  {% endif %}
+
+  <table class="sign">
+    <tr>
+      <td>Dibuat oleh (Ketua Tim)<br>
+        {% if leader_sig %}<img src="{{ leader_sig }}" alt="">{% else %}<br><br><br>{% endif %}
+        <span class="name">{{ o.leader_signer_name or "( ................ )" }}</span>
+        <span class="when">{{ o.leader_signed_at | wib }}</span></td>
+      <td>Disetujui oleh (Project Manager)<br>
+        {% if pm_sig %}<img src="{{ pm_sig }}" alt="">{% else %}<br><br><br>{% endif %}
+        <span class="name">{{ o.pm_signer_name or o.pm_name or "( ................ )" }}</span>
+        <span class="when">{{ o.pm_signed_at | wib }}</span></td>
+    </tr>
+  </table>
+
+  <div class="verify">
+    {% if qr %}<img src="{{ qr }}" alt="QR verifikasi">{% endif %}
+    <div>Dokumen resmi sistem VMS Visiontech. Pindai QR untuk memeriksa keaslian.<br>
+      Sidik SHA-256: <span class="hash">{{ o.signature_hash }}</span></div>
+  </div>
+</body>
+</html>

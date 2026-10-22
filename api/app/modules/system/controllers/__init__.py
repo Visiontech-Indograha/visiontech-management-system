@@ -1,6 +1,7 @@
 """
 Paket controller untuk modul system.
 """
+
 from app.modules.system.controllers.app_release_controller import (
     AppReleaseController,
 )
@@ -18,4 +19,3 @@ __all__ = [
     "MonitoringController",
     "SyncController",
 ]
-

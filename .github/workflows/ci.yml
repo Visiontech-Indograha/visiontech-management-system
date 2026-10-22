@@ -57,20 +57,20 @@ jobs:
           done
           PGPASSWORD=postgres psql -h localhost -U postgres -d visiontech_db -Atc "show server_version"
 
-      - name: Pasang skema dari db/*.sql (urutan 01 → 05)
+      - name: Pasang skema Master Schema V2 (db/06) + DDL idempoten aplikasi (migration_v3)
         working-directory: db
         env:
           PGPASSWORD: postgres
         run: |
-          for f in 01_schema 02_functions 03_policies 04_signature_auth 05_face; do
-            psql -h localhost -U postgres -d visiontech_db -v ON_ERROR_STOP=1 -q -f "$f.sql"
+          for f in 06_master_schema_v2.sql 08_master_v2_tambahan.sql; do
+            psql -h localhost -U postgres -d visiontech_db -v ON_ERROR_STOP=1 -q -f "$f"
           done
 
       - name: Pasang dependensi
         run: pip install -r requirements-dev.txt
 
-      - name: Tandai migrasi (db/*.sql sudah memuat hasil migrasi 0002–0003)
-        run: python -m alembic stamp head
+      - name: Terapkan DDL aplikasi (V2 tidak memakai rantai alembic V1)
+        run: python -c "import asyncio; from app.database.migration_v3 import apply_v3_migrations as m; asyncio.run(m())"
 
       - name: Galat fatal — sintaks & nama tak terdefinisi (semua berkas, tanpa garis dasar)
         run: ruff check --isolated --select E9,F63,F7,F82 app tests

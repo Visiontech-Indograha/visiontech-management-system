@@ -11,7 +11,7 @@ import 'app_update_controller.dart';
 
 /// Membungkus seluruh aplikasi (di atas Navigator, lihat main.dart): memeriksa pembaruan saat aplikasi dibuka &
 /// kembali aktif, dan menutup aplikasi dengan layar "Pembaruan wajib" bila server mewajibkannya — juga di layar
-/// login. Sinkronisasi antrean luring (ConnectivitySyncWatcher) tetap berjalan di belakangnya.
+/// login. Sinkronisasi antrean offline (ConnectivitySyncWatcher) tetap berjalan di belakangnya.
 class AppUpdateGate extends ConsumerStatefulWidget {
   const AppUpdateGate({super.key, required this.child});
 

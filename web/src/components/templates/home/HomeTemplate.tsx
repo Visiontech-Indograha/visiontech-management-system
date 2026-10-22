@@ -4,33 +4,28 @@ import { ExpiringDocumentsCard } from "@/components/organisms/home/ExpiringDocum
 import { HomeActivePlansCard } from "@/components/organisms/home/HomeActivePlansCard";
 import { HomeGreeting } from "@/components/organisms/home/HomeGreeting";
 import { HomeStatGrid } from "@/components/organisms/home/HomeStatGrid";
-import { PendingDocumentsCard } from "@/components/organisms/home/PendingDocumentsCard";
-import type { ExpiringList, PendingList } from "@/services/homeService";
-import type { WorkPlan } from "@/services/workPlanService";
+import type { ExpiringList } from "@/services/homeService";
+import type { DailyPlan } from "@/services/dailyPlanService";
 
-/** Kerangka Beranda: sapaan, kartu angka, antrean dokumen (HR), rencana kerja aktif. */
-export function HomeTemplate({ today, name, stats, canVerifyDocs, pendingDocs, expiringDocs, plans, active }: {
+/** Kerangka Beranda: sapaan, ringkasan jadwal harian, jadwal aktif, dokumen kedaluwarsa (HR/GA). */
+export function HomeTemplate({ today, name, stats, canManageDocs, expiringDocs, plans, active }: {
   today: string;
   name: string | undefined;
   stats: ComponentProps<typeof HomeStatGrid>;
-  canVerifyDocs: boolean;
-  pendingDocs: PendingList["items"] | undefined;
+  canManageDocs: boolean;
   expiringDocs: ExpiringList["items"] | undefined;
-  plans: UseQueryResult<WorkPlan[]>;
-  active: WorkPlan[];
+  plans: UseQueryResult<DailyPlan[]>;
+  active: DailyPlan[];
 }) {
   return (
     <div className="space-y-6 md:space-y-8">
       <header>
         <HomeGreeting today={today} name={name} />
       </header>
-
       <HomeStatGrid {...stats} />
-
-      {canVerifyDocs && !!pendingDocs?.length && <PendingDocumentsCard items={pendingDocs} />}
-      {canVerifyDocs && !!expiringDocs?.length && <ExpiringDocumentsCard items={expiringDocs} />}
-
       <HomeActivePlansCard plans={plans} active={active} />
+      {/* Dokumen karyawan kedaluwarsa (HR/GA) */}
+      {canManageDocs && !!expiringDocs?.length && <ExpiringDocumentsCard items={expiringDocs} />}
     </div>
   );
 }

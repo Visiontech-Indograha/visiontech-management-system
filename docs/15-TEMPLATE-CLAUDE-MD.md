@@ -46,7 +46,7 @@ web/            React — components/{ui,molecules,organisms,templates} + featur
 mobile/         Flutter — core/, shared/, features/
 face-service/   layanan wajah (fase 8)
 db/             5 berkas SQL, fondasi skema
-prototype/      prototipe V2 — RUJUKAN, JANGAN DIUBAH
+(prototype/ dihapus 2026-10-20 — rujukan V2 dibaca dari riwayat git: `git show f3a519f0:prototype/<path>`)
 docs/           seluruh rencana dan standar
 ```
 
@@ -116,7 +116,6 @@ Satu task per iterasi.
 
 ## Jangan
 
-- Mengubah apa pun di `prototype/`.
 - Menulis aturan bisnis di router atau di frontend.
 - Menambah pustaka UI atau pengelola state kedua.
 - Mengompresi PDF atau berkas Office. Hanya foto yang dikompresi.

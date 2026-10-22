@@ -1,6 +1,7 @@
 """
 Paket repositori untuk modul attendance.
 """
+
 from app.modules.attendance.repositories.attendance_repository import (
     AttendanceMonitorRepository,
     AttendanceOfflineRepository,
@@ -12,4 +13,3 @@ __all__ = [
     "AttendanceOfflineRepository",
     "AttendanceSessionRepository",
 ]
-

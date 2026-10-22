@@ -1,17 +1,18 @@
 """
 app/modules/system/controllers/sync_controller.py
 
-Controller orkestrasi use case sinkronisasi luring (kirim antrean & periksa status).
+Controller orkestrasi use case sinkronisasi offline (kirim antrean & periksa status).
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.2.
 """
+
 from __future__ import annotations
 
 from datetime import datetime
 
 from fastapi import Depends
 
-from app.api.deps import get_sync_service
 from app.core.security import CurrentUser
+from app.modules.system.dependencies import get_sync_service
 from app.modules.system.schemas.system_schema import (
     OperationResult,
     OperationStatus,
@@ -22,7 +23,7 @@ from app.modules.system.services.system_service import SyncService
 
 
 class SyncController:
-    """Controller eksekusi antrean operasi dan pemantauan status sinkronisasi luring."""
+    """Controller eksekusi antrean operasi dan pemantauan status sinkronisasi offline."""
 
     def __init__(
         self,
@@ -36,9 +37,7 @@ class SyncController:
         data: SyncRequest,
     ) -> SyncResponse:
         """Menerapkan antrean operasi dari perangkat klien secara idempoten."""
-        results = await self.service.apply_operations(
-            current_user, data.device_id, data.operations
-        )
+        results = await self.service.apply_operations(current_user, data.device_id, data.operations)
         return SyncResponse(results=[OperationResult(**r) for r in results])
 
     async def handle_sync_status(
@@ -52,4 +51,3 @@ class SyncController:
 
 
 __all__ = ["SyncController"]
-

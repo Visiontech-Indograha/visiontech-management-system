@@ -57,7 +57,7 @@ export function NotificationBell({ className }: { className?: string }) {
               className="flex flex-col items-start gap-0.5 py-2"
               onSelect={() => {
                 if (!n.read_at) read.mutate(n.id);
-                if (n.work_plan_id) navigate(`/work-plans/${n.work_plan_id}`);
+                if (n.daily_plan_id) navigate("/work-plans");
               }}
             >
               <TextBlock as="span" className={clsx("text-sm", !n.read_at && "font-semibold text-ink")}>{n.title}</TextBlock>

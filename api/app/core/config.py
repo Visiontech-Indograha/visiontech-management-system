@@ -128,9 +128,12 @@ class Settings(BaseSettings):
     FACE_SERVICE_URL: str = "http://127.0.0.1:8001"
     FACE_SERVICE_TOKEN: str = ""
     FACE_SERVICE_TIMEOUT_S: float = 8.0
-    # Gambar wajah sementara hanya berlaku untuk absen online dalam beberapa menit (luring: terikat payload bertanda tangan).
+    # Konversi .docx → PDF untuk pratinjau laporan (LibreOffice headless). Kosong = cari "soffice" di PATH.
+    SOFFICE_PATH: str = ""
+    DOCX_TO_PDF_TIMEOUT_S: float = 90.0
+    # Gambar wajah sementara hanya berlaku untuk absen online dalam beberapa menit (offline: terikat payload bertanda tangan).
     FACE_PROBE_MAX_AGE_MIN: int = 15
-    # Masa berlaku template di HP; sama dengan batas absen luring (7 hari) agar penarikan persetujuan tetap berlaku.
+    # Masa berlaku template di HP; sama dengan batas absen offline (7 hari) agar penarikan persetujuan tetap berlaku.
     FACE_TEMPLATE_TTL_DAYS: int = 7
     # True = akun yang terhubung ke karyawan WAJIB mendaftarkan wajah sebelum membuka menu lain (web dan HP).
     # Bawaan True (keputusan pemilik 2026-10-08): absen HP ditolak tanpa wajah terdaftar. Lingkungan yang belum punya
@@ -150,9 +153,12 @@ class Settings(BaseSettings):
 
     # "production" menyalakan penjaga di bawah; nilai lain (development/test) memakai bawaan lokal.
     APP_ENV: str = "development"
+    # Seed media & order contoh saat startup (demo/uji). Bawaan MATI: bila aktif, foto kosong/bukan /uploads/
+    # ditimpa gambar contoh — jangan pernah diaktifkan di data sungguhan.
+    SEED_DEMO_MEDIA: bool = False
 
     # Mengabaikan variabel lingkungan berlebih yang tidak dipetakan ke atribut di sini
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(env_file=(".env", "api/.env"), extra="ignore")
 
     @model_validator(mode="after")
     def _encode_database_url_credentials(self) -> Settings:

@@ -1,36 +1,41 @@
-import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
-import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { TextAreaField, TextField } from "@/components/molecules/Field";
+import { SelectField } from "@/components/molecules/Field";
+import { ControlOption } from "@/components/molecules/FormBlock";
 import { errorMessage } from "@/lib/errors";
-import { returnSchema, type ReturnValues } from "@/schemas/assetSchemas";
-import { useRequestReturn, type Asset } from "@/services/assetService";
+import { useReturnLoan, type Loan, type ReturnCondition } from "@/services/assetService";
 import { AssetFormDialog } from "./AssetFormDialog";
 
-/** Ketua rencana kerja peminjam mengajukan pengembalian (BAST) — petugas aset memeriksanya. */
-export function AssetReturnDialog({ asset, onClose }: { asset: Asset; onClose: () => void }) {
-  const requestReturn = useRequestReturn();
+/** Pengelola aset menerima pengembalian; kondisinya menjadi status aset (siap/rusak/hilang). */
+export function AssetReturnDialog({ loan, onClose }: { loan: Loan; onClose: () => void }) {
+  const giveBack = useReturnLoan();
+  const [condition, setCondition] = useState<ReturnCondition>("ready");
   const [formError, setFormError] = useState<string | null>(null);
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<ReturnValues>({ resolver: zodResolver(returnSchema), defaultValues: { condition_on_return: asset.condition, note: "" } });
-  const onSubmit = handleSubmit(async (v) => {
+  const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
     setFormError(null);
     try {
-      await requestReturn.mutateAsync({ allocation_id: asset.allocation_id!, condition_on_return: v.condition_on_return, note: v.note || null });
-      toast.success("Pengembalian diajukan. Petugas aset akan memeriksa kondisinya.");
+      await giveBack.mutateAsync({ assignmentId: loan.assignment_id, condition });
+      toast.success(`${loan.asset_name} dikembalikan.`);
       onClose();
     } catch (err) {
       setFormError(errorMessage(err));
     }
-  });
+  };
   return (
-    <AssetFormDialog title={`Kembalikan ${asset.name}`} submitLabel="Ajukan pengembalian" submitting={isSubmitting} formError={formError} onClose={onClose} onSubmit={onSubmit}>
-      <TextField label="Kondisi saat dikembalikan" error={errors.condition_on_return?.message} {...register("condition_on_return")} />
-      <TextAreaField label="Catatan (opsional)" {...register("note")} />
+    <AssetFormDialog
+      title={`Terima ${loan.asset_name} dari ${loan.employee_name}`}
+      submitLabel="Terima pengembalian"
+      submitting={giveBack.isPending}
+      formError={formError}
+      onClose={onClose}
+      onSubmit={onSubmit}
+    >
+      <SelectField label="Kondisi saat dikembalikan" value={condition} onChange={(e) => setCondition(e.target.value as ReturnCondition)}>
+        <ControlOption value="ready">Baik — siap dipakai lagi</ControlOption>
+        <ControlOption value="damaged">Rusak</ControlOption>
+        <ControlOption value="lost">Hilang</ControlOption>
+      </SelectField>
     </AssetFormDialog>
   );
 }

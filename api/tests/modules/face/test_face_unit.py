@@ -104,7 +104,7 @@ async def test_enroll_rejects_face_of_another_employee():
 
 
 async def test_verify_selfie_outcomes(monkeypatch):
-    monkeypatch.setattr(fs.storage, "get_object_bytes", lambda key: b"jpeg")
+    monkeypatch.setattr(fs.storage, "get_image_bytes", lambda key: b"jpeg")
     enrolled = {"vector": [1.0, 0.0]}
     svc, _ = _service(embedding=enrolled, results=[_result([0.95, 0.05])])
     assert (await svc.verify_selfie(EMP, uuid4())).result == "MATCH"

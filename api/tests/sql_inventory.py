@@ -11,6 +11,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 SQL_START = re.compile(r"^\s*(SELECT|INSERT|UPDATE|DELETE|WITH)\b", re.IGNORECASE)
+# Kata kunci kedua: membedakan kueri dari teks biasa ("Update data order.", label log "DELETE").
+SQL_BODY = re.compile(r"\b(FROM|INTO|SET|VALUES|WHERE|RETURNING|AS)\b", re.IGNORECASE)
 # Pola yang sama dengan SQLAlchemy TextClause: `:nama::tipe` BUKAN parameter (terkirim mentah ke DB).
 PARAM = re.compile(r"(?<![:\w\x5c]):(\w+)(?!:)")
 
@@ -44,6 +46,7 @@ def collect(root: Path = Path("app")) -> tuple[list[SqlLiteral], int]:
                 text = "".join(v.value for v in node.values if isinstance(v, ast.Constant))
                 dynamic += bool(SQL_START.match(text))
             elif (isinstance(node, ast.Constant) and isinstance(node.value, str)
-                  and id(node) not in inside_fstring and SQL_START.match(node.value)):
+                  and id(node) not in inside_fstring and SQL_START.match(node.value)
+                  and SQL_BODY.search(node.value)):
                 found.append(SqlLiteral(path.as_posix(), node.lineno, node.value))
     return found, dynamic

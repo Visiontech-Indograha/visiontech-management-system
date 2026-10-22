@@ -5,8 +5,11 @@ server — bukan jam perangkat, bukan tanggal kiriman klien, bukan zona waktu me
 """
 from __future__ import annotations
 
+import io
 import re
 from pathlib import Path
+
+from PIL import Image
 
 from app.core.time import jakarta_now
 from tests.conftest import requires_db, sync_query
@@ -26,9 +29,15 @@ def test_clock_is_read_only_in_core_time():
 
 @requires_db
 def test_attendance_work_date_follows_the_organisation_timezone(client, world):
-    response = client.post("/attendance/check-in", headers=world.headers(client, "member"), json={
-        "site_id": world.site_id, "location": {"lat": -6.2, "lng": 106.8}})
+    # V2: absen wajib swafoto; tanggal kerja disimpan di attendance.attendance_date.
+    buf = io.BytesIO()
+    Image.new("RGB", (32, 32), (90, 90, 90)).save(buf, "PNG")
+    headers = world.headers(client, "member")
+    selfie = client.post("/files/upload", headers=headers, files={"file": ("s.png", buf.getvalue(), "image/png")})
+    response = client.post("/attendance/check-in", headers=headers, json={
+        "site_id": world.site_id, "location": {"lat": -6.2, "lng": 106.8},
+        "selfie_file_id": selfie.json()["file_id"]})
 
     assert response.status_code == 200, response.text
-    assert sync_query("SELECT work_date FROM vms.attendance WHERE id = %s", (response.json()["id"],)) \
-        == [(jakarta_now().date(),)]
+    assert sync_query("SELECT attendance_date FROM attendance WHERE attendance_id = %s",
+                      (response.json()["id"],)) == [(jakarta_now().date(),)]

@@ -72,7 +72,7 @@ def test_survey_report_follows_reference_outline():
                     "8. Penutup"):
         assert section in text
     assert "Survei Titik 03" in text and "Instalasi 03" not in text  # hanya item fase SURVEY
-    assert "Remark: Butuh tiang 6 m" in text
+    assert "Keterangan: Butuh tiang 6 m" in text
     assert "SHA-256" in text
 
 
@@ -132,6 +132,7 @@ def _service(order: dict) -> es.ExportService:
     return es.ExportService(repo, orders)
 
 
+@pytest.mark.anyio
 async def test_official_pdf_requires_pm_signature():
     user = SimpleNamespace(employee_id="e1", email="pm@x", role="PROJECT_MANAGER")
     with pytest.raises(AppError) as err:
@@ -139,6 +140,7 @@ async def test_official_pdf_requires_pm_signature():
     assert err.value.code == "NOT_SIGNED"
 
 
+@pytest.mark.anyio
 async def test_survey_report_requires_survey_items():
     user = SimpleNamespace(employee_id="e1", email="pm@x", role="PROJECT_MANAGER")
     with pytest.raises(AppError) as err:
@@ -146,6 +148,7 @@ async def test_survey_report_requires_survey_items():
     assert err.value.code == "NO_SURVEY_ITEMS"
 
 
+@pytest.mark.anyio
 async def test_periodic_range_is_limited():
     user = SimpleNamespace(employee_id="e1", email="pm@x", role="PROJECT_MANAGER")
     svc = _service(dict(ORDER))

@@ -30,8 +30,23 @@ class SyncRepository(BaseRepository):
         client_created_at: datetime,
     ) -> Any:
         """
-        Mencatat operasi offline ke dalam antrean audit activity log.
+        Mencatat operasi offline ke antrean (app_activity_logs). Idempoten per (pengguna, client_op_id): kiriman
+        ulang mengembalikan hasil sebelumnya; operasi baru berstatus PENDING agar service menjalankannya.
         """
+        existing = await self.fetchone(
+            """
+            SELECT log_id AS id, COALESCE(changed_diff->>'status', 'PENDING') AS status,
+                   NULLIF(changed_diff->>'error_message', '') AS error_message
+            FROM app_activity_logs
+            WHERE actor_user_id = CAST(:user AS uuid) AND action = 'OFFLINE_OPERATION'
+              AND changed_diff->>'client_op_id' = CAST(:op AS text)
+            ORDER BY created_at
+            LIMIT 1
+            """,
+            {"user": str(user_id), "op": str(client_op_id)},
+        )
+        if existing is not None:
+            return existing
         row = await self.fetchone(
             """
             INSERT INTO app_activity_logs (
@@ -43,15 +58,15 @@ class SyncRepository(BaseRepository):
                 'OFFLINE_OPERATION', 'offline_sync', CAST(:op AS uuid),
                 jsonb_build_object(
                     'client_op_id', CAST(:op AS text),
-                    'op_type', :type,
-                    'status', 'APPLIED',
-                    'device_id', :device,
+                    'op_type', CAST(:type AS text),
+                    'status', 'PENDING',
+                    'device_id', CAST(:device AS text),
                     'payload', CAST(:payload AS jsonb),
-                    'client_created_at', :created
+                    'client_created_at', CAST(:created AS text)
                 ),
                 NOW()
             )
-            RETURNING log_id AS id, 'APPLIED' AS status, NULL AS error_message
+            RETURNING log_id AS id, 'PENDING' AS status, NULL AS error_message
             """,
             {
                 "user": str(user_id),

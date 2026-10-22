@@ -390,10 +390,11 @@ class WorkCompletionRepository(BaseRepository):
         """Memperbarui status order (PM override)."""
         sql = """
             UPDATE work_completion
-            SET order_status = :status,
+            SET order_status = CAST(:status AS varchar),
                 summary_notes = CASE
-                    WHEN :notes IS NOT NULL
-                    THEN COALESCE(summary_notes, '') || E'\n[Status ' || :status || ']: ' || :notes
+                    WHEN CAST(:notes AS text) IS NOT NULL
+                    THEN COALESCE(summary_notes, '') || E'\n[Status ' || CAST(:status AS text) || ']: '
+                         || CAST(:notes AS text)
                     ELSE summary_notes
                 END,
                 update_at = NOW()

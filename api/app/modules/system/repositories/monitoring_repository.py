@@ -98,8 +98,8 @@ class CRUDMonitoring(CRUDBase):
                    e.full_name,
                    a.attendance_date AS work_date,
                    COALESCE(o.name, 'Kantor / Site') AS site_label,
-                   a.clock_in_at,
-                   a.clock_out_at,
+                   a.clock_in_at AS check_in_at,
+                   a.clock_out_at AS check_out_at,
                    CASE
                        WHEN a.is_within_attendance_radius = TRUE THEN 'AUTO_VALID'
                        WHEN a.om_approval_status = 'APPROVED' THEN 'APPROVED'

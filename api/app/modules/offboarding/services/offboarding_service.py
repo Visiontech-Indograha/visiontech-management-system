@@ -58,7 +58,7 @@ class OffboardingService:
         record = await self.repo.get(offboarding_id, for_update=for_update)
         division = await self._my_division(user)
         if record is None or (division is not None and str(record.division_id) != division):
-            raise NotFoundError("Data offboarding")
+            raise NotFoundError("Data proses keluar")
         return record
 
     async def detail(self, user: CurrentUser, offboarding_id: UUID) -> dict[str, Any]:
@@ -76,7 +76,7 @@ class OffboardingService:
         if employee is None:
             raise NotFoundError("Karyawan")
         if employee.offboarding_status != "active" or await self.repo.open_for_employee(data.employee_id):
-            raise AppError("ALREADY_OFFBOARDING", "Karyawan ini sudah dalam proses atau selesai offboarding.",
+            raise AppError("ALREADY_OFFBOARDING", "Karyawan ini sudah dalam proses keluar atau sudah keluar.",
                            status=409)
         effective = data.effective_date
         if effective is None:
@@ -101,7 +101,7 @@ class OffboardingService:
         if item is None:
             raise NotFoundError("Item clearance")
         if item.status not in CLEARANCE_OPEN:
-            raise AppError("INVALID_STATE", "Offboarding ini tidak lagi menerima verifikasi barang.", status=409)
+            raise AppError("INVALID_STATE", "Proses keluar ini tidak lagi menerima pemeriksaan barang.", status=409)
         if item.verified_at is not None:
             raise AppError("ALREADY_VERIFIED", "Barang ini sudah diverifikasi.", status=409)
         if not user.employee_id:
@@ -125,7 +125,7 @@ class OffboardingService:
         if not user.employee_id:
             raise ForbiddenError("Akun ini belum tertaut ke data karyawan.")
         if user.employee_id == str(record.employee_id):
-            raise ForbiddenError("Tidak bisa menyetujui offboarding diri sendiri.")
+            raise ForbiddenError("Tidak bisa menyetujui proses keluar diri sendiri.")
         as_pm = approval_type == "PM"
         if as_pm:
             managers = await self.repo.division_managers(record.division_id)
@@ -138,7 +138,7 @@ class OffboardingService:
                 raise AppError("ALREADY_APPROVED", "PM sudah menyetujui.", status=409)
         else:
             if not _manages_all(user):
-                raise ForbiddenError("Persetujuan HR hanya oleh pengelola offboarding (HR).")
+                raise ForbiddenError("Persetujuan HR hanya oleh pengelola proses keluar (HR).")
             if record.approved_by_hr_id is not None:
                 raise AppError("ALREADY_APPROVED", "HR sudah menyetujui.", status=409)
         await self.repo.approve(offboarding_id, as_pm=as_pm, approver_id=user.employee_id)
@@ -157,5 +157,5 @@ class OffboardingService:
     async def cancel(self, user: CurrentUser, offboarding_id: UUID, reason: str) -> None:
         record = await self._visible(user, offboarding_id, for_update=True)
         if record.status == "COMPLETED":
-            raise AppError("INVALID_STATE", "Offboarding yang sudah selesai tidak bisa dibatalkan.", status=409)
+            raise AppError("INVALID_STATE", "Proses keluar yang sudah selesai tidak bisa dibatalkan.", status=409)
         await self.repo.cancel(offboarding_id, record.employee_id, reason.strip())

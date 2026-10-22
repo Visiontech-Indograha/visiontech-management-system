@@ -7,8 +7,7 @@ Yang dijaga:
 - data yang diubah setelah direkam (lokasi/jam/swafoto) ditolak `OFFLINE_TAMPERED`;
 - jam absen = jangkar server + penghitung waktu internal, BUKAN jam HP;
 - valid otomatis hanya bila semua cek lolos; selain itu Perlu review dengan catatan server;
-- absen pulang offline: masuk valid → langsung tercatat; Perlu review → ditahan, berlaku saat disetujui,
-  gugur saat ditolak;
+- absen pulang offline: selalu tercatat pada jamnya; keputusan OM atas absen masuk berlaku untuk seluruh hari;
 - kirim ulang tidak menggandakan (idempoten per `client_op_id`).
 """
 from __future__ import annotations
@@ -20,6 +19,7 @@ import time
 import uuid
 from datetime import timedelta
 
+import pytest
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 from PIL import Image
@@ -29,6 +29,11 @@ from app.core.time import utcnow
 from tests.conftest import World, requires_db, sync_query
 
 pytestmark = requires_db
+
+
+@pytest.fixture(autouse=True)
+def _storage(fake_storage):
+    return fake_storage
 
 INSIDE = (-6.2, 106.8)     # tepat di lokasi uji (radius 100 m)
 OUTSIDE = (-6.3, 106.8)    # ±11 km
@@ -64,6 +69,9 @@ class Phone:
                gps_shift_ms: int = 0, mocked: bool = False, explanation: str | None = None,
                selfie_sha: str | None = None, anchor: str | None = None, extra: dict | None = None) -> dict:
         """Absen offline yang direkam `after_ms` setelah jangkar. Jam HP sengaja dimajukan 3 jam."""
+        selfie_file = None
+        if kind == "CHECK_IN" and selfie_sha is None:  # V2: swafoto selalu wajib saat absen masuk
+            selfie_file, selfie_sha = _selfie(self.client, self.world, self.who)
         anchor_token = anchor if anchor is not None else self.anchor
         anchor_ms = security.verify_time_anchor(anchor_token or "", self._user_id()) or int(time.time() * 1000)
         op = str(uuid.uuid4())
@@ -77,15 +85,18 @@ class Phone:
             "explanation": explanation, "selfie_sha256": selfie_sha, **(extra or {}),
         }, separators=(",", ":"))
         signature = base64.b64encode(self.key.sign(payload.encode(), ec.ECDSA(hashes.SHA256()))).decode()
-        return {"device_id": self.device_id, "client_op_id": op, "kind": kind, "payload": payload,
-                "signature": signature}
+        event = {"device_id": self.device_id, "client_op_id": op, "kind": kind, "payload": payload,
+                 "signature": signature}
+        if selfie_file:
+            event["selfie_file_id"] = selfie_file
+        return event
 
     def send(self, event: dict, selfie_file_id: str | None = None):
         body = {**event, **({"selfie_file_id": selfie_file_id} if selfie_file_id else {})}
         return self.client.post("/attendance/offline", headers=self.headers, json=body)
 
     def _user_id(self) -> str:
-        return str(sync_query("SELECT id FROM vms.app_user WHERE login = %s", (self.world.logins[self.who],))[0][0])
+        return str(sync_query("SELECT user_id FROM users WHERE email = %s", (self.world.logins[self.who],))[0][0])
 
 
 def _selfie(client, world: World, who: str = "member") -> tuple[str, str]:
@@ -96,18 +107,20 @@ def _selfie(client, world: World, who: str = "member") -> tuple[str, str]:
                            files={"file": ("swafoto.png", buf.getvalue(), "image/png")})
     assert uploaded.status_code == 200, uploaded.text
     file_id = uploaded.json()["file_id"]
-    sha = sync_query("SELECT encode(sha256, 'hex') FROM vms.file_object WHERE id = %s", (file_id,))[0][0]
+    sha = sync_query("SELECT encode(sha256, 'hex') FROM file_object WHERE id = %s", (file_id,))[0][0]
     return file_id, sha
 
 
 def _row(att_id: str) -> tuple:
+    """(status, catatan, jam masuk, jam pulang). V2: catatan offline & penjelasan sama-sama di out_of_radius_note."""
     return sync_query(
-        "SELECT status::text, offline, offline_note, check_in_at, check_out_at, check_out_requested_at, explanation "
-        "FROM vms.attendance WHERE id = %s", (att_id,))[0]
+        "SELECT CASE om_approval_status WHEN 'AUTO_VALID' THEN 'AUTO_VALID' WHEN 'APPROVED_BY_OM' THEN 'APPROVED' "
+        "WHEN 'REJECTED_BY_OM' THEN 'REJECTED' ELSE 'NEEDS_REVIEW' END, out_of_radius_note, clock_in_at, clock_out_at "
+        "FROM attendance WHERE attendance_id = %s", (att_id,))[0]
 
 
 def _count(world: World, who: str = "member") -> int:
-    return sync_query("SELECT count(*) FROM vms.attendance WHERE employee_id = %s",
+    return sync_query("SELECT count(*) FROM attendance WHERE employee_id = %s",
                       (world.employees[who],))[0][0]
 
 
@@ -142,8 +155,8 @@ def test_genuine_offline_check_in_is_auto_valid_and_uses_anchor_time_not_phone_c
     assert accepted.status_code == 200, accepted.text
     body = accepted.json()
     assert body["result"] == "AUTO_VALID" and body["time_trusted"] is True and body["notes"] == []
-    status, offline, note, check_in_at, *_ = _row(body["attendance_id"])
-    assert (status, offline, note) == ("AUTO_VALID", True, None)
+    status, note, check_in_at, _ = _row(body["attendance_id"])
+    assert (status, note) == ("AUTO_VALID", None)
     # jam = jangkar + 90 detik penghitung internal; jam HP (+3 jam) diabaikan
     expected_ms = json.loads(event["payload"])["gps_time_ms"]
     assert abs(check_in_at.timestamp() * 1000 - expected_ms) < 1_000
@@ -198,8 +211,8 @@ def test_offline_outside_zone_needs_explanation_and_the_recorded_selfie(client, 
     accepted = phone.send(phone.record("CHECK_IN", at=OUTSIDE, explanation="Jalan ditutup", selfie_sha=sha),
                           selfie_file_id=file_id)
     assert accepted.status_code == 200, accepted.text
-    status, offline, _, _, _, _, explanation = _row(accepted.json()["attendance_id"])
-    assert (status, offline, explanation) == ("NEEDS_REVIEW", True, "Jalan ditutup")
+    status, note, _, _ = _row(accepted.json()["attendance_id"])
+    assert status == "NEEDS_REVIEW" and "Jalan ditutup" in note
 
 
 def test_phone_restarted_while_offline_uses_gps_time_and_needs_review(client, world):
@@ -209,7 +222,7 @@ def test_phone_restarted_while_offline_uses_gps_time_and_needs_review(client, wo
     assert accepted.status_code == 200, accepted.text
     body = accepted.json()
     assert body["result"] == "NEEDS_REVIEW" and body["time_trusted"] is False
-    assert _row(body["attendance_id"])[2] == "jam hanya dari satelit GPS (HP dinyalakan ulang saat offline)"
+    assert "jam hanya dari satelit GPS (HP dinyalakan ulang saat offline)" in _row(body["attendance_id"])[1]
 
 
 def test_clock_not_matching_gps_or_mock_location_needs_review(client, world, other_world):
@@ -217,13 +230,13 @@ def test_clock_not_matching_gps_or_mock_location_needs_review(client, world, oth
     phone.go_online()
     drift = phone.send(phone.record("CHECK_IN", gps_shift_ms=10 * 60_000))
     assert drift.status_code == 200 and drift.json()["result"] == "NEEDS_REVIEW"
-    assert _row(drift.json()["attendance_id"])[2] == "jam tidak cocok dengan waktu satelit GPS"
+    assert "jam tidak cocok dengan waktu satelit GPS" in _row(drift.json()["attendance_id"])[1]
 
     other = Phone(client, other_world)
     other.go_online()
     mocked = other.send(other.record("CHECK_IN", mocked=True))
     assert mocked.status_code == 200 and mocked.json()["result"] == "NEEDS_REVIEW"
-    assert _row(mocked.json()["attendance_id"])[2] == "lokasi palsu terdeteksi"
+    assert "lokasi palsu terdeteksi" in _row(mocked.json()["attendance_id"])[1]
 
 
 def test_sent_more_than_24_hours_later_needs_review_and_after_7_days_is_refused(client, world, monkeypatch):
@@ -240,16 +253,14 @@ def test_sent_more_than_24_hours_later_needs_review_and_after_7_days_is_refused(
     late = phone.send(phone.record("CHECK_IN", anchor=old_anchor))
     assert late.status_code == 200, late.text
     assert late.json()["result"] == "NEEDS_REVIEW" and late.json()["time_trusted"] is True
-    assert _row(late.json()["attendance_id"])[2] == "terkirim lebih dari 24 jam setelah absen"
+    assert "terkirim lebih dari 24 jam setelah absen" in _row(late.json()["attendance_id"])[1]
 
     too_old = phone.send(phone.record("CHECK_IN", anchor=ancient_anchor))
     assert too_old.status_code == 422 and too_old.json()["error"]["code"] == "OFFLINE_TOO_OLD"
 
 
 def test_office_account_cannot_send_offline_attendance(client, world):
-    sync_query("UPDATE vms.employee SET attendance_mode = 'OFFICE' WHERE id = %s RETURNING id",
-               (world.employees["leader"],))
-    phone = Phone(client, world, "leader")
+    phone = Phone(client, world, "pm")  # peran kantor (docs/35 §1)
     phone.go_online()
     refused = phone.send(phone.record("CHECK_IN"))
     assert refused.status_code == 403 and refused.json()["error"]["code"] == "WRONG_ATTENDANCE_CHANNEL"
@@ -266,7 +277,7 @@ def test_offline_check_out_after_valid_check_in_is_recorded_at_its_own_time(clie
     closed = phone.send(out_event)
     assert closed.status_code == 200, closed.text
     assert closed.json()["result"] == "CHECKED_OUT" and closed.json()["attendance_id"] == att_id
-    check_out_at = _row(att_id)[4]
+    check_out_at = _row(att_id)[3]
     assert abs(check_out_at.timestamp() * 1000 - json.loads(out_event["payload"])["gps_time_ms"]) < 1_000
 
 
@@ -277,7 +288,8 @@ def test_offline_check_out_without_check_in_is_refused(client, world):
     assert refused.status_code == 409 and refused.json()["error"]["code"] == "NO_OPEN_SESSION"
 
 
-def test_check_out_on_review_is_held_then_applied_when_approved(client, world, fake_storage):
+def test_check_out_on_review_is_recorded_and_the_decision_covers_the_whole_day(client, world, fake_storage):
+    """V2: jam pulang tetap dicatat walau absen masuk menunggu OM; keputusan OM berlaku untuk seluruh absen."""
     phone = Phone(client, world)
     phone.go_online()
     file_id, sha = _selfie(client, world)
@@ -285,20 +297,17 @@ def test_check_out_on_review_is_held_then_applied_when_approved(client, world, f
                         selfie_file_id=file_id).json()["attendance_id"]
     held = phone.send(phone.record("CHECK_OUT", after_ms=120_000))
     assert held.status_code == 200 and held.json()["result"] == "CHECK_OUT_PENDING_REVIEW"
-    _, _, _, _, check_out_at, requested_at, _ = _row(att_id)
-    assert check_out_at is None and requested_at is not None
+    status, _, _, check_out_at = _row(att_id)
+    assert status == "NEEDS_REVIEW" and check_out_at is not None
 
-    # Peninjau melihat tanda offline & jam pulang yang ditahan di daftar absensi.
-    listed = client.get("/attendance", headers=world.headers(client, "pm")).json()["items"]
-    item = next(i for i in listed if i["id"] == att_id)
-    assert item["offline"] is True and item["check_out_requested_at"] is not None and item["can_review"] is True
+    listed = client.get("/attendance", headers=world.headers(client, "pm"), params={"size": 100}).json()["items"]
+    assert next(i for i in listed if i["id"] == att_id)["can_review"] is True
 
     assert _review(client, world, att_id, approve=True).status_code == 200
-    status, _, _, _, check_out_at, requested_at, _ = _row(att_id)
-    assert status == "APPROVED" and check_out_at == requested_at
+    assert _row(att_id)[0] == "APPROVED" and _row(att_id)[3] == check_out_at
 
 
-def test_held_check_out_is_dropped_when_the_check_in_is_rejected(client, world, fake_storage):
+def test_rejecting_the_check_in_rejects_the_whole_day(client, world, fake_storage):
     phone = Phone(client, world)
     phone.go_online()
     file_id, sha = _selfie(client, world)
@@ -306,5 +315,4 @@ def test_held_check_out_is_dropped_when_the_check_in_is_rejected(client, world, 
                         selfie_file_id=file_id).json()["attendance_id"]
     phone.send(phone.record("CHECK_OUT", after_ms=120_000))
     assert _review(client, world, att_id, approve=False).status_code == 200
-    status, _, _, _, check_out_at, _, _ = _row(att_id)
-    assert status == "REJECTED" and check_out_at is None
+    assert _row(att_id)[0] == "REJECTED"

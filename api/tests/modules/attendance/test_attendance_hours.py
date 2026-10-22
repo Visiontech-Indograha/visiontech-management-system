@@ -52,7 +52,7 @@ def test_check_in_before_0700_is_rejected():
                 lng=106.8,
                 lat=-6.2,
                 origin="GPS",
-                selfie_file_id=None,
+                selfie_file_id=uuid4(),  # V2: swafoto selalu wajib, diperiksa sebelum jam buka
                 channel="WEB",
                 at=early_dt,
             )

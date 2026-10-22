@@ -12,7 +12,7 @@ from zoneinfo import ZoneInfo
 import pytest
 
 from app.modules.attendance.services import attendance_monitor_service as monitor
-from tests.conftest import login_headers, requires_db
+from tests.conftest import login_headers, requires_db, sync_query
 
 pytestmark = requires_db
 
@@ -35,22 +35,27 @@ def _at(monkeypatch, iso: str) -> None:
     monkeypatch.setattr(monitor, "jakarta_now", lambda: datetime.fromisoformat(iso).replace(tzinfo=WIB))
 
 
+def _employee_of(user) -> str:
+    return str(sync_query("SELECT employee_id FROM users WHERE user_id = %s", (user.user_id,))[0][0])
+
+
 def _admin_with_employee(make_user):
     user = make_user("ADMIN")
-    (emp_id,) = user.query(
-        """INSERT INTO vms.employee (organization_id, employee_no, full_name, position, join_date)
-           VALUES (%s, 'UJI-001', %s, 'Teknisi', '2026-01-05') RETURNING id""",
-        (user.org_id, EMPLOYEE_NAME),
-    )[0]
-    return user, str(emp_id)
+    emp_id = _employee_of(user)
+    sync_query("UPDATE employee SET full_name = %s, employee_no = 'UJI-001' WHERE employee_id = %s RETURNING 1",
+               (EMPLOYEE_NAME, emp_id))
+    return user, emp_id
 
 
-def _check_in(user, emp_id: str, work_date: str, face_result: str | None = None) -> None:
-    # Status ditentukan trigger DB (server yang memutuskan); NEEDS_REVIEW dibuat lewat wajah NO_MATCH.
-    user.query(
-        """INSERT INTO vms.attendance (organization_id, employee_id, work_date, site_label, check_in_at, radius_m, face_result)
-           VALUES (%s, %s, %s, 'Lokasi uji', %s::date + time '08:05', 100, %s)""",
-        (user.org_id, emp_id, work_date, work_date, face_result),
+def _check_in(user, emp_id: str, work_date: str, needs_review: bool = False) -> None:
+    sync_query(
+        "INSERT INTO attendance (employee_id, attendance_date, target_location_type, office_id, scheduled_in, "
+        "scheduled_out, clock_in_at, in_lat, in_lng, face_match_score, face_photo_path, distance_to_target_m, "
+        "is_within_attendance_radius, om_approval_status, distance_from_main_office_m, city_zone_status, "
+        "meal_allowance_amount) "
+        "VALUES (%s, %s, 'OFFICE', (SELECT office_id FROM employee WHERE employee_id = %s), '07:00', '16:00', "
+        "%s::date + time '08:05', -6.2, 106.8, 0, 'uji.webp', 0, TRUE, %s, 0, 'DALAM_KOTA', 0) RETURNING 1",
+        (emp_id, work_date, emp_id, work_date, "PENDING_OM" if needs_review else "AUTO_VALID"),
     )
 
 
@@ -91,13 +96,8 @@ def test_before_nine_or_weekend_is_skipped(client, make_user, sent, monkeypatch,
 
 def test_needs_review_spike_alerts(client, make_user, sent, monkeypatch):
     user, _ = _admin_with_employee(make_user)
-    for i in range(4):
-        (emp,) = user.query(
-            """INSERT INTO vms.employee (organization_id, employee_no, full_name, position, join_date)
-               VALUES (%s, %s, 'Anggota uji', 'Teknisi', '2026-01-05') RETURNING id""",
-            (user.org_id, f"UJI-1{i}"),
-        )[0]
-        _check_in(user, str(emp), "2026-09-23", "NO_MATCH")
+    for _ in range(4):
+        _check_in(user, _employee_of(make_user(None)), "2026-09-23", needs_review=True)
     _at(monkeypatch, "2026-09-23T14:00:00")
 
     response = client.post("/cron/attendance/alert-needs-review", headers=login_headers(client, user))
@@ -110,7 +110,7 @@ def test_needs_review_spike_alerts(client, make_user, sent, monkeypatch):
 
 def test_needs_review_below_minimum_is_quiet(client, make_user, sent, monkeypatch):
     user, emp_id = _admin_with_employee(make_user)
-    _check_in(user, emp_id, "2026-09-23", "NO_MATCH")
+    _check_in(user, emp_id, "2026-09-23", needs_review=True)
     _at(monkeypatch, "2026-09-23T14:00:00")
 
     response = client.post("/cron/attendance/alert-needs-review", headers=login_headers(client, user))
@@ -119,7 +119,7 @@ def test_needs_review_below_minimum_is_quiet(client, make_user, sent, monkeypatc
     assert sent == []
 
 
-@pytest.mark.parametrize("role", ["OPS", "FINANCE", None])
+@pytest.mark.parametrize("role", ["OPS", "HR", None])
 def test_only_admin_may_trigger_jobs(client, make_user, sent, role):
     headers = login_headers(client, make_user(role))
 

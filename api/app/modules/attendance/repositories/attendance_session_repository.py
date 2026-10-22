@@ -429,7 +429,7 @@ class AttendanceSessionRepository(BaseRepository):
             """
             SELECT DISTINCT CAST(u.employee_id AS text) AS employee_id
             FROM users u
-            WHERE u.system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'PROJECT_MANAGER', 'ADMIN_HR_GA')
+            WHERE u.system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'PROJECT_MANAGER')
               AND u.employee_id IS NOT NULL
               AND u.employee_id <> CAST(:emp AS uuid)
               AND u.delete_at IS NULL
@@ -537,7 +537,7 @@ class AttendanceSessionRepository(BaseRepository):
                    AND EXISTS (
                        SELECT 1 FROM users
                        WHERE user_id = CAST(:viewer AS uuid)
-                         AND system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'PROJECT_MANAGER', 'ADMIN_HR_GA')
+                         AND system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'PROJECT_MANAGER')
                    )
                 """,
                 {"viewer": str(viewer_user_id), "emp": str(employee_id)},
@@ -580,7 +580,7 @@ class AttendanceSessionRepository(BaseRepository):
                 CAST(:view_all AS boolean)
                 OR EXISTS (
                     SELECT 1 FROM users v WHERE v.user_id = CAST(:viewer AS uuid)
-                      AND v.system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'PROJECT_MANAGER', 'ADMIN_HR_GA')
+                      AND v.system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'PROJECT_MANAGER')
                 )
                 OR a.employee_id IS NOT DISTINCT FROM (
                     SELECT u.employee_id FROM users u WHERE u.user_id = CAST(:viewer AS uuid)

@@ -244,11 +244,12 @@ def test_sent_more_than_24_hours_later_needs_review_and_after_7_days_is_refused(
     phone.go_online()
     user_id = phone._user_id()
     real_now = utcnow()
-    monkeypatch.setattr(security, "utcnow", lambda: real_now - timedelta(hours=25))
-    old_anchor = security.create_time_anchor(user_id)
-    monkeypatch.setattr(security, "utcnow", lambda: real_now - timedelta(days=8))
-    ancient_anchor = security.create_time_anchor(user_id)
-    monkeypatch.undo()
+    # Konteks terpisah: undo hanya memulihkan jam, bukan penyimpanan palsu (swafoto tetap diunggah ke tiruan).
+    with monkeypatch.context() as m:
+        m.setattr(security, "utcnow", lambda: real_now - timedelta(hours=25))
+        old_anchor = security.create_time_anchor(user_id)
+        m.setattr(security, "utcnow", lambda: real_now - timedelta(days=8))
+        ancient_anchor = security.create_time_anchor(user_id)
 
     late = phone.send(phone.record("CHECK_IN", anchor=old_anchor))
     assert late.status_code == 200, late.text

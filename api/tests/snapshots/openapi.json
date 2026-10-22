@@ -18988,7 +18988,7 @@
   },
   "/api/v1/recaps/attendance": {
    "get": {
-    "description": "HR/OPS/ADMIN: seluruh perusahaan; lainnya: hanya dirinya (aturan `GET /attendance`).",
+    "description": "OM/ADMIN (view:all_attendance): seluruh perusahaan; lainnya: hanya dirinya.",
     "operationId": "attendance_recap_api_v1_recaps_attendance_get",
     "parameters": [
      {

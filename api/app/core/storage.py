@@ -85,6 +85,23 @@ def upload_file(object_name: str, file_data: bytes, content_type: str) -> bool:
         return False
 
 
+def get_image_bytes(storage_key: str) -> bytes | None:
+    """Isi gambar unggahan untuk diproses server (laporan, wajah, tanda tangan).
+
+    Unggahan gambar lewat `/files/upload` hanya menyimpan varian WebP `{org}/{id}_{full|view|thumb}.webp` —
+    kunci asli `{org}/{id}.{ext}` yang tercatat di `file_object.storage_key` tidak ikut tersimpan. Coba kunci asli
+    dulu (berkas non-kompresi / data lama), lalu varian terbesar."""
+    if not storage_key:
+        return None
+    base = storage_key.rsplit(".", 1)[0]
+    for key in (storage_key, f"{base}_full.webp", f"{base}_view.webp", f"{base}_thumb.webp"):
+        if object_exists(key):
+            data = get_object_bytes(key)
+            if data:
+                return data
+    return None
+
+
 def get_object_bytes(object_name: str) -> bytes | None:
     """Unduh isi objek dari MinIO. None bila objek tidak ada atau MinIO tidak tersedia."""
     if not ensure_bucket():

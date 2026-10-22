@@ -1,9 +1,10 @@
 """
 app/modules/attendance/controllers/attendance_controller.py
 
-Controller orkestrasi use case absensi lapangan dan luring.
+Controller orkestrasi use case absensi lapangan dan offline.
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.2.
 """
+
 from __future__ import annotations
 
 from datetime import date
@@ -12,12 +13,9 @@ from uuid import UUID
 
 from fastapi import Depends
 
-from app.api.deps import (
-    get_attendance_offline_service,
-    get_attendance_session_service,
-)
 from app.core.permissions import Permission
 from app.core.security import CurrentUser, create_time_anchor
+from app.modules.attendance.dependencies import get_attendance_offline_service, get_attendance_session_service
 from app.modules.attendance.schemas.attendance_schema import (
     AttendanceListResponse,
     AttendanceResponse,
@@ -25,6 +23,7 @@ from app.modules.attendance.schemas.attendance_schema import (
     CheckOutRequest,
     DeviceKeyRequest,
     ExplanationRequest,
+    MealAllowanceRow,
     OfflineAttendanceEvent,
     OfflineAttendanceResult,
     ReviewRequest,
@@ -42,7 +41,7 @@ def _response(row: Any) -> AttendanceResponse:
 
 class AttendanceController:
     """
-    Controller use case absensi lapangan (check-in, check-out, review, ekspor, dan event luring).
+    Controller use case absensi lapangan (check-in, check-out, review, ekspor, dan event offline).
     """
 
     def __init__(
@@ -91,7 +90,7 @@ class AttendanceController:
         current_user: CurrentUser,
         data: DeviceKeyRequest,
     ) -> dict[str, str]:
-        """Mendaftarkan kunci publik Android Keystore perangkat untuk verifikasi absen luring."""
+        """Mendaftarkan kunci publik Android Keystore perangkat untuk verifikasi absen offline."""
         await self.offline_service.register_device_key(current_user, data.device_id, data.public_key)
         return {"message": "Kunci perangkat terdaftar."}
 
@@ -100,7 +99,7 @@ class AttendanceController:
         current_user: CurrentUser,
         data: OfflineAttendanceEvent,
     ) -> OfflineAttendanceResult:
-        """Memproses sinkronisasi event absen luring bertanda tangan kriptografis."""
+        """Memproses sinkronisasi event absen offline bertanda tangan kriptografis."""
         result = await self.offline_service.apply(
             current_user,
             device_id=data.device_id,
@@ -109,7 +108,6 @@ class AttendanceController:
             payload=data.payload,
             signature=data.signature,
             selfie_file_id=data.selfie_file_id,
-            face_probe_id=data.face_probe_id,
         )
         return OfflineAttendanceResult(**result)
 
@@ -119,9 +117,7 @@ class AttendanceController:
         data: CheckInRequest,
     ) -> AttendanceResponse:
         """Memproses absensi masuk (check-in) pengguna."""
-        await self.session_service.ensure_check_in_refs(
-            current_user.organization_id, data.site_id, data.selfie_file_id
-        )
+        await self.session_service.ensure_check_in_refs(current_user.organization_id, data.site_id, data.selfie_file_id)
         row = await self.session_service.check_in(
             current_user.organization_id,
             current_user.user_id,
@@ -133,7 +129,6 @@ class AttendanceController:
             selfie_file_id=data.selfie_file_id,
             channel=data.channel,
             explanation=data.explanation,
-            face_probe_id=data.face_probe_id,
         )
         return _response(row)
 
@@ -143,14 +138,11 @@ class AttendanceController:
         data: CheckOutRequest,
     ) -> AttendanceResponse:
         """Memproses absensi pulang (check-out) pengguna."""
-        await self.session_service.ensure_check_in_refs(
-            current_user.organization_id, None, data.selfie_file_id
-        )
+        await self.session_service.ensure_check_in_refs(current_user.organization_id, None, data.selfie_file_id)
         row = await self.session_service.check_out(
             current_user.user_id,
             data.channel,
             org_id=current_user.organization_id,
-            face_probe_id=data.face_probe_id,
             lat=data.location.lat,
             lng=data.location.lng,
             selfie_file_id=data.selfie_file_id,
@@ -190,10 +182,13 @@ class AttendanceController:
         end_date: date,
     ) -> str:
         """Mengekspor data absensi organisasi dalam rentang tanggal ke format CSV."""
-        return await self.session_service.export_csv(
-            current_user.organization_id, start_date, end_date
-        )
+        return await self.session_service.export_csv(current_user.organization_id, start_date, end_date)
+
+    async def handle_meal_allowance(
+        self, current_user: CurrentUser, start_date: date, end_date: date, division_id: UUID | None
+    ) -> list[MealAllowanceRow]:
+        rows = await self.session_service.meal_allowance(current_user, start_date, end_date, division_id)
+        return [MealAllowanceRow(**dict(r._mapping)) for r in rows]
 
 
 __all__ = ["AttendanceController"]
-

@@ -4,6 +4,7 @@ app/modules/auth/routes/auth_session_route.py
 Rute endpoint HTTP untuk manajemen sesi perangkat aktif.
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.1.
 """
+
 from uuid import UUID
 
 from fastapi import APIRouter, Depends
@@ -52,4 +53,3 @@ async def revoke_session(
     Mencabut satu sesi perangkat tertentu milik sendiri.
     """
     return await controller.handle_revoke_session(session_id, current_user)
-

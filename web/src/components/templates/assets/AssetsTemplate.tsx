@@ -1,39 +1,31 @@
-import type { UseQueryResult } from "@tanstack/react-query";
-import { AssetCheckDialog } from "@/components/organisms/assets/AssetCheckDialog";
 import { AssetCreateButton } from "@/components/organisms/assets/AssetCreateButton";
 import { AssetCreateDialog } from "@/components/organisms/assets/AssetCreateDialog";
+import { AssetLendDialog } from "@/components/organisms/assets/AssetLendDialog";
 import { AssetList, type AssetAction } from "@/components/organisms/assets/AssetList";
-import { AssetReleaseDialog } from "@/components/organisms/assets/AssetReleaseDialog";
-import { AssetReserveDialog } from "@/components/organisms/assets/AssetReserveDialog";
 import { AssetReturnDialog } from "@/components/organisms/assets/AssetReturnDialog";
-import { AssetReturnHistoryDialog } from "@/components/organisms/assets/AssetReturnHistoryDialog";
-import { AssetVerifyReturnDialog } from "@/components/organisms/assets/AssetVerifyReturnDialog";
-import type { Asset } from "@/services/assetService";
+import { AssetStatusDialog } from "@/components/organisms/assets/AssetStatusDialog";
+import { VehicleFilesDialog } from "@/components/organisms/assets/VehicleFilesDialog";
+import type { AssetKind } from "@/services/assetService";
 import { PageTemplate } from "../PageTemplate";
 
 /** Dialog aset yang sedang terbuka di halaman "Kendaraan & alat". */
-export type AssetsDialog = { kind: "create" } | AssetAction | null;
+export type AssetsDialog = { kind: "create"; asset: AssetKind } | AssetAction | null;
 
-/** Kerangka "Kendaraan & alat": kartu aset + dialog sesuai tindakan. */
-export function AssetsTemplate({ assets, canManage, canReserve, isBorrowingLeader, open, onOpen, close }: {
-  assets: UseQueryResult<Asset[]>;
+/** Kerangka "Kendaraan & alat": tab inventaris + dialog sesuai tindakan. */
+export function AssetsTemplate({ canManage, open, onOpen, close }: {
   canManage: boolean;
-  canReserve: boolean;
-  isBorrowingLeader: (asset: Asset) => boolean;
   open: AssetsDialog;
   onOpen: (dialog: AssetsDialog) => void;
   close: () => void;
 }) {
   return (
-    <PageTemplate title="Kendaraan & alat" action={canManage && <AssetCreateButton onCreate={() => onOpen({ kind: "create" })} />}>
-      <AssetList assets={assets} canManage={canManage} canReserve={canReserve} isBorrowingLeader={isBorrowingLeader} onOpen={onOpen} />
-      {open?.kind === "create" && <AssetCreateDialog onClose={close} />}
-      {open?.kind === "reserve" && <AssetReserveDialog asset={open.asset} onClose={close} />}
-      {open?.kind === "release" && <AssetReleaseDialog asset={open.asset} onClose={close} />}
-      {open?.kind === "check" && <AssetCheckDialog asset={open.asset} onClose={close} />}
-      {open?.kind === "return" && <AssetReturnDialog asset={open.asset} onClose={close} />}
-      {open?.kind === "verify" && <AssetVerifyReturnDialog asset={open.asset} onClose={close} />}
-      {open?.kind === "history" && <AssetReturnHistoryDialog asset={open.asset} onClose={close} />}
+    <PageTemplate title="Kendaraan & alat" action={canManage && <AssetCreateButton onCreate={(asset) => onOpen({ kind: "create", asset })} />}>
+      <AssetList canManage={canManage} onOpen={onOpen} />
+      {open?.kind === "create" && <AssetCreateDialog kind={open.asset} onClose={close} />}
+      {open?.kind === "lend" && <AssetLendDialog kind={open.asset} assetId={open.id} assetName={open.name} onClose={close} />}
+      {open?.kind === "status" && <AssetStatusDialog kind={open.asset} id={open.id} name={open.name} status={open.status} onClose={close} />}
+      {open?.kind === "files" && <VehicleFilesDialog vehicle={open.vehicle} canManage={canManage} onClose={close} />}
+      {open?.kind === "return" && <AssetReturnDialog loan={open.loan} onClose={close} />}
     </PageTemplate>
   );
 }

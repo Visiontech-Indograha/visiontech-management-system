@@ -1,19 +1,17 @@
 """
 app/modules/attendance/routes/attendance_route.py
 
-Rute endpoint HTTP untuk absensi lapangan dan luring (/attendance).
+Rute endpoint HTTP untuk absensi lapangan dan offline (/attendance).
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.1.
 """
+
 from datetime import date
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import PlainTextResponse
 
-from app.api.deps import (
-    get_current_user,
-    require_permission,
-)
+from app.api.deps import get_current_user, require_permission
 from app.core.permissions import Permission
 from app.core.security import CurrentUser
 from app.modules.attendance.controllers.attendance_controller import AttendanceController
@@ -24,6 +22,7 @@ from app.modules.attendance.schemas.attendance_schema import (
     CheckOutRequest,
     DeviceKeyRequest,
     ExplanationRequest,
+    MealAllowanceRow,
     OfflineAttendanceEvent,
     OfflineAttendanceResult,
     ReviewRequest,
@@ -67,7 +66,7 @@ async def register_device_key(
     controller: AttendanceController = Depends(),
 ) -> dict[str, str]:
     """
-    R-34: daftarkan kunci publik Android Keystore perangkat ini untuk memverifikasi absen luring.
+    R-34: daftarkan kunci publik Android Keystore perangkat ini untuk memverifikasi absen offline.
     """
     return await controller.handle_register_device_key(current_user, data)
 
@@ -79,7 +78,7 @@ async def submit_offline_attendance(
     controller: AttendanceController = Depends(),
 ) -> OfflineAttendanceResult:
     """
-    R-34: terima satu absen luring yang ditandatangani perangkat (idempoten per client_op_id).
+    R-34: terima satu absen offline yang ditandatangani perangkat (idempoten per client_op_id).
     """
     return await controller.handle_submit_offline(current_user, data)
 
@@ -149,5 +148,16 @@ async def export_attendance(
     return await controller.handle_export(current_user, start_date, end_date)
 
 
-__all__ = ["router"]
+@router.get("/meal-allowance", response_model=list[MealAllowanceRow])
+async def meal_allowance_recap(
+    start_date: date,
+    end_date: date,
+    division_id: UUID | None = None,
+    current_user: CurrentUser = Depends(get_current_user),
+    controller: AttendanceController = Depends(),
+) -> list[MealAllowanceRow]:
+    """Rekap uang makan per karyawan dari absensi sah: pengelola absensi semua divisi, PM divisinya."""
+    return await controller.handle_meal_allowance(current_user, start_date, end_date, division_id)
 
+
+__all__ = ["router"]

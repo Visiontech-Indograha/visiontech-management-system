@@ -1,6 +1,7 @@
 """
 Paket skema untuk modul system.
 """
+
 from app.modules.system.schemas.system_schema import (
     AppUpdateOut,
     AttendanceRecap,

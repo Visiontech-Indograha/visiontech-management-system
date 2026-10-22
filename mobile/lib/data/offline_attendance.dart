@@ -14,7 +14,7 @@ import '../core/error_message.dart';
 import 'app_database.dart';
 import 'vms_api.dart';
 
-/// Absen lapangan luring (R-34, keputusan pemilik 2026-10-02 — mengubah K-13).
+/// Absen lapangan offline (R-34, keputusan pemilik 2026-10-02 — mengubah K-13).
 ///
 /// Disimpan di mana: antrean SQLite aplikasi (`pending_sync_operations`, jenis
 /// [entityType]) di penyimpanan INTERNAL aplikasi, dan swafotonya di folder
@@ -75,7 +75,7 @@ class OfflineAttendance {
     await _storage.write(key: _deviceKeyFlag, value: flag);
   }
 
-  /// Rekam satu absen luring (masuk/pulang): tandatangani lalu simpan ke antrean.
+  /// Rekam satu absen offline (masuk/pulang): tandatangani lalu simpan ke antrean.
   Future<void> record({
     required String kind,
     required Map<String, dynamic> site,
@@ -150,7 +150,7 @@ class OfflineAttendance {
         );
   }
 
-  /// Absen luring yang belum terkirim (untuk kartu "hari ini" & riwayat).
+  /// Absen offline yang belum terkirim (untuk kartu "hari ini" & riwayat).
   Future<List<Map<String, dynamic>>> pending() async {
     final rows =
         await (_db.select(_db.pendingSyncOperations)
@@ -177,7 +177,7 @@ class OfflineAttendance {
     ];
   }
 
-  /// Kirim antrean absen luring berurutan. Berhenti saat jaringan putus; ditolak server → "Perlu perhatian".
+  /// Kirim antrean absen offline berurutan. Berhenti saat jaringan putus; ditolak server → "Perlu perhatian".
   Future<void> push() async {
     final rows =
         await (_db.select(_db.pendingSyncOperations)
@@ -237,7 +237,7 @@ class OfflineAttendance {
         )..where((t) => t.id.equals(row.id))).write(
           const PendingSyncOperationsCompanion(
             deadLetter: Value(true),
-            lastError: Value('Swafoto absen luring tidak ditemukan di HP.'),
+            lastError: Value('Swafoto absen offline tidak ditemukan di HP.'),
           ),
         );
       }

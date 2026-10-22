@@ -8,8 +8,7 @@ import '../../core/error_message.dart';
 import '../../core/providers.dart';
 import '../../core/theme/theme.dart';
 import '../../shared/ui/vms_ui.dart';
-import '../plans/revision_history_screen.dart';
-import '../plans/work_plans_screen.dart';
+import '../plans/daily_plan_screen.dart';
 
 final _time = DateFormat('d MMM yyyy, HH.mm', 'id_ID');
 
@@ -44,7 +43,7 @@ class _NotificationBellState extends ConsumerState<NotificationBell> {
       final res = await ref.read(syncEngineProvider).api.notifications();
       if (mounted) setState(() => _unread = res.unread);
     } catch (_) {
-      // Luring: lencana tetap angka terakhir.
+      // Offline: lencana tetap angka terakhir.
     }
   }
 
@@ -135,18 +134,14 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     final api = ref.read(syncEngineProvider).api;
     try {
       if (n['read_at'] == null) await api.readNotification(n['id'] as String);
-      final planId = n['work_plan_id'] as String?;
-      if (planId != null && n['kind'] == 'PLAN_REVISED') {
+      final planId = n['daily_plan_id'] as String?;
+      if (planId != null) {
         if (!mounted) return;
         await Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => RevisionHistoryScreen(planId: planId)),
+          MaterialPageRoute(
+            builder: (_) => DailyPlanScreen(dailyPlanId: planId),
+          ),
         );
-      } else if (planId != null) {
-        final plan = await api.workPlan(planId);
-        if (!mounted) return;
-        await Navigator.of(
-          context,
-        ).push(MaterialPageRoute(builder: (_) => PlanDetailScreen(plan: plan)));
       }
     } catch (e) {
       if (mounted) {
@@ -159,7 +154,10 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen(liveEventTickProvider, (_, _) => _load());   // T8: peristiwa waktu nyata
+    ref.listen(
+      liveEventTickProvider,
+      (_, _) => _load(),
+    ); // T8: peristiwa waktu nyata
     final unread = _items.where((n) => n['read_at'] == null).length;
     return Scaffold(
       appBar: VmsTopBar(

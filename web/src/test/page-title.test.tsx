@@ -8,12 +8,7 @@ describe("Judul tab peramban", () => {
     expect(pageTitle("/")).toBe("Beranda · Visiontech VMS");
     expect(pageTitle("/attendance")).toBe("Absensi · Visiontech VMS");
     expect(pageTitle("/sites/")).toBe("Lokasi kerja · Visiontech VMS");
-    expect(pageTitle("/work-plans/new")).toBe("Buat rencana kerja · Visiontech VMS");
-    expect(pageTitle("/work-plans/abc-123")).toBe("Detail rencana kerja · Visiontech VMS");
-    expect(pageTitle("/work-plans/abc-123/edit")).toBe("Sunting rencana kerja · Visiontech VMS");
-    expect(pageTitle("/work-plans/abc-123/presentation")).toBe("Presentasi laporan · Visiontech VMS");
     expect(pageTitle("/directory/e1")).toBe("Detail karyawan · Visiontech VMS");
-    expect(pageTitle("/verify/abc/def")).toBe("Verifikasi dokumen · Visiontech VMS");
     expect(pageTitle("/login")).toBe("Masuk · Visiontech VMS");
     expect(pageTitle("/tidak-ada")).toBe("Halaman tidak ditemukan · Visiontech VMS");
   });

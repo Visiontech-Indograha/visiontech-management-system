@@ -25,7 +25,7 @@ from sqlalchemy.engine import make_url
 
 from app.cli import _operator_url
 from app.core.security import hash_password
-from app.db.session import make_engine
+from app.database.session import make_engine
 
 PASSWORD = "password123"
 ORG_NAME = "PT Visiontech Indograha"

@@ -1,4 +1,4 @@
-﻿/** Nama permission sesuai backend terbaru (api/app/core/permissions.py). */
+/** Nama permission sesuai backend terbaru (api/app/core/permissions.py). */
 export const PERMISSIONS = [
   "manage:users",
   "view:users",
@@ -6,6 +6,8 @@ export const PERMISSIONS = [
   "view:documents",
   "manage:employee_documents",
   "verify:documents",
+  "manage:teams",
+  "view:teams",
   "create:plan",
   "publish:plan",
   "view:all_attendance",
@@ -14,8 +16,14 @@ export const PERMISSIONS = [
   "review:overtime",
   "manage:sites",
   "manage:assets",
+  "manage:mess",
+  "view:mess",
+  "manage:offboarding",
+  "view:offboarding",
+  "manage:image_requirements",
   "view:timeline",
   "view:audit",
+  "view:backup",
   "run:system_jobs",
 ] as const;
 

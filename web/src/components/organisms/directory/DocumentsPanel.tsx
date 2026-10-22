@@ -1,15 +1,15 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { useSession } from "@/stores/sessionStore";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { SelectField, TextField } from "@/components/molecules/Field";
 import { ApiError } from "@/lib/apiClient";
 import { formatDate } from "@/lib/format";
 import {
   useCreateDocument,
+  useDeactivateDocument,
+  useDeleteDocument,
   useEmployeeDocuments,
   useUploadFile,
-  useVerifyDocument,
   type EmployeeDocument,
 } from "@/services/employeeService";
 import { FilePreview } from "@/components/molecules/FilePreview";
@@ -24,51 +24,60 @@ import { FormErrorText } from "@/components/molecules/FormErrorText";
 
 type Errors = Record<string, string>;
 
-/** Jenis baku — "SIM A"/"SIM C" dipakai aturan pengemudi kendaraan, jadi harus dipilih, bukan diketik. */
-const DOC_TYPES = ["KTP", "SIM A", "SIM B I", "SIM B II", "SIM C", "MCU", "Sertifikat K3", "Kontrak kerja"];
+/** Kode baku employee_file.type (sama dengan seed V2); API juga merapikan ketikan bebas ke bentuk ini. */
+const DOC_TYPES: Record<string, string> = {
+  KTP: "KTP",
+  SIM_A: "SIM A",
+  SIM_B1: "SIM B I",
+  SIM_B2: "SIM B II",
+  SIM_C: "SIM C",
+  MCU: "Medical check-up",
+  SERTIFIKAT_K3: "Sertifikat K3",
+  SERTIFIKAT_TEKNIS: "Sertifikat teknis",
+  KONTRAK_PKWT: "Kontrak PKWT",
+};
 const OTHER = "__other__";
+const docLabel = (code: string) => DOC_TYPES[code] ?? code.split("_").join(" ");
 
-/** Sisa hari sampai kedaluwarsa menurut tanggal WIB (M2: peringatan ≤ 30 hari). */
+const STATUS: Record<EmployeeDocument["status"], { label: string; tone: "success" | "warning" | "danger" }> = {
+  active: { label: "Berlaku", tone: "success" },
+  extended: { label: "Diganti", tone: "warning" },
+  not_active: { label: "Tidak berlaku", tone: "danger" },
+};
+
+/** Sisa hari sampai kedaluwarsa menurut tanggal WIB (peringatan ≤ 30 hari). */
 function daysUntil(isoDate: string): number {
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(new Date());
   return Math.round((Date.parse(isoDate) - Date.parse(today)) / 86_400_000);
 }
 
 function ExpiryWarning({ doc }: { doc: EmployeeDocument }) {
-  if (!doc.expiry_date || doc.status !== "VERIFIED" || !["CURRENT", "EXPIRED"].includes(doc.lifecycle)) return null;
-  const days = daysUntil(doc.expiry_date);
-  if (days < 0 || doc.lifecycle === "EXPIRED") return <Pill tone="danger">Kedaluwarsa</Pill>;
+  if (!doc.expired_at || doc.status !== "active") return null;
+  const days = daysUntil(doc.expired_at);
+  if (days < 0) return <Pill tone="danger">Kedaluwarsa</Pill>;
   if (days <= 30) return <Pill tone="warning">{days === 0 ? "Berakhir hari ini" : `${days} hari lagi`}</Pill>;
   return null;
 }
 
-const STATUS: Record<string, { label: string; tone: "success" | "warning" | "danger" }> = {
-  VERIFIED: { label: "Terverifikasi", tone: "success" },
-  REJECTED: { label: "Ditolak", tone: "danger" },
-};
-
 /**
- * Daftar berkas karyawan + tambah (manage:employee_documents) + verifikasi (verify:documents) +
- * perpanjang per berkas (R8: tombolnya ada di daftar — termasuk "Berkas saya" — bukan hanya di detail).
+ * Dokumen & sertifikat karyawan (employee_file). Karyawan melihat miliknya; HR/GA (`canManage`) menambah,
+ * memperbarui (dokumen sejenis yang baru menggantikan yang lama), menonaktifkan, dan menghapus salah unggah.
  */
-export function DocumentsPanel({
-  employeeId,
-  canManage,
-  canVerify = false,
-  canRenew = canManage,
-}: {
-  employeeId: string;
-  canManage: boolean;
-  canVerify?: boolean;
-  canRenew?: boolean;
-}) {
+export function DocumentsPanel({ employeeId, canManage }: { employeeId: string; canManage: boolean }) {
   const docs = useEmployeeDocuments(employeeId);
-  const { me } = useSession();
+  const deactivate = useDeactivateDocument(employeeId);
+  const remove = useDeleteDocument(employeeId);
   const [editing, setEditing] = useState(false);
   const [renewing, setRenewing] = useState<EmployeeDocument | null>(null);
-  const showActions = canVerify || canRenew;
-  const renewable = (d: EmployeeDocument) =>
-    canRenew && d.status === "VERIFIED" && (d.lifecycle === "CURRENT" || d.lifecycle === "EXPIRED");
+  // Hapus dua langkah (tanpa dialog bawaan peramban, R1): klik pertama minta konfirmasi.
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const columns = canManage ? 6 : 5;
+
+  const act = (run: Promise<unknown>, done: string) =>
+    run.then(
+      () => toast.success(done),
+      (err) => toast.error(err instanceof ApiError ? err.message : "Terjadi kesalahan. Coba lagi."),
+    );
 
   return (
     <section aria-label="Berkas">
@@ -82,24 +91,24 @@ export function DocumentsPanel({
           <TableBlockHead className="border-b border-line text-mist">
             <TableBlockRow>
               <TableBlockHeaderCell className="px-4 py-3 font-medium">Berkas</TableBlockHeaderCell>
-              <TableBlockHeaderCell className="px-4 py-3 font-medium">Nomor</TableBlockHeaderCell>
+              <TableBlockHeaderCell className="px-4 py-3 font-medium">Berlaku sejak</TableBlockHeaderCell>
               <TableBlockHeaderCell className="px-4 py-3 font-medium">Kedaluwarsa</TableBlockHeaderCell>
               <TableBlockHeaderCell className="px-4 py-3 font-medium">Status</TableBlockHeaderCell>
               <TableBlockHeaderCell className="px-4 py-3 font-medium">File</TableBlockHeaderCell>
-              {showActions && <TableBlockHeaderCell className="px-4 py-3 text-right font-medium">Aksi</TableBlockHeaderCell>}
+              {canManage && <TableBlockHeaderCell className="px-4 py-3 text-right font-medium">Aksi</TableBlockHeaderCell>}
             </TableBlockRow>
           </TableBlockHead>
           <TableBlockBody>
             {docs.isPending && (
               <TableBlockRow aria-hidden>
-                <TableBlockCell colSpan={6} className="px-4 py-3">
+                <TableBlockCell colSpan={columns} className="px-4 py-3">
                   <LoadingBar className="h-4 w-1/2" />
                 </TableBlockCell>
               </TableBlockRow>
             )}
             {docs.isError && (
               <TableBlockRow>
-                <TableBlockCell colSpan={6} className="px-4 py-6 text-center text-danger">
+                <TableBlockCell colSpan={columns} className="px-4 py-6 text-center text-danger">
                   Berkas tidak dapat dimuat.{" "}
                   <ActionButton variant="outline" size="sm" onClick={() => docs.refetch()}>
                     Coba lagi
@@ -109,19 +118,19 @@ export function DocumentsPanel({
             )}
             {docs.data?.items.length === 0 && (
               <TableBlockRow>
-                <TableBlockCell colSpan={6} className="px-4 py-6 text-center text-mist">
+                <TableBlockCell colSpan={columns} className="px-4 py-6 text-center text-mist">
                   Belum ada berkas.
                 </TableBlockCell>
               </TableBlockRow>
             )}
             {docs.data?.items.map((d) => (
               <TableBlockRow key={d.id} className="h-11 border-b border-line last:border-0">
-                <TableBlockCell className="px-4 py-2 font-medium">{d.doc_type}</TableBlockCell>
-                <TableBlockCell className="px-4 py-2">{d.number_masked}</TableBlockCell>
+                <TableBlockCell className="px-4 py-2 font-medium">{docLabel(d.doc_type)}</TableBlockCell>
+                <TableBlockCell className="px-4 py-2">{formatDate(d.active_at)}</TableBlockCell>
                 <TableBlockCell className="px-4 py-2">
-                  {d.expiry_date ? (
+                  {d.expired_at ? (
                     <TextBlock as="span" className="flex flex-wrap items-center gap-2">
-                      {formatDate(d.expiry_date)}
+                      {formatDate(d.expired_at)}
                       <ExpiryWarning doc={d} />
                     </TextBlock>
                   ) : (
@@ -129,24 +138,42 @@ export function DocumentsPanel({
                   )}
                 </TableBlockCell>
                 <TableBlockCell className="px-4 py-2">
-                  <Pill tone={STATUS[d.status]?.tone ?? "warning"}>{STATUS[d.status]?.label ?? "Menunggu verifikasi"}</Pill>
+                  <Pill tone={STATUS[d.status].tone}>{STATUS[d.status].label}</Pill>
                 </TableBlockCell>
                 <TableBlockCell className="px-4 py-2">
-                  <FilePreview fileId={d.file_id} fileName={d.doc_type} />
+                  {d.file_id ? <FilePreview fileId={d.file_id} fileName={docLabel(d.doc_type)} /> : "-"}
                 </TableBlockCell>
-                {showActions && (
+                {canManage && (
                   <TableBlockCell className="px-4 py-2 text-right">
-                    {canVerify && d.status === "PENDING" && d.uploaded_by === me?.user_id && (
-                      <TextBlock as="span" className="text-xs text-mist">Menunggu petugas lain</TextBlock>
-                    )}
-                    {canVerify && d.status === "PENDING" && d.uploaded_by !== me?.user_id && (
-                      <VerifyActions employeeId={employeeId} doc={d} />
-                    )}
-                    {renewable(d) && (
-                      <ActionButton size="sm" variant="outline" aria-label={`Perpanjang ${d.doc_type}`} onClick={() => setRenewing(d)}>
-                        Perpanjang
+                    <TextBlock as="span" className="inline-flex gap-2">
+                      {d.status === "active" && (
+                        <>
+                          <ActionButton size="sm" variant="outline" aria-label={`Perbarui ${docLabel(d.doc_type)}`} onClick={() => setRenewing(d)}>
+                            Perbarui
+                          </ActionButton>
+                          <ActionButton
+                            size="sm"
+                            variant="outline"
+                            disabled={deactivate.isPending}
+                            onClick={() => act(deactivate.mutateAsync(d.id), `${docLabel(d.doc_type)} dinonaktifkan.`)}
+                          >
+                            Nonaktifkan
+                          </ActionButton>
+                        </>
+                      )}
+                      <ActionButton
+                        size="sm"
+                        variant="outline"
+                        disabled={remove.isPending}
+                        onClick={() => {
+                          if (confirmDelete !== d.id) return setConfirmDelete(d.id);
+                          setConfirmDelete(null);
+                          void act(remove.mutateAsync(d.id), `${docLabel(d.doc_type)} dihapus.`);
+                        }}
+                      >
+                        {confirmDelete === d.id ? "Yakin hapus? (salah unggah)" : "Hapus"}
                       </ActionButton>
-                    )}
+                    </TextBlock>
                   </TableBlockCell>
                 )}
               </TableBlockRow>
@@ -161,35 +188,13 @@ export function DocumentsPanel({
   );
 }
 
-function VerifyActions({ employeeId, doc }: { employeeId: string; doc: EmployeeDocument }) {
-  const verify = useVerifyDocument(employeeId);
-  const decide = (is_approved: boolean) =>
-    verify.mutate(
-      { docId: doc.id, is_approved },
-      {
-        onSuccess: () => toast.success(is_approved ? `${doc.doc_type} terverifikasi.` : `${doc.doc_type} ditolak.`),
-        onError: (err) => toast.error(err instanceof ApiError ? err.message : "Terjadi kesalahan. Coba lagi."),
-      },
-    );
-  return (
-    <TextBlock as="span" className="inline-flex gap-2">
-      <ActionButton size="sm" onClick={() => decide(true)} disabled={verify.isPending}>
-        Verifikasi
-      </ActionButton>
-      <ActionButton size="sm" variant="outline" onClick={() => decide(false)} disabled={verify.isPending}>
-        Tolak
-      </ActionButton>
-    </TextBlock>
-  );
-}
-
 function DocumentDialog({
   employeeId,
   renew,
   onClose,
 }: {
   employeeId: string;
-  /** Berkas yang diperpanjang: jenisnya tetap, berkas baru menggantikannya setelah diverifikasi. */
+  /** Dokumen yang diperbarui: jenisnya tetap; yang baru menggantikannya (lama → "Diganti"). */
   renew?: EmployeeDocument;
   onClose: () => void;
 }) {
@@ -205,8 +210,8 @@ function DocumentDialog({
     const f = new FormData(e.currentTarget);
     const picked = String(f.get("doc_type") ?? "");
     const doc_type = (picked === OTHER ? String(f.get("doc_type_other") ?? "") : picked).trim();
-    const number = String(f.get("number") ?? "").trim();
-    const expiry_date = String(f.get("expiry_date") ?? "").trim() || null;
+    const active_at = String(f.get("active_at") ?? "").trim() || null;
+    const expired_at = String(f.get("expired_at") ?? "").trim() || null;
     const fileInput = e.currentTarget.elements.namedItem("file") as HTMLInputElement;
     const file = fileInput.files?.[0];
 
@@ -214,15 +219,15 @@ function DocumentDialog({
     setFormError(null);
 
     if (!doc_type) return setErrors({ doc_type: "Wajib diisi." });
-    if (!number) return setErrors({ number: "Wajib diisi." });
+    if (active_at && expired_at && expired_at < active_at) return setErrors({ expired_at: "Tidak boleh sebelum tanggal berlaku." });
     if (!file || file.size === 0) return setErrors({ file: "File wajib dilampirkan." });
 
     try {
       const fileForm = new FormData();
       fileForm.set("file", file);
       const { file_id } = await upload.mutateAsync(fileForm);
-      await create.mutateAsync({ doc_type, number, expiry_date, file_id, supersedes_id: renew?.id ?? null });
-      toast.success(renew ? "Perpanjangan dikirim, menunggu verifikasi." : "Berkas ditambahkan.");
+      await create.mutateAsync({ doc_type, file_id, active_at, expired_at });
+      toast.success(renew ? "Berkas diperbarui." : "Berkas ditambahkan.");
       onClose();
     } catch (err) {
       if (err instanceof ApiError && err.details.fields) setErrors(err.details.fields as Errors);
@@ -233,11 +238,9 @@ function DocumentDialog({
   return (
     <VmsDialog
       open
-      title={renew ? "Perpanjang berkas" : "Tambah berkas"}
+      title={renew ? "Perbarui berkas" : "Tambah berkas"}
       onClose={onClose}
-      footer={
-        <DialogActions onCancel={onClose} busy={pending} formId="document-form" />
-      }
+      footer={<DialogActions onCancel={onClose} busy={pending} formId="document-form" />}
     >
       <FormBlock id="document-form" onSubmit={submit} noValidate>
         <FormErrorText message={formError} />
@@ -245,8 +248,8 @@ function DocumentDialog({
           <TextBlock className="mb-4 text-sm">
             <ControlInput type="hidden" name="doc_type" value={renew.doc_type} />
             <TextBlock as="span" className="text-mist">Jenis dokumen: </TextBlock>
-            <TextBlock as="span" className="font-medium">{renew.doc_type}</TextBlock>
-            {renew.expiry_date && <TextBlock as="span" className="text-mist"> · berlaku sampai {formatDate(renew.expiry_date)}</TextBlock>}
+            <TextBlock as="span" className="font-medium">{docLabel(renew.doc_type)}</TextBlock>
+            {renew.expired_at && <TextBlock as="span" className="text-mist"> · berlaku sampai {formatDate(renew.expired_at)}</TextBlock>}
           </TextBlock>
         ) : (
           <>
@@ -260,9 +263,9 @@ function DocumentDialog({
               <ControlOption value="" disabled>
                 Pilih jenis dokumen
               </ControlOption>
-              {DOC_TYPES.map((t) => (
-                <ControlOption key={t} value={t}>
-                  {t}
+              {Object.entries(DOC_TYPES).map(([code, label]) => (
+                <ControlOption key={code} value={code}>
+                  {label}
                 </ControlOption>
               ))}
               <ControlOption value={OTHER}>Lainnya…</ControlOption>
@@ -270,8 +273,8 @@ function DocumentDialog({
             {other && <TextField name="doc_type_other" label="Jenis dokumen lainnya" hint="Contoh: SIO Excavator, Drone Pilot" />}
           </>
         )}
-        <TextField name="number" label="Nomor dokumen" error={errors.number} />
-        <TextField name="expiry_date" label="Tanggal kedaluwarsa" type="date" error={errors.expiry_date} hint="Bila ada." />
+        <TextField name="active_at" label="Berlaku sejak" type="date" error={errors.active_at} hint="Kosongkan bila berlaku hari ini." />
+        <TextField name="expired_at" label="Tanggal kedaluwarsa" type="date" error={errors.expired_at} hint="Bila ada." />
         <TextField name="file" label="File (jpg, png, pdf; maks. 10 MB)" type="file" accept=".jpg,.jpeg,.png,.pdf" error={errors.file} />
       </FormBlock>
     </VmsDialog>

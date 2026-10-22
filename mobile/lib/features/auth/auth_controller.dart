@@ -207,11 +207,13 @@ class AuthController extends Notifier<AuthState> {
       final loginResponse = await apiClient.dio.post(
         '/api/v1/auth/login',
         data: {'email': username, 'password': password, 'platform': 'mobile'},
-        options: Options(headers: {
-          'X-Device-Id': clientId,
-          'X-Device-Fingerprint': clientId,
-          'X-Device-Label': 'Aplikasi Android',
-        }),
+        options: Options(
+          headers: {
+            'X-Device-Id': clientId,
+            'X-Device-Fingerprint': clientId,
+            'X-Device-Label': 'Aplikasi Android',
+          },
+        ),
       );
 
       final accessToken = (loginResponse.data as Map)['access_token'] as String;

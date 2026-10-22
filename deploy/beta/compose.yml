@@ -1,0 +1,39 @@
+# Stack aplikasi BETA (docs/40) — kembar prod dengan nama, port, data, dan JARINGAN terpisah.
+# Jaringan sendiri (vms_beta_net) WAJIB: web memanggil `api:8000` dan API memanggil `face`/`minio` lewat nama
+# layanan — di jaringan bersama prod nama itu akan bentrok dan beta bisa menembak prod (atau sebaliknya).
+# Dipakai autodeploy.sh di ~/deploy/vms-beta (branch `beta`). DB & MinIO beta: compose.infra.yml.
+name: vms-beta
+services:
+  api:
+    build: ./api
+    image: vms-beta-api
+    container_name: vms_beta_api
+    env_file: ./api.env
+    ports: ["8001:8000"]
+    restart: unless-stopped
+    volumes:
+      - ./rilis:/srv/rilis:ro          # kanal pembaruan APK beta
+    environment:
+      APP_RELEASE_DIR: /srv/rilis
+    networks: [betanet]
+  web:
+    build: ./web
+    image: vms-beta-web
+    container_name: vms_beta_web
+    environment: ["SITE_ADDRESS=:80"]
+    ports: ["8081:80"]
+    restart: unless-stopped
+    depends_on: [api]
+    networks: [betanet]
+  face:
+    build: ./face
+    image: vms-beta-face
+    container_name: vms_beta_face
+    env_file: ./face.env
+    mem_limit: 1200m
+    restart: unless-stopped
+    networks: [betanet]
+networks:
+  betanet:
+    external: true
+    name: vms_beta_net

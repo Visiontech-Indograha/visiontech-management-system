@@ -47,15 +47,22 @@ const setup = (items: unknown[], extra?: (url: string) => { status?: number; dat
     const hit = extra?.(c.url ?? "");
     if (hit) return hit;
     if (c.url === "/attendance") return { data: { items, total: items.length, page: 1, size: 50, today: "2026-10-02" } };
-    if (c.url === "/sites") return { data: [site] };
+    if (c.url === "/offices") return { data: [site] };
     if (c.url === "/employees") return { data: { items: [], total: 0, page: 1, size: 100 } };
   });
 
 const card = async () => screen.findByRole("region", { name: "Absen hari ini" });
 
 describe("Absen kantor lewat web (R-33)", () => {
-  beforeEach(() => stubLocation(OFFICE));
-  afterEach(() => vi.unstubAllGlobals());
+  beforeEach(() => {
+    stubLocation(OFFICE);
+    // Jam tetap 18.30 WIB — aturan jam absen (07.00 masuk, 19.00 batas pulang) tidak tergantung jam CI.
+    vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-10-02T11:30:00Z") });
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
 
   it("pekerja lapangan diarahkan ke aplikasi HP", async () => {
     setup([]);
@@ -64,18 +71,12 @@ describe("Absen kantor lewat web (R-33)", () => {
     expect(within(await card()).queryByRole("button", { name: "Absen masuk" })).not.toBeInTheDocument();
   });
 
-  it("di dalam radius: absen masuk kanal WEB tanpa penjelasan & tanpa swafoto", async () => {
+  it("di dalam radius: swafoto selalu diminta dulu (docs/35 §5), tanpa penjelasan", async () => {
     const calls = setup([], (url) => (url === "/attendance/check-in" ? { data: att() } : undefined));
     renderRoute("/attendance", { me: officeMe() });
     fireEvent.click(await within(await card()).findByRole("button", { name: "Absen masuk" }));
-    await waitFor(() => expect(calls.some((c) => c.url === "/attendance/check-in")).toBe(true));
-    expect(calls.find((c) => c.url === "/attendance/check-in")!.data).toMatchObject({
-      channel: "WEB",
-      site_id: site.id,
-      location: OFFICE,
-      explanation: null,
-      selfie_file_id: null,
-    });
+    expect(await screen.findByText("Ambil swafoto wajah Anda untuk absen masuk.")).toBeInTheDocument();
+    expect(calls.some((c) => c.url === "/attendance/check-in")).toBe(false); // belum terkirim sebelum swafoto
   });
 
   it("di luar radius: penjelasan wajib diisi sebelum dikirim", async () => {
@@ -101,8 +102,9 @@ describe("Absen kantor lewat web (R-33)", () => {
     expect(await within(region).findByRole("alert")).toHaveTextContent("Isi penjelasan untuk mengajukan ulang");
     fireEvent.change(within(region).getByLabelText("Penjelasan (wajib)"), { target: { value: "Foto ulang lebih jelas" } });
     fireEvent.click(resubmit);
-    await waitFor(() => expect(calls.some((c) => c.url === "/attendance/check-in")).toBe(true));
-    expect(calls.find((c) => c.url === "/attendance/check-in")!.data).toMatchObject({ explanation: "Foto ulang lebih jelas" });
+    // Penjelasan lengkap → lanjut ke swafoto wajib (docs/35 §5); kiriman ke server terjadi setelah foto diambil.
+    expect(await screen.findByText(/Ambil swafoto/)).toBeInTheDocument();
+    expect(calls.some((c) => c.url === "/attendance/check-in")).toBe(false);
   });
 
   it("ditolak dua kali: hari itu terkunci", async () => {
@@ -131,16 +133,12 @@ describe("Absen kantor lewat web (R-33)", () => {
     expect(calls.find((c) => c.url === "/attendance/check-out")!.data).toMatchObject({ channel: "WEB", location: OFFICE });
   });
 
-  it("sudah mendaftarkan wajah: absen masuk membuka verifikasi wajah dulu (web tanpa jalur luring)", async () => {
-    const calls = setup([], (url) =>
-      url === "/face/status"
-        ? { data: { employee_linked: true, consent: "GRANTED", enrolled: true, liveness_required: true,
-            template_ttl_days: 7, policy: { version: "v1", text: "t" } } }
-        : undefined);
+  it("wajah V2: tidak ada langkah verifikasi wajah terpisah (server mencocokkan swafoto absen)", async () => {
+    const calls = setup([], (url) => (url === "/face/status" ? { data: { enrolled: true, required: false } } : undefined));
     renderRoute("/attendance", { me: officeMe() });
     fireEvent.click(await within(await card()).findByRole("button", { name: "Absen masuk" }));
-    expect(await screen.findByText("Verifikasi wajah — absen masuk")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Mulai Verifikasi Wajah" })).toBeInTheDocument();
-    expect(calls.some((c) => c.url === "/attendance/check-in")).toBe(false); // belum terkirim sebelum wajah diverifikasi
+    expect(await screen.findByText("Ambil swafoto wajah Anda untuk absen masuk.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Mulai Verifikasi Wajah" })).toBeNull();
+    expect(calls.some((c) => c.url.startsWith("/face/probe"))).toBe(false);
   });
 });

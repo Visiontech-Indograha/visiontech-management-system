@@ -12,8 +12,8 @@ import { FormErrorText } from "@/components/molecules/FormErrorText";
  * karyawan terhapus di daftar, jadi pemulihan tersedia di halaman ini selama detailnya masih terbuka.
  */
 export function EmployeeArchivePanel({ employee }: { employee: Employee }) {
-  const archive = useArchiveEmployee(employee.id);
-  const restore = useRestoreEmployee(employee.id);
+  const archive = useArchiveEmployee(employee.employee_id);
+  const restore = useRestoreEmployee(employee.employee_id);
   const [archived, setArchived] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);

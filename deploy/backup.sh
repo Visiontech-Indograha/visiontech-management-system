@@ -8,6 +8,10 @@ set -euo pipefail
 BASE="${VMS_DEPLOY_DIR:-$HOME/deploy/vms-mvp}"
 LABEL="${1:-harian}"
 cd "$BASE"
+# prod/beta (docs/40): kontainer DB & API dari deploy.env; bawaan = prod.
+[ -f deploy.env ] && . ./deploy.env
+DB_CONTAINER="${VMS_DB_CONTAINER:-vms_db_prod}"
+API_CONTAINER="${VMS_CONTAINER_PREFIX:-vms}_api"
 mkdir -p backups
 
 # Retensi WAJIB jalan walau unggah MinIO gagal: tanpa trap, `exit 4` di bawah melewati baris ini
@@ -19,13 +23,13 @@ DB=$(grep -E '^DATABASE_URL=' api.env | sed -E 's#.*/([A-Za-z0-9_]+)(\?.*)?$#\1#
 [ -n "$DB" ] || { echo "Nama DB tidak ditemukan di api.env" >&2; exit 2; }
 FILE="backups/$DB-$LABEL-$(date +%Y%m%d-%H%M%S).dump"
 
-docker exec vms_db_prod sh -c "pg_dump -U \"\$POSTGRES_USER\" -d '$DB' -Fc" > "$FILE"
+docker exec "$DB_CONTAINER" sh -c "pg_dump -U \"\$POSTGRES_USER\" -d '$DB' -Fc" > "$FILE"
 [ -s "$FILE" ] || { echo "Backup kosong: $FILE" >&2; exit 3; }
 
 # Unggah lewat kontainer API (klien MinIO & kredensialnya sudah ada di sana).
 # Kegagalan autentikasi dicetak sebagai instruksi perbaikan, bukan traceback Python: insiden
 # 2026-10-13 menghabiskan berjam-jam karena hanya terlihat "InvalidAccessKeyId" tanpa petunjuk.
-docker exec -i -e OBJ="$(basename "$FILE")" vms_api python -c '
+docker exec -i -e OBJ="$(basename "$FILE")" "$API_CONTAINER" python -c '
 import io, os, sys
 from datetime import datetime, timedelta, timezone
 

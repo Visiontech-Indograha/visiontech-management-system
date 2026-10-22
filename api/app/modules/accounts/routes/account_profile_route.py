@@ -4,6 +4,7 @@ app/modules/accounts/routes/account_profile_route.py
 Rute endpoint HTTP untuk akun login karyawan (/employees/{emp_id}/account).
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.1.
 """
+
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
@@ -78,4 +79,3 @@ async def activate(
     Mengaktifkan kembali akun karyawan.
     """
     return await controller.handle_activate(emp_id, current_user.organization_id)
-

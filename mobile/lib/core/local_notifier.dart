@@ -34,11 +34,17 @@ class LocalNotifier {
   Future<void> requestPermission() async {
     if (!_ready) await init();
     await _plugin
-        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >()
         ?.requestNotificationsPermission();
   }
 
-  Future<void> show({required String title, required String body, String payload = ''}) async {
+  Future<void> show({
+    required String title,
+    required String body,
+    String payload = '',
+  }) async {
     if (!_ready) await init();
     if (!_ready) return;
     await _plugin.show(

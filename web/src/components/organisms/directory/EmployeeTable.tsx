@@ -1,7 +1,7 @@
 import type { UseQueryResult } from "@tanstack/react-query";
 import { formatDate } from "@/lib/format";
 import type { EmployeeList } from "@/services/employeeService";
-import { Pill } from "@/components/molecules/Pill";
+import { EmployeeStatusPill } from "./EmployeeStatusPill";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { InlineLink } from "@/components/molecules/Links";
 import { TableBlock, TableBlockBody, TableBlockCell, TableBlockHead, TableBlockHeaderCell, TableBlockRow } from "@/components/molecules/TableBlock";
@@ -18,7 +18,7 @@ export function EmployeeTable({ list }: { list: UseQueryResult<EmployeeList> }) 
               <TableBlockHeaderCell className="px-4 py-3 font-medium">Nama</TableBlockHeaderCell>
               <TableBlockHeaderCell className="px-4 py-3 font-medium">Jabatan</TableBlockHeaderCell>
               <TableBlockHeaderCell className="px-4 py-3 font-medium">Bergabung</TableBlockHeaderCell>
-              <TableBlockHeaderCell className="px-4 py-3 font-medium">Akun</TableBlockHeaderCell>
+              <TableBlockHeaderCell className="px-4 py-3 font-medium">Status</TableBlockHeaderCell>
             </TableBlockRow>
           </TableBlockHead>
           <TableBlockBody>
@@ -47,16 +47,16 @@ export function EmployeeTable({ list }: { list: UseQueryResult<EmployeeList> }) 
               </TableBlockRow>
             )}
             {data?.items.map((e) => (
-              <TableBlockRow key={e.id} className="h-11 border-b border-line last:border-0 hover:bg-hover">
+              <TableBlockRow key={e.employee_id} className="h-11 border-b border-line last:border-0 hover:bg-hover">
                 <TableBlockCell className="px-4 py-2">
-                  <InlineLink to={`/directory/${e.id}`} state={{ employee: e }} className="font-medium text-lens hover:underline">
+                  <InlineLink to={`/directory/${e.employee_id}`} state={{ employee: e }} className="font-medium text-lens hover:underline">
                     {e.full_name}
                   </InlineLink>
                   <div className="text-xs text-mist">{e.employee_no}</div>
                 </TableBlockCell>
-                <TableBlockCell className="px-4 py-2">{e.position}</TableBlockCell>
+                <TableBlockCell className="px-4 py-2">{e.position_name ?? "-"}<div className="text-xs text-mist">{e.division_name ?? e.office_name}</div></TableBlockCell>
                 <TableBlockCell className="px-4 py-2">{formatDate(e.join_date)}</TableBlockCell>
-                <TableBlockCell className="px-4 py-2">{e.is_active ? <Pill tone="success">Aktif</Pill> : <Pill>Nonaktif</Pill>}</TableBlockCell>
+                <TableBlockCell className="px-4 py-2"><EmployeeStatusPill status={e.offboarding_status} /></TableBlockCell>
               </TableBlockRow>
             ))}
           </TableBlockBody>

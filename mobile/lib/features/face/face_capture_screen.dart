@@ -1,62 +1,33 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:math';
 
 import 'package:camera/camera.dart';
-import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 
-import '../../core/api_client.dart';
-import '../../core/error_message.dart';
-import '../../core/face/liveness.dart';
-import '../../core/face/nv21.dart';
-import '../../core/providers.dart';
 import '../../core/system_ui.dart';
 
-/// Untuk apa kamera wajah dipakai: absen (satu gambar akhir) atau pendaftaran (beberapa pose).
-enum FaceCaptureMode { attendance, enroll }
-
-/// Hasil layar kamera wajah. `photos` MENTAH tanpa watermark (watermark GPS menurunkan akurasi pengenalan dan ini
-/// bukan foto absensi). `liveness` dikirim apa adanya ke /face/probe atau /face/enroll.
+/// Hasil layar kamera wajah: foto MENTAH tanpa watermark (watermark menurunkan akurasi pengenalan). Server yang
+/// memeriksa: satu wajah, kualitas, dan foto-foto dari orang yang sama (wajah V2, Milestone 7).
 class FaceCaptureResult {
-  const FaceCaptureResult({
-    required this.photos,
-    required this.liveness,
-    this.stopReason,
-  });
+  const FaceCaptureResult({required this.photos});
 
   final List<File> photos;
-  final Map<String, dynamic> liveness;
-
-  /// Null = semua tantangan lolos. Selain itu alasan berhenti: `offline`, `unavailable`, atau `timeout`.
-  final String? stopReason;
-
-  bool get passed => liveness['passed'] == true;
 }
 
-enum _Phase { starting, challenge, stills, failed }
+enum _Phase { starting, stills, failed }
 
-enum _ChallengeStatus { idle, verifying, success, retry }
-
-/// Kamera depan + dua tantangan liveness acak (anti foto layar). Tiap bingkai dikirim ke server; server yang memutuskan
-/// dan menerbitkan bukti bertanda tangan. HP tidak bisa memalsukannya (aturan inti #3).
-class FaceCaptureScreen extends ConsumerStatefulWidget {
-  const FaceCaptureScreen({super.key, required this.mode});
-
-  final FaceCaptureMode mode;
+/// Kamera depan untuk pendaftaran wajah: beberapa pose berurutan (3–5 foto, sesuai /face/policy).
+class FaceCaptureScreen extends StatefulWidget {
+  const FaceCaptureScreen({super.key});
 
   @override
-  ConsumerState<FaceCaptureScreen> createState() => _FaceCaptureScreenState();
+  State<FaceCaptureScreen> createState() => _FaceCaptureScreenState();
 }
 
-class _FaceCaptureScreenState extends ConsumerState<FaceCaptureScreen> {
-  static const _timeout = Duration(seconds: 45);
-  static const _attendancePrompts = ['Hadap lurus ke kamera'];
-  static const _enrollPrompts = [
+class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
+  static const _prompts = [
     'Hadap lurus ke kamera',
     'Tengok sedikit ke kiri',
     'Tengok sedikit ke kanan',
@@ -67,28 +38,18 @@ class _FaceCaptureScreenState extends ConsumerState<FaceCaptureScreen> {
   _Phase _phase = _Phase.starting;
   String _hint = 'Menyiapkan kamera...';
   String? _error;
-  final _challenges = pickLivenessChallenges(Random.secure());
-  // Tantangan acak, lalu langkah meluruskan wajah (tanpa bukti) sebelum gambar diambil.
-  late final _steps = [..._challenges, straightenStep];
-  final _proofs = <String>[];
-  int _step = 0;
-  bool _busy = false;
-  _ChallengeStatus _status = _ChallengeStatus.idle;
-  DateTime _lastSent = DateTime.fromMillisecondsSinceEpoch(0);
-  DateTime _deadline = DateTime.now();
-  Timer? _ticker;
+  int _taken = 0;
 
   @override
   void initState() {
     super.initState();
-    // Bingkai yang dikirim harus tegak: kunci potret selama layar ini terbuka.
+    // Foto harus tegak: kunci potret selama layar ini terbuka.
     SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
     _initCamera();
   }
 
   @override
   void dispose() {
-    _ticker?.cancel();
     _cam?.dispose();
     SystemChrome.setPreferredOrientations(const []);
     hideSystemNavigation();
@@ -102,25 +63,14 @@ class _FaceCaptureScreenState extends ConsumerState<FaceCaptureScreen> {
         (c) => c.lensDirection == CameraLensDirection.front,
         orElse: () => cams.first,
       );
-      final ctrl = CameraController(
-        front,
-        ResolutionPreset.high,
-        enableAudio: false,
-        imageFormatGroup: ImageFormatGroup.nv21,
-      );
+      final ctrl = CameraController(front, ResolutionPreset.high, enableAudio: false);
       await ctrl.initialize();
       if (!mounted) {
         await ctrl.dispose();
         return;
       }
-      _cam = ctrl;
-      _deadline = DateTime.now().add(_timeout);
-      setState(() {
-        _phase = _Phase.challenge;
-        _hint = _steps.first.instruction;
-      });
-      await ctrl.startImageStream(_onFrame);
-      _ticker = Timer.periodic(const Duration(seconds: 1), (_) => _tick());
+      setState(() => _cam = ctrl);
+      await _takeStills();
     } on CameraException catch (e) {
       _fail(
         e.code == 'CameraAccessDenied'
@@ -140,206 +90,28 @@ class _FaceCaptureScreenState extends ConsumerState<FaceCaptureScreen> {
     });
   }
 
-  void _tick() {
-    if (_phase == _Phase.challenge &&
-        _status != _ChallengeStatus.verifying &&
-        _status != _ChallengeStatus.success &&
-        DateTime.now().isAfter(_deadline)) {
-      // Waktu habis saat meluruskan wajah (semua tantangan sudah lolos) tetap dianggap lolos.
-      _beginStills(reason: _step >= _challenges.length ? null : 'timeout');
-    }
-  }
-
-  void _onFrame(CameraImage image) {
-    if (_phase != _Phase.challenge || _busy || _status != _ChallengeStatus.idle) return;
-    final now = DateTime.now();
-    if (now.difference(_lastSent) < _steps[_step].interval) return;
-    if (image.planes.length != 1) {
-      // Hanya NV21 (satu bidang) yang didukung konversi; format lain berarti fallback gambar tanpa bukti.
-      _beginStills(reason: 'unavailable');
-      return;
-    }
-    _busy = true;
-    _lastSent = now;
-    final plane = image.planes.first;
-    final frame = FrameData(
-      bytes: Uint8List.fromList(plane.bytes),
-      width: image.width,
-      height: image.height,
-      rowStride: plane.bytesPerRow,
-      rotation: _cam!.description.sensorOrientation,
-    );
-    unawaited(_check(frame));
-  }
-
-  Future<void> _check(FrameData frame) async {
-    final step = _step;
-    final challenge = _steps[step];
-    try {
-      if (mounted) {
-        setState(() {
-          _status = _ChallengeStatus.verifying;
-          _hint = 'Memeriksa gerakan...';
-        });
-      }
-      final jpeg = await compute(encodeFrame, frame);
-      final res = await ref
-          .read(syncEngineProvider)
-          .api
-          .faceChallengeCheck(jpeg, challenge.id);
-      if (!mounted || _phase != _Phase.challenge || step != _step) return;
-
-      if (challenge.id == 'depan') {
-        // Panduan meluruskan: server tidak menerbitkan bukti; cukup lurus lalu ambil gambar.
-        if (res['status'] == 'sukses') {
-          if (mounted) {
-            setState(() {
-              _status = _ChallengeStatus.success;
-              _hint = 'Posisi wajah pas!';
-            });
-          }
-          await Future<void>.delayed(const Duration(milliseconds: 800));
-          await _beginStills();
-        } else if (mounted) {
-          final detail = res['detail'] != null ? friendlyChallengeHint('${res['detail']}') : null;
-          setState(() {
-            _status = _ChallengeStatus.retry;
-            _hint = detail != null && detail.isNotEmpty
-                ? 'Belum sesuai: $detail. Silakan coba lagi.'
-                : 'Posisikan wajah lurus ke kamera.';
-          });
-          await Future<void>.delayed(const Duration(milliseconds: 1000));
-          if (mounted && _phase == _Phase.challenge && step == _step) {
-            setState(() {
-              _status = _ChallengeStatus.idle;
-              _hint = challenge.instruction;
-            });
-          }
-        }
-        return;
-      }
-
-      final proof = res['proof'];
-      if (res['status'] == 'sukses' && proof is String) {
-        _proofs.add(proof);
-        await HapticFeedback.mediumImpact();
-        if (mounted) {
-          setState(() {
-            _status = _ChallengeStatus.success;
-            _hint = 'Tantangan ${_step + 1} Berhasil!';
-          });
-        }
-        // Beri jeda rileks agar pengguna dapat mengembalikan posisi kepala
-        await Future<void>.delayed(const Duration(milliseconds: 1300));
-        if (mounted && _phase == _Phase.challenge && step == _step) {
-          setState(() {
-            _step++;
-            _deadline = DateTime.now().add(const Duration(seconds: 30));
-            _status = _ChallengeStatus.idle;
-            _hint = _steps[_step].instruction;
-          });
-        }
-      } else if (mounted) {
-        final detail = res['detail'] != null ? friendlyChallengeHint('${res['detail']}') : null;
-        setState(() {
-          _status = _ChallengeStatus.retry;
-          _hint = detail != null && detail.isNotEmpty
-              ? 'Belum sesuai: $detail. Silakan ulangi.'
-              : 'Gerakan belum terdeteksi. Silakan ulangi: ${challenge.instruction}';
-        });
-        // Jeda untuk memberi kesempatan pengguna melihat pesan dan mengulang gerakan
-        await Future<void>.delayed(const Duration(milliseconds: 1100));
-        if (mounted && _phase == _Phase.challenge && step == _step) {
-          if (_deadline.difference(DateTime.now()).inSeconds < 15) {
-            _deadline = DateTime.now().add(const Duration(seconds: 25));
-          }
-          setState(() {
-            _status = _ChallengeStatus.idle;
-            _hint = challenge.instruction;
-          });
-        }
-      }
-    } on DioException catch (e) {
-      if (!mounted) return;
-      if (isNetworkFailure(e)) {
-        await _beginStills(reason: 'offline');
-      } else if (e.response?.statusCode == 503) {
-        await _beginStills(reason: 'unavailable');
-      } else if (e.response?.statusCode == 429) {
-        setState(() {
-          _status = _ChallengeStatus.retry;
-          _hint = 'Terlalu cepat. Tunggu sebentar...';
-        });
-        await Future<void>.delayed(const Duration(milliseconds: 1200));
-        if (mounted && _phase == _Phase.challenge && step == _step) {
-          setState(() {
-            _status = _ChallengeStatus.idle;
-            _hint = challenge.instruction;
-          });
-        }
-      } else {
-        setState(() {
-          _status = _ChallengeStatus.retry;
-          _hint = apiErrorMessage(e);
-        });
-        await Future<void>.delayed(const Duration(milliseconds: 1200));
-        if (mounted && _phase == _Phase.challenge && step == _step) {
-          setState(() {
-            _status = _ChallengeStatus.idle;
-            _hint = challenge.instruction;
-          });
-        }
-      }
-    } finally {
-      _busy = false;
-    }
-  }
-
-  Future<void> _beginStills({String? reason}) async {
-    if (_phase != _Phase.challenge) return;
-    _phase = _Phase.stills;
-    _ticker?.cancel();
+  Future<void> _takeStills() async {
     final cam = _cam!;
-    try {
-      await cam.stopImageStream();
-    } on CameraException {
-      // Aliran sudah berhenti.
-    }
-    final prompts = widget.mode == FaceCaptureMode.enroll
-        ? _enrollPrompts
-        : _attendancePrompts;
-    final settle = Duration(
-      milliseconds: widget.mode == FaceCaptureMode.enroll ? 1600 : 900,
-    );
+    setState(() => _phase = _Phase.stills);
     try {
       final dir = await getTemporaryDirectory();
       final files = <File>[];
-      for (var i = 0; i < prompts.length; i++) {
+      for (var i = 0; i < _prompts.length; i++) {
         if (!mounted) return;
-        setState(() => _hint = prompts[i]);
-        await Future<void>.delayed(settle); // beri waktu berpose sebelum jepret
+        setState(() => _hint = _prompts[i]);
+        await Future<void>.delayed(const Duration(milliseconds: 1800)); // beri waktu berpose
         final shot = await cam.takePicture();
-        final target = File(
-          '${dir.path}/face_${DateTime.now().microsecondsSinceEpoch}_$i.jpg',
-        );
+        final target = File('${dir.path}/face_${DateTime.now().microsecondsSinceEpoch}_$i.jpg');
         files.add(await File(shot.path).copy(target.path));
         try {
           await File(shot.path).delete();
         } on FileSystemException {
           // Berkas sementara kamera; tidak kritis.
         }
+        if (mounted) setState(() => _taken = i + 1);
       }
       if (!mounted) return;
-      Navigator.of(context).pop(
-        FaceCaptureResult(
-          photos: files,
-          liveness: livenessPayload(
-            challenges: [for (final c in _challenges) c.id],
-            proofs: _proofs,
-          ),
-          stopReason: reason,
-        ),
-      );
+      Navigator.of(context).pop(FaceCaptureResult(photos: files));
     } on CameraException {
       _fail('Gagal mengambil gambar wajah. Coba lagi.');
     }
@@ -384,35 +156,6 @@ class _FaceCaptureScreenState extends ConsumerState<FaceCaptureScreen> {
   Widget _panel(BuildContext context) {
     final theme = Theme.of(context);
     final failed = _phase == _Phase.failed;
-    Widget? challengeIcon;
-    if (_phase == _Phase.challenge) {
-      challengeIcon = switch (_status) {
-        _ChallengeStatus.verifying => const SizedBox(
-            width: 44,
-            height: 44,
-            child: Padding(
-              padding: EdgeInsets.all(6),
-              child: CircularProgressIndicator(strokeWidth: 3, color: Colors.white),
-            ),
-          ),
-        _ChallengeStatus.success => const Icon(
-            Icons.check_circle_rounded,
-            size: 48,
-            color: Color(0xFF4ADE80),
-          ),
-        _ChallengeStatus.retry => const Icon(
-            Icons.replay_circle_filled_rounded,
-            size: 48,
-            color: Color(0xFFFBBF24),
-          ),
-        _ChallengeStatus.idle => Icon(
-            _steps[_step].icon,
-            size: 44,
-            color: Colors.white,
-          ),
-      };
-    }
-
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -422,49 +165,27 @@ class _FaceCaptureScreenState extends ConsumerState<FaceCaptureScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          ?challengeIcon,
-          if (!failed && _phase != _Phase.starting)
+          if (_phase == _Phase.stills)
             Text(
-              _phase == _Phase.challenge
-                  ? (_step < _challenges.length
-                        ? 'Tantangan ${_step + 1} dari ${_challenges.length}'
-                        : 'Luruskan wajah')
-                  : 'Mengambil gambar wajah',
-              style: theme.textTheme.labelMedium?.copyWith(
-                color: _status == _ChallengeStatus.success
-                    ? const Color(0xFF4ADE80)
-                    : (_status == _ChallengeStatus.retry
-                        ? const Color(0xFFFBBF24)
-                        : Colors.white70),
-              ),
+              'Foto ${(_taken + 1).clamp(1, _prompts.length)} dari ${_prompts.length}',
+              style: theme.textTheme.labelMedium?.copyWith(color: Colors.white70),
             ),
           const SizedBox(height: 6),
           Text(
             failed ? (_error ?? 'Terjadi kesalahan.') : _hint,
             key: const Key('face-hint'),
             textAlign: TextAlign.center,
-            style: theme.textTheme.titleMedium?.copyWith(
-              color: _status == _ChallengeStatus.retry
-                  ? const Color(0xFFFEF08A)
-                  : (_status == _ChallengeStatus.success
-                      ? const Color(0xFFBBF7D0)
-                      : Colors.white),
-            ),
+            style: theme.textTheme.titleMedium?.copyWith(color: Colors.white),
           ),
-          if (!failed) ...[
-            const SizedBox(height: 12),
+          const SizedBox(height: 12),
+          if (!failed)
             LinearProgressIndicator(
-              value: _proofs.length / _challenges.length,
+              value: _taken / _prompts.length,
               minHeight: 6,
               borderRadius: BorderRadius.circular(3),
-            ),
-          ] else ...[
-            const SizedBox(height: 12),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Tutup'),
-            ),
-          ],
+            )
+          else
+            FilledButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Tutup')),
         ],
       ),
     );

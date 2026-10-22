@@ -43,8 +43,16 @@ export function AttendanceList({ list, page, meEmployeeId, onPageChange, onOpen 
                   <TextBlock as="dd" className="inline">
                     {Math.round(a.distance_m)} m{a.is_late ? " · terlambat" : ""}
                     {a.is_early_leave ? " · pulang cepat" : ""}
-                    {a.offline ? " · absen luring" : ""}
-                    {a.city_category === "LUAR_KOTA" ? " · luar kota" : " · dalam kota"}
+                    {a.offline ? " · absen offline" : ""}
+                  </TextBlock>
+                </div>
+                <div>
+                  <TextBlock as="dt" className="inline text-mist">Uang Makan: </TextBlock>
+                  <TextBlock as="dd" className="inline font-medium text-emerald-400">
+                    {a.meal_allowance_amount != null
+                      ? `Rp ${Math.round(a.meal_allowance_amount).toLocaleString("id-ID")}`
+                      : "-"}
+                    {a.city_category === "LUAR_KOTA" ? " (Luar Kota > 15 km)" : " (Dalam Kota)"}
                   </TextBlock>
                 </div>
                 {a.check_out_distance_m != null && (

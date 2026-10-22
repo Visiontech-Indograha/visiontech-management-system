@@ -1,6 +1,8 @@
 import {
+  Bed,
   BookUser,
-  CalendarRange,
+  Briefcase,
+  ClipboardCheck,
   Clock,
   ChartColumn,
   ClipboardList,
@@ -11,6 +13,8 @@ import {
   MapPin,
   Truck,
   ScrollText,
+  UserMinus,
+  Users,
   type LucideIcon,
 } from "lucide-react";
 import type { Permission } from "@/lib/permissions";
@@ -27,14 +31,18 @@ export interface NavItem {
 /** Menu web memakai izin yang dikirim /auth/me; API tetap menegakkan otorisasi. */
 export const NAV_ITEMS: NavItem[] = [
   { path: "/", label: "Beranda", icon: House },
-  { path: "/work-plans", label: "Work plan", icon: ClipboardList },
-  { path: "/timeline", label: "Timeline tim", icon: CalendarRange, requires: ["view:timeline"] },
+  { path: "/work-plans", label: "Jadwal harian", icon: ClipboardList },
+  { path: "/surveys", label: "Survei", icon: ClipboardCheck, requires: ["create:plan"] },
+  { path: "/work-completions", label: "Pekerjaan klien & dokumen", icon: Briefcase, requires: ["create:plan"] },
+  { path: "/teams", label: "Tim Lapangan", icon: Users, requires: ["view:teams"] },
   { path: "/attendance", label: "Absensi", icon: Clock },
   { path: "/attendance-recap", label: "Rekap absensi", icon: ChartColumn },
   { path: "/overtime-recap", label: "Rekap lembur", icon: Hourglass, anyOf: ["review:overtime", "create:plan"] },
   { path: "/assets", label: "Kendaraan & alat", icon: Truck },
+  { path: "/mess", label: "Mess Karyawan", icon: Bed, requires: ["view:mess"] },
   { path: "/my-documents", label: "Berkas saya", icon: FolderOpen, requires: ["view:documents"] },
   { path: "/directory", label: "Direktori", icon: BookUser, requires: ["view:users"] },
+  { path: "/offboarding", label: "Offboarding", icon: UserMinus, requires: ["view:offboarding"] },
   { path: "/sites", label: "Lokasi kerja", icon: MapPin, requires: ["manage:sites"] },
   { path: "/work-types", label: "Jenis pekerjaan", icon: ListChecks, requires: ["create:plan"] },
   { path: "/audit-logs", label: "Audit log", icon: ScrollText, requires: ["view:audit"] },

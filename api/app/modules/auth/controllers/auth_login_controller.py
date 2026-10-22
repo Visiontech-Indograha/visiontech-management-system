@@ -4,13 +4,14 @@ app/modules/auth/controllers/auth_login_controller.py
 Controller untuk mengoordinasikan alur login, refresh token, dan logout.
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.2.
 """
+
 from __future__ import annotations
 
 import ipaddress
 
 from fastapi import Depends, Request, Response
 
-from app.api.deps import get_auth_flow_service
+from app.modules.auth.dependencies import get_auth_flow_service
 from app.modules.auth.schemas.auth_login_request_schema import AuthLoginRequestSchema
 from app.modules.auth.schemas.auth_login_response_schema import AuthLoginResponseSchema
 from app.modules.auth.schemas.auth_profile_schema import AuthMessageResponseSchema
@@ -24,6 +25,7 @@ REFRESH_COOKIE_PATH = "/api/v1/auth"
 
 def _is_secure_request(request: Request | None) -> bool:
     import sys
+
     if "pytest" in sys.modules:
         return True
     if request is None:
@@ -52,10 +54,9 @@ class AuthLoginController:
         fingerprint = request.headers.get("x-device-fingerprint") or request.headers.get("x-device-id")
         if not fingerprint:
             import hashlib
+
             fingerprint = hashlib.sha256(user_agent.encode()).hexdigest()[:32]
-        device_label = request.headers.get("x-device-label") or (
-            "Aplikasi HP" if request.headers.get("x-device-id") else "Web Login"
-        )
+        device_label = request.headers.get("x-device-label")
         return ClientInfo(
             ip=ip,
             user_agent=user_agent,
@@ -111,4 +112,3 @@ class AuthLoginController:
             samesite="strict" if is_secure else "lax",
         )
         return AuthMessageResponseSchema(message="Berhasil keluar.")
-

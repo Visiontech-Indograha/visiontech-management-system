@@ -4,15 +4,12 @@
  */
 
 import React from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/atoms/Dialog";
-import { Button } from "@/components/atoms/Button";
+import { Modal as Dialog, ModalContent as DialogContent, ModalHeader as DialogHeader, ModalTitle as DialogTitle } from "@/components/molecules/Modal";
+import { ActionButton as Button } from "@/components/molecules/ActionButton";
+import { ExternalLink as LinkTo } from "@/components/molecules/Links";
+import { FrameView } from "@/components/molecules/FrameView";
 import { toPreviewUrl, toDownloadUrl } from "@/lib/mediaUtils";
-import { Download, ExternalLink, FileText, Printer } from "lucide-react";
+import { Download, ExternalLink as ExternalLinkIcon, FileText, Printer } from "@/components/molecules/Glyphs";
 
 interface PdfViewerModalProps {
   isOpen: boolean;
@@ -63,7 +60,7 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({
               <Printer className="w-3.5 h-3.5" />
               Cetak
             </Button>
-            <a href={downloadUrl} download>
+            <LinkTo href={downloadUrl} download>
               <Button
                 variant="outline"
                 size="sm"
@@ -72,22 +69,22 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({
                 <Download className="w-3.5 h-3.5" />
                 Unduh
               </Button>
-            </a>
-            <a href={previewUrl} target="_blank" rel="noopener noreferrer">
+            </LinkTo>
+            <LinkTo href={previewUrl} target="_blank" rel="noopener noreferrer">
               <Button
                 variant="ghost"
                 size="sm"
                 className="text-xs text-slate-300 hover:text-white hover:bg-slate-700 h-8 gap-1.5"
               >
-                <ExternalLink className="w-3.5 h-3.5" />
+                <ExternalLinkIcon className="w-3.5 h-3.5" />
                 Tab Baru
               </Button>
-            </a>
+            </LinkTo>
           </div>
         </DialogHeader>
 
         <div className="flex-1 w-full h-full bg-slate-950 relative">
-          <iframe
+          <FrameView
             id="pdf-preview-frame"
             src={previewUrl}
             title={title}

@@ -67,9 +67,9 @@ describe("Akun & keamanan", () => {
     it("pekerja lapangan belum terdaftar: daftar lewat kamera langsung, bukan pilih berkas", async () => {
       setup(faceStatus());
       renderRoute("/account", { role: "field" });
-      const section = await screen.findByRole("region", { name: "Biometrik Wajah" });
-      expect(within(section).getByTestId("face-capture")).toBeInTheDocument();
-      expect(within(section).getByRole("button", { name: "Mulai Pendaftaran Wajah" })).toBeInTheDocument();
+      // Belum terdaftar & wajib → gerbang layar penuh menggantikan semua halaman (termasuk Akun).
+      const gate = await screen.findByTestId("face-gate");
+      expect(within(gate).getByTestId("face-capture")).toBeInTheDocument();
       expect(document.querySelector('input[type="file"]')).toBeNull(); // foto orang lain tak bisa didaftarkan
     });
 
@@ -121,7 +121,7 @@ describe("Tata letak halaman Akun & keamanan", () => {
     mockApi((c) => {
       if (c.url === "/auth/sessions") return { data: [] };
       if (c.url === "/face/status") {
-        return { data: { enrolled: false, required: true } };
+        return { data: { enrolled: true, required: true } };  // terdaftar → halaman Akun tampil penuh
       }
     });
     renderRoute("/account", { role: "field" });

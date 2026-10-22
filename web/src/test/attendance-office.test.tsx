@@ -95,8 +95,9 @@ describe("Absen kantor lewat web (R-33)", () => {
     expect(await within(region).findByRole("alert")).toHaveTextContent("Isi penjelasan untuk mengajukan ulang");
     fireEvent.change(within(region).getByLabelText("Penjelasan (wajib)"), { target: { value: "Foto ulang lebih jelas" } });
     fireEvent.click(resubmit);
-    await waitFor(() => expect(calls.some((c) => c.url === "/attendance/check-in")).toBe(true));
-    expect(calls.find((c) => c.url === "/attendance/check-in")!.data).toMatchObject({ explanation: "Foto ulang lebih jelas" });
+    // Penjelasan lengkap → lanjut ke swafoto wajib (docs/35 §5); kiriman ke server terjadi setelah foto diambil.
+    expect(await screen.findByText(/Ambil swafoto/)).toBeInTheDocument();
+    expect(calls.some((c) => c.url === "/attendance/check-in")).toBe(false);
   });
 
   it("ditolak dua kali: hari itu terkunci", async () => {

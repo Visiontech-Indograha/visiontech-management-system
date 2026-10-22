@@ -10,7 +10,8 @@ import { toDownloadUrl } from "@/lib/mediaUtils";
 import { useBackupRegistry, type BackupRegistryItem } from "@/services/backupRegistryService";
 import { LoadingBar } from "@/components/molecules/LoadingBar";
 import { ActionButton } from "@/components/molecules/ActionButton";
-import { Button } from "@/components/atoms/Button";
+import { ExternalLink } from "@/components/molecules/Links";
+import { TextBlock } from "@/components/molecules/TextBlock";
 import {
   TableBlock,
   TableBlockBody,
@@ -25,7 +26,7 @@ import {
   Download,
   HardDriveDownload,
   ShieldAlert,
-} from "lucide-react";
+} from "@/components/molecules/Glyphs";
 import { toast } from "sonner";
 
 export const BackupRegistryTable: React.FC = () => {
@@ -56,13 +57,13 @@ export const BackupRegistryTable: React.FC = () => {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-base font-semibold text-ink flex items-center gap-2">
-            <HardDriveDownload className="w-5 h-5 text-indigo-600" />
-            Registry Cadangan Basis Data (PostgreSQL Backups)
-          </h3>
-          <p className="text-xs text-mist">
-            Daftar snapshot arsip basis data otomatis dan terjadwal sesuai kepatuhan retensi data ISO 27001.
-          </p>
+          <TextBlock as="h3" className="flex items-center gap-2 text-base font-semibold text-ink">
+            <HardDriveDownload className="h-5 w-5 text-lens" />
+            Cadangan basis data
+          </TextBlock>
+          <TextBlock as="p" className="text-xs text-mist">
+            Salinan basis data otomatis dan terjadwal, beserta kode pemeriksa keasliannya.
+          </TextBlock>
         </div>
       </div>
 
@@ -117,16 +118,17 @@ export const BackupRegistryTable: React.FC = () => {
                   </TableBlockCell>
 
                   <TableBlockCell className="px-4 py-2">
-                    <span
-                      className={`inline-block px-2 py-0.5 text-[11px] font-semibold rounded border mr-2 ${getCycleBadge(
+                    <TextBlock
+                      as="span"
+                      className={`mr-2 inline-block rounded border px-2 py-0.5 text-[11px] font-semibold ${getCycleBadge(
                         item.backup_cycle
                       )}`}
                     >
                       {item.backup_cycle}
-                    </span>
-                    <span className="text-xs text-mist">
-                      {item.period_start} s.d. {item.period_end}
-                    </span>
+                    </TextBlock>
+                    <TextBlock as="span" className="text-xs text-mist">
+                      {`${item.period_start} s.d. ${item.period_end}`}
+                    </TextBlock>
                   </TableBlockCell>
 
                   <TableBlockCell className="px-4 py-2 font-medium text-ink">
@@ -135,43 +137,46 @@ export const BackupRegistryTable: React.FC = () => {
 
                   <TableBlockCell className="px-4 py-2">
                     <div className="flex items-center gap-1.5 font-mono text-xs text-mist">
-                      <span>{item.sha256_checksum.slice(0, 12)}...{item.sha256_checksum.slice(-6)}</span>
-                      <button
+                      <TextBlock as="span">{`${item.sha256_checksum.slice(0, 12)}...${item.sha256_checksum.slice(-6)}`}</TextBlock>
+                      <ActionButton
                         type="button"
+                        variant="ghost"
+                        size="sm"
                         onClick={() => handleCopyChecksum(item.sha256_checksum, item.backup_id)}
-                        className="p-1 rounded hover:bg-surface-muted text-mist hover:text-ink transition-colors"
-                        title="Salin Full SHA-256 Checksum"
+                        className="h-7 w-7 p-1 text-mist hover:text-ink"
+                        title="Salin kode pemeriksa lengkap"
+                        aria-label="Salin kode pemeriksa lengkap"
                       >
                         {copiedId === item.backup_id ? (
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                          <CheckCircle2 className="h-3.5 w-3.5 text-success" />
                         ) : (
                           <Copy className="w-3.5 h-3.5" />
                         )}
-                      </button>
+                      </ActionButton>
                     </div>
                   </TableBlockCell>
 
                   <TableBlockCell className="px-4 py-2">
                     {isSuccess ? (
-                      <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600">
-                        <CheckCircle2 className="w-3.5 h-3.5" />
+                      <TextBlock as="span" className="inline-flex items-center gap-1 text-xs font-medium text-success">
+                        <CheckCircle2 className="h-3.5 w-3.5" />
                         Berhasil
-                      </span>
+                      </TextBlock>
                     ) : (
-                      <span className="inline-flex items-center gap-1 text-xs font-medium text-danger">
-                        <ShieldAlert className="w-3.5 h-3.5" />
+                      <TextBlock as="span" className="inline-flex items-center gap-1 text-xs font-medium text-danger">
+                        <ShieldAlert className="h-3.5 w-3.5" />
                         {item.status}
-                      </span>
+                      </TextBlock>
                     )}
                   </TableBlockCell>
 
                   <TableBlockCell className="px-4 py-2 text-right">
-                    <Button asChild size="sm" variant="outline" className="h-8 px-2.5 text-xs">
-                      <a href={downloadUrl} download>
-                        <Download className="w-3.5 h-3.5 mr-1 text-indigo-600" />
+                    <ActionButton asChild size="sm" variant="outline" className="h-8 px-2.5 text-xs">
+                      <ExternalLink href={downloadUrl} download>
+                        <Download className="mr-1 h-3.5 w-3.5 text-lens" />
                         Unduh
-                      </a>
-                    </Button>
+                      </ExternalLink>
+                    </ActionButton>
                   </TableBlockCell>
                 </TableBlockRow>
               );

@@ -55,7 +55,7 @@ void main() {
 
         final data = last().data as Map;
         expect(data['selfie_file_id'], 'f1');
-        expect(data['face_result'], 'SKIPPED');
+        // V2: hasil wajah dihitung server dari swafoto — HP tidak mengirim face_result.
         // Perangkat tak melaporkan akurasi → kunci tidak dikirim, server tidak menolak.
         expect(data.containsKey('accuracy_m'), isFalse);
       },

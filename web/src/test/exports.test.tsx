@@ -26,8 +26,8 @@ describe("Ekspor dokumen order", () => {
   it("PDF resmi terkunci sebelum PM menandatangani; dokumen lain tersedia", async () => {
     mockApi((c) => (c.url === "/exports/work-completions/c-1" ? { data: [] } : undefined));
     renderPanel(false);
-    expect(screen.getByRole("button", { name: /BAST resmi \(\.pdf\)/ })).toBeDisabled();
-    expect(screen.getByRole("button", { name: /Survey Report \(\.docx\)/ })).toBeEnabled();
+    expect(screen.getByRole("button", { name: /Serah terima resmi \(\.pdf\)/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Laporan survei \(\.docx\)/ })).toBeEnabled();
   });
 
   it("membuat Survey Report lewat POST lalu menampilkan riwayat yang bisa diunduh ulang", async () => {
@@ -48,11 +48,11 @@ describe("Ekspor dokumen order", () => {
       }
     });
     renderPanel(true);
-    fireEvent.click(screen.getByRole("button", { name: /Survey Report \(\.docx\)/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Laporan survei \(\.docx\)/ }));
     await waitFor(() =>
       expect(calls.find((c) => c.method === "post")?.data).toEqual({ template: "SURVEY_REPORT" }),
     );
-    expect(await screen.findByText(/Survey Report \(\.docx\) · .* · Dian/)).toBeInTheDocument();
+    expect(await screen.findByText(/Laporan survei \(\.docx\) · .* · Dian/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Unduh" })).toBeInTheDocument();
   });
 });

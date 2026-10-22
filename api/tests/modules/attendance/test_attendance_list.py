@@ -52,7 +52,7 @@ def day(client, world, fake_storage):
     }
 
 
-@pytest.mark.parametrize("who", ["hr", "ops", "admin"])
+@pytest.mark.parametrize("who", ["pm", "ops", "admin"])
 def test_reviewers_see_the_whole_company(client, world, day, who):
     ids = {a["id"] for a in _list(client, world, who, size=100)["items"]}
     assert {day["member"], day["leader"], day["pm"]} <= ids
@@ -66,7 +66,7 @@ def test_pm_sees_attendance_of_the_team(client, world, day):
     assert [a["id"] for a in by_leader["items"]] == [day["leader"]]
 
 
-@pytest.mark.parametrize("who", ["pm", "hr", "ops"])
+@pytest.mark.parametrize("who", ["pm", "ops", "admin"])
 def test_scope_separates_personal_from_team_or_general(client, world, day, who):
     """Absensi pribadi dipisah dari absensi anggota/umum untuk pemegang wewenang lihat (PM, Finance, OPS)."""
     own = day.get(who)
@@ -85,7 +85,7 @@ def test_scope_mine_for_account_without_employee_is_empty_and_rejects_bad_value(
     assert bad.status_code == 422
 
 
-@pytest.mark.parametrize("who", ["member", "leader"])
+@pytest.mark.parametrize("who", ["member", "leader", "hr"])
 def test_everyone_else_sees_only_their_own(client, world, day, who):
     listed = _list(client, world, who, employee_id=world.employees["leader"])   # upaya melihat milik orang lain
 

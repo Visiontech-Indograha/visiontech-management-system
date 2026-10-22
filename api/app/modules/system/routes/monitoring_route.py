@@ -25,7 +25,7 @@ async def attendance_recap(
     current_user: CurrentUser = Depends(get_current_user),
     controller: MonitoringController = Depends(),
 ) -> AttendanceRecap:
-    """HR/OPS/ADMIN: seluruh perusahaan; lainnya: hanya dirinya (aturan `GET /attendance`)."""
+    """OM/ADMIN (view:all_attendance): seluruh perusahaan; lainnya: hanya dirinya."""
     return await controller.handle_attendance_recap(current_user, month)
 
 

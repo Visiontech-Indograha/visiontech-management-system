@@ -53,8 +53,8 @@ def test_attendance_selfie_is_only_for_its_owner_and_reviewers(client, world, fa
         "site_id": world.site_id, "location": {"lat": -6.2, "lng": 106.8}, "selfie_file_id": file_id})
     assert check_in.status_code == 200, check_in.text
 
-    # swafoto terlihat oleh yang boleh melihat absensinya — pemilik & peninjau (PM, OM, HR/GA, admin).
-    _expect(client, world, file_id, allowed={"member", "pm", "hr", "ops", "admin"}, denied={"leader"})
+    # swafoto terlihat oleh pemilik & peninjau absensi (PM, OM, admin) — bukan rekan atau HR/GA.
+    _expect(client, world, file_id, allowed={"member", "pm", "ops", "admin"}, denied={"leader", "hr"})
 
 
 def test_daily_plan_attachment_follows_plan_visibility(client, world, other_world, fake_storage):
@@ -73,8 +73,8 @@ def test_daily_plan_attachment_follows_plan_visibility(client, world, other_worl
 def test_unattached_upload_is_only_for_its_uploader(client, world, other_world, fake_storage):
     file_id = _upload(client, world, "member", (100, 110, 120))
 
-    _expect(client, world, file_id, allowed={"member"},
-            denied={"leader", "pm", "ops", "hr", "admin"})
+    # Superadmin memegang semua izin (termasuk melihat semua berkas); peran lain tidak.
+    _expect(client, world, file_id, allowed={"member", "admin"}, denied={"leader", "pm", "ops", "hr"})
     assert _status(client, other_world, "member", file_id) == 404
     # Kontrak: jenis berkas dikirim server (magic bytes saat unggah), bukan ditebak klien dari URL.
     body = client.get(f"/files/{file_id}/url", headers=world.headers(client, "member")).json()

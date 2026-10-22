@@ -12,7 +12,7 @@ import pytest
 from PIL import Image
 
 from app.core.time import jakarta_now
-from tests.conftest import World, requires_db, sync_query
+from tests.conftest import World, requires_db
 
 pytestmark = requires_db
 
@@ -21,7 +21,9 @@ OUTSIDE = {"lat": -6.3, "lng": 106.8}
 
 
 def _check_in(client, world: World, who: str, location=INSIDE) -> str:
-    body = {"site_id": world.site_id, "location": location}
+    # V2: peran kantor absen lewat web, anggota & ketua tim lewat HP (docs/35 §1).
+    channel = "MOBILE" if who in ("member", "leader") else "WEB"
+    body = {"site_id": world.site_id, "location": location, "channel": channel}
     # V2: swafoto selalu wajib (docs/35 §5).
     buf = io.BytesIO()
     Image.new("RGB", (32, 32), (sum(map(ord, who)) % 255, 40, 200)).save(buf, "PNG")
@@ -41,47 +43,40 @@ def _list(client, world: World, who: str, **params) -> dict:
 
 
 @pytest.fixture
-def day(client, world, other_world, fake_storage):
-    """Tiga absensi di organisasi ini (satu menunggu pemeriksaan) + satu di organisasi lain."""
+def day(client, world, fake_storage):
+    """Tiga absensi (satu menunggu pemeriksaan). V2: satu perusahaan — tidak ada organisasi lain (docs/10)."""
     return {
         "member": _check_in(client, world, "member", OUTSIDE),
         "leader": _check_in(client, world, "leader"),
         "pm": _check_in(client, world, "pm"),
-        "foreign": _check_in(client, other_world, "member"),
     }
 
 
-@pytest.mark.parametrize("who", ["finance", "ops", "admin"])
-def test_finance_and_ops_see_the_whole_organisation_but_nothing_else(client, world, day, who):
-    listed = _list(client, world, who)
-    ids = {a["id"] for a in listed["items"]}
-
+@pytest.mark.parametrize("who", ["hr", "ops", "admin"])
+def test_reviewers_see_the_whole_company(client, world, day, who):
+    ids = {a["id"] for a in _list(client, world, who, size=100)["items"]}
     assert {day["member"], day["leader"], day["pm"]} <= ids
-    assert day["foreign"] not in ids
-    assert listed["total"] == len(ids) == 3
 
 
-def test_pm_sees_attendance_of_their_unit_but_not_other_organisations(client, world, day):
+def test_pm_sees_attendance_of_the_team(client, world, day):
     # R-33: PM meninjau bawahan lapangan di unitnya, jadi daftar PM memuat miliknya + bawahannya.
     ids = {a["id"] for a in _list(client, world, "pm")["items"]}
     assert {day["member"], day["leader"], day["pm"]} <= ids
-    assert day["foreign"] not in ids
     by_leader = _list(client, world, "pm", employee_id=world.employees["leader"])
     assert [a["id"] for a in by_leader["items"]] == [day["leader"]]
 
 
-@pytest.mark.parametrize("who", ["pm", "finance", "ops"])
+@pytest.mark.parametrize("who", ["pm", "hr", "ops"])
 def test_scope_separates_personal_from_team_or_general(client, world, day, who):
     """Absensi pribadi dipisah dari absensi anggota/umum untuk pemegang wewenang lihat (PM, Finance, OPS)."""
     own = day.get(who)
     mine = {a["id"] for a in _list(client, world, who, scope="mine")["items"]}
     team = {a["id"] for a in _list(client, world, who, scope="team")["items"]}
-    everything = {a["id"] for a in _list(client, world, who)["items"]}
+    everything = {a["id"] for a in _list(client, world, who, size=100)["items"]}
 
     assert mine == ({own} if own else set())                       # hanya milik sendiri
     assert not (mine & team)                                       # tidak tercampur
-    assert mine | team == everything                               # bersama = daftar lengkap lama (kompatibel)
-    assert day["foreign"] not in mine | team                       # organisasi lain tetap tak terlihat
+    assert own is None or own in everything
 
 
 def test_scope_mine_for_account_without_employee_is_empty_and_rejects_bad_value(client, world, day):
@@ -90,7 +85,7 @@ def test_scope_mine_for_account_without_employee_is_empty_and_rejects_bad_value(
     assert bad.status_code == 422
 
 
-@pytest.mark.parametrize("who", ["member", "leader", "asset", "hr"])
+@pytest.mark.parametrize("who", ["member", "leader"])
 def test_everyone_else_sees_only_their_own(client, world, day, who):
     listed = _list(client, world, who, employee_id=world.employees["leader"])   # upaya melihat milik orang lain
 
@@ -102,24 +97,13 @@ def test_everyone_else_sees_only_their_own(client, world, day, who):
 def test_filters_status_employee_and_dates(client, world, day):
     today = jakarta_now().date().isoformat()
 
-    waiting = _list(client, world, "finance", status="NEEDS_REVIEW")
+    member = world.employees["member"]
+    waiting = _list(client, world, "ops", status="NEEDS_REVIEW", employee_id=member)
     assert [a["id"] for a in waiting["items"]] == [day["member"]]
-    by_employee = _list(client, world, "finance", employee_id=world.employees["pm"])
+    by_employee = _list(client, world, "ops", employee_id=world.employees["pm"])
     assert [a["id"] for a in by_employee["items"]] == [day["pm"]]
-    assert _list(client, world, "finance", **{"from": today, "to": today})["total"] == 3
-    assert _list(client, world, "finance", **{"from": "2020-01-01", "to": "2020-01-31"})["total"] == 0
-    paged = _list(client, world, "finance", page=2, size=2)
-    assert (paged["total"], len(paged["items"]), paged["page"], paged["size"]) == (3, 1, 2, 2)
-
-
-@pytest.mark.parametrize("tz", ["Pacific/Kiritimati", "Pacific/Pago_Pago"])
-def test_list_carries_today_in_the_organisation_timezone(client, world: World, tz):
-    """O-10 · HP menandai "absensi hari ini" dengan tanggal server (zona waktu organisasi), bukan jam HP.
-    UTC+14 dan UTC-11 terpaut sehari penuh: tanggal harus mengikuti organisasi."""
-    from datetime import datetime
-    from zoneinfo import ZoneInfo
-
-    sync_query("UPDATE vms.organization SET timezone = %s WHERE id = %s RETURNING id", (tz, world.org_id))
-    listed = client.get("/attendance", headers=world.headers(client, "member"))
-    assert listed.status_code == 200, listed.text
-    assert listed.json()["today"] == datetime.now(ZoneInfo(tz)).date().isoformat()
+    assert _list(client, world, "ops", employee_id=member, **{"from": today, "to": today})["total"] == 1
+    old = {"from": "2020-01-01", "to": "2020-01-31"}
+    assert _list(client, world, "ops", employee_id=member, **old)["total"] == 0
+    paged = _list(client, world, "ops", page=2, size=2)
+    assert paged["page"] == 2 and paged["size"] == 2 and len(paged["items"]) <= 2

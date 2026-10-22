@@ -1,6 +1,6 @@
 """
-T-01 · Konteks RLS & audit per permintaan (dok 12: satu permintaan = satu transaksi + SET LOCAL).
-Nilai harus terbaca fungsi DB, dan hilang begitu transaksinya selesai (R-08: tidak bocor
+T-01 · Konteks audit per permintaan (dok 12: satu permintaan = satu transaksi + SET LOCAL).
+Nilai harus terbaca di DB (current_setting), dan hilang begitu transaksinya selesai (R-08: tidak bocor
 ke permintaan lain yang memakai koneksi yang sama).
 """
 from __future__ import annotations
@@ -16,6 +16,11 @@ from tests.conftest import requires_db
 
 pytestmark = requires_db
 
+_CONTEXT_SQL = (
+    "SELECT NULLIF(current_setting('app.user_id', true), '')::uuid, "
+    "NULLIF(current_setting('app.organization_id', true), '')::uuid, current_setting('app.actor_label', true)"
+)
+
 
 def test_context_is_visible_inside_transaction_and_gone_after():
     user_id, org_id = uuid.uuid4(), uuid.uuid4()
@@ -27,12 +32,8 @@ def test_context_is_visible_inside_transaction_and_gone_after():
                 async with conn.begin():
                     await set_request_context(conn, user_id=str(user_id), organization_id=str(org_id),
                                               actor_label="uji@contoh.test")
-                    inside = (await conn.execute(text(
-                        "SELECT vms.current_user_id(), vms.current_org_id(), current_setting('app.actor_label', true)"
-                    ))).one()
-                after = (await conn.execute(text(
-                    "SELECT vms.current_user_id(), vms.current_org_id(), current_setting('app.actor_label', true)"
-                ))).one()
+                    inside = (await conn.execute(text(_CONTEXT_SQL))).one()
+                after = (await conn.execute(text(_CONTEXT_SQL))).one()
                 await conn.rollback()
                 return tuple(inside), tuple(after)
         finally:

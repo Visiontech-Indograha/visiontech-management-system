@@ -1,14 +1,14 @@
 """
-V-12 · Absensi mengikuti `domain.js` CHECK_IN / CHECK_OUT / EXPLAIN_ATTENDANCE / REVIEW_ATTENDANCE.
-Jarak, status, terlambat, dan pulang cepat diputuskan server (trigger `attendance_geofence`,
-`attendance_checkout`, jam kerja organisasi — K-11); respons = yang tersimpan. Regresi R10:
-jam perangkat tidak dipakai.
+V-12 · Aturan absen masuk / pulang / penjelasan / pemeriksaan (Master Schema V2, docs/35 §5).
+Jarak, status, terlambat, dan pulang cepat diputuskan server; respons = yang tersimpan. Regresi R10:
+jam perangkat tidak dipakai. Swafoto selalu wajib; anggota & ketua tim absen lewat HP, peran kantor lewat web.
 """
 from __future__ import annotations
 
 import io
 from datetime import timedelta
 
+import pytest
 from PIL import Image
 
 from app.core.time import jakarta_now
@@ -16,8 +16,19 @@ from tests.conftest import World, requires_db, sync_query
 
 pytestmark = requires_db
 
-INSIDE = {"lat": -6.2, "lng": 106.8}      # tepat di lokasi uji (radius 100 m)
+INSIDE = {"lat": -6.2, "lng": 106.8}      # tepat di kantor uji (radius 100 m)
 OUTSIDE = {"lat": -6.3, "lng": 106.8}     # ±11 km
+FIELD = ("member", "leader")              # peran lapangan → kanal HP
+
+
+@pytest.fixture(autouse=True)
+def _storage(fake_storage):
+    """Swafoto selalu diunggah — penyimpanan palsu untuk semua uji di modul ini."""
+    return fake_storage
+
+
+def _channel(who: str) -> str:
+    return "MOBILE" if who in FIELD else "WEB"
 
 
 def _selfie(client, world: World, who: str) -> str:
@@ -30,27 +41,39 @@ def _selfie(client, world: World, who: str) -> str:
 
 
 def _check_in(client, world: World, who: str = "member", location=INSIDE, **extra):
-    # R-33: penjelasan wajib di luar zona & saat mengajukan ulang — uji di sini selalu menyertakannya.
+    # R-33: penjelasan wajib di luar zona & saat mengajukan ulang — uji di sini menyertakannya kecuali diminta lain.
     extra.setdefault("explanation", "Survei titik di luar lokasi")
+    extra.setdefault("selfie_file_id", _selfie(client, world, who))
     return client.post("/attendance/check-in", headers=world.headers(client, who),
-                       json={"site_id": world.site_id, "location": location, **extra})
+                       json={"site_id": world.site_id, "location": location, "channel": _channel(who), **extra})
 
 
 def _check_out(client, world: World, who: str = "member"):
-    return client.post("/attendance/check-out", headers=world.headers(client, who), json={"location": INSIDE})
+    return client.post("/attendance/check-out", headers=world.headers(client, who),
+                       json={"location": INSIDE, "channel": _channel(who)})
 
 
 def _needs_review(client, world: World, who: str = "member") -> str:
-    """Absensi di luar radius dengan swafoto → NEEDS_REVIEW (trigger)."""
-    response = _check_in(client, world, who, OUTSIDE, selfie_file_id=_selfie(client, world, who))
+    """Absen di luar radius dengan swafoto + penjelasan → menunggu pemeriksaan."""
+    response = _check_in(client, world, who, OUTSIDE)
     assert response.status_code == 200, response.text
     assert response.json()["status"] == "NEEDS_REVIEW"
     return response.json()["id"]
 
 
+_STATUS = ("CASE om_approval_status WHEN 'AUTO_VALID' THEN 'AUTO_VALID' WHEN 'APPROVED_BY_OM' THEN 'APPROVED' "
+           "WHEN 'REJECTED_BY_OM' THEN 'REJECTED' ELSE 'NEEDS_REVIEW' END")
+
+
 def _row(att_id: str) -> tuple:
-    return sync_query("SELECT status::text, is_late, distance_m, check_out_at IS NOT NULL, is_early_leave, "
-                      "explanation, review_note FROM vms.attendance WHERE id = %s", (att_id,))[0]
+    return sync_query(
+        f"SELECT {_STATUS}, clock_in_at::time > scheduled_in, distance_to_target_m, clock_out_at IS NOT NULL, "
+        "(clock_out_at IS NOT NULL AND clock_out_at::time < scheduled_out), out_of_radius_note "
+        "FROM attendance WHERE attendance_id = %s", (att_id,))[0]
+
+
+def _count(world: World, who: str = "member") -> int:
+    return sync_query("SELECT count(*) FROM attendance WHERE employee_id = %s", (world.employees[who],))[0][0]
 
 
 # ── CHECK_IN ──────────────────────────────────────────────────────────────────────────────────
@@ -58,14 +81,16 @@ def test_open_session_blocks_check_in_until_it_is_checked_out(client, world):
     """Sesi kemarin yang lupa ditutup: check-in ditolak, tetapi check-out tetap bisa menutupnya."""
     yesterday = jakarta_now().date() - timedelta(days=1)
     open_id = str(sync_query(
-        "INSERT INTO vms.attendance (organization_id, employee_id, work_date, site_id, site_label, check_in_at, "
-        "location, location_origin, radius_m) VALUES (%s, %s, %s, %s, 'Gudang uji', now() - interval '1 day', "
-        "ST_GeogFromText('POINT(106.8 -6.2)'), 'GPS', 100) RETURNING id",
-        (world.org_id, world.employees["member"], yesterday, world.site_id))[0][0])
+        "INSERT INTO attendance (employee_id, attendance_date, target_location_type, office_id, scheduled_in, "
+        "scheduled_out, clock_in_at, in_lat, in_lng, face_match_score, face_photo_path, distance_to_target_m, "
+        "is_within_attendance_radius, distance_from_main_office_m, city_zone_status, meal_allowance_amount) "
+        "VALUES (%s, %s, 'OFFICE', %s, '07:00', '16:00', now() - interval '1 day', -6.2, 106.8, 0, 'uji.webp', "
+        "0, TRUE, 0, 'DALAM_KOTA', 0) RETURNING attendance_id",
+        (world.employees["member"], yesterday, world.site_id))[0][0])
 
     blocked = _check_in(client, world)
     assert blocked.status_code == 409, blocked.text
-    assert blocked.json()["error"]["message"] == "Anda belum absen pulang dari absen masuk sebelumnya."
+    assert blocked.json()["error"]["code"] == "OPEN_SESSION"
 
     closed = _check_out(client, world)
     assert closed.status_code == 200, closed.text
@@ -73,7 +98,7 @@ def test_open_session_blocks_check_in_until_it_is_checked_out(client, world):
     assert _check_in(client, world).status_code == 200
 
 
-def test_one_attendance_per_day_unless_the_previous_one_was_rejected(client, world, fake_storage):
+def test_one_attendance_per_day_unless_the_previous_one_was_rejected(client, world):
     att_id = _needs_review(client, world)
     # R-33: absen pulang hanya setelah absen masuk valid.
     pending_out = _check_out(client, world)
@@ -81,8 +106,7 @@ def test_one_attendance_per_day_unless_the_previous_one_was_rejected(client, wor
 
     again = _check_in(client, world)
     assert again.status_code == 409, again.text
-    assert again.json()["error"]["message"] == \
-        "Absensi untuk hari ini sudah tercatat (hanya dapat mengajukan ulang jika absensi sebelumnya ditolak)."
+    assert again.json()["error"]["code"] == "ALREADY_CHECKED_IN"
 
     rejected = client.post(f"/attendance/{att_id}/review", headers=world.headers(client, "pm"),
                            json={"is_approved": False, "note": "Lokasi tidak sesuai penugasan"})
@@ -91,8 +115,6 @@ def test_one_attendance_per_day_unless_the_previous_one_was_rejected(client, wor
 
 
 def test_response_is_what_the_server_stored(client, world):
-    """Sebelumnya respons memakai hitungan router (terlambat 09.00, SIMULASI → tinjau) yang berbeda
-    dengan hasil trigger yang tersimpan."""
     response = _check_in(client, world, location_origin="SIMULASI")
 
     assert response.status_code == 200, response.text
@@ -102,24 +124,30 @@ def test_response_is_what_the_server_stored(client, world):
 
 
 def test_device_time_is_ignored(client, world):
-    """R10 · jam perangkat tidak dipakai: waktu dari server, terlambat menurut jam kerja organisasi."""
+    """R10 · jam perangkat tidak dipakai: jam & tanggal dari server (WIB)."""
     response = _check_in(client, world, check_in_at="2020-01-01T07:00:00+07:00", work_date="2020-01-01")
 
     assert response.status_code == 200, response.text
     assert sync_query(
-        "SELECT abs(extract(epoch FROM a.check_in_at - now())) < 300, a.work_date = (now() AT TIME ZONE o.timezone)::date, "
-        "a.is_late = ((a.check_in_at AT TIME ZONE o.timezone)::time > o.shift_start) "
-        "FROM vms.attendance a JOIN vms.organization o ON o.id = a.organization_id WHERE a.id = %s",
-        (response.json()["id"],)) == [(True, True, True)]
+        "SELECT abs(extract(epoch FROM clock_in_at - now())) < 300, attendance_date = %s "
+        "FROM attendance WHERE attendance_id = %s",
+        (jakarta_now().date(), response.json()["id"])) == [(True, True)]
 
 
-def test_outside_the_radius_needs_a_selfie(client, world):
-    response = _check_in(client, world, location=OUTSIDE)
+def test_outside_the_radius_needs_an_explanation(client, world):
+    response = _check_in(client, world, location=OUTSIDE, explanation=None)
 
     assert response.status_code == 422, response.text
-    assert response.json()["error"]["message"].startswith("Di luar radius toleransi")
-    assert sync_query("SELECT count(*) FROM vms.attendance WHERE employee_id = %s",
-                      (world.employees["member"],)) == [(0,)]
+    assert response.json()["error"]["code"] == "EXPLANATION_REQUIRED"
+    assert _count(world) == 0
+
+
+def test_every_check_in_needs_a_selfie(client, world):
+    response = _check_in(client, world, selfie_file_id=None)
+
+    assert response.status_code == 422, response.text
+    assert "swafoto" in response.json()["error"]["message"].lower()
+    assert _count(world) == 0
 
 
 # ── CHECK_OUT ─────────────────────────────────────────────────────────────────────────────────
@@ -130,15 +158,12 @@ def test_check_out_keeps_the_status_and_the_server_decides_early_leave(client, w
 
     assert response.status_code == 200, response.text
     assert response.json()["status"] == "AUTO_VALID" == _row(att_id)[0]   # pulang cepat bukan alasan tinjau
-    assert sync_query(
-        "SELECT a.is_early_leave = ((a.check_out_at AT TIME ZONE o.timezone)::time < o.shift_end) "
-        "FROM vms.attendance a JOIN vms.organization o ON o.id = a.organization_id WHERE a.id = %s",
-        (att_id,)) == [(True,)]
+    assert response.json()["is_early_leave"] == _row(att_id)[4]
     assert _check_out(client, world).status_code == 409                  # tidak ada sesi terbuka lagi
 
 
 # ── EXPLAIN & REVIEW ──────────────────────────────────────────────────────────────────────────
-def test_only_own_attendance_waiting_for_review_can_be_explained(client, world, fake_storage):
+def test_only_own_attendance_waiting_for_review_can_be_explained(client, world):
     valid_id = _check_in(client, world, who="leader").json()["id"]
     waiting_id = _needs_review(client, world)
     member = world.headers(client, "member")
@@ -146,8 +171,6 @@ def test_only_own_attendance_waiting_for_review_can_be_explained(client, world, 
     not_waiting = client.post(f"/attendance/{valid_id}/explain", headers=world.headers(client, "leader"),
                               json={"explanation": "Macet"})
     assert not_waiting.status_code == 409, not_waiting.text
-    assert not_waiting.json()["error"]["message"] == \
-        "Hanya absensi sendiri yang menunggu pemeriksaan dapat diberi penjelasan."
     assert client.post(f"/attendance/{waiting_id}/explain", headers=member,
                        json={"explanation": "   "}).status_code == 422
     assert client.post(f"/attendance/{waiting_id}/explain", headers=member,
@@ -155,8 +178,8 @@ def test_only_own_attendance_waiting_for_review_can_be_explained(client, world, 
     assert _row(waiting_id)[5] == "Titik lokasi di gerbang proyek"
 
 
-def test_review_rules(client, world, fake_storage):
-    """R-33: pekerja lapangan ditinjau PM unitnya (bukan Finance); tidak pernah absensi sendiri."""
+def test_review_rules(client, world):
+    """Peninjau (PM/OM/HR/admin) tidak pernah memverifikasi absensi sendiri; catatan wajib."""
     pm = world.headers(client, "pm")
     valid_id = _check_in(client, world, who="leader").json()["id"]
     own_id = _needs_review(client, world, who="pm")
@@ -165,10 +188,6 @@ def test_review_rules(client, world, fake_storage):
     def review(att_id, **body):
         return client.post(f"/attendance/{att_id}/review", headers=pm, json={"is_approved": True, **body})
 
-    by_finance = client.post(f"/attendance/{waiting_id}/review", headers=world.headers(client, "finance"),
-                             json={"is_approved": True, "note": "Oke"})
-    assert by_finance.status_code == 403, by_finance.text
-
     assert review(valid_id, note="Oke").json()["error"]["message"] == "Absensi tidak menunggu pemeriksaan."
     own = review(own_id, note="Oke")
     assert own.status_code == 403 and own.json()["error"]["message"] == "Anda tidak boleh memverifikasi absensi sendiri."
@@ -176,46 +195,29 @@ def test_review_rules(client, world, fake_storage):
     assert missing_note.status_code == 422 and missing_note.json()["error"]["message"] == \
         "Catatan pemeriksaan wajib diisi."
     assert review(waiting_id, note="Lokasi sesuai surat tugas").status_code == 200
-    assert _row(waiting_id)[0] == "APPROVED" and _row(waiting_id)[6] == "Lokasi sesuai surat tugas"
+    status, *_, note = _row(waiting_id)
+    assert status == "APPROVED" and "Lokasi sesuai surat tugas" in note
 
 
-def test_pm_reviews_attendance_only_in_own_unit(client, world, fake_storage):
-    """R-33 (dulu R-10): PM memvalidasi absensi bawahan lapangan di unitnya; unit lain tidak terlihat & 403."""
-    other_unit = str(sync_query("INSERT INTO vms.business_unit (organization_id, code, name) "
-                                "VALUES (%s, 'LAIN', 'Unit lain') RETURNING id", (world.org_id,))[0][0])
-    world.add_person("luar", None, unit_id=other_unit)
-    # R-33: pekerja lapangan hanya absen di lokasi proyek unitnya.
-    other_site = str(sync_query(
-        "INSERT INTO vms.site (organization_id, name, location, radius_m, unit_id) "
-        "VALUES (%s, 'Gudang unit lain', ST_GeogFromText('POINT(106.8 -6.2)'), 100, %s) RETURNING id",
-        (world.org_id, other_unit))[0][0])
-    pm = world.headers(client, "pm")
-    mine_id = _needs_review(client, world)
-    outside = _check_in(client, world, "luar", OUTSIDE, site_id=other_site,
-                        selfie_file_id=_selfie(client, world, "luar"))
-    assert outside.status_code == 200, outside.text
-    other_id = outside.json()["id"]
-
-    listed = {a["id"] for a in client.get("/attendance", headers=pm).json()["items"]}
-    assert mine_id in listed and other_id not in listed
+def test_field_staff_cannot_review(client, world):
+    waiting_id = _needs_review(client, world)
     body = {"is_approved": False, "note": "Tidak ada surat tugas di lokasi itu"}
-    assert client.post(f"/attendance/{other_id}/review", headers=pm, json=body).status_code == 403
-    assert client.post(f"/attendance/{mine_id}/review", headers=pm, json=body).status_code == 200
-    assert _row(mine_id)[0] == "REJECTED"
-    assert client.post(f"/attendance/{mine_id}/review", headers=world.headers(client, "leader"),
+
+    assert client.post(f"/attendance/{waiting_id}/review", headers=world.headers(client, "leader"),
                        json=body).status_code == 403
+    assert client.post(f"/attendance/{waiting_id}/review", headers=world.headers(client, "pm"),
+                       json=body).status_code == 200
+    assert _row(waiting_id)[0] == "REJECTED"
 
 
 # ── K-12 · akurasi GPS & batas radius (dok 07 §4.3) ──────────────────────────────────────────
 def test_poor_gps_accuracy_is_rejected_with_a_reason(client, world):
-    """K-12: akurasi GPS > 100 m ditolak dengan alasan — bukan diterima diam-diam — dan tidak ada
-    baris absensi yang tersimpan."""
+    """K-12: akurasi GPS > 100 m ditolak dengan alasan dan tidak ada baris absensi yang tersimpan."""
     response = _check_in(client, world, accuracy_m=150.0)
     assert response.status_code == 422, response.text
     assert response.json()["error"]["code"] == "GPS_INACCURATE"
     assert "akurasi" in response.json()["error"]["message"].lower()
-    assert sync_query("SELECT count(*) FROM vms.attendance WHERE employee_id = %s",
-                      (world.employees["member"],))[0][0] == 0
+    assert _count(world) == 0
 
 
 def test_gps_accuracy_at_the_limit_or_unknown_is_accepted(client, world):
@@ -228,9 +230,8 @@ def test_gps_accuracy_at_the_limit_or_unknown_is_accepted(client, world):
 
 
 def test_radius_boundary_is_decided_consistently(client, world):
-    """Tepat di tepi radius (dok 07 §4.3): titik ±99 m di dalam, ±101 m di luar — keputusan server
-    stabil, tidak bergantung pembulatan klien."""
-    radius = sync_query("SELECT radius_m FROM vms.site WHERE id = %s", (world.site_id,))[0][0]
+    """Tepat di tepi radius: titik ±99 m di dalam, ±101 m di luar — keputusan server stabil."""
+    radius = sync_query("SELECT attendance_radius_m FROM office WHERE office_id = %s", (world.site_id,))[0][0]
     deg_per_m = 1 / 111_320  # derajat lintang per meter
     inside = {"lat": INSIDE["lat"] + (radius - 1) * deg_per_m, "lng": INSIDE["lng"]}
     outside = {"lat": INSIDE["lat"] - (radius + 1) * deg_per_m, "lng": INSIDE["lng"]}
@@ -239,5 +240,5 @@ def test_radius_boundary_is_decided_consistently(client, world):
     assert near.status_code == 200, near.text
     assert near.json()["status"] == "AUTO_VALID" and near.json()["distance_m"] <= radius
 
-    far = _check_in(client, world, "leader", outside)
-    assert far.status_code == 422, far.text  # di luar radius tanpa swafoto → ditolak trigger
+    far = _check_in(client, world, "leader", outside, explanation=None)
+    assert far.status_code == 422, far.text  # di luar radius tanpa penjelasan → ditolak

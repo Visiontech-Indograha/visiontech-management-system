@@ -25,7 +25,7 @@ pytestmark = requires_db
 def org_name() -> Iterator[str]:
     name = f"uji-t02-{uuid.uuid4().hex[:10]}"
     yield name
-    sync_query("DELETE FROM vms.login_attempt WHERE login = %s", (name,))
+    sync_query("DELETE FROM office WHERE name = %s RETURNING office_id", (name,))
 
 
 def _app() -> FastAPI:
@@ -33,8 +33,8 @@ def _app() -> FastAPI:
     app.add_exception_handler(AppError, app_error_handler)  # type: ignore[arg-type]
 
     async def insert(db: AsyncSession, name: str) -> None:
-        # login_attempt: tabel tanpa RLS yang memang ditulis aplikasi (peran vms_api tidak boleh membuat organisasi).
-        await db.execute(text("INSERT INTO vms.login_attempt (login, successful) VALUES (:n, false)"), {"n": name})
+        await db.execute(text(
+            "INSERT INTO office (name, address, latitude, longitude) VALUES (:n, 'Jl. Uji', -6.2, 106.8)"), {"n": name})
 
     @app.post("/ok/{name}")
     async def ok(name: str, db: AsyncSession = Depends(get_db, scope=DB_SCOPE)) -> dict[str, str]:
@@ -55,7 +55,7 @@ def _app() -> FastAPI:
 
 
 def _count(name: str) -> int:
-    return sync_query("SELECT count(*) FROM vms.login_attempt WHERE login = %s", (name,))[0][0]
+    return sync_query("SELECT count(*) FROM office WHERE name = %s", (name,))[0][0]
 
 
 def test_successful_request_commits(org_name):

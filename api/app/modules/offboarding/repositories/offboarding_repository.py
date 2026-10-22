@@ -73,7 +73,8 @@ class OffboardingRepository(BaseRepository):
         return await self.fetchone(
             """
             SELECT e.employee_id, e.full_name, e.offboarding_status::text AS offboarding_status, e.division_id,
-                   e.join_date::date AS join_date, e.pkwt_end_date::date AS pkwt_end_date,
+                   (e.join_date AT TIME ZONE 'Asia/Jakarta')::date AS join_date,
+                   (e.pkwt_end_date AT TIME ZONE 'Asia/Jakarta')::date AS pkwt_end_date,
                    (SELECT string_agg(t.name, ', ') FROM team t
                     WHERE t.leader_employee_id = e.employee_id AND t.status AND t.delete_at IS NULL) AS leads_teams,
                    (SELECT string_agg(dv.name, ', ') FROM division dv
@@ -240,13 +241,13 @@ class OffboardingRepository(BaseRepository):
         return list(await self.fetchall(
             """
             SELECT e.employee_id, e.employee_no, e.full_name, d.name AS division_name,
-                   e.pkwt_end_date::date AS pkwt_end_date,
+                   (e.pkwt_end_date AT TIME ZONE 'Asia/Jakarta')::date AS pkwt_end_date,
                    (SELECT COUNT(*) FROM asset_assignment a WHERE a.employee_id = e.employee_id
                     AND a.returned_at IS NULL AND a.delete_at IS NULL)::int AS open_loans
             FROM employee e
             LEFT JOIN division d ON d.division_id = e.division_id
             WHERE e.delete_at IS NULL AND e.offboarding_status = 'active' AND e.pkwt_end_date IS NOT NULL
-              AND e.pkwt_end_date::date <= :until
+              AND (e.pkwt_end_date AT TIME ZONE 'Asia/Jakarta')::date <= :until
               AND (CAST(:div AS uuid) IS NULL OR e.division_id = CAST(:div AS uuid))
             ORDER BY e.pkwt_end_date, e.full_name
             """,

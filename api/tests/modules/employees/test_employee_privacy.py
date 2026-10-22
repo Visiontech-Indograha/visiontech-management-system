@@ -1,7 +1,6 @@
 """
-R-20 · M2-01 — data kontak pribadi (email, telepon, alamat, tanggal lahir, kontak darurat) hanya
-untuk pemiliknya dan HR/admin (prototipe `privateAccess`, dok 08 ancaman "mengintip data rekan").
-Dulu setiap akun (izin dasar view:users) membaca semuanya lewat direktori.
+R-20 · M2-01 — kontak pribadi (telepon, email, alamat) hanya untuk pemiliknya dan HR/admin
+(dok 08 ancaman "mengintip data rekan"). V2 sempat membuka semuanya ke setiap akun lewat direktori.
 """
 from __future__ import annotations
 
@@ -9,13 +8,12 @@ from tests.conftest import World, requires_db, sync_query
 
 pytestmark = requires_db
 
-PRIVATE = ("email", "phone", "address", "birth_date")
+PRIVATE = ("phone_number", "email", "city")
 
 
 def _fill(world: World, who: str) -> str:
     emp = world.employees[who]
-    sync_query("UPDATE vms.employee SET phone = '0812', address = 'Jl. Uji 1', birth_date = '1990-01-02', "
-               "email = 'uji@contoh.id' WHERE id = %s RETURNING id", (emp,))
+    sync_query("UPDATE employee SET phone_number = '0812' WHERE employee_id = %s RETURNING 1", (emp,))
     return emp
 
 
@@ -26,21 +24,24 @@ def _detail(client, world: World, who: str, emp: str) -> dict:
 
 
 def _listed(client, world: World, who: str, emp: str) -> dict:
-    r = client.get("/employees", headers=world.headers(client, who), params={"size": 100})
+    r = client.get("/employees", headers=world.headers(client, who),
+                   params={"size": 100, "office_id": world.org_id})
     assert r.status_code == 200, r.text
-    return next(e for e in r.json()["items"] if e["id"] == emp)
+    return next(e for e in r.json()["items"] if e["employee_id"] == emp)
 
 
 def test_colleague_sees_no_private_fields(client, world: World):
     emp = _fill(world, "member")
-    for view in (_detail(client, world, "leader", emp), _listed(client, world, "leader", emp)):
+    detail = _detail(client, world, "leader", emp)
+    assert detail["addresses"] == []
+    for view in (detail, _listed(client, world, "leader", emp)):
         assert all(view[f] is None for f in PRIVATE), view
-        assert view["full_name"] and view["position"] is not None   # data kerja tetap terlihat
+        assert view["full_name"] and view["office_name"]   # data kerja tetap terlihat
 
 
 def test_owner_and_hr_see_private_fields(client, world: World):
     emp = _fill(world, "member")
     for who in ("member", "hr", "admin"):
         view = _detail(client, world, who, emp)
-        assert (view["phone"], view["address"]) == ("0812", "Jl. Uji 1"), who
-        assert _listed(client, world, who, emp)["phone"] == "0812", who
+        assert view["phone_number"] == "0812" and view["email"] == world.logins["member"], who
+        assert _listed(client, world, who, emp)["phone_number"] == "0812", who

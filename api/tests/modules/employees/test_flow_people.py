@@ -5,6 +5,7 @@ Setiap langkah tulis dibuktikan dengan membaca ulang dari DB lewat koneksi terpi
 from __future__ import annotations
 
 import io
+import uuid
 
 from PIL import Image
 
@@ -44,122 +45,114 @@ def test_employee_lifecycle(client, world):
     assert emp_id in {e["employee_id"] for e in listed["items"]}
 
 
-def test_personal_document_upload_and_hr_verification(client, world, fake_storage):
-    member = world.headers(client, "member")
+def _upload(client, headers, color: int = 60) -> str:
+    buf = io.BytesIO()
+    Image.new("RGB", (32, 32), (color, 10, 10)).save(buf, "PNG")
+    uploaded = client.post("/files/upload", headers=headers, files={"file": ("dok.png", buf.getvalue(), "image/png")})
+    assert uploaded.status_code == 200, uploaded.text
+    return uploaded.json()["file_id"]
+
+
+def test_personal_document_is_managed_by_hr_and_seen_by_its_owner(client, world, fake_storage):
+    hr, member = world.headers(client, "hr"), world.headers(client, "member")
     own_emp = world.employees["member"]
 
-    uploaded = client.post("/files/upload", headers=member, files={"file": ("ktp.png", _png(), "image/png")})
-    assert uploaded.status_code == 200, uploaded.text
-    file_id = uploaded.json()["file_id"]
-    assert sync_query("SELECT count(*) FROM vms.file_object WHERE id = %s", (file_id,)) == [(1,)]
+    file_id = _upload(client, hr)
+    assert sync_query("SELECT count(*) FROM file_object WHERE id = %s", (file_id,)) == [(1,)]
     assert fake_storage  # berkas benar-benar dikirim ke penyimpanan
 
-    doc = client.post(f"/employees/{own_emp}/documents", headers=member,
-                      json={"doc_type": "KTP", "number": "3201011234567890", "file_id": file_id})
+    doc = client.post(f"/employees/{own_emp}/documents", headers=hr, json={"doc_type": "KTP", "file_id": file_id})
     assert doc.status_code == 201, doc.text
     doc_id = doc.json()["id"]
-    # Nomor asli tidak pernah disimpan — hanya bentuk tersamar (dok 03 M2).
-    assert sync_query("SELECT number_masked, status::text FROM vms.employee_document WHERE id = %s", (doc_id,)) \
-        == [("************7890", "PENDING")]
+    assert sync_query("SELECT type, status::text FROM employee_file WHERE employee_file_id = %s", (doc_id,))         == [("KTP", "active")]
 
-    verified = client.post(f"/employees/{own_emp}/documents/{doc_id}/verify", headers=world.headers(client, "hr"),
-                           json={"is_approved": True})
-    assert verified.status_code == 200, verified.text
-    assert sync_query("SELECT status::text FROM vms.employee_document WHERE id = %s", (doc_id,)) == [("VERIFIED",)]
+    mine = client.get(f"/employees/{own_emp}/documents", headers=member)
+    assert mine.status_code == 200 and doc_id in [d["id"] for d in mine.json()["items"]]
+    # Dokumen rekan → 404 (keberadaan data tidak dibocorkan).
+    assert client.get(f"/employees/{own_emp}/documents", headers=world.headers(client, "leader")).status_code == 404
+
+
+def test_employee_cannot_upload_documents_themselves(client, world, fake_storage):
+    member = world.headers(client, "member")
+    file_id = _upload(client, member)
+    response = client.post(f"/employees/{world.employees['member']}/documents", headers=member,
+                           json={"doc_type": "SIM A", "file_id": file_id})
+    assert response.status_code == 403, response.text
 
 
 def test_site_and_attendance_day(client, world, fake_storage):
-    pm = world.headers(client, "pm")
-    member = world.headers(client, "member")
+    ops, pm, member = (world.headers(client, w) for w in ("ops", "pm", "member"))
 
-    # R-33: lokasi proyek dibuat PM untuk unitnya (bawahannya).
-    site = client.post("/offices", headers=pm, json={
-        "name": "Gedung uji", "location": {"lat": -6.21, "lng": 106.81}, "radius_m": 150})
+    # Master kantor dikelola OM (docs/35 §2); PM tidak.
+    body = {"name": f"Gedung uji {world.tag}", "address": "Jl. Uji", "location": {"lat": -6.21, "lng": 106.81},
+            "radius_m": 150}
+    assert client.post("/offices", headers=pm, json=body).status_code == 403
+    site = client.post("/offices", headers=ops, json=body)
     assert site.status_code == 201, site.text
-    assert sync_query("SELECT radius_m FROM vms.site WHERE id = %s", (site.json()["id"],)) == [(150,)]
+    office_id = site.json()["id"]
+    try:
+        assert sync_query("SELECT attendance_radius_m FROM office WHERE office_id = %s", (office_id,)) == [(150,)]
 
-    # Di luar radius (±11 km) dengan swafoto → menunggu pemeriksaan Finance (domain.js CHECK_IN).
-    selfie = client.post("/files/upload", headers=member, files={"file": ("swafoto.png", _png(), "image/png")})
-    check_in = client.post("/attendance/check-in", headers=member, json={
-        "site_id": world.site_id, "location": {"lat": -6.3, "lng": 106.8}, "location_origin": "GPS",
-        "selfie_file_id": selfie.json()["file_id"], "explanation": "Survei titik baru"})
-    assert check_in.status_code == 200, check_in.text
-    att_id = check_in.json()["id"]
-    # Jarak & status dihitung server (aturan inti #3), bukan dikirim perangkat.
-    assert sync_query("SELECT status::text, distance_m > radius_m FROM vms.attendance WHERE id = %s", (att_id,)) \
-        == [("NEEDS_REVIEW", True)]
+        # Di luar radius (±11 km) dengan swafoto + penjelasan → menunggu pemeriksaan.
+        check_in = client.post("/attendance/check-in", headers=member, json={
+            "site_id": world.site_id, "location": {"lat": -6.3, "lng": 106.8}, "location_origin": "GPS",
+            "selfie_file_id": _upload(client, member), "explanation": "Survei titik baru"})
+        assert check_in.status_code == 200, check_in.text
+        att_id = check_in.json()["id"]
+        # Jarak & status dihitung server (aturan inti #3), bukan dikirim perangkat.
+        assert sync_query("SELECT om_approval_status, is_within_attendance_radius FROM attendance "
+                          "WHERE attendance_id = %s", (att_id,)) == [("PENDING_OM", False)]
 
-    out_body = {"location": {"lat": -6.2, "lng": 106.8}, "location_origin": "GPS"}
-    # R-33: belum valid → belum boleh absen pulang.
-    assert client.post("/attendance/check-out", headers=member, json=out_body).status_code == 409
+        out_body = {"location": {"lat": -6.2, "lng": 106.8}, "location_origin": "GPS"}
+        # R-33: belum valid → belum boleh absen pulang.
+        assert client.post("/attendance/check-out", headers=member, json=out_body).status_code == 409
 
-    explained = client.post(f"/attendance/{att_id}/explain", headers=member, json={"explanation": "Macet di tol"})
-    assert explained.status_code == 200, explained.text
-    assert sync_query("SELECT explanation FROM vms.attendance WHERE id = %s", (att_id,)) == [("Macet di tol",)]
+        explained = client.post(f"/attendance/{att_id}/explain", headers=member, json={"explanation": "Macet di tol"})
+        assert explained.status_code == 200, explained.text
 
-    reviewed = client.post(f"/attendance/{att_id}/review", headers=pm,
-                           json={"is_approved": True, "note": "Macet dibenarkan PM"})
-    assert reviewed.status_code == 200, reviewed.text
-    assert sync_query("SELECT status::text, reviewed_at IS NOT NULL, review_note FROM vms.attendance WHERE id = %s",
-                      (att_id,)) == [("APPROVED", True, "Macet dibenarkan PM")]
+        reviewed = client.post(f"/attendance/{att_id}/review", headers=pm,
+                               json={"is_approved": True, "note": "Macet dibenarkan PM"})
+        assert reviewed.status_code == 200, reviewed.text
+        status, note = sync_query("SELECT om_approval_status, out_of_radius_note FROM attendance "
+                                  "WHERE attendance_id = %s", (att_id,))[0]
+        assert status == "APPROVED_BY_OM" and "Macet di tol" in note and "Macet dibenarkan PM" in note
 
-    check_out = client.post("/attendance/check-out", headers=member, json=out_body)
-    assert check_out.status_code == 200, check_out.text
-    assert sync_query("SELECT check_out_at IS NOT NULL FROM vms.attendance WHERE id = %s", (att_id,)) == [(True,)]
+        check_out = client.post("/attendance/check-out", headers=member, json=out_body)
+        assert check_out.status_code == 200, check_out.text
+        assert sync_query("SELECT clock_out_at IS NOT NULL FROM attendance WHERE attendance_id = %s",
+                          (att_id,)) == [(True,)]
 
-    export = client.get("/attendance/export", headers=world.headers(client, "finance"),
-                        params={"start_date": "2026-01-01", "end_date": "2026-12-31"})
-    assert export.status_code == 200, export.text
-
-
-def test_hr_cannot_verify_document_they_uploaded(client, world, fake_storage):
-    hr = world.headers(client, "hr")
-    emp = world.employees["member"]
-    file_id = client.post("/files/upload", headers=hr, files={"file": ("sim.png", _png(), "image/png")}).json()["file_id"]
-    doc_id = client.post(f"/employees/{emp}/documents", headers=hr,
-                         json={"doc_type": "SIM A", "number": "123456789012", "file_id": file_id}).json()["id"]
-
-    own = client.post(f"/employees/{emp}/documents/{doc_id}/verify", headers=hr, json={"is_approved": True})
-    assert own.status_code == 409, own.text  # empat mata, bukan 500 dari CHECK basis data
-    assert own.json()["error"]["code"] == "FOUR_EYES"
-    assert sync_query("SELECT status::text FROM vms.employee_document WHERE id = %s", (doc_id,)) == [("PENDING",)]
+        export = client.get("/attendance/export", headers=world.headers(client, "admin"),
+                            params={"start_date": "2026-01-01", "end_date": "2026-12-31"})
+        assert export.status_code == 200, export.text
+    finally:
+        from tests.cleanup import purge_office
+        from tests.conftest import _sync_conn
+        with _sync_conn() as conn:
+            purge_office(conn, office_id)
 
 
-def test_get_single_employee_for_direct_link(client, world, other_world):
+def test_get_single_employee_for_direct_link(client, world):
     hr = world.headers(client, "hr")
     emp = world.employees["member"]
     got = client.get(f"/employees/{emp}", headers=hr)
     assert got.status_code == 200, got.text
-    assert got.json()["id"] == str(emp)
-    # Karyawan organisasi lain tidak bocor lewat tautan langsung.
-    assert client.get(f"/employees/{other_world.employees['member']}", headers=hr).status_code == 404
+    assert got.json()["employee_id"] == str(emp)
+    assert client.get(f"/employees/{uuid.uuid4()}", headers=hr).status_code == 404
 
 
-def test_r8_renewed_document_supersedes_the_old_one_when_verified(client, world, fake_storage):
-    """R8 / domain.js VERIFY_DOCUMENT: dokumen pengganti disetujui → dokumen lama berjenis sama
-    menjadi SUPERSEDED, yang baru CURRENT. Dulu: indeks unik CURRENT per (karyawan, jenis) → 500."""
-    member, hr = world.headers(client, "member"), world.headers(client, "hr")
+def test_new_document_of_the_same_type_replaces_the_old_one(client, world, fake_storage):
+    """Dokumen sejenis yang baru menggantikan yang berlaku: lama → `extended`, baru → `active`."""
+    hr = world.headers(client, "hr")
     emp = world.employees["member"]
 
-    def upload(color: int) -> str:
-        buf = io.BytesIO()
-        Image.new("RGB", (32, 32), (color, 10, 10)).save(buf, "PNG")
-        return client.post("/files/upload", headers=member,
-                           files={"file": ("sim.png", buf.getvalue(), "image/png")}).json()["file_id"]
-
-    old = client.post(f"/employees/{emp}/documents", headers=member, json={
-        "doc_type": "SIM A", "number": "111122223333", "expiry_date": "2026-10-01", "file_id": upload(1)}).json()["id"]
-    assert client.post(f"/employees/{emp}/documents/{old}/verify", headers=hr,
-                       json={"is_approved": True}).status_code == 200
-
-    new = client.post(f"/employees/{emp}/documents", headers=member, json={
-        "doc_type": "SIM A", "number": "111122223333", "expiry_date": "2031-10-01", "file_id": upload(2),
-        "supersedes_id": old})
+    old = client.post(f"/employees/{emp}/documents", headers=hr, json={
+        "doc_type": "SIM A", "expired_at": "2026-10-01", "file_id": _upload(client, hr, 1)})
+    assert old.status_code == 201, old.text
+    new = client.post(f"/employees/{emp}/documents", headers=hr, json={
+        "doc_type": "SIM A", "expired_at": "2031-10-01", "file_id": _upload(client, hr, 2)})
     assert new.status_code == 201, new.text
-    verified = client.post(f"/employees/{emp}/documents/{new.json()['id']}/verify", headers=hr,
-                           json={"is_approved": True})
-    assert verified.status_code == 200, verified.text
 
-    lifecycle = "SELECT lifecycle::text FROM vms.employee_document WHERE id = %s"
-    assert sync_query(lifecycle, (old,)) == [("SUPERSEDED",)]
-    assert sync_query(lifecycle, (new.json()["id"],)) == [("CURRENT",)]
+    status = "SELECT status::text FROM employee_file WHERE employee_file_id = %s"
+    assert sync_query(status, (old.json()["id"],)) == [("extended",)]
+    assert sync_query(status, (new.json()["id"],)) == [("active",)]

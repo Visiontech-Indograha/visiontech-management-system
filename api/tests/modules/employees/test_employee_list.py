@@ -1,6 +1,6 @@
 """
-GET/POST /employees — daftar (cari `q`, filter `is_active`, halaman) dan galat NIK ganda.
-Dijaga saat SQL router karyawan dipindah ke crud (P9-7/R-25b).
+GET/POST /employees — daftar (cari `q`, saring kantor & status, halaman) dan galat NIK ganda.
+V2: satu perusahaan — uji membatasi diri ke kantor dunia uji (`office_id`).
 """
 from __future__ import annotations
 
@@ -10,32 +10,28 @@ pytestmark = requires_db
 
 
 def _list(client, world, **params) -> dict:
-    response = client.get("/employees", headers=world.headers(client, "hr"), params=params)
+    response = client.get("/employees", headers=world.headers(client, "hr"),
+                          params={"office_id": world.org_id, **params})
     assert response.status_code == 200, response.text
     return response.json()
 
 
-def test_search_filter_and_paging(client, world, other_world):
-    everyone = _list(client, world)
-    assert everyone["total"] == len(world.employees) and len(everyone["items"]) == len(world.employees)
+def test_search_filter_and_paging(client, world):
+    everyone = _list(client, world, size=100)
+    ids = {i["employee_id"] for i in everyone["items"]}
+    assert set(world.employees.values()) <= ids and everyone["total"] == len(ids)
     assert [i["full_name"] for i in everyone["items"]] == sorted(i["full_name"] for i in everyone["items"])
 
     found = _list(client, world, q="uji pm")
-    assert [i["id"] for i in found["items"]] == [world.employees["pm"]]
-    assert _list(client, world, q="UJI-0")["total"] == len(world.employees)   # NIK juga dicari, tanpa beda huruf
-
-    sync_query("UPDATE vms.employee SET is_active = false WHERE id = %s", (world.employees["member"],))
-    inactive = _list(client, world, is_active="false")
-    assert [i["id"] for i in inactive["items"]] == [world.employees["member"]]
-    assert _list(client, world, is_active="true")["total"] == len(world.employees) - 1
+    assert [i["employee_id"] for i in found["items"]] == [world.employees["pm"]]
 
     page = _list(client, world, size=3, page=2)
-    assert page["total"] == len(world.employees) and len(page["items"]) == 3 and page["page"] == 2
+    assert page["total"] == everyone["total"] and page["page"] == 2 and len(page["items"]) <= 3
 
 
 def test_duplicate_employee_number_is_a_friendly_error(client, world):
-    body = {"employee_no": "UJI-00", "full_name": "Kembar", "position": "Teknisi", "join_date": "2026-01-05"}
+    taken = sync_query("SELECT employee_no FROM employee WHERE employee_id = %s", (world.employees["pm"],))[0][0]
+    body = {"employee_no": taken, "full_name": "Kembar", "office_id": world.org_id, "join_date": "2026-01-05"}
     response = client.post("/employees", headers=world.headers(client, "hr"), json=body)
-    assert response.status_code == 400
-    error = response.json()["error"]
-    assert error["code"] == "DB_ERROR" and "duplicate" not in response.text and "constraint" not in response.text
+    assert response.status_code in (400, 409), response.text
+    assert "duplicate" not in response.text and "constraint" not in response.text

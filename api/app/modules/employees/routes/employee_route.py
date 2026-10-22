@@ -20,12 +20,27 @@ from app.modules.employees.schemas.employee_schema import (
     EmployeeCreate,
     EmployeeDetail,
     EmployeeListResponse,
+    EmployeeOut,
     EmployeeUpdate,
 )
 
 router = APIRouter(prefix="/employees", tags=["Employees"])
 _VIEW = Depends(require_permission(Permission.VIEW_USERS))
 _MANAGE = Depends(require_permission(Permission.MANAGE_USERS))
+
+
+def _sees_private(user: CurrentUser, employee_id: UUID) -> bool:
+    """Kontak pribadi (telepon, email, alamat) hanya untuk pemiliknya dan pengelola karyawan (HR/admin)."""
+    return Permission.MANAGE_USERS.value in user.permissions or str(employee_id) == (user.employee_id or "")
+
+
+def _private_hidden[T: EmployeeOut](emp: T, user: CurrentUser) -> T:
+    if _sees_private(user, emp.employee_id):
+        return emp
+    hidden: dict[str, object] = {"phone_number": None, "email": None, "city": None}
+    if isinstance(emp, EmployeeDetail):
+        hidden["addresses"] = []
+    return emp.model_copy(update=hidden)
 
 
 @router.get("", response_model=EmployeeListResponse)
@@ -42,8 +57,9 @@ async def list_employees(
     controller: EmployeeController = Depends(),
 ) -> EmployeeListResponse:
     """Direktori karyawan (cari nama / no. karyawan / email; saring status, divisi, kantor, jabatan)."""
-    return await controller.list(page=page, size=size, status=employee_status, division_id=division_id,
-                                 office_id=office_id, position_id=position_id, q=q)
+    result = await controller.list(page=page, size=size, status=employee_status, division_id=division_id,
+                                   office_id=office_id, position_id=position_id, q=q)
+    return result.model_copy(update={"items": [_private_hidden(e, current_user) for e in result.items]})
 
 
 @router.get("/{employee_id}", response_model=EmployeeDetail)
@@ -52,8 +68,8 @@ async def get_employee(
     current_user: CurrentUser = _VIEW,
     controller: EmployeeController = Depends(),
 ) -> EmployeeDetail:
-    """Detail karyawan + alamat."""
-    return await controller.detail(employee_id)
+    """Detail karyawan + alamat (kontak pribadi hanya untuk pemilik & HR/admin)."""
+    return _private_hidden(await controller.detail(employee_id), current_user)
 
 
 @router.post("", response_model=EmployeeDetail, status_code=status.HTTP_201_CREATED)

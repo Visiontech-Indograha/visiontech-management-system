@@ -13,7 +13,8 @@ from app.core.repository import BaseRepository
 _SELECT = """
     SELECT e.employee_id, e.employee_no, e.full_name, e.office_id, o.name AS office_name,
            e.division_id, d.name AS division_name, e.position_id, jp.code AS position_code, jp.name AS position_name,
-           e.join_date::date AS join_date, e.pkwt_end_date::date AS pkwt_end_date, e.phone_number,
+           (e.join_date AT TIME ZONE 'Asia/Jakarta')::date AS join_date,
+           (e.pkwt_end_date AT TIME ZONE 'Asia/Jakarta')::date AS pkwt_end_date, e.phone_number,
            (SELECT f.id FROM file_object f WHERE f.storage_key = e.photo_path LIMIT 1) AS photo_file_id,
            (e.face_embedding IS NOT NULL) AS face_enrolled, e.offboarding_status::text AS offboarding_status,
            (e.delete_at IS NOT NULL) AS archived,
@@ -128,7 +129,8 @@ class EmployeeRepository(BaseRepository):
             INSERT INTO employee (office_id, division_id, position_id, full_name, employee_no, join_date,
                                   pkwt_end_date, phone_number, photo_path, profile_photo_path)
             VALUES (CAST(:office_id AS uuid), CAST(:division_id AS uuid), CAST(:position_id AS uuid), :full_name,
-                    :employee_no, CAST(:join_date AS timestamptz), CAST(:pkwt_end_date AS timestamptz),
+                    :employee_no, (CAST(:join_date AS date)::timestamp AT TIME ZONE 'Asia/Jakarta'),
+                    (CAST(:pkwt_end_date AS date)::timestamp AT TIME ZONE 'Asia/Jakarta'),
                     :phone_number, :photo_path, :photo_path)
             RETURNING employee_id
             """,
@@ -139,11 +141,16 @@ class EmployeeRepository(BaseRepository):
     async def update(self, employee_id: UUID, fields: dict[str, Any]) -> None:
         if not fields:
             return
-        casts = {**dict.fromkeys(_UUIDS, "uuid"), "join_date": "timestamptz", "pkwt_end_date": "timestamptz"}
+        casts = dict.fromkeys(_UUIDS, "uuid")
+        # Tanggal kerja = tengah malam WIB (kolom timestamptz) — tidak bergeser sehari di sesi berzona UTC.
+        dates = {"join_date", "pkwt_end_date"}
         sets = []
         for k in fields:
             col = k
-            sets.append(f"{col} = CAST(:{k} AS {casts[k]})" if k in casts else f"{col} = :{k}")
+            if k in dates:
+                sets.append(f"{col} = (CAST(:{k} AS date)::timestamp AT TIME ZONE 'Asia/Jakarta')")
+            else:
+                sets.append(f"{col} = CAST(:{k} AS {casts[k]})" if k in casts else f"{col} = :{k}")
             if k == "photo_path":
                 sets.append("profile_photo_path = :photo_path")
         await self.execute(

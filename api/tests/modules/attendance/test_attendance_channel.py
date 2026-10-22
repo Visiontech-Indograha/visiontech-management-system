@@ -1,36 +1,38 @@
 """
-Absensi dipisah per jenis pekerja (docs/10 Bagian C, 2026-10-01): `employee.attendance_mode`
-FIELD → absen lewat aplikasi HP (`channel` MOBILE), OFFICE → absen lewat web (`channel` WEB).
+Absensi dipisah per jenis pekerja (docs/35 §1, Master Schema V2): jenis pekerja mengikuti peran —
+TEAM_LEADER/EMPLOYEE → aplikasi HP (`channel` MOBILE), peran kantor → web (`channel` WEB).
 Kanal yang salah ditolak server; jenis pekerja dibaca dari basis data, bukan dari klien.
 """
 from __future__ import annotations
 
 import io
 
+import pytest
 from PIL import Image
 
-from tests.conftest import World, requires_db, sync_query
+from tests.conftest import WORLD_PASSWORD, World, requires_db, sync_query
 
 pytestmark = requires_db
 
-INSIDE = {"lat": -6.2, "lng": 106.8}      # tepat di lokasi uji (radius 100 m)
+INSIDE = {"lat": -6.2, "lng": 106.8}      # tepat di kantor uji (radius 100 m)
 NEAR = {"lat": -6.2018, "lng": 106.8}     # ±200 m — di luar radius 100 m
 
 
-def _set_mode(world: World, who: str, mode: str) -> str | None:
-    """Ubah jenis pekerja; untuk OFFICE kembalikan lokasi kantor (tanpa unit) — R-33: pekerja kantor
-    hanya absen di lokasi kantor."""
-    sync_query("UPDATE vms.employee SET attendance_mode = %s WHERE id = %s RETURNING id",
-               (mode, world.employees[who]))
-    if mode != "OFFICE":
-        return None
-    return str(sync_query(
-        "INSERT INTO vms.site (organization_id, name, location, radius_m) "
-        "VALUES (%s, 'Kantor uji', ST_GeogFromText('POINT(106.8 -6.2)'), 100) RETURNING id", (world.org_id,))[0][0])
+@pytest.fixture(autouse=True)
+def _storage(fake_storage):
+    return fake_storage
+
+
+def _selfie(client, world: World, who: str) -> str:
+    buf = io.BytesIO()
+    Image.new("RGB", (64, 64), (sum(map(ord, who)) % 255, 20, 30)).save(buf, "PNG")
+    return client.post("/files/upload", headers=world.headers(client, who),
+                       files={"file": ("s.png", buf.getvalue(), "image/png")}).json()["file_id"]
 
 
 def _check_in(client, world: World, who: str, channel: str | None, location=INSIDE, site_id=None, **extra):
     extra.setdefault("explanation", "Rapat di luar kantor")  # R-33: wajib di luar zona
+    extra.setdefault("selfie_file_id", _selfie(client, world, who))
     body = {"site_id": site_id or world.site_id, "location": location, **extra}
     if channel:
         body["channel"] = channel
@@ -42,6 +44,26 @@ def _check_out(client, world: World, who: str, channel: str):
                        json={"channel": channel, "location": INSIDE})
 
 
+@pytest.fixture
+def new_office():
+    """Kantor tambahan untuk satu uji; dihapus beserta absensinya sesudahnya."""
+    from tests.cleanup import purge_office
+    from tests.conftest import _sync_conn
+
+    made: list[str] = []
+
+    def make(name: str, lat: float = -6.2, lng: float = 106.8) -> str:
+        made.append(str(sync_query(
+            "INSERT INTO office (name, address, latitude, longitude) "
+            "VALUES (%s, 'Jl. Uji', %s, %s) RETURNING office_id", (name, lat, lng))[0][0]))
+        return made[-1]
+
+    yield make
+    with _sync_conn() as conn:
+        for office_id in made:
+            purge_office(conn, office_id)
+
+
 def test_field_worker_rejected_on_web_and_accepted_on_mobile(client, world):
     web = _check_in(client, world, "member", "WEB")
     assert web.status_code == 403, web.text
@@ -51,44 +73,35 @@ def test_field_worker_rejected_on_web_and_accepted_on_mobile(client, world):
     # Klien lama tanpa `channel` dianggap MOBILE dan tetap diterima.
     mobile = _check_in(client, world, "member", None)
     assert mobile.status_code == 200, mobile.text
-    source = sync_query("SELECT source::text FROM vms.attendance WHERE id = %s", (mobile.json()["id"],))[0][0]
-    assert source == "MOBILE"
+    assert mobile.json()["status"] == "AUTO_VALID"
 
 
 def test_office_worker_rejected_on_mobile_and_checks_in_out_on_web(client, world):
-    office = _set_mode(world, "member", "OFFICE")
-    mobile = _check_in(client, world, "member", "MOBILE", site_id=office)
+    mobile = _check_in(client, world, "pm", "MOBILE")
     assert mobile.status_code == 403, mobile.text
     assert mobile.json()["error"]["code"] == "WRONG_ATTENDANCE_CHANNEL"
     assert "lewat web" in mobile.json()["error"]["message"]
 
-    web = _check_in(client, world, "member", "WEB", site_id=office, accuracy_m=40)
+    web = _check_in(client, world, "pm", "WEB", accuracy_m=40)
     assert web.status_code == 200, web.text
     att_id = web.json()["id"]
     assert web.json()["status"] == "AUTO_VALID"
-    assert sync_query("SELECT source::text FROM vms.attendance WHERE id = %s", (att_id,))[0][0] == "WEB"
 
     # Pulang juga lewat kanal yang sesuai; dari HP ditolak, sesi tetap terbuka.
-    assert _check_out(client, world, "member", "MOBILE").status_code == 403
-    out = _check_out(client, world, "member", "WEB")
+    assert _check_out(client, world, "pm", "MOBILE").status_code == 403
+    out = _check_out(client, world, "pm", "WEB")
     assert out.status_code == 200, out.text
     # Tulis → baca ulang
-    listed = client.get("/attendance", headers=world.headers(client, "member"),
-                        params={"employee_id": world.employees["member"]}).json()["items"]
+    listed = client.get("/attendance", headers=world.headers(client, "pm"),
+                        params={"employee_id": world.employees["pm"]}).json()["items"]
     assert [a["id"] for a in listed if a["check_out_at"]] == [att_id]
 
 
-def test_web_out_of_radius_needs_a_selfie_then_review(client, world, fake_storage):
-    """R-33: absen web di luar radius juga wajib swafoto; dengan swafoto → NEEDS_REVIEW."""
-    office = _set_mode(world, "member", "OFFICE")
-    without = _check_in(client, world, "member", "WEB", site_id=office, location=NEAR, accuracy_m=80)
-    assert without.status_code == 422 and "swafoto wajib" in without.json()["error"]["message"]
-    buf = io.BytesIO()
-    Image.new("RGB", (64, 64), (10, 20, 30)).save(buf, "PNG")
-    selfie = client.post("/files/upload", headers=world.headers(client, "member"),
-                         files={"file": ("s.png", buf.getvalue(), "image/png")}).json()["file_id"]
-    response = _check_in(client, world, "member", "WEB", site_id=office, location=NEAR, accuracy_m=80,
-                         selfie_file_id=selfie)
+def test_web_out_of_radius_needs_an_explanation_then_review(client, world):
+    without = _check_in(client, world, "pm", "WEB", location=NEAR, accuracy_m=80, explanation=None)
+    assert without.status_code == 422 and without.json()["error"]["code"] == "EXPLANATION_REQUIRED"
+
+    response = _check_in(client, world, "pm", "WEB", location=NEAR, accuracy_m=80)
     assert response.status_code == 200, response.text
     assert response.json()["status"] == "NEEDS_REVIEW"
     assert response.json()["distance_m"] > 100
@@ -96,101 +109,37 @@ def test_web_out_of_radius_needs_a_selfie_then_review(client, world, fake_storag
 
 def test_web_accuracy_limit_is_looser_than_mobile(client, world):
     """Lokasi browser laptop dari WiFi: batas 300 m (HP tetap 100 m, K-12)."""
-    office = _set_mode(world, "member", "OFFICE")
-    assert _check_in(client, world, "member", "WEB", site_id=office, accuracy_m=301).status_code == 422
-    assert _check_in(client, world, "member", "WEB", site_id=office, accuracy_m=250).status_code == 200
+    assert _check_in(client, world, "pm", "WEB", accuracy_m=301).status_code == 422
+    assert _check_in(client, world, "pm", "WEB", accuracy_m=250).status_code == 200
 
 
-def test_me_and_employee_expose_attendance_mode_and_hr_can_change_it(client, world):
-    me = client.get("/auth/me", headers=world.headers(client, "member")).json()
-    assert me["attendance_mode"] == "FIELD"
-
-    emp_id = world.employees["member"]
-    updated = client.put(f"/employees/{emp_id}", headers=world.headers(client, "hr"),
-                         json={"attendance_mode": "OFFICE"})
-    assert updated.status_code == 200, updated.text
-    assert updated.json()["attendance_mode"] == "OFFICE"
-    # Tulis → baca ulang
-    assert client.get(f"/employees/{emp_id}", headers=world.headers(client, "hr")).json()["attendance_mode"] == "OFFICE"
-    assert client.get("/auth/me", headers=world.headers(client, "member")).json()["attendance_mode"] == "OFFICE"
-
-    # Nilai tak dikenal ditolak skema; null berarti tidak diubah.
-    assert client.put(f"/employees/{emp_id}", headers=world.headers(client, "hr"),
-                      json={"attendance_mode": "REMOTE"}).status_code == 422
-    kept = client.put(f"/employees/{emp_id}", headers=world.headers(client, "hr"),
-                      json={"attendance_mode": None, "phone": "0812"})
-    assert kept.status_code == 200, kept.text
-    assert kept.json()["attendance_mode"] == "OFFICE"
+def test_me_exposes_attendance_mode_from_the_role(client, world):
+    assert client.get("/auth/me", headers=world.headers(client, "member")).json()["attendance_mode"] == "FIELD"
+    assert client.get("/auth/me", headers=world.headers(client, "leader")).json()["attendance_mode"] == "FIELD"
+    assert client.get("/auth/me", headers=world.headers(client, "pm")).json()["attendance_mode"] == "OFFICE"
 
 
-def test_admin_without_employee_can_login_on_web_and_mobile(client, seeded_user):
-    """Keputusan pemilik 2026-10-06: akun administrator (tanpa karyawan) masuk dari web DAN HP."""
-    for platform in ("web", "mobile"):
-        got = client.post("/auth/login", json={"email": seeded_user.login, "password": seeded_user.password,
-                                               "platform": platform})
-        assert got.status_code == 200, (platform, got.text)
+def test_login_platform_follows_the_role(client, world):
+    """docs/35 §1: peran lapangan masuk lewat HP, peran kantor (termasuk admin) lewat web."""
+    for who, allowed in (("member", "mobile"), ("leader", "mobile"), ("pm", "web"), ("hr", "web"),
+                         ("admin", "web")):
+        creds = {"email": world.logins[who], "password": WORLD_PASSWORD}
+        denied = "web" if allowed == "mobile" else "mobile"
+        assert client.post("/auth/login", json={**creds, "platform": denied}).status_code == 403, who
+        assert client.post("/auth/login", json={**creds, "platform": allowed}).status_code == 200, who
 
 
-def test_login_platform_rules_still_hold_for_employees(client, world):
-    from tests.conftest import WORLD_PASSWORD
-    member = {"email": world.logins["member"], "password": WORLD_PASSWORD}
-    assert client.post("/auth/login", json={**member, "platform": "web"}).status_code == 403      # lapangan di web
-    assert client.post("/auth/login", json={**member, "platform": "mobile"}).status_code == 200
-    sync_query("UPDATE vms.employee SET attendance_mode = 'OFFICE' WHERE id = %s", (world.employees["member"],))
-    assert client.post("/auth/login", json={**member, "platform": "mobile"}).status_code == 403   # kantor di HP
-    assert client.post("/auth/login", json={**member, "platform": "web"}).status_code == 200
-
-
-def test_admin_linked_to_an_employee_still_logs_in_on_both_platforms(client, world):
-    """Admin yang akunnya ditautkan ke data karyawan (mis. kantor) tetap boleh login di web DAN HP."""
-    from tests.conftest import WORLD_PASSWORD
-    sync_query("UPDATE vms.employee SET attendance_mode = 'OFFICE' WHERE id = %s", (world.employees["admin"],))
-    creds = {"email": world.logins["admin"], "password": WORLD_PASSWORD}
-    assert client.post("/auth/login", json={**creds, "platform": "mobile"}).status_code == 200
-    assert client.post("/auth/login", json={**creds, "platform": "web"}).status_code == 200
-
-
-def test_admin_can_attend_from_mobile_and_web_regardless_of_mode(client, world):
-    """Pemilik sistem (ADMIN) yang tertaut ke karyawan kantor boleh absen dari HP, sedangkan kantor biasa tidak."""
-    office = _set_mode(world, "admin", "OFFICE")
-    mobile = _check_in(client, world, "admin", "MOBILE", site_id=office)
-    assert mobile.status_code == 200, mobile.text
-    assert mobile.json()["status"] == "AUTO_VALID"
-    assert sync_query("SELECT source::text FROM vms.attendance WHERE id = %s", (mobile.json()["id"],))[0][0] == "MOBILE"
-
-    # Kontrol: pekerja kantor biasa tetap ditolak di HP.
-    sync_query("UPDATE vms.employee SET attendance_mode = 'OFFICE' WHERE id = %s RETURNING id", (world.employees["member"],))
-    denied = _check_in(client, world, "member", "MOBILE", site_id=office)
-    assert denied.status_code == 403 and denied.json()["error"]["code"] == "WRONG_ATTENDANCE_CHANNEL"
-
-
-def test_field_worker_without_sk_can_check_in_at_head_office_and_sees_it(client, world):
-    """Pekerja lapangan tanpa SK/lokasi proyek tetap bisa absen di kantor pusat (2026-10-07)."""
-    office = str(sync_query(
-        "INSERT INTO vms.site (organization_id, name, location, radius_m) "
-        "VALUES (%s, 'Kantor Pusat uji', ST_GeogFromText('POINT(106.8 -6.2)'), 100) RETURNING id",
-        (world.org_id,))[0][0])
-    sites = client.get("/offices", headers=world.headers(client, "member"), params={"for_attendance": "true"})
-    assert sites.status_code == 200, sites.text
-    assert office in {s["id"] for s in sites.json()}
-    # APK lama memanggil /offices tanpa for_attendance — kantor pusat juga harus ada.
-    old_apk = client.get("/offices", headers=world.headers(client, "member")).json()
-    assert office in {s["id"] for s in old_apk}
-    res = _check_in(client, world, "member", "MOBILE", site_id=office)
-    assert res.status_code == 200, res.text
-    assert res.json()["status"] == "AUTO_VALID"
-
-
-def test_field_worker_can_choose_between_several_offices(client, world):
+def test_field_worker_can_check_in_at_any_office(client, world, new_office):
     """Kantor Visiontech ada beberapa: semuanya tampil di daftar absen dan pekerja memilih sendiri."""
-    offices = [str(sync_query(
-        "INSERT INTO vms.site (organization_id, name, location, radius_m) "
-        "VALUES (%s, %s, ST_GeogFromText(%s), 100) RETURNING id",
-        (world.org_id, name, point))[0][0])
-        for name, point in (("Kantor A uji", "POINT(106.8 -6.2)"), ("Kantor B uji", "POINT(101.4 0.5)"))]
+    offices = [new_office("Kantor A uji"), new_office("Kantor B uji", 0.5, 101.4)]
     listed = {s["id"] for s in client.get("/offices", headers=world.headers(client, "member"),
                                           params={"for_attendance": "true"}).json()}
-    assert set(offices) <= listed and world.site_id in listed      # kantor + lokasi proyek unitnya
+    assert set(offices) <= listed
+    # APK lama memanggil /offices tanpa for_attendance — kantor juga harus ada.
+    assert set(offices) <= {s["id"] for s in client.get("/offices", headers=world.headers(client, "member")).json()}
+
     res = _check_in(client, world, "member", "MOBILE", site_id=offices[1], location={"lat": 0.5, "lng": 101.4})
     assert res.status_code == 200, res.text
-    assert sync_query("SELECT site_id::text FROM vms.attendance WHERE id = %s", (res.json()["id"],))[0][0] == offices[1]
+    assert res.json()["status"] == "AUTO_VALID"
+    stored = sync_query("SELECT office_id::text FROM attendance WHERE attendance_id = %s", (res.json()["id"],))
+    assert stored[0][0] == offices[1]

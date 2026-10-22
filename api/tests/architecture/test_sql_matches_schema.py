@@ -33,6 +33,7 @@ def _prepare_errors() -> dict[str, str]:
                 cur.execute("DEALLOCATE _cek")
             except psycopg2.Error as e:
                 errors[lit.key] = f"{lit.path}:{lit.line}: {str(e).splitlines()[0]}"
+                cur.execute("DEALLOCATE ALL")  # jangan biarkan _cek tersisa → kegagalan palsu berantai
     finally:
         conn.close()
     return errors

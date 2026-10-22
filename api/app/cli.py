@@ -8,6 +8,7 @@ import argparse
 import asyncio
 import getpass
 import sys
+import uuid
 
 from sqlalchemy import text
 
@@ -47,15 +48,25 @@ async def create_admin(email: str, password: str, organization_id: str | None = 
             )).scalar():
                 raise CliError(f"Pengguna {email} sudah ada.")
 
-            office_id = (await conn.execute(text("SELECT office_id FROM office WHERE delete_at IS NULL LIMIT 1"))).scalar()
-            if not office_id:
+            if organization_id:
                 office_id = (await conn.execute(text(
-                    "INSERT INTO office (name, address, latitude, longitude) VALUES ('Kantor Utama', 'Jakarta', -6.2088, 106.8456) RETURNING office_id"
+                    "SELECT office_id FROM office WHERE office_id = CAST(:off AS uuid) AND delete_at IS NULL"
+                ), {"off": organization_id})).scalar()
+                if not office_id:
+                    raise CliError(f"Organisasi {organization_id} tidak ditemukan.")
+            else:
+                offices = (await conn.execute(text("SELECT office_id FROM office WHERE delete_at IS NULL LIMIT 2"))).all()
+                if len(offices) > 1:
+                    raise CliError("Ada lebih dari satu organisasi; pilih dengan --organization-id.")
+                office_id = offices[0][0] if offices else (await conn.execute(text(
+                    "INSERT INTO office (name, address, latitude, longitude) "
+                    "VALUES ('Kantor Utama', 'Jakarta', -6.2088, 106.8456) RETURNING office_id"
                 ))).scalar_one()
 
             emp_id = (await conn.execute(text(
-                "INSERT INTO employee (office_id, full_name, employee_no, join_date) VALUES (:off, 'Admin Super', 'EMP-ADMIN', NOW()) RETURNING employee_id"
-            ), {"off": office_id})).scalar_one()
+                "INSERT INTO employee (office_id, full_name, employee_no, join_date) "
+                "VALUES (:off, 'Admin Super', :no, NOW()) RETURNING employee_id"
+            ), {"off": office_id, "no": f"ADMIN-{uuid.uuid4().hex[:8].upper()}"})).scalar_one()
 
             user_id = (await conn.execute(
                 text("""

@@ -215,7 +215,7 @@ class AssetService:
         if asset.status != "ready" or await self.repo.has_open_loan(data.asset_type, asset_id):
             raise AppError("ASSET_NOT_AVAILABLE", f"{_LABEL[data.asset_type]} tidak siap dipinjam.", status=409)
         if not await self.repo.employee_active(data.employee_id):
-            raise ValidationError("Karyawan tidak ditemukan, nonaktif, atau sedang proses offboarding.")
+            raise ValidationError("Karyawan tidak ditemukan, nonaktif, atau sedang proses keluar.")
 
         if data.daily_plan_id is not None:
             if data.asset_type == "TOOL" and asset.ownership_type == "PERSONAL_LOAN":

@@ -123,7 +123,7 @@ class EmployeeService:
         if employee.deleted:
             raise AppError("INVALID_STATE", "Karyawan sudah diarsipkan.", status=409)
         if employee.offboarding_status != "offboarded":
-            raise AppError("INVALID_STATE", "Selesaikan offboarding karyawan ini terlebih dahulu.", status=409)
+            raise AppError("INVALID_STATE", "Selesaikan dulu proses keluar karyawan ini.", status=409)
         await self.repo.archive(employee_id)
         return {"id": str(employee_id), "message": ARCHIVED}
 

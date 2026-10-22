@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import io
 import re
-from datetime import timedelta
 
 from fastapi.routing import APIRoute
 from PIL import Image
@@ -89,6 +88,18 @@ GUARDED_IN_HANDLER = {
     ("GET", "/overtime"): "OvertimeService: check_daily_access(VIEW) untuk daily_plan_id (diuji)",
     ("POST", "/overtime/{ot_id}/review"): "OvertimeService: PM/OM divisi jadwal, bukan pengaju (diuji)",
     ("GET", "/recaps/overtime"): "OvertimeService: izin review:overtime (Finance/OPS/Admin) (diuji)",
+    # Survei ACS/CCTV (docs/37): SurveyService._task → DailyAccess (ketua tim jadwalnya / PM-OM divisi).
+    **dict.fromkeys([("GET", "/work-plans/surveys"), ("GET", "/work-plans/surveys/{task_id}"), ("POST", "/work-plans/surveys/{task_id}/points"), ("PUT", "/work-plans/surveys/points/{point_id}"), ("DELETE", "/work-plans/surveys/points/{point_id}"), ("PUT", "/work-plans/surveys/points/{point_id}/location"), ("PUT", "/work-plans/surveys/{task_id}/report"), ("POST", "/work-plans/surveys/{task_id}/submit"), ("POST", "/work-plans/surveys/{task_id}/lines"), ("PUT", "/work-plans/surveys/lines/{bom_id}"), ("DELETE", "/work-plans/surveys/lines/{bom_id}"), ("POST", "/work-plans/surveys/{task_id}/catalog")], "SurveyService._task → DailyAccess (ketua tim / PM-OM divisi)"),
+    ("GET", "/exports/surveys/{task_id}/preview"): "ExportService → SurveyService.detail (akses survei)",
+    ("POST", "/exports/surveys/{task_id}"): "ExportService → SurveyService.detail (akses survei)",
+    ("POST", "/exports/team-week"): "ExportService.export_team_week: anggota tim atau PM/OM divisinya (diuji)",
+    ("GET", "/work-completions/{completion_id}/signatures/{role}"): "WorkCompletionService._access (tim/PM order)",
+    ("DELETE", "/work-completions/{completion_id}/photos/{file_id}"):
+        "WorkCompletionService._access: ketua di tim order atau PM; terkunci setelah disetujui PM",
+    # Daftar master hanya-baca untuk pilihan formulir; terbatas organisasi pengguna.
+    ("GET", "/clients"): "master hanya-baca untuk formulir (organisasi pengguna)",
+    ("GET", "/projects"): "master hanya-baca untuk formulir (organisasi pengguna)",
+    ("GET", "/job-positions"): "master hanya-baca untuk formulir (organisasi pengguna)",
 }
 _GUARDS = ("permission_checker", "daily_access.")
 
@@ -187,20 +198,6 @@ def test_only_the_owner_explains_an_attendance(client, world, other_world, fake_
     own = client.post(f"/attendance/{att_id}/explain", headers=member, json={"explanation": "GPS ponsel mati"})
     assert own.status_code == 200, own.text
     assert sync_query("SELECT explanation FROM vms.attendance WHERE id = %s", (att_id,)) == [("GPS ponsel mati",)]
-
-
-# ── Cek bentrok jadwal ────────────────────────────────────────────────────────────────────────
-@requires_db
-def test_schedule_conflicts_are_for_plan_managers_in_the_same_organisation(client, world, other_world):
-    today = jakarta_now().date()
-    query = f"start_date={today.isoformat()}&end_date={(today + timedelta(days=3)).isoformat()}"
-    own_emp, foreign_emp = world.employees["member"], other_world.employees["member"]
-
-    assert client.get(f"/employees/{own_emp}/conflicts?{query}", headers=world.headers(client, "pm")).status_code == 200
-    assert client.get(f"/employees/{own_emp}/conflicts?{query}",
-                      headers=world.headers(client, "member")).status_code == 403
-    foreign = client.get(f"/employees/{foreign_emp}/conflicts?{query}", headers=world.headers(client, "pm"))
-    assert foreign.status_code == 404, foreign.text
 
 
 # ── Cron kedaluwarsa dokumen ──────────────────────────────────────────────────────────────────

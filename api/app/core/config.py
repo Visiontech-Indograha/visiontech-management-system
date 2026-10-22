@@ -153,6 +153,9 @@ class Settings(BaseSettings):
 
     # "production" menyalakan penjaga di bawah; nilai lain (development/test) memakai bawaan lokal.
     APP_ENV: str = "development"
+    # Seed media & order contoh saat startup (demo/uji). Bawaan MATI: bila aktif, foto kosong/bukan /uploads/
+    # ditimpa gambar contoh — jangan pernah diaktifkan di data sungguhan.
+    SEED_DEMO_MEDIA: bool = False
 
     # Mengabaikan variabel lingkungan berlebih yang tidak dipetakan ke atribut di sini
     model_config = SettingsConfigDict(env_file=(".env", "api/.env"), extra="ignore")

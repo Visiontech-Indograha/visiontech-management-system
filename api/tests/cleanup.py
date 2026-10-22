@@ -77,6 +77,13 @@ def purge_users(conn: psycopg2.extensions.connection, user_ids: list[str]) -> No
     conn.commit()
 
 
+def purge_employees(conn: psycopg2.extensions.connection, employee_ids: list[str]) -> None:
+    """Hapus karyawan uji beserta akun, sesi, dan turunannya (berantai lewat FK)."""
+    with conn.cursor() as cur:
+        purge_rows(cur, "employee", "employee_id", employee_ids)
+    conn.commit()
+
+
 def purge_login_logs(conn: psycopg2.extensions.connection, logins: list[str]) -> None:
     """Hapus jejak percobaan masuk akun uji (app_activity_logs tidak ber-FK ke users)."""
     from app.modules.auth.repositories.auth_session_repository import AuthSessionRepository

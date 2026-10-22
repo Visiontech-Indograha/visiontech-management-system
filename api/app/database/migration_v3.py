@@ -20,6 +20,7 @@ from pathlib import Path
 
 from sqlalchemy import text
 
+from app.core.config import settings
 from app.core.time import jakarta_now
 from app.database.session import engine
 
@@ -229,6 +230,49 @@ async def apply_v3_migrations() -> None:
 
     logger.info("DDL Migration VMS V3 berhasil diterapkan ke database!")
 
+    # 2–3 hanya untuk data demo: menimpa foto karyawan/alat/kendaraan & panduan foto yang bukan /uploads/
+    # (padahal foto asli disimpan sebagai storage key) dan menyisipkan order contoh. Bawaan mati.
+    if not settings.SEED_DEMO_MEDIA:
+        return
+    await _seed_demo_media()
+
+
+_DEMO_ORDERS = (
+    """
+    INSERT INTO work_completion (
+                            completion_id, division_id, pm_id, client_name, project_title,
+                            order_number, total_target_unit, unit_measure, order_status,
+                            priority_level, site_address, site_lat, site_lng,
+                            summary_notes, realization_photos_json
+                        ) VALUES (
+                            gen_random_uuid(), :div_id, :pm_id, 'PT Pertamina EP Asset 1',
+                            'Pemasangan 13 Unit CCTV Area Kilang Pangkalan Susu',
+                            'WO-2026-PTM-001', 13, 'Unit CCTV', 'ONGOING', 'HIGH',
+                            'Pangkalan Susu, Kab. Langkat, Sumatera Utara', 4.0201200, 98.2435100,
+                            'Order pemasangan CCTV IP 4K outdoor tahan cuaca & sertifikasi explosion-proof.',
+                            '["/uploads/inspections/download_040.jpg", "/uploads/inspections/download_041.jpg"]'::jsonb
+                        )
+    """,
+    """
+    INSERT INTO work_completion (
+                            completion_id, division_id, pm_id, client_name, project_title,
+                            order_number, total_target_unit, unit_measure, order_status,
+                            priority_level, site_address, site_lat, site_lng,
+                            summary_notes, realization_photos_json
+                        ) VALUES (
+                            gen_random_uuid(), :div_id, :pm_id, 'PT PLN (Persero) UID Sumut',
+                            'Replacement Automatic Gate Portal Gardu Induk Glugur',
+                            'WO-2026-PLN-014', 1, 'Unit Gate', 'ONGOING', 'URGENT',
+                            'Jl. KL Yos Sudarso, Glugur, Medan', 3.6124000, 98.6738000,
+                            'Penggantian motor barrier gate dan integrasi sensor RFID access card.',
+                            '["/uploads/inspections/download_028.jpg"]'::jsonb
+                        )
+    """,
+)
+
+
+async def _seed_demo_media() -> None:
+    """Media & order contoh untuk lingkungan demo (SEED_DEMO_MEDIA=true)."""
     # 2. Sinkronisasi berkas media fisik
     sync_media_seed_files()
 
@@ -282,35 +326,9 @@ async def apply_v3_migrations() -> None:
             pm_id = row_pm.scalar()
 
             if div_id and pm_id:
-                await conn.execute(text("""
-                    INSERT INTO work_completion (
-                        completion_id, division_id, pm_id, client_name, project_title,
-                        order_number, total_target_unit, unit_measure, order_status,
-                        priority_level, site_address, site_lat, site_lng,
-                        summary_notes, realization_photos_json
-                    ) VALUES (
-                        gen_random_uuid(), :div_id, :pm_id, 'PT Pertamina EP Asset 1',
-                        'Pemasangan 13 Unit CCTV Area Kilang Pangkalan Susu',
-                        'WO-2026-PTM-001', 13, 'Unit CCTV', 'ONGOING', 'HIGH',
-                        'Pangkalan Susu, Kab. Langkat, Sumatera Utara', 4.0201200, 98.2435100,
-                        'Order pemasangan CCTV IP 4K outdoor tahan cuaca & sertifikasi explosion-proof.',
-                        '["/uploads/inspections/download_040.jpg", "/uploads/inspections/download_041.jpg"]'::jsonb
-                    );
-
-                    INSERT INTO work_completion (
-                        completion_id, division_id, pm_id, client_name, project_title,
-                        order_number, total_target_unit, unit_measure, order_status,
-                        priority_level, site_address, site_lat, site_lng,
-                        summary_notes, realization_photos_json
-                    ) VALUES (
-                        gen_random_uuid(), :div_id, :pm_id, 'PT PLN (Persero) UID Sumut',
-                        'Replacement Automatic Gate Portal Gardu Induk Glugur',
-                        'WO-2026-PLN-014', 1, 'Unit Gate', 'ONGOING', 'URGENT',
-                        'Jl. KL Yos Sudarso, Glugur, Medan', 3.6124000, 98.6738000,
-                        'Penggantian motor barrier gate dan integrasi sensor RFID access card.',
-                        '["/uploads/inspections/download_028.jpg"]'::jsonb
-                    );
-                """), {"div_id": div_id, "pm_id": pm_id})
+                # asyncpg menolak beberapa perintah ber-parameter sekaligus → jalankan satu per satu.
+                for insert_sql in _DEMO_ORDERS:
+                    await conn.execute(text(insert_sql), {"div_id": div_id, "pm_id": pm_id})
                 logger.info("Berhasil menambahkan 2 sampel Work Completion (Order Klien Pertamina & PLN)!")
 
     logger.info("Seluruh tahapan migrasi VMS V3 dan update data seed berhasil dieksekusi!")

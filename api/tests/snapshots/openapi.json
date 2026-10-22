@@ -15602,7 +15602,7 @@
   },
   "/api/v1/employees/{employee_id}": {
    "get": {
-    "description": "Detail karyawan + alamat.",
+    "description": "Detail karyawan + alamat (kontak pribadi hanya untuk pemilik & HR/admin).",
     "operationId": "get_employee_api_v1_employees__employee_id__get",
     "parameters": [
      {
@@ -18988,7 +18988,7 @@
   },
   "/api/v1/recaps/attendance": {
    "get": {
-    "description": "FINANCE/HR/OPS/ADMIN: seluruh organisasi; lainnya: hanya dirinya (aturan `GET /attendance`).",
+    "description": "HR/OPS/ADMIN: seluruh perusahaan; lainnya: hanya dirinya (aturan `GET /attendance`).",
     "operationId": "attendance_recap_api_v1_recaps_attendance_get",
     "parameters": [
      {

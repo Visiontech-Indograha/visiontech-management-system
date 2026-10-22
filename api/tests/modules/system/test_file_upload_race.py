@@ -37,4 +37,4 @@ def test_upload_that_loses_the_dedup_race_reuses_the_existing_file(client, world
 
     assert second.status_code == 200, second.text
     assert second.json()["file_id"] == first.json()["file_id"]
-    assert sync_query("SELECT count(*) FROM vms.file_object WHERE organization_id = %s", (world.org_id,))[0][0] == 1
+    assert sync_query("SELECT count(*) FROM file_object WHERE office_id = %s", (world.org_id,))[0][0] == 1

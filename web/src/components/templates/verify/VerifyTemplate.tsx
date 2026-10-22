@@ -1,14 +1,14 @@
-import type { UseQueryResult } from "@tanstack/react-query";
-import { VerificationResultPanel } from "@/components/organisms/verify/VerificationResultPanel";
-import { VerifyIntro } from "@/components/organisms/verify/VerifyIntro";
-import type { VerifyOut } from "@/services/verifyService";
+import { CompletionVerificationCard, VerifyHeading } from "@/components/organisms/verify/CompletionVerificationCard";
+import type { CompletionVerification } from "@/services/exportService";
 
-/** Kerangka publik verifikasi tanda tangan QR. */
-export function VerifyTemplate({ token, query }: { token: string; query: UseQueryResult<VerifyOut> }) {
+/** Kerangka halaman publik verifikasi dokumen (dibuka dari QR, tanpa login). */
+export function VerifyTemplate(props: { data: CompletionVerification | undefined; pending: boolean; failed: boolean }) {
   return (
-    <main className="mx-auto w-full max-w-xl px-4 py-10">
-      <VerifyIntro />
-      <VerificationResultPanel token={token} query={query} />
+    <main className="mx-auto flex min-h-screen max-w-xl flex-col justify-center gap-4 px-4 py-8">
+      <header>
+        <VerifyHeading />
+      </header>
+      <CompletionVerificationCard {...props} />
     </main>
   );
 }

@@ -1,6 +1,7 @@
 """
 Paket skema kontrak data untuk modul auth.
 """
+
 from app.modules.auth.schemas.auth_login_request_schema import AuthLoginRequestSchema, LoginRequest
 from app.modules.auth.schemas.auth_login_response_schema import AuthLoginResponseSchema, TokenResponse
 from app.modules.auth.schemas.auth_profile_schema import (
@@ -34,4 +35,3 @@ __all__ = [
     "TokenResponse",
     "UserMeResponse",
 ]
-

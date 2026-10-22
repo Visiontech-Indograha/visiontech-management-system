@@ -237,7 +237,7 @@ void main() {
 
       final row = (await queue()).single;
       expect(row.deadLetter, isTrue);
-      expect(row.lastError, 'Swafoto absen luring tidak ditemukan di HP.');
+      expect(row.lastError, 'Swafoto absen offline tidak ditemukan di HP.');
     });
   });
 

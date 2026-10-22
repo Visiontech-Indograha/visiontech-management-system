@@ -86,7 +86,7 @@ class _SyncStatusBannerState extends ConsumerState<SyncStatusBanner> {
         scheme.errorContainer,
         scheme.onErrorContainer,
         Icons.report_problem_outlined,
-        '$_deadLetters item gagal terkirim — butuh keputusan Anda',
+        '$_deadLetters data gagal terkirim — perlu dicek',
       ),
       _ when _offline => (
         scheme.tertiaryContainer,

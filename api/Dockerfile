@@ -10,6 +10,15 @@ RUN apt-get update && apt-get install -y \
     fontconfig \
     && rm -rf /var/lib/apt/lists/*
 
+# Pratinjau laporan survei (docs/37): .docx -> PDF dengan LibreOffice headless; Carlito/Caladea = metrik
+# Calibri/Cambria sehingga tata letak sama dengan dokumen Word aslinya.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libreoffice-writer-nogui \
+    fonts-crosextra-carlito \
+    fonts-crosextra-caladea \
+    fonts-liberation \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 COPY requirements.txt .

@@ -4,6 +4,7 @@ app/modules/overtime/routes/overtime_recap_route.py
 Rute endpoint HTTP untuk rekapitulasi lembur (/recaps/overtime).
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.1.
 """
+
 from fastapi import APIRouter, Depends, Query
 
 from app.api.deps import get_current_user

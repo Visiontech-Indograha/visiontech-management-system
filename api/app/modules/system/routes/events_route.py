@@ -4,6 +4,7 @@ app/modules/system/routes/events_route.py
 Rute endpoint HTTP untuk aliran SSE peristiwa waktu nyata (/events).
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.1.
 """
+
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
 from fastapi.security import HTTPAuthorizationCredentials
@@ -30,4 +31,3 @@ async def events(
 
 
 __all__ = ["router"]
-

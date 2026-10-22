@@ -1,17 +1,77 @@
 """
 app/modules/overtime/services/overtime_service.py
-
-Layanan logika bisnis untuk modul lembur dan rekap lembur.
-Mengikuti Panduan Standar Arsitektur API FastAPI Modular §5.3.
+Lembur daily-first: ketua/anggota tim mengajukan lembur atas jadwal harian yang sedang berjalan (ONGOING);
+PM/OM divisi jadwal itu memutuskan (bukan pengajunya sendiri). Rekap: pemegang review:overtime seluruhnya,
+PM hanya divisinya.
 """
-from app.services.overtime_service import OvertimeService as BaseOvertimeService
+
+from __future__ import annotations
+
+from collections.abc import Sequence
+from datetime import date
+from typing import Any
+from uuid import UUID
+
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationError
+from app.core.permissions import Permission
+from app.core.security import CurrentUser
+from app.modules.overtime.repositories.overtime_repository import OvertimeRepository
+from app.shared.access.access_service import DailyNeed, check_daily_access, is_admin, require_daily_status
 
 
-class OvertimeService(BaseOvertimeService):
-    """
-    Layanan bisnis lembur.
-    Mengelola aturan pengajuan lembur, batas jam lembur, review PM/OPS, dan kalkulasi rekap bulanan.
-    """
+def _state(msg: str) -> AppError:
+    return AppError("INVALID_STATE", msg, status=409)
 
 
-__all__ = ["OvertimeService"]
+class OvertimeService:
+    """Pengajuan & persetujuan lembur."""
+
+    def __init__(self, db: AsyncSession) -> None:
+        self.db = db
+        self.repo = OvertimeRepository(db)
+
+    async def report(self, user: CurrentUser, daily_plan_id: UUID, hours: float, reason: str) -> Any:
+        access = await check_daily_access(self.db, daily_plan_id, user, DailyNeed.TEAM)
+        require_daily_status(access, "ONGOING")
+        if not 0 < hours <= 12:
+            raise ValidationError("Jam lembur harus lebih dari 0 dan paling banyak 12 jam.")
+        reason = reason.strip()
+        if not reason:
+            raise ValidationError("Alasan lembur wajib diisi.")
+        employee_id = user.employee_id or ""
+        if await self.repo.duplicate(daily_plan_id, employee_id):
+            raise _state("Pengajuan lembur Anda untuk jadwal ini sudah ada dan sedang diproses.")
+        overtime_id = await self.repo.insert(daily_plan_id, employee_id, access.plan.work_date, hours, reason)
+        return await self.repo.get(overtime_id)
+
+    async def review(self, user: CurrentUser, overtime_id: UUID, decision: str, note: str | None) -> Any:
+        ot = await self.repo.get(overtime_id)
+        if ot is None:
+            raise NotFoundError("Lembur")
+        if ot.status != "PENDING_PM":
+            raise _state("Pengajuan lembur ini sudah diperiksa.")
+        if ot.daily_plan_id is None:
+            if not is_admin(user):
+                raise ForbiddenError("Lembur tanpa jadwal hanya dapat diperiksa admin.")
+        else:
+            await check_daily_access(self.db, ot.daily_plan_id, user, DailyNeed.MANAGE)
+        if user.employee_id is None or user.employee_id == str(ot.employee_id):
+            raise ForbiddenError("Pengaju lembur tidak dapat memutuskan pengajuannya sendiri.")
+        if decision not in ("APPROVED", "REJECTED"):
+            raise ValidationError("Keputusan harus disetujui atau ditolak.")
+        if not await self.repo.review(overtime_id, user.employee_id, decision, (note or "").strip() or None):
+            raise _state("Pengajuan lembur ini sudah diperiksa.")
+        return await self.repo.get(overtime_id)
+
+    async def list_by_plan(self, user: CurrentUser, daily_plan_id: UUID) -> Sequence[Any]:
+        await check_daily_access(self.db, daily_plan_id, user, DailyNeed.VIEW)
+        return await self.repo.list_by_plan(daily_plan_id)
+
+    async def recap(self, user: CurrentUser, month: date | None) -> Sequence[Any]:
+        if is_admin(user) or Permission.REVIEW_OVERTIME.value in user.permissions:
+            return await self.repo.recap(month, None)
+        if user.role == "PROJECT_MANAGER" and user.employee_id:
+            return await self.repo.recap(month, user.employee_id)
+        raise ForbiddenError("Rekap lembur hanya untuk OM, PM divisi, atau admin.")

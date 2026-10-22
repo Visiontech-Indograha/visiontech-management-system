@@ -1,5 +1,11 @@
 # 26 · Plan Migrasi Struktur Folder API
 
+> **Status 2026-10-20: SELESAI (arsitektur modular R-35).** Seluruh kode ada di `app/modules/<modul>/`
+> (routes · controllers · services · repositories · schemas · dependencies.py); `app/services`, `app/crud`,
+> `app/schemas`, `app/db`, `app/templates`, dan `app/api/v1/endpoints` dihapus. Struktur terbaru: docs/12 §1.
+> Rencana di bawah ini tinggal sebagai catatan sejarah. Sisa pekerjaan: 6 impor lintas-modul ke repositori modul
+> lain (`KNOWN_VIOLATIONS` di `api/tests/test_structure.py`).
+
 **Dasar:** keputusan pemilik 2026-09-29 (R-28, **kritis**): `api/` wajib mengikuti struktur
 `docs/12` §1 (`api/v1/endpoints`, `api/deps.py`, `core/`, `models/`, `schemas/`, `crud/`, `services/`,
 `main.py`, `dependencies.py`), supaya mudah dibaca, di-debug, dan dirawat.

@@ -203,9 +203,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   controller: _usernameController,
                                   enabled: !isLoading,
                                   label: const Text('Email'),
-                                  placeholder: const Text(
-                                    'nama@visiontech.id',
-                                  ),
+                                  placeholder: const Text('nama@visiontech.id'),
                                   keyboardType: TextInputType.emailAddress,
                                   textInputAction: TextInputAction.next,
                                   leading: const Icon(

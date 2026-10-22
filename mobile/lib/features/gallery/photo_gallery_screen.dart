@@ -42,12 +42,13 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
     });
     try {
       final dir = await visiontechFolder(LocalFileKind.dailyReport);
-      final files = dir
-          .listSync()
-          .whereType<File>()
-          .where((f) => RegExp(r'\.(jpe?g|png)$', caseSensitive: false).hasMatch(f.path))
-          .toList()
-        ..sort((a, b) => b.lastModifiedSync().compareTo(a.lastModifiedSync()));
+      final files =
+          dir
+              .listSync()
+              .whereType<File>()
+              .where((f) => RegExp(r'\.(jpe?g|png)$', caseSensitive: false).hasMatch(f.path))
+              .toList()
+            ..sort((a, b) => b.lastModifiedSync().compareTo(a.lastModifiedSync()));
       if (mounted) setState(() => _files = files);
     } catch (e) {
       if (mounted) setState(() => _error = 'Galeri tidak dapat dibuka: $e');
@@ -79,7 +80,9 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Hapus foto ini?'),
-        content: const Text('Foto dihapus dari galeri aplikasi dan album Visiontech di HP. Foto yang sudah diunggah ke laporan tidak terpengaruh.'),
+        content: const Text(
+          'Foto dihapus dari galeri aplikasi dan album Visiontech di HP. Foto yang sudah diunggah ke laporan tidak terpengaruh.',
+        ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
           TextButton(
@@ -114,10 +117,7 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             InteractiveViewer(child: Image.file(file)),
-            Padding(
-              padding: const EdgeInsets.all(8),
-              child: Text(_stamp.format(file.lastModifiedSync())),
-            ),
+            Padding(padding: const EdgeInsets.all(8), child: Text(_stamp.format(file.lastModifiedSync()))),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
@@ -149,34 +149,37 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
             icon: const Icon(Icons.add_a_photo_rounded),
             label: const Text('Ambil foto'),
           ),
-    appBar: VmsTopBar(
-      onBack: widget.asTab ? null : () => Navigator.of(context).maybePop(),
-      trailing: HeaderAction(icon: Icons.refresh_rounded, tooltip: 'Muat ulang', onTap: _load),
-    ),
+    appBar: VmsTopBar(onBack: widget.asTab ? null : () => Navigator.of(context).maybePop()),
     body: _loading
         ? const Center(child: CircularProgressIndicator())
         : _error != null
-        ? Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(_error!)))
+        ? Center(
+            child: Padding(padding: const EdgeInsets.all(24), child: Text(_error!)),
+          )
         : _files.isEmpty
         ? const EmptyState(
             icon: Icons.photo_library_outlined,
             title: 'Belum ada foto laporan',
             message: 'Ketuk "Ambil foto" atau foto lewat kamera aplikasi; hasilnya tersimpan di sini.',
           )
-        : GridView.builder(
-            padding: const EdgeInsets.fromLTRB(12, 12, 12, 88),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              mainAxisSpacing: 8,
-              crossAxisSpacing: 8,
-            ),
-            itemCount: _files.length,
-            itemBuilder: (_, i) => InkWell(
-              key: Key('gallery-photo-$i'),
-              onTap: () => _open(_files[i]),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image.file(_files[i], fit: BoxFit.cover, cacheWidth: 300),
+        : RefreshIndicator(
+            onRefresh: _load,
+            child: GridView.builder(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 88),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                mainAxisSpacing: 8,
+                crossAxisSpacing: 8,
+              ),
+              itemCount: _files.length,
+              itemBuilder: (_, i) => InkWell(
+                key: Key('gallery-photo-$i'),
+                onTap: () => _open(_files[i]),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.file(_files[i], fit: BoxFit.cover, cacheWidth: 300),
+                ),
               ),
             ),
           ),

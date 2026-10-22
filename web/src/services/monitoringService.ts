@@ -2,7 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/apiClient";
 import type { components } from "@/lib/apiTypes";
 
-export type TimelineGroup = components["schemas"]["TimelineGroup"];
 export type AttendanceRecap = components["schemas"]["AttendanceRecap"];
 export type OvertimeRecapRow = components["schemas"]["OvertimeRecapRow"];
 
@@ -11,13 +10,6 @@ export const useOvertimeRecap = (month: string) =>
   useQuery({
     queryKey: ["overtime-recap", month],
     queryFn: async () => (await api.get<OvertimeRecapRow[]>("/recaps/overtime", { params: month ? { month } : {} })).data,
-  });
-
-export const useTimeline = (f: { from: string; to: string }) =>
-  useQuery({
-    queryKey: ["timeline", f],
-    queryFn: async () =>
-      (await api.get<TimelineGroup[]>("/timeline", { params: { ...(f.from ? { from: f.from } : {}), ...(f.to ? { to: f.to } : {}) } })).data,
   });
 
 export const useAttendanceRecap = (month: string) =>

@@ -16,8 +16,8 @@ import { SectionTitle } from "@/components/molecules/SectionTitle";
  * "Akun & keamanan" setelah masuk.
  */
 export function AccountCard({ employee }: { employee: Employee }) {
-  const account = useAccount(employee.id);
-  const action = useAccountAction(employee.id);
+  const account = useAccount(employee.employee_id);
+  const action = useAccountAction(employee.employee_id);
   const [login, setLogin] = useState(employee.email ?? "");
   const [issued, setIssued] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -68,7 +68,7 @@ export function AccountCard({ employee }: { employee: Employee }) {
         {a && !a.exists && (
           <div className="flex flex-col gap-3">
             <TextBlock className="text-mist">Karyawan ini belum punya akun login.</TextBlock>
-            {employee.is_active && (
+            {employee.offboarding_status !== "offboarded" && (
               <>
                 <TextField
                   label="Email login"
@@ -143,7 +143,7 @@ export function AccountCard({ employee }: { employee: Employee }) {
                   Nonaktifkan akun
                 </ActionButton>
               ) : (
-                employee.is_active && (
+                employee.offboarding_status !== "offboarded" && (
                   <ActionButton
                     variant="outline"
                     disabled={action.isPending}

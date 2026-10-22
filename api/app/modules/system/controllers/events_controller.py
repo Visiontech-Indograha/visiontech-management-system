@@ -4,6 +4,7 @@ app/modules/system/controllers/events_controller.py
 Controller orkestrasi aliran peristiwa waktu nyata (SSE) untuk web dan HP.
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.2.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -67,4 +68,3 @@ class EventsController:
 
 
 __all__ = ["PING_SECONDS", "EventsController"]
-

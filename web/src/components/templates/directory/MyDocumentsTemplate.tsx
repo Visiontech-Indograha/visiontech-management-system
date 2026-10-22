@@ -7,8 +7,8 @@ export function MyDocumentsTemplate({ employeeId, canManage }: { employeeId: str
   return (
     <PageTemplate title="Berkas saya">
       {employeeId ? (
-        // M2: karyawan mengajukan dokumen pribadinya sendiri (izin dasar upload:documents); HR memverifikasi.
-        <DocumentsPanel employeeId={employeeId} canManage={canManage} canRenew />
+        // Karyawan melihat dokumennya sendiri; HR/GA yang mencatat & memperbarui (manage:employee_documents).
+        <DocumentsPanel employeeId={employeeId} canManage={canManage} />
       ) : (
         <UnlinkedEmployeeNotice />
       )}

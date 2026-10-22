@@ -9,11 +9,15 @@ export const EmployeeDetailPage = lazy(() => import("@/pages/directory/EmployeeD
 export const MyDocumentsPage = lazy(() => import("@/pages/directory/MyDocumentsPage").then((m) => ({ default: m.MyDocumentsPage })));
 export const WorkTypesPage = lazy(() => import("@/pages/work-types/WorkTypesPage").then((m) => ({ default: m.WorkTypesPage })));
 export const SitesPage = lazy(() => import("@/pages/sites/SitesPage").then((m) => ({ default: m.SitesPage })));
-export const WorkPlanDetailPage = lazy(() => import("@/pages/work-plans/WorkPlanDetailPage").then((m) => ({ default: m.WorkPlanDetailPage })));
-export const PlanEditorPage = lazy(() => import("@/pages/work-plans/PlanEditorPage").then((m) => ({ default: m.PlanEditorPage })));
-export const WorkPlansPage = lazy(() => import("@/pages/work-plans/WorkPlansPage").then((m) => ({ default: m.WorkPlansPage })));
+export const DailyPlansPage = lazy(() => import("@/pages/work-plans/DailyPlansPage").then((m) => ({ default: m.DailyPlansPage })));
 export const AttendanceRecapPage = lazy(() => import("@/pages/monitoring/AttendanceRecapPage").then((m) => ({ default: m.AttendanceRecapPage })));
 export const OvertimeRecapPage = lazy(() => import("@/pages/monitoring/OvertimeRecapPage").then((m) => ({ default: m.OvertimeRecapPage })));
-export const TimelinePage = lazy(() => import("@/pages/monitoring/TimelinePage").then((m) => ({ default: m.TimelinePage })));
 export const AccountPage = lazy(() => import("@/pages/account/AccountPage").then((m) => ({ default: m.AccountPage })));
-export const PresentationPage = lazy(() => import("@/pages/work-plans/PresentationPage").then((m) => ({ default: m.PresentationPage })));
+
+// Halaman Baru Master Schema V2
+export const TeamsPage = lazy(() => import("@/pages/teams/TeamsPage").then((m) => ({ default: m.TeamsPage })));
+export const MessPage = lazy(() => import("@/pages/mess/MessPage").then((m) => ({ default: m.MessPage })));
+export const OffboardingPage = lazy(() => import("@/pages/offboarding/OffboardingPage").then((m) => ({ default: m.OffboardingPage })));
+export const WorkCompletionsPage = lazy(() => import("@/pages/work-completions/WorkCompletionsPage").then((m) => ({ default: m.WorkCompletionsPage })));
+export const SurveysPage = lazy(() => import("@/pages/surveys/SurveysPage").then((m) => ({ default: m.SurveysPage })));
+export const SurveyDetailPage = lazy(() => import("@/pages/surveys/SurveyDetailPage").then((m) => ({ default: m.SurveyDetailPage })));

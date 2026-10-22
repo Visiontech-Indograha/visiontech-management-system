@@ -4,6 +4,7 @@ app/modules/system/controllers/files_controller.py
 Controller orkestrasi unggah berkas, kompresi gambar, dan akses berkas bertiket.
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.2.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -14,15 +15,15 @@ import filetype
 from fastapi import Depends, HTTPException, UploadFile
 from fastapi.responses import Response
 
-import app.api.v1.endpoints.files as files_api
-from app.api.deps import get_file_service
 from app.core.errors import AppError, NotFoundError
 from app.core.image import compress_image
 from app.core.security import CurrentUser, create_file_access_ticket
 from app.core.storage import get_object_bytes, upload_file
+from app.modules.system.dependencies import get_file_service
 from app.modules.system.services.system_service import FileService
+from app.shared.content_disposition import content_disposition
 
-MAX_FILE_SIZE = getattr(files_api, "MAX_FILE_SIZE", 10 * 1024 * 1024)
+MAX_FILE_SIZE = 10 * 1024 * 1024
 ALLOWED_MIMES = [
     "image/jpeg",
     "image/png",
@@ -49,11 +50,10 @@ class FilesController:
         file: UploadFile,
     ) -> dict[str, str]:
         """Validasi tipe, ukuran, deduplikasi SHA-256, kompresi citra, dan penyimpanan MinIO."""
-        max_size = getattr(files_api, "MAX_FILE_SIZE", MAX_FILE_SIZE)
-        file_bytes = await file.read(max_size + 1)
+        file_bytes = await file.read(MAX_FILE_SIZE + 1)
         byte_size = len(file_bytes)
 
-        if byte_size > max_size:
+        if byte_size > MAX_FILE_SIZE:
             raise HTTPException(
                 status_code=413,
                 detail={"code": "FILE_TOO_LARGE", "message": "Ukuran berkas melebihi batas 10MB."},
@@ -95,17 +95,16 @@ class FilesController:
             return {"file_id": stored_id, "message": "File sudah ada (deduplikasi)."}
 
         is_image = mime_type.startswith("image/")
-        uploader = getattr(files_api, "upload_file", upload_file)
 
         def process_and_upload() -> bool:
             if is_image:
                 results = compress_image(file_bytes)
                 if results:
                     return all(
-                        uploader(f"{current_user.organization_id}/{file_id}_{variant}.webp", v_bytes, "image/webp")
+                        upload_file(f"{current_user.organization_id}/{file_id}_{variant}.webp", v_bytes, "image/webp")
                         for variant, v_bytes in results.items()
                     )
-            return uploader(storage_key, file_bytes, mime_type)
+            return upload_file(storage_key, file_bytes, mime_type)
 
         loop = asyncio.get_running_loop()
         if not await loop.run_in_executor(None, process_and_upload):
@@ -128,20 +127,23 @@ class FilesController:
         Menyajikan isi berkas langsung sebagai byte agar bisa dipakai sebagai `src` <img> atau unduhan aman.
 
         Urutan pencarian objek di MinIO:
-        1. `{org}/{file_id}_{variant}.webp` (hasil kompresi aplikasi)
+        1. `{kantor pengunggah}/{file_id}_{variant}.webp` (hasil kompresi aplikasi)
         2. `file_object.storage_key` (berkas asli / hasil impor massal)
         3. Semua varian webp lain sebagai cadangan
         """
         file_obj = await self.service.authorize(file_id, current_user)
         is_image = file_obj.mime_type.startswith("image/")
 
+        # Varian WebP disimpan di prefiks kantor PENGUNGGAH (`storage_key` = `{kantor}/{id}.{ext}`), bukan kantor
+        # yang membuka — PM kantor lain harus tetap bisa melihat foto ketua tim.
+        base = (file_obj.storage_key or "").rsplit(".", 1)[0] or f"{current_user.organization_id}/{file_id}"
         candidates: list[str] = []
         if is_image and variant in ("thumb", "view", "full"):
-            candidates.append(f"{current_user.organization_id}/{file_id}_{variant}.webp")
+            candidates.append(f"{base}_{variant}.webp")
         candidates.append(file_obj.storage_key)
         if is_image:
             for v in ("view", "full", "thumb"):
-                candidates.append(f"{current_user.organization_id}/{file_id}_{v}.webp")
+                candidates.append(f"{base}_{v}.webp")
 
         seen: set[str] = set()
         for key in candidates:
@@ -151,13 +153,12 @@ class FilesController:
             data = get_object_bytes(key)
             if data:
                 file_name = getattr(file_obj, "file_name", None) or f"{file_id}.{file_obj.mime_type.split('/')[-1]}"
-                safe_name = str(file_name).replace('"', '\\"')
                 disp_type = "attachment" if download else "inline"
                 return Response(
                     content=data,
                     media_type="image/webp" if key.endswith(".webp") else file_obj.mime_type,
                     headers={
-                        "Content-Disposition": f'{disp_type}; filename="{safe_name}"',
+                        "Content-Disposition": content_disposition(disp_type, str(file_name)),
                         "Cache-Control": "private, no-cache, no-store, must-revalidate",
                     },
                 )

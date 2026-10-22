@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { useSession } from "@/stores/sessionStore";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
@@ -8,9 +8,11 @@ import { ApiError } from "@/lib/apiClient";
 import { TextAreaField } from "@/components/molecules/Field";
 import { errorMessage } from "@/lib/errors";
 import { formatDateTime } from "@/lib/format";
+
+/** Jam sekarang di WIB (aturan jam absen server), bukan zona waktu perangkat. */
+const wibHour = (d = new Date()) =>
+  Number(new Intl.DateTimeFormat("en-GB", { hour: "2-digit", hourCycle: "h23", timeZone: "Asia/Jakarta" }).format(d));
 import { useAttendanceSites } from "@/services/siteService";
-import { useFaceStatus } from "@/services/accountService";
-import { FaceProbeDialog } from "@/components/organisms/face/FaceProbeDialog";
 import { SelfieCaptureDialog } from "./SelfieCaptureDialog";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
@@ -122,11 +124,6 @@ function OfficeCheckInForm({ employeeId }: { employeeId: string }) {
   // R-33: penjelasan wajib bila di luar radius atau mengajukan ulang absensi yang ditolak (juga dicek server).
   const [explanation, setExplanation] = useState("");
   const [askExplanation, setAskExplanation] = useState(false);
-  // Wajah (web = hanya online): karyawan yang sudah mendaftar wajah memverifikasi dulu; hasilnya dipakai satu absen.
-  const face = useFaceStatus();
-  const needFace = !!(face.data?.employee_linked && face.data.consent === "GRANTED" && face.data.enrolled);
-  const [faceFor, setFaceFor] = useState<"in" | "out" | null>(null);
-  const probeRef = useRef<string | null>(null);
   const [selfieFor, setSelfieFor] = useState<{ pos: BrowserPosition; siteName: string; info: string } | null>(null);
   // Bawaan: lokasi yang namanya memuat "kantor", selain itu lokasi pertama; pilihan pengguna didahulukan.
   const siteId = picked || (sites.data?.find((s) => /kantor/i.test(s.name)) ?? sites.data?.[0])?.id || "";
@@ -145,24 +142,19 @@ function OfficeCheckInForm({ employeeId }: { employeeId: string }) {
   };
 
   const handleCheckInClick = () => {
-    const now = new Date();
-    if (now.getHours() < 7) {
+    if (wibHour() < 7) {
       setError("Absensi masuk belum dibuka. Jam masuk kerja dimulai pukul 07:00 WIB.");
       return;
     }
     setError(null);
-    if (needFace) setFaceFor("in");
-    else checkIn.mutate(undefined);
+    checkIn.mutate(undefined);
   };
 
-  const proceedCheckOut = () => {
-    if (needFace) setFaceFor("out");
-    else checkOut.mutate(undefined);
-  };
+  const proceedCheckOut = () => checkOut.mutate(undefined);
 
   const handleCheckOutClick = () => {
     const now = new Date();
-    if (now.getHours() >= 19) {
+    if (wibHour(now) >= 19) {
       setError("Batas waktu absensi pulang mandiri telah ditutup pada pukul 19:00 WIB (Sistem auto check-out aktif).");
       return;
     }
@@ -181,8 +173,8 @@ function OfficeCheckInForm({ employeeId }: { employeeId: string }) {
     proceedCheckOut();
   };
 
-  // Alur (flowchart R-33): cek lokasi & jam → di luar zona/ajukan ulang: alasan wajib → di luar zona: swafoto
-  // wajib → kirim. Server menghitung ulang jarak & status dan menolak bila alasan/swafoto tidak ada.
+  // Alur (docs/35 §5): cek lokasi & jam → di luar zona/ajukan ulang: alasan wajib → swafoto (selalu wajib; server
+  // mencocokkannya dengan wajah terdaftar bila ada) → kirim. Server menghitung ulang jarak & status.
   const checkIn = useMutation({
     mutationFn: async (vars?: { pos: BrowserPosition; selfieFileId: string }): Promise<Attendance | null> => {
       const pos = vars?.pos ?? (await currentPosition());
@@ -197,11 +189,13 @@ function OfficeCheckInForm({ employeeId }: { employeeId: string }) {
             : "Isi penjelasan untuk mengajukan ulang absensi yang ditolak.",
         );
       }
-      if (outside && !vars?.selfieFileId) {
+      if (!vars?.selfieFileId) {
         setSelfieFor({
           pos,
-          siteName: site.name,
-          info: `Anda ${away} m dari ${site.name} (radius ${site.radius_m} m). Swafoto wajib di luar zona.`,
+          siteName: site?.name ?? "lokasi kerja",
+          info: outside
+            ? `Anda ${away} m dari ${site.name} (radius ${site.radius_m} m). Ambil swafoto sebagai bukti.`
+            : "Ambil swafoto wajah Anda untuk absen masuk.",
         });
         return null;
       }
@@ -213,12 +207,10 @@ function OfficeCheckInForm({ employeeId }: { employeeId: string }) {
           accuracy_m: pos.accuracy,
           explanation: explanation.trim() || null,
           selfie_file_id: vars?.selfieFileId ?? null,
-          face_probe_id: probeRef.current,
         });
     },
     onSuccess: async (a) => {
       if (!a) return; // menunggu swafoto
-      probeRef.current = null;
       setError(null);
       setExplanation("");
       setAskExplanation(false);
@@ -250,11 +242,9 @@ function OfficeCheckInForm({ employeeId }: { employeeId: string }) {
           accuracy_m: pos.accuracy,
           explanation: explanation.trim() || null,
           selfie_file_id: vars?.selfieFileId ?? null,
-          face_probe_id: probeRef.current,
         });
     },
     onSuccess: async (a) => {
-      probeRef.current = null;
       setOutPos(null);
       setError(null);
       setExplanation("");
@@ -409,19 +399,6 @@ function OfficeCheckInForm({ employeeId }: { employeeId: string }) {
             <TextBlock className="text-sm text-success">Absensi hari ini selesai. Terima kasih!</TextBlock>
           )}
         </div>
-      )}
-      {faceFor && (
-        <FaceProbeDialog
-          title={faceFor === "in" ? "Verifikasi wajah — absen masuk" : "Verifikasi wajah — absen pulang"}
-          onCancel={() => setFaceFor(null)}
-          onDone={(probeId) => {
-            const which = faceFor;
-            probeRef.current = probeId;
-            setFaceFor(null);
-            if (which === "in") checkIn.mutate(undefined);
-            else checkOut.mutate(undefined);
-          }}
-        />
       )}
       {selfieOut && outPos && (
         <SelfieCaptureDialog

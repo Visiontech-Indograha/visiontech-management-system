@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -56,7 +55,7 @@ void main() {
 
         final data = last().data as Map;
         expect(data['selfie_file_id'], 'f1');
-        expect(data['face_result'], 'SKIPPED');
+        // V2: hasil wajah dihitung server dari swafoto — HP tidak mengirim face_result.
         // Perangkat tak melaporkan akurasi → kunci tidak dikirim, server tidak menolak.
         expect(data.containsKey('accuracy_m'), isFalse);
       },
@@ -93,40 +92,56 @@ void main() {
     });
   });
 
-  test('SK, lokasi, lembur: path baca', () async {
-    backend.routes['/work-plans'] = (_) => [
-      {'id': 'p1'},
+  test('jadwal harian, lokasi, lembur: path baca', () async {
+    backend.routes['/work-plans/daily'] = (_) => [
+      {'daily_plan_id': 'd1'},
     ];
-    backend.routes['/work-plans/p1'] = (_) => {'id': 'p1'};
-    backend.routes['/work-plans/p1/days'] = (_) => [
-      {'id': 'd1'},
+    backend.routes['/work-plans/daily/d1'] = (_) => {'daily_plan_id': 'd1', 'items': <Object>[]};
+    backend.routes['/work-plans/daily/d1/items'] = (_) => [
+      {'item_id': 'i1'},
     ];
-    backend.routes['/sites'] = (_) => [
+    backend.routes['/offices'] = (_) => [
       {'id': 's1'},
     ];
     backend.routes['/overtime'] = (_) => <Object>[];
 
-    expect((await api.workPlans()).single['id'], 'p1');
-    expect((await api.workPlan('p1'))['id'], 'p1');
-    expect((await api.planDays('p1')).single['id'], 'd1');
+    expect((await api.dailyPlans(start: '2026-10-19', end: '2026-10-25')).single['daily_plan_id'], 'd1');
+    expect(backend.requests.last.queryParameters, {'start': '2026-10-19', 'end': '2026-10-25'});
+    expect((await api.dailyPlan('d1'))['daily_plan_id'], 'd1');
+    expect((await api.dayItems('d1')).single['item_id'], 'i1');
     expect((await api.sites()).single['id'], 's1');
     expect(await api.myOvertime(), isEmpty);
     expect(backend.requests.map((r) => r.method).toSet(), {'GET'});
   });
 
-  test('ketua menerima SK secara daring dengan row version terbaru', () async {
-    backend.routes['/work-plans/p1/accept'] = (_) => {
-      'id': 'p1',
-      'status': 'ACCEPTED',
-      'row_version': 8,
-    };
+  test('progres titik & minta geser', () async {
+    backend.routes['/work-plans/items/i1/progress'] = (_) => {'item_id': 'i1', 'status': 'DONE'};
+    backend.routes['/work-plans/items/i1/request-rollover'] = (_) => {'status': 'PENDING_ROLLOVER'};
 
-    final accepted = await api.acceptPlan('p1', rowVersion: 7);
+    await api.updateProgress('i1', completedQty: 1, photos: [
+      {'file_id': 'f1', 'requirement_id': 'r1'},
+    ]);
+    expect(last().method, 'PATCH');
+    expect(last().data, {
+      'completed_qty': 1,
+      'photos': [
+        {'file_id': 'f1', 'requirement_id': 'r1'},
+      ],
+    });
 
-    expect(accepted['status'], 'ACCEPTED');
-    expect(last().method, 'POST');
-    expect(last().path, '/api/v1/work-plans/p1/accept');
-    expect(last().data, {'row_version': 7, 'reason': ''});
+    await api.requestRollover('i1', reason: 'Hujan', completedQty: 0);
+    expect(last().data, {'delay_reason': 'Hujan', 'completed_qty': 0});
+  });
+
+  test('ketua menandatangani BAST: PNG data URL + foto realisasi', () async {
+    backend.routes['/work-completions/c1/sign'] = (_) => {'completion_id': 'c1'};
+    await api.signCompletion('c1', signaturePng: 'QUJD', summary: 'Selesai', photoFileIds: ['f1']);
+    expect(last().path, '/api/v1/work-completions/c1/sign');
+    expect(last().data, {
+      'signature_data_url': 'data:image/png;base64,QUJD',
+      'summary_notes': 'Selesai',
+      'realization_photos': ['f1'],
+    });
   });
 
   group('berkas & sinkron', () {
@@ -163,78 +178,41 @@ void main() {
     });
   });
 
-  group('biometrik wajah (Face API)', () {
-    test('status, policy, dan consent', () async {
-      backend.routes['/face/status'] = (_) => {'consent_given': true, 'has_template': true};
-      backend.routes['/face/policy'] = (_) => {'version': '1.0'};
-      backend.routes['/face/consent'] = (_) => {'message': 'Persetujuan biometrik dicatat.'};
+  group('wajah V2 (Face API)', () {
+    test('status & kebijakan', () async {
+      backend.routes['/face/status'] = (_) => {'enrolled': true, 'required': true};
+      backend.routes['/face/policy'] = (_) => {'match_threshold': 0.8, 'min_images': 3, 'max_images': 5};
 
       final status = await api.faceStatus();
-      expect(status['consent_given'], isTrue);
+      expect(status['enrolled'], isTrue);
       expect(last().path, '/api/v1/face/status');
 
       final pol = await api.facePolicy();
-      expect(pol['version'], '1.0');
+      expect(pol['min_images'], 3);
       expect(last().path, '/api/v1/face/policy');
-
-      await api.setFaceConsent('GRANTED', policyVersion: '1.0');
-      expect(last().path, '/api/v1/face/consent');
-      expect(last().data, {'state': 'GRANTED', 'policy_version': '1.0'});
     });
 
-    test('kirim face probe mengembalikan probe_id', () async {
-      final dir = await Directory.systemTemp.createTemp('vms-face-test');
-      final file = File('${dir.path}/probe.jpg')..writeAsStringSync('dummy-image');
-      backend.routes['/face/probe'] = (_) => {'probe_id': 'probe-123'};
-
-      final probeId = await api.createFaceProbe(
-        file,
-        liveness: {
-          'challenges': ['bawah', 'kiri'],
-          'passed': true,
-          'proofs': ['p1', 'p2'],
-        },
-      );
-      expect(probeId, 'probe-123');
-      expect(last().path, '/api/v1/face/probe');
-      final form = last().data as FormData;
-      expect(form, isA<FormData>());
-      // Hasil tantangan ikut terkirim sebagai JSON (bukan lagi '{}' kosong).
-      final liveness = form.fields.firstWhere((f) => f.key == 'liveness').value;
-      expect(liveness, contains('"proofs":["p1","p2"]'));
-      expect(liveness, contains('"passed":true'));
-      await dir.delete(recursive: true);
-    });
-
-    test('pemeriksaan tantangan mengirim bingkai dan mengembalikan bukti', () async {
-      backend.routes['/face/challenge-check'] = (_) => {
-        'status': 'sukses',
-        'detail': 'ok',
-        'proof': 'bukti-1',
-      };
-      final res = await api.faceChallengeCheck(Uint8List.fromList([1, 2, 3]), 'bawah');
-      expect(res['proof'], 'bukti-1');
-      expect(last().path, '/api/v1/face/challenge-check');
-      final form = last().data as FormData;
-      expect(form.fields.firstWhere((f) => f.key == 'challenge').value, 'bawah');
-      expect(form.files.single.key, 'file');
-    });
-
-    test('pendaftaran membawa liveness dan banyak berkas', () async {
+    test('pendaftaran: banyak berkas, tanpa liveness', () async {
       final dir = await Directory.systemTemp.createTemp('vms-face-enroll');
       final files = [
-        for (var i = 0; i < 3; i++) File('${dir.path}/p$i.jpg')..writeAsStringSync('x$i'),
+        for (var i = 0; i < 4; i++) File('${dir.path}/p$i.jpg')..writeAsStringSync('x$i'),
       ];
-      backend.routes['/face/enroll'] = (_) => {'enrolled': 3};
-      final res = await api.enrollFace(
-        files,
-        liveness: {'challenges': ['bawah', 'kiri'], 'passed': true, 'proofs': ['a', 'b']},
-      );
-      expect(res['enrolled'], 3);
+      backend.routes['/face/enroll'] = (_) => {'enrolled': true, 'images_used': 4};
+      final res = await api.enrollFace(files);
+      expect(res['images_used'], 4);
       final form = last().data as FormData;
-      expect(form.files.where((f) => f.key == 'files'), hasLength(3));
-      expect(form.fields.firstWhere((f) => f.key == 'liveness').value, contains('"proofs":["a","b"]'));
+      expect(form.files.where((f) => f.key == 'files'), hasLength(4));
+      expect(form.fields.where((f) => f.key == 'liveness'), isEmpty);
       await dir.delete(recursive: true);
+    });
+
+    test('absen masuk: swafoto, tanpa face_probe_id', () async {
+      backend.routes['/attendance/check-in'] = (_) => {'id': 'a1'};
+      await api.checkIn(siteId: 's1', lat: 1, lng: 2, selfieFileId: 'f1');
+      final body = last().data as Map;
+      expect(body['selfie_file_id'], 'f1');
+      expect(body.containsKey('face_probe_id'), isFalse);
+      expect(body.containsKey('face_result'), isFalse);
     });
   });
 }

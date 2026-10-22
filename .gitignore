@@ -60,6 +60,10 @@ yarn-error.log
 dist/
 dist-ssr/
 *.local
+uploads/*
+!uploads/.gitkeep
+api/uploads/*
+!api/uploads/.gitkeep
 
 # Flutter/Dart
 .dart_tool/
@@ -117,9 +121,7 @@ MEMORY.md
 memory.md
 CLAUDE.md
 GEMINI.md
-prototype/GEMINI.md
-prototype/agent.md
-prototype/coordination/
 *.agent.md
 
 !web/src/lib/
+backup-prod/

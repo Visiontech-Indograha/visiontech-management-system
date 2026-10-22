@@ -18,7 +18,7 @@ describe("Lokasi kerja (/sites)", () => {
   });
 
   it("menampilkan daftar dan keadaan kosong", async () => {
-    mockApi((c) => (c.url === "/sites" ? { data: [site] } : undefined));
+    mockApi((c) => (c.url === "/offices" ? { data: [site] } : undefined));
     renderRoute("/sites", { role: "PM" });
     expect(await screen.findByText("Gudang Cikarang")).toBeInTheDocument();
     expect(screen.getByText(/radius 50 m/)).toBeInTheDocument();
@@ -26,8 +26,8 @@ describe("Lokasi kerja (/sites)", () => {
 
   it("menambah lokasi mengirim SiteCreate", async () => {
     const calls = mockApi((c) => {
-      if (c.url === "/sites" && c.method === "get") return { data: [] };
-      if (c.url === "/sites" && c.method === "post") return { status: 201, data: site };
+      if (c.url === "/offices" && c.method === "get") return { data: [] };
+      if (c.url === "/offices" && c.method === "post") return { status: 201, data: site };
     });
     renderRoute("/sites", { role: "PM" });
     await screen.findByText(/Belum ada lokasi kerja/);
@@ -47,7 +47,7 @@ describe("Lokasi kerja (/sites)", () => {
   });
 
   it("validasi: lintang di luar rentang tidak dikirim", async () => {
-    const calls = mockApi((c) => (c.url === "/sites" ? { data: [] } : undefined));
+    const calls = mockApi((c) => (c.url === "/offices" ? { data: [] } : undefined));
     renderRoute("/sites", { role: "PM" });
     await screen.findByText(/Belum ada lokasi kerja/);
     fireEvent.click(screen.getAllByRole("button", { name: "Tambah lokasi" })[0]);
@@ -62,14 +62,14 @@ describe("Lokasi kerja (/sites)", () => {
 
   it("menghapus lewat dialog konfirmasi", async () => {
     const calls = mockApi((c) => {
-      if (c.url === "/sites") return { data: [{ ...site, can_manage: true }] };
-      if (c.url === "/sites/s1" && c.method === "delete") return { data: { message: "Lokasi dihapus." } };
+      if (c.url === "/offices") return { data: [{ ...site, can_manage: true }] };
+      if (c.url === "/offices/s1" && c.method === "delete") return { data: { message: "Lokasi dihapus." } };
     });
     renderRoute("/sites", { role: "PM" });
     fireEvent.click(await screen.findByRole("button", { name: "Hapus Gudang Cikarang" }));
     const dialog = screen.getByRole("dialog", { name: "Hapus lokasi kerja" });
     fireEvent.click(within(dialog).getByRole("button", { name: "Hapus" }));
-    await waitFor(() => expect(calls.some((c) => c.method === "delete" && c.url === "/sites/s1")).toBe(true));
+    await waitFor(() => expect(calls.some((c) => c.method === "delete" && c.url === "/offices/s1")).toBe(true));
   });
 
   it("galat memuat menampilkan Coba lagi", async () => {
@@ -80,7 +80,7 @@ describe("Lokasi kerja (/sites)", () => {
 
   it("dialog tambah punya peta dinamis dan pencarian alamat; hasil cari mengisi lintang, bujur, dan alamat", async () => {
     const calls = mockApi((c) => {
-      if (c.url === "/sites") return { data: [] };
+      if (c.url === "/offices") return { data: [] };
       if (c.url === "/geo/search") return { data: [{ name: "Jl. Sudirman, Pekanbaru, Riau", type: "road", lat: 0.5071, lng: 101.4478 }] };
     });
     renderRoute("/sites", { role: "PM" });
@@ -98,7 +98,7 @@ describe("Lokasi kerja (/sites)", () => {
   });
 
   it("lintang/bujur tetap bisa diketik manual dan penanda mengikuti", async () => {
-    mockApi((c) => (c.url === "/sites" ? { data: [] } : undefined));
+    mockApi((c) => (c.url === "/offices" ? { data: [] } : undefined));
     renderRoute("/sites", { role: "PM" });
     await screen.findByText(/Belum ada lokasi kerja/);
     fireEvent.click(screen.getAllByRole("button", { name: "Tambah lokasi" })[0]);

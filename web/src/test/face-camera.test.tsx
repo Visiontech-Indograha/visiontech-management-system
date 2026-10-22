@@ -1,7 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { FaceEnrollCapture } from "@/components/organisms/face/FaceEnrollCapture";
-import { FaceProbeDialog } from "@/components/organisms/face/FaceProbeDialog";
 import { apiError, mockApi } from "./utils";
 
 const toast = vi.hoisted(() => ({ warning: vi.fn(), success: vi.fn(), error: vi.fn() }));
@@ -39,22 +38,9 @@ describe("Kamera wajah di web", () => {
   });
   afterEach(() => vi.useRealTimers());
 
-  it("pendaftaran: dua tantangan dibuktikan server, lalu pose, lalu unggah dengan liveness bukti", async () => {
+  it("pendaftaran: empat pose dijepret lalu diunggah sekali (tanpa tantangan liveness)", async () => {
     stubCamera();
-    let n = 0;
-    const calls = mockApi((c) => {
-      if (c.url === "/face/challenge-check") {
-        n += 1;
-        const challenge = (c.data as Record<string, string>).challenge;
-        return {
-          data:
-            challenge === "depan"
-              ? { status: "sukses", detail: "ok", proof: null }
-              : { status: "sukses", detail: "ok", proof: `bukti-${n}` },
-        };
-      }
-      if (c.url === "/face/enroll") return { data: { enrolled: 4 } };
-    });
+    const calls = mockApi((c) => (c.url === "/face/enroll" ? { data: { enrolled: true, images_used: 4 } } : undefined));
     const onEnrolled = vi.fn();
     render(<FaceEnrollCapture onEnrolled={onEnrolled} />);
     fireEvent.click(screen.getByRole("button", { name: "Mulai Pendaftaran Wajah" }));
@@ -63,36 +49,24 @@ describe("Kamera wajah di web", () => {
     await waitFor(() => expect(onEnrolled).toHaveBeenCalledTimes(1));
     expect(screen.getByText("Wajah berhasil didaftarkan.")).toBeInTheDocument();
     expect(stopTrack).toHaveBeenCalled(); // kamera dimatikan setelah selesai
-
-    const checks = calls
-      .filter((c) => c.url === "/face/challenge-check")
-      .map((c) => (c.data as Record<string, string>).challenge);
-    expect(checks).toHaveLength(3); // 2 tantangan + 1 langkah meluruskan
-    expect(checks[2]).toBe("depan");
-    expect(new Set(checks.slice(0, 2)).size).toBe(2); // dua tantangan BERBEDA
-    expect(["kiri", "kanan", "atas", "bawah", "buka_mulut"]).toEqual(expect.arrayContaining(checks.slice(0, 2)));
-
-    const enroll = calls.find((c) => c.url === "/face/enroll")!.data as Record<string, unknown>;
+    expect(calls.map((c) => c.url)).toEqual(["/face/enroll"]);
+    const enroll = calls[0]!.data as Record<string, unknown>;
     expect(enroll.files).toHaveLength(4);
-    const liveness = JSON.parse(enroll.liveness as string);
-    expect(liveness.passed).toBe(true);
-    expect(liveness.proofs).toHaveLength(2); // bukti "depan" TIDAK ikut
-    expect(liveness.challenges).toEqual(checks.slice(0, 2));
+    expect(enroll.liveness).toBeUndefined();
   });
 
-  it("menampilkan petunjuk server saat gerakan belum cukup", async () => {
+  it("galat server pendaftaran ditampilkan dan bisa dicoba lagi", async () => {
     stubCamera();
-    let call = 0;
-    mockApi((c) => {
-      if (c.url !== "/face/challenge-check") return undefined;
-      call += 1;
-      return call === 1
-        ? { data: { status: "menunggu", detail: "Tengok lagi ke KIRI sedikit.", proof: null } }
-        : { data: { status: "sukses", detail: "ok", proof: `b${call}` } };
-    });
-    render(<FaceProbeDialog title="Verifikasi" onCancel={() => undefined} onDone={() => undefined} />);
-    fireEvent.click(screen.getByRole("button", { name: "Mulai Verifikasi Wajah" }));
-    await waitFor(() => expect(screen.getByTestId("face-hint")).toHaveTextContent("Tengok lagi ke KIRI sedikit."));
+    mockApi((c) =>
+      c.url === "/face/enroll" ? apiError(409, "FACE_DUPLICATE", "Wajah ini sudah terdaftar untuk karyawan lain.") : undefined,
+    );
+    const onEnrolled = vi.fn();
+    render(<FaceEnrollCapture onEnrolled={onEnrolled} />);
+    fireEvent.click(screen.getByRole("button", { name: "Mulai Pendaftaran Wajah" }));
+    await advance(8000);
+    expect(await screen.findByRole("alert")).toHaveTextContent("sudah terdaftar untuk karyawan lain");
+    expect(onEnrolled).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Coba Lagi" })).toBeInTheDocument();
   });
 
   it.each([
@@ -116,50 +90,5 @@ describe("Kamera wajah di web", () => {
     fireEvent.click(screen.getByRole("button", { name: "Mulai Pendaftaran Wajah" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("HTTPS");
     expect(getUserMedia).not.toHaveBeenCalled();
-  });
-
-  it("verifikasi absen: probe terunggah → onDone(probe_id)", async () => {
-    stubCamera();
-    const calls = mockApi((c) => {
-      if (c.url === "/face/challenge-check") return { data: { status: "sukses", detail: "ok", proof: "p" } };
-      if (c.url === "/face/probe") return { data: { probe_id: "probe-123" } };
-    });
-    const onDone = vi.fn();
-    render(<FaceProbeDialog title="Verifikasi" onCancel={() => undefined} onDone={onDone} />);
-    fireEvent.click(screen.getByRole("button", { name: "Mulai Verifikasi Wajah" }));
-    await advance(2000);
-    await waitFor(() => expect(onDone).toHaveBeenCalledWith("probe-123"));
-    const probe = calls.find((c) => c.url === "/face/probe")!.data as Record<string, unknown>;
-    expect(probe.file).toBeInstanceOf(Blob);
-    expect(JSON.parse(probe.liveness as string).passed).toBe(true);
-  });
-
-  it("face-service mati (503): absen tetap lanjut tanpa probe dan pengguna diberi tahu", async () => {
-    stubCamera();
-    mockApi((c) => {
-      if (c.url === "/face/challenge-check") return { data: { status: "sukses", detail: "ok", proof: "p" } };
-      if (c.url === "/face/probe") return apiError(503, "FACE_SERVICE_UNAVAILABLE", "Layanan wajah tidak tersedia.");
-    });
-    const onDone = vi.fn();
-    render(<FaceProbeDialog title="Verifikasi" onCancel={() => undefined} onDone={onDone} />);
-    fireEvent.click(screen.getByRole("button", { name: "Mulai Verifikasi Wajah" }));
-    await advance(2000);
-    await waitFor(() => expect(onDone).toHaveBeenCalledWith(null));
-    expect(toast.warning).toHaveBeenCalled();
-  });
-
-  it("galat server selain 503 ditampilkan dan bisa dicoba lagi", async () => {
-    stubCamera();
-    mockApi((c) => {
-      if (c.url === "/face/challenge-check") return { data: { status: "sukses", detail: "ok", proof: "p" } };
-      if (c.url === "/face/probe") return apiError(422, "FACE_NOT_DETECTED", "Wajah tidak terdeteksi pada gambar.");
-    });
-    const onDone = vi.fn();
-    render(<FaceProbeDialog title="Verifikasi" onCancel={() => undefined} onDone={onDone} />);
-    fireEvent.click(screen.getByRole("button", { name: "Mulai Verifikasi Wajah" }));
-    await advance(2000);
-    expect(await screen.findByRole("alert")).toHaveTextContent("Wajah tidak terdeteksi");
-    expect(onDone).not.toHaveBeenCalled();
-    expect(screen.getByRole("button", { name: "Coba Lagi" })).toBeInTheDocument();
   });
 });

@@ -91,6 +91,8 @@ void main() {
   setUpAll(() => initializeDateFormatting('id_ID'));
 
   setUp(() {
+    // Jam tetap 10.00 WIB: aturan jam absen tidak bergantung jam CI.
+    attendanceClock = () => DateTime.utc(2026, 10, 2, 3);
     // Swafoto absen selalu diminta (V2): uji tanpa plugin kamera.
     photoCaptureOverride = (_) async {
       final dir = await Directory.systemTemp.createTemp('vms-swafoto');
@@ -102,6 +104,7 @@ void main() {
   });
 
   tearDown(() async {
+    attendanceClock = DateTime.now;
     photoCaptureOverride = null;
     await db.close();
   });

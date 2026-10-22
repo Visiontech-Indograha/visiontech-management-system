@@ -133,7 +133,8 @@ void main() {
     for (var i = 0; i < 30; i++) {
       await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
       await tester.pump(const Duration(milliseconds: 50));
-      if (find.byType(CircularProgressIndicator).evaluate().isEmpty) break;
+      // Minimal ±0,5 dtk: di CI yang lambat indikator proses belum tentu sudah muncul di putaran awal.
+      if (i >= 10 && find.byType(CircularProgressIndicator).evaluate().isEmpty) break;
     }
     await tester.pumpAndSettle();
   }

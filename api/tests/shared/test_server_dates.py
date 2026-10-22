@@ -28,7 +28,7 @@ def test_clock_is_read_only_in_core_time():
 
 
 @requires_db
-def test_attendance_work_date_follows_the_organisation_timezone(client, world):
+def test_attendance_work_date_follows_the_organisation_timezone(client, world, fake_storage):
     # V2: absen wajib swafoto; tanggal kerja disimpan di attendance.attendance_date.
     buf = io.BytesIO()
     Image.new("RGB", (32, 32), (90, 90, 90)).save(buf, "PNG")

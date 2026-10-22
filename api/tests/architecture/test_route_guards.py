@@ -177,7 +177,7 @@ def _incident(client, world: World, plan_id: str, who: str):
 
 # ── Penjelasan absensi ────────────────────────────────────────────────────────────────────────
 @requires_db
-def test_only_the_owner_explains_an_attendance(client, world, other_world, fake_storage):
+def test_only_the_owner_explains_an_attendance(client, world, fake_storage):
     member = world.headers(client, "member")
     # Di luar radius + swafoto → NEEDS_REVIEW; hanya absensi yang menunggu pemeriksaan dapat dijelaskan (V-12).
     buf = io.BytesIO()
@@ -189,37 +189,31 @@ def test_only_the_owner_explains_an_attendance(client, world, other_world, fake_
     assert check_in.status_code == 200, check_in.text
     att_id = check_in.json()["id"]
 
-    for outsider in (world.headers(client, "leader"), world.headers(client, "admin"),
-                     other_world.headers(client, "member")):
+    for outsider in (world.headers(client, "leader"), world.headers(client, "admin")):
         response = client.post(f"/attendance/{att_id}/explain", headers=outsider, json={"explanation": "Titipan"})
         assert response.status_code == 404, response.text
-    assert sync_query("SELECT explanation FROM vms.attendance WHERE id = %s", (att_id,)) == [("Survei titik baru",)]
+    assert sync_query("SELECT out_of_radius_note FROM attendance WHERE attendance_id = %s", (att_id,)) == [("Survei titik baru",)]
 
     own = client.post(f"/attendance/{att_id}/explain", headers=member, json={"explanation": "GPS ponsel mati"})
     assert own.status_code == 200, own.text
-    assert sync_query("SELECT explanation FROM vms.attendance WHERE id = %s", (att_id,)) == [("GPS ponsel mati",)]
+    assert sync_query("SELECT out_of_radius_note FROM attendance WHERE attendance_id = %s", (att_id,)) == [("GPS ponsel mati",)]
 
 
 # ── Cron kedaluwarsa dokumen ──────────────────────────────────────────────────────────────────
-def _expired_current_document(world: World) -> str:
+def _expired_active_document(world: World) -> str:
     return str(sync_query(
-        "WITH _ctx AS (SELECT set_config('app.organization_id', %s, true)) "
-        "INSERT INTO vms.employee_document (employee_id, doc_type, number_masked, expiry_date, status, lifecycle, "
-        "uploaded_by) SELECT e.id, 'SIM A', '****1234', DATE '2026-01-01', 'VERIFIED', 'CURRENT', u.id "
-        "FROM vms.employee e JOIN vms.app_user u ON u.employee_id = e.id, _ctx WHERE e.id = %s RETURNING id",
-        (world.org_id, world.employees["member"]))[0][0])
+        "INSERT INTO employee_file (employee_id, type, path_file, status, active_at, expired_at) "
+        "VALUES (%s, 'SIM_A', 'uji/sim.png', 'active', DATE '2025-01-01', DATE '2026-01-01') "
+        "RETURNING employee_file_id", (world.employees["member"],))[0][0])
 
 
 @requires_db
-def test_document_expiry_cron_is_admin_only_and_stays_in_its_organisation(client, world, other_world):
-    own_doc, foreign_doc = _expired_current_document(world), _expired_current_document(other_world)
+def test_document_expiry_cron_is_admin_only(client, world):
+    doc = _expired_active_document(world)
 
     assert client.post("/documents/cron/expire-documents", headers=world.headers(client, "member")).status_code == 403
     assert client.post("/documents/cron/expire-documents", headers=world.headers(client, "hr")).status_code == 403
     response = client.post("/documents/cron/expire-documents", headers=world.headers(client, "admin"))
 
     assert response.status_code == 200, response.text
-    lifecycle = "SELECT lifecycle::text FROM vms.employee_document WHERE id = %s"
-    assert sync_query(lifecycle, (own_doc,)) == [("EXPIRED",)]
-    assert sync_query(lifecycle, (foreign_doc,)) == [("CURRENT",)]
-
+    assert sync_query("SELECT status::text FROM employee_file WHERE employee_file_id = %s", (doc,))         == [("not_active",)]

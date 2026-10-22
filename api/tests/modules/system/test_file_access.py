@@ -36,16 +36,15 @@ def _expect(client, world: World, file_id: str, allowed: set[str], denied: set[s
     assert got == {**dict.fromkeys(allowed, 200), **dict.fromkeys(denied, 404)}
 
 
-def test_personal_document_is_only_for_its_owner_and_hr(client, world, other_world, fake_storage):
+def test_personal_document_is_only_for_its_owner_and_hr(client, world, fake_storage):
     # HR mengunggah atas nama anggota: pemilik tetap boleh, pengunggah (HR) tetap boleh.
     file_id = _upload(client, world, "hr", (10, 20, 30))
     doc = client.post(f"/employees/{world.employees['member']}/documents", headers=world.headers(client, "hr"),
-                      json={"doc_type": "KTP", "number": "3201011234567890", "file_id": file_id})
+                      json={"doc_type": "KTP", "file_id": file_id})
     assert doc.status_code == 201, doc.text
 
     _expect(client, world, file_id, allowed={"member", "hr", "admin"},
-            denied={"leader", "pm", "ops", "finance", "asset"})
-    assert _status(client, other_world, "hr", file_id) == 404
+            denied={"leader", "pm", "ops"})
 
 
 def test_attendance_selfie_is_only_for_its_owner_and_reviewers(client, world, fake_storage):
@@ -54,9 +53,8 @@ def test_attendance_selfie_is_only_for_its_owner_and_reviewers(client, world, fa
         "site_id": world.site_id, "location": {"lat": -6.2, "lng": 106.8}, "selfie_file_id": file_id})
     assert check_in.status_code == 200, check_in.text
 
-    # swafoto terlihat oleh yang boleh melihat absensinya — pemilik, PM unitnya, Finance, OPS, dan Admin.
-    _expect(client, world, file_id, allowed={"member", "pm", "finance", "ops", "admin"},
-            denied={"leader", "hr", "asset"})
+    # swafoto terlihat oleh yang boleh melihat absensinya — pemilik & peninjau (PM, OM, HR/GA, admin).
+    _expect(client, world, file_id, allowed={"member", "pm", "hr", "ops", "admin"}, denied={"leader"})
 
 
 def test_daily_plan_attachment_follows_plan_visibility(client, world, other_world, fake_storage):
@@ -76,7 +74,7 @@ def test_unattached_upload_is_only_for_its_uploader(client, world, other_world, 
     file_id = _upload(client, world, "member", (100, 110, 120))
 
     _expect(client, world, file_id, allowed={"member"},
-            denied={"leader", "pm", "ops", "hr", "finance", "asset", "admin"})
+            denied={"leader", "pm", "ops", "hr", "admin"})
     assert _status(client, other_world, "member", file_id) == 404
     # Kontrak: jenis berkas dikirim server (magic bytes saat unggah), bukan ditebak klien dari URL.
     body = client.get(f"/files/{file_id}/url", headers=world.headers(client, "member")).json()
@@ -146,11 +144,11 @@ def test_upload_fails_and_leaves_no_record_when_storage_is_down(client, world, m
     import app.modules.system.controllers.files_controller as files_api
 
     monkeypatch.setattr(files_api, "upload_file", lambda name, data, content_type: False)
-    before = sync_query("SELECT count(*) FROM vms.file_object WHERE organization_id = %s", (world.org_id,))[0][0]
+    before = sync_query("SELECT count(*) FROM file_object WHERE office_id = %s", (world.org_id,))[0][0]
     res = client.post("/files/upload", headers=world.headers(client, "member"),
                       files={"file": ("catatan.pdf", b"%PDF-1.4 penyimpanan mati", "application/pdf")})
     assert res.status_code == 503 and res.json()["error"]["code"] == "STORAGE_UNAVAILABLE"
-    after = sync_query("SELECT count(*) FROM vms.file_object WHERE organization_id = %s", (world.org_id,))[0][0]
+    after = sync_query("SELECT count(*) FROM file_object WHERE office_id = %s", (world.org_id,))[0][0]
     assert after == before
 
 

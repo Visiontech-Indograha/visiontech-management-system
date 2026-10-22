@@ -115,8 +115,6 @@ describe("halaman detail karyawan (HR)", () => {
     expect(within(docType).getByRole("option", { name: "SIM A" })).toBeInTheDocument();
     expect(within(docType).getByRole("option", { name: "Lainnya…" })).toBeInTheDocument();
     fireEvent.change(within(dialog).getByLabelText(/Jenis dokumen/), { target: { value: "KTP" } });
-    fireEvent.change(within(dialog).getByLabelText(/Nomor dokumen/), { target: { value: "123" } });
-    
     // Simulate file upload
     const file = new File(["dummy content"], "test.png", { type: "image/png" });
     const fileInput = within(dialog).getByLabelText(/File/);
@@ -129,7 +127,7 @@ describe("halaman detail karyawan (HR)", () => {
     const posts = calls.filter((c) => c.method === "post");
     expect(posts[0].url).toBe("/files/upload");
     expect(posts[1].url).toBe("/employees/e1/documents");
-    expect(posts[1].data).toMatchObject({ doc_type: "KTP", number: "123", file_id: "f1" });
+    expect(posts[1].data).toMatchObject({ doc_type: "KTP", file_id: "f1" });  // V2: berkas tanpa nomor dokumen
   });
 
   it("ubah data mengirim PUT /employees/{id} dengan EmployeeUpdate V2", async () => {

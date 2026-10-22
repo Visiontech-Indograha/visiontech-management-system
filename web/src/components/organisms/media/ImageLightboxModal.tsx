@@ -4,18 +4,16 @@
  */
 
 import React, { useState } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/atoms/Dialog";
-import { Button } from "@/components/atoms/Button";
+import { Modal as Dialog, ModalContent as DialogContent, ModalHeader as DialogHeader, ModalTitle as DialogTitle } from "@/components/molecules/Modal";
+import { ActionButton as Button } from "@/components/molecules/ActionButton";
+import { ExternalLink as LinkTo } from "@/components/molecules/Links";
+import { ImageView } from "@/components/molecules/ImageView";
+import { TextBlock } from "@/components/molecules/TextBlock";
 import { toPreviewUrl, toDownloadUrl } from "@/lib/mediaUtils";
 import {
   Clock,
   Download,
-  ExternalLink,
+  ExternalLink as ExternalLinkIcon,
   ImageIcon,
   MapPin,
   RotateCw,
@@ -23,7 +21,7 @@ import {
   ZoomIn,
   ZoomOut,
   RotateCcw,
-} from "lucide-react";
+} from "@/components/molecules/Glyphs";
 
 interface ImageLightboxModalProps {
   isOpen: boolean;
@@ -121,7 +119,7 @@ export const ImageLightboxModal: React.FC<ImageLightboxModalProps> = ({
               <RotateCcw className="w-4 h-4" />
             </Button>
 
-            <a href={downloadUrl} download>
+            <LinkTo href={downloadUrl} download>
               <Button
                 variant="outline"
                 size="sm"
@@ -129,22 +127,22 @@ export const ImageLightboxModal: React.FC<ImageLightboxModalProps> = ({
               >
                 <Download className="w-4 h-4" />
               </Button>
-            </a>
-            <a href={previewUrl} target="_blank" rel="noopener noreferrer">
+            </LinkTo>
+            <LinkTo href={previewUrl} target="_blank" rel="noopener noreferrer">
               <Button
                 variant="ghost"
                 size="sm"
                 className="text-xs text-slate-400 hover:text-white hover:bg-slate-800 h-8 px-2"
               >
-                <ExternalLink className="w-4 h-4" />
+                <ExternalLinkIcon className="w-4 h-4" />
               </Button>
-            </a>
+            </LinkTo>
           </div>
         </DialogHeader>
 
         {/* Viewport Konten Gambar */}
         <div className="flex-1 w-full h-full relative overflow-auto flex items-center justify-center p-4 bg-slate-950">
-          <img
+          <ImageView
             src={previewUrl}
             alt={title}
             style={{
@@ -161,25 +159,25 @@ export const ImageLightboxModal: React.FC<ImageLightboxModalProps> = ({
                 {hasGps && (
                   <div className="flex items-center gap-1.5 text-sky-400 font-medium">
                     <MapPin className="w-4 h-4 text-sky-400 shrink-0" />
-                    <span>
+                    <TextBlock as="span">
                       {Number(gpsLat).toFixed(6)}, {Number(gpsLng).toFixed(6)}
-                    </span>
+                    </TextBlock>
                   </div>
                 )}
                 {timestamp && (
                   <div className="flex items-center gap-1.5">
                     <Clock className="w-4 h-4 text-emerald-400 shrink-0" />
-                    <span>{timestamp}</span>
+                    <TextBlock as="span">{timestamp}</TextBlock>
                   </div>
                 )}
                 {uploadedBy && (
                   <div className="flex items-center gap-1.5">
                     <User className="w-4 h-4 text-amber-400 shrink-0" />
-                    <span>{uploadedBy}</span>
+                    <TextBlock as="span">{uploadedBy}</TextBlock>
                   </div>
                 )}
               </div>
-              <span className="text-[11px] text-slate-500">Zoom: {Math.round(scale * 100)}%</span>
+              <TextBlock as="span" className="text-[11px] text-slate-500">Zoom: {Math.round(scale * 100)}%</TextBlock>
             </div>
           )}
         </div>

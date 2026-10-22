@@ -6,13 +6,10 @@
  */
 
 import React from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/atoms/Dialog";
-import { Button } from "@/components/atoms/Button";
+import { Modal as Dialog, ModalContent as DialogContent, ModalHeader as DialogHeader, ModalTitle as DialogTitle } from "@/components/molecules/Modal";
+import { ActionButton as Button } from "@/components/molecules/ActionButton";
+import { ExternalLink as LinkTo } from "@/components/molecules/Links";
+import { TextBlock } from "@/components/molecules/TextBlock";
 import {
   detectFileCategory,
   toDownloadUrl,
@@ -23,12 +20,12 @@ import { ImageLightboxModal } from "./ImageLightboxModal";
 import { PdfViewerModal } from "./PdfViewerModal";
 import {
   Download,
-  ExternalLink,
+  ExternalLink as ExternalLinkIcon,
   FileCheck,
   FileSpreadsheet,
   FileText,
   Presentation,
-} from "lucide-react";
+} from "@/components/molecules/Glyphs";
 
 export interface UniversalMediaModalProps {
   isOpen: boolean;
@@ -119,7 +116,7 @@ export const UniversalMediaModal: React.FC<UniversalMediaModalProps> = ({
           <DialogTitle className="text-base font-semibold text-white">
             {title || "Unduh Dokumen"}
           </DialogTitle>
-          <p className="text-xs text-slate-400">{getCategoryLabel()}</p>
+          <TextBlock as="p" className="text-xs text-slate-400">{getCategoryLabel()}</TextBlock>
         </DialogHeader>
 
         <div className="py-6 flex flex-col items-center justify-center text-center space-y-3">
@@ -127,27 +124,27 @@ export const UniversalMediaModal: React.FC<UniversalMediaModalProps> = ({
             {getDocIcon()}
           </div>
           <div className="max-w-xs">
-            <p className="text-sm font-medium text-slate-200 truncate" title={fileName}>
+            <TextBlock as="p" className="text-sm font-medium text-slate-200 truncate" title={fileName}>
               {fileName}
-            </p>
-            <p className="text-xs text-slate-400 mt-1">
+            </TextBlock>
+            <TextBlock as="p" className="text-xs text-slate-400 mt-1">
               Dokumen perkantoran memerlukan aplikasi lokal (Office/WPS/LibreOffice) untuk membuka format berkas ini secara utuh.
-            </p>
+            </TextBlock>
           </div>
         </div>
 
         <div className="flex flex-col gap-2 pt-2 border-t border-slate-800">
-          <a href={downloadUrl} download className="w-full">
+          <LinkTo href={downloadUrl} download className="w-full">
             <Button
               className="w-full bg-sky-600 hover:bg-sky-500 text-white font-medium h-10 gap-2 text-sm shadow-md"
             >
               <Download className="w-4 h-4" />
               Unduh Berkas Sekarang
             </Button>
-          </a>
+          </LinkTo>
 
           <div className="flex items-center gap-2">
-            <a
+            <LinkTo
               href={previewUrl}
               target="_blank"
               rel="noopener noreferrer"
@@ -157,10 +154,10 @@ export const UniversalMediaModal: React.FC<UniversalMediaModalProps> = ({
                 variant="outline"
                 className="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700 h-9 gap-1.5 text-xs"
               >
-                <ExternalLink className="w-3.5 h-3.5" />
+                <ExternalLinkIcon className="w-3.5 h-3.5" />
                 Buka di Tab Baru
               </Button>
-            </a>
+            </LinkTo>
             <Button
               variant="ghost"
               onClick={onClose}

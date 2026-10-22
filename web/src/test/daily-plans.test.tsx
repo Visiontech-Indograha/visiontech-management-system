@@ -2,8 +2,11 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { mockApi, renderRoute } from "./utils";
 
-/** Jadwal harian daily-first (M5): matriks tim × hari, buat dari sel kosong, ajukan/setujui, setujui minggu. */
+/** Jadwal harian daily-first (M5): kalender bulanan, klik tanggal → detail / buat jadwal, setujui, setujui minggu. */
 const todayIso = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(new Date());
+// Nama tombol tanggal di kalender: "<hari, tanggal bulan>: <n> jadwal" atau ": kosong".
+const dayLabel = new Intl.DateTimeFormat("id-ID", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" })
+  .format(new Date(`${todayIso}T00:00:00Z`));
 const options = {
   divisions: [{ division_id: "d1", name: "Sipil" }],
   teams: [
@@ -28,9 +31,10 @@ describe("Jadwal harian", () => {
       if (c.url === "/work-plans/daily/p1/approve") return { data: plan({ status: "APPROVED" }) };
     });
     renderRoute("/work-plans", { role: "PM" });
-    fireEvent.click(await screen.findByRole("button", { name: `Jadwal Tim Alpha ${todayIso}` }));
+    // Satu jadwal di tanggal itu → langsung detail lengkap.
+    fireEvent.click(await screen.findByRole("button", { name: `${dayLabel}: 1 jadwal` }));
     const dialog = await screen.findByRole("dialog");
-    fireEvent.click(within(dialog).getByRole("button", { name: "Setujui" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Setujui jadwal" }));
     await waitFor(() => expect(calls.some((c) => c.method === "post" && c.url === "/work-plans/daily/p1/approve")).toBe(true));
   });
 
@@ -47,13 +51,15 @@ describe("Jadwal harian", () => {
     );
   });
 
-  it("sel kosong membuka form buat jadwal untuk tim & tanggal itu", async () => {
+  it("tanggal kosong membuka form buat jadwal untuk tim & tanggal itu", async () => {
     mockApi((c) => {
       if (c.url === "/work-plans/daily") return { data: [] };
       if (c.url === "/work-plans/form-options") return { data: options };
     });
     renderRoute("/work-plans", { role: "PM" });
-    fireEvent.click(await screen.findByRole("button", { name: `Buat jadwal Tim Bravo ${todayIso}` }));
+    fireEvent.click(await screen.findByRole("button", { name: `${dayLabel}: kosong` }));
+    const day = await screen.findByRole("dialog");
+    fireEvent.click(within(day).getByRole("button", { name: /Tim Bravo/ }));
     const dialog = await screen.findByRole("dialog", { name: "Buat jadwal harian" });
     expect(within(dialog).getByLabelText("Tim")).toHaveValue("t2");
     expect(within(dialog).getByLabelText("Tanggal")).toHaveValue(todayIso);
@@ -62,7 +68,7 @@ describe("Jadwal harian", () => {
   it("pekerja lapangan tidak melihat tombol buat/persetujuan", async () => {
     mockApi((c) => (c.url === "/work-plans/daily" ? { data: [plan({ status: "APPROVED" })] } : undefined));
     renderRoute("/work-plans", { role: "field" });
-    expect(await screen.findByRole("button", { name: `Jadwal Tim Alpha ${todayIso}` })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: `${dayLabel}: 1 jadwal` })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Buat jadwal/ })).toBeNull();
     expect(screen.queryByRole("button", { name: /Setujui minggu ini/ })).toBeNull();
   });

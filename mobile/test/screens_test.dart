@@ -128,9 +128,13 @@ void main() {
   }
 
   Future<void> settle(WidgetTester tester) async {
-    await tester.runAsync(
-      () => Future<void>.delayed(const Duration(milliseconds: 100)),
-    );
+    // Beri waktu I/O nyata (berkas swafoto, DB lokal, unggah palsu) sampai indikator proses hilang,
+    // baru tunggu animasi selesai — rantai async V2 (kamera → unggah → kirim) lebih panjang dari 100 ms.
+    for (var i = 0; i < 30; i++) {
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+      await tester.pump(const Duration(milliseconds: 50));
+      if (find.byType(CircularProgressIndicator).evaluate().isEmpty) break;
+    }
     await tester.pumpAndSettle();
   }
 
@@ -141,7 +145,7 @@ void main() {
 
       expect(find.text('Lokasi a'), findsOneWidget);
       expect(find.text('Lokasi b'), findsOneWidget);
-      expect(find.text('1 dari 2 titik selesai'), findsNWidgets(2));
+      expect(find.textContaining('1 dari 2 pekerjaan selesai'), findsNWidgets(2));
       final q = backend.requests.firstWhere((r) => r.path.endsWith('/work-plans/daily')).queryParameters;
       expect(q.keys, containsAll(['start', 'end']));
     });

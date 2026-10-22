@@ -1,25 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/apiClient";
+import type { components } from "@/lib/apiTypes";
 
-export interface WorkCompletionOrder {
-  completion_id: string;
-  division_id?: string | null;
-  division_name?: string | null;
-  pm_id?: string | null;
-  pm_name?: string | null;
-  client_name: string;
-  project_title: string;
-  order_number?: string | null;
-  total_target_unit: number;
-  completed_unit?: number;
-  unit_measure: string;
-  order_status: "PENDING_CLIENT" | "ONGOING" | "URGENT" | "COMPLETED" | "CANCELLED";
-  priority_level: "NORMAL" | "HIGH" | "URGENT";
-  site_address?: string | null;
-  site_lat?: number | null;
-  site_lng?: number | null;
-  create_at?: string;
-}
+/** Satu pekerjaan klien — tipe dari skema API (`WorkCompletionOut`), bukan ditulis ulang. */
+export type WorkCompletionOrder = components["schemas"]["WorkCompletionOut"];
 
 export type WorkCompletion = WorkCompletionOrder;
 export type WorkCompletionListResponse = WorkCompletionOrder[];

@@ -54,8 +54,15 @@ const setup = (items: unknown[], extra?: (url: string) => { status?: number; dat
 const card = async () => screen.findByRole("region", { name: "Absen hari ini" });
 
 describe("Absen kantor lewat web (R-33)", () => {
-  beforeEach(() => stubLocation(OFFICE));
-  afterEach(() => vi.unstubAllGlobals());
+  beforeEach(() => {
+    stubLocation(OFFICE);
+    // Jam tetap 18.30 WIB — aturan jam absen (07.00 masuk, 19.00 batas pulang) tidak tergantung jam CI.
+    vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-10-02T11:30:00Z") });
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
 
   it("pekerja lapangan diarahkan ke aplikasi HP", async () => {
     setup([]);

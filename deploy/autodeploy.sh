@@ -9,6 +9,15 @@ set -uo pipefail
 
 BASE="${VMS_DEPLOY_DIR:-$HOME/deploy/vms-mvp}"
 BRANCH="${VMS_DEPLOY_BRANCH:-prod}"
+# Lingkungan (docs/40): prod & beta memakai skrip yang sama, beda variabel di <BASE>/deploy.env.
+#   prod: vms_api/vms_web, port 8000/8080, kanal APK stable · beta: vms_beta_api/…, port 8001/8081, kanal beta.
+[ -f "${VMS_DEPLOY_DIR:-$HOME/deploy/vms-mvp}/deploy.env" ] && . "${VMS_DEPLOY_DIR:-$HOME/deploy/vms-mvp}/deploy.env"
+BRANCH="${VMS_DEPLOY_BRANCH:-$BRANCH}"
+ENV_NAME="${VMS_ENV_NAME:-prod}"                 # prod | beta (judul Discord, kanal APK)
+PFX="${VMS_CONTAINER_PREFIX:-vms}"              # vms_api / vms_beta_api
+IMG="${VMS_IMAGE_PREFIX:-vms-mvp}"              # vms-mvp-api / vms-beta-api
+API_PORT="${VMS_API_PORT:-8000}"
+WEB_PORT="${VMS_WEB_PORT:-8080}"
 cd "$BASE" || exit 1
 exec 9>"$BASE/.autodeploy.lock"
 flock -n 9 || exit 0                       # deploy sebelumnya masih berjalan
@@ -99,7 +108,7 @@ step() { echo; echo "===== $(date '+%H:%M:%S') · $* ====="; echo "$*|$(date +%s
 wait_api_reaches_db() {                       # → 0 bila API benar-benar tersambung ke basis data
   local i
   for i in $(seq 1 12); do                    # maks ±60 dtk
-    if docker exec vms_api python -c "
+    if docker exec ${PFX}_api python -c "
 import asyncio, asyncpg
 from app.core.config import settings
 async def main():
@@ -116,7 +125,7 @@ asyncio.run(main())" >/dev/null 2>&1; then
 wait_api_reaches_minio() {                    # → 0 bila API benar-benar bisa memakai MinIO
   local i
   for i in $(seq 1 6); do                     # maks ±30 dtk
-    if docker exec vms_api python -c "
+    if docker exec ${PFX}_api python -c "
 from minio import Minio
 from app.core.config import settings as s
 host = s.MINIO_ENDPOINT.replace('http://', '').replace('https://', '')
@@ -135,7 +144,7 @@ db_hint() {
   echo "API tidak bisa mencapai basis data lewat DATABASE_URL di api.env."
   echo "Periksa sandi yang memuat karakter khusus (@ : / #) — WAJIB di-URL-encode ('@' → '%40')."
   echo "Pastikan port untuk host kontainer (vms_db_prod) adalah 5432, BUKAN 5433 (port host)."
-  docker exec vms_api python -c "
+  docker exec ${PFX}_api python -c "
 import os
 from sqlalchemy.engine import make_url
 for key in ('DATABASE_URL', 'MIGRATION_DATABASE_URL'):
@@ -161,7 +170,7 @@ fail() {
   FIELDS="Commit|1|[\`$SHORT\`]($GH_URL/commit/$NEW)${F}Oleh|1|$AUTHOR${F}Durasi|1|$(dur $(( $(date +%s) - T0 )))\
 ${F}Versi berjalan|0|\`${OLD:0:8}\` (sebelumnya) — kecuali tahap gagal setelah kontainer dinyalakan\
 ${F}Tahapan|0|$(stage_times)" \
-  discord "🔴 Deploy GAGAL — $1" 15158332 \
+  discord "🔴 [$ENV_NAME] Deploy GAGAL — $1" 15158332 \
 "**$SUBJECT**
 
 \`\`\`
@@ -173,7 +182,7 @@ $(tail -20 "$LOG" | cut -c1-150)
 }
 
 FIELDS="Branch|1|\`$BRANCH\`${F}Commit|1|[\`$SHORT\`]($GH_URL/commit/$NEW)${F}Oleh|1|$AUTHOR" \
-discord "🚀 Deploy dimulai — $SHORT" 3447003 \
+discord "🚀 [$ENV_NAME] Deploy dimulai — $SHORT" 3447003 \
 "**$SUBJECT**
 
 **Perubahan yang ikut:**
@@ -199,17 +208,21 @@ $CHANGES
   wait_api_reaches_minio || { minio_hint; exit 18; }
   step "Backup database (DB aplikasi → lokal + MinIO vms-backups)"
   ./backup.sh "pra-deploy-$SHORT" || exit 13
-  step "Migrasi database (alembic upgrade head)"
-  docker exec vms_api alembic upgrade head 2>&1 || exit 15
-  docker exec vms_api alembic current 2>&1 | tail -1
+  step "Migrasi database (Master Schema V2: migration_v3, idempoten)"
+  # V2 tidak memakai rantai alembic V1 (skema = db/06 + DDL idempoten di app/database/migration_v3.py).
+  docker exec ${PFX}_api python -c "
+import asyncio
+from app.database.migration_v3 import apply_v3_migrations
+asyncio.run(apply_v3_migrations())
+print('migrasi V2: selesai')" 2>&1 || exit 15
   step "Cek siap pakai (api, basis data, web, jalur /api, 3x berturut-turut)"
   ok=0
   for i in $(seq 1 24); do                     # maks ±2 menit
-    a=$(curl -s -o /dev/null -w '%{http_code}' localhost:8000/health)
-    r=$(curl -s -o /dev/null -w '%{http_code}' localhost:8000/ready)
-    w=$(curl -s -o /dev/null -w '%{http_code}' localhost:8080/)
-    p=$(curl -s -o /dev/null -w '%{http_code}' localhost:8080/api/v1/auth/me)
-    run=$(docker inspect -f '{{.State.Running}}' vms_api vms_web 2>/dev/null | sort -u | tr '\n' ' ')
+    a=$(curl -s -o /dev/null -w '%{http_code}' localhost:${API_PORT}/health)
+    r=$(curl -s -o /dev/null -w '%{http_code}' localhost:${API_PORT}/ready)
+    w=$(curl -s -o /dev/null -w '%{http_code}' localhost:${WEB_PORT}/)
+    p=$(curl -s -o /dev/null -w '%{http_code}' localhost:${WEB_PORT}/api/v1/auth/me)
+    run=$(docker inspect -f '{{.State.Running}}' ${PFX}_api ${PFX}_web 2>/dev/null | sort -u | tr '\n' ' ')
     if [ "$a" = 200 ] && [ "$r" = 200 ] && [ "$w" = 200 ] && [ "$p" = 401 ] && [ "$run" = "true " ]; then
       ok=$((ok+1)); [ "$ok" -ge 3 ] && break
     else ok=0; fi
@@ -218,7 +231,7 @@ $CHANGES
   echo "api=$a db=$([ "$r" = 200 ] && echo ok || echo "GAGAL($r)") web=$w jalur_api=$p stabil=$ok/3"
   [ "$ok" -ge 3 ] || exit 16
   for c in api web; do                           # pastikan yang berjalan memang image hasil build ini
-    [ "$(docker inspect -f '{{.Image}}' vms_$c)" = "$(docker image inspect -f '{{.Id}}' vms-mvp-$c)" ] || { echo "vms_$c bukan image terbaru"; exit 16; }
+    [ "$(docker inspect -f '{{.Image}}' ${PFX}_$c)" = "$(docker image inspect -f '{{.Id}}' ${IMG}-$c)" ] || { echo "${PFX}_$c bukan image terbaru"; exit 16; }
   done
   echo "image=terbaru"
   docker image prune -f >/dev/null 2>&1
@@ -234,15 +247,15 @@ esac
 
 echo "$NEW" > "$LAST_FILE"
 TOOK=$(( $(date +%s) - T0 ))
-MIG=$(grep -E "Running upgrade" "$LOG" | sed 's/.*Running upgrade /• /' | cut -c1-120)
+MIG=$(grep -E "^migrasi V2:" "$LOG" | tail -1)
 HEALTH=$(grep -E '^api=' "$LOG" | tail -1)
 BACKUP=$(grep -E '^minio:' "$LOG" | tail -1 | sed -E 's/^minio: *//')
 FIELDS="Commit|1|[\`$SHORT\`]($GH_URL/commit/$NEW)${F}Oleh|1|$AUTHOR${F}Total waktu|1|$(dur "$TOOK")\
 ${F}Kesehatan|0|\`$HEALTH\`\
-${F}Basis data|0|${MIG:-Tidak ada migrasi baru} · versi \`$(grep -E '\(head\)' "$LOG" | tail -1 | cut -d' ' -f1)\`\
+${F}Basis data|0|${MIG:-—}\
 ${F}Backup sebelum deploy|0|\`${BACKUP:-—}\`\
 ${F}Tahapan|0|$(stage_times)" \
-discord "✅ Siap dipakai — $SHORT" 3066993 \
+discord "✅ [$ENV_NAME] Siap dipakai — $SHORT" 3066993 \
 "**$SUBJECT**
 
 Server sudah lolos cek siap pakai (API, basis data, web, dan jalur \`/api\` sehat 3× berturut-turut; kontainer memakai image terbaru).
@@ -320,6 +333,13 @@ Silakan pasang Flutter SDK di server atau bangun rilis dari laptop dengan \`scri
     extra_args="-PallowDebugSigning=true"
   fi
 
+  # Beta: paket .beta ("Visiontech Beta", terpasang berdampingan dengan prod) & kanal pembaruan beta.
+  local beta_args=""
+  if [ "$ENV_NAME" = "beta" ]; then
+    export VMS_BETA=1
+    beta_args="--dart-define=VMS_BETA=true --dart-define=UPDATE_CHANNEL=beta"
+  fi
+
   mkdir -p "$rilis_dir"
   local build_ok=0
   (
@@ -327,10 +347,10 @@ Silakan pasang Flutter SDK di server atau bangun rilis dari laptop dengan \`scri
     "$flutter_bin" pub get || exit 31
     "$flutter_bin" build apk --release --split-per-abi --target-platform android-arm,android-arm64 \
       --build-name "$name" --build-number "$build" -Pforce-version-code-ignoring-abi=true \
-      --dart-define=API_BASE_URL="$APP_URL" $extra_args || exit 32
+      --dart-define=API_BASE_URL="$APP_URL" $beta_args $extra_args || exit 32
     "$flutter_bin" build apk --release --target-platform android-arm,android-arm64 \
       --build-name "$name" --build-number "$build" \
-      --dart-define=API_BASE_URL="$APP_URL" $extra_args || exit 33
+      --dart-define=API_BASE_URL="$APP_URL" $beta_args $extra_args || exit 33
   ) > "$mobile_log" 2>&1 && build_ok=1
 
   local dur_build

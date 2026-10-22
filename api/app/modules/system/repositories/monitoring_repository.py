@@ -44,17 +44,17 @@ class CRUDMonitoring(CRUDBase):
                 """
             SELECT CAST(e.employee_id AS text) AS employee_id, e.full_name,
                    count(*) FILTER (
-                       WHERE a.is_within_attendance_radius = TRUE OR a.om_approval_status = 'APPROVED'
+                       WHERE a.is_within_attendance_radius = TRUE OR a.om_approval_status = 'APPROVED_BY_OM'
                    ) AS days_present,
                    count(*) FILTER (WHERE a.is_within_attendance_radius = TRUE) AS auto_valid,
                    count(*) FILTER (
-                       WHERE a.is_within_attendance_radius = FALSE AND a.om_approval_status = 'PENDING'
+                       WHERE a.is_within_attendance_radius = FALSE AND a.om_approval_status = 'PENDING_OM'
                    ) AS needs_review,
                    count(*) FILTER (
-                       WHERE a.is_within_attendance_radius = FALSE AND a.om_approval_status = 'APPROVED'
+                       WHERE a.is_within_attendance_radius = FALSE AND a.om_approval_status = 'APPROVED_BY_OM'
                    ) AS approved,
                    count(*) FILTER (
-                       WHERE a.is_within_attendance_radius = FALSE AND a.om_approval_status = 'REJECTED'
+                       WHERE a.is_within_attendance_radius = FALSE AND a.om_approval_status = 'REJECTED_BY_OM'
                    ) AS rejected
             FROM attendance a
             JOIN employee e ON e.employee_id = a.employee_id
@@ -102,8 +102,8 @@ class CRUDMonitoring(CRUDBase):
                    a.clock_out_at AS check_out_at,
                    CASE
                        WHEN a.is_within_attendance_radius = TRUE THEN 'AUTO_VALID'
-                       WHEN a.om_approval_status = 'APPROVED' THEN 'APPROVED'
-                       WHEN a.om_approval_status = 'REJECTED' THEN 'REJECTED'
+                       WHEN a.om_approval_status = 'APPROVED_BY_OM' THEN 'APPROVED'
+                       WHEN a.om_approval_status = 'REJECTED_BY_OM' THEN 'REJECTED'
                        ELSE 'NEEDS_REVIEW'
                    END AS status,
                    (a.clock_in_at::time > a.scheduled_in) AS is_late,

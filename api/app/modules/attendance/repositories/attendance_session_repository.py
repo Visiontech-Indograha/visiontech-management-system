@@ -563,6 +563,7 @@ class AttendanceSessionRepository(BaseRepository):
         # Normalize status filter jika berasal dari frontend ('NEEDS_REVIEW' -> 'PENDING_OM' atau mapping sebaliknya)
         params = {
             "viewer": str(viewer_user_id),
+            "view_all": view_all,
             "emp": str(employee_id) if employee_id else None,
             "date_from": date_from,
             "date_to": date_to,
@@ -574,6 +575,17 @@ class AttendanceSessionRepository(BaseRepository):
 
         where_clauses = [
             "a.delete_at IS NULL",
+            # Peninjau (sama dengan can_review) & pemegang VIEW_ALL melihat semua; pekerja lapangan hanya miliknya.
+            """(
+                CAST(:view_all AS boolean)
+                OR EXISTS (
+                    SELECT 1 FROM users v WHERE v.user_id = CAST(:viewer AS uuid)
+                      AND v.system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'PROJECT_MANAGER', 'ADMIN_HR_GA')
+                )
+                OR a.employee_id IS NOT DISTINCT FROM (
+                    SELECT u.employee_id FROM users u WHERE u.user_id = CAST(:viewer AS uuid)
+                )
+            )""",
             "(CAST(:emp AS uuid) IS NULL OR a.employee_id = CAST(:emp AS uuid))",
             """(
                 CAST(:scope AS text) = 'all'

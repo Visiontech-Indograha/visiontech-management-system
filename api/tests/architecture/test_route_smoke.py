@@ -59,10 +59,8 @@ def test_route_requires_login(client, method: str, path: str):
 
 
 @requires_db
-@pytest.mark.parametrize(("method", "path"), ROUTES)
+@pytest.mark.parametrize(("method", "path"), [r for r in ROUTES if r not in STREAMING_ROUTES])
 def test_route_never_crashes_for_admin(client, make_user, method: str, path: str):
-    if (method, path) in STREAMING_ROUTES:
-        pytest.skip("aliran SSE tak berujung; diuji manual (E2E T8)")
     headers = login_headers(client, make_user("ADMIN"))
 
     response = client.request(method, _concrete(path), json={}, headers=headers)

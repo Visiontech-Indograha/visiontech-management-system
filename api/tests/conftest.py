@@ -340,90 +340,11 @@ def fake_storage(monkeypatch) -> dict[str, bytes]:
 
 
 
-# ── Uji fitur V1 (skema `vms`) di DB Master Schema V2 ─────────────────────────────────────────────
-# DB uji worktree ini murni V2 (tanpa skema `vms`). Uji yang gagal HANYA karena tabel `vms.*` tidak ada
-# ditandai "dilewati" dengan alasan jelas, bukan disembunyikan; kegagalan lain tetap tampil apa adanya.
-# Fitur V1 ditulis ulang ke V2 bertahap — setelah itu ujinya diperbarui dan penanda ini tidak lagi kena.
-_V1_MARKERS = (
-    'relation "vms.', "schema \"vms\"", 'relation "login_attempt"',
-    # peran FINANCE/ASSET dihapus di V2 (keputusan pemilik 2026-10-20) & dunia uji tak lagi membuatnya
-    'system_role_enum: "FINANCE"', 'system_role_enum: "ASSET"', "'finance'", "'asset'",
-    # role DB & RLS skema lama (vms_api, app_user) tidak ada di Master Schema V2
-    'set role "vms_api"', "NO_RLS_TENANT_TABLES: ['app_user']",
-)
-
-
-def _is_v1_only(exc: BaseException | None) -> bool:
-    seen: set[int] = set()
-    while exc is not None and id(exc) not in seen:
-        seen.add(id(exc))
-        if any(m in str(exc) for m in _V1_MARKERS):
-            return True
-        exc = exc.__cause__ or exc.__context__
-    return False
-
-
-@pytest.hookimpl(hookwrapper=True)
-def pytest_runtest_makereport(item: pytest.Item, call: pytest.CallInfo[None]):  # type: ignore[no-untyped-def]
-    outcome = yield
-    report = outcome.get_result()
-    if report.failed and call.excinfo is not None and _is_v1_only(call.excinfo.value):
-        report.outcome = "skipped"
-        report.longrepr = (str(item.path), item.location[1] or 0,
-                           "Skipped: menguji tabel V1 (skema vms) yang tidak ada di Master Schema V2 — perlu ditulis ulang")
-
-
-# Uji yang masih mengharapkan aturan V1 (swafoto opsional, tanpa kantor utama, kode galat & pesan lama,
-# peran DB `vms_api`). Aturan V2 sudah berbeda; ditandai xfail (tidak ketat) sampai ditulis ulang — docs/40.
-_V1_EXPECTATIONS = {
-    "architecture/test_route_guards.py::test_only_the_owner_explains_an_attendance",
-    "core/test_rls_app_role.py::test_admin_never_sees_another_organisation_even_without_a_filter",
-    "core/test_rls_app_role.py::test_runtime_role_can_use_every_table_but_no_partition_directly",
-    "core/test_rls_app_role.py::test_runtime_role_is_not_superuser_owner_or_bypassing_rls",
-    "core/test_rls_app_role.py::test_without_request_context_nothing_is_visible",
-    "modules/attendance/test_attendance_channel.py::test_admin_without_employee_can_login_on_web_and_mobile",
-    "modules/attendance/test_attendance_channel.py::test_field_worker_rejected_on_web_and_accepted_on_mobile",
-    "modules/attendance/test_attendance_channel.py::test_me_and_employee_expose_attendance_mode_and_hr_can_change_it",
-    "modules/attendance/test_attendance_export.py::test_finance_exports_own_organisation_in_local_time",
-    "modules/attendance/test_attendance_hours.py::test_check_in_before_0700_is_rejected",
-    "modules/attendance/test_attendance_rules.py::test_check_out_keeps_the_status_and_the_server_decides_early_leave",
-    "modules/attendance/test_attendance_rules.py::test_device_time_is_ignored",
-    "modules/attendance/test_attendance_rules.py::test_gps_accuracy_at_the_limit_or_unknown_is_accepted",
-    "modules/attendance/test_attendance_rules.py::test_one_attendance_per_day_unless_the_previous_one_was_rejected",
-    "modules/attendance/test_attendance_rules.py::test_only_own_attendance_waiting_for_review_can_be_explained",
-    "modules/attendance/test_attendance_rules.py::test_outside_the_radius_needs_a_selfie",
-    "modules/attendance/test_attendance_rules.py::test_poor_gps_accuracy_is_rejected_with_a_reason",
-    "modules/attendance/test_attendance_rules.py::test_response_is_what_the_server_stored",
-    "modules/attendance/test_attendance_rules.py::test_review_rules",
-    "modules/employees/test_employee_account.py::test_account_shows_failed_logins_and_lock",
-    "modules/employees/test_employee_account.py::test_deactivate_revokes_access_and_reset_issues_new_password",
-    "modules/employees/test_employee_account.py::test_hr_creates_account_and_employee_can_log_in",
-    "modules/employees/test_employee_account.py::test_login_must_be_unique_and_valid",
-    "modules/employees/test_employee_account.py::test_only_account_managers_in_the_same_organisation",
-    "modules/employees/test_employee_list.py::test_duplicate_employee_number_is_a_friendly_error",
-    "modules/employees/test_employee_list.py::test_search_filter_and_paging",
-    "modules/employees/test_employee_restore.py::test_hr_archives_an_offboarded_employee_and_can_restore_it",
-    "modules/employees/test_employee_restore.py::test_restore_rules",
-    "modules/employees/test_flow_people.py::test_get_single_employee_for_direct_link",
-    "modules/employees/test_flow_people.py::test_hr_cannot_verify_document_they_uploaded",
-    "modules/employees/test_flow_people.py::test_r8_renewed_document_supersedes_the_old_one_when_verified",
-    "modules/employees/test_flow_people.py::test_site_and_attendance_day",
-    "modules/system/test_file_access.py::test_attendance_selfie_is_only_for_its_owner_and_reviewers",
-    "shared/test_server_dates.py::test_attendance_work_date_follows_the_organisation_timezone",
-}
-
-# Seluruh modul: fixture-nya masih absen dengan aturan V1 (kanal web/HP lama).
-_V1_MODULES = {"modules/attendance/test_attendance_list.py"}
-
-
 def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
     """Uji `async def` dijalankan lewat plugin anyio (backend asyncio) tanpa perlu penanda di tiap uji."""
     import inspect
 
     for item in items:
-        nid = item.nodeid.split("tests/", 1)[-1]
-        if nid in _V1_EXPECTATIONS or nid.split("::")[0] in _V1_MODULES:
-            item.add_marker(pytest.mark.xfail(reason="masih menguji aturan V1 — perlu ditulis ulang ke V2", strict=False))
         func = getattr(item, "function", None)
         if func is not None and inspect.iscoroutinefunction(func) and item.get_closest_marker("anyio") is None:
             item.add_marker(pytest.mark.anyio)

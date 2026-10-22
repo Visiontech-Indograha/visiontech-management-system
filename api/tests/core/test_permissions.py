@@ -1,7 +1,6 @@
 """
-T-03 · Satu sumber peran + peta izin (dok 03 §1, dok 08).
-Kode peran Python harus identik dengan enum `vms.role_code`; izin per peran mengikuti dok 03,
-kecuali OPS yang mengikuti `prototype/js/domain.js` `permissions.OPS` (V-07, dok 10 Bagian C).
+T-03 · Satu sumber peran + peta izin (Master Schema V2, docs/35 §1–§2).
+Kode peran Python (`SystemRole`) harus identik dengan enum `system_role_enum`; izin per peran tetap.
 """
 from __future__ import annotations
 
@@ -9,41 +8,47 @@ import uuid
 
 import pytest
 
-from app.core.permissions import BASE_PERMISSIONS, NO_GLOBAL_ROLE, Permission, RoleCode, get_role_permissions
+from app.core.permissions import BASE_PERMISSIONS, NO_GLOBAL_ROLE, Permission, SystemRole, get_role_permissions
 from tests.conftest import login_headers, requires_db, sync_query
 
 P = Permission
 
-EXPECTED_EXTRA: dict[RoleCode, set[Permission]] = {
-    # R-33 (menggantikan R-10): PM meninjau bawahan lapangan & mengelola lokasi proyek unitnya;
-    # Finance melihat semua, meninjau pekerja kantor, ekspor, lokasi kantor; OPS melihat semua & meninjau Finance.
-    RoleCode.PM: {P.CREATE_PLAN, P.PUBLISH_PLAN, P.VIEW_TIMELINE, P.REVIEW_ATTENDANCE, P.MANAGE_SITES},
-    RoleCode.HR: {P.MANAGE_USERS, P.VERIFY_DOCUMENTS, P.MANAGE_EMPLOYEE_DOCUMENTS},
-    RoleCode.FINANCE: {P.VIEW_ALL_ATTENDANCE, P.REVIEW_ATTENDANCE, P.EXPORT_ATTENDANCE, P.REVIEW_OVERTIME,
-                       P.MANAGE_SITES},
-    RoleCode.ASSET: {P.MANAGE_ASSETS},
-    RoleCode.OPS: {P.CREATE_PLAN, P.PUBLISH_PLAN, P.REVIEW_OVERTIME, P.VIEW_TIMELINE, P.VIEW_AUDIT,
-                   P.VIEW_ALL_ATTENDANCE, P.REVIEW_ATTENDANCE},
-    # Ketua/anggota berasal dari SK (is_plan_leader/is_plan_member), bukan peran global.
-    RoleCode.LEADER: set(),
-    RoleCode.MEMBER: set(),
+EXPECTED_EXTRA: dict[SystemRole, set[Permission]] = {
+    # OM membawahi divisi & PM: kelola master kantor dan divisi, lihat & tinjau semua absensi.
+    SystemRole.OPERATIONAL_MANAGER: {
+        P.CREATE_PLAN, P.PUBLISH_PLAN, P.REVIEW_OVERTIME, P.VIEW_ALL_ATTENDANCE, P.REVIEW_ATTENDANCE,
+        P.VIEW_TIMELINE, P.VIEW_AUDIT, P.VIEW_TEAMS, P.VIEW_MESS, P.VIEW_OFFBOARDING, P.MANAGE_SITES,
+        P.MANAGE_DIVISIONS,
+    },
+    # Lokasi proyek PM ada di jadwal harian (bukan master kantor) — tanpa MANAGE_SITES.
+    SystemRole.PROJECT_MANAGER: {
+        P.CREATE_PLAN, P.PUBLISH_PLAN, P.VIEW_TIMELINE, P.REVIEW_ATTENDANCE, P.MANAGE_TEAMS, P.VIEW_TEAMS,
+        P.VIEW_MESS, P.VIEW_OFFBOARDING, P.MANAGE_IMAGE_REQUIREMENTS,
+    },
+    # Admin HR/GA = HR + aset + mess + proses keluar (FINANCE/ASSET V1 digabung ke sini).
+    SystemRole.ADMIN_HR_GA: {
+        P.MANAGE_USERS, P.VERIFY_DOCUMENTS, P.MANAGE_EMPLOYEE_DOCUMENTS, P.MANAGE_ASSETS, P.MANAGE_MESS,
+        P.VIEW_MESS, P.MANAGE_OFFBOARDING, P.VIEW_OFFBOARDING, P.VIEW_TEAMS,
+    },
+    # Ketua/anggota tim mendapat wewenangnya dari keanggotaan tim, bukan peran global.
+    SystemRole.TEAM_LEADER: set(),
+    SystemRole.EMPLOYEE: set(),
 }
 
 
 @requires_db
-def test_role_codes_match_database_enum():
-    (labels,) = sync_query("SELECT enum_range(NULL::vms.role_code)::text[]")[0]
+def test_system_roles_match_database_enum():
+    (labels,) = sync_query("SELECT enum_range(NULL::system_role_enum)::text[]")[0]
 
-    assert {r.value for r in RoleCode} == set(labels)
+    assert [r.value for r in SystemRole] == list(labels)
 
 
-def test_admin_has_every_permission():
-    """Admin memiliki kuasa penuh atas seluruh perizinan sistem."""
-    assert set(get_role_permissions(RoleCode.ADMIN)) == {p.value for p in Permission}
+def test_super_admin_has_every_permission():
+    assert set(get_role_permissions(SystemRole.SUPER_ADMIN)) == {p.value for p in Permission}
 
 
 @pytest.mark.parametrize("role", list(EXPECTED_EXTRA))
-def test_role_permissions_follow_doc_03(role: RoleCode):
+def test_role_permissions_are_fixed(role: SystemRole):
     expected = {p.value for p in BASE_PERMISSIONS | EXPECTED_EXTRA[role]}
 
     assert set(get_role_permissions(role)) == expected
@@ -59,9 +64,9 @@ def test_unknown_role_gets_no_permissions(role: str):
 
 
 def test_only_hr_and_admin_may_touch_other_peoples_documents():
-    holders = {r for r in RoleCode if P.MANAGE_EMPLOYEE_DOCUMENTS.value in get_role_permissions(r)}
+    holders = {r for r in SystemRole if P.MANAGE_EMPLOYEE_DOCUMENTS.value in get_role_permissions(r)}
 
-    assert holders == {RoleCode.HR, RoleCode.ADMIN}
+    assert holders == {SystemRole.ADMIN_HR_GA, SystemRole.SUPER_ADMIN}
 
 
 @requires_db
@@ -72,9 +77,9 @@ def test_admin_reaches_permission_protected_endpoint(client, make_user):
 
 
 @requires_db
-@pytest.mark.parametrize("role", ["PM", "OPS", "FINANCE", "ASSET", None])
+@pytest.mark.parametrize("role", ["PM", "OPS", "LEADER", None])
 def test_other_peoples_documents_are_hidden_as_404(client, make_user, role):
-    """Dok 08: dokumen pribadi hanya pemilik & HR; yang lain 404, bukan 403."""
+    """Dokumen pribadi hanya pemilik & HR; yang lain 404, bukan 403."""
     response = client.get(
         f"/employees/{uuid.uuid4()}/documents", headers=login_headers(client, make_user(role))
     )
@@ -83,8 +88,7 @@ def test_other_peoples_documents_are_hidden_as_404(client, make_user, role):
 
 
 @requires_db
-def test_hr_gets_404_for_an_employee_outside_the_organisation(client, make_user):
-    """R-20: izin HR berlaku untuk karyawan organisasinya saja — id tak dikenal/asing → 404 (V-08)."""
+def test_hr_gets_404_for_an_unknown_employee(client, make_user):
     response = client.get(f"/employees/{uuid.uuid4()}/documents", headers=login_headers(client, make_user("HR")))
 
     assert response.status_code == 404, response.text

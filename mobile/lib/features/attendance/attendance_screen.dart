@@ -192,7 +192,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
   }
 
   Future<void> _checkIn() async {
-    final now = DateTime.now();
+    final now = attendanceClock();
     if (_wibHour(now) < 7) {
       _snack('Absensi masuk baru dibuka mulai pukul 07:00 WIB.');
       return;
@@ -288,7 +288,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
   }
 
   Future<void> _checkOut() async {
-    final now = DateTime.now();
+    final now = attendanceClock();
     if (_wibHour(now) >= 19) {
       _snack('Batas waktu absensi pulang mandiri telah ditutup pada pukul 19:00 WIB (Sistem auto check-out aktif).');
       return;
@@ -800,3 +800,6 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
 
 /// Jam sekarang di WIB (UTC+7, aturan jam absen server), bukan zona waktu perangkat.
 int _wibHour(DateTime now) => now.toUtc().add(const Duration(hours: 7)).hour;
+
+/// Jam untuk aturan jam absen (07.00 masuk, 19.00 batas pulang). Uji membekukannya agar tidak bergantung jam CI.
+DateTime Function() attendanceClock = DateTime.now;

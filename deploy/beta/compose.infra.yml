@@ -1,0 +1,38 @@
+# Infrastruktur BETA (docs/40): PostgreSQL & MinIO kembar prod (image sama), volume & jaringan terpisah.
+# Kredensial dari ~/deploy/vms-beta/infra.env (dibuat pasang-beta.sh, tidak masuk Git).
+name: vms-beta-infra
+services:
+  db:
+    image: vms-db:18
+    container_name: vms_db_beta
+    restart: always
+    env_file: ./infra.env            # POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB
+    volumes:
+      - vms_pgdata18_beta:/var/lib/postgresql
+    ports: ["127.0.0.1:5435:5432"]   # hanya lokal server (prod: 5433, uji: 5434)
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      betanet:
+        aliases: [db]
+  minio:
+    image: quay.io/minio/minio:latest
+    container_name: vms_minio_beta
+    restart: always
+    command: server /data --console-address ":9001"
+    env_file: ./infra.env            # MINIO_ROOT_USER, MINIO_ROOT_PASSWORD
+    volumes:
+      - vms_minio_data_beta:/data
+    ports: ["127.0.0.1:9002:9000", "127.0.0.1:9003:9001"]
+    networks:
+      betanet:
+        aliases: [minio]
+volumes:
+  vms_pgdata18_beta:
+  vms_minio_data_beta:
+networks:
+  betanet:
+    name: vms_beta_net

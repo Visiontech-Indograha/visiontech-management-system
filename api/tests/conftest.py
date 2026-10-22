@@ -28,7 +28,7 @@ use_test_database()   # harus sebelum app.* diimpor: pengaturan dibaca saat impo
 
 from app.core.config import settings
 from app.core.security import hash_password
-from app.db.session import SEARCH_PATH, AsyncSessionLocal, make_engine
+from app.database.session import SEARCH_PATH, AsyncSessionLocal, make_engine
 from app.main import API_PREFIX, app
 
 _UNSAFE = unsafe_test_database(settings.DATABASE_URL) or unsafe_test_storage(settings.MINIO_ENDPOINT)
@@ -67,7 +67,23 @@ def _face_enrollment_off() -> None:
 @pytest.fixture(scope="session", autouse=True)
 def _null_pool() -> None:
     # Setiap TestClient menjalankan event loop sendiri; koneksi asyncpg tidak boleh dipakai lintas loop.
-    AsyncSessionLocal.configure(bind=make_engine(poolclass=NullPool))
+    test_engine = make_engine(poolclass=NullPool)
+    AsyncSessionLocal.configure(bind=test_engine)
+    # `engine` global (health check, migrasi startup) juga tanpa pool, agar tidak mewarisi koneksi loop lama.
+    import app.database.migration_v3 as migration_v3
+    import app.database.session as db_session
+    db_session.engine = test_engine
+    migration_v3.engine = test_engine
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _main_office() -> None:
+    # Absen V2 butuh satu kantor utama (zona kota & uang makan); DB uji kosong belum punya.
+    if not _DB_OK or sync_query("SELECT 1 FROM office WHERE is_main_office AND delete_at IS NULL"):
+        return
+    sync_query(
+        "INSERT INTO office (name, address, latitude, longitude, is_main_office) "
+        "VALUES ('Kantor utama uji', 'Jl. Uji No. 1', -6.2000000, 106.8000000, TRUE) RETURNING office_id")
 
 
 def _sync_conn():
@@ -98,51 +114,81 @@ class SeededUser:
         return sync_query(sql, params)
 
 
+# Kantor utama seed Master Schema V2: akun tanpa karyawan memakai kantor ini sebagai "organisasi".
+MAIN_OFFICE_ID = "11111111-0000-4000-a000-000000000001"
+
+# Peran V1 lama di uji → system_role V2 (FINANCE & ASSET tidak ada di V2 — keputusan pemilik 2026-10-20).
+V2_ROLE = {
+    "ADMIN": "SUPER_ADMIN",
+    "OPS": "OPERATIONAL_MANAGER",
+    "PM": "PROJECT_MANAGER",
+    "LEADER": "TEAM_LEADER",
+    "HR": "ADMIN_HR_GA",
+    None: "EMPLOYEE",
+}
+
+
 @pytest.fixture
 def make_user() -> Iterator[Callable[..., SeededUser]]:
     """
-    Pabrik pengguna sekali pakai: `make_user("HR")`, `make_user(None)` (tanpa peran global).
-    Setiap pengguna mendapat organisasi sendiri; semuanya dihapus bersih setelah uji.
+    Pabrik akun sekali pakai: `make_user("HR")`, `make_user(None)` (karyawan biasa). Skema V2 mewajibkan
+    `users.employee_id`, jadi tiap akun mendapat karyawan uji di kantor utama (tanpa divisi).
+    Peran memakai kode lama (ADMIN/HR/PM/OPS/LEADER) atau langsung system_role V2. Dihapus bersih setelah uji.
     """
-    created: list[tuple[str, str]] = []
+    from tests.cleanup import purge_employees, purge_login_logs, purge_office
+
+    employees: list[str] = []
+    logins: list[str] = []
+    office: list[str] = []  # kantor uji milik fixture ini (dibuat saat akun pertama)
+
+    def _office() -> str:
+        if not office:
+            office.append(str(sync_query(
+                "INSERT INTO office (name, address, latitude, longitude) "
+                "VALUES (%s, 'Jl. Uji No. 1', -6.2000000, 106.8000000) RETURNING office_id",
+                (f"Kantor uji akun {uuid.uuid4().hex[:8]}",))[0][0]))
+        return office[0]
 
     def _make(role: str | None = "ADMIN") -> SeededUser:
-        login = f"uji-{uuid.uuid4().hex[:12]}@contoh.test"
+        tag = uuid.uuid4().hex[:12]
+        login = f"uji-{tag}@contoh.test"
         password = "KataSandiUji-123"
-        with _sync_conn() as conn, conn.cursor() as cur:
-            cur.execute("INSERT INTO vms.organization (name) VALUES ('Organisasi uji') RETURNING id")
-            org_id = cur.fetchone()[0]
-            cur.execute(
-                "INSERT INTO vms.app_user (organization_id, login, password_hash) VALUES (%s, %s, %s) RETURNING id",
-                (org_id, login, hash_password(password)),
-            )
-            user_id = cur.fetchone()[0]
-            if role:
-                cur.execute("INSERT INTO vms.user_role (user_id, role) VALUES (%s, %s)", (user_id, role))
-        created.append((str(org_id), login))
-        return SeededUser(str(org_id), str(user_id), login, password)
+        system_role = V2_ROLE.get(role, role)
+        employee_id = str(sync_query(
+            "INSERT INTO employee (office_id, full_name, employee_no, join_date) "
+            "VALUES (%s, %s, %s, '2026-01-05') RETURNING employee_id",
+            (_office(), f"Karyawan uji {tag}", f"UJI-{tag}"))[0][0])
+        employees.append(employee_id)
+        user_id = str(sync_query(
+            "INSERT INTO users (employee_id, username, email, password_hash, system_role) "
+            "VALUES (%s, %s, %s, %s, %s::system_role_enum) RETURNING user_id",
+            (employee_id, login.split("@")[0], login, hash_password(password), system_role))[0][0])
+        logins.append(login)
+        return SeededUser(_office(), user_id, login, password)
 
     try:
         yield _make
     finally:
-        with _sync_conn() as conn, conn.cursor() as cur:
-            for org_id, login in created:
-                cur.execute("DELETE FROM vms.login_attempt WHERE login = %s", (login,))
-                cur.execute("DELETE FROM vms.organization WHERE id = %s", (org_id,))
+        conn = _sync_conn()
+        try:
+            purge_employees(conn, employees)
+            purge_login_logs(conn, logins)
+            for office_id in office:
+                purge_office(conn, office_id)
+        finally:
+            conn.close()
 
 
 @pytest.fixture
 def seeded_user(make_user: Callable[..., SeededUser]) -> SeededUser:
-    """Pengguna ADMIN sekali pakai."""
     return make_user("ADMIN")
 
 
 def login_platform(login: str) -> str:
-    """R-33: aplikasi HP hanya untuk staf lapangan, web hanya untuk akun kantor — uji login lewat
-    klien yang sesuai jenis pekerja akun (seperti aplikasi sungguhan)."""
-    rows = sync_query("SELECT e.attendance_mode FROM vms.app_user u LEFT JOIN vms.employee e ON e.id = u.employee_id "
-                      "WHERE u.login = %s", (login,))
-    return "mobile" if rows and rows[0][0] == "FIELD" else "web"
+    """docs/35 §1: peran lapangan (TEAM_LEADER, EMPLOYEE) masuk lewat aplikasi HP, peran kantor lewat web —
+    uji login lewat klien yang sesuai, seperti aplikasi sungguhan."""
+    rows = sync_query("SELECT system_role::text FROM users WHERE email = %s AND delete_at IS NULL", (login,))
+    return "mobile" if rows and rows[0][0] in ("TEAM_LEADER", "EMPLOYEE") else "web"
 
 
 def login_headers(client: TestClient, user: SeededUser) -> dict[str, str]:
@@ -159,43 +205,49 @@ def client() -> Iterator[TestClient]:
         yield c
 
 
-# ── Dunia uji untuk alur per modul (V-02) ─────────────────────────────────────────────────────
+# ── Dunia uji untuk alur per modul (V-02), Master Schema V2 ──────────────────────────────────────
 WORLD_PASSWORD = "KataSandiDunia-123"
 
 
 class World:
-    """Satu organisasi lengkap: unit, lokasi, karyawan, dan pengguna per peran yang saling tertaut."""
+    """Satu kantor (office) lengkap: divisi, tim, karyawan, dan akun per peran yang saling tertaut.
 
-    def __init__(self, tag: str, org_id: str, unit_id: str, site_id: str):
+    `org_id` = office_id (organisasi di V2), `unit_id` = division_id, `team_id` = tim lapangan
+    (ketua = `leader`, anggota = `member`). V2 tidak punya tabel lokasi: `site_id` diisi office_id
+    (absen kantor memakai koordinat office)."""
+
+    def __init__(self, tag: str, org_id: str):
         self.tag = tag
         self.org_id = org_id
-        self.unit_id = unit_id
-        self.site_id = site_id
+        self.site_id = org_id
+        self.unit_id = ""
+        self.team_id = ""
         self.employees: dict[str, str] = {}  # nama peran → employee_id
-        self.logins: dict[str, str] = {}     # nama peran → login
+        self.users: dict[str, str] = {}      # nama peran → user_id
+        self.logins: dict[str, str] = {}     # nama peran → email login
         self._headers: dict[str, dict[str, str]] = {}
         self._password_hash = hash_password(WORLD_PASSWORD)
 
-    def add_unit(self, code: str) -> str:
-        return str(sync_query(
-            "INSERT INTO vms.business_unit (organization_id, code, name) VALUES (%s, %s, %s) RETURNING id",
-            (self.org_id, code, f"Unit uji {code}"))[0][0])
-
-    def add_person(self, who: str, role: str | None, unit_id: str | None = None, *, per_unit: bool = False) -> str:
-        """Karyawan + akun (+ peran global) di organisasi ini. → employee_id."""
-        unit = unit_id or self.unit_id
+    def add_person(self, who: str, role: str | None, unit_id: str | None = None, **_: object) -> str:
+        """Karyawan + akun di kantor ini. `role` = kode lama (ADMIN/HR/PM/OPS/LEADER/None) atau system_role V2."""
         self.employees[who] = str(sync_query(
-            "INSERT INTO vms.employee (organization_id, employee_no, full_name, position, unit_id, join_date) "
-            "VALUES (%s, %s, %s, 'Teknisi', %s, '2026-01-05') RETURNING id",
-            (self.org_id, f"UJI-{len(self.employees):02d}", f"Karyawan uji {who}", unit))[0][0])
+            "INSERT INTO employee (office_id, division_id, full_name, employee_no, join_date) "
+            "VALUES (%s, %s, %s, %s, '2026-01-05') RETURNING employee_id",
+            (self.org_id, unit_id or self.unit_id or None, f"Karyawan uji {who}",
+             f"UJI-{self.tag}-{len(self.employees):02d}"))[0][0])
         self.logins[who] = f"{who}-{self.tag}@contoh.test"
-        user_id = sync_query(
-            "INSERT INTO vms.app_user (organization_id, login, password_hash, employee_id) VALUES (%s, %s, %s, %s) RETURNING id",
-            (self.org_id, self.logins[who], self._password_hash, self.employees[who]))[0][0]
-        if role:
-            sync_query("INSERT INTO vms.user_role (user_id, role, unit_id) VALUES (%s, %s, %s)",
-                       (user_id, role, unit if per_unit else None))
+        self.users[who] = str(sync_query(
+            "INSERT INTO users (employee_id, username, email, password_hash, system_role) "
+            "VALUES (%s, %s, %s, %s, %s::system_role_enum) RETURNING user_id",
+            (self.employees[who], f"{who}-{self.tag}", self.logins[who], self._password_hash,
+             V2_ROLE.get(role, role)))[0][0])
         return self.employees[who]
+
+    def add_unit(self, name: str) -> str:
+        """Divisi tambahan dengan OM & PM dunia ini."""
+        return str(sync_query(
+            "INSERT INTO division (om_id, pm_id, name) VALUES (%s, %s, %s) RETURNING division_id",
+            (self.employees["ops"], self.employees["pm"], f"Divisi uji {name}"))[0][0])
 
     def headers(self, client: TestClient, who: str) -> dict[str, str]:
         if who not in self._headers:
@@ -206,45 +258,47 @@ class World:
         return self._headers[who]
 
 
-# peran di dunia uji → (peran global, apakah per unit)
+# peran di dunia uji → peran lama (dipetakan ke system_role V2 lewat V2_ROLE)
 _WORLD_PEOPLE = {
-    "admin": ("ADMIN", False),
-    "hr": ("HR", False),
-    "pm": ("PM", True),
-    "finance": ("FINANCE", False),
-    "asset": ("ASSET", False),
-    "ops": ("OPS", False),
-    "leader": (None, False),   # ketua & anggota berasal dari SK, bukan peran global
-    "member": (None, False),
+    "admin": "ADMIN",
+    "hr": "HR",
+    "pm": "PM",
+    "ops": "OPS",
+    "leader": "LEADER",
+    "member": None,
 }
 
 
 @contextlib.contextmanager
 def _build_world() -> Iterator[World]:
-    from tests.cleanup import purge_organization
+    from tests.cleanup import purge_login_logs, purge_office
 
     tag = uuid.uuid4().hex[:8]
-    org_id = str(sync_query("INSERT INTO vms.organization (name) VALUES (%s) RETURNING id", (f"Dunia uji {tag}",))[0][0])
+    org_id = str(sync_query(
+        "INSERT INTO office (name, address, latitude, longitude) "
+        "VALUES (%s, 'Jl. Uji No. 1', -6.2000000, 106.8000000) RETURNING office_id",
+        (f"Kantor uji {tag}",))[0][0])
     try:
-        unit_id = str(sync_query(
-            "INSERT INTO vms.business_unit (organization_id, code, name) VALUES (%s, 'CCTV_ACS', 'CCTV & ACS') RETURNING id",
-            (org_id,))[0][0])
-        site_id = str(sync_query(
-            # R-33: lokasi proyek milik unit uji — pekerja lapangan hanya absen di lokasi unitnya.
-            "INSERT INTO vms.site (organization_id, name, location, radius_m, unit_id) "
-            "VALUES (%s, 'Gudang uji', ST_GeogFromText('POINT(106.8 -6.2)'), 100, %s) RETURNING id",
-            (org_id, unit_id))[0][0])
-        built = World(tag, org_id, unit_id, site_id)
-        for who, (role, per_unit) in _WORLD_PEOPLE.items():
-            built.add_person(who, role, per_unit=per_unit)
+        built = World(tag, org_id)
+        for who, role in _WORLD_PEOPLE.items():
+            built.add_person(who, role)
+        built.unit_id = built.add_unit("CCTV & ACS")
+        sync_query("UPDATE employee SET division_id = %s WHERE office_id = %s", (built.unit_id, org_id))
+        built.team_id = str(sync_query(
+            "INSERT INTO team (office_id, division_id, leader_employee_id, name) "
+            "VALUES (%s, %s, %s, %s) RETURNING team_id",
+            (org_id, built.unit_id, built.employees["leader"], f"Tim uji {tag}"))[0][0])
+        for who in ("leader", "member"):
+            sync_query("INSERT INTO member (team_id, employee_id) VALUES (%s, %s)",
+                       (built.team_id, built.employees[who]))
         yield built
     finally:
         conn = _sync_conn()
         try:
-            purge_organization(conn, org_id)
+            purge_office(conn, org_id)
+            purge_login_logs(conn, list(built.logins.values()) if "built" in locals() else [])
         finally:
             conn.close()
-        sync_query("DELETE FROM vms.login_attempt WHERE login LIKE %s", (f"%-{tag}@contoh.test",))
 
 
 @pytest.fixture
@@ -275,14 +329,6 @@ def fake_storage(monkeypatch) -> dict[str, bytes]:
     monkeypatch.setattr(storage_core, "get_presigned_url", lambda name, expires=None: f"https://minio.uji/{name}")
 
     try:
-        import app.api.v1.endpoints.files as files_api
-
-        monkeypatch.setattr(files_api, "upload_file", upload)
-        monkeypatch.setattr(files_api, "get_presigned_url", lambda name, expires=None: f"https://minio.uji/{name}")
-    except (ImportError, AttributeError):
-        pass
-
-    try:
         import app.modules.system.controllers.files_controller as files_ctrl
 
         monkeypatch.setattr(files_ctrl, "upload_file", upload)
@@ -292,3 +338,18 @@ def fake_storage(monkeypatch) -> dict[str, bytes]:
 
     return stored
 
+
+
+def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
+    """Uji `async def` dijalankan lewat plugin anyio (backend asyncio) tanpa perlu penanda di tiap uji."""
+    import inspect
+
+    for item in items:
+        func = getattr(item, "function", None)
+        if func is not None and inspect.iscoroutinefunction(func) and item.get_closest_marker("anyio") is None:
+            item.add_marker(pytest.mark.anyio)
+
+
+@pytest.fixture
+def anyio_backend() -> str:
+    return "asyncio"

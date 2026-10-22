@@ -14,13 +14,13 @@ ENV_TEST_FILE = Path(__file__).resolve().parent.parent / ".env.test"
 
 
 def unsafe_test_database(url: str) -> str | None:
-    """None bila aman; selain itu alasan penolakan. Aman = host lokal (CI) atau nama DB berakhiran `_test`."""
+    """None bila aman; selain itu alasan penolakan. Aman = host lokal (CI) atau nama DB `*_test` / `test_*`."""
     parsed = urlparse(url.replace("+asyncpg", ""))
     host = (parsed.hostname or "").lower()
     name = parsed.path.lstrip("/")
-    if host in _LOCAL_HOSTS or name.endswith("_test"):
+    if host in _LOCAL_HOSTS or name.endswith("_test") or name.startswith("test_"):
         return None
-    return (f"DB uji '{name}' di {host}:{parsed.port or 5432} bukan DB lokal atau '*_test' — "
+    return (f"DB uji '{name}' di {host}:{parsed.port or 5432} bukan DB lokal, '*_test', atau 'test_*' — "
             "kemungkinan DB produksi. Set TEST_DATABASE_URL (lihat api/.env.test, docs/24 T0).")
 
 

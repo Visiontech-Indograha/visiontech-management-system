@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -77,7 +76,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       width: size,
       height: size,
       alignment: Alignment.center,
-      decoration: const BoxDecoration(color: VmsColors.gold, shape: BoxShape.circle),
+      decoration: const BoxDecoration(
+        color: VmsColors.gold,
+        shape: BoxShape.circle,
+      ),
       child: Text(
         initials,
         style: (textStyle ?? VmsTextStyles.title).copyWith(
@@ -124,47 +126,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     }
   }
 
-  Future<void> _toggleFaceConsent(bool grant) async {
-    setState(() => _faceLoading = true);
-    try {
-      final api = ref.read(syncEngineProvider).api;
-      // Teks & versi persetujuan MILIK SERVER: pengguna harus melihat kalimat yang benar-benar disetujui.
-      final policy = await api.facePolicy();
-      final version = '${policy['version']}';
-      if (grant) {
-        if (!mounted) return;
-        final ok = await showFaceConsentDialog(
-          context,
-          text: '${policy['text']}',
-          version: version,
-        );
-        if (!ok) return;
-      }
-      await api.setFaceConsent(
-        grant ? 'GRANTED' : 'WITHDRAWN',
-        policyVersion: version,
-      );
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(grant
-                ? 'Persetujuan biometrik wajah diberikan.'
-                : 'Persetujuan biometrik wajah dicabut.'),
-          ),
-        );
-      }
-      await _loadFaceState();
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(apiErrorMessage(e))),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _faceLoading = false);
-    }
-  }
-
   Future<void> _enrollFaceFlow() async {
     if (!mounted) return;
     setState(() => _isEnrolling = true);
@@ -172,7 +133,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       final out = await runFaceEnrollment(context, ref);
       if (!mounted) return;
       if (out.message != null) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(out.message!)));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(out.message!)));
       }
       if (out.ok) await _loadFaceState();
     } finally {
@@ -337,9 +299,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final name = (user?.username ?? '-').split('@').first;
 
     return Scaffold(
-      appBar: VmsTopBar(
-        trailing: _avatar(name, 44),
-      ),
+      appBar: VmsTopBar(trailing: _avatar(name, 44)),
       body: ListView(
         padding: safeListPadding(context),
         children: [
@@ -472,15 +432,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                     _faceLoading
                                         ? 'Memeriksa status...'
                                         : (_faceStatus?['enrolled'] == true
-                                            ? 'Wajah Terdaftar (Aktif)'
-                                            : (_faceStatus?['consent'] == 'GRANTED'
-                                                ? 'Izin Diberikan — Belum Ada Wajah'
-                                                : 'Persetujuan Belum Diberikan')),
+                                              ? 'Wajah Terdaftar (Aktif)'
+                                              : 'Belum Terdaftar'),
                                     style: VmsTextStyles.caption.copyWith(
                                       color: _faceStatus?['enrolled'] == true
                                           ? Accent.emerald.strong
                                           : VmsColors.neutral500,
-                                      fontWeight: _faceStatus?['enrolled'] == true
+                                      fontWeight:
+                                          _faceStatus?['enrolled'] == true
                                           ? FontWeight.w600
                                           : FontWeight.normal,
                                     ),
@@ -509,36 +468,22 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           ),
                         ],
                         const SizedBox(height: 12),
-                        if (_faceStatus?['consent'] != 'GRANTED') ...[
-                          OutlinedButton.icon(
-                            onPressed: _isEnrolling || _faceLoading
-                                ? null
-                                : () => _toggleFaceConsent(true),
-                            icon: const Icon(Icons.check_circle_outline_rounded),
-                            label: const Text('Beri Persetujuan Biometrik (v1.0)'),
-                          ),
-                        ] else ...[
+                        if (_faceStatus?['enrolled'] == true)
+                          Text(
+                            'Perlu daftar ulang (ganti wajah/HP)? Minta HR mengatur ulang pendaftaran wajah Anda.',
+                            style: VmsTextStyles.caption.copyWith(
+                              color: VmsColors.neutral500,
+                            ),
+                          )
+                        else if (_faceStatus?['required'] == true)
                           PrimaryAction(
-                            label: _faceStatus?['enrolled'] == true
-                                ? 'Daftar Ulang Wajah'
-                                : 'Daftarkan Wajah (3-5 Foto)',
+                            label: 'Daftarkan Wajah (4 Foto)',
                             icon: Icons.camera_alt_rounded,
                             busy: _isEnrolling,
-                            onTap: _isEnrolling || _faceLoading ? null : _enrollFaceFlow,
+                            onTap: _isEnrolling || _faceLoading
+                                ? null
+                                : _enrollFaceFlow,
                           ),
-                          const SizedBox(height: 6),
-                          Center(
-                            child: TextButton(
-                              onPressed: _isEnrolling || _faceLoading
-                                  ? null
-                                  : () => _toggleFaceConsent(false),
-                              child: Text(
-                                'Cabut Izin Biometrik',
-                                style: TextStyle(color: Accent.rose.strong, fontSize: 13),
-                              ),
-                            ),
-                          ),
-                        ],
                       ],
                     ),
                   ),

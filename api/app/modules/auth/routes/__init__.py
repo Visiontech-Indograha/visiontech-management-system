@@ -2,6 +2,7 @@
 Paket routing untuk modul auth.
 Menggabungkan rute login, profile, dan session ke router modular terpadu.
 """
+
 from fastapi import APIRouter
 
 from app.modules.auth.routes.auth_login_route import router as login_router
@@ -15,4 +16,3 @@ router.include_router(profile_router)
 router.include_router(session_router)
 
 __all__ = ["router"]
-

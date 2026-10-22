@@ -7,7 +7,7 @@ export function MyDocumentsPage() {
   return (
     <MyDocumentsTemplate
       employeeId={me?.employee_id ?? null}
-      canManage={!!me?.permissions.includes("upload:documents")}
+      canManage={!!me?.permissions.includes("manage:employee_documents")}
     />
   );
 }

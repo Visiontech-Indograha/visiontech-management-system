@@ -1,61 +1,33 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useRef, useState } from "react";
-import { useForm, useWatch } from "react-hook-form";
+import { useForm, useWatch, type Control, type UseFormRegister } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { z } from "zod";
-import { SelectField, TextAreaField, TextField } from "@/components/molecules/Field";
+import { TextField } from "@/components/molecules/Field";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { errorMessage } from "@/lib/errors";
-import { ATTENDANCE_MODE_LABEL } from "@/lib/attendanceModeLabels";
-import { useCreateEmployee, useUnits } from "@/services/employeeService";
+import { useCreateEmployee } from "@/services/employeeService";
 import { oversize, uploadForm } from "@/services/uploadService";
-import { ControlInput, ControlOption, FormBlock } from "@/components/molecules/FormBlock";
+import { ControlInput, FormBlock } from "@/components/molecules/FormBlock";
 import { FormErrorText } from "@/components/molecules/FormErrorText";
 import { DialogActions } from "@/components/molecules/DialogActions";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { Camera, Trash2, User } from "@/components/molecules/Glyphs";
+import { EmployeeFormFields } from "./EmployeeFormFields";
+import { employeeFormSchema, type EmployeeFormValues } from "@/lib/employeeForm";
 import { AvatarBlock, AvatarBlockFallback, AvatarBlockImage } from "@/components/molecules/AvatarBlock";
 
 const today = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(new Date());
 
-const optional = z.string().trim();
-
-const createSchema = z.object({
-  employee_no: z.string().trim().min(1, "No. karyawan wajib diisi."),
-  full_name: z.string().trim().min(1, "Nama lengkap wajib diisi."),
-  position: z.string().trim().min(1, "Jabatan wajib diisi."),
-  unit_id: z.string().min(1, "Pilih unit."),
-  join_date: z.string().min(1, "Tanggal bergabung wajib diisi."),
-  attendance_mode: z.enum(["FIELD", "OFFICE"]),
-  birth_date: optional,
-  email: z.union([z.literal(""), z.string().trim().email("Format email tidak valid.")]),
-  phone: optional,
-  address: optional,
-  // Kontak darurat (terstruktur)
-  emergency_name: optional,
-  emergency_relationship: optional,
-  emergency_phone: optional,
-  emergency_address: optional,
-});
-
+const createSchema = employeeFormSchema.and(
+  z.object({ address_line: z.string().trim(), city: z.string().trim(), postal_code: z.string().trim() }),
+);
 type CreateValues = z.infer<typeof createSchema>;
 
-const RELATIONSHIP_OPTIONS = [
-  "Istri",
-  "Suami",
-  "Orang Tua",
-  "Anak",
-  "Saudara",
-  "Kerabat",
-  "Teman",
-  "Lainnya",
-] as const;
-
-/** M2-03 · HR mendaftarkan karyawan baru lengkap dengan foto profil dan kontak darurat. */
+/** HR mendaftarkan karyawan baru V2: data kerja, foto, dan alamat pertama (opsional). */
 export function EmployeeCreateDialog({ onClose }: { onClose: () => void }) {
-  const units = useUnits();
   const create = useCreateEmployee();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -75,18 +47,14 @@ export function EmployeeCreateDialog({ onClose }: { onClose: () => void }) {
     defaultValues: {
       employee_no: "",
       full_name: "",
-      position: "",
-      unit_id: "",
+      office_id: "",
+      division_id: "",
+      position_id: "",
       join_date: today(),
-      attendance_mode: "FIELD",
-      birth_date: "",
-      email: "",
-      phone: "",
-      address: "",
-      emergency_name: "",
-      emergency_relationship: "Keluarga",
-      emergency_phone: "",
-      emergency_address: "",
+      pkwt_end_date: "",
+      address_line: "",
+      city: "",
+      postal_code: "",
     },
   });
 
@@ -139,38 +107,22 @@ export function EmployeeCreateDialog({ onClose }: { onClose: () => void }) {
         photo_file_id = await uploadForm(form);
       }
 
-      // Siapkan kontak darurat terstruktur jika diisi
-      const emergency_contacts =
-        v.emergency_name && v.emergency_phone
-          ? [
-              {
-                name: v.emergency_name,
-                relationship: v.emergency_relationship || "Keluarga",
-                phone: v.emergency_phone,
-                address: v.emergency_address || null,
-                is_primary: true,
-              },
-            ]
-          : undefined;
-
+      const hasAddress = !!(v.address_line && v.city && v.postal_code);
       const created = await create.mutateAsync({
         employee_no: v.employee_no,
         full_name: v.full_name,
-        position: v.position,
-        unit_id: v.unit_id || null,
+        office_id: v.office_id,
+        division_id: v.division_id || null,
+        position_id: v.position_id || null,
         join_date: v.join_date,
-        attendance_mode: v.attendance_mode,
-        birth_date: v.birth_date || null,
-        email: v.email || null,
-        phone: v.phone || null,
-        address: v.address || null,
-        photo_file_id: photo_file_id,
-        emergency_contacts,
+        pkwt_end_date: v.pkwt_end_date || null,
+        photo_file_id,
+        address: hasAddress ? { address_line: v.address_line, city: v.city, postal_code: v.postal_code } : null,
       });
 
       toast.success("Karyawan baru berhasil ditambahkan.");
       onClose();
-      navigate(`/directory/${created.id}`);
+      navigate(`/directory/${created.employee_id}`);
     } catch (err) {
       setFormError(errorMessage(err));
     } finally {
@@ -242,60 +194,15 @@ export function EmployeeCreateDialog({ onClose }: { onClose: () => void }) {
           </div>
         </div>
 
-        {/* Data Pokok */}
-        <TextBlock className="mb-2 font-semibold text-sm text-foreground">Data Pokok</TextBlock>
-        <TextField label="No. karyawan" error={errors.employee_no?.message} {...register("employee_no")} />
-        <TextField label="Nama lengkap" error={errors.full_name?.message} {...register("full_name")} />
-        <TextField label="Jabatan" error={errors.position?.message} {...register("position")} />
-        <SelectField label="Unit" error={errors.unit_id?.message} {...register("unit_id")}>
-          <ControlOption value="" disabled>
-            {units.isPending ? "Memuat unit..." : "Pilih unit"}
-          </ControlOption>
-          {units.data?.map((u) => (
-            <ControlOption key={u.id} value={u.id}>
-              {u.name}
-            </ControlOption>
-          ))}
-        </SelectField>
-        <TextField label="Tanggal bergabung" type="date" error={errors.join_date?.message} {...register("join_date")} />
-
-        <SelectField label="Absen lewat" error={errors.attendance_mode?.message} {...register("attendance_mode")}>
-          <ControlOption value="FIELD">{ATTENDANCE_MODE_LABEL.FIELD}</ControlOption>
-          <ControlOption value="OFFICE">{ATTENDANCE_MODE_LABEL.OFFICE}</ControlOption>
-        </SelectField>
-
-        {/* Data Pribadi */}
-        <TextBlock className="mt-6 mb-2 font-semibold text-sm text-foreground">Data Pribadi</TextBlock>
-        <TextField label="Tanggal lahir (opsional)" type="date" error={errors.birth_date?.message} {...register("birth_date")} />
-        <TextField label="Email (opsional)" type="email" error={errors.email?.message} {...register("email")} />
-        <TextField label="No. telepon (opsional)" error={errors.phone?.message} {...register("phone")} />
-        <TextAreaField label="Alamat (opsional)" error={errors.address?.message} {...register("address")} />
-
-        {/* Kontak Darurat */}
-        <TextBlock className="mt-6 mb-2 font-semibold text-sm text-foreground">Kontak Darurat (Opsional)</TextBlock>
-        <TextField
-          label="Nama kontak darurat"
-          error={errors.emergency_name?.message}
-          hint="Nama keluarga / kerabat yang dapat dihubungi"
-          {...register("emergency_name")}
+        <EmployeeFormFields
+          register={register as unknown as UseFormRegister<EmployeeFormValues>}
+          errors={errors}
+          control={control as unknown as Control<EmployeeFormValues>}
         />
-        <SelectField label="Hubungan" error={errors.emergency_relationship?.message} {...register("emergency_relationship")}>
-          {RELATIONSHIP_OPTIONS.map((rel) => (
-            <ControlOption key={rel} value={rel}>
-              {rel}
-            </ControlOption>
-          ))}
-        </SelectField>
-        <TextField
-          label="No. telepon darurat"
-          error={errors.emergency_phone?.message}
-          {...register("emergency_phone")}
-        />
-        <TextAreaField
-          label="Alamat kontak darurat (opsional)"
-          error={errors.emergency_address?.message}
-          {...register("emergency_address")}
-        />
+        <TextBlock className="mt-6 mb-2 font-semibold text-sm text-foreground">Alamat (Opsional)</TextBlock>
+        <TextField label="Alamat" error={errors.address_line?.message} {...register("address_line")} />
+        <TextField label="Kota" error={errors.city?.message} {...register("city")} />
+        <TextField label="Kode pos" error={errors.postal_code?.message} {...register("postal_code")} />
       </FormBlock>
     </VmsDialog>
   );

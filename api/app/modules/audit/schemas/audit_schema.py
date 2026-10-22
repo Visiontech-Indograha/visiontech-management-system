@@ -1,9 +1,36 @@
 """
-app/modules/audit/schemas/audit_schema.py
+app/schemas/audit.py
 
-Skema validasi permintaan dan respons log audit kejadian sistem.
-Mengikuti Panduan Standar Arsitektur API FastAPI Modular §5.4.
+Request and response schemas for system audit logs.
 """
-from app.schemas.audit import AuditEventListResponse, AuditEventResponse
+from datetime import datetime
+from typing import Any
+from uuid import UUID
 
-__all__ = ["AuditEventListResponse", "AuditEventResponse"]
+from pydantic import BaseModel
+
+
+class AuditEventResponse(BaseModel):
+    """
+    Schema for an individual audit event.
+    """
+    id: UUID
+    occurred_at: datetime
+    # Label pelaku tindakan audit
+    actor_label: str
+    action: str
+    entity_type: str
+    entity_id: UUID | None = None
+    detail: str | None = None
+    # Perubahan data secara spesifik jika ada
+    changes: dict[str, Any] | None = None
+
+
+class AuditEventListResponse(BaseModel):
+    """
+    Schema for paginated list of audit events.
+    """
+    items: list[AuditEventResponse]
+    total: int
+    page: int
+    size: int

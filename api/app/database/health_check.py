@@ -9,7 +9,7 @@ from __future__ import annotations
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
-import app.db.session as db_session
+import app.database.session as db_session
 from app.database.session import engine
 
 
@@ -24,8 +24,10 @@ async def check_database_health() -> bool:
             # Alembic membuat tabel version di schema `public`, bukan `vms`.
             # Periksa keduanya: skema aplikasi ada DAN migrasi sudah pernah dijalankan.
             schema_ok = await conn.scalar(
-                text("SELECT to_regclass('vms.organization') IS NOT NULL "
-                     "AND to_regclass('public.alembic_version') IS NOT NULL")
+                text(
+                    "SELECT (to_regclass('public.office') IS NOT NULL) "
+                    "AND (to_regclass('public.users') IS NOT NULL)"
+                )
             )
             return bool(schema_ok)
     except (OSError, SQLAlchemyError):

@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../features/attendance/attendance_screen.dart';
 import '../features/auth/auth_controller.dart';
 import '../features/auth/auth_state.dart';
 import '../features/auth/biometric_lock_screen.dart';
 import '../features/auth/login_screen.dart';
 import '../features/gallery/photo_gallery_screen.dart';
-import '../features/plans/work_plans_screen.dart';
+import '../features/plans/daily_plans_screen.dart';
 import '../features/profile/profile_screen.dart';
 import 'home_shell.dart';
 import 'splash_screen.dart';
@@ -79,7 +80,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: '/plans',
-                builder: (context, state) => const WorkPlansScreen(),
+                builder: (context, state) => const DailyPlansScreen(),
               ),
             ],
           ),
@@ -87,7 +88,8 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: '/gallery',
-                builder: (context, state) => const PhotoGalleryScreen(asTab: true),
+                builder: (context, state) =>
+                    const PhotoGalleryScreen(asTab: true),
               ),
             ],
           ),

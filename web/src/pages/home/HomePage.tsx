@@ -1,26 +1,26 @@
 import { useSession } from "@/stores/sessionStore";
 import { HomeTemplate } from "@/components/templates/home/HomeTemplate";
-import { useAttendanceToReview, useExpiringDocuments, usePendingDocuments } from "@/services/homeService";
-import { useWorkPlans } from "@/services/workPlanService";
+import { useAttendanceToReview, useExpiringDocuments } from "@/services/homeService";
+import { addDays, useDailyPlans, wibDate, weekStart } from "@/services/dailyPlanService";
 
-const WAITING = ["DRAFT", "PUBLISHED", "ACCEPTED", "APPEALED", "COMPLETION_REVIEW"];
-
-/** Beranda (R-12): sapaan, ringkasan angka, rencana kerja aktif, antrean dokumen — semua dari endpoint yang sudah ada. */
+/** Beranda (R-12, daily-first): sapaan, ringkasan jadwal minggu ini, jadwal aktif, dokumen kedaluwarsa. */
 export function HomePage() {
   const { me } = useSession();
   const perms = me?.permissions ?? [];
   const canReview = perms.includes("review:attendance");
-  const plans = useWorkPlans({ status: "", archived: false });
+  const canCreatePlan = perms.includes("create:plan");
+  const todayIso = wibDate();
+  const start = weekStart(todayIso);
+  const plans = useDailyPlans({ start, end: addDays(start, 6) });
   const toReview = useAttendanceToReview(canReview);
-  const canVerifyDocs = perms.includes("verify:documents");
-  const expiring = useExpiringDocuments(canVerifyDocs);
-  const pending = usePendingDocuments(canVerifyDocs);
+  const canManageDocs = perms.includes("manage:employee_documents");
+  const expiring = useExpiringDocuments(canManageDocs);
 
   const list = plans.data ?? [];
-  const running = list.filter((p) => p.status === "IN_PROGRESS");
-  const waiting = list.filter((p) => WAITING.includes(p.status) || p.pending_request);
-  const requests = list.filter((p) => p.pending_request);
-  const active = [...new Set([...requests, ...running, ...waiting])].slice(0, 6);
+  const running = list.filter((p) => p.status === "ONGOING");
+  const onToday = list.filter((p) => p.work_date === todayIso);
+  const waiting = list.filter((p) => p.status === "SUBMITTED");
+  const active = [...new Set([...running, ...onToday, ...waiting])].slice(0, 6);
   const today = new Intl.DateTimeFormat("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Jakarta" }).format(new Date());
 
   return (
@@ -30,16 +30,14 @@ export function HomePage() {
       stats={{
         running: { value: running.length, loading: plans.isPending },
         waiting: { value: waiting.length, loading: plans.isPending },
-        requests: { value: requests.length, loading: plans.isPending },
+        today: { value: onToday.length, loading: plans.isPending },
         toReview: { value: toReview.data, loading: toReview.isPending },
-        pending: { value: pending.data?.length, loading: pending.isPending },
         expiring: { value: expiring.data?.length, loading: expiring.isPending },
-        canCreatePlan: perms.includes("create:plan"),
+        canCreatePlan,
         canReview,
-        canVerifyDocs,
+        canManageDocs,
       }}
-      canVerifyDocs={canVerifyDocs}
-      pendingDocs={pending.data}
+      canManageDocs={canManageDocs}
       expiringDocs={expiring.data}
       plans={plans}
       active={active}

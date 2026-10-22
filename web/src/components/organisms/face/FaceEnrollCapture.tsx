@@ -1,14 +1,13 @@
-import { FaceCamera, type FaceLiveness } from "./FaceCamera";
+import { FaceCamera } from "./FaceCamera";
 import { enrollFace } from "@/services/faceService";
 
 const POSES = ["Hadap lurus ke kamera", "Tengok sedikit ke kiri", "Tengok sedikit ke kanan", "Tersenyum ke kamera"];
 
-/** Pendaftaran wajah lewat webcam (bukan pilih berkas): dua gerakan acak yang diperiksa SERVER, lalu beberapa pose. */
+/** Pendaftaran wajah lewat webcam (bukan pilih berkas): beberapa pose; server menolak bila bukan satu orang yang sama. */
 export function FaceEnrollCapture({ onEnrolled }: { onEnrolled: () => void }) {
-  const enroll = async (photos: Blob[], liveness: FaceLiveness) => {
+  const enroll = async (photos: Blob[]) => {
     const form = new FormData();
     photos.forEach((p, i) => form.append("files", p, `pose${i}.jpg`));
-    form.append("liveness", JSON.stringify(liveness));
     await enrollFace(form);
     onEnrolled();
   };

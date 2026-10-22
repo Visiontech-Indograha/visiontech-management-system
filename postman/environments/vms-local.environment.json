@@ -1,0 +1,67 @@
+{
+  "id": "e817e089-633d-4c3e-862d-b1086256c9a1",
+  "name": "VMS Local Environment",
+  "values": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:8000/api/v1",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "bearer_token",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "division_id",
+      "value": "33333333-0000-4000-a000-000000000001",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "team_id",
+      "value": "44444444-0000-4000-a000-000000000001",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "work_type_id",
+      "value": "71111111-0000-4000-a000-000000000001",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "test_completion_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "test_daily_plan_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "test_prereq_item_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "test_main_item_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "bom_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    }
+  ],
+  "_postman_variable_scope": "environment"
+}

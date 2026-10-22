@@ -4,17 +4,18 @@ app/modules/system/services/system_service.py
 Layanan logika bisnis untuk modul sistem (rilis aplikasi, sinkronisasi, pemantauan, pengelolaan berkas).
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §5.3.
 """
-from app.services.app_release_service import (
+
+from app.modules.system.services.app_release_service import (
     FILES_PATH,
 )
-from app.services.app_release_service import (
+from app.modules.system.services.app_release_service import (
     AppReleaseService as BaseAppReleaseService,
 )
-from app.services.file_service import FileService as BaseFileService
-from app.services.monitoring_service import (
+from app.modules.system.services.file_service import FileService as BaseFileService
+from app.modules.system.services.monitoring_service import (
     MonitoringService as BaseMonitoringService,
 )
-from app.services.sync_service import SyncService as BaseSyncService
+from app.modules.system.services.sync_service import SyncService as BaseSyncService
 
 
 class AppReleaseService(BaseAppReleaseService):
@@ -22,7 +23,7 @@ class AppReleaseService(BaseAppReleaseService):
 
 
 class SyncService(BaseSyncService):
-    """Layanan orkestrasi operasi sinkronisasi data luring."""
+    """Layanan orkestrasi operasi sinkronisasi data offline."""
 
 
 class MonitoringService(BaseMonitoringService):
@@ -40,4 +41,3 @@ __all__ = [
     "MonitoringService",
     "SyncService",
 ]
-

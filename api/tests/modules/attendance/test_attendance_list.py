@@ -22,11 +22,12 @@ OUTSIDE = {"lat": -6.3, "lng": 106.8}
 
 def _check_in(client, world: World, who: str, location=INSIDE) -> str:
     body = {"site_id": world.site_id, "location": location}
+    # V2: swafoto selalu wajib (docs/35 §5).
+    buf = io.BytesIO()
+    Image.new("RGB", (32, 32), (sum(map(ord, who)) % 255, 40, 200)).save(buf, "PNG")
+    body["selfie_file_id"] = client.post("/files/upload", headers=world.headers(client, who), files={
+        "file": ("s.png", buf.getvalue(), "image/png")}).json()["file_id"]
     if location is OUTSIDE:
-        buf = io.BytesIO()
-        Image.new("RGB", (32, 32), (sum(map(ord, who)) % 255, 40, 200)).save(buf, "PNG")
-        body["selfie_file_id"] = client.post("/files/upload", headers=world.headers(client, who), files={
-            "file": ("s.png", buf.getvalue(), "image/png")}).json()["file_id"]
         body["explanation"] = "Survei titik di luar lokasi"  # R-33: wajib di luar zona
     response = client.post("/attendance/check-in", headers=world.headers(client, who), json=body)
     assert response.status_code == 200, response.text

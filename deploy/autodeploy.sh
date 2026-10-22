@@ -36,6 +36,24 @@ if [ ! -d src/.git ]; then
   git -C src rev-parse HEAD > "$LAST_FILE"
 fi
 git -C src fetch -q origin "$BRANCH" || exit 1
+
+# APK dibangun & ditandatangani GitHub Actions (.github/workflows/apk.yml) → branch `rilis-apk-<env>`.
+# Dipasang tiap menit, terlepas dari deploy kode: APK dulu, latest.json terakhir (HP tidak melihat APK setengah jadi).
+install_apk_release() {
+  local ref="rilis-apk-$ENV_NAME" dir="$BASE/rilis/android" seen="$BASE/.last-apk" sha tmp
+  git -C src fetch -q origin "+refs/heads/$ref:refs/remotes/origin/$ref" 2>/dev/null || return 0
+  sha=$(git -C src rev-parse "origin/$ref")
+  [ "$sha" = "$(cat "$seen" 2>/dev/null)" ] && return 0
+  tmp=$(mktemp -d) && git -C src archive "origin/$ref" | tar -x -C "$tmp" || { rm -rf "$tmp"; return 0; }
+  mkdir -p "$dir"
+  for f in "$tmp"/*.apk; do [ -e "$f" ] && cp "$f" "$dir/.$(basename "$f").tmp" && mv "$dir/.$(basename "$f").tmp" "$dir/$(basename "$f")"; done
+  cp "$tmp/latest.json" "$dir/.latest.json.tmp" && mv "$dir/.latest.json.tmp" "$dir/latest.json"
+  rm -rf "$tmp"
+  echo "$sha" > "$seen"
+  echo "$(date '+%F %T') APK $ENV_NAME terpasang dari $ref (${sha:0:8})" >> "$LOGDIR/apk.log"
+}
+install_apk_release
+
 NEW=$(git -C src rev-parse "origin/$BRANCH")
 OLD=$(cat "$LAST_FILE" 2>/dev/null || echo "")
 [ "$NEW" = "$OLD" ] && exit 0
@@ -273,6 +291,8 @@ build_mobile() {
   t_mb0=$(date +%s)
 
   [ -d "$mobile_src" ] || return 0
+  # Bawaan: APK dibangun GitHub Actions & dipasang install_apk_release. Build di server hanya bila diminta.
+  [ "${VMS_BUILD_APK_ON_SERVER:-0}" = "1" ] || return 0
 
   local touched=0
   if [ -n "$OLD" ]; then

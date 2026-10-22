@@ -1,0 +1,115 @@
+# Build APK bertanda tangan untuk beta & prod (docs/40). Kunci rilis disimpan sebagai secret repo (privat):
+#   ANDROID_KEYSTORE_B64 (isi vms-release-2.jks, base64), ANDROID_STORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD
+# Hasil di-push ke branch `rilis-apk-<env>` (satu commit, ditimpa); autodeploy.sh di server mengambilnya lewat
+# kunci deploy yang sudah ada dan memasangnya ke folder pembaruan otomatis — server tidak butuh token tambahan.
+name: APK
+
+on:
+  push:
+    branches: [beta, prod]
+    paths: ["mobile/**", ".github/workflows/apk.yml"]
+  workflow_dispatch:
+    inputs:
+      env:
+        description: Lingkungan
+        type: choice
+        options: [beta, prod]
+        default: beta
+      wajib:
+        description: Wajibkan pembaruan (min_build = build ini)
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apk-${{ github.event.inputs.env || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      ENV_NAME: ${{ github.event.inputs.env || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.inputs.env || github.ref_name }}
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Pasang kunci tanda tangan (dari secret, tidak pernah dicetak)
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+          STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          [ -n "$KEYSTORE_B64" ] || { echo "Secret ANDROID_KEYSTORE_B64 belum diisi"; exit 1; }
+          echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.jks"
+          cat > mobile/android/key.properties <<EOF
+          storeFile=$RUNNER_TEMP/release.jks
+          storePassword=$STORE_PASSWORD
+          keyAlias=$KEY_ALIAS
+          keyPassword=$KEY_PASSWORD
+          EOF
+
+      - name: Build APK (${{ env.ENV_NAME }})
+        working-directory: mobile
+        run: |
+          if [ "$ENV_NAME" = beta ]; then
+            export VMS_BETA=1
+            URL=https://visiontech-bar.tail827174.ts.net:10000
+            EXTRA="--dart-define=VMS_BETA=true --dart-define=UPDATE_CHANNEL=beta"
+          else
+            URL=https://portal.visiontechindo.com
+            EXTRA=""
+          fi
+          flutter pub get
+          flutter build apk --release --split-per-abi --target-platform android-arm,android-arm64 \
+            -Pforce-version-code-ignoring-abi=true --dart-define=API_BASE_URL="$URL" $EXTRA
+
+      - name: Verifikasi tanda tangan = kunci rilis Visiontech & tulis latest.json
+        env:
+          WAJIB: ${{ github.event.inputs.wajib || 'false' }}
+        run: |
+          set -euo pipefail
+          APKSIGNER=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)/apksigner
+          WANT=$(grep -v '^#' deploy/android-release-cert.sha256 | tr -d '[:space:]')
+          VER=$(sed -n 's/^version:[[:space:]]*\([0-9][0-9.]*\)+\([0-9]*\).*/\1 \2/p' mobile/pubspec.yaml)
+          NAME=${VER% *}; BUILD=${VER#* }
+          PKG=com.visiontech.vms_mobile; [ "$ENV_NAME" = beta ] && PKG=$PKG.beta
+          OUT="$RUNNER_TEMP/rilis"; mkdir -p "$OUT"
+          FILES=""; SEP=""
+          for apk in mobile/build/app/outputs/flutter-apk/app-*-release.apk; do
+            ABI=$(basename "$apk" | sed 's/^app-\(.*\)-release\.apk$/\1/')
+            GOT=$("$APKSIGNER" verify --print-certs "$apk" | sed -n 's/.*certificate SHA-256 digest: //p' | head -1)
+            [ "$GOT" = "$WANT" ] || { echo "APK $ABI ditandatangani kunci lain ($GOT) — dibatalkan"; exit 1; }
+            DEST="vms-$NAME-$BUILD-$ABI.apk"; cp "$apk" "$OUT/$DEST"
+            SHA=$(sha256sum "$OUT/$DEST" | cut -d' ' -f1); SIZE=$(stat -c %s "$OUT/$DEST")
+            FILES="$FILES$SEP    {\"abi\": \"$ABI\", \"name\": \"$DEST\", \"sha256\": \"$SHA\", \"size\": $SIZE}"; SEP=$',\n'
+          done
+          MIN=1; [ "$WAJIB" = true ] && MIN=$BUILD
+          printf '{\n  "package": "%s",\n  "version_name": "%s",\n  "build": %s,\n  "min_build": %s,\n  "released_at": "%s",\n  "notes": ["%s"],\n  "files": [\n%s\n  ]\n}\n' \
+            "$PKG" "$NAME" "$BUILD" "$MIN" "$(TZ=Asia/Jakarta date -Iseconds)" \
+            "$(git log -1 --format=%s | sed 's/"/\\"/g')" "$FILES" > "$OUT/latest.json"
+          cat "$OUT/latest.json"
+          echo "OUT=$OUT" >> "$GITHUB_ENV"
+
+      - name: Terbitkan ke branch rilis-apk-${{ env.ENV_NAME }}
+        run: |
+          cd "$OUT"
+          git init -q -b "rilis-apk-$ENV_NAME"
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor }}@users.noreply.github.com"
+          git add -A && git commit -q -m "APK $ENV_NAME $(sed -n 's/.*"version_name": "\(.*\)".*/\1/p' latest.json) dari ${GITHUB_SHA::8}"
+          git push -q --force "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" "HEAD:rilis-apk-$ENV_NAME"

@@ -2,7 +2,8 @@
 # Pasang lingkungan BETA (docs/40) di server — kembar prod, data & jaringan terpisah. PROD HANYA DIBACA.
 #
 #   ./pasang-beta.sh siapkan   # folder, kredensial baru, DB & MinIO beta, env aplikasi, cron, Tailscale
-#   ./pasang-beta.sh data      # (setelah deploy beta pertama) salin data prod V1 → DB beta V2 & berkas MinIO
+#   ./pasang-beta.sh data      # (setelah deploy beta pertama) salin data prod V1 → DB beta V2, lalu berkas
+#   ./pasang-beta.sh berkas    # hanya salin ulang berkas MinIO prod → beta
 #
 # Aman diulang: berkas rahasia yang sudah ada tidak ditimpa; DB beta tidak diisi ulang bila sudah berisi.
 set -euo pipefail
@@ -99,26 +100,58 @@ EOF
 
 data() {
   cd "$BETA"
-  local prod_db prod_minio_key prod_minio_secret beta_pw minio_user minio_pw
-  prod_db=$(val DATABASE_URL "$PROD/api.env" | sed -E 's#\+asyncpg##; s#@[^/]+/#@127.0.0.1:5433/#')
+  local prod_db_name beta_pw
+  prod_db_name=$(val DATABASE_URL "$PROD/api.env" | sed -E 's#.*/([A-Za-z0-9_]+)(\?.*)?$#\1#')
   beta_pw=$(val POSTGRES_PASSWORD infra.env)
-  # 1) Data prod V1 → DB beta V2 (sumber hanya dibaca; skrip menolak bila beta sudah berisi karyawan).
+  # 1) Dump prod (pg_dump = hanya membaca, lewat soket kontainer) → DB sementara `sumber_v1` di kontainer BETA.
+  #    Superuser beta melewati RLS V1, jadi semua baris terbaca tanpa memakai kredensial prod.
+  docker exec vms_db_beta psql -U vms_app -d postgres -q -c "DROP DATABASE IF EXISTS sumber_v1" -c "CREATE DATABASE sumber_v1"
+  docker exec vms_db_prod sh -c "pg_dump -U \"\$POSTGRES_USER\" -d '$prod_db_name' -Fc" \
+    | docker exec -i vms_db_beta pg_restore -U vms_app -d sumber_v1 --no-owner --no-acl
+  # 2) sumber_v1 (V1) → vms_beta (V2); skrip menolak bila beta sudah berisi karyawan.
   docker run --rm --network host -v "$BETA/src/scripts:/s:ro" \
-    -e SUMBER_DSN="$prod_db" -e TUJUAN_DSN="postgresql://vms_app:${beta_pw}@127.0.0.1:5435/vms_beta" \
+    -e SUMBER_DSN="postgresql://vms_app:${beta_pw}@127.0.0.1:5435/sumber_v1" \
+    -e TUJUAN_DSN="postgresql://vms_app:${beta_pw}@127.0.0.1:5435/vms_beta" \
     vms-beta-api python /s/migrasi_v1_ke_v2.py
-  # 2) Berkas prod → MinIO beta (salinan; prod hanya dibaca).
+  docker exec vms_db_beta psql -U vms_app -d postgres -q -c "DROP DATABASE sumber_v1"
+  berkas
+}
+
+berkas() {
+  cd "$BETA"
+  local prod_minio_key prod_minio_secret minio_user minio_pw
+  # 3) Berkas prod → MinIO beta (salinan; prod hanya dibaca).
   prod_minio_key=$(val MINIO_ACCESS_KEY "$PROD/api.env"); prod_minio_secret=$(val MINIO_SECRET_KEY "$PROD/api.env")
   minio_user=$(val MINIO_ROOT_USER infra.env); minio_pw=$(val MINIO_ROOT_PASSWORD infra.env)
-  docker run --rm --network host --entrypoint sh quay.io/minio/mc -c "
-    mc alias set prod http://127.0.0.1:9000 '$prod_minio_key' '$prod_minio_secret' >/dev/null &&
-    mc alias set beta http://127.0.0.1:9002 '$minio_user' '$minio_pw' >/dev/null &&
-    for b in vms-files vms-bucket; do mc mb -p beta/\$b >/dev/null; mc mirror --overwrite prod/\$b beta/\$b; done"
+  # Klien MinIO Python dari image API beta (image `mc` resmi kini butuh login registri).
+  docker run --rm --network host -e PK="$prod_minio_key" -e PS="$prod_minio_secret" -e BK="$minio_user" \
+    -e BS="$minio_pw" --entrypoint python vms-beta-api -c '
+import io, os
+from minio import Minio
+prod = Minio("127.0.0.1:9000", access_key=os.environ["PK"], secret_key=os.environ["PS"], secure=False)
+beta = Minio("127.0.0.1:9002", access_key=os.environ["BK"], secret_key=os.environ["BS"], secure=False)
+for bucket in ("vms-files", "vms-bucket"):
+    if not beta.bucket_exists(bucket):
+        beta.make_bucket(bucket)
+    n = 0
+    for obj in prod.list_objects(bucket, recursive=True):
+        resp = prod.get_object(bucket, obj.object_name)
+        try:
+            data = resp.read()
+        finally:
+            resp.close(); resp.release_conn()
+        beta.put_object(bucket, obj.object_name, io.BytesIO(data), len(data),
+                        content_type=obj.content_type or "application/octet-stream")
+        n += 1
+    print(f"{bucket}: {n} berkas disalin")
+'
   docker restart vms_beta_api >/dev/null
-  echo "data beta selesai (DB & berkas = salinan prod saat ini)"
+  echo "berkas beta selesai (salinan MinIO prod saat ini)"
 }
 
 case "${1:-}" in
   siapkan) siapkan ;;
   data) data ;;
+  berkas) berkas ;;
   *) echo "pakai: $0 siapkan | data" >&2; exit 2 ;;
 esac

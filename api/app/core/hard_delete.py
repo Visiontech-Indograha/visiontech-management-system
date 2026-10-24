@@ -61,31 +61,30 @@ async def purge_row(db: AsyncSession, table: str, pk_column: str, row_id: UUID) 
 async def write_delete_audit(
     db: AsyncSession,
     *,
-    organization_id: str,
     actor_user_id: str,
-    actor_label: str,
+    actor_role: str,
+    actor_email: str,
     entity_type: str,
     entity_id: UUID,
     detail: dict[str, Any] | None = None,
     action: str = "HARD_DELETE",
 ) -> None:
-    """Catat siapa menghapus apa. Memakai savepoint agar kegagalan catatan tidak membatalkan hapusnya sendiri."""
+    """Catat siapa menghapus/mengubah apa di app_activity_logs (savepoint: gagal mencatat tidak membatalkan hapus)."""
     try:
         async with db.begin_nested():
             await db.execute(
                 text(
-                    "INSERT INTO audit_event (organization_id, actor_user_id, actor_label, action, entity_type, "
-                    "entity_id, changes) VALUES (CAST(:org AS uuid), CAST(:uid AS uuid), :label, :action, "
-                    ":etype, CAST(:eid AS uuid), CAST(:changes AS jsonb))"
+                    "INSERT INTO app_activity_logs (actor_user_id, actor_role, platform, action, entity_table, "
+                    "entity_id, changed_diff) VALUES (CAST(:uid AS uuid), :role, 'web_react', :action, :etype, "
+                    "CAST(:eid AS uuid), CAST(:diff AS jsonb))"
                 ),
                 {
-                    "org": organization_id,
                     "uid": actor_user_id,
-                    "label": actor_label,
+                    "role": actor_role[:30],
                     "action": action,
                     "etype": entity_type,
                     "eid": str(entity_id),
-                    "changes": json.dumps(detail or {}),
+                    "diff": json.dumps({"actor_email": actor_email, **(detail or {})}),
                 },
             )
     except Exception:

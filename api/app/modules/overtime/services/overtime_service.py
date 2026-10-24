@@ -41,8 +41,9 @@ class OvertimeService:
             raise NotFoundError("Lembur")
         await purge_row(self.db, "overtime", "overtime_id", overtime_id)
         await write_delete_audit(
-            self.db, organization_id=actor.organization_id, actor_user_id=actor.user_id,
-            actor_label=actor.email, entity_type="overtime", entity_id=overtime_id,
+            self.db, actor_user_id=actor.user_id,
+            actor_role=actor.role,
+            actor_email=actor.email, entity_type="overtime", entity_id=overtime_id,
         )
 
     async def report(self, user: CurrentUser, daily_plan_id: UUID, hours: float, reason: str) -> Any:

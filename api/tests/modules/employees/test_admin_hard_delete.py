@@ -39,6 +39,8 @@ def test_delete_employee_requires_super_admin_and_archive(client, world):
     assert done.json() == {"status": "deleted"}
     assert sync_query("SELECT count(*) FROM employee WHERE employee_id = %s", (employee_id,))[0][0] == 0
     assert sync_query("SELECT count(*) FROM users WHERE employee_id = %s", (employee_id,))[0][0] == 0
+    assert sync_query("SELECT count(*) FROM app_activity_logs WHERE entity_id = %s AND action = 'HARD_DELETE'",
+                      (employee_id,))[0][0] == 1
 
 
 def test_delete_account_keeps_employee_and_blocks_self(client, world):

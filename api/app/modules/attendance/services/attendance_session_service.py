@@ -569,8 +569,9 @@ class AttendanceSessionService:
             raise ValidationError("Tidak ada data yang diubah.")
         await self.repo.admin_update(attendance_id, fields)
         await write_delete_audit(
-            self.repo.db, organization_id=actor.organization_id, actor_user_id=actor.user_id,
-            actor_label=actor.email, entity_type="attendance", entity_id=attendance_id,
+            self.repo.db, actor_user_id=actor.user_id,
+            actor_role=actor.role,
+            actor_email=actor.email, entity_type="attendance", entity_id=attendance_id,
             detail={"action": "PATCH", "reason": data.reason, "fields": sorted(fields)}, action="ADMIN_UPDATE",
         )
 
@@ -579,8 +580,9 @@ class AttendanceSessionService:
             raise NotFoundError("Absensi")
         await purge_row(self.repo.db, "attendance", "attendance_id", attendance_id)
         await write_delete_audit(
-            self.repo.db, organization_id=actor.organization_id, actor_user_id=actor.user_id,
-            actor_label=actor.email, entity_type="attendance", entity_id=attendance_id,
+            self.repo.db, actor_user_id=actor.user_id,
+            actor_role=actor.role,
+            actor_email=actor.email, entity_type="attendance", entity_id=attendance_id,
         )
 
     async def review_attendance(

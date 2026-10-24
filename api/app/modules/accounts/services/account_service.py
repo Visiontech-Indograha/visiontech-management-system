@@ -129,8 +129,9 @@ class AccountService:
             raise AppError("CANNOT_DELETE_SELF", "Anda tidak bisa menghapus akun Anda sendiri.", status=409)
         await purge_row(self.users.db, "users", "user_id", account.id)
         await write_delete_audit(
-            self.users.db, organization_id=actor.organization_id, actor_user_id=actor.user_id,
-            actor_label=actor.email, entity_type="users", entity_id=account.id,
+            self.users.db, actor_user_id=actor.user_id,
+            actor_role=actor.role,
+            actor_email=actor.email, entity_type="users", entity_id=account.id,
             detail={"employee_id": str(employee_id)},
         )
 

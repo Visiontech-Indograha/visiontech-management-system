@@ -13,6 +13,9 @@ from typing import Any
 from uuid import UUID
 
 from app.core.errors import AppError, NotFoundError, ValidationError
+from app.core.hard_delete import write_delete_audit
+from app.core.security import CurrentUser
+from app.core.storage import delete_object
 from app.modules.employees.repositories.employee_repository import EmployeeRepository
 from app.modules.employees.schemas.employee_schema import AddressIn, EmployeeCreate, EmployeeUpdate
 
@@ -126,6 +129,22 @@ class EmployeeService:
             raise AppError("INVALID_STATE", "Selesaikan dulu proses keluar karyawan ini.", status=409)
         await self.repo.archive(employee_id)
         return {"id": str(employee_id), "message": ARCHIVED}
+
+    async def delete(self, employee_id: UUID, actor: CurrentUser) -> None:
+        """Hapus permanen — hanya karyawan yang sudah diarsipkan (cegah salah hapus yang aktif)."""
+        employee = await self.repo.lock(employee_id)
+        if employee is None:
+            raise NotFoundError("Karyawan")
+        if not employee.deleted:
+            raise AppError("NOT_ARCHIVED", "Arsipkan karyawan ini dulu sebelum menghapus permanen.", status=409)
+        photo_keys = await self.repo.photo_keys(employee_id)
+        await self.repo.hard_delete(employee_id)
+        await write_delete_audit(
+            self.repo.db, organization_id=actor.organization_id, actor_user_id=actor.user_id,
+            actor_label=actor.email, entity_type="employee", entity_id=employee_id,
+        )
+        for key in photo_keys:
+            delete_object(key)
 
     async def restore(self, employee_id: UUID) -> dict[str, Any]:
         employee = await self.repo.lock(employee_id)

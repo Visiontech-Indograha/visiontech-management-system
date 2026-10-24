@@ -18,6 +18,7 @@ from app.modules.accounts.schemas.account_schema import AccountCreate, AccountOu
 router = APIRouter(prefix="/employees/{emp_id}/account", tags=["Employee Account"])
 
 _manager = Depends(require_permission(Permission.MANAGE_USERS))
+_delete_any = Depends(require_permission(Permission.DELETE_ANY))
 
 
 @router.get("", response_model=AccountOut)
@@ -55,6 +56,16 @@ async def reset_password(
     Mereset password akun karyawan ke password sementara baru.
     """
     return await controller.handle_reset_password(emp_id, current_user.organization_id)
+
+
+@router.delete("")
+async def delete_account(
+    emp_id: UUID,
+    current_user: CurrentUser = _delete_any,
+    controller: AccountProfileController = Depends(),
+) -> dict[str, str]:
+    """Hapus permanen akun login karyawan — hanya SUPER_ADMIN."""
+    return await controller.handle_delete_account(emp_id, current_user)
 
 
 @router.post("/deactivate", response_model=AccountOut)

@@ -120,13 +120,18 @@ def test_me_exposes_attendance_mode_from_the_role(client, world):
 
 
 def test_login_platform_follows_the_role(client, world):
-    """docs/35 §1: peran lapangan masuk lewat HP, peran kantor (termasuk admin) lewat web."""
-    for who, allowed in (("member", "mobile"), ("leader", "mobile"), ("pm", "web"), ("hr", "web"),
-                         ("admin", "web")):
+    """docs/35 §1: peran lapangan masuk lewat HP, peran kantor lewat web (docs/41 §2: SUPER_ADMIN boleh keduanya)."""
+    for who, allowed in (("member", "mobile"), ("leader", "mobile"), ("pm", "web"), ("hr", "web")):
         creds = {"email": world.logins[who], "password": WORLD_PASSWORD}
         denied = "web" if allowed == "mobile" else "mobile"
         assert client.post("/auth/login", json={**creds, "platform": denied}).status_code == 403, who
         assert client.post("/auth/login", json={**creds, "platform": allowed}).status_code == 200, who
+
+
+def test_super_admin_logs_in_on_both_platforms(client, world):
+    creds = {"email": world.logins["admin"], "password": WORLD_PASSWORD}
+    for platform in ("web", "mobile"):
+        assert client.post("/auth/login", json={**creds, "platform": platform}).status_code == 200, platform
 
 
 def test_field_worker_can_check_in_at_any_office(client, world, new_office):

@@ -15,6 +15,7 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationError
+from app.core.hard_delete import purge_row, write_delete_audit
 from app.core.permissions import Permission
 from app.core.security import CurrentUser
 from app.modules.overtime.repositories.overtime_repository import OvertimeRepository
@@ -31,6 +32,18 @@ class OvertimeService:
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
         self.repo = OvertimeRepository(db)
+
+    async def delete(self, overtime_id: UUID, actor: CurrentUser) -> None:
+        """Hapus permanen pengajuan lembur (SUPER_ADMIN) + audit."""
+        exists = await self.repo.fetchone("SELECT 1 FROM overtime WHERE overtime_id = CAST(:id AS uuid) FOR UPDATE",
+                                          {"id": str(overtime_id)})
+        if exists is None:
+            raise NotFoundError("Lembur")
+        await purge_row(self.db, "overtime", "overtime_id", overtime_id)
+        await write_delete_audit(
+            self.db, organization_id=actor.organization_id, actor_user_id=actor.user_id,
+            actor_label=actor.email, entity_type="overtime", entity_id=overtime_id,
+        )
 
     async def report(self, user: CurrentUser, daily_plan_id: UUID, hours: float, reason: str) -> Any:
         access = await check_daily_access(self.db, daily_plan_id, user, DailyNeed.TEAM)

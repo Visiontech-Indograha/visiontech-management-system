@@ -18,9 +18,12 @@ from sqlalchemy.exc import IntegrityError
 from app.core.config import settings
 from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationError, trigger_rule_message
 from app.core.events import queue_event
+from app.core.hard_delete import purge_row, write_delete_audit
+from app.core.security import CurrentUser
 from app.modules.attendance.repositories.attendance_session_repository import (
     CRUDAttendanceSession,
 )
+from app.modules.attendance.schemas.attendance_schema import AttendanceAdminPatch
 from app.modules.face.services.face_service import FaceOutcome, FaceService
 from app.modules.notifications.services.notification_service import NotificationService
 from app.shared.access.access_service import ensure_same_org
@@ -556,6 +559,29 @@ class AttendanceSessionService:
         if not explanation.strip():
             raise ValidationError("Penjelasan wajib diisi.")
         await self.repo.set_explanation(attendance_id, explanation.strip())
+
+    async def admin_patch(self, attendance_id: UUID, actor: CurrentUser, data: AttendanceAdminPatch) -> None:
+        """SUPER_ADMIN mengoreksi absensi; nilai lama tidak disimpan, alasan dicatat di audit."""
+        if not await self.repo.admin_exists(attendance_id):
+            raise NotFoundError("Absensi")
+        fields = data.model_dump(exclude={"reason"}, exclude_unset=True)
+        if not fields:
+            raise ValidationError("Tidak ada data yang diubah.")
+        await self.repo.admin_update(attendance_id, fields)
+        await write_delete_audit(
+            self.repo.db, organization_id=actor.organization_id, actor_user_id=actor.user_id,
+            actor_label=actor.email, entity_type="attendance", entity_id=attendance_id,
+            detail={"action": "PATCH", "reason": data.reason, "fields": sorted(fields)}, action="ADMIN_UPDATE",
+        )
+
+    async def admin_delete(self, attendance_id: UUID, actor: CurrentUser) -> None:
+        if not await self.repo.admin_exists(attendance_id):
+            raise NotFoundError("Absensi")
+        await purge_row(self.repo.db, "attendance", "attendance_id", attendance_id)
+        await write_delete_audit(
+            self.repo.db, organization_id=actor.organization_id, actor_user_id=actor.user_id,
+            actor_label=actor.email, entity_type="attendance", entity_id=attendance_id,
+        )
 
     async def review_attendance(
         self, org_id: str, user_id: str, attendance_id: UUID, approve: bool, note: str | None

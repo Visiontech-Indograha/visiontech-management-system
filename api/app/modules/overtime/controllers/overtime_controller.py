@@ -34,6 +34,11 @@ class OvertimeController:
     ) -> None:
         self.overtime_service = overtime_service
 
+    async def handle_delete(self, current_user: CurrentUser, ot_id: UUID) -> dict[str, str]:
+        """Hapus permanen pengajuan lembur."""
+        await self.overtime_service.delete(ot_id, current_user)
+        return {"status": "deleted"}
+
     async def handle_report(self, current_user: CurrentUser, data: OvertimeCreate) -> OvertimeResponse:
         """Mengajukan lembur pada work plan yang aktif."""
         row = await self.overtime_service.report(current_user, data.daily_plan_id, data.hours, data.reason)

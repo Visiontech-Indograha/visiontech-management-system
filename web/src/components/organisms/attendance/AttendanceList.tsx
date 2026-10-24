@@ -1,8 +1,10 @@
+import { useQueryClient } from "@tanstack/react-query";
 import type { UseQueryResult } from "@tanstack/react-query";
 import { QueryState } from "@/components/molecules/QueryState";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
 import { formatDate, formatDateTime } from "@/lib/format";
-import type { Attendance, AttendanceList as AttendanceListData } from "@/services/attendanceService";
+import { deleteAttendance, type Attendance, type AttendanceList as AttendanceListData } from "@/services/attendanceService";
+import { DeleteConfirmButton } from "@/components/organisms/DeleteConfirmButton";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
@@ -15,6 +17,7 @@ export function AttendanceList({ list, page, meEmployeeId, onPageChange, onOpen 
   onPageChange: (page: number) => void;
   onOpen: (open: { kind: "review" | "explain"; item: Attendance }) => void;
 }) {
+  const qc = useQueryClient();
   const data = list.data;
   const lastPage = data ? Math.max(1, Math.ceil(data.total / data.size)) : 1;
   return (
@@ -91,6 +94,18 @@ export function AttendanceList({ list, page, meEmployeeId, onPageChange, onOpen 
                       : `Ditinjau ${a.reviewed_at ? formatDateTime(a.reviewed_at) : ""}`}
                 </div>
               </ListBlock>
+              <div className="mt-auto">
+                <DeleteConfirmButton
+                  label="Hapus absensi"
+                  title="Hapus absensi?"
+                  description={`Absensi ${a.employee_name ?? ""} tanggal ${formatDate(a.work_date)} dihapus permanen.`}
+                  successText="Absensi dihapus."
+                  onDelete={async () => {
+                    await deleteAttendance(a.id);
+                    await qc.invalidateQueries({ queryKey: ["attendance"] });
+                  }}
+                />
+              </div>
               {a.status === "NEEDS_REVIEW" && (
                 <div className="mt-auto flex flex-col gap-2 md:flex-row">
                   {a.can_review ? (

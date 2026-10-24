@@ -140,8 +140,9 @@ class EmployeeService:
         photo_keys = await self.repo.photo_keys(employee_id)
         await self.repo.hard_delete(employee_id)
         await write_delete_audit(
-            self.repo.db, organization_id=actor.organization_id, actor_user_id=actor.user_id,
-            actor_label=actor.email, entity_type="employee", entity_id=employee_id,
+            self.repo.db, actor_user_id=actor.user_id,
+            actor_role=actor.role,
+            actor_email=actor.email, entity_type="employee", entity_id=employee_id,
         )
         for key in photo_keys:
             delete_object(key)

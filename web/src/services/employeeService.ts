@@ -121,6 +121,24 @@ export function useArchiveEmployee(id: string) {
   });
 }
 
+/** SUPER_ADMIN menghapus permanen karyawan yang sudah diarsipkan (DELETE /employees/{id}). */
+export function useDeleteEmployee(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () => (await api.delete<{ status: string }>(`/employees/${id}`)).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["employees"] }),
+  });
+}
+
+/** SUPER_ADMIN menghapus permanen akun login karyawan (DELETE /employees/{id}/account). */
+export function useDeleteAccount(employeeId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () => (await api.delete<{ status: string }>(`/employees/${employeeId}/account`)).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["employees"] }),
+  });
+}
+
 /** HR memulihkan karyawan terhapus sebagai nonaktif (POST /employees/{id}/restore, V-29). */
 export function useRestoreEmployee(id: string) {
   const qc = useQueryClient();

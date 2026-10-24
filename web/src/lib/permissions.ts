@@ -25,6 +25,7 @@ export const PERMISSIONS = [
   "view:audit",
   "view:backup",
   "run:system_jobs",
+  "delete:any",
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];

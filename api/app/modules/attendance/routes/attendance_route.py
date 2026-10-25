@@ -16,6 +16,7 @@ from app.core.permissions import Permission
 from app.core.security import CurrentUser
 from app.modules.attendance.controllers.attendance_controller import AttendanceController
 from app.modules.attendance.schemas.attendance_schema import (
+    AttendanceAdminPatch,
     AttendanceListResponse,
     AttendanceResponse,
     CheckInRequest,
@@ -133,6 +134,27 @@ async def review_attendance(
     OPS → Finance; tidak pernah absensi sendiri.
     """
     return await controller.handle_review(current_user, att_id, data)
+
+
+@router.patch("/{att_id}")
+async def admin_patch_attendance(
+    att_id: UUID,
+    data: AttendanceAdminPatch,
+    current_user: CurrentUser = Depends(require_permission(Permission.DELETE_ANY)),
+    controller: AttendanceController = Depends(),
+) -> dict[str, str]:
+    """Koreksi jam/status absensi — hanya SUPER_ADMIN; alasan wajib dan dicatat di audit."""
+    return await controller.handle_admin_patch(current_user, att_id, data)
+
+
+@router.delete("/{att_id}")
+async def admin_delete_attendance(
+    att_id: UUID,
+    current_user: CurrentUser = Depends(require_permission(Permission.DELETE_ANY)),
+    controller: AttendanceController = Depends(),
+) -> dict[str, str]:
+    """Hapus permanen satu absensi — hanya SUPER_ADMIN."""
+    return await controller.handle_admin_delete(current_user, att_id)
 
 
 @router.get("/export", response_class=PlainTextResponse)

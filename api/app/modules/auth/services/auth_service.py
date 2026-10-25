@@ -165,7 +165,7 @@ class AuthService:
         # docs/35 §1: web hanya untuk peran kantor, aplikasi HP hanya untuk peran lapangan. Kredensial sudah
         # benar, jadi penolakan platform tidak dihitung sebagai gagal login.
         role = user.role or ""
-        if platform == "mobile" and role not in FIELD_ROLES:
+        if platform == "mobile" and role not in FIELD_ROLES and role != "SUPER_ADMIN":
             raise AppError(
                 "NOT_FIELD_STAFF",
                 "Akun kantor tidak dapat masuk lewat aplikasi HP. Silakan masuk lewat web.",

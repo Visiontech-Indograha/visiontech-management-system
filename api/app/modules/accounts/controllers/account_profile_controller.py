@@ -12,6 +12,7 @@ from uuid import UUID
 
 from fastapi import Depends
 
+from app.core.security import CurrentUser
 from app.modules.accounts.dependencies import get_account_service
 from app.modules.accounts.schemas.account_schema import AccountCreate, AccountOut, AccountWithPassword
 from app.modules.accounts.services.account_service import AccountService
@@ -62,6 +63,11 @@ class AccountProfileController:
             **self.map_row_to_out(row).model_dump(),
             temporary_password=password,
         )
+
+    async def handle_delete_account(self, emp_id: UUID, actor: CurrentUser) -> dict[str, str]:
+        """Hapus permanen akun login karyawan."""
+        await self.account_service.delete_account(emp_id, actor)
+        return {"status": "deleted"}
 
     async def handle_deactivate(self, emp_id: UUID, organization_id: str) -> AccountOut:
         """Menonaktifkan akun karyawan."""

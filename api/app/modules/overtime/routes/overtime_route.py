@@ -9,7 +9,8 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, require_permission
+from app.core.permissions import Permission
 from app.core.security import CurrentUser
 from app.modules.overtime.controllers.overtime_controller import OvertimeController
 from app.modules.overtime.schemas.overtime_schema import (
@@ -50,3 +51,13 @@ async def review_overtime(
 ) -> OvertimeResponse:
     """Menyetujui atau menolak pengajuan lembur."""
     return await controller.handle_review(current_user, ot_id, data)
+
+
+@router.delete("/{ot_id}")
+async def delete_overtime(
+    ot_id: UUID,
+    current_user: CurrentUser = Depends(require_permission(Permission.DELETE_ANY)),
+    controller: OvertimeController = Depends(),
+) -> dict[str, str]:
+    """Hapus permanen pengajuan lembur — hanya SUPER_ADMIN."""
+    return await controller.handle_delete(current_user, ot_id)

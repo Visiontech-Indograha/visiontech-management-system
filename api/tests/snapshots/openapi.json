@@ -364,6 +364,74 @@
     "title": "AttachmentsIn",
     "type": "object"
    },
+   "AttendanceAdminPatch": {
+    "description": "Koreksi absensi oleh SUPER_ADMIN; hanya kolom yang dikirim yang diubah. `reason` masuk ke audit.",
+    "properties": {
+     "clock_in_at": {
+      "anyOf": [
+       {
+        "format": "date-time",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Clock In At"
+     },
+     "clock_out_at": {
+      "anyOf": [
+       {
+        "format": "date-time",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Clock Out At"
+     },
+     "om_approval_status": {
+      "anyOf": [
+       {
+        "enum": [
+         "AUTO_VALID",
+         "PENDING_OM",
+         "APPROVED_BY_OM",
+         "REJECTED_BY_OM"
+        ],
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Om Approval Status"
+     },
+     "out_of_radius_note": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Out Of Radius Note"
+     },
+     "reason": {
+      "maxLength": 500,
+      "minLength": 3,
+      "title": "Reason",
+      "type": "string"
+     }
+    },
+    "required": [
+     "reason"
+    ],
+    "title": "AttendanceAdminPatch",
+    "type": "object"
+   },
    "AttendanceListResponse": {
     "description": "Schema for paginated responses of attendance records.",
     "properties": {
@@ -13684,6 +13752,120 @@
     ]
    }
   },
+  "/api/v1/attendance/{att_id}": {
+   "delete": {
+    "description": "Hapus permanen satu absensi — hanya SUPER_ADMIN.",
+    "operationId": "admin_delete_attendance_api_v1_attendance__att_id__delete",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "att_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Att Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": {
+          "type": "string"
+         },
+         "title": "Response Admin Delete Attendance Api V1 Attendance  Att Id  Delete",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Admin Delete Attendance",
+    "tags": [
+     "Attendance"
+    ]
+   },
+   "patch": {
+    "description": "Koreksi jam/status absensi — hanya SUPER_ADMIN; alasan wajib dan dicatat di audit.",
+    "operationId": "admin_patch_attendance_api_v1_attendance__att_id__patch",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "att_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Att Id",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/AttendanceAdminPatch"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": {
+          "type": "string"
+         },
+         "title": "Response Admin Patch Attendance Api V1 Attendance  Att Id  Patch",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Admin Patch Attendance",
+    "tags": [
+     "Attendance"
+    ]
+   }
+  },
   "/api/v1/attendance/{att_id}/explain": {
    "post": {
     "description": "P4-4 · domain.js EXPLAIN_ATTENDANCE — hanya absensi sendiri yang menunggu pemeriksaan.",
@@ -15120,6 +15302,57 @@
    }
   },
   "/api/v1/employees/{emp_id}/account": {
+   "delete": {
+    "description": "Hapus permanen akun login karyawan — hanya SUPER_ADMIN.",
+    "operationId": "delete_account_api_v1_employees__emp_id__account_delete",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "emp_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Emp Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": {
+          "type": "string"
+         },
+         "title": "Response Delete Account Api V1 Employees  Emp Id  Account Delete",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Delete Account",
+    "tags": [
+     "Employee Account"
+    ]
+   },
    "get": {
     "description": "Mendapatkan detail akun berdasarkan ID karyawan.",
     "operationId": "get_account_api_v1_employees__emp_id__account_get",
@@ -15601,6 +15834,57 @@
    }
   },
   "/api/v1/employees/{employee_id}": {
+   "delete": {
+    "description": "Hapus permanen karyawan beserta akun loginnya — hanya SUPER_ADMIN, dan hanya yang sudah diarsipkan.",
+    "operationId": "delete_employee_api_v1_employees__employee_id__delete",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "employee_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Employee Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": {
+          "type": "string"
+         },
+         "title": "Response Delete Employee Api V1 Employees  Employee Id  Delete",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Delete Employee",
+    "tags": [
+     "Employees"
+    ]
+   },
    "get": {
     "description": "Detail karyawan + alamat (kontak pribadi hanya untuk pemilik & HR/admin).",
     "operationId": "get_employee_api_v1_employees__employee_id__get",
@@ -18658,6 +18942,59 @@
      }
     ],
     "summary": "Report Overtime",
+    "tags": [
+     "Overtime"
+    ]
+   }
+  },
+  "/api/v1/overtime/{ot_id}": {
+   "delete": {
+    "description": "Hapus permanen pengajuan lembur — hanya SUPER_ADMIN.",
+    "operationId": "delete_overtime_api_v1_overtime__ot_id__delete",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "ot_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Ot Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": {
+          "type": "string"
+         },
+         "title": "Response Delete Overtime Api V1 Overtime  Ot Id  Delete",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Delete Overtime",
     "tags": [
      "Overtime"
     ]

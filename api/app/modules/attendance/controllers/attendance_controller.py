@@ -17,6 +17,7 @@ from app.core.permissions import Permission
 from app.core.security import CurrentUser, create_time_anchor
 from app.modules.attendance.dependencies import get_attendance_offline_service, get_attendance_session_service
 from app.modules.attendance.schemas.attendance_schema import (
+    AttendanceAdminPatch,
     AttendanceListResponse,
     AttendanceResponse,
     CheckInRequest,
@@ -162,6 +163,16 @@ class AttendanceController:
             current_user.organization_id, current_user.user_id, att_id, data.explanation
         )
         return {"message": "Penjelasan ditambahkan."}
+
+    async def handle_admin_patch(
+        self, current_user: CurrentUser, att_id: UUID, data: AttendanceAdminPatch
+    ) -> dict[str, str]:
+        await self.session_service.admin_patch(att_id, current_user, data)
+        return {"status": "updated"}
+
+    async def handle_admin_delete(self, current_user: CurrentUser, att_id: UUID) -> dict[str, str]:
+        await self.session_service.admin_delete(att_id, current_user)
+        return {"status": "deleted"}
 
     async def handle_review(
         self,

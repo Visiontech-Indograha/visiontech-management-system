@@ -64,6 +64,15 @@ class ExplanationRequest(BaseModel):
     explanation: str
 
 
+class AttendanceAdminPatch(BaseModel):
+    """Koreksi absensi oleh SUPER_ADMIN; hanya kolom yang dikirim yang diubah. `reason` masuk ke audit."""
+    clock_in_at: datetime | None = None
+    clock_out_at: datetime | None = None
+    om_approval_status: Literal["AUTO_VALID", "PENDING_OM", "APPROVED_BY_OM", "REJECTED_BY_OM"] | None = None
+    out_of_radius_note: str | None = None
+    reason: str = Field(min_length=3, max_length=500)
+
+
 class ReviewRequest(BaseModel):
     """
     Schema for reviewing (approving or rejecting) an attendance event.

@@ -2,6 +2,7 @@
 /// nilai string HARUS sama persis.
 enum UserRole {
   admin('ADMIN'),
+  superAdmin('SUPER_ADMIN'),
   hr('HR'),
   finance('FINANCE'),
   pm('PM'),
@@ -48,7 +49,7 @@ class AuthUser {
 
   /// Administrator (pemilik sistem) boleh absen dari HP maupun web, jadi tidak diarahkan ke web saja.
   bool get absensiLewatWeb =>
-      attendanceMode == 'OFFICE' && role != UserRole.admin;
+      attendanceMode == 'OFFICE' && role != UserRole.admin && role != UserRole.superAdmin;
 
   /// Bentuk `GET /api/v1/auth/me`: user_id, email, role, permissions, employee_id,
   /// attendance_mode, photo_file_id.

@@ -283,7 +283,7 @@ export interface paths {
         get?: never;
         /**
          * Move Point
-         * @description Geser titik di peta titik (PM kapan pun; ketua tim selama survei masih draf).
+         * @description Geser titik di peta layout (PM kapan pun; ketua tim selama survei masih draf).
          */
         put: operations["move_point_api_v1_work_plans_surveys_points__point_id__location_put"];
         post?: never;
@@ -1162,6 +1162,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/exports/team-week": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Export Team Week
+         * @description Laporan mingguan tim (.pptx): semua pekerjaan tim 7 hari — foto, keterangan, status. Ketua/anggota tim
+         *     atau PM/OM divisinya.
+         */
+        post: operations["export_team_week_api_v1_exports_team_week_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/exports/{export_id}/file": {
         parameters: {
             query?: never;
@@ -1954,7 +1975,7 @@ export interface paths {
         };
         /**
          * Get Employee
-         * @description Detail karyawan + alamat.
+         * @description Detail karyawan + alamat (kontak pribadi hanya untuk pemilik & HR/admin).
          */
         get: operations["get_employee_api_v1_employees__employee_id__get"];
         /**
@@ -1963,7 +1984,11 @@ export interface paths {
          */
         put: operations["update_employee_api_v1_employees__employee_id__put"];
         post?: never;
-        delete?: never;
+        /**
+         * Delete Employee
+         * @description Hapus permanen karyawan beserta akun loginnya — hanya SUPER_ADMIN, dan hanya yang sudah diarsipkan.
+         */
+        delete: operations["delete_employee_api_v1_employees__employee_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2271,7 +2296,11 @@ export interface paths {
          * @description Membuat akun baru untuk karyawan dengan kata sandi sementara.
          */
         post: operations["create_account_api_v1_employees__emp_id__account_post"];
-        delete?: never;
+        /**
+         * Delete Account
+         * @description Hapus permanen akun login karyawan — hanya SUPER_ADMIN.
+         */
+        delete: operations["delete_account_api_v1_employees__emp_id__account_delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2386,7 +2415,7 @@ export interface paths {
         };
         /**
          * Attendance Recap
-         * @description FINANCE/HR/OPS/ADMIN: seluruh organisasi; lainnya: hanya dirinya (aturan `GET /attendance`).
+         * @description OM/ADMIN (view:all_attendance): seluruh perusahaan; lainnya: hanya dirinya.
          */
         get: operations["attendance_recap_api_v1_recaps_attendance_get"];
         put?: never;
@@ -2538,6 +2567,30 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attendance/{att_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Admin Delete Attendance
+         * @description Hapus permanen satu absensi — hanya SUPER_ADMIN.
+         */
+        delete: operations["admin_delete_attendance_api_v1_attendance__att_id__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Admin Patch Attendance
+         * @description Koreksi jam/status absensi — hanya SUPER_ADMIN; alasan wajib dan dicatat di audit.
+         */
+        patch: operations["admin_patch_attendance_api_v1_attendance__att_id__patch"];
         trace?: never;
     };
     "/api/v1/attendance/export": {
@@ -3014,6 +3067,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/overtime/{ot_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Overtime
+         * @description Hapus permanen pengajuan lembur — hanya SUPER_ADMIN.
+         */
+        delete: operations["delete_overtime_api_v1_overtime__ot_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/recaps/overtime": {
         parameters: {
             query?: never;
@@ -3432,6 +3505,22 @@ export interface components {
         AttachmentsIn: {
             /** File Ids */
             file_ids: string[];
+        };
+        /**
+         * AttendanceAdminPatch
+         * @description Koreksi absensi oleh SUPER_ADMIN; hanya kolom yang dikirim yang diubah. `reason` masuk ke audit.
+         */
+        AttendanceAdminPatch: {
+            /** Clock In At */
+            clock_in_at?: string | null;
+            /** Clock Out At */
+            clock_out_at?: string | null;
+            /** Om Approval Status */
+            om_approval_status?: ("AUTO_VALID" | "PENDING_OM" | "APPROVED_BY_OM" | "REJECTED_BY_OM") | null;
+            /** Out Of Radius Note */
+            out_of_radius_note?: string | null;
+            /** Reason */
+            reason: string;
         };
         /**
          * AttendanceListResponse
@@ -7052,6 +7141,19 @@ export interface components {
             /** Status */
             status?: boolean | null;
         };
+        /** TeamWeekExportRequest */
+        TeamWeekExportRequest: {
+            /**
+             * Team Id
+             * Format: uuid
+             */
+            team_id: string;
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+        };
         /** ToolCreate */
         ToolCreate: {
             /**
@@ -10261,6 +10363,39 @@ export interface operations {
             };
         };
     };
+    export_team_week_api_v1_exports_team_week_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TeamWeekExportRequest"];
+            };
+        };
+        responses: {
+            /** @description Berkas dokumen */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     download_export_api_v1_exports__export_id__file_get: {
         parameters: {
             query?: never;
@@ -11797,6 +11932,39 @@ export interface operations {
             };
         };
     };
+    delete_employee_api_v1_employees__employee_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                employee_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     add_address_api_v1_employees__employee_id__addresses_post: {
         parameters: {
             query?: never;
@@ -12472,6 +12640,39 @@ export interface operations {
             };
         };
     };
+    delete_account_api_v1_employees__emp_id__account_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                emp_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     reset_password_api_v1_employees__emp_id__account_reset_password_post: {
         parameters: {
             query?: never;
@@ -12880,6 +13081,76 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["ReviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_delete_attendance_api_v1_attendance__att_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                att_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_patch_attendance_api_v1_attendance__att_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                att_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AttendanceAdminPatch"];
             };
         };
         responses: {
@@ -13822,6 +14093,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OvertimeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_overtime_api_v1_overtime__ot_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ot_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
                 };
             };
             /** @description Validation Error */

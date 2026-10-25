@@ -3,7 +3,8 @@ import { toast } from "sonner";
 import { TextField } from "@/components/molecules/Field";
 import { errorMessage } from "@/lib/errors";
 import { formatDateTime } from "@/lib/format";
-import { useAccount, useAccountAction, type Employee } from "@/services/employeeService";
+import { useAccount, useAccountAction, useDeleteAccount, type Employee } from "@/services/employeeService";
+import { DeleteConfirmButton } from "@/components/organisms/DeleteConfirmButton";
 import { Pill } from "@/components/molecules/Pill";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { LoadingBar } from "@/components/molecules/LoadingBar";
@@ -18,6 +19,7 @@ import { SectionTitle } from "@/components/molecules/SectionTitle";
 export function AccountCard({ employee }: { employee: Employee }) {
   const account = useAccount(employee.employee_id);
   const action = useAccountAction(employee.employee_id);
+  const deleteAccount = useDeleteAccount(employee.employee_id);
   const [login, setLogin] = useState(employee.email ?? "");
   const [issued, setIssued] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -155,6 +157,13 @@ export function AccountCard({ employee }: { employee: Employee }) {
                   </ActionButton>
                 )
               )}
+              <DeleteConfirmButton
+                label="Hapus akun"
+                title="Hapus akun login?"
+                description={`Akun login ${a.login} dihapus permanen; data karyawannya tetap ada.`}
+                successText="Akun login dihapus."
+                onDelete={() => deleteAccount.mutateAsync()}
+              />
             </div>
           </div>
         )}

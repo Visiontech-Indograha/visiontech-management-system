@@ -8,6 +8,7 @@ from uuid import UUID
 
 from fastapi import Depends
 
+from app.core.security import CurrentUser
 from app.modules.employees.dependencies import get_employee_service
 from app.modules.employees.schemas.employee_schema import (
     AddressIn,
@@ -53,6 +54,10 @@ class EmployeeController:
 
     async def archive(self, employee_id: UUID) -> dict[str, str]:
         return await self.service.archive(employee_id)
+
+    async def delete(self, employee_id: UUID, actor: CurrentUser) -> dict[str, str]:
+        await self.service.delete(employee_id, actor)
+        return {"status": "deleted"}
 
     async def restore(self, employee_id: UUID) -> dict[str, str]:
         return await self.service.restore(employee_id)

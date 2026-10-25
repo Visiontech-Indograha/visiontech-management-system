@@ -8,6 +8,7 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
+from app.core.hard_delete import purge_row
 from app.core.repository import BaseRepository
 
 _SELECT = """
@@ -189,6 +190,19 @@ class EmployeeRepository(BaseRepository):
                            "WHERE employee_id = CAST(:id AS uuid)", params)
         await self.execute("UPDATE users SET is_active = FALSE, delete_at = now(), update_at = now() "
                            "WHERE employee_id = CAST(:id AS uuid)", params)
+
+    async def photo_keys(self, employee_id: UUID) -> list[str]:
+        """Kunci berkas MinIO milik karyawan (foto), untuk dibersihkan setelah hapus permanen."""
+        row = await self.fetchone("SELECT photo_path, profile_photo_path FROM employee "
+                                  "WHERE employee_id = CAST(:id AS uuid)", {"id": str(employee_id)})
+        return [k for k in (row or ()) if k]
+
+    async def hard_delete(self, employee_id: UUID) -> None:
+        """Hapus permanen: akun login (beserta sesinya) dulu, lalu karyawan beserta semua rujukannya."""
+        for (uid,) in (await self.fetchall("SELECT user_id FROM users WHERE employee_id = CAST(:id AS uuid)",
+                                           {"id": str(employee_id)})):
+            await purge_row(self.db, "users", "user_id", uid)
+        await purge_row(self.db, "employee", "employee_id", employee_id)
 
     async def restore(self, employee_id: UUID) -> None:
         """Batal arsip: data kembali terlihat, status tetap offboarded (akses baru lewat HR)."""

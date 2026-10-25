@@ -39,6 +39,9 @@ class Permission(StrEnum):
     """
     Daftar izin (permissions) yang digunakan dalam aplikasi.
     """
+    # Hapus permanen apa pun — hanya SUPER_ADMIN (docs/41 §3a)
+    DELETE_ANY = "delete:any"
+
     # Pengguna & direktori karyawan
     MANAGE_USERS = "manage:users"
     VIEW_USERS = "view:users"
@@ -101,7 +104,7 @@ BASE_PERMISSIONS: frozenset[Permission] = frozenset({P.VIEW_USERS, P.VIEW_DOCUME
 
 # Izin tambahan per peran legacy (vms.role_code) - mematuhi dok 03 & test_permissions.py
 _ROLE_EXTRA: dict[RoleCode, frozenset[Permission]] = {
-    RoleCode.ADMIN: frozenset(Permission),
+    RoleCode.ADMIN: frozenset(Permission) - {Permission.DELETE_ANY},
     RoleCode.OPS: frozenset({
         P.CREATE_PLAN, P.PUBLISH_PLAN, P.REVIEW_OVERTIME, P.VIEW_TIMELINE, P.VIEW_AUDIT,
         P.VIEW_ALL_ATTENDANCE, P.REVIEW_ATTENDANCE,

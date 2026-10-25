@@ -27,6 +27,7 @@ from app.modules.employees.schemas.employee_schema import (
 router = APIRouter(prefix="/employees", tags=["Employees"])
 _VIEW = Depends(require_permission(Permission.VIEW_USERS))
 _MANAGE = Depends(require_permission(Permission.MANAGE_USERS))
+_DELETE_ANY = Depends(require_permission(Permission.DELETE_ANY))
 
 
 def _sees_private(user: CurrentUser, employee_id: UUID) -> bool:
@@ -135,6 +136,16 @@ async def archive_employee(
 ) -> dict[str, str]:
     """Arsipkan karyawan yang sudah selesai offboarding."""
     return await controller.archive(employee_id)
+
+
+@router.delete("/{employee_id}")
+async def delete_employee(
+    employee_id: UUID,
+    current_user: CurrentUser = _DELETE_ANY,
+    controller: EmployeeController = Depends(),
+) -> dict[str, str]:
+    """Hapus permanen karyawan beserta akun loginnya — hanya SUPER_ADMIN, dan hanya yang sudah diarsipkan."""
+    return await controller.delete(employee_id, current_user)
 
 
 @router.post("/{employee_id}/restore")

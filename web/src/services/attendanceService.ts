@@ -74,3 +74,8 @@ export async function checkIn(body: components["schemas"]["CheckInRequest"]): Pr
 export async function checkOut(body: components["schemas"]["CheckOutRequest"]): Promise<Attendance> {
   return (await api.post<Attendance>("/attendance/check-out", body)).data;
 }
+
+/** DELETE /attendance/{id} — SUPER_ADMIN menghapus permanen satu absensi. */
+export async function deleteAttendance(id: string): Promise<unknown> {
+  return (await api.delete(`/attendance/${id}`)).data;
+}

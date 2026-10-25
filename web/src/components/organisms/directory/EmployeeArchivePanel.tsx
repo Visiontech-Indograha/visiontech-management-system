@@ -2,7 +2,8 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { errorMessage } from "@/lib/errors";
-import { useArchiveEmployee, useRestoreEmployee, type Employee } from "@/services/employeeService";
+import { useArchiveEmployee, useDeleteEmployee, useRestoreEmployee, type Employee } from "@/services/employeeService";
+import { DeleteConfirmButton } from "@/components/organisms/DeleteConfirmButton";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { FormErrorText } from "@/components/molecules/FormErrorText";
@@ -14,6 +15,7 @@ import { FormErrorText } from "@/components/molecules/FormErrorText";
 export function EmployeeArchivePanel({ employee }: { employee: Employee }) {
   const archive = useArchiveEmployee(employee.employee_id);
   const restore = useRestoreEmployee(employee.employee_id);
+  const remove = useDeleteEmployee(employee.employee_id);
   const [archived, setArchived] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -51,6 +53,13 @@ export function EmployeeArchivePanel({ employee }: { employee: Employee }) {
           <ActionButton variant="outline" onClick={doRestore} disabled={busy}>
             Pulihkan karyawan
           </ActionButton>
+          <DeleteConfirmButton
+            label="Hapus permanen"
+            title="Hapus permanen karyawan?"
+            description={`${employee.full_name} beserta akun login dan data terkaitnya dihapus dari database.`}
+            successText="Karyawan dihapus permanen."
+            onDelete={() => remove.mutateAsync()}
+          />
         </div>
       ) : (
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">

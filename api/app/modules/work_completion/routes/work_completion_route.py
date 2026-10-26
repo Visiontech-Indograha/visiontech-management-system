@@ -124,6 +124,19 @@ async def update_work_completion_status(
     return await controller.update_status(completion_id, body, current_user)
 
 
+@router.delete(
+    "/{completion_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Hapus Order Proyek Klien (Soft Delete)",
+)
+async def delete_work_completion(
+    completion_id: UUID,
+    current_user: CurrentUser = _PLANNER,
+    controller: WorkCompletionController = Depends(),
+) -> None:
+    await controller.delete_order(completion_id, current_user)
+
+
 @router.post(
     "/{completion_id}/sign",
     response_model=WorkCompletionOut,

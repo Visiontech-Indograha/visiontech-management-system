@@ -15,7 +15,7 @@ from pydantic import BaseModel, Field
 
 class WorkCompletionCreate(BaseModel):
     """Schema input pembuatan Order Klien baru oleh PM / OM."""
-    division_id: UUID
+    division_id: UUID | None = None
     pm_id: UUID | None = None
     # Proyek/SPK (Milestone 10): kosongkan klien/judul/nomor untuk diisi otomatis dari proyek.
     project_id: UUID | None = None

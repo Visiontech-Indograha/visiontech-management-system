@@ -184,6 +184,17 @@ class WorkCompletionService:
             raise ForbiddenError("Hanya PM, OM, atau Super Admin yang dapat membuat Order Klien.")
         if current_user.role == "PROJECT_MANAGER" and not data.get("pm_id"):
             data["pm_id"] = current_user.employee_id
+        if not data.get("division_id"):
+            if data.get("project_id"):
+                proj = await self.crud.project_snapshot(data["project_id"])
+                if proj:
+                    data["division_id"] = proj.division_id
+            elif current_user.employee_id:
+                pm_div = await self.crud.get_pm_division(current_user.employee_id)
+                if pm_div:
+                    data["division_id"] = pm_div
+        if not data.get("division_id"):
+            raise ValidationError("Divisi order wajib ditentukan.")
         if data.get("project_id"):
             project = await self.crud.project_snapshot(data["project_id"])
             if project is None or str(project.division_id) != str(data["division_id"]):
@@ -208,6 +219,13 @@ class WorkCompletionService:
         if not created:
             raise AppError("CREATE_FAILED", "Gagal mengambil data order yang baru dibuat.")
         return created
+
+    async def delete_order(self, current_user: CurrentUser, completion_id: UUID) -> None:
+        """Menghapus order proyek klien (soft delete)."""
+        existing = await self._editable(current_user, completion_id)
+        if existing.get("leader_signed_at") and current_user.role != "SUPER_ADMIN":
+            raise AppError("ORDER_LOCKED", "Order yang sudah ditandatangani ketua tim tidak dapat dihapus.", status=409)
+        await self.crud.delete_completion(completion_id)
 
     async def update_order(
         self, current_user: CurrentUser, completion_id: UUID, data: dict[str, Any]

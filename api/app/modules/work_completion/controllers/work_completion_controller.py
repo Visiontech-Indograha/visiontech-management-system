@@ -92,6 +92,14 @@ class WorkCompletionController:
         data = await self.service.update_order(current_user, completion_id, body.model_dump(exclude_unset=True))
         return WorkCompletionOut(**data)
 
+    async def delete_order(
+        self,
+        completion_id: UUID,
+        current_user: CurrentUser,
+    ) -> None:
+        """Hapus order proyek klien."""
+        await self.service.delete_order(current_user, completion_id)
+
     async def update_status(
         self,
         completion_id: UUID,

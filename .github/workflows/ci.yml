@@ -158,13 +158,13 @@ jobs:
           wf='^\.github/workflows/ci\.yml$'
           echo "api=$(hit "^(api|db|face-service|deploy|scripts)/|$wf")" >> "$GITHUB_OUTPUT"
           echo "web=$(hit "^web/|$wf")" >> "$GITHUB_OUTPUT"
-          echo "mobile=$(hit "^mobile/|$wf")" >> "$GITHUB_OUTPUT"
+          echo "mobile=true" >> "$GITHUB_OUTPUT"
           cat "$GITHUB_OUTPUT"
 
   mobile:
     name: Mobile (Flutter analyze + test)
     needs: secrets
-    if: ${{ !cancelled() && needs.secrets.outputs.mobile == 'true' }}
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     defaults:
       run:

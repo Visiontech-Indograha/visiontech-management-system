@@ -892,7 +892,8 @@ export interface paths {
         /** Perbarui Data Order Proyek Klien */
         put: operations["update_work_completion_api_v1_work_completions__completion_id__put"];
         post?: never;
-        delete?: never;
+        /** Hapus Order Proyek Klien (Soft Delete) */
+        delete: operations["delete_work_completion_api_v1_work_completions__completion_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -7522,11 +7523,8 @@ export interface components {
          * @description Schema input pembuatan Order Klien baru oleh PM / OM.
          */
         WorkCompletionCreate: {
-            /**
-             * Division Id
-             * Format: uuid
-             */
-            division_id: string;
+            /** Division Id */
+            division_id?: string | null;
             /** Pm Id */
             pm_id?: string | null;
             /** Project Id */
@@ -9761,6 +9759,35 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["WorkCompletionOut"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_work_completion_api_v1_work_completions__completion_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                completion_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -14018,8 +14045,11 @@ export interface operations {
     };
     list_overtime_api_v1_overtime_get: {
         parameters: {
-            query: {
-                daily_plan_id: string;
+            query?: {
+                /** @description ID jadwal harian */
+                daily_plan_id?: string | null;
+                /** @description Alias daily_plan_id */
+                work_plan_id?: string | null;
             };
             header?: never;
             path?: never;

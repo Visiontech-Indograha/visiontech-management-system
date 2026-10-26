@@ -59,8 +59,10 @@ describe("login dan sesi API", () => {
     type("Email", ME.email);
     type("Password", "Rahasia123");
     fireEvent.click(screen.getByRole("button", { name: "Masuk" }));
-    await waitFor(() => expect(router.state.location.pathname).toBe("/"));
-    expect(getAccessToken()).toBe("tok");
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/");
+      expect(getAccessToken()).toBe("tok");
+    });
     expect(await screen.findByRole("heading", { level: 1, name: /budi/ })).toBeInTheDocument();
     expect(await screen.findByText("Karyawan lapangan")).toBeInTheDocument();
     expect(calls.some((call) => call.url === "/auth/me")).toBe(true);
@@ -102,7 +104,9 @@ describe("ganti password sukarela", () => {
     type("Password baru", "BaruLagi99");
     type("Ulangi password baru", "BaruLagi99");
     fireEvent.click(screen.getByRole("button", { name: "Ganti password" }));
-    await waitFor(() => expect(router.state.location.pathname).toBe("/"));
-    expect(getAccessToken()).toBe("baru");
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/");
+      expect(getAccessToken()).toBe("baru");
+    });
   });
 });

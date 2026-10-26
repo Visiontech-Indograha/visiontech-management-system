@@ -11088,9 +11088,16 @@
       "title": "Client Name"
      },
      "division_id": {
-      "format": "uuid",
-      "title": "Division Id",
-      "type": "string"
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Division Id"
      },
      "order_number": {
       "anyOf": [
@@ -11214,9 +11221,6 @@
       "type": "string"
      }
     },
-    "required": [
-     "division_id"
-    ],
     "title": "WorkCompletionCreate",
     "type": "object"
    },
@@ -18884,13 +18888,41 @@
     "operationId": "list_overtime_api_v1_overtime_get",
     "parameters": [
      {
+      "description": "ID jadwal harian",
       "in": "query",
       "name": "daily_plan_id",
-      "required": true,
+      "required": false,
       "schema": {
-       "format": "uuid",
-       "title": "Daily Plan Id",
-       "type": "string"
+       "anyOf": [
+        {
+         "format": "uuid",
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "ID jadwal harian",
+       "title": "Daily Plan Id"
+      }
+     },
+     {
+      "description": "Alias daily_plan_id",
+      "in": "query",
+      "name": "work_plan_id",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "format": "uuid",
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Alias daily_plan_id",
+       "title": "Work Plan Id"
       }
      }
     ],
@@ -20281,6 +20313,45 @@
    }
   },
   "/api/v1/work-completions/{completion_id}": {
+   "delete": {
+    "operationId": "delete_work_completion_api_v1_work_completions__completion_id__delete",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "completion_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Completion Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Hapus Order Proyek Klien (Soft Delete)",
+    "tags": [
+     "Work Completions (Order Klien)"
+    ]
+   },
    "get": {
     "operationId": "get_work_completion_api_v1_work_completions__completion_id__get",
     "parameters": [

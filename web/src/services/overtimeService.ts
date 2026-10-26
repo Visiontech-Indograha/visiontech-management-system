@@ -6,7 +6,7 @@ export type Overtime = components["schemas"]["OvertimeResponse"];
 
 /** GET /overtime?work_plan_id= — lembur yang diajukan dalam satu rencana kerja. */
 export async function listPlanOvertime(planId: string): Promise<Overtime[]> {
-  return (await api.get<Overtime[]>("/overtime", { params: { work_plan_id: planId } })).data;
+  return (await api.get<Overtime[]>("/overtime", { params: { daily_plan_id: planId, work_plan_id: planId } })).data;
 }
 
 /** POST /overtime — ajukan lembur (tanggal dicatat server). */

@@ -3256,6 +3256,45 @@
       }
      }
     }
+   },
+   "delete": {
+    "tags": [
+     "Work Completions (Order Klien)"
+    ],
+    "summary": "Hapus Order Proyek Klien (Soft Delete)",
+    "operationId": "delete_work_completion_api_v1_work_completions__completion_id__delete",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "completion_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Completion Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
    }
   },
   "/api/v1/work-completions/{completion_id}/photos/{file_id}": {
@@ -10453,12 +10492,40 @@
      {
       "name": "daily_plan_id",
       "in": "query",
-      "required": true,
+      "required": false,
       "schema": {
-       "type": "string",
-       "format": "uuid",
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "uuid"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "ID jadwal harian",
        "title": "Daily Plan Id"
-      }
+      },
+      "description": "ID jadwal harian"
+     },
+     {
+      "name": "work_plan_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "uuid"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Alias daily_plan_id",
+       "title": "Work Plan Id"
+      },
+      "description": "Alias daily_plan_id"
      }
     ],
     "responses": {
@@ -22524,8 +22591,15 @@
    "WorkCompletionCreate": {
     "properties": {
      "division_id": {
-      "type": "string",
-      "format": "uuid",
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
       "title": "Division Id"
      },
      "pm_id": {
@@ -22665,9 +22739,6 @@
      }
     },
     "type": "object",
-    "required": [
-     "division_id"
-    ],
     "title": "WorkCompletionCreate",
     "description": "Schema input pembuatan Order Klien baru oleh PM / OM."
    },

@@ -12,6 +12,7 @@ import { TextBlock } from "@/components/molecules/TextBlock";
 import { ApiError } from "@/lib/apiClient";
 import {
   addDays,
+  useDailyFormOptions,
   useCreatePlanItem,
   usePrerequisiteOptions,
   useDecideRollover,
@@ -129,6 +130,10 @@ export function DailyItemsPanel({ detail, loading, canPlan }: { detail: DailyPla
 function ItemForm({ detail, onDone }: { detail: DailyPlanDetail; onDone: () => void }) {
   // Jenis titik survei hanya dipakai di dalam survei, bukan sebagai item jadwal.
   const types = useWorkTypes(false, detail.division_id).data?.filter((w) => w.kind !== "SURVEY_POINT");
+  const formOptions = useDailyFormOptions(true).data;
+  const orders = (formOptions?.orders ?? []).filter(
+    (o) => !o.division_id || o.division_id === detail.division_id
+  );
   const create = useCreatePlanItem(detail.daily_plan_id);
   const prereqs = usePrerequisiteOptions(detail.daily_plan_id).data ?? [];
   const [phase, setPhase] = useState("SURVEY");
@@ -139,13 +144,23 @@ function ItemForm({ detail, onDone }: { detail: DailyPlanDetail; onDone: () => v
     const f = new FormData(e.currentTarget);
     const v = (k: string) => String(f.get(k) ?? "").trim();
     setError(null);
+    const latVal = v("site_lat");
+    const lngVal = v("site_lng");
+    const startTimeVal = v("start_time");
+    const endTimeVal = v("end_time");
+
     const body: PlanItemCreate = {
       work_type_id: v("work_type_id"),
       title: v("title"),
       task_phase: phase as PlanItemCreate["task_phase"],
       is_main_deliverable: MAIN.includes(phase) && v("main") === "yes",
+      completion_id: v("completion_id") || undefined,
       target_qty: v("target_qty") || "1",
       location_name: v("location_name") || null,
+      start_time: startTimeVal || null,
+      end_time: endTimeVal || null,
+      site_lat: latVal ? Number(latVal) : null,
+      site_lng: lngVal ? Number(lngVal) : null,
       depends_on_item_id: v("depends_on_item_id") || null,
       notes: v("notes") || null,
     };
@@ -157,6 +172,16 @@ function ItemForm({ detail, onDone }: { detail: DailyPlanDetail; onDone: () => v
   return (
     <FormBlock className="mt-3 space-y-1 rounded-control border border-line p-3" onSubmit={submit} noValidate>
       {error && <TextBlock role="alert" className="text-danger">{error}</TextBlock>}
+      {orders.length > 0 && (
+        <SelectField name="completion_id" label="Pekerjaan Klien / Order SPK (opsional)" defaultValue="">
+          <ControlOption value="">Bukan bagian order tertentu</ControlOption>
+          {orders.map((o) => (
+            <ControlOption key={o.completion_id} value={o.completion_id}>
+              {o.order_number ? `[${o.order_number}] ` : ""}{o.client_name} - {o.project_title}
+            </ControlOption>
+          ))}
+        </SelectField>
+      )}
       <SelectField name="work_type_id" label="Template (jenis pekerjaan divisi)" defaultValue="">
         <ControlOption value="">Pilih template</ControlOption>
         {types?.map((t) => <ControlOption key={t.id} value={t.id}>{t.name}</ControlOption>)}
@@ -176,6 +201,14 @@ function ItemForm({ detail, onDone }: { detail: DailyPlanDetail; onDone: () => v
       <div className="grid gap-x-3 md:grid-cols-2">
         <TextField name="target_qty" label="Target volume" inputMode="decimal" defaultValue="1" />
         <TextField name="location_name" label="Nama titik/lokasi (opsional)" />
+      </div>
+      <div className="grid gap-x-3 md:grid-cols-2">
+        <TextField name="start_time" label="Jam mulai (opsional)" type="time" />
+        <TextField name="end_time" label="Jam selesai (opsional)" type="time" />
+      </div>
+      <div className="grid gap-x-3 md:grid-cols-2">
+        <TextField name="site_lat" label="Latitude titik (opsional)" inputMode="decimal" placeholder="misal: -6.2088" />
+        <TextField name="site_lng" label="Longitude titik (opsional)" inputMode="decimal" placeholder="misal: 106.8456" />
       </div>
       {prereqs.length > 0 && (
         <SelectField

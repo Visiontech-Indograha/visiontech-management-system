@@ -173,6 +173,11 @@ export function WorkCompletionDetailModal({
                     <TextBlock className="font-medium text-ink pl-6">
                       {order.site_address || "Lokasi belum ditentukan secara spesifik"}
                     </TextBlock>
+                    {order.site_lat != null && order.site_lng != null && (
+                      <TextBlock className="text-xs text-mist pl-6">
+                        Koordinat GPS: {order.site_lat}, {order.site_lng}
+                      </TextBlock>
+                    )}
                   </div>
                 </div>
 

@@ -726,6 +726,23 @@ class AttendanceSessionRepository(BaseRepository):
             {"exp": explanation, "id": str(attendance_id)},
         )
 
+    async def admin_update(self, attendance_id: UUID | str, fields: dict[str, Any]) -> bool:
+        """Koreksi kolom absensi (nama kolom dari daftar tetap, nilai lewat parameter)."""
+        allowed = ("clock_in_at", "clock_out_at", "om_approval_status", "out_of_radius_note")
+        sets = [f"{c} = :{c}" for c in allowed if c in fields]
+        if not sets:
+            return False
+        params = {c: fields[c] for c in allowed if c in fields} | {"id": str(attendance_id)}
+        result = await self.execute(
+            f"UPDATE attendance SET {', '.join(sets)}, update_at = NOW() "
+            "WHERE attendance_id = CAST(:id AS uuid) AND delete_at IS NULL", params)
+        return bool(result.rowcount)
+
+    async def admin_exists(self, attendance_id: UUID | str) -> bool:
+        row = await self.fetchone("SELECT 1 FROM attendance WHERE attendance_id = CAST(:id AS uuid) FOR UPDATE",
+                                  {"id": str(attendance_id)})
+        return row is not None
+
     async def set_review(self, attendance_id: UUID | str, status: str, reviewer: Any, note: str) -> None:
         """Menyimpan hasil peninjauan absensi oleh OM/atasan."""
         om_status = "APPROVED_BY_OM" if status == "APPROVED" else "REJECTED_BY_OM"

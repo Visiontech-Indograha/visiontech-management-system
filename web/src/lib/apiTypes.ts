@@ -1984,7 +1984,11 @@ export interface paths {
          */
         put: operations["update_employee_api_v1_employees__employee_id__put"];
         post?: never;
-        delete?: never;
+        /**
+         * Delete Employee
+         * @description Hapus permanen karyawan beserta akun loginnya — hanya SUPER_ADMIN, dan hanya yang sudah diarsipkan.
+         */
+        delete: operations["delete_employee_api_v1_employees__employee_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2292,7 +2296,11 @@ export interface paths {
          * @description Membuat akun baru untuk karyawan dengan kata sandi sementara.
          */
         post: operations["create_account_api_v1_employees__emp_id__account_post"];
-        delete?: never;
+        /**
+         * Delete Account
+         * @description Hapus permanen akun login karyawan — hanya SUPER_ADMIN.
+         */
+        delete: operations["delete_account_api_v1_employees__emp_id__account_delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2559,6 +2567,30 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attendance/{att_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Admin Delete Attendance
+         * @description Hapus permanen satu absensi — hanya SUPER_ADMIN.
+         */
+        delete: operations["admin_delete_attendance_api_v1_attendance__att_id__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Admin Patch Attendance
+         * @description Koreksi jam/status absensi — hanya SUPER_ADMIN; alasan wajib dan dicatat di audit.
+         */
+        patch: operations["admin_patch_attendance_api_v1_attendance__att_id__patch"];
         trace?: never;
     };
     "/api/v1/attendance/export": {
@@ -3035,6 +3067,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/overtime/{ot_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Overtime
+         * @description Hapus permanen pengajuan lembur — hanya SUPER_ADMIN.
+         */
+        delete: operations["delete_overtime_api_v1_overtime__ot_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/recaps/overtime": {
         parameters: {
             query?: never;
@@ -3453,6 +3505,22 @@ export interface components {
         AttachmentsIn: {
             /** File Ids */
             file_ids: string[];
+        };
+        /**
+         * AttendanceAdminPatch
+         * @description Koreksi absensi oleh SUPER_ADMIN; hanya kolom yang dikirim yang diubah. `reason` masuk ke audit.
+         */
+        AttendanceAdminPatch: {
+            /** Clock In At */
+            clock_in_at?: string | null;
+            /** Clock Out At */
+            clock_out_at?: string | null;
+            /** Om Approval Status */
+            om_approval_status?: ("AUTO_VALID" | "PENDING_OM" | "APPROVED_BY_OM" | "REJECTED_BY_OM") | null;
+            /** Out Of Radius Note */
+            out_of_radius_note?: string | null;
+            /** Reason */
+            reason: string;
         };
         /**
          * AttendanceListResponse
@@ -11873,6 +11941,39 @@ export interface operations {
             };
         };
     };
+    delete_employee_api_v1_employees__employee_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                employee_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     add_address_api_v1_employees__employee_id__addresses_post: {
         parameters: {
             query?: never;
@@ -12548,6 +12649,39 @@ export interface operations {
             };
         };
     };
+    delete_account_api_v1_employees__emp_id__account_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                emp_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     reset_password_api_v1_employees__emp_id__account_reset_password_post: {
         parameters: {
             query?: never;
@@ -12956,6 +13090,76 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["ReviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_delete_attendance_api_v1_attendance__att_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                att_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_patch_attendance_api_v1_attendance__att_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                att_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AttendanceAdminPatch"];
             };
         };
         responses: {
@@ -13898,6 +14102,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OvertimeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_overtime_api_v1_overtime__ot_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ot_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
                 };
             };
             /** @description Validation Error */

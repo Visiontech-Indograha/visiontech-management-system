@@ -13,7 +13,8 @@ from types import SimpleNamespace
 from typing import Any
 
 from app.core.errors import AppError, NotFoundError
-from app.core.security import hash_password
+from app.core.hard_delete import purge_row, write_delete_audit
+from app.core.security import CurrentUser, hash_password
 from app.modules.auth.repositories.auth_session_repository import CRUDSession
 from app.modules.auth.repositories.auth_user_repository import CRUDUser
 from app.modules.employees.repositories.employee_repository import CRUDEmployee
@@ -120,6 +121,19 @@ class AccountService:
             str(account.login), None, True, "PASSWORD_RESET", user_id=account.id, action="LOGIN_UNLOCKED"
         )
         return account, password
+
+    async def delete_account(self, employee_id: Any, actor: CurrentUser) -> None:
+        """Hapus permanen akun login (bukan data karyawannya). Admin tidak boleh menghapus akunnya sendiri."""
+        account = await self._account(employee_id, actor.organization_id)
+        if str(account.id) == actor.user_id:
+            raise AppError("CANNOT_DELETE_SELF", "Anda tidak bisa menghapus akun Anda sendiri.", status=409)
+        await purge_row(self.users.db, "users", "user_id", account.id)
+        await write_delete_audit(
+            self.users.db, actor_user_id=actor.user_id,
+            actor_role=actor.role,
+            actor_email=actor.email, entity_type="users", entity_id=account.id,
+            detail={"employee_id": str(employee_id)},
+        )
 
     async def set_active(self, employee_id: Any, org_id: str, active: bool) -> Any:
         """

@@ -87,6 +87,45 @@ async def test_max_4_devices_limit_enforced():
         )
 
 
+def _mobile_login_service(role: str) -> AuthService:
+    service = AuthService(AsyncMock(), AsyncMock())
+    user = MagicMock()
+    user.id = uuid4()
+    user.organization_id = uuid4()
+    user.is_active = True
+    user.password_hash = "$argon2id$mock"
+    user.role = role
+    service.sessions.failed_logins = AsyncMock(return_value=MagicMock(locked_until=None))
+    service.users.find_by_login = AsyncMock(return_value=user)
+    service._act_as = AsyncMock()
+    service.sessions.find_active_family_by_device = AsyncMock(return_value=None)
+    service.sessions.count_active_devices = AsyncMock(return_value=0)
+    service.sessions.record_login_attempt = AsyncMock()
+    service._start_session = AsyncMock(return_value=MagicMock(access_token="tok", refresh_token="ref"))
+    return service
+
+
+@pytest.mark.anyio
+async def test_super_admin_can_login_on_mobile():
+    service = _mobile_login_service("SUPER_ADMIN")
+    client = ClientInfo(ip="192.168.1.10", user_agent="Dart", device_label="HP admin", fingerprint="fp-a")
+    with patch("app.modules.auth.services.auth_service.verify_password", return_value=True):
+        tokens = await service.login("ageng@visiontech.id", "Secret123!", client, platform="mobile")
+    assert tokens.access_token == "tok"
+
+
+@pytest.mark.anyio
+async def test_office_role_still_rejected_on_mobile():
+    service = _mobile_login_service("OPERATIONS_MANAGER")
+    client = ClientInfo(ip="192.168.1.10", user_agent="Dart", device_label="HP om", fingerprint="fp-o")
+    with (
+        patch("app.modules.auth.services.auth_service.verify_password", return_value=True),
+        pytest.raises(AppError) as exc_info,
+    ):
+        await service.login("om@example.com", "Secret123!", client, platform="mobile")
+    assert exc_info.value.code == "NOT_FIELD_STAFF"
+
+
 @pytest.mark.anyio
 async def test_security_login_event_broadcast():
     """Memastikan saat login berhasil, event SSE topik security dipublikasikan ke broker."""

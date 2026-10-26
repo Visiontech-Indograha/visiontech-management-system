@@ -283,7 +283,7 @@ export interface paths {
         get?: never;
         /**
          * Move Point
-         * @description Geser titik di peta titik (PM kapan pun; ketua tim selama survei masih draf).
+         * @description Geser titik di peta layout (PM kapan pun; ketua tim selama survei masih draf).
          */
         put: operations["move_point_api_v1_work_plans_surveys_points__point_id__location_put"];
         post?: never;
@@ -1162,6 +1162,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/exports/team-week": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Export Team Week
+         * @description Laporan mingguan tim (.pptx): semua pekerjaan tim 7 hari — foto, keterangan, status. Ketua/anggota tim
+         *     atau PM/OM divisinya.
+         */
+        post: operations["export_team_week_api_v1_exports_team_week_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/exports/{export_id}/file": {
         parameters: {
             query?: never;
@@ -1954,7 +1975,7 @@ export interface paths {
         };
         /**
          * Get Employee
-         * @description Detail karyawan + alamat.
+         * @description Detail karyawan + alamat (kontak pribadi hanya untuk pemilik & HR/admin).
          */
         get: operations["get_employee_api_v1_employees__employee_id__get"];
         /**
@@ -2386,7 +2407,7 @@ export interface paths {
         };
         /**
          * Attendance Recap
-         * @description FINANCE/HR/OPS/ADMIN: seluruh organisasi; lainnya: hanya dirinya (aturan `GET /attendance`).
+         * @description OM/ADMIN (view:all_attendance): seluruh perusahaan; lainnya: hanya dirinya.
          */
         get: operations["attendance_recap_api_v1_recaps_attendance_get"];
         put?: never;
@@ -3448,6 +3469,15 @@ export interface components {
             size: number;
             /** Today */
             today?: string | null;
+            /** Required Out At */
+            required_out_at?: string | null;
+            /**
+             * Report Pending Count
+             * @default 0
+             */
+            report_pending_count: number;
+            /** Report Pending Plan Id */
+            report_pending_plan_id?: string | null;
             /** Time Anchor */
             time_anchor?: string | null;
         };
@@ -7052,6 +7082,19 @@ export interface components {
             /** Status */
             status?: boolean | null;
         };
+        /** TeamWeekExportRequest */
+        TeamWeekExportRequest: {
+            /**
+             * Team Id
+             * Format: uuid
+             */
+            team_id: string;
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+        };
         /** ToolCreate */
         ToolCreate: {
             /**
@@ -10238,6 +10281,39 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["PeriodicExportRequest"];
+            };
+        };
+        responses: {
+            /** @description Berkas dokumen */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_team_week_api_v1_exports_team_week_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TeamWeekExportRequest"];
             };
         };
         responses: {

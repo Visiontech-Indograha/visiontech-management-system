@@ -17,9 +17,12 @@ const KEY = ["work-types"] as const;
 /** GET /work-types — yang aktif; `all` (butuh izin create:plan) menyertakan yang nonaktif. */
 /** Peran jenis pekerjaan (docs/37 §9). */
 export const WORK_TYPE_KIND_LABEL = {
-  WORK: "Pekerjaan",
-  SURVEY_TASK: "Tugas survei",
-  SURVEY_POINT: "Jenis titik survei",
+  WORK: "Instalasi",
+  INSTALLATION: "Instalasi",
+  SURVEY_TASK: "Survei Lapangan",
+  SURVEY_POINT: "Survei Lapangan per Titik",
+  MAINTENANCE: "Perawatan",
+  REPLACEMENT: "Pergantian Barang",
 } as const;
 
 export const useWorkTypes = (all = false, division_id?: string) =>

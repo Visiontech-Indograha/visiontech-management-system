@@ -56,7 +56,7 @@ const card = async () => screen.findByRole("region", { name: "Absen hari ini" })
 describe("Absen kantor lewat web (R-33)", () => {
   beforeEach(() => {
     stubLocation(OFFICE);
-    // Jam tetap 18.30 WIB — aturan jam absen (07.00 masuk, 19.00 batas pulang) tidak tergantung jam CI.
+    // Jam tetap 18.30 WIB — aturan jam absen (06.45 masuk, 19.00 batas pulang) tidak tergantung jam CI.
     vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-10-02T11:30:00Z") });
   });
   afterEach(() => {
@@ -131,6 +131,32 @@ describe("Absen kantor lewat web (R-33)", () => {
     fireEvent.click(await within(await card()).findByRole("button", { name: "Absen pulang" }));
     await waitFor(() => expect(calls.some((c) => c.url === "/attendance/check-out")).toBe(true));
     expect(calls.find((c) => c.url === "/attendance/check-out")!.data).toMatchObject({ channel: "WEB", location: OFFICE });
+  });
+
+  it("absen masuk baru bisa mulai 06:45 WIB", async () => {
+    vi.setSystemTime(new Date("2026-10-01T23:44:00Z")); // 06:44 WIB
+    const calls = setup([]);
+    renderRoute("/attendance", { me: officeMe() });
+    const region = await card();
+    fireEvent.click(await within(region).findByRole("button", { name: "Absen masuk" }));
+    expect(await within(region).findByRole("alert")).toHaveTextContent("dimulai pukul 06:45 WIB");
+    expect(calls.some((c) => c.url === "/attendance/check-in")).toBe(false);
+  });
+
+  it("laporan harian belum diisi: peringatan sebelum absen pulang, tetap boleh lanjut", async () => {
+    const calls = mockApi((c) => {
+      if (c.url === "/attendance")
+        return { data: { items: [att()], total: 1, page: 1, size: 50, today: "2026-10-02", report_pending_count: 2 } };
+      if (c.url === "/attendance/check-out") return { data: att({ check_out_at: "2026-10-02T10:00:00Z" }) };
+      if (c.url === "/offices") return { data: [site] };
+      if (c.url === "/employees") return { data: { items: [], total: 0, page: 1, size: 100 } };
+    });
+    renderRoute("/attendance", { me: officeMe() });
+    fireEvent.click(await within(await card()).findByRole("button", { name: "Absen pulang" }));
+    expect(await screen.findByText(/2 tugas hari ini yang progresnya belum diperbarui/)).toBeInTheDocument();
+    expect(calls.some((c) => c.url === "/attendance/check-out")).toBe(false);
+    fireEvent.click(screen.getByRole("button", { name: "Tetap absen pulang" }));
+    await waitFor(() => expect(calls.some((c) => c.url === "/attendance/check-out")).toBe(true));
   });
 
   it("wajah V2: tidak ada langkah verifikasi wajah terpisah (server mencocokkan swafoto absen)", async () => {

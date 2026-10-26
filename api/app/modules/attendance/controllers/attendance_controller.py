@@ -77,12 +77,18 @@ class AttendanceController:
             page=page,
             size=size,
         )
+        today, required_out, pending, pending_plan = await self.session_service.day_hints(
+            current_user.organization_id, current_user.employee_id
+        )
         return AttendanceListResponse(
             items=[_response(r) for r in rows],
             total=total,
             page=page,
             size=size,
-            today=await self.session_service.today(current_user.organization_id),
+            today=today,
+            required_out_at=required_out,
+            report_pending_count=pending,
+            report_pending_plan_id=pending_plan,
             time_anchor=create_time_anchor(current_user.user_id),
         )
 

@@ -313,7 +313,9 @@ class SurveyRepository(BaseRepository):
     async def work_type_division(self, work_type_id: UUID | str) -> str | None:
         div = await self.scalar(
             "SELECT CAST(division_id AS text) FROM work_type WHERE work_type_id = CAST(:w AS uuid) "
-            "AND delete_at IS NULL AND kind = 'WORK'", {"w": str(work_type_id)})
+            "AND delete_at IS NULL AND kind IN ('WORK', 'INSTALLATION', 'MAINTENANCE', 'REPLACEMENT')",
+            {"w": str(work_type_id)},
+        )
         return str(div) if div else None
 
     async def insert_follow_up(self, daily_plan_id: UUID | str, completion_id: UUID | str, work_type_id: UUID | str,

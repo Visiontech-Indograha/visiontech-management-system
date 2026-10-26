@@ -1,4 +1,6 @@
+import { useMemo } from "react";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSession } from "@/stores/sessionStore";
 import { api } from "@/lib/apiClient";
 import type { components } from "@/lib/apiTypes";
 
@@ -154,6 +156,29 @@ export const useOffices = () =>
 
 export const useDivisions = () =>
   useQuery({ queryKey: ["divisions"], staleTime: 5 * 60_000, queryFn: async () => (await api.get<Division[]>("/divisions")).data });
+
+/** Hook untuk mendapatkan daftar divisi yang relevan dengan pengguna login (PM hanya melihat divisi yang dipimpinnya/dimilikinya). */
+export function useUserDivisions(currentDivisionId?: string | null) {
+  const query = useDivisions();
+  const { me } = useSession();
+
+  const userDivisions = useMemo(() => {
+    const list = query.data ?? [];
+    if (!query.data || me?.role !== "PROJECT_MANAGER") return list;
+    return list.filter((u) => {
+      const isPm = Boolean(me.employee_id && u.pm_id && String(u.pm_id).toLowerCase() === String(me.employee_id).toLowerCase());
+      const isMyDiv = Boolean(me.division_id && String(u.id).toLowerCase() === String(me.division_id).toLowerCase());
+      const isCurrent = Boolean(currentDivisionId && String(u.id).toLowerCase() === String(currentDivisionId).toLowerCase());
+      return isPm || isMyDiv || isCurrent;
+    });
+  }, [query.data, me, currentDivisionId]);
+
+  return {
+    ...query,
+    data: userDivisions,
+    allDivisions: query.data ?? [],
+  };
+}
 
 export const useJobPositions = () =>
   useQuery({

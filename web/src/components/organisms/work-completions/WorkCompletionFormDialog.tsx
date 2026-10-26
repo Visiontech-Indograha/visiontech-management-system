@@ -8,7 +8,7 @@ import { DialogActions } from "@/components/molecules/DialogActions";
 import { FormErrorText } from "@/components/molecules/FormErrorText";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { useCreateWorkCompletion } from "@/services/workCompletionService";
-import { useDivisions } from "@/services/employeeService";
+import { useUserDivisions } from "@/services/employeeService";
 import { useSession } from "@/stores/sessionStore";
 
 interface FormValues {
@@ -27,7 +27,7 @@ interface FormValues {
 export function WorkCompletionFormDialog({ onClose }: { onClose: () => void }) {
   const create = useCreateWorkCompletion();
   const { me } = useSession();
-  const { data: divisions } = useDivisions();
+  const { data: divisions } = useUserDivisions();
   const [formError, setFormError] = useState<string | null>(null);
 
   const {

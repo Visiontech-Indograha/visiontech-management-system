@@ -446,6 +446,35 @@
       "title": "Page",
       "type": "integer"
      },
+     "report_pending_count": {
+      "default": 0,
+      "title": "Report Pending Count",
+      "type": "integer"
+     },
+     "report_pending_plan_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Report Pending Plan Id"
+     },
+     "required_out_at": {
+      "anyOf": [
+       {
+        "format": "date-time",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Required Out At"
+     },
      "size": {
       "title": "Size",
       "type": "integer"

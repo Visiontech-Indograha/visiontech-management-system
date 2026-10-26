@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { Package, Plus, Trash2 } from "@/components/molecules/Glyphs";
+import { Edit2, Package, Plus, Trash2 } from "@/components/molecules/Glyphs";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { ActionButton } from "@/components/molecules/ActionButton";
@@ -20,7 +20,9 @@ import {
 import {
   useWorkTypeMaterials,
   useCreateWorkTypeMaterial,
+  useUpdateWorkTypeMaterial,
   useDeleteWorkTypeMaterial,
+  type DefaultMaterial,
   type WorkType,
 } from "@/services/workTypeService";
 
@@ -43,9 +45,11 @@ export function WorkTypeMaterialsDialog({
   onClose,
 }: WorkTypeMaterialsDialogProps) {
   const [isAdding, setIsAdding] = useState(false);
+  const [editingMaterial, setEditingMaterial] = useState<DefaultMaterial | null>(null);
 
   const { data: materials = [], isPending, isError } = useWorkTypeMaterials(workType?.id || "");
   const createMaterial = useCreateWorkTypeMaterial();
+  const updateMaterial = useUpdateWorkTypeMaterial();
   const deleteMaterial = useDeleteWorkTypeMaterial();
 
   const { register, handleSubmit, reset } = useForm<NewMaterialValues>({
@@ -61,24 +65,65 @@ export function WorkTypeMaterialsDialog({
 
   if (!workType) return null;
 
+  const startEdit = (m: DefaultMaterial) => {
+    setEditingMaterial(m);
+    reset({
+      material_name: m.material_name,
+      material_code: m.material_code || "",
+      default_qty: m.default_qty,
+      unit: m.unit,
+      category: m.category || "",
+      description: m.description || "",
+    });
+    setIsAdding(true);
+  };
+
+  const handleCancelForm = () => {
+    setIsAdding(false);
+    setEditingMaterial(null);
+    reset({
+      material_code: "",
+      material_name: "",
+      default_qty: 1,
+      unit: "Unit",
+      category: "Kabel & Aksesoris",
+      description: "",
+    });
+  };
+
   const onAddSubmit = async (values: NewMaterialValues) => {
     try {
-      await createMaterial.mutateAsync({
-        workTypeId: workType.id,
-        payload: {
-          material_name: values.material_name,
-          material_code: values.material_code || undefined,
-          default_qty: Number(values.default_qty),
-          unit: values.unit,
-          category: values.category || undefined,
-          description: values.description || undefined,
-        },
-      });
-      toast.success("Material default berhasil ditambahkan.");
-      setIsAdding(false);
-      reset();
+      if (editingMaterial) {
+        await updateMaterial.mutateAsync({
+          workTypeId: workType.id,
+          materialId: editingMaterial.default_material_id,
+          payload: {
+            material_name: values.material_name,
+            material_code: values.material_code || undefined,
+            default_qty: Number(values.default_qty),
+            unit: values.unit,
+            category: values.category || undefined,
+            description: values.description || undefined,
+          },
+        });
+        toast.success("Material default berhasil diperbarui.");
+      } else {
+        await createMaterial.mutateAsync({
+          workTypeId: workType.id,
+          payload: {
+            material_name: values.material_name,
+            material_code: values.material_code || undefined,
+            default_qty: Number(values.default_qty),
+            unit: values.unit,
+            category: values.category || undefined,
+            description: values.description || undefined,
+          },
+        });
+        toast.success("Material default berhasil ditambahkan.");
+      }
+      handleCancelForm();
     } catch {
-      toast.error("Gagal menambahkan material default.");
+      toast.error(editingMaterial ? "Gagal memperbarui material default." : "Gagal menambahkan material default.");
     }
   };
 
@@ -110,7 +155,18 @@ export function WorkTypeMaterialsDialog({
             <ActionButton
               variant="default"
               size="sm"
-              onClick={() => setIsAdding(true)}
+              onClick={() => {
+                setEditingMaterial(null);
+                reset({
+                  material_code: "",
+                  material_name: "",
+                  default_qty: 1,
+                  unit: "Unit",
+                  category: "Kabel & Aksesoris",
+                  description: "",
+                });
+                setIsAdding(true);
+              }}
             >
               <Plus className="mr-1.5 h-3.5 w-3.5" />
               Tambah Material
@@ -118,11 +174,11 @@ export function WorkTypeMaterialsDialog({
           )}
         </div>
 
-        {/* Form Tambah Material */}
+        {/* Form Tambah/Ubah Material */}
         {isAdding && (
           <div className="rounded-control border border-primary/30 bg-primary/5 p-3">
             <TextBlock className="mb-2 text-xs font-bold text-ink uppercase tracking-wider">
-              Material Baru
+              {editingMaterial ? "Ubah Material Standar" : "Material Baru"}
             </TextBlock>
             <FormBlock id="add-material-template-form" onSubmit={handleSubmit(onAddSubmit)}>
               <TextField
@@ -162,9 +218,9 @@ export function WorkTypeMaterialsDialog({
               />
               <div className="mt-3 flex justify-end gap-2">
                 <DialogActions
-                  onCancel={() => setIsAdding(false)}
-                  submitLabel="Simpan Template"
-                  busy={createMaterial.isPending}
+                  onCancel={handleCancelForm}
+                  submitLabel={editingMaterial ? "Simpan Perubahan" : "Simpan Template"}
+                  busy={createMaterial.isPending || updateMaterial.isPending}
                   formId="add-material-template-form"
                 />
               </div>
@@ -233,14 +289,24 @@ export function WorkTypeMaterialsDialog({
                       {m.unit}
                     </TableBlockCell>
                     <TableBlockCell className="text-center">
-                      <ActionButton
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(m.default_material_id, m.material_name)}
-                        aria-label="Hapus Material"
-                      >
-                        <Trash2 className="h-3.5 w-3.5 text-danger" />
-                      </ActionButton>
+                      <div className="flex items-center justify-center gap-1">
+                        <ActionButton
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => startEdit(m)}
+                          aria-label="Ubah Material"
+                        >
+                          <Edit2 className="h-3.5 w-3.5 text-mist hover:text-primary" />
+                        </ActionButton>
+                        <ActionButton
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete(m.default_material_id, m.material_name)}
+                          aria-label="Hapus Material"
+                        >
+                          <Trash2 className="h-3.5 w-3.5 text-danger" />
+                        </ActionButton>
+                      </div>
                     </TableBlockCell>
                   </TableBlockRow>
                 ))}

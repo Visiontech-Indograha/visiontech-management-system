@@ -87,6 +87,10 @@ export function WorkTypeFormDialog({ type, onClose }: { type: WorkType | null; o
     setFormError(null);
     try {
       const divisionId = v.division_id || me?.division_id || type?.division_id || undefined;
+      if (!divisionId) {
+        setFormError("Divisi wajib dipilih untuk jenis pekerjaan ini.");
+        return;
+      }
       await save.mutateAsync({
         name: v.name,
         division_id: divisionId,

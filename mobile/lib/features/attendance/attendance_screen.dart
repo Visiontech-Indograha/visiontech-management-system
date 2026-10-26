@@ -19,6 +19,7 @@ import '../../shared/ui/vms_ui.dart';
 import '../auth/auth_controller.dart';
 import '../auth/auth_state.dart';
 import '../face/face_enroll_gate.dart';
+import '../plans/daily_plan_screen.dart';
 
 /// Absensi (M5, dok 05 §3.5). Wajib online: waktu & geofence ditentukan server.
 /// Di luar radius lokasi, server mewajibkan swafoto — aplikasi memintanya lebih dulu.
@@ -34,6 +35,10 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
   // R-34: absen offline yang belum terkirim (antrean bertanda tangan di HP).
   List<Map<String, dynamic>> _offline = [];
   String? _serverToday;
+  // Jam wajib pulang & jumlah tugas belum dilapor hari ini (dari server): dasar pengingat dan peringatan laporan.
+  DateTime? _requiredOutAt;
+  int _reportPending = 0;
+  String? _reportPlanId;
   List<Map<String, dynamic>> _sites = [];
   String? _siteId;
   // Lokasi SK yang sedang berjalan untuk akun ini (dasar peringatan bila memilih lokasi lain).
@@ -73,6 +78,9 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       final att = await engine.fetchList('attendance', () async {
         final res = await engine.api.myAttendance(employeeId: _employeeId);
         _serverToday = res.today;
+        _requiredOutAt = DateTime.tryParse(res.requiredOutAt ?? '');
+        _reportPending = res.reportPendingCount;
+        _reportPlanId = res.reportPendingPlanId;
         anchor = res.timeAnchor;
         return res.items;
       });
@@ -124,6 +132,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
           _siteId = _sites.isNotEmpty ? _sites.first['id'] as String : null;
         }
       });
+      await _syncReminders();
     } catch (e) {
       if (mounted) setState(() => _error = apiErrorMessage(e));
     } finally {
@@ -191,10 +200,60 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     return loc.position;
   }
 
+  /// Susun ulang alarm pengingat absen (masuk 07:30–08:00, pulang dari jam wajib pulang) sesuai keadaan terbaru.
+  Future<void> _syncReminders() async {
+    final today = _today;
+    final checkedIn = today != null && today['check_in_at'] != null;
+    final checkedOut = today != null && today['check_out_at'] != null;
+    var requiredOut = _requiredOutAt;
+    if (requiredOut == null && checkedIn) {
+      requiredOut = DateTime.tryParse('${today['check_in_at']}')?.add(const Duration(hours: 9));
+    }
+    try {
+      await ref.read(attendanceRemindersProvider).sync(
+        serverToday: _serverToday,
+        checkedIn: checkedIn,
+        checkedOut: checkedOut,
+        requiredOut: requiredOut,
+      );
+    } catch (_) {
+      // Pengingat hanya bantuan; kegagalan penjadwalan tidak boleh mengganggu layar absen.
+    }
+  }
+
+  /// Peringatan laporan harian: ada tugas hari ini yang progresnya belum diperbarui. Tidak memblokir absen.
+  Future<bool> _confirmDailyReport() async {
+    if (_reportPending <= 0) return true;
+    if (!mounted) return false;
+    final choice = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Laporan harian belum diisi'),
+        content: Text(
+          'Ada $_reportPending tugas hari ini yang progresnya belum kamu perbarui. '
+          'Isi laporan harian dulu sebelum absen pulang.',
+        ),
+        actions: [
+          if (_reportPlanId != null)
+            TextButton(onPressed: () => Navigator.pop(ctx, 'report'), child: const Text('Isi laporan')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, 'go'), child: const Text('Tetap absen pulang')),
+        ],
+      ),
+    );
+    if (choice == 'report' && mounted) {
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(builder: (_) => DailyPlanScreen(dailyPlanId: _reportPlanId!)),
+      );
+      await _load();
+      return false;
+    }
+    return choice == 'go';
+  }
+
   Future<void> _checkIn() async {
     final now = attendanceClock();
-    if (_wibHour(now) < 7) {
-      _snack('Absensi masuk baru dibuka mulai pukul 07:00 WIB.');
+    if (_wibMinutes(now) < 6 * 60 + 45) {
+      _snack('Absensi masuk baru dibuka mulai pukul 06:45 WIB.');
       return;
     }
     final site = _sites.where((s) => s['id'] == _siteId).firstOrNull;
@@ -293,6 +352,8 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       _snack('Batas waktu absensi pulang mandiri telah ditutup pada pukul 19:00 WIB (Sistem auto check-out aktif).');
       return;
     }
+
+    if (!await _confirmDailyReport()) return;
 
     final checkInAtStr = _today?['check_in_at'] as String?;
     if (checkInAtStr != null) {
@@ -800,6 +861,11 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
 
 /// Jam sekarang di WIB (UTC+7, aturan jam absen server), bukan zona waktu perangkat.
 int _wibHour(DateTime now) => now.toUtc().add(const Duration(hours: 7)).hour;
+
+int _wibMinutes(DateTime now) {
+  final w = now.toUtc().add(const Duration(hours: 7));
+  return w.hour * 60 + w.minute;
+}
 
 /// Jam untuk aturan jam absen (07.00 masuk, 19.00 batas pulang). Uji membekukannya agar tidak bergantung jam CI.
 DateTime Function() attendanceClock = DateTime.now;

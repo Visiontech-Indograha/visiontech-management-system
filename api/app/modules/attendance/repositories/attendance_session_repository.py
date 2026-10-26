@@ -13,6 +13,7 @@ from typing import Any
 from uuid import UUID
 
 from app.core.repository import BaseRepository
+from app.shared.attendance_sql import IS_LATE, IS_LATE_A
 
 
 def _haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> int:
@@ -66,7 +67,7 @@ class AttendanceSessionRepository(BaseRepository):
         Mendapatkan sesi absensi terbaru yang belum check-out.
         """
         return await self.fetchone(
-            """
+            f"""
             SELECT a.attendance_id AS id,
                    a.employee_id,
                    a.office_id AS organization_id,
@@ -76,7 +77,7 @@ class AttendanceSessionRepository(BaseRepository):
                    a.clock_in_at AS check_in_at,
                    a.clock_out_at AS check_out_at,
                    a.distance_to_target_m::float AS distance_m,
-                   (a.clock_in_at::time > a.scheduled_in) AS is_late,
+                   ({IS_LATE_A}) AS is_late,
                    (a.clock_out_at IS NOT NULL AND a.clock_out_at::time < a.scheduled_out) AS is_early_leave,
                    CASE
                        WHEN a.om_approval_status = 'AUTO_VALID' THEN 'AUTO_VALID'
@@ -103,6 +104,34 @@ class AttendanceSessionRepository(BaseRepository):
             ORDER BY a.clock_in_at DESC LIMIT 1
             """,
             {"emp": str(employee_id), "valid": valid_only},
+        )
+
+    async def open_hint(self, employee_id: UUID | str) -> Any:
+        """Sesi terbuka terbaru: jam masuk, jam pulang kantor, dan status terlambat (untuk pengingat pulang)."""
+        return await self.fetchone(
+            f"""
+            SELECT a.clock_in_at, a.scheduled_out, ({IS_LATE_A}) AS is_late
+            FROM attendance a
+            WHERE a.employee_id = CAST(:emp AS uuid) AND a.clock_out_at IS NULL AND a.delete_at IS NULL
+              AND a.om_approval_status <> 'REJECTED_BY_OM'
+            ORDER BY a.clock_in_at DESC LIMIT 1
+            """,
+            {"emp": str(employee_id)},
+        )
+
+    async def unreported_items(self, employee_id: UUID | str, work_date: Any) -> Any:
+        """Tugas hari ini yang ditugaskan ke karyawan tetapi progresnya belum diperbarui hari ini."""
+        return await self.fetchone(
+            """
+            SELECT count(*)::int AS n, (array_agg(w.daily_plan_id))[1] AS plan_id
+            FROM work_plan_item i
+            JOIN work_plan_daily w ON w.daily_plan_id = i.daily_plan_id
+            WHERE w.work_date = :d AND w.status IN ('APPROVED', 'ONGOING') AND w.delete_at IS NULL
+              AND i.delete_at IS NULL AND i.status IN ('TODO', 'IN_PROGRESS')
+              AND i.assigned_employee_ids @> to_jsonb(CAST(:emp AS text))
+              AND (i.update_at AT TIME ZONE 'Asia/Jakarta')::date <> :d
+            """,
+            {"d": work_date, "emp": str(employee_id)},
         )
 
     async def auto_checkout_unclosed(
@@ -321,7 +350,7 @@ class AttendanceSessionRepository(BaseRepository):
         face_score = float(face_similarity * 100.0) if face_similarity is not None else 0.0
 
         return await self.fetchone(
-            """
+            f"""
             INSERT INTO attendance (
                 employee_id, attendance_date, target_location_type, office_id, daily_plan_id,
                 scheduled_in, scheduled_out, clock_in_at, in_lat, in_lng,
@@ -342,7 +371,7 @@ class AttendanceSessionRepository(BaseRepository):
                       COALESCE(daily_plan_id, office_id) AS site_id, CAST(:label AS text) AS site_label,
                       clock_in_at AS check_in_at, clock_out_at AS check_out_at,
                       distance_to_target_m::float AS distance_m,
-                      (clock_in_at::time > scheduled_in) AS is_late,
+                      ({IS_LATE}) AS is_late,
                       (clock_out_at IS NOT NULL AND clock_out_at::time < scheduled_out) AS is_early_leave,
                       CASE
                           WHEN om_approval_status = 'AUTO_VALID' THEN 'AUTO_VALID'
@@ -393,7 +422,7 @@ class AttendanceSessionRepository(BaseRepository):
     ) -> Any:
         """Menutup sesi absensi (check-out)."""
         return await self.fetchone(
-            """
+            f"""
             UPDATE attendance
                SET clock_out_at = NOW(),
                    out_of_radius_note = COALESCE(out_of_radius_note || '; ', '') || COALESCE(:exp, ''),
@@ -403,7 +432,7 @@ class AttendanceSessionRepository(BaseRepository):
                       COALESCE(daily_plan_id, office_id) AS site_id, 'Lokasi Kerja' AS site_label,
                       clock_in_at AS check_in_at, clock_out_at AS check_out_at,
                       distance_to_target_m::float AS distance_m,
-                      (clock_in_at::time > scheduled_in) AS is_late,
+                      ({IS_LATE}) AS is_late,
                       (clock_out_at IS NOT NULL AND clock_out_at::time < scheduled_out) AS is_early_leave,
                       CASE
                           WHEN om_approval_status = 'AUTO_VALID' THEN 'AUTO_VALID'
@@ -460,7 +489,7 @@ class AttendanceSessionRepository(BaseRepository):
     async def flag_missing_face(self, attendance_id: UUID | str, event: str, note: str) -> Any:
         """Menandai absensi yang memerlukan pemeriksaan verifikasi wajah."""
         return await self.fetchone(
-            """
+            f"""
             UPDATE attendance
                SET out_of_radius_note = NULLIF(concat_ws('; ', out_of_radius_note, CAST(:note AS text)), ''),
                    om_approval_status = CASE WHEN om_approval_status = 'AUTO_VALID'
@@ -471,7 +500,7 @@ class AttendanceSessionRepository(BaseRepository):
                       COALESCE(daily_plan_id, office_id) AS site_id, 'Lokasi Kerja' AS site_label,
                       clock_in_at AS check_in_at, clock_out_at AS check_out_at,
                       distance_to_target_m::float AS distance_m,
-                      (clock_in_at::time > scheduled_in) AS is_late,
+                      ({IS_LATE}) AS is_late,
                       (clock_out_at IS NOT NULL AND clock_out_at::time < scheduled_out) AS is_early_leave,
                       CASE
                           WHEN om_approval_status = 'AUTO_VALID' THEN 'AUTO_VALID'
@@ -492,7 +521,7 @@ class AttendanceSessionRepository(BaseRepository):
     async def get(self, attendance_id: UUID | str, org_id: UUID | str) -> Any:
         """Mengambil satu rekaman absensi berdasarkan ID."""
         return await self.fetchone(
-            """
+            f"""
             SELECT a.attendance_id AS id,
                    a.employee_id,
                    a.attendance_date AS work_date,
@@ -501,7 +530,7 @@ class AttendanceSessionRepository(BaseRepository):
                    a.clock_in_at AS check_in_at,
                    a.clock_out_at AS check_out_at,
                    a.distance_to_target_m::float AS distance_m,
-                   (a.clock_in_at::time > a.scheduled_in) AS is_late,
+                   ({IS_LATE_A}) AS is_late,
                    (a.clock_out_at IS NOT NULL AND a.clock_out_at::time < a.scheduled_out) AS is_early_leave,
                    CASE
                        WHEN a.om_approval_status = 'AUTO_VALID' THEN 'AUTO_VALID'
@@ -627,7 +656,7 @@ class AttendanceSessionRepository(BaseRepository):
                    a.clock_in_at AS check_in_at,
                    a.clock_out_at AS check_out_at,
                    a.distance_to_target_m::float AS distance_m,
-                   (a.clock_in_at::time > a.scheduled_in) AS is_late,
+                   ({IS_LATE_A}) AS is_late,
                    (a.clock_out_at IS NOT NULL AND a.clock_out_at::time < a.scheduled_out) AS is_early_leave,
                    CASE
                        WHEN a.om_approval_status = 'AUTO_VALID' THEN 'AUTO_VALID'
@@ -732,7 +761,7 @@ class AttendanceSessionRepository(BaseRepository):
         """Baris ekspor absensi untuk laporan rekap."""
         return list(
             await self.fetchall(
-                """
+                f"""
                 SELECT a.attendance_date AS work_date,
                        e.employee_no,
                        e.full_name,
@@ -745,7 +774,7 @@ class AttendanceSessionRepository(BaseRepository):
                            WHEN a.om_approval_status = 'REJECTED_BY_OM' THEN 'REJECTED'
                            ELSE 'NEEDS_REVIEW'
                        END AS status,
-                       (a.clock_in_at::time > a.scheduled_in) AS is_late,
+                       ({IS_LATE_A}) AS is_late,
                        (a.clock_out_at IS NOT NULL AND a.clock_out_at::time < a.scheduled_out) AS is_early_leave,
                        NULL::float AS check_out_distance_m,
                        FALSE AS check_out_outside,

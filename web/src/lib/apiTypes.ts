@@ -3537,6 +3537,15 @@ export interface components {
             size: number;
             /** Today */
             today?: string | null;
+            /** Required Out At */
+            required_out_at?: string | null;
+            /**
+             * Report Pending Count
+             * @default 0
+             */
+            report_pending_count: number;
+            /** Report Pending Plan Id */
+            report_pending_plan_id?: string | null;
             /** Time Anchor */
             time_anchor?: string | null;
         };

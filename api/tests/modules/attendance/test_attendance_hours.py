@@ -1,7 +1,7 @@
 """
 api/tests/test_attendance_hours.py
 Pengujian unit dan aturan bisnis untuk jam operasional absensi:
-- Jam masuk dibuka mulai pukul 07:00 (sebelum 07:00 ditolak CHECKIN_TOO_EARLY)
+- Jam masuk dibuka mulai pukul 06:45 (sebelum 06:45 ditolak CHECKIN_TOO_EARLY)
 - Waktu kerja 9 jam kotor (8 jam efektif + 1 jam istirahat):
   - < 9 jam kotor: dicatat pulang cepat dan ada keterangan durasi kerja
   - >= 9 jam kotor: absensi valid penuh dan ada pesan penyemangat
@@ -11,7 +11,7 @@ Pengujian unit dan aturan bisnis untuk jam operasional absensi:
 from __future__ import annotations
 
 import asyncio
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
@@ -24,8 +24,8 @@ from app.modules.attendance.services.attendance_session_service import Attendanc
 MONITOR = "app.modules.attendance.services.attendance_monitor_service"
 
 
-def test_check_in_before_0700_is_rejected():
-    """Percobaan check-in sebelum pukul 07:00 ditolak dengan 422 CHECKIN_TOO_EARLY."""
+def test_check_in_before_0645_is_rejected():
+    """Percobaan check-in sebelum pukul 06:45 ditolak dengan 422 CHECKIN_TOO_EARLY."""
     async def run():
         repo = AsyncMock()
         clock = AsyncMock()
@@ -38,7 +38,7 @@ def test_check_in_before_0700_is_rejected():
         worker_mock = MagicMock(employee_id=uuid4(), attendance_mode="OFFICE", unit_id=None, is_admin=False)
         repo.attendance_mode_of.return_value = worker_mock
 
-        early_dt = datetime(2026, 10, 14, 6, 45, tzinfo=UTC)
+        early_dt = datetime(2026, 10, 14, 6, 44, tzinfo=UTC)
         clock_mock = MagicMock()
         clock_mock.local_now = early_dt
         clock_mock.today = early_dt.date()
@@ -59,7 +59,7 @@ def test_check_in_before_0700_is_rejected():
 
         assert exc_info.value.code == "CHECKIN_TOO_EARLY"
         assert exc_info.value.status == 422
-        assert "07:00" in exc_info.value.message
+        assert "06:45" in exc_info.value.message
 
     asyncio.run(run())
 
@@ -224,3 +224,40 @@ def test_auto_checkout_unclosed_sessions():
             mock_notif.attendance_auto_checkout_bulk.assert_awaited_once()
 
     asyncio.run(run())
+
+
+def _hints_service(opened, pending):
+    repo = AsyncMock()
+    repo.open_hint.return_value = opened
+    repo.unreported_items.return_value = pending
+    clock = AsyncMock()
+    clock.local_now.return_value = MagicMock(today=date(2026, 10, 26))
+    return AttendanceSessionService(repo, clock)
+
+
+def test_required_out_is_nine_hours_after_on_time_check_in():
+    from datetime import time, timedelta
+
+    from app.core.time import WIB
+    checked_in = datetime(2026, 10, 26, 7, 0, tzinfo=WIB)
+    opened = MagicMock(clock_in_at=checked_in, scheduled_out=time(17, 0), is_late=False)
+    _, required_out, _, _ = asyncio.run(_hints_service(opened, None).day_hints("org", str(uuid4())))
+    assert required_out == checked_in + timedelta(hours=9)
+
+
+def test_late_check_in_must_leave_at_office_closing_time():
+    from datetime import time
+
+    from app.core.time import WIB
+    opened = MagicMock(clock_in_at=datetime(2026, 10, 26, 8, 30, tzinfo=WIB), scheduled_out=time(17, 0), is_late=True)
+    _, required_out, _, _ = asyncio.run(_hints_service(opened, None).day_hints("org", str(uuid4())))
+    assert required_out == datetime(2026, 10, 26, 17, 0, tzinfo=WIB)
+
+
+def test_day_hints_reports_pending_daily_report_and_no_session():
+    plan_id = uuid4()
+    pending = MagicMock(n=2, plan_id=plan_id)
+    _, required_out, count, plan = asyncio.run(_hints_service(None, pending).day_hints("org", str(uuid4())))
+    assert required_out is None and count == 2 and plan == plan_id
+    _, _, none_count, _ = asyncio.run(_hints_service(None, None).day_hints("org", None))
+    assert none_count == 0

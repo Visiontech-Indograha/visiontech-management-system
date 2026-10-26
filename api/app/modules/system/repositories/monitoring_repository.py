@@ -10,6 +10,7 @@ from typing import Any
 from uuid import UUID
 
 from app.core.repository import CRUDBase
+from app.shared.attendance_sql import IS_LATE_A
 
 
 class CRUDMonitoring(CRUDBase):
@@ -92,7 +93,7 @@ class CRUDMonitoring(CRUDBase):
         """
         return list(
             await self.fetchall(
-                """
+                f"""
             SELECT CAST(a.attendance_id AS text) AS id,
                    CAST(e.employee_id AS text) AS employee_id,
                    e.full_name,
@@ -106,7 +107,7 @@ class CRUDMonitoring(CRUDBase):
                        WHEN a.om_approval_status = 'REJECTED_BY_OM' THEN 'REJECTED'
                        ELSE 'NEEDS_REVIEW'
                    END AS status,
-                   (a.clock_in_at::time > a.scheduled_in) AS is_late,
+                   ({IS_LATE_A}) AS is_late,
                    (a.clock_out_at IS NOT NULL AND a.clock_out_at::time < a.scheduled_out) AS is_early_leave,
                    CAST(a.city_zone_status AS text) AS city_category
             FROM attendance a

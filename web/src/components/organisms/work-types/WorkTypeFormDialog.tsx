@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { FilePreview } from "@/components/molecules/FilePreview";
@@ -9,7 +9,7 @@ import { errorMessage } from "@/lib/errors";
 import { workTypeSchema, type WorkTypeValues } from "@/schemas/workTypeSchema";
 import { oversize, uploadForm } from "@/services/uploadService";
 import { useSaveWorkType, useWorkTypes, type WorkType } from "@/services/workTypeService";
-import { useDivisions } from "@/services/employeeService";
+import { useUserDivisions } from "@/services/employeeService";
 import { useSession } from "@/stores/sessionStore";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { ArrowDown, ArrowUp, Plus, Trash2 } from "@/components/molecules/Glyphs";
@@ -23,19 +23,10 @@ import { FormErrorText } from "@/components/molecules/FormErrorText";
 export function WorkTypeFormDialog({ type, onClose }: { type: WorkType | null; onClose: () => void }) {
   const save = useSaveWorkType(type?.id);
   const { me } = useSession();
-  const { data: units } = useDivisions();
+  const { data: userDivisions = [] } = useUserDivisions(type?.division_id);
   const [formError, setFormError] = useState<string | null>(null);
 
-  const userDivisions = useMemo(() => {
-    if (!units) return [];
-    if (me?.role !== "PROJECT_MANAGER") return units;
-    return units.filter((u) => {
-      const isPm = Boolean(me.employee_id && u.pm_id && String(u.pm_id).toLowerCase() === String(me.employee_id).toLowerCase());
-      const isMyDiv = Boolean(me.division_id && String(u.id).toLowerCase() === String(me.division_id).toLowerCase());
-      const isCurrentTypeDiv = Boolean(type?.division_id && String(u.id).toLowerCase() === String(type.division_id).toLowerCase());
-      return isPm || isMyDiv || isCurrentTypeDiv;
-    });
-  }, [units, me, type]);
+
 
   const initialDivisionId = type?.division_id ?? (userDivisions.length === 1 ? userDivisions[0].id : (me?.division_id ?? ""));
 

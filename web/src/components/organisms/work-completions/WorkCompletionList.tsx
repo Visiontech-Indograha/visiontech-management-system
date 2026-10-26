@@ -8,6 +8,7 @@ import { ActionButton } from "@/components/molecules/ActionButton";
 import { PHASE_COLOR, PHASE_LABEL, PHASES, phaseColor, phaseLabel, type Phase } from "@/lib/workPhase";
 import { WorkCompletionAddButton } from "./WorkCompletionAddButton";
 import { WorkCompletionDetailModal } from "./WorkCompletionDetailModal";
+import { VmsDialog } from "@/components/molecules/VmsDialog";
 import {
   type WorkCompletion,
   type WorkCompletionListResponse,
@@ -48,11 +49,14 @@ export function WorkCompletionList({
   const updateStatusMutation = useUpdateWorkCompletionStatus();
   const deleteMutation = useDeleteWorkCompletion();
 
-  const handleDelete = async (order: WorkCompletion) => {
-    if (!window.confirm(`Hapus pekerjaan klien "${order.project_title}"?`)) return;
+  const [deleteTarget, setDeleteTarget] = useState<WorkCompletion | null>(null);
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
     try {
-      await deleteMutation.mutateAsync(order.completion_id);
+      await deleteMutation.mutateAsync(deleteTarget.completion_id);
       toast.success("Pekerjaan klien berhasil dihapus.");
+      setDeleteTarget(null);
     } catch {
       toast.error("Gagal menghapus pekerjaan klien.");
     }
@@ -190,7 +194,7 @@ export function WorkCompletionList({
                         size="sm"
                         variant="ghost"
                         className="text-danger hover:bg-danger-bg hover:text-danger"
-                        onClick={() => void handleDelete(order)}
+                        onClick={() => setDeleteTarget(order)}
                       >
                         Hapus
                       </ActionButton>
@@ -209,6 +213,34 @@ export function WorkCompletionList({
         onClose={() => setSelectedCompletionId(null)}
         canManage={canManage}
       />
+
+      {deleteTarget && (
+        <VmsDialog
+          open
+          title="Hapus pekerjaan klien"
+          onClose={() => setDeleteTarget(null)}
+          footer={
+            <div className="flex justify-end gap-2">
+              <ActionButton variant="outline" size="sm" onClick={() => setDeleteTarget(null)}>
+                Batal
+              </ActionButton>
+              <ActionButton
+                variant="default"
+                size="sm"
+                className="bg-danger text-white hover:bg-danger/90"
+                disabled={deleteMutation.isPending}
+                onClick={confirmDelete}
+              >
+                Hapus
+              </ActionButton>
+            </div>
+          }
+        >
+          <TextBlock className="text-sm text-mist">
+            Apakah Anda yakin ingin menghapus pekerjaan klien <TextBlock as="strong">{deleteTarget.project_title}</TextBlock>?
+          </TextBlock>
+        </VmsDialog>
+      )}
     </QueryState>
   );
 }

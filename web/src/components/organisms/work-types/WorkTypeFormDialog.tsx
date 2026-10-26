@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { FilePreview } from "@/components/molecules/FilePreview";
@@ -8,7 +8,7 @@ import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { errorMessage } from "@/lib/errors";
 import { workTypeSchema, type WorkTypeValues } from "@/schemas/workTypeSchema";
 import { oversize, uploadForm } from "@/services/uploadService";
-import { useSaveWorkType, useWorkTypes, WORK_TYPE_KIND_LABEL, type WorkType } from "@/services/workTypeService";
+import { useSaveWorkType, useWorkTypes, type WorkType } from "@/services/workTypeService";
 import { useDivisions } from "@/services/employeeService";
 import { useSession } from "@/stores/sessionStore";
 import { ActionButton } from "@/components/molecules/ActionButton";
@@ -26,7 +26,18 @@ export function WorkTypeFormDialog({ type, onClose }: { type: WorkType | null; o
   const { data: units } = useDivisions();
   const [formError, setFormError] = useState<string | null>(null);
 
-  const initialDivisionId = type?.division_id ?? me?.division_id ?? "";
+  const userDivisions = useMemo(() => {
+    if (!units) return [];
+    if (me?.role !== "PROJECT_MANAGER") return units;
+    return units.filter((u) => {
+      const isPm = Boolean(me.employee_id && u.pm_id && String(u.pm_id).toLowerCase() === String(me.employee_id).toLowerCase());
+      const isMyDiv = Boolean(me.division_id && String(u.id).toLowerCase() === String(me.division_id).toLowerCase());
+      const isCurrentTypeDiv = Boolean(type?.division_id && String(u.id).toLowerCase() === String(type.division_id).toLowerCase());
+      return isPm || isMyDiv || isCurrentTypeDiv;
+    });
+  }, [units, me, type]);
+
+  const initialDivisionId = type?.division_id ?? (userDivisions.length === 1 ? userDivisions[0].id : (me?.division_id ?? ""));
 
   const {
     register,
@@ -40,7 +51,7 @@ export function WorkTypeFormDialog({ type, onClose }: { type: WorkType | null; o
       name: type?.name ?? "",
       division_id: initialDivisionId,
       description: type?.description ?? "",
-      kind: type?.kind ?? "WORK",
+      kind: type?.kind ?? "INSTALLATION",
       follow_up_work_type_id: type?.follow_up_work_type_id ?? null,
       photos: (type?.photos ?? []).map((p) => ({
         label: p.label,
@@ -52,16 +63,18 @@ export function WorkTypeFormDialog({ type, onClose }: { type: WorkType | null; o
   });
 
   useEffect(() => {
-    const divId = type?.division_id ?? me?.division_id;
+    const divId = type?.division_id ?? (userDivisions.length === 1 ? userDivisions[0].id : me?.division_id);
     if (divId) {
       setValue("division_id", divId);
     }
-  }, [type, me, units, setValue]);
+  }, [type, me, userDivisions, setValue]);
   const slots = useFieldArray({ control, name: "photos" });
   const kind = useWatch({ control, name: "kind" });
   const divisionId = useWatch({ control, name: "division_id" });
   const sameDivision = useWorkTypes(false, divisionId || undefined);
-  const installTypes = (sameDivision.data ?? []).filter((w) => w.kind === "WORK" && w.id !== type?.id);
+  const installTypes = (sameDivision.data ?? []).filter(
+    (w) => ["WORK", "INSTALLATION", "MAINTENANCE", "REPLACEMENT"].includes(w.kind) && w.id !== type?.id
+  );
   const watched = useWatch({ control, name: "photos" });
   const [uploading, setUploading] = useState<number | null>(null);
   const uploadExample = async (i: number, file: File | undefined) => {
@@ -126,20 +139,20 @@ export function WorkTypeFormDialog({ type, onClose }: { type: WorkType | null; o
           label="Divisi"
           error={errors.division_id?.message}
           hint={
-            me?.role === "PROJECT_MANAGER" && me?.division_id
+            me?.role === "PROJECT_MANAGER" && userDivisions.length <= 1
               ? "Divisi ditentukan otomatis sesuai akun Anda."
               : "Pilih divisi yang menaungi jenis pekerjaan ini."
           }
-          disabled={Boolean(me?.role === "PROJECT_MANAGER" && me?.division_id)}
+          disabled={Boolean(me?.role === "PROJECT_MANAGER" && userDivisions.length <= 1)}
           {...register("division_id")}
         >
           <ControlOption value="">-- Pilih Divisi --</ControlOption>
-          {units?.map((u) => (
+          {userDivisions.map((u) => (
             <ControlOption key={u.id} value={u.id}>
               {`${u.name} (${u.code})`}
             </ControlOption>
           ))}
-          {initialDivisionId && !units?.some((u) => u.id === initialDivisionId) && (
+          {initialDivisionId && !userDivisions.some((u) => u.id === initialDivisionId) && (
             <ControlOption value={initialDivisionId}>
               {type?.division_name || "Divisi Terkait"}
             </ControlOption>
@@ -152,13 +165,26 @@ export function WorkTypeFormDialog({ type, onClose }: { type: WorkType | null; o
               ? "Dipilih ketua tim saat menambah titik survei (mis. Pintu Akses, Barrier Gate). Foto & material di bawah berlaku untuk titik jenis ini."
               : kind === "SURVEY_TASK"
                 ? "Paket survei yang dimasukkan ke jadwal; titik-titiknya memakai jenis titik survei divisi ini."
-                : "Pekerjaan biasa di jadwal (pemasangan, maintenance, …)."
+                : kind === "MAINTENANCE"
+                  ? "Pekerjaan pemeliharaan atau perawatan berkala fasilitas/perangkat."
+                  : kind === "REPLACEMENT"
+                    ? "Pekerjaan pergantian barang atau komponen rusak."
+                    : "Pekerjaan instalasi atau pemasangan baru di lapangan."
           }
           {...register("kind")}
         >
-          {Object.entries(WORK_TYPE_KIND_LABEL).map(([value, label]) => (
-            <ControlOption key={value} value={value}>{label}</ControlOption>
-          ))}
+          <ControlOption value="INSTALLATION">Instalasi</ControlOption>
+          <ControlOption value="SURVEY_TASK">Survei Lapangan</ControlOption>
+          <ControlOption value="SURVEY_POINT">Survei Lapangan per Titik</ControlOption>
+          <ControlOption value="MAINTENANCE">Perawatan</ControlOption>
+          <ControlOption value="REPLACEMENT">Pergantian Barang</ControlOption>
+
+          {type?.kind === "WORK" && (
+            <ControlOption value="WORK">Instalasi</ControlOption>
+          )}
+
+
+
         </SelectField>
         <TextField label="Nama jenis" error={errors.name?.message} {...register("name")} />
         {/* Tunggu pilihan dimuat: select yang dipasang sebelum opsinya ada kehilangan nilai tersimpan. */}

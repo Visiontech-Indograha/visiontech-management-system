@@ -139,6 +139,11 @@ class AttendanceListResponse(BaseModel):
     # O-10: Tanggal hari ini menurut zona waktu organisasi.
     # Aplikasi HP menandai "absensi hari ini" menggunakan nilai ini, bukan jam perangkat.
     today: date | None = None
+    # Jam wajib pulang sesi terbuka milik pemanggil (masuk+9 jam; terlambat = jam pulang kantor) → jadwal pengingat.
+    required_out_at: datetime | None = None
+    # Jumlah tugas hari ini yang progresnya belum diperbarui (peringatan laporan harian; tidak memblokir absen).
+    report_pending_count: int = 0
+    report_pending_plan_id: UUID | None = None
     # R-34: Jangkar waktu bertanda tangan server untuk absen offline.
     # Mewakili jam server saat ini, berlaku selama 30 hari.
     time_anchor: str | None = None

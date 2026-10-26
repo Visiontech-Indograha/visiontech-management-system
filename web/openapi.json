@@ -4228,6 +4228,49 @@
     ]
    }
   },
+  "/api/v1/exports/team-week": {
+   "post": {
+    "tags": [
+     "Ekspor Dokumen"
+    ],
+    "summary": "Export Team Week",
+    "description": "Laporan mingguan tim (.pptx): semua pekerjaan tim 7 hari — foto, keterangan, status. Ketua/anggota tim\natau PM/OM divisinya.",
+    "operationId": "export_team_week_api_v1_exports_team_week_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/TeamWeekExportRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Berkas dokumen",
+      "content": {
+       "application/octet-stream": {}
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ]
+   }
+  },
   "/api/v1/exports/{export_id}/file": {
    "get": {
     "tags": [
@@ -6710,7 +6753,7 @@
      "Employees"
     ],
     "summary": "Get Employee",
-    "description": "Detail karyawan + alamat.",
+    "description": "Detail karyawan + alamat (kontak pribadi hanya untuk pemilik & HR/admin).",
     "operationId": "get_employee_api_v1_employees__employee_id__get",
     "security": [
      {
@@ -8182,7 +8225,7 @@
      "Monitoring"
     ],
     "summary": "Attendance Recap",
-    "description": "FINANCE/HR/OPS/ADMIN: seluruh organisasi; lainnya: hanya dirinya (aturan `GET /attendance`).",
+    "description": "OM/ADMIN (view:all_attendance): seluruh perusahaan; lainnya: hanya dirinya.",
     "operationId": "attendance_recap_api_v1_recaps_attendance_get",
     "security": [
      {
@@ -11536,6 +11579,35 @@
       ],
       "title": "Today"
      },
+     "required_out_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Required Out At"
+     },
+     "report_pending_count": {
+      "type": "integer",
+      "title": "Report Pending Count",
+      "default": 0
+     },
+     "report_pending_plan_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Report Pending Plan Id"
+     },
      "time_anchor": {
       "anyOf": [
        {
@@ -12404,8 +12476,7 @@
         "type": "number"
        },
        {
-        "type": "string",
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+        "type": "string"
        }
       ],
       "title": "Compressed Size Mb"
@@ -12460,7 +12531,6 @@
      },
      "compressed_size_mb": {
       "type": "string",
-      "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
       "title": "Compressed Size Mb"
      },
      "sha256_checksum": {
@@ -12548,7 +12618,6 @@
      },
      "qty": {
       "type": "string",
-      "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
       "title": "Qty"
      },
      "unit": {
@@ -12667,7 +12736,6 @@
      },
      "default_qty": {
       "type": "string",
-      "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
       "title": "Default Qty",
       "default": "1"
      }
@@ -12709,12 +12777,10 @@
      },
      "target_qty": {
       "type": "string",
-      "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
       "title": "Target Qty"
      },
      "completed_qty": {
       "type": "string",
-      "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
       "title": "Completed Qty"
      },
      "delay_reason": {
@@ -13398,12 +13464,10 @@
      },
      "target_qty": {
       "type": "string",
-      "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
       "title": "Target Qty"
      },
      "completed_qty": {
       "type": "string",
-      "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
       "title": "Completed Qty"
      },
      "status": {
@@ -13503,8 +13567,7 @@
         "minimum": -90.0
        },
        {
-        "type": "string",
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+        "type": "string"
        }
       ],
       "title": "Site Lat"
@@ -13517,8 +13580,7 @@
         "minimum": -180.0
        },
        {
-        "type": "string",
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+        "type": "string"
        }
       ],
       "title": "Site Lng"
@@ -13655,12 +13717,10 @@
      },
      "site_lat": {
       "type": "string",
-      "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
       "title": "Site Lat"
      },
      "site_lng": {
       "type": "string",
-      "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
       "title": "Site Lng"
      },
      "attendance_radius_m": {
@@ -13891,12 +13951,10 @@
      },
      "site_lat": {
       "type": "string",
-      "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
       "title": "Site Lat"
      },
      "site_lng": {
       "type": "string",
-      "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
       "title": "Site Lng"
      },
      "attendance_radius_m": {
@@ -14068,8 +14126,7 @@
         "minimum": -90.0
        },
        {
-        "type": "string",
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+        "type": "string"
        },
        {
         "type": "null"
@@ -14085,8 +14142,7 @@
         "minimum": -180.0
        },
        {
-        "type": "string",
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+        "type": "string"
        },
        {
         "type": "null"
@@ -16115,8 +16171,7 @@
         "minimum": 0.0
        },
        {
-        "type": "string",
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+        "type": "string"
        }
       ],
       "title": "Daily Allowance",
@@ -16186,7 +16241,6 @@
      },
      "daily_allowance": {
       "type": "string",
-      "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
       "title": "Daily Allowance"
      },
      "description": {
@@ -16282,8 +16336,7 @@
         "minimum": 0.0
        },
        {
-        "type": "string",
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+        "type": "string"
        },
        {
         "type": "null"
@@ -16334,8 +16387,7 @@
         "minimum": 0.0
        },
        {
-        "type": "string",
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+        "type": "string"
        }
       ],
       "title": "Qty"
@@ -16376,7 +16428,6 @@
      },
      "qty": {
       "type": "string",
-      "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
       "title": "Qty",
       "default": "1"
      },
@@ -16794,8 +16845,7 @@
         "minimum": -90.0
        },
        {
-        "type": "string",
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+        "type": "string"
        }
       ],
       "title": "Latitude"
@@ -16808,8 +16858,7 @@
         "minimum": -180.0
        },
        {
-        "type": "string",
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+        "type": "string"
        }
       ],
       "title": "Longitude"
@@ -16864,12 +16913,10 @@
      },
      "latitude": {
       "type": "string",
-      "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
       "title": "Latitude"
      },
      "longitude": {
       "type": "string",
-      "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
       "title": "Longitude"
      },
      "employee_id": {
@@ -16975,8 +17022,7 @@
         "type": "number"
        },
        {
-        "type": "string",
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+        "type": "string"
        },
        {
         "type": "null"
@@ -16990,8 +17036,7 @@
         "type": "number"
        },
        {
-        "type": "string",
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+        "type": "string"
        },
        {
         "type": "null"
@@ -17604,8 +17649,7 @@
         "minimum": 0.0
        },
        {
-        "type": "string",
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+        "type": "string"
        }
       ],
       "title": "In City Meal Rate",
@@ -17618,8 +17662,7 @@
         "minimum": 0.0
        },
        {
-        "type": "string",
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+        "type": "string"
        }
       ],
       "title": "Out City Meal Rate",
@@ -17690,13 +17733,11 @@
      },
      "in_city_meal_rate": {
       "type": "string",
-      "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
       "title": "In City Meal Rate",
       "default": "35000.00"
      },
      "out_city_meal_rate": {
       "type": "string",
-      "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
       "title": "Out City Meal Rate",
       "default": "65000.00"
      },
@@ -17831,8 +17872,7 @@
         "minimum": 0.0
        },
        {
-        "type": "string",
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+        "type": "string"
        },
        {
         "type": "null"
@@ -17847,8 +17887,7 @@
         "minimum": 0.0
        },
        {
-        "type": "string",
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+        "type": "string"
        },
        {
         "type": "null"
@@ -18638,8 +18677,7 @@
         "exclusiveMinimum": 0.0
        },
        {
-        "type": "string",
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+        "type": "string"
        }
       ],
       "title": "Target Qty",
@@ -18689,8 +18727,7 @@
         "minimum": -90.0
        },
        {
-        "type": "string",
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+        "type": "string"
        },
        {
         "type": "null"
@@ -18706,8 +18743,7 @@
         "minimum": -180.0
        },
        {
-        "type": "string",
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+        "type": "string"
        },
        {
         "type": "null"
@@ -18853,17 +18889,14 @@
      },
      "target_qty": {
       "type": "string",
-      "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
       "title": "Target Qty"
      },
      "completed_qty": {
       "type": "string",
-      "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
       "title": "Completed Qty"
      },
      "progress_percent": {
       "type": "string",
-      "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
       "title": "Progress Percent"
      },
      "status": {
@@ -18983,8 +19016,7 @@
      "site_lat": {
       "anyOf": [
        {
-        "type": "string",
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+        "type": "string"
        },
        {
         "type": "null"
@@ -18995,8 +19027,7 @@
      "site_lng": {
       "anyOf": [
        {
-        "type": "string",
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+        "type": "string"
        },
        {
         "type": "null"
@@ -19135,8 +19166,7 @@
         "exclusiveMinimum": 0.0
        },
        {
-        "type": "string",
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+        "type": "string"
        },
        {
         "type": "null"
@@ -19188,8 +19218,7 @@
         "minimum": -90.0
        },
        {
-        "type": "string",
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+        "type": "string"
        },
        {
         "type": "null"
@@ -19205,8 +19234,7 @@
         "minimum": -180.0
        },
        {
-        "type": "string",
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+        "type": "string"
        },
        {
         "type": "null"
@@ -19307,8 +19335,7 @@
         "minimum": -90.0
        },
        {
-        "type": "string",
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+        "type": "string"
        },
        {
         "type": "null"
@@ -19324,8 +19351,7 @@
         "minimum": -180.0
        },
        {
-        "type": "string",
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+        "type": "string"
        },
        {
         "type": "null"
@@ -19366,8 +19392,7 @@
         "minimum": 0.0
        },
        {
-        "type": "string",
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+        "type": "string"
        }
       ],
       "title": "Qty",
@@ -19410,8 +19435,7 @@
         "minimum": -90.0
        },
        {
-        "type": "string",
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+        "type": "string"
        }
       ],
       "title": "Site Lat"
@@ -19424,8 +19448,7 @@
         "minimum": -180.0
        },
        {
-        "type": "string",
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+        "type": "string"
        }
       ],
       "title": "Site Lng"
@@ -19473,8 +19496,7 @@
      "site_lat": {
       "anyOf": [
        {
-        "type": "string",
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+        "type": "string"
        },
        {
         "type": "null"
@@ -19485,8 +19507,7 @@
      "site_lng": {
       "anyOf": [
        {
-        "type": "string",
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+        "type": "string"
        },
        {
         "type": "null"
@@ -19660,8 +19681,7 @@
         "minimum": 0.0
        },
        {
-        "type": "string",
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+        "type": "string"
        }
       ],
       "title": "Completed Qty"
@@ -19749,8 +19769,7 @@
         "exclusiveMinimum": 0.0
        },
        {
-        "type": "string",
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+        "type": "string"
        }
       ],
       "title": "Total Target Qty",
@@ -19850,7 +19869,6 @@
      },
      "total_target_qty": {
       "type": "string",
-      "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
       "title": "Total Target Qty"
      },
      "unit_measure": {
@@ -19981,8 +19999,7 @@
         "exclusiveMinimum": 0.0
        },
        {
-        "type": "string",
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+        "type": "string"
        },
        {
         "type": "null"
@@ -20254,8 +20271,7 @@
         "minimum": 0.0
        },
        {
-        "type": "string",
-        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+        "type": "string"
        }
       ],
       "title": "Completed Qty"
@@ -21066,6 +21082,26 @@
     },
     "type": "object",
     "title": "TeamUpdate"
+   },
+   "TeamWeekExportRequest": {
+    "properties": {
+     "team_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Team Id"
+     },
+     "start_date": {
+      "type": "string",
+      "format": "date",
+      "title": "Start Date"
+     }
+    },
+    "type": "object",
+    "required": [
+     "team_id",
+     "start_date"
+    ],
+    "title": "TeamWeekExportRequest"
    },
    "ToolCreate": {
     "properties": {

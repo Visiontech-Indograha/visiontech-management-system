@@ -6,13 +6,13 @@ import { ControlOption, FormBlock } from "@/components/molecules/FormBlock";
 import { FormErrorText } from "@/components/molecules/FormErrorText";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { errorMessage } from "@/lib/errors";
-import { useDivisions, useEmployees, useOffices } from "@/services/employeeService";
+import { useEmployees, useOffices, useUserDivisions } from "@/services/employeeService";
 import { useCreateTeam } from "@/services/teamService";
 
 /** Tambah tim lapangan: nama, divisi, kantor, ketua (pilih karyawan — bukan ketik ID). Anggota ditambah lewat Detail. */
 export function TeamFormDialog({ onClose }: { onClose: () => void }) {
   const create = useCreateTeam();
-  const divisions = useDivisions();
+  const divisions = useUserDivisions();
   const offices = useOffices();
   const [q, setQ] = useState("");
   const employees = useEmployees({ status: "active", page: 1, q: q.trim() || undefined });
@@ -22,12 +22,14 @@ export function TeamFormDialog({ onClose }: { onClose: () => void }) {
   const [leaderId, setLeaderId] = useState("");
   const [error, setError] = useState<string | null>(null);
 
+  const effectiveDivisionId = divisionId || (divisions.data?.length === 1 ? divisions.data[0].id : "");
+
   const submit = async () => {
     setError(null);
-    if (name.trim().length < 2 || !divisionId || !officeId || !leaderId)
+    if (name.trim().length < 2 || !effectiveDivisionId || !officeId || !leaderId)
       return setError("Isi nama tim, divisi, kantor, dan ketua tim.");
     try {
-      await create.mutateAsync({ name: name.trim(), division_id: divisionId, office_id: officeId, leader_employee_id: leaderId, status: true });
+      await create.mutateAsync({ name: name.trim(), division_id: effectiveDivisionId, office_id: officeId, leader_employee_id: leaderId, status: true });
       toast.success("Tim ditambahkan. Tambah anggotanya lewat tombol Anggota & kontak.");
       onClose();
     } catch (err) {
@@ -52,7 +54,7 @@ export function TeamFormDialog({ onClose }: { onClose: () => void }) {
       >
         <FormErrorText message={error} />
         <TextField label="Nama tim" value={name} onChange={(e) => setName(e.target.value)} placeholder="mis. Tim CCTV Pekanbaru 2" />
-        <SelectField label="Divisi" value={divisionId} onChange={(e) => setDivisionId(e.target.value)}>
+        <SelectField label="Divisi" value={effectiveDivisionId} onChange={(e) => setDivisionId(e.target.value)}>
           <ControlOption value="">Pilih divisi</ControlOption>
           {(divisions.data ?? []).map((d) => (
             <ControlOption key={d.id} value={d.id}>{d.name}</ControlOption>

@@ -100,6 +100,17 @@ DDL_STATEMENTS = [
     """,
     "CREATE INDEX IF NOT EXISTS idx_site_visit_attendance ON attendance_site_visit(attendance_id);",
     "CREATE INDEX IF NOT EXISTS idx_site_visit_item ON attendance_site_visit(item_id);",
+    # 7. work_type roles: perluasan peran pekerjaan (Instalasi, Survei Lapangan, Survei Titik, Perawatan, Pergantian)
+    """
+    DO $$
+    BEGIN
+        ALTER TABLE work_type DROP CONSTRAINT IF EXISTS work_type_kind_check;
+        ALTER TABLE work_type ADD CONSTRAINT work_type_kind_check
+            CHECK (kind IN ('WORK', 'INSTALLATION', 'SURVEY_TASK', 'SURVEY_POINT', 'MAINTENANCE', 'REPLACEMENT'));
+    EXCEPTION WHEN OTHERS THEN
+        NULL;
+    END $$;
+    """,
 
     # file_object & work_plan_attachment kini bagian DDL 06 (db/migration_m5_daily_refs.sql).
 

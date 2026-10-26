@@ -124,4 +124,88 @@ describe("Jenis Pekerjaan (/work-types)", () => {
       division_id: "22222222-3333-4444-5555-666666666666",
     });
   });
+
+  it("filter divisi PM: hanya menampilkan divisi yang dipimpin PM (mis. CCTV dan ACS, bukan MEP)", async () => {
+    const multiUnits = [
+      { id: "div-cctv", code: "CCTV", name: "Surveillance CCTV", pm_id: "emp-pm" },
+      { id: "div-acs", code: "ACS", name: "Access Control System", pm_id: "emp-pm" },
+      { id: "div-mep", code: "MEP", name: "Mechanical Electrical", pm_id: "emp-other" },
+    ];
+
+    mockApi((c) => {
+      if (c.url === "/work-types" && c.method === "get") return { data: [] };
+      if (c.url === "/divisions") return { data: multiUnits };
+    });
+
+    renderRoute("/work-types", {
+      me: {
+        user_id: "u-pm-cctv",
+        employee_id: "emp-pm",
+        email: "pm.cctv@visiontech.co.id",
+        role: "PROJECT_MANAGER",
+        permissions: ["create:plan", "read:plan"],
+        division_id: "div-cctv",
+      },
+    });
+
+    await screen.findByText(/Belum ada jenis pekerjaan/);
+    fireEvent.click(screen.getAllByRole("button", { name: "Tambah jenis" })[0]);
+
+    const dialog = screen.getByRole("dialog", { name: "Tambah jenis pekerjaan" });
+    expect(dialog).toBeInTheDocument();
+
+    const divisionSelect = within(dialog).getByLabelText("Divisi") as HTMLSelectElement;
+    await waitFor(() => expect(divisionSelect.value).toBe("div-cctv"));
+
+    // Opsi CCTV dan ACS harus ada, opsi MEP tidak boleh ada
+    expect(await within(dialog).findByText(/Surveillance CCTV/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/Access Control System/)).toBeInTheDocument();
+    expect(within(dialog).queryByText(/Mechanical Electrical/)).not.toBeInTheDocument();
+  });
+
+  it("pilihan peran lengkap: Perawatan dan Pergantian Barang dapat dipilih dan disimpan", async () => {
+    const calls = mockApi((c) => {
+      if (c.url === "/work-types" && c.method === "get") return { data: [] };
+      if (c.url === "/divisions") return { data: mockUnits };
+      if (c.url === "/work-types" && c.method === "post") {
+        return { status: 201, data: { ...mockWorkType, id: "wt-maint", kind: "MAINTENANCE" } };
+      }
+    });
+
+    renderRoute("/work-types", {
+      me: {
+        user_id: "u-pm",
+        email: "pm@visiontech.co.id",
+        role: "PROJECT_MANAGER",
+        permissions: ["create:plan", "read:plan"],
+        division_id: "11111111-2222-3333-4444-555555555555",
+      },
+    });
+
+    await screen.findByText(/Belum ada jenis pekerjaan/);
+    fireEvent.click(screen.getAllByRole("button", { name: "Tambah jenis" })[0]);
+
+    const dialog = screen.getByRole("dialog", { name: "Tambah jenis pekerjaan" });
+    const peranSelect = within(dialog).getByLabelText("Peran") as HTMLSelectElement;
+
+    // Periksa opsi peran yang tersedia sesuai alur bisnis baru
+    expect(within(peranSelect).getByText("Instalasi")).toBeInTheDocument();
+    expect(within(peranSelect).getByText("Survei Lapangan")).toBeInTheDocument();
+    expect(within(peranSelect).getByText("Survei Lapangan per Titik")).toBeInTheDocument();
+    expect(within(peranSelect).getByText("Perawatan")).toBeInTheDocument();
+    expect(within(peranSelect).getByText("Pergantian Barang")).toBeInTheDocument();
+
+    // Pilih peran Perawatan
+    fireEvent.change(peranSelect, { target: { value: "MAINTENANCE" } });
+    fireEvent.change(within(dialog).getByLabelText("Nama jenis"), { target: { value: "Pemeliharaan CCTV Bulanan" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Simpan" }));
+
+    await waitFor(() => expect(calls.some((c) => c.method === "post")).toBe(true));
+    const postCall = calls.find((c) => c.method === "post");
+    expect(postCall?.data).toMatchObject({
+      name: "Pemeliharaan CCTV Bulanan",
+      kind: "MAINTENANCE",
+      division_id: "11111111-2222-3333-4444-555555555555",
+    });
+  });
 });

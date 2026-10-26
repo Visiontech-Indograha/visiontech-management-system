@@ -11912,8 +11912,11 @@
       "default": "WORK",
       "enum": [
        "WORK",
+       "INSTALLATION",
        "SURVEY_TASK",
-       "SURVEY_POINT"
+       "SURVEY_POINT",
+       "MAINTENANCE",
+       "REPLACEMENT"
       ],
       "title": "Kind",
       "type": "string"
@@ -12021,8 +12024,11 @@
       "default": "WORK",
       "enum": [
        "WORK",
+       "INSTALLATION",
        "SURVEY_TASK",
-       "SURVEY_POINT"
+       "SURVEY_POINT",
+       "MAINTENANCE",
+       "REPLACEMENT"
       ],
       "title": "Kind",
       "type": "string"

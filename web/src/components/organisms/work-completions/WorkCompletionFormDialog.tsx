@@ -8,8 +8,11 @@ import { DialogActions } from "@/components/molecules/DialogActions";
 import { FormErrorText } from "@/components/molecules/FormErrorText";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { useCreateWorkCompletion } from "@/services/workCompletionService";
+import { useDivisions } from "@/services/employeeService";
+import { useSession } from "@/stores/sessionStore";
 
 interface FormValues {
+  division_id?: string;
   client_name: string;
   project_title: string;
   order_number?: string;
@@ -17,10 +20,14 @@ interface FormValues {
   unit_measure: string;
   priority_level: string;
   site_address?: string;
+  site_lat?: number | null;
+  site_lng?: number | null;
 }
 
 export function WorkCompletionFormDialog({ onClose }: { onClose: () => void }) {
   const create = useCreateWorkCompletion();
+  const { me } = useSession();
+  const { data: divisions } = useDivisions();
   const [formError, setFormError] = useState<string | null>(null);
 
   const {
@@ -29,6 +36,7 @@ export function WorkCompletionFormDialog({ onClose }: { onClose: () => void }) {
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     defaultValues: {
+      division_id: me?.division_id ?? "",
       client_name: "",
       project_title: "",
       order_number: "",
@@ -36,13 +44,23 @@ export function WorkCompletionFormDialog({ onClose }: { onClose: () => void }) {
       unit_measure: "Titik / Unit",
       priority_level: "NORMAL",
       site_address: "",
+      site_lat: null,
+      site_lng: null,
     },
   });
 
   const onSubmit = async (values: FormValues) => {
     setFormError(null);
     try {
+      const parsedLat = values.site_lat !== undefined && values.site_lat !== null && !Number.isNaN(values.site_lat)
+        ? Number(values.site_lat)
+        : undefined;
+      const parsedLng = values.site_lng !== undefined && values.site_lng !== null && !Number.isNaN(values.site_lng)
+        ? Number(values.site_lng)
+        : undefined;
+
       await create.mutateAsync({
+        division_id: values.division_id || me?.division_id || undefined,
         client_name: values.client_name,
         project_title: values.project_title,
         order_number: values.order_number || undefined,
@@ -50,6 +68,8 @@ export function WorkCompletionFormDialog({ onClose }: { onClose: () => void }) {
         unit_measure: values.unit_measure,
         priority_level: values.priority_level,
         site_address: values.site_address || undefined,
+        site_lat: parsedLat,
+        site_lng: parsedLng,
       });
       toast.success("Pekerjaan klien berhasil dibuat.");
       onClose();
@@ -69,6 +89,21 @@ export function WorkCompletionFormDialog({ onClose }: { onClose: () => void }) {
       </TextBlock>
       <FormBlock id="work-completion-form" onSubmit={handleSubmit(onSubmit)}>
         {formError && <FormErrorText message={formError} />}
+
+        <SelectField
+          label="Divisi Penanggung Jawab"
+          error={errors.division_id?.message}
+          {...register("division_id", {
+            required: !me?.division_id ? "Divisi wajib dipilih." : false,
+          })}
+        >
+          <ControlOption value="">-- Pilih Divisi --</ControlOption>
+          {(divisions ?? []).map((d) => (
+            <ControlOption key={d.id} value={d.id}>
+              {d.name}
+            </ControlOption>
+          ))}
+        </SelectField>
 
         <TextField
           label="Nama Klien / Perusahaan"
@@ -122,6 +157,23 @@ export function WorkCompletionFormDialog({ onClose }: { onClose: () => void }) {
           rows={2}
           {...register("site_address")}
         />
+
+        <div className="grid grid-cols-2 gap-3">
+          <TextField
+            label="Latitude Lokasi (Opsional)"
+            placeholder="misal: -6.2088"
+            type="number"
+            step="any"
+            {...register("site_lat", { valueAsNumber: true })}
+          />
+          <TextField
+            label="Longitude Lokasi (Opsional)"
+            placeholder="misal: 106.8456"
+            type="number"
+            step="any"
+            {...register("site_lng", { valueAsNumber: true })}
+          />
+        </div>
 
         <DialogActions
           onCancel={onClose}

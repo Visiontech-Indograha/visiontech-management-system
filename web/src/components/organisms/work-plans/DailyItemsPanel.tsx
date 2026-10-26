@@ -144,6 +144,11 @@ function ItemForm({ detail, onDone }: { detail: DailyPlanDetail; onDone: () => v
     const f = new FormData(e.currentTarget);
     const v = (k: string) => String(f.get(k) ?? "").trim();
     setError(null);
+    const latVal = v("site_lat");
+    const lngVal = v("site_lng");
+    const startTimeVal = v("start_time");
+    const endTimeVal = v("end_time");
+
     const body: PlanItemCreate = {
       work_type_id: v("work_type_id"),
       title: v("title"),
@@ -152,6 +157,10 @@ function ItemForm({ detail, onDone }: { detail: DailyPlanDetail; onDone: () => v
       completion_id: v("completion_id") || undefined,
       target_qty: v("target_qty") || "1",
       location_name: v("location_name") || null,
+      start_time: startTimeVal || null,
+      end_time: endTimeVal || null,
+      site_lat: latVal ? Number(latVal) : null,
+      site_lng: lngVal ? Number(lngVal) : null,
       depends_on_item_id: v("depends_on_item_id") || null,
       notes: v("notes") || null,
     };
@@ -192,6 +201,14 @@ function ItemForm({ detail, onDone }: { detail: DailyPlanDetail; onDone: () => v
       <div className="grid gap-x-3 md:grid-cols-2">
         <TextField name="target_qty" label="Target volume" inputMode="decimal" defaultValue="1" />
         <TextField name="location_name" label="Nama titik/lokasi (opsional)" />
+      </div>
+      <div className="grid gap-x-3 md:grid-cols-2">
+        <TextField name="start_time" label="Jam mulai (opsional)" type="time" />
+        <TextField name="end_time" label="Jam selesai (opsional)" type="time" />
+      </div>
+      <div className="grid gap-x-3 md:grid-cols-2">
+        <TextField name="site_lat" label="Latitude titik (opsional)" inputMode="decimal" placeholder="misal: -6.2088" />
+        <TextField name="site_lng" label="Longitude titik (opsional)" inputMode="decimal" placeholder="misal: 106.8456" />
       </div>
       {prereqs.length > 0 && (
         <SelectField

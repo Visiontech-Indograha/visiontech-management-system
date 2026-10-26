@@ -145,7 +145,8 @@ class Settings(BaseSettings):
     APP_RELEASE_DIR: str = ""
 
     # Pengaturan jam operasional absensi (07:00 s.d. 19:00, 8 jam kerja efektif + 1 jam istirahat)
-    ATTENDANCE_OPEN_TIME: str = "07:00"
+    ATTENDANCE_OPEN_TIME: str = "06:45"  # tombol absen masuk aktif mulai jam ini
+    ATTENDANCE_LATE_AFTER: str = "08:00"  # absen masuk setelah jam ini tetap boleh tetapi bertanda terlambat
     ATTENDANCE_CLOSE_TIME: str = "19:00"
     ATTENDANCE_REQUIRED_WORK_HOURS: int = 8
     ATTENDANCE_BREAK_HOURS: int = 1

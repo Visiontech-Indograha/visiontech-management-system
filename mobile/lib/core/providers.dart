@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/app_database.dart';
 import '../data/sync_engine.dart';
 import 'api_client.dart';
+import 'attendance_reminders.dart';
 import 'biometric_auth.dart';
 import 'device_id.dart';
 import 'local_notifier.dart';
@@ -70,3 +71,6 @@ final liveEventTickProvider = NotifierProvider<SyncTickNotifier, int>(
 );
 
 final localNotifierProvider = Provider<LocalNotifier>((ref) => LocalNotifier());
+final attendanceRemindersProvider = Provider<AttendanceReminders>(
+  (ref) => AttendanceReminders(ref.read(localNotifierProvider)),
+);

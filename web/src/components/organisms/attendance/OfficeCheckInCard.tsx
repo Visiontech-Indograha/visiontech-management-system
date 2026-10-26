@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useSession } from "@/stores/sessionStore";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
@@ -12,6 +13,10 @@ import { formatDateTime } from "@/lib/format";
 /** Jam sekarang di WIB (aturan jam absen server), bukan zona waktu perangkat. */
 const wibHour = (d = new Date()) =>
   Number(new Intl.DateTimeFormat("en-GB", { hour: "2-digit", hourCycle: "h23", timeZone: "Asia/Jakarta" }).format(d));
+const wibMinutes = (d = new Date()) =>
+  wibHour(d) * 60 + Number(new Intl.DateTimeFormat("en-GB", { minute: "2-digit", timeZone: "Asia/Jakarta" }).format(d));
+/** Absen masuk dibuka 06:45 WIB (sama dengan ATTENDANCE_OPEN_TIME di server). */
+const OPEN_MINUTES = 6 * 60 + 45;
 import { useAttendanceSites } from "@/services/siteService";
 import { SelfieCaptureDialog } from "./SelfieCaptureDialog";
 import { ActionButton } from "@/components/molecules/ActionButton";
@@ -88,6 +93,7 @@ function useMyToday(employeeId: string | null | undefined) {
       return {
         rec: open ?? todays.find((a) => a.status !== "REJECTED") ?? null,
         rejected: todays.filter((a) => a.status === "REJECTED"),
+        reportPending: data.report_pending_count ?? 0,
       };
     },
   });
@@ -117,6 +123,7 @@ export function OfficeCheckInCard() {
 
 function OfficeCheckInForm({ employeeId }: { employeeId: string }) {
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const today = useMyToday(employeeId);
   const sites = useAttendanceSites();
   const [picked, setPicked] = useState("");
@@ -133,6 +140,7 @@ function OfficeCheckInForm({ employeeId }: { employeeId: string }) {
   const locked = !rec && rejected.length >= MAX_ATTEMPTS_PER_DAY;
   const resubmit = rejected.length > 0;
 
+  const [confirmReport, setConfirmReport] = useState(false);
   const [confirmEarlyLeave, setConfirmEarlyLeave] = useState<{ effH: number; effM: number } | null>(null);
   const [encouragementModal, setEncouragementModal] = useState<string | null>(null);
 
@@ -142,8 +150,8 @@ function OfficeCheckInForm({ employeeId }: { employeeId: string }) {
   };
 
   const handleCheckInClick = () => {
-    if (wibHour() < 7) {
-      setError("Absensi masuk belum dibuka. Jam masuk kerja dimulai pukul 07:00 WIB.");
+    if (wibMinutes() < OPEN_MINUTES) {
+      setError("Absensi masuk belum dibuka. Jam masuk kerja dimulai pukul 06:45 WIB.");
       return;
     }
     setError(null);
@@ -152,7 +160,12 @@ function OfficeCheckInForm({ employeeId }: { employeeId: string }) {
 
   const proceedCheckOut = () => checkOut.mutate(undefined);
 
-  const handleCheckOutClick = () => {
+  const handleCheckOutClick = (reportChecked = false) => {
+    // Peringatan laporan harian (tidak memblokir): ada tugas hari ini yang progresnya belum diperbarui.
+    if (!reportChecked && (today.data?.reportPending ?? 0) > 0) {
+      setConfirmReport(true);
+      return;
+    }
     const now = new Date();
     if (wibHour(now) >= 19) {
       setError("Batas waktu absensi pulang mandiri telah ditutup pada pukul 19:00 WIB (Sistem auto check-out aktif).");
@@ -392,7 +405,7 @@ function OfficeCheckInForm({ employeeId }: { employeeId: string }) {
               </ActionButton>
             </div>
           ) : !rec.check_out_at ? (
-            <ActionButton className="h-11 w-full md:w-auto" disabled={busy} onClick={handleCheckOutClick}>
+            <ActionButton className="h-11 w-full md:w-auto" disabled={busy} onClick={() => handleCheckOutClick()}>
               {checkOut.isPending ? "Membaca lokasi…" : "Absen pulang"}
             </ActionButton>
           ) : (
@@ -424,6 +437,40 @@ function OfficeCheckInForm({ employeeId }: { employeeId: string }) {
             checkIn.mutate({ pos, selfieFileId: fileId });
           }}
         />
+      )}
+      {confirmReport && (
+        <VmsDialog
+          open={confirmReport}
+          title="Laporan harian belum diisi"
+          onClose={() => setConfirmReport(false)}
+          footer={
+            <div className="flex w-full justify-end gap-2">
+              <ActionButton
+                variant="outline"
+                className="h-11"
+                onClick={() => {
+                  setConfirmReport(false);
+                  navigate("/work-plans");
+                }}
+              >
+                Isi laporan
+              </ActionButton>
+              <ActionButton
+                className="h-11"
+                onClick={() => {
+                  setConfirmReport(false);
+                  handleCheckOutClick(true);
+                }}
+              >
+                Tetap absen pulang
+              </ActionButton>
+            </div>
+          }
+        >
+          <TextBlock className="text-sm leading-relaxed text-ink">
+            {`Ada ${today.data?.reportPending ?? 0} tugas hari ini yang progresnya belum diperbarui. Isi laporan harian dulu sebelum absen pulang.`}
+          </TextBlock>
+        </VmsDialog>
       )}
       {confirmEarlyLeave && (
         <VmsDialog

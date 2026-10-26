@@ -11916,6 +11916,35 @@
       ],
       "title": "Today"
      },
+     "required_out_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Required Out At"
+     },
+     "report_pending_count": {
+      "type": "integer",
+      "title": "Report Pending Count",
+      "default": 0
+     },
+     "report_pending_plan_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Report Pending Plan Id"
+     },
      "time_anchor": {
       "anyOf": [
        {

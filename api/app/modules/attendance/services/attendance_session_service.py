@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import csv
 import io
-from datetime import time
+from datetime import datetime, time, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -20,6 +20,7 @@ from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationE
 from app.core.events import queue_event
 from app.core.hard_delete import purge_row, write_delete_audit
 from app.core.security import CurrentUser
+from app.core.time import WIB
 from app.modules.attendance.repositories.attendance_session_repository import (
     CRUDAttendanceSession,
 )
@@ -538,6 +539,26 @@ class AttendanceSessionService:
             limit=size,
             offset=(page - 1) * size,
         )
+
+    async def day_hints(self, org_id: str, employee_id: str | None) -> tuple[Any, Any, int, Any]:
+        """(hari ini, jam wajib pulang, jumlah tugas belum dilapor, id jadwal) untuk pengingat di HP/web.
+
+        Jam wajib pulang: tepat waktu = masuk + (kerja + istirahat) jam; terlambat = jam pulang kantor.
+        """
+        today = await self.today(org_id)
+        if not employee_id:
+            return today, None, 0, None
+        required_out = None
+        opened = await self.repo.open_hint(employee_id)
+        if opened is not None:
+            checked_in = opened.clock_in_at.astimezone(WIB)
+            if opened.is_late and opened.scheduled_out is not None:
+                required_out = datetime.combine(checked_in.date(), opened.scheduled_out, tzinfo=WIB)
+            else:
+                hours = settings.ATTENDANCE_REQUIRED_WORK_HOURS + settings.ATTENDANCE_BREAK_HOURS
+                required_out = checked_in + timedelta(hours=hours)
+        pending = await self.repo.unreported_items(employee_id, today)
+        return today, required_out, int(pending.n or 0) if pending else 0, pending.plan_id if pending else None
 
     async def today(self, org_id: str) -> Any:
         """Tanggal kerja hari ini menurut zona waktu organisasi — sama dengan `work_date` absen masuk."""

@@ -192,7 +192,14 @@ class VmsApi {
   /// Absensi milik sendiri (server membatasi ke pengguna ini bila bukan HR/Finance).
   /// `today` = tanggal hari ini menurut zona waktu organisasi (O-10), bukan jam HP.
   Future<
-    ({List<Map<String, dynamic>> items, String? today, String? timeAnchor})
+    ({
+      List<Map<String, dynamic>> items,
+      String? today,
+      String? timeAnchor,
+      String? requiredOutAt,
+      int reportPendingCount,
+      String? reportPendingPlanId,
+    })
   >
   myAttendance({required String employeeId}) async {
     final res = await _dio.get(
@@ -207,6 +214,9 @@ class VmsApi {
       items: _list(data['items']),
       today: data['today'] as String?,
       timeAnchor: data['time_anchor'] as String?,
+      requiredOutAt: data['required_out_at'] as String?,
+      reportPendingCount: (data['report_pending_count'] as num?)?.toInt() ?? 0,
+      reportPendingPlanId: data['report_pending_plan_id'] as String?,
     );
   }
 

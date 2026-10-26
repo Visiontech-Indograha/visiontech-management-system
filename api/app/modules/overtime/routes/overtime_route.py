@@ -7,7 +7,7 @@ Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.1.
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 
 from app.api.deps import get_current_user, require_permission
 from app.core.permissions import Permission
@@ -34,12 +34,13 @@ async def report_overtime(
 
 @router.get("", response_model=list[OvertimeResponse])
 async def list_overtime(
-    daily_plan_id: UUID,
+    daily_plan_id: UUID | None = Query(None, description="ID jadwal harian"),
+    work_plan_id: UUID | None = Query(None, description="Alias daily_plan_id"),
     current_user: CurrentUser = Depends(get_current_user),
     controller: OvertimeController = Depends(),
 ) -> list[OvertimeResponse]:
     """Daftar lembur untuk satu jadwal harian."""
-    return await controller.handle_list_by_plan(current_user, daily_plan_id)
+    return await controller.handle_list(current_user, daily_plan_id or work_plan_id)
 
 
 @router.post("/{ot_id}/review", response_model=OvertimeResponse)

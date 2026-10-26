@@ -8,10 +8,12 @@ import { ActionButton } from "@/components/molecules/ActionButton";
 import { PHASE_COLOR, PHASE_LABEL, PHASES, phaseColor, phaseLabel, type Phase } from "@/lib/workPhase";
 import { WorkCompletionAddButton } from "./WorkCompletionAddButton";
 import { WorkCompletionDetailModal } from "./WorkCompletionDetailModal";
+import { VmsDialog } from "@/components/molecules/VmsDialog";
 import {
   type WorkCompletion,
   type WorkCompletionListResponse,
   useUpdateWorkCompletionStatus,
+  useDeleteWorkCompletion,
 } from "@/services/workCompletionService";
 
 /** Status pekerjaan klien → label sehari-hari + warna (berjalan biru, mendesak merah, menunggu kuning, selesai hijau). */
@@ -45,6 +47,20 @@ export function WorkCompletionList({
   const [picked, setView] = useState<View | null>(null);
   const [only, setOnly] = useState<Phase | null>(null);
   const updateStatusMutation = useUpdateWorkCompletionStatus();
+  const deleteMutation = useDeleteWorkCompletion();
+
+  const [deleteTarget, setDeleteTarget] = useState<WorkCompletion | null>(null);
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await deleteMutation.mutateAsync(deleteTarget.completion_id);
+      toast.success("Pekerjaan klien berhasil dihapus.");
+      setDeleteTarget(null);
+    } catch {
+      toast.error("Gagal menghapus pekerjaan klien.");
+    }
+  };
 
   const toggleUrgent = async (order: WorkCompletion) => {
     const next = order.order_status === "URGENT" ? "ONGOING" : "URGENT";
@@ -170,9 +186,19 @@ export function WorkCompletionList({
                       {done ? "Lihat hasil & dokumen" : "Buka detail"}
                     </ActionButton>
                     {canManage && !done && (
-                      <ActionButton size="sm" variant="outline" onClick={() => void toggleUrgent(order)}>
+                      <>
+                        <ActionButton size="sm" variant="outline" onClick={() => void toggleUrgent(order)}>
                         {order.order_status === "URGENT" ? "Hapus tanda mendesak" : "Tandai mendesak"}
                       </ActionButton>
+                      <ActionButton
+                        size="sm"
+                        variant="ghost"
+                        className="text-danger hover:bg-danger-bg hover:text-danger"
+                        onClick={() => setDeleteTarget(order)}
+                      >
+                        Hapus
+                      </ActionButton>
+                    </>
                     )}
                   </div>
                 </div>
@@ -187,6 +213,34 @@ export function WorkCompletionList({
         onClose={() => setSelectedCompletionId(null)}
         canManage={canManage}
       />
+
+      {deleteTarget && (
+        <VmsDialog
+          open
+          title="Hapus pekerjaan klien"
+          onClose={() => setDeleteTarget(null)}
+          footer={
+            <div className="flex justify-end gap-2">
+              <ActionButton variant="outline" size="sm" onClick={() => setDeleteTarget(null)}>
+                Batal
+              </ActionButton>
+              <ActionButton
+                variant="default"
+                size="sm"
+                className="bg-danger text-white hover:bg-danger/90"
+                disabled={deleteMutation.isPending}
+                onClick={confirmDelete}
+              >
+                Hapus
+              </ActionButton>
+            </div>
+          }
+        >
+          <TextBlock className="text-sm text-mist">
+            Apakah Anda yakin ingin menghapus pekerjaan klien <TextBlock as="strong">{deleteTarget.project_title}</TextBlock>?
+          </TextBlock>
+        </VmsDialog>
+      )}
     </QueryState>
   );
 }

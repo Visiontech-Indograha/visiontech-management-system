@@ -108,7 +108,8 @@ class WorkTypeService:
         if self_id and str(data.follow_up_work_type_id) == str(self_id):
             raise ValidationError("Pemasangan lanjutan tidak boleh jenis titik itu sendiri.")
         target = await self.repo.kind_of(data.follow_up_work_type_id)
-        if target is None or target[0] != "WORK" or target[1] != division_id:
+        allowed_kinds = ("WORK", "INSTALLATION", "MAINTENANCE", "REPLACEMENT")
+        if target is None or target[0] not in allowed_kinds or target[1] != division_id:
             raise ValidationError("Pemasangan lanjutan harus jenis pekerjaan biasa (bukan survei) di divisi yang sama.")
         return data.follow_up_work_type_id
 

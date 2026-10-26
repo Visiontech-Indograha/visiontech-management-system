@@ -208,15 +208,15 @@ export async function requestItemRollover(itemId: string, body: RequestRolloverI
   return res.data;
 }
 
-/** PM Full Override: menyetujui, menolak, atau memindahkan tugas secara paksa. */
-export async function pmApproveOrMoveItem(itemId: string, body: PmApproveOrMoveIn): Promise<PmApproveOrMoveOut> {
-  const res = await api.post<PmApproveOrMoveOut>(`/work-plans/items/${itemId}/pm-approve-or-move`, body);
+/** PM Keputusan Rollover: menyetujui (ke tanggal baru / jadwal lain) atau menolak. */
+export async function pmApproveOrMoveItem(itemId: string, body: Record<string, unknown>): Promise<Record<string, unknown>> {
+  const res = await api.post<Record<string, unknown>>(`/work-plans/items/${itemId}/rollover-decision`, body);
   return res.data;
 }
 
-/** Mengambil status agregasi rantai tugas rollover (task chain) lintas hari/minggu. */
-export async function getTaskChainStatus(itemId: string): Promise<TaskChainStatusOut> {
-  const res = await api.get<TaskChainStatusOut>(`/work-plans/items/${itemId}/chain-status`);
+/** Mengambil rantai rollover (task chain) lintas hari/minggu. */
+export async function getTaskChainStatus(itemId: string): Promise<Record<string, unknown>[]> {
+  const res = await api.get<Record<string, unknown>[]>(`/work-plans/items/${itemId}/chain`);
   return res.data;
 }
 

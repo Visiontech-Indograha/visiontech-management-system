@@ -8,8 +8,11 @@ import { DialogActions } from "@/components/molecules/DialogActions";
 import { FormErrorText } from "@/components/molecules/FormErrorText";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { useCreateWorkCompletion } from "@/services/workCompletionService";
+import { useDivisions } from "@/services/employeeService";
+import { useSession } from "@/stores/sessionStore";
 
 interface FormValues {
+  division_id?: string;
   client_name: string;
   project_title: string;
   order_number?: string;
@@ -21,6 +24,8 @@ interface FormValues {
 
 export function WorkCompletionFormDialog({ onClose }: { onClose: () => void }) {
   const create = useCreateWorkCompletion();
+  const { me } = useSession();
+  const { data: divisions } = useDivisions();
   const [formError, setFormError] = useState<string | null>(null);
 
   const {
@@ -29,6 +34,7 @@ export function WorkCompletionFormDialog({ onClose }: { onClose: () => void }) {
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     defaultValues: {
+      division_id: me?.division_id ?? "",
       client_name: "",
       project_title: "",
       order_number: "",
@@ -43,6 +49,7 @@ export function WorkCompletionFormDialog({ onClose }: { onClose: () => void }) {
     setFormError(null);
     try {
       await create.mutateAsync({
+        division_id: values.division_id || me?.division_id || undefined,
         client_name: values.client_name,
         project_title: values.project_title,
         order_number: values.order_number || undefined,
@@ -69,6 +76,21 @@ export function WorkCompletionFormDialog({ onClose }: { onClose: () => void }) {
       </TextBlock>
       <FormBlock id="work-completion-form" onSubmit={handleSubmit(onSubmit)}>
         {formError && <FormErrorText message={formError} />}
+
+        <SelectField
+          label="Divisi Penanggung Jawab"
+          error={errors.division_id?.message}
+          {...register("division_id", {
+            required: !me?.division_id ? "Divisi wajib dipilih." : false,
+          })}
+        >
+          <ControlOption value="">-- Pilih Divisi --</ControlOption>
+          {(divisions ?? []).map((d) => (
+            <ControlOption key={d.id} value={d.id}>
+              {d.name}
+            </ControlOption>
+          ))}
+        </SelectField>
 
         <TextField
           label="Nama Klien / Perusahaan"

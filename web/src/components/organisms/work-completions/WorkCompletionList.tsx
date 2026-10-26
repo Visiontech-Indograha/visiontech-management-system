@@ -12,6 +12,7 @@ import {
   type WorkCompletion,
   type WorkCompletionListResponse,
   useUpdateWorkCompletionStatus,
+  useDeleteWorkCompletion,
 } from "@/services/workCompletionService";
 
 /** Status pekerjaan klien → label sehari-hari + warna (berjalan biru, mendesak merah, menunggu kuning, selesai hijau). */
@@ -45,6 +46,17 @@ export function WorkCompletionList({
   const [picked, setView] = useState<View | null>(null);
   const [only, setOnly] = useState<Phase | null>(null);
   const updateStatusMutation = useUpdateWorkCompletionStatus();
+  const deleteMutation = useDeleteWorkCompletion();
+
+  const handleDelete = async (order: WorkCompletion) => {
+    if (!window.confirm(`Hapus pekerjaan klien "${order.project_title}"?`)) return;
+    try {
+      await deleteMutation.mutateAsync(order.completion_id);
+      toast.success("Pekerjaan klien berhasil dihapus.");
+    } catch {
+      toast.error("Gagal menghapus pekerjaan klien.");
+    }
+  };
 
   const toggleUrgent = async (order: WorkCompletion) => {
     const next = order.order_status === "URGENT" ? "ONGOING" : "URGENT";
@@ -170,9 +182,19 @@ export function WorkCompletionList({
                       {done ? "Lihat hasil & dokumen" : "Buka detail"}
                     </ActionButton>
                     {canManage && !done && (
-                      <ActionButton size="sm" variant="outline" onClick={() => void toggleUrgent(order)}>
+                      <>
+                        <ActionButton size="sm" variant="outline" onClick={() => void toggleUrgent(order)}>
                         {order.order_status === "URGENT" ? "Hapus tanda mendesak" : "Tandai mendesak"}
                       </ActionButton>
+                      <ActionButton
+                        size="sm"
+                        variant="ghost"
+                        className="text-danger hover:bg-danger-bg hover:text-danger"
+                        onClick={() => void handleDelete(order)}
+                      >
+                        Hapus
+                      </ActionButton>
+                    </>
                     )}
                   </div>
                 </div>

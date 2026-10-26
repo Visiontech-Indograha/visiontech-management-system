@@ -117,11 +117,51 @@ export function useCreateWorkCompletion() {
   });
 }
 
+export interface WorkCompletionUpdate {
+  client_name?: string;
+  project_title?: string;
+  order_number?: string | null;
+  total_target_unit?: number;
+  unit_measure?: string;
+  order_status?: string;
+  priority_level?: string;
+  site_address?: string | null;
+  site_lat?: number | null;
+  site_lng?: number | null;
+  summary_notes?: string | null;
+}
+
+export function useUpdateWorkCompletion() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, payload }: { id: string; payload: WorkCompletionUpdate }) => {
+      const res = await api.put<WorkCompletionOrder>(`/work-completions/${id}`, payload);
+      return res.data;
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ["work-completions"] });
+      qc.invalidateQueries({ queryKey: completionKey(vars.id) });
+    },
+  });
+}
+
+export function useDeleteWorkCompletion() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      await api.delete(`/work-completions/${id}`);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["work-completions"] });
+    },
+  });
+}
+
 export function useUpdateWorkCompletionStatus() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const res = await api.patch<WorkCompletionOrder>(`/work-completions/${id}/status`, { status });
+      const res = await api.patch<WorkCompletionOrder>(`/work-completions/${id}/status`, { order_status: status });
       return res.data;
     },
     onSuccess: (_, vars) => {

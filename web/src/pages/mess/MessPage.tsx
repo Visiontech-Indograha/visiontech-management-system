@@ -8,7 +8,7 @@ export function MessPage() {
   const [adding, setAdding] = useState(false);
 
   const handleCheckout = async (stay: MessStay) => {
-    await checkout.mutateAsync({ id: stay.id });
+    await checkout.mutateAsync({ id: stay.mess_stay_id });
   };
 
   return (

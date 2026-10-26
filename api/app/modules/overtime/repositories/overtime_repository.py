@@ -69,6 +69,25 @@ class OvertimeRepository(BaseRepository):
             {"p": str(daily_plan_id)},
         )
 
+    async def list_by_employee(self, employee_id: UUID | str) -> Sequence[Any]:
+        return await self.fetchall(
+            f"SELECT {_COLUMNS} FROM overtime o JOIN employee e ON e.employee_id = o.employee_id "
+            "WHERE o.employee_id = CAST(:emp AS uuid) AND o.delete_at IS NULL ORDER BY o.create_at DESC",
+            {"emp": str(employee_id)},
+        )
+
+    async def list_all_active(self, managed_by: str | None = None) -> Sequence[Any]:
+        sql = f"""
+            SELECT {_COLUMNS} FROM overtime o
+            JOIN employee e ON e.employee_id = o.employee_id
+            LEFT JOIN work_plan_daily wpd ON wpd.daily_plan_id = o.daily_plan_id
+            LEFT JOIN division d ON d.division_id = wpd.division_id
+            WHERE o.delete_at IS NULL
+              AND (CAST(:mgr AS uuid) IS NULL OR CAST(:mgr AS uuid) IN (d.pm_id, d.om_id))
+            ORDER BY o.create_at DESC
+        """
+        return await self.fetchall(sql, {"mgr": managed_by})
+
     async def recap(self, month: date | None, managed_by: str | None) -> Sequence[Any]:
         """Rekap per karyawan per bulan; `managed_by` = hanya jadwal di divisi yang PM/OM-nya karyawan ini."""
         return await self.fetchall(

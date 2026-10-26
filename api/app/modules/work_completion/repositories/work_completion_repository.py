@@ -69,6 +69,17 @@ class WorkCompletionRepository(BaseRepository):
         )
         return role
 
+    async def get_pm_division(self, employee_id: UUID | str) -> UUID | None:
+        """Mencari division_id dari penugasan PM di tabel division atau kolom division_id employee."""
+        sql = """
+            SELECT division_id FROM division WHERE pm_id = CAST(:emp AS uuid) AND delete_at IS NULL
+            UNION
+            SELECT division_id FROM employee WHERE employee_id = CAST(:emp AS uuid) AND delete_at IS NULL
+            LIMIT 1
+        """
+        row = await self.scalar(sql, {"emp": str(employee_id)})
+        return UUID(str(row)) if row else None
+
 
     async def list_completions(
         self,
@@ -401,6 +412,15 @@ class WorkCompletionRepository(BaseRepository):
             WHERE completion_id = CAST(:id AS uuid) AND delete_at IS NULL
         """
         await self.execute(sql, {"id": str(completion_id), "status": status, "notes": notes})
+
+    async def delete_completion(self, completion_id: UUID | str) -> None:
+        """Soft delete order proyek klien."""
+        sql = """
+            UPDATE work_completion
+            SET delete_at = NOW(), update_at = NOW()
+            WHERE completion_id = CAST(:id AS uuid) AND delete_at IS NULL
+        """
+        await self.execute(sql, {"id": str(completion_id)})
 
     async def sign_completion(
         self,

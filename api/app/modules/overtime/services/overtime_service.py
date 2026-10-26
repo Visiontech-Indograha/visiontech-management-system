@@ -79,6 +79,18 @@ class OvertimeService:
             raise _state("Pengajuan lembur ini sudah diperiksa.")
         return await self.repo.get(overtime_id)
 
+    async def list_overtimes(self, user: CurrentUser, daily_plan_id: UUID | None = None) -> Sequence[Any]:
+        if daily_plan_id:
+            await check_daily_access(self.db, daily_plan_id, user, DailyNeed.VIEW)
+            return await self.repo.list_by_plan(daily_plan_id)
+        if is_admin(user) or Permission.REVIEW_OVERTIME.value in user.permissions:
+            return await self.repo.list_all_active(None)
+        if user.role == "PROJECT_MANAGER" and user.employee_id:
+            return await self.repo.list_all_active(user.employee_id)
+        if user.employee_id:
+            return await self.repo.list_by_employee(user.employee_id)
+        return []
+
     async def list_by_plan(self, user: CurrentUser, daily_plan_id: UUID) -> Sequence[Any]:
         await check_daily_access(self.db, daily_plan_id, user, DailyNeed.VIEW)
         return await self.repo.list_by_plan(daily_plan_id)

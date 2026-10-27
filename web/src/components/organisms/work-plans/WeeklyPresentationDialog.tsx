@@ -65,6 +65,14 @@ export function WeeklyPresentationDialog({
           />
         </div>
 
+        {teams.length === 0 && (
+          <div className="p-6 text-center border border-dashed border-line rounded-lg">
+            <TextBlock as="span" className="text-sm text-mist">
+              Belum ada tim lapangan yang terdaftar pada divisi ini.
+            </TextBlock>
+          </div>
+        )}
+
         {isLoading && (
           <div className="py-8 text-center">
             <TextBlock as="span" className="text-sm text-mist animate-pulse">

@@ -11,6 +11,20 @@ import { errorMessage } from "@/lib/errors";
 import { useLeaveMutation, type LeaveCreateInput } from "@/services/leaveService";
 import { useSession } from "@/stores/sessionStore";
 
+function calculateWorkingDays(startStr: string, endStr: string): number {
+  const start = new Date(startStr);
+  const end = new Date(endStr);
+  let days = 0;
+  const cur = new Date(start);
+  while (cur <= end) {
+    if (cur.getDay() !== 0) {
+      days++;
+    }
+    cur.setDate(cur.getDate() + 1);
+  }
+  return days;
+}
+
 export function LeaveApplyDialog({
   onClose,
 }: {
@@ -42,6 +56,12 @@ export function LeaveApplyDialog({
     setFormError(null);
     if (new Date(values.end_date) < new Date(values.start_date)) {
       setFormError("Tanggal selesai tidak boleh sebelum tanggal mulai.");
+      return;
+    }
+
+    const effectiveDays = calculateWorkingDays(values.start_date, values.end_date);
+    if (effectiveDays <= 0) {
+      setFormError("Permohonan cuti harus mencakup minimal 1 hari kerja efektif (bukan hari Minggu saja).");
       return;
     }
 
@@ -111,10 +131,11 @@ export function LeaveApplyDialog({
         {startDate && endDate && new Date(endDate) >= new Date(startDate) && (
           <div className="p-2.5 rounded-control bg-hover text-xs text-mist">
             <TextBlock as="span">
-              Perkiraan durasi:{" "}
+              Perkiraan durasi hari kerja:{" "}
               <TextBlock as="strong" className="text-foreground">
-                {Math.max(1, Math.round((new Date(endDate).getTime() - new Date(startDate).getTime()) / 86400000) + 1)} hari
+                {calculateWorkingDays(startDate, endDate)} hari
               </TextBlock>{" "}
+              (tidak termasuk hari Minggu) ·{" "}
               {leaveType === "ANNUAL" ? "(akan dikurangi dari kuota cuti tahunan)" : "(tidak memotong kuota tahunan)"}
             </TextBlock>
           </div>

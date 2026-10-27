@@ -100,3 +100,11 @@ export function useReviewLeave() {
   });
 }
 
+/** Label jenis cuti/izin untuk tampilan. */
+export const LEAVE_TYPE_LABEL: Record<string, string> = {
+  ANNUAL: "Cuti Tahunan",
+  SICK: "Izin Sakit",
+  MATERNITY: "Cuti Melahirkan",
+  UNPAID: "Cuti di Luar Tanggungan",
+  OTHER: "Izin Khusus",
+};

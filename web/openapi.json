@@ -20008,6 +20008,17 @@
       ],
       "title": "Daily Plan Id"
      },
+     "target": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Target"
+     },
      "created_at": {
       "type": "string",
       "format": "date-time",

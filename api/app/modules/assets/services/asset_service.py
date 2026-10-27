@@ -38,6 +38,7 @@ from app.modules.assets.schemas.asset_schema import (
     VehicleFileCreate,
     VehicleUpdate,
 )
+from app.modules.notifications.services.notification_service import NotificationService
 
 LICENCES = {
     "Motorcycle": ({"SIM_C"}, "SIM C"),
@@ -58,6 +59,9 @@ class AssetService:
 
     def __init__(self, repo: AssetRepository) -> None:
         self.repo = repo
+
+    def _notify(self) -> NotificationService:
+        return NotificationService(self.repo.db)
 
     # ── Rujukan ────────────────────────────────────────────────────────────────
     async def _path(self, file_id: UUID | None, what: str) -> str | None:
@@ -253,7 +257,11 @@ class AssetService:
             raise AppError("ALREADY_RETURNED", "Aset ini sudah dikembalikan.", status=409)
         await self.repo.close_loan(assignment_id, condition)
         await self.repo.set_status(loan.asset_type, loan.asset_id, condition)
-        return await self.repo.get_loan(assignment_id)
+        done = await self.repo.get_loan(assignment_id)
+        await self._notify().notify_employees(
+            [done.employee_id], "ASSET_RETURNED", f"Pengembalian {done.asset_name} diterima", "", target="asset"
+        )
+        return done
 
     # ── Pengajuan pinjam & pengembalian oleh karyawan ──────────────────────────
     async def _own_employee(self, user: CurrentUser) -> UUID:
@@ -276,7 +284,12 @@ class AssetService:
         request_id = await self.repo.insert_request(
             data.asset_type, asset_id, employee_id, data.purpose.strip(), data.needed_on
         )
-        return await self.repo.get_request(request_id)
+        req = await self.repo.get_request(request_id)
+        await self._notify().notify_roles(
+            ["ADMIN_HR_GA"], "ASSET_REQUESTED", f"{req.employee_name} mengajukan pinjam {req.asset_name}",
+            data.purpose.strip(), target="asset",
+        )
+        return req
 
     async def requests(self, user: CurrentUser, *, status: str | None) -> list[Any]:
         if Permission.MANAGE_ASSETS.value in set(user.permissions):
@@ -294,7 +307,12 @@ class AssetService:
         if req.status != "PENDING":
             raise AppError("NOT_CANCELLABLE", "Pengajuan ini sudah diputuskan.", status=409)
         await self.repo.set_request_status(request_id, "CANCELLED", None, None)
-        return await self.repo.get_request(request_id)
+        req = await self.repo.get_request(request_id)
+        await self._notify().notify_roles(
+            ["ADMIN_HR_GA"], "ASSET_REQUEST_CANCELLED",
+            f"{req.employee_name} membatalkan pengajuan pinjam {req.asset_name}", "", target="asset",
+        )
+        return req
 
     async def review_request(self, user: CurrentUser, request_id: UUID, data: LoanRequestReview) -> Any:
         reviewer = await self._own_employee(user)
@@ -314,7 +332,13 @@ class AssetService:
             ))
             assignment_id = loan.assignment_id
         await self.repo.set_request_status(request_id, data.decision, str(reviewer), note, assignment_id)
-        return await self.repo.get_request(request_id)
+        result = await self.repo.get_request(request_id)
+        verdict = "disetujui, silakan ambil aset" if data.decision == "APPROVED" else "ditolak"
+        await self._notify().notify_employees(
+            [result.employee_id], "ASSET_REQUEST_DECIDED", f"Pengajuan pinjam {result.asset_name} {verdict}",
+            note or "", target="asset",
+        )
+        return result
 
     async def request_return(self, user: CurrentUser, assignment_id: UUID, data: LoanReturnRequest) -> Any:
         employee_id = await self._own_employee(user)
@@ -329,4 +353,9 @@ class AssetService:
         assert photo is not None
         note = data.note.strip() if data.note else None
         await self.repo.request_return(assignment_id, data.condition, note, photo)
-        return await self.repo.get_loan(assignment_id)
+        done = await self.repo.get_loan(assignment_id)
+        await self._notify().notify_roles(
+            ["ADMIN_HR_GA"], "ASSET_RETURN_REQUESTED",
+            f"{done.employee_name} mengembalikan {done.asset_name}, mohon diperiksa", note or "", target="asset",
+        )
+        return done

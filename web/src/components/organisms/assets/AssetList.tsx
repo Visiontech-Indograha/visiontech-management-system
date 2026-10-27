@@ -11,6 +11,7 @@ import { Pill } from "@/components/molecules/Pill";
 import { QueryState } from "@/components/molecules/QueryState";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
 import { TextBlock } from "@/components/molecules/TextBlock";
+import { PhotoStrip } from "@/components/organisms/PhotoStrip";
 import { formatDate } from "@/lib/format";
 import { useLoans, useTools, useVehicles, type AssetKind, type Loan, type Tool, type Vehicle } from "@/services/assetService";
 
@@ -70,6 +71,7 @@ export function AssetList({ canManage, onOpen }: { canManage: boolean; onOpen: (
                   <TextBlock as="span" className="font-mono text-sm">{v.number_plate}</TextBlock>
                   <StatusBadge status={v.status} />
                 </div>
+                {v.photo_file_id && <PhotoStrip photos={[{ file_id: v.photo_file_id }]} alt={`Foto ${v.name}`} />}
                 <TextBlock as="h2" className="text-base font-medium">{v.name}</TextBlock>
                 <ListBlock as="dl" className="space-y-1 text-xs text-mist">
                   <ListPair>{VEHICLE_TYPE[v.vehicle_type]} · {v.division_name} · {v.office_name}</ListPair>
@@ -95,6 +97,7 @@ export function AssetList({ canManage, onOpen }: { canManage: boolean; onOpen: (
                   <TextBlock as="span" className="font-mono text-sm">{t.tool_code}</TextBlock>
                   <StatusBadge status={t.status} />
                 </div>
+                {t.photo_file_id && <PhotoStrip photos={[{ file_id: t.photo_file_id }]} alt={`Foto ${t.name}`} />}
                 <TextBlock as="h2" className="text-base font-medium">{t.name}</TextBlock>
                 <ListBlock as="dl" className="space-y-1 text-xs text-mist">
                   <ListPair>{OWNERSHIP[t.ownership_type]} · {t.division_name ?? "Semua divisi"} · {t.office_name}</ListPair>
@@ -118,6 +121,7 @@ export function AssetList({ canManage, onOpen }: { canManage: boolean; onOpen: (
                     {l.employee_name} · sejak {formatDate(l.loaned_at)}
                     {l.work_date ? ` · jadwal ${formatDate(l.work_date)}` : ""}
                   </TextBlock>
+                  {l.handover_file_id && <PhotoStrip photos={[{ file_id: l.handover_file_id }]} alt="Foto serah terima" />}
                 </div>
                 <StatusBadge status={l.assignment_status} />
                 {canManage && (

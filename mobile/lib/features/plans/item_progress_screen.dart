@@ -103,8 +103,8 @@ class _ItemProgressScreenState extends ConsumerState<ItemProgressScreen> {
         _photos
           ..clear()
           ..addAll([
-            for (final p in (item['realization_photos_json'] as List? ?? const []).cast<Map>())
-              _Photo(fileId: '${p['file_id']}', requirementId: p['requirement_id'] as String?),
+            for (final p in photoRefsOf(item['realization_photos_json']))
+              _Photo(fileId: p.fileId, requirementId: p.requirementId),
           ]);
         _error = null;
       });
@@ -644,4 +644,19 @@ class _AddTile extends StatelessWidget {
       ),
     ),
   );
+}
+
+/// Foto bukti tersimpan sebagai objek `{file_id, requirement_id}` (baru) atau string id berkas (lama);
+/// keduanya dibaca agar semua foto di server tampil dan data rusak tidak membuat layar error.
+List<({String fileId, String? requirementId})> photoRefsOf(Object? raw) {
+  if (raw is! List) return const [];
+  final refs = <({String fileId, String? requirementId})>[];
+  for (final e in raw) {
+    if (e is String && e.isNotEmpty) {
+      refs.add((fileId: e, requirementId: null));
+    } else if (e is Map && e['file_id'] is String && (e['file_id'] as String).isNotEmpty) {
+      refs.add((fileId: e['file_id'] as String, requirementId: e['requirement_id'] as String?));
+    }
+  }
+  return refs;
 }

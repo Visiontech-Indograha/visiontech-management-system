@@ -1,11 +1,13 @@
 import { useState } from "react";
-import { AlertCircle, Calendar, Camera, CheckCircle2, Users } from "@/components/molecules/Glyphs";
+import { AlertCircle, Calendar, Camera, Users } from "@/components/molecules/Glyphs";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { SelectField, TextField } from "@/components/molecules/Field";
 import { ControlOption } from "@/components/molecules/FormBlock";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
+import { PhotoStrip } from "@/components/organisms/PhotoStrip";
 import { formatDate } from "@/lib/format";
+import { photoRefs } from "@/lib/photoRefs";
 import { useWeeklyPresentation } from "@/services/dailyPlanService";
 
 interface TeamOption {
@@ -133,20 +135,14 @@ export function WeeklyPresentationDialog({
                           {formatDate(rep.submitted_at || rep.create_at)}
                         </TextBlock>
                         <div className="flex items-center gap-2">
-                          {rep.photos_json && Array.isArray(rep.photos_json) && rep.photos_json.length > 0 && (
+                          {photoRefs(rep.photos_json).length > 0 && (
                             <div className="flex items-center gap-1">
                               <Camera size={12} className="text-mist" />
                               <TextBlock as="span" className="text-xs text-mist">
-                                {`${rep.photos_json.length} foto`}
+                                {`${photoRefs(rep.photos_json).length} foto`}
                               </TextBlock>
                             </div>
                           )}
-                          <div className="flex items-center gap-1">
-                            <CheckCircle2 size={12} className="text-success" />
-                            <TextBlock as="span" className="text-xs text-success">
-                              Terverifikasi
-                            </TextBlock>
-                          </div>
                         </div>
                       </div>
 
@@ -154,6 +150,7 @@ export function WeeklyPresentationDialog({
                         {rep.summary}
                       </TextBlock>
 
+                      <PhotoStrip photos={photoRefs(rep.photos_json)} alt="Foto laporan harian" />
                       {rep.obstacles && (
                         <div className="mt-2 bg-amber-500/10 border border-amber-500/20 rounded p-1.5 flex items-start gap-1.5">
                           <AlertCircle size={14} className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" />

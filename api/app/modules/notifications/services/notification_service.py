@@ -44,20 +44,55 @@ class NotificationService:
         p = await self._daily(daily_plan_id)
         if p:
             await self.repo.insert_many(p.office_id, [p.pm, p.om], "DAILY_SUBMITTED",
-                                        f"{self._day_label(p)} menunggu persetujuan", p.site_name, daily_plan_id)
+                                        f"{self._day_label(p)} menunggu persetujuan", p.site_name,
+                                        daily_plan_id, "plan")
 
     async def daily_approved(self, daily_plan_id: UUID | str) -> None:
         p = await self._daily(daily_plan_id)
         if p:
             await self.repo.insert_many(p.office_id, [p.leader, *p.members], "DAILY_APPROVED",
-                                        f"{self._day_label(p)} disetujui", p.site_name, daily_plan_id)
+                                        f"{self._day_label(p)} disetujui", p.site_name, daily_plan_id, "plan")
 
     async def daily_rejected(self, daily_plan_id: UUID | str, reason: str) -> None:
         p = await self._daily(daily_plan_id)
         if p:
             await self.repo.insert_many(p.office_id, [p.creator], "DAILY_REJECTED",
                                         f"{await self._actor()} mengembalikan {self._day_label(p)}", reason,
-                                        daily_plan_id)
+                                        daily_plan_id, "plan")
+
+    async def employee_name(self, employee_id: UUID | str) -> str:
+        return await self.repo.employee_name(employee_id)
+
+    async def notify_division_managers(
+        self, employee_id: UUID | str, kind: str, title: str, body: str = "", *,
+        target: str | None = None,
+        roles: Iterable[str] = ("PROJECT_MANAGER", "OPERATIONAL_MANAGER"),
+    ) -> None:
+        """Notifikasi ke PM/OM di divisi karyawan itu."""
+        where = await self.repo.employee_division(employee_id)
+        if where is None:
+            return
+        await self.notify_roles(roles, kind, title, body, office_id=where.office_id,
+                                division_id=where.division_id, target=target)
+
+    async def notify_employees(
+        self, employee_ids: Iterable[str | UUID | None], kind: str, title: str, body: str = "",
+        *, target: str | None = None, plan_id: UUID | str | None = None,
+    ) -> None:
+        """Notifikasi ke karyawan tertentu (disimpan di kotak masuk + realtime)."""
+        users = await self.repo.user_ids_for_employees(str(e) for e in employee_ids if e)
+        await self.repo.insert_for_users(users, kind, title, body, plan_id, target)
+
+    async def notify_roles(
+        self, roles: Iterable[str], kind: str, title: str, body: str = "",
+        *, office_id: UUID | str | None = None, division_id: UUID | str | None = None,
+        target: str | None = None, plan_id: UUID | str | None = None, exclude_user_id: str | None = None,
+    ) -> None:
+        """Notifikasi ke semua akun berperan tertentu (opsional per kantor/divisi), selain pelaku."""
+        users = await self.repo.user_ids_with_role(roles, office_id, division_id)
+        await self.repo.insert_for_users(
+            [u for u in users if u != exclude_user_id], kind, title, body, plan_id, target
+        )
 
     async def list_for(self, user_id: str, unread_only: bool = False, limit: int = 50) -> list[Any]:
         """

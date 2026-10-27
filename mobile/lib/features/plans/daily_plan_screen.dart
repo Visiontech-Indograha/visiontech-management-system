@@ -136,6 +136,7 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
       builder: (ctx) => AlertDialog(
         title: const Text('Ajukan koreksi laporan'),
         content: TextField(
+            maxLength: 500,
           controller: reason,
           maxLines: 3,
           decoration: const InputDecoration(labelText: 'Apa yang perlu diperbaiki? (min. 5 karakter)'),
@@ -173,12 +174,14 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
+            maxLength: 1000,
               controller: summary,
               minLines: 2,
               maxLines: 4,
               decoration: const InputDecoration(labelText: 'Ringkasan hasil kerja *'),
             ),
             TextField(
+            maxLength: 1000,
               controller: obstacles,
               minLines: 1,
               maxLines: 3,
@@ -255,11 +258,13 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
+            maxLength: 12,
               controller: hours,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               decoration: const InputDecoration(labelText: 'Jam lembur (maks. 12)'),
             ),
             TextField(
+            maxLength: 500,
               controller: reason,
               decoration: const InputDecoration(labelText: 'Alasan'),
             ),
@@ -408,12 +413,22 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
                         busy: _busy,
                         onTap: _dailyReport == null
                             ? null
-                            : () => _run(
-                                () => ref.read(syncEngineProvider).api.submitCorrection(
-                                  _openCorrection!['correction_id'] as String,
-                                ),
-                                'Revisi dikirim ke PM.',
-                              ),
+                            : () async {
+                                if (!await confirmAction(
+                                  context,
+                                  title: 'Kirim revisi ke PM?',
+                                  message: 'PM akan memeriksa laporan dan hasil kerja yang sudah Anda perbarui.',
+                                  confirmLabel: 'Kirim revisi',
+                                )) {
+                                  return;
+                                }
+                                await _run(
+                                  () => ref.read(syncEngineProvider).api.submitCorrection(
+                                    _openCorrection!['correction_id'] as String,
+                                  ),
+                                  'Revisi dikirim ke PM.',
+                                );
+                              },
                       ),
                     ],
                   ],
@@ -435,10 +450,20 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
                       label: _dailyReport == null ? 'Kirim laporan untuk menutup hari' : 'Selesaikan hari kerja',
                       icon: Icons.task_alt_rounded,
                       busy: _busy,
-                      onTap: _dailyReport == null || _reportPending ? null : () => _run(
-                        () => ref.read(syncEngineProvider).api.completeDay(widget.dailyPlanId),
-                        'Hari kerja ditutup.',
-                      ),
+                      onTap: _dailyReport == null || _reportPending ? null : () async {
+                        if (!await confirmAction(
+                          context,
+                          title: 'Selesaikan hari kerja?',
+                          message: 'Hasil kerja dikunci. Perubahan setelahnya perlu persetujuan PM lewat koreksi laporan.',
+                          confirmLabel: 'Selesaikan',
+                        )) {
+                          return;
+                        }
+                        await _run(
+                          () => ref.read(syncEngineProvider).api.completeDay(widget.dailyPlanId),
+                          'Hari kerja ditutup.',
+                        );
+                      },
                     ),
                   ],
                   const SectionTitle('Daftar pekerjaan hari ini'),

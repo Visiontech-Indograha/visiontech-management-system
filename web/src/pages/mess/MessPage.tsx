@@ -1,5 +1,7 @@
 import { useState } from "react";
+import { toast } from "sonner";
 import { MessTemplate } from "@/components/templates/mess/MessTemplate";
+import { errorMessage } from "@/lib/errors";
 import { type MessStay, useMessStays, useCheckoutMessStay } from "@/services/messService";
 
 export function MessPage() {
@@ -8,7 +10,12 @@ export function MessPage() {
   const [adding, setAdding] = useState(false);
 
   const handleCheckout = async (stay: MessStay) => {
-    await checkout.mutateAsync({ id: stay.mess_stay_id });
+    try {
+      await checkout.mutateAsync({ id: stay.mess_stay_id });
+      toast.success(`Inap ${stay.employee_name} ditandai selesai.`);
+    } catch (err) {
+      toast.error(errorMessage(err));
+    }
   };
 
   return (

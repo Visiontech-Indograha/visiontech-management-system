@@ -134,7 +134,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_users_email_active ON users (email) WHERE d
 -- 4. Tabel user_sessions (JWT Hybrid Session untuk React Web & Flutter Android)
 CREATE TABLE IF NOT EXISTS user_sessions (
     session_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES users(user_id),
+    user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
     token_family_id UUID NOT NULL,
     refresh_token_hash CHAR(64) NOT NULL,
     platform client_platform_enum NOT NULL,
@@ -464,7 +464,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_daily_report_correction_open ON daily_repor
 -- 17c. Tabel notification (kotak masuk notifikasi pengguna; realtime lewat SSE, riwayat tersimpan di sini)
 CREATE TABLE IF NOT EXISTS notification (
     notification_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES users(user_id),
+    user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
     kind VARCHAR(40) NOT NULL,
     title VARCHAR(200) NOT NULL,
     body TEXT NOT NULL DEFAULT '',

@@ -1,0 +1,31 @@
+"""Validasi input: unggahan palsu ditolak dari isinya, dan field teks/kredensial dibatasi panjangnya."""
+from __future__ import annotations
+
+from tests.conftest import WORLD_PASSWORD, World, requires_db
+
+pytestmark = requires_db
+
+
+def test_upload_with_forged_content_type_is_rejected(client, world: World) -> None:
+    response = client.post(
+        "/files/upload",
+        headers=world.headers(client, "member"),
+        files={"file": ("laporan.pdf", b"<script>alert(1)</script>", "application/pdf")},
+    )
+    assert response.status_code == 415, response.text
+
+
+def test_login_rejects_oversized_credentials(client, world: World) -> None:
+    too_long = client.post("/auth/login", json={"email": "a" * 300 + "@x.id", "password": WORLD_PASSWORD})
+    assert too_long.status_code == 422
+    huge_password = client.post("/auth/login", json={"email": world.logins["member"], "password": "x" * 5000})
+    assert huge_password.status_code == 422
+
+
+def test_overtime_reason_is_length_limited(client, world: World) -> None:
+    response = client.post(
+        "/overtime",
+        headers=world.headers(client, "member"),
+        json={"daily_plan_id": "00000000-0000-0000-0000-000000000000", "hours": 2, "reason": "a" * 1001},
+    )
+    assert response.status_code == 422

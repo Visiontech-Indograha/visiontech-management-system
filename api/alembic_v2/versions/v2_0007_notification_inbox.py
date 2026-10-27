@@ -19,7 +19,7 @@ def upgrade() -> None:
         """
         CREATE TABLE IF NOT EXISTS notification (
             notification_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            user_id UUID NOT NULL REFERENCES users(user_id),
+            user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
             kind VARCHAR(40) NOT NULL,
             title VARCHAR(200) NOT NULL,
             body TEXT NOT NULL DEFAULT '',

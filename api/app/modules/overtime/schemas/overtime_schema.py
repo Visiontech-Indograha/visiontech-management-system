@@ -7,7 +7,7 @@ Corresponding to domain transactions: REPORT_OVERTIME and REVIEW_OVERTIME.
 from datetime import date, datetime
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class OvertimeCreate(BaseModel):
@@ -20,7 +20,7 @@ class OvertimeCreate(BaseModel):
     """
     daily_plan_id: UUID
     hours: float
-    reason: str
+    reason: str = Field(max_length=1000)
 
 
 class OvertimeReview(BaseModel):
@@ -30,8 +30,8 @@ class OvertimeReview(BaseModel):
     Status keputusan (decision) berupa APPROVED atau REJECTED, dan akan
     diperiksa serta diproses di dalam service.
     """
-    decision: str
-    note: str | None = None
+    decision: str = Field(max_length=20)
+    note: str | None = Field(default=None, max_length=1000)
 
 
 class OvertimeResponse(BaseModel):
@@ -44,7 +44,7 @@ class OvertimeResponse(BaseModel):
     employee_name: str
     work_date: date
     hours: float
-    reason: str
+    reason: str = Field(max_length=1000)
     status: str
     reviewed_by: UUID | None
     reviewed_at: datetime | None

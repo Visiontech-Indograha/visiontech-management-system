@@ -1080,10 +1080,12 @@
     "description": "Skema permohonan ganti kata sandi.",
     "properties": {
      "current_password": {
+      "maxLength": 256,
       "title": "Current Password",
       "type": "string"
      },
      "new_password": {
+      "maxLength": 128,
       "title": "New Password",
       "type": "string"
      }
@@ -1099,16 +1101,19 @@
     "description": "Skema payload untuk permintaan login akun.",
     "properties": {
      "email": {
+      "maxLength": 254,
       "title": "Email",
       "type": "string"
      },
      "password": {
+      "maxLength": 256,
       "title": "Password",
       "type": "string"
      },
      "platform": {
       "anyOf": [
        {
+        "maxLength": 20,
         "type": "string"
        },
        {
@@ -6650,6 +6655,8 @@
    "MessStayCreate": {
     "properties": {
      "address": {
+      "maxLength": 500,
+      "minLength": 3,
       "title": "Address",
       "type": "string"
      },
@@ -6810,6 +6817,8 @@
      "address": {
       "anyOf": [
        {
+        "maxLength": 500,
+        "minLength": 3,
         "type": "string"
        },
        {
@@ -6834,6 +6843,8 @@
      "latitude": {
       "anyOf": [
        {
+        "maximum": 90.0,
+        "minimum": -90.0,
         "type": "number"
        },
        {
@@ -6848,6 +6859,8 @@
      "longitude": {
       "anyOf": [
        {
+        "maximum": 180.0,
+        "minimum": -180.0,
         "type": "number"
        },
        {
@@ -8170,6 +8183,7 @@
       "type": "number"
      },
      "reason": {
+      "maxLength": 1000,
       "title": "Reason",
       "type": "string"
      }
@@ -8262,6 +8276,7 @@
       "type": "string"
      },
      "reason": {
+      "maxLength": 1000,
       "title": "Reason",
       "type": "string"
      },
@@ -8331,12 +8346,14 @@
     "description": "Schema for reviewing an overtime request (domain.js REVIEW_OVERTIME).\n\nStatus keputusan (decision) berupa APPROVED atau REJECTED, dan akan\ndiperiksa serta diproses di dalam service.",
     "properties": {
      "decision": {
+      "maxLength": 20,
       "title": "Decision",
       "type": "string"
      },
      "note": {
       "anyOf": [
        {
+        "maxLength": 1000,
         "type": "string"
        },
        {

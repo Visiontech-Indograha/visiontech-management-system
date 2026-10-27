@@ -188,6 +188,7 @@ class _ItemProgressScreenState extends ConsumerState<ItemProgressScreen> {
       builder: (ctx) => AlertDialog(
         title: const Text('Minta pindah ke hari lain'),
         content: TextField(
+            maxLength: 500,
           controller: reason,
           maxLines: 3,
           decoration: const InputDecoration(labelText: 'Alasan (hujan, izin kerja, material, ...)'),
@@ -379,6 +380,7 @@ class _ItemProgressScreenState extends ConsumerState<ItemProgressScreen> {
                     ),
                     Expanded(
                       child: TextField(
+            maxLength: 12,
                         controller: _qty,
                         enabled: _editable,
                         textAlign: TextAlign.center,
@@ -423,6 +425,7 @@ class _ItemProgressScreenState extends ConsumerState<ItemProgressScreen> {
           // Langkah 3 — catatan
           const _Step(number: 3, title: 'Catatan (boleh kosong)', done: false, optional: true),
           TextField(
+            maxLength: 1000,
             controller: _notes,
             enabled: _editable,
             maxLines: 3,

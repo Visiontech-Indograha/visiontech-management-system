@@ -13978,10 +13978,12 @@
     "properties": {
      "current_password": {
       "type": "string",
+      "maxLength": 256,
       "title": "Current Password"
      },
      "new_password": {
       "type": "string",
+      "maxLength": 128,
       "title": "New Password"
      }
     },
@@ -13997,16 +13999,19 @@
     "properties": {
      "email": {
       "type": "string",
+      "maxLength": 254,
       "title": "Email"
      },
      "password": {
       "type": "string",
+      "maxLength": 256,
       "title": "Password"
      },
      "platform": {
       "anyOf": [
        {
-        "type": "string"
+        "type": "string",
+        "maxLength": 20
        },
        {
         "type": "null"
@@ -19561,6 +19566,8 @@
      },
      "address": {
       "type": "string",
+      "maxLength": 500,
+      "minLength": 3,
       "title": "Address"
      },
      "latitude": {
@@ -19734,7 +19741,9 @@
      "address": {
       "anyOf": [
        {
-        "type": "string"
+        "type": "string",
+        "maxLength": 500,
+        "minLength": 3
        },
        {
         "type": "null"
@@ -19745,7 +19754,9 @@
      "latitude": {
       "anyOf": [
        {
-        "type": "number"
+        "type": "number",
+        "maximum": 90.0,
+        "minimum": -90.0
        },
        {
         "type": "string"
@@ -19759,7 +19770,9 @@
      "longitude": {
       "anyOf": [
        {
-        "type": "number"
+        "type": "number",
+        "maximum": 180.0,
+        "minimum": -180.0
        },
        {
         "type": "string"
@@ -21068,6 +21081,7 @@
      },
      "reason": {
       "type": "string",
+      "maxLength": 1000,
       "title": "Reason"
      }
     },
@@ -21160,6 +21174,7 @@
      },
      "reason": {
       "type": "string",
+      "maxLength": 1000,
       "title": "Reason"
      },
      "status": {
@@ -21229,12 +21244,14 @@
     "properties": {
      "decision": {
       "type": "string",
+      "maxLength": 20,
       "title": "Decision"
      },
      "note": {
       "anyOf": [
        {
-        "type": "string"
+        "type": "string",
+        "maxLength": 1000
        },
        {
         "type": "null"

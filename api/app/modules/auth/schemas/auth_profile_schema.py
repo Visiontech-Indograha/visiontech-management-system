@@ -5,7 +5,7 @@ Skema profil pengguna yang sedang masuk dan perubahan kata sandi.
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.5.
 """
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class AuthUserMeResponseSchema(BaseModel):
@@ -28,8 +28,8 @@ class AuthChangePasswordRequestSchema(BaseModel):
     Skema permohonan ganti kata sandi.
     """
 
-    current_password: str
-    new_password: str
+    current_password: str = Field(max_length=256)
+    new_password: str = Field(max_length=128)
 
 
 class AuthMessageResponseSchema(BaseModel):

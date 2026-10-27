@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field
 class MessStayCreate(BaseModel):
     mess_name: str = Field(..., min_length=2, max_length=150)
     city: str = Field(..., min_length=2, max_length=100)
-    address: str
+    address: str = Field(min_length=3, max_length=500)
     latitude: Decimal = Field(ge=-90, le=90)
     longitude: Decimal = Field(ge=-180, le=180)
     employee_id: UUID
@@ -25,9 +25,9 @@ class MessStayCreate(BaseModel):
 class MessStayUpdate(BaseModel):
     mess_name: str | None = Field(None, min_length=2, max_length=150)
     city: str | None = Field(None, min_length=2, max_length=100)
-    address: str | None = None
-    latitude: Decimal | None = None
-    longitude: Decimal | None = None
+    address: str | None = Field(None, min_length=3, max_length=500)
+    latitude: Decimal | None = Field(None, ge=-90, le=90)
+    longitude: Decimal | None = Field(None, ge=-180, le=180)
     stay_start_date: date | None = None
     stay_end_date: date | None = None
 

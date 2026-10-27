@@ -105,10 +105,13 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       }
       final daySites = [
         for (final p in plans.items)
-          if (p['status'] == 'APPROVED' || p['status'] == 'ONGOING')
+          if ((p['status'] == 'APPROVED' || p['status'] == 'ONGOING') &&
+              p['site_lat'] != null &&
+              p['site_lng'] != null &&
+              p['attendance_radius_m'] != null)
             {
               'id': p['daily_plan_id'],
-              'name': 'Lokasi tugas: ${p['site_name']}',
+              'name': 'Lokasi tugas: ${p['site_name'] ?? 'Site'}',
               'location': {'lat': num.parse('${p['site_lat']}'), 'lng': num.parse('${p['site_lng']}')},
               'radius_m': p['attendance_radius_m'],
             },

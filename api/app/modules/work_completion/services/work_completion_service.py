@@ -182,7 +182,11 @@ class WorkCompletionService:
         """Membuat order proyek baru."""
         if current_user.role not in ("SUPER_ADMIN", "OPERATIONAL_MANAGER", "PROJECT_MANAGER"):
             raise ForbiddenError("Hanya PM, OM, atau Super Admin yang dapat membuat Order Klien.")
-        if current_user.role == "PROJECT_MANAGER" and not data.get("pm_id"):
+        if current_user.role == "PROJECT_MANAGER":
+            if not current_user.employee_id:
+                raise ForbiddenError("Akun PM ini belum tertaut ke data karyawan.")
+            if data.get("pm_id") and str(data["pm_id"]) != str(current_user.employee_id):
+                raise ForbiddenError("PM hanya dapat membuat order atas nama dirinya sendiri.")
             data["pm_id"] = current_user.employee_id
         if not data.get("division_id"):
             if data.get("project_id"):
@@ -195,6 +199,12 @@ class WorkCompletionService:
                     data["division_id"] = pm_div
         if not data.get("division_id"):
             raise ValidationError("Divisi order wajib ditentukan.")
+        if current_user.role != "SUPER_ADMIN" and (
+            not current_user.employee_id
+            or not await self.crud.is_division_manager(data["division_id"], current_user.employee_id)
+        ):
+            raise ForbiddenError("Anda bukan PM/OM divisi order ini.")
+        project = None
         if data.get("project_id"):
             project = await self.crud.project_snapshot(data["project_id"])
             if project is None or str(project.division_id) != str(data["division_id"]):
@@ -213,6 +223,10 @@ class WorkCompletionService:
         pm_id = data.get("pm_id")
         if pm_id and await self.crud.employee_role(pm_id) != "PROJECT_MANAGER":
             raise ValidationError("PM order harus karyawan aktif dengan peran Project Manager.")
+        if pm_id and not await self.crud.is_division_pm(data["division_id"], pm_id) and not (
+            project is not None and str(project.pm_id) == str(pm_id)
+        ):
+            raise ValidationError("PM order harus ditugaskan pada divisi yang sama.")
 
         cid = await self.crud.create_completion(data)
         created = await self.crud.get_completion(cid)
@@ -376,3 +390,48 @@ class WorkCompletionService:
         """Sinkronisasi otomatis template default materials dari jenis pekerjaan."""
         await self._editable(current_user, completion_id)
         return await self.crud.sync_bom_from_work_types(completion_id, overwrite_existing=overwrite_existing)
+
+    async def decide_acc(
+        self, current_user: CurrentUser, completion_id: UUID, decision: str, notes: str | None = None
+    ) -> dict[str, Any]:
+        """Menyimpan keputusan ACC klien (MENUNGGU_ACC, DITERIMA, DITOLAK_REWORK)."""
+        await self._access(current_user, completion_id, manage=True)
+        await self.crud.set_acc_decision(completion_id, decision, current_user.employee_id, notes)
+        if decision == "DITOLAK_REWORK":
+            await self.crud.reopen_items_for_rework(completion_id)
+        return await self.get_order_detail(current_user, completion_id)
+
+    async def create_revision(
+        self,
+        current_user: CurrentUser,
+        completion_id: UUID,
+        description: str,
+        request_date: Any = None,
+        create_survey: bool = False,
+    ) -> dict[str, Any]:
+        """Mencatat revisi/tambahan pekerjaan dari klien."""
+        order = await self._access(current_user, completion_id, manage=True)
+        survey_task_id = None
+        if create_survey:
+            from app.modules.work_plans.services.survey_service import SurveyService
+            survey_svc = SurveyService(self.crud.db)
+            div_id = order.get("division_id")
+            title = f"Survei Revisi: {description[:50]}"
+            survey_task_id = await survey_svc.create_revision_task({
+                "division_id": str(div_id) if div_id else None,
+                "title": title,
+                "description": description,
+                "client_id": str(order.get("client_id")) if order.get("client_id") else None,
+                "completion_id": str(completion_id),
+                "created_by_id": current_user.employee_id,
+            })
+
+        rev_id = await self.crud.create_revision(
+            completion_id, description, request_date, current_user.employee_id, survey_task_id
+        )
+        return {"revision_id": rev_id, "survey_task_id": survey_task_id}
+
+    async def list_revisions(self, current_user: CurrentUser, completion_id: UUID) -> list[dict[str, Any]]:
+        """Membaca daftar revisi klien."""
+        await self.get_order_detail(current_user, completion_id)
+        return await self.crud.list_revisions(completion_id)

@@ -26,16 +26,18 @@ class DailyPlanCreate(BaseModel):
     team_id: UUID
     project_id: UUID | None = None  # proyek/SPK divisi yang sama (Milestone 10)
     work_date: date
-    site_name: str = Field(min_length=2, max_length=150)
-    site_lat: Decimal = Field(ge=-90, le=90)
-    site_lng: Decimal = Field(ge=-180, le=180)
-    attendance_radius_m: int = Field(150, ge=10, le=5000)
+    site_name: str | None = Field(default=None, min_length=2, max_length=150)
+    site_lat: Decimal | None = Field(default=None, ge=-90, le=90)
+    site_lng: Decimal | None = Field(default=None, ge=-180, le=180)
+    attendance_radius_m: int | None = Field(default=150, ge=10, le=5000)
     clock_in_time: time = time(7, 0)
     clock_out_time: time = time(16, 0)
 
     @model_validator(mode="after")
     def _hours(self) -> DailyPlanCreate:
         _check_hours(self.clock_in_time, self.clock_out_time)
+        if (self.site_lat is None) != (self.site_lng is None):
+            raise ValueError("Latitude dan longitude harus diisi bersama atau dibiarkan kosong.")
         return self
 
 
@@ -111,10 +113,10 @@ class DailyPlanOut(BaseModel):
     pm_name: str | None = None  # PM divisi — kontak ketua tim
     pm_phone: str | None = None
     work_date: date
-    site_name: str
-    site_lat: Decimal
-    site_lng: Decimal
-    attendance_radius_m: int
+    site_name: str | None = None
+    site_lat: Decimal | None = None
+    site_lng: Decimal | None = None
+    attendance_radius_m: int | None = None
     clock_in_time: time
     clock_out_time: time
     status: DailyStatus

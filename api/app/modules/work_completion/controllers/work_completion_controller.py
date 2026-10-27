@@ -14,12 +14,15 @@ from fastapi import Depends, Response
 from app.core.security import CurrentUser
 from app.modules.work_completion.dependencies import get_work_completion_service
 from app.modules.work_completion.schemas.work_completion_schema import (
+    WorkCompletionAccDecision,
     WorkCompletionBomIn,
     WorkCompletionBomOut,
     WorkCompletionBomUpdate,
     WorkCompletionCreate,
     WorkCompletionListOut,
     WorkCompletionOut,
+    WorkCompletionRevisionCreate,
+    WorkCompletionRevisionOut,
     WorkCompletionSignRequest,
     WorkCompletionStatusUpdate,
     WorkCompletionUpdate,
@@ -189,3 +192,39 @@ class WorkCompletionController:
     async def verify(self, completion_id: UUID, signature_hash: str) -> WorkCompletionVerifyOut:
         """Verifikasi publik dokumen resmi lewat QR."""
         return WorkCompletionVerifyOut(**await self.service.verify(completion_id, signature_hash))
+
+    async def decide_acc(
+        self,
+        completion_id: UUID,
+        body: WorkCompletionAccDecision,
+        current_user: CurrentUser,
+    ) -> WorkCompletionOut:
+        """Menyimpan keputusan ACC klien (MENUNGGU_ACC, DITERIMA, DITOLAK_REWORK)."""
+        data = await self.service.decide_acc(
+            current_user, completion_id, body.decision, body.notes
+        )
+        return WorkCompletionOut(**data)
+
+    async def create_revision(
+        self,
+        completion_id: UUID,
+        body: WorkCompletionRevisionCreate,
+        current_user: CurrentUser,
+    ) -> dict[str, Any]:
+        """Mencatat revisi/tambahan pekerjaan klien."""
+        return await self.service.create_revision(
+            current_user,
+            completion_id,
+            description=body.description,
+            request_date=body.request_date,
+            create_survey=body.create_survey,
+        )
+
+    async def list_revisions(
+        self,
+        completion_id: UUID,
+        current_user: CurrentUser,
+    ) -> list[WorkCompletionRevisionOut]:
+        """Daftar revisi pekerjaan klien."""
+        rows = await self.service.list_revisions(current_user, completion_id)
+        return [WorkCompletionRevisionOut(**r) for r in rows]

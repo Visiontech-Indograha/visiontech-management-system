@@ -56,9 +56,13 @@ def _state(message: str) -> AppError:
 class SurveyService:
     """Use case survei per titik."""
 
-    def __init__(self, db: AsyncSession, repo: SurveyRepository) -> None:
+    def __init__(self, db: AsyncSession, repo: SurveyRepository | None = None) -> None:
         self.db = db
-        self.repo = repo
+        self.repo = repo if repo is not None else SurveyRepository(db)
+
+    async def create_revision_task(self, data: dict[str, Any]) -> UUID | None:
+        """Membuat tugas survei revisi."""
+        return await self.repo.create_task(data)
 
     async def _task(self, user: CurrentUser, task_id: UUID, need: DailyNeed) -> tuple[Any, DailyAccess]:
         task = await self.repo.task(task_id)

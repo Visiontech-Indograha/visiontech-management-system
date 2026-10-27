@@ -144,6 +144,12 @@ async def ensure_schema_extensions() -> None:
             delete_at TIMESTAMPTZ NULL
         );
         """,
+        "ALTER TABLE work_completion ADD COLUMN IF NOT EXISTS client_id UUID NULL;",
+        (
+            "ALTER TABLE work_completion ADD CONSTRAINT fk_work_completion_client "
+            "FOREIGN KEY (client_id) REFERENCES client(client_id);"
+        ),
+        "ALTER TABLE work_completion ALTER COLUMN client_name DROP NOT NULL;",
         "ALTER TABLE work_completion ADD COLUMN IF NOT EXISTS acc_status VARCHAR(30) NULL DEFAULT 'MENUNGGU_ACC';",
         "ALTER TABLE work_completion ADD COLUMN IF NOT EXISTS acc_decided_at TIMESTAMPTZ NULL;",
         (
@@ -151,6 +157,11 @@ async def ensure_schema_extensions() -> None:
             "UUID NULL REFERENCES employee(employee_id);"
         ),
         "ALTER TABLE work_completion ADD COLUMN IF NOT EXISTS acc_notes TEXT NULL;",
+        "ALTER TABLE work_plan_item ADD COLUMN IF NOT EXISTS source_type VARCHAR(30) NOT NULL DEFAULT 'PLAN';",
+        (
+            "ALTER TABLE work_plan_item ADD COLUMN IF NOT EXISTS revision_id "
+            "UUID NULL REFERENCES work_completion_revision(revision_id);"
+        ),
     ]
     async with engine.begin() as conn:
         for stmt in statements:

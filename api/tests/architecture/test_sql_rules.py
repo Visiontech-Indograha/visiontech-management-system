@@ -40,8 +40,8 @@ KNOWN: dict[str, int] = {
     # Milestone 10 (master V2): pencarian klien/karyawan/pekerjaan klien "mengandung kata" & daftar order
     # berhalaman — diterima pemilik 2026-10-22 sebagai pengecualian (tabel kecil); ganti ke trigram/keyset bila tumbuh.
     "app/modules/clients/repositories/client_repository.py | like-leading-wildcard": 2,
-    "app/modules/work_completion/repositories/work_completion_repository.py | like-leading-wildcard": 2,
-    "app/modules/work_completion/repositories/work_completion_repository.py | offset": 1,
+    "app/modules/work_completion/repositories/work_completion_core_repository.py | like-leading-wildcard": 2,
+    "app/modules/work_completion/repositories/work_completion_core_repository.py | offset": 1,
 }
 
 

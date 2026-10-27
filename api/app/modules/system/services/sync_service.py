@@ -21,7 +21,6 @@ from app.core.errors import AppError
 from app.core.security import CurrentUser
 from app.modules.overtime.services.overtime_service import OvertimeService
 from app.modules.system.repositories.sync_repository import CRUDSync
-from app.modules.work_plans.repositories.daily_plan_repository import DailyPlanRepository
 from app.modules.work_plans.schemas.daily_report_schema import DailyReportCreate
 from app.modules.work_plans.services.daily_plan_service import DailyPlanService
 
@@ -75,7 +74,7 @@ class SyncService:
                 obstacles=p.get("obstacles"),
                 photos_json=p.get("photos_json", []),
             )
-            service = DailyPlanService(self.db, DailyPlanRepository(self.db))
+            service = DailyPlanService(self.db)
             await service.submit_daily_report(user, daily_plan_id, report)
 
     async def apply_operations(self, user: CurrentUser, device_id: str, operations: list[Any]) -> list[dict[str, Any]]:

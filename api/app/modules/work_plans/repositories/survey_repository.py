@@ -365,7 +365,7 @@ class SurveyRepository(BaseRepository):
             """
             SELECT work_type_id FROM work_type
             WHERE division_id = CAST(:div AS uuid) AND delete_at IS NULL
-            ORDER BY (name ILIKE '%survei%' OR name ILIKE '%survey%') DESC, create_at ASC
+            ORDER BY (kind = 'SURVEY_TASK' OR strpos(lower(name), 'survei') > 0) DESC, create_at ASC
             LIMIT 1
             """,
             {"div": str(division_id)},

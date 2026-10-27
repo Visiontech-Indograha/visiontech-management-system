@@ -413,11 +413,11 @@ class WorkCompletionService:
         order = await self._access(current_user, completion_id, manage=True)
         survey_task_id = None
         if create_survey:
-            from app.modules.work_plans.repositories.survey_repository import SurveyRepository
-            survey_repo = SurveyRepository(self.crud.db)
+            from app.modules.work_plans.services.survey_service import SurveyService
+            survey_svc = SurveyService(self.crud.db)
             div_id = order.get("division_id")
             title = f"Survei Revisi: {description[:50]}"
-            survey_task_id = await survey_repo.create_task({
+            survey_task_id = await survey_svc.create_revision_task({
                 "division_id": str(div_id) if div_id else None,
                 "title": title,
                 "description": description,

@@ -26,12 +26,10 @@ def sync_media_seed_files() -> list[str]:
 
     # Sumber data uji (termasuk path foto dan uploads yang diberikan pengguna)
     foto_candidates = [
-        Path("C:/Users/ageng/visiontect-vms/vms-photos"),
         project_root / "web" / "dist" / "foto_test",
         project_root.parent / "vms-photos",
     ]
     file_candidates = [
-        Path("C:/Users/ageng/visiontect-vms/uploads"),
         project_root / "web" / "dist" / "file_test",
         project_root.parent / "uploads",
     ]
@@ -112,69 +110,11 @@ async def ensure_activity_log_partitions(months_ahead: int = 2) -> None:
             logger.warning("Partisi app_activity_logs tidak dibuat: %s - %s", stmt[:70], e)
 
 
-async def ensure_schema_extensions() -> None:
-    """Memastikan ekstensi skema tabel laporan harian & revisi order telah terpasang."""
-    statements = [
-        """
-        CREATE TABLE IF NOT EXISTS work_plan_daily_report (
-            report_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            daily_plan_id UUID NOT NULL REFERENCES work_plan_daily(daily_plan_id) ON DELETE CASCADE,
-            leader_employee_id UUID NOT NULL REFERENCES employee(employee_id),
-            summary TEXT NOT NULL,
-            obstacles TEXT NULL,
-            photos_json JSONB NOT NULL DEFAULT '[]'::jsonb,
-            submitted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            create_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            update_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            delete_at TIMESTAMPTZ NULL,
-            CONSTRAINT uq_work_plan_daily_report_plan UNIQUE (daily_plan_id)
-        );
-        """,
-        """
-        CREATE TABLE IF NOT EXISTS work_completion_revision (
-            revision_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            completion_id UUID NOT NULL REFERENCES work_completion(completion_id) ON DELETE CASCADE,
-            description TEXT NOT NULL,
-            request_date DATE NOT NULL DEFAULT CURRENT_DATE,
-            survey_task_id UUID NULL REFERENCES work_plan_item(item_id) ON DELETE SET NULL,
-            status VARCHAR(30) NOT NULL DEFAULT 'PENDING',
-            created_by_id UUID NULL REFERENCES employee(employee_id),
-            create_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            update_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            delete_at TIMESTAMPTZ NULL
-        );
-        """,
-        "ALTER TABLE work_completion ADD COLUMN IF NOT EXISTS client_id UUID NULL;",
-        (
-            "ALTER TABLE work_completion ADD CONSTRAINT fk_work_completion_client "
-            "FOREIGN KEY (client_id) REFERENCES client(client_id);"
-        ),
-        "ALTER TABLE work_completion ALTER COLUMN client_name DROP NOT NULL;",
-        "ALTER TABLE work_completion ADD COLUMN IF NOT EXISTS acc_status VARCHAR(30) NULL DEFAULT 'MENUNGGU_ACC';",
-        "ALTER TABLE work_completion ADD COLUMN IF NOT EXISTS acc_decided_at TIMESTAMPTZ NULL;",
-        (
-            "ALTER TABLE work_completion ADD COLUMN IF NOT EXISTS acc_decided_by_id "
-            "UUID NULL REFERENCES employee(employee_id);"
-        ),
-        "ALTER TABLE work_completion ADD COLUMN IF NOT EXISTS acc_notes TEXT NULL;",
-        "ALTER TABLE work_plan_item ADD COLUMN IF NOT EXISTS source_type VARCHAR(30) NOT NULL DEFAULT 'PLAN';",
-        (
-            "ALTER TABLE work_plan_item ADD COLUMN IF NOT EXISTS revision_id "
-            "UUID NULL REFERENCES work_completion_revision(revision_id);"
-        ),
-    ]
-    async with engine.begin() as conn:
-        for stmt in statements:
-            try:
-                await conn.execute(text(stmt.strip()))
-            except Exception as e:  # noqa: BLE001
-                logger.warning("Skema ekstensi dilewati/gagal: %s - %s", stmt.strip()[:60], e)
-
-
 async def prepare_v2_runtime() -> None:
-    """Maintain time-based audit partitions, schema extensions and optional demo data at startup."""
+    """Maintain time-based audit partitions and optional demo data at startup.
+
+    Perubahan skema hanya lewat Alembic V2 (`alembic upgrade head`), bukan DDL saat startup."""
     await ensure_activity_log_partitions()
-    await ensure_schema_extensions()
     if not settings.SEED_DEMO_MEDIA:
         return
     await _seed_demo_media()

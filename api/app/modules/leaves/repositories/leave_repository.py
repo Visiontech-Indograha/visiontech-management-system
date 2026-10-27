@@ -139,22 +139,36 @@ class LeaveRepository(BaseRepository):
         employee_id: UUID | str | None = None,
         status: str | None = None,
         year: int | None = None,
+        pm_id: UUID | str | None = None,
     ) -> Sequence[Any]:
-        """Daftar permohonan cuti dengan filter."""
+        """Daftar permohonan cuti dengan filter (pm_id: hanya karyawan divisi PM tsb + dirinya)."""
         return await self.fetchall(
             _LEAVE_SELECT + """
             WHERE lr.delete_at IS NULL
               AND (CAST(:emp AS uuid) IS NULL OR lr.employee_id = CAST(:emp AS uuid))
               AND (CAST(:st AS text) IS NULL OR lr.status::text = :st)
               AND (CAST(:yr AS integer) IS NULL OR EXTRACT(YEAR FROM lr.start_date) = :yr)
+              AND (CAST(:pm AS uuid) IS NULL OR d.pm_id = CAST(:pm AS uuid) OR lr.employee_id = CAST(:pm AS uuid))
             ORDER BY lr.create_at DESC
             """,
             {
                 "emp": str(employee_id) if employee_id else None,
                 "st": status,
                 "yr": year,
+                "pm": str(pm_id) if pm_id else None,
             },
         )
+
+    async def division_pm_of(self, employee_id: UUID | str) -> Any:
+        """pm_id divisi tempat karyawan bernaung (None bila tanpa divisi)."""
+        row = await self.fetchone(
+            """
+            SELECT d.pm_id FROM employee e LEFT JOIN division d ON d.division_id = e.division_id
+            WHERE e.employee_id = CAST(:id AS uuid)
+            """,
+            {"id": str(employee_id)},
+        )
+        return row.pm_id if row else None
 
     async def update_review(
         self,

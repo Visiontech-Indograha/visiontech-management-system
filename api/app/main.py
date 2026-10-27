@@ -32,10 +32,13 @@ def create_app() -> FastAPI:
     app = FastAPI(title=settings.PROJECT_NAME, lifespan=lifespan)
 
     # Daftarkan middleware CORS
+    # Wildcard + credentials membuat situs mana pun bisa memakai cookie refresh pengguna; credentials hanya
+    # untuk origin yang didaftarkan. Web produksi satu origin dengan API (proxy), jadi tidak butuh CORS.
+    origins = [o.strip() for o in settings.CORS_ORIGINS.split(",") if o.strip()]
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
-        allow_credentials=True,
+        allow_origins=origins or ["*"],
+        allow_credentials=bool(origins),
         allow_methods=["*"],
         allow_headers=["*"],
     )

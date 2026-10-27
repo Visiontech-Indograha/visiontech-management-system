@@ -23,6 +23,10 @@ export const WORK_TYPE_KIND_LABEL = {
   SURVEY_POINT: "Survei Lapangan per Titik",
   MAINTENANCE: "Perawatan",
   REPLACEMENT: "Pergantian Barang",
+  PREPARATION: "Persiapan",
+  DISMANTLE: "Pembongkaran",
+  COMMISSIONING: "Commissioning",
+  TROUBLESHOOTING: "Troubleshooting",
 } as const;
 
 export const useWorkTypes = (all = false, division_id?: string) =>

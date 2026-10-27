@@ -20,7 +20,7 @@ class ReleaseDownload {
   factory ReleaseDownload.fromJson(Map<String, dynamic> j) => ReleaseDownload(
     abi: j['abi'] as String,
     url: j['url'] as String,
-    sha256: j['sha256'] as String,
+    sha256: ((j['sha256'] as String?) ?? '').toLowerCase(),
     size: (j['size'] as num).toInt(),
   );
 
@@ -175,6 +175,7 @@ class AppUpdateService {
 
   Future<bool> _matches(File f, ReleaseDownload d) async {
     if (!await f.exists() || await f.length() != d.size) return false;
+    if (d.sha256.isEmpty) return false;
     return (await _channel.sha256(f.path)).toLowerCase() == d.sha256;
   }
 

@@ -37,20 +37,21 @@ class LeaveController:
     async def handle_review(self, user: CurrentUser, leave_id: UUID, data: LeaveReview) -> LeaveResponse:
         return _response(await self.service.review(user, leave_id, data))
 
-    async def handle_get(self, leave_id: UUID) -> LeaveResponse:
-        return _response(await self.service.get(leave_id))
+    async def handle_get(self, user: CurrentUser, leave_id: UUID) -> LeaveResponse:
+        return _response(await self.service.get(user, leave_id))
 
     async def handle_list(
         self,
+        user: CurrentUser,
         employee_id: UUID | None = None,
         status: str | None = None,
         year: int | None = None,
     ) -> list[LeaveResponse]:
-        rows = await self.service.list(employee_id=employee_id, status=status, year=year)
+        rows = await self.service.list(user, employee_id=employee_id, status=status, year=year)
         return [_response(r) for r in rows]
 
-    async def handle_balance(self, employee_id: UUID, year: int) -> LeaveBalanceResponse:
-        bal = await self.service.balance(employee_id, year)
+    async def handle_balance(self, user: CurrentUser, employee_id: UUID, year: int) -> LeaveBalanceResponse:
+        bal = await self.service.balance(user, employee_id, year)
         return LeaveBalanceResponse(
             balance_id=bal.balance_id,
             employee_id=bal.employee_id,

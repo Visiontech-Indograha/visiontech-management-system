@@ -238,17 +238,19 @@ class AuthService:
                 "INVALID_TOKEN", "Sesi telah berakhir atau tidak dikenali. Silakan masuk kembali.", status=401
             )
 
+        family_start = getattr(rotated, "family_created_at", None)
+        if family_start is not None and (utcnow() - family_start).total_seconds() > 86400:
+            # Batas sesi 24 jam dihitung dari login awal, bukan dari rotasi terakhir.
+            await self.sessions.revoke_family(rotated.user_id, rotated.family_id, "Batas sesi 24 jam")
+            raise AppError("SESSION_EXPIRED", "Sesi sudah 24 jam. Silakan masuk kembali.", status=401)
+
         user = await self.users.find_by_id(rotated.user_id)
         if not user or not user.is_active:
             # Akun dinonaktifkan: seluruh sesinya berakhir pada permintaan ini juga (DoD fase 1).
             await self.sessions.revoke_all_for_user(rotated.user_id, "Akun dinonaktifkan")
             raise AppError("INACTIVE", "Akun Anda dinonaktifkan. Hubungi HR atau admin.", status=403, persist=True)
 
-        auth_time = (
-            int(rotated.family_created_at.timestamp())
-            if getattr(rotated, "family_created_at", None)
-            else int(utcnow().timestamp())
-        )
+        auth_time = int(family_start.timestamp()) if family_start is not None else int(utcnow().timestamp())
         return IssuedTokens(
             access_token=self._access_token(user, rotated.session_id, auth_time=auth_time),
             refresh_token=rotated.refresh_token,

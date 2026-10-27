@@ -15,6 +15,7 @@ export const PERMISSIONS = [
   "export:attendance",
   "review:overtime",
   "manage:sites",
+  "manage:divisions",
   "manage:assets",
   "manage:mess",
   "view:mess",
@@ -23,7 +24,7 @@ export const PERMISSIONS = [
   "manage:image_requirements",
   "view:timeline",
   "view:audit",
-  "view:backup",
+  "manage:backups",
   "run:system_jobs",
   "delete:any",
 ] as const;

@@ -10,48 +10,63 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- ============================================================================
 -- BAGIAN 1: PEMBUATAN TIPE ENUMERASI (ENUM)
+-- Idempoten: dijalankan ulang pada DB berisi tidak menghapus kolom enum (dulu DROP TYPE ... CASCADE).
 -- ============================================================================
-DROP TYPE IF EXISTS system_role_enum CASCADE;
-CREATE TYPE system_role_enum AS ENUM ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'PROJECT_MANAGER', 'TEAM_LEADER', 'ADMIN_HR_GA', 'EMPLOYEE');
+DO $$ BEGIN
+    CREATE TYPE system_role_enum AS ENUM ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'PROJECT_MANAGER', 'TEAM_LEADER', 'ADMIN_HR_GA', 'EMPLOYEE');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
-DROP TYPE IF EXISTS client_platform_enum CASCADE;
-CREATE TYPE client_platform_enum AS ENUM ('web_react', 'android_flutter', 'system_cron');
+DO $$ BEGIN
+    CREATE TYPE client_platform_enum AS ENUM ('web_react', 'android_flutter', 'system_cron');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
-DROP TYPE IF EXISTS offboarding_status_enum CASCADE;
-CREATE TYPE offboarding_status_enum AS ENUM ('active', 'in_process', 'offboarded');
+DO $$ BEGIN
+    CREATE TYPE offboarding_status_enum AS ENUM ('active', 'in_process', 'offboarded');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
-DROP TYPE IF EXISTS offboarding_reason_enum CASCADE;
-CREATE TYPE offboarding_reason_enum AS ENUM ('PKWT_EXPIRED', 'RESIGN', 'TERMINATED', 'RETIRED');
+DO $$ BEGIN
+    CREATE TYPE offboarding_reason_enum AS ENUM ('PKWT_EXPIRED', 'RESIGN', 'TERMINATED', 'RETIRED');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
-DROP TYPE IF EXISTS doc_status_enum CASCADE;
-CREATE TYPE doc_status_enum AS ENUM ('active', 'not_active', 'extended');
+DO $$ BEGIN
+    CREATE TYPE doc_status_enum AS ENUM ('active', 'not_active', 'extended');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
-DROP TYPE IF EXISTS vehicle_type_enum CASCADE;
-CREATE TYPE vehicle_type_enum AS ENUM ('Motorcycle', 'Car', 'Truck');
+DO $$ BEGIN
+    CREATE TYPE vehicle_type_enum AS ENUM ('Motorcycle', 'Car', 'Truck');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
-DROP TYPE IF EXISTS asset_status_enum CASCADE;
-CREATE TYPE asset_status_enum AS ENUM ('ready', 'allocated', 'loaned', 'damaged', 'lost', 'pension');
+DO $$ BEGIN
+    CREATE TYPE asset_status_enum AS ENUM ('ready', 'allocated', 'loaned', 'damaged', 'lost', 'pension');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
-DROP TYPE IF EXISTS vehicle_file_type_enum CASCADE;
-CREATE TYPE vehicle_file_type_enum AS ENUM ('STNK', 'BPKB', 'KIR');
+DO $$ BEGIN
+    CREATE TYPE vehicle_file_type_enum AS ENUM ('STNK', 'BPKB', 'KIR');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
-DROP TYPE IF EXISTS inspection_type_enum CASCADE;
-CREATE TYPE inspection_type_enum AS ENUM ('day', 'month', 'year', 'repair', 'profile');
+DO $$ BEGIN
+    CREATE TYPE inspection_type_enum AS ENUM ('day', 'month', 'year', 'repair', 'profile');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
-DROP TYPE IF EXISTS tool_ownership_enum CASCADE;
-CREATE TYPE tool_ownership_enum AS ENUM ('PERSONAL_LOAN', 'SHARED_TOOL');
+DO $$ BEGIN
+    CREATE TYPE tool_ownership_enum AS ENUM ('PERSONAL_LOAN', 'SHARED_TOOL');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
-DROP TYPE IF EXISTS tool_category_enum CASCADE;
-CREATE TYPE tool_category_enum AS ENUM ('BAJU', 'LAPTOP', 'SEPATU', 'BOR', 'TANGGA', 'LAINNYA');
+DO $$ BEGIN
+    CREATE TYPE tool_category_enum AS ENUM ('BAJU', 'LAPTOP', 'SEPATU', 'BOR', 'TANGGA', 'LAINNYA');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
-DROP TYPE IF EXISTS city_zone_enum CASCADE;
-CREATE TYPE city_zone_enum AS ENUM ('DALAM_KOTA', 'LUAR_KOTA');
+DO $$ BEGIN
+    CREATE TYPE city_zone_enum AS ENUM ('DALAM_KOTA', 'LUAR_KOTA');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
-DROP TYPE IF EXISTS rollover_approval_enum CASCADE;
-CREATE TYPE rollover_approval_enum AS ENUM ('NONE', 'WAITING_PM', 'APPROVED_BY_PM', 'REJECTED_BY_PM');
+DO $$ BEGIN
+    CREATE TYPE rollover_approval_enum AS ENUM ('NONE', 'WAITING_PM', 'APPROVED_BY_PM', 'REJECTED_BY_PM');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
-DROP TYPE IF EXISTS export_format_enum CASCADE;
-CREATE TYPE export_format_enum AS ENUM ('WORD_DOCX', 'PPTX', 'PDF', 'EXCEL_XLSX');
+DO $$ BEGIN
+    CREATE TYPE export_format_enum AS ENUM ('WORD_DOCX', 'PPTX', 'PDF', 'EXCEL_XLSX');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- ============================================================================
 -- BAGIAN 2: DDL TABEL (26 ENTITAS TERINTEGRASI DENGAN SOFT DELETE)
@@ -453,7 +468,7 @@ CREATE TABLE IF NOT EXISTS attendance (
     is_within_attendance_radius BOOLEAN NOT NULL,
     out_of_radius_photo_path VARCHAR(255) NULL,
     out_of_radius_note TEXT NULL,
-    om_approval_status VARCHAR(25) NOT NULL DEFAULT 'AUTO_VALID', -- 'AUTO_VALID', 'PENDING_OM', 'APPROVED', 'REJECTED'
+    om_approval_status VARCHAR(25) NOT NULL DEFAULT 'AUTO_VALID', -- 'AUTO_VALID', 'PENDING_OM', 'APPROVED_BY_OM', 'REJECTED_BY_OM' (CHECK di alembic v2_0004)
     distance_from_main_office_m INT NOT NULL,
     city_zone_status city_zone_enum NOT NULL,
     meal_allowance_amount NUMERIC(12,2) NOT NULL,

@@ -103,6 +103,7 @@ export function AttendanceList({ list, page, meEmployeeId, onPageChange, onOpen 
                   onDelete={async () => {
                     await deleteAttendance(a.id);
                     await qc.invalidateQueries({ queryKey: ["attendance"] });
+                    await qc.invalidateQueries({ queryKey: ["attendance-recap"] });
                   }}
                 />
               </div>

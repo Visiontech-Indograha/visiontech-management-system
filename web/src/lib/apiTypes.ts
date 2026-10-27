@@ -734,6 +734,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/work-plans/teams/{team_id}/weekly-presentation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Team Weekly Presentation
+         * @description Rekapitulasi presentasi laporan harian selama satu minggu untuk setiap tim pada pertemuan hari Sabtu.
+         */
+        get: operations["get_team_weekly_presentation_api_v1_work_plans_teams__team_id__weekly_presentation_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/work-plans/daily/{daily_plan_id}/items": {
         parameters: {
             query?: never;
@@ -1422,6 +1442,90 @@ export interface paths {
          * @description Menghapus data hunian mess karyawan.
          */
         delete: operations["delete_stay_api_v1_mess__mess_stay_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/leaves": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Leaves
+         * @description Mengambil riwayat atau daftar permohonan cuti.
+         */
+        get: operations["list_leaves_api_v1_leaves_get"];
+        put?: never;
+        /**
+         * Apply Leave
+         * @description Mengajukan permohonan cuti atau sakit (karyawan, ketua tim, atau HR).
+         */
+        post: operations["apply_leave_api_v1_leaves_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/leaves/balances/{employee_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Leave Balance
+         * @description Mengambil kuota dan sisa cuti tahunan karyawan.
+         */
+        get: operations["get_leave_balance_api_v1_leaves_balances__employee_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/leaves/{leave_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Leave
+         * @description Detail permohonan cuti.
+         */
+        get: operations["get_leave_api_v1_leaves__leave_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/leaves/{leave_id}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Review Leave
+         * @description Persetujuan atau penolakan cuti oleh PM atau HR/OM/Super Admin.
+         */
+        post: operations["review_leave_api_v1_leaves__leave_id__review_post"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -5420,6 +5524,119 @@ export interface components {
             /** Status */
             status?: boolean | null;
         };
+        /** LeaveBalanceResponse */
+        LeaveBalanceResponse: {
+            /**
+             * Balance Id
+             * Format: uuid
+             */
+            balance_id: string;
+            /**
+             * Employee Id
+             * Format: uuid
+             */
+            employee_id: string;
+            /** Employee Name */
+            employee_name: string;
+            /** Period Year */
+            period_year: number;
+            /** Total Quota */
+            total_quota: number;
+            /** Used Quota */
+            used_quota: number;
+            /** Remaining Quota */
+            remaining_quota: number;
+        };
+        /** LeaveCreate */
+        LeaveCreate: {
+            /** Employee Id */
+            employee_id?: string | null;
+            /**
+             * Leave Type
+             * @enum {string}
+             */
+            leave_type: "ANNUAL" | "SICK" | "MATERNITY" | "UNPAID" | "OTHER";
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /**
+             * End Date
+             * Format: date
+             */
+            end_date: string;
+            /** Reason */
+            reason: string;
+            /** Attachment File Id */
+            attachment_file_id?: string | null;
+        };
+        /** LeaveResponse */
+        LeaveResponse: {
+            /**
+             * Leave Id
+             * Format: uuid
+             */
+            leave_id: string;
+            /**
+             * Employee Id
+             * Format: uuid
+             */
+            employee_id: string;
+            /** Employee Name */
+            employee_name: string;
+            /** Employee No */
+            employee_no?: string | null;
+            /** Division Name */
+            division_name?: string | null;
+            /**
+             * Leave Type
+             * @enum {string}
+             */
+            leave_type: "ANNUAL" | "SICK" | "MATERNITY" | "UNPAID" | "OTHER";
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /**
+             * End Date
+             * Format: date
+             */
+            end_date: string;
+            /** Total Days */
+            total_days: number;
+            /** Reason */
+            reason: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "PENDING" | "APPROVED_BY_PM" | "APPROVED_BY_HR" | "APPROVED_BY_FINANCE" | "REJECTED" | "CANCELLED";
+            /** Attachment Path */
+            attachment_path?: string | null;
+            /** Reviewed By Name */
+            reviewed_by_name?: string | null;
+            /** Reviewed At */
+            reviewed_at?: string | null;
+            /** Rejection Note */
+            rejection_note?: string | null;
+            /**
+             * Create At
+             * Format: date-time
+             */
+            create_at: string;
+        };
+        /** LeaveReview */
+        LeaveReview: {
+            /**
+             * Decision
+             * @enum {string}
+             */
+            decision: "APPROVED" | "REJECTED";
+            /** Note */
+            note?: string | null;
+        };
         /**
          * LineEditIn
          * @description Ubah satu baris BoM (ketua tim saat draf, PM saat meninjau).
@@ -7538,6 +7755,30 @@ export interface components {
             /** Photo File Id */
             photo_file_id?: string | null;
         };
+        /** WeeklyPresentationOut */
+        WeeklyPresentationOut: {
+            /**
+             * Team Id
+             * Format: uuid
+             */
+            team_id: string;
+            /** Team Name */
+            team_name: string;
+            /** Week Start */
+            week_start: string;
+            /** Week End */
+            week_end: string;
+            /** Total Plans */
+            total_plans: number;
+            /** Completed Plans */
+            completed_plans: number;
+            /** Daily Reports */
+            daily_reports?: components["schemas"]["DailyReportOut"][];
+            /** Presentation Notes */
+            presentation_notes?: string | null;
+            /** Pm Feedback */
+            pm_feedback?: string | null;
+        };
         /**
          * WorkCompletionAccDecision
          * @description Schema keputusan ACC Client oleh PM.
@@ -7987,7 +8228,7 @@ export interface components {
              * @default WORK
              * @enum {string}
              */
-            kind: "WORK" | "INSTALLATION" | "SURVEY_TASK" | "SURVEY_POINT" | "MAINTENANCE" | "REPLACEMENT";
+            kind: "WORK" | "INSTALLATION" | "SURVEY_TASK" | "SURVEY_POINT" | "MAINTENANCE" | "REPLACEMENT" | "PREPARATION" | "DISMANTLE" | "COMMISSIONING" | "TROUBLESHOOTING";
             /** Follow Up Work Type Id */
             follow_up_work_type_id?: string | null;
         };
@@ -8019,7 +8260,7 @@ export interface components {
              * @default WORK
              * @enum {string}
              */
-            kind: "WORK" | "INSTALLATION" | "SURVEY_TASK" | "SURVEY_POINT" | "MAINTENANCE" | "REPLACEMENT";
+            kind: "WORK" | "INSTALLATION" | "SURVEY_TASK" | "SURVEY_POINT" | "MAINTENANCE" | "REPLACEMENT" | "PREPARATION" | "DISMANTLE" | "COMMISSIONING" | "TROUBLESHOOTING";
             /** Follow Up Work Type Id */
             follow_up_work_type_id?: string | null;
             /** Follow Up Name */
@@ -9562,6 +9803,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DailyPlanOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_team_weekly_presentation_api_v1_work_plans_teams__team_id__weekly_presentation_get: {
+        parameters: {
+            query: {
+                /** @description Tanggal pertemuan evaluasi hari Sabtu */
+                meeting_date: string;
+            };
+            header?: never;
+            path: {
+                team_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WeeklyPresentationOut"];
                 };
             };
             /** @description Validation Error */
@@ -11262,6 +11537,175 @@ export interface operations {
                     "application/json": {
                         [key: string]: string;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_leaves_api_v1_leaves_get: {
+        parameters: {
+            query?: {
+                /** @description Filter per karyawan */
+                employee_id?: string | null;
+                /** @description Filter status cuti */
+                status?: string | null;
+                /** @description Tahun cuti */
+                year?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeaveResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    apply_leave_api_v1_leaves_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LeaveCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeaveResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_leave_balance_api_v1_leaves_balances__employee_id__get: {
+        parameters: {
+            query?: {
+                /** @description Tahun kuota cuti */
+                year?: number;
+            };
+            header?: never;
+            path: {
+                employee_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeaveBalanceResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_leave_api_v1_leaves__leave_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                leave_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeaveResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    review_leave_api_v1_leaves__leave_id__review_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                leave_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LeaveReview"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeaveResponse"];
                 };
             };
             /** @description Validation Error */

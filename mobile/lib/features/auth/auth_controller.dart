@@ -232,11 +232,27 @@ class AuthController extends Notifier<AuthState> {
       }
 
       final meResponse = await apiClient.dio.get('/api/v1/auth/me');
+      final me = AuthUser.fromJson(meResponse.data as Map<String, dynamic>);
+      // Masuk lewat "Masuk dengan Password" tidak menghapus antrean offline
+      // (milik orang yang sama biasanya). Bila ternyata akun BERBEDA dari
+      // pemilik profil cache, antrean itu milik orang lain: buang sebelum
+      // tersinkron atas nama akun baru.
+      final previous = await tokenStorage.readCachedProfile();
+      if (previous != null) {
+        String? previousId;
+        try {
+          previousId = (jsonDecode(previous) as Map<String, dynamic>)['user_id']
+              as String?;
+        } catch (_) {
+          previousId = null;
+        }
+        if (previousId != me.id) {
+          await ref.read(appDatabaseProvider).wipeAllLocalData();
+        }
+      }
       await tokenStorage.saveCachedProfile(jsonEncode(meResponse.data));
       _justLoggedIn = true;
-      state = AuthAuthenticated(
-        AuthUser.fromJson(meResponse.data as Map<String, dynamic>),
-      );
+      state = AuthAuthenticated(me);
     } on DioException catch (e) {
       state = AuthUnauthenticated(
         error: _extractErrorMessage(e),

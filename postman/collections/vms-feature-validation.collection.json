@@ -55,7 +55,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"hendrik.pm@visiontech.co.id\",\n  \"password\": \"Admin123!\",\n  \"platform\": \"web\",\n  \"device_name\": \"Postman CLI Validation\"\n}"
+              "raw": "{\n  \"email\": \"ramadani@visiontech.id\",\n  \"password\": \"Admin123!\",\n  \"platform\": \"web\",\n  \"device_name\": \"Postman CLI Validation\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/auth/login",
@@ -427,7 +427,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"login admin@visiontech.co.id via web = 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"login ageng@visiontech.id via web = 200\", () => pm.response.to.have.status(200));",
                   "pm.collectionVariables.set(\"tok_admin\", pm.response.json().access_token);"
                 ]
               }
@@ -453,7 +453,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"admin@visiontech.co.id\",\n  \"password\": \"Admin123!\",\n  \"platform\": \"web\"\n}",
+              "raw": "{\n  \"email\": \"ageng@visiontech.id\",\n  \"password\": \"Admin123!\",\n  \"platform\": \"web\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -470,7 +470,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"login randi.om@visiontech.co.id via web = 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"login ade@visiontech.id via web = 200\", () => pm.response.to.have.status(200));",
                   "pm.collectionVariables.set(\"tok_om\", pm.response.json().access_token);"
                 ]
               }
@@ -496,7 +496,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"randi.om@visiontech.co.id\",\n  \"password\": \"Admin123!\",\n  \"platform\": \"web\"\n}",
+              "raw": "{\n  \"email\": \"ade@visiontech.id\",\n  \"password\": \"Admin123!\",\n  \"platform\": \"web\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -513,7 +513,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"login hendrik.pm@visiontech.co.id via web = 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"login handoko@visiontech.id via web = 200\", () => pm.response.to.have.status(200));",
                   "pm.collectionVariables.set(\"tok_pm\", pm.response.json().access_token);"
                 ]
               }
@@ -539,7 +539,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"hendrik.pm@visiontech.co.id\",\n  \"password\": \"Admin123!\",\n  \"platform\": \"web\"\n}",
+              "raw": "{\n  \"email\": \"handoko@visiontech.id\",\n  \"password\": \"Admin123!\",\n  \"platform\": \"web\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -556,7 +556,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"login agus.tl@visiontech.co.id via mobile = 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"login heru@visiontech.id via mobile = 200\", () => pm.response.to.have.status(200));",
                   "pm.collectionVariables.set(\"tok_tl\", pm.response.json().access_token);"
                 ]
               }
@@ -582,7 +582,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"agus.tl@visiontech.co.id\",\n  \"password\": \"Admin123!\",\n  \"platform\": \"mobile\"\n}",
+              "raw": "{\n  \"email\": \"heru@visiontech.id\",\n  \"password\": \"Admin123!\",\n  \"platform\": \"mobile\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -599,7 +599,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"login riko.tech@visiontech.co.id via mobile = 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"login yulfi@visiontech.id via mobile = 200\", () => pm.response.to.have.status(200));",
                   "pm.collectionVariables.set(\"tok_emp\", pm.response.json().access_token);"
                 ]
               }
@@ -625,7 +625,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"riko.tech@visiontech.co.id\",\n  \"password\": \"Admin123!\",\n  \"platform\": \"mobile\"\n}",
+              "raw": "{\n  \"email\": \"yulfi@visiontech.id\",\n  \"password\": \"Admin123!\",\n  \"platform\": \"mobile\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -642,7 +642,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"login siti.hr@visiontech.co.id via web = 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"login dara@visiontech.id via web = 200\", () => pm.response.to.have.status(200));",
                   "pm.collectionVariables.set(\"tok_hr\", pm.response.json().access_token);"
                 ]
               }
@@ -668,7 +668,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"siti.hr@visiontech.co.id\",\n  \"password\": \"Admin123!\",\n  \"platform\": \"web\"\n}",
+              "raw": "{\n  \"email\": \"dara@visiontech.id\",\n  \"password\": \"Admin123!\",\n  \"platform\": \"web\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -685,7 +685,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"docs/35 §1: agus.tl@visiontech.co.id via web ditolak 403 NOT_OFFICE_ACCOUNT\", () => {",
+                  "pm.test(\"docs/35 §1: heru@visiontech.id via web ditolak 403 NOT_OFFICE_ACCOUNT\", () => {",
                   "    pm.response.to.have.status(403);",
                   "    pm.expect(pm.response.json().error.code).to.eql(\"NOT_OFFICE_ACCOUNT\");",
                   "});"
@@ -713,7 +713,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"agus.tl@visiontech.co.id\",\n  \"password\": \"Admin123!\",\n  \"platform\": \"web\"\n}",
+              "raw": "{\n  \"email\": \"heru@visiontech.id\",\n  \"password\": \"Admin123!\",\n  \"platform\": \"web\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -730,7 +730,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"docs/35 §1: riko.tech@visiontech.co.id via web ditolak 403 NOT_OFFICE_ACCOUNT\", () => {",
+                  "pm.test(\"docs/35 §1: yulfi@visiontech.id via web ditolak 403 NOT_OFFICE_ACCOUNT\", () => {",
                   "    pm.response.to.have.status(403);",
                   "    pm.expect(pm.response.json().error.code).to.eql(\"NOT_OFFICE_ACCOUNT\");",
                   "});"
@@ -758,7 +758,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"riko.tech@visiontech.co.id\",\n  \"password\": \"Admin123!\",\n  \"platform\": \"web\"\n}",
+              "raw": "{\n  \"email\": \"yulfi@visiontech.id\",\n  \"password\": \"Admin123!\",\n  \"platform\": \"web\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -775,7 +775,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"docs/35 §1: admin@visiontech.co.id via mobile ditolak 403 NOT_FIELD_STAFF\", () => {",
+                  "pm.test(\"docs/35 §1: ageng@visiontech.id via mobile ditolak 403 NOT_FIELD_STAFF\", () => {",
                   "    pm.response.to.have.status(403);",
                   "    pm.expect(pm.response.json().error.code).to.eql(\"NOT_FIELD_STAFF\");",
                   "});"
@@ -803,7 +803,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"admin@visiontech.co.id\",\n  \"password\": \"Admin123!\",\n  \"platform\": \"mobile\"\n}",
+              "raw": "{\n  \"email\": \"ageng@visiontech.id\",\n  \"password\": \"Admin123!\",\n  \"platform\": \"mobile\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -820,7 +820,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"docs/35 §1: hendrik.pm@visiontech.co.id via mobile ditolak 403 NOT_FIELD_STAFF\", () => {",
+                  "pm.test(\"docs/35 §1: handoko@visiontech.id via mobile ditolak 403 NOT_FIELD_STAFF\", () => {",
                   "    pm.response.to.have.status(403);",
                   "    pm.expect(pm.response.json().error.code).to.eql(\"NOT_FIELD_STAFF\");",
                   "});"
@@ -848,7 +848,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"hendrik.pm@visiontech.co.id\",\n  \"password\": \"Admin123!\",\n  \"platform\": \"mobile\"\n}",
+              "raw": "{\n  \"email\": \"handoko@visiontech.id\",\n  \"password\": \"Admin123!\",\n  \"platform\": \"mobile\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -8650,7 +8650,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"dian.pm@visiontech.co.id\",\n  \"password\": \"Admin123!\",\n  \"platform\": \"web\"\n}",
+              "raw": "{\n  \"email\": \"ramadani@visiontech.id\",\n  \"password\": \"Admin123!\",\n  \"platform\": \"web\"\n}",
               "options": {
                 "raw": {
                   "language": "json"

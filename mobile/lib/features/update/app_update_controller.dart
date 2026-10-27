@@ -13,18 +13,20 @@ import '../../core/providers.dart';
 import '../../data/vms_api.dart';
 import 'app_update_service.dart';
 
-/// Pembaruan mandiri hanya untuk APK rilis yang disebar lewat portal. Build debug dan build untuk Google Play
-/// (`--dart-define=UPDATE_CHANNEL=play`, kebijakan Play melarang pembaruan di luar Play) tidak memeriksa apa pun.
+/// Pembaruan mandiri aktif untuk APK yang disebar di luar Google Play (portal dan rilis/beta).
+/// Build untuk Google Play (`--dart-define=UPDATE_CHANNEL=play`, kebijakan Play melarang
+/// pembaruan di luar Play) tidak memeriksa apa pun.
 const _updateChannel = String.fromEnvironment(
   'UPDATE_CHANNEL',
   defaultValue: 'portal',
 );
 const _checkInDebug = bool.fromEnvironment('UPDATE_CHECK_IN_DEBUG');
+const _isBeta = bool.fromEnvironment('VMS_BETA');
 
 final appUpdateEnabledProvider = Provider<bool>(
   (ref) =>
-      _updateChannel == 'portal' &&
-      (kReleaseMode || _checkInDebug) &&
+      _updateChannel != 'play' &&
+      (kReleaseMode || _checkInDebug || _isBeta || _updateChannel == 'beta') &&
       !kIsWeb &&
       Platform.isAndroid,
 );

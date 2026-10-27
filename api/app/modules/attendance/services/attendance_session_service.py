@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import csv
 import io
+import sys
 from datetime import datetime, time, timedelta
 from typing import Any
 from uuid import UUID
@@ -20,7 +21,7 @@ from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationE
 from app.core.events import queue_event
 from app.core.hard_delete import purge_row, write_delete_audit
 from app.core.security import CurrentUser
-from app.core.time import WIB
+from app.core.time import WIB, jakarta_now
 from app.modules.attendance.repositories.attendance_session_repository import (
     CRUDAttendanceSession,
 )
@@ -287,7 +288,6 @@ class AttendanceSessionService:
         local_clock = await self.clock.local_now(org_id)
         today = work_date or (local_clock.today if local_clock else None)
         # Validasi jam masuk: dibuka mulai pukul 07:00 (keputusan pemilik 2026-10-14).
-        import sys
 
         is_test_env = "pytest" in sys.modules
         is_mocked_clock = hasattr(self.clock, "assert_called") or hasattr(self.clock, "return_value")
@@ -306,6 +306,16 @@ class AttendanceSessionService:
                         f"Absensi masuk belum dibuka. Jam masuk kerja dimulai pukul {settings.ATTENDANCE_OPEN_TIME}.",
                         status=422,
                     )
+        leave_info = await self.repo.is_on_approved_leave(employee_id, today)
+        if isinstance(leave_info, (tuple, list)) and len(leave_info) == 2:
+            on_leave, leave_type = leave_info
+            if on_leave:
+                raise AppError(
+                    "ON_APPROVED_LEAVE",
+                    f"Anda sedang dalam masa cuti/izin/sakit resmi ({leave_type}). Absensi tidak diperkenankan.",
+                    status=409,
+                )
+
         # Sesi valid yang lupa ditutup mengunci absen masuk berikutnya (O-10); absen hari lalu yang masih
         # menunggu pemeriksaan tidak mengunci hari baru (R-33).
         if await self.repo.active_on(employee_id, today):
@@ -319,6 +329,12 @@ class AttendanceSessionService:
         site = await self.repo.site_for_check_in(site_id, org_id, lng, lat)
         if site is None:
             raise NotFoundError("Lokasi")
+        if site.distance_m is None or site.radius_m is None:
+            raise AppError(
+                "SITE_LOCATION_REQUIRED",
+                "Koordinat dan radius lokasi jadwal harus dilengkapi sebelum presensi dapat dilakukan.",
+                status=422,
+            )
         # R-33: pekerja kantor hanya di lokasi kantor. Pekerja lapangan di lokasi proyek unitnya DAN di kantor pusat
         # (unit_id NULL): tanpa SK aktif mereka tetap harus bisa absen di kantor (2026-10-07, permintaan pemilik).
         if worker.attendance_mode == "OFFICE":
@@ -361,7 +377,7 @@ class AttendanceSessionService:
                 face_similarity=outcome.similarity if outcome else None,
                 source=channel,
                 explanation=note,
-                at=at,
+                at=at or (local_clock.local_now if local_clock else None),
             )
             row = await self.record_face(row, "CHECK_IN", outcome, online=online)
             await self._flag_for_review(org_id, row, "Absen masuk {name} perlu diperiksa")
@@ -405,10 +421,22 @@ class AttendanceSessionService:
             raise AppError("NO_OPEN_SESSION", "Tidak ada sesi absensi terbuka.", status=409)
         effective_org_id = org_id or str(getattr(session, "organization_id", ""))
         local_clock = await self.clock.local_now(effective_org_id) if effective_org_id else None
-        now_local = local_clock.local_now if local_clock else None
+        now_local = local_clock.local_now if local_clock else jakarta_now()
+
+        # Validasi laporan harian: jika ketua tim belum mengisi laporan harian jadwal kerja hari ini
+        work_date = getattr(session, "attendance_date", None) or (
+            now_local.date() if now_local else jakarta_now().date()
+        )
+        unreported_plan_id = await self.repo.active_leader_plan_without_report(worker.employee_id, work_date)
+        if unreported_plan_id is not None:
+            raise AppError(
+                "REPORT_REQUIRED",
+                "Ketua tim wajib mengisi laporan harian sebelum melakukan absensi pulang.",
+                status=422,
+                details={"daily_plan_id": str(unreported_plan_id)},
+            )
 
         # Validasi batas waktu absensi pulang: ditutup pada pukul 19:00 (keputusan pemilik 2026-10-14).
-        import sys
 
         is_test_env = "pytest" in sys.modules
         is_mocked_clock = hasattr(self.clock, "assert_called") or hasattr(self.clock, "return_value")
@@ -421,12 +449,17 @@ class AttendanceSessionService:
         if should_check_close and now_local is not None:
             close_hour, close_min = [int(p) for p in settings.ATTENDANCE_CLOSE_TIME.split(":")]
             if now_local.time() >= time(close_hour, close_min):
-                raise AppError(
-                    "CHECKOUT_CLOSED",
-                    f"Batas waktu absensi pulang mandiri telah ditutup pada pukul {settings.ATTENDANCE_CLOSE_TIME}. "
-                    "Sesi yang belum selesai akan ditutup secara otomatis oleh sistem.",
-                    status=422,
-                )
+                has_ot = await self.repo.has_active_overtime(worker.employee_id, work_date)
+                if not has_ot:
+                    raise AppError(
+                        "CHECKOUT_CLOSED",
+                        (
+                            f"Batas waktu absensi pulang mandiri telah ditutup pada pukul "
+                            f"{settings.ATTENDANCE_CLOSE_TIME}. "
+                            "Sesi yang belum selesai akan ditutup secara otomatis oleh sistem."
+                        ),
+                        status=422,
+                    )
 
         if accuracy_m is not None:  # K-12: titik yang terlalu kabur tidak bisa membuktikan kehadiran
             limit = MAX_WEB_ACCURACY_M if channel == "WEB" else MAX_GPS_ACCURACY_M
@@ -447,13 +480,12 @@ class AttendanceSessionService:
             check_in_time = session.check_in_at
             curr_dt = now_local
             if curr_dt is None:
-                from app.core.time import jakarta_now
-
                 curr_dt = jakarta_now()
 
-            if getattr(check_in_time, "tzinfo", None) is not None and getattr(curr_dt, "tzinfo", None) is None:
-                curr_dt = curr_dt.replace(tzinfo=check_in_time.tzinfo)
-            elif getattr(check_in_time, "tzinfo", None) is None and getattr(curr_dt, "tzinfo", None) is not None:
+            if check_in_time.tzinfo is not None:
+                check_in_time = check_in_time.astimezone(WIB)
+                curr_dt = curr_dt.replace(tzinfo=WIB) if curr_dt.tzinfo is None else curr_dt.astimezone(WIB)
+            elif curr_dt.tzinfo is not None:
                 curr_dt = curr_dt.replace(tzinfo=None)
 
             duration_sec = max(0.0, (curr_dt - check_in_time).total_seconds())
@@ -469,7 +501,7 @@ class AttendanceSessionService:
 
         try:
             row = await self.repo.close(
-                session.id, lat=lat, lng=lng, selfie_file_id=selfie_file_id, explanation=explanation
+                session.id, lat=lat, lng=lng, selfie_file_id=selfie_file_id, explanation=explanation, at=now_local
             )
         except IntegrityError as exc:  # T7: di luar radius tanpa swafoto/penjelasan → pesan aturan dari trigger
             rule = trigger_rule_message(exc)

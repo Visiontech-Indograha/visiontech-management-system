@@ -272,7 +272,7 @@ CREATE TABLE IF NOT EXISTS work_type (
     name VARCHAR(100) NOT NULL,
     description TEXT NULL,
     -- WORK = pekerjaan biasa; SURVEY_TASK = paket survei di jadwal; SURVEY_POINT = jenis titik survei (docs/37 §9)
-    kind VARCHAR(20) NOT NULL DEFAULT 'WORK' CHECK (kind IN ('WORK', 'SURVEY_TASK', 'SURVEY_POINT')),
+    kind VARCHAR(20) NOT NULL DEFAULT 'WORK' CHECK (kind IN ('WORK', 'INSTALLATION', 'SURVEY_TASK', 'SURVEY_POINT', 'MAINTENANCE', 'REPLACEMENT')),
     follow_up_work_type_id UUID NULL REFERENCES work_type(work_type_id) ON DELETE SET NULL,  -- pemasangan lanjutan
     create_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     update_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

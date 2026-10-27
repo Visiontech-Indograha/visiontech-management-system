@@ -17,12 +17,15 @@ from app.core.security import CurrentUser
 from app.modules.work_completion.controllers.work_completion_controller import WorkCompletionController
 from app.modules.work_completion.schemas.work_completion_schema import (
     SyncBomFromWorkTypesIn,
+    WorkCompletionAccDecision,
     WorkCompletionBomIn,
     WorkCompletionBomOut,
     WorkCompletionBomUpdate,
     WorkCompletionCreate,
     WorkCompletionListOut,
     WorkCompletionOut,
+    WorkCompletionRevisionCreate,
+    WorkCompletionRevisionOut,
     WorkCompletionSignRequest,
     WorkCompletionStatusUpdate,
     WorkCompletionUpdate,
@@ -219,6 +222,47 @@ async def sync_bom_from_work_types(
 ) -> dict[str, Any]:
     overwrite = body.overwrite_existing if body else False
     return await controller.sync_bom(completion_id, overwrite, current_user)
+
+
+@router.post(
+    "/{completion_id}/acc-decision",
+    response_model=WorkCompletionOut,
+    summary="Keputusan ACC Klien (MENUNGGU_ACC, DITERIMA, DITOLAK_REWORK)",
+)
+async def decide_acc_status(
+    completion_id: UUID,
+    body: WorkCompletionAccDecision,
+    current_user: CurrentUser = _PLANNER,
+    controller: WorkCompletionController = Depends(),
+) -> WorkCompletionOut:
+    return await controller.decide_acc(completion_id, body, current_user)
+
+
+@router.post(
+    "/{completion_id}/revisions",
+    status_code=status.HTTP_201_CREATED,
+    summary="Catat Revisi / Tambahan Pekerjaan dari Klien",
+)
+async def create_revision(
+    completion_id: UUID,
+    body: WorkCompletionRevisionCreate,
+    current_user: CurrentUser = _PLANNER,
+    controller: WorkCompletionController = Depends(),
+) -> dict[str, Any]:
+    return await controller.create_revision(completion_id, body, current_user)
+
+
+@router.get(
+    "/{completion_id}/revisions",
+    response_model=list[WorkCompletionRevisionOut],
+    summary="Daftar Revisi Klien",
+)
+async def list_revisions(
+    completion_id: UUID,
+    current_user: CurrentUser = Depends(get_current_user),
+    controller: WorkCompletionController = Depends(),
+) -> list[WorkCompletionRevisionOut]:
+    return await controller.list_revisions(completion_id, current_user)
 
 
 # Halaman verifikasi QR dibuka siapa saja yang memegang dokumen: tanpa login, wajib sidik SHA-256 lengkap.

@@ -1,9 +1,12 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/api_client.dart';
 import '../../core/error_message.dart';
 import '../../core/providers.dart';
+import '../../data/sync_engine.dart';
 import '../../shared/ui/vms_ui.dart';
 import '../auth/auth_controller.dart';
 import '../auth/auth_state.dart';
@@ -36,8 +39,10 @@ class DailyPlanScreen extends ConsumerStatefulWidget {
 
 class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
   Map<String, dynamic>? _plan;
+  Map<String, dynamic>? _dailyReport;
   String? _error;
   bool _busy = false;
+  bool _reportPending = false;
 
   String get _me {
     final auth = ref.read(authControllerProvider);
@@ -59,13 +64,99 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
         'daily_plan_${widget.dailyPlanId}',
         () => engine.api.dailyPlan(widget.dailyPlanId),
       );
-      if (mounted) setState(() => (_plan = plan, _error = null));
+      var report = _dailyReport;
+      try {
+        report = await engine.api.dailyReport(widget.dailyPlanId);
+        await engine.cachePut('daily_report_${widget.dailyPlanId}', report);
+        _reportPending = false;
+      } on DioException catch (e) {
+        if (e.response?.statusCode == 404) {
+          report = null;
+          _reportPending = false;
+        } else if (!isNetworkFailure(e)) {
+          rethrow;
+        } else {
+          final cached = await engine.cacheGet('daily_report_${widget.dailyPlanId}');
+          if (cached.data is Map) report = Map<String, dynamic>.from(cached.data as Map);
+        }
+      }
+      if (mounted) setState(() => (_plan = plan, _dailyReport = report, _error = null));
     } catch (e) {
       if (mounted) setState(() => _error = apiErrorMessage(e));
     }
   }
 
   void _snack(String text, {bool error = false}) => showVmsToast(context, text, error: error);
+
+  Future<void> _dailyReportForm() async {
+    final summary = TextEditingController(text: _dailyReport?['summary'] as String? ?? '');
+    final obstacles = TextEditingController(text: _dailyReport?['obstacles'] as String? ?? '');
+    final report = await showDialog<Map<String, String>>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Laporan harian'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: summary,
+              minLines: 2,
+              maxLines: 4,
+              decoration: const InputDecoration(labelText: 'Ringkasan hasil kerja *'),
+            ),
+            TextField(
+              controller: obstacles,
+              minLines: 1,
+              maxLines: 3,
+              decoration: const InputDecoration(labelText: 'Kendala (opsional)'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
+          FilledButton(
+            onPressed: () {
+              final text = summary.text.trim();
+              if (text.length < 3) {
+                _snack('Ringkasan minimal 3 karakter.', error: true);
+                return;
+              }
+              Navigator.pop(ctx, {'summary': text, 'obstacles': obstacles.text.trim()});
+            },
+            child: const Text('Kirim laporan'),
+          ),
+        ],
+      ),
+    );
+    summary.dispose();
+    obstacles.dispose();
+    if (report == null || !mounted) return;
+
+    setState(() => _busy = true);
+    try {
+      final applied = await ref.read(syncEngineProvider).submit(
+        OfflineOp.dailyReportSubmit,
+        {
+          'daily_plan_id': widget.dailyPlanId,
+          'summary': report['summary'],
+          'obstacles': report['obstacles'],
+          'photos_json': const <String>[],
+        },
+      );
+      if (applied) {
+        _reportPending = false;
+        _snack('Laporan harian tersimpan.');
+        await _load();
+      } else {
+        setState(() => _reportPending = true);
+        _snack('Laporan disimpan dan menunggu koneksi untuk dikirim.');
+      }
+    } catch (e) {
+      _snack(apiErrorMessage(e), error: true);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
 
   Future<void> _run(Future<void> Function() action, String done) async {
     setState(() => _busy = true);
@@ -183,7 +274,11 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
                         const SizedBox(height: 10),
                         InfoRow(
                           icon: Icons.place_outlined,
-                          text: '${plan['site_name']} (radius absen ${plan['attendance_radius_m']} m)',
+                          text: plan['site_lat'] == null ||
+                                  plan['site_lng'] == null ||
+                                  plan['attendance_radius_m'] == null
+                              ? 'Lokasi belum ditentukan · presensi belum tersedia'
+                              : '${plan['site_name'] ?? 'Site'} (radius absen ${plan['attendance_radius_m']} m)',
                         ),
                         const SizedBox(height: 4),
                         InfoRow(
@@ -217,11 +312,22 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
                   ],
                   if (_isLeader && plan['status'] == 'ONGOING') ...[
                     const SizedBox(height: 12),
+                    _Tile(
+                      icon: _dailyReport == null ? Icons.assignment_outlined : Icons.assignment_turned_in_outlined,
+                      title: _dailyReport == null ? 'Kirim laporan harian' : 'Perbarui laporan harian',
+                      subtitle: _reportPending
+                          ? 'Menunggu koneksi untuk dikirim'
+                          : _dailyReport == null
+                              ? 'Wajib sebelum hari kerja ditutup atau absen pulang'
+                              : 'Terkirim · ${_dailyReport!['submitted_at']}',
+                      onTap: _busy ? null : _dailyReportForm,
+                    ),
+                    const SizedBox(height: 12),
                     PrimaryAction(
-                      label: 'Selesaikan hari kerja',
+                      label: _dailyReport == null ? 'Kirim laporan untuk menutup hari' : 'Selesaikan hari kerja',
                       icon: Icons.task_alt_rounded,
                       busy: _busy,
-                      onTap: () => _run(
+                      onTap: _dailyReport == null || _reportPending ? null : () => _run(
                         () => ref.read(syncEngineProvider).api.completeDay(widget.dailyPlanId),
                         'Hari kerja ditutup.',
                       ),

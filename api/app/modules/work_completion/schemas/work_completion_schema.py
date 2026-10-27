@@ -6,19 +6,41 @@ Pydantic schemas untuk entitas Order Proyek Klien (Work Completion) VMS V3.
 
 from __future__ import annotations
 
-from datetime import datetime
-from typing import Any
+from datetime import date, datetime
+from typing import Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+
+def _clean_coordinate(val: Any, max_abs: float) -> float | None:
+    if val is None or val == "":
+        return None
+    if isinstance(val, str):
+        val = val.replace(",", ".").strip()
+        if not val:
+            return None
+    try:
+        f = float(val)
+    except (ValueError, TypeError):
+        raise ValueError("Koordinat harus berupa angka desimal valid.") from None
+    if abs(f) > max_abs:
+        for scale in (1e6, 1e7, 1e5):
+            candidate = f / scale
+            if abs(candidate) <= max_abs:
+                f = candidate
+                break
+    if abs(f) > max_abs:
+        raise ValueError(f"Koordinat di luar batas jangkauan (-{max_abs} s/d {max_abs}).")
+    return round(f, 7)
 
 
 class WorkCompletionCreate(BaseModel):
     """Schema input pembuatan Order Klien baru oleh PM / OM."""
     division_id: UUID | None = None
     pm_id: UUID | None = None
-    # Proyek/SPK (Milestone 10): kosongkan klien/judul/nomor untuk diisi otomatis dari proyek.
     project_id: UUID | None = None
+    client_id: UUID | None = None
     client_name: str | None = Field(None, min_length=2, max_length=150, description="Nama klien (kosong = dari proyek)")
     project_title: str | None = Field(None, min_length=3, max_length=255, description="Judul (kosong = dari proyek)")
     order_number: str | None = Field(None, max_length=50, description="Nomor SPK / PO / WO")
@@ -31,9 +53,20 @@ class WorkCompletionCreate(BaseModel):
     site_lng: float | None = None
     summary_notes: str | None = None
 
+    @field_validator("site_lat", mode="before")
+    @classmethod
+    def validate_site_lat(cls, v: Any) -> float | None:
+        return _clean_coordinate(v, 90.0)
+
+    @field_validator("site_lng", mode="before")
+    @classmethod
+    def validate_site_lng(cls, v: Any) -> float | None:
+        return _clean_coordinate(v, 180.0)
+
 
 class WorkCompletionUpdate(BaseModel):
     """Schema pembaruan detail Order Klien."""
+    client_id: UUID | None = None
     client_name: str | None = None
     project_title: str | None = None
     order_number: str | None = None
@@ -45,6 +78,42 @@ class WorkCompletionUpdate(BaseModel):
     site_lat: float | None = None
     site_lng: float | None = None
     summary_notes: str | None = None
+
+    @field_validator("site_lat", mode="before")
+    @classmethod
+    def validate_site_lat(cls, v: Any) -> float | None:
+        return _clean_coordinate(v, 90.0)
+
+    @field_validator("site_lng", mode="before")
+    @classmethod
+    def validate_site_lng(cls, v: Any) -> float | None:
+        return _clean_coordinate(v, 180.0)
+
+
+class WorkCompletionAccDecision(BaseModel):
+    """Schema keputusan ACC Client oleh PM."""
+    decision: Literal["MENUNGGU_ACC", "DITERIMA", "DITOLAK_REWORK"]
+    notes: str | None = None
+
+
+class WorkCompletionRevisionCreate(BaseModel):
+    """Schema penambahan revisi permintaan dari klien."""
+    description: str = Field(..., min_length=3, description="Deskripsi permintaan revisi/tambahan klien")
+    request_date: date | None = None
+    create_survey: bool = Field(default=False, description="Otomatis buat draf survei tugas untuk revisi ini")
+
+
+class WorkCompletionRevisionOut(BaseModel):
+    """Schema output revisi klien."""
+    revision_id: UUID
+    completion_id: UUID
+    description: str
+    request_date: date
+    survey_task_id: UUID | None = None
+    status: str
+    created_by_id: UUID | None = None
+    created_by_name: str | None = None
+    create_at: Any | None = None
 
 
 class WorkCompletionStatusUpdate(BaseModel):
@@ -132,7 +201,8 @@ class WorkCompletionOut(BaseModel):
     division_name: str | None = None
     pm_id: UUID | None = None
     pm_name: str | None = None
-    client_name: str
+    client_id: UUID | None = None
+    client_name: str | None = None
     project_title: str
     order_number: str | None = None
     total_target_unit: int
@@ -142,6 +212,12 @@ class WorkCompletionOut(BaseModel):
     unit_measure: str
     order_status: str
     priority_level: str
+    acc_status: str = "MENUNGGU_ACC"
+    acc_decided_at: Any | None = None
+    acc_decided_by_id: UUID | None = None
+    acc_decided_by_name: str | None = None
+    acc_notes: str | None = None
+    revisions: list[WorkCompletionRevisionOut] = Field(default_factory=list)
     start_work_date: Any | None = None
     end_work_date: Any | None = None
     site_address: str | None = None

@@ -2,15 +2,19 @@
 Modul CLI (Command Line Interface) untuk operasi administratif VMS.
 
 Modul ini menyediakan perintah untuk membuat admin, mengisi data awal (seed),
-serta membersihkan data yatim (orphan) pada database.
+membersihkan data yatim (orphan), serta menjalankan backup database otomatis.
 """
+from __future__ import annotations
+
 import argparse
 import asyncio
 import getpass
 import sys
 import uuid
+from typing import Any
 
 from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.security import hash_password
@@ -55,7 +59,9 @@ async def create_admin(email: str, password: str, organization_id: str | None = 
                 if not office_id:
                     raise CliError(f"Organisasi {organization_id} tidak ditemukan.")
             else:
-                offices = (await conn.execute(text("SELECT office_id FROM office WHERE delete_at IS NULL LIMIT 2"))).all()
+                offices = (await conn.execute(
+                    text("SELECT office_id FROM office WHERE delete_at IS NULL LIMIT 2")
+                )).all()
                 if len(offices) > 1:
                     raise CliError("Ada lebih dari satu organisasi; pilih dengan --organization-id.")
                 office_id = offices[0][0] if offices else (await conn.execute(text(
@@ -90,11 +96,13 @@ async def seed() -> None:
         office_id = (await conn.execute(text("SELECT office_id FROM office LIMIT 1"))).scalar()
         if not office_id:
             office_id = (await conn.execute(text(
-                "INSERT INTO office (name, address, latitude, longitude) VALUES ('Kantor Pusat Visiontech', 'Jl. Sudirman Jakarta', -6.2088, 106.8456) RETURNING office_id"
+                "INSERT INTO office (name, address, latitude, longitude) "
+                "VALUES ('Kantor Pusat Visiontech', 'Jl. Sudirman Jakarta', -6.2088, 106.8456) RETURNING office_id"
             ))).scalar()
 
         print("Database seeded with Master Schema V2 initial data.")
     await engine.dispose()
+
 
 async def cleanup_orphans() -> None:
     """
@@ -110,6 +118,24 @@ async def cleanup_orphans() -> None:
         print(f"Cleaned up {res.rowcount} orphan/expired sessions.")
     await engine.dispose()
 
+
+async def backup_database(cycle: str = "WEEKLY", output_dir: str = "backups") -> dict[str, Any]:
+    """
+    Menjalankan prosedur backup data sistem terkompresi dan mencatatkannya ke registry.
+    """
+    from app.modules.system_backup.services.backup_service import BackupService
+
+    engine = make_engine(_operator_url())
+    async with AsyncSession(engine) as session:
+        service = BackupService(session)
+        rec = await service.execute_automated_backup(cycle=cycle, output_dir=output_dir)
+        await session.commit()
+        rec_map = dict(rec._mapping) if hasattr(rec, "_mapping") else dict(rec)
+        print(f"Backup berhasil dibuat: {rec_map['file_path_url']} (Checksum: {rec_map['sha256_checksum'][:16]}...)")
+        await engine.dispose()
+        return rec_map
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="VMS CLI")
     subparsers = parser.add_subparsers(dest="command")
@@ -120,6 +146,12 @@ def main() -> None:
 
     subparsers.add_parser("seed", help="Seed database with initial data")
     subparsers.add_parser("cleanup-orphans", help="Cleanup orphan sessions and tokens")
+
+    backup_parser = subparsers.add_parser("backup-db", help="Jalankan backup database sistem")
+    backup_parser.add_argument(
+        "--cycle", default="WEEKLY", choices=["DAILY", "WEEKLY", "MONTHLY"], help="Siklus backup"
+    )
+    backup_parser.add_argument("--output-dir", default="backups", help="Direktori penyimpanan arsip")
 
     args = parser.parse_args()
 
@@ -137,8 +169,11 @@ def main() -> None:
         asyncio.run(seed())
     elif args.command == "cleanup-orphans":
         asyncio.run(cleanup_orphans())
+    elif args.command == "backup-db":
+        asyncio.run(backup_database(cycle=args.cycle, output_dir=args.output_dir))
     else:
         parser.print_help()
+
 
 if __name__ == "__main__":
     main()

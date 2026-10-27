@@ -37,7 +37,7 @@ from app.modules.work_plans.schemas.plan_item_schema import (
 )
 from app.shared.access.access_service import DailyAccess, DailyNeed, check_daily_access, require_daily_status
 
-EDITABLE = ("DRAFT", "SUBMITTED")
+EDITABLE_STATUSES = ("DRAFT", "SUBMITTED", "APPROVED", "ONGOING")
 FIELD_ACTIVE = ("APPROVED", "ONGOING")
 
 
@@ -114,15 +114,18 @@ class PlanItemService:
 
     async def create(self, user: CurrentUser, daily_plan_id: UUID, data: PlanItemCreate) -> Any:
         access = await check_daily_access(self.db, daily_plan_id, user, DailyNeed.MANAGE)
-        require_daily_status(access, *EDITABLE)
+        require_daily_status(access, "DRAFT", "SUBMITTED")
         fields = data.model_dump()
         fields["title"] = data.title.strip()
         await self._validate(access, fields)
-        return await self.repo.get(await self.repo.insert(daily_plan_id, fields))
+        item_id = await self.repo.insert(daily_plan_id, fields)
+        return await self.repo.get(item_id)
 
     async def update(self, user: CurrentUser, item_id: UUID, data: PlanItemUpdate) -> Any:
         item, access = await self._item(user, item_id, DailyNeed.MANAGE)
-        require_daily_status(access, *EDITABLE)
+        require_daily_status(access, *EDITABLE_STATUSES)
+        if item.status == "DONE":
+            raise AppError("ITEM_LOCKED", "Item yang sudah selesai (DONE) tidak dapat diubah.", status=409)
         fields = data.model_dump(exclude_unset=True)
         if fields.get("title"):
             fields["title"] = fields["title"].strip()
@@ -132,14 +135,30 @@ class PlanItemService:
             raise ValidationError("Deliverable utama hanya untuk fase instalasi, penggantian, atau pemeliharaan.")
         await self._validate(access, {"completion_id": item.completion_id, **fields}, item_id)
         await self.repo.update(item_id, fields)
+        if access.plan.status in ("APPROVED", "ONGOING"):
+            await self.repo.log_activity(
+                user.user_id, user.role, "ITEM_UPDATED_ON_ACTIVE_DAY", item_id,
+                {
+                    "daily_plan_id": str(item.daily_plan_id),
+                    "status": access.plan.status,
+                    "changed": {k: str(v) for k, v in fields.items()},
+                },
+            )
         return await self.repo.get(item_id)
 
     async def delete(self, user: CurrentUser, item_id: UUID) -> None:
-        _, access = await self._item(user, item_id, DailyNeed.MANAGE)
-        require_daily_status(access, *EDITABLE)
+        item, access = await self._item(user, item_id, DailyNeed.MANAGE)
+        require_daily_status(access, *EDITABLE_STATUSES)
+        if item.status == "DONE":
+            raise AppError("ITEM_LOCKED", "Item yang sudah selesai (DONE) tidak dapat dihapus.", status=409)
         if await self.repo.dependents(item_id):
             raise AppError("ITEM_IS_PREREQUISITE", "Pekerjaan ini masih ditunggu pekerjaan lain.", status=409)
         await self.repo.archive(item_id)
+        if access.plan.status in ("APPROVED", "ONGOING"):
+            await self.repo.log_activity(
+                user.user_id, user.role, "ITEM_DELETED_ON_ACTIVE_DAY", item_id,
+                {"daily_plan_id": str(item.daily_plan_id), "status": access.plan.status, "title": item.title}
+            )
 
     # ── Lapangan ──────────────────────────────────────────────────────────────
     async def progress(self, user: CurrentUser, item_id: UUID, data: ProgressIn) -> Any:
@@ -185,39 +204,72 @@ class PlanItemService:
     async def decide_rollover(self, user: CurrentUser, item_id: UUID, data: RolloverDecision) -> Any:
         item, access = await self._item(user, item_id, DailyNeed.MANAGE)
         locked = await self.repo.lock(item_id)
-        if locked is None or locked.rollover_approval_status != "WAITING_PM":
-            raise _state("Pekerjaan ini tidak sedang menunggu keputusan pindah hari.")
-        log = {"decision": "APPROVED" if data.approve else "REJECTED", "note": (data.note or "").strip() or None,
-               "delay_reason": item.delay_reason, "from_daily_plan_id": str(item.daily_plan_id)}
+        if locked is None:
+            raise NotFoundError("Item pekerjaan")
+        if locked.status in ("DONE", "SHIFTED_DAY"):
+            raise _state("Pekerjaan yang sudah selesai atau sudah dipindahkan tidak dapat digeser.")
+
         if not data.approve:
+            if locked.rollover_approval_status != "WAITING_PM":
+                raise _state("Pekerjaan ini tidak sedang menunggu keputusan pindah hari.")
+            log = {"decision": "REJECTED", "note": (data.note or "").strip() or None,
+                   "delay_reason": item.delay_reason, "from_daily_plan_id": str(item.daily_plan_id)}
             await self.repo.reject_rollover(item_id, user.employee_id)
             await self.repo.log_decision(user.user_id, user.role, item_id, log)
             return await self.repo.get(item_id)
 
         origin = access.plan
+        target_team_id = data.target_team_id or origin.team_id
+        if str(target_team_id) != str(origin.team_id):
+            raise ValidationError("Tim tujuan rollover harus sama dengan tim jadwal asal.")
+
         if data.target_daily_plan_id:
             target = await self.repo.target_day(data.target_daily_plan_id)
             if target is None:
                 raise NotFoundError("Jadwal tujuan")
+            if str(target.division_id) != str(origin.division_id):
+                raise ValidationError("Jadwal tujuan harus dalam divisi yang sama.")
+            if str(target.team_id) != str(target_team_id):
+                raise ValidationError("Jadwal tujuan tidak sesuai dengan tim yang dipilih.")
+            if target.status == "COMPLETED":
+                raise _state("Jadwal tujuan sudah selesai.")
+            work_date = target.work_date
+            target_id = target.daily_plan_id
         else:
             target_date: date = data.target_date  # type: ignore[assignment]  # dijamin validator skema
-            target = await self.repo.team_day(origin.team_id, target_date)
-        work_date = target.work_date if target else data.target_date
-        assert work_date is not None
+            target = await self.repo.team_day(target_team_id, target_date)
+            work_date = target.work_date if target else target_date
+            assert work_date is not None
+            if target is not None:
+                if str(target.division_id) != str(origin.division_id):
+                    raise ValidationError("Jadwal tujuan harus divisi yang sama.")
+                if target.status == "COMPLETED":
+                    raise _state("Jadwal tujuan sudah selesai.")
+                target_id = target.daily_plan_id
+            else:
+                target_id = await self.repo.clone_day(
+                    item.daily_plan_id, target_date, user.employee_id, target_team_id=target_team_id
+                )
+
         if work_date <= origin.work_date:
             raise ValidationError("Tanggal tujuan harus setelah tanggal jadwal asal.")
         if work_date < jakarta_now().date():
             raise ValidationError("Tanggal tujuan tidak boleh lampau.")
-        if target is not None:
-            if str(target.team_id) != str(origin.team_id) or str(target.division_id) != str(origin.division_id):
-                raise ValidationError("Jadwal tujuan harus tim & divisi yang sama (pindah tim = penugasan ulang).")
-            if target.status == "COMPLETED":
-                raise _state("Jadwal tujuan sudah selesai.")
-            target_id = target.daily_plan_id
-        else:
-            target_id = await self.repo.clone_day(item.daily_plan_id, work_date, user.employee_id)
+
         new_item = await self.repo.shift(item_id, target_id, user.employee_id)
-        log.update(to_daily_plan_id=str(target_id), new_item_id=str(new_item),
-                   carried_qty=str(locked.target_qty - locked.completed_qty))
+        relinked = await self.repo.relink_dependents(item_id, new_item)
+
+        log = {
+            "decision": "APPROVED",
+            "proactive": locked.rollover_approval_status != "WAITING_PM",
+            "note": (data.note or "").strip() or None,
+            "delay_reason": locked.delay_reason or "Dipindahkan oleh PM",
+            "from_daily_plan_id": str(item.daily_plan_id),
+            "to_daily_plan_id": str(target_id),
+            "new_item_id": str(new_item),
+            "target_team_id": str(target_team_id),
+            "carried_qty": str(locked.target_qty - locked.completed_qty),
+            "relinked_dependents": relinked,
+        }
         await self.repo.log_decision(user.user_id, user.role, item_id, log)
         return await self.repo.get(new_item)

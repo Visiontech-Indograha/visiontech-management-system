@@ -33,14 +33,23 @@ SEARCH_PATH = "public, vms"
 def make_engine(url: str | None = None, **kwargs: Any) -> AsyncEngine:
     """
     Create and configure the SQLAlchemy AsyncEngine. `url` kosong → DATABASE_URL (koneksi API).
+    Dilengkapi pool_pre_ping dan pool_recycle untuk stabilitas koneksi jaringan database.
     """
-    # Membuat engine async dengan path pencarian yang tepat
-    return create_async_engine(
-        url or settings.DATABASE_URL,
-        echo=False,
-        connect_args={"server_settings": {"search_path": SEARCH_PATH}},
-        **kwargs,
-    )
+    engine_kwargs: dict[str, Any] = {
+        "echo": False,
+        "connect_args": {"server_settings": {"search_path": SEARCH_PATH}},
+    }
+    # Parameter pool_size & max_overflow hanya untuk queue pool (bukan NullPool pada uji coba)
+    poolclass = kwargs.get("poolclass")
+    is_null_pool = poolclass is not None and getattr(poolclass, "__name__", "") == "NullPool"
+    if not is_null_pool:
+        engine_kwargs["pool_pre_ping"] = True
+        engine_kwargs["pool_recycle"] = 1800
+        engine_kwargs["pool_size"] = 10
+        engine_kwargs["max_overflow"] = 20
+
+    engine_kwargs.update(kwargs)
+    return create_async_engine(url or settings.DATABASE_URL, **engine_kwargs)
 
 
 engine = make_engine()

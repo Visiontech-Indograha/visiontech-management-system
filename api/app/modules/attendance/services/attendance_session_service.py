@@ -421,7 +421,7 @@ class AttendanceSessionService:
             raise AppError("NO_OPEN_SESSION", "Tidak ada sesi absensi terbuka.", status=409)
         effective_org_id = org_id or str(getattr(session, "organization_id", ""))
         local_clock = await self.clock.local_now(effective_org_id) if effective_org_id else None
-        now_local = local_clock.local_now if local_clock else None
+        now_local = local_clock.local_now if local_clock else jakarta_now()
 
         # Validasi laporan harian: jika ketua tim belum mengisi laporan harian jadwal kerja hari ini
         work_date = getattr(session, "attendance_date", None) or (

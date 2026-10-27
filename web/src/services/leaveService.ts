@@ -60,7 +60,7 @@ export async function reviewLeave(leaveId: string, body: LeaveReviewInput): Prom
   return (await api.post<LeaveRequest>(`/leaves/${leaveId}/review`, body)).data;
 }
 
-export async function getLeaveBalance(employeeId: string, year = 2026): Promise<LeaveBalance> {
+export async function getLeaveBalance(employeeId: string, year = new Date().getFullYear()): Promise<LeaveBalance> {
   return (await api.get<LeaveBalance>(`/leaves/balances/${employeeId}`, { params: { year } })).data;
 }
 
@@ -70,7 +70,7 @@ export const useLeaves = (params?: { employee_id?: string; status?: string; year
     queryFn: () => listLeaves(params),
   });
 
-export const useLeaveBalance = (employeeId: string, year = 2026) =>
+export const useLeaveBalance = (employeeId: string, year = new Date().getFullYear()) =>
   useQuery({
     queryKey: ["leave-balance", employeeId, year],
     queryFn: () => getLeaveBalance(employeeId, year),

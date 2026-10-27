@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { RouteObject } from "react-router-dom";
+import { Briefcase, Building2 } from "lucide-react";
 import { AppShell } from "@/components/templates/AppShell";
 import { RequireAuth } from "@/app/RequireAuth";
 import { RequireAccess } from "@/app/RequireAccess";
@@ -51,6 +52,7 @@ const PAGES: Record<string, ReactNode> = {
   "/offboarding": <OffboardingPage />,
   "/assets": <AssetsPage />,
   "/attendance": <AttendancePage />,
+  "/leaves": <LeavesPage />,
   "/attendance-recap": <AttendanceRecapPage />,
   "/overtime-recap": <OvertimeRecapPage />,
 };
@@ -94,9 +96,22 @@ export const routes: RouteObject[] = [
                   </RequireAccess>
                 ),
               },
-              { path: "/clients", element: <ClientsPage /> },
-              { path: "/projects", element: <ProjectsPage /> },
-              { path: "/leaves", element: <LeavesPage /> },
+              {
+                path: "/clients",
+                element: (
+                  <RequireAccess item={{ path: "/clients", label: "Klien", icon: Building2, requires: ["create:plan"] }}>
+                    <ClientsPage />
+                  </RequireAccess>
+                ),
+              },
+              {
+                path: "/projects",
+                element: (
+                  <RequireAccess item={{ path: "/projects", label: "Proyek", icon: Briefcase, requires: ["create:plan"] }}>
+                    <ProjectsPage />
+                  </RequireAccess>
+                ),
+              },
               { path: "/account", element: <AccountPage /> },
               { path: "/forbidden", element: <ForbiddenPage /> },
               { path: "*", element: <NotFoundPage /> },

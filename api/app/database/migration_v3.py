@@ -1,15 +1,4 @@
-"""
-app/database/migration_v3.py
-
-Modul migrasi database dan sinkronisasi media uji otomatis VMS V3.
-Menjalankan DDL migrasi untuk:
-1. image_requirement (description TEXT)
-2. work_completion (Restrukturisasi ke Client Project Order)
-3. work_plan_item (Penambahan multi-slot start_time, end_time, completion_id, GPS)
-4. document_template_export (Dukungan source_type WEEKLY, DAILY, COMPLETION)
-5. attendance_site_visit (Pencatatan check-in multi-lokasi harian)
-6. Seeding media uji dari web/dist/foto_test dan web/dist/file_test ke uploads/
-"""
+"""Runtime maintenance for the Master Schema V2 API."""
 
 from __future__ import annotations
 
@@ -25,106 +14,6 @@ from app.core.time import jakarta_now
 from app.database.session import engine
 
 logger = logging.getLogger(__name__)
-
-DDL_STATEMENTS = [
-    # 1. image_requirement
-    "ALTER TABLE image_requirement ADD COLUMN IF NOT EXISTS description TEXT NULL;",
-
-    # 2. work_completion (Parent Client Order)
-    "ALTER TABLE work_completion ADD COLUMN IF NOT EXISTS division_id UUID REFERENCES division(division_id);",
-    "ALTER TABLE work_completion ADD COLUMN IF NOT EXISTS pm_id UUID REFERENCES employee(employee_id);",
-    "ALTER TABLE work_completion ADD COLUMN IF NOT EXISTS client_name VARCHAR(150) NOT NULL DEFAULT 'Klien Umum';",
-    (
-        "ALTER TABLE work_completion ADD COLUMN IF NOT EXISTS project_title "
-        "VARCHAR(255) NOT NULL DEFAULT 'Pekerjaan Lapangan';"
-    ),
-    "ALTER TABLE work_completion ADD COLUMN IF NOT EXISTS order_number VARCHAR(50) NULL;",
-    "ALTER TABLE work_completion ADD COLUMN IF NOT EXISTS total_target_unit INT NOT NULL DEFAULT 1;",
-    "ALTER TABLE work_completion ADD COLUMN IF NOT EXISTS unit_measure VARCHAR(50) NOT NULL DEFAULT 'Unit';",
-    "ALTER TABLE work_completion ADD COLUMN IF NOT EXISTS order_status VARCHAR(30) NOT NULL DEFAULT 'ONGOING';",
-    "ALTER TABLE work_completion ADD COLUMN IF NOT EXISTS priority_level VARCHAR(20) NOT NULL DEFAULT 'NORMAL';",
-    "ALTER TABLE work_completion ADD COLUMN IF NOT EXISTS site_address TEXT NULL;",
-    "ALTER TABLE work_completion ADD COLUMN IF NOT EXISTS site_lat NUMERIC(10,7) NULL;",
-    "ALTER TABLE work_completion ADD COLUMN IF NOT EXISTS site_lng NUMERIC(10,7) NULL;",
-
-    # Nullable columns for draft/ongoing work_completion
-    "ALTER TABLE work_completion ALTER COLUMN daily_plan_id DROP NOT NULL;",
-    "ALTER TABLE work_completion ALTER COLUMN leader_signer_id DROP NOT NULL;",
-    "ALTER TABLE work_completion ALTER COLUMN leader_signature_path DROP NOT NULL;",
-    "ALTER TABLE work_completion ALTER COLUMN leader_signed_at DROP NOT NULL;",
-    "ALTER TABLE work_completion ALTER COLUMN signature_hash DROP NOT NULL;",
-
-    # 3. work_plan_item multi-slot assignment
-    (
-        "ALTER TABLE work_plan_item ADD COLUMN IF NOT EXISTS completion_id "
-        "UUID NULL REFERENCES work_completion(completion_id);"
-    ),
-    "ALTER TABLE work_plan_item ADD COLUMN IF NOT EXISTS start_time TIME NULL DEFAULT '08:00:00';",
-    "ALTER TABLE work_plan_item ADD COLUMN IF NOT EXISTS end_time TIME NULL DEFAULT '17:00:00';",
-    "ALTER TABLE work_plan_item ADD COLUMN IF NOT EXISTS location_name VARCHAR(150) NULL;",
-    "ALTER TABLE work_plan_item ADD COLUMN IF NOT EXISTS site_lat NUMERIC(10,7) NULL;",
-    "ALTER TABLE work_plan_item ADD COLUMN IF NOT EXISTS site_lng NUMERIC(10,7) NULL;",
-    "ALTER TABLE work_plan_item ADD COLUMN IF NOT EXISTS assigned_employee_ids JSONB NULL;",
-
-    # 4. document_template_export
-    (
-        "ALTER TABLE document_template_export ADD COLUMN IF NOT EXISTS source_type "
-        "VARCHAR(30) NOT NULL DEFAULT 'WORK_COMPLETION';"
-    ),
-    (
-        "ALTER TABLE document_template_export ADD COLUMN IF NOT EXISTS daily_plan_id "
-        "UUID NULL REFERENCES work_plan_daily(daily_plan_id);"
-    ),
-    "ALTER TABLE document_template_export ALTER COLUMN completion_id DROP NOT NULL;",
-
-    # 5. Media photo_path columns on asset & personnel tables
-    "ALTER TABLE vehicle ADD COLUMN IF NOT EXISTS photo_path VARCHAR(255) NULL;",
-    "ALTER TABLE tool ADD COLUMN IF NOT EXISTS photo_path VARCHAR(255) NULL;",
-    "ALTER TABLE employee ADD COLUMN IF NOT EXISTS photo_path VARCHAR(255) NULL;",
-
-    # 6. attendance_site_visit
-    """
-    CREATE TABLE IF NOT EXISTS attendance_site_visit (
-        visit_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        attendance_id UUID NOT NULL REFERENCES attendance(attendance_id) ON DELETE CASCADE,
-        item_id UUID NOT NULL REFERENCES work_plan_item(item_id),
-        check_in_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        visit_lat NUMERIC(10,7) NOT NULL,
-        visit_lng NUMERIC(10,7) NOT NULL,
-        photo_path VARCHAR(255) NOT NULL,
-        distance_to_target_m INT NOT NULL,
-        is_within_radius BOOLEAN NOT NULL DEFAULT TRUE,
-        notes TEXT NULL,
-        create_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    );
-    """,
-    "CREATE INDEX IF NOT EXISTS idx_site_visit_attendance ON attendance_site_visit(attendance_id);",
-    "CREATE INDEX IF NOT EXISTS idx_site_visit_item ON attendance_site_visit(item_id);",
-    # 7. work_type roles: perluasan peran pekerjaan (Instalasi, Survei Lapangan, Survei Titik, Perawatan, Pergantian)
-    """
-    DO $$
-    BEGIN
-        ALTER TABLE work_type DROP CONSTRAINT IF EXISTS work_type_kind_check;
-        ALTER TABLE work_type ADD CONSTRAINT work_type_kind_check
-            CHECK (kind IN ('WORK', 'INSTALLATION', 'SURVEY_TASK', 'SURVEY_POINT', 'MAINTENANCE', 'REPLACEMENT'));
-    EXCEPTION WHEN OTHERS THEN
-        NULL;
-    END $$;
-    """,
-
-    # file_object & work_plan_attachment kini bagian DDL 06 (db/migration_m5_daily_refs.sql).
-
-    # 6. Jenis titik survei dinamis (docs/37 §9): peran work type, pemasangan lanjutan, status titik.
-    "ALTER TABLE work_type ADD COLUMN IF NOT EXISTS kind VARCHAR(20) NOT NULL DEFAULT 'WORK' "
-    "CHECK (kind IN ('WORK', 'SURVEY_TASK', 'SURVEY_POINT'));",
-    "ALTER TABLE work_type ADD COLUMN IF NOT EXISTS follow_up_work_type_id UUID NULL "
-    "REFERENCES work_type(work_type_id) ON DELETE SET NULL;",
-    "ALTER TABLE work_plan_item ADD COLUMN IF NOT EXISTS point_status VARCHAR(10) NULL "
-    "CHECK (point_status IN ('EXISTING', 'PROPOSED'));",
-    "CREATE INDEX IF NOT EXISTS idx_work_type_division_kind ON work_type(division_id, kind) WHERE delete_at IS NULL;",
-    # 7. Kontak PM ↔ ketua/anggota tim (telepon & WhatsApp dari web/HP).
-    "ALTER TABLE employee ADD COLUMN IF NOT EXISTS phone_number VARCHAR(20) NULL;",
-]
 
 
 def sync_media_seed_files() -> list[str]:
@@ -223,26 +112,58 @@ async def ensure_activity_log_partitions(months_ahead: int = 2) -> None:
             logger.warning("Partisi app_activity_logs tidak dibuat: %s - %s", stmt[:70], e)
 
 
-async def apply_v3_migrations() -> None:
-    """Menjalankan migrasi DDL dan sinkronisasi media uji ke PostgreSQL."""
-    logger.info("Memulai eksekusi DDL Migration VMS V3...")
+async def ensure_schema_extensions() -> None:
+    """Memastikan ekstensi skema tabel laporan harian & revisi order telah terpasang."""
+    statements = [
+        """
+        CREATE TABLE IF NOT EXISTS work_plan_daily_report (
+            report_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            daily_plan_id UUID NOT NULL REFERENCES work_plan_daily(daily_plan_id) ON DELETE CASCADE,
+            leader_employee_id UUID NOT NULL REFERENCES employee(employee_id),
+            summary TEXT NOT NULL,
+            obstacles TEXT NULL,
+            photos_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+            submitted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            create_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            update_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            delete_at TIMESTAMPTZ NULL,
+            CONSTRAINT uq_work_plan_daily_report_plan UNIQUE (daily_plan_id)
+        );
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS work_completion_revision (
+            revision_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            completion_id UUID NOT NULL REFERENCES work_completion(completion_id) ON DELETE CASCADE,
+            description TEXT NOT NULL,
+            request_date DATE NOT NULL DEFAULT CURRENT_DATE,
+            survey_task_id UUID NULL REFERENCES work_plan_item(item_id) ON DELETE SET NULL,
+            status VARCHAR(30) NOT NULL DEFAULT 'PENDING',
+            created_by_id UUID NULL REFERENCES employee(employee_id),
+            create_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            update_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            delete_at TIMESTAMPTZ NULL
+        );
+        """,
+        "ALTER TABLE work_completion ADD COLUMN IF NOT EXISTS acc_status VARCHAR(30) NULL DEFAULT 'MENUNGGU_ACC';",
+        "ALTER TABLE work_completion ADD COLUMN IF NOT EXISTS acc_decided_at TIMESTAMPTZ NULL;",
+        (
+            "ALTER TABLE work_completion ADD COLUMN IF NOT EXISTS acc_decided_by_id "
+            "UUID NULL REFERENCES employee(employee_id);"
+        ),
+        "ALTER TABLE work_completion ADD COLUMN IF NOT EXISTS acc_notes TEXT NULL;",
+    ]
+    async with engine.begin() as conn:
+        for stmt in statements:
+            try:
+                await conn.execute(text(stmt.strip()))
+            except Exception as e:  # noqa: BLE001
+                logger.warning("Skema ekstensi dilewati/gagal: %s - %s", stmt.strip()[:60], e)
+
+
+async def prepare_v2_runtime() -> None:
+    """Maintain time-based audit partitions, schema extensions and optional demo data at startup."""
     await ensure_activity_log_partitions()
-
-    # 1. Jalankan DDL
-    for stmt in DDL_STATEMENTS:
-        clean_stmt = stmt.strip()
-        if not clean_stmt:
-            continue
-        try:
-            async with engine.begin() as conn:
-                await conn.execute(text(clean_stmt))
-        except Exception as e:  # noqa: BLE001
-            logger.warning("DDL statement warning (mungkin sudah terpasang): %s - %s", clean_stmt[:40], e)
-
-    logger.info("DDL Migration VMS V3 berhasil diterapkan ke database!")
-
-    # 2–3 hanya untuk data demo: menimpa foto karyawan/alat/kendaraan & panduan foto yang bukan /uploads/
-    # (padahal foto asli disimpan sebagai storage key) dan menyisipkan order contoh. Bawaan mati.
+    await ensure_schema_extensions()
     if not settings.SEED_DEMO_MEDIA:
         return
     await _seed_demo_media()
@@ -290,7 +211,8 @@ async def _seed_demo_media() -> None:
     # 3. Seed relasi foto pada database jika masih kosong
     async with engine.begin() as conn:
         # Update contoh SOP image_requirement
-        await conn.execute(text("""
+        await conn.execute(
+            text("""
             UPDATE image_requirement
             SET path_image = '/uploads/sop/1312298.png',
                 description = COALESCE(
@@ -298,29 +220,36 @@ async def _seed_demo_media() -> None:
                     'Ambil foto tegak lurus dengan pencahayaan memadai sesuai standar K3 Visiontech.'
                 )
             WHERE path_image IS NULL OR path_image = '' OR path_image LIKE 'http%';
-        """))
+        """)
+        )
 
         # Update foto kendaraan
-        await conn.execute(text("""
+        await conn.execute(
+            text("""
             UPDATE vehicle
             SET photo_path = '/uploads/vehicles/download_028.jpg'
             WHERE photo_path IS NULL OR photo_path = '' OR photo_path NOT LIKE '/uploads/%';
-        """))
+        """)
+        )
 
         # Update foto peralatan kerja
-        await conn.execute(text("""
+        await conn.execute(
+            text("""
             UPDATE tool
             SET photo_path = '/uploads/tools/download_029.jpg'
             WHERE photo_path IS NULL OR photo_path = '' OR photo_path NOT LIKE '/uploads/%';
-        """))
+        """)
+        )
 
         # Update foto profil karyawan (keduanya disinkronkan)
-        await conn.execute(text("""
+        await conn.execute(
+            text("""
             UPDATE employee
             SET photo_path = '/uploads/employees/download_038.jpg',
                 profile_photo_path = '/uploads/employees/download_038.jpg'
             WHERE photo_path IS NULL OR photo_path = '' OR photo_path NOT LIKE '/uploads/%';
-        """))
+        """)
+        )
 
         # Buat sampel Work Completion jika tabel masih kosong
         check_wc = await conn.execute(text("SELECT count(*) FROM work_completion;"))
@@ -329,15 +258,17 @@ async def _seed_demo_media() -> None:
             # Ambil division_id dan employee_id yang valid
             row_div = await conn.execute(text("SELECT division_id FROM division LIMIT 1;"))
             div_id = row_div.scalar()
-            row_pm = await conn.execute(text("""
+            row_pm = await conn.execute(
+                text("""
                 SELECT e.employee_id FROM employee e
                 JOIN users u ON u.employee_id = e.employee_id
                 WHERE u.system_role = 'PROJECT_MANAGER' LIMIT 1;
-            """))
+            """)
+            )
             pm_id = row_pm.scalar()
 
             if div_id and pm_id:
-                # asyncpg menolak beberapa perintah ber-parameter sekaligus → jalankan satu per satu.
+                # asyncpg menolak beberapa perintah ber-parameter sekaligus -> jalankan satu per satu.
                 for insert_sql in _DEMO_ORDERS:
                     await conn.execute(text(insert_sql), {"div_id": div_id, "pm_id": pm_id})
                 logger.info("Berhasil menambahkan 2 sampel Work Completion (Order Klien Pertamina & PLN)!")

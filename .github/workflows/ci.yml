@@ -69,8 +69,8 @@ jobs:
       - name: Pasang dependensi
         run: pip install -r requirements-dev.txt
 
-      - name: Terapkan DDL aplikasi (V2 tidak memakai rantai alembic V1)
-        run: python -c "import asyncio; from app.database.migration_v3 import apply_v3_migrations as m; asyncio.run(m())"
+      - name: Terapkan migrasi Master Schema V2
+        run: python -m alembic upgrade head
 
       - name: Galat fatal — sintaks & nama tak terdefinisi (semua berkas, tanpa garis dasar)
         run: ruff check --isolated --select E9,F63,F7,F82 app tests

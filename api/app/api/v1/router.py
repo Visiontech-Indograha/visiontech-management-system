@@ -17,6 +17,7 @@ from app.modules.exports.routes import router as exports_router
 from app.modules.face.routes import router as face_router
 from app.modules.image_requirements.routes import router as image_requirements_router
 from app.modules.job_positions.routes import router as job_positions_router
+from app.modules.leaves.routes import leaves_router
 from app.modules.mess.routes import router as mess_router
 from app.modules.notifications.routes import notifications_router
 from app.modules.offboarding.routes import router as offboarding_router
@@ -52,6 +53,7 @@ api_router.include_router(exports_router)
 api_router.include_router(verify_router)
 api_router.include_router(teams_router)
 api_router.include_router(mess_router)
+api_router.include_router(leaves_router)
 api_router.include_router(offboarding_router)
 api_router.include_router(image_requirements_router)
 api_router.include_router(backup_router)

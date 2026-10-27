@@ -201,6 +201,7 @@ export function WorkTypeMaterialsDialog({
               <div className="grid grid-cols-2 gap-2">
                 <TextField
                   type="number"
+                  min={0}
                   step="any"
                   label="Kebutuhan Default"
                   {...register("default_qty", { required: true })}

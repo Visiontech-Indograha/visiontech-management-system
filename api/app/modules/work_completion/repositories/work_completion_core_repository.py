@@ -8,7 +8,7 @@ import json
 from typing import Any
 from uuid import UUID
 
-from app.core.repository import BaseRepository
+from app.core.repository import BaseRepository, escape_like
 
 
 def _row_to_dict(row: Any) -> dict[str, Any]:
@@ -145,7 +145,7 @@ class WorkCompletionCoreRepository(BaseRepository):
                 "(wc.client_name ILIKE :search OR wc.project_title ILIKE :search OR wc.order_number ILIKE :search)"
             )
             filters.append(search_clause)
-            params["search"] = f"%{search}%"
+            params["search"] = f"%{escape_like(search)}%"
 
         where_clause = " AND ".join(filters)
 
@@ -270,7 +270,7 @@ class WorkCompletionCoreRepository(BaseRepository):
                 "(wc.client_name ILIKE :search OR wc.project_title ILIKE :search OR wc.order_number ILIKE :search)"
             )
             filters.append(search_clause)
-            params["search"] = f"%{search}%"
+            params["search"] = f"%{escape_like(search)}%"
 
         where_clause = " AND ".join(filters)
         sql = f"SELECT COUNT(*) FROM work_completion wc WHERE {where_clause}"

@@ -263,9 +263,11 @@ class _ApplyLeaveSheetState extends ConsumerState<_ApplyLeaveSheet> {
     if (d == null) return;
     setState(() {
       if (start) {
+        _error = null;
         _start = d;
         if (_end != null && _end!.isBefore(d)) _end = d;
       } else {
+        _error = null;
         _end = d;
       }
     });
@@ -356,6 +358,9 @@ class _ApplyLeaveSheetState extends ConsumerState<_ApplyLeaveSheet> {
           TextField(
             maxLength: 1000,
             controller: _reason,
+            onChanged: (_) {
+              if (_error != null) setState(() => _error = null);
+            },
             maxLines: 3,
             decoration: const InputDecoration(labelText: 'Alasan'),
           ),

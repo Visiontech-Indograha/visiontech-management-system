@@ -9,7 +9,7 @@ from typing import Any
 from uuid import UUID
 
 from app.core.hard_delete import purge_row
-from app.core.repository import BaseRepository
+from app.core.repository import BaseRepository, escape_like
 
 _SELECT = """
     SELECT e.employee_id, e.employee_no, e.full_name, e.office_id, o.name AS office_name,
@@ -67,7 +67,7 @@ class EmployeeRepository(BaseRepository):
                 position_id: UUID | None, q: str | None) -> dict[str, Any]:
         return {"status": status, "div": str(division_id) if division_id else None,
                 "office": str(office_id) if office_id else None, "pos": str(position_id) if position_id else None,
-                "q": q}
+                "q": escape_like(q)}
 
     async def count(self, **filters: Any) -> int:
         n = await self.scalar(

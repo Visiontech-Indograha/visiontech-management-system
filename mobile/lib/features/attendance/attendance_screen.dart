@@ -598,7 +598,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     ref.listen(liveEventTickProvider, (_, _) => _load()); // T8: peristiwa waktu nyata
     final today = _today;
     final auth = ref.watch(authControllerProvider);
-    final name = auth is AuthAuthenticated ? auth.user.username.split('@').first : '';
+    final name = auth is AuthAuthenticated ? auth.user.displayName.split(' ').first : '';
     final lewatWeb = auth is AuthAuthenticated && auth.user.absensiLewatWeb;
     final hour = DateTime.now().hour;
     final greet = hour < 11

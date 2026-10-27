@@ -21,6 +21,7 @@ class AuthUserMeResponseSchema(BaseModel):
     attendance_mode: str | None = None
     division_id: str | None = None
     photo_file_id: str | None = None
+    full_name: str | None = None
 
 
 class AuthChangePasswordRequestSchema(BaseModel):

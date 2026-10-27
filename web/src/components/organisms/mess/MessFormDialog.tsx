@@ -118,6 +118,8 @@ export function MessFormDialog({ onClose }: { onClose: () => void }) {
           <TextField
             label="Latitude"
             type="number"
+            min={-90}
+            max={90}
             step="any"
             placeholder="misal: 1.2845"
             error={errors.latitude?.message}
@@ -126,6 +128,8 @@ export function MessFormDialog({ onClose }: { onClose: () => void }) {
           <TextField
             label="Longitude"
             type="number"
+            min={-180}
+            max={180}
             step="any"
             placeholder="misal: 101.218"
             error={errors.longitude?.message}

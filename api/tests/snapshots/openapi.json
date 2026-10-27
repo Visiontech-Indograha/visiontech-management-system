@@ -1304,6 +1304,17 @@
       ],
       "title": "Employee Id"
      },
+     "full_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Full Name"
+     },
      "permissions": {
       "items": {
        "type": "string"

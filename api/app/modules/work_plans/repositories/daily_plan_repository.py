@@ -330,7 +330,7 @@ class DailyPlanRepository(BaseRepository):
                 "did": str(daily_plan_id),
                 "lid": str(leader_id),
                 "summary": summary.strip(),
-                "obstacles": obstacles.strip() if obstacles else None,
+                "obstacles": obstacles.strip() if obstacles and obstacles.strip() else None,
                 "photos": json.dumps(photos),
             },
         )

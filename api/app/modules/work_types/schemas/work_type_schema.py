@@ -6,7 +6,18 @@ from pydantic import BaseModel, Field
 
 EvidenceSource = Literal["CAMERA", "GALLERY"]
 # WORK = pekerjaan biasa; SURVEY_TASK = paket survei di jadwal; SURVEY_POINT = jenis titik survei (docs/37 §9)
-WorkTypeKind = Literal["WORK", "INSTALLATION", "SURVEY_TASK", "SURVEY_POINT", "MAINTENANCE", "REPLACEMENT"]
+WorkTypeKind = Literal[
+    "WORK",
+    "INSTALLATION",
+    "SURVEY_TASK",
+    "SURVEY_POINT",
+    "MAINTENANCE",
+    "REPLACEMENT",
+    "PREPARATION",
+    "DISMANTLE",
+    "COMMISSIONING",
+    "TROUBLESHOOTING",
+]
 
 
 class WorkTypePhotoIn(BaseModel):

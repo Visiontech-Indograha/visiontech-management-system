@@ -295,25 +295,33 @@ class SurveyRepository(BaseRepository):
             {"t": str(team_id), "d": work_date},
         )
 
-    async def draft_day(self, source_daily_id: UUID | str, work_date: Any, author: str | None) -> UUID:
+    async def draft_day(
+        self,
+        source_daily_id: UUID | str,
+        work_date: Any,
+        author: str | None,
+        team_id: UUID | str | None = None,
+    ) -> UUID:
         """Jadwal DRAFT baru untuk tim survei di tanggal lanjutan (lokasi, radius, jam disalin dari hari survei)."""
         new_id: UUID = await self.scalar(
             """
             INSERT INTO work_plan_daily (division_id, team_id, project_id, work_date, site_name, site_lat, site_lng,
                                          attendance_radius_m, clock_in_time, clock_out_time, status, created_by_id)
-            SELECT division_id, team_id, project_id, :d, site_name, site_lat, site_lng, attendance_radius_m,
+            SELECT division_id, COALESCE(CAST(:tid AS uuid), team_id), project_id, :d,
+                   site_name, site_lat, site_lng, attendance_radius_m,
                    clock_in_time, clock_out_time, 'DRAFT', COALESCE(CAST(:by AS uuid), created_by_id)
             FROM work_plan_daily WHERE daily_plan_id = CAST(:id AS uuid)
             RETURNING daily_plan_id
             """,
-            {"id": str(source_daily_id), "d": work_date, "by": author},
+            {"id": str(source_daily_id), "d": work_date, "by": author, "tid": str(team_id) if team_id else None},
         )
         return new_id
 
     async def work_type_division(self, work_type_id: UUID | str) -> str | None:
         div = await self.scalar(
-            "SELECT CAST(division_id AS text) FROM work_type WHERE work_type_id = CAST(:w AS uuid) "
-            "AND delete_at IS NULL AND kind IN ('WORK', 'INSTALLATION', 'MAINTENANCE', 'REPLACEMENT')",
+            "SELECT CAST(division_id AS text) FROM work_type "
+            "WHERE work_type_id = CAST(:w AS uuid) AND delete_at IS NULL "
+            "AND kind IN ('WORK', 'INSTALLATION', 'MAINTENANCE', 'REPLACEMENT', 'PREPARATION', 'SURVEY_POINT')",
             {"w": str(work_type_id)},
         )
         return str(div) if div else None
@@ -336,3 +344,57 @@ class SurveyRepository(BaseRepository):
              "notes": notes},
         )
         return item_id
+
+    async def create_task(self, data: dict[str, Any]) -> UUID | None:
+        """Buat tugas survei baru (work_plan_item SURVEY) dari order completion/revisi jika konteks tersedia."""
+        cid = data.get("completion_id")
+        if not cid:
+            return None
+        order = await self.fetchone(
+            "SELECT daily_plan_id, division_id FROM work_completion WHERE completion_id = CAST(:cid AS uuid)",
+            {"cid": str(cid)},
+        )
+        if not order:
+            return None
+        daily_plan_id = order.daily_plan_id
+        division_id = order.division_id or data.get("division_id")
+        if not daily_plan_id or not division_id:
+            return None
+
+        wt_id = await self.scalar(
+            """
+            SELECT work_type_id FROM work_type
+            WHERE division_id = CAST(:div AS uuid) AND delete_at IS NULL
+            ORDER BY (kind = 'SURVEY_TASK' OR strpos(lower(name), 'survei') > 0) DESC, create_at ASC
+            LIMIT 1
+            """,
+            {"div": str(division_id)},
+        )
+        if not wt_id:
+            return None
+
+        title = (data.get("title") or "Survei Revisi Pekerjaan")[:200]
+        notes = data.get("description")
+
+        item_id = await self.scalar(
+            """
+            INSERT INTO work_plan_item (
+                daily_plan_id, work_type_id, title, task_phase, is_main_deliverable,
+                completion_id, target_qty, completed_qty, progress_percent, status,
+                notes, realization_photos_json
+            ) VALUES (
+                CAST(:daily AS uuid), CAST(:wt AS uuid), :title, 'SURVEY', FALSE,
+                CAST(:order AS uuid), 1, 0, 0, 'TODO',
+                :notes, '[]'::jsonb
+            )
+            RETURNING item_id
+            """,
+            {
+                "daily": str(daily_plan_id),
+                "wt": str(wt_id),
+                "title": title,
+                "order": str(cid),
+                "notes": notes,
+            },
+        )
+        return UUID(str(item_id)) if item_id else None

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { TextField, SelectField, TextAreaField } from "@/components/molecules/Field";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
@@ -7,37 +7,64 @@ import { FormBlock, ControlOption } from "@/components/molecules/FormBlock";
 import { DialogActions } from "@/components/molecules/DialogActions";
 import { FormErrorText } from "@/components/molecules/FormErrorText";
 import { TextBlock } from "@/components/molecules/TextBlock";
+import { ActionButton } from "@/components/molecules/ActionButton";
 import { useCreateWorkCompletion } from "@/services/workCompletionService";
 import { useUserDivisions } from "@/services/employeeService";
+import { useClients } from "@/services/clientService";
+import { useProjects } from "@/services/projectService";
 import { useSession } from "@/stores/sessionStore";
 
 interface FormValues {
   division_id?: string;
+  client_id?: string;
   client_name: string;
+  project_id?: string;
   project_title: string;
   order_number?: string;
   total_target_unit: number;
   unit_measure: string;
   priority_level: string;
   site_address?: string;
-  site_lat?: number | null;
-  site_lng?: number | null;
+  site_lat?: string | number | null;
+  site_lng?: string | number | null;
 }
+
+const cleanCoord = (val: unknown, maxVal: number): number | undefined => {
+  if (val === undefined || val === null || val === "") return undefined;
+  const str = String(val).replace(",", ".").trim();
+  let num = Number(str);
+  if (Number.isNaN(num)) return undefined;
+  if (Math.abs(num) > maxVal) {
+    for (const scale of [1e6, 1e7, 1e5]) {
+      if (Math.abs(num / scale) <= maxVal) {
+        num = num / scale;
+        break;
+      }
+    }
+  }
+  return Math.abs(num) <= maxVal ? Number(num.toFixed(7)) : undefined;
+};
 
 export function WorkCompletionFormDialog({ onClose }: { onClose: () => void }) {
   const create = useCreateWorkCompletion();
   const { me } = useSession();
   const { data: divisions } = useUserDivisions();
+  const { data: clients } = useClients(true);
   const [formError, setFormError] = useState<string | null>(null);
+  const [isManualInput, setIsManualInput] = useState(false);
 
   const {
     register,
     handleSubmit,
+    control,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     defaultValues: {
       division_id: me?.division_id ?? "",
+      client_id: "",
       client_name: "",
+      project_id: "",
       project_title: "",
       order_number: "",
       total_target_unit: 1,
@@ -49,15 +76,60 @@ export function WorkCompletionFormDialog({ onClose }: { onClose: () => void }) {
     },
   });
 
+  const divisionValue = useWatch({ control, name: "division_id" });
+  const clientValue = useWatch({ control, name: "client_id" });
+  const projectValue = useWatch({ control, name: "project_id" });
+  const selectedDivisionId = divisionValue || me?.division_id || undefined;
+  const selectedClientId = clientValue || undefined;
+
+  const { data: projects } = useProjects({
+    division_id: selectedDivisionId,
+    client_id: selectedClientId,
+    status: "ONGOING",
+  });
+
+  // Ketika klien dipilih dari dropdown
+  const handleClientSelect = (clientId: string) => {
+    setValue("client_id", clientId);
+    setValue("project_id", "");
+    const found = clients?.find((c) => c.client_id === clientId);
+    if (found) {
+      setValue("client_name", found.name);
+    }
+  };
+
+  // Ketika proyek master dipilih dari dropdown
+  const handleProjectSelect = (projectId: string) => {
+    setValue("project_id", projectId);
+    const found = projects?.find((p) => p.project_id === projectId);
+    if (found) {
+      setValue("project_title", found.project_title);
+      if (found.spk_number) {
+        setValue("order_number", found.spk_number);
+      }
+      if (found.unit_measure) {
+        setValue("unit_measure", found.unit_measure);
+      }
+      if (found.total_target_qty) {
+        setValue("total_target_unit", Number(found.total_target_qty));
+      }
+    }
+  };
+
   const onSubmit = async (values: FormValues) => {
     setFormError(null);
     try {
-      const parsedLat = values.site_lat !== undefined && values.site_lat !== null && !Number.isNaN(values.site_lat)
-        ? Number(values.site_lat)
-        : undefined;
-      const parsedLng = values.site_lng !== undefined && values.site_lng !== null && !Number.isNaN(values.site_lng)
-        ? Number(values.site_lng)
-        : undefined;
+      const parsedLat = cleanCoord(values.site_lat, 90);
+      const parsedLng = cleanCoord(values.site_lng, 180);
+
+      if (values.site_lat && parsedLat === undefined) {
+        setFormError("Latitude tidak valid. Harus antara -90 dan 90.");
+        return;
+      }
+      if (values.site_lng && parsedLng === undefined) {
+        setFormError("Longitude tidak valid. Harus antara -180 dan 180.");
+        return;
+      }
 
       await create.mutateAsync({
         division_id: values.division_id || me?.division_id || undefined,
@@ -105,23 +177,86 @@ export function WorkCompletionFormDialog({ onClose }: { onClose: () => void }) {
           ))}
         </SelectField>
 
-        <TextField
-          label="Nama Klien / Perusahaan"
-          placeholder="misal: PT Pertamina EP, PT PLN Persero"
-          error={errors.client_name?.message}
-          {...register("client_name", { required: "Nama klien wajib diisi." })}
-        />
+        <div className="flex items-center justify-between my-1">
+          <TextBlock as="span" className="text-xs text-mist">
+            Sumber Data Klien & Proyek:
+          </TextBlock>
+          <ActionButton
+            type="button"
+            variant="link"
+            size="xs"
+            className="text-primary font-medium p-0 h-auto"
+            onClick={() => setIsManualInput(!isManualInput)}
+          >
+            {isManualInput ? "Pilih dari Master Klien/Proyek" : "Ganti ke Input Bebas Manual"}
+          </ActionButton>
+        </div>
 
-        <TextField
-          label="Judul Pekerjaan / Proyek"
-          placeholder="misal: Pemasangan 13 Unit CCTV Kilang"
-          error={errors.project_title?.message}
-          {...register("project_title", { required: "Judul proyek wajib diisi." })}
-        />
+        {!isManualInput && (clients?.length ?? 0) > 0 ? (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <SelectField
+                label="Pilih Klien Master"
+                value={clientValue ?? ""}
+                onChange={(e) => handleClientSelect(e.target.value)}
+              >
+                <ControlOption value="">-- Pilih Klien Terdaftar --</ControlOption>
+                {(clients ?? []).map((c) => (
+                  <ControlOption key={c.client_id} value={c.client_id}>
+                    {c.client_code} - {c.name}
+                  </ControlOption>
+                ))}
+              </SelectField>
+
+              <SelectField
+                label="Pilih Proyek / SPK Master"
+                value={projectValue ?? ""}
+                onChange={(e) => handleProjectSelect(e.target.value)}
+              >
+                <ControlOption value="">-- Pilih Proyek Aktif --</ControlOption>
+                {(projects ?? []).map((p) => (
+                  <ControlOption key={p.project_id} value={p.project_id}>
+                    {p.spk_number} - {p.project_title}
+                  </ControlOption>
+                ))}
+              </SelectField>
+            </div>
+
+            <TextField
+              label="Nama Klien / Perusahaan"
+              placeholder="misal: PT Pertamina EP, PT PLN Persero"
+              error={errors.client_name?.message}
+              {...register("client_name", { required: "Nama klien wajib diisi." })}
+            />
+
+            <TextField
+              label="Judul Pekerjaan / Proyek"
+              placeholder="misal: Pemasangan 13 Unit CCTV Kilang"
+              error={errors.project_title?.message}
+              {...register("project_title", { required: "Judul proyek wajib diisi." })}
+            />
+          </>
+        ) : (
+          <>
+            <TextField
+              label="Nama Klien / Perusahaan"
+              placeholder="misal: PT Pertamina EP, PT PLN Persero"
+              error={errors.client_name?.message}
+              {...register("client_name", { required: "Nama klien wajib diisi." })}
+            />
+
+            <TextField
+              label="Judul Pekerjaan / Proyek"
+              placeholder="misal: Pemasangan 13 Unit CCTV Kilang"
+              error={errors.project_title?.message}
+              {...register("project_title", { required: "Judul proyek wajib diisi." })}
+            />
+          </>
+        )}
 
         <div className="grid grid-cols-2 gap-3">
           <TextField
-            label="Nomor surat perintah kerja (boleh kosong)"
+            label="Nomor surat perintah kerja (SPK / PO)"
             placeholder="misal: PO-2026-PTM-001"
             {...register("order_number")}
           />
@@ -161,17 +296,15 @@ export function WorkCompletionFormDialog({ onClose }: { onClose: () => void }) {
         <div className="grid grid-cols-2 gap-3">
           <TextField
             label="Latitude Lokasi (Opsional)"
-            placeholder="misal: -6.2088"
-            type="number"
-            step="any"
-            {...register("site_lat", { valueAsNumber: true })}
+            placeholder="misal: 0.541042 atau -6.2088"
+            inputMode="decimal"
+            {...register("site_lat")}
           />
           <TextField
             label="Longitude Lokasi (Opsional)"
-            placeholder="misal: 106.8456"
-            type="number"
-            step="any"
-            {...register("site_lng", { valueAsNumber: true })}
+            placeholder="misal: 101.415331 atau 106.8456"
+            inputMode="decimal"
+            {...register("site_lng")}
           />
         </div>
 

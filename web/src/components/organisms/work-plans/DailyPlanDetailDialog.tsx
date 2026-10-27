@@ -97,8 +97,14 @@ export function DailyPlanDetailDialog({ plan, canPlan, isLeader, onEdit, onClose
           <TextBlock className="rounded-control bg-warning-bg px-3 py-2 text-warning">Dikembalikan PM: {p.rejection_reason}</TextBlock>
         )}
         <ListBlock as="dl" className="space-y-1">
-          <ListPair>Lokasi: {p.site_name} ({Number(p.site_lat).toFixed(5)}, {Number(p.site_lng).toFixed(5)})</ListPair>
-          <ListPair>Jam kerja: {p.clock_in_time.slice(0, 5)}–{p.clock_out_time.slice(0, 5)} · radius absen {p.attendance_radius_m} m</ListPair>
+          <ListPair>
+            Lokasi: {p.site_name ?? "Belum ditentukan"}
+            {p.site_lat != null && p.site_lng != null && ` (${Number(p.site_lat).toFixed(5)}, ${Number(p.site_lng).toFixed(5)})`}
+          </ListPair>
+          <ListPair>
+            Jam kerja: {p.clock_in_time.slice(0, 5)}–{p.clock_out_time.slice(0, 5)}
+            {p.attendance_radius_m != null && ` · radius absen ${p.attendance_radius_m} m`}
+          </ListPair>
           <ListPair>
             Ketua: {p.leader_name} <ContactLinks phone={p.leader_phone} name={p.leader_name} />
           </ListPair>

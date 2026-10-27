@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Siapkan basis data Master Schema V2 BARU di kontainer PostgreSQL (docs/40): buat DB → db/06 → db/08.
-# DDL aplikasi (migration_v3) dijalankan terpisah oleh API/`autodeploy.sh` saat start.
+# Migrasi perubahan aplikasi dikelola Alembic dan dijalankan saat deploy.
 #
 #   scripts/siapkan_db_v2.sh <kontainer_db> <nama_db_baru> <pemilik>
 #   contoh latihan : scripts/siapkan_db_v2.sh vms_db_test latih_v2 vms_app
@@ -21,4 +21,4 @@ for f in 06_master_schema_v2.sql 08_master_v2_tambahan.sql; do
   docker exec -i "$CONTAINER" psql -U "$OWNER" -d "$DB" -q -v ON_ERROR_STOP=1 < "$HERE/db/$f"
   echo "terpasang: $f"
 done
-echo "DB '$DB' siap (jalankan migration_v3 lewat API, lalu skrip migrasi data bila perlu)."
+echo "DB '$DB' siap; Alembic V2 akan memvalidasi baseline dan menerapkan pembaruan saat deploy."

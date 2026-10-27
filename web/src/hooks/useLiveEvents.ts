@@ -81,6 +81,21 @@ function handle(qc: QueryClient, ev: LiveEvent) {
   } else if (ev.topic === "attendance") {
     void qc.invalidateQueries({ queryKey: ["attendance"] });
     void qc.invalidateQueries({ queryKey: ["attendance-recap"] });
+  } else if (ev.topic === "work-completion" || ev.topic === "completion") {
+    void qc.invalidateQueries({
+      predicate: (q) => typeof q.queryKey[0] === "string" && /^(work-completion|completions?)/.test(q.queryKey[0]),
+    });
+  } else if (ev.topic === "client" || ev.topic === "project") {
+    void qc.invalidateQueries({ queryKey: ["clients"] });
+    void qc.invalidateQueries({ queryKey: ["projects"] });
+  } else if (ev.topic === "leave" || ev.topic === "leaves") {
+    void qc.invalidateQueries({ queryKey: ["leaves"] });
+    void qc.invalidateQueries({ queryKey: ["leave-balance"] });
+  } else if (ev.topic === "master") {
+    void qc.invalidateQueries({ queryKey: ["work-types"] });
+    void qc.invalidateQueries({ queryKey: ["materials"] });
+    void qc.invalidateQueries({ queryKey: ["clients"] });
+    void qc.invalidateQueries({ queryKey: ["projects"] });
   }
 }
 

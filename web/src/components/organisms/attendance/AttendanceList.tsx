@@ -2,7 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { UseQueryResult } from "@tanstack/react-query";
 import { QueryState } from "@/components/molecules/QueryState";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
-import { formatDate, formatDateTime } from "@/lib/format";
+import { faceResultLabel, formatDate, formatDateTime, formatDistance } from "@/lib/format";
 import { deleteAttendance, type Attendance, type AttendanceList as AttendanceListData } from "@/services/attendanceService";
 import { DeleteConfirmButton } from "@/components/organisms/DeleteConfirmButton";
 import { ActionButton } from "@/components/molecules/ActionButton";
@@ -44,7 +44,7 @@ export function AttendanceList({ list, page, meEmployeeId, onPageChange, onOpen 
                 <div>
                   <TextBlock as="dt" className="inline text-mist">Jarak: </TextBlock>
                   <TextBlock as="dd" className="inline">
-                    {Math.round(a.distance_m)} m{a.is_late ? " · terlambat" : ""}
+                    {formatDistance(a.distance_m)}{a.is_late ? " · terlambat" : ""}
                     {a.is_early_leave ? " · pulang cepat" : ""}
                     {a.offline ? " · absen offline" : ""}
                   </TextBlock>
@@ -62,7 +62,7 @@ export function AttendanceList({ list, page, meEmployeeId, onPageChange, onOpen 
                   <div>
                     <TextBlock as="dt" className="inline text-mist">Jarak pulang: </TextBlock>
                     <TextBlock as="dd" className="inline">
-                      {Math.round(a.check_out_distance_m)} m{a.check_out_outside ? " · Pulang di luar radius" : ""}
+                      {formatDistance(a.check_out_distance_m)}{a.check_out_outside ? " · Pulang di luar radius" : ""}
                     </TextBlock>
                   </div>
                 )}
@@ -71,11 +71,11 @@ export function AttendanceList({ list, page, meEmployeeId, onPageChange, onOpen 
                     <TextBlock as="dt" className="inline text-mist">Wajah: </TextBlock>
                     <TextBlock as="dd" className="inline">
                       {a.face_result
-                        ? `Masuk: ${a.face_result}${a.face_similarity !== null && a.face_similarity !== undefined ? ` (${Math.round(a.face_similarity * 100)}%)` : ""}`
+                        ? `Masuk: ${faceResultLabel(a.face_result)}${a.face_result !== "SKIPPED" && a.face_similarity !== null && a.face_similarity !== undefined ? ` (${Math.round(a.face_similarity * 100)}%)` : ""}`
                         : ""}
                       {a.face_result && a.check_out_face_result ? " · " : ""}
                       {a.check_out_face_result
-                        ? `Pulang: ${a.check_out_face_result}${a.check_out_face_similarity !== null && a.check_out_face_similarity !== undefined ? ` (${Math.round(a.check_out_face_similarity * 100)}%)` : ""}`
+                        ? `Pulang: ${faceResultLabel(a.check_out_face_result)}${a.check_out_face_result !== "SKIPPED" && a.check_out_face_similarity !== null && a.check_out_face_similarity !== undefined ? ` (${Math.round(a.check_out_face_similarity * 100)}%)` : ""}`
                         : ""}
                     </TextBlock>
                   </div>

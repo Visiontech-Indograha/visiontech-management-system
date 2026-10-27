@@ -519,6 +519,9 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                 autofocus: true,
                 maxLines: 4,
                 maxLength: 1000,
+                onChanged: (_) {
+                  if (error != null) setDialog(() => error = null);
+                },
                 decoration: InputDecoration(hintText: 'Mis. ban bocor di jalan menuju lokasi', errorText: error),
               ),
             ],

@@ -8,7 +8,7 @@ import type { components } from "@/lib/apiTypes";
 import { ApiError } from "@/lib/apiClient";
 import { TextAreaField } from "@/components/molecules/Field";
 import { errorMessage } from "@/lib/errors";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, formatDistance } from "@/lib/format";
 
 /** Jam sekarang di WIB (aturan jam absen server), bukan zona waktu perangkat. */
 const wibHour = (d = new Date()) =>
@@ -229,7 +229,7 @@ function OfficeCheckInForm({ employeeId }: { employeeId: string }) {
       setAskExplanation(false);
       toast.success(
         a.status === "NEEDS_REVIEW"
-          ? `Absen masuk tercatat, tetapi ${Math.round(a.distance_m)} m dari lokasi — menunggu pemeriksaan.`
+          ? `Absen masuk tercatat, tetapi ${formatDistance(a.distance_m)} dari lokasi — menunggu pemeriksaan.`
           : "Absen masuk tercatat.",
       );
       await refresh();
@@ -368,7 +368,7 @@ function OfficeCheckInForm({ employeeId }: { employeeId: string }) {
             <div>
               <TextBlock as="dt" className="inline text-mist">Lokasi: </TextBlock>
               <TextBlock as="dd" className="inline">
-                {rec.site_label} · {Math.round(rec.distance_m)} m{rec.is_late ? " · terlambat" : ""}
+                {rec.site_label} · {formatDistance(rec.distance_m)}{rec.is_late ? " · terlambat" : ""}
                 {rec.is_early_leave ? " · pulang cepat" : ""}
               </TextBlock>
             </div>

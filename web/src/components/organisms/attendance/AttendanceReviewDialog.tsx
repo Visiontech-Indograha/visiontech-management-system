@@ -6,7 +6,7 @@ import { FilePreview } from "@/components/molecules/FilePreview";
 import { SelectField, TextAreaField } from "@/components/molecules/Field";
 import type { components } from "@/lib/apiTypes";
 import { errorMessage } from "@/lib/errors";
-import { formatDateTime } from "@/lib/format";
+import { faceResultLabel, formatDateTime, formatDistance } from "@/lib/format";
 import { reviewSchema, type ReviewValues } from "@/schemas/attendanceSchemas";
 import { useAttendanceAction, type Attendance, reviewAttendance } from "@/services/attendanceService";
 import { AttendanceFormDialog } from "./AttendanceFormDialog";
@@ -36,7 +36,7 @@ export function AttendanceReviewDialog({ item, onClose }: { item: Attendance; on
     <AttendanceFormDialog title="Tinjau absensi" submitLabel="Simpan keputusan" submitting={isSubmitting} formError={formError} onClose={onClose} onSubmit={onSubmit}>
       <TextBlock className="mb-1 text-sm font-medium">{item.employee_name}</TextBlock>
       <TextBlock className="mb-3 text-sm text-mist">
-        {item.site_label} · {Math.round(item.distance_m)} m · masuk {formatDateTime(item.check_in_at)}
+        {item.site_label} · {formatDistance(item.distance_m)} · masuk {formatDateTime(item.check_in_at)}
       </TextBlock>
       {item.offline && (
         <div role="status" className="mb-3 rounded-control border border-warning-border bg-warning-bg px-3 py-2 text-sm text-warning">
@@ -52,7 +52,7 @@ export function AttendanceReviewDialog({ item, onClose }: { item: Attendance; on
       {item.check_out_outside && (
         <div role="status" className="mb-3 rounded-control border border-warning-border bg-warning-bg px-3 py-2 text-sm text-warning">
           <TextBlock className="font-medium">
-            Pulang di luar radius ({Math.round(item.check_out_distance_m ?? 0)} m dari lokasi)
+            Pulang di luar radius ({formatDistance(item.check_out_distance_m ?? 0)} dari lokasi)
           </TextBlock>
           {item.check_out_explanation && <TextBlock>Penjelasan: {item.check_out_explanation}</TextBlock>}
           {item.check_out_selfie_file_id && (
@@ -75,16 +75,16 @@ export function AttendanceReviewDialog({ item, onClose }: { item: Attendance; on
           <TextBlock className="font-medium">Verifikasi Wajah (Server)</TextBlock>
           {item.face_result && (
             <TextBlock className="text-mist">
-              Masuk: <TextBlock as="span" className="font-medium text-foreground">{item.face_result}</TextBlock>
-              {item.face_similarity !== null && item.face_similarity !== undefined
+              Masuk: <TextBlock as="span" className="font-medium text-foreground">{faceResultLabel(item.face_result)}</TextBlock>
+              {item.face_result !== "SKIPPED" && item.face_similarity !== null && item.face_similarity !== undefined
                 ? ` · Kemiripan: ${(item.face_similarity * 100).toFixed(1)}%`
                 : ""}
             </TextBlock>
           )}
           {item.check_out_face_result && (
             <TextBlock className="text-mist">
-              Pulang: <TextBlock as="span" className="font-medium text-foreground">{item.check_out_face_result}</TextBlock>
-              {item.check_out_face_similarity !== null && item.check_out_face_similarity !== undefined
+              Pulang: <TextBlock as="span" className="font-medium text-foreground">{faceResultLabel(item.check_out_face_result)}</TextBlock>
+              {item.check_out_face_result !== "SKIPPED" && item.check_out_face_similarity !== null && item.check_out_face_similarity !== undefined
                 ? ` · Kemiripan: ${(item.check_out_face_similarity * 100).toFixed(1)}%`
                 : ""}
             </TextBlock>

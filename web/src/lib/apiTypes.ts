@@ -6437,6 +6437,8 @@ export interface components {
             body: string;
             /** Daily Plan Id */
             daily_plan_id?: string | null;
+            /** Target */
+            target?: string | null;
             /**
              * Created At
              * Format: date-time

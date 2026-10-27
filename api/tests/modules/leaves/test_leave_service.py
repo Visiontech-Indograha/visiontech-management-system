@@ -26,6 +26,12 @@ from app.modules.leaves.schemas.leave_schema import LeaveCreate, LeaveReview
 from app.modules.leaves.services.leave_service import LeaveService
 
 
+@pytest.fixture(autouse=True)
+def _silent_notifications(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Tes unit memakai repo tiruan; notifikasi diuji terpisah di tests/modules/notifications."""
+    monkeypatch.setattr(LeaveService, "_notify", lambda self: AsyncMock())
+
+
 def make_user(role: str = "EMPLOYEE", employee_id: str | None = None) -> CurrentUser:
     eid = str(uuid4()) if employee_id is None else str(employee_id)
     return CurrentUser(

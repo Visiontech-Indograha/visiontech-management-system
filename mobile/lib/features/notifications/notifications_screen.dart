@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/error_message.dart';
@@ -135,7 +136,11 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     try {
       if (n['read_at'] == null) await api.readNotification(n['id'] as String);
       final planId = n['daily_plan_id'] as String?;
-      if (planId != null) {
+      final route = notificationRoute(n['target'] as String?);
+      if (route != null && planId == null) {
+        if (!mounted) return;
+        await context.push(route);
+      } else if (planId != null) {
         if (!mounted) return;
         await Navigator.of(context).push(
           MaterialPageRoute(
@@ -264,3 +269,11 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     );
   }
 }
+
+/// Layar tujuan untuk jenis notifikasi (`target` dari API); null bila tidak ada layar khusus.
+String? notificationRoute(String? target) => switch (target) {
+      'leave' => '/leaves',
+      'asset' => '/assets',
+      'overtime' => '/overtime',
+      _ => null,
+    };

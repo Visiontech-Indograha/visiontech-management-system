@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import AppError, ForbiddenError, NotFoundError
 from app.core.security import CurrentUser
+from app.modules.notifications.services.notification_service import NotificationService
 from app.modules.work_plans.repositories.daily_correction_repository import DailyCorrectionRepository
 from app.modules.work_plans.schemas.daily_correction_schema import CorrectionCreate, CorrectionDecide
 from app.shared.access.access_service import DailyNeed, check_daily_access, is_admin, require_daily_status
@@ -41,6 +42,12 @@ class DailyCorrectionService:
         if any(c.status in OPEN for c in await self.repo.of_plan(daily_plan_id)):
             raise AppError("CORRECTION_OPEN", "Sudah ada koreksi yang sedang berjalan untuk jadwal ini.", status=409)
         correction_id = await self.repo.insert(daily_plan_id, user.employee_id, data.reason.strip())
+        notifier = NotificationService(self.db)
+        await notifier.notify_division_managers(
+            user.employee_id, "CORRECTION_REQUESTED",
+            f"{await notifier.employee_name(user.employee_id)} meminta koreksi laporan harian",
+            data.reason.strip(), target="correction", roles=("PROJECT_MANAGER",),
+        )
         return await self.repo.get(correction_id)
 
     async def of_plan(self, user: CurrentUser, daily_plan_id: UUID) -> list[Any]:
@@ -78,7 +85,18 @@ class DailyCorrectionService:
                 await self.repo.set_plan_status(row.daily_plan_id, "COMPLETED")
             else:
                 await self.repo.set_status(correction_id, "REVISING", reviewer=reviewer, note=note)
-        return await self.repo.get(correction_id)
+        result = await self.repo.get(correction_id)
+        titles = {
+            "APPROVE": "PM menyetujui koreksi, silakan revisi laporan",
+            "REJECT": "PM menolak permintaan koreksi laporan",
+            "ACCEPT": "PM menerima revisi laporan Anda",
+            "RETURN": "PM mengembalikan laporan untuk direvisi lagi",
+        }
+        await NotificationService(self.db).notify_employees(
+            [row.requested_by_id], "CORRECTION_DECIDED", titles.get(data.decision, "Keputusan koreksi laporan"),
+            note or "", target="correction", plan_id=row.daily_plan_id,
+        )
+        return result
 
     async def submit_revision(self, user: CurrentUser, correction_id: UUID) -> Any:
         row = await self._locked(correction_id)
@@ -88,4 +106,10 @@ class DailyCorrectionService:
         if not await self.repo.has_report(row.daily_plan_id):
             raise AppError("REPORT_REQUIRED", "Laporan harian wajib diisi sebelum revisi dikirim.", status=422)
         await self.repo.set_status(correction_id, "IN_REVIEW", bump_revision=True)
+        notifier = NotificationService(self.db)
+        await notifier.notify_division_managers(
+            row.requested_by_id, "CORRECTION_REVISED",
+            f"{await notifier.employee_name(row.requested_by_id)} mengirim revisi laporan, mohon diperiksa", "",
+            target="correction", roles=("PROJECT_MANAGER",),
+        )
         return await self.repo.get(correction_id)

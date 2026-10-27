@@ -13,6 +13,7 @@ from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationE
 from app.core.security import CurrentUser
 from app.modules.leaves.repositories.leave_repository import LeaveRepository
 from app.modules.leaves.schemas.leave_schema import LeaveCreate, LeaveReview
+from app.modules.notifications.services.notification_service import NotificationService
 
 LEAVE_TYPES = (
     ("ANNUAL", "Cuti tahunan", True),
@@ -31,6 +32,9 @@ class LeaveService:
 
     def __init__(self, repo: LeaveRepository) -> None:
         self.repo = repo
+
+    def _notify(self) -> NotificationService:
+        return NotificationService(self.repo.db)
 
     async def apply(self, user: CurrentUser, data: LeaveCreate) -> Any:
         # Karyawan biasa hanya boleh mengajukan cuti untuk dirinya sendiri
@@ -84,6 +88,13 @@ class LeaveService:
             attachment_path=str(data.attachment_file_id) if data.attachment_file_id else None,
             status="PENDING",
         )
+        notifier = self._notify()
+        who = await notifier.employee_name(emp_id)
+        span = f"{data.start_date:%d/%m/%Y} - {data.end_date:%d/%m/%Y}"
+        await notifier.notify_division_managers(
+            emp_id, "LEAVE_REQUESTED", f"{who} mengajukan cuti/izin", span, target="leave",
+            roles=("PROJECT_MANAGER", "OPERATIONAL_MANAGER", "ADMIN_HR_GA"),
+        )
         return await self.repo.get_leave(leave_id)
 
     async def review(self, user: CurrentUser, leave_id: UUID, data: LeaveReview) -> Any:
@@ -134,6 +145,21 @@ class LeaveService:
                 # Pengembalian kuota karena sebelumnya sudah dipotong saat disetujui PM
                 await self.repo.deduct_balance(leave.employee_id, leave.start_date.year, -leave.total_days)
 
+        notifier = self._notify()
+        verdict = {
+            "REJECTED": "ditolak",
+            "APPROVED_BY_PM": "disetujui PM (menunggu HR)",
+            "APPROVED_BY_HR": "disetujui",
+        }[new_status]
+        await notifier.notify_employees(
+            [leave.employee_id], "LEAVE_DECIDED", f"Cuti/izin Anda {verdict}",
+            data.note.strip() if data.note else "", target="leave",
+        )
+        if new_status == "APPROVED_BY_PM":
+            await notifier.notify_roles(
+                ["ADMIN_HR_GA"], "LEAVE_REQUESTED",
+                f"Cuti {await notifier.employee_name(leave.employee_id)} menunggu persetujuan HR", "", target="leave",
+            )
         return await self.repo.get_leave(leave_id)
 
     async def cancel(self, user: CurrentUser, leave_id: UUID) -> Any:
@@ -149,6 +175,11 @@ class LeaveService:
         # Kuota sudah dipotong saat disetujui PM; kembalikan bila dibatalkan
         if leave.leave_type == "ANNUAL" and leave.status == "APPROVED_BY_PM":
             await self.repo.deduct_balance(leave.employee_id, leave.start_date.year, -leave.total_days)
+        notifier = self._notify()
+        await notifier.notify_division_managers(
+            leave.employee_id, "LEAVE_CANCELLED",
+            f"{await notifier.employee_name(leave.employee_id)} membatalkan pengajuan cuti/izin", "", target="leave",
+        )
         return await self.repo.get_leave(leave_id)
 
     async def _pm_owns(self, user: CurrentUser, employee_id: UUID | str) -> bool:

@@ -64,4 +64,17 @@ void main() {
       expect(calls, 1);
     });
   });
+
+  test('foto bukti lama (string id) dan baru (objek) sama-sama terbaca', () {
+    final refs = photoRefsOf([
+      {'file_id': 'a', 'requirement_id': 'r1'},
+      'b',
+      null,
+      3,
+      {'file_id': ''},
+    ]);
+    expect(refs.map((r) => r.fileId), ['a', 'b']);
+    expect(refs.first.requirementId, 'r1');
+    expect(photoRefsOf(null), isEmpty);
+  });
 }

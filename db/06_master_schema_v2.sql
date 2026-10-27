@@ -461,6 +461,22 @@ CREATE TABLE IF NOT EXISTS daily_report_correction (
 CREATE UNIQUE INDEX IF NOT EXISTS uq_daily_report_correction_open ON daily_report_correction (daily_plan_id)
     WHERE status IN ('REQUESTED', 'REVISING', 'IN_REVIEW') AND delete_at IS NULL;
 
+-- 17c. Tabel notification (kotak masuk notifikasi pengguna; realtime lewat SSE, riwayat tersimpan di sini)
+CREATE TABLE IF NOT EXISTS notification (
+    notification_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(user_id),
+    kind VARCHAR(40) NOT NULL,
+    title VARCHAR(200) NOT NULL,
+    body TEXT NOT NULL DEFAULT '',
+    daily_plan_id UUID NULL,
+    target VARCHAR(40) NULL,
+    read_at TIMESTAMPTZ NULL,
+    create_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS ix_notification_user_created ON notification (user_id, create_at DESC);
+CREATE INDEX IF NOT EXISTS ix_notification_user_unread ON notification (user_id) WHERE read_at IS NULL;
+
+
 -- 21. Tabel employee_offboarding (Konfirmasi 1A: Prosedur Offboarding PKWT & Pengembalian Barang)
 CREATE TABLE IF NOT EXISTS employee_offboarding (
     offboarding_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

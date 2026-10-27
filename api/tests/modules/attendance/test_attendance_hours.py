@@ -87,6 +87,7 @@ def test_check_out_after_1900_is_rejected():
         )
         repo.open_session.return_value = session_mock
         repo.active_leader_plan_without_report.return_value = None
+        repo.has_active_overtime.return_value = False
 
         late_dt = datetime(2026, 10, 14, 19, 15, tzinfo=UTC)
         clock_mock = MagicMock()
@@ -104,6 +105,62 @@ def test_check_out_after_1900_is_rejected():
         assert exc_info.value.code == "CHECKOUT_CLOSED"
         assert exc_info.value.status == 422
         assert "19:00" in exc_info.value.message
+
+    asyncio.run(run())
+
+def test_check_out_after_1900_with_overtime_is_allowed():
+    """Check-out setelah pukul 19:00 diperbolehkan jika karyawan memiliki lembur aktif."""
+    async def run():
+        repo = AsyncMock()
+        clock = AsyncMock()
+        service = AttendanceSessionService(repo, clock)
+
+        user_id = str(uuid4())
+        org_id = str(uuid4())
+
+        worker_mock = MagicMock(employee_id=uuid4(), attendance_mode="OFFICE", unit_id=None, is_admin=False)
+        repo.attendance_mode_of.return_value = worker_mock
+
+        check_in_at = datetime(2026, 10, 14, 8, 0, tzinfo=UTC)
+        session_mock = MagicMock(
+            id=uuid4(),
+            employee_id=worker_mock.employee_id,
+            organization_id=org_id,
+            check_in_at=check_in_at,
+            status="AUTO_VALID",
+            attendance_date=datetime(2026, 10, 14, tzinfo=UTC).date(),
+        )
+        repo.open_session.return_value = session_mock
+        repo.active_leader_plan_without_report.return_value = None
+        repo.has_active_overtime.return_value = True
+
+        late_dt = datetime(2026, 10, 14, 21, 30, tzinfo=UTC)
+        clock_mock = MagicMock()
+        clock_mock.local_now = late_dt
+        clock_mock.today = late_dt.date()
+        clock.local_now.return_value = clock_mock
+
+        closed_session = MagicMock(
+            id=session_mock.id,
+            status="AUTO_VALID",
+            employee_id=worker_mock.employee_id,
+            organization_id=org_id,
+            check_in_at=check_in_at,
+            check_out_at=late_dt,
+            _mapping={"check_out_outside": False},
+        )
+        repo.close.return_value = closed_session
+        repo.reviewer_employee_ids.return_value = []
+
+        with patch("app.modules.attendance.services.attendance_session_service.NotificationService") as mock_notif_cls:
+            mock_notif = mock_notif_cls.return_value
+            mock_notif.attendance_encouragement = AsyncMock()
+            res = await service.check_out(
+                user_id,
+                channel="WEB",
+                org_id=org_id,
+            )
+            assert res is not None
 
     asyncio.run(run())
 

@@ -384,20 +384,42 @@ CREATE TABLE IF NOT EXISTS work_plan_item (
     delete_at TIMESTAMPTZ NULL
 );
 
--- 18. Tabel company_mess_stay (Mencatat Lokasi Mess & Riwayat Inap Berbasis Tanggal Riil)
-CREATE TABLE IF NOT EXISTS company_mess_stay (
-    mess_stay_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    mess_name VARCHAR(100) NOT NULL,
+-- 18a. Tabel company_mess (master lokasi mess; dipilih saat hunian diajukan/dicatat)
+CREATE TABLE IF NOT EXISTS company_mess (
+    mess_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    mess_name VARCHAR(150) NOT NULL,
     city VARCHAR(100) NOT NULL,
     address TEXT NOT NULL,
-    latitude NUMERIC(10,7) NOT NULL,
-    longitude NUMERIC(10,7) NOT NULL,
-    employee_id UUID NOT NULL REFERENCES employee(employee_id),
-    stay_start_date DATE NOT NULL,
-    stay_end_date DATE NOT NULL,
+    latitude NUMERIC(10,7) NULL,
+    longitude NUMERIC(10,7) NULL,
+    capacity INTEGER NULL CHECK (capacity IS NULL OR capacity > 0),
     create_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     update_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     delete_at TIMESTAMPTZ NULL
+);
+
+-- 18. Tabel company_mess_stay (Riwayat Inap Berbasis Tanggal Riil; REQUESTED → APPROVED/REJECTED oleh PM/OM/HR)
+CREATE TABLE IF NOT EXISTS company_mess_stay (
+    mess_stay_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    mess_id UUID NULL REFERENCES company_mess(mess_id),
+    mess_name VARCHAR(150) NOT NULL,
+    city VARCHAR(100) NOT NULL,
+    address TEXT NOT NULL,
+    latitude NUMERIC(10,7) NULL,
+    longitude NUMERIC(10,7) NULL,
+    employee_id UUID NOT NULL REFERENCES employee(employee_id),
+    stay_start_date DATE NOT NULL,
+    stay_end_date DATE NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'APPROVED',
+    requested_by_user_id UUID NULL REFERENCES users(user_id) ON DELETE SET NULL,
+    request_note TEXT NULL,
+    decided_by_user_id UUID NULL REFERENCES users(user_id) ON DELETE SET NULL,
+    decided_at TIMESTAMPTZ NULL,
+    decision_note TEXT NULL,
+    create_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    update_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    delete_at TIMESTAMPTZ NULL,
+    CONSTRAINT ck_mess_stay_status CHECK (status IN ('REQUESTED','APPROVED','REJECTED','CANCELLED'))
 );
 
 -- 20. Tabel asset_assignment (Peminjaman Alat Pribadi, Alat Umum & Kendaraan - Konfirmasi 3A, 3B, 1A)

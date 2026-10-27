@@ -1,6 +1,6 @@
 """
 app/modules/mess/routes/mess_route.py
-Rute API HTTP untuk entitas hunian mess karyawan (company_mess_stay).
+Rute API HTTP mess karyawan: master mess (company_mess) dan hunian (company_mess_stay).
 """
 from __future__ import annotations
 
@@ -14,14 +14,60 @@ from app.core.permissions import Permission
 from app.core.security import CurrentUser
 from app.modules.mess.controllers.mess_controller import MessController
 from app.modules.mess.schemas.mess_schema import (
+    MessDecision,
+    MessPlaceIn,
+    MessPlaceOut,
+    MessPlaceUpdate,
     MessStayCreate,
     MessStayOut,
+    MessStayRequest,
     MessStayUpdate,
 )
 
 router = APIRouter(prefix="/mess", tags=["Mess"])
 _VIEW = Depends(require_permission(Permission.VIEW_MESS))
 _MANAGE = Depends(require_permission(Permission.MANAGE_MESS))
+_REVIEW = Depends(require_permission(Permission.REVIEW_MESS))
+
+
+@router.get("/places", response_model=list[MessPlaceOut])
+async def list_places(
+    current_user: CurrentUser = Depends(get_current_user),
+    controller: MessController = Depends(),
+) -> list[MessPlaceOut]:
+    """Daftar mess yang bisa dipilih (nama, alamat, kapasitas, jumlah penghuni hari ini); semua akun login."""
+    return await controller.handle_list_places(current_user)
+
+
+@router.post("/places", response_model=MessPlaceOut, status_code=201)
+async def create_place(
+    data: MessPlaceIn,
+    current_user: CurrentUser = _MANAGE,
+    controller: MessController = Depends(),
+) -> MessPlaceOut:
+    """Menambah mess ke daftar master."""
+    return await controller.handle_create_place(current_user, data)
+
+
+@router.put("/places/{mess_id}", response_model=MessPlaceOut)
+async def update_place(
+    mess_id: UUID,
+    data: MessPlaceUpdate,
+    current_user: CurrentUser = _MANAGE,
+    controller: MessController = Depends(),
+) -> MessPlaceOut:
+    """Memperbarui data mess di master."""
+    return await controller.handle_update_place(current_user, mess_id, data)
+
+
+@router.delete("/places/{mess_id}")
+async def delete_place(
+    mess_id: UUID,
+    current_user: CurrentUser = _MANAGE,
+    controller: MessController = Depends(),
+) -> dict[str, str]:
+    """Menghapus mess dari daftar (ditolak bila masih dihuni / ada pengajuan aktif)."""
+    return await controller.handle_delete_place(current_user, mess_id)
 
 
 @router.get("", response_model=list[MessStayOut])
@@ -29,11 +75,12 @@ async def list_stays(
     employee_id: UUID | None = Query(None, description="Filter berdasarkan ID karyawan"),
     start: date | None = Query(None, description="Hunian yang beririsan sejak tanggal ini"),
     end: date | None = Query(None, description="Hunian yang beririsan sampai tanggal ini"),
+    status: str | None = Query(None, pattern="^(REQUESTED|APPROVED|REJECTED|CANCELLED)$"),
     current_user: CurrentUser = _VIEW,
     controller: MessController = Depends(),
 ) -> list[MessStayOut]:
-    """Mengambil daftar riwayat dan jadwal hunian mess karyawan."""
-    return await controller.handle_list_stays(current_user, employee_id, start, end)
+    """Mengambil daftar riwayat, jadwal hunian, dan pengajuan mess karyawan."""
+    return await controller.handle_list_stays(current_user, employee_id, start, end, status)
 
 
 @router.get("/me", response_model=list[MessStayOut])
@@ -41,8 +88,18 @@ async def my_stays(
     current_user: CurrentUser = Depends(get_current_user),
     controller: MessController = Depends(),
 ) -> list[MessStayOut]:
-    """Riwayat dan jadwal hunian mess milik sendiri (tanpa izin view:mess; hanya data akun ini)."""
+    """Riwayat, jadwal, dan pengajuan hunian mess milik sendiri (tanpa izin view:mess; hanya data akun ini)."""
     return await controller.handle_my_stays(current_user)
+
+
+@router.post("/requests", response_model=MessStayOut, status_code=201)
+async def request_stay(
+    data: MessStayRequest,
+    current_user: CurrentUser = Depends(get_current_user),
+    controller: MessController = Depends(),
+) -> MessStayOut:
+    """Karyawan mengajukan hunian di mess pilihannya (employee_id dari token); diputus PM/OM/HR."""
+    return await controller.handle_request_stay(current_user, data)
 
 
 @router.get("/{mess_stay_id}", response_model=MessStayOut)
@@ -61,8 +118,39 @@ async def create_stay(
     current_user: CurrentUser = _MANAGE,
     controller: MessController = Depends(),
 ) -> MessStayOut:
-    """Mencatat hunian mess karyawan baru."""
+    """HR/GA mencatat hunian: karyawan + mess dari master, langsung disetujui."""
     return await controller.handle_create_stay(current_user, data)
+
+
+@router.post("/{mess_stay_id}/decision", response_model=MessStayOut)
+async def decide_stay(
+    mess_stay_id: UUID,
+    data: MessDecision,
+    current_user: CurrentUser = _REVIEW,
+    controller: MessController = Depends(),
+) -> MessStayOut:
+    """PM divisi / OM / HR menyetujui atau menolak pengajuan hunian (penolakan wajib beralasan)."""
+    return await controller.handle_decide(current_user, mess_stay_id, data)
+
+
+@router.post("/{mess_stay_id}/cancel", response_model=MessStayOut)
+async def cancel_stay(
+    mess_stay_id: UUID,
+    current_user: CurrentUser = Depends(get_current_user),
+    controller: MessController = Depends(),
+) -> MessStayOut:
+    """Pemohon (atau HR/GA) membatalkan pengajuan / hunian yang belum dimulai."""
+    return await controller.handle_cancel(current_user, mess_stay_id)
+
+
+@router.post("/{mess_stay_id}/end", response_model=MessStayOut)
+async def end_stay(
+    mess_stay_id: UUID,
+    current_user: CurrentUser = Depends(get_current_user),
+    controller: MessController = Depends(),
+) -> MessStayOut:
+    """Penghuni (atau HR/GA) menyelesaikan hunian yang sedang berjalan; riwayat tetap tersimpan."""
+    return await controller.handle_end(current_user, mess_stay_id)
 
 
 @router.put("/{mess_stay_id}", response_model=MessStayOut)
@@ -72,7 +160,7 @@ async def update_stay(
     current_user: CurrentUser = _MANAGE,
     controller: MessController = Depends(),
 ) -> MessStayOut:
-    """Memperbarui informasi hunian mess karyawan."""
+    """Mengubah periode hunian."""
     return await controller.handle_update_stay(current_user, mess_stay_id, data)
 
 

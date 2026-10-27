@@ -19,6 +19,7 @@ export const PERMISSIONS = [
   "manage:assets",
   "manage:mess",
   "view:mess",
+  "review:mess",
   "manage:offboarding",
   "view:offboarding",
   "manage:image_requirements",

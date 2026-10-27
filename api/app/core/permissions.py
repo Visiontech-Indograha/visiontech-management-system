@@ -76,6 +76,7 @@ class Permission(StrEnum):
     # Mess karyawan (Master V2)
     MANAGE_MESS = "manage:mess"
     VIEW_MESS = "view:mess"
+    REVIEW_MESS = "review:mess"  # memutuskan pengajuan hunian: PM (divisinya), OM, HR/GA
 
     # Offboarding & clearance aset (Master V2)
     MANAGE_OFFBOARDING = "manage:offboarding"
@@ -131,16 +132,16 @@ _SYSTEM_ROLE_EXTRA: dict[SystemRole, frozenset[Permission]] = {
     SystemRole.OPERATIONAL_MANAGER: frozenset({
         P.CREATE_PLAN, P.PUBLISH_PLAN, P.REVIEW_OVERTIME, P.VIEW_ALL_ATTENDANCE,
         P.REVIEW_ATTENDANCE, P.VIEW_TIMELINE, P.VIEW_AUDIT, P.VIEW_TEAMS,
-        P.VIEW_MESS, P.VIEW_OFFBOARDING, P.MANAGE_SITES, P.MANAGE_DIVISIONS,
+        P.VIEW_MESS, P.REVIEW_MESS, P.VIEW_OFFBOARDING, P.MANAGE_SITES, P.MANAGE_DIVISIONS,
     }),
     # Lokasi proyek PM ada di work_plan_daily (bukan master kantor) — tanpa MANAGE_SITES di V2.
     SystemRole.PROJECT_MANAGER: frozenset({
         P.CREATE_PLAN, P.PUBLISH_PLAN, P.VIEW_TIMELINE, P.REVIEW_ATTENDANCE,
-        P.MANAGE_TEAMS, P.VIEW_TEAMS, P.VIEW_MESS, P.VIEW_OFFBOARDING, P.MANAGE_IMAGE_REQUIREMENTS,
+        P.MANAGE_TEAMS, P.VIEW_TEAMS, P.VIEW_MESS, P.REVIEW_MESS, P.VIEW_OFFBOARDING, P.MANAGE_IMAGE_REQUIREMENTS,
     }),
     SystemRole.ADMIN_HR_GA: frozenset({
         P.MANAGE_USERS, P.VERIFY_DOCUMENTS, P.MANAGE_EMPLOYEE_DOCUMENTS, P.MANAGE_ASSETS,
-        P.MANAGE_MESS, P.VIEW_MESS, P.MANAGE_OFFBOARDING, P.VIEW_OFFBOARDING, P.VIEW_TEAMS,
+        P.MANAGE_MESS, P.VIEW_MESS, P.REVIEW_MESS, P.MANAGE_OFFBOARDING, P.VIEW_OFFBOARDING, P.VIEW_TEAMS,
     }),
     SystemRole.TEAM_LEADER: frozenset(),
     SystemRole.EMPLOYEE: frozenset(),

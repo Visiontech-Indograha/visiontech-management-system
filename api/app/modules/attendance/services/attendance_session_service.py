@@ -21,7 +21,7 @@ from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationE
 from app.core.events import queue_event
 from app.core.hard_delete import purge_row, write_delete_audit
 from app.core.security import CurrentUser
-from app.core.time import WIB
+from app.core.time import WIB, jakarta_now
 from app.modules.attendance.repositories.attendance_session_repository import (
     CRUDAttendanceSession,
 )
@@ -414,7 +414,9 @@ class AttendanceSessionService:
         now_local = local_clock.local_now if local_clock else None
 
         # Validasi laporan harian: jika ketua tim belum mengisi laporan harian jadwal kerja hari ini
-        work_date = getattr(session, "attendance_date", None) or (now_local.date() if now_local else datetime.now(WIB).date())  # noqa: E501
+        work_date = getattr(session, "attendance_date", None) or (
+            now_local.date() if now_local else jakarta_now().date()
+        )
         unreported_plan_id = await self.repo.active_leader_plan_without_report(worker.employee_id, work_date)
         if unreported_plan_id is not None:
             raise AppError(
@@ -463,8 +465,6 @@ class AttendanceSessionService:
             check_in_time = session.check_in_at
             curr_dt = now_local
             if curr_dt is None:
-                from app.core.time import jakarta_now
-
                 curr_dt = jakarta_now()
 
             if check_in_time.tzinfo is not None:

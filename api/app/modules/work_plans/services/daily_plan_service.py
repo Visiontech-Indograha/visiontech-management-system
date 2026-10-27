@@ -44,9 +44,9 @@ def _week(day: date) -> tuple[date, date]:
 class DailyPlanService:
     """Use case jadwal harian."""
 
-    def __init__(self, db: AsyncSession, repo: DailyPlanRepository) -> None:
+    def __init__(self, db: AsyncSession, repo: DailyPlanRepository | None = None) -> None:
         self.db = db
-        self.repo = repo
+        self.repo = repo if repo is not None else DailyPlanRepository(db)
 
     @staticmethod
     def _manager_scope(user: CurrentUser) -> str | None:

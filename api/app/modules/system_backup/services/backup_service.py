@@ -8,7 +8,7 @@ import asyncio
 import gzip
 import hashlib
 from collections.abc import Sequence
-from datetime import UTC, datetime
+from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -18,6 +18,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import NotFoundError
+from app.core.time import utcnow
 from app.modules.system_backup.repositories.backup_repository import BackupRepository
 from app.modules.system_backup.schemas.backup_schema import BackupCreate
 
@@ -73,7 +74,7 @@ class BackupService:
         Menjalankan prosedur backup data otomatis, menghasilkan arsip gzip terkompresi,
         menghitung sha256 checksum, dan mencatatkannya ke system_backup_registry.
         """
-        now = datetime.now(UTC)
+        now = utcnow()
         filename = f"vms_backup_{cycle.lower()}_{now.strftime('%Y%m%d_%H%M%S')}.sql.gz"
         file_path = Path(output_dir) / filename
 

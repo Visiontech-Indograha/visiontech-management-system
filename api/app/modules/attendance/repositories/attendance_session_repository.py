@@ -150,8 +150,8 @@ class AttendanceSessionRepository(BaseRepository):
                    SET clock_out_at = :close_time,
                        out_of_radius_note = COALESCE(out_of_radius_note || '; ', '') || :explanation,
                        update_at = NOW()
-                 WHERE office_id = CAST(:org AS uuid)
-                   AND attendance_date = :work_date
+                 WHERE (NULLIF(:org, '') IS NULL OR office_id = CAST(NULLIF(:org, '') AS uuid))
+                   AND attendance_date <= :work_date
                    AND clock_in_at IS NOT NULL
                    AND clock_out_at IS NULL
                    AND om_approval_status <> 'REJECTED_BY_OM'
@@ -856,6 +856,41 @@ class AttendanceSessionRepository(BaseRepository):
         """
         val = await self.scalar(sql, {"eid": str(employee_id), "wdate": work_date})
         return UUID(str(val)) if val is not None else None
+
+
+    async def is_on_approved_leave(
+        self, employee_id: UUID | str, work_date: Any
+    ) -> tuple[bool, str | None]:
+        """Cek apakah karyawan memiliki cuti/izin/sakit yang sudah disetujui pada tanggal kerja ini."""
+        sql = """
+            SELECT leave_type
+            FROM leave_request
+            WHERE employee_id = CAST(:eid AS uuid)
+              AND :wdate >= start_date AND :wdate <= end_date
+              AND status IN ('APPROVED_BY_PM', 'APPROVED_BY_HR')
+              AND delete_at IS NULL
+            LIMIT 1
+        """
+        val = await self.scalar(sql, {"eid": str(employee_id), "wdate": work_date})
+        if val is not None:
+            return True, str(val)
+        return False, None
+
+    async def has_active_overtime(
+        self, employee_id: UUID | str, work_date: Any
+    ) -> bool:
+        """Cek apakah karyawan memiliki lembur (APPROVED atau PENDING_PM) pada tanggal ini."""
+        sql = """
+            SELECT 1
+            FROM overtime
+            WHERE employee_id = CAST(:eid AS uuid)
+              AND work_date = :wdate
+              AND status IN ('APPROVED', 'PENDING_PM')
+              AND delete_at IS NULL
+            LIMIT 1
+        """
+        val = await self.scalar(sql, {"eid": str(employee_id), "wdate": work_date})
+        return val is not None
 
 
 CRUDAttendanceSession = AttendanceSessionRepository

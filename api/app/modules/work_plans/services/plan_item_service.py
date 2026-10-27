@@ -119,11 +119,6 @@ class PlanItemService:
         fields["title"] = data.title.strip()
         await self._validate(access, fields)
         item_id = await self.repo.insert(daily_plan_id, fields)
-        if access.plan.status in ("APPROVED", "ONGOING"):
-            await self.repo.log_activity(
-                user.user_id, user.role, "ITEM_ADDED_TO_ACTIVE_DAY", item_id,
-                {"daily_plan_id": str(daily_plan_id), "status": access.plan.status, "title": fields["title"]}
-            )
         return await self.repo.get(item_id)
 
     async def update(self, user: CurrentUser, item_id: UUID, data: PlanItemUpdate) -> Any:

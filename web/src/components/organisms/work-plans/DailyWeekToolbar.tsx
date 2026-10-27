@@ -43,24 +43,42 @@ export function ApproveWeekButton({ count, busy, onClick }: { count: number; bus
 }
 
 /** Rekap divisi minggu yang tampil (docs/35 §8): .xlsx (jadwal, BoQ, uang makan) atau slide .pptx. Butuh satu divisi. */
-export function WeekRecapButtons({ divisionId, start, end }: { divisionId: string; start: string; end: string }) {
+export function WeekRecapButtons({
+  divisionId,
+  start,
+  end,
+  onOpenPresentation,
+}: {
+  divisionId: string;
+  start: string;
+  end: string;
+  onOpenPresentation?: () => void;
+}) {
   const exporter = useExportPeriodic();
   const run = (export_format: "EXCEL_XLSX" | "PPTX") =>
     exporter.mutate(
       { division_id: divisionId, start_date: start, end_date: end, export_format },
       { onSuccess: () => toast.success("Rekap minggu berhasil dibuat."), onError: (err) => toast.error(errorMessage(err)) },
     );
-  if (!divisionId) {
-    return <TextBlock as="span" className="text-xs text-mist">Pilih satu divisi untuk mengunduh rekap minggu ini.</TextBlock>;
-  }
   return (
-    <div className="flex gap-2">
-      <ActionButton variant="outline" size="sm" disabled={exporter.isPending} onClick={() => run("EXCEL_XLSX")}>
-        Rekap minggu ini (.xlsx)
-      </ActionButton>
-      <ActionButton variant="outline" size="sm" disabled={exporter.isPending} onClick={() => run("PPTX")}>
-        Laporan slide minggu ini (.pptx)
-      </ActionButton>
+    <div className="flex flex-wrap items-center gap-2">
+      {divisionId ? (
+        <>
+          <ActionButton variant="outline" size="sm" disabled={exporter.isPending} onClick={() => run("EXCEL_XLSX")}>
+            Rekap minggu ini (.xlsx)
+          </ActionButton>
+          <ActionButton variant="outline" size="sm" disabled={exporter.isPending} onClick={() => run("PPTX")}>
+            Laporan slide minggu ini (.pptx)
+          </ActionButton>
+        </>
+      ) : (
+        <TextBlock as="span" className="text-xs text-mist">Pilih satu divisi untuk mengunduh rekap minggu ini.</TextBlock>
+      )}
+      {onOpenPresentation && (
+        <ActionButton variant="secondary" size="sm" onClick={onOpenPresentation}>
+          Presentasi Evaluasi Sabtu
+        </ActionButton>
+      )}
     </div>
   );
 }

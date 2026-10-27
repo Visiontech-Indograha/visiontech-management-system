@@ -266,7 +266,7 @@ class AssetRepository(BaseRepository):
         await self.execute(
             f"UPDATE {table} SET status = CAST(:status AS asset_status_enum), update_at = now() "
             f"WHERE {col} = CAST(:id AS uuid)",
-            {"id": str(asset_id), "status": status},
+            {"id": str(asset_id), "status": status.lower()},
         )
 
     async def has_open_loan(self, asset_type: str, asset_id: UUID | str) -> bool:
@@ -395,7 +395,7 @@ class AssetRepository(BaseRepository):
             RETURNING assignment_id
             """,
             {"type": asset_type, "asset": str(asset_id), "emp": str(employee_id),
-             "plan": str(daily_plan_id) if daily_plan_id else None, "status": status, "photo": handover_path},
+             "plan": str(daily_plan_id) if daily_plan_id else None, "status": status.lower(), "photo": handover_path},
         )
         return assignment_id
 
@@ -403,5 +403,5 @@ class AssetRepository(BaseRepository):
         await self.execute(
             "UPDATE asset_assignment SET returned_at = now(), assignment_status = CAST(:c AS asset_status_enum), "
             "update_at = now() WHERE assignment_id = CAST(:id AS uuid)",
-            {"id": str(assignment_id), "c": condition},
+            {"id": str(assignment_id), "c": condition.lower()},
         )

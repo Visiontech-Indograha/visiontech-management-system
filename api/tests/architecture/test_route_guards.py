@@ -100,6 +100,17 @@ GUARDED_IN_HANDLER = {
     ("GET", "/clients"): "master hanya-baca untuk formulir (organisasi pengguna)",
     ("GET", "/projects"): "master hanya-baca untuk formulir (organisasi pengguna)",
     ("GET", "/job-positions"): "master hanya-baca untuk formulir (organisasi pengguna)",
+    # Manajemen cuti & izin karyawan
+    ("GET", "/leaves"): "LeaveService: rekap cuti karyawan sendiri atau HR/Admin",
+    ("POST", "/leaves"): "LeaveService: pengajuan cuti milik sendiri",
+    ("GET", "/leaves/balances/{employee_id}"): "LeaveService: saldo cuti sendiri atau HR/Admin",
+    ("GET", "/leaves/{leave_id}"): "LeaveService: detail cuti sendiri atau HR/Admin",
+    ("POST", "/leaves/{leave_id}/review"): "LeaveService: persetujuan cuti oleh HR/Admin",
+    # Revisi order & laporan harian / mingguan
+    ("GET", "/work-completions/{completion_id}/revisions"): "WorkCompletionService: daftar revisi order klien",
+    ("GET", "/work-plans/daily/{daily_plan_id}/report"): "DailyPlanService: laporan harian jadwal",
+    ("POST", "/work-plans/daily/{daily_plan_id}/report"): "DailyPlanService: kirim laporan harian ketua tim",
+    ("GET", "/work-plans/teams/{team_id}/weekly-presentation"): "DailyPlanService: presentasi mingguan tim",
 }
 _GUARDS = ("permission_checker", "daily_access.")
 

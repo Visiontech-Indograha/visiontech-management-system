@@ -1,4 +1,5 @@
 import type { UseQueryResult } from "@tanstack/react-query";
+import { WorkCompletionNavTabs } from "@/components/organisms/work-completions/WorkCompletionNavTabs";
 import { WorkCompletionAddButton } from "@/components/organisms/work-completions/WorkCompletionAddButton";
 import { WorkCompletionFormDialog } from "@/components/organisms/work-completions/WorkCompletionFormDialog";
 import { WorkCompletionList } from "@/components/organisms/work-completions/WorkCompletionList";
@@ -24,6 +25,7 @@ export function WorkCompletionsTemplate({
       description="Pekerjaan dari klien, kemajuannya, hasil kerja, dan dokumen serah terima."
       action={canManage && <WorkCompletionAddButton onAdd={onAdd} />}
     >
+      <WorkCompletionNavTabs activeTab="completions" />
       <WorkCompletionList query={query} canManage={canManage} onAdd={onAdd} />
       {adding && <WorkCompletionFormDialog onClose={onCloseAdd} />}
     </PageTemplate>

@@ -12,7 +12,7 @@ Log build **lengkap** selalu terlampir. Pesan memakai embed Discord (kolom, taut
 
 Server (`~/deploy/vms-mvp`): `autodeploy.sh` dijalankan cron tiap menit (dengan kunci `flock`).
 Urutan: checkout → `docker compose build` → backup DB (14 terakhir disimpan di `backups/`) →
-`up -d --force-recreate` → `alembic upgrade head` → **cek siap pakai**. `--force-recreate`
+`alembic upgrade head` (Master Schema V2) → `up -d --force-recreate` → **cek siap pakai**. `--force-recreate`
 memastikan kontainer memakai ID image hasil build terbaru meskipun commit hanya mengubah dokumentasi.
 
 Sumber build dikunci ke branch **`prod`**, bukan `main` dan bukan tag:
@@ -30,7 +30,7 @@ Cek ini diulang tiap 5 detik, maksimal ±2 menit. Semua syarat berikut harus lol
 | Cek | Harus |
 |---|---|
 | `localhost:8000/health` | 200 |
-| `localhost:8000/ready` (API benar-benar terhubung ke DB, skema `vms` ada) | 200, bukan 503 |
+| `localhost:8000/ready` (API berhasil terhubung ke DB) | 200, bukan 503 |
 | `localhost:8080/` (web) | 200 |
 | `localhost:8080/api/v1/auth/me` (jalur proxy web → API) | 401 |
 | Kontainer `vms_api` dan `vms_web` | berjalan |
@@ -106,4 +106,3 @@ lalu membandingkan jumlah baris per tabel, versi alembic, tabel ber-RLS, dan fun
 kontainer sementara selalu dihapus; keluaran hanya nama tabel & angka. Jalankan tiap bulan dan setelah perubahan
 besar skema. Catatan: berkas di MinIO (foto/dokumen/PDF) belum ikut dicadangkan, dan cadangan DB masih di server
 yang sama (lihat docs/06 P9-5).
-

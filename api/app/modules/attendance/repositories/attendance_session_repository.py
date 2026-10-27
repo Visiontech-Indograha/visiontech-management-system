@@ -87,7 +87,8 @@ class AttendanceSessionRepository(BaseRepository):
                    END AS status,
                    a.out_of_radius_note AS explanation,
                    a.update_at AS reviewed_at,
-                   NULL::uuid AS selfie_file_id,
+                   (SELECT f.id FROM file_object f WHERE f.storage_key = a.face_photo_path LIMIT 1)
+                       AS selfie_file_id,
                    CASE WHEN a.face_match_score = 0 THEN 'SKIPPED' WHEN a.face_match_score >= 80.0 THEN 'MATCH'
                            ELSE 'MISMATCH' END AS face_result,
                    (a.face_match_score / 100.0)::float AS face_similarity,
@@ -380,7 +381,7 @@ class AttendanceSessionRepository(BaseRepository):
                           ELSE 'NEEDS_REVIEW'
                       END AS status,
                       out_of_radius_note AS explanation, update_at AS reviewed_at,
-                      NULL::uuid AS selfie_file_id,
+                      CAST(:selfie_id AS uuid) AS selfie_file_id,
                       CASE WHEN face_match_score = 0 THEN 'SKIPPED' WHEN face_match_score >= 80.0 THEN 'MATCH'
                            ELSE 'MISMATCH' END AS face_result,
                       (face_match_score / 100.0)::float AS face_similarity,
@@ -408,6 +409,7 @@ class AttendanceSessionRepository(BaseRepository):
                 "city_zone": city_zone,
                 "meal_amount": meal_rate,
                 "label": site_label,
+                "selfie_id": str(selfie_file_id) if selfie_file_id else None,
             },
         )
 
@@ -419,17 +421,24 @@ class AttendanceSessionRepository(BaseRepository):
         lng: float | None = None,
         selfie_file_id: UUID | None = None,
         explanation: str | None = None,
+        at: Any = None,
     ) -> Any:
         """Menutup sesi absensi (check-out)."""
         return await self.fetchone(
             f"""
             UPDATE attendance
-               SET clock_out_at = NOW(),
+               SET clock_out_at = COALESCE(CAST(:at AS timestamptz), NOW()),
                    out_of_radius_note = COALESCE(out_of_radius_note || '; ', '') || COALESCE(:exp, ''),
                    update_at = NOW()
              WHERE attendance_id = CAST(:id AS uuid) AND delete_at IS NULL
             RETURNING attendance_id AS id, employee_id, attendance_date AS work_date,
-                      COALESCE(daily_plan_id, office_id) AS site_id, 'Lokasi Kerja' AS site_label,
+                      COALESCE(daily_plan_id, office_id) AS site_id,
+                      COALESCE(
+                          (SELECT wpd.site_name FROM work_plan_daily wpd
+                               WHERE wpd.daily_plan_id = attendance.daily_plan_id),
+                          (SELECT o.name FROM office o WHERE o.office_id = attendance.office_id),
+                          'Lokasi Kerja'
+                      ) AS site_label,
                       clock_in_at AS check_in_at, clock_out_at AS check_out_at,
                       distance_to_target_m::float AS distance_m,
                       ({IS_LATE}) AS is_late,
@@ -441,7 +450,8 @@ class AttendanceSessionRepository(BaseRepository):
                           ELSE 'NEEDS_REVIEW'
                       END AS status,
                       out_of_radius_note AS explanation, update_at AS reviewed_at,
-                      NULL::uuid AS selfie_file_id,
+                      (SELECT f.id FROM file_object f WHERE f.storage_key = attendance.face_photo_path LIMIT 1)
+                          AS selfie_file_id,
                       CASE WHEN face_match_score = 0 THEN 'SKIPPED' WHEN face_match_score >= 80.0 THEN 'MATCH'
                            ELSE 'MISMATCH' END AS face_result,
                       (face_match_score / 100.0)::float AS face_similarity,
@@ -449,7 +459,7 @@ class AttendanceSessionRepository(BaseRepository):
                       NULL::float AS check_out_distance_m, FALSE AS check_out_outside,
                       NULL::uuid AS check_out_selfie_file_id, NULL::text AS check_out_explanation
             """,
-            {"id": str(attendance_id), "exp": explanation.strip() if explanation else None},
+            {"id": str(attendance_id), "exp": explanation.strip() if explanation else None, "at": at},
         )
 
     async def reviewer_employee_ids(self, org_id: UUID | str, employee_id: UUID | str) -> list[str]:
@@ -497,7 +507,13 @@ class AttendanceSessionRepository(BaseRepository):
                    update_at = NOW()
              WHERE attendance_id = CAST(:id AS uuid) AND delete_at IS NULL
             RETURNING attendance_id AS id, employee_id, attendance_date AS work_date,
-                      COALESCE(daily_plan_id, office_id) AS site_id, 'Lokasi Kerja' AS site_label,
+                      COALESCE(daily_plan_id, office_id) AS site_id,
+                      COALESCE(
+                          (SELECT wpd.site_name FROM work_plan_daily wpd
+                               WHERE wpd.daily_plan_id = attendance.daily_plan_id),
+                          (SELECT o.name FROM office o WHERE o.office_id = attendance.office_id),
+                          'Lokasi Kerja'
+                      ) AS site_label,
                       clock_in_at AS check_in_at, clock_out_at AS check_out_at,
                       distance_to_target_m::float AS distance_m,
                       ({IS_LATE}) AS is_late,
@@ -509,7 +525,8 @@ class AttendanceSessionRepository(BaseRepository):
                           ELSE 'NEEDS_REVIEW'
                       END AS status,
                       out_of_radius_note AS explanation, update_at AS reviewed_at,
-                      NULL::uuid AS selfie_file_id,
+                      (SELECT f.id FROM file_object f WHERE f.storage_key = attendance.face_photo_path LIMIT 1)
+                          AS selfie_file_id,
                       CASE WHEN face_match_score = 0 THEN 'SKIPPED' WHEN face_match_score >= 80.0 THEN 'MATCH'
                            ELSE 'MISMATCH' END AS face_result,
                       (face_match_score / 100.0)::float AS face_similarity,
@@ -540,7 +557,8 @@ class AttendanceSessionRepository(BaseRepository):
                    END AS status,
                    a.out_of_radius_note AS explanation,
                    a.update_at AS reviewed_at,
-                   NULL::uuid AS selfie_file_id,
+                   (SELECT f.id FROM file_object f WHERE f.storage_key = a.face_photo_path LIMIT 1)
+                       AS selfie_file_id,
                    CASE WHEN a.face_match_score = 0 THEN 'SKIPPED' WHEN a.face_match_score >= 80.0 THEN 'MATCH'
                            ELSE 'MISMATCH' END AS face_result,
                    (a.face_match_score / 100.0)::float AS face_similarity,
@@ -666,7 +684,8 @@ class AttendanceSessionRepository(BaseRepository):
                    END AS status,
                    a.out_of_radius_note AS explanation,
                    a.update_at AS reviewed_at,
-                   NULL::uuid AS selfie_file_id,
+                   (SELECT f.id FROM file_object f WHERE f.storage_key = a.face_photo_path LIMIT 1)
+                       AS selfie_file_id,
                    a.out_of_radius_note AS review_note,
                    e.full_name AS employee_name,
                    CASE WHEN a.face_match_score = 0 THEN 'SKIPPED' WHEN a.face_match_score >= 80.0 THEN 'MATCH'
@@ -816,6 +835,27 @@ class AttendanceSessionRepository(BaseRepository):
                 {"start": start, "end": end, "div": str(division_id) if division_id else None},
             )
         )
+
+    async def active_leader_plan_without_report(
+        self, employee_id: UUID | str, work_date: Any
+    ) -> UUID | None:
+        """Cari apakah karyawan adalah ketua tim pada jadwal harian hari ini yang belum memiliki laporan."""
+        sql = """
+            SELECT wpd.daily_plan_id
+            FROM work_plan_daily wpd
+            JOIN team t ON t.team_id = wpd.team_id
+            WHERE t.leader_employee_id = CAST(:eid AS uuid)
+              AND wpd.work_date = :wdate
+              AND wpd.status IN ('APPROVED', 'ONGOING')
+              AND wpd.delete_at IS NULL
+              AND NOT EXISTS (
+                  SELECT 1 FROM work_plan_daily_report r
+                  WHERE r.daily_plan_id = wpd.daily_plan_id AND r.delete_at IS NULL
+              )
+            LIMIT 1
+        """
+        val = await self.scalar(sql, {"eid": str(employee_id), "wdate": work_date})
+        return UUID(str(val)) if val is not None else None
 
 
 CRUDAttendanceSession = AttendanceSessionRepository

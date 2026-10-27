@@ -102,6 +102,7 @@ class RolloverDecision(BaseModel):
     approve: bool
     target_daily_plan_id: UUID | None = None
     target_date: date | None = None
+    target_team_id: UUID | None = None
     note: str | None = Field(default=None, max_length=1000)
 
     @model_validator(mode="after")

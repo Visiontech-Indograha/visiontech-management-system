@@ -1,7 +1,9 @@
 """
 app/modules/mess/services/mess_service.py
-Hunian mess karyawan proyek (Milestone 5). Karyawan aktif; tanggal selesai ≥ mulai; tidak boleh tumpang tindih
-dengan hunian lain milik karyawan yang sama. Lihat: view:mess; kelola: manage:mess (HR/GA).
+Hunian mess karyawan proyek. Mess dipilih dari master (company_mess), bukan diketik ulang. Karyawan mengajukan
+hunian (REQUESTED) yang diputus PM divisinya / OM / HR; HR/GA juga dapat mencatat langsung (APPROVED). Karyawan
+aktif; tanggal selesai ≥ mulai; tidak tumpang tindih dengan hunian aktif karyawan yang sama; kapasitas mess dijaga.
+Lihat: view:mess; kelola: manage:mess (HR/GA); putuskan pengajuan: review:mess (PM/OM/HR).
 """
 from __future__ import annotations
 
@@ -11,10 +13,26 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.errors import AppError, NotFoundError, ValidationError
+from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationError
+from app.core.security import CurrentUser
+from app.core.time import jakarta_now, utcnow
 from app.modules.mess.repositories.mess_repository import MessRepository
-from app.modules.mess.schemas.mess_schema import MessStayCreate, MessStayUpdate
+from app.modules.mess.schemas.mess_schema import (
+    MessDecision,
+    MessPlaceIn,
+    MessPlaceUpdate,
+    MessStayCreate,
+    MessStayRequest,
+    MessStayUpdate,
+)
 from app.modules.notifications.services.notification_service import NotificationService
+
+ORG_WIDE_ROLES = ("ADMIN_HR_GA", "OPERATIONAL_MANAGER", "SUPER_ADMIN")
+MANAGER_ROLES = ("ADMIN_HR_GA", "SUPER_ADMIN")
+
+
+def _period(start: date, end: date) -> str:
+    return f"{start:%d/%m/%Y} - {end:%d/%m/%Y}"
 
 
 class MessService:
@@ -24,8 +42,36 @@ class MessService:
         self.repo = MessRepository(db)
         self.db = db
 
-    async def list_stays(self, employee_id: UUID | None, start: date | None, end: date | None) -> list[Any]:
-        return await self.repo.list_stays(employee_id, start, end)
+    # --- master mess ---------------------------------------------------------------------------------------------
+    async def list_places(self) -> list[Any]:
+        return await self.repo.list_places()
+
+    async def get_place(self, mess_id: UUID) -> Any:
+        place = await self.repo.get_place(mess_id)
+        if place is None:
+            raise NotFoundError("Mess")
+        return place
+
+    async def create_place(self, data: MessPlaceIn) -> Any:
+        return await self.repo.get_place(await self.repo.insert_place(data.model_dump()))
+
+    async def update_place(self, mess_id: UUID, data: MessPlaceUpdate) -> Any:
+        await self.get_place(mess_id)
+        await self.repo.update_place(mess_id, data.model_dump())
+        return await self.repo.get_place(mess_id)
+
+    async def delete_place(self, mess_id: UUID) -> None:
+        await self.get_place(mess_id)
+        if await self.repo.place_has_active_stays(mess_id):
+            raise AppError("MESS_IN_USE", "Mess masih dihuni atau punya pengajuan aktif; selesaikan dulu hunian itu.",
+                           status=409)
+        await self.repo.archive_place(mess_id)
+
+    # --- hunian ----------------------------------------------------------------------------------------------------
+    async def list_stays(
+        self, employee_id: UUID | None, start: date | None, end: date | None, status: str | None = None
+    ) -> list[Any]:
+        return await self.repo.list_stays(employee_id, start, end, status)
 
     async def get_stay(self, mess_stay_id: UUID) -> Any:
         stay = await self.repo.get(mess_stay_id)
@@ -33,31 +79,144 @@ class MessService:
             raise NotFoundError("Hunian mess")
         return stay
 
-    async def _check_period(self, employee_id: UUID, start: date, end: date, exclude: UUID | None = None) -> None:
+    async def _check_period(self, employee_id: UUID | str, start: date, end: date,
+                            exclude: UUID | None = None) -> None:
         if end < start:
             raise ValidationError("Tanggal selesai menginap tidak boleh sebelum tanggal mulai.")
         if await self.repo.overlaps(employee_id, start, end, exclude):
-            raise AppError("MESS_OVERLAP", "Karyawan ini sudah tercatat menginap di mess pada tanggal tersebut.",
+            raise AppError("MESS_OVERLAP", "Karyawan ini sudah punya hunian atau pengajuan mess pada tanggal tersebut.",
                            status=409)
 
-    async def create_stay(self, data: MessStayCreate) -> Any:
+    async def _check_capacity(self, place: Any, start: date, end: date, exclude: UUID | None = None) -> None:
+        if place.capacity is None:
+            return
+        if await self.repo.approved_overlap_count(place.mess_id, start, end, exclude) >= place.capacity:
+            raise AppError("MESS_FULL", f"{place.mess_name} sudah penuh pada tanggal tersebut "
+                           f"(kapasitas {place.capacity} orang).", status=409)
+
+    async def create_stay(self, user: CurrentUser, data: MessStayCreate) -> Any:
+        """Pencatatan langsung HR/GA: langsung disetujui."""
         if not await self.repo.employee_active(data.employee_id):
             raise ValidationError("Karyawan tidak ditemukan atau tidak aktif.")
+        place = await self.get_place(data.mess_id)
         await self._check_period(data.employee_id, data.stay_start_date, data.stay_end_date)
-        fields = data.model_dump()
-        fields["employee_id"] = str(data.employee_id)
-        stay = await self.repo.get(await self.repo.insert(fields))
+        await self._check_capacity(place, data.stay_start_date, data.stay_end_date)
+        stay_id = await self.repo.insert({
+            "mess_id": str(data.mess_id), "employee_id": str(data.employee_id),
+            "stay_start_date": data.stay_start_date, "stay_end_date": data.stay_end_date, "status": "APPROVED",
+            "requested_by": None, "request_note": None, "decided_by": user.user_id,
+            "decided_at": utcnow(),
+        })
         await NotificationService(self.db).notify_employees(
-            [data.employee_id], "MESS_ASSIGNED", f"Anda ditempatkan di {data.mess_name}",
-            f"{data.stay_start_date:%d/%m/%Y} - {data.stay_end_date:%d/%m/%Y}, {data.address}", target="mess",
+            [data.employee_id], "MESS_ASSIGNED", f"Anda ditempatkan di {place.mess_name}",
+            f"{_period(data.stay_start_date, data.stay_end_date)}, {place.address}", target="mess",
         )
+        return await self.repo.get(stay_id)
+
+    async def request_stay(self, user: CurrentUser, data: MessStayRequest) -> Any:
+        """Karyawan mengajukan hunian di mess pilihannya."""
+        if user.employee_id is None:
+            raise ForbiddenError("Akun ini tidak tertaut ke data karyawan.")
+        employee_id = UUID(str(user.employee_id))
+        if not await self.repo.employee_active(employee_id):
+            raise ValidationError("Karyawan tidak ditemukan atau tidak aktif.")
+        if data.stay_start_date < jakarta_now().date():
+            raise ValidationError("Tanggal mulai tidak boleh di masa lalu.")
+        place = await self.get_place(data.mess_id)
+        await self._check_period(employee_id, data.stay_start_date, data.stay_end_date)
+        await self._check_capacity(place, data.stay_start_date, data.stay_end_date)
+        stay_id = await self.repo.insert({
+            "mess_id": str(data.mess_id), "employee_id": str(employee_id),
+            "stay_start_date": data.stay_start_date, "stay_end_date": data.stay_end_date, "status": "REQUESTED",
+            "requested_by": user.user_id, "request_note": (data.note or "").strip() or None,
+            "decided_by": None, "decided_at": None,
+        })
+        stay = await self.repo.get(stay_id)
+        notifier = NotificationService(self.db)
+        who = await notifier.employee_name(employee_id) or "Karyawan"
+        title = f"{who} mengajukan hunian di {place.mess_name}"
+        body = _period(data.stay_start_date, data.stay_end_date)
+        await notifier.notify_division_managers(employee_id, "MESS_REQUESTED", title, body, target="mess")
+        await notifier.notify_roles(("ADMIN_HR_GA",), "MESS_REQUESTED", title, body, target="mess")
         return stay
+
+    async def _can_decide(self, user: CurrentUser, employee_id: UUID | str) -> bool:
+        if user.role in ORG_WIDE_ROLES:
+            return True
+        if user.role == "PROJECT_MANAGER":
+            pm_id = await self.repo.division_pm_of(employee_id)
+            return pm_id is not None and str(pm_id) == str(user.employee_id)
+        return False
+
+    async def decide(self, user: CurrentUser, mess_stay_id: UUID, data: MessDecision) -> Any:
+        stay = await self.get_stay(mess_stay_id)
+        if str(user.employee_id) == str(stay.employee_id):
+            raise ForbiddenError("Pemohon tidak dapat memutuskan pengajuannya sendiri.")
+        if not await self._can_decide(user, stay.employee_id):
+            raise ForbiddenError("Anda tidak berwenang memutuskan pengajuan mess karyawan ini.")
+        if stay.status != "REQUESTED":
+            raise AppError("MESS_ALREADY_DECIDED", "Pengajuan ini sudah diputuskan atau dibatalkan.", status=409)
+        note = (data.note or "").strip() or None
+        if not data.approve and note is None:
+            raise ValidationError("Alasan penolakan wajib diisi.")
+        if data.approve:
+            place = await self.get_place(stay.mess_id) if stay.mess_id else None
+            if place is not None:
+                await self._check_capacity(place, stay.stay_start_date, stay.stay_end_date, exclude=mess_stay_id)
+            await self._check_period(stay.employee_id, stay.stay_start_date, stay.stay_end_date, exclude=mess_stay_id)
+        status = "APPROVED" if data.approve else "REJECTED"
+        await self.repo.decide(mess_stay_id, status, user.user_id, note, utcnow())
+        notifier = NotificationService(self.db)
+        who = await notifier.employee_name(user.employee_id) if user.employee_id else None
+        await notifier.notify_employees(
+            [stay.employee_id], "MESS_DECIDED",
+            f"Pengajuan mess {'disetujui' if data.approve else 'ditolak'}" + (f" oleh {who}" if who else ""),
+            f"{stay.mess_name}, {_period(stay.stay_start_date, stay.stay_end_date)}"
+            + (f". Catatan: {note}" if note else ""),
+            target="mess",
+        )
+        return await self.repo.get(mess_stay_id)
+
+    def _is_owner(self, user: CurrentUser, stay: Any) -> bool:
+        return user.employee_id is not None and str(user.employee_id) == str(stay.employee_id)
+
+    async def cancel(self, user: CurrentUser, mess_stay_id: UUID) -> Any:
+        """Pemohon membatalkan pengajuan (atau hunian yang belum dimulai); HR/GA boleh membatalkan siapa pun."""
+        stay = await self.get_stay(mess_stay_id)
+        if not (self._is_owner(user, stay) or user.role in MANAGER_ROLES):
+            raise ForbiddenError("Hanya pemohon atau HR/GA yang dapat membatalkan hunian ini.")
+        not_started = stay.stay_start_date > jakarta_now().date()
+        cancellable = stay.status == "REQUESTED" or (stay.status == "APPROVED" and not_started)
+        if not cancellable:
+            raise AppError("MESS_NOT_CANCELLABLE", "Hunian yang sudah berjalan tidak dapat dibatalkan; pakai "
+                           "\"Selesai inap\".", status=409)
+        await self.repo.set_status(mess_stay_id, "CANCELLED")
+        if stay.status == "APPROVED" and not self._is_owner(user, stay):
+            await NotificationService(self.db).notify_employees(
+                [stay.employee_id], "MESS_CANCELLED", f"Hunian di {stay.mess_name} dibatalkan",
+                _period(stay.stay_start_date, stay.stay_end_date), target="mess",
+            )
+        return await self.repo.get(mess_stay_id)
+
+    async def end_stay(self, user: CurrentUser, mess_stay_id: UUID) -> Any:
+        """Selesai inap: tanggal selesai dimajukan ke hari ini (riwayat tetap ada)."""
+        stay = await self.get_stay(mess_stay_id)
+        if not (self._is_owner(user, stay) or user.role in MANAGER_ROLES):
+            raise ForbiddenError("Hanya penghuni atau HR/GA yang dapat menyelesaikan hunian ini.")
+        today = jakarta_now().date()
+        if stay.status != "APPROVED" or stay.stay_start_date > today or stay.stay_end_date < today:
+            raise AppError("MESS_NOT_ACTIVE", "Hanya hunian yang sedang berjalan yang dapat diselesaikan.", status=409)
+        await self.repo.set_end_date(mess_stay_id, today)
+        return await self.repo.get(mess_stay_id)
 
     async def update_stay(self, mess_stay_id: UUID, data: MessStayUpdate) -> Any:
         stay = await self.get_stay(mess_stay_id)
-        await self._check_period(stay.employee_id, data.stay_start_date or stay.stay_start_date,
-                                 data.stay_end_date or stay.stay_end_date, exclude=mess_stay_id)
-        await self.repo.update(mess_stay_id, data.model_dump())
+        start = data.stay_start_date or stay.stay_start_date
+        end = data.stay_end_date or stay.stay_end_date
+        await self._check_period(stay.employee_id, start, end, exclude=mess_stay_id)
+        if stay.mess_id and stay.status == "APPROVED":
+            await self._check_capacity(await self.get_place(stay.mess_id), start, end, exclude=mess_stay_id)
+        await self.repo.update_dates(mess_stay_id, data.stay_start_date, data.stay_end_date)
         return await self.repo.get(mess_stay_id)
 
     async def delete_stay(self, mess_stay_id: UUID) -> None:

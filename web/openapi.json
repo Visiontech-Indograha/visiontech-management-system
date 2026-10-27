@@ -5413,13 +5413,199 @@
     }
    }
   },
+  "/api/v1/mess/places": {
+   "get": {
+    "tags": [
+     "Mess"
+    ],
+    "summary": "List Places",
+    "description": "Daftar mess yang bisa dipilih (nama, alamat, kapasitas, jumlah penghuni hari ini); semua akun login.",
+    "operationId": "list_places_api_v1_mess_places_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/MessPlaceOut"
+         },
+         "type": "array",
+         "title": "Response List Places Api V1 Mess Places Get"
+        }
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "Mess"
+    ],
+    "summary": "Create Place",
+    "description": "Menambah mess ke daftar master.",
+    "operationId": "create_place_api_v1_mess_places_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/MessPlaceIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/MessPlaceOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ]
+   }
+  },
+  "/api/v1/mess/places/{mess_id}": {
+   "put": {
+    "tags": [
+     "Mess"
+    ],
+    "summary": "Update Place",
+    "description": "Memperbarui data mess di master.",
+    "operationId": "update_place_api_v1_mess_places__mess_id__put",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "mess_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Mess Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/MessPlaceUpdate"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/MessPlaceOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "tags": [
+     "Mess"
+    ],
+    "summary": "Delete Place",
+    "description": "Menghapus mess dari daftar (ditolak bila masih dihuni / ada pengajuan aktif).",
+    "operationId": "delete_place_api_v1_mess_places__mess_id__delete",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "mess_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Mess Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": {
+          "type": "string"
+         },
+         "title": "Response Delete Place Api V1 Mess Places  Mess Id  Delete"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/v1/mess": {
    "get": {
     "tags": [
      "Mess"
     ],
     "summary": "List Stays",
-    "description": "Mengambil daftar riwayat dan jadwal hunian mess karyawan.",
+    "description": "Mengambil daftar riwayat, jadwal hunian, dan pengajuan mess karyawan.",
     "operationId": "list_stays_api_v1_mess_get",
     "security": [
      {
@@ -5483,6 +5669,23 @@
        "title": "End"
       },
       "description": "Hunian yang beririsan sampai tanggal ini"
+     },
+     {
+      "name": "status",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "pattern": "^(REQUESTED|APPROVED|REJECTED|CANCELLED)$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Status"
+      }
      }
     ],
     "responses": {
@@ -5517,7 +5720,7 @@
      "Mess"
     ],
     "summary": "Create Stay",
-    "description": "Mencatat hunian mess karyawan baru.",
+    "description": "HR/GA mencatat hunian: karyawan + mess dari master, langsung disetujui.",
     "operationId": "create_stay_api_v1_mess_post",
     "security": [
      {
@@ -5564,7 +5767,7 @@
      "Mess"
     ],
     "summary": "My Stays",
-    "description": "Riwayat dan jadwal hunian mess milik sendiri (tanpa izin view:mess; hanya data akun ini).",
+    "description": "Riwayat, jadwal, dan pengajuan hunian mess milik sendiri (tanpa izin view:mess; hanya data akun ini).",
     "operationId": "my_stays_api_v1_mess_me_get",
     "responses": {
      "200": {
@@ -5577,6 +5780,53 @@
          },
          "type": "array",
          "title": "Response My Stays Api V1 Mess Me Get"
+        }
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ]
+   }
+  },
+  "/api/v1/mess/requests": {
+   "post": {
+    "tags": [
+     "Mess"
+    ],
+    "summary": "Request Stay",
+    "description": "Karyawan mengajukan hunian di mess pilihannya (employee_id dari token); diputus PM/OM/HR.",
+    "operationId": "request_stay_api_v1_mess_requests_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/MessStayRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/MessStayOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
         }
        }
       }
@@ -5642,7 +5892,7 @@
      "Mess"
     ],
     "summary": "Update Stay",
-    "description": "Memperbarui informasi hunian mess karyawan.",
+    "description": "Mengubah periode hunian.",
     "operationId": "update_stay_api_v1_mess__mess_stay_id__put",
     "security": [
      {
@@ -5729,6 +5979,163 @@
           "type": "string"
          },
          "title": "Response Delete Stay Api V1 Mess  Mess Stay Id  Delete"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/mess/{mess_stay_id}/decision": {
+   "post": {
+    "tags": [
+     "Mess"
+    ],
+    "summary": "Decide Stay",
+    "description": "PM divisi / OM / HR menyetujui atau menolak pengajuan hunian (penolakan wajib beralasan).",
+    "operationId": "decide_stay_api_v1_mess__mess_stay_id__decision_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "mess_stay_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Mess Stay Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/MessDecision"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/MessStayOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/mess/{mess_stay_id}/cancel": {
+   "post": {
+    "tags": [
+     "Mess"
+    ],
+    "summary": "Cancel Stay",
+    "description": "Pemohon (atau HR/GA) membatalkan pengajuan / hunian yang belum dimulai.",
+    "operationId": "cancel_stay_api_v1_mess__mess_stay_id__cancel_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "mess_stay_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Mess Stay Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/MessStayOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/mess/{mess_stay_id}/end": {
+   "post": {
+    "tags": [
+     "Mess"
+    ],
+    "summary": "End Stay",
+    "description": "Penghuni (atau HR/GA) menyelesaikan hunian yang sedang berjalan; riwayat tetap tersimpan.",
+    "operationId": "end_stay_api_v1_mess__mess_stay_id__end_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "mess_stay_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Mess Stay Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/MessStayOut"
         }
        }
       }
@@ -19561,7 +19968,32 @@
     ],
     "title": "MemberOut"
    },
-   "MessStayCreate": {
+   "MessDecision": {
+    "properties": {
+     "approve": {
+      "type": "boolean",
+      "title": "Approve"
+     },
+     "note": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 500
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Note"
+     }
+    },
+    "type": "object",
+    "required": [
+     "approve"
+    ],
+    "title": "MessDecision"
+   },
+   "MessPlaceIn": {
     "properties": {
      "mess_name": {
       "type": "string",
@@ -19578,7 +20010,7 @@
      "address": {
       "type": "string",
       "maxLength": 500,
-      "minLength": 3,
+      "minLength": 5,
       "title": "Address"
      },
      "latitude": {
@@ -19590,6 +20022,9 @@
        },
        {
         "type": "string"
+       },
+       {
+        "type": "null"
        }
       ],
       "title": "Latitude"
@@ -19603,45 +20038,42 @@
        },
        {
         "type": "string"
+       },
+       {
+        "type": "null"
        }
       ],
       "title": "Longitude"
      },
-     "employee_id": {
-      "type": "string",
-      "format": "uuid",
-      "title": "Employee Id"
-     },
-     "stay_start_date": {
-      "type": "string",
-      "format": "date",
-      "title": "Stay Start Date"
-     },
-     "stay_end_date": {
-      "type": "string",
-      "format": "date",
-      "title": "Stay End Date"
+     "capacity": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "maximum": 1000.0,
+        "minimum": 1.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Capacity",
+      "description": "Jumlah penghuni maksimum; kosong = tak dibatasi"
      }
     },
     "type": "object",
     "required": [
      "mess_name",
      "city",
-     "address",
-     "latitude",
-     "longitude",
-     "employee_id",
-     "stay_start_date",
-     "stay_end_date"
+     "address"
     ],
-    "title": "MessStayCreate"
+    "title": "MessPlaceIn"
    },
-   "MessStayOut": {
+   "MessPlaceOut": {
     "properties": {
-     "mess_stay_id": {
+     "mess_id": {
       "type": "string",
       "format": "uuid",
-      "title": "Mess Stay Id"
+      "title": "Mess Id"
      },
      "mess_name": {
       "type": "string",
@@ -19656,11 +20088,227 @@
       "title": "Address"
      },
      "latitude": {
-      "type": "string",
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
       "title": "Latitude"
      },
      "longitude": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Longitude"
+     },
+     "capacity": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Capacity"
+     },
+     "occupied": {
+      "type": "integer",
+      "title": "Occupied",
+      "default": 0
+     }
+    },
+    "type": "object",
+    "required": [
+     "mess_id",
+     "mess_name",
+     "city",
+     "address"
+    ],
+    "title": "MessPlaceOut"
+   },
+   "MessPlaceUpdate": {
+    "properties": {
+     "mess_name": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 150,
+        "minLength": 2
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Mess Name"
+     },
+     "city": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 100,
+        "minLength": 2
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "City"
+     },
+     "address": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 500,
+        "minLength": 5
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Address"
+     },
+     "latitude": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 90.0,
+        "minimum": -90.0
+       },
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Latitude"
+     },
+     "longitude": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 180.0,
+        "minimum": -180.0
+       },
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Longitude"
+     },
+     "capacity": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "maximum": 1000.0,
+        "minimum": 1.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Capacity"
+     }
+    },
+    "type": "object",
+    "title": "MessPlaceUpdate"
+   },
+   "MessStayCreate": {
+    "properties": {
+     "employee_id": {
       "type": "string",
+      "format": "uuid",
+      "title": "Employee Id"
+     },
+     "mess_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Mess Id"
+     },
+     "stay_start_date": {
+      "type": "string",
+      "format": "date",
+      "title": "Stay Start Date"
+     },
+     "stay_end_date": {
+      "type": "string",
+      "format": "date",
+      "title": "Stay End Date"
+     }
+    },
+    "type": "object",
+    "required": [
+     "employee_id",
+     "mess_id",
+     "stay_start_date",
+     "stay_end_date"
+    ],
+    "title": "MessStayCreate",
+    "description": "Pencatatan langsung oleh HR/GA: karyawan + mess dari master, langsung disetujui."
+   },
+   "MessStayOut": {
+    "properties": {
+     "mess_stay_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Mess Stay Id"
+     },
+     "mess_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Mess Id"
+     },
+     "mess_name": {
+      "type": "string",
+      "title": "Mess Name"
+     },
+     "city": {
+      "type": "string",
+      "title": "City"
+     },
+     "address": {
+      "type": "string",
+      "title": "Address"
+     },
+     "latitude": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Latitude"
+     },
+     "longitude": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
       "title": "Longitude"
      },
      "employee_id": {
@@ -19700,6 +20348,45 @@
       "format": "date",
       "title": "Stay End Date"
      },
+     "status": {
+      "type": "string",
+      "title": "Status",
+      "default": "APPROVED"
+     },
+     "request_note": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Request Note"
+     },
+     "decision_note": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Decision Note"
+     },
+     "decided_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Decided At"
+     },
      "create_at": {
       "type": "string",
       "format": "date-time",
@@ -19712,8 +20399,6 @@
      "mess_name",
      "city",
      "address",
-     "latitude",
-     "longitude",
      "employee_id",
      "stay_start_date",
      "stay_end_date",
@@ -19721,79 +20406,47 @@
     ],
     "title": "MessStayOut"
    },
+   "MessStayRequest": {
+    "properties": {
+     "mess_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Mess Id"
+     },
+     "stay_start_date": {
+      "type": "string",
+      "format": "date",
+      "title": "Stay Start Date"
+     },
+     "stay_end_date": {
+      "type": "string",
+      "format": "date",
+      "title": "Stay End Date"
+     },
+     "note": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 500
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Note"
+     }
+    },
+    "type": "object",
+    "required": [
+     "mess_id",
+     "stay_start_date",
+     "stay_end_date"
+    ],
+    "title": "MessStayRequest",
+    "description": "Pengajuan hunian oleh karyawan sendiri; diputus PM/OM/HR."
+   },
    "MessStayUpdate": {
     "properties": {
-     "mess_name": {
-      "anyOf": [
-       {
-        "type": "string",
-        "maxLength": 150,
-        "minLength": 2
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Mess Name"
-     },
-     "city": {
-      "anyOf": [
-       {
-        "type": "string",
-        "maxLength": 100,
-        "minLength": 2
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "City"
-     },
-     "address": {
-      "anyOf": [
-       {
-        "type": "string",
-        "maxLength": 500,
-        "minLength": 3
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Address"
-     },
-     "latitude": {
-      "anyOf": [
-       {
-        "type": "number",
-        "maximum": 90.0,
-        "minimum": -90.0
-       },
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Latitude"
-     },
-     "longitude": {
-      "anyOf": [
-       {
-        "type": "number",
-        "maximum": 180.0,
-        "minimum": -180.0
-       },
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Longitude"
-     },
      "stay_start_date": {
       "anyOf": [
        {

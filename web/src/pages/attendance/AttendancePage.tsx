@@ -15,7 +15,7 @@ export function AttendancePage() {
   // Pemegang wewenang lihat/tinjau absensi orang lain: pisahkan absensi pribadi dari absensi anggota (PM) / umum (Finance, OPS).
   const sees = !!me?.permissions.includes("view:all_attendance");
   const hasTeam = canReview || sees;
-  const teamLabel = sees ? "Absensi umum" : "Absensi anggota";
+  const teamLabel = sees ? "Semua karyawan" : "Absensi anggota";
   const [f, setF] = useState<AttendanceFilters>({
     status: canReview ? "NEEDS_REVIEW" : "", from: "", to: "", page: 1, scope: hasTeam ? "team" : "",
   });

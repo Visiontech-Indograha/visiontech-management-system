@@ -82,7 +82,7 @@ export function DocumentsPanel({ employeeId, canManage }: { employeeId: string; 
   return (
     <section aria-label="Berkas">
       <div className="mb-3 flex items-center justify-between">
-        <TextBlock as="h2" className="text-base font-semibold">Berkas</TextBlock>
+        <TextBlock as="h2" className="text-base font-semibold">Daftar berkas</TextBlock>
         {canManage && <ActionButton onClick={() => setEditing(true)}>Tambah berkas</ActionButton>}
       </div>
 

@@ -70,7 +70,8 @@ class _AssetsScreenState extends ConsumerState<AssetsScreen> {
 
   void _toast(String message) {
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(message)));
     }
   }
 
@@ -78,6 +79,7 @@ class _AssetsScreenState extends ConsumerState<AssetsScreen> {
     final done = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       builder: (_) => const _RequestSheet(),
     );
     if (done == true) await _load();
@@ -251,9 +253,6 @@ class _RequestSheet extends ConsumerStatefulWidget {
 class _RequestSheetState extends ConsumerState<_RequestSheet> {
   String _kind = 'tools';
   List<Map<String, dynamic>> _assets = [];
-  String? _assetId;
-  final _purpose = TextEditingController();
-  bool _busy = false;
   bool _loadingAssets = true;
   String? _error;
 
@@ -263,16 +262,10 @@ class _RequestSheetState extends ConsumerState<_RequestSheet> {
     _loadAssets();
   }
 
-  @override
-  void dispose() {
-    _purpose.dispose();
-    super.dispose();
-  }
-
   Future<void> _loadAssets() async {
     setState(() {
       _loadingAssets = true;
-      _assetId = null;
+      _error = null;
     });
     try {
       final list = await ref
@@ -295,20 +288,230 @@ class _RequestSheetState extends ConsumerState<_RequestSheet> {
     }
   }
 
-  String _label(Map<String, dynamic> a) => _kind == 'tools'
-      ? '${a['name']} (${a['tool_code']})'
-      : '${a['name']} (${a['number_plate']})';
+  Future<void> _open(Map<String, dynamic> asset) async {
+    final sent = await showDialog<bool>(
+      context: context,
+      builder: (_) => _AssetDetailDialog(asset: asset, kind: _kind),
+    );
+    if (sent == true && mounted) Navigator.of(context).pop(true);
+  }
 
-  String _id(Map<String, dynamic> a) =>
-      (_kind == 'tools' ? a['tool_id'] : a['vehicle_id']) as String;
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: MediaQuery.of(context).size.height * 0.88,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text('Pilih aset yang ingin dipinjam', style: VmsTextStyles.heading),
+            const SizedBox(height: 4),
+            Text(
+              'Ketuk kartu untuk melihat foto dan mengajukan.',
+              style: VmsTextStyles.bodySm,
+            ),
+            const SizedBox(height: 12),
+            SegmentedButton<String>(
+              segments: const [
+                ButtonSegment(
+                  value: 'tools',
+                  label: Text('Alat'),
+                  icon: Icon(Icons.handyman_rounded),
+                ),
+                ButtonSegment(
+                  value: 'vehicles',
+                  label: Text('Kendaraan'),
+                  icon: Icon(Icons.directions_car_rounded),
+                ),
+              ],
+              selected: {_kind},
+              onSelectionChanged: (s) {
+                setState(() => _kind = s.first);
+                _loadAssets();
+              },
+            ),
+            const SizedBox(height: 12),
+            Expanded(
+              child: _loadingAssets
+                  ? const Center(child: CircularProgressIndicator())
+                  : _error != null
+                  ? Center(
+                      child: Text(
+                        _error!,
+                        style: const TextStyle(color: Colors.red),
+                      ),
+                    )
+                  : _assets.isEmpty
+                  ? const Center(
+                      child: Text('Tidak ada aset yang tersedia saat ini.'),
+                    )
+                  : GridView.builder(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            mainAxisSpacing: 12,
+                            crossAxisSpacing: 12,
+                            childAspectRatio: 0.82,
+                          ),
+                      itemCount: _assets.length,
+                      itemBuilder: (_, i) => _AssetCard(
+                        asset: _assets[i],
+                        kind: _kind,
+                        onTap: () => _open(_assets[i]),
+                      ),
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+String _assetTitle(Map<String, dynamic> a) => (a['name'] as String?) ?? '-';
+
+String _assetCode(Map<String, dynamic> a, String kind) =>
+    ((kind == 'tools' ? a['tool_code'] : a['number_plate']) as String?) ?? '';
+
+/// Foto aset (URL bersyarat dari server); ikon bila belum ada foto atau gagal dimuat.
+class _AssetPhoto extends ConsumerWidget {
+  const _AssetPhoto({
+    required this.asset,
+    required this.kind,
+    this.variant = 'thumb',
+  });
+  final Map<String, dynamic> asset;
+  final String kind;
+  final String variant;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final icon = Icon(
+      kind == 'tools' ? Icons.handyman_rounded : Icons.directions_car_rounded,
+      size: 40,
+      color: Colors.black38,
+    );
+    final fileId = asset['photo_file_id'] as String?;
+    return Container(
+      color: Colors.black.withValues(alpha: 0.05),
+      alignment: Alignment.center,
+      child: fileId == null
+          ? icon
+          : FutureBuilder<String>(
+              future: ref
+                  .read(syncEngineProvider)
+                  .api
+                  .fileUrl(fileId, variant: variant),
+              builder: (_, s) => s.hasData
+                  ? Image.network(
+                      s.data!,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      height: double.infinity,
+                      errorBuilder: (_, _, _) => icon,
+                    )
+                  : s.hasError
+                  ? icon
+                  : const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+            ),
+    );
+  }
+}
+
+class _AssetCard extends StatelessWidget {
+  const _AssetCard({
+    required this.asset,
+    required this.kind,
+    required this.onTap,
+  });
+  final Map<String, dynamic> asset;
+  final String kind;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Theme.of(context).colorScheme.surface,
+      borderRadius: BorderRadius.circular(16),
+      clipBehavior: Clip.antiAlias,
+      elevation: 1,
+      child: InkWell(
+        onTap: onTap,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: SizedBox(
+                width: double.infinity,
+                child: _AssetPhoto(asset: asset, kind: kind),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _assetTitle(asset),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: VmsTextStyles.bodySm,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    _assetCode(asset, kind),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 12, color: Colors.black54),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Modal detail aset: foto besar + tujuan penggunaan + tombol ajukan. Mengembalikan true bila terkirim.
+class _AssetDetailDialog extends ConsumerStatefulWidget {
+  const _AssetDetailDialog({required this.asset, required this.kind});
+  final Map<String, dynamic> asset;
+  final String kind;
+
+  @override
+  ConsumerState<_AssetDetailDialog> createState() => _AssetDetailDialogState();
+}
+
+class _AssetDetailDialogState extends ConsumerState<_AssetDetailDialog> {
+  final _purpose = TextEditingController();
+  bool _busy = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _purpose.dispose();
+    super.dispose();
+  }
 
   Future<void> _submit() async {
-    if (_assetId == null || _purpose.text.trim().length < 3) {
-      setState(
-        () => _error = 'Pilih aset dan isi tujuan (minimal 3 karakter).',
-      );
+    if (_busy) return;
+    if (_purpose.text.trim().length < 3) {
+      setState(() => _error = 'Isi tujuan penggunaan (minimal 3 karakter).');
       return;
     }
+    final id =
+        (widget.kind == 'tools'
+                ? widget.asset['tool_id']
+                : widget.asset['vehicle_id'])
+            as String;
     setState(() {
       _busy = true;
       _error = null;
@@ -318,8 +521,8 @@ class _RequestSheetState extends ConsumerState<_RequestSheet> {
           .read(syncEngineProvider)
           .api
           .requestLoan(
-            assetType: _kind == 'tools' ? 'TOOL' : 'VEHICLE',
-            assetId: _assetId!,
+            assetType: widget.kind == 'tools' ? 'TOOL' : 'VEHICLE',
+            assetId: id,
             purpose: _purpose.text.trim(),
           );
       if (mounted) Navigator.of(context).pop(true);
@@ -335,67 +538,73 @@ class _RequestSheetState extends ConsumerState<_RequestSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        16,
-        16,
-        16,
-        MediaQuery.of(context).viewInsets.bottom + 16,
-      ),
+    final a = widget.asset;
+    return Dialog(
+      insetPadding: const EdgeInsets.all(20),
+      clipBehavior: Clip.antiAlias,
       child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            SegmentedButton<String>(
-              segments: const [
-                ButtonSegment(value: 'tools', label: Text('Alat')),
-                ButtonSegment(value: 'vehicles', label: Text('Kendaraan')),
-              ],
-              selected: {_kind},
-              onSelectionChanged: (s) {
-                setState(() => _kind = s.first);
-                _loadAssets();
-              },
+            SizedBox(
+              height: 200,
+              child: _AssetPhoto(asset: a, kind: widget.kind, variant: 'view'),
             ),
-            const SizedBox(height: 8),
-            if (_loadingAssets)
-              const Padding(
-                padding: EdgeInsets.all(16),
-                child: Center(child: CircularProgressIndicator()),
-              )
-            else if (_assets.isEmpty)
-              const Padding(
-                padding: EdgeInsets.all(8),
-                child: Text('Tidak ada aset yang tersedia.'),
-              )
-            else
-              DropdownButtonFormField<String>(
-                initialValue: _assetId,
-                isExpanded: true,
-                decoration: const InputDecoration(labelText: 'Aset'),
-                items: [
-                  for (final a in _assets)
-                    DropdownMenuItem(value: _id(a), child: Text(_label(a))),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(_assetTitle(a), style: VmsTextStyles.heading),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${widget.kind == 'tools' ? 'Kode' : 'Plat'}: ${_assetCode(a, widget.kind)}',
+                    style: VmsTextStyles.bodySm,
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _purpose,
+                    maxLength: 500,
+                    maxLines: 2,
+                    onChanged: (_) {
+                      if (_error != null) setState(() => _error = null);
+                    },
+                    decoration: const InputDecoration(
+                      labelText: 'Tujuan penggunaan',
+                      hintText: 'Mis. survei titik CCTV di Duri',
+                    ),
+                  ),
+                  if (_error != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        _error!,
+                        style: const TextStyle(color: Colors.red),
+                      ),
+                    ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: _busy
+                              ? null
+                              : () => Navigator.of(context).pop(false),
+                          child: const Text('Batal'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: FilledButton(
+                          onPressed: _busy ? null : _submit,
+                          child: Text(_busy ? 'Mengirim...' : 'Ajukan pinjam'),
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
-                onChanged: (v) => setState(() => _assetId = v),
               ),
-            const SizedBox(height: 8),
-            TextField(
-            maxLength: 500,
-              controller: _purpose,
-              maxLines: 2,
-              decoration: const InputDecoration(labelText: 'Tujuan penggunaan'),
-            ),
-            if (_error != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Text(_error!, style: const TextStyle(color: Colors.red)),
-              ),
-            const SizedBox(height: 12),
-            FilledButton(
-              onPressed: _busy ? null : _submit,
-              child: Text(_busy ? 'Mengirim...' : 'Kirim pengajuan'),
             ),
           ],
         ),
@@ -511,7 +720,7 @@ class _ReturnSheetState extends ConsumerState<_ReturnSheet> {
             ),
             const SizedBox(height: 8),
             TextField(
-            maxLength: 500,
+              maxLength: 500,
               controller: _note,
               maxLines: 2,
               decoration: const InputDecoration(

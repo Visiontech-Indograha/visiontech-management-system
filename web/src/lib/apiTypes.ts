@@ -1479,6 +1479,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/mess/places": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Places
+         * @description Daftar mess yang bisa dipilih (nama, alamat, kapasitas, jumlah penghuni hari ini); semua akun login.
+         */
+        get: operations["list_places_api_v1_mess_places_get"];
+        put?: never;
+        /**
+         * Create Place
+         * @description Menambah mess ke daftar master.
+         */
+        post: operations["create_place_api_v1_mess_places_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mess/places/{mess_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Update Place
+         * @description Memperbarui data mess di master.
+         */
+        put: operations["update_place_api_v1_mess_places__mess_id__put"];
+        post?: never;
+        /**
+         * Delete Place
+         * @description Menghapus mess dari daftar (ditolak bila masih dihuni / ada pengajuan aktif).
+         */
+        delete: operations["delete_place_api_v1_mess_places__mess_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/mess": {
         parameters: {
             query?: never;
@@ -1488,13 +1536,13 @@ export interface paths {
         };
         /**
          * List Stays
-         * @description Mengambil daftar riwayat dan jadwal hunian mess karyawan.
+         * @description Mengambil daftar riwayat, jadwal hunian, dan pengajuan mess karyawan.
          */
         get: operations["list_stays_api_v1_mess_get"];
         put?: never;
         /**
          * Create Stay
-         * @description Mencatat hunian mess karyawan baru.
+         * @description HR/GA mencatat hunian: karyawan + mess dari master, langsung disetujui.
          */
         post: operations["create_stay_api_v1_mess_post"];
         delete?: never;
@@ -1512,11 +1560,31 @@ export interface paths {
         };
         /**
          * My Stays
-         * @description Riwayat dan jadwal hunian mess milik sendiri (tanpa izin view:mess; hanya data akun ini).
+         * @description Riwayat, jadwal, dan pengajuan hunian mess milik sendiri (tanpa izin view:mess; hanya data akun ini).
          */
         get: operations["my_stays_api_v1_mess_me_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mess/requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Request Stay
+         * @description Karyawan mengajukan hunian di mess pilihannya (employee_id dari token); diputus PM/OM/HR.
+         */
+        post: operations["request_stay_api_v1_mess_requests_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1537,7 +1605,7 @@ export interface paths {
         get: operations["get_stay_api_v1_mess__mess_stay_id__get"];
         /**
          * Update Stay
-         * @description Memperbarui informasi hunian mess karyawan.
+         * @description Mengubah periode hunian.
          */
         put: operations["update_stay_api_v1_mess__mess_stay_id__put"];
         post?: never;
@@ -1546,6 +1614,66 @@ export interface paths {
          * @description Menghapus data hunian mess karyawan.
          */
         delete: operations["delete_stay_api_v1_mess__mess_stay_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mess/{mess_stay_id}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Decide Stay
+         * @description PM divisi / OM / HR menyetujui atau menolak pengajuan hunian (penolakan wajib beralasan).
+         */
+        post: operations["decide_stay_api_v1_mess__mess_stay_id__decision_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mess/{mess_stay_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel Stay
+         * @description Pemohon (atau HR/GA) membatalkan pengajuan / hunian yang belum dimulai.
+         */
+        post: operations["cancel_stay_api_v1_mess__mess_stay_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mess/{mess_stay_id}/end": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * End Stay
+         * @description Penghuni (atau HR/GA) menyelesaikan hunian yang sedang berjalan; riwayat tetap tersimpan.
+         */
+        post: operations["end_stay_api_v1_mess__mess_stay_id__end_post"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -6258,8 +6386,15 @@ export interface components {
              */
             create_at: string;
         };
-        /** MessStayCreate */
-        MessStayCreate: {
+        /** MessDecision */
+        MessDecision: {
+            /** Approve */
+            approve: boolean;
+            /** Note */
+            note?: string | null;
+        };
+        /** MessPlaceIn */
+        MessPlaceIn: {
             /** Mess Name */
             mess_name: string;
             /** City */
@@ -6267,14 +6402,70 @@ export interface components {
             /** Address */
             address: string;
             /** Latitude */
-            latitude: number | string;
+            latitude?: number | string | null;
             /** Longitude */
-            longitude: number | string;
+            longitude?: number | string | null;
+            /**
+             * Capacity
+             * @description Jumlah penghuni maksimum; kosong = tak dibatasi
+             */
+            capacity?: number | null;
+        };
+        /** MessPlaceOut */
+        MessPlaceOut: {
+            /**
+             * Mess Id
+             * Format: uuid
+             */
+            mess_id: string;
+            /** Mess Name */
+            mess_name: string;
+            /** City */
+            city: string;
+            /** Address */
+            address: string;
+            /** Latitude */
+            latitude?: string | null;
+            /** Longitude */
+            longitude?: string | null;
+            /** Capacity */
+            capacity?: number | null;
+            /**
+             * Occupied
+             * @default 0
+             */
+            occupied: number;
+        };
+        /** MessPlaceUpdate */
+        MessPlaceUpdate: {
+            /** Mess Name */
+            mess_name?: string | null;
+            /** City */
+            city?: string | null;
+            /** Address */
+            address?: string | null;
+            /** Latitude */
+            latitude?: number | string | null;
+            /** Longitude */
+            longitude?: number | string | null;
+            /** Capacity */
+            capacity?: number | null;
+        };
+        /**
+         * MessStayCreate
+         * @description Pencatatan langsung oleh HR/GA: karyawan + mess dari master, langsung disetujui.
+         */
+        MessStayCreate: {
             /**
              * Employee Id
              * Format: uuid
              */
             employee_id: string;
+            /**
+             * Mess Id
+             * Format: uuid
+             */
+            mess_id: string;
             /**
              * Stay Start Date
              * Format: date
@@ -6293,6 +6484,8 @@ export interface components {
              * Format: uuid
              */
             mess_stay_id: string;
+            /** Mess Id */
+            mess_id?: string | null;
             /** Mess Name */
             mess_name: string;
             /** City */
@@ -6300,9 +6493,9 @@ export interface components {
             /** Address */
             address: string;
             /** Latitude */
-            latitude: string;
+            latitude?: string | null;
             /** Longitude */
-            longitude: string;
+            longitude?: string | null;
             /**
              * Employee Id
              * Format: uuid
@@ -6323,23 +6516,47 @@ export interface components {
              */
             stay_end_date: string;
             /**
+             * Status
+             * @default APPROVED
+             */
+            status: string;
+            /** Request Note */
+            request_note?: string | null;
+            /** Decision Note */
+            decision_note?: string | null;
+            /** Decided At */
+            decided_at?: string | null;
+            /**
              * Create At
              * Format: date-time
              */
             create_at: string;
         };
+        /**
+         * MessStayRequest
+         * @description Pengajuan hunian oleh karyawan sendiri; diputus PM/OM/HR.
+         */
+        MessStayRequest: {
+            /**
+             * Mess Id
+             * Format: uuid
+             */
+            mess_id: string;
+            /**
+             * Stay Start Date
+             * Format: date
+             */
+            stay_start_date: string;
+            /**
+             * Stay End Date
+             * Format: date
+             */
+            stay_end_date: string;
+            /** Note */
+            note?: string | null;
+        };
         /** MessStayUpdate */
         MessStayUpdate: {
-            /** Mess Name */
-            mess_name?: string | null;
-            /** City */
-            city?: string | null;
-            /** Address */
-            address?: string | null;
-            /** Latitude */
-            latitude?: number | string | null;
-            /** Longitude */
-            longitude?: number | string | null;
             /** Stay Start Date */
             stay_start_date?: string | null;
             /** Stay End Date */
@@ -12029,6 +12246,127 @@ export interface operations {
             };
         };
     };
+    list_places_api_v1_mess_places_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessPlaceOut"][];
+                };
+            };
+        };
+    };
+    create_place_api_v1_mess_places_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MessPlaceIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessPlaceOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_place_api_v1_mess_places__mess_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                mess_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MessPlaceUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessPlaceOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_place_api_v1_mess_places__mess_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                mess_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_stays_api_v1_mess_get: {
         parameters: {
             query?: {
@@ -12038,6 +12376,7 @@ export interface operations {
                 start?: string | null;
                 /** @description Hunian yang beririsan sampai tanggal ini */
                 end?: string | null;
+                status?: string | null;
             };
             header?: never;
             path?: never;
@@ -12114,6 +12453,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MessStayOut"][];
+                };
+            };
+        };
+    };
+    request_stay_api_v1_mess_requests_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MessStayRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessStayOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -12204,6 +12576,103 @@ export interface operations {
                     "application/json": {
                         [key: string]: string;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    decide_stay_api_v1_mess__mess_stay_id__decision_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                mess_stay_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MessDecision"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessStayOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_stay_api_v1_mess__mess_stay_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                mess_stay_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessStayOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    end_stay_api_v1_mess__mess_stay_id__end_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                mess_stay_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessStayOut"];
                 };
             };
             /** @description Validation Error */

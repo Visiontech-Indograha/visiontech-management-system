@@ -14,14 +14,17 @@ import { CalendarClock, LogOut, MapPin } from "@/components/molecules/Glyphs";
 
 export function MessList({
   stays,
+  canAdd,
   onAdd,
   onCheckout,
 }: {
   stays: UseQueryResult<MessStay[]>;
+  canAdd: boolean;
   onAdd: () => void;
   onCheckout: (stay: MessStay) => void;
 }) {
   const [ending, setEnding] = useState<MessStay | null>(null);
+  const today = wibDate();
   return (
     <>
       {stays.isPending && (
@@ -31,12 +34,17 @@ export function MessList({
         </div>
       )}
       {stays.isError && (
-        <RetryNotice message="Daftar hunian mess tidak dapat dimuat." onRetry={() => stays.refetch()} />
+        <RetryNotice
+          message="Daftar hunian mess tidak dapat dimuat."
+          onRetry={() => stays.refetch()}
+        />
       )}
       {stays.data?.length === 0 && (
         <div className="rounded-panel border border-line bg-surface shadow-card p-6 text-center">
-          <TextBlock className="mb-3 text-mist">Belum ada karyawan yang tercatat tinggal di mess.</TextBlock>
-          <MessAddButton onAdd={onAdd} />
+          <TextBlock className="mb-3 text-mist">
+            Belum ada karyawan yang tercatat tinggal di mess.
+          </TextBlock>
+          {canAdd && <MessAddButton onAdd={onAdd} />}
         </div>
       )}
       {stays.data && stays.data.length > 0 && (
@@ -46,13 +54,21 @@ export function MessList({
               key={s.mess_stay_id}
               className="flex items-start gap-3 rounded-panel border border-line bg-surface shadow-card p-4"
             >
-              <CalendarClock className="mt-0.5 shrink-0 text-primary" size={20} aria-hidden />
+              <CalendarClock
+                className="mt-0.5 shrink-0 text-primary"
+                size={20}
+                aria-hidden
+              />
               <div className="min-w-0 flex-1 space-y-1">
                 <div className="flex items-center justify-between gap-2">
                   <TextBlock className="font-semibold text-ink">
-                    {s.employee_name || `Karyawan (${s.employee_no || s.employee_id.slice(0, 8)})`}
+                    {s.employee_name ||
+                      `Karyawan (${s.employee_no || s.employee_id.slice(0, 8)})`}
                   </TextBlock>
-                  <TextBlock as="span" className="rounded-full bg-primary/10 px-2 py-0.5 text-2xs font-medium text-primary">
+                  <TextBlock
+                    as="span"
+                    className="rounded-full bg-primary/10 px-2 py-0.5 text-2xs font-medium text-primary"
+                  >
                     {s.city}
                   </TextBlock>
                 </div>
@@ -61,22 +77,31 @@ export function MessList({
                 </TextBlock>
                 <div className="flex items-center gap-1 text-xs text-mist">
                   <MapPin size={13} className="shrink-0" />
-                  <TextBlock as="span" className="line-clamp-1">{s.address}</TextBlock>
+                  <TextBlock as="span" className="line-clamp-1">
+                    {s.address}
+                  </TextBlock>
                 </div>
                 <TextBlock className="text-2xs text-mist">
-                  Periode inap: {formatDate(s.stay_start_date)} s/d {formatDate(s.stay_end_date)}
-                  {s.stay_end_date < wibDate() ? " · Melewati jadwal, segera selesaikan" : ""}
+                  Periode inap: {formatDate(s.stay_start_date)} s/d{" "}
+                  {formatDate(s.stay_end_date)}
+                  {s.stay_start_date > today
+                    ? " · Belum dimulai"
+                    : s.stay_end_date < today
+                      ? " · Sudah selesai"
+                      : " · Sedang menginap"}
                 </TextBlock>
               </div>
-              <ActionButton
-                variant="outline"
-                size="sm"
-                className="text-danger hover:bg-danger-bg hover:text-danger ml-2 shrink-0"
-                onClick={() => setEnding(s)}
-              >
-                <LogOut size={14} className="mr-1" />
-                Selesai Inap
-              </ActionButton>
+              {s.stay_start_date <= today && s.stay_end_date >= today && (
+                <ActionButton
+                  variant="outline"
+                  size="sm"
+                  className="text-danger hover:bg-danger-bg hover:text-danger ml-2 shrink-0"
+                  onClick={() => setEnding(s)}
+                >
+                  <LogOut size={14} className="mr-1" />
+                  Selesai Inap
+                </ActionButton>
+              )}
             </ListEntry>
           ))}
         </ListBlock>
@@ -84,7 +109,11 @@ export function MessList({
       <ConfirmDialog
         open={ending !== null}
         title="Selesaikan inap?"
-        message={ending ? `Inap ${ending.employee_name} di ${ending.mess_name} akan ditandai selesai.` : ""}
+        message={
+          ending
+            ? `Inap ${ending.employee_name} di ${ending.mess_name} akan ditandai selesai.`
+            : ""
+        }
         confirmLabel="Selesai inap"
         onConfirm={() => {
           if (ending) onCheckout(ending);

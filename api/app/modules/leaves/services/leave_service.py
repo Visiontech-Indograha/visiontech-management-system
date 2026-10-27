@@ -15,6 +15,7 @@ from app.modules.leaves.repositories.leave_repository import LeaveRepository
 from app.modules.leaves.schemas.leave_schema import LeaveCreate, LeaveReview
 
 ALLOWED_REVIEW_ROLES = ("PROJECT_MANAGER", "ADMIN_HR_GA", "OPERATIONAL_MANAGER", "SUPER_ADMIN")
+ORG_WIDE_ROLES = ("ADMIN_HR_GA", "OPERATIONAL_MANAGER", "SUPER_ADMIN")
 
 
 class LeaveService:
@@ -91,6 +92,9 @@ class LeaveService:
         if str(user.employee_id) == str(leave.employee_id):
             raise ForbiddenError("Pemohon cuti tidak dapat menyetujui atau menolak permohonannya sendiri.")
 
+        if user.role == "PROJECT_MANAGER" and not await self._pm_owns(user, leave.employee_id):
+            raise ForbiddenError("PM hanya dapat meninjau cuti karyawan di divisinya.")
+
         if leave.status in ("APPROVED_BY_HR", "REJECTED", "CANCELLED"):
             raise AppError("ALREADY_DECIDED", "Permohonan cuti ini sudah diputuskan.", status=409)
 
@@ -124,21 +128,44 @@ class LeaveService:
 
         return await self.repo.get_leave(leave_id)
 
-    async def get(self, leave_id: UUID) -> Any:
+    async def _pm_owns(self, user: CurrentUser, employee_id: UUID | str) -> bool:
+        pm_id = await self.repo.division_pm_of(employee_id)
+        return pm_id is not None and str(pm_id) == str(user.employee_id)
+
+    async def _ensure_can_view(self, user: CurrentUser, employee_id: UUID | str) -> None:
+        if user.role in ORG_WIDE_ROLES or str(employee_id) == str(user.employee_id):
+            return
+        if user.role == "PROJECT_MANAGER" and await self._pm_owns(user, employee_id):
+            return
+        raise ForbiddenError("Anda tidak berhak melihat data cuti karyawan ini.")
+
+    async def get(self, user: CurrentUser, leave_id: UUID) -> Any:
         leave = await self.repo.get_leave(leave_id)
         if leave is None:
             raise NotFoundError("Permohonan cuti")
+        await self._ensure_can_view(user, leave.employee_id)
         return leave
 
     async def list(
         self,
+        user: CurrentUser,
         *,
         employee_id: UUID | None = None,
         status: str | None = None,
         year: int | None = None,
     ) -> list[Any]:
-        return list(await self.repo.list_leaves(employee_id=employee_id, status=status, year=year))
+        pm_id = None
+        if user.role == "PROJECT_MANAGER":
+            pm_id = user.employee_id
+        elif user.role not in ORG_WIDE_ROLES:
+            if user.employee_id is None:
+                return []
+            employee_id = UUID(str(user.employee_id))
+        return list(
+            await self.repo.list_leaves(employee_id=employee_id, status=status, year=year, pm_id=pm_id)
+        )
 
-    async def balance(self, employee_id: UUID, year: int) -> Any:
+    async def balance(self, user: CurrentUser, employee_id: UUID, year: int) -> Any:
+        await self._ensure_can_view(user, employee_id)
         bal = await self.repo.get_or_create_balance(employee_id, year)
         return bal

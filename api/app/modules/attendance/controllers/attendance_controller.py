@@ -124,7 +124,9 @@ class AttendanceController:
         data: CheckInRequest,
     ) -> AttendanceResponse:
         """Memproses absensi masuk (check-in) pengguna."""
-        await self.session_service.ensure_check_in_refs(current_user.organization_id, data.site_id, data.selfie_file_id)
+        await self.session_service.ensure_check_in_refs(
+            current_user.organization_id, data.site_id, data.selfie_file_id, user_id=current_user.user_id
+        )
         row = await self.session_service.check_in(
             current_user.organization_id,
             current_user.user_id,
@@ -145,7 +147,9 @@ class AttendanceController:
         data: CheckOutRequest,
     ) -> AttendanceResponse:
         """Memproses absensi pulang (check-out) pengguna."""
-        await self.session_service.ensure_check_in_refs(current_user.organization_id, None, data.selfie_file_id)
+        await self.session_service.ensure_check_in_refs(
+            current_user.organization_id, None, data.selfie_file_id, user_id=current_user.user_id
+        )
         row = await self.session_service.check_out(
             current_user.user_id,
             data.channel,

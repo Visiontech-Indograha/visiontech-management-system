@@ -107,9 +107,16 @@ class AttendanceSessionService:
             raise AppError("WRONG_ATTENDANCE_CHANNEL", WRONG_CHANNEL[channel], status=403)
         return row
 
-    async def ensure_check_in_refs(self, org_id: str, site_id: UUID | None, selfie_file_id: UUID | None) -> None:
-        """Lokasi & swafoto absen (masuk maupun pulang) harus milik organisasi pengguna (galat 422 bila bukan)."""
+    async def ensure_check_in_refs(
+        self, org_id: str, site_id: UUID | None, selfie_file_id: UUID | None, *, user_id: str | None = None
+    ) -> None:
+        """Lokasi & swafoto absen (masuk maupun pulang) harus milik organisasi pengguna (galat 422 bila bukan),
+        dan swafoto harus diunggah oleh akun yang absen itu sendiri (bukan foto orang lain)."""
         await ensure_same_org(self.repo.db, org_id, sites=[site_id] if site_id else [], files=[selfie_file_id])
+        if user_id and selfie_file_id:
+            uploader = await self.repo.file_uploader(selfie_file_id)
+            if uploader is not None and str(uploader) != str(user_id):
+                raise AppError("SELFIE_NOT_OWNED", "Swafoto harus diunggah dari akun Anda sendiri.", status=422)
 
     async def export_csv(self, org_id: str, start: Any, end: Any) -> str:
         """P4-5 · CSV absensi untuk Finance; jam dalam zona waktu organisasi."""
@@ -318,6 +325,7 @@ class AttendanceSessionService:
 
         # Sesi valid yang lupa ditutup mengunci absen masuk berikutnya (O-10); absen hari lalu yang masih
         # menunggu pemeriksaan tidak mengunci hari baru (R-33).
+        await self.repo.lock_employee(employee_id)
         if await self.repo.active_on(employee_id, today):
             raise AppError("ALREADY_CHECKED_IN", ALREADY_TODAY, status=409)
         opened = await self.repo.open_session(employee_id)

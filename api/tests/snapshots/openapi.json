@@ -17937,6 +17937,11 @@
       "required": false,
       "schema": {
        "default": "view",
+       "enum": [
+        "thumb",
+        "view",
+        "full"
+       ],
        "title": "Variant",
        "type": "string"
       }
@@ -18020,6 +18025,11 @@
       "required": false,
       "schema": {
        "default": "full",
+       "enum": [
+        "thumb",
+        "view",
+        "full"
+       ],
        "title": "Variant",
        "type": "string"
       }

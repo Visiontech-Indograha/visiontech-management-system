@@ -81,7 +81,7 @@ describe("Lokasi kerja (/sites)", () => {
   it("dialog tambah punya peta dinamis dan pencarian alamat; hasil cari mengisi lintang, bujur, dan alamat", async () => {
     const calls = mockApi((c) => {
       if (c.url === "/offices") return { data: [] };
-      if (c.url === "/geo/search") return { data: [{ name: "Jl. Sudirman, Pekanbaru, Riau", type: "road", lat: 0.5071, lng: 101.4478 }] };
+      if (c.url === "/work-plans/geo/search") return { data: [{ name: "Jl. Sudirman, Pekanbaru, Riau", type: "road", lat: 0.5071, lng: 101.4478 }] };
     });
     renderRoute("/sites", { role: "PM" });
     await screen.findByText(/Belum ada lokasi kerja/);
@@ -94,7 +94,7 @@ describe("Lokasi kerja (/sites)", () => {
     expect(within(dialog).getByLabelText("Bujur (lng)")).toHaveValue("101.447800");
     expect(within(dialog).getByLabelText("Alamat")).toHaveValue("Jl. Sudirman, Pekanbaru, Riau");
     expect(within(dialog).getByLabelText("Nama lokasi")).toHaveValue("Jl. Sudirman");
-    expect(calls.some((c) => c.url === "/geo/search")).toBe(true);
+    expect(calls.some((c) => c.url === "/work-plans/geo/search")).toBe(true);
   });
 
   it("lintang/bujur tetap bisa diketik manual dan penanda mengikuti", async () => {

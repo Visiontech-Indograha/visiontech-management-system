@@ -35,29 +35,32 @@ async def list_leaves(
     employee_id: UUID | None = Query(None, description="Filter per karyawan"),
     status: str | None = Query(None, description="Filter status cuti"),
     year: int | None = Query(None, description="Tahun cuti"),
+    current_user: CurrentUser = Depends(get_current_user),
     controller: LeaveController = Depends(),
 ) -> list[LeaveResponse]:
     """Mengambil riwayat atau daftar permohonan cuti."""
-    return await controller.handle_list(employee_id=employee_id, status=status, year=year)
+    return await controller.handle_list(current_user, employee_id=employee_id, status=status, year=year)
 
 
 @router.get("/balances/{employee_id}", response_model=LeaveBalanceResponse)
 async def get_leave_balance(
     employee_id: UUID,
     year: int = Query(2026, description="Tahun kuota cuti"),
+    current_user: CurrentUser = Depends(get_current_user),
     controller: LeaveController = Depends(),
 ) -> LeaveBalanceResponse:
     """Mengambil kuota dan sisa cuti tahunan karyawan."""
-    return await controller.handle_balance(employee_id, year)
+    return await controller.handle_balance(current_user, employee_id, year)
 
 
 @router.get("/{leave_id}", response_model=LeaveResponse)
 async def get_leave(
     leave_id: UUID,
+    current_user: CurrentUser = Depends(get_current_user),
     controller: LeaveController = Depends(),
 ) -> LeaveResponse:
     """Detail permohonan cuti."""
-    return await controller.handle_get(leave_id)
+    return await controller.handle_get(current_user, leave_id)
 
 
 @router.post("/{leave_id}/review", response_model=LeaveResponse)

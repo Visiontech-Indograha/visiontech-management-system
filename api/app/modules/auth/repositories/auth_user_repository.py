@@ -51,6 +51,19 @@ class AuthUserRepository(BaseRepository):
             {"id": user_id},
         )
 
+    async def session_alive(self, session_id: UUID | str) -> bool:
+        """Keluarga sesi token masih punya refresh aktif (logout/cabut perangkat langsung berlaku)."""
+        row = await self.fetchone(
+            """
+            SELECT 1 AS ok FROM user_sessions s
+            WHERE s.token_family_id = (SELECT token_family_id FROM user_sessions WHERE session_id = CAST(:sid AS uuid))
+              AND s.is_revoked = FALSE AND s.delete_at IS NULL AND s.expires_at > now()
+            LIMIT 1
+            """,
+            {"sid": str(session_id)},
+        )
+        return row is not None
+
     async def find_identity(self, user_id: UUID | str) -> Any:
         """Status aktif & peran akun — dibaca ulang dari DB pada setiap permintaan (bukan dari klaim token)."""
         return await self.fetchone(

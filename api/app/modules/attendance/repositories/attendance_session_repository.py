@@ -78,7 +78,8 @@ class AttendanceSessionRepository(BaseRepository):
                    a.clock_out_at AS check_out_at,
                    a.distance_to_target_m::float AS distance_m,
                    ({IS_LATE_A}) AS is_late,
-                   (a.clock_out_at IS NOT NULL AND a.clock_out_at::time < a.scheduled_out) AS is_early_leave,
+                   (a.clock_out_at IS NOT NULL
+                    AND (a.clock_out_at AT TIME ZONE 'Asia/Jakarta')::time < a.scheduled_out) AS is_early_leave,
                    CASE
                        WHEN a.om_approval_status = 'AUTO_VALID' THEN 'AUTO_VALID'
                        WHEN a.om_approval_status = 'APPROVED_BY_OM' THEN 'APPROVED'
@@ -142,12 +143,15 @@ class AttendanceSessionRepository(BaseRepository):
         close_time: Any,
         explanation: str,
     ) -> list[Any]:
-        """Menutup otomatis sesi absensi yang belum ditutup pada jam penutupan harian."""
+        """Menutup otomatis sesi absensi yang belum ditutup pada jam penutupan harian.
+
+        Jam pulang = jam tutup pada TANGGAL ABSEN itu sendiri (WIB), bukan hari ini: sesi lupa ditutup
+        sejak kemarin tidak boleh tercatat bekerja puluhan jam."""
         return list(
             await self.fetchall(
                 """
                 UPDATE attendance
-                   SET clock_out_at = :close_time,
+                   SET clock_out_at = (attendance_date + CAST(:close_clock AS time)) AT TIME ZONE 'Asia/Jakarta',
                        out_of_radius_note = COALESCE(out_of_radius_note || '; ', '') || :explanation,
                        update_at = NOW()
                  WHERE (NULLIF(:org, '') IS NULL OR office_id = CAST(NULLIF(:org, '') AS uuid))
@@ -158,9 +162,21 @@ class AttendanceSessionRepository(BaseRepository):
                    AND delete_at IS NULL
                 RETURNING attendance_id AS id, employee_id, 'Kantor' AS site_label
                 """,
-                {"org": str(org_id), "work_date": work_date, "close_time": close_time, "explanation": explanation},
+                {"org": str(org_id), "work_date": work_date, "close_clock": close_time, "explanation": explanation},
             )
         )
+
+    async def file_uploader(self, file_id: UUID | str) -> Any:
+        """Akun pengunggah berkas (None bila tidak tercatat)."""
+        row = await self.fetchone(
+            "SELECT uploaded_by FROM file_object WHERE id = CAST(:id AS uuid)", {"id": str(file_id)}
+        )
+        return row.uploaded_by if row else None
+
+    async def lock_employee(self, employee_id: UUID | str) -> None:
+        """Kunci per karyawan sampai transaksi selesai: dua absen masuk bersamaan (ketuk ganda, sinkron
+        offline + online) diproses berurutan sehingga cek "sudah absen" tidak terlewati."""
+        await self.execute("SELECT pg_advisory_xact_lock(hashtext(:emp))", {"emp": f"attendance:{employee_id}"})
 
     async def active_on(self, employee_id: UUID | str, work_date: Any) -> bool:
         """Mengecek apakah ada sesi absensi aktif untuk karyawan tertentu pada tanggal tersebut."""
@@ -373,7 +389,8 @@ class AttendanceSessionRepository(BaseRepository):
                       clock_in_at AS check_in_at, clock_out_at AS check_out_at,
                       distance_to_target_m::float AS distance_m,
                       ({IS_LATE}) AS is_late,
-                      (clock_out_at IS NOT NULL AND clock_out_at::time < scheduled_out) AS is_early_leave,
+                      (clock_out_at IS NOT NULL
+                       AND (clock_out_at AT TIME ZONE 'Asia/Jakarta')::time < scheduled_out) AS is_early_leave,
                       CASE
                           WHEN om_approval_status = 'AUTO_VALID' THEN 'AUTO_VALID'
                           WHEN om_approval_status = 'APPROVED_BY_OM' THEN 'APPROVED'
@@ -442,7 +459,8 @@ class AttendanceSessionRepository(BaseRepository):
                       clock_in_at AS check_in_at, clock_out_at AS check_out_at,
                       distance_to_target_m::float AS distance_m,
                       ({IS_LATE}) AS is_late,
-                      (clock_out_at IS NOT NULL AND clock_out_at::time < scheduled_out) AS is_early_leave,
+                      (clock_out_at IS NOT NULL
+                       AND (clock_out_at AT TIME ZONE 'Asia/Jakarta')::time < scheduled_out) AS is_early_leave,
                       CASE
                           WHEN om_approval_status = 'AUTO_VALID' THEN 'AUTO_VALID'
                           WHEN om_approval_status = 'APPROVED_BY_OM' THEN 'APPROVED'
@@ -517,7 +535,8 @@ class AttendanceSessionRepository(BaseRepository):
                       clock_in_at AS check_in_at, clock_out_at AS check_out_at,
                       distance_to_target_m::float AS distance_m,
                       ({IS_LATE}) AS is_late,
-                      (clock_out_at IS NOT NULL AND clock_out_at::time < scheduled_out) AS is_early_leave,
+                      (clock_out_at IS NOT NULL
+                       AND (clock_out_at AT TIME ZONE 'Asia/Jakarta')::time < scheduled_out) AS is_early_leave,
                       CASE
                           WHEN om_approval_status = 'AUTO_VALID' THEN 'AUTO_VALID'
                           WHEN om_approval_status = 'APPROVED_BY_OM' THEN 'APPROVED'
@@ -548,7 +567,8 @@ class AttendanceSessionRepository(BaseRepository):
                    a.clock_out_at AS check_out_at,
                    a.distance_to_target_m::float AS distance_m,
                    ({IS_LATE_A}) AS is_late,
-                   (a.clock_out_at IS NOT NULL AND a.clock_out_at::time < a.scheduled_out) AS is_early_leave,
+                   (a.clock_out_at IS NOT NULL
+                    AND (a.clock_out_at AT TIME ZONE 'Asia/Jakarta')::time < a.scheduled_out) AS is_early_leave,
                    CASE
                        WHEN a.om_approval_status = 'AUTO_VALID' THEN 'AUTO_VALID'
                        WHEN a.om_approval_status = 'APPROVED_BY_OM' THEN 'APPROVED'
@@ -675,7 +695,8 @@ class AttendanceSessionRepository(BaseRepository):
                    a.clock_out_at AS check_out_at,
                    a.distance_to_target_m::float AS distance_m,
                    ({IS_LATE_A}) AS is_late,
-                   (a.clock_out_at IS NOT NULL AND a.clock_out_at::time < a.scheduled_out) AS is_early_leave,
+                   (a.clock_out_at IS NOT NULL
+                    AND (a.clock_out_at AT TIME ZONE 'Asia/Jakarta')::time < a.scheduled_out) AS is_early_leave,
                    CASE
                        WHEN a.om_approval_status = 'AUTO_VALID' THEN 'AUTO_VALID'
                        WHEN a.om_approval_status = 'APPROVED_BY_OM' THEN 'APPROVED'
@@ -794,7 +815,8 @@ class AttendanceSessionRepository(BaseRepository):
                            ELSE 'NEEDS_REVIEW'
                        END AS status,
                        ({IS_LATE_A}) AS is_late,
-                       (a.clock_out_at IS NOT NULL AND a.clock_out_at::time < a.scheduled_out) AS is_early_leave,
+                       (a.clock_out_at IS NOT NULL
+                        AND (a.clock_out_at AT TIME ZONE 'Asia/Jakarta')::time < a.scheduled_out) AS is_early_leave,
                        NULL::float AS check_out_distance_m,
                        FALSE AS check_out_outside,
                        a.city_zone_status::text AS city_category,

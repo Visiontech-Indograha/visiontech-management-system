@@ -95,7 +95,10 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       final sites = await engine.fetchList('sites', engine.api.sites);
       // Lokasi tugas hari ini (jadwal harian tim yang disetujui/berjalan) juga target absen sah (docs/35 §5):
       // id = daily_plan_id, didahulukan di atas kantor.
-      final today = DateTime.now().toIso8601String().substring(0, 10);
+      // Tanggal server (WIB) bila sudah diketahui; jam HP bisa salah atau beda zona.
+      final today = _serverToday ??
+          DateFormat('yyyy-MM-dd').format(
+              DateTime.now().toUtc().add(const Duration(hours: 7)));
       final plans = await engine.fetchList('daily_today', () => engine.api.dailyPlans(start: today, end: today));
       try {
         final fs = await engine.api.faceStatus();

@@ -14,7 +14,18 @@ enum UserRole {
   const UserRole(this.wireValue);
   final String wireValue;
 
-  static UserRole fromWire(String value) {
+  /// Peran Master Schema V2 (`users.system_role`) yang dikirim `/auth/me`.
+  static const _v2 = {
+    'OPERATIONAL_MANAGER': UserRole.ops,
+    'PROJECT_MANAGER': UserRole.pm,
+    'ADMIN_HR_GA': UserRole.hr,
+    'TEAM_LEADER': UserRole.leader,
+    'EMPLOYEE': UserRole.member,
+  };
+
+  static UserRole fromWire(String? value) {
+    final v2 = _v2[value];
+    if (v2 != null) return v2;
     return UserRole.values.firstWhere(
       (r) => r.wireValue == value,
       orElse: () => UserRole.member,
@@ -55,9 +66,9 @@ class AuthUser {
   /// attendance_mode, photo_file_id.
   factory AuthUser.fromJson(Map<String, dynamic> json) {
     return AuthUser(
-      id: json['user_id'] as String,
-      username: json['email'] as String,
-      role: UserRole.fromWire(json['role'] as String),
+      id: (json['user_id'] as String?) ?? '',
+      username: (json['email'] as String?) ?? '',
+      role: UserRole.fromWire(json['role'] as String?),
       employeeId: (json['employee_id'] as String?) ?? '',
       attendanceMode: (json['attendance_mode'] as String?) ?? 'FIELD',
       photoFileId: json['photo_file_id'] as String?,

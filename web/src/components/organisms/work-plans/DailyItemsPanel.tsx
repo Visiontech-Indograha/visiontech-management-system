@@ -57,7 +57,7 @@ export function DailyItemsPanel({ detail, loading, canPlan }: { detail: DailyPla
             <div className="flex flex-wrap items-center justify-between gap-2">
               <TextBlock as="span">
                 {PHASE[i.task_phase] ?? i.task_phase} · {i.title}
-                {i.location_name ? ` · ${i.location_name}` : ""}
+                {i.location_name && !i.title.includes(i.location_name) ? ` · ${i.location_name}` : ""}
               </TextBlock>
               <div className="flex items-center gap-2">
                 <Pill tone={i.status === "DONE" ? "success" : i.status === "PENDING_ROLLOVER" ? "warning" : "neutral"}>

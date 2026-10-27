@@ -251,6 +251,8 @@ class _ItemProgressScreenState extends ConsumerState<ItemProgressScreen> {
         ? 'PARTIAL'
         : 'TODO';
     final stateAccent = statusStyle(state).accent;
+    final overTarget = target > 0 && qty > target;
+    final barColor = overTarget ? theme.colorScheme.error : stateAccent.strong;
     final mandatory = _slots.where((s) => s['is_mandatory'] == true).toList();
     final filled = mandatory.where((s) => _photos.any((p) => p.requirementId == s['image_requirement_id'])).length;
     final waiting = item['depends_on_title'] != null && item['depends_on_done'] != true;
@@ -402,15 +404,17 @@ class _ItemProgressScreenState extends ConsumerState<ItemProgressScreen> {
                     child: LinearProgressIndicator(
                       value: v,
                       minHeight: 8,
-                      color: stateAccent.strong,
-                      backgroundColor: stateAccent.soft,
+                      color: barColor,
+                      backgroundColor: overTarget ? theme.colorScheme.errorContainer : stateAccent.soft,
                     ),
                   ),
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  '${statusStyle(state).label} · ${(pct * 100).round()}%',
-                  style: theme.textTheme.bodySmall?.copyWith(color: stateAccent.strong, fontWeight: FontWeight.w700),
+                  overTarget
+                      ? 'Melebihi target (${qtyText(target)})'
+                      : '${statusStyle(state).label} · ${(pct * 100).round()}%',
+                  style: theme.textTheme.bodySmall?.copyWith(color: barColor, fontWeight: FontWeight.w700),
                 ),
               ],
             ),

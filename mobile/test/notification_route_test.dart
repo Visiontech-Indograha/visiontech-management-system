@@ -6,6 +6,7 @@ void main() {
     expect(notificationRoute('leave'), '/leaves');
     expect(notificationRoute('asset'), '/assets');
     expect(notificationRoute('overtime'), '/overtime');
+    expect(notificationRoute('mess'), '/mess');
     expect(notificationRoute('plan'), isNull);
     expect(notificationRoute(null), isNull);
   });

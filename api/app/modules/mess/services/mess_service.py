@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.errors import AppError, NotFoundError, ValidationError
 from app.modules.mess.repositories.mess_repository import MessRepository
 from app.modules.mess.schemas.mess_schema import MessStayCreate, MessStayUpdate
+from app.modules.notifications.services.notification_service import NotificationService
 
 
 class MessService:
@@ -21,6 +22,7 @@ class MessService:
 
     def __init__(self, db: AsyncSession) -> None:
         self.repo = MessRepository(db)
+        self.db = db
 
     async def list_stays(self, employee_id: UUID | None, start: date | None, end: date | None) -> list[Any]:
         return await self.repo.list_stays(employee_id, start, end)
@@ -44,7 +46,12 @@ class MessService:
         await self._check_period(data.employee_id, data.stay_start_date, data.stay_end_date)
         fields = data.model_dump()
         fields["employee_id"] = str(data.employee_id)
-        return await self.repo.get(await self.repo.insert(fields))
+        stay = await self.repo.get(await self.repo.insert(fields))
+        await NotificationService(self.db).notify_employees(
+            [data.employee_id], "MESS_ASSIGNED", f"Anda ditempatkan di {data.mess_name}",
+            f"{data.stay_start_date:%d/%m/%Y} - {data.stay_end_date:%d/%m/%Y}, {data.address}", target="mess",
+        )
+        return stay
 
     async def update_stay(self, mess_stay_id: UUID, data: MessStayUpdate) -> Any:
         stay = await self.get_stay(mess_stay_id)

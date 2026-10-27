@@ -275,5 +275,6 @@ String? notificationRoute(String? target) => switch (target) {
       'leave' => '/leaves',
       'asset' => '/assets',
       'overtime' => '/overtime',
+      'mess' => '/mess',
       _ => null,
     };

@@ -6,6 +6,8 @@ import { LoadingBar } from "@/components/molecules/LoadingBar";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
 import { RetryNotice } from "@/components/molecules/RetryNotice";
+import { formatDate } from "@/lib/format";
+import { wibDate } from "@/services/dailyPlanService";
 import { CalendarClock, LogOut, MapPin } from "@/components/molecules/Glyphs";
 
 export function MessList({
@@ -59,7 +61,8 @@ export function MessList({
                   <TextBlock as="span" className="line-clamp-1">{s.address}</TextBlock>
                 </div>
                 <TextBlock className="text-2xs text-mist">
-                  Periode Inap: {s.stay_start_date} s/d {s.stay_end_date}
+                  Periode inap: {formatDate(s.stay_start_date)} s/d {formatDate(s.stay_end_date)}
+                  {s.stay_end_date < wibDate() ? " · Melewati jadwal, segera selesaikan" : ""}
                 </TextBlock>
               </div>
               <ActionButton

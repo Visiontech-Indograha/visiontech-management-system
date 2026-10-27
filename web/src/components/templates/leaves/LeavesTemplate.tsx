@@ -13,6 +13,7 @@ export function LeavesTemplate({
   statusFilter,
   onStatusFilterChange,
   canReview,
+  canFinalReview,
   applying,
   reviewing,
   onApply,
@@ -25,6 +26,7 @@ export function LeavesTemplate({
   statusFilter: string;
   onStatusFilterChange: (status: string) => void;
   canReview: boolean;
+  canFinalReview: boolean;
   applying: boolean;
   reviewing: LeaveRequest | null;
   onApply: () => void;
@@ -45,6 +47,7 @@ export function LeavesTemplate({
           statusFilter={statusFilter}
           onStatusFilterChange={onStatusFilterChange}
           canReview={canReview}
+          canFinalReview={canFinalReview}
           onApply={onApply}
           onReview={onReview}
         />

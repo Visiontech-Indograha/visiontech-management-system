@@ -17,13 +17,16 @@ export function LeavesPage() {
   const [applying, setApplying] = useState(false);
   const [reviewing, setReviewing] = useState<LeaveRequest | null>(null);
 
+  const currentYear = new Date().getFullYear();
+
   // Jika bukan reviewer/admin, batasi daftar ke pengajuan diri sendiri; jika reviewer, tampilkan semua
   const leavesQuery = useLeaves({
     employee_id: canReview ? undefined : (me?.employee_id || undefined),
     status: statusFilter || undefined,
+    year: currentYear,
   });
 
-  const balanceQuery = useLeaveBalance(me?.employee_id ?? "", 2026);
+  const balanceQuery = useLeaveBalance(me?.employee_id ?? "", currentYear);
 
   return (
     <LeavesTemplate

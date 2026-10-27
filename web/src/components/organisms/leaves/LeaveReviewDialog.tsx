@@ -5,6 +5,7 @@ import { FormErrorText } from "@/components/molecules/FormErrorText";
 import { TextAreaField } from "@/components/molecules/Field";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
+import { errorMessage } from "@/lib/errors";
 import { useReviewLeave, type LeaveRequest } from "@/services/leaveService";
 
 export function LeaveReviewDialog({
@@ -39,8 +40,8 @@ export function LeaveReviewDialog({
           : `Permohonan cuti ${leave.employee_name} ditolak.`
       );
       onClose();
-    } catch {
-      setFormError("Gagal memproses permohonan cuti.");
+    } catch (err) {
+      setFormError(errorMessage(err, "Gagal memproses permohonan cuti."));
     }
   };
 

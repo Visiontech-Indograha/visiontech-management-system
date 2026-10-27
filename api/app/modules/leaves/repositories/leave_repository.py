@@ -73,6 +73,22 @@ class LeaveRepository(BaseRepository):
             {"emp": str(employee_id), "year": year, "days": days},
         )
 
+    async def has_overlapping_leave(
+        self, employee_id: UUID | str, start_date: date, end_date: date
+    ) -> bool:
+        """Cek apakah karyawan sudah memiliki permohonan cuti aktif/pending yang bertabrakan tanggalnya."""
+        sql = """
+            SELECT 1
+            FROM leave_request
+            WHERE employee_id = CAST(:emp AS uuid)
+              AND delete_at IS NULL
+              AND status IN ('PENDING', 'APPROVED_BY_PM', 'APPROVED_BY_HR')
+              AND start_date <= :end AND end_date >= :start
+            LIMIT 1
+        """
+        val = await self.scalar(sql, {"emp": str(employee_id), "start": start_date, "end": end_date})
+        return val is not None
+
     async def insert_leave(
         self,
         employee_id: UUID | str,

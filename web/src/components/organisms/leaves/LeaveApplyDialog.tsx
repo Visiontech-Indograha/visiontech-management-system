@@ -7,6 +7,7 @@ import { FormBlock, ControlOption } from "@/components/molecules/FormBlock";
 import { DialogActions } from "@/components/molecules/DialogActions";
 import { FormErrorText } from "@/components/molecules/FormErrorText";
 import { TextBlock } from "@/components/molecules/TextBlock";
+import { errorMessage } from "@/lib/errors";
 import { useLeaveMutation, type LeaveCreateInput } from "@/services/leaveService";
 import { useSession } from "@/stores/sessionStore";
 
@@ -54,8 +55,8 @@ export function LeaveApplyDialog({
       });
       toast.success("Permohonan cuti / izin berhasil diajukan dan menunggu persetujuan.");
       onClose();
-    } catch {
-      setFormError("Gagal mengajukan permohonan cuti. Periksa kuota cuti tahunan atau tanggal yang bentrok.");
+    } catch (err) {
+      setFormError(errorMessage(err, "Gagal mengajukan permohonan cuti. Periksa kuota cuti tahunan atau tanggal yang bentrok."));
     }
   };
 

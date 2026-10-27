@@ -21,6 +21,11 @@ from app.modules.work_plans.schemas.daily_plan_schema import (
     DailyPlanUpdate,
     GeoResult,
 )
+from app.modules.work_plans.schemas.daily_report_schema import (
+    DailyReportCreate,
+    DailyReportOut,
+    WeeklyPresentationOut,
+)
 from app.modules.work_plans.services.daily_plan_service import DailyPlanService
 from app.modules.work_plans.services.geocode_service import GeocodeService
 
@@ -86,3 +91,33 @@ class DailyPlanController:
 
     async def handle_geo_search(self, q: str) -> list[GeoResult]:
         return [GeoResult(**r) for r in await self.geocoder.search(q)]
+
+    async def handle_submit_report(
+        self, user: CurrentUser, daily_plan_id: UUID, data: DailyReportCreate
+    ) -> DailyReportOut:
+        report = await self.service.submit_daily_report(user, daily_plan_id, data)
+        return DailyReportOut(**report._mapping)
+
+    async def handle_get_report(
+        self, user: CurrentUser, daily_plan_id: UUID
+    ) -> DailyReportOut:
+        report = await self.service.get_daily_report(user, daily_plan_id)
+        return DailyReportOut(**report._mapping)
+
+    async def handle_weekly_presentation(
+        self, user: CurrentUser, team_id: UUID, meeting_date: date
+    ) -> WeeklyPresentationOut:
+        data = await self.service.get_weekly_presentation(user, team_id, meeting_date)
+        reports = [DailyReportOut(**r._mapping) for r in data["daily_reports"]]
+        return WeeklyPresentationOut(
+            team_id=data["team_id"],
+            team_name=data["team_name"],
+            week_start=data["week_start"],
+            week_end=data["week_end"],
+            total_plans=data["total_plans"],
+            completed_plans=data["completed_plans"],
+            daily_reports=reports,
+            presentation_notes=data["presentation_notes"],
+            pm_feedback=data["pm_feedback"],
+        )
+

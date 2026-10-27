@@ -3,7 +3,8 @@ app/modules/system/services/sync_service.py
 Sinkronisasi offline (M12; dok 02 A-08, dok 04 §7). Tiap operasi dijalankan dalam SAVEPOINT memakai
 logika yang sama dengan jalur online, lalu ditandai APPLIED / REJECTED (alasan disimpan, tidak dibuang).
 Hanya aksi lapangan yang boleh offline; absensi, penerbitan & persetujuan wajib online (waktu & geofence server).
-Daily-first (Milestone 5): laporan harian & insiden SK V1 dipensiunkan — yang tersisa lembur per jadwal harian.
+Daily-first (Milestone 5): laporan harian jadwal dan lembur dapat diantrekan dari lapangan; laporan insiden SK V1
+dipensiunkan.
 """
 
 from __future__ import annotations
@@ -20,8 +21,10 @@ from app.core.errors import AppError
 from app.core.security import CurrentUser
 from app.modules.overtime.services.overtime_service import OvertimeService
 from app.modules.system.repositories.sync_repository import CRUDSync
+from app.modules.work_plans.schemas.daily_report_schema import DailyReportCreate
+from app.modules.work_plans.services.daily_plan_service import DailyPlanService
 
-OFFLINE_ALLOWED = ("OVERTIME_REPORT",)
+OFFLINE_ALLOWED = ("OVERTIME_REPORT", "DAILY_REPORT_SUBMIT")
 NOT_OFFLINE = "Aksi ini tidak dapat dikirim saat offline."
 INVALID = "Data operasi tidak valid."
 
@@ -64,6 +67,15 @@ class SyncService:
         if op_type == "OVERTIME_REPORT":
             daily_plan_id = UUID(str(p["daily_plan_id"]))
             await OvertimeService(self.db).report(user, daily_plan_id, float(p["hours"]), str(p["reason"]))
+        elif op_type == "DAILY_REPORT_SUBMIT":
+            daily_plan_id = UUID(str(p["daily_plan_id"]))
+            report = DailyReportCreate(
+                summary=str(p["summary"]),
+                obstacles=p.get("obstacles"),
+                photos_json=p.get("photos_json", []),
+            )
+            service = DailyPlanService(self.db)
+            await service.submit_daily_report(user, daily_plan_id, report)
 
     async def apply_operations(self, user: CurrentUser, device_id: str, operations: list[Any]) -> list[dict[str, Any]]:
         """

@@ -56,9 +56,13 @@ def _state(message: str) -> AppError:
 class SurveyService:
     """Use case survei per titik."""
 
-    def __init__(self, db: AsyncSession, repo: SurveyRepository) -> None:
+    def __init__(self, db: AsyncSession, repo: SurveyRepository | None = None) -> None:
         self.db = db
-        self.repo = repo
+        self.repo = repo if repo is not None else SurveyRepository(db)
+
+    async def create_revision_task(self, data: dict[str, Any]) -> UUID | None:
+        """Membuat tugas survei revisi."""
+        return await self.repo.create_task(data)
 
     async def _task(self, user: CurrentUser, task_id: UUID, need: DailyNeed) -> tuple[Any, DailyAccess]:
         task = await self.repo.task(task_id)
@@ -337,10 +341,11 @@ class SurveyService:
         if data.daily_plan_id:
             target = await self.repo.plan_target(data.daily_plan_id)
         elif data.work_date:
-            target = await self.repo.team_day(task.team_id, data.work_date)
+            chosen_team_id = data.team_id or task.team_id
+            target = await self.repo.team_day(chosen_team_id, data.work_date)
             if target is None and data.work_date >= task.work_date:
-                await self.repo.draft_day(task.daily_plan_id, data.work_date, user.employee_id)
-                target = await self.repo.team_day(task.team_id, data.work_date)
+                await self.repo.draft_day(task.daily_plan_id, data.work_date, user.employee_id, team_id=chosen_team_id)
+                target = await self.repo.team_day(chosen_team_id, data.work_date)
         else:
             raise ValidationError("Pilih tanggal atau jadwal tujuan.")
         if target is None:
@@ -349,8 +354,8 @@ class SurveyService:
         if target.status not in PLANNABLE:
             raise _state(f"Jadwal tim pada {target.work_date:%d-%m-%Y} sudah diterbitkan. "
                          "Pilih tanggal lain, atau tambahkan lewat perubahan jadwal.")
-        if str(target.team_id) != str(task.team_id) or str(target.division_id) != str(task.division_id):
-            raise ValidationError("Jadwal lanjutan harus tim & divisi yang sama dengan survei.")
+        if str(target.division_id) != str(task.division_id):
+            raise ValidationError("Jadwal lanjutan harus di divisi yang sama dengan survei.")
         if target.work_date < task.work_date:
             raise ValidationError("Jadwal lanjutan harus pada atau setelah tanggal survei.")
         for wt in filter(None, (data.work_type_id, data.preparation_work_type_id)):

@@ -35,6 +35,9 @@ class VmsApi {
   Future<Map<String, dynamic>> dailyPlan(String id) async =>
       _map((await _dio.get('$_p/work-plans/daily/$id')).data);
 
+  Future<Map<String, dynamic>> dailyReport(String id) async =>
+      _map((await _dio.get('$_p/work-plans/daily/$id/report')).data);
+
   /// Ketua tim memulai hari kerja (APPROVED → ONGOING) / menutupnya (→ COMPLETED).
   Future<Map<String, dynamic>> startDay(String id) async =>
       _map((await _dio.post('$_p/work-plans/daily/$id/start')).data);

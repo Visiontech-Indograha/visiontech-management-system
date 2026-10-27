@@ -125,3 +125,11 @@ GEMINI.md
 
 !web/src/lib/
 backup-prod/
+api/backups/
+.postman/
+IDEA.md
+AGENTS.md
+postman/skills/
+
+
+

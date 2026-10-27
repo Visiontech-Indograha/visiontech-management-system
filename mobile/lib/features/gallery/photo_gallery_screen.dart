@@ -7,6 +7,7 @@ import '../../core/gallery_save.dart';
 import '../../core/local_storage.dart';
 import '../../core/photo_capture.dart';
 import '../../shared/ui/vms_ui.dart';
+import '../notifications/notifications_screen.dart' show NotificationBell;
 
 final _stamp = DateFormat('d MMM yyyy, HH.mm', 'id_ID');
 
@@ -149,7 +150,10 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
             icon: const Icon(Icons.add_a_photo_rounded),
             label: const Text('Ambil foto'),
           ),
-    appBar: VmsTopBar(onBack: widget.asTab ? null : () => Navigator.of(context).maybePop()),
+    appBar: VmsTopBar(
+      onBack: widget.asTab ? null : () => Navigator.of(context).maybePop(),
+      trailing: widget.asTab ? const NotificationBell() : null,
+    ),
     body: _loading
         ? const Center(child: CircularProgressIndicator())
         : _error != null

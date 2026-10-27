@@ -19,6 +19,7 @@ import '../../shared/ui/vms_ui.dart';
 import '../auth/auth_controller.dart';
 import '../auth/auth_state.dart';
 import '../face/face_enroll_gate.dart';
+import '../notifications/notifications_screen.dart' show NotificationBell;
 import '../plans/daily_plan_screen.dart';
 
 /// Absensi (M5, dok 05 §3.5). Wajib online: waktu & geofence ditentukan server.
@@ -609,7 +610,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
         ? 'Selamat sore'
         : 'Selamat malam';
     return Scaffold(
-      appBar: const VmsTopBar(),
+      appBar: const VmsTopBar(trailing: NotificationBell()),
       body: RefreshIndicator(
         onRefresh: _load,
         edgeOffset: 120,

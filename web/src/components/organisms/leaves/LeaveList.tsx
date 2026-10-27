@@ -1,4 +1,5 @@
 import type { UseQueryResult } from "@tanstack/react-query";
+import { formatDate } from "@/lib/format";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { LoadingBar } from "@/components/molecules/LoadingBar";
 import { RetryNotice } from "@/components/molecules/RetryNotice";
@@ -8,15 +9,7 @@ import { SelectField } from "@/components/molecules/Field";
 import { ControlOption } from "@/components/molecules/FormBlock";
 import { Calendar, CheckCircle2, Clock, XCircle } from "@/components/molecules/Glyphs";
 import { LeaveApplyButton } from "./LeaveApplyButton";
-import type { LeaveRequest } from "@/services/leaveService";
-
-const LEAVE_TYPE_LABEL: Record<string, string> = {
-  ANNUAL: "Cuti Tahunan",
-  SICK: "Izin Sakit",
-  MATERNITY: "Cuti Melahirkan",
-  UNPAID: "Cuti di Luar Tanggungan",
-  OTHER: "Izin Khusus",
-};
+import { LEAVE_TYPE_LABEL, type LeaveRequest } from "@/services/leaveService";
 
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
   PENDING: { label: "Menunggu Persetujuan", className: "bg-amber-500/15 text-amber-600 font-medium" },
@@ -124,7 +117,7 @@ export function LeaveList({
                     <div className="flex items-center gap-1.5">
                       <Clock size={13} className="shrink-0" />
                       <TextBlock as="span">
-                        {String(l.start_date).slice(0, 10)} s/d {String(l.end_date).slice(0, 10)} (
+                        {formatDate(String(l.start_date))} s/d {formatDate(String(l.end_date))} (
                         <TextBlock as="strong" className="text-foreground">{l.total_days} hari</TextBlock>)
                       </TextBlock>
                     </div>

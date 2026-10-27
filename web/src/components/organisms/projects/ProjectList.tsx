@@ -1,4 +1,5 @@
 import type { UseQueryResult } from "@tanstack/react-query";
+import { formatDate } from "@/lib/format";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { LoadingBar } from "@/components/molecules/LoadingBar";
 import { RetryNotice } from "@/components/molecules/RetryNotice";
@@ -164,7 +165,7 @@ export function ProjectList({
                     <div className="flex items-center gap-2">
                       <Calendar size={14} className="text-mist shrink-0" />
                       <TextBlock as="span">
-                        {String(p.start_date).slice(0, 10)} s/d {String(p.end_date).slice(0, 10)}
+                        {formatDate(String(p.start_date))} s/d {formatDate(String(p.end_date))}
                       </TextBlock>
                     </div>
                   </div>

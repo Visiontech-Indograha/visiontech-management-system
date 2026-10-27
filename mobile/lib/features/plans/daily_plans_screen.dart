@@ -6,6 +6,7 @@ import '../../core/error_message.dart';
 
 import '../../core/providers.dart';
 import '../../shared/ui/vms_ui.dart';
+import '../notifications/notifications_screen.dart' show NotificationBell;
 import 'daily_plan_screen.dart' show DailyPlanScreen, phaseLabel;
 import 'survey_screen.dart' show MySurveysSection, openReportFile;
 
@@ -90,6 +91,7 @@ class _DailyPlansScreenState extends ConsumerState<DailyPlansScreen> {
     final thisWeek = _monday == mondayOf(DateTime.now());
     final shown = _plans.where((p) => _only == null || (p['phases'] as List? ?? const []).contains(_only)).toList();
     return Scaffold(
+      appBar: const VmsTopBar(trailing: NotificationBell()),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(

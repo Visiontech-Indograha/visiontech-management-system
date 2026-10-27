@@ -9,6 +9,7 @@ import '../../shared/ui/vms_ui.dart';
 import '../auth/auth_controller.dart';
 import '../auth/auth_state.dart';
 import '../face/face_flow.dart';
+import '../notifications/notifications_screen.dart' show NotificationBell;
 import '../sync/sync_queue_screen.dart';
 import '../update/update_ui.dart';
 
@@ -300,7 +301,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final name = user?.displayName ?? '-';
 
     return Scaffold(
-      appBar: VmsTopBar(trailing: _avatar(name, 44)),
+      appBar: VmsTopBar(
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [const NotificationBell(), const SizedBox(width: 8), _avatar(name, 44)],
+        ),
+      ),
       body: ListView(
         padding: safeListPadding(context),
         children: [

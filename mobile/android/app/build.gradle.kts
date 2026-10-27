@@ -13,6 +13,11 @@ val keystoreProperties = Properties().apply {
 }
 val hasReleaseKey = listOf("storeFile", "storePassword", "keyAlias", "keyPassword").all { keystoreProperties.containsKey(it) }
 val isBeta = System.getenv("VMS_BETA") == "1"
+val isDevelopment = System.getenv("VMS_DEVELOPMENT") == "1"
+
+if (isBeta && isDevelopment) {
+    throw GradleException("Pilih salah satu target build: VMS_BETA atau VMS_DEVELOPMENT.")
+}
 
 android {
     namespace = "com.visiontech.vms_mobile"
@@ -40,9 +45,14 @@ android {
         versionCode = flutter.versionCode
         versionName = flutter.versionName
 
-        // APK beta uji lokal (scripts/bangun-beta.sh): berdampingan dengan aplikasi prod.
+        // Beta dan development dipasang berdampingan tanpa mengganti aplikasi produksi.
         if (isBeta) applicationIdSuffix = ".beta"
-        manifestPlaceholders["appLabel"] = if (isBeta) "Visiontech Beta" else "Visiontech"
+        if (isDevelopment) applicationIdSuffix = ".dev"
+        manifestPlaceholders["appLabel"] = when {
+            isBeta -> "Visiontech Beta"
+            isDevelopment -> "Visiontech Dev"
+            else -> "Visiontech"
+        }
     }
 
     signingConfigs {

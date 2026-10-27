@@ -29,6 +29,11 @@ from app.modules.work_plans.schemas.daily_plan_schema import (
     GeoResult,
     RejectIn,
 )
+from app.modules.work_plans.schemas.daily_report_schema import (
+    DailyReportCreate,
+    DailyReportOut,
+    WeeklyPresentationOut,
+)
 from app.shared.access.access_service import DailyAccess, DailyNeed
 
 router = APIRouter(prefix="/work-plans", tags=["Work Plans (Daily-First)"])
@@ -150,8 +155,50 @@ async def complete_daily_plan(daily_plan_id: UUID, current_user: CurrentUser = _
     return await controller.handle_transition(current_user, daily_plan_id, "complete")
 
 
+@router.post(
+    "/daily/{daily_plan_id}/report",
+    response_model=DailyReportOut,
+    status_code=status.HTTP_201_CREATED,
+    summary="Kirim atau Perbarui Laporan Harian Ketua Tim",
+)
+async def submit_daily_report(
+    daily_plan_id: UUID,
+    data: DailyReportCreate,
+    current_user: CurrentUser = _LOGIN,
+    controller: DailyPlanController = Depends(),
+) -> DailyReportOut:
+    """Laporan harian aktif (ringkasan, kendala, foto) oleh ketua tim atau PM/OM."""
+    return await controller.handle_submit_report(current_user, daily_plan_id, data)
+
+
+@router.get(
+    "/daily/{daily_plan_id}/report",
+    response_model=DailyReportOut,
+    summary="Ambil Laporan Harian Tim",
+)
+async def get_daily_report(
+    daily_plan_id: UUID,
+    current_user: CurrentUser = _LOGIN,
+    controller: DailyPlanController = Depends(),
+) -> DailyReportOut:
+    """Detail laporan harian untuk jadwal kerja harian."""
+    return await controller.handle_get_report(current_user, daily_plan_id)
+
+
 @router.get("/orders/{completion_id}/schedule", response_model=list[DailyPlanOut])
 async def order_schedule(completion_id: UUID, current_user: CurrentUser = _LOGIN,
                          controller: DailyPlanController = Depends()) -> list[DailyPlanOut]:
     """Jadwal harian yang memuat item order klien ini (proyek multi-minggu)."""
     return await controller.handle_order_schedule(current_user, completion_id)
+
+
+@router.get("/teams/{team_id}/weekly-presentation", response_model=WeeklyPresentationOut)
+async def get_team_weekly_presentation(
+    team_id: UUID,
+    meeting_date: date = Query(..., description="Tanggal pertemuan evaluasi hari Sabtu"),
+    current_user: CurrentUser = _LOGIN,
+    controller: DailyPlanController = Depends(),
+) -> WeeklyPresentationOut:
+    """Rekapitulasi presentasi laporan harian selama satu minggu untuk setiap tim pada pertemuan hari Sabtu."""
+    return await controller.handle_weekly_presentation(current_user, team_id, meeting_date)
+

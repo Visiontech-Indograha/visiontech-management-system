@@ -98,6 +98,15 @@ class AuthUserRepository(BaseRepository):
         )
         return emp
 
+    async def full_name(self, user_id: UUID | str) -> str | None:
+        """Nama lengkap karyawan yang tertaut ke akun ini (untuk sapaan di aplikasi)."""
+        name = await self.scalar(
+            "SELECT e.full_name FROM users u JOIN employee e ON e.employee_id = u.employee_id "
+            "WHERE u.user_id = CAST(:uid AS uuid) AND u.delete_at IS NULL",
+            {"uid": user_id},
+        )
+        return str(name) if name else None
+
     async def profile_photo_file_id(self, user_id: UUID | str) -> str | None:
         """ID berkas foto profil karyawan yang tertaut ke akun ini (URL bertanda tangan diambil klien terpisah)."""
         photo = await self.scalar(

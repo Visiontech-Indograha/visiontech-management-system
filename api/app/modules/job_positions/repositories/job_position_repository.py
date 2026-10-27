@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
-from app.core.repository import BaseRepository
+from app.core.repository import BaseRepository, safe_columns
 
 _SELECT = """
     SELECT p.position_id, p.division_id, d.name AS division_name, p.code, p.name, p.grade_level,
@@ -51,7 +51,7 @@ class JobPositionRepository(BaseRepository):
     async def update(self, position_id: UUID, fields: dict[str, Any]) -> Any:
         if fields:
             sets = ", ".join(
-                f"{k} = CAST(:{k} AS uuid)" if k == "division_id" else f"{k} = :{k}" for k in fields)
+                f"{k} = CAST(:{k} AS uuid)" if k == "division_id" else f"{k} = :{k}" for k in safe_columns(fields))
             await self.execute(
                 f"UPDATE job_position SET {sets}, update_at = now() WHERE position_id = CAST(:id AS uuid)",
                 {**{k: (str(v) if k == "division_id" and v else v) for k, v in fields.items()}, "id": str(position_id)},

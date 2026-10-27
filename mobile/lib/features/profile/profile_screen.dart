@@ -297,7 +297,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authControllerProvider);
     final user = authState is AuthAuthenticated ? authState.user : null;
-    final name = (user?.username ?? '-').split('@').first;
+    final name = user?.displayName ?? '-';
 
     return Scaffold(
       appBar: VmsTopBar(trailing: _avatar(name, 44)),

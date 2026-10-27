@@ -449,6 +449,14 @@ class _ReturnSheetState extends ConsumerState<_ReturnSheet> {
       setState(() => _error = 'Foto kondisi wajib diambil dengan kamera.');
       return;
     }
+    if (!await confirmAction(
+      context,
+      title: 'Ajukan pengembalian?',
+      message: 'HR/GA akan memeriksa foto dan kondisi aset sebelum pengembalian diterima.',
+      confirmLabel: 'Ajukan pengembalian',
+    )) {
+      return;
+    }
     setState(() {
       _busy = true;
       _error = null;

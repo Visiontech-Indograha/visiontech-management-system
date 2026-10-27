@@ -41,6 +41,7 @@ class AuthUser {
     required this.employeeId,
     this.attendanceMode = 'FIELD',
     this.photoFileId,
+    this.fullName,
   });
 
   final String id;
@@ -58,6 +59,15 @@ class AuthUser {
   /// diambil lewat `GET /files/{id}/url` (lihat VmsApi.fileUrl).
   final String? photoFileId;
 
+  /// Nama lengkap karyawan (dari `/auth/me`); null bila akun belum tertaut ke karyawan.
+  final String? fullName;
+
+  /// Nama untuk tampilan: nama lengkap, atau bagian depan email bila belum ada.
+  String get displayName {
+    final n = fullName?.trim();
+    return (n != null && n.isNotEmpty) ? n : username.split('@').first;
+  }
+
   /// Administrator (pemilik sistem) boleh absen dari HP maupun web, jadi tidak diarahkan ke web saja.
   bool get absensiLewatWeb =>
       attendanceMode == 'OFFICE' && role != UserRole.admin && role != UserRole.superAdmin;
@@ -72,6 +82,7 @@ class AuthUser {
       employeeId: (json['employee_id'] as String?) ?? '',
       attendanceMode: (json['attendance_mode'] as String?) ?? 'FIELD',
       photoFileId: json['photo_file_id'] as String?,
+      fullName: json['full_name'] as String?,
     );
   }
 }

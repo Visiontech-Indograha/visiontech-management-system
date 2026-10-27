@@ -4263,6 +4263,8 @@ export interface components {
             division_id?: string | null;
             /** Photo File Id */
             photo_file_id?: string | null;
+            /** Full Name */
+            full_name?: string | null;
         };
         /** BackupCreate */
         BackupCreate: {

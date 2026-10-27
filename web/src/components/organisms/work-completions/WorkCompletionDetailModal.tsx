@@ -22,6 +22,8 @@ import {
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { LoadingBar } from "@/components/molecules/LoadingBar";
 import { useWorkCompletion } from "@/services/workCompletionService";
+import { PhotoStrip } from "@/components/organisms/PhotoStrip";
+import { photoRefs } from "@/lib/photoRefs";
 import { WorkCompletionBomTable } from "./WorkCompletionBomTable";
 import { WorkCompletionExportPanel } from "./WorkCompletionExportPanel";
 
@@ -189,6 +191,15 @@ export function WorkCompletionDetailModal({
                     <TextBlock className="text-sm text-ink whitespace-pre-wrap">
                       {order.summary_notes}
                     </TextBlock>
+                  </div>
+                )}
+
+                {photoRefs(order.realization_photos_json).length > 0 && (
+                  <div className="rounded-control border border-line p-3 bg-hover/20">
+                    <TextBlock className="text-xs font-semibold text-mist uppercase tracking-wider mb-2">
+                      Foto hasil pekerjaan
+                    </TextBlock>
+                    <PhotoStrip photos={photoRefs(order.realization_photos_json)} alt="Foto hasil pekerjaan" />
                   </div>
                 )}
               </TabsBlockContent>

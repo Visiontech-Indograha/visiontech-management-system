@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:vms_mobile/features/auth/auth_state.dart';
 import 'package:vms_mobile/features/records/my_records_screens.dart';
 
 void main() {
@@ -17,5 +18,11 @@ void main() {
     expect(documentExpiresSoon({'status': 'active', 'expired_at': '2026-10-01'}, today), isTrue);
     expect(documentExpiresSoon({'status': 'extended', 'expired_at': '2026-10-30'}, today), isFalse);
     expect(documentExpiresSoon({'status': 'active', 'expired_at': null}, today), isFalse);
+  });
+
+  test('nama tampilan memakai nama lengkap, cadangannya bagian depan email', () {
+    final withName = AuthUser.fromJson({'email': 'a@b.id', 'full_name': 'Uji Ketua 1.1'});
+    expect(withName.displayName, 'Uji Ketua 1.1');
+    expect(AuthUser.fromJson({'email': 'ketua11@uji.test'}).displayName, 'ketua11');
   });
 }

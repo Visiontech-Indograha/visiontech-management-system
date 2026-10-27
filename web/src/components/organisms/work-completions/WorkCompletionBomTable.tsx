@@ -357,12 +357,14 @@ export function WorkCompletionBomTable({
             <div className="grid grid-cols-3 gap-3">
               <TextField
                 type="number"
+                min={0}
                 step="any"
                 label="Estimasi Kebutuhan"
                 {...addForm.register("estimated_qty", { required: true })}
               />
               <TextField
                 type="number"
+                min={0}
                 step="any"
                 label="Jumlah terpakai"
                 {...addForm.register("actual_qty")}
@@ -401,12 +403,14 @@ export function WorkCompletionBomTable({
             <div className="grid grid-cols-2 gap-3">
               <TextField
                 type="number"
+                min={0}
                 step="any"
                 label="Estimasi Kebutuhan"
                 {...editForm.register("estimated_qty", { required: true })}
               />
               <TextField
                 type="number"
+                min={0}
                 step="any"
                 label={`Jumlah terpakai (${editingItem.unit})`}
                 {...editForm.register("actual_qty", { required: true })}

@@ -14226,6 +14226,17 @@
        }
       ],
       "title": "Photo File Id"
+     },
+     "full_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Full Name"
      }
     },
     "type": "object",

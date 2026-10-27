@@ -29,3 +29,21 @@ def test_overtime_reason_is_length_limited(client, world: World) -> None:
         json={"daily_plan_id": "00000000-0000-0000-0000-000000000000", "hours": 2, "reason": "a" * 1001},
     )
     assert response.status_code == 422
+
+
+def test_like_wildcards_in_search_terms_are_escaped() -> None:
+    from app.core.repository import escape_like
+
+    bs = chr(92)
+    assert escape_like("100%_a" + bs + "b") == "100" + bs + "%" + bs + "_a" + bs + bs + "b"
+    assert escape_like(None) is None
+
+
+def test_dynamic_update_rejects_non_identifier_column_names() -> None:
+    import pytest
+
+    from app.core.repository import safe_columns
+
+    assert safe_columns(["name", "update_at"]) == ["name", "update_at"]
+    with pytest.raises(ValueError):
+        safe_columns(["name = 'x'; DROP TABLE users; --"])

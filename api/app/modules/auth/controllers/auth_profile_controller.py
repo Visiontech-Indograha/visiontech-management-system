@@ -36,6 +36,7 @@ class AuthProfileController:
         photo_file_id = await self.flow_service.profile_photo_file_id(current_user.user_id)
         return AuthUserMeResponseSchema(
             photo_file_id=photo_file_id,
+            full_name=await self.flow_service.full_name(current_user.user_id),
             user_id=res.user_id,
             email=res.email,
             role=res.role,

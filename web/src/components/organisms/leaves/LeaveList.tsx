@@ -25,6 +25,7 @@ export function LeaveList({
   statusFilter,
   onStatusFilterChange,
   canReview,
+  canFinalReview,
   onApply,
   onReview,
 }: {
@@ -32,6 +33,7 @@ export function LeaveList({
   statusFilter: string;
   onStatusFilterChange: (status: string) => void;
   canReview: boolean;
+  canFinalReview: boolean;
   onApply: () => void;
   onReview: (leave: LeaveRequest) => void;
 }) {
@@ -146,9 +148,9 @@ export function LeaveList({
 
                 <div className="mt-4 pt-3 border-t border-line flex items-center justify-between text-xs">
                   <TextBlock as="span" className="text-mist">
-                    Diajukan {String(l.create_at).slice(0, 10)}
+                    Diajukan {formatDate(String(l.create_at))}
                   </TextBlock>
-                  {canReview && isPending && (
+                  {canReview && (isPending || (canFinalReview && l.status === "APPROVED_BY_PM")) && (
                     <ActionButton
                       variant="outline"
                       size="sm"

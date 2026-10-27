@@ -14,6 +14,9 @@ export function LeavesPage() {
     me?.role === "HR" ||
     me?.role === "SUPER_ADMIN";
 
+  // Persetujuan kedua (setelah PM) hanya oleh HR/GA atau admin.
+  const canFinalReview = me?.role === "ADMIN_HR_GA" || me?.role === "HR" || me?.role === "SUPER_ADMIN";
+
   const [statusFilter, setStatusFilter] = useState("");
   const [applying, setApplying] = useState(false);
   const [reviewing, setReviewing] = useState<LeaveRequest | null>(null);
@@ -36,6 +39,7 @@ export function LeavesPage() {
       statusFilter={statusFilter}
       onStatusFilterChange={setStatusFilter}
       canReview={canReview}
+      canFinalReview={canFinalReview}
       applying={applying}
       reviewing={reviewing}
       onApply={() => setApplying(true)}

@@ -728,3 +728,13 @@ class _SkeletonCardsState extends State<SkeletonCards> with SingleTickerProvider
     ),
   );
 }
+
+/// Membuang controller milik dialog setelah animasi tutup dialog selesai. Membuangnya langsung setelah `showDialog`
+/// kembali membuat TextField yang masih tampil saat animasi memicu error "_dependents.isEmpty" (layar merah).
+void disposeAfterDialog(List<TextEditingController> controllers) {
+  Future<void>.delayed(const Duration(milliseconds: 500), () {
+    for (final c in controllers) {
+      c.dispose();
+    }
+  });
+}

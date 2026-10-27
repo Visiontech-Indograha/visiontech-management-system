@@ -10,7 +10,7 @@ from __future__ import annotations
 import csv
 import io
 import sys
-from datetime import datetime, time, timedelta
+from datetime import date, datetime, time, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -177,6 +177,30 @@ class AttendanceSessionService:
         if (end - start).days > 62:
             raise ValidationError("Rentang rekap paling lama 62 hari.")
         return await self.repo.meal_allowance_recap(start, end, division_id)
+
+    async def my_recap(self, user: Any, month: str | None) -> dict[str, Any]:
+        """Rekap absensi bulanan milik sendiri: hari hadir, terlambat, pulang awal, uang makan (hanya absensi sah)."""
+        worker = await self.repo.attendance_mode_of(user.user_id)
+        if worker is None:
+            raise ForbiddenError("Akun ini belum tertaut ke data karyawan.")
+        today = jakarta_now().date()
+        try:
+            year, mon = (today.year, today.month) if not month else (int(month[:4]), int(month[5:7]))
+            first = date(year, mon, 1)
+        except (ValueError, IndexError) as exc:
+            raise ValidationError("Bulan harus berformat YYYY-MM.") from exc
+        last = (date(year + (mon == 12), mon % 12 + 1, 1)) - timedelta(days=1)
+        rows = await self.repo.my_recap_rows(worker.employee_id, first, last)
+        valid = [r for r in rows if r.is_valid]
+        return {
+            "month": f"{year:04d}-{mon:02d}",
+            "days_present": len(rows),
+            "late_days": sum(1 for r in rows if r.is_late),
+            "early_leave_days": sum(1 for r in rows if r.is_early_leave),
+            "pending_days": sum(1 for r in rows if r.is_pending),
+            "meal_allowance_total": float(sum(r.meal_allowance_amount or 0 for r in valid)),
+            "items": rows,
+        }
 
     async def _require_enrolled(self, user_id: str, worker: Any, channel: str, online: bool) -> None:
         """T3: absen HP (online) ditolak bila wajah belum terdaftar dan saklar FACE_ENROLLMENT_REQUIRED menyala.

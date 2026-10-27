@@ -14,6 +14,14 @@ from app.core.security import CurrentUser
 from app.modules.leaves.repositories.leave_repository import LeaveRepository
 from app.modules.leaves.schemas.leave_schema import LeaveCreate, LeaveReview
 
+LEAVE_TYPES = (
+    ("ANNUAL", "Cuti tahunan", True),
+    ("SICK", "Sakit", False),
+    ("MATERNITY", "Cuti melahirkan", False),
+    ("UNPAID", "Cuti tanpa gaji", False),
+    ("OTHER", "Izin lainnya", False),
+)
+CANCELLABLE_STATUSES = ("PENDING", "APPROVED_BY_PM")
 ALLOWED_REVIEW_ROLES = ("PROJECT_MANAGER", "ADMIN_HR_GA", "OPERATIONAL_MANAGER", "SUPER_ADMIN")
 ORG_WIDE_ROLES = ("ADMIN_HR_GA", "OPERATIONAL_MANAGER", "SUPER_ADMIN")
 
@@ -126,6 +134,21 @@ class LeaveService:
                 # Pengembalian kuota karena sebelumnya sudah dipotong saat disetujui PM
                 await self.repo.deduct_balance(leave.employee_id, leave.start_date.year, -leave.total_days)
 
+        return await self.repo.get_leave(leave_id)
+
+    async def cancel(self, user: CurrentUser, leave_id: UUID) -> Any:
+        leave = await self.repo.get_leave(leave_id)
+        if leave is None:
+            raise NotFoundError("Permohonan cuti")
+        if user.employee_id is None or str(user.employee_id) != str(leave.employee_id):
+            raise ForbiddenError("Hanya pemohon yang dapat membatalkan permohonan cutinya.")
+        if leave.status not in CANCELLABLE_STATUSES:
+            raise AppError("NOT_CANCELLABLE", "Permohonan cuti ini sudah tidak dapat dibatalkan.", status=409)
+
+        await self.repo.cancel_leave(leave_id)
+        # Kuota sudah dipotong saat disetujui PM; kembalikan bila dibatalkan
+        if leave.leave_type == "ANNUAL" and leave.status == "APPROVED_BY_PM":
+            await self.repo.deduct_balance(leave.employee_id, leave.start_date.year, -leave.total_days)
         return await self.repo.get_leave(leave_id)
 
     async def _pm_owns(self, user: CurrentUser, employee_id: UUID | str) -> bool:

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { UseQueryResult } from "@tanstack/react-query";
+import { CorrectionsPanel } from "@/components/organisms/work-plans/CorrectionsPanel";
 import { WeeklyPresentationDialog } from "@/components/organisms/work-plans/WeeklyPresentationDialog";
 import { DailyPlanDetailDialog } from "@/components/organisms/work-plans/DailyPlanDetailDialog";
 import { DailyPlanFormDialog } from "@/components/organisms/work-plans/DailyPlanFormDialog";
@@ -92,6 +93,7 @@ export function DailyPlansTemplate(props: {
           onClose={() => onDialog(null)}
         />
       )}
+      <CorrectionsPanel canDecide={canPlan} />
     </PageTemplate>
   );
 }

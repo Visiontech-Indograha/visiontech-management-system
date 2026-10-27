@@ -61,3 +61,9 @@ class LeaveBalanceResponse(BaseModel):
     total_quota: int
     used_quota: int
     remaining_quota: int
+
+
+class LeaveTypeOption(BaseModel):
+    code: LeaveType
+    label: str
+    uses_quota: bool

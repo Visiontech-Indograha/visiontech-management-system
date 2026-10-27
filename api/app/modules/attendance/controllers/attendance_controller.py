@@ -25,6 +25,8 @@ from app.modules.attendance.schemas.attendance_schema import (
     DeviceKeyRequest,
     ExplanationRequest,
     MealAllowanceRow,
+    MyRecapItem,
+    MyRecapResponse,
     OfflineAttendanceEvent,
     OfflineAttendanceResult,
     ReviewRequest,
@@ -210,6 +212,11 @@ class AttendanceController:
     ) -> list[MealAllowanceRow]:
         rows = await self.session_service.meal_allowance(current_user, start_date, end_date, division_id)
         return [MealAllowanceRow(**dict(r._mapping)) for r in rows]
+
+    async def handle_my_recap(self, current_user: CurrentUser, month: str | None) -> MyRecapResponse:
+        data = await self.session_service.my_recap(current_user, month)
+        data["items"] = [MyRecapItem(**dict(r._mapping)) for r in data["items"]]
+        return MyRecapResponse(**data)
 
 
 __all__ = ["AttendanceController"]

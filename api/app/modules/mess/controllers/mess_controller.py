@@ -67,3 +67,9 @@ class MessController:
     ) -> dict[str, str]:
         await self.service.delete_stay(mess_stay_id)
         return {"message": "Data hunian mess berhasil dihapus."}
+
+    async def handle_my_stays(self, current_user: CurrentUser) -> list[MessStayOut]:
+        if current_user.employee_id is None:
+            return []
+        rows = await self.service.list_stays(UUID(str(current_user.employee_id)), None, None)
+        return [MessStayOut(**dict(r._mapping)) for r in rows]

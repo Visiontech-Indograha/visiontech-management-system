@@ -1,13 +1,46 @@
 import 'dart:io';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/api_client.dart' show isNetworkFailure;
 import '../../core/error_message.dart';
 import '../../core/providers.dart';
+import '../../data/sync_engine.dart' show OfflineOp;
 import '../../shared/ui/vms_ui.dart';
 import 'daily_plan_screen.dart' show phaseLabel, qtyText;
 import 'photo_slots.dart' show PhotoOrigin, pickReportPhoto;
+
+/// Alasan hasil kerja belum boleh disimpan, atau null bila valid. Jumlah tidak boleh melebihi target; menandai
+/// selesai (jumlah = target) mewajibkan semua foto wajib terisi.
+String? progressProblem({
+  required num qty,
+  required num target,
+  required int mandatorySlots,
+  required int filledMandatory,
+}) {
+  if (target > 0 && qty > target) {
+    return 'Jumlah melebihi target (${qtyText(target)}). Periksa kembali.';
+  }
+  if (target > 0 && qty >= target && filledMandatory < mandatorySlots) {
+    return 'Foto wajib belum lengkap ($filledMandatory/$mandatorySlots). Lengkapi sebelum menandai selesai.';
+  }
+  return null;
+}
+
+/// Unggah dengan percobaan ulang untuk gangguan jaringan (maks. 3 kali, jeda 2 dan 4 detik). Galat dari server
+/// (4xx/5xx) tidak diulang karena hasilnya akan sama.
+Future<T> retryUpload<T>(Future<T> Function() action, {Duration step = const Duration(seconds: 2)}) async {
+  for (var attempt = 1; ; attempt++) {
+    try {
+      return await action();
+    } on DioException catch (e) {
+      if (!isNetworkFailure(e) || attempt >= 3) rethrow;
+      await Future<void>.delayed(step * attempt);
+    }
+  }
+}
 
 /// Satu foto realisasi: berkas server (`fileId`) atau berkas lokal yang belum diunggah (`path`).
 class _Photo {
@@ -91,22 +124,56 @@ class _ItemProgressScreenState extends ConsumerState<ItemProgressScreen> {
   Future<void> _save() async {
     final qty = num.tryParse(_qty.text.replaceAll(',', '.'));
     if (qty == null || qty < 0) return _snack('Isi jumlah yang sudah selesai dengan angka.');
+    final problem = progressProblem(
+      qty: qty,
+      target: num.tryParse('${_item?['target_qty'] ?? 0}') ?? 0,
+      mandatorySlots: _slots.where((s) => s['is_mandatory'] == true).length,
+      filledMandatory: _slots
+          .where((s) => s['is_mandatory'] == true)
+          .where((s) => _photos.any((p) => p.requirementId == s['image_requirement_id']))
+          .length,
+    );
+    if (problem != null) return _snack(problem, error: true);
     setState(() => _busy = true);
     try {
-      final api = ref.read(syncEngineProvider).api;
-      for (final p in _photos.where((p) => p.fileId == null)) {
-        p.fileId = await api.uploadFile(File(p.path!));
+      final engine = ref.read(syncEngineProvider);
+      final api = engine.api;
+      final notes = _notes.text.trim().isEmpty ? null : _notes.text.trim();
+      try {
+        // Foto yang sudah terunggah tidak diunggah ulang bila simpan diulang setelah gagal di tengah jalan.
+        for (final p in _photos.where((p) => p.fileId == null)) {
+          p.fileId = await retryUpload(() => api.uploadFile(File(p.path!)));
+        }
+        await api.updateProgress(
+          widget.itemId,
+          completedQty: qty,
+          photos: [
+            for (final p in _photos) {'file_id': p.fileId, 'requirement_id': p.requirementId},
+          ],
+          notes: notes,
+        );
+        _snack('Hasil kerja tersimpan.');
+        await _load();
+      } on DioException catch (e) {
+        if (!isNetworkFailure(e)) rethrow;
+        // Tidak ada koneksi: simpan di antrean HP (foto ikut), dikirim otomatis saat online.
+        final local = _photos.where((p) => p.fileId == null).toList();
+        await engine.submit(
+          OfflineOp.planItemProgress,
+          {
+            'item_id': widget.itemId,
+            'completed_qty': qty,
+            'notes': notes,
+            'photos': [
+              for (final p in _photos.where((p) => p.fileId != null))
+                {'file_id': p.fileId, 'requirement_id': p.requirementId},
+            ],
+            'new_photo_requirements': [for (final p in local) p.requirementId],
+          },
+          localFiles: [for (final p in local) p.path!],
+        );
+        _snack('Tidak ada koneksi. Hasil kerja disimpan di HP dan dikirim otomatis saat online.');
       }
-      await api.updateProgress(
-        widget.itemId,
-        completedQty: qty,
-        photos: [
-          for (final p in _photos) {'file_id': p.fileId, 'requirement_id': p.requirementId},
-        ],
-        notes: _notes.text.trim().isEmpty ? null : _notes.text.trim(),
-      );
-      _snack('Hasil kerja tersimpan.');
-      await _load();
     } catch (e) {
       _snack(apiErrorMessage(e), error: true);
     } finally {

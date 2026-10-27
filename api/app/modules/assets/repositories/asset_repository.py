@@ -67,13 +67,26 @@ _LOAN_SELECT = """
            COALESCE(t.name, v.name) AS asset_name, COALESCE(t.tool_code, v.number_plate) AS asset_code,
            aa.employee_id, e.full_name AS employee_name, aa.daily_plan_id, wpd.work_date,
            aa.assignment_status::text AS assignment_status, aa.loaned_at, aa.returned_at,
-           fo.id AS handover_file_id
+           fo.id AS handover_file_id, aa.return_requested_at, aa.return_condition, aa.return_note,
+           rfo.id AS return_file_id
     FROM asset_assignment aa
     JOIN employee e ON e.employee_id = aa.employee_id
     LEFT JOIN tool t ON t.tool_id = aa.tool_id
     LEFT JOIN vehicle v ON v.vehicle_id = aa.vehicle_id
     LEFT JOIN work_plan_daily wpd ON wpd.daily_plan_id = aa.daily_plan_id
     LEFT JOIN file_object fo ON fo.storage_key = aa.handover_photo_path
+    LEFT JOIN file_object rfo ON rfo.storage_key = aa.return_photo_path
+"""
+
+_REQUEST_SELECT = """
+    SELECT r.request_id, r.asset_type, COALESCE(r.tool_id, r.vehicle_id) AS asset_id,
+           COALESCE(t.name, v.name) AS asset_name, COALESCE(t.tool_code, v.number_plate) AS asset_code,
+           r.employee_id, e.full_name AS employee_name, r.purpose, r.needed_on, r.status, r.review_note,
+           r.reviewed_at, r.assignment_id, r.create_at
+    FROM asset_loan_request r
+    JOIN employee e ON e.employee_id = r.employee_id
+    LEFT JOIN tool t ON t.tool_id = r.tool_id
+    LEFT JOIN vehicle v ON v.vehicle_id = r.vehicle_id
 """
 
 
@@ -404,4 +417,73 @@ class AssetRepository(BaseRepository):
             "UPDATE asset_assignment SET returned_at = now(), assignment_status = CAST(:c AS asset_status_enum), "
             "update_at = now() WHERE assignment_id = CAST(:id AS uuid)",
             {"id": str(assignment_id), "c": condition.lower()},
+        )
+
+    # ── Pengajuan pinjam & pengembalian oleh karyawan ──────────────────────────
+    async def insert_request(
+        self, asset_type: str, asset_id: UUID | str, employee_id: UUID | str, purpose: str, needed_on: date | None
+    ) -> UUID:
+        col = "tool_id" if asset_type == "TOOL" else "vehicle_id"
+        request_id: UUID = await self.scalar(
+            f"""
+            INSERT INTO asset_loan_request (asset_type, {col}, employee_id, purpose, needed_on)
+            VALUES (:type, CAST(:asset AS uuid), CAST(:emp AS uuid), :purpose, CAST(:needed AS date))
+            RETURNING request_id
+            """,
+            {"type": asset_type, "asset": str(asset_id), "emp": str(employee_id), "purpose": purpose,
+             "needed": needed_on},
+        )
+        return request_id
+
+    async def has_pending_request(self, asset_type: str, asset_id: UUID | str, employee_id: UUID | str) -> bool:
+        col = "tool_id" if asset_type == "TOOL" else "vehicle_id"
+        return bool(await self.scalar(
+            f"SELECT EXISTS (SELECT 1 FROM asset_loan_request WHERE {col} = CAST(:a AS uuid) "
+            "AND employee_id = CAST(:e AS uuid) AND status = 'PENDING' AND delete_at IS NULL)",
+            {"a": str(asset_id), "e": str(employee_id)},
+        ))
+
+    async def requests(self, *, employee_id: UUID | str | None, status: str | None) -> list[Any]:
+        return list(await self.fetchall(
+            _REQUEST_SELECT + """
+            WHERE r.delete_at IS NULL
+              AND (CAST(:emp AS uuid) IS NULL OR r.employee_id = CAST(:emp AS uuid))
+              AND (CAST(:st AS text) IS NULL OR r.status = CAST(:st AS text))
+            ORDER BY (r.status = 'PENDING') DESC, r.create_at DESC
+            """,
+            {"emp": str(employee_id) if employee_id else None, "st": status},
+        ))
+
+    async def get_request(self, request_id: UUID | str) -> Any:
+        return await self.fetchone(
+            _REQUEST_SELECT + " WHERE r.request_id = CAST(:id AS uuid) AND r.delete_at IS NULL",
+            {"id": str(request_id)},
+        )
+
+    async def request_for_update(self, request_id: UUID | str) -> Any:
+        return await self.fetchone(
+            "SELECT request_id, asset_type, tool_id, vehicle_id, employee_id, status FROM asset_loan_request "
+            "WHERE request_id = CAST(:id AS uuid) AND delete_at IS NULL FOR UPDATE",
+            {"id": str(request_id)},
+        )
+
+    async def set_request_status(
+        self, request_id: UUID | str, status: str, reviewer: str | None, note: str | None,
+        assignment_id: UUID | str | None = None,
+    ) -> None:
+        await self.execute(
+            "UPDATE asset_loan_request SET status = :st, reviewed_by_id = CAST(:rev AS uuid), reviewed_at = now(), "
+            "review_note = :note, assignment_id = CAST(:asg AS uuid), update_at = now() "
+            "WHERE request_id = CAST(:id AS uuid)",
+            {"id": str(request_id), "st": status, "rev": reviewer, "note": note,
+             "asg": str(assignment_id) if assignment_id else None},
+        )
+
+    async def request_return(
+        self, assignment_id: UUID | str, condition: str, note: str | None, photo_path: str
+    ) -> None:
+        await self.execute(
+            "UPDATE asset_assignment SET return_requested_at = now(), return_condition = :c, return_note = :n, "
+            "return_photo_path = :p, update_at = now() WHERE assignment_id = CAST(:id AS uuid)",
+            {"id": str(assignment_id), "c": condition, "n": note, "p": photo_path},
         )

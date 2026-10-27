@@ -211,3 +211,26 @@ class NeedsReviewResponse(BaseModel):
     alerted: bool
     needs_review_today: int
     daily_average: float
+
+
+class MyRecapItem(BaseModel):
+    work_date: date
+    check_in_at: datetime
+    check_out_at: datetime | None = None
+    is_late: bool
+    is_early_leave: bool
+    is_valid: bool
+    is_pending: bool
+    meal_allowance_amount: float = 0
+    city_zone: str | None = None
+
+
+class MyRecapResponse(BaseModel):
+    """Rekap absensi bulanan milik sendiri (HP karyawan)."""
+    month: str
+    days_present: int
+    late_days: int
+    early_leave_days: int
+    pending_days: int
+    meal_allowance_total: float
+    items: list[MyRecapItem]

@@ -37,12 +37,39 @@ class DailyPlanScreen extends ConsumerStatefulWidget {
   ConsumerState<DailyPlanScreen> createState() => _DailyPlanScreenState();
 }
 
+/// Koreksi yang masih berjalan dari riwayat koreksi satu jadwal (terbaru dulu); null bila tidak ada.
+Map<String, dynamic>? openCorrectionOf(List<Map<String, dynamic>> corrections) {
+  for (final c in corrections) {
+    if (const {'REQUESTED', 'REVISING', 'IN_REVIEW'}.contains(c['status'])) return c;
+  }
+  return null;
+}
+
+String correctionStateTitle(String status) => switch (status) {
+  'REQUESTED' => 'Koreksi menunggu keputusan PM',
+  'REVISING' => 'PM meminta revisi laporan',
+  'IN_REVIEW' => 'Revisi menunggu pemeriksaan PM',
+  _ => status,
+};
+
+String correctionStateSubtitle(Map<String, dynamic> correction) {
+  final note = (correction['review_note'] as String?)?.trim();
+  return switch (correction['status']) {
+    'REVISING' => note == null || note.isEmpty
+        ? 'Perbarui laporan dan hasil kerja, lalu kirim revisi'
+        : 'Catatan PM: $note',
+    'REQUESTED' => 'Alasan: ${correction['reason']}',
+    _ => 'Anda akan diberi tahu setelah PM memutuskan',
+  };
+}
+
 class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
   Map<String, dynamic>? _plan;
   Map<String, dynamic>? _dailyReport;
   String? _error;
   bool _busy = false;
   bool _reportPending = false;
+  List<Map<String, dynamic>> _corrections = const [];
 
   String get _me {
     final auth = ref.read(authControllerProvider);
@@ -80,13 +107,60 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
           if (cached.data is Map) report = Map<String, dynamic>.from(cached.data as Map);
         }
       }
-      if (mounted) setState(() => (_plan = plan, _dailyReport = report, _error = null));
+      var corrections = _corrections;
+      if (plan['leader_employee_id'] == _me) {
+        try {
+          corrections = await engine.api.planCorrections(widget.dailyPlanId);
+        } on DioException {
+          // riwayat koreksi hanya tambahan; layar tetap tampil tanpanya
+        }
+      }
+      if (mounted) {
+        setState(() => (_plan = plan, _dailyReport = report, _corrections = corrections, _error = null));
+      }
     } catch (e) {
       if (mounted) setState(() => _error = apiErrorMessage(e));
     }
   }
 
   void _snack(String text, {bool error = false}) => showVmsToast(context, text, error: error);
+
+  /// Koreksi yang masih berjalan (diminta, direvisi, atau menunggu pemeriksaan PM); null bila tidak ada.
+  Map<String, dynamic>? get _openCorrection =>
+      openCorrectionOf(_corrections);
+
+  Future<void> _requestCorrection() async {
+    final reason = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Ajukan koreksi laporan'),
+        content: TextField(
+          controller: reason,
+          maxLines: 3,
+          decoration: const InputDecoration(labelText: 'Apa yang perlu diperbaiki? (min. 5 karakter)'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Kirim ke PM')),
+        ],
+      ),
+    );
+    final text = reason.text.trim();
+    disposeAfterDialog([reason]);
+    if (ok != true) return;
+    if (text.length < 5) return _snack('Tulis alasan koreksi minimal 5 karakter.', error: true);
+    await _run(
+      () => ref.read(syncEngineProvider).api.requestCorrection(widget.dailyPlanId, text),
+      'Permintaan koreksi dikirim ke PM.',
+    );
+  }
+
+  /// Waktu kirim laporan untuk manusia (waktu HP), bukan string ISO mentah dari server.
+  String _sentAt(dynamic iso) {
+    final at = iso is String ? DateTime.tryParse(iso)?.toLocal() : null;
+    return at == null ? '-' : DateFormat('d MMM yyyy, HH:mm', 'id_ID').format(at);
+  }
 
   Future<void> _dailyReportForm() async {
     final summary = TextEditingController(text: _dailyReport?['summary'] as String? ?? '');
@@ -128,8 +202,7 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
         ],
       ),
     );
-    summary.dispose();
-    obstacles.dispose();
+    disposeAfterDialog([summary, obstacles]);
     if (report == null || !mounted) return;
 
     setState(() => _busy = true);
@@ -310,6 +383,40 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
                       ),
                     ),
                   ],
+                  if (_isLeader && plan['status'] == 'COMPLETED' && _openCorrection == null) ...[
+                    const SizedBox(height: 12),
+                    _Tile(
+                      icon: Icons.edit_note_rounded,
+                      title: 'Ajukan koreksi laporan',
+                      subtitle: 'Perbaikan laporan harus disetujui PM',
+                      onTap: _busy ? null : _requestCorrection,
+                    ),
+                  ],
+                  if (_isLeader && _openCorrection != null) ...[
+                    const SizedBox(height: 12),
+                    _Tile(
+                      icon: Icons.rule_rounded,
+                      title: correctionStateTitle(_openCorrection!['status'] as String),
+                      subtitle: correctionStateSubtitle(_openCorrection!),
+                      onTap: null,
+                    ),
+                    if (_openCorrection!['status'] == 'REVISING') ...[
+                      const SizedBox(height: 12),
+                      PrimaryAction(
+                        label: 'Kirim revisi ke PM',
+                        icon: Icons.send_rounded,
+                        busy: _busy,
+                        onTap: _dailyReport == null
+                            ? null
+                            : () => _run(
+                                () => ref.read(syncEngineProvider).api.submitCorrection(
+                                  _openCorrection!['correction_id'] as String,
+                                ),
+                                'Revisi dikirim ke PM.',
+                              ),
+                      ),
+                    ],
+                  ],
                   if (_isLeader && plan['status'] == 'ONGOING') ...[
                     const SizedBox(height: 12),
                     _Tile(
@@ -319,10 +426,11 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
                           ? 'Menunggu koneksi untuk dikirim'
                           : _dailyReport == null
                               ? 'Wajib sebelum hari kerja ditutup atau absen pulang'
-                              : 'Terkirim · ${_dailyReport!['submitted_at']}',
+                              : 'Terkirim · ${_sentAt(_dailyReport!['submitted_at'])}',
                       onTap: _busy ? null : _dailyReportForm,
                     ),
                     const SizedBox(height: 12),
+                    if (_openCorrection == null)
                     PrimaryAction(
                       label: _dailyReport == null ? 'Kirim laporan untuk menutup hari' : 'Selesaikan hari kerja',
                       icon: Icons.task_alt_rounded,
